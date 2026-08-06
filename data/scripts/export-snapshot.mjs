@@ -21,6 +21,7 @@ if (local) {
   const seeds = JSON.parse(readFileSync(join(DATA_DIR, 'seeds', 'collections.json'), 'utf8'));
   places = Object.values(review.places)
     .filter((p) => !p.needs_review && !p.fetch_failed)
+    .filter((p) => (p.review_status ?? 'approved') === 'approved' && (p.is_published ?? true))
     .map((p) => ({ ...p, place_photos: p.photos.map((ph, i) => ({ ...ph, sort_order: i })) }));
   const bySlug = Object.fromEntries(places.map((p) => [p.slug, p]));
   collections = seeds.collections.map((c) => ({
@@ -32,10 +33,12 @@ if (local) {
   const { createClient } = await import('@supabase/supabase-js');
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
+  // The demo ships only reviewer-approved, published places.
   const { data: p, error: pErr } = await supabase
     .from('places')
     .select('*, place_photos(*)')
     .eq('is_published', true)
+    .eq('review_status', 'approved')
     .order('sort_order', { ascending: true, nullsFirst: false });
   if (pErr) throw new Error(pErr.message);
   places = p;
@@ -97,7 +100,7 @@ const snapshot = {
     food: places.filter((p) => p.category === 'food').map(toCard),
     out: places.filter((p) => p.category === 'out').map(toCard),
   },
-  collections: collections.map((c) => {
+  collections: collections.flatMap((c) => {
     // Count only published members — with the service key the nested join is
     // not RLS-filtered, and unpublished places must not inflate the card count.
     const publishedSlugs = new Set(places.map((p) => p.slug));
@@ -105,6 +108,7 @@ const snapshot = {
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((cp) => cp.places?.slug)
       .filter((slug) => slug && publishedSlugs.has(slug));
+    if (!memberSlugs.length) return []; // hide collections with no approved members
     return {
       slug: c.slug,
       title_en: c.title_en, title_vi: c.title_vi,
