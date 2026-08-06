@@ -134,6 +134,77 @@
         "desc_vi": "Đài quan sát tầng 81 toà tháp cao nhất Việt Nam — ngắm hoàng hôn trên sông Sài Gòn. Cuối tuần nên đặt vé trước."
       },
       {
+        "id": "saigon-night-cruise",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAa09Fcfms5ypf8FSPZJ7jHCNtaPSy5pkyG3GUYqxWqqQHCiktS5ajVfRQJWbBhrMZMglNEIOIpK6mCfxJI897r93H6TaF91w-_9711BRl2qo9NF5ErP-SQaS_sWH_XN_QnUKwZeWCnbRO_7a7BHl-NzA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAa09Fcfms5ypf8FSPZJ7jHCNtaPSy5pkyG3GUYqxWqqQHCiktS5ajVfRQJWbBhrMZMglNEIOIpK6mCfxJI897r93H6TaF91w-_9711BRl2qo9NF5ErP-SQaS_sWH_XN_QnUKwZeWCnbRO_7a7BHl-NzA=s4800-w800",
+            "attr_name": "Saigon Waterbus Bạch Đằng",
+            "attr_uri": "https://maps.google.com/maps/contrib/102791173696452358404"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDElvPmqB42mEMsfzpZ-DDVIJRNzQZ9RB940DmWTHLFz4dFWZKbrgERuK6vsOgPml94CbGq3IRM1lHfv9CIWliJslo2pWYvUuARK-FFfhT06vqB_zi8a9_-Q9L6WllJRep1ntcDHsMwH9SKZ5UCxoZK=s4800-w800",
+            "attr_name": "TravelLover",
+            "attr_uri": "https://maps.google.com/maps/contrib/111305034770066065532"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCNfCZ-cTXZ9cnzrfHKDOIILkzqCVTJQn6i2XdMaUXcee9WYcL3JcWP6v43eztCU_6ff62E8ohgj5TR8RjNqCCseVG8or-TsuPjBRfoWb7TKtyZjjMJ0-K6yXLtJ9_4j25ulYaMjY2FXku6_NM=s4800-w800",
+            "attr_name": "Iain Laslett",
+            "attr_uri": "https://maps.google.com/maps/contrib/112887046504403632048"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDqcVWubsy5UV_xKMEmfC4R8Khn-AwBbWv8S-K1flWkSxtizNrBuHQ5YSJiG7ztogoF3umuNtu2LuSOaGAAZmfKaN-pG9wVFRbHdzxHd02BjZvRWFoYgd8BRHtkfuN9ujYi9kZBYGVZ9qqA=s4800-w800",
+            "attr_name": "Rince Thomas",
+            "attr_uri": "https://maps.google.com/maps/contrib/100078469941503744565"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB4EDfGMs3qIwTRXAHMDHgDRdcMvl3wVcI1sq_7R0F36wMcc9mLi_nhnzed8JtyitOdCoYoU5nLstF1CG5KNbncHLEV-trIvGbRlazdgKz8fPD7gKkACZhyoeRhY98NsVjos5NhJHOd-hzT_kg=s4800-w800",
+            "attr_name": "Linh Kona",
+            "attr_uri": "https://maps.google.com/maps/contrib/111653632282817190189"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDG2d7q6X_SMBcJIrln6bnN-yWyK21LgpptpWZpKQzpTBYQuyHvBqHE2fr7hBhkIcEDc6Pb_KEZTm1Wa6RYF5clv0MJ8de9EnUzjXO1hzUOGFBx3X2OJGoptfM2GGKd4g6YljOCdYafOU7L=s4800-w800",
+            "attr_name": "Anh Suong",
+            "attr_uri": "https://maps.google.com/maps/contrib/111226387389409134667"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBwFmd9FXSNNwBQVBUkIW9SAD8ZyVzSi0aIluWKgmlSZP-i-Npg4LYkAuVr0i_QgePSAi6ftt1z3VTxEmuvD8lYBbMKh0ddVOgMnEvOOSf0tdrP5Q2qdH1MRzAVJJGOYFZYseLkAob3OrZy_7Q=s4800-w800",
+            "attr_name": "Anh Tuấn",
+            "attr_uri": "https://maps.google.com/maps/contrib/114548263493965499553"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCj9YrlcvDHIKCf6fTHBO8WFTLpuNawL5Ckkyma_GNXGxJB3v1WtTYsv_dqasVEy3XxBEDZFpe1W_9Ig7AUAaskzPdcd8pipVZj02QYsaGGp66u8xvH3lgaZXSaxfm2aoMdASd8-xkq2qF8URc=s4800-w800",
+            "attr_name": "Dzung Mai",
+            "attr_uri": "https://maps.google.com/maps/contrib/112900963544827081247"
+          }
+        ],
+        "attr_name": "Saigon Waterbus Bạch Đằng",
+        "attr_uri": "https://maps.google.com/maps/contrib/102791173696452358404",
+        "emoji": "🛥️",
+        "en": "Saigon Waterbus night ride",
+        "vi": "Waterbus Sài Gòn chuyến đêm",
+        "loc_en": "Bạch Đằng pier",
+        "loc_vi": "Bến Bạch Đằng",
+        "address": "10B Tôn Đức Thắng, Sài Gòn, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7752626,
+        "lng": 106.7068754,
+        "rating": "4.4/5",
+        "rating_count": 4378,
+        "price": "50k₫",
+        "price_vnd": 50000,
+        "votes": 3,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
+        "vibes": [
+          "views",
+          "chill"
+        ],
+        "desc_en": "Evening boat loop on the Saigon River with the skyline lit up — a relaxed, cheap way to end a group day out.",
+        "desc_vi": "Vòng thuyền buổi tối trên sông Sài Gòn ngắm thành phố lên đèn — cách thư giãn, rẻ để kết thúc ngày đi chơi nhóm."
+      },
+      {
         "id": "independence-palace",
         "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBlHXunTiE7ogrlZnoJlPvrGxs87h38AqL5ZAZ7IGHxt5_8XWTOy3rcm8hADSx6ISW6XtPBCVbgV3xFYGgvzzHEFED_kt_7Bwe7EKQKyku5xA2LBjkM3NGHMEBBKeOGLf72kvMi9CvSwFuy=s4800-w800",
         "photos": [
@@ -483,6 +554,254 @@
         "desc_vi": "Chín tầng quán cà phê indie trong chung cư thập niên 60 trên phố đi bộ — góc nào cũng chụp ảnh đẹp."
       },
       {
+        "id": "lusine-le-loi",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAjLJCo7qN0qgoSINkFgn1xkDyEQQHwMZzUIim1LBxsZQEybB8sR9-ayLwsqz37lB78mSL5yxvIprCjWF1WG82uQS4U7BiVCWsvYmoB_o-0wppDaRxE_zqz7j1teEWhz5vjUG7pKUttXH2uJ8Q=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAjLJCo7qN0qgoSINkFgn1xkDyEQQHwMZzUIim1LBxsZQEybB8sR9-ayLwsqz37lB78mSL5yxvIprCjWF1WG82uQS4U7BiVCWsvYmoB_o-0wppDaRxE_zqz7j1teEWhz5vjUG7pKUttXH2uJ8Q=s4800-w800",
+            "attr_name": "L’Usine Lê Lợi",
+            "attr_uri": "https://maps.google.com/maps/contrib/114772649037932743948"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBxwOUabPTJxzA7zZOkSrPh9pQNfo9r-7a_k845pz1NqUlzCqPvwA2194RhEvkiOP-FijEaEP8YfCGtEm4g9S0e_nPAR4MHK5rwMMHBRKqlTtNlfWTsEWkYMwUB3YcSQ1z_K-qeSXvz6CGL5PE=s4800-w800",
+            "attr_name": "L’Usine Lê Lợi",
+            "attr_uri": "https://maps.google.com/maps/contrib/114772649037932743948"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBReNTknYwncAzTo_Ov3Nv6G2JPTGDqggz5HOa_U-08x4ty-sHu9wPubTstzsMCrxGR2T9MN3-22rF0x8REw3CNnuo0MOm-JSGrN5e9kzqwTBTdGo1e5xjrq--GRJcdcMsMUdj2MpM_k3B2kw=s4800-w800",
+            "attr_name": "Isabelle G",
+            "attr_uri": "https://maps.google.com/maps/contrib/113373817074082737499"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC57QnUimhvWc8Wi02J_MSw8nWRdrLajUnaNS5DUxbdoo-5N9vwpY0J5Ss5olD2DukOaYYC2jw32JUlKisnPPyGK8jtgMl5qe4nEXg01D39i9kJeXz5MbqyyIG_C--_usT_2N4FjNcYWDT5oWsrz04-6A=s4800-w800",
+            "attr_name": "Anthony Lim",
+            "attr_uri": "https://maps.google.com/maps/contrib/109334729372262095864"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB_O0N9jX4ITkzV3efmAzIznH8-MD7CIHiYH7aV6mrL4B9mB79PvV4ijPR3G9KlJqQjsP0eoazIoog9bHzNx262VeIsLNF9lC4H9XXsqnB57ymIX_jWhM1Ys3RWbbVHqzeqSQKdAIVfpu3yw-4=s4800-w800",
+            "attr_name": "CHIA HSIN芯 CHAN",
+            "attr_uri": "https://maps.google.com/maps/contrib/102105350158913386012"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCNoE59_B9Bh0aO67QbgYM0kEvZGYGBI7J5HiVP3SqT14wdHEXf7QCIVszcRzhtIIKKBpNuiK-6mLR20dZdl6ti66-WhnaLRiQw2y4ho0JkumitMOteZVho38YXbvZA7MTiJpjoqLhn7BrpGTc=s4800-w800",
+            "attr_name": "Shee Yu Shen",
+            "attr_uri": "https://maps.google.com/maps/contrib/109802106608855971134"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAzsFmPhkbKscEDSSS_9VAaW8bd-B-hSltroUlfaQW-IvglnHxy54mtlZpYUxKp5-1wYpR_aatwTfFdH0e5aXGwkaRRgRoiQ-nZlMnJZ5x2jV013B5utHEZwIKqe4cW-iGA9zUmmbdfK9Hz6X8OyfzKog=s4800-w800",
+            "attr_name": "lyndsey McPherson",
+            "attr_uri": "https://maps.google.com/maps/contrib/105572171897090257729"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBch9hoRFBJVfKYUU5CW6uXo9jXlh6FlZrpyTmkYPX1h18PP2PaxGt7KdlPQKywwFddbDruIPP7v8fvf1HN8ezdbe4p_rDTr-IVouHzCRyuoYT65rcdiuGUMzVut-UZdYcO88CQBy_QYUqV=s4800-w800",
+            "attr_name": "tsurutv tsuru",
+            "attr_uri": "https://maps.google.com/maps/contrib/107520037649111095500"
+          }
+        ],
+        "attr_name": "L’Usine Lê Lợi",
+        "attr_uri": "https://maps.google.com/maps/contrib/114772649037932743948",
+        "emoji": "🥐",
+        "en": "L'Usine Lê Lợi",
+        "vi": "L'Usine Lê Lợi",
+        "loc_en": "Lê Lợi, D1",
+        "loc_vi": "Lê Lợi, Q1",
+        "address": "34 Lê Lợi, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7743611,
+        "lng": 106.7005507,
+        "rating": "4.4/5",
+        "rating_count": 1267,
+        "price": "150k₫",
+        "price_vnd": 150000,
+        "votes": 2,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
+        "vibes": [
+          "cafes",
+          "shopping"
+        ],
+        "desc_en": "Café, brunch and concept store in one colonial-era space — browse local designers while you wait for the eggs benedict.",
+        "desc_vi": "Café, brunch và concept store trong một không gian thời thuộc địa — dạo xem đồ local designer trong lúc chờ món."
+      },
+      {
+        "id": "com-tam-ba-ghien",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCpsBsMxAfTRJJ0jVTDr9_Y40pK4w_-JCAxXpaNxElDstNIrgoJ8XJaY27FOdJWjil_m2yD66Z2dT6xRYzzw839V3tYiF93aRvCvxFXHYWSJX0Ep6PZ5KqYTCa8UplX9Ad3nByv6vSwuT97E5Bvl8OM=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCpsBsMxAfTRJJ0jVTDr9_Y40pK4w_-JCAxXpaNxElDstNIrgoJ8XJaY27FOdJWjil_m2yD66Z2dT6xRYzzw839V3tYiF93aRvCvxFXHYWSJX0Ep6PZ5KqYTCa8UplX9Ad3nByv6vSwuT97E5Bvl8OM=s4800-w800",
+            "attr_name": "Bernard Huen",
+            "attr_uri": "https://maps.google.com/maps/contrib/105356211593860927587"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB-1FtkxU-N15UP4tnv1oQHInO1u4OHAEPkNHB0oTM0OmnQd3E9qMwi6_fHFAXMMMr_l5487TRXvZVbxRhvn4TE1WCneD7yKH3H9yeFQN-JHRSJuSHWQ_jCYNkBXldtdIdnn47cMUEZpHk3uRyThW517Q=s4800-w800",
+            "attr_name": "Hồng Hoàng",
+            "attr_uri": "https://maps.google.com/maps/contrib/114211119983595167675"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBwm-FVdHZna_66e1JAALFuyzjvTYfp5z2-s0Xq2IfQbsofCq0jO2-8LT_n-W0_S-yO-HRkflvvOYoqH8HtzGlxqHy3j3Jvg9BZmFa08QIXPhNQCS3j7nx5B1iuNGw3LCeCBa97f0TJz-E7J7Ng_Sdr=s4800-w800",
+            "attr_name": "Jason B",
+            "attr_uri": "https://maps.google.com/maps/contrib/108608683599146897608"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAduuuBkzc_SrXz16o7IgkevtmbVUJsK0mN7lvU1Ytqw6fgo2SXE76ztaN7cH-tLGFxu5q_enmFQPUrG4ZrPAwLspaWc49dUxo-COIjx73hIw5iutGVLdCxKn-F2lcNVdQIkoEnEJSaFtZlOgW6-aKuVA=s4800-w800",
+            "attr_name": "Vivi",
+            "attr_uri": "https://maps.google.com/maps/contrib/110360995646058625216"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBtfVltsmuqNCNZruKx1pZbCEVl_HMbD4HX8oN6rY4wGrh61Kty18COoAz2fwleGDnzSAA94y8e124etn6OKLqjCHL3nqznzzdzUeyeMiBpeB31yONuhPcFcz7aSvH79lPGaxNKQidPkR6g_XiHpEdLig=s4800-w800",
+            "attr_name": "Quang Duy",
+            "attr_uri": "https://maps.google.com/maps/contrib/107228993580391182510"
+          }
+        ],
+        "attr_name": "Bernard Huen",
+        "attr_uri": "https://maps.google.com/maps/contrib/105356211593860927587",
+        "emoji": "🍚",
+        "en": "Cơm tấm Ba Ghiền",
+        "vi": "Cơm tấm Ba Ghiền",
+        "loc_en": "Đặng Văn Ngữ, Phú Nhuận",
+        "loc_vi": "Đặng Văn Ngữ, Phú Nhuận",
+        "address": "84 Đ. Đặng Văn Ngữ, Phú Nhuận, Hồ Chí Minh, Vietnam",
+        "lat": 10.794442,
+        "lng": 106.66936,
+        "rating": "4.2/5",
+        "rating_count": 3606,
+        "price": "70k₫",
+        "price_vnd": 70000,
+        "votes": 5,
+        "dur_en": "30–45 min",
+        "dur_vi": "30–45 phút",
+        "dur_min": 30,
+        "dur_max": 45,
+        "vibes": [
+          "food_tour"
+        ],
+        "desc_en": "Michelin-listed broken rice with a legendary grilled pork chop the size of your face — come hungry.",
+        "desc_vi": "Cơm tấm được Michelin vinh danh với miếng sườn nướng to bản huyền thoại — nhớ để bụng thật đói."
+      },
+      {
+        "id": "chill-skybar",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCIztf5LShXzHFzX9RH_altBy8CRjldWfVBcj5iSlzIccXNnOJoDn7KokL64tAcZR7i1VAVf0gnqvZaMI5CfGTtlacMqrVjQ3WmHHCby2iPP70mFTXW2BMDhXC4MUaqjB6bgFSs2weZIQiy5Uk5begX=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCIztf5LShXzHFzX9RH_altBy8CRjldWfVBcj5iSlzIccXNnOJoDn7KokL64tAcZR7i1VAVf0gnqvZaMI5CfGTtlacMqrVjQ3WmHHCby2iPP70mFTXW2BMDhXC4MUaqjB6bgFSs2weZIQiy5Uk5begX=s4800-w800",
+            "attr_name": "Laurence Chapelle",
+            "attr_uri": "https://maps.google.com/maps/contrib/110222299952027390511"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAG7KM1srLTFWvzjTj_C-tgsEIC5FU_xx4oXPK18wFmy36kxZJ2_EwlSSqIux_OngFuIm4mWK6vro8yzwaC1YedJIh3xynkQT9KjXrr7fBJ197-5kf3fCJdMyYnWJ728IYQVUGCBQdoUL4--A=s4800-w800",
+            "attr_name": "Chill Skybar & Dining",
+            "attr_uri": "https://maps.google.com/maps/contrib/118009274833483829071"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAZZMlgTa7cnYg7hwBmrUwB5VsGDRmoerLjvnAJYA0zScuzsIBWhw914h-_UDyhpk4I4RwuyGH8-bn0z0Jnd04QjYWsKWq9i3PsEdY_7H39py2hX6Av1-fO4Prnh9qgtWEIGR_vz8Ofh00Na4U=s4800-w800",
+            "attr_name": "Chill Skybar & Dining",
+            "attr_uri": "https://maps.google.com/maps/contrib/118009274833483829071"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAr8hKGKaLZ8cjvRbaST01ZYXErXXAv7jnym1Aa-GcEYYPC4t7e4rtjCxtNbm8ILPvPovhEhGUgdVDZNhVJBNn9i194cuZXeP8gFeU0pdTbXh-B_GxirLXucTRegcFmgUbn0E0MyhHIA8sW1XbTRRDzoA=s4800-w800",
+            "attr_name": "Ng Marnie",
+            "attr_uri": "https://maps.google.com/maps/contrib/108558094778387599547"
+          }
+        ],
+        "attr_name": "Laurence Chapelle",
+        "attr_uri": "https://maps.google.com/maps/contrib/110222299952027390511",
+        "emoji": "🍸",
+        "en": "Chill Skybar",
+        "vi": "Chill Skybar",
+        "loc_en": "AB Tower, D1",
+        "loc_vi": "AB Tower, Q1",
+        "address": "Tầng 26 - 27, AB Tower, 76A Lê Lai, Bến Thành, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7705648,
+        "lng": 106.6943777,
+        "rating": "4.4/5",
+        "rating_count": 5839,
+        "price": "350k₫",
+        "price_vnd": 350000,
+        "votes": 3,
+        "dur_en": "1.5–2h",
+        "dur_vi": "1.5–2 giờ",
+        "dur_min": 90,
+        "dur_max": 120,
+        "vibes": [
+          "nightlife",
+          "views"
+        ],
+        "desc_en": "Golden-hour cocktails with the whole skyline from the 26th floor. Dress code smart-casual; happy hour before 19:00.",
+        "desc_vi": "Cocktail giờ vàng với trọn vẹn đường chân trời từ tầng 26. Dress code lịch sự; happy hour trước 19:00."
+      },
+      {
+        "id": "social-club-rooftop",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAiNb-S-oHebEH5O_LDlXn8LVfBWhNICUt0qJbfu9HTjqnJi-FrT6uPaTO9IaHhJGLElWVYyxY43GKsGOqMqqrHRZSaBWVnrz2rOSGFzoglZtKVXrOwB-MeXuDRgR-lGPATlbgVz8U0pXKQ=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAiNb-S-oHebEH5O_LDlXn8LVfBWhNICUt0qJbfu9HTjqnJi-FrT6uPaTO9IaHhJGLElWVYyxY43GKsGOqMqqrHRZSaBWVnrz2rOSGFzoglZtKVXrOwB-MeXuDRgR-lGPATlbgVz8U0pXKQ=s4800-w800",
+            "attr_name": "Social Club Rooftop Bar",
+            "attr_uri": "https://maps.google.com/maps/contrib/116674450865676759235"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDNMuemFjDnnC47IsC2fS18deagMiXo9hsFyfiZY3AQlPbisAHM_Af59JK5dxX0KdHjKFwe3gCC3wRu8LGvB57gjIE50wru9WMRHl5jk4HyuBWZwytBs7UdSKQzG_BzcIin18mKycZmyVZQRMvpA9INVQ=s4800-w800",
+            "attr_name": "Nam Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/108489377996785721607"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC0RrRAo_VHrF1cmLi9pEpeZhPZQvdidySD4sFLJzZwf2xZRQU4OAqSZmgvr_DxIlKWvuavQeEVZxribBcnkUgt0AbBY4S76lWTQEh_wiWR4AaPXsZM_rVfbf3DLrE4zGfgHqIO0UrlCx9ppg=s4800-w800",
+            "attr_name": "Jules L",
+            "attr_uri": "https://maps.google.com/maps/contrib/118006659001888631572"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA-3TuzSxR-eHi-16rEWD7uGrs1s1mftYCLJFqp_NWw0PrvHJ46MHDwmHmKlO_A3OdsZDqMn5W9DeKxdYko_K33DqdZ3SveE94PtPMrUAIQrrzTxfUvDD4ONCk4Pm_nEkzwqYhEqlIeQUYj0zV3E_LFfg=s4800-w800",
+            "attr_name": "やや",
+            "attr_uri": "https://maps.google.com/maps/contrib/109742064090047344141"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDw2PcbzumDT1TDngAuHj24kXBXMDVAaIVOMSM2RfYvPlDVZTcHzcChWT3GjaMxcfGEUJ7ub7JTZnYEgeVVYRBOZ_CgegTZt1uOg5RxKs7bPlMgK0uYbqaH6UuqIIVTbBisqArOZT3teA-d5UEogaeyKA=s4800-w800",
+            "attr_name": "Nam Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/108489377996785721607"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCY37pWDa9nJB_Wy1PV8f6D7RO25lxJRL_k7_LiJkaS_N6v8-sUlVSxkrQwqd1MCmjqLN_n8G4sBvON02O_6jDa7oB5AuVL0hV7olP6SugoFYWh9qOzc0lMOSLIlbgrTUwiG6g9_yZX2J6y_IX_ZinSLg=s4800-w800",
+            "attr_name": "Clam",
+            "attr_uri": "https://maps.google.com/maps/contrib/105406106205014723562"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDR16Kr8ku6FzeRWfHdKcmOK2lPxL2wH1OBrzLm3wJoeVoOH3siq7t45i53GZZo3W8dOPQTXM00LrTYb_QLD3yWwoueATKyos_qYJG17mgFHlj2H4JYOnfYup_VlxIcJU4xkRS4TjtKLCoR2K29mYy9EA=s4800-w800",
+            "attr_name": "Giacomo Colavita",
+            "attr_uri": "https://maps.google.com/maps/contrib/116440602603515388666"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBKXEspd8_D1bjPpatSI-GJakiXgOs3sma62DVMfHkty5kK_TMzRQxMVCzz_V4NPjTBiMjOKs84rviiNul3xViep7yN6iiOI44-jEA1cbM5DY55ycy-9nNFEhQCSlnZARC_ZAzdO2E7WfXSVF7MD9giDQ=s4800-w800",
+            "attr_name": "Polly P",
+            "attr_uri": "https://maps.google.com/maps/contrib/111140108512017437799"
+          }
+        ],
+        "attr_name": "Social Club Rooftop Bar",
+        "attr_uri": "https://maps.google.com/maps/contrib/116674450865676759235",
+        "emoji": "🍹",
+        "en": "Social Club Rooftop",
+        "vi": "Social Club Rooftop",
+        "loc_en": "Hôtel des Arts, D3",
+        "loc_vi": "Hôtel des Arts, Q3",
+        "address": "76 78 Nguyễn Thị Minh Khai, St, Xuân Hòa, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7824226,
+        "lng": 106.6973331,
+        "rating": "4.5/5",
+        "rating_count": 2383,
+        "price": "250k₫",
+        "price_vnd": 250000,
+        "votes": 2,
+        "dur_en": "1.5–2h",
+        "dur_vi": "1.5–2 giờ",
+        "dur_min": 90,
+        "dur_max": 120,
+        "vibes": [
+          "views",
+          "nightlife"
+        ],
+        "desc_en": "Rooftop pool bar on the 23rd floor of Hôtel des Arts — skyline views without the D1 crowds; Sunday pool parties.",
+        "desc_vi": "Bar hồ bơi tầng 23 của Hôtel des Arts — ngắm skyline mà không chen chúc như Q1; Chủ nhật có pool party."
+      },
+      {
         "id": "bui-vien-walking-street",
         "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDr7vHWKVN6Cp16QxNL3Pv-4PAenUrs-byiLo7BZyLUg5wXqBK9gaFzLsKvGVRJE0ZJw1gpxFmSkFJL8SnUJ7h6Lf8SRQ7Xj7aXIqktolOlOxbUsR2d2yTfqLH1flAORN5dYrmPtGB75A9dZ1a5LoMm=s4800-w800",
         "photos": [
@@ -812,6 +1131,77 @@
         "desc_vi": "Đài quan sát tầng 81 toà tháp cao nhất Việt Nam — ngắm hoàng hôn trên sông Sài Gòn. Cuối tuần nên đặt vé trước."
       },
       {
+        "id": "saigon-night-cruise",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAa09Fcfms5ypf8FSPZJ7jHCNtaPSy5pkyG3GUYqxWqqQHCiktS5ajVfRQJWbBhrMZMglNEIOIpK6mCfxJI897r93H6TaF91w-_9711BRl2qo9NF5ErP-SQaS_sWH_XN_QnUKwZeWCnbRO_7a7BHl-NzA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAa09Fcfms5ypf8FSPZJ7jHCNtaPSy5pkyG3GUYqxWqqQHCiktS5ajVfRQJWbBhrMZMglNEIOIpK6mCfxJI897r93H6TaF91w-_9711BRl2qo9NF5ErP-SQaS_sWH_XN_QnUKwZeWCnbRO_7a7BHl-NzA=s4800-w800",
+            "attr_name": "Saigon Waterbus Bạch Đằng",
+            "attr_uri": "https://maps.google.com/maps/contrib/102791173696452358404"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDElvPmqB42mEMsfzpZ-DDVIJRNzQZ9RB940DmWTHLFz4dFWZKbrgERuK6vsOgPml94CbGq3IRM1lHfv9CIWliJslo2pWYvUuARK-FFfhT06vqB_zi8a9_-Q9L6WllJRep1ntcDHsMwH9SKZ5UCxoZK=s4800-w800",
+            "attr_name": "TravelLover",
+            "attr_uri": "https://maps.google.com/maps/contrib/111305034770066065532"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCNfCZ-cTXZ9cnzrfHKDOIILkzqCVTJQn6i2XdMaUXcee9WYcL3JcWP6v43eztCU_6ff62E8ohgj5TR8RjNqCCseVG8or-TsuPjBRfoWb7TKtyZjjMJ0-K6yXLtJ9_4j25ulYaMjY2FXku6_NM=s4800-w800",
+            "attr_name": "Iain Laslett",
+            "attr_uri": "https://maps.google.com/maps/contrib/112887046504403632048"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDqcVWubsy5UV_xKMEmfC4R8Khn-AwBbWv8S-K1flWkSxtizNrBuHQ5YSJiG7ztogoF3umuNtu2LuSOaGAAZmfKaN-pG9wVFRbHdzxHd02BjZvRWFoYgd8BRHtkfuN9ujYi9kZBYGVZ9qqA=s4800-w800",
+            "attr_name": "Rince Thomas",
+            "attr_uri": "https://maps.google.com/maps/contrib/100078469941503744565"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB4EDfGMs3qIwTRXAHMDHgDRdcMvl3wVcI1sq_7R0F36wMcc9mLi_nhnzed8JtyitOdCoYoU5nLstF1CG5KNbncHLEV-trIvGbRlazdgKz8fPD7gKkACZhyoeRhY98NsVjos5NhJHOd-hzT_kg=s4800-w800",
+            "attr_name": "Linh Kona",
+            "attr_uri": "https://maps.google.com/maps/contrib/111653632282817190189"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDG2d7q6X_SMBcJIrln6bnN-yWyK21LgpptpWZpKQzpTBYQuyHvBqHE2fr7hBhkIcEDc6Pb_KEZTm1Wa6RYF5clv0MJ8de9EnUzjXO1hzUOGFBx3X2OJGoptfM2GGKd4g6YljOCdYafOU7L=s4800-w800",
+            "attr_name": "Anh Suong",
+            "attr_uri": "https://maps.google.com/maps/contrib/111226387389409134667"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBwFmd9FXSNNwBQVBUkIW9SAD8ZyVzSi0aIluWKgmlSZP-i-Npg4LYkAuVr0i_QgePSAi6ftt1z3VTxEmuvD8lYBbMKh0ddVOgMnEvOOSf0tdrP5Q2qdH1MRzAVJJGOYFZYseLkAob3OrZy_7Q=s4800-w800",
+            "attr_name": "Anh Tuấn",
+            "attr_uri": "https://maps.google.com/maps/contrib/114548263493965499553"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCj9YrlcvDHIKCf6fTHBO8WFTLpuNawL5Ckkyma_GNXGxJB3v1WtTYsv_dqasVEy3XxBEDZFpe1W_9Ig7AUAaskzPdcd8pipVZj02QYsaGGp66u8xvH3lgaZXSaxfm2aoMdASd8-xkq2qF8URc=s4800-w800",
+            "attr_name": "Dzung Mai",
+            "attr_uri": "https://maps.google.com/maps/contrib/112900963544827081247"
+          }
+        ],
+        "attr_name": "Saigon Waterbus Bạch Đằng",
+        "attr_uri": "https://maps.google.com/maps/contrib/102791173696452358404",
+        "emoji": "🛥️",
+        "en": "Saigon Waterbus night ride",
+        "vi": "Waterbus Sài Gòn chuyến đêm",
+        "loc_en": "Bạch Đằng pier",
+        "loc_vi": "Bến Bạch Đằng",
+        "address": "10B Tôn Đức Thắng, Sài Gòn, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7752626,
+        "lng": 106.7068754,
+        "rating": "4.4/5",
+        "rating_count": 4378,
+        "price": "50k₫",
+        "price_vnd": 50000,
+        "votes": 3,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
+        "vibes": [
+          "views",
+          "chill"
+        ],
+        "desc_en": "Evening boat loop on the Saigon River with the skyline lit up — a relaxed, cheap way to end a group day out.",
+        "desc_vi": "Vòng thuyền buổi tối trên sông Sài Gòn ngắm thành phố lên đèn — cách thư giãn, rẻ để kết thúc ngày đi chơi nhóm."
+      },
+      {
         "id": "independence-palace",
         "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBlHXunTiE7ogrlZnoJlPvrGxs87h38AqL5ZAZ7IGHxt5_8XWTOy3rcm8hADSx6ISW6XtPBCVbgV3xFYGgvzzHEFED_kt_7Bwe7EKQKyku5xA2LBjkM3NGHMEBBKeOGLf72kvMi9CvSwFuy=s4800-w800",
         "photos": [
@@ -880,6 +1270,146 @@
         ],
         "desc_en": "The frozen-in-1975 presidential palace — war rooms, retro salons and tanks on the lawn; the audio guide is worth it.",
         "desc_vi": "Dinh tổng thống 'đóng băng' từ 1975 — phòng tác chiến, salon retro và xe tăng trên bãi cỏ; thuê audio guide rất đáng."
+      },
+      {
+        "id": "notre-dame-cathedral",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCCqna2lRJofPk1vgTljC18CLtzAH9Onc4G22wg7IA0r0ySkX5oY8RpAk_L6r0ayCbLRRExiQJqD1ghLTRtH8OvNzXlkrta8GrE0b8f210A3zwJbin-QLm9EGjnZyKYpU-A4yDY9fNWNUFClg=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBNUISYzNIIpD5MSspd_vX_9A-C1Y9WXLcg-NyZxWIaDm3kR73DlnCDPJZl8UucN1ta8WZBlT1135MhO0OwY5d6A82gdhthHAd8Ye-8qoZAFP-Lgje3wLBKCyNyfBA1QtZz14na44rs6OpEXqQ=s4800-w800",
+            "attr_name": "林宏達",
+            "attr_uri": "https://maps.google.com/maps/contrib/108194996842222783992"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBEFLgphFAtRMxkdYFtvWKeO5DfPy2N53_ltbrgNWiM-E3EwZOpHwz1KTnuUelNa7dJ79_reZM3BQlNiXrOiXNkJJGXFQeqJbE10-AI6GZ3YAaCz6Lq706mi8pBRPVStin6HUK-VhJkfoxA8A=s4800-w724",
+            "attr_name": "aj",
+            "attr_uri": "https://maps.google.com/maps/contrib/101431495761220231120"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC_D9MHeKnGGKtt_J3Q_1FO8r_TPP7Rxbp2yXLluYmJmmbOcrnFqqZo63wXH1xDcJl6WkisgA7B8snyWpVBq3mF6Pe14Bme2fiag2CyPf8cx7-X2dzSOp5IpEpJ-6neHC4dlDYh7hCE3e-YJg=s4800-w800",
+            "attr_name": "Sakalis Of BNA",
+            "attr_uri": "https://maps.google.com/maps/contrib/116419137122780334156"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCbVd1CIeJDnAngKukjMnJ6nvSA4auIUJQJPjN9VbrjwNVvtUAbpMjb7UdxM-WZLtc70CN8iDV-kOp1u09g5Yik4pLDiz_IzWqWzPDEpPWd1L7ATXkvaUSqyZblHxS7f5H46IfdmAbFHLel=s4800-w800",
+            "attr_name": "NGUYỄN VĂN MINH CHÁNH",
+            "attr_uri": "https://maps.google.com/maps/contrib/100968979814345776530"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAVwvbMmjjrw1wWgGULC-8FyJW7BzdmBf8La8JI9RtmeLyvRZ7di0S-1EO9FqvTASINi_Lt0xlAuODecUD2KKjhNZe_oX1IKA38ZWucgqMal962ZCioSQgWit-ZPES2SGeochqdRs8p3em7=s4800-w800",
+            "attr_name": "Tuấn Kiệt",
+            "attr_uri": "https://maps.google.com/maps/contrib/106923153331228182618"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCCqna2lRJofPk1vgTljC18CLtzAH9Onc4G22wg7IA0r0ySkX5oY8RpAk_L6r0ayCbLRRExiQJqD1ghLTRtH8OvNzXlkrta8GrE0b8f210A3zwJbin-QLm9EGjnZyKYpU-A4yDY9fNWNUFClg=s4800-w800",
+            "attr_name": "văn hiếu phan",
+            "attr_uri": "https://maps.google.com/maps/contrib/114373236572453699168"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBiMFAKgndNHggU36VOLrIV27_qMltm6uyD00sqXeCmV6SvPpxEoXgApDIMSX2QcCNHj_-FINd4tc0kec-QiUIRT5rSIh73wF_qHdwNk_3nJZsDp6YHnSqStP4z7kGHtl5ClAZ41oH22hmwhg=s4800-w800",
+            "attr_name": "Tien Dat Le",
+            "attr_uri": "https://maps.google.com/maps/contrib/117763116281813703972"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCuHWvs3ioyG2WJv2diBJbjbmo6CEer0D0BdZgLWRSZ4J4K1vkFBKnRUXR8vlhi55D7TIVnr5cCE9aFLEOM1_gXbnZ1lv1WiWE68v65MwrqnHQezEhd4SRAL6Ewah1XsSxHNR8j1AiodNwZ3tg=s4800-w800",
+            "attr_name": "Hữu Dương Thanh",
+            "attr_uri": "https://maps.google.com/maps/contrib/113896793213870247645"
+          }
+        ],
+        "attr_name": "văn hiếu phan",
+        "attr_uri": "https://maps.google.com/maps/contrib/114373236572453699168",
+        "emoji": "⛪",
+        "en": "Notre-Dame Cathedral",
+        "vi": "Nhà thờ Đức Bà",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "01 Công trường Công xã Paris, Quận 1, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7797855,
+        "lng": 106.6990189,
+        "rating": "4.4/5",
+        "rating_count": 28992,
+        "price": "0₫",
+        "price_vnd": 0,
+        "votes": 3,
+        "dur_en": "20–40 min",
+        "dur_vi": "20–40 phút",
+        "dur_min": 20,
+        "dur_max": 40,
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "The red-brick 1880 cathedral at the heart of the city — restoration scaffolding up, but the square is still the classic photo stop.",
+        "desc_vi": "Nhà thờ gạch đỏ năm 1880 giữa lòng thành phố — đang trùng tu nhưng quảng trường vẫn là điểm chụp ảnh kinh điển."
+      },
+      {
+        "id": "jade-emperor-pagoda",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDv4NZxBXSNS2BzkfvDXjGXIfmRnctKqbXTNfSi3ZAK0ZH4xqz1gGh7z4u8V8RfnKhyPUUeVk_s9u07d8G5mwBT6m4keIgf69rtJNl57Jls-jP2Iat0_xsP1My61FHAmjMu3zkKlRn_t8MS1W28nqIuJw=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDv4NZxBXSNS2BzkfvDXjGXIfmRnctKqbXTNfSi3ZAK0ZH4xqz1gGh7z4u8V8RfnKhyPUUeVk_s9u07d8G5mwBT6m4keIgf69rtJNl57Jls-jP2Iat0_xsP1My61FHAmjMu3zkKlRn_t8MS1W28nqIuJw=s4800-w800",
+            "attr_name": "Jason Moore",
+            "attr_uri": "https://maps.google.com/maps/contrib/109492858401933557585"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBBX-Xy2WXj0k6czdHtziAD8a-hn_fIVZTJhtQTm51wmzAEPyHgW6FRfwyrulRXuTtaoihrHlvQe0DbbHWllW6DS_Nlt4GMytAxpn1kOQz4sp1zFOo7UqjpkVoovSXL3j_1N22ZJndmKRDTwm-iBTXnIQ=s4800-w800",
+            "attr_name": "Aldrin Martins",
+            "attr_uri": "https://maps.google.com/maps/contrib/108842068063120743657"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAqFoX1e0a-YJFifgCLNYqsWfcE4bYdIYQVx43bxlPbuviDhJr07ELZ3L51X5AgfTVwZWNcZGmYwzra4yhUk7xcYZQEh-4qdhhVRKotoGjsU-o3uipCL-_82Z_iZlu93M7Wa75PnbyIA9Zss6pNN7qSgg=s4800-w800",
+            "attr_name": "Ju",
+            "attr_uri": "https://maps.google.com/maps/contrib/105448512531289068518"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA3WZwk9onRMlegpmv_E8g9SOSF-BFUa3wRXZ8rwv5HMP71pMw1nxPOQqfUNmMgpznafDE7vi_JoaM108ZrsNIhB_IL-IypvGmS98KG5WNT76j-9QA-SsL6iK8jp2PVU3qOvyIWrAXzIATdLVl9jKaD2w=s4800-w800",
+            "attr_name": "Huyenct",
+            "attr_uri": "https://maps.google.com/maps/contrib/107482814653091160155"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDewxspf0TeOoirhxmLCdy4ckl3qNMCzRoVdF8RgLvQke6KXHrgYi5R-IHod4svggLs6KIzznrx4Dp0X29WTYedveNBtYCv_ksnRtraishCBQQpoIRbwlU8OLgpCVa_zsmGxPmmHhIy6l6cPTJpCCWcDg=s4800-w800",
+            "attr_name": "Thành Nam Đỗ",
+            "attr_uri": "https://maps.google.com/maps/contrib/105316773188572646439"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCzqr2UBwn9BrOGYHNZVBt1SQP3oJTV0abXpGJ-8lYkA3xWlAh_ENnt8ajaV1UqTGzGnnsqgAnFPVz9EzU6wZd4t_RGahDNrci5ZNMMtfcyJP_hZfBJK19jfikPloWgiTvt3zkfw0gD1gCWUP59KP52fA=s4800-w800",
+            "attr_name": "Thông Khưu",
+            "attr_uri": "https://maps.google.com/maps/contrib/108371393047619644985"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAhiiXJBhiJhlZhQa5WbLoTg-Ao7sJpwhiJ4KHRFKicaAwWIGhcMbWRg39YI61ncpBFzEGnpxXboeRSWj5SSTCqamRsKmuV8xqWCTej7z46Ccjjp682eLBO8rCSwLa_Uyncpi9_BcvdettYvfsGhFaS=s4800-w800",
+            "attr_name": "Quang Phúc MT",
+            "attr_uri": "https://maps.google.com/maps/contrib/114365699290277943284"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBh0nqAo0-_0hBbeeETd7g5pZL6w2-Dg3tDEVxIOpR56vb2Cj0xFSSc4tUP_N78z0AhRNLLgHUzPoOpopclL_a0pAxotgVfCl180y_RNDjQiEiqAko2zBvf-rjaCWIjA8-YkSFC9z_GHmt9QZPVnrjU=s4800-w800",
+            "attr_name": "Gopi O K",
+            "attr_uri": "https://maps.google.com/maps/contrib/103512777401950896824"
+          }
+        ],
+        "attr_name": "Jason Moore",
+        "attr_uri": "https://maps.google.com/maps/contrib/109492858401933557585",
+        "emoji": "⛩️",
+        "en": "Jade Emperor Pagoda",
+        "vi": "Chùa Ngọc Hoàng",
+        "loc_en": "Đa Kao, D1",
+        "loc_vi": "Đa Kao, Q1",
+        "address": "73 Mai Thị Lựu, Tân Định, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7919963,
+        "lng": 106.6981791,
+        "rating": "4.7/5",
+        "rating_count": 2018,
+        "price": "0₫",
+        "price_vnd": 0,
+        "votes": 3,
+        "dur_en": "30–60 min",
+        "dur_vi": "30–60 phút",
+        "dur_min": 30,
+        "dur_max": 60,
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "Incense-filled 1909 Taoist temple with carved wooden panels and a turtle pond — quiet, atmospheric, and free.",
+        "desc_vi": "Ngôi chùa Đạo giáo năm 1909 nghi ngút khói hương với phù điêu gỗ và hồ rùa — yên tĩnh, huyền ảo, miễn phí."
       },
       {
         "id": "nguyen-hue-walking-street",
@@ -1163,6 +1693,146 @@
         ],
         "desc_en": "Gustave Eiffel-era post office with vaulted ceilings and vintage phone booths — still working; send the crew a postcard.",
         "desc_vi": "Bưu điện thời Gustave Eiffel với trần vòm và buồng điện thoại cổ — vẫn hoạt động; gửi cả nhóm một tấm bưu thiếp."
+      },
+      {
+        "id": "fine-arts-museum",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDHq6j3diypSrnQcpHdiMjO5fEnoIbdWRZi3MtDVtgsPyCkaoz18kj3NCTfAO-del4JHETcj6GwYjYRVSiSCCUhpTrBAudU7qBx0C1wY0mPBeymTiVEOG-rcK_LGAko50Z1cMpydVhmBlLsDuo1BSKK=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDHq6j3diypSrnQcpHdiMjO5fEnoIbdWRZi3MtDVtgsPyCkaoz18kj3NCTfAO-del4JHETcj6GwYjYRVSiSCCUhpTrBAudU7qBx0C1wY0mPBeymTiVEOG-rcK_LGAko50Z1cMpydVhmBlLsDuo1BSKK=s4800-w800",
+            "attr_name": "Vinh Truong",
+            "attr_uri": "https://maps.google.com/maps/contrib/105046942311769839490"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD2LGp9pmU6tYTPKd8983wyzSxNVqZYU-G8_Y055YFnC5mMRnHhuRlnRuUmaE-VuhJ4ooIOknGGGhxxeZ70_S8zB4aPUT9cLXHe5QT-vmzAqarcEqVbXX6Gwmb7VbbvRtfXQuSydphJmfahl5mjMGVYIw=s4800-w800",
+            "attr_name": "Felix Caveda",
+            "attr_uri": "https://maps.google.com/maps/contrib/118442367790594595163"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCtpnLQX43SBameQHGuqR_FeBcIkSPoTeudAAZvhcW0i23IxNpKs-p6D93GOv6L_HfCdDMkiomNX24YDXSb2LNGKcMJBd5-CFycD_iV5rvkKw18Vs5Kuj63SSdwVO4kngszT_fwO4Hz6P405qrS8pnlVw=s4800-w800",
+            "attr_name": "Frank Yen",
+            "attr_uri": "https://maps.google.com/maps/contrib/101899315456804180730"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDG-GBhvD_9V58g_2p9gBrbE7hRmQe3nOveXg5cgWGtYvDyx5JaHJ8S_Le3b86zjUEM8YsWa5Szn-rPjsu9eZ9Gv2ozEDnKiErj6nmxHdHfoDZrjvsbL0gwCD-0_MEuHQf38fdTNZTMNRGWtsN0879sYw=s4800-w800",
+            "attr_name": "Intp_Travel",
+            "attr_uri": "https://maps.google.com/maps/contrib/107056505637626718967"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCBbBqE53l59CtqOLzw06No2l6a4B8laSEpT0s-EfIaahFRX4_HDJCyaklfguEjcWV3OlePKDfs685SZ-_kd0DXu9mGdP6k05-AMn7K30hs_Jz3E8QxuwEcuCjt7Tu1fwWC85Owan0ZJslkY6E_mrUBKA=s4800-w800",
+            "attr_name": "猫之魂",
+            "attr_uri": "https://maps.google.com/maps/contrib/108120019670401364459"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCh2iUoEbYxM_Uwt4nOidQO78YNso_pwKoWHp_MmVcyFEJrVi6430ItZEYTFkcUcW_0-TvXSxD6fN6Uh1VB5WlfYrYbyvxSlA0LBAiwo1Eq4XAi1Yaox2IAdMcTBf3kszvTZACPlaa3EFE07ff-HJRNHw=s4800-w800",
+            "attr_name": "Minh Pham",
+            "attr_uri": "https://maps.google.com/maps/contrib/108710996526507141367"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAhhCUPp_FWnEi13m9MdkhQDPZ2ufVCoXFRv_u81Ffhh5P7pBnbVP--sGe5uzsiyZvbAZuq9g4Pdl4gCw7YhUuzR6ATB-huWmsw-hKUy9N2IZ1crRBzX5_rumDxY_FXH2Jom7AgmzewS5XQtx7XOvlyBQ=s4800-w800",
+            "attr_name": "Raven",
+            "attr_uri": "https://maps.google.com/maps/contrib/104290096252283856048"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCXo5orwVFhl2iOcdJtml4H6ybR_GB_VDouSIxH6RgqxuOiTyO6EyiTWxOS43AaN6x3d33OFIei-MCmgaWuVFAfgIdmD2Zf2IqjWiGznAJ-w7X5A4wMUJOvHpooVZUd_BMnrJkqbHmJ9rTibVf9YOqv=s4800-w800",
+            "attr_name": "Nam Tran (22everywhere)",
+            "attr_uri": "https://maps.google.com/maps/contrib/107368505264861091462"
+          }
+        ],
+        "attr_name": "Vinh Truong",
+        "attr_uri": "https://maps.google.com/maps/contrib/105046942311769839490",
+        "emoji": "🎨",
+        "en": "Fine Arts Museum",
+        "vi": "Bảo tàng Mỹ thuật",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "97 Phó Đức Chính, Bến Thành, Hồ Chí Minh, Vietnam",
+        "lat": 10.7699472,
+        "lng": 106.6992162,
+        "rating": "4.4/5",
+        "rating_count": 1269,
+        "price": "30k₫",
+        "price_vnd": 30000,
+        "votes": 2,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "Vietnamese art in a gorgeous 1930s villa with stained glass and one of Saigon's first elevators — the building is half the show.",
+        "desc_vi": "Mỹ thuật Việt trong biệt thự thập niên 30 tuyệt đẹp với kính màu và một trong những thang máy đầu tiên của Sài Gòn."
+      },
+      {
+        "id": "saigon-opera-house",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAcXONRWCF5_MKOZApKOqnZgPb0ELuUEyLWyKhcZciJcgQc0JftEZNgXFscgLGesRk9jlpGPMHeYnj5eyCNdeq2siN8ZBOKFg4KWDjycEXUjEKygN_upD7sP9fMU3A5ljNRMX8CftdmOi1CBg=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBz-6_2IhDIZ1nazgvYsrkRIqk3Q-Bt6oBuPzEjNm9lM9_5xtLFbdaOS8x7UpprCaMkj7-2F0Xrx2CqdTnCM4lg5Bnb3vG4f9i8YNKsZR7SAN3RIGHTvkRJtDqKP5Ds8uKRVAm0kZGX46Eqo-z-BRRF=s4800-w800",
+            "attr_name": "Lan Thao Truong Ngoc",
+            "attr_uri": "https://maps.google.com/maps/contrib/116882900748129480590"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAcXONRWCF5_MKOZApKOqnZgPb0ELuUEyLWyKhcZciJcgQc0JftEZNgXFscgLGesRk9jlpGPMHeYnj5eyCNdeq2siN8ZBOKFg4KWDjycEXUjEKygN_upD7sP9fMU3A5ljNRMX8CftdmOi1CBg=s4800-w800",
+            "attr_name": "GOMINHTIEN Gỗ Ghép, Ván Ép, Ván MDF, Ván MFC",
+            "attr_uri": "https://maps.google.com/maps/contrib/111694441414280731087"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA6F3F3d30JX7Qq6pJHcpA8AAaeNlO5pX2N2257G-WYXMxkbnRfBFoLl9BM9d07migLLto4Z6zNWn5hFVVqOdX9AEMkhylSykd-42QoA-HiEzkRVq0wPHUFYKLHnlE4lVlvAO8_HO7PQo5EqiAOm9lw2g=s4800-w800",
+            "attr_name": "泰國劉德華",
+            "attr_uri": "https://maps.google.com/maps/contrib/117541821627272322101"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA5gOSkRSXlZ7bROhOPg8xre3V00ham578NGBgsHJ-wGIgAOjts6d2b5w4md3O8QNeFSVzJ2feYIRGVzD0IAYsZuoNITqd_w5rlGbXQnfUAenwSx5PcSFwuRsRcfHBoEVzQsZJDSWSH8yEfxJs=s4800-w800",
+            "attr_name": "Žygimantas Jakeliūnas",
+            "attr_uri": "https://maps.google.com/maps/contrib/109514074401725716637"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBaDG9LrdFvg5OZWI6jBqATMKODHiWjDJuOasRffanfjmj0WajHj6m4qjnx_WtGWETDI0bg-ENdWgBWaJDUhJWxiFJW5-nsOLNFTQhsuU8FpylKNqBZLfVdYHKWr4_bDBbMzOvNBbmQ-QBK4w=s4800-w800",
+            "attr_name": "Jaco Bo",
+            "attr_uri": "https://maps.google.com/maps/contrib/118154944671440602604"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDaP5g-alC1V4HwAi9yyaO5j81oVgvVZxTvjmr1tW6d88unOBPZI-UVI71zBKvIDC3DWK3NwZxR5zj0JoEI2LTqLpklzYQVNOf0x1T5ffZ1RmKAOMVzg1BtYCt9yuwqi3GECdV8CCm0xZB1T2WUzDLsZg=s4800-w800",
+            "attr_name": "Cho Shinnakerdchoke",
+            "attr_uri": "https://maps.google.com/maps/contrib/109069824139833722397"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC6oaDsE5b21yJi6_Qd6YsxAfjBNH3-4bK23YWIk_7F5Cs0WBxfTZB800GfotNrIrwztjD6IXB7mOtkA3EhtJ4c4GonwbrccbWluXbneFKTIWTE9gWCsyK-gih9KmBz1OPXYXlTri7-GDWWMQ=s4800-w800",
+            "attr_name": "Minh Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/102538559185342038213"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCDnd2qMZEeGzGSUO3aUUfo72JSl_OdIMH9exQZgypGxlZpV1KCpDCYPqFYBZ9rqjjSVmf9_oXy07ZZXbAa42P1142O7kJPDL6W0kVuRt_Wa2sLEmUUII8pM3ZpStc9y_2G6D6K6Uc7rebO6g=s4800-w800",
+            "attr_name": "Vic",
+            "attr_uri": "https://maps.google.com/maps/contrib/110554982448115222923"
+          }
+        ],
+        "attr_name": "GOMINHTIEN Gỗ Ghép, Ván Ép, Ván MDF, Ván MFC",
+        "attr_uri": "https://maps.google.com/maps/contrib/111694441414280731087",
+        "emoji": "🎭",
+        "en": "Saigon Opera House",
+        "vi": "Nhà hát Thành phố",
+        "loc_en": "Đồng Khởi, D1",
+        "loc_vi": "Đồng Khởi, Q1",
+        "address": "07 Công trường Lam Sơn, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7766128,
+        "lng": 106.7031715,
+        "rating": "4.6/5",
+        "rating_count": 17757,
+        "price": "0₫",
+        "price_vnd": 0,
+        "votes": 2,
+        "dur_en": "20–40 min",
+        "dur_vi": "20–40 phút",
+        "dur_min": 20,
+        "dur_max": 40,
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "Flamboyant 1900 French opera house — catch the À Ố Show inside, or just admire the façade with a coffee across the street.",
+        "desc_vi": "Nhà hát Pháp năm 1900 lộng lẫy — xem À Ố Show bên trong, hoặc ngắm mặt tiền với ly cà phê phía đối diện."
       }
     ]
   },
@@ -1175,9 +1845,11 @@
       "desc_vi": "Từ giờ vàng đến nửa đêm — những sân thượng và quầy bar nơi Sài Gòn khoe đường chân trời.",
       "curator": "@saigonnights",
       "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAG7KM1srLTFWvzjTj_C-tgsEIC5FU_xx4oXPK18wFmy36kxZJ2_EwlSSqIux_OngFuIm4mWK6vro8yzwaC1YedJIh3xynkQT9KjXrr7fBJ197-5kf3fCJdMyYnWJ728IYQVUGCBQdoUL4--A=s4800-w800",
-      "count": 3,
+      "count": 5,
       "place_slugs": [
+        "chill-skybar",
         "blank-lounge",
+        "social-club-rooftop",
         "bitexco-skydeck",
         "landmark-81-skyview"
       ]
@@ -1190,9 +1862,10 @@
       "desc_vi": "Những quán, hẻm và phố đêm mà chính người Sài Gòn cũng xếp hàng.",
       "curator": "@foodmapvn",
       "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBW631wzyjXx44oyi0UKBZs2hb-eOGRMsRE57EipB998chJc2VF-kFoP3_ZuZIRypL5mOlxYDAUM9uwUmQ49FCbTutq6zmjyH_qC1-zJtvpvokROidSOQwdVJOs6VEvY9wVUe6yeRuJ19-o8yZ8ZuVnjg=s4800-w800",
-      "count": 1,
+      "count": 2,
       "place_slugs": [
-        "banh-mi-huynh-hoa"
+        "banh-mi-huynh-hoa",
+        "com-tam-ba-ghien"
       ]
     },
     {
@@ -1203,10 +1876,14 @@
       "desc_vi": "Công trình thuộc địa, đền chùa nghi ngút khói hương và quán cà phê lâu đời nhất thành phố.",
       "curator": "@quietcorners",
       "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBPCBaxqkcNZnIZchuM2m6WC-duHpA4o8CQ_3BQFOIRCIlzURLnSmz6c3coRo3cMCFpVPN7IYjgZILsAsHlKzesD4yVvyBDsU9TXjsd8EcebLPFuDNVblmZ0qf10OsInOCZFNbdUuTFIDSnrbv510ppbA=s4800-w800",
-      "count": 2,
+      "count": 6,
       "place_slugs": [
         "independence-palace",
-        "central-post-office"
+        "central-post-office",
+        "notre-dame-cathedral",
+        "jade-emperor-pagoda",
+        "fine-arts-museum",
+        "saigon-opera-house"
       ]
     },
     {

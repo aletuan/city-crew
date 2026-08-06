@@ -113,15 +113,7 @@ patch('detail-open-patch', (t) => {
 });
 
 // ── 5. Public collections cards from real data ──────────────────────────────
-const TAB_FOR_COLLECTION = {
-  'rooftops-with-a-view': 'food',
-  'street-food-classics': 'food',
-  'cafes-of-saigon': 'food',
-  'old-saigon-heritage': 'out',
-  'green-escapes': 'out',
-  'first-timer-classics': 'foryou',
-};
-const collectionsHtml = snapshot.collections.map((c) => `              <div class="gcard crow" onclick="openCollection('${TAB_FOR_COLLECTION[c.slug] ?? 'foryou'}')">
+const collectionsHtml = snapshot.collections.map((c) => `              <div class="gcard crow" onclick="openCollection('${c.slug}')">
                 <img src="${c.cover_url}" alt="">
                 <div style="flex:1;"><div class="ct"><span data-lang-en="">${c.title_en}</span><span data-lang-vi="">${c.title_vi}</span></div>
                   <div class="cm">${c.count} <span data-lang-en="">places · by</span><span data-lang-vi="">địa điểm · bởi</span> ${c.curator}</div></div>
@@ -173,6 +165,157 @@ patch('real-review-counts', (t) => {
     t = t.replace(from, to);
   }
   return t;
+});
+
+// ── 5c. Collection detail view ──────────────────────────────────────────────
+// Tapping a collection used to dump the user on the Explore tab with a rough
+// category filter; now it opens a real detail screen listing the collection's
+// actual places. The two "My collections" demo cards are backed by real
+// published places too (6 and 9, matching their card labels).
+const PERSONAL_COLLECTIONS = [
+  {
+    slug: 'date-night',
+    title_en: 'Date night', title_vi: 'Hẹn hò tối',
+    desc_en: 'Your private shortlist for the next evening out.',
+    desc_vi: 'Danh sách riêng của bạn cho buổi hẹn tối tiếp theo.',
+    curator: null, cover_url: null,
+    place_slugs: ['chill-skybar', 'saigon-night-cruise', 'carmen-bar', 'lusine-le-loi', 'blank-lounge', 'saigon-opera-house'],
+  },
+  {
+    slug: 'weekend-family',
+    title_en: 'Weekend with family', title_vi: 'Cuối tuần cùng gia đình',
+    desc_en: 'Easy classics the whole crew can do in a weekend.',
+    desc_vi: 'Những điểm kinh điển nhẹ nhàng cả nhà cùng đi trong cuối tuần.',
+    curator: null, cover_url: null,
+    place_slugs: ['book-street', 'independence-palace', 'central-post-office', 'notre-dame-cathedral', 'nguyen-hue-walking-street', 'bitexco-skydeck', 'banh-mi-huynh-hoa', 'fine-arts-museum', 'jade-emperor-pagoda'],
+  },
+];
+
+const publishedIds = new Set(Object.values(snapshot.places).flat().map((p) => p.id));
+const collectionsJs = 'var COLLECTIONS = ' + JSON.stringify(Object.fromEntries(
+  [...snapshot.collections, ...PERSONAL_COLLECTIONS].map((c) => {
+    const slugs = c.place_slugs.filter((s) => publishedIds.has(s));
+    if (!slugs.length) throw new Error(`collection ${c.slug} has no published places`);
+    return [c.slug, {
+      en: c.title_en, vi: c.title_vi,
+      desc_en: c.desc_en, desc_vi: c.desc_vi,
+      curator: c.curator ?? null, cover: c.cover_url ?? null,
+      place_slugs: slugs,
+    }];
+  })), null, 1) + ';';
+
+patch('collections-data', (t) => {
+  const S = '/*__COLS_DATA_START__*/', E = '/*__COLS_DATA_END__*/';
+  const block = S + collectionsJs + E;
+  if (t.includes(S)) {
+    return t.slice(0, t.indexOf(S)) + block + t.slice(t.indexOf(E) + E.length);
+  }
+  const anchor = '/*__DATA_END__*/';
+  if (!t.includes(anchor)) throw new Error('places data end marker not found');
+  return t.replace(anchor, anchor + '\n' + block);
+});
+
+const COLLECTION_SCREEN = `<!--__COLDETAIL_START__-->
+            <!-- ── SCREEN: COLLECTION DETAIL ── -->
+            <section class="screen" id="s-collection">
+              <div class="pad" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <button class="gbtn" onclick="go('s-collections')" aria-label="Back"><i data-lucide="chevron-left"></i></button>
+                <button class="gbtn" onclick="toast('cshared')" aria-label="Share collection"><i data-lucide="share-2"></i></button>
+              </div>
+              <div class="hero" style="height:190px;">
+                <img id="col-cover" class="real" alt="">
+                <div class="scrim"></div>
+              </div>
+              <div class="pad" style="margin-top:14px;">
+                <h2 class="h-display" style="font-size:24px;"><span data-lang-en="" id="col-title-en"></span><span data-lang-vi="" id="col-title-vi"></span></h2>
+                <div class="sub" style="font-size:13px;margin-top:4px;"><span id="col-count"></span> <span data-lang-en="">places</span><span data-lang-vi="">địa điểm</span><span id="col-by"> · <span data-lang-en="">by</span><span data-lang-vi="">bởi</span> <span id="col-curator"></span></span></div>
+                <p class="sub" style="font-size:14px;line-height:1.55;margin-top:10px;max-width:none;"><span data-lang-en="" id="col-desc-en"></span><span data-lang-vi="" id="col-desc-vi"></span></p>
+              </div>
+              <div id="col-places" style="margin-top:12px;"></div>
+            </section>
+            <!--__COLDETAIL_END__-->`;
+
+patch('collection-screen', (t) => {
+  const S = '<!--__COLDETAIL_START__-->', E = '<!--__COLDETAIL_END__-->';
+  if (t.includes(S)) {
+    return t.slice(0, t.indexOf(S)) + COLLECTION_SCREEN + t.slice(t.indexOf(E) + E.length);
+  }
+  const anchor = '<!-- ── SCREEN: PROFILE ── -->';
+  if (!t.includes(anchor)) throw new Error('profile screen anchor not found');
+  return t.replace(anchor, COLLECTION_SCREEN + '\n\n            ' + anchor);
+});
+
+const OPEN_COLLECTION_FN = `var DET_BACK = 's-explore';
+function openCollection(slug) {
+  var c = COLLECTIONS[slug];
+  if (!c) { go('s-collections'); return; }
+  var byId = {};
+  [].concat(PLACES.foryou, PLACES.food, PLACES.out).forEach(function (p) { byId[p.id] = p; });
+  var members = c.place_slugs.map(function (s) { return byId[s]; }).filter(Boolean);
+  document.getElementById('col-title-en').textContent = c.en;
+  document.getElementById('col-title-vi').textContent = c.vi;
+  document.getElementById('col-desc-en').textContent = c.desc_en || '';
+  document.getElementById('col-desc-vi').textContent = c.desc_vi || '';
+  document.getElementById('col-count').textContent = members.length;
+  document.getElementById('col-by').style.display = c.curator ? '' : 'none';
+  document.getElementById('col-curator').textContent = c.curator || '';
+  var cover = document.getElementById('col-cover');
+  var coverUrl = c.cover || (members[0] && members[0].photo) || '';
+  if (coverUrl) { cover.src = res(coverUrl); cover.style.display = 'block'; } else { cover.style.display = 'none'; }
+  var wrap = document.getElementById('col-places');
+  wrap.innerHTML = '';
+  members.forEach(function (pl) {
+    var row = document.createElement('div');
+    row.className = 'gcard crow';
+    row.style.cursor = 'pointer';
+    var media = pl.photo
+      ? '<img src="' + res(pl.photo) + '" alt="">'
+      : '<div style="width:84px;height:84px;border-radius:20px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:30px;background:var(--surface-glass);">' + (pl.emoji || '📍') + '</div>';
+    row.innerHTML = media +
+      '<div style="flex:1;"><div class="ct"><span data-lang-en="">' + pl.en + '</span><span data-lang-vi="">' + pl.vi + '</span></div>' +
+      '<div class="cm">' + (pl.rating ? '★ ' + pl.rating + (fmtCount(pl.rc) ? ' · ' + fmtCount(pl.rc) : '') + ' · ' : '') +
+      '<span data-lang-en="">' + pl.loc_en + '</span><span data-lang-vi="">' + pl.loc_vi + '</span></div></div>' +
+      '<button class="gbtn" aria-label="Open"><i data-lucide="chevron-right"></i></button>';
+    row.onclick = function () { openDetail(pl); };
+    wrap.appendChild(row);
+  });
+  go('s-collection');
+  document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('active', t.getAttribute('data-s') === 's-collections'); });
+  icons();
+}`;
+
+patch('open-collection-fn', (t) => {
+  const orig = "function openCollection(cat) { activeCat = cat; renderFilters(); renderCards(); go('s-explore'); }";
+  if (t.includes('var c = COLLECTIONS[slug]')) return t;
+  if (!t.includes(orig)) throw new Error('openCollection not found');
+  return t.replace(orig, OPEN_COLLECTION_FN);
+});
+
+// Place detail's back button returns to whichever screen opened it (explore
+// or a collection), instead of always dumping the user on Explore.
+patch('detail-back-target', (t) => {
+  const orig = `<button class="gbtn" onclick="go('s-explore')" aria-label="Back"><i data-lucide="chevron-left"></i></button>`;
+  const repl = `<button class="gbtn" onclick="go(DET_BACK)" aria-label="Back"><i data-lucide="chevron-left"></i></button>`;
+  if (t.includes('go(DET_BACK)')) return t;
+  if (!t.includes(orig)) throw new Error('detail back button not found');
+  return t.replace(orig, repl);
+});
+
+patch('detail-back-capture', (t) => {
+  const anchor = 'function openDetail(pl) {\n  current = pl;';
+  const insert = "function openDetail(pl) {\n  var _scr = document.querySelector('.screen.active');\n  if (_scr && _scr.id !== 's-detail') DET_BACK = _scr.id;\n  current = pl;";
+  if (t.includes("DET_BACK = _scr.id")) return t;
+  if (!t.includes(anchor)) throw new Error('openDetail head not found');
+  return t.replace(anchor, insert);
+});
+
+// "My collections" demo cards point at their real-data collections.
+patch('personal-collection-links', (t) => {
+  if (t.includes("openCollection('date-night')")) return t;
+  const dn = `onclick="openCollection('food')"`;
+  const wf = `onclick="openCollection('out')"`;
+  if (!t.includes(dn) || !t.includes(wf)) throw new Error('personal collection cards not found');
+  return t.replace(dn, `onclick="openCollection('date-night')"`).replace(wf, `onclick="openCollection('weekend-family')"`);
 });
 
 // ── 6. Wizard: vibe slugs + slider ids so the generator can read inputs ─────
@@ -309,7 +452,21 @@ for (const key of ['foryou', 'food', 'out']) {
   }
 }
 
+const cs = checkTpl.indexOf('/*__COLS_DATA_START__*/') + '/*__COLS_DATA_START__*/'.length;
+const ce = checkTpl.indexOf('/*__COLS_DATA_END__*/');
+if (ce < 0) throw new Error('self-check: COLLECTIONS block missing');
+const cols = JSON.parse(checkTpl.slice(cs, ce).replace(/^var COLLECTIONS = /, '').replace(/;$/, ''));
+const idSet = new Set([...parsed.foryou, ...parsed.food, ...parsed.out].map((p) => p.id));
+for (const [slug, c] of Object.entries(cols)) {
+  if (!c.place_slugs.some((s) => idSet.has(s))) throw new Error(`self-check: collection ${slug} resolves to no published places`);
+  if (!c.en || !c.vi) throw new Error(`self-check: collection ${slug} missing bilingual titles`);
+}
+if (!checkTpl.includes('id="s-collection"')) throw new Error('self-check: collection detail screen missing');
+if (checkTpl.includes("openCollection('food')") || checkTpl.includes("openCollection('out')")) {
+  throw new Error('self-check: stale category-based openCollection call remains');
+}
+
 writeFileSync(MOCKUP, out);
 console.log(`OK: patches applied [${applied.join(', ') || 'none (already up to date)'}]`);
-console.log(`Places injected: foryou=${parsed.foryou.length} food=${parsed.food.length} out=${parsed.out.length}; collections=${snapshot.collections.length}`);
+console.log(`Places injected: foryou=${parsed.foryou.length} food=${parsed.food.length} out=${parsed.out.length}; collections=${Object.keys(cols).length}`);
 console.log(`Wrote ${MOCKUP}`);
