@@ -63,38 +63,73 @@
         "desc_vi": "Chín tầng quán cà phê indie trong chung cư thập niên 60 trên phố đi bộ — góc nào cũng chụp ảnh đẹp."
       },
       {
-        "id": "ben-thanh-street-food",
-        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsfiITgzB4SvmYqiXtnqrKIQV2KAQIpLJWY-vuWbVXhFBwKfxP66rqVBI15tjUN4TDfvi_j3BIhSW2hGOBWnE_JlIrtXj6oY8-DW5R7d5sHOyM4cQi-imvT4EJ_S7Bblg4_VUj2lL-8KviEg=s4800-w800",
+        "id": "landmark-81-skyview",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDrhuoKKxuA6czVPCJwnsVH7zbexeZov_uVIWMqmxY6ozI91vhlK5jtmCMoQrPvE5g_v6CRZQgXdvADYfvNHu-nPKipfpmwVL6EXDGWDPCmA8VjiwMm2vPQ0W07pCTy3tFL4-PLq0CkzS4y2QCUcYdR4g=s4800-w800",
         "photos": [
           {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsfiITgzB4SvmYqiXtnqrKIQV2KAQIpLJWY-vuWbVXhFBwKfxP66rqVBI15tjUN4TDfvi_j3BIhSW2hGOBWnE_JlIrtXj6oY8-DW5R7d5sHOyM4cQi-imvT4EJ_S7Bblg4_VUj2lL-8KviEg=s4800-w800",
-            "attr_name": "Bilal Rifat",
-            "attr_uri": "https://maps.google.com/maps/contrib/103621954677239724748"
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDrhuoKKxuA6czVPCJwnsVH7zbexeZov_uVIWMqmxY6ozI91vhlK5jtmCMoQrPvE5g_v6CRZQgXdvADYfvNHu-nPKipfpmwVL6EXDGWDPCmA8VjiwMm2vPQ0W07pCTy3tFL4-PLq0CkzS4y2QCUcYdR4g=s4800-w800",
+            "attr_name": "pixel vietnam",
+            "attr_uri": "https://maps.google.com/maps/contrib/109728597366535505519"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAdAurdDamxTTCAiYNQ6SZXy3msBww5vpMcutPlzlJlwDkl9S60NYt_LZ5gMpJgKOVBPVC2WK2VcmpP5FA9V71Mhlj7LaQCsg1EMpuiZYZM2SwflbuQYPJC0axvQ8gQFJSv-PhHEmCn-hsGVAYJXVQVPg=s4800-w800",
+            "attr_name": "hy minh",
+            "attr_uri": "https://maps.google.com/maps/contrib/111845423520615127422"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB5deZDU9UD1bTJdApug-rpLaE0x3omceiJu2EqNG3FRxkTndmmj2l8ReKpEy9UQ4TRWaOnTNeyXiFA5i7yQVlgJzV3LqVVRhT-B1tPvPUScNweZjlWhB0sAo89FXPkSZRufzdxNCnhlQXg=s4800-w800",
+            "attr_name": "Thịnh Mai Viết",
+            "attr_uri": "https://maps.google.com/maps/contrib/102283659686772013076"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCYOTLDIciCI9x-qjETbdredGu75hV9u54ig-SpuGEycBWpsJdtFLLIdAHvxyGlGccmdfq_I1PouTP5NOtM3lW2HezL_tz3UicE6FUjn3RbdImVz_fj-FoEFW10l3DH0NTMv89OBtc8O-aHUm90VzwK=s4800-w800",
+            "attr_name": "Soko 37 (Soko37)",
+            "attr_uri": "https://maps.google.com/maps/contrib/113575010328824564195"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBew1PevJT0O-BKz2U-763fZOwY7l44sqQC0XrD8-93n3SnYF4Tl9-tNgZAwDOrwmG8onesVuOqidG3QZkg1Q8NiRDoYDM6YgIsOoYni0Wc47JfNf0EsfIQ61WSYhRDpGCvD3Aw3j6UeXUtc9krm-GNDA=s4800-w800",
+            "attr_name": "Tran Tuan",
+            "attr_uri": "https://maps.google.com/maps/contrib/100253882852886239957"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDwruSn49qZBqXb0g9jDlcyJ3iWTP02S9RNo-BKpglvoZ9NNQxpzpFOjPMQTIZq_kHuOIWVchnYXqNC4z09fxT0BZoiyno8no33z6zobsUDouHDR8IFcYCQYv88XWrUyZ-H5ajY1le5jzyZjz_THnQ7Hw=s4800-w800",
+            "attr_name": "pixel vietnam",
+            "attr_uri": "https://maps.google.com/maps/contrib/109728597366535505519"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCkwQd-A3Mbz6Tmu-H2JiUyCDu88CcLrbuS1FPQpAmiQKBhB6BuR9NzPv99aTbOmClTKQjoz-NaNMqdsiPwGRga8roqLsA0da2mLvyGPdBlz0EFh_i2HFBhvXDIN9UL7h6aANERWlTlXKFQKQ=s4800-w800",
+            "attr_name": "Duong Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/110181281541742865022"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC7SlDEyiISWWXs_JVJMUYoJm-tzOstPqq3fWfCmCZfoQwaUMfShlkVFFRv18_grZeazi1u5qUNxpOZjO-qQZy_xETw-X5xrnOiRUtJjp3_4JuIcOLoz_YrbZXZEvpjSg4iiruYQe7VQjjH8LQLn240Pg=s4800-w800",
+            "attr_name": "Mon Lang",
+            "attr_uri": "https://maps.google.com/maps/contrib/107595129856188189039"
           }
         ],
-        "attr_name": "Bilal Rifat",
-        "attr_uri": "https://maps.google.com/maps/contrib/103621954677239724748",
-        "emoji": "🍜",
-        "en": "Bến Thành street food",
-        "vi": "Ẩm thực Bến Thành",
-        "loc_en": "District 1",
-        "loc_vi": "Quận 1",
-        "address": "32b Thủ Khoa Huân, Bến Thành, Hồ Chí Minh 700000, Vietnam",
-        "lat": 10.7737417,
-        "lng": 106.6972944,
-        "rating": "4.3/5",
-        "price": "140k₫",
-        "price_vnd": 140000,
-        "votes": 5,
-        "dur_en": "1–2h",
-        "dur_vi": "1–2 giờ",
+        "attr_name": "pixel vietnam",
+        "attr_uri": "https://maps.google.com/maps/contrib/109728597366535505519",
+        "emoji": "🌆",
+        "en": "Landmark 81 SkyView",
+        "vi": "Landmark 81 SkyView",
+        "loc_en": "Bình Thạnh",
+        "loc_vi": "Bình Thạnh",
+        "address": "720A Điện Biên Phủ, Phường, Thạnh Mỹ Tây, Hồ Chí Minh 72300, Vietnam",
+        "lat": 10.7951119,
+        "lng": 106.722096,
+        "rating": "4.6/5",
+        "price": "300k₫",
+        "price_vnd": 300000,
+        "votes": 3,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
         "dur_min": 60,
-        "dur_max": 120,
+        "dur_max": 90,
         "vibes": [
-          "food_tour"
+          "views"
         ],
-        "desc_en": "Classic market stalls — bánh xèo, grilled skewers, chè. Easy for groups: everyone picks their own.",
-        "desc_vi": "Sạp chợ kinh điển — bánh xèo, đồ nướng, chè. Hợp đi nhóm: ai thích gì tự chọn."
+        "desc_en": "Observation deck on the 81st floor of Vietnam's tallest tower — sunset views over the Saigon River. Book ahead on weekends.",
+        "desc_vi": "Đài quan sát tầng 81 toà tháp cao nhất Việt Nam — ngắm hoàng hôn trên sông Sài Gòn. Cuối tuần nên đặt vé trước."
       },
       {
         "id": "independence-palace",
@@ -164,6 +199,56 @@
         ],
         "desc_en": "The frozen-in-1975 presidential palace — war rooms, retro salons and tanks on the lawn; the audio guide is worth it.",
         "desc_vi": "Dinh tổng thống 'đóng băng' từ 1975 — phòng tác chiến, salon retro và xe tăng trên bãi cỏ; thuê audio guide rất đáng."
+      },
+      {
+        "id": "nguyen-hue-walking-street",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBaxQ-xZjIhb_6ypeCsmMMaivNCfITWdNSlpedVFPqA90ZfcCYBu-hYiXCT9wScP6DcPUE2ZyY3HgNp1mIqY3-Bmv_X40Cr9MARGU8M4gcRXdECCnJMNZpZRA-FsG-tnYYXYh5DW3-qk0T3_YoRb9v6nQ=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBaxQ-xZjIhb_6ypeCsmMMaivNCfITWdNSlpedVFPqA90ZfcCYBu-hYiXCT9wScP6DcPUE2ZyY3HgNp1mIqY3-Bmv_X40Cr9MARGU8M4gcRXdECCnJMNZpZRA-FsG-tnYYXYh5DW3-qk0T3_YoRb9v6nQ=s4800-w800",
+            "attr_name": "yuichi sasaki",
+            "attr_uri": "https://maps.google.com/maps/contrib/103660962830515051392"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAYczWCeXGIlADg4j1VhtdsmvptMH1-Et8v6QW4bcF4bwK7ddGiED5OmpYRVtLfdwgCbT6v71zoRc2W4zaqhomhAo2xVZMAYTPebK0yOg5Xtwe29qvh4NwIn8vveXOGnXrDXPg1wWjtqnMDtv4YRpP4Bw=s4800-w800",
+            "attr_name": "Леонид Климковский",
+            "attr_uri": "https://maps.google.com/maps/contrib/115919745696921901794"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAWWrI_WsZVPEDKFPE9YwourRU4F1_7jmQpKjnpu3OTG7CFgg_F7Iwlgu4aZFpBJPigbqIINptD2XQ7bwl-_aRT1wcn3FxlxpzEOvcsQNmgC58HCdD9oKT-HfB0Bw1isyDhbiqyVLDYNu4XK0uCpd6j8g=s4800-w800",
+            "attr_name": "yuichi sasaki",
+            "attr_uri": "https://maps.google.com/maps/contrib/103660962830515051392"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAVM_U3L9RgCqIQz421yzLOdj4FzwefaED90sWy61PBo3tw8Y_mK1cDBDEWXjyMdJN8SzcvOvCudAhGQxvwzvju_fB28lQ2-bU4YaZvRkX_Ivjn1yn7o9foA3NfWuYxmxJaWzqgG0wEvUdi9abTIpReEw=s4800-w800",
+            "attr_name": "Brian Loh",
+            "attr_uri": "https://maps.google.com/maps/contrib/116474476362383193496"
+          }
+        ],
+        "attr_name": "yuichi sasaki",
+        "attr_uri": "https://maps.google.com/maps/contrib/103660962830515051392",
+        "emoji": "🚶",
+        "en": "Nguyễn Huệ Walking Street",
+        "vi": "Phố đi bộ Nguyễn Huệ",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "QPF3+JF9, Sai Gon, Ho Chi Minh, Vietnam",
+        "lat": 10.7740408,
+        "lng": 106.7037237,
+        "rating": "4.5/5",
+        "price": "0₫",
+        "price_vnd": 0,
+        "votes": 5,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "dur_min": 45,
+        "dur_max": 90,
+        "vibes": [
+          "outdoors",
+          "chill"
+        ],
+        "desc_en": "The city's living room — fountains, skateboarders and street shows from City Hall down to the river; best after dark.",
+        "desc_vi": "Phòng khách của thành phố — đài phun nước, trượt ván và biểu diễn đường phố từ Uỷ ban xuống bờ sông; đẹp nhất khi lên đèn."
       },
       {
         "id": "bui-vien-walking-street",
@@ -390,90 +475,6 @@
         "desc_vi": "Chín tầng quán cà phê indie trong chung cư thập niên 60 trên phố đi bộ — góc nào cũng chụp ảnh đẹp."
       },
       {
-        "id": "ben-thanh-street-food",
-        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsfiITgzB4SvmYqiXtnqrKIQV2KAQIpLJWY-vuWbVXhFBwKfxP66rqVBI15tjUN4TDfvi_j3BIhSW2hGOBWnE_JlIrtXj6oY8-DW5R7d5sHOyM4cQi-imvT4EJ_S7Bblg4_VUj2lL-8KviEg=s4800-w800",
-        "photos": [
-          {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsfiITgzB4SvmYqiXtnqrKIQV2KAQIpLJWY-vuWbVXhFBwKfxP66rqVBI15tjUN4TDfvi_j3BIhSW2hGOBWnE_JlIrtXj6oY8-DW5R7d5sHOyM4cQi-imvT4EJ_S7Bblg4_VUj2lL-8KviEg=s4800-w800",
-            "attr_name": "Bilal Rifat",
-            "attr_uri": "https://maps.google.com/maps/contrib/103621954677239724748"
-          }
-        ],
-        "attr_name": "Bilal Rifat",
-        "attr_uri": "https://maps.google.com/maps/contrib/103621954677239724748",
-        "emoji": "🍜",
-        "en": "Bến Thành street food",
-        "vi": "Ẩm thực Bến Thành",
-        "loc_en": "District 1",
-        "loc_vi": "Quận 1",
-        "address": "32b Thủ Khoa Huân, Bến Thành, Hồ Chí Minh 700000, Vietnam",
-        "lat": 10.7737417,
-        "lng": 106.6972944,
-        "rating": "4.3/5",
-        "price": "140k₫",
-        "price_vnd": 140000,
-        "votes": 5,
-        "dur_en": "1–2h",
-        "dur_vi": "1–2 giờ",
-        "dur_min": 60,
-        "dur_max": 120,
-        "vibes": [
-          "food_tour"
-        ],
-        "desc_en": "Classic market stalls — bánh xèo, grilled skewers, chè. Easy for groups: everyone picks their own.",
-        "desc_vi": "Sạp chợ kinh điển — bánh xèo, đồ nướng, chè. Hợp đi nhóm: ai thích gì tự chọn."
-      },
-      {
-        "id": "broma-not-a-bar",
-        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCpl27EwMVadc5-36IWIzcsMZMUfFoHS1RgZ6o6vd8-POOoTRk79Zq7VDXAeECi7AzhMqyDGvPi42QLGDOZjmqkYR53VY3KqMEiItpjFZYG099Ne9RApr8Q_L7eEsdI7QcvcsFP3lMcmdAcYIzqopLx7g=s4800-w800",
-        "photos": [
-          {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCpl27EwMVadc5-36IWIzcsMZMUfFoHS1RgZ6o6vd8-POOoTRk79Zq7VDXAeECi7AzhMqyDGvPi42QLGDOZjmqkYR53VY3KqMEiItpjFZYG099Ne9RApr8Q_L7eEsdI7QcvcsFP3lMcmdAcYIzqopLx7g=s4800-w800",
-            "attr_name": "卓大大",
-            "attr_uri": "https://maps.google.com/maps/contrib/101027781417497142132"
-          },
-          {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA0i41psW4hZ9-udWNQ4_1jNOYhcSopUc0VTY-EklK839NE6wr1vvyeAMbj_vsI-uLJsyFs0srPoO0xh3uktHagdzSQ0QSdy4L_J_31_RXrYaMOc8vUdXgHU5YiQ8b5Bpsnifv1_AgVV7pTqQ=s4800-w800",
-            "attr_name": "Hoàng Minh",
-            "attr_uri": "https://maps.google.com/maps/contrib/101825962877060434354"
-          },
-          {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBtLM3pkumoLsd1tTgpe7a8PwYTE-dq9qUGWOwIMiGAXYPDo5sHOAg9qFstbN2AaGCKpQz2I1UrA7gx6j8v6OU2mo_UElsfYQpPUKKH9NJT7cdx55PFNbtyOoNWNZGRLhUhmElw6HpC6pJn--qnMSqPhw=s4800-w800",
-            "attr_name": "Hoàng Nguyễn Viết",
-            "attr_uri": "https://maps.google.com/maps/contrib/106392003921629652128"
-          },
-          {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCL_MaTMBclcDUimTMgom6YDeNAEZl0Kpc3A04T0iJllXOo_ZDIe_hCObTMQGvRLYSCxXg_QECVZWaGC2grKswje7reC_r83e0qTACo6t-hxl5o76-kep29MC1FugXIeHuXLKXxzohERbeLSs3fW_OZCA=s4800-w800",
-            "attr_name": "M. ZGN",
-            "attr_uri": "https://maps.google.com/maps/contrib/106746960187710257477"
-          }
-        ],
-        "attr_name": "卓大大",
-        "attr_uri": "https://maps.google.com/maps/contrib/101027781417497142132",
-        "emoji": "🌃",
-        "en": "Broma: Not A Bar",
-        "vi": "Broma: Not A Bar",
-        "loc_en": "Nguyễn Huệ, D1",
-        "loc_vi": "Nguyễn Huệ, Q1",
-        "address": "41 Nguyễn Huệ, Sài Gòn, Hồ Chí Minh, Vietnam",
-        "lat": 10.7727302,
-        "lng": 106.7046106,
-        "rating": "4.3/5",
-        "price": "200k₫",
-        "price_vnd": 200000,
-        "votes": 2,
-        "dur_en": "1.5–2.5h",
-        "dur_vi": "1.5–2.5 giờ",
-        "dur_min": 90,
-        "dur_max": 150,
-        "vibes": [
-          "nightlife",
-          "views"
-        ],
-        "desc_en": "Grungy rooftop over Nguyễn Huệ with craft cocktails and DJ sets — watch the walking street buzz from above.",
-        "desc_vi": "Rooftop bụi bặm nhìn xuống Nguyễn Huệ với cocktail thủ công và DJ — ngắm phố đi bộ nhộn nhịp từ trên cao."
-      },
-      {
         "id": "bui-vien-walking-street",
         "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDr7vHWKVN6Cp16QxNL3Pv-4PAenUrs-byiLo7BZyLUg5wXqBK9gaFzLsKvGVRJE0ZJw1gpxFmSkFJL8SnUJ7h6Lf8SRQ7Xj7aXIqktolOlOxbUsR2d2yTfqLH1flAORN5dYrmPtGB75A9dZ1a5LoMm=s4800-w800",
         "photos": [
@@ -676,65 +677,6 @@
         "desc_vi": "Góc trốn phố yên tĩnh trên lầu hai với nắng ban công và chất Sài Gòn xưa — lựa chọn né đám đông cho buổi chiều chậm."
       },
       {
-        "id": "banh-xeo-46a",
-        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBLDzRgoIB7z1y21g-dk9Hmam4hRyIosJUp669WAY1IRQDjyXRgrhC9IaGzsUnihP8sC2VuSSxjR1sIYTsfmIVvuxeMtuG6c7IMqY2n63-U4RWhyGfWLdnhHzUc4N4MWkH48gk1R4j9gLWaHyqILdu87w=s4800-w800",
-        "photos": [
-          {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBLDzRgoIB7z1y21g-dk9Hmam4hRyIosJUp669WAY1IRQDjyXRgrhC9IaGzsUnihP8sC2VuSSxjR1sIYTsfmIVvuxeMtuG6c7IMqY2n63-U4RWhyGfWLdnhHzUc4N4MWkH48gk1R4j9gLWaHyqILdu87w=s4800-w800",
-            "attr_name": "JINN",
-            "attr_uri": "https://maps.google.com/maps/contrib/109529946471151847156"
-          },
-          {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDo1L2-9SfW7P6RtQ87Ynw2ZeZUH0QRgzK_8AAquCfVpPXyFKKDIZ9tljH0Ye57XDK1_8zO2BmCk7a7xYKUm7T33daL6gKnQe-9nyOyHpzPVNhWI07rAancJh-YCnBogmK8SVQ2TGtOzt4L_qA=s4800-w800",
-            "attr_name": "Bánh Xèo 46A",
-            "attr_uri": "https://maps.google.com/maps/contrib/118234762988822738721"
-          },
-          {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDFT7qlxiAxGFJ9ibBQrioBBL7zpPcxKOjD5019xUxD8QBchrT8wriKz6atGHWvWeOqZj6zr33-hkfMvZHPTe0EqmrQwd41NfeWUNfrjxVIl8evkxQJ1j0X4aHCtHkazXCY6wvE1o8W6nlAUERDMwrDOA=s4800-w800",
-            "attr_name": "Tài Lê",
-            "attr_uri": "https://maps.google.com/maps/contrib/100492667426498836214"
-          },
-          {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDaNY_71LzrrJUTPkHcJI2ny9syfX0QAaj6obHBgAQlNEs2yMwTTW-I7Tt4IZylZ_O9D03wIgyXR4Wq33T4Ztq-GIxRBfayQGTx50vfVnfQo-0SX2l0xuVkoBo_xgMsixVfI6lxfDN1gGA8dGSRwEx3=s4800-w547",
-            "attr_name": "Hợp Lục Đình",
-            "attr_uri": "https://maps.google.com/maps/contrib/116202144189123085219"
-          },
-          {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAzE3gzrFXulZ81HxfSPMrQ7Fwda-S18Qzqb-9kB_LaduUV6LQ64BSijy1YGgmMWLom5X8oeX1AS00WK5jvuS5kJXbLbx6TytlQGFcIW1qCHtTDEa5jqDh3S36AsWvqi5MNurigAIvBlAtjL9aF7g2oyw=s4800-w800",
-            "attr_name": "Radu Cazacu",
-            "attr_uri": "https://maps.google.com/maps/contrib/101686795976001110831"
-          },
-          {
-            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBxAd7oFH9JGPfn9dDqndtDU5Qh1kXw6UDfV388aYLlMWlq3bBurQhYueEHLeBlNmhNKVdTglvLKi4-uZx7ef3vKj8i6FsxvHsKlRYgM9nSclRqICbQBzzEXtcnBKN-a7qCi5tfDll0a7mXVMMQy14t=s4800-w800",
-            "attr_name": "Mark Marino",
-            "attr_uri": "https://maps.google.com/maps/contrib/107037567611063986631"
-          }
-        ],
-        "attr_name": "JINN",
-        "attr_uri": "https://maps.google.com/maps/contrib/109529946471151847156",
-        "emoji": "🥞",
-        "en": "Bánh xèo 46A",
-        "vi": "Bánh xèo 46A",
-        "loc_en": "Đinh Công Tráng, D1",
-        "loc_vi": "Đinh Công Tráng, Q1",
-        "address": "46A Đinh Công Tráng, Tân Định, Hồ Chí Minh, Vietnam",
-        "lat": 10.7895674,
-        "lng": 106.6913428,
-        "rating": "3.8/5",
-        "price": "100k₫",
-        "price_vnd": 100000,
-        "votes": 3,
-        "dur_en": "45–60 min",
-        "dur_vi": "45–60 phút",
-        "dur_min": 45,
-        "dur_max": 60,
-        "vibes": [
-          "food_tour"
-        ],
-        "desc_en": "Crackling rice-flour crêpes fried in well-worn pans since 1945 — wrap in mustard leaves, dip, repeat.",
-        "desc_vi": "Bánh xèo giòn rụm đổ bằng chảo gang lâu năm từ 1945 — cuốn lá cải, chấm mắm, và cứ thế lặp lại."
-      },
-      {
         "id": "blank-lounge",
         "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAIVFrr5ZWPZPZfbc198jE5rIJEmyFU5um3gwa8SA9HVAD4Ia6mNaAQk_jT8H147w1eE8B3njERsjvdwExuRYnzg9z9XvwT-KR-7Ocb-tDV7HRYkwM7-88euZHZ0SAL_LTGsadtJ8qYuPrCwNlX9ocgYg=s4800-w800",
         "photos": [
@@ -786,6 +728,75 @@
       }
     ],
     "out": [
+      {
+        "id": "landmark-81-skyview",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDrhuoKKxuA6czVPCJwnsVH7zbexeZov_uVIWMqmxY6ozI91vhlK5jtmCMoQrPvE5g_v6CRZQgXdvADYfvNHu-nPKipfpmwVL6EXDGWDPCmA8VjiwMm2vPQ0W07pCTy3tFL4-PLq0CkzS4y2QCUcYdR4g=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDrhuoKKxuA6czVPCJwnsVH7zbexeZov_uVIWMqmxY6ozI91vhlK5jtmCMoQrPvE5g_v6CRZQgXdvADYfvNHu-nPKipfpmwVL6EXDGWDPCmA8VjiwMm2vPQ0W07pCTy3tFL4-PLq0CkzS4y2QCUcYdR4g=s4800-w800",
+            "attr_name": "pixel vietnam",
+            "attr_uri": "https://maps.google.com/maps/contrib/109728597366535505519"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAdAurdDamxTTCAiYNQ6SZXy3msBww5vpMcutPlzlJlwDkl9S60NYt_LZ5gMpJgKOVBPVC2WK2VcmpP5FA9V71Mhlj7LaQCsg1EMpuiZYZM2SwflbuQYPJC0axvQ8gQFJSv-PhHEmCn-hsGVAYJXVQVPg=s4800-w800",
+            "attr_name": "hy minh",
+            "attr_uri": "https://maps.google.com/maps/contrib/111845423520615127422"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB5deZDU9UD1bTJdApug-rpLaE0x3omceiJu2EqNG3FRxkTndmmj2l8ReKpEy9UQ4TRWaOnTNeyXiFA5i7yQVlgJzV3LqVVRhT-B1tPvPUScNweZjlWhB0sAo89FXPkSZRufzdxNCnhlQXg=s4800-w800",
+            "attr_name": "Thịnh Mai Viết",
+            "attr_uri": "https://maps.google.com/maps/contrib/102283659686772013076"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCYOTLDIciCI9x-qjETbdredGu75hV9u54ig-SpuGEycBWpsJdtFLLIdAHvxyGlGccmdfq_I1PouTP5NOtM3lW2HezL_tz3UicE6FUjn3RbdImVz_fj-FoEFW10l3DH0NTMv89OBtc8O-aHUm90VzwK=s4800-w800",
+            "attr_name": "Soko 37 (Soko37)",
+            "attr_uri": "https://maps.google.com/maps/contrib/113575010328824564195"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBew1PevJT0O-BKz2U-763fZOwY7l44sqQC0XrD8-93n3SnYF4Tl9-tNgZAwDOrwmG8onesVuOqidG3QZkg1Q8NiRDoYDM6YgIsOoYni0Wc47JfNf0EsfIQ61WSYhRDpGCvD3Aw3j6UeXUtc9krm-GNDA=s4800-w800",
+            "attr_name": "Tran Tuan",
+            "attr_uri": "https://maps.google.com/maps/contrib/100253882852886239957"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDwruSn49qZBqXb0g9jDlcyJ3iWTP02S9RNo-BKpglvoZ9NNQxpzpFOjPMQTIZq_kHuOIWVchnYXqNC4z09fxT0BZoiyno8no33z6zobsUDouHDR8IFcYCQYv88XWrUyZ-H5ajY1le5jzyZjz_THnQ7Hw=s4800-w800",
+            "attr_name": "pixel vietnam",
+            "attr_uri": "https://maps.google.com/maps/contrib/109728597366535505519"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCkwQd-A3Mbz6Tmu-H2JiUyCDu88CcLrbuS1FPQpAmiQKBhB6BuR9NzPv99aTbOmClTKQjoz-NaNMqdsiPwGRga8roqLsA0da2mLvyGPdBlz0EFh_i2HFBhvXDIN9UL7h6aANERWlTlXKFQKQ=s4800-w800",
+            "attr_name": "Duong Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/110181281541742865022"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC7SlDEyiISWWXs_JVJMUYoJm-tzOstPqq3fWfCmCZfoQwaUMfShlkVFFRv18_grZeazi1u5qUNxpOZjO-qQZy_xETw-X5xrnOiRUtJjp3_4JuIcOLoz_YrbZXZEvpjSg4iiruYQe7VQjjH8LQLn240Pg=s4800-w800",
+            "attr_name": "Mon Lang",
+            "attr_uri": "https://maps.google.com/maps/contrib/107595129856188189039"
+          }
+        ],
+        "attr_name": "pixel vietnam",
+        "attr_uri": "https://maps.google.com/maps/contrib/109728597366535505519",
+        "emoji": "🌆",
+        "en": "Landmark 81 SkyView",
+        "vi": "Landmark 81 SkyView",
+        "loc_en": "Bình Thạnh",
+        "loc_vi": "Bình Thạnh",
+        "address": "720A Điện Biên Phủ, Phường, Thạnh Mỹ Tây, Hồ Chí Minh 72300, Vietnam",
+        "lat": 10.7951119,
+        "lng": 106.722096,
+        "rating": "4.6/5",
+        "price": "300k₫",
+        "price_vnd": 300000,
+        "votes": 3,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
+        "vibes": [
+          "views"
+        ],
+        "desc_en": "Observation deck on the 81st floor of Vietnam's tallest tower — sunset views over the Saigon River. Book ahead on weekends.",
+        "desc_vi": "Đài quan sát tầng 81 toà tháp cao nhất Việt Nam — ngắm hoàng hôn trên sông Sài Gòn. Cuối tuần nên đặt vé trước."
+      },
       {
         "id": "independence-palace",
         "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBlHXunTiE7ogrlZnoJlPvrGxs87h38AqL5ZAZ7IGHxt5_8XWTOy3rcm8hADSx6ISW6XtPBCVbgV3xFYGgvzzHEFED_kt_7Bwe7EKQKyku5xA2LBjkM3NGHMEBBKeOGLf72kvMi9CvSwFuy=s4800-w800",
@@ -854,6 +865,56 @@
         ],
         "desc_en": "The frozen-in-1975 presidential palace — war rooms, retro salons and tanks on the lawn; the audio guide is worth it.",
         "desc_vi": "Dinh tổng thống 'đóng băng' từ 1975 — phòng tác chiến, salon retro và xe tăng trên bãi cỏ; thuê audio guide rất đáng."
+      },
+      {
+        "id": "nguyen-hue-walking-street",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBaxQ-xZjIhb_6ypeCsmMMaivNCfITWdNSlpedVFPqA90ZfcCYBu-hYiXCT9wScP6DcPUE2ZyY3HgNp1mIqY3-Bmv_X40Cr9MARGU8M4gcRXdECCnJMNZpZRA-FsG-tnYYXYh5DW3-qk0T3_YoRb9v6nQ=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBaxQ-xZjIhb_6ypeCsmMMaivNCfITWdNSlpedVFPqA90ZfcCYBu-hYiXCT9wScP6DcPUE2ZyY3HgNp1mIqY3-Bmv_X40Cr9MARGU8M4gcRXdECCnJMNZpZRA-FsG-tnYYXYh5DW3-qk0T3_YoRb9v6nQ=s4800-w800",
+            "attr_name": "yuichi sasaki",
+            "attr_uri": "https://maps.google.com/maps/contrib/103660962830515051392"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAYczWCeXGIlADg4j1VhtdsmvptMH1-Et8v6QW4bcF4bwK7ddGiED5OmpYRVtLfdwgCbT6v71zoRc2W4zaqhomhAo2xVZMAYTPebK0yOg5Xtwe29qvh4NwIn8vveXOGnXrDXPg1wWjtqnMDtv4YRpP4Bw=s4800-w800",
+            "attr_name": "Леонид Климковский",
+            "attr_uri": "https://maps.google.com/maps/contrib/115919745696921901794"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAWWrI_WsZVPEDKFPE9YwourRU4F1_7jmQpKjnpu3OTG7CFgg_F7Iwlgu4aZFpBJPigbqIINptD2XQ7bwl-_aRT1wcn3FxlxpzEOvcsQNmgC58HCdD9oKT-HfB0Bw1isyDhbiqyVLDYNu4XK0uCpd6j8g=s4800-w800",
+            "attr_name": "yuichi sasaki",
+            "attr_uri": "https://maps.google.com/maps/contrib/103660962830515051392"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAVM_U3L9RgCqIQz421yzLOdj4FzwefaED90sWy61PBo3tw8Y_mK1cDBDEWXjyMdJN8SzcvOvCudAhGQxvwzvju_fB28lQ2-bU4YaZvRkX_Ivjn1yn7o9foA3NfWuYxmxJaWzqgG0wEvUdi9abTIpReEw=s4800-w800",
+            "attr_name": "Brian Loh",
+            "attr_uri": "https://maps.google.com/maps/contrib/116474476362383193496"
+          }
+        ],
+        "attr_name": "yuichi sasaki",
+        "attr_uri": "https://maps.google.com/maps/contrib/103660962830515051392",
+        "emoji": "🚶",
+        "en": "Nguyễn Huệ Walking Street",
+        "vi": "Phố đi bộ Nguyễn Huệ",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "QPF3+JF9, Sai Gon, Ho Chi Minh, Vietnam",
+        "lat": 10.7740408,
+        "lng": 106.7037237,
+        "rating": "4.5/5",
+        "price": "0₫",
+        "price_vnd": 0,
+        "votes": 5,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "dur_min": 45,
+        "dur_max": 90,
+        "vibes": [
+          "outdoors",
+          "chill"
+        ],
+        "desc_en": "The city's living room — fountains, skateboarders and street shows from City Hall down to the river; best after dark.",
+        "desc_vi": "Phòng khách của thành phố — đài phun nước, trượt ván và biểu diễn đường phố từ Uỷ ban xuống bờ sông; đẹp nhất khi lên đèn."
       },
       {
         "id": "book-street",
@@ -1097,8 +1158,8 @@
       "count": 3,
       "place_slugs": [
         "blank-lounge",
-        "broma-not-a-bar",
-        "bitexco-skydeck"
+        "bitexco-skydeck",
+        "landmark-81-skyview"
       ]
     },
     {
@@ -1109,11 +1170,9 @@
       "desc_vi": "Những quán, hẻm và phố đêm mà chính người Sài Gòn cũng xếp hàng.",
       "curator": "@foodmapvn",
       "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBW631wzyjXx44oyi0UKBZs2hb-eOGRMsRE57EipB998chJc2VF-kFoP3_ZuZIRypL5mOlxYDAUM9uwUmQ49FCbTutq6zmjyH_qC1-zJtvpvokROidSOQwdVJOs6VEvY9wVUe6yeRuJ19-o8yZ8ZuVnjg=s4800-w800",
-      "count": 3,
+      "count": 1,
       "place_slugs": [
-        "banh-mi-huynh-hoa",
-        "banh-xeo-46a",
-        "ben-thanh-street-food"
+        "banh-mi-huynh-hoa"
       ]
     },
     {
@@ -1164,11 +1223,12 @@
       "desc_en": "One perfect starter day: the must-sees that never miss.",
       "desc_vi": "Một ngày nhập môn hoàn hảo: những điểm phải ghé và không bao giờ gây thất vọng.",
       "curator": "@citycrew",
-      "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsCJlUuaIBmw33QSyk5b0wGjjBvInYXFqbSeZRrb3Bhf9xdeMXV6-X1GnJ307Q7yzskxM4S7vPWaebC0w0F8sB4VJusDR0c3qcMVVkeqibkwWDm9S0Rl6c-O9p6gGScOPKqRRmdEJgtIjPRs_DzjkU5Q=s4800-w800",
-      "count": 4,
+      "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBlHXunTiE7ogrlZnoJlPvrGxs87h38AqL5ZAZ7IGHxt5_8XWTOy3rcm8hADSx6ISW6XtPBCVbgV3xFYGgvzzHEFED_kt_7Bwe7EKQKyku5xA2LBjkM3NGHMEBBKeOGLf72kvMi9CvSwFuy=s4800-w800",
+      "count": 5,
       "place_slugs": [
-        "ben-thanh-street-food",
         "independence-palace",
+        "nguyen-hue-walking-street",
+        "landmark-81-skyview",
         "banh-mi-huynh-hoa",
         "bui-vien-walking-street"
       ]
