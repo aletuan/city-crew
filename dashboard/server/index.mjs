@@ -47,7 +47,7 @@ app.get('/api/places', route(async (req, res) => {
   const { status, category, vibe, q } = req.query;
   let query = supabase
     .from('places')
-    .select('slug, name_en, name_vi, category, is_featured, vibe_tags, neighborhood_en, review_status, rating, place_photos(photo_uri, is_cover, is_hidden)')
+    .select('slug, name_en, name_vi, category, is_featured, vibe_tags, neighborhood_en, review_status, rating, rating_count, place_photos(photo_uri, is_cover, is_hidden)')
     .order('slug');
   if (status) query = query.eq('review_status', status);
   if (category) query = query.eq('category', category);

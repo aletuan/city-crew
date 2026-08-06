@@ -80,6 +80,7 @@ const toCard = (p) => {
     address: p.address,
     lat: p.lat, lng: p.lng,
     rating: p.rating ? `${p.rating}/5` : null,
+    rating_count: p.rating_count,
     price: p.price_display,
     price_vnd: p.price_vnd,
     votes: p.saved_count,

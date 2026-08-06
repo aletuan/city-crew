@@ -5,6 +5,8 @@ const STATUSES = ['pending', 'approved', 'flagged'];
 const CATEGORIES = [['food', 'Food & drinks'], ['out', 'Outdoors & culture']];
 const VIBES = ['cafes', 'food_tour', 'outdoors', 'views', 'culture', 'shopping', 'nightlife', 'chill'];
 
+const fmtCount = (n) => (!n ? null : n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n));
+
 export default function PlaceList() {
   const [params, setParams] = useSearchParams();
   const [rows, setRows] = useState(null);
@@ -78,7 +80,10 @@ export default function PlaceList() {
             <div className="names">
               <div className="en">{p.name_en} {p.is_featured && <span className="tag featured">featured</span>}</div>
               <div className="vi">{p.name_vi}</div>
-              <div className="loc">{p.neighborhood_en} · {p.rating ?? '—'}★</div>
+              <div className="loc">
+                {p.neighborhood_en} · {p.rating ?? '—'}★
+                {p.rating_count ? ` · ${fmtCount(p.rating_count)} Google reviews` : ' · no reviews'}
+              </div>
             </div>
             <div className="facts">
               {p.vibe_tags.map((v) => <span className="tag" key={v}>{v.replace('_', ' ')}</span>)}

@@ -81,7 +81,8 @@ function itiScore(p, slot, vibes) {
   return itiOverlap(p.vibes, vibes) * 3
     + itiOverlap(p.vibes, slot.pref) * 2
     + (parseFloat(p.rating) || 0)
-    + (p.votes || 0) * 0.1;
+    // popularity from real Google review counts, log-scaled
+    + Math.min(3, Math.log10(1 + (p.rc || 0)));
 }
 
 function itiCandidates(pool, slot, vibes, used) {

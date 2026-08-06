@@ -38,7 +38,7 @@ const toMockupPlace = (p, cat) => ({
   emoji: p.emoji,
   en: p.en, vi: p.vi,
   loc_en: p.loc_en, loc_vi: p.loc_vi,
-  rating: p.rating, price: p.price, votes: p.votes,
+  rating: p.rating, rc: p.rating_count ?? null, price: p.price, votes: p.votes,
   desc_en: p.desc_en, desc_vi: p.desc_vi,
   attr_name: p.attr_name,
   dur_en: p.dur_en, dur_vi: p.dur_vi,
@@ -140,6 +140,39 @@ patch('public-collections', (t) => {
   if (start < 0 || sectionEnd < 0 || start > sectionEnd) throw new Error('collections block bounds not found');
   const end = t.lastIndexOf('</div>', sectionEnd) + '</div>'.length;
   return t.slice(0, start) + S + '\n' + collectionsHtml + '\n' + E + '\n            ' + t.slice(end);
+});
+
+// ── 5b. Real review counts: the bookmark badge used to show a fabricated
+// "saved" number; replace every fabricated count with the real Google
+// rating_count (pl.rc). Bookmark becomes a pure toggle. ─────────────────────
+patch('real-review-counts', (t) => {
+  if (t.includes('fmtCount')) return t;
+  const swaps = [
+    // helper, injected just before icons()
+    ['function icons() {',
+      "function fmtCount(n){ return !n ? '' : (n >= 1000 ? (Math.round(n / 100) / 10) + 'k' : String(n)); }\nfunction icons() {"],
+    // renderCards: drop the fabricated per-card count…
+    ['    var v = (saved[pl.id] ? 1 : 0) + pl.votes;',
+      '    var rc = fmtCount(pl.rc);'],
+    // …show real review count beside the star rating (chip hidden when the
+    // place genuinely has no Google rating — never invent one)…
+    [`'<div class="top"><span class="rating"><i data-lucide="star"></i>' + pl.rating + '</span>' +`,
+      `'<div class="top">' + (pl.rating ? '<span class="rating"><i data-lucide="star"></i>' + pl.rating + (rc ? ' · ' + rc : '') + '</span>' : '<span></span>') +`],
+    // …and make the bookmark badge icon-only
+    [`'<span class="vote' + (saved[pl.id] ? ' voted' : '') + '"><i data-lucide="bookmark"></i>' + v + '</span></div>' +`,
+      `'<span class="vote' + (saved[pl.id] ? ' voted' : '') + '"><i data-lucide="bookmark"></i></span></div>' +`],
+    // detail screen: real Google review count instead of fake "N saved"
+    [`document.getElementById('det-votes').innerHTML = '<b>' + ((saved[pl.id] ? 1 : 0) + pl.votes) + '</b> ' + (LANG === 'vi' ? 'đã lưu' : 'saved');`,
+      `document.getElementById('det-votes').innerHTML = pl.rc ? '<b>' + fmtCount(pl.rc) + '</b> ' + (LANG === 'vi' ? 'đánh giá Google' : 'Google reviews') : '';`],
+    // saveDetail: keep the heart toggle, stop rewriting any number
+    [`document.getElementById('det-votes').innerHTML = '<b>' + ((saved[current.id] ? 1 : 0) + current.votes) + '</b> ' + (LANG === 'vi' ? 'đã lưu' : 'saved');`,
+      ''],
+  ];
+  for (const [from, to] of swaps) {
+    if (!t.includes(from)) throw new Error(`real-review-counts anchor not found: ${from.slice(0, 60)}…`);
+    t = t.replace(from, to);
+  }
+  return t;
 });
 
 // ── 6. Wizard: vibe slugs + slider ids so the generator can read inputs ─────
