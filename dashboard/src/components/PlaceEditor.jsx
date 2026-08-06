@@ -108,9 +108,13 @@ export default function PlaceEditor() {
         await api.reorderPhotos(slug, ids);
       }
 
+      // Refresh the baseline in place — never unmount the editor (a null form
+      // would flash the loading screen and remount every photo, which reads
+      // as a full page reload).
+      const fresh = await api.place(slug);
       setPhotoEdits(emptyPhotoEdits());
-      setForm(null);
-      await load().then((p) => setForm(pickForm(p)));
+      setPlace(fresh);
+      setForm(pickForm(fresh));
       refreshProgress();
       toast(extra.review_status ? `Marked ${extra.review_status}` : 'Saved');
     } catch (err) {
@@ -118,7 +122,7 @@ export default function PlaceEditor() {
     } finally {
       setSaving(false);
     }
-  }, [saving, slug, form, photoEdits, place, load, refreshProgress, toast]);
+  }, [saving, slug, form, photoEdits, place, refreshProgress, toast]);
 
   const idx = siblings.indexOf(slug);
   const go = useCallback((delta) => {
