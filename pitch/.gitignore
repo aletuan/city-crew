@@ -1,0 +1,8 @@
+# generated / heavy artifacts — everything here is reproducible or user-supplied
+recorder/node_modules/
+video/node_modules/
+video/public/
+clips/
+out/
+music/*.mp3
+.DS_Store
