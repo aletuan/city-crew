@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 import { mkdirSync, renameSync, readdirSync } from 'fs';
 import { join } from 'path';
 
-const URL = 'http://127.0.0.1:8742/cityCrew%20C2%20Mockup%20Dark%20(standalone).html';
+const URL = 'http://127.0.0.1:8742/citycrew-mockup-dark.html';
 const CLIPS = join(import.meta.dirname, '..', 'clips');
 // Page laid out at CSS zoom 2 → phone fills the full 864×1744 recording.
 const VIEW = { width: 864, height: 1744 };

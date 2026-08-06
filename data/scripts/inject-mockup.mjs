@@ -3,19 +3,18 @@
 //
 // All edits are idempotent: data blocks are delimited by markers, and code
 // patches are skipped when already applied. A self-check re-parses the output
-// before it is accepted. Writes citycrew-mockup-dark.html in place, plus a copy
-// under the filename the pitch recorder serves.
+// before it is accepted. Writes citycrew-mockup-dark.html in place — the pitch
+// recorder serves the same file.
 //
 // Usage: node scripts/inject-mockup.mjs
 
-import { readFileSync, writeFileSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ROOT = join(DATA_DIR, '..');
 const MOCKUP = join(ROOT, 'citycrew-mockup-dark.html');
-const RECORDER_COPY = join(ROOT, 'cityCrew C2 Mockup Dark (standalone).html');
 
 const snapshot = JSON.parse(readFileSync(join(DATA_DIR, 'snapshot', 'citycrew-data.json'), 'utf8'));
 
@@ -158,7 +157,6 @@ for (const key of ['foryou', 'food', 'out']) {
 }
 
 writeFileSync(MOCKUP, out);
-copyFileSync(MOCKUP, RECORDER_COPY);
 console.log(`OK: patches applied [${applied.join(', ') || 'none (already up to date)'}]`);
 console.log(`Places injected: foryou=${parsed.foryou.length} food=${parsed.food.length} out=${parsed.out.length}; collections=${snapshot.collections.length}`);
-console.log(`Wrote ${MOCKUP}\n  and ${RECORDER_COPY}`);
+console.log(`Wrote ${MOCKUP}`);
