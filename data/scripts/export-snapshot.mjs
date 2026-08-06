@@ -94,18 +94,24 @@ const snapshot = {
     food: places.filter((p) => p.category === 'food').map(toCard),
     out: places.filter((p) => p.category === 'out').map(toCard),
   },
-  collections: collections.map((c) => ({
-    slug: c.slug,
-    title_en: c.title_en, title_vi: c.title_vi,
-    desc_en: c.desc_en, desc_vi: c.desc_vi,
-    curator: c.curator_handle,
-    cover_url: c.cover?.photo_uri ?? null,
-    count: (c.collection_places ?? []).length,
-    place_slugs: (c.collection_places ?? [])
+  collections: collections.map((c) => {
+    // Count only published members — with the service key the nested join is
+    // not RLS-filtered, and unpublished places must not inflate the card count.
+    const publishedSlugs = new Set(places.map((p) => p.slug));
+    const memberSlugs = (c.collection_places ?? [])
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((cp) => cp.places?.slug)
-      .filter(Boolean),
-  })),
+      .filter((slug) => slug && publishedSlugs.has(slug));
+    return {
+      slug: c.slug,
+      title_en: c.title_en, title_vi: c.title_vi,
+      desc_en: c.desc_en, desc_vi: c.desc_vi,
+      curator: c.curator_handle,
+      cover_url: c.cover?.photo_uri ?? null,
+      count: memberSlugs.length,
+      place_slugs: memberSlugs,
+    };
+  }),
 };
 
 const out = join(DATA_DIR, 'snapshot', 'citycrew-data.json');
