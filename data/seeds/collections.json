@@ -1,0 +1,53 @@
+{
+  "$comment": "Curated public collections; place lists reference slugs from candidates.json. cover is the slug whose cover photo is used.",
+  "collections": [
+    {
+      "slug": "rooftops-with-a-view",
+      "title_en": "Rooftops with a view", "title_vi": "Rooftop ngắm thành phố",
+      "desc_en": "Golden hour to midnight — the decks and bars where Saigon shows off its skyline.",
+      "desc_vi": "Từ giờ vàng đến nửa đêm — những sân thượng và quầy bar nơi Sài Gòn khoe đường chân trời.",
+      "curator_handle": "@saigonnights", "cover": "chill-skybar", "sort_order": 1,
+      "places": ["chill-skybar", "blank-lounge", "broma-not-a-bar", "social-club-rooftop", "bitexco-skydeck", "landmark-81-skyview", "the-deck-saigon"]
+    },
+    {
+      "slug": "street-food-classics",
+      "title_en": "Street food classics", "title_vi": "Ẩm thực đường phố kinh điển",
+      "desc_en": "The stalls, alleys and night streets locals actually queue for.",
+      "desc_vi": "Những quán, hẻm và phố đêm mà chính người Sài Gòn cũng xếp hàng.",
+      "curator_handle": "@foodmapvn", "cover": "banh-mi-huynh-hoa", "sort_order": 2,
+      "places": ["banh-mi-huynh-hoa", "pho-le", "com-tam-ba-ghien", "banh-xeo-46a", "oc-dao", "ho-thi-ky-food-street", "vinh-khanh-food-street", "lunch-lady", "ben-thanh-street-food"]
+    },
+    {
+      "slug": "old-saigon-heritage",
+      "title_en": "Old Saigon heritage", "title_vi": "Di sản Sài Gòn xưa",
+      "desc_en": "Colonial landmarks, incense-filled temples and the city's oldest café.",
+      "desc_vi": "Công trình thuộc địa, đền chùa nghi ngút khói hương và quán cà phê lâu đời nhất thành phố.",
+      "curator_handle": "@quietcorners", "cover": "central-post-office", "sort_order": 3,
+      "places": ["independence-palace", "central-post-office", "notre-dame-cathedral", "jade-emperor-pagoda", "thien-hau-temple", "fine-arts-museum", "saigon-opera-house", "cheo-leo-cafe"]
+    },
+    {
+      "slug": "cafes-of-saigon",
+      "title_en": "Cafés worth the detour", "title_vi": "Những quán cà phê đáng đường xa",
+      "desc_en": "From 1938 vợt coffee to specialty roasters — a caffeine trail across the city.",
+      "desc_vi": "Từ cà phê vợt 1938 đến specialty roaster — hành trình caffeine xuyên thành phố.",
+      "curator_handle": "@saigoncaphe", "cover": "cafe-apartment", "sort_order": 4,
+      "places": ["cafe-apartment", "workshop-coffee", "cheo-leo-cafe", "little-hanoi-egg-coffee", "bang-khuang-cafe", "okkio-caffe", "oromia-coffee"]
+    },
+    {
+      "slug": "green-escapes",
+      "title_en": "Green escapes", "title_vi": "Trốn phố tìm xanh",
+      "desc_en": "Parks, riverbanks and easy strolls when the group needs to breathe.",
+      "desc_vi": "Công viên, bờ sông và những cung dạo bộ nhẹ nhàng khi cả nhóm cần thở.",
+      "curator_handle": "@quietcorners", "cover": "vinhomes-central-park", "sort_order": 5,
+      "places": ["tao-dan-park", "saigon-zoo", "vinhomes-central-park", "starlight-bridge", "book-street"]
+    },
+    {
+      "slug": "first-timer-classics",
+      "title_en": "First-timer classics", "title_vi": "Lần đầu tới Sài Gòn",
+      "desc_en": "One perfect starter day: the must-sees that never miss.",
+      "desc_vi": "Một ngày nhập môn hoàn hảo: những điểm phải ghé và không bao giờ gây thất vọng.",
+      "curator_handle": "@citycrew", "cover": "nguyen-hue-walking-street", "sort_order": 6,
+      "places": ["ben-thanh-street-food", "independence-palace", "nguyen-hue-walking-street", "landmark-81-skyview", "banh-mi-huynh-hoa", "bui-vien-walking-street"]
+    }
+  ]
+}

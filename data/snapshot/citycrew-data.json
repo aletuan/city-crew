@@ -1,0 +1,2591 @@
+{
+  "generated_from": "local review files",
+  "places": {
+    "foryou": [
+      {
+        "id": "cafe-apartment",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDMxsPAbBBZ2d466X8dw6ImFpJX0NqTYgqOGx7rdNI53sNlFbsFv1pIzZBBvCHOuKlA6UzAGAQeFcjthl_Da0-oERFHQg_PRzkgJX7qFCXzTKNZ1y3BxRKMbT__7Gxcd9D7YdAc7kRcNmXkSLrDFUjLpg=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDMxsPAbBBZ2d466X8dw6ImFpJX0NqTYgqOGx7rdNI53sNlFbsFv1pIzZBBvCHOuKlA6UzAGAQeFcjthl_Da0-oERFHQg_PRzkgJX7qFCXzTKNZ1y3BxRKMbT__7Gxcd9D7YdAc7kRcNmXkSLrDFUjLpg=s4800-w800",
+            "attr_name": "SHREYAS",
+            "attr_uri": "https://maps.google.com/maps/contrib/100165939680759656657"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBSoYdKuQHEnw8tmf5zbHkrSaRWwu1811V0pny0s4zaRTMT6IB_wzQ8uo1F1Gt0Rv-6mdjGfeIru1So68xkNhH5FcGz-WjuD9PCvDwqMgJF05SD6hiJ5EX1Wlo_hEG8Kmy-7so9Mg7g-YYR=s4800-w800",
+            "attr_name": "Thitiluck Thitiluck",
+            "attr_uri": "https://maps.google.com/maps/contrib/106352847400815514261"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAG_WaAwFwBzEwWGMjRVJRVAmEKB-6JsRC2whITq4Hgi352lLTV6ZhkR7EHNF6mVoDBXs5XcI4Xp9kbR7o6J0IuZqtygqGnHCpAhu9otrS5E2Z2olgiIo4WjWwYXbKcD6L2DtyO24cBixUq4jYtD9Gs=s4800-w800",
+            "attr_name": "Vishwanath Gaitonde",
+            "attr_uri": "https://maps.google.com/maps/contrib/117883956379755581918"
+          }
+        ],
+        "attr_name": "SHREYAS",
+        "attr_uri": "https://maps.google.com/maps/contrib/100165939680759656657",
+        "emoji": "☕",
+        "en": "The Café Apartment",
+        "vi": "Chung cư Cà phê",
+        "loc_en": "Nguyễn Huệ, D1",
+        "loc_vi": "Nguyễn Huệ, Q1",
+        "address": "42 Nguyễn Huệ, Street, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7740888,
+        "lng": 106.7040596,
+        "rating": "4.4/5",
+        "price": "60k₫",
+        "votes": 4,
+        "dur_en": "1–2h",
+        "dur_vi": "1–2 giờ",
+        "vibes": [
+          "cafes",
+          "views"
+        ],
+        "desc_en": "Nine floors of indie cafés in a 1960s apartment block on the walking street — every window is a photo.",
+        "desc_vi": "Chín tầng quán cà phê indie trong chung cư thập niên 60 trên phố đi bộ — góc nào cũng chụp ảnh đẹp."
+      },
+      {
+        "id": "ben-thanh-street-food",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsfiITgzB4SvmYqiXtnqrKIQV2KAQIpLJWY-vuWbVXhFBwKfxP66rqVBI15tjUN4TDfvi_j3BIhSW2hGOBWnE_JlIrtXj6oY8-DW5R7d5sHOyM4cQi-imvT4EJ_S7Bblg4_VUj2lL-8KviEg=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsfiITgzB4SvmYqiXtnqrKIQV2KAQIpLJWY-vuWbVXhFBwKfxP66rqVBI15tjUN4TDfvi_j3BIhSW2hGOBWnE_JlIrtXj6oY8-DW5R7d5sHOyM4cQi-imvT4EJ_S7Bblg4_VUj2lL-8KviEg=s4800-w800",
+            "attr_name": "Bilal Rifat",
+            "attr_uri": "https://maps.google.com/maps/contrib/103621954677239724748"
+          }
+        ],
+        "attr_name": "Bilal Rifat",
+        "attr_uri": "https://maps.google.com/maps/contrib/103621954677239724748",
+        "emoji": "🍜",
+        "en": "Bến Thành street food",
+        "vi": "Ẩm thực Bến Thành",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "32b Thủ Khoa Huân, Bến Thành, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7737417,
+        "lng": 106.69729439999999,
+        "rating": "4.3/5",
+        "price": "140k₫",
+        "votes": 5,
+        "dur_en": "1–2h",
+        "dur_vi": "1–2 giờ",
+        "vibes": [
+          "food_tour"
+        ],
+        "desc_en": "Classic market stalls — bánh xèo, grilled skewers, chè. Easy for groups: everyone picks their own.",
+        "desc_vi": "Sạp chợ kinh điển — bánh xèo, đồ nướng, chè. Hợp đi nhóm: ai thích gì tự chọn."
+      },
+      {
+        "id": "banh-mi-huynh-hoa",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC3nfKc7w05Tv07agItt7eKHSaK9Jne82S9LrBwTiRZQfF4YtCzFAGMsFsHDj62oUdWkzMibwTn3UgaNCR2zrxuYofQXkwKkpmR_zOPtQLCLQqqdKkBtAy1TxAKpYGamTnDmJ4IMw0GZk0ytnWzREfYPw=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC3nfKc7w05Tv07agItt7eKHSaK9Jne82S9LrBwTiRZQfF4YtCzFAGMsFsHDj62oUdWkzMibwTn3UgaNCR2zrxuYofQXkwKkpmR_zOPtQLCLQqqdKkBtAy1TxAKpYGamTnDmJ4IMw0GZk0ytnWzREfYPw=s4800-w800",
+            "attr_name": "Zhi Qin Ooi",
+            "attr_uri": "https://maps.google.com/maps/contrib/112083975906563403770"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBW631wzyjXx44oyi0UKBZs2hb-eOGRMsRE57EipB998chJc2VF-kFoP3_ZuZIRypL5mOlxYDAUM9uwUmQ49FCbTutq6zmjyH_qC1-zJtvpvokROidSOQwdVJOs6VEvY9wVUe6yeRuJ19-o8yZ8ZuVnjg=s4800-w800",
+            "attr_name": "葉家豪",
+            "attr_uri": "https://maps.google.com/maps/contrib/105546766132576466480"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAe8ParxjGxybzi2T3fM_o7VXZ0Xv43NRQe70dUYR1eCLpiXvtmWTqWXfI9Ad4fO5pQj6A24PRa-E-m_r-BC6ZiPCya054FKVAr1L2wu4XsSGbA_GZ33HnrJlzOk6uq2LYPVYk4-T_aOYe3vNq6pKmz=s4800-w650",
+            "attr_name": "ngọc Nhi đang buồn",
+            "attr_uri": "https://maps.google.com/maps/contrib/117343170390869295506"
+          }
+        ],
+        "attr_name": "Zhi Qin Ooi",
+        "attr_uri": "https://maps.google.com/maps/contrib/112083975906563403770",
+        "emoji": "🥖",
+        "en": "Bánh mì Huỳnh Hoa",
+        "vi": "Bánh mì Huỳnh Hoa",
+        "loc_en": "Lê Thị Riêng, D1",
+        "loc_vi": "Lê Thị Riêng, Q1",
+        "address": "26 Lê Thị Riêng, Bến Thành, Hồ Chí Minh, Vietnam",
+        "lat": 10.771522599999999,
+        "lng": 106.6923968,
+        "rating": "4.1/5",
+        "price": "68k₫",
+        "votes": 6,
+        "dur_en": "15–30 min",
+        "dur_vi": "15–30 phút",
+        "vibes": [
+          "food_tour"
+        ],
+        "desc_en": "The most famous bánh mì in the city, stacked absurdly with cold cuts and pâté — expect a line, it moves fast.",
+        "desc_vi": "Ổ bánh mì nổi tiếng nhất thành phố, nhân thịt nguội và pâté đầy ú ụ — xếp hàng hơi đông nhưng rất nhanh."
+      },
+      {
+        "id": "landmark-81-skyview",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDrhuoKKxuA6czVPCJwnsVH7zbexeZov_uVIWMqmxY6ozI91vhlK5jtmCMoQrPvE5g_v6CRZQgXdvADYfvNHu-nPKipfpmwVL6EXDGWDPCmA8VjiwMm2vPQ0W07pCTy3tFL4-PLq0CkzS4y2QCUcYdR4g=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDrhuoKKxuA6czVPCJwnsVH7zbexeZov_uVIWMqmxY6ozI91vhlK5jtmCMoQrPvE5g_v6CRZQgXdvADYfvNHu-nPKipfpmwVL6EXDGWDPCmA8VjiwMm2vPQ0W07pCTy3tFL4-PLq0CkzS4y2QCUcYdR4g=s4800-w800",
+            "attr_name": "pixel vietnam",
+            "attr_uri": "https://maps.google.com/maps/contrib/109728597366535505519"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAdAurdDamxTTCAiYNQ6SZXy3msBww5vpMcutPlzlJlwDkl9S60NYt_LZ5gMpJgKOVBPVC2WK2VcmpP5FA9V71Mhlj7LaQCsg1EMpuiZYZM2SwflbuQYPJC0axvQ8gQFJSv-PhHEmCn-hsGVAYJXVQVPg=s4800-w800",
+            "attr_name": "hy minh",
+            "attr_uri": "https://maps.google.com/maps/contrib/111845423520615127422"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB5deZDU9UD1bTJdApug-rpLaE0x3omceiJu2EqNG3FRxkTndmmj2l8ReKpEy9UQ4TRWaOnTNeyXiFA5i7yQVlgJzV3LqVVRhT-B1tPvPUScNweZjlWhB0sAo89FXPkSZRufzdxNCnhlQXg=s4800-w800",
+            "attr_name": "Thịnh Mai Viết",
+            "attr_uri": "https://maps.google.com/maps/contrib/102283659686772013076"
+          }
+        ],
+        "attr_name": "pixel vietnam",
+        "attr_uri": "https://maps.google.com/maps/contrib/109728597366535505519",
+        "emoji": "🌆",
+        "en": "Landmark 81 SkyView",
+        "vi": "Landmark 81 SkyView",
+        "loc_en": "Bình Thạnh",
+        "loc_vi": "Bình Thạnh",
+        "address": "720A Điện Biên Phủ, Phường, Thạnh Mỹ Tây, Hồ Chí Minh 72300, Vietnam",
+        "lat": 10.7951119,
+        "lng": 106.722096,
+        "rating": "4.6/5",
+        "price": "300k₫",
+        "votes": 3,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "views"
+        ],
+        "desc_en": "Observation deck on the 81st floor of Vietnam's tallest tower — sunset views over the Saigon River. Book ahead on weekends.",
+        "desc_vi": "Đài quan sát tầng 81 toà tháp cao nhất Việt Nam — ngắm hoàng hôn trên sông Sài Gòn. Cuối tuần nên đặt vé trước."
+      },
+      {
+        "id": "saigon-night-cruise",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAa09Fcfms5ypf8FSPZJ7jHCNtaPSy5pkyG3GUYqxWqqQHCiktS5ajVfRQJWbBhrMZMglNEIOIpK6mCfxJI897r93H6TaF91w-_9711BRl2qo9NF5ErP-SQaS_sWH_XN_QnUKwZeWCnbRO_7a7BHl-NzA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAa09Fcfms5ypf8FSPZJ7jHCNtaPSy5pkyG3GUYqxWqqQHCiktS5ajVfRQJWbBhrMZMglNEIOIpK6mCfxJI897r93H6TaF91w-_9711BRl2qo9NF5ErP-SQaS_sWH_XN_QnUKwZeWCnbRO_7a7BHl-NzA=s4800-w800",
+            "attr_name": "Saigon Waterbus Bạch Đằng",
+            "attr_uri": "https://maps.google.com/maps/contrib/102791173696452358404"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDElvPmqB42mEMsfzpZ-DDVIJRNzQZ9RB940DmWTHLFz4dFWZKbrgERuK6vsOgPml94CbGq3IRM1lHfv9CIWliJslo2pWYvUuARK-FFfhT06vqB_zi8a9_-Q9L6WllJRep1ntcDHsMwH9SKZ5UCxoZK=s4800-w800",
+            "attr_name": "TravelLover",
+            "attr_uri": "https://maps.google.com/maps/contrib/111305034770066065532"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCNfCZ-cTXZ9cnzrfHKDOIILkzqCVTJQn6i2XdMaUXcee9WYcL3JcWP6v43eztCU_6ff62E8ohgj5TR8RjNqCCseVG8or-TsuPjBRfoWb7TKtyZjjMJ0-K6yXLtJ9_4j25ulYaMjY2FXku6_NM=s4800-w800",
+            "attr_name": "Iain Laslett",
+            "attr_uri": "https://maps.google.com/maps/contrib/112887046504403632048"
+          }
+        ],
+        "attr_name": "Saigon Waterbus Bạch Đằng",
+        "attr_uri": "https://maps.google.com/maps/contrib/102791173696452358404",
+        "emoji": "🛥️",
+        "en": "Saigon Waterbus night ride",
+        "vi": "Waterbus Sài Gòn chuyến đêm",
+        "loc_en": "Bạch Đằng pier",
+        "loc_vi": "Bến Bạch Đằng",
+        "address": "10B Tôn Đức Thắng, Sài Gòn, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7752626,
+        "lng": 106.7068754,
+        "rating": "4.4/5",
+        "price": "50k₫",
+        "votes": 3,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "views",
+          "chill"
+        ],
+        "desc_en": "Evening boat loop on the Saigon River with the skyline lit up — a relaxed, cheap way to end a group day out.",
+        "desc_vi": "Vòng thuyền buổi tối trên sông Sài Gòn ngắm thành phố lên đèn — cách thư giãn, rẻ để kết thúc ngày đi chơi nhóm."
+      },
+      {
+        "id": "independence-palace",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBlHXunTiE7ogrlZnoJlPvrGxs87h38AqL5ZAZ7IGHxt5_8XWTOy3rcm8hADSx6ISW6XtPBCVbgV3xFYGgvzzHEFED_kt_7Bwe7EKQKyku5xA2LBjkM3NGHMEBBKeOGLf72kvMi9CvSwFuy=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBlHXunTiE7ogrlZnoJlPvrGxs87h38AqL5ZAZ7IGHxt5_8XWTOy3rcm8hADSx6ISW6XtPBCVbgV3xFYGgvzzHEFED_kt_7Bwe7EKQKyku5xA2LBjkM3NGHMEBBKeOGLf72kvMi9CvSwFuy=s4800-w800",
+            "attr_name": "Kim Khôi Trần",
+            "attr_uri": "https://maps.google.com/maps/contrib/102283866764790454931"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCWqJUAPigtS4SOlo9RfPNAK56FJRiVNWQbVuQQQMqWJQKfWR43IgFGk91R3G79Y10kJEprkWiF7W44PtIcclz2RTJqCgiNswGxhnB8i3T83PM5xyYAUb_aC0WnPPyDqu4wcai0VtNjLVx5LQ=s4800-w800",
+            "attr_name": "Gina L.",
+            "attr_uri": "https://maps.google.com/maps/contrib/106980859216500729283"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCMTdeg6c3CWWIetC2tliUTU9Tltlo4edY_IPi6B7yR4rKak73diwfagfvvyZGuNVZYxnhNEdix9RjfdaLXfRm7Y6ikuFQe-BYpXj13vqSqFn6QfmxmBNQ3yZvM4v2HjLsCyDedd9z6Sc25=s4800-w800",
+            "attr_name": "R Y",
+            "attr_uri": "https://maps.google.com/maps/contrib/109517852513671403978"
+          }
+        ],
+        "attr_name": "Kim Khôi Trần",
+        "attr_uri": "https://maps.google.com/maps/contrib/102283866764790454931",
+        "emoji": "🏛️",
+        "en": "Independence Palace",
+        "vi": "Dinh Độc Lập",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "Ben Thanh, Ho Chi Minh, Vietnam",
+        "lat": 10.776994199999999,
+        "lng": 106.69530209999999,
+        "rating": "4.5/5",
+        "price": "40k₫",
+        "votes": 4,
+        "dur_en": "1.5–2h",
+        "dur_vi": "1.5–2 giờ",
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "The frozen-in-1975 presidential palace — war rooms, retro salons and tanks on the lawn; the audio guide is worth it.",
+        "desc_vi": "Dinh tổng thống 'đóng băng' từ 1975 — phòng tác chiến, salon retro và xe tăng trên bãi cỏ; thuê audio guide rất đáng."
+      },
+      {
+        "id": "war-remnants-museum",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAWDSebi1GS_K8Mr51CAZ7NmZJTSRqVyyXUy0XEpvN6GcccsPr7RbMYs0NXnfZPblyP_bzsiSJGdz-Gc5Qk5p0Y9AnSfiaZ9LuTPIVsPkBA2jbAnjDLdmAt_X4u9nHuG7wRRZmigjIbRs4nWg=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAWDSebi1GS_K8Mr51CAZ7NmZJTSRqVyyXUy0XEpvN6GcccsPr7RbMYs0NXnfZPblyP_bzsiSJGdz-Gc5Qk5p0Y9AnSfiaZ9LuTPIVsPkBA2jbAnjDLdmAt_X4u9nHuG7wRRZmigjIbRs4nWg=s4800-w800",
+            "attr_name": "Jeffrey Marrs",
+            "attr_uri": "https://maps.google.com/maps/contrib/103142141888452191851"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCdDA3BoQhfCxJTPLXXAvyHYRpvzMdBgeD0tFYs81b9eT0Oqbkgs3miK4TTZePjZ1gCGhITtDfiR4Wrpj7wxQXh7oTg1A8oCfShVrdFMUPNg7JXeJYkYM8GdE5g0QrlPmJtHIeVxlzCG678-iQ=s4800-w800",
+            "attr_name": "Mel Lai",
+            "attr_uri": "https://maps.google.com/maps/contrib/106055453024597314895"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCF17Cu6vfGQPs1zI157crI3mMU12kHpXbw00vh_efnJMbwklMwireeTC3JKsvE3Wl0BS7OGf-Qo6lROp2Ed5cS-hCK58ODjgLQwNp-lt1Zp493BSjsbCyVXAjZo0EPUWF6V5--M7AGv_2TkRM=s4800-w800",
+            "attr_name": "la cà Khá",
+            "attr_uri": "https://maps.google.com/maps/contrib/107920768232672232596"
+          }
+        ],
+        "attr_name": "Jeffrey Marrs",
+        "attr_uri": "https://maps.google.com/maps/contrib/103142141888452191851",
+        "emoji": "🕊️",
+        "en": "War Remnants Museum",
+        "vi": "Bảo tàng Chứng tích Chiến tranh",
+        "loc_en": "District 3",
+        "loc_vi": "Quận 3",
+        "address": "Phường 6, Quận 3, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7795106,
+        "lng": 106.6920916,
+        "rating": "4.5/5",
+        "price": "40k₫",
+        "votes": 4,
+        "dur_en": "1.5–2.5h",
+        "dur_vi": "1.5–2.5 giờ",
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "Sobering, unmissable exhibits on the war — give it a full morning and plan something gentle afterwards.",
+        "desc_vi": "Trưng bày ám ảnh và không thể bỏ qua về chiến tranh — dành trọn buổi sáng và sắp xếp hoạt động nhẹ nhàng sau đó."
+      },
+      {
+        "id": "central-post-office",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBPCBaxqkcNZnIZchuM2m6WC-duHpA4o8CQ_3BQFOIRCIlzURLnSmz6c3coRo3cMCFpVPN7IYjgZILsAsHlKzesD4yVvyBDsU9TXjsd8EcebLPFuDNVblmZ0qf10OsInOCZFNbdUuTFIDSnrbv510ppbA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBPCBaxqkcNZnIZchuM2m6WC-duHpA4o8CQ_3BQFOIRCIlzURLnSmz6c3coRo3cMCFpVPN7IYjgZILsAsHlKzesD4yVvyBDsU9TXjsd8EcebLPFuDNVblmZ0qf10OsInOCZFNbdUuTFIDSnrbv510ppbA=s4800-w800",
+            "attr_name": "T-Adventure",
+            "attr_uri": "https://maps.google.com/maps/contrib/116837704532603036731"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD46y_1eBPqxRgIilTWFpXmzbmY9aZfovPdPpwa_4zf4ohIm0b4KYqK3QEd5x_U9YX3Dw3MXrD624Yso-8P3ADDDt_mWK98lGIq6LcrdzowuMALJqp5gtpj3WpXKKLcZTzo2lB-LUxhPxoxSr4NxPAAyw=s4800-w800",
+            "attr_name": "Hamdi Ahmed",
+            "attr_uri": "https://maps.google.com/maps/contrib/107779631000792906939"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCVMpSHApAXUzbkfVD2dpsM7mRWrG5QM9hp2cqT6IjHOFg70vUHPZkx9RQm3M9vmM2RjOwMcfXQZ2qIK-qKasCbff0UI08D6IYH5uhChjKnJlbWsb-NGHS-PQLxcDG18WWmOnBJO2CPFY7C4bmUO0GgWA=s4800-w800",
+            "attr_name": "Masafumi Saito",
+            "attr_uri": "https://maps.google.com/maps/contrib/117659347128573805157"
+          }
+        ],
+        "attr_name": "T-Adventure",
+        "attr_uri": "https://maps.google.com/maps/contrib/116837704532603036731",
+        "emoji": "📮",
+        "en": "Central Post Office",
+        "vi": "Bưu điện Thành phố",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "02 Công trường Công xã Paris, Bến Nghé, Quận 1, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7799129,
+        "lng": 106.699902,
+        "rating": "4.4/5",
+        "price": "0₫",
+        "votes": 4,
+        "dur_en": "30–45 min",
+        "dur_vi": "30–45 phút",
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "Gustave Eiffel-era post office with vaulted ceilings and vintage phone booths — still working; send the crew a postcard.",
+        "desc_vi": "Bưu điện thời Gustave Eiffel với trần vòm và buồng điện thoại cổ — vẫn hoạt động; gửi cả nhóm một tấm bưu thiếp."
+      },
+      {
+        "id": "nguyen-hue-walking-street",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsCJlUuaIBmw33QSyk5b0wGjjBvInYXFqbSeZRrb3Bhf9xdeMXV6-X1GnJ307Q7yzskxM4S7vPWaebC0w0F8sB4VJusDR0c3qcMVVkeqibkwWDm9S0Rl6c-O9p6gGScOPKqRRmdEJgtIjPRs_DzjkU5Q=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsCJlUuaIBmw33QSyk5b0wGjjBvInYXFqbSeZRrb3Bhf9xdeMXV6-X1GnJ307Q7yzskxM4S7vPWaebC0w0F8sB4VJusDR0c3qcMVVkeqibkwWDm9S0Rl6c-O9p6gGScOPKqRRmdEJgtIjPRs_DzjkU5Q=s4800-w800",
+            "attr_name": "Jen N",
+            "attr_uri": "https://maps.google.com/maps/contrib/102468413286995813430"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBaxQ-xZjIhb_6ypeCsmMMaivNCfITWdNSlpedVFPqA90ZfcCYBu-hYiXCT9wScP6DcPUE2ZyY3HgNp1mIqY3-Bmv_X40Cr9MARGU8M4gcRXdECCnJMNZpZRA-FsG-tnYYXYh5DW3-qk0T3_YoRb9v6nQ=s4800-w800",
+            "attr_name": "yuichi sasaki",
+            "attr_uri": "https://maps.google.com/maps/contrib/103660962830515051392"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjALtSoMcr_K2D-85Idb84k0ZfuypbpfH_KhZVMSWSWnCQJ7WluBCUmpgBfaBT9w2k6ZH1EbKY0bEJpXg6HUl4E_hoxykxxqBhK71XX8EsLixFoZDR0R8gdqPIo8qktxDENLH-OcKttM1m0D4CJMYImN=s4800-w800",
+            "attr_name": "Hajime Kaneko",
+            "attr_uri": "https://maps.google.com/maps/contrib/107874854712181144506"
+          }
+        ],
+        "attr_name": "Jen N",
+        "attr_uri": "https://maps.google.com/maps/contrib/102468413286995813430",
+        "emoji": "🚶",
+        "en": "Nguyễn Huệ Walking Street",
+        "vi": "Phố đi bộ Nguyễn Huệ",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "QPF3+JF9, Sai Gon, Ho Chi Minh, Vietnam",
+        "lat": 10.7740408,
+        "lng": 106.7037237,
+        "rating": "4.5/5",
+        "price": "0₫",
+        "votes": 5,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "outdoors",
+          "chill"
+        ],
+        "desc_en": "The city's living room — fountains, skateboarders and street shows from City Hall down to the river; best after dark.",
+        "desc_vi": "Phòng khách của thành phố — đài phun nước, trượt ván và biểu diễn đường phố từ Uỷ ban xuống bờ sông; đẹp nhất khi lên đèn."
+      },
+      {
+        "id": "bui-vien-walking-street",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDS2eKPgdUsPwvRXn0QjdjDM8CwZsa1rvMnLt5B5WJvoUeHDQvTwmqDv4-UcwQSb_e791QlgFMXRGPqLwtebAQ6CpE2IOkkdmuJcYSJv5u6Qe9o_bglVhFJvNGoPjm1eJWJUXMCOmlXqTdxFA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDS2eKPgdUsPwvRXn0QjdjDM8CwZsa1rvMnLt5B5WJvoUeHDQvTwmqDv4-UcwQSb_e791QlgFMXRGPqLwtebAQ6CpE2IOkkdmuJcYSJv5u6Qe9o_bglVhFJvNGoPjm1eJWJUXMCOmlXqTdxFA=s4800-w800",
+            "attr_name": "Cường Lê",
+            "attr_uri": "https://maps.google.com/maps/contrib/109839143565563769791"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDr7vHWKVN6Cp16QxNL3Pv-4PAenUrs-byiLo7BZyLUg5wXqBK9gaFzLsKvGVRJE0ZJw1gpxFmSkFJL8SnUJ7h6Lf8SRQ7Xj7aXIqktolOlOxbUsR2d2yTfqLH1flAORN5dYrmPtGB75A9dZ1a5LoMm=s4800-w800",
+            "attr_name": "Phu Nguyenvan",
+            "attr_uri": "https://maps.google.com/maps/contrib/108228788646108906575"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB1asqsSUeYN_0Z42TnFY7acc3StHxNaZStaSZGXRVzx_l6QpJXuiH8CxGhlXDrgxiZnfJ9lsjeiYRaW8TkPMGzXdOR-UOf7iLzGBi_9yjpes1BC7PWDwSI52jWdDuNj2L0nvvwHtOX-39u7qXhT7JE=s4800-w800",
+            "attr_name": "Peter Holroyd",
+            "attr_uri": "https://maps.google.com/maps/contrib/114220226898873699275"
+          }
+        ],
+        "attr_name": "Cường Lê",
+        "attr_uri": "https://maps.google.com/maps/contrib/109839143565563769791",
+        "emoji": "🍻",
+        "en": "Bùi Viện Walking Street",
+        "vi": "Phố đi bộ Bùi Viện",
+        "loc_en": "Phạm Ngũ Lão, D1",
+        "loc_vi": "Phạm Ngũ Lão, Q1",
+        "address": "Bùi Viện Phạm Ngũ Lão, phường, Bến Thành, Hồ Chí Minh, Vietnam",
+        "lat": 10.767351000000001,
+        "lng": 106.69388359999999,
+        "rating": "4.3/5",
+        "price": "150k₫",
+        "votes": 4,
+        "dur_en": "2–3h",
+        "dur_vi": "2–3 giờ",
+        "vibes": [
+          "nightlife"
+        ],
+        "desc_en": "Neon, bass and street beer chairs — chaotic, loud, and exactly what some nights need. Weekends peak after 22:00.",
+        "desc_vi": "Đèn neon, tiếng bass và ghế bia vỉa hè — ồn ào, hỗn loạn, và đúng chất cho những đêm cần 'quẩy'. Cuối tuần đông nhất sau 22h."
+      }
+    ],
+    "food": [
+      {
+        "id": "cafe-apartment",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDMxsPAbBBZ2d466X8dw6ImFpJX0NqTYgqOGx7rdNI53sNlFbsFv1pIzZBBvCHOuKlA6UzAGAQeFcjthl_Da0-oERFHQg_PRzkgJX7qFCXzTKNZ1y3BxRKMbT__7Gxcd9D7YdAc7kRcNmXkSLrDFUjLpg=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDMxsPAbBBZ2d466X8dw6ImFpJX0NqTYgqOGx7rdNI53sNlFbsFv1pIzZBBvCHOuKlA6UzAGAQeFcjthl_Da0-oERFHQg_PRzkgJX7qFCXzTKNZ1y3BxRKMbT__7Gxcd9D7YdAc7kRcNmXkSLrDFUjLpg=s4800-w800",
+            "attr_name": "SHREYAS",
+            "attr_uri": "https://maps.google.com/maps/contrib/100165939680759656657"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBSoYdKuQHEnw8tmf5zbHkrSaRWwu1811V0pny0s4zaRTMT6IB_wzQ8uo1F1Gt0Rv-6mdjGfeIru1So68xkNhH5FcGz-WjuD9PCvDwqMgJF05SD6hiJ5EX1Wlo_hEG8Kmy-7so9Mg7g-YYR=s4800-w800",
+            "attr_name": "Thitiluck Thitiluck",
+            "attr_uri": "https://maps.google.com/maps/contrib/106352847400815514261"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAG_WaAwFwBzEwWGMjRVJRVAmEKB-6JsRC2whITq4Hgi352lLTV6ZhkR7EHNF6mVoDBXs5XcI4Xp9kbR7o6J0IuZqtygqGnHCpAhu9otrS5E2Z2olgiIo4WjWwYXbKcD6L2DtyO24cBixUq4jYtD9Gs=s4800-w800",
+            "attr_name": "Vishwanath Gaitonde",
+            "attr_uri": "https://maps.google.com/maps/contrib/117883956379755581918"
+          }
+        ],
+        "attr_name": "SHREYAS",
+        "attr_uri": "https://maps.google.com/maps/contrib/100165939680759656657",
+        "emoji": "☕",
+        "en": "The Café Apartment",
+        "vi": "Chung cư Cà phê",
+        "loc_en": "Nguyễn Huệ, D1",
+        "loc_vi": "Nguyễn Huệ, Q1",
+        "address": "42 Nguyễn Huệ, Street, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7740888,
+        "lng": 106.7040596,
+        "rating": "4.4/5",
+        "price": "60k₫",
+        "votes": 4,
+        "dur_en": "1–2h",
+        "dur_vi": "1–2 giờ",
+        "vibes": [
+          "cafes",
+          "views"
+        ],
+        "desc_en": "Nine floors of indie cafés in a 1960s apartment block on the walking street — every window is a photo.",
+        "desc_vi": "Chín tầng quán cà phê indie trong chung cư thập niên 60 trên phố đi bộ — góc nào cũng chụp ảnh đẹp."
+      },
+      {
+        "id": "workshop-coffee",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC_qS63GV8q7ceM8uxyFmh8o5Udefo2Zsv3RuV24a85ZCyAEmGNHeDEM8e-Y5czXbYfbUL9X-ohWe5eCobrmD69PX5SIGKa8bRIm0YYEzpdC-Iz3Iv3lMwJ04dBOqFPBTRG6PyyzWw241CHeg=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC_qS63GV8q7ceM8uxyFmh8o5Udefo2Zsv3RuV24a85ZCyAEmGNHeDEM8e-Y5czXbYfbUL9X-ohWe5eCobrmD69PX5SIGKa8bRIm0YYEzpdC-Iz3Iv3lMwJ04dBOqFPBTRG6PyyzWw241CHeg=s4800-w800",
+            "attr_name": "Khánh Pro",
+            "attr_uri": "https://maps.google.com/maps/contrib/105952862646285956877"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBaHZOJ6iUgS-X4OFSFu_NXwwGL-hT_7bNr065Chdtms0mAwkNLqiASZS4a28VlfOjkh6FEl1pJHLt9z5JgatKeIPVPXscZcuyHajrSgeeMxFgXR-eVFLiVxOyjCE4FylelRdcjMmbB93Ha-lPKr6zbJw=s4800-w800",
+            "attr_name": "Skipper",
+            "attr_uri": "https://maps.google.com/maps/contrib/113286270576889883328"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDjZFx0xiW4mj9xcpGGerVWNlrhsp8LK5P2HxUNYSctmn1fLiOpnlvoHMwBG2p58RRvM5pu5CnVFxqELrvfENUj8GrTkc33ePjb06jBOeBfIDbxOW2CLDNH4VK1Pucwwmr4WnxwVH1D40FsM5w=s4800-w800",
+            "attr_name": "Thai Binh Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/117799904479038638737"
+          }
+        ],
+        "attr_name": "Khánh Pro",
+        "attr_uri": "https://maps.google.com/maps/contrib/105952862646285956877",
+        "emoji": "☕",
+        "en": "The Workshop Coffee",
+        "vi": "The Workshop Coffee",
+        "loc_en": "Ngô Đức Kế, D1",
+        "loc_vi": "Ngô Đức Kế, Q1",
+        "address": "Tầng 2, 27 Ngô Đức Kế, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7734764,
+        "lng": 106.7056037,
+        "rating": "4.4/5",
+        "price": "90k₫",
+        "votes": 3,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "cafes"
+        ],
+        "desc_en": "Industrial-loft specialty roaster above Ngô Đức Kế — single-origin pour-overs and big tables that fit a whole crew of laptops.",
+        "desc_vi": "Rang xưởng specialty phong cách loft trên lầu Ngô Đức Kế — pour-over single-origin và bàn dài đủ chỗ cho cả nhóm."
+      },
+      {
+        "id": "cong-caphe-dong-khoi",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD182iuIPIm48J97kD0zIXSnEVJ9VIUJ0GUOi-ZFZIUTIwSQ6l16dyg1IikZ7H8dHAVv2OE23lIPK7fw6UDBoH7FCP79pDHzdwO2-VZL7KttJTb3CapkkxtPLWU-JlEpvZ-pTMB8TSeHp_julw=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD182iuIPIm48J97kD0zIXSnEVJ9VIUJ0GUOi-ZFZIUTIwSQ6l16dyg1IikZ7H8dHAVv2OE23lIPK7fw6UDBoH7FCP79pDHzdwO2-VZL7KttJTb3CapkkxtPLWU-JlEpvZ-pTMB8TSeHp_julw=s4800-w800",
+            "attr_name": "Cộng Cà Phê",
+            "attr_uri": "https://maps.google.com/maps/contrib/104225104840781833788"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBcGTBWiXB9XY7bCqZYpBvaQjpEA5ixggjh_hKf0KF4Q-cJqk1P0CYeJxyMcl_cIjfJssNvYgmjU5iJb_LnqAxXuw-iidlY9Tc6yrUKdSUCwJA9UcjIIYqglMGMyZTbDmgpcfXANL3p7jv4PRw=s4800-w800",
+            "attr_name": "Cộng Cà Phê",
+            "attr_uri": "https://maps.google.com/maps/contrib/104225104840781833788"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDcpFsIHttdb4lGdwRGSdoLqUqshJ_CfFDOaJmQdQO-QhGh6M6M5B3kiYDb5jrlandXpKUgPAp7tKywOTiV97VCcgBnczhJsov5RcR1x0_uflqrvztW3goyxOAahWULFwajhJmN_SesWee6G7UhN16_Bw=s4800-w800",
+            "attr_name": "Long Ho",
+            "attr_uri": "https://maps.google.com/maps/contrib/110854011937575254013"
+          }
+        ],
+        "attr_name": "Cộng Cà Phê",
+        "attr_uri": "https://maps.google.com/maps/contrib/104225104840781833788",
+        "emoji": "🥥",
+        "en": "Cộng Cà Phê (Đồng Khởi)",
+        "vi": "Cộng Cà Phê (Đồng Khởi)",
+        "loc_en": "Đồng Khởi, D1",
+        "loc_vi": "Đồng Khởi, Q1",
+        "address": "B3-10 Vincom, Đồng Khởi/72 Lê Thánh Tôn, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7780202,
+        "lng": 106.70199009999999,
+        "rating": "4.1/5",
+        "price": "55k₫",
+        "votes": 2,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "cafes",
+          "chill"
+        ],
+        "desc_en": "Retro subsidy-era decor and the famous coconut coffee — an easy first stop before wandering Đồng Khởi.",
+        "desc_vi": "Không gian bao cấp hoài cổ và món cốt dừa cà phê trứ danh — điểm dừng dễ chịu trước khi dạo Đồng Khởi."
+      },
+      {
+        "id": "little-hanoi-egg-coffee",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAAha0Dbqt0FIsQft4BLw8p8GM42vRA_IfH3XdDDepmMj78dS1s3KYvx5Bs-pN8l7qzdkWfD6jPe9gscqnIMlfn6eROuG-RE_h0lNFIn7l8MqlYCPKFq894Vnvkwu8Lb6ILnfhvp16a61Df_cU=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAAha0Dbqt0FIsQft4BLw8p8GM42vRA_IfH3XdDDepmMj78dS1s3KYvx5Bs-pN8l7qzdkWfD6jPe9gscqnIMlfn6eROuG-RE_h0lNFIn7l8MqlYCPKFq894Vnvkwu8Lb6ILnfhvp16a61Df_cU=s4800-w800",
+            "attr_name": "Little HaNoi Egg Coffee (Yersin)",
+            "attr_uri": "https://maps.google.com/maps/contrib/107446562256909945452"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDM99rvFMMMlKvqS9-vlH9Yecnadcjx7LtYZFMG_wtqlmPZd3nfDiqPsQf_4jv_OhO8s_-S_kE0vCDaOTBWKAqB88zQsZiYYQVaLMgLod4X2B-IlDFCJXVKUIdcD8YH16yPYe4qW3ovBRkmXyH-QGB0eQ=s4800-w800",
+            "attr_name": "nicole chen",
+            "attr_uri": "https://maps.google.com/maps/contrib/108445574352540580923"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDzg9sRPAe80ipruoG-MRXzPr5PejtLJD3Uz5PAOoFYDo_GwB6VySCA6h8tZCdlMpoYf4-KNs9WV5R0hDVOJSCaG_Mali-RCk8mXWGMoFYv6i_kdNBOy5eUfPF2C2U_VW-vtrMq7nPX-M_o9i0=s4800-w800",
+            "attr_name": "Little HaNoi Egg Coffee (Yersin)",
+            "attr_uri": "https://maps.google.com/maps/contrib/107446562256909945452"
+          }
+        ],
+        "attr_name": "Little HaNoi Egg Coffee (Yersin)",
+        "attr_uri": "https://maps.google.com/maps/contrib/107446562256909945452",
+        "emoji": "🍮",
+        "en": "Little HaNoi Egg Coffee",
+        "vi": "Little HaNoi Egg Coffee",
+        "loc_en": "Phạm Ngũ Lão, D1",
+        "loc_vi": "Phạm Ngũ Lão, Q1",
+        "address": "Yersin/119/5 Phạm Ngũ Lão, Phường, Bến Thành, Hồ Chí Minh, Vietnam",
+        "lat": 10.7694043,
+        "lng": 106.6960112,
+        "rating": "4.8/5",
+        "price": "50k₫",
+        "votes": 3,
+        "dur_en": "45–60 min",
+        "dur_vi": "45–60 phút",
+        "vibes": [
+          "cafes"
+        ],
+        "desc_en": "Hanoi-style egg coffee whipped to a custard — hidden down an alley off Phạm Ngũ Lão; go early to grab the balcony seats.",
+        "desc_vi": "Cà phê trứng chuẩn Hà Nội đánh bông như kem — nằm sâu trong hẻm Phạm Ngũ Lão; đi sớm để giành chỗ ban công."
+      },
+      {
+        "id": "okkio-caffe",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCMcifkLSmPp7uf9Nx5DLIbHpOZFx2Oq6GzuJ6zLSzcD0ZPwXBI7YWxXFu9N5m-m-ClpPOo5B2IBmKjaH2oxkmxtbYjw5N8Fpr-kK5cRFjvWviymR3SMxHWXfTEsumBk9q5FV8B2ZZ4soEi=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCMcifkLSmPp7uf9Nx5DLIbHpOZFx2Oq6GzuJ6zLSzcD0ZPwXBI7YWxXFu9N5m-m-ClpPOo5B2IBmKjaH2oxkmxtbYjw5N8Fpr-kK5cRFjvWviymR3SMxHWXfTEsumBk9q5FV8B2ZZ4soEi=s4800-w800",
+            "attr_name": "OKKIO",
+            "attr_uri": "https://maps.google.com/maps/contrib/102038398507456509006"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDShGSwgUgUnaajl3Mqe8mtubBUFKROCtq0SQs9JbkCszpyOgN348xasrSJRcjyXiV9uLp74p_Hw7y3XDyrarVVJL2y8rUB-APZsvoOHi1I9gP6v3pIA0-Uxvnb65a9AVMnBu5_auiKrHG-A9NjuoumAg=s4800-w800",
+            "attr_name": "Tri Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/117110730234388824076"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCoU5U5XU1a-8xQFbzkonMNvWfLloj5pF-GMZo0O0x2RkPWX5Eyo43TlvS6HtPAoez5XbS0qLcfhSTKoEQSx3BKuklUcfjQ_pMtTXhcM556ui3-xhFqCWes8VfE6nnNKQbfw7OfdbnxvAhvAM1LedmR6w=s4800-w800",
+            "attr_name": "OKKIO",
+            "attr_uri": "https://maps.google.com/maps/contrib/102038398507456509006"
+          }
+        ],
+        "attr_name": "OKKIO",
+        "attr_uri": "https://maps.google.com/maps/contrib/102038398507456509006",
+        "emoji": "☕",
+        "en": "Okkio Caffe",
+        "vi": "Okkio Caffe",
+        "loc_en": "Lê Lợi, D1",
+        "loc_vi": "Lê Lợi, Q1",
+        "address": "120 - 122 Lê Lợi, Bến Thành, Hồ Chí Minh, Vietnam",
+        "lat": 10.7725195,
+        "lng": 106.69895849999999,
+        "rating": "4.6/5",
+        "price": "65k₫",
+        "votes": 2,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "cafes"
+        ],
+        "desc_en": "Moody red-brick espresso bar overlooking Lê Lợi — small, stylish, and the coffee is taken seriously.",
+        "desc_vi": "Quán espresso gạch đỏ đầy chất điện ảnh nhìn xuống Lê Lợi — nhỏ, chất, và cà phê thì cực kỳ nghiêm túc."
+      },
+      {
+        "id": "shin-coffee",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBn_JoJbSjBOJi4v2gMdEFczGgR5E6qbKc3F9-e71ShqIYAg_iUE-qNdt_4u5BPLUYFrM_nQFI_4Kn4Iy8APQjGAqROe7HwDqq7jIcic2N_O7_U53KOTCv-7MoGFZKCZYDtivlNUIF2n1egUA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBn_JoJbSjBOJi4v2gMdEFczGgR5E6qbKc3F9-e71ShqIYAg_iUE-qNdt_4u5BPLUYFrM_nQFI_4Kn4Iy8APQjGAqROe7HwDqq7jIcic2N_O7_U53KOTCv-7MoGFZKCZYDtivlNUIF2n1egUA=s4800-w800",
+            "attr_name": "SHIN Heritage",
+            "attr_uri": "https://maps.google.com/maps/contrib/101774485035792195092"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBEcMKfncb-bPfTWpOzRJcla1cNAkbeaFNXE_Vnh5aeMTjKK3XCtugRzB_gZYzJjm_VvoYk1Ppqb9LolKDzgjzWJO2nOMrGYMj8Rc3CXXVbtaSsqKkZdH08sSzb6sXlU9tw9PiuS-NWoASQTw=s4800-w800",
+            "attr_name": "SHIN Heritage",
+            "attr_uri": "https://maps.google.com/maps/contrib/101774485035792195092"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAnDRU3LeOk3_UdQORiVl-XolmHNQye_O4bHKfyMCtqx-NLwtCtZp27mhryak4x3x4tXJxsGI58JidGzovJgbZM0HJLHN9tIWhGrd0TKQyhcdJdS_62YiGIgG9jiJZmjsbpX0AZep5R9HMZyw=s4800-w800",
+            "attr_name": "Nguyen Tien Thu",
+            "attr_uri": "https://maps.google.com/maps/contrib/117713615599909368380"
+          }
+        ],
+        "attr_name": "SHIN Heritage",
+        "attr_uri": "https://maps.google.com/maps/contrib/101774485035792195092",
+        "emoji": "☕",
+        "en": "SHIN Heritage",
+        "vi": "SHIN Heritage",
+        "loc_en": "Lưu Văn Lang, D1",
+        "loc_vi": "Lưu Văn Lang, Q1",
+        "address": "27 Lưu Văn Lang, Bến Thành, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7732377,
+        "lng": 106.69906379999999,
+        "rating": "4.6/5",
+        "price": "80k₫",
+        "votes": 2,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "cafes"
+        ],
+        "desc_en": "Serious Vietnamese specialty beans a block from Bến Thành — order a tasting flight and compare regions with the group.",
+        "desc_vi": "Hạt specialty Việt Nam chất lượng cao cách Bến Thành một dãy phố — gọi khay thử để cả nhóm so hương vị từng vùng."
+      },
+      {
+        "id": "bang-khuang-cafe",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCDjKw4l57mTC0tmugGF_hZbf8aG1RKJdVWLyvjsKspqfepfZRCqUw_F53y6PWaAJLMPt8jzuQ_ixe3kjHWYxvS0R8YaMrClvj8btO9njH9kuIEeE5ed-laXJlRx_MsI-05VLafZODviYk7kA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCDjKw4l57mTC0tmugGF_hZbf8aG1RKJdVWLyvjsKspqfepfZRCqUw_F53y6PWaAJLMPt8jzuQ_ixe3kjHWYxvS0R8YaMrClvj8btO9njH9kuIEeE5ed-laXJlRx_MsI-05VLafZODviYk7kA=s4800-w800",
+            "attr_name": "Bâng Khuâng Café",
+            "attr_uri": "https://maps.google.com/maps/contrib/114561003296126582059"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD3kzlAsK2bVwFvcLpnjBYcT8abIFv39oD1gHAhT48FrsgnCfi6pwyxnnI4CqIY-mm8KSwPsJd7ZQkWVXCXjXClAz0me4Cl6rGGSjVL2jzFjdon9YfHJ52732ki1GmJPdFngNzHxySv2Zq7pqA=s4800-w800",
+            "attr_name": "Felix Süllwold",
+            "attr_uri": "https://maps.google.com/maps/contrib/105489895019978917349"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDU1D5BV-YF3yBjxJxEWWYI96I9D9UEuf-8cqXFgq3N5lxC3qHk_nCpT76v3sdc0M0T2ClMO_Vsg_B1vJW1Kk9nRqOOJLQ9cWOf-vvwYYcJrrOVKm0wWXhatbL9L4ceLtq7aTnOgyfvNJgUFgb8PHRJUg=s4800-w800",
+            "attr_name": "yoshi harada",
+            "attr_uri": "https://maps.google.com/maps/contrib/111970408196976304964"
+          }
+        ],
+        "attr_name": "Bâng Khuâng Café",
+        "attr_uri": "https://maps.google.com/maps/contrib/114561003296126582059",
+        "emoji": "🪟",
+        "en": "Bâng Khuâng Café",
+        "vi": "Bâng Khuâng Café",
+        "loc_en": "Thái Văn Lung, D1",
+        "loc_vi": "Thái Văn Lung, Q1",
+        "address": "2nd floor, 9 Thái Văn Lung, Sài Gòn, Hồ Chí Minh, Vietnam",
+        "lat": 10.77869,
+        "lng": 106.7050646,
+        "rating": "4.3/5",
+        "price": "60k₫",
+        "votes": 2,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "cafes",
+          "chill"
+        ],
+        "desc_en": "Quiet second-floor hideout with balcony light and old-Saigon mood — the anti-crowd choice for a slow afternoon.",
+        "desc_vi": "Góc trốn phố yên tĩnh trên lầu hai với nắng ban công và chất Sài Gòn xưa — lựa chọn né đám đông cho buổi chiều chậm."
+      },
+      {
+        "id": "cheo-leo-cafe",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBL_-KZukGVswqqVFmD8W5mBE-mi_ob165-pFxOlgsow8Sv0YIhClk_YHfIKJDKW1SqS5OGs0-w8h_AwEhu41IJRgHdWBc6uje-RROXb1pxj0ZL_xr8qftVPlol2zIFGVF9cVXaua2xCgoSplo=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBL_-KZukGVswqqVFmD8W5mBE-mi_ob165-pFxOlgsow8Sv0YIhClk_YHfIKJDKW1SqS5OGs0-w8h_AwEhu41IJRgHdWBc6uje-RROXb1pxj0ZL_xr8qftVPlol2zIFGVF9cVXaua2xCgoSplo=s4800-w800",
+            "attr_name": "CHEO LEO Cafe",
+            "attr_uri": "https://maps.google.com/maps/contrib/107184839502948202751"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAgMCX_W5sXLSMbb6c3F2EXAyOh6ewm6UlxxXMfytzoWvmsfVAgJIqwwC1gx_VW6zus37OFWgwM_gYjFzC-2eKonnEM_eNuW1nalr4Bj3BVsB18HvkJz9fsf2TDbAqygGD6o6_7QkhiRbHxKtc=s4800-w250",
+            "attr_name": "CHEO LEO Cafe",
+            "attr_uri": "https://maps.google.com/maps/contrib/107184839502948202751"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDUZ4Hz7GiEDrweJhF-dqeT1dU-5RcbvzrmWa59VZ-sGO-Jk9MR9iIoX2QKJIHvM7hRwmwr98mgTcM25TwhC-Tq2KYkjs0VlNqX65tqNeZdXCcOpx9TbQGKgfLK2YfNWYdld3T9SXBzBQ4oPAUnpphXLA=s4800-w800",
+            "attr_name": "蕭嘉麟",
+            "attr_uri": "https://maps.google.com/maps/contrib/113497403507409942239"
+          }
+        ],
+        "attr_name": "CHEO LEO Cafe",
+        "attr_uri": "https://maps.google.com/maps/contrib/107184839502948202751",
+        "emoji": "🫖",
+        "en": "Cheo Leo Café",
+        "vi": "Cà phê Cheo Leo",
+        "loc_en": "Bàn Cờ, D3",
+        "loc_vi": "Bàn Cờ, Q3",
+        "address": "109/ 36 Đ. Nguyễn Thiện Thuật, Khu phố 8, Bàn Cờ, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.766997,
+        "lng": 106.67985329999999,
+        "rating": "4.5/5",
+        "price": "25k₫",
+        "votes": 5,
+        "dur_en": "45–60 min",
+        "dur_vi": "45–60 phút",
+        "vibes": [
+          "cafes",
+          "culture"
+        ],
+        "desc_en": "Saigon's oldest café (1938) still brews vợt-style in clay pots — go for bạc xỉu and stories from the family that never stopped.",
+        "desc_vi": "Quán cà phê lâu đời nhất Sài Gòn (1938) vẫn pha vợt bằng siêu đất — ghé uống bạc xỉu và nghe chuyện gia đình giữ nghề."
+      },
+      {
+        "id": "oromia-coffee",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAGvBdKC5Ng0j8JqsGJSIQDjINxcfeYINmOzsveGlESQEYVN-ZO1adHDr3-rMkM_h82nURsPnCp5wNOWrLQwJsEwtaod-TtrQlgWb5DQGqLclPDEbD24MGsvSkkHq_Kbo60Xr7-CDqF27dcDWg=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAGvBdKC5Ng0j8JqsGJSIQDjINxcfeYINmOzsveGlESQEYVN-ZO1adHDr3-rMkM_h82nURsPnCp5wNOWrLQwJsEwtaod-TtrQlgWb5DQGqLclPDEbD24MGsvSkkHq_Kbo60Xr7-CDqF27dcDWg=s4800-w800",
+            "attr_name": "Oromia Coffee & Lounge",
+            "attr_uri": "https://maps.google.com/maps/contrib/111644447834624957230"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDKQi2V6QTeyONAfTTpVN_NF2VTKj1lcw3oBEZsmGDJG2D8En-H0ZNkwsK2LmDcw-0uQ0WuTsGQEJNA50d_9bpRsWk8RBX9ljkzFpRtlMPnV7sdzO-WXbjzcLYPmgsb1g7lFRAuZ2rUJz5jrd0=s4800-w800",
+            "attr_name": "Oromia Coffee & Lounge",
+            "attr_uri": "https://maps.google.com/maps/contrib/111644447834624957230"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCwsGLv6Tlrh-HpEQI8lZQ6FfGDjpRo97Ng_saZh_pz8lDTn22ozf7mOsrew692AJseSxeun0OhUieG18NMbJh6gGTs_s8FLK8Zg0kUK6rd2m3b-3T-lzCPjDTKv7ZPCpDGw92_IBsIpNDn6j2ud2w2Og=s4800-w800",
+            "attr_name": "Rohan Kumar",
+            "attr_uri": "https://maps.google.com/maps/contrib/100712841069296848065"
+          }
+        ],
+        "attr_name": "Oromia Coffee & Lounge",
+        "attr_uri": "https://maps.google.com/maps/contrib/111644447834624957230",
+        "emoji": "🌿",
+        "en": "Oromia Coffee & Lounge",
+        "vi": "Oromia Coffee & Lounge",
+        "loc_en": "Phan Kế Bính, D1",
+        "loc_vi": "Phan Kế Bính, Q1",
+        "address": "85 Phan Kế Bính, Quận 1, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7906677,
+        "lng": 106.69836169999999,
+        "rating": "4/5",
+        "price": "80k₫",
+        "votes": 2,
+        "dur_en": "1–2h",
+        "dur_vi": "1–2 giờ",
+        "vibes": [
+          "cafes",
+          "chill"
+        ],
+        "desc_en": "A garden villa café with koi pond and shaded decks — feels like leaving the city without leaving D1.",
+        "desc_vi": "Biệt thự sân vườn với hồ cá koi và hiên râm mát — cảm giác rời khỏi thành phố mà vẫn ở Quận 1."
+      },
+      {
+        "id": "lusine-le-loi",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAjLJCo7qN0qgoSINkFgn1xkDyEQQHwMZzUIim1LBxsZQEybB8sR9-ayLwsqz37lB78mSL5yxvIprCjWF1WG82uQS4U7BiVCWsvYmoB_o-0wppDaRxE_zqz7j1teEWhz5vjUG7pKUttXH2uJ8Q=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAjLJCo7qN0qgoSINkFgn1xkDyEQQHwMZzUIim1LBxsZQEybB8sR9-ayLwsqz37lB78mSL5yxvIprCjWF1WG82uQS4U7BiVCWsvYmoB_o-0wppDaRxE_zqz7j1teEWhz5vjUG7pKUttXH2uJ8Q=s4800-w800",
+            "attr_name": "L’Usine Lê Lợi",
+            "attr_uri": "https://maps.google.com/maps/contrib/114772649037932743948"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBxwOUabPTJxzA7zZOkSrPh9pQNfo9r-7a_k845pz1NqUlzCqPvwA2194RhEvkiOP-FijEaEP8YfCGtEm4g9S0e_nPAR4MHK5rwMMHBRKqlTtNlfWTsEWkYMwUB3YcSQ1z_K-qeSXvz6CGL5PE=s4800-w800",
+            "attr_name": "L’Usine Lê Lợi",
+            "attr_uri": "https://maps.google.com/maps/contrib/114772649037932743948"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBReNTknYwncAzTo_Ov3Nv6G2JPTGDqggz5HOa_U-08x4ty-sHu9wPubTstzsMCrxGR2T9MN3-22rF0x8REw3CNnuo0MOm-JSGrN5e9kzqwTBTdGo1e5xjrq--GRJcdcMsMUdj2MpM_k3B2kw=s4800-w800",
+            "attr_name": "Isabelle G",
+            "attr_uri": "https://maps.google.com/maps/contrib/113373817074082737499"
+          }
+        ],
+        "attr_name": "L’Usine Lê Lợi",
+        "attr_uri": "https://maps.google.com/maps/contrib/114772649037932743948",
+        "emoji": "🥐",
+        "en": "L'Usine Lê Lợi",
+        "vi": "L'Usine Lê Lợi",
+        "loc_en": "Lê Lợi, D1",
+        "loc_vi": "Lê Lợi, Q1",
+        "address": "34 Lê Lợi, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7743611,
+        "lng": 106.70055070000001,
+        "rating": "4.4/5",
+        "price": "150k₫",
+        "votes": 2,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "cafes",
+          "shopping"
+        ],
+        "desc_en": "Café, brunch and concept store in one colonial-era space — browse local designers while you wait for the eggs benedict.",
+        "desc_vi": "Café, brunch và concept store trong một không gian thời thuộc địa — dạo xem đồ local designer trong lúc chờ món."
+      },
+      {
+        "id": "ben-thanh-street-food",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsfiITgzB4SvmYqiXtnqrKIQV2KAQIpLJWY-vuWbVXhFBwKfxP66rqVBI15tjUN4TDfvi_j3BIhSW2hGOBWnE_JlIrtXj6oY8-DW5R7d5sHOyM4cQi-imvT4EJ_S7Bblg4_VUj2lL-8KviEg=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsfiITgzB4SvmYqiXtnqrKIQV2KAQIpLJWY-vuWbVXhFBwKfxP66rqVBI15tjUN4TDfvi_j3BIhSW2hGOBWnE_JlIrtXj6oY8-DW5R7d5sHOyM4cQi-imvT4EJ_S7Bblg4_VUj2lL-8KviEg=s4800-w800",
+            "attr_name": "Bilal Rifat",
+            "attr_uri": "https://maps.google.com/maps/contrib/103621954677239724748"
+          }
+        ],
+        "attr_name": "Bilal Rifat",
+        "attr_uri": "https://maps.google.com/maps/contrib/103621954677239724748",
+        "emoji": "🍜",
+        "en": "Bến Thành street food",
+        "vi": "Ẩm thực Bến Thành",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "32b Thủ Khoa Huân, Bến Thành, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7737417,
+        "lng": 106.69729439999999,
+        "rating": "4.3/5",
+        "price": "140k₫",
+        "votes": 5,
+        "dur_en": "1–2h",
+        "dur_vi": "1–2 giờ",
+        "vibes": [
+          "food_tour"
+        ],
+        "desc_en": "Classic market stalls — bánh xèo, grilled skewers, chè. Easy for groups: everyone picks their own.",
+        "desc_vi": "Sạp chợ kinh điển — bánh xèo, đồ nướng, chè. Hợp đi nhóm: ai thích gì tự chọn."
+      },
+      {
+        "id": "secret-garden",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA1MqIQskZ69N3X90XMBWpMDCmL_3gL80e7i2CB53VMvei7FecXBfM8g4UwishnFM8PewbDlgo93LsdtNYMyRccVIczWrKeOL02iBdrnc2EiZLYHA99NbX23_2UyJ9RndxI2zmR1wBbrainaKzfze7L=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA1MqIQskZ69N3X90XMBWpMDCmL_3gL80e7i2CB53VMvei7FecXBfM8g4UwishnFM8PewbDlgo93LsdtNYMyRccVIczWrKeOL02iBdrnc2EiZLYHA99NbX23_2UyJ9RndxI2zmR1wBbrainaKzfze7L=s4800-w800",
+            "attr_name": "Tommy Ny",
+            "attr_uri": "https://maps.google.com/maps/contrib/114261712974779335726"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCEox7WagxCFivyRIMXim2skO103m75ZZ_4v9A-ELDUHz2UOkyUlTXl67A0HgVMl_NfnwdQwCejPvKUwNCXhoMIwESy6wDFX_CBx0Fig8ag8bUlyeHNKydvYMXRPagIFaN7GD0oeezsFKufjQ=s4800-w800",
+            "attr_name": "Secret Garden Restaurant",
+            "attr_uri": "https://maps.google.com/maps/contrib/108517894477651113279"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBtQEqpyC0QjVAyPaFWc5griieSljDJ4VdyXZgEIsArjuwLU0uUNOqlKzFzYUMDu69kvcYQqgZQHhI-ThoOph-Dks21Kvm7XeyxbDqKYzp3lu2BU-HNNan63L8l2G1aU-Giq0hRFPnVuIKuCQzg2oXNyA=s4800-w800",
+            "attr_name": "Anh Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/107910297214128661084"
+          }
+        ],
+        "attr_name": "Tommy Ny",
+        "attr_uri": "https://maps.google.com/maps/contrib/114261712974779335726",
+        "emoji": "🍲",
+        "en": "Secret Garden",
+        "vi": "Secret Garden",
+        "loc_en": "Pasteur, D1",
+        "loc_vi": "Pasteur, Q1",
+        "address": "158 Pasteur, Sài Gòn, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7770824,
+        "lng": 106.69975439999999,
+        "rating": "4.1/5",
+        "price": "150k₫",
+        "votes": 2,
+        "dur_en": "1.5–2h",
+        "dur_vi": "1.5–2 giờ",
+        "vibes": [
+          "food_tour",
+          "chill"
+        ],
+        "desc_en": "Rooftop home-style Vietnamese food under lanterns — book a long table for the whole crew.",
+        "desc_vi": "Cơm nhà Việt trên sân thượng dưới ánh đèn lồng — đặt bàn dài cho cả nhóm."
+      },
+      {
+        "id": "banh-mi-huynh-hoa",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC3nfKc7w05Tv07agItt7eKHSaK9Jne82S9LrBwTiRZQfF4YtCzFAGMsFsHDj62oUdWkzMibwTn3UgaNCR2zrxuYofQXkwKkpmR_zOPtQLCLQqqdKkBtAy1TxAKpYGamTnDmJ4IMw0GZk0ytnWzREfYPw=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC3nfKc7w05Tv07agItt7eKHSaK9Jne82S9LrBwTiRZQfF4YtCzFAGMsFsHDj62oUdWkzMibwTn3UgaNCR2zrxuYofQXkwKkpmR_zOPtQLCLQqqdKkBtAy1TxAKpYGamTnDmJ4IMw0GZk0ytnWzREfYPw=s4800-w800",
+            "attr_name": "Zhi Qin Ooi",
+            "attr_uri": "https://maps.google.com/maps/contrib/112083975906563403770"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBW631wzyjXx44oyi0UKBZs2hb-eOGRMsRE57EipB998chJc2VF-kFoP3_ZuZIRypL5mOlxYDAUM9uwUmQ49FCbTutq6zmjyH_qC1-zJtvpvokROidSOQwdVJOs6VEvY9wVUe6yeRuJ19-o8yZ8ZuVnjg=s4800-w800",
+            "attr_name": "葉家豪",
+            "attr_uri": "https://maps.google.com/maps/contrib/105546766132576466480"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAe8ParxjGxybzi2T3fM_o7VXZ0Xv43NRQe70dUYR1eCLpiXvtmWTqWXfI9Ad4fO5pQj6A24PRa-E-m_r-BC6ZiPCya054FKVAr1L2wu4XsSGbA_GZ33HnrJlzOk6uq2LYPVYk4-T_aOYe3vNq6pKmz=s4800-w650",
+            "attr_name": "ngọc Nhi đang buồn",
+            "attr_uri": "https://maps.google.com/maps/contrib/117343170390869295506"
+          }
+        ],
+        "attr_name": "Zhi Qin Ooi",
+        "attr_uri": "https://maps.google.com/maps/contrib/112083975906563403770",
+        "emoji": "🥖",
+        "en": "Bánh mì Huỳnh Hoa",
+        "vi": "Bánh mì Huỳnh Hoa",
+        "loc_en": "Lê Thị Riêng, D1",
+        "loc_vi": "Lê Thị Riêng, Q1",
+        "address": "26 Lê Thị Riêng, Bến Thành, Hồ Chí Minh, Vietnam",
+        "lat": 10.771522599999999,
+        "lng": 106.6923968,
+        "rating": "4.1/5",
+        "price": "68k₫",
+        "votes": 6,
+        "dur_en": "15–30 min",
+        "dur_vi": "15–30 phút",
+        "vibes": [
+          "food_tour"
+        ],
+        "desc_en": "The most famous bánh mì in the city, stacked absurdly with cold cuts and pâté — expect a line, it moves fast.",
+        "desc_vi": "Ổ bánh mì nổi tiếng nhất thành phố, nhân thịt nguội và pâté đầy ú ụ — xếp hàng hơi đông nhưng rất nhanh."
+      },
+      {
+        "id": "pho-le",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDJFOHA7gSprsnIZVPBo37YkSSL1MNpspPkcqP_e7U4Rx3VaLM8G97YCP0L1xzDcXIePTj3_o4y9Rg2Vu1B7Y5PPnrw_qdxzwAq7c7BtTpOUfSRgN8QCxVEdA6mSXbkpjec1uyULmRJj7ZTuQ=s4800-w370",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDJFOHA7gSprsnIZVPBo37YkSSL1MNpspPkcqP_e7U4Rx3VaLM8G97YCP0L1xzDcXIePTj3_o4y9Rg2Vu1B7Y5PPnrw_qdxzwAq7c7BtTpOUfSRgN8QCxVEdA6mSXbkpjec1uyULmRJj7ZTuQ=s4800-w370",
+            "attr_name": "Phở Lệ",
+            "attr_uri": "https://maps.google.com/maps/contrib/116533816795176386646"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAO5rO5vsZIVAeD108bd1J6YB0zXdOrPUKMR7b1pcfrVNlgTHsG48YlEoEnctUUB0eo29AuNBYjfubpwarC4l6m0YneS-Iu3tFhp6hmqowFsvajbRddGENmNpeCF2ALSKCn75TL5F7-Y4o1lw=s4800-w800",
+            "attr_name": "Phở Lệ",
+            "attr_uri": "https://maps.google.com/maps/contrib/116533816795176386646"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDP0mddoGh-fIEmVm6vtZWQwKRIL7d5HZbgY3eJEGojOOPwS5Ywr-QzkD5vnsp4FdYRU1tI86cg2aoQA2N8K0r2H5OeQlMHgPYcZHtWT6biI4bNIKbIOzZqTs4sv7H4N4qxiW_vucH_pR8A4d4V63N1FQ=s4800-w800",
+            "attr_name": "Pert MONEX",
+            "attr_uri": "https://maps.google.com/maps/contrib/100542560408947054153"
+          }
+        ],
+        "attr_name": "Phở Lệ",
+        "attr_uri": "https://maps.google.com/maps/contrib/116533816795176386646",
+        "emoji": "🍜",
+        "en": "Phở Lệ",
+        "vi": "Phở Lệ",
+        "loc_en": "Nguyễn Trãi, D5",
+        "loc_vi": "Nguyễn Trãi, Q5",
+        "address": "413 - 415 Nguyễn Trãi, An Đông, Hồ Chí Minh, Vietnam",
+        "lat": 10.755295900000002,
+        "lng": 106.67351959999999,
+        "rating": "4.2/5",
+        "price": "90k₫",
+        "votes": 4,
+        "dur_en": "30–60 min",
+        "dur_vi": "30–60 phút",
+        "vibes": [
+          "food_tour"
+        ],
+        "desc_en": "Chợ Lớn's beloved southern-style phở since 1970 — rich broth, tender brisket, open till late for the post-pagoda stop.",
+        "desc_vi": "Phở kiểu Nam trứ danh Chợ Lớn từ 1970 — nước dùng đậm, nạm mềm, mở khuya tiện ghé sau khi viếng chùa."
+      },
+      {
+        "id": "com-tam-ba-ghien",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDTvf2HWPXqt1LJW9949fSQ0sgde80G7cvfj8mXbk3ah1ix0t77j_ka-5q0q-zQGgfnrslkTIqteoXKL4PZyQ3LwhoYQV6NCJND0IgZhM2Sm1Du1E8QXoy3exdz3fnQQO7n9y5st4ikOhQ1bP8=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDTvf2HWPXqt1LJW9949fSQ0sgde80G7cvfj8mXbk3ah1ix0t77j_ka-5q0q-zQGgfnrslkTIqteoXKL4PZyQ3LwhoYQV6NCJND0IgZhM2Sm1Du1E8QXoy3exdz3fnQQO7n9y5st4ikOhQ1bP8=s4800-w800",
+            "attr_name": "Viettel Store",
+            "attr_uri": "https://maps.google.com/maps/contrib/102587055378129974576"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCpsBsMxAfTRJJ0jVTDr9_Y40pK4w_-JCAxXpaNxElDstNIrgoJ8XJaY27FOdJWjil_m2yD66Z2dT6xRYzzw839V3tYiF93aRvCvxFXHYWSJX0Ep6PZ5KqYTCa8UplX9Ad3nByv6vSwuT97E5Bvl8OM=s4800-w800",
+            "attr_name": "Bernard Huen",
+            "attr_uri": "https://maps.google.com/maps/contrib/105356211593860927587"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB-1FtkxU-N15UP4tnv1oQHInO1u4OHAEPkNHB0oTM0OmnQd3E9qMwi6_fHFAXMMMr_l5487TRXvZVbxRhvn4TE1WCneD7yKH3H9yeFQN-JHRSJuSHWQ_jCYNkBXldtdIdnn47cMUEZpHk3uRyThW517Q=s4800-w800",
+            "attr_name": "Hồng Hoàng",
+            "attr_uri": "https://maps.google.com/maps/contrib/114211119983595167675"
+          }
+        ],
+        "attr_name": "Viettel Store",
+        "attr_uri": "https://maps.google.com/maps/contrib/102587055378129974576",
+        "emoji": "🍚",
+        "en": "Cơm tấm Ba Ghiền",
+        "vi": "Cơm tấm Ba Ghiền",
+        "loc_en": "Đặng Văn Ngữ, Phú Nhuận",
+        "loc_vi": "Đặng Văn Ngữ, Phú Nhuận",
+        "address": "84 Đ. Đặng Văn Ngữ, Phú Nhuận, Hồ Chí Minh, Vietnam",
+        "lat": 10.794442,
+        "lng": 106.66936,
+        "rating": "4.2/5",
+        "price": "70k₫",
+        "votes": 5,
+        "dur_en": "30–45 min",
+        "dur_vi": "30–45 phút",
+        "vibes": [
+          "food_tour"
+        ],
+        "desc_en": "Michelin-listed broken rice with a legendary grilled pork chop the size of your face — come hungry.",
+        "desc_vi": "Cơm tấm được Michelin vinh danh với miếng sườn nướng to bản huyền thoại — nhớ để bụng thật đói."
+      },
+      {
+        "id": "banh-xeo-46a",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBLDzRgoIB7z1y21g-dk9Hmam4hRyIosJUp669WAY1IRQDjyXRgrhC9IaGzsUnihP8sC2VuSSxjR1sIYTsfmIVvuxeMtuG6c7IMqY2n63-U4RWhyGfWLdnhHzUc4N4MWkH48gk1R4j9gLWaHyqILdu87w=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBLDzRgoIB7z1y21g-dk9Hmam4hRyIosJUp669WAY1IRQDjyXRgrhC9IaGzsUnihP8sC2VuSSxjR1sIYTsfmIVvuxeMtuG6c7IMqY2n63-U4RWhyGfWLdnhHzUc4N4MWkH48gk1R4j9gLWaHyqILdu87w=s4800-w800",
+            "attr_name": "JINN",
+            "attr_uri": "https://maps.google.com/maps/contrib/109529946471151847156"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDo1L2-9SfW7P6RtQ87Ynw2ZeZUH0QRgzK_8AAquCfVpPXyFKKDIZ9tljH0Ye57XDK1_8zO2BmCk7a7xYKUm7T33daL6gKnQe-9nyOyHpzPVNhWI07rAancJh-YCnBogmK8SVQ2TGtOzt4L_qA=s4800-w800",
+            "attr_name": "Bánh Xèo 46A",
+            "attr_uri": "https://maps.google.com/maps/contrib/118234762988822738721"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDFT7qlxiAxGFJ9ibBQrioBBL7zpPcxKOjD5019xUxD8QBchrT8wriKz6atGHWvWeOqZj6zr33-hkfMvZHPTe0EqmrQwd41NfeWUNfrjxVIl8evkxQJ1j0X4aHCtHkazXCY6wvE1o8W6nlAUERDMwrDOA=s4800-w800",
+            "attr_name": "Tài Lê",
+            "attr_uri": "https://maps.google.com/maps/contrib/100492667426498836214"
+          }
+        ],
+        "attr_name": "JINN",
+        "attr_uri": "https://maps.google.com/maps/contrib/109529946471151847156",
+        "emoji": "🥞",
+        "en": "Bánh xèo 46A",
+        "vi": "Bánh xèo 46A",
+        "loc_en": "Đinh Công Tráng, D1",
+        "loc_vi": "Đinh Công Tráng, Q1",
+        "address": "46A Đinh Công Tráng, Tân Định, Hồ Chí Minh, Vietnam",
+        "lat": 10.7895674,
+        "lng": 106.6913428,
+        "rating": "3.8/5",
+        "price": "100k₫",
+        "votes": 3,
+        "dur_en": "45–60 min",
+        "dur_vi": "45–60 phút",
+        "vibes": [
+          "food_tour"
+        ],
+        "desc_en": "Crackling rice-flour crêpes fried in well-worn pans since 1945 — wrap in mustard leaves, dip, repeat.",
+        "desc_vi": "Bánh xèo giòn rụm đổ bằng chảo gang lâu năm từ 1945 — cuốn lá cải, chấm mắm, và cứ thế lặp lại."
+      },
+      {
+        "id": "oc-dao",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCzScI0gSgf-0HtSn4bSkTFhA9vJ85XcyPwFPgwXEf0JSkMg_x-Tfs7qk0pacGU81e91kZ9sFySY_YfV-rc6P66lcAt_Ue-4ftGhy4Uawu0txw47p2T3H65R3C2FYH2dIdEMTQ0nbUyy-wXLQ=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCzScI0gSgf-0HtSn4bSkTFhA9vJ85XcyPwFPgwXEf0JSkMg_x-Tfs7qk0pacGU81e91kZ9sFySY_YfV-rc6P66lcAt_Ue-4ftGhy4Uawu0txw47p2T3H65R3C2FYH2dIdEMTQ0nbUyy-wXLQ=s4800-w800",
+            "attr_name": "xuyen Mai",
+            "attr_uri": "https://maps.google.com/maps/contrib/101547126081097322955"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA2RzH9tcYGhW2034noayN3wXax_Khq3ueY9DlWgixS_SBRrsqTFBUqDLNn5Bu44jnmNb00q3I_meN6I8DLxDpOQXOnz28Dxj0_FJ1le2BJFYlJmdokrHj6JHLbNdJTKFGwawJstksemwrJom2XH2US=s4800-w800",
+            "attr_name": "yuichi sasaki",
+            "attr_uri": "https://maps.google.com/maps/contrib/103660962830515051392"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAol8XijvCx7ePx1PWOLV8IjXScIe435qwKRcx_w4mVpWokRDuTm_P0d_FpxjoO4BHG6X21YtxF_j_SpJXGRmIrh0R2luZEKhh965xf5uubrzwzym0mvl0UDLH-HaoSN4m1XkODzvidofwEg8sBvwY_=s4800-w800",
+            "attr_name": "Kittika P",
+            "attr_uri": "https://maps.google.com/maps/contrib/112350913824706268840"
+          }
+        ],
+        "attr_name": "xuyen Mai",
+        "attr_uri": "https://maps.google.com/maps/contrib/101547126081097322955",
+        "emoji": "🦪",
+        "en": "Ốc Đào",
+        "vi": "Ốc Đào",
+        "loc_en": "Nguyễn Trãi, D1",
+        "loc_vi": "Nguyễn Trãi, Q1",
+        "address": "212B/D48 Nguyễn Trãi, Cầu Ông Lãnh, Hồ Chí Minh, Vietnam",
+        "lat": 10.765238,
+        "lng": 106.6846346,
+        "rating": "4.2/5",
+        "price": "150k₫",
+        "votes": 4,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "food_tour"
+        ],
+        "desc_en": "The snail-eating institution hidden in a D1 alley — order garlic-butter scallops and salted-egg snails for the table.",
+        "desc_vi": "Địa chỉ ăn ốc huyền thoại trong hẻm Quận 1 — gọi sò điệp bơ tỏi và ốc trứng muối cho cả bàn."
+      },
+      {
+        "id": "ho-thi-ky-food-street",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDlvTY6zvSeR8s7Om16gN2Fy3phEaXW11trFM7Rg3UdicTmXsWNJdvvMX_RyPi7wWZpum3jjjVgtLEa8BQVbZiiixuPNBsvcNUHhGepreSqklcgCXdg0OhY1FL86lxd_uU5pZsPA4QeE2gL2Q=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDlvTY6zvSeR8s7Om16gN2Fy3phEaXW11trFM7Rg3UdicTmXsWNJdvvMX_RyPi7wWZpum3jjjVgtLEa8BQVbZiiixuPNBsvcNUHhGepreSqklcgCXdg0OhY1FL86lxd_uU5pZsPA4QeE2gL2Q=s4800-w800",
+            "attr_name": "Yong dae Kim",
+            "attr_uri": "https://maps.google.com/maps/contrib/113244400926493749430"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDt83crcNpqUOgs2iKyY0rqjDgjmfPyo0mw9yQn7Bcoc5QbvGifJxENZ2eJXe_wTL-dTAOOIbb71IEKflFSsC0SnhTqs7_-F3zNohuaiaZeA_mWUNtSA4VhLrykj0-Lj5pncmUcwgtM4sRECw=s4800-w800",
+            "attr_name": "Chợ Hồ Thị Kỷ Food Street",
+            "attr_uri": "https://maps.google.com/maps/contrib/109072928936183088819"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAqayu0s2ycwchq3Gm9DkuanA7lnIKtwyif-1GEVeAAjf4iwFNfRBtzm0LIM5JR5OgnDnDFe0x5y1Kd5-BRtASLqFUUdVZSJEZBVs_3XZYIIGg3rCXEtS66ZOL0pB4gcpzl8i4uuOSjxRDmnw=s4800-w800",
+            "attr_name": "Katsunori K",
+            "attr_uri": "https://maps.google.com/maps/contrib/109679174000330685691"
+          }
+        ],
+        "attr_name": "Yong dae Kim",
+        "attr_uri": "https://maps.google.com/maps/contrib/113244400926493749430",
+        "emoji": "🍢",
+        "en": "Hồ Thị Kỷ food street",
+        "vi": "Phố ẩm thực Hồ Thị Kỷ",
+        "loc_en": "District 10",
+        "loc_vi": "Quận 10",
+        "address": "Hồ Thị Kỷ, Vườn Lài, Hồ Chí Minh 70350, Vietnam",
+        "lat": 10.7663259,
+        "lng": 106.6759953,
+        "rating": "4.4/5",
+        "price": "120k₫",
+        "votes": 4,
+        "dur_en": "1.5–2h",
+        "dur_vi": "1.5–2 giờ",
+        "vibes": [
+          "food_tour",
+          "nightlife"
+        ],
+        "desc_en": "Flower market by day, packed food alley by night — Cambodian desserts, grilled everything, all under 50k a dish.",
+        "desc_vi": "Chợ hoa ban ngày, hẻm ăn vặt chật kín ban đêm — chè Campuchia, đồ nướng đủ loại, món nào cũng dưới 50k."
+      },
+      {
+        "id": "vinh-khanh-food-street",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCm18-Yr-GwaOViNDZQea62TtZLRpU7_nTWrXmL3wdgasS7UBGFb_MNXzM0Ayzc8d_4TLBvsWSKAS1ozNAZVSCGBK0oW_6jzTvtC49XTATOo1IUxLjUxhFv5bShD9FexX5-8LWPol9_seJBt3OkbL7WsA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCm18-Yr-GwaOViNDZQea62TtZLRpU7_nTWrXmL3wdgasS7UBGFb_MNXzM0Ayzc8d_4TLBvsWSKAS1ozNAZVSCGBK0oW_6jzTvtC49XTATOo1IUxLjUxhFv5bShD9FexX5-8LWPol9_seJBt3OkbL7WsA=s4800-w800",
+            "attr_name": "Ronara ROS",
+            "attr_uri": "https://maps.google.com/maps/contrib/108296747703050426554"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBpBzpGXeGTB_VIdlhw_DavMApj93mG36hZmi_O4DLHEsVdjHpJukhXnJ6UoggeOOM-pq7uO81FaBCrW3QTQokdSIEp3Q5Vzg3RhWZuthe7yNNTzBDvY8ZdoDqMv-TeO0fVl-7k80YW0wzeRQ=s4800-w800",
+            "attr_name": "Jerry Cheng",
+            "attr_uri": "https://maps.google.com/maps/contrib/110571898200138939608"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC2TfDwrBOgsYPkQboT-lR4FtVo6Q4uF_HNim3Y4aREjqug9SbznqXYgULHpQN444qp7BJtSERkvdsstXBEkwmFYBsFTPEC5E6e18n2RZYIXZM7WSjm2aui_7m5_ve6qnMftQ8UpxpUpytJcg=s4800-w800",
+            "attr_name": "Yonghyuk Lee",
+            "attr_uri": "https://maps.google.com/maps/contrib/104452692763511001105"
+          }
+        ],
+        "attr_name": "Ronara ROS",
+        "attr_uri": "https://maps.google.com/maps/contrib/108296747703050426554",
+        "emoji": "🍤",
+        "en": "Vĩnh Khánh food street",
+        "vi": "Phố ẩm thực Vĩnh Khánh",
+        "loc_en": "District 4",
+        "loc_vi": "Quận 4",
+        "address": "40 Đ. Vĩnh Khánh, Khánh Hội, Hồ Chí Minh, Vietnam",
+        "lat": 10.761858499999999,
+        "lng": 106.70223610000001,
+        "rating": "4.2/5",
+        "price": "150k₫",
+        "votes": 3,
+        "dur_en": "1.5–2h",
+        "dur_vi": "1.5–2 giờ",
+        "vibes": [
+          "food_tour",
+          "nightlife"
+        ],
+        "desc_en": "D4's rowdy seafood strip — plastic stools, beer towers and kilos of grilled snails; the later it gets, the better it is.",
+        "desc_vi": "Con phố ốc sôi động của Quận 4 — ghế nhựa, tháp bia và ốc nướng tính ký; càng khuya càng vui."
+      },
+      {
+        "id": "lunch-lady",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB9KqjaxMOZ6COLZIvRK1bSU6yuEMiJk_WLAyvRz7vnwRM2CPXG3M6PC1vhQEcE1X_t6l7jmMhPO3HTB9AiQokJ4p86NQZlWl3Al9WqL2iWbu0b6Lujppv8dbF-_B3z2DGyllkN3r265uIR3Q=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB9KqjaxMOZ6COLZIvRK1bSU6yuEMiJk_WLAyvRz7vnwRM2CPXG3M6PC1vhQEcE1X_t6l7jmMhPO3HTB9AiQokJ4p86NQZlWl3Al9WqL2iWbu0b6Lujppv8dbF-_B3z2DGyllkN3r265uIR3Q=s4800-w800",
+            "attr_name": "Nam H. Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/113639400250049884131"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCtIVhs-nP61wz7adk0zImyIieM6y_ipI5bqZtxJfukLqfOUQRtzAb782IAzvLGfkyqNLSA3QCqT14scqLJyeJAtR9kYCjAfxC9kmSectHBFL0TF9PYz9lvTdMxwsb0DywaCSQNGDEd-aME=s4800-w800",
+            "attr_name": "Dương Anh Khoa",
+            "attr_uri": "https://maps.google.com/maps/contrib/104876197727995542549"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjADogfp3AgEKlNzWxaiRb0ovFo4Cj31BJiNkUm4Ze-1j71FV-yLyMIGFjyIo8zW8vYBmA23GxzA7VBEeB-x5Jz5kz3Wb0lcICSlsSdxqq_SKonvJh2ZTNSM1fuQLHdn_ppLEPJySXjfuwRwMuRMDNXf0g=s4800-w800",
+            "attr_name": "Cường Huy",
+            "attr_uri": "https://maps.google.com/maps/contrib/110779454351475306510"
+          }
+        ],
+        "attr_name": "Nam H. Nguyen",
+        "attr_uri": "https://maps.google.com/maps/contrib/113639400250049884131",
+        "emoji": "🍲",
+        "en": "The Lunch Lady",
+        "vi": "Quán Cô Thanh (Lunch Lady)",
+        "loc_en": "Hoàng Sa, D1",
+        "loc_vi": "Hoàng Sa, Q1",
+        "address": "Lô C1 Chung Cư 1A1B, Đường Nguyễn Đình Chiểu, Sài Gòn, Hồ Chí Minh, Vietnam",
+        "lat": 10.791744099999999,
+        "lng": 106.70442260000002,
+        "rating": "3.9/5",
+        "price": "90k₫",
+        "votes": 3,
+        "dur_en": "30–60 min",
+        "dur_vi": "30–60 phút",
+        "vibes": [
+          "food_tour"
+        ],
+        "desc_en": "Bourdain's famous canal-side noodle stall — a different soup every day of the week; go before 1pm or it's gone.",
+        "desc_vi": "Quán bún nổi tiếng nhờ Anthony Bourdain bên kênh — mỗi ngày một món khác nhau; đến trước 13h kẻo hết."
+      },
+      {
+        "id": "chill-skybar",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAG7KM1srLTFWvzjTj_C-tgsEIC5FU_xx4oXPK18wFmy36kxZJ2_EwlSSqIux_OngFuIm4mWK6vro8yzwaC1YedJIh3xynkQT9KjXrr7fBJ197-5kf3fCJdMyYnWJ728IYQVUGCBQdoUL4--A=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAG7KM1srLTFWvzjTj_C-tgsEIC5FU_xx4oXPK18wFmy36kxZJ2_EwlSSqIux_OngFuIm4mWK6vro8yzwaC1YedJIh3xynkQT9KjXrr7fBJ197-5kf3fCJdMyYnWJ728IYQVUGCBQdoUL4--A=s4800-w800",
+            "attr_name": "Chill Skybar & Dining",
+            "attr_uri": "https://maps.google.com/maps/contrib/118009274833483829071"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBOwR_EHCxT9EswzxDJYBvoudIdE55QMgXShGwMV74P8Qr1nvNPUUhP0yGh0QtsN9vr2Lb1pc0kuu_OlPTb9cIWHF_2NNYQ9s7y805OOzkStutyp_xSHQifbpgCQT0iV_5iu7jFsP2Y0wgsrpHuxTxZDQ=s4800-w800",
+            "attr_name": "Stephanie Julia",
+            "attr_uri": "https://maps.google.com/maps/contrib/106278972476125893285"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAZZMlgTa7cnYg7hwBmrUwB5VsGDRmoerLjvnAJYA0zScuzsIBWhw914h-_UDyhpk4I4RwuyGH8-bn0z0Jnd04QjYWsKWq9i3PsEdY_7H39py2hX6Av1-fO4Prnh9qgtWEIGR_vz8Ofh00Na4U=s4800-w800",
+            "attr_name": "Chill Skybar & Dining",
+            "attr_uri": "https://maps.google.com/maps/contrib/118009274833483829071"
+          }
+        ],
+        "attr_name": "Chill Skybar & Dining",
+        "attr_uri": "https://maps.google.com/maps/contrib/118009274833483829071",
+        "emoji": "🍸",
+        "en": "Chill Skybar",
+        "vi": "Chill Skybar",
+        "loc_en": "AB Tower, D1",
+        "loc_vi": "AB Tower, Q1",
+        "address": "Tầng 26 - 27, AB Tower, 76A Lê Lai, Bến Thành, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.770564799999999,
+        "lng": 106.69437769999999,
+        "rating": "4.4/5",
+        "price": "350k₫",
+        "votes": 3,
+        "dur_en": "1.5–2h",
+        "dur_vi": "1.5–2 giờ",
+        "vibes": [
+          "nightlife",
+          "views"
+        ],
+        "desc_en": "Golden-hour cocktails with the whole skyline from the 26th floor. Dress code smart-casual; happy hour before 19:00.",
+        "desc_vi": "Cocktail giờ vàng với trọn vẹn đường chân trời từ tầng 26. Dress code lịch sự; happy hour trước 19:00."
+      },
+      {
+        "id": "blank-lounge",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBRKUFyFsUOR9g1E79rBd8Z2ANWs30bgZ7EWqz7uwzNnPJcOZj1sMqMVwEaECpFAYUNRMuu8wC50mLx6ZFfWO0Pu17eQqYCSIvSwqrFkLvt-sA_MBDgc81pWkfKW9Yf-7isFG4EPDT3BcLevNuuJeTj=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBRKUFyFsUOR9g1E79rBd8Z2ANWs30bgZ7EWqz7uwzNnPJcOZj1sMqMVwEaECpFAYUNRMuu8wC50mLx6ZFfWO0Pu17eQqYCSIvSwqrFkLvt-sA_MBDgc81pWkfKW9Yf-7isFG4EPDT3BcLevNuuJeTj=s4800-w800",
+            "attr_name": "Blank Lounge Landmark - Highest Cafe & Bar Lounge in Vietnam",
+            "attr_uri": "https://maps.google.com/maps/contrib/104898916394924089729"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAIVFrr5ZWPZPZfbc198jE5rIJEmyFU5um3gwa8SA9HVAD4Ia6mNaAQk_jT8H147w1eE8B3njERsjvdwExuRYnzg9z9XvwT-KR-7Ocb-tDV7HRYkwM7-88euZHZ0SAL_LTGsadtJ8qYuPrCwNlX9ocgYg=s4800-w800",
+            "attr_name": "Andy Chen",
+            "attr_uri": "https://maps.google.com/maps/contrib/109678737477302414106"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDCPH1MjGL9nnf30uiKwPm1M-orEhfXikrhDlWMrERQQ1-hh1uU3-WmUnbz6KonM58bgnST0JOlDaexIV40a4avBhuaDJE1ViJvCqrfpk7xX-_JkVvmnupb_sTWcZGAqGXYrXB-1jsKZNAAna78D535=s4800-w800",
+            "attr_name": "Biluki",
+            "attr_uri": "https://maps.google.com/maps/contrib/114147835587566920378"
+          }
+        ],
+        "attr_name": "Blank Lounge Landmark - Highest Cafe & Bar Lounge in Vietnam",
+        "attr_uri": "https://maps.google.com/maps/contrib/104898916394924089729",
+        "emoji": "🥂",
+        "en": "Blank Lounge (Landmark 81)",
+        "vi": "Blank Lounge (Landmark 81)",
+        "loc_en": "Bình Thạnh",
+        "loc_vi": "Bình Thạnh",
+        "address": "Floor 75th - 76th, Landmark 81, 208 Nguyễn Hữu Cảnh, Ward 22, Thạnh Mỹ Tây, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7949104,
+        "lng": 106.72192380000001,
+        "rating": "4.5/5",
+        "price": "250k₫",
+        "votes": 2,
+        "dur_en": "1.5–2h",
+        "dur_vi": "1.5–2 giờ",
+        "vibes": [
+          "views",
+          "nightlife"
+        ],
+        "desc_en": "Coffee by day, cocktails by night on floors 75–76 of Landmark 81 — the cheaper way to get the highest view in Vietnam.",
+        "desc_vi": "Cà phê ban ngày, cocktail ban đêm ở tầng 75–76 Landmark 81 — cách 'hạt dẻ' nhất để ngắm view cao nhất Việt Nam."
+      },
+      {
+        "id": "the-deck-saigon",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB0cAMwS7PraJA37sdioQKxYEkaBLyW4zljmJaC-qX2dKMRTTxms1BUItRA5uXOVQnTqLfiepARU_HMaxNr76j9uEypPEyeoRl3BDdcEalLpvMT9HwcOjJHBuFTv_3xRg4wbNtX9_mo219iYw=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB0cAMwS7PraJA37sdioQKxYEkaBLyW4zljmJaC-qX2dKMRTTxms1BUItRA5uXOVQnTqLfiepARU_HMaxNr76j9uEypPEyeoRl3BDdcEalLpvMT9HwcOjJHBuFTv_3xRg4wbNtX9_mo219iYw=s4800-w800",
+            "attr_name": "The Deck Saigon",
+            "attr_uri": "https://maps.google.com/maps/contrib/107158908032059755366"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBSae-zHANeaUSf6cPkhsz6mRg5taCTabuDfBLuSZWw1q6GR6781SEq4TLh-J7jFZ3g2vBmeh8ktRcCdlNItMQj5zMowJAX5JV8ZP83JRIEdChQIGN-mem7cbOKL_wXXK-6DpAWPG4Wj52SJed2UQIV0g=s4800-w800",
+            "attr_name": "A F",
+            "attr_uri": "https://maps.google.com/maps/contrib/115768907784066723678"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD1KJbzsCbsZ8az8bt52cTJGI8NXKkj7mEtpn0lT1onmBhuF84uOVSnbHLwVGuR6EqfR4yeANNDzxId-217qfLXD-B_HpJwXNwOrTQwhgWpu_7Ef_6nOg2ShF92g2xlQr8pfMSbNAtPjq1xiOp4QH-Jow=s4800-w800",
+            "attr_name": "The Deck Saigon",
+            "attr_uri": "https://maps.google.com/maps/contrib/107158908032059755366"
+          }
+        ],
+        "attr_name": "The Deck Saigon",
+        "attr_uri": "https://maps.google.com/maps/contrib/107158908032059755366",
+        "emoji": "🛶",
+        "en": "The Deck Saigon",
+        "vi": "The Deck Saigon",
+        "loc_en": "Thảo Điền",
+        "loc_vi": "Thảo Điền",
+        "address": "38 Nguyễn Ư Dĩ, St, An Khánh, Hồ Chí Minh 10000, Vietnam",
+        "lat": 10.8072065,
+        "lng": 106.7443897,
+        "rating": "4.4/5",
+        "price": "300k₫",
+        "votes": 2,
+        "dur_en": "1.5–2.5h",
+        "dur_vi": "1.5–2.5 giờ",
+        "vibes": [
+          "views",
+          "chill"
+        ],
+        "desc_en": "Riverside deck in Thảo Điền with sunset aperitivos right on the water — book the river edge and arrive by 17:30.",
+        "desc_vi": "Sàn gỗ ven sông ở Thảo Điền với aperitivo hoàng hôn sát mặt nước — đặt bàn mép sông và đến trước 17:30."
+      },
+      {
+        "id": "social-club-rooftop",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAiNb-S-oHebEH5O_LDlXn8LVfBWhNICUt0qJbfu9HTjqnJi-FrT6uPaTO9IaHhJGLElWVYyxY43GKsGOqMqqrHRZSaBWVnrz2rOSGFzoglZtKVXrOwB-MeXuDRgR-lGPATlbgVz8U0pXKQ=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAiNb-S-oHebEH5O_LDlXn8LVfBWhNICUt0qJbfu9HTjqnJi-FrT6uPaTO9IaHhJGLElWVYyxY43GKsGOqMqqrHRZSaBWVnrz2rOSGFzoglZtKVXrOwB-MeXuDRgR-lGPATlbgVz8U0pXKQ=s4800-w800",
+            "attr_name": "Social Club Rooftop Bar",
+            "attr_uri": "https://maps.google.com/maps/contrib/116674450865676759235"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDNMuemFjDnnC47IsC2fS18deagMiXo9hsFyfiZY3AQlPbisAHM_Af59JK5dxX0KdHjKFwe3gCC3wRu8LGvB57gjIE50wru9WMRHl5jk4HyuBWZwytBs7UdSKQzG_BzcIin18mKycZmyVZQRMvpA9INVQ=s4800-w800",
+            "attr_name": "Nam Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/108489377996785721607"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC0RrRAo_VHrF1cmLi9pEpeZhPZQvdidySD4sFLJzZwf2xZRQU4OAqSZmgvr_DxIlKWvuavQeEVZxribBcnkUgt0AbBY4S76lWTQEh_wiWR4AaPXsZM_rVfbf3DLrE4zGfgHqIO0UrlCx9ppg=s4800-w800",
+            "attr_name": "Jules L",
+            "attr_uri": "https://maps.google.com/maps/contrib/118006659001888631572"
+          }
+        ],
+        "attr_name": "Social Club Rooftop Bar",
+        "attr_uri": "https://maps.google.com/maps/contrib/116674450865676759235",
+        "emoji": "🍹",
+        "en": "Social Club Rooftop",
+        "vi": "Social Club Rooftop",
+        "loc_en": "Hôtel des Arts, D3",
+        "loc_vi": "Hôtel des Arts, Q3",
+        "address": "76 78 Nguyễn Thị Minh Khai, St, Xuân Hòa, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7824226,
+        "lng": 106.6973331,
+        "rating": "4.5/5",
+        "price": "250k₫",
+        "votes": 2,
+        "dur_en": "1.5–2h",
+        "dur_vi": "1.5–2 giờ",
+        "vibes": [
+          "views",
+          "nightlife"
+        ],
+        "desc_en": "Rooftop pool bar on the 23rd floor of Hôtel des Arts — skyline views without the D1 crowds; Sunday pool parties.",
+        "desc_vi": "Bar hồ bơi tầng 23 của Hôtel des Arts — ngắm skyline mà không chen chúc như Q1; Chủ nhật có pool party."
+      },
+      {
+        "id": "bui-vien-walking-street",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDS2eKPgdUsPwvRXn0QjdjDM8CwZsa1rvMnLt5B5WJvoUeHDQvTwmqDv4-UcwQSb_e791QlgFMXRGPqLwtebAQ6CpE2IOkkdmuJcYSJv5u6Qe9o_bglVhFJvNGoPjm1eJWJUXMCOmlXqTdxFA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDS2eKPgdUsPwvRXn0QjdjDM8CwZsa1rvMnLt5B5WJvoUeHDQvTwmqDv4-UcwQSb_e791QlgFMXRGPqLwtebAQ6CpE2IOkkdmuJcYSJv5u6Qe9o_bglVhFJvNGoPjm1eJWJUXMCOmlXqTdxFA=s4800-w800",
+            "attr_name": "Cường Lê",
+            "attr_uri": "https://maps.google.com/maps/contrib/109839143565563769791"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDr7vHWKVN6Cp16QxNL3Pv-4PAenUrs-byiLo7BZyLUg5wXqBK9gaFzLsKvGVRJE0ZJw1gpxFmSkFJL8SnUJ7h6Lf8SRQ7Xj7aXIqktolOlOxbUsR2d2yTfqLH1flAORN5dYrmPtGB75A9dZ1a5LoMm=s4800-w800",
+            "attr_name": "Phu Nguyenvan",
+            "attr_uri": "https://maps.google.com/maps/contrib/108228788646108906575"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB1asqsSUeYN_0Z42TnFY7acc3StHxNaZStaSZGXRVzx_l6QpJXuiH8CxGhlXDrgxiZnfJ9lsjeiYRaW8TkPMGzXdOR-UOf7iLzGBi_9yjpes1BC7PWDwSI52jWdDuNj2L0nvvwHtOX-39u7qXhT7JE=s4800-w800",
+            "attr_name": "Peter Holroyd",
+            "attr_uri": "https://maps.google.com/maps/contrib/114220226898873699275"
+          }
+        ],
+        "attr_name": "Cường Lê",
+        "attr_uri": "https://maps.google.com/maps/contrib/109839143565563769791",
+        "emoji": "🍻",
+        "en": "Bùi Viện Walking Street",
+        "vi": "Phố đi bộ Bùi Viện",
+        "loc_en": "Phạm Ngũ Lão, D1",
+        "loc_vi": "Phạm Ngũ Lão, Q1",
+        "address": "Bùi Viện Phạm Ngũ Lão, phường, Bến Thành, Hồ Chí Minh, Vietnam",
+        "lat": 10.767351000000001,
+        "lng": 106.69388359999999,
+        "rating": "4.3/5",
+        "price": "150k₫",
+        "votes": 4,
+        "dur_en": "2–3h",
+        "dur_vi": "2–3 giờ",
+        "vibes": [
+          "nightlife"
+        ],
+        "desc_en": "Neon, bass and street beer chairs — chaotic, loud, and exactly what some nights need. Weekends peak after 22:00.",
+        "desc_vi": "Đèn neon, tiếng bass và ghế bia vỉa hè — ồn ào, hỗn loạn, và đúng chất cho những đêm cần 'quẩy'. Cuối tuần đông nhất sau 22h."
+      },
+      {
+        "id": "acoustic-bar",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBCgTBcygJQlcMi8KrArINrhgQX6XWcKKr-Q507KrvOpFB801OpLYeyXcQAYcY6OfvnkaGxpxFgyHAK923LAMwI3KqeIWUmYWiNZyuQH6C3ukVpxlASwbQ4_mL1z6jsx52HMwZcA0SxIzlYbQ=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBCgTBcygJQlcMi8KrArINrhgQX6XWcKKr-Q507KrvOpFB801OpLYeyXcQAYcY6OfvnkaGxpxFgyHAK923LAMwI3KqeIWUmYWiNZyuQH6C3ukVpxlASwbQ4_mL1z6jsx52HMwZcA0SxIzlYbQ=s4800-w800",
+            "attr_name": "Hidetoshi Koizumi",
+            "attr_uri": "https://maps.google.com/maps/contrib/111387759349662810071"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCZ3JLdqZgIu3_yvdb-MxRJqG0f6muG8wuTpUtnYPC5-Jf4YSXjE23WP3SEUH9yOLg5jceHPiN0UH9wck8BenYfE1Sae3MWXcUQZ_zyn4-kRP2Rn4dVaNpt7RaYRQ_1wYc21Sx2dyqbmZ4UDeaN2VKgLQ=s4800-w800",
+            "attr_name": "Joss Le",
+            "attr_uri": "https://maps.google.com/maps/contrib/113765792221098152599"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBqHIzPzHb1nfevHE849HvEzEi57U9F-Y0SmU2gFiZlmR0M1ZPPBWyi-6i-iwSH3qxpOowAXZSc59jWzC0Z-Gm7eeTIp5JIlqMZ9o-GcGod1iXAvPVsBr-PVQdUqN0yXit_CM9fsdC03hoVAXSISs3xdQ=s4800-w800",
+            "attr_name": "Viet Hoang",
+            "attr_uri": "https://maps.google.com/maps/contrib/112876013197567789250"
+          }
+        ],
+        "attr_name": "Hidetoshi Koizumi",
+        "attr_uri": "https://maps.google.com/maps/contrib/111387759349662810071",
+        "emoji": "🎸",
+        "en": "Acoustic Bar",
+        "vi": "Acoustic Bar",
+        "loc_en": "Ngô Thời Nhiệm, D3",
+        "loc_vi": "Ngô Thời Nhiệm, Q3",
+        "address": "Ngô Thời Nhiệm/6E Võ Thị Sáu, Xuân Hòa, Hồ Chí Minh 72407, Vietnam",
+        "lat": 10.7811947,
+        "lng": 106.6899157,
+        "rating": "4.5/5",
+        "price": "150k₫",
+        "votes": 3,
+        "dur_en": "2–3h",
+        "dur_vi": "2–3 giờ",
+        "vibes": [
+          "nightlife"
+        ],
+        "desc_en": "Saigon's best-loved live music room — local bands covering everything from V-pop to rock; arrive by 20:30 for a table.",
+        "desc_vi": "Phòng nhạc sống được yêu thích nhất Sài Gòn — ban nhạc chơi từ V-pop đến rock; đến trước 20:30 mới có bàn."
+      },
+      {
+        "id": "broma-not-a-bar",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB9ka7vM2CWTtBcHOYmQmac1pWIhkZ3uU-zCvSUKEuxZXRABBiHDqx8aXK-dLlXFFD3AwnZG8WnzfUskplTyCCaSXwxqgdHNWsrcXcvwMM5bFPItF0Lzm06InTk7HyBdxqeE4CiSnO9_xg4LA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB9ka7vM2CWTtBcHOYmQmac1pWIhkZ3uU-zCvSUKEuxZXRABBiHDqx8aXK-dLlXFFD3AwnZG8WnzfUskplTyCCaSXwxqgdHNWsrcXcvwMM5bFPItF0Lzm06InTk7HyBdxqeE4CiSnO9_xg4LA=s4800-w800",
+            "attr_name": "Elegant Team",
+            "attr_uri": "https://maps.google.com/maps/contrib/105136298221765102179"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDrWdq6xe1VTla0KqXhP6z2ZN2ctt367Kay95BCEjzwh1XDBHkG9_oegK6uKkUtxItXnnTp9TpUfIGxwNbey73KYYZca6n6a21aPC3nWgw8CeEceVs8x6ENZmlhTN-QPsIoUsM46ANaweBB=s4800-w800",
+            "attr_name": "Not A Bar Kitchen & Bar",
+            "attr_uri": "https://maps.google.com/maps/contrib/108807029419735558491"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCL_MaTMBclcDUimTMgom6YDeNAEZl0Kpc3A04T0iJllXOo_ZDIe_hCObTMQGvRLYSCxXg_QECVZWaGC2grKswje7reC_r83e0qTACo6t-hxl5o76-kep29MC1FugXIeHuXLKXxzohERbeLSs3fW_OZCA=s4800-w800",
+            "attr_name": "M. ZGN",
+            "attr_uri": "https://maps.google.com/maps/contrib/106746960187710257477"
+          }
+        ],
+        "attr_name": "Elegant Team",
+        "attr_uri": "https://maps.google.com/maps/contrib/105136298221765102179",
+        "emoji": "🌃",
+        "en": "Broma: Not A Bar",
+        "vi": "Broma: Not A Bar",
+        "loc_en": "Nguyễn Huệ, D1",
+        "loc_vi": "Nguyễn Huệ, Q1",
+        "address": "41 Nguyễn Huệ, Sài Gòn, Hồ Chí Minh, Vietnam",
+        "lat": 10.7727302,
+        "lng": 106.7046106,
+        "rating": "4.3/5",
+        "price": "200k₫",
+        "votes": 2,
+        "dur_en": "1.5–2.5h",
+        "dur_vi": "1.5–2.5 giờ",
+        "vibes": [
+          "nightlife",
+          "views"
+        ],
+        "desc_en": "Grungy rooftop over Nguyễn Huệ with craft cocktails and DJ sets — watch the walking street buzz from above.",
+        "desc_vi": "Rooftop bụi bặm nhìn xuống Nguyễn Huệ với cocktail thủ công và DJ — ngắm phố đi bộ nhộn nhịp từ trên cao."
+      },
+      {
+        "id": "carmen-bar",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDnJBQQIPnJ6E24f_XD9i5_8Lx6t_xFpPknw-vh36o7yYuR4laFLkTsHvv62WGDeTcmL_mc9x2fjL7POZ-kFuUKzPgdqHpHzo0IJ1t64_RFam-8qIw8L6FQ8vuMa-xVts4hQE9Yfv3Dky16c8Y=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDnJBQQIPnJ6E24f_XD9i5_8Lx6t_xFpPknw-vh36o7yYuR4laFLkTsHvv62WGDeTcmL_mc9x2fjL7POZ-kFuUKzPgdqHpHzo0IJ1t64_RFam-8qIw8L6FQ8vuMa-xVts4hQE9Yfv3Dky16c8Y=s4800-w800",
+            "attr_name": "Carmen",
+            "attr_uri": "https://maps.google.com/maps/contrib/110899780450108297949"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDra9BH7gACFXJTH2tbTlg3E6S0EUJVbRJl2d2NPyeNuFeRaz0A81fFLnslLjNB1rIr8dSudfQ1quXaPc02Q_ngGhYR0U_1vKxBIUWckq0isSHVQDaVWhniMR55nm6D7Ox1Pe6FZPTlj1kq8g=s4800-w800",
+            "attr_name": "Carmen",
+            "attr_uri": "https://maps.google.com/maps/contrib/110899780450108297949"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDyK6wbJgq7Fkiq0Ow8lpGX9b4S72QOIWYNn3D69_shvDRbi2L_3JaH3tBLZMKnnXwPd8gV517bUvHtUx9kb5i5GQ3EOwZhBc3iq73daMXWyANW74vNU9y8Ly-8mb_XmsrJCjpNnkMEw5bntg=s4800-w800",
+            "attr_name": "Carmen",
+            "attr_uri": "https://maps.google.com/maps/contrib/110899780450108297949"
+          }
+        ],
+        "attr_name": "Carmen",
+        "attr_uri": "https://maps.google.com/maps/contrib/110899780450108297949",
+        "emoji": "💃",
+        "en": "Carmen Bar",
+        "vi": "Carmen Bar",
+        "loc_en": "Lý Tự Trọng, D1",
+        "loc_vi": "Lý Tự Trọng, Q1",
+        "address": "8 Lý Tự Trọng, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.782286700000002,
+        "lng": 106.70473539999999,
+        "rating": "4.3/5",
+        "price": "200k₫",
+        "votes": 2,
+        "dur_en": "2–3h",
+        "dur_vi": "2–3 giờ",
+        "vibes": [
+          "nightlife"
+        ],
+        "desc_en": "Cave-like cellar with live flamenco, Latin and Vietnamese classics every night — an old-school Saigon institution.",
+        "desc_vi": "Hầm rượu như hang động với flamenco, nhạc Latin và tình ca Việt mỗi đêm — một 'định chế' Sài Gòn xưa."
+      }
+    ],
+    "out": [
+      {
+        "id": "landmark-81-skyview",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDrhuoKKxuA6czVPCJwnsVH7zbexeZov_uVIWMqmxY6ozI91vhlK5jtmCMoQrPvE5g_v6CRZQgXdvADYfvNHu-nPKipfpmwVL6EXDGWDPCmA8VjiwMm2vPQ0W07pCTy3tFL4-PLq0CkzS4y2QCUcYdR4g=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDrhuoKKxuA6czVPCJwnsVH7zbexeZov_uVIWMqmxY6ozI91vhlK5jtmCMoQrPvE5g_v6CRZQgXdvADYfvNHu-nPKipfpmwVL6EXDGWDPCmA8VjiwMm2vPQ0W07pCTy3tFL4-PLq0CkzS4y2QCUcYdR4g=s4800-w800",
+            "attr_name": "pixel vietnam",
+            "attr_uri": "https://maps.google.com/maps/contrib/109728597366535505519"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAdAurdDamxTTCAiYNQ6SZXy3msBww5vpMcutPlzlJlwDkl9S60NYt_LZ5gMpJgKOVBPVC2WK2VcmpP5FA9V71Mhlj7LaQCsg1EMpuiZYZM2SwflbuQYPJC0axvQ8gQFJSv-PhHEmCn-hsGVAYJXVQVPg=s4800-w800",
+            "attr_name": "hy minh",
+            "attr_uri": "https://maps.google.com/maps/contrib/111845423520615127422"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB5deZDU9UD1bTJdApug-rpLaE0x3omceiJu2EqNG3FRxkTndmmj2l8ReKpEy9UQ4TRWaOnTNeyXiFA5i7yQVlgJzV3LqVVRhT-B1tPvPUScNweZjlWhB0sAo89FXPkSZRufzdxNCnhlQXg=s4800-w800",
+            "attr_name": "Thịnh Mai Viết",
+            "attr_uri": "https://maps.google.com/maps/contrib/102283659686772013076"
+          }
+        ],
+        "attr_name": "pixel vietnam",
+        "attr_uri": "https://maps.google.com/maps/contrib/109728597366535505519",
+        "emoji": "🌆",
+        "en": "Landmark 81 SkyView",
+        "vi": "Landmark 81 SkyView",
+        "loc_en": "Bình Thạnh",
+        "loc_vi": "Bình Thạnh",
+        "address": "720A Điện Biên Phủ, Phường, Thạnh Mỹ Tây, Hồ Chí Minh 72300, Vietnam",
+        "lat": 10.7951119,
+        "lng": 106.722096,
+        "rating": "4.6/5",
+        "price": "300k₫",
+        "votes": 3,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "views"
+        ],
+        "desc_en": "Observation deck on the 81st floor of Vietnam's tallest tower — sunset views over the Saigon River. Book ahead on weekends.",
+        "desc_vi": "Đài quan sát tầng 81 toà tháp cao nhất Việt Nam — ngắm hoàng hôn trên sông Sài Gòn. Cuối tuần nên đặt vé trước."
+      },
+      {
+        "id": "saigon-night-cruise",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAa09Fcfms5ypf8FSPZJ7jHCNtaPSy5pkyG3GUYqxWqqQHCiktS5ajVfRQJWbBhrMZMglNEIOIpK6mCfxJI897r93H6TaF91w-_9711BRl2qo9NF5ErP-SQaS_sWH_XN_QnUKwZeWCnbRO_7a7BHl-NzA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAa09Fcfms5ypf8FSPZJ7jHCNtaPSy5pkyG3GUYqxWqqQHCiktS5ajVfRQJWbBhrMZMglNEIOIpK6mCfxJI897r93H6TaF91w-_9711BRl2qo9NF5ErP-SQaS_sWH_XN_QnUKwZeWCnbRO_7a7BHl-NzA=s4800-w800",
+            "attr_name": "Saigon Waterbus Bạch Đằng",
+            "attr_uri": "https://maps.google.com/maps/contrib/102791173696452358404"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDElvPmqB42mEMsfzpZ-DDVIJRNzQZ9RB940DmWTHLFz4dFWZKbrgERuK6vsOgPml94CbGq3IRM1lHfv9CIWliJslo2pWYvUuARK-FFfhT06vqB_zi8a9_-Q9L6WllJRep1ntcDHsMwH9SKZ5UCxoZK=s4800-w800",
+            "attr_name": "TravelLover",
+            "attr_uri": "https://maps.google.com/maps/contrib/111305034770066065532"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCNfCZ-cTXZ9cnzrfHKDOIILkzqCVTJQn6i2XdMaUXcee9WYcL3JcWP6v43eztCU_6ff62E8ohgj5TR8RjNqCCseVG8or-TsuPjBRfoWb7TKtyZjjMJ0-K6yXLtJ9_4j25ulYaMjY2FXku6_NM=s4800-w800",
+            "attr_name": "Iain Laslett",
+            "attr_uri": "https://maps.google.com/maps/contrib/112887046504403632048"
+          }
+        ],
+        "attr_name": "Saigon Waterbus Bạch Đằng",
+        "attr_uri": "https://maps.google.com/maps/contrib/102791173696452358404",
+        "emoji": "🛥️",
+        "en": "Saigon Waterbus night ride",
+        "vi": "Waterbus Sài Gòn chuyến đêm",
+        "loc_en": "Bạch Đằng pier",
+        "loc_vi": "Bến Bạch Đằng",
+        "address": "10B Tôn Đức Thắng, Sài Gòn, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7752626,
+        "lng": 106.7068754,
+        "rating": "4.4/5",
+        "price": "50k₫",
+        "votes": 3,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "views",
+          "chill"
+        ],
+        "desc_en": "Evening boat loop on the Saigon River with the skyline lit up — a relaxed, cheap way to end a group day out.",
+        "desc_vi": "Vòng thuyền buổi tối trên sông Sài Gòn ngắm thành phố lên đèn — cách thư giãn, rẻ để kết thúc ngày đi chơi nhóm."
+      },
+      {
+        "id": "independence-palace",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBlHXunTiE7ogrlZnoJlPvrGxs87h38AqL5ZAZ7IGHxt5_8XWTOy3rcm8hADSx6ISW6XtPBCVbgV3xFYGgvzzHEFED_kt_7Bwe7EKQKyku5xA2LBjkM3NGHMEBBKeOGLf72kvMi9CvSwFuy=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBlHXunTiE7ogrlZnoJlPvrGxs87h38AqL5ZAZ7IGHxt5_8XWTOy3rcm8hADSx6ISW6XtPBCVbgV3xFYGgvzzHEFED_kt_7Bwe7EKQKyku5xA2LBjkM3NGHMEBBKeOGLf72kvMi9CvSwFuy=s4800-w800",
+            "attr_name": "Kim Khôi Trần",
+            "attr_uri": "https://maps.google.com/maps/contrib/102283866764790454931"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCWqJUAPigtS4SOlo9RfPNAK56FJRiVNWQbVuQQQMqWJQKfWR43IgFGk91R3G79Y10kJEprkWiF7W44PtIcclz2RTJqCgiNswGxhnB8i3T83PM5xyYAUb_aC0WnPPyDqu4wcai0VtNjLVx5LQ=s4800-w800",
+            "attr_name": "Gina L.",
+            "attr_uri": "https://maps.google.com/maps/contrib/106980859216500729283"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCMTdeg6c3CWWIetC2tliUTU9Tltlo4edY_IPi6B7yR4rKak73diwfagfvvyZGuNVZYxnhNEdix9RjfdaLXfRm7Y6ikuFQe-BYpXj13vqSqFn6QfmxmBNQ3yZvM4v2HjLsCyDedd9z6Sc25=s4800-w800",
+            "attr_name": "R Y",
+            "attr_uri": "https://maps.google.com/maps/contrib/109517852513671403978"
+          }
+        ],
+        "attr_name": "Kim Khôi Trần",
+        "attr_uri": "https://maps.google.com/maps/contrib/102283866764790454931",
+        "emoji": "🏛️",
+        "en": "Independence Palace",
+        "vi": "Dinh Độc Lập",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "Ben Thanh, Ho Chi Minh, Vietnam",
+        "lat": 10.776994199999999,
+        "lng": 106.69530209999999,
+        "rating": "4.5/5",
+        "price": "40k₫",
+        "votes": 4,
+        "dur_en": "1.5–2h",
+        "dur_vi": "1.5–2 giờ",
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "The frozen-in-1975 presidential palace — war rooms, retro salons and tanks on the lawn; the audio guide is worth it.",
+        "desc_vi": "Dinh tổng thống 'đóng băng' từ 1975 — phòng tác chiến, salon retro và xe tăng trên bãi cỏ; thuê audio guide rất đáng."
+      },
+      {
+        "id": "war-remnants-museum",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAWDSebi1GS_K8Mr51CAZ7NmZJTSRqVyyXUy0XEpvN6GcccsPr7RbMYs0NXnfZPblyP_bzsiSJGdz-Gc5Qk5p0Y9AnSfiaZ9LuTPIVsPkBA2jbAnjDLdmAt_X4u9nHuG7wRRZmigjIbRs4nWg=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAWDSebi1GS_K8Mr51CAZ7NmZJTSRqVyyXUy0XEpvN6GcccsPr7RbMYs0NXnfZPblyP_bzsiSJGdz-Gc5Qk5p0Y9AnSfiaZ9LuTPIVsPkBA2jbAnjDLdmAt_X4u9nHuG7wRRZmigjIbRs4nWg=s4800-w800",
+            "attr_name": "Jeffrey Marrs",
+            "attr_uri": "https://maps.google.com/maps/contrib/103142141888452191851"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCdDA3BoQhfCxJTPLXXAvyHYRpvzMdBgeD0tFYs81b9eT0Oqbkgs3miK4TTZePjZ1gCGhITtDfiR4Wrpj7wxQXh7oTg1A8oCfShVrdFMUPNg7JXeJYkYM8GdE5g0QrlPmJtHIeVxlzCG678-iQ=s4800-w800",
+            "attr_name": "Mel Lai",
+            "attr_uri": "https://maps.google.com/maps/contrib/106055453024597314895"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCF17Cu6vfGQPs1zI157crI3mMU12kHpXbw00vh_efnJMbwklMwireeTC3JKsvE3Wl0BS7OGf-Qo6lROp2Ed5cS-hCK58ODjgLQwNp-lt1Zp493BSjsbCyVXAjZo0EPUWF6V5--M7AGv_2TkRM=s4800-w800",
+            "attr_name": "la cà Khá",
+            "attr_uri": "https://maps.google.com/maps/contrib/107920768232672232596"
+          }
+        ],
+        "attr_name": "Jeffrey Marrs",
+        "attr_uri": "https://maps.google.com/maps/contrib/103142141888452191851",
+        "emoji": "🕊️",
+        "en": "War Remnants Museum",
+        "vi": "Bảo tàng Chứng tích Chiến tranh",
+        "loc_en": "District 3",
+        "loc_vi": "Quận 3",
+        "address": "Phường 6, Quận 3, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7795106,
+        "lng": 106.6920916,
+        "rating": "4.5/5",
+        "price": "40k₫",
+        "votes": 4,
+        "dur_en": "1.5–2.5h",
+        "dur_vi": "1.5–2.5 giờ",
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "Sobering, unmissable exhibits on the war — give it a full morning and plan something gentle afterwards.",
+        "desc_vi": "Trưng bày ám ảnh và không thể bỏ qua về chiến tranh — dành trọn buổi sáng và sắp xếp hoạt động nhẹ nhàng sau đó."
+      },
+      {
+        "id": "notre-dame-cathedral",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBNUISYzNIIpD5MSspd_vX_9A-C1Y9WXLcg-NyZxWIaDm3kR73DlnCDPJZl8UucN1ta8WZBlT1135MhO0OwY5d6A82gdhthHAd8Ye-8qoZAFP-Lgje3wLBKCyNyfBA1QtZz14na44rs6OpEXqQ=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBNUISYzNIIpD5MSspd_vX_9A-C1Y9WXLcg-NyZxWIaDm3kR73DlnCDPJZl8UucN1ta8WZBlT1135MhO0OwY5d6A82gdhthHAd8Ye-8qoZAFP-Lgje3wLBKCyNyfBA1QtZz14na44rs6OpEXqQ=s4800-w800",
+            "attr_name": "林宏達",
+            "attr_uri": "https://maps.google.com/maps/contrib/108194996842222783992"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBEFLgphFAtRMxkdYFtvWKeO5DfPy2N53_ltbrgNWiM-E3EwZOpHwz1KTnuUelNa7dJ79_reZM3BQlNiXrOiXNkJJGXFQeqJbE10-AI6GZ3YAaCz6Lq706mi8pBRPVStin6HUK-VhJkfoxA8A=s4800-w724",
+            "attr_name": "aj",
+            "attr_uri": "https://maps.google.com/maps/contrib/101431495761220231120"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC_D9MHeKnGGKtt_J3Q_1FO8r_TPP7Rxbp2yXLluYmJmmbOcrnFqqZo63wXH1xDcJl6WkisgA7B8snyWpVBq3mF6Pe14Bme2fiag2CyPf8cx7-X2dzSOp5IpEpJ-6neHC4dlDYh7hCE3e-YJg=s4800-w800",
+            "attr_name": "Sakalis Of BNA",
+            "attr_uri": "https://maps.google.com/maps/contrib/116419137122780334156"
+          }
+        ],
+        "attr_name": "林宏達",
+        "attr_uri": "https://maps.google.com/maps/contrib/108194996842222783992",
+        "emoji": "⛪",
+        "en": "Notre-Dame Cathedral",
+        "vi": "Nhà thờ Đức Bà",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "01 Công trường Công xã Paris, Quận 1, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.779785500000001,
+        "lng": 106.6990189,
+        "rating": "4.4/5",
+        "price": "0₫",
+        "votes": 3,
+        "dur_en": "20–40 min",
+        "dur_vi": "20–40 phút",
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "The red-brick 1880 cathedral at the heart of the city — restoration scaffolding up, but the square is still the classic photo stop.",
+        "desc_vi": "Nhà thờ gạch đỏ năm 1880 giữa lòng thành phố — đang trùng tu nhưng quảng trường vẫn là điểm chụp ảnh kinh điển."
+      },
+      {
+        "id": "central-post-office",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBPCBaxqkcNZnIZchuM2m6WC-duHpA4o8CQ_3BQFOIRCIlzURLnSmz6c3coRo3cMCFpVPN7IYjgZILsAsHlKzesD4yVvyBDsU9TXjsd8EcebLPFuDNVblmZ0qf10OsInOCZFNbdUuTFIDSnrbv510ppbA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBPCBaxqkcNZnIZchuM2m6WC-duHpA4o8CQ_3BQFOIRCIlzURLnSmz6c3coRo3cMCFpVPN7IYjgZILsAsHlKzesD4yVvyBDsU9TXjsd8EcebLPFuDNVblmZ0qf10OsInOCZFNbdUuTFIDSnrbv510ppbA=s4800-w800",
+            "attr_name": "T-Adventure",
+            "attr_uri": "https://maps.google.com/maps/contrib/116837704532603036731"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD46y_1eBPqxRgIilTWFpXmzbmY9aZfovPdPpwa_4zf4ohIm0b4KYqK3QEd5x_U9YX3Dw3MXrD624Yso-8P3ADDDt_mWK98lGIq6LcrdzowuMALJqp5gtpj3WpXKKLcZTzo2lB-LUxhPxoxSr4NxPAAyw=s4800-w800",
+            "attr_name": "Hamdi Ahmed",
+            "attr_uri": "https://maps.google.com/maps/contrib/107779631000792906939"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCVMpSHApAXUzbkfVD2dpsM7mRWrG5QM9hp2cqT6IjHOFg70vUHPZkx9RQm3M9vmM2RjOwMcfXQZ2qIK-qKasCbff0UI08D6IYH5uhChjKnJlbWsb-NGHS-PQLxcDG18WWmOnBJO2CPFY7C4bmUO0GgWA=s4800-w800",
+            "attr_name": "Masafumi Saito",
+            "attr_uri": "https://maps.google.com/maps/contrib/117659347128573805157"
+          }
+        ],
+        "attr_name": "T-Adventure",
+        "attr_uri": "https://maps.google.com/maps/contrib/116837704532603036731",
+        "emoji": "📮",
+        "en": "Central Post Office",
+        "vi": "Bưu điện Thành phố",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "02 Công trường Công xã Paris, Bến Nghé, Quận 1, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7799129,
+        "lng": 106.699902,
+        "rating": "4.4/5",
+        "price": "0₫",
+        "votes": 4,
+        "dur_en": "30–45 min",
+        "dur_vi": "30–45 phút",
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "Gustave Eiffel-era post office with vaulted ceilings and vintage phone booths — still working; send the crew a postcard.",
+        "desc_vi": "Bưu điện thời Gustave Eiffel với trần vòm và buồng điện thoại cổ — vẫn hoạt động; gửi cả nhóm một tấm bưu thiếp."
+      },
+      {
+        "id": "jade-emperor-pagoda",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBBX-Xy2WXj0k6czdHtziAD8a-hn_fIVZTJhtQTm51wmzAEPyHgW6FRfwyrulRXuTtaoihrHlvQe0DbbHWllW6DS_Nlt4GMytAxpn1kOQz4sp1zFOo7UqjpkVoovSXL3j_1N22ZJndmKRDTwm-iBTXnIQ=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBBX-Xy2WXj0k6czdHtziAD8a-hn_fIVZTJhtQTm51wmzAEPyHgW6FRfwyrulRXuTtaoihrHlvQe0DbbHWllW6DS_Nlt4GMytAxpn1kOQz4sp1zFOo7UqjpkVoovSXL3j_1N22ZJndmKRDTwm-iBTXnIQ=s4800-w800",
+            "attr_name": "Aldrin Martins",
+            "attr_uri": "https://maps.google.com/maps/contrib/108842068063120743657"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAqFoX1e0a-YJFifgCLNYqsWfcE4bYdIYQVx43bxlPbuviDhJr07ELZ3L51X5AgfTVwZWNcZGmYwzra4yhUk7xcYZQEh-4qdhhVRKotoGjsU-o3uipCL-_82Z_iZlu93M7Wa75PnbyIA9Zss6pNN7qSgg=s4800-w800",
+            "attr_name": "Ju",
+            "attr_uri": "https://maps.google.com/maps/contrib/105448512531289068518"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDv4NZxBXSNS2BzkfvDXjGXIfmRnctKqbXTNfSi3ZAK0ZH4xqz1gGh7z4u8V8RfnKhyPUUeVk_s9u07d8G5mwBT6m4keIgf69rtJNl57Jls-jP2Iat0_xsP1My61FHAmjMu3zkKlRn_t8MS1W28nqIuJw=s4800-w800",
+            "attr_name": "Jason Moore",
+            "attr_uri": "https://maps.google.com/maps/contrib/109492858401933557585"
+          }
+        ],
+        "attr_name": "Aldrin Martins",
+        "attr_uri": "https://maps.google.com/maps/contrib/108842068063120743657",
+        "emoji": "⛩️",
+        "en": "Jade Emperor Pagoda",
+        "vi": "Chùa Ngọc Hoàng",
+        "loc_en": "Đa Kao, D1",
+        "loc_vi": "Đa Kao, Q1",
+        "address": "73 Mai Thị Lựu, Tân Định, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7919963,
+        "lng": 106.69817909999999,
+        "rating": "4.7/5",
+        "price": "0₫",
+        "votes": 3,
+        "dur_en": "30–60 min",
+        "dur_vi": "30–60 phút",
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "Incense-filled 1909 Taoist temple with carved wooden panels and a turtle pond — quiet, atmospheric, and free.",
+        "desc_vi": "Ngôi chùa Đạo giáo năm 1909 nghi ngút khói hương với phù điêu gỗ và hồ rùa — yên tĩnh, huyền ảo, miễn phí."
+      },
+      {
+        "id": "thien-hau-temple",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAEjboxxM_AIfGTGXfmg56f0J4HmSZItcjI-Hw7B3Eac_zHyq4ve2uV9Is6g9yqgGU7QXXSgsG6UupslTRijxaRuHIETnaSDvfmb9AwS1B1TRDTJyk2dzhxC8JipjlJiITkj2EwEJ69La7Ghg=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAEjboxxM_AIfGTGXfmg56f0J4HmSZItcjI-Hw7B3Eac_zHyq4ve2uV9Is6g9yqgGU7QXXSgsG6UupslTRijxaRuHIETnaSDvfmb9AwS1B1TRDTJyk2dzhxC8JipjlJiITkj2EwEJ69La7Ghg=s4800-w800",
+            "attr_name": "Ân Phùng",
+            "attr_uri": "https://maps.google.com/maps/contrib/117961578349621140907"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAchM-ddkpvy0alBcxOd2aPlwnTeLiv2lWiigqXTW47JgISxQ5jDe479a3UeL76Cx-fUhuyzfA2f_Zfb7Ns0_ILVn-VN0YX6zMf4Xa4LlJQXd_9o-tnxcaVO7_jbrsQDWP9qRGmNmqOX4kZg-p0pskr4g=s4800-w800",
+            "attr_name": "Aymeric Asselineau",
+            "attr_uri": "https://maps.google.com/maps/contrib/106750451797212069243"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDNvWe_UlRQMgfijoV1KWzn8CLG_K6qHIXRaIMmoApUiwftPMtV7bb2eC677ijwmeO6LlnV_9vQl7uVW9xgNoKGgl6iyhODac3GXWsF4f0UFH0hjbg5QIEeLlp9Ijm0pqoaumCRgHrt00Dwvw=s4800-w800",
+            "attr_name": "Fiona Su",
+            "attr_uri": "https://maps.google.com/maps/contrib/112030815065285248512"
+          }
+        ],
+        "attr_name": "Ân Phùng",
+        "attr_uri": "https://maps.google.com/maps/contrib/117961578349621140907",
+        "emoji": "🏮",
+        "en": "Thiên Hậu Temple",
+        "vi": "Chùa Bà Thiên Hậu",
+        "loc_en": "Chợ Lớn, D5",
+        "loc_vi": "Chợ Lớn, Q5",
+        "address": "710 Nguyễn Trãi, Chợ Lớn, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7532496,
+        "lng": 106.66117349999999,
+        "rating": "4.6/5",
+        "price": "0₫",
+        "votes": 3,
+        "dur_en": "30–60 min",
+        "dur_vi": "30–60 phút",
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "Chinatown's 19th-century temple to the sea goddess — spiral incense coils overhead and porcelain dioramas on the roof.",
+        "desc_vi": "Ngôi miếu thế kỷ 19 thờ Bà Thiên Hậu giữa Chợ Lớn — vòng nhang xoắn trên đầu và tiểu tượng gốm trên mái."
+      },
+      {
+        "id": "fine-arts-museum",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDHq6j3diypSrnQcpHdiMjO5fEnoIbdWRZi3MtDVtgsPyCkaoz18kj3NCTfAO-del4JHETcj6GwYjYRVSiSCCUhpTrBAudU7qBx0C1wY0mPBeymTiVEOG-rcK_LGAko50Z1cMpydVhmBlLsDuo1BSKK=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDHq6j3diypSrnQcpHdiMjO5fEnoIbdWRZi3MtDVtgsPyCkaoz18kj3NCTfAO-del4JHETcj6GwYjYRVSiSCCUhpTrBAudU7qBx0C1wY0mPBeymTiVEOG-rcK_LGAko50Z1cMpydVhmBlLsDuo1BSKK=s4800-w800",
+            "attr_name": "Vinh Truong",
+            "attr_uri": "https://maps.google.com/maps/contrib/105046942311769839490"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD2LGp9pmU6tYTPKd8983wyzSxNVqZYU-G8_Y055YFnC5mMRnHhuRlnRuUmaE-VuhJ4ooIOknGGGhxxeZ70_S8zB4aPUT9cLXHe5QT-vmzAqarcEqVbXX6Gwmb7VbbvRtfXQuSydphJmfahl5mjMGVYIw=s4800-w800",
+            "attr_name": "Felix Caveda",
+            "attr_uri": "https://maps.google.com/maps/contrib/118442367790594595163"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCtpnLQX43SBameQHGuqR_FeBcIkSPoTeudAAZvhcW0i23IxNpKs-p6D93GOv6L_HfCdDMkiomNX24YDXSb2LNGKcMJBd5-CFycD_iV5rvkKw18Vs5Kuj63SSdwVO4kngszT_fwO4Hz6P405qrS8pnlVw=s4800-w800",
+            "attr_name": "Frank Yen",
+            "attr_uri": "https://maps.google.com/maps/contrib/101899315456804180730"
+          }
+        ],
+        "attr_name": "Vinh Truong",
+        "attr_uri": "https://maps.google.com/maps/contrib/105046942311769839490",
+        "emoji": "🎨",
+        "en": "Fine Arts Museum",
+        "vi": "Bảo tàng Mỹ thuật",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "97 Phó Đức Chính, Bến Thành, Hồ Chí Minh, Vietnam",
+        "lat": 10.769947199999999,
+        "lng": 106.6992162,
+        "rating": "4.4/5",
+        "price": "30k₫",
+        "votes": 2,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "Vietnamese art in a gorgeous 1930s villa with stained glass and one of Saigon's first elevators — the building is half the show.",
+        "desc_vi": "Mỹ thuật Việt trong biệt thự thập niên 30 tuyệt đẹp với kính màu và một trong những thang máy đầu tiên của Sài Gòn."
+      },
+      {
+        "id": "saigon-opera-house",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBz-6_2IhDIZ1nazgvYsrkRIqk3Q-Bt6oBuPzEjNm9lM9_5xtLFbdaOS8x7UpprCaMkj7-2F0Xrx2CqdTnCM4lg5Bnb3vG4f9i8YNKsZR7SAN3RIGHTvkRJtDqKP5Ds8uKRVAm0kZGX46Eqo-z-BRRF=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBz-6_2IhDIZ1nazgvYsrkRIqk3Q-Bt6oBuPzEjNm9lM9_5xtLFbdaOS8x7UpprCaMkj7-2F0Xrx2CqdTnCM4lg5Bnb3vG4f9i8YNKsZR7SAN3RIGHTvkRJtDqKP5Ds8uKRVAm0kZGX46Eqo-z-BRRF=s4800-w800",
+            "attr_name": "Lan Thao Truong Ngoc",
+            "attr_uri": "https://maps.google.com/maps/contrib/116882900748129480590"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAcXONRWCF5_MKOZApKOqnZgPb0ELuUEyLWyKhcZciJcgQc0JftEZNgXFscgLGesRk9jlpGPMHeYnj5eyCNdeq2siN8ZBOKFg4KWDjycEXUjEKygN_upD7sP9fMU3A5ljNRMX8CftdmOi1CBg=s4800-w800",
+            "attr_name": "GOMINHTIEN Gỗ Ghép, Ván Ép, Ván MDF, Ván MFC",
+            "attr_uri": "https://maps.google.com/maps/contrib/111694441414280731087"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA6F3F3d30JX7Qq6pJHcpA8AAaeNlO5pX2N2257G-WYXMxkbnRfBFoLl9BM9d07migLLto4Z6zNWn5hFVVqOdX9AEMkhylSykd-42QoA-HiEzkRVq0wPHUFYKLHnlE4lVlvAO8_HO7PQo5EqiAOm9lw2g=s4800-w800",
+            "attr_name": "泰國劉德華",
+            "attr_uri": "https://maps.google.com/maps/contrib/117541821627272322101"
+          }
+        ],
+        "attr_name": "Lan Thao Truong Ngoc",
+        "attr_uri": "https://maps.google.com/maps/contrib/116882900748129480590",
+        "emoji": "🎭",
+        "en": "Saigon Opera House",
+        "vi": "Nhà hát Thành phố",
+        "loc_en": "Đồng Khởi, D1",
+        "loc_vi": "Đồng Khởi, Q1",
+        "address": "07 Công trường Lam Sơn, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.776612799999999,
+        "lng": 106.7031715,
+        "rating": "4.6/5",
+        "price": "0₫",
+        "votes": 2,
+        "dur_en": "20–40 min",
+        "dur_vi": "20–40 phút",
+        "vibes": [
+          "culture"
+        ],
+        "desc_en": "Flamboyant 1900 French opera house — catch the À Ố Show inside, or just admire the façade with a coffee across the street.",
+        "desc_vi": "Nhà hát Pháp năm 1900 lộng lẫy — xem À Ố Show bên trong, hoặc ngắm mặt tiền với ly cà phê phía đối diện."
+      },
+      {
+        "id": "tao-dan-park",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA5uwY09H5jhBZ6g10DtZ36RGLWr1iO5u7zvmPPHa3IPfsMgRHF7kjsaidEvGc04pQSxoriRLgw6V0bzgGNbvAgOIopLQauzMrF0007Ih9nRmB6NWzMirzXvfyK9fDyCfCdToSKENfqjFYv3w=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA5uwY09H5jhBZ6g10DtZ36RGLWr1iO5u7zvmPPHa3IPfsMgRHF7kjsaidEvGc04pQSxoriRLgw6V0bzgGNbvAgOIopLQauzMrF0007Ih9nRmB6NWzMirzXvfyK9fDyCfCdToSKENfqjFYv3w=s4800-w800",
+            "attr_name": "Nathan Phan",
+            "attr_uri": "https://maps.google.com/maps/contrib/112283924865188273160"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCULHpCQvlA3shfmDi02Clps9XjIk-xs4m34wT6xgg6usMChUoUf9WH-4_AMp6v2Cczdx6cuTfUl3zcmA6mzXptHT4lFW-sBmNty13IerSNH5_Fgz8O6YBI7g3HJPBGfewdLLFc-ratGfCCeA=s4800-w647",
+            "attr_name": "Diễm Chi",
+            "attr_uri": "https://maps.google.com/maps/contrib/100461035937048451005"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAMdbJsHZclKa6qmGl-wQoHGnNLDenxGBsBMPwjnixyR5Ntyq6rVla2EwqrRHYEGUCdMy28cg-2RpfgXaM1sBmoatcwQ_9Dw4IqRcsqM7TAWh_Mr-P179NOa1Jyes2j0kQqodTWKCeevjD8JWo=s4800-w800",
+            "attr_name": "Tien Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/110084548439668434228"
+          }
+        ],
+        "attr_name": "Nathan Phan",
+        "attr_uri": "https://maps.google.com/maps/contrib/112283924865188273160",
+        "emoji": "🌳",
+        "en": "Tao Dan Park picnic",
+        "vi": "Picnic Công viên Tao Đàn",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "Ben Thanh, Ho Chi Minh 700000, Vietnam",
+        "lat": 10.7755796,
+        "lng": 106.6920797,
+        "rating": "4.5/5",
+        "price": "0₫",
+        "votes": 1,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "outdoors",
+          "chill"
+        ],
+        "desc_en": "Shaded lawns and old trees in the middle of D1 — bring a mat, coffee and board games.",
+        "desc_vi": "Thảm cỏ râm mát giữa Quận 1 — mang theo bạt, cà phê và board game."
+      },
+      {
+        "id": "book-street",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBTTAeL3InHQGDA4vcCuE7z572hR3siY3y6HKbtwEY3vB-477Yh-Q89qM0uXXBdBdKwkCUNkH-_9ZLkkDFOhykhCtaTyOm_gqOB6OIDXPjxOOQzSbWP80nAY6uWEcTCbMauaw8pz57-5EAP--Vd1Y8B1w=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBTTAeL3InHQGDA4vcCuE7z572hR3siY3y6HKbtwEY3vB-477Yh-Q89qM0uXXBdBdKwkCUNkH-_9ZLkkDFOhykhCtaTyOm_gqOB6OIDXPjxOOQzSbWP80nAY6uWEcTCbMauaw8pz57-5EAP--Vd1Y8B1w=s4800-w800",
+            "attr_name": "Nguyễn Xuân Vĩnh Hưng",
+            "attr_uri": "https://maps.google.com/maps/contrib/100783457268148256357"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCVnqRmIslD-Z94hIAS_2I0tHzZ4jRF10ADeE1I1dJk1gZzGdvB5GrdT62jIlJKtUCXqf76l6dZ8m9I340g9gawkjmvDtHohNrCLVQZkTzss_OI7lp_KvFC6UD9Un8rAt_ib9Fs6_sB5ATW=s4800-w800",
+            "attr_name": "Ánh Diệp Lê",
+            "attr_uri": "https://maps.google.com/maps/contrib/100727059689942813727"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDWGR_6DNhIoZxHRzXEipfkQjbQNp0LzLHuRxuVxKm0-v8YVvcptrcECSfdwVTAvUoIEVFOnqkFpXDRStTaGJ1j4ShjKX81j7RcU54OE8SsAfyc5TARTpPiskf02ZK-Uk5vIJwjbLo2hUDoIQ=s4800-w800",
+            "attr_name": "apjapi_ korea",
+            "attr_uri": "https://maps.google.com/maps/contrib/103528797516602257479"
+          }
+        ],
+        "attr_name": "Nguyễn Xuân Vĩnh Hưng",
+        "attr_uri": "https://maps.google.com/maps/contrib/100783457268148256357",
+        "emoji": "📚",
+        "en": "Book Street",
+        "vi": "Đường Sách",
+        "loc_en": "Nguyễn Văn Bình, D1",
+        "loc_vi": "Nguyễn Văn Bình, Q1",
+        "address": "2 Đ. Nguyễn Văn Bình, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.780963,
+        "lng": 106.7000734,
+        "rating": "4.6/5",
+        "price": "0₫",
+        "votes": 2,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "culture",
+          "chill"
+        ],
+        "desc_en": "Pedestrian lane of bookshops and cafés beside the post office — an easy, free group stroll.",
+        "desc_vi": "Con đường đi bộ với nhà sách và quán cà phê cạnh Bưu điện — điểm dạo chơi miễn phí, nhẹ nhàng."
+      },
+      {
+        "id": "starlight-bridge",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD12Ec8W6YFsDF2k8MS4Rpx7TxKlr26IziaE4Vd0iLABWvhoXzdcddbKjjEtKvwJl-WsEOsEcG299wzElnyyP8N7iPGjDBBIyfQ-X2NjofqBO8JPD5KNMxlphQMdYRTVo_-KYDTSi6V64_kauvYxN9HsQ=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD12Ec8W6YFsDF2k8MS4Rpx7TxKlr26IziaE4Vd0iLABWvhoXzdcddbKjjEtKvwJl-WsEOsEcG299wzElnyyP8N7iPGjDBBIyfQ-X2NjofqBO8JPD5KNMxlphQMdYRTVo_-KYDTSi6V64_kauvYxN9HsQ=s4800-w800",
+            "attr_name": "zoharix",
+            "attr_uri": "https://maps.google.com/maps/contrib/116587133673750272997"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB2q-p-Ch8yLQeCzJhEybdCTgo1DBF0Wb6-2DkI13ANXV4DlJhXllVfZnb1YZecdQ1Zvc5kfamP7GwiToR-bqFBgAFF3lru6gIVDzmPkdiL52xl9-rYfNjTgOkqwtEMPVnHr6E_qAyjgFT45qS6FN9uVw=s4800-w800",
+            "attr_name": "zoharix",
+            "attr_uri": "https://maps.google.com/maps/contrib/116587133673750272997"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBh6ip2DhSeJ2Tb1c1LQzTSM_7xZgdMBQpvc7KZNs9wOcxnGwL7BQ58_N6wejk6xBj1wYFRMWNhHsn_AtfmL2DyhAzD3G1yUzn5Dgcm0UlT1GDIp-H-yRehc-pulhEHziA6ecqtr4hQowD5a_qVmIFODA=s4800-w800",
+            "attr_name": "Trọng Hiếu Hồ",
+            "attr_uri": "https://maps.google.com/maps/contrib/106545726650173419436"
+          }
+        ],
+        "attr_name": "zoharix",
+        "attr_uri": "https://maps.google.com/maps/contrib/116587133673750272997",
+        "emoji": "🌉",
+        "en": "Starlight Bridge",
+        "vi": "Cầu Ánh Sao",
+        "loc_en": "District 7",
+        "loc_vi": "Quận 7",
+        "address": "6 Đ. Tôn Dật Tiên, Khu đô thị Phú Mỹ Hưng, Tân Mỹ, Hồ Chí Minh, Vietnam",
+        "lat": 10.724701399999999,
+        "lng": 106.71863959999999,
+        "rating": "4.6/5",
+        "price": "0₫",
+        "votes": 1,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "outdoors",
+          "views"
+        ],
+        "desc_en": "LED-lit pedestrian bridge in Phú Mỹ Hưng — night walk plus cheap snacks at the lakeside.",
+        "desc_vi": "Cầu đi bộ thắp đèn LED ở Phú Mỹ Hưng — dạo đêm và ăn vặt ven hồ giá rẻ."
+      },
+      {
+        "id": "nguyen-hue-walking-street",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsCJlUuaIBmw33QSyk5b0wGjjBvInYXFqbSeZRrb3Bhf9xdeMXV6-X1GnJ307Q7yzskxM4S7vPWaebC0w0F8sB4VJusDR0c3qcMVVkeqibkwWDm9S0Rl6c-O9p6gGScOPKqRRmdEJgtIjPRs_DzjkU5Q=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsCJlUuaIBmw33QSyk5b0wGjjBvInYXFqbSeZRrb3Bhf9xdeMXV6-X1GnJ307Q7yzskxM4S7vPWaebC0w0F8sB4VJusDR0c3qcMVVkeqibkwWDm9S0Rl6c-O9p6gGScOPKqRRmdEJgtIjPRs_DzjkU5Q=s4800-w800",
+            "attr_name": "Jen N",
+            "attr_uri": "https://maps.google.com/maps/contrib/102468413286995813430"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBaxQ-xZjIhb_6ypeCsmMMaivNCfITWdNSlpedVFPqA90ZfcCYBu-hYiXCT9wScP6DcPUE2ZyY3HgNp1mIqY3-Bmv_X40Cr9MARGU8M4gcRXdECCnJMNZpZRA-FsG-tnYYXYh5DW3-qk0T3_YoRb9v6nQ=s4800-w800",
+            "attr_name": "yuichi sasaki",
+            "attr_uri": "https://maps.google.com/maps/contrib/103660962830515051392"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjALtSoMcr_K2D-85Idb84k0ZfuypbpfH_KhZVMSWSWnCQJ7WluBCUmpgBfaBT9w2k6ZH1EbKY0bEJpXg6HUl4E_hoxykxxqBhK71XX8EsLixFoZDR0R8gdqPIo8qktxDENLH-OcKttM1m0D4CJMYImN=s4800-w800",
+            "attr_name": "Hajime Kaneko",
+            "attr_uri": "https://maps.google.com/maps/contrib/107874854712181144506"
+          }
+        ],
+        "attr_name": "Jen N",
+        "attr_uri": "https://maps.google.com/maps/contrib/102468413286995813430",
+        "emoji": "🚶",
+        "en": "Nguyễn Huệ Walking Street",
+        "vi": "Phố đi bộ Nguyễn Huệ",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "QPF3+JF9, Sai Gon, Ho Chi Minh, Vietnam",
+        "lat": 10.7740408,
+        "lng": 106.7037237,
+        "rating": "4.5/5",
+        "price": "0₫",
+        "votes": 5,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "outdoors",
+          "chill"
+        ],
+        "desc_en": "The city's living room — fountains, skateboarders and street shows from City Hall down to the river; best after dark.",
+        "desc_vi": "Phòng khách của thành phố — đài phun nước, trượt ván và biểu diễn đường phố từ Uỷ ban xuống bờ sông; đẹp nhất khi lên đèn."
+      },
+      {
+        "id": "saigon-zoo",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAQcC-PyeQ9RGRAM4-977nISijcb-d-0j_Duf-_I8xp1LRvTx1hcee88U-sbqLp9qdNjxlm8L-zRVB2nmqRVZ2bQTcc-qo_yrhab9MrbFmmjKHclrkIsJJpQpudupSxk2f3qtSUzkB4IT4X=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAQcC-PyeQ9RGRAM4-977nISijcb-d-0j_Duf-_I8xp1LRvTx1hcee88U-sbqLp9qdNjxlm8L-zRVB2nmqRVZ2bQTcc-qo_yrhab9MrbFmmjKHclrkIsJJpQpudupSxk2f3qtSUzkB4IT4X=s4800-w800",
+            "attr_name": "Gia Trường Lê",
+            "attr_uri": "https://maps.google.com/maps/contrib/107439197803252668802"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCCQkWJdUvvyQAo-fY6OvnNuwVy2mS65CQGRhFPXn-otbmakvgOQtT6YGK2KMKSmPU-AXA-xkFmmXaUAIzZfIEVLBd7k7ylr1Jm8qkgGexHaudHk6ujCVY1Z25LmDA89hijH60YKSeXYKYtXg=s4800-w800",
+            "attr_name": "Na Lyn",
+            "attr_uri": "https://maps.google.com/maps/contrib/100591357600839182004"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCgWu_gWVC_FdFBmSTOpZS6MZYkqWw1OxvutJoLeEWzarV7Eb6HuHosMvHCF7vIFylwua0bqUM7MS5zDBUpE9xH3MgbpkeubzB5wM9wbb-iT-wUnY5A7uPEiFmjsIy_pl1SnCPWr4FSumRuYVlqRtt0rA=s4800-w800",
+            "attr_name": "Hiếu Trung (HTH)",
+            "attr_uri": "https://maps.google.com/maps/contrib/111109479427541054837"
+          }
+        ],
+        "attr_name": "Gia Trường Lê",
+        "attr_uri": "https://maps.google.com/maps/contrib/107439197803252668802",
+        "emoji": "🦒",
+        "en": "Saigon Zoo & Botanical Gardens",
+        "vi": "Thảo Cầm Viên",
+        "loc_en": "District 1",
+        "loc_vi": "Quận 1",
+        "address": "2 Nguyễn Bỉnh Khiêm, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.787334399999999,
+        "lng": 106.70505659999999,
+        "rating": "4.3/5",
+        "price": "60k₫",
+        "votes": 2,
+        "dur_en": "2–3h",
+        "dur_vi": "2–3 giờ",
+        "vibes": [
+          "outdoors"
+        ],
+        "desc_en": "One of the world's oldest zoos (1865) with giant century-old trees — go early morning before the heat.",
+        "desc_vi": "Một trong những vườn thú lâu đời nhất thế giới (1865) với những cổ thụ trăm tuổi — đi sáng sớm cho mát."
+      },
+      {
+        "id": "vinhomes-central-park",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA2p2YlVtcBP7FrkjXHYN5W6e1JkdXRgHD9POQT33TE9OunbKKcm8oeW2uP7cb3NCsIrkJZCqaBpoBqxeC0i1utSCfiZ1AaDwFfvGlBgheA7xCWjr2P4Pi0UKQlI27-X0Gp8d4v8PEJZ7hn3g=s4800-w750",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA2p2YlVtcBP7FrkjXHYN5W6e1JkdXRgHD9POQT33TE9OunbKKcm8oeW2uP7cb3NCsIrkJZCqaBpoBqxeC0i1utSCfiZ1AaDwFfvGlBgheA7xCWjr2P4Pi0UKQlI27-X0Gp8d4v8PEJZ7hn3g=s4800-w750",
+            "attr_name": "Huy Nguyen (Marshall)",
+            "attr_uri": "https://maps.google.com/maps/contrib/109752992531610948682"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD12S25j3DQzIEs129HTYpGRE7IMqgSMH9omoCICGScbuuzVy7No-snArF2442Z0w3OOQpQFT5Y6CkgzaR5JD7U1IrMIrl0z_PjOlitlzDRyQ3BWLvq_I5ukOqymaLCkDWq4rt8YKCSBqcj3g=s4800-w800",
+            "attr_name": "Vu Le",
+            "attr_uri": "https://maps.google.com/maps/contrib/109257426014720480284"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB9vUA6C2H0KtcT_5E8bUS0GFQU98fvjo9iHyWzTiiXeF7j0l4_QrUom03KSnF9zoi71VZiWrm4jR2EYj7uOKoaMezaXe0V5jLmGxSxMditd0Iur27JrPQ8tg8EDW7BbeCZMeW4e6YObrBj0Q=s4800-w800",
+            "attr_name": "Bobby Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/108074264753865084956"
+          }
+        ],
+        "attr_name": "Huy Nguyen (Marshall)",
+        "attr_uri": "https://maps.google.com/maps/contrib/109752992531610948682",
+        "emoji": "🧺",
+        "en": "Vinhomes Central Park",
+        "vi": "Công viên Vinhomes Central Park",
+        "loc_en": "Bình Thạnh",
+        "loc_vi": "Bình Thạnh",
+        "address": "Trần Trọng Kim, Vinhomes Tân Cảng, Thạnh Mỹ Tây, Hồ Chí Minh, Vietnam",
+        "lat": 10.7934308,
+        "lng": 106.7243981,
+        "rating": "4.6/5",
+        "price": "0₫",
+        "votes": 2,
+        "dur_en": "1–2h",
+        "dur_vi": "1–2 giờ",
+        "vibes": [
+          "outdoors",
+          "chill"
+        ],
+        "desc_en": "Riverside lawns under Landmark 81 — rent a mat, watch the skyline light up, and let the kids run wild.",
+        "desc_vi": "Bãi cỏ ven sông dưới chân Landmark 81 — thuê bạt, ngắm skyline lên đèn và để lũ trẻ chạy nhảy thoả thích."
+      },
+      {
+        "id": "saigon-square",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB9NUu0nNkujshKr9dBNwIDbNOhnjjixlV8NAc95NsQEywtVrtl32k07jBLV1FnA7img4oh1cx_I7mu00Rj4oeJlYFK1GHUKlGFCynP8AsMhx4LPmcaauY9YRD9yy4Uvk-S756LerBfV3th7g=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjB9NUu0nNkujshKr9dBNwIDbNOhnjjixlV8NAc95NsQEywtVrtl32k07jBLV1FnA7img4oh1cx_I7mu00Rj4oeJlYFK1GHUKlGFCynP8AsMhx4LPmcaauY9YRD9yy4Uvk-S756LerBfV3th7g=s4800-w800",
+            "attr_name": "soyoung Lee",
+            "attr_uri": "https://maps.google.com/maps/contrib/116110839725911201519"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD9u6FogXvLfX4T-S8IyFT-R4qVivoEI8x50-RhiPKgsyYQcN4xTTKD4MpV5For7yogePMAeBZU9UJDw4JiU55CXHktqaULE43ImIVVe6O49uvheaglzYgGruUFwoFgFuszkWLAE6T2fzM7OwY=s4800-w800",
+            "attr_name": "Antal dr.Joó",
+            "attr_uri": "https://maps.google.com/maps/contrib/116713703535436929261"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAnAKBk4gZZ3Y-BefekD1FvwuKdAJxYCr_VyWNtC-rG0g4aGzuyh32063r_r8Jsm9DM4OI3hL3LeZW-bRHZ_7HRUp8pWr4-u81IxnqWTdbF_FNjoonRJI9YwH6pIP_EBNY3vayKPMb4noM1wg=s4800-w800",
+            "attr_name": "Thamara Kandabada",
+            "attr_uri": "https://maps.google.com/maps/contrib/110734025912425055109"
+          }
+        ],
+        "attr_name": "soyoung Lee",
+        "attr_uri": "https://maps.google.com/maps/contrib/116110839725911201519",
+        "emoji": "🛍️",
+        "en": "Saigon Square",
+        "vi": "Saigon Square",
+        "loc_en": "Nam Kỳ Khởi Nghĩa, D1",
+        "loc_vi": "Nam Kỳ Khởi Nghĩa, Q1",
+        "address": "77 - 89 Nam Kỳ Khởi Nghĩa, Bến Thành, Hồ Chí Minh, Vietnam",
+        "lat": 10.7727039,
+        "lng": 106.7002091,
+        "rating": "4.1/5",
+        "price": "0₫",
+        "votes": 3,
+        "dur_en": "1–2h",
+        "dur_vi": "1–2 giờ",
+        "vibes": [
+          "shopping"
+        ],
+        "desc_en": "Air-conditioned bargain maze — clothes, bags and shoes at haggle-friendly prices; go with a number in mind and halve it.",
+        "desc_vi": "Mê cung mua sắm máy lạnh giá hời — quần áo, túi, giày thoải mái trả giá; cứ lấy giá họ nói chia đôi."
+      },
+      {
+        "id": "vincom-dong-khoi",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBD5QvZTJ8V6ZTZvRUfTKg2AZqjBv3a_nwFL-TK7lnB5u6qqfp3rEdRe3FK6VWT-42Rhp7Bv4WZhxlccjBCXmRw228HPSZxfVnpdzOvvveLETkmOjkx08u-z39LuZYvjSMZ_6ytLYWE_LA-lQ=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBD5QvZTJ8V6ZTZvRUfTKg2AZqjBv3a_nwFL-TK7lnB5u6qqfp3rEdRe3FK6VWT-42Rhp7Bv4WZhxlccjBCXmRw228HPSZxfVnpdzOvvveLETkmOjkx08u-z39LuZYvjSMZ_6ytLYWE_LA-lQ=s4800-w800",
+            "attr_name": "DEUK YOUNG CHOI",
+            "attr_uri": "https://maps.google.com/maps/contrib/111797006812364068231"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBgRA8dMHnwuYDdC4AH62ZBAC2uGiL9cl80S6IIGvSAX52y_7L_qzeDm2lau-YGg1UwaPdOMr0mG4sjac0R96tGSMpZmFY6yaG1b5MKMF29VPy7QvO2OXRmFLEf62HaEEzq6m8ErpTUh2PmUPE=s4800-w800",
+            "attr_name": "Vincom Center Đồng Khởi",
+            "attr_uri": "https://maps.google.com/maps/contrib/105751490212776525918"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAHkTuliBWfnqLSbWcMGIN9AbNushKhKi5zyxYxvEP_GELKqr7vZb1-SbHpDrePKi6ZtVj6OOdQL0TcU-kF9AMDL3be7QTArbvzBM_Cjh-XAkkF9-xPtkJLBNOQapUi6g_iNtg_lMJwzjC1R1hLiMZp-w=s4800-w800",
+            "attr_name": "Всеволод Т",
+            "attr_uri": "https://maps.google.com/maps/contrib/115338445120156477065"
+          }
+        ],
+        "attr_name": "DEUK YOUNG CHOI",
+        "attr_uri": "https://maps.google.com/maps/contrib/111797006812364068231",
+        "emoji": "🏬",
+        "en": "Vincom Center Đồng Khởi",
+        "vi": "Vincom Center Đồng Khởi",
+        "loc_en": "Đồng Khởi, D1",
+        "loc_vi": "Đồng Khởi, Q1",
+        "address": "72 Lê Thánh Tôn, Sài Gòn, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.7779043,
+        "lng": 106.7022087,
+        "rating": "4.5/5",
+        "price": "0₫",
+        "votes": 1,
+        "dur_en": "1–2h",
+        "dur_vi": "1–2 giờ",
+        "vibes": [
+          "shopping"
+        ],
+        "desc_en": "Downtown's glossy mall — international brands upstairs, a big food basement below; the reliable rainy-afternoon option.",
+        "desc_vi": "TTTM bóng bẩy giữa trung tâm — thương hiệu quốc tế phía trên, tầng hầm ẩm thực bên dưới; lựa chọn an toàn cho chiều mưa."
+      },
+      {
+        "id": "takashimaya",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDJwBkyh87Idkm0J0SY1Ux4Q-gudche9M_tz54TozeSULQL3AVTjrui4eLCodaJptb3aeMi0f-DiQhmo8qSXtIpTzfzwqtlDyg4w9IIo0C2MluKvA_eaa9kQzh0GUeJfHf-H-hiLzjPy5rxA1c3pJ3A=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDJwBkyh87Idkm0J0SY1Ux4Q-gudche9M_tz54TozeSULQL3AVTjrui4eLCodaJptb3aeMi0f-DiQhmo8qSXtIpTzfzwqtlDyg4w9IIo0C2MluKvA_eaa9kQzh0GUeJfHf-H-hiLzjPy5rxA1c3pJ3A=s4800-w800",
+            "attr_name": "Takashimaya (Ho Chi Minh City Takashimaya Department Store)",
+            "attr_uri": "https://maps.google.com/maps/contrib/117331852131316554826"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCj0Z4rHUUObZiGcq_FZK8vA7fDQw4gIvbDtC1AZZTHormYiDxvbHVkc8hw_d2xe-I-sKVS8i7EFARrjVFMAuwsFQmQVXs01Py9anuJrnsBFOmRvQyclx2T60Y1jtyyhP_PGWJwr5emhmkqDDbmg1QRBA=s4800-w800",
+            "attr_name": "Thuy Nguyen",
+            "attr_uri": "https://maps.google.com/maps/contrib/110825430725218340140"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD-QpK8oTBV9pvpAbL9RzSqy1m1UQQJf3_5cEYHyqyDaexxDZODuzFPYvS71c5vCydvPgQgjFytYWiSKV719Pwb9aq2pjoUO_pUUwmi-8FrLoYbycMKOhAfyJ_qK1AHrsbA5u0YYvNPP_oMAoxXKuMx=s4800-w800",
+            "attr_name": "TRUNG HIẾU TRẦN",
+            "attr_uri": "https://maps.google.com/maps/contrib/103990228510062884101"
+          }
+        ],
+        "attr_name": "Takashimaya (Ho Chi Minh City Takashimaya Department Store)",
+        "attr_uri": "https://maps.google.com/maps/contrib/117331852131316554826",
+        "emoji": "🎁",
+        "en": "Takashimaya (Saigon Centre)",
+        "vi": "Takashimaya (Saigon Centre)",
+        "loc_en": "Lê Lợi, D1",
+        "loc_vi": "Lê Lợi, Q1",
+        "address": "92 - 94 Nam Kỳ Khởi Nghĩa, Sài Gòn, Hồ Chí Minh 70000, Vietnam",
+        "lat": 10.772982899999999,
+        "lng": 106.70066999999999,
+        "rating": "4.4/5",
+        "price": "0₫",
+        "votes": 1,
+        "dur_en": "1–2h",
+        "dur_vi": "1–2 giờ",
+        "vibes": [
+          "shopping"
+        ],
+        "desc_en": "Japanese department store polish on Lê Lợi — the basement food hall is a destination in itself.",
+        "desc_vi": "Bách hoá chuẩn Nhật trên Lê Lợi — riêng khu ẩm thực tầng hầm đã đáng một chuyến ghé."
+      },
+      {
+        "id": "the-new-playground",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD64qQsVuj_22iRmgjS00Zz-4kAvKqUtCAx-cpMK_XyHCxwNIRS_bSZwFyQvHrsx-R_MaLPp5tOst6X7jAHHIwvszjewoOOy-HdyvJu_ozDa8WJOtgW_GvZbmfkOzOfu7xF20pV4ZyZ18rjig=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjD64qQsVuj_22iRmgjS00Zz-4kAvKqUtCAx-cpMK_XyHCxwNIRS_bSZwFyQvHrsx-R_MaLPp5tOst6X7jAHHIwvszjewoOOy-HdyvJu_ozDa8WJOtgW_GvZbmfkOzOfu7xF20pV4ZyZ18rjig=s4800-w800",
+            "attr_name": "Andrey Solncev",
+            "attr_uri": "https://maps.google.com/maps/contrib/113391204690213466392"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAR1Va9PLZlpuMCQryf0iCFxoEB2-BdUPHS5hDdRKKxzlYTSoTTel5fnT_SriDqJhZrZXwJV8SS-P9-mP-N2QBVEVo3okxxwqjgkKvBP9-OSb-WzYUyFNm_T5WTuQRCKqxL7fPAYB4639-qw0nE5-vYWw=s4800-w800",
+            "attr_name": "Ade Ardianta",
+            "attr_uri": "https://maps.google.com/maps/contrib/101216190995275824854"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAwZntC4T276bWFHQgKYVnJH53K4qyUNuXTNxmcTGokak_D68B9MWSGRJwTh7_HNdKhXSfxR_EMdQOJs-Q8BhKbawj3298Exzq7IMrfoyhB4QqltOIDgSCSpBcCj4cQSFuQmee4WId6JLMULA=s4800-w800",
+            "attr_name": "Paintlim",
+            "attr_uri": "https://maps.google.com/maps/contrib/112625441383353319899"
+          }
+        ],
+        "attr_name": "Andrey Solncev",
+        "attr_uri": "https://maps.google.com/maps/contrib/113391204690213466392",
+        "emoji": "🧢",
+        "en": "The New Playground",
+        "vi": "The New Playground",
+        "loc_en": "Lý Tự Trọng, D1",
+        "loc_vi": "Lý Tự Trọng, Q1",
+        "address": "26 Lý Tự Trọng, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7782185,
+        "lng": 106.701092,
+        "rating": "4.3/5",
+        "price": "0₫",
+        "votes": 3,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "shopping"
+        ],
+        "desc_en": "Underground mall of local streetwear brands — where young Saigon shops; come for the fits, stay for the people-watching.",
+        "desc_vi": "Khu mua sắm dưới lòng đất của các brand streetwear Việt — giới trẻ Sài Gòn tụ hội; đến vì đồ, ở lại vì không khí."
+      },
+      {
+        "id": "an-dong-market",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCTr4kcqTfVCjiWdhBuy8rj0zuSF8P70U6aS7DYUHYmt-Bjfof55me_oemYQHX-7qnkgofbl3nrXh3f8vSGtcvDu3tVg9EEtvR1cucrnj4uKkk8RjnTU4BscaP9fx31mQXazojS1jz6SKlGzQ=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCTr4kcqTfVCjiWdhBuy8rj0zuSF8P70U6aS7DYUHYmt-Bjfof55me_oemYQHX-7qnkgofbl3nrXh3f8vSGtcvDu3tVg9EEtvR1cucrnj4uKkk8RjnTU4BscaP9fx31mQXazojS1jz6SKlGzQ=s4800-w800",
+            "attr_name": "Sorphalla Sean",
+            "attr_uri": "https://maps.google.com/maps/contrib/108522475373420743460"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCY5k89xU7kvlt23mUhV_ZfAeaHJgBFuyZXOOW1B0kfty95EKmljDhX0eTgPjeCzd92MM63gvrgUsbq3foBAhBYZqbFlPej7VfCg2NCvsR8ddwIwgJ_DJlWbZtTXCJqObFs30XiEqxlXPcv9AI=s4800-w700",
+            "attr_name": "Chợ An Đông",
+            "attr_uri": "https://maps.google.com/maps/contrib/103363236923791174818"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDwDmOkRKddlhZX3jZW2CIO1_L0d7ia9Gvs8wF9P8cBIJaDDdYSB8yuqxGPzhhF8Q66hadzlbPaZlVaRivjzYq0WP13kN5RqPWAhXLYrrbyw8573oJeJH6z0BfkdSRwr55Kjv7lvrRDZEq4L-J0uW4tjw=s4800-w800",
+            "attr_name": "鄧Kevin",
+            "attr_uri": "https://maps.google.com/maps/contrib/109960124253288979933"
+          }
+        ],
+        "attr_name": "Sorphalla Sean",
+        "attr_uri": "https://maps.google.com/maps/contrib/108522475373420743460",
+        "emoji": "🧵",
+        "en": "An Đông Market",
+        "vi": "Chợ An Đông",
+        "loc_en": "District 5",
+        "loc_vi": "Quận 5",
+        "address": "34-36 An Dương Vương, An Đông, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7581989,
+        "lng": 106.6722817,
+        "rating": "4.1/5",
+        "price": "0₫",
+        "votes": 1,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "shopping",
+          "food_tour"
+        ],
+        "desc_en": "Chợ Lớn's wholesale fabric and fashion market with a serious food floor — less touristy than Bến Thành, better prices.",
+        "desc_vi": "Chợ sỉ vải vóc và thời trang của Chợ Lớn với tầng ẩm thực đáng nể — ít khách du lịch hơn Bến Thành, giá mềm hơn."
+      },
+      {
+        "id": "bitexco-skydeck",
+        "photo_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDF-OjlgoqNsTuYUgXT1v49e3jhZHypx30kv4KTA_vl5S2h35I-KDx47wM-LrAr7LcFHTsfXZteBl1KeQmq581Or-KTXF3ToQn1fL0r2L0MVqnQ2-3GDfcbjbR4rVT6e46l2SD2ByeWI4-niA=s4800-w800",
+        "photos": [
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDF-OjlgoqNsTuYUgXT1v49e3jhZHypx30kv4KTA_vl5S2h35I-KDx47wM-LrAr7LcFHTsfXZteBl1KeQmq581Or-KTXF3ToQn1fL0r2L0MVqnQ2-3GDfcbjbR4rVT6e46l2SD2ByeWI4-niA=s4800-w800",
+            "attr_name": "Teddy Tan",
+            "attr_uri": "https://maps.google.com/maps/contrib/105870042903561981748"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjCEXzvzcnDx3hVMOISpneItlGH0As4izSyrM1mJGaYgSVrhNVxBdZQkzbsTTsjAQNBYq6yt2msUjoTPgZdFrP7FZ7QpJZXrpbO6uMFurDstBAL72xDpeDf1vzUyLNWr555aN4VRyJXN7KQpOBU=s4800-w800",
+            "attr_name": "Shiva shiva shiva",
+            "attr_uri": "https://maps.google.com/maps/contrib/116909748471454316378"
+          },
+          {
+            "url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAjLuwfVqkyjt0_Z9OuLApreCG1RJYk9Hv5NBwSTeg0qQ3el4mT2eFz3apRPa7gnteljrCCa9ftRgLrwQyXb8qKlYBeU7NV83m5XH_iJQXmJXFT3OUQLAZq0T3w935l7Bs3jEvF7PJCnULfBy6h2bqUJg=s4800-w800",
+            "attr_name": "Trip Be Me Travel Stories",
+            "attr_uri": "https://maps.google.com/maps/contrib/110595152436519858715"
+          }
+        ],
+        "attr_name": "Teddy Tan",
+        "attr_uri": "https://maps.google.com/maps/contrib/105870042903561981748",
+        "emoji": "🏙️",
+        "en": "Bitexco Saigon Skydeck",
+        "vi": "Saigon Skydeck (Bitexco)",
+        "loc_en": "Hồ Tùng Mậu, D1",
+        "loc_vi": "Hồ Tùng Mậu, Q1",
+        "address": "36 Hồ Tùng Mậu, Sài Gòn, Hồ Chí Minh 700000, Vietnam",
+        "lat": 10.7715673,
+        "lng": 106.7042465,
+        "rating": "4.4/5",
+        "price": "240k₫",
+        "votes": 2,
+        "dur_en": "1–1.5h",
+        "dur_vi": "1–1.5 giờ",
+        "vibes": [
+          "views"
+        ],
+        "desc_en": "The lotus-shaped tower's 49th-floor deck with 360° views — cheaper than Landmark 81 and right in the old center.",
+        "desc_vi": "Đài quan sát tầng 49 của toà tháp búp sen với view 360° — rẻ hơn Landmark 81 và nằm ngay trung tâm cũ."
+      }
+    ]
+  },
+  "collections": [
+    {
+      "slug": "rooftops-with-a-view",
+      "title_en": "Rooftops with a view",
+      "title_vi": "Rooftop ngắm thành phố",
+      "desc_en": "Golden hour to midnight — the decks and bars where Saigon shows off its skyline.",
+      "desc_vi": "Từ giờ vàng đến nửa đêm — những sân thượng và quầy bar nơi Sài Gòn khoe đường chân trời.",
+      "curator": "@saigonnights",
+      "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjAG7KM1srLTFWvzjTj_C-tgsEIC5FU_xx4oXPK18wFmy36kxZJ2_EwlSSqIux_OngFuIm4mWK6vro8yzwaC1YedJIh3xynkQT9KjXrr7fBJ197-5kf3fCJdMyYnWJ728IYQVUGCBQdoUL4--A=s4800-w800",
+      "count": 7,
+      "place_slugs": [
+        "chill-skybar",
+        "blank-lounge",
+        "broma-not-a-bar",
+        "social-club-rooftop",
+        "bitexco-skydeck",
+        "landmark-81-skyview",
+        "the-deck-saigon"
+      ]
+    },
+    {
+      "slug": "street-food-classics",
+      "title_en": "Street food classics",
+      "title_vi": "Ẩm thực đường phố kinh điển",
+      "desc_en": "The stalls, alleys and night streets locals actually queue for.",
+      "desc_vi": "Những quán, hẻm và phố đêm mà chính người Sài Gòn cũng xếp hàng.",
+      "curator": "@foodmapvn",
+      "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjC3nfKc7w05Tv07agItt7eKHSaK9Jne82S9LrBwTiRZQfF4YtCzFAGMsFsHDj62oUdWkzMibwTn3UgaNCR2zrxuYofQXkwKkpmR_zOPtQLCLQqqdKkBtAy1TxAKpYGamTnDmJ4IMw0GZk0ytnWzREfYPw=s4800-w800",
+      "count": 9,
+      "place_slugs": [
+        "banh-mi-huynh-hoa",
+        "pho-le",
+        "com-tam-ba-ghien",
+        "banh-xeo-46a",
+        "oc-dao",
+        "ho-thi-ky-food-street",
+        "vinh-khanh-food-street",
+        "lunch-lady",
+        "ben-thanh-street-food"
+      ]
+    },
+    {
+      "slug": "old-saigon-heritage",
+      "title_en": "Old Saigon heritage",
+      "title_vi": "Di sản Sài Gòn xưa",
+      "desc_en": "Colonial landmarks, incense-filled temples and the city's oldest café.",
+      "desc_vi": "Công trình thuộc địa, đền chùa nghi ngút khói hương và quán cà phê lâu đời nhất thành phố.",
+      "curator": "@quietcorners",
+      "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBPCBaxqkcNZnIZchuM2m6WC-duHpA4o8CQ_3BQFOIRCIlzURLnSmz6c3coRo3cMCFpVPN7IYjgZILsAsHlKzesD4yVvyBDsU9TXjsd8EcebLPFuDNVblmZ0qf10OsInOCZFNbdUuTFIDSnrbv510ppbA=s4800-w800",
+      "count": 8,
+      "place_slugs": [
+        "independence-palace",
+        "central-post-office",
+        "notre-dame-cathedral",
+        "jade-emperor-pagoda",
+        "thien-hau-temple",
+        "fine-arts-museum",
+        "saigon-opera-house",
+        "cheo-leo-cafe"
+      ]
+    },
+    {
+      "slug": "cafes-of-saigon",
+      "title_en": "Cafés worth the detour",
+      "title_vi": "Những quán cà phê đáng đường xa",
+      "desc_en": "From 1938 vợt coffee to specialty roasters — a caffeine trail across the city.",
+      "desc_vi": "Từ cà phê vợt 1938 đến specialty roaster — hành trình caffeine xuyên thành phố.",
+      "curator": "@saigoncaphe",
+      "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjDMxsPAbBBZ2d466X8dw6ImFpJX0NqTYgqOGx7rdNI53sNlFbsFv1pIzZBBvCHOuKlA6UzAGAQeFcjthl_Da0-oERFHQg_PRzkgJX7qFCXzTKNZ1y3BxRKMbT__7Gxcd9D7YdAc7kRcNmXkSLrDFUjLpg=s4800-w800",
+      "count": 7,
+      "place_slugs": [
+        "cafe-apartment",
+        "workshop-coffee",
+        "cheo-leo-cafe",
+        "little-hanoi-egg-coffee",
+        "bang-khuang-cafe",
+        "okkio-caffe",
+        "oromia-coffee"
+      ]
+    },
+    {
+      "slug": "green-escapes",
+      "title_en": "Green escapes",
+      "title_vi": "Trốn phố tìm xanh",
+      "desc_en": "Parks, riverbanks and easy strolls when the group needs to breathe.",
+      "desc_vi": "Công viên, bờ sông và những cung dạo bộ nhẹ nhàng khi cả nhóm cần thở.",
+      "curator": "@quietcorners",
+      "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjA2p2YlVtcBP7FrkjXHYN5W6e1JkdXRgHD9POQT33TE9OunbKKcm8oeW2uP7cb3NCsIrkJZCqaBpoBqxeC0i1utSCfiZ1AaDwFfvGlBgheA7xCWjr2P4Pi0UKQlI27-X0Gp8d4v8PEJZ7hn3g=s4800-w750",
+      "count": 5,
+      "place_slugs": [
+        "tao-dan-park",
+        "saigon-zoo",
+        "vinhomes-central-park",
+        "starlight-bridge",
+        "book-street"
+      ]
+    },
+    {
+      "slug": "first-timer-classics",
+      "title_en": "First-timer classics",
+      "title_vi": "Lần đầu tới Sài Gòn",
+      "desc_en": "One perfect starter day: the must-sees that never miss.",
+      "desc_vi": "Một ngày nhập môn hoàn hảo: những điểm phải ghé và không bao giờ gây thất vọng.",
+      "curator": "@citycrew",
+      "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBsCJlUuaIBmw33QSyk5b0wGjjBvInYXFqbSeZRrb3Bhf9xdeMXV6-X1GnJ307Q7yzskxM4S7vPWaebC0w0F8sB4VJusDR0c3qcMVVkeqibkwWDm9S0Rl6c-O9p6gGScOPKqRRmdEJgtIjPRs_DzjkU5Q=s4800-w800",
+      "count": 6,
+      "place_slugs": [
+        "ben-thanh-street-food",
+        "independence-palace",
+        "nguyen-hue-walking-street",
+        "landmark-81-skyview",
+        "banh-mi-huynh-hoa",
+        "bui-vien-walking-street"
+      ]
+    }
+  ]
+}

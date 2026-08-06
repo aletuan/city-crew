@@ -3,3 +3,6 @@
 .claude/
 .playwright-mcp/
 *.jpeg
+data/.env
+data/node_modules/
+data/review/.cache/

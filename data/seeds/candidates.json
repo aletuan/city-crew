@@ -1,0 +1,61 @@
+{
+  "$comment": "Candidate places for the cityCrew demo dataset. `query` is sent to Places Text Search; category: food|out (mockup tabs); featured places also appear in the For-you tab. Places marked mockup_id existed in the original mockup seed data.",
+  "candidates": [
+    { "slug": "cafe-apartment", "query": "The Cafe Apartment 42 Nguyen Hue Ho Chi Minh City", "category": "food", "vibe_tags": ["cafes", "views"], "featured": true, "area": "D1", "mockup_id": "cafe" },
+    { "slug": "workshop-coffee", "query": "The Workshop Coffee Ngo Duc Ke District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["cafes"], "featured": false, "area": "D1" },
+    { "slug": "cong-caphe-dong-khoi", "query": "Cong Caphe Dong Khoi District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["cafes", "chill"], "featured": false, "area": "D1" },
+    { "slug": "little-hanoi-egg-coffee", "query": "Little HaNoi Egg Coffee District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["cafes"], "featured": false, "area": "D1" },
+    { "slug": "okkio-caffe", "query": "Okkio Caffe Le Loi District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["cafes"], "featured": false, "area": "D1" },
+    { "slug": "shin-coffee", "query": "Shin Coffee Nguyen Thiep District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["cafes"], "featured": false, "area": "D1" },
+    { "slug": "bang-khuang-cafe", "query": "Bang Khuang Cafe District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["cafes", "chill"], "featured": false, "area": "D1" },
+    { "slug": "cheo-leo-cafe", "query": "Cheo Leo Cafe District 3 Ho Chi Minh City", "category": "food", "vibe_tags": ["cafes", "culture"], "featured": false, "area": "D3" },
+    { "slug": "oromia-coffee", "query": "Oromia Coffee and Lounge Phu Nhuan Ho Chi Minh City", "category": "food", "vibe_tags": ["cafes", "chill"], "featured": false, "area": "Phú Nhuận" },
+    { "slug": "lusine-le-loi", "query": "L'Usine Le Loi District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["cafes", "shopping"], "featured": false, "area": "D1" },
+
+    { "slug": "ben-thanh-street-food", "query": "Ben Thanh Street Food Market Thu Khoa Huan Ho Chi Minh City", "category": "food", "vibe_tags": ["food_tour"], "featured": true, "area": "D1", "mockup_id": "market" },
+    { "slug": "secret-garden", "query": "Secret Garden Restaurant Pasteur District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["food_tour", "chill"], "featured": false, "area": "D1", "mockup_id": "garden" },
+    { "slug": "banh-mi-huynh-hoa", "query": "Banh Mi Huynh Hoa Le Thi Rieng Ho Chi Minh City", "category": "food", "vibe_tags": ["food_tour"], "featured": true, "area": "D1" },
+    { "slug": "pho-le", "query": "Pho Le Nguyen Trai District 5 Ho Chi Minh City", "category": "food", "vibe_tags": ["food_tour"], "featured": false, "area": "D5" },
+    { "slug": "com-tam-ba-ghien", "query": "Com Tam Ba Ghien Dang Van Ngu Phu Nhuan Ho Chi Minh City", "category": "food", "vibe_tags": ["food_tour"], "featured": false, "area": "Phú Nhuận" },
+    { "slug": "banh-xeo-46a", "query": "Banh Xeo 46A Dinh Cong Trang District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["food_tour"], "featured": false, "area": "D1" },
+    { "slug": "oc-dao", "query": "Oc Dao Nguyen Trai District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["food_tour"], "featured": false, "area": "D1" },
+    { "slug": "ho-thi-ky-food-street", "query": "Ho Thi Ky Food Street District 10 Ho Chi Minh City", "category": "food", "vibe_tags": ["food_tour", "nightlife"], "featured": false, "area": "D10" },
+    { "slug": "vinh-khanh-food-street", "query": "Vinh Khanh Food Street District 4 Ho Chi Minh City", "category": "food", "vibe_tags": ["food_tour", "nightlife"], "featured": false, "area": "D4" },
+    { "slug": "lunch-lady", "query": "The Lunch Lady Hoang Sa District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["food_tour"], "featured": false, "area": "D1" },
+
+    { "slug": "landmark-81-skyview", "query": "Landmark 81 SkyView Observation Deck Ho Chi Minh City", "category": "out", "vibe_tags": ["views"], "featured": true, "area": "Bình Thạnh", "mockup_id": "tower" },
+    { "slug": "saigon-night-cruise", "query": "Saigon River dinner cruise Bach Dang pier Ho Chi Minh City", "category": "out", "vibe_tags": ["views", "chill"], "featured": true, "area": "D1", "mockup_id": "river" },
+    { "slug": "chill-skybar", "query": "Chill Skybar AB Tower District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["nightlife", "views"], "featured": false, "area": "D1", "mockup_id": "rooftop" },
+    { "slug": "blank-lounge", "query": "Blank Lounge Landmark 81 Ho Chi Minh City", "category": "food", "vibe_tags": ["views", "nightlife"], "featured": false, "area": "Bình Thạnh" },
+    { "slug": "the-deck-saigon", "query": "The Deck Saigon Thao Dien Ho Chi Minh City", "category": "food", "vibe_tags": ["views", "chill"], "featured": false, "area": "Thảo Điền" },
+    { "slug": "social-club-rooftop", "query": "Social Club Rooftop Hotel des Arts District 3 Ho Chi Minh City", "category": "food", "vibe_tags": ["views", "nightlife"], "featured": false, "area": "D3" },
+
+    { "slug": "independence-palace", "query": "Independence Palace Ho Chi Minh City", "category": "out", "vibe_tags": ["culture"], "featured": true, "area": "D1" },
+    { "slug": "war-remnants-museum", "query": "War Remnants Museum Ho Chi Minh City", "category": "out", "vibe_tags": ["culture"], "featured": true, "area": "D3" },
+    { "slug": "notre-dame-cathedral", "query": "Notre Dame Cathedral Basilica of Saigon", "category": "out", "vibe_tags": ["culture"], "featured": false, "area": "D1" },
+    { "slug": "central-post-office", "query": "Saigon Central Post Office Ho Chi Minh City", "category": "out", "vibe_tags": ["culture"], "featured": true, "area": "D1" },
+    { "slug": "jade-emperor-pagoda", "query": "Jade Emperor Pagoda Da Kao Ho Chi Minh City", "category": "out", "vibe_tags": ["culture"], "featured": false, "area": "D1" },
+    { "slug": "thien-hau-temple", "query": "Thien Hau Temple Cho Lon District 5 Ho Chi Minh City", "category": "out", "vibe_tags": ["culture"], "featured": false, "area": "D5" },
+    { "slug": "fine-arts-museum", "query": "Ho Chi Minh City Fine Arts Museum", "category": "out", "vibe_tags": ["culture"], "featured": false, "area": "D1" },
+    { "slug": "saigon-opera-house", "query": "Saigon Opera House Ho Chi Minh City", "category": "out", "vibe_tags": ["culture"], "featured": false, "area": "D1" },
+
+    { "slug": "tao-dan-park", "query": "Tao Dan Park Ho Chi Minh City", "category": "out", "vibe_tags": ["outdoors", "chill"], "featured": false, "area": "D1", "mockup_id": "park" },
+    { "slug": "book-street", "query": "Nguyen Van Binh Book Street Ho Chi Minh City", "category": "out", "vibe_tags": ["culture", "chill"], "featured": false, "area": "D1", "mockup_id": "books" },
+    { "slug": "starlight-bridge", "query": "Cầu Ánh Sao Quận 7 TP.HCM", "category": "out", "vibe_tags": ["outdoors", "views"], "featured": false, "area": "D7", "mockup_id": "bridge" },
+    { "slug": "nguyen-hue-walking-street", "query": "Nguyen Hue Walking Street Ho Chi Minh City", "category": "out", "vibe_tags": ["outdoors", "chill"], "featured": true, "area": "D1" },
+    { "slug": "saigon-zoo", "query": "Saigon Zoo and Botanical Gardens Ho Chi Minh City", "category": "out", "vibe_tags": ["outdoors"], "featured": false, "area": "D1" },
+    { "slug": "vinhomes-central-park", "query": "Vinhomes Central Park riverside park Binh Thanh Ho Chi Minh City", "category": "out", "vibe_tags": ["outdoors", "chill"], "featured": false, "area": "Bình Thạnh" },
+
+    { "slug": "saigon-square", "query": "Saigon Square shopping mall Nam Ky Khoi Nghia District 1", "category": "out", "vibe_tags": ["shopping"], "featured": false, "area": "D1" },
+    { "slug": "vincom-dong-khoi", "query": "Vincom Center Dong Khoi Ho Chi Minh City", "category": "out", "vibe_tags": ["shopping"], "featured": false, "area": "D1" },
+    { "slug": "takashimaya", "query": "Takashimaya Saigon Centre Ho Chi Minh City", "category": "out", "vibe_tags": ["shopping"], "featured": false, "area": "D1" },
+    { "slug": "the-new-playground", "query": "The New Playground 26 Ly Tu Trong District 1 Ho Chi Minh City", "category": "out", "vibe_tags": ["shopping"], "featured": false, "area": "D1" },
+    { "slug": "an-dong-market", "query": "An Dong Market District 5 Ho Chi Minh City", "category": "out", "vibe_tags": ["shopping", "food_tour"], "featured": false, "area": "D5" },
+
+    { "slug": "bui-vien-walking-street", "query": "Bui Vien Walking Street Ho Chi Minh City", "category": "food", "vibe_tags": ["nightlife"], "featured": true, "area": "D1" },
+    { "slug": "acoustic-bar", "query": "Acoustic Bar Ngo Thoi Nhiem District 3 Ho Chi Minh City", "category": "food", "vibe_tags": ["nightlife"], "featured": false, "area": "D3" },
+    { "slug": "broma-not-a-bar", "query": "Broma Not A Bar Nguyen Hue Ho Chi Minh City", "category": "food", "vibe_tags": ["nightlife", "views"], "featured": false, "area": "D1" },
+    { "slug": "carmen-bar", "query": "Carmen Bar Ly Tu Trong District 1 Ho Chi Minh City", "category": "food", "vibe_tags": ["nightlife"], "featured": false, "area": "D1" },
+    { "slug": "bitexco-skydeck", "query": "Bitexco Financial Tower Saigon Skydeck Ho Chi Minh City", "category": "out", "vibe_tags": ["views"], "featured": false, "area": "D1" }
+  ]
+}

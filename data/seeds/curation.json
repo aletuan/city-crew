@@ -1,0 +1,361 @@
+{
+  "$comment": "Hand-curated editorial fields, merged over fetched data by apply-curation.mjs. Voice: one vivid line + one practical group tip, matching the original mockup blurbs. duration in minutes, price_vnd per person.",
+  "places": {
+    "cafe-apartment": {
+      "name_en": "The Café Apartment", "name_vi": "Chung cư Cà phê",
+      "neighborhood_en": "Nguyễn Huệ, D1", "neighborhood_vi": "Nguyễn Huệ, Q1",
+      "emoji": "☕", "price_vnd": 60000, "price_display": "60k₫", "duration_min": 60, "duration_max": 120, "saved_count": 4,
+      "desc_en": "Nine floors of indie cafés in a 1960s apartment block on the walking street — every window is a photo.",
+      "desc_vi": "Chín tầng quán cà phê indie trong chung cư thập niên 60 trên phố đi bộ — góc nào cũng chụp ảnh đẹp."
+    },
+    "workshop-coffee": {
+      "name_en": "The Workshop Coffee", "name_vi": "The Workshop Coffee",
+      "neighborhood_en": "Ngô Đức Kế, D1", "neighborhood_vi": "Ngô Đức Kế, Q1",
+      "emoji": "☕", "price_vnd": 90000, "price_display": "90k₫", "duration_min": 60, "duration_max": 90, "saved_count": 3,
+      "desc_en": "Industrial-loft specialty roaster above Ngô Đức Kế — single-origin pour-overs and big tables that fit a whole crew of laptops.",
+      "desc_vi": "Rang xưởng specialty phong cách loft trên lầu Ngô Đức Kế — pour-over single-origin và bàn dài đủ chỗ cho cả nhóm."
+    },
+    "cong-caphe-dong-khoi": {
+      "name_en": "Cộng Cà Phê (Đồng Khởi)", "name_vi": "Cộng Cà Phê (Đồng Khởi)",
+      "neighborhood_en": "Đồng Khởi, D1", "neighborhood_vi": "Đồng Khởi, Q1",
+      "emoji": "🥥", "price_vnd": 55000, "price_display": "55k₫", "duration_min": 45, "duration_max": 90, "saved_count": 2,
+      "desc_en": "Retro subsidy-era decor and the famous coconut coffee — an easy first stop before wandering Đồng Khởi.",
+      "desc_vi": "Không gian bao cấp hoài cổ và món cốt dừa cà phê trứ danh — điểm dừng dễ chịu trước khi dạo Đồng Khởi."
+    },
+    "little-hanoi-egg-coffee": {
+      "name_en": "Little HaNoi Egg Coffee", "name_vi": "Little HaNoi Egg Coffee",
+      "neighborhood_en": "Phạm Ngũ Lão, D1", "neighborhood_vi": "Phạm Ngũ Lão, Q1",
+      "emoji": "🍮", "price_vnd": 50000, "price_display": "50k₫", "duration_min": 45, "duration_max": 60, "saved_count": 3,
+      "desc_en": "Hanoi-style egg coffee whipped to a custard — hidden down an alley off Phạm Ngũ Lão; go early to grab the balcony seats.",
+      "desc_vi": "Cà phê trứng chuẩn Hà Nội đánh bông như kem — nằm sâu trong hẻm Phạm Ngũ Lão; đi sớm để giành chỗ ban công."
+    },
+    "okkio-caffe": {
+      "name_en": "Okkio Caffe", "name_vi": "Okkio Caffe",
+      "neighborhood_en": "Lê Lợi, D1", "neighborhood_vi": "Lê Lợi, Q1",
+      "emoji": "☕", "price_vnd": 65000, "price_display": "65k₫", "duration_min": 45, "duration_max": 90, "saved_count": 2,
+      "desc_en": "Moody red-brick espresso bar overlooking Lê Lợi — small, stylish, and the coffee is taken seriously.",
+      "desc_vi": "Quán espresso gạch đỏ đầy chất điện ảnh nhìn xuống Lê Lợi — nhỏ, chất, và cà phê thì cực kỳ nghiêm túc."
+    },
+    "shin-coffee": {
+      "name_en": "SHIN Heritage", "name_vi": "SHIN Heritage",
+      "neighborhood_en": "Lưu Văn Lang, D1", "neighborhood_vi": "Lưu Văn Lang, Q1",
+      "emoji": "☕", "price_vnd": 80000, "price_display": "80k₫", "duration_min": 45, "duration_max": 90, "saved_count": 2,
+      "desc_en": "Serious Vietnamese specialty beans a block from Bến Thành — order a tasting flight and compare regions with the group.",
+      "desc_vi": "Hạt specialty Việt Nam chất lượng cao cách Bến Thành một dãy phố — gọi khay thử để cả nhóm so hương vị từng vùng."
+    },
+    "bang-khuang-cafe": {
+      "name_en": "Bâng Khuâng Café", "name_vi": "Bâng Khuâng Café",
+      "neighborhood_en": "Thái Văn Lung, D1", "neighborhood_vi": "Thái Văn Lung, Q1",
+      "emoji": "🪟", "price_vnd": 60000, "price_display": "60k₫", "duration_min": 60, "duration_max": 90, "saved_count": 2,
+      "desc_en": "Quiet second-floor hideout with balcony light and old-Saigon mood — the anti-crowd choice for a slow afternoon.",
+      "desc_vi": "Góc trốn phố yên tĩnh trên lầu hai với nắng ban công và chất Sài Gòn xưa — lựa chọn né đám đông cho buổi chiều chậm."
+    },
+    "cheo-leo-cafe": {
+      "name_en": "Cheo Leo Café", "name_vi": "Cà phê Cheo Leo",
+      "neighborhood_en": "Bàn Cờ, D3", "neighborhood_vi": "Bàn Cờ, Q3",
+      "emoji": "🫖", "rating": 4.5, "rating_count": 200, "price_vnd": 25000, "price_display": "25k₫", "duration_min": 45, "duration_max": 60, "saved_count": 5,
+      "desc_en": "Saigon's oldest café (1938) still brews vợt-style in clay pots — go for bạc xỉu and stories from the family that never stopped.",
+      "desc_vi": "Quán cà phê lâu đời nhất Sài Gòn (1938) vẫn pha vợt bằng siêu đất — ghé uống bạc xỉu và nghe chuyện gia đình giữ nghề."
+    },
+    "oromia-coffee": {
+      "name_en": "Oromia Coffee & Lounge", "name_vi": "Oromia Coffee & Lounge",
+      "neighborhood_en": "Phan Kế Bính, D1", "neighborhood_vi": "Phan Kế Bính, Q1",
+      "emoji": "🌿", "price_vnd": 80000, "price_display": "80k₫", "duration_min": 60, "duration_max": 120, "saved_count": 2,
+      "desc_en": "A garden villa café with koi pond and shaded decks — feels like leaving the city without leaving D1.",
+      "desc_vi": "Biệt thự sân vườn với hồ cá koi và hiên râm mát — cảm giác rời khỏi thành phố mà vẫn ở Quận 1."
+    },
+    "lusine-le-loi": {
+      "name_en": "L'Usine Lê Lợi", "name_vi": "L'Usine Lê Lợi",
+      "neighborhood_en": "Lê Lợi, D1", "neighborhood_vi": "Lê Lợi, Q1",
+      "emoji": "🥐", "price_vnd": 150000, "price_display": "150k₫", "duration_min": 60, "duration_max": 90, "saved_count": 2,
+      "desc_en": "Café, brunch and concept store in one colonial-era space — browse local designers while you wait for the eggs benedict.",
+      "desc_vi": "Café, brunch và concept store trong một không gian thời thuộc địa — dạo xem đồ local designer trong lúc chờ món."
+    },
+
+    "ben-thanh-street-food": {
+      "name_en": "Bến Thành street food", "name_vi": "Ẩm thực Bến Thành",
+      "neighborhood_en": "District 1", "neighborhood_vi": "Quận 1",
+      "emoji": "🍜", "rating": 4.3, "rating_count": 1500, "price_vnd": 140000, "price_display": "140k₫", "duration_min": 60, "duration_max": 120, "saved_count": 5,
+      "desc_en": "Classic market stalls — bánh xèo, grilled skewers, chè. Easy for groups: everyone picks their own.",
+      "desc_vi": "Sạp chợ kinh điển — bánh xèo, đồ nướng, chè. Hợp đi nhóm: ai thích gì tự chọn."
+    },
+    "secret-garden": {
+      "name_en": "Secret Garden", "name_vi": "Secret Garden",
+      "neighborhood_en": "Pasteur, D1", "neighborhood_vi": "Pasteur, Q1",
+      "emoji": "🍲", "price_vnd": 150000, "price_display": "150k₫", "duration_min": 90, "duration_max": 120, "saved_count": 2,
+      "desc_en": "Rooftop home-style Vietnamese food under lanterns — book a long table for the whole crew.",
+      "desc_vi": "Cơm nhà Việt trên sân thượng dưới ánh đèn lồng — đặt bàn dài cho cả nhóm."
+    },
+    "banh-mi-huynh-hoa": {
+      "name_en": "Bánh mì Huỳnh Hoa", "name_vi": "Bánh mì Huỳnh Hoa",
+      "neighborhood_en": "Lê Thị Riêng, D1", "neighborhood_vi": "Lê Thị Riêng, Q1",
+      "emoji": "🥖", "price_vnd": 68000, "price_display": "68k₫", "duration_min": 15, "duration_max": 30, "saved_count": 6,
+      "desc_en": "The most famous bánh mì in the city, stacked absurdly with cold cuts and pâté — expect a line, it moves fast.",
+      "desc_vi": "Ổ bánh mì nổi tiếng nhất thành phố, nhân thịt nguội và pâté đầy ú ụ — xếp hàng hơi đông nhưng rất nhanh."
+    },
+    "pho-le": {
+      "name_en": "Phở Lệ", "name_vi": "Phở Lệ",
+      "neighborhood_en": "Nguyễn Trãi, D5", "neighborhood_vi": "Nguyễn Trãi, Q5",
+      "emoji": "🍜", "price_vnd": 90000, "price_display": "90k₫", "duration_min": 30, "duration_max": 60, "saved_count": 4,
+      "desc_en": "Chợ Lớn's beloved southern-style phở since 1970 — rich broth, tender brisket, open till late for the post-pagoda stop.",
+      "desc_vi": "Phở kiểu Nam trứ danh Chợ Lớn từ 1970 — nước dùng đậm, nạm mềm, mở khuya tiện ghé sau khi viếng chùa."
+    },
+    "com-tam-ba-ghien": {
+      "name_en": "Cơm tấm Ba Ghiền", "name_vi": "Cơm tấm Ba Ghiền",
+      "neighborhood_en": "Đặng Văn Ngữ, Phú Nhuận", "neighborhood_vi": "Đặng Văn Ngữ, Phú Nhuận",
+      "emoji": "🍚", "price_vnd": 70000, "price_display": "70k₫", "duration_min": 30, "duration_max": 45, "saved_count": 5,
+      "desc_en": "Michelin-listed broken rice with a legendary grilled pork chop the size of your face — come hungry.",
+      "desc_vi": "Cơm tấm được Michelin vinh danh với miếng sườn nướng to bản huyền thoại — nhớ để bụng thật đói."
+    },
+    "banh-xeo-46a": {
+      "name_en": "Bánh xèo 46A", "name_vi": "Bánh xèo 46A",
+      "neighborhood_en": "Đinh Công Tráng, D1", "neighborhood_vi": "Đinh Công Tráng, Q1",
+      "emoji": "🥞", "price_vnd": 100000, "price_display": "100k₫", "duration_min": 45, "duration_max": 60, "saved_count": 3,
+      "desc_en": "Crackling rice-flour crêpes fried in well-worn pans since 1945 — wrap in mustard leaves, dip, repeat.",
+      "desc_vi": "Bánh xèo giòn rụm đổ bằng chảo gang lâu năm từ 1945 — cuốn lá cải, chấm mắm, và cứ thế lặp lại."
+    },
+    "oc-dao": {
+      "name_en": "Ốc Đào", "name_vi": "Ốc Đào",
+      "neighborhood_en": "Nguyễn Trãi, D1", "neighborhood_vi": "Nguyễn Trãi, Q1",
+      "emoji": "🦪", "price_vnd": 150000, "price_display": "150k₫", "duration_min": 60, "duration_max": 90, "saved_count": 4,
+      "desc_en": "The snail-eating institution hidden in a D1 alley — order garlic-butter scallops and salted-egg snails for the table.",
+      "desc_vi": "Địa chỉ ăn ốc huyền thoại trong hẻm Quận 1 — gọi sò điệp bơ tỏi và ốc trứng muối cho cả bàn."
+    },
+    "ho-thi-ky-food-street": {
+      "name_en": "Hồ Thị Kỷ food street", "name_vi": "Phố ẩm thực Hồ Thị Kỷ",
+      "neighborhood_en": "District 10", "neighborhood_vi": "Quận 10",
+      "emoji": "🍢", "price_vnd": 120000, "price_display": "120k₫", "duration_min": 90, "duration_max": 120, "saved_count": 4,
+      "desc_en": "Flower market by day, packed food alley by night — Cambodian desserts, grilled everything, all under 50k a dish.",
+      "desc_vi": "Chợ hoa ban ngày, hẻm ăn vặt chật kín ban đêm — chè Campuchia, đồ nướng đủ loại, món nào cũng dưới 50k."
+    },
+    "vinh-khanh-food-street": {
+      "name_en": "Vĩnh Khánh food street", "name_vi": "Phố ẩm thực Vĩnh Khánh",
+      "neighborhood_en": "District 4", "neighborhood_vi": "Quận 4",
+      "emoji": "🍤", "price_vnd": 150000, "price_display": "150k₫", "duration_min": 90, "duration_max": 120, "saved_count": 3,
+      "desc_en": "D4's rowdy seafood strip — plastic stools, beer towers and kilos of grilled snails; the later it gets, the better it is.",
+      "desc_vi": "Con phố ốc sôi động của Quận 4 — ghế nhựa, tháp bia và ốc nướng tính ký; càng khuya càng vui."
+    },
+    "lunch-lady": {
+      "name_en": "The Lunch Lady", "name_vi": "Quán Cô Thanh (Lunch Lady)",
+      "neighborhood_en": "Hoàng Sa, D1", "neighborhood_vi": "Hoàng Sa, Q1",
+      "emoji": "🍲", "price_vnd": 90000, "price_display": "90k₫", "duration_min": 30, "duration_max": 60, "saved_count": 3,
+      "desc_en": "Bourdain's famous canal-side noodle stall — a different soup every day of the week; go before 1pm or it's gone.",
+      "desc_vi": "Quán bún nổi tiếng nhờ Anthony Bourdain bên kênh — mỗi ngày một món khác nhau; đến trước 13h kẻo hết."
+    },
+
+    "landmark-81-skyview": {
+      "name_en": "Landmark 81 SkyView", "name_vi": "Landmark 81 SkyView",
+      "neighborhood_en": "Bình Thạnh", "neighborhood_vi": "Bình Thạnh",
+      "emoji": "🌆", "price_vnd": 300000, "price_display": "300k₫", "duration_min": 60, "duration_max": 90, "saved_count": 3,
+      "desc_en": "Observation deck on the 81st floor of Vietnam's tallest tower — sunset views over the Saigon River. Book ahead on weekends.",
+      "desc_vi": "Đài quan sát tầng 81 toà tháp cao nhất Việt Nam — ngắm hoàng hôn trên sông Sài Gòn. Cuối tuần nên đặt vé trước."
+    },
+    "saigon-night-cruise": {
+      "name_en": "Saigon Waterbus night ride", "name_vi": "Waterbus Sài Gòn chuyến đêm",
+      "neighborhood_en": "Bạch Đằng pier", "neighborhood_vi": "Bến Bạch Đằng",
+      "emoji": "🛥️", "price_vnd": 50000, "price_display": "50k₫", "duration_min": 60, "duration_max": 90, "saved_count": 3,
+      "desc_en": "Evening boat loop on the Saigon River with the skyline lit up — a relaxed, cheap way to end a group day out.",
+      "desc_vi": "Vòng thuyền buổi tối trên sông Sài Gòn ngắm thành phố lên đèn — cách thư giãn, rẻ để kết thúc ngày đi chơi nhóm."
+    },
+    "chill-skybar": {
+      "name_en": "Chill Skybar", "name_vi": "Chill Skybar",
+      "neighborhood_en": "AB Tower, D1", "neighborhood_vi": "AB Tower, Q1",
+      "emoji": "🍸", "price_vnd": 350000, "price_display": "350k₫", "duration_min": 90, "duration_max": 120, "saved_count": 3,
+      "desc_en": "Golden-hour cocktails with the whole skyline from the 26th floor. Dress code smart-casual; happy hour before 19:00.",
+      "desc_vi": "Cocktail giờ vàng với trọn vẹn đường chân trời từ tầng 26. Dress code lịch sự; happy hour trước 19:00."
+    },
+    "blank-lounge": {
+      "name_en": "Blank Lounge (Landmark 81)", "name_vi": "Blank Lounge (Landmark 81)",
+      "neighborhood_en": "Bình Thạnh", "neighborhood_vi": "Bình Thạnh",
+      "emoji": "🥂", "price_vnd": 250000, "price_display": "250k₫", "duration_min": 90, "duration_max": 120, "saved_count": 2,
+      "desc_en": "Coffee by day, cocktails by night on floors 75–76 of Landmark 81 — the cheaper way to get the highest view in Vietnam.",
+      "desc_vi": "Cà phê ban ngày, cocktail ban đêm ở tầng 75–76 Landmark 81 — cách 'hạt dẻ' nhất để ngắm view cao nhất Việt Nam."
+    },
+    "the-deck-saigon": {
+      "name_en": "The Deck Saigon", "name_vi": "The Deck Saigon",
+      "neighborhood_en": "Thảo Điền", "neighborhood_vi": "Thảo Điền",
+      "emoji": "🛶", "price_vnd": 300000, "price_display": "300k₫", "duration_min": 90, "duration_max": 150, "saved_count": 2,
+      "desc_en": "Riverside deck in Thảo Điền with sunset aperitivos right on the water — book the river edge and arrive by 17:30.",
+      "desc_vi": "Sàn gỗ ven sông ở Thảo Điền với aperitivo hoàng hôn sát mặt nước — đặt bàn mép sông và đến trước 17:30."
+    },
+    "social-club-rooftop": {
+      "name_en": "Social Club Rooftop", "name_vi": "Social Club Rooftop",
+      "neighborhood_en": "Hôtel des Arts, D3", "neighborhood_vi": "Hôtel des Arts, Q3",
+      "emoji": "🍹", "price_vnd": 250000, "price_display": "250k₫", "duration_min": 90, "duration_max": 120, "saved_count": 2,
+      "desc_en": "Rooftop pool bar on the 23rd floor of Hôtel des Arts — skyline views without the D1 crowds; Sunday pool parties.",
+      "desc_vi": "Bar hồ bơi tầng 23 của Hôtel des Arts — ngắm skyline mà không chen chúc như Q1; Chủ nhật có pool party."
+    },
+
+    "independence-palace": {
+      "name_en": "Independence Palace", "name_vi": "Dinh Độc Lập",
+      "neighborhood_en": "District 1", "neighborhood_vi": "Quận 1",
+      "emoji": "🏛️", "price_vnd": 40000, "price_display": "40k₫", "duration_min": 90, "duration_max": 120, "saved_count": 4,
+      "desc_en": "The frozen-in-1975 presidential palace — war rooms, retro salons and tanks on the lawn; the audio guide is worth it.",
+      "desc_vi": "Dinh tổng thống 'đóng băng' từ 1975 — phòng tác chiến, salon retro và xe tăng trên bãi cỏ; thuê audio guide rất đáng."
+    },
+    "war-remnants-museum": {
+      "name_en": "War Remnants Museum", "name_vi": "Bảo tàng Chứng tích Chiến tranh",
+      "neighborhood_en": "District 3", "neighborhood_vi": "Quận 3",
+      "emoji": "🕊️", "price_vnd": 40000, "price_display": "40k₫", "duration_min": 90, "duration_max": 150, "saved_count": 4,
+      "desc_en": "Sobering, unmissable exhibits on the war — give it a full morning and plan something gentle afterwards.",
+      "desc_vi": "Trưng bày ám ảnh và không thể bỏ qua về chiến tranh — dành trọn buổi sáng và sắp xếp hoạt động nhẹ nhàng sau đó."
+    },
+    "notre-dame-cathedral": {
+      "name_en": "Notre-Dame Cathedral", "name_vi": "Nhà thờ Đức Bà",
+      "neighborhood_en": "District 1", "neighborhood_vi": "Quận 1",
+      "emoji": "⛪", "price_vnd": 0, "price_display": "0₫", "duration_min": 20, "duration_max": 40, "saved_count": 3,
+      "desc_en": "The red-brick 1880 cathedral at the heart of the city — restoration scaffolding up, but the square is still the classic photo stop.",
+      "desc_vi": "Nhà thờ gạch đỏ năm 1880 giữa lòng thành phố — đang trùng tu nhưng quảng trường vẫn là điểm chụp ảnh kinh điển."
+    },
+    "central-post-office": {
+      "name_en": "Central Post Office", "name_vi": "Bưu điện Thành phố",
+      "neighborhood_en": "District 1", "neighborhood_vi": "Quận 1",
+      "emoji": "📮", "price_vnd": 0, "price_display": "0₫", "duration_min": 30, "duration_max": 45, "saved_count": 4,
+      "desc_en": "Gustave Eiffel-era post office with vaulted ceilings and vintage phone booths — still working; send the crew a postcard.",
+      "desc_vi": "Bưu điện thời Gustave Eiffel với trần vòm và buồng điện thoại cổ — vẫn hoạt động; gửi cả nhóm một tấm bưu thiếp."
+    },
+    "jade-emperor-pagoda": {
+      "name_en": "Jade Emperor Pagoda", "name_vi": "Chùa Ngọc Hoàng",
+      "neighborhood_en": "Đa Kao, D1", "neighborhood_vi": "Đa Kao, Q1",
+      "emoji": "⛩️", "price_vnd": 0, "price_display": "0₫", "duration_min": 30, "duration_max": 60, "saved_count": 3,
+      "desc_en": "Incense-filled 1909 Taoist temple with carved wooden panels and a turtle pond — quiet, atmospheric, and free.",
+      "desc_vi": "Ngôi chùa Đạo giáo năm 1909 nghi ngút khói hương với phù điêu gỗ và hồ rùa — yên tĩnh, huyền ảo, miễn phí."
+    },
+    "thien-hau-temple": {
+      "name_en": "Thiên Hậu Temple", "name_vi": "Chùa Bà Thiên Hậu",
+      "neighborhood_en": "Chợ Lớn, D5", "neighborhood_vi": "Chợ Lớn, Q5",
+      "emoji": "🏮", "price_vnd": 0, "price_display": "0₫", "duration_min": 30, "duration_max": 60, "saved_count": 3,
+      "desc_en": "Chinatown's 19th-century temple to the sea goddess — spiral incense coils overhead and porcelain dioramas on the roof.",
+      "desc_vi": "Ngôi miếu thế kỷ 19 thờ Bà Thiên Hậu giữa Chợ Lớn — vòng nhang xoắn trên đầu và tiểu tượng gốm trên mái."
+    },
+    "fine-arts-museum": {
+      "name_en": "Fine Arts Museum", "name_vi": "Bảo tàng Mỹ thuật",
+      "neighborhood_en": "District 1", "neighborhood_vi": "Quận 1",
+      "emoji": "🎨", "price_vnd": 30000, "price_display": "30k₫", "duration_min": 60, "duration_max": 90, "saved_count": 2,
+      "desc_en": "Vietnamese art in a gorgeous 1930s villa with stained glass and one of Saigon's first elevators — the building is half the show.",
+      "desc_vi": "Mỹ thuật Việt trong biệt thự thập niên 30 tuyệt đẹp với kính màu và một trong những thang máy đầu tiên của Sài Gòn."
+    },
+    "saigon-opera-house": {
+      "name_en": "Saigon Opera House", "name_vi": "Nhà hát Thành phố",
+      "neighborhood_en": "Đồng Khởi, D1", "neighborhood_vi": "Đồng Khởi, Q1",
+      "emoji": "🎭", "price_vnd": 0, "price_display": "0₫", "duration_min": 20, "duration_max": 40, "saved_count": 2,
+      "desc_en": "Flamboyant 1900 French opera house — catch the À Ố Show inside, or just admire the façade with a coffee across the street.",
+      "desc_vi": "Nhà hát Pháp năm 1900 lộng lẫy — xem À Ố Show bên trong, hoặc ngắm mặt tiền với ly cà phê phía đối diện."
+    },
+
+    "tao-dan-park": {
+      "name_en": "Tao Dan Park picnic", "name_vi": "Picnic Công viên Tao Đàn",
+      "neighborhood_en": "District 1", "neighborhood_vi": "Quận 1",
+      "emoji": "🌳", "price_vnd": 0, "price_display": "0₫", "duration_min": 60, "duration_max": 90, "saved_count": 1,
+      "desc_en": "Shaded lawns and old trees in the middle of D1 — bring a mat, coffee and board games.",
+      "desc_vi": "Thảm cỏ râm mát giữa Quận 1 — mang theo bạt, cà phê và board game."
+    },
+    "book-street": {
+      "name_en": "Book Street", "name_vi": "Đường Sách",
+      "neighborhood_en": "Nguyễn Văn Bình, D1", "neighborhood_vi": "Nguyễn Văn Bình, Q1",
+      "emoji": "📚", "price_vnd": 0, "price_display": "0₫", "duration_min": 45, "duration_max": 90, "saved_count": 2,
+      "desc_en": "Pedestrian lane of bookshops and cafés beside the post office — an easy, free group stroll.",
+      "desc_vi": "Con đường đi bộ với nhà sách và quán cà phê cạnh Bưu điện — điểm dạo chơi miễn phí, nhẹ nhàng."
+    },
+    "starlight-bridge": {
+      "name_en": "Starlight Bridge", "name_vi": "Cầu Ánh Sao",
+      "neighborhood_en": "District 7", "neighborhood_vi": "Quận 7",
+      "emoji": "🌉", "price_vnd": 0, "price_display": "0₫", "duration_min": 45, "duration_max": 90, "saved_count": 1,
+      "desc_en": "LED-lit pedestrian bridge in Phú Mỹ Hưng — night walk plus cheap snacks at the lakeside.",
+      "desc_vi": "Cầu đi bộ thắp đèn LED ở Phú Mỹ Hưng — dạo đêm và ăn vặt ven hồ giá rẻ."
+    },
+    "nguyen-hue-walking-street": {
+      "name_en": "Nguyễn Huệ Walking Street", "name_vi": "Phố đi bộ Nguyễn Huệ",
+      "neighborhood_en": "District 1", "neighborhood_vi": "Quận 1",
+      "emoji": "🚶", "price_vnd": 0, "price_display": "0₫", "duration_min": 45, "duration_max": 90, "saved_count": 5,
+      "desc_en": "The city's living room — fountains, skateboarders and street shows from City Hall down to the river; best after dark.",
+      "desc_vi": "Phòng khách của thành phố — đài phun nước, trượt ván và biểu diễn đường phố từ Uỷ ban xuống bờ sông; đẹp nhất khi lên đèn."
+    },
+    "saigon-zoo": {
+      "name_en": "Saigon Zoo & Botanical Gardens", "name_vi": "Thảo Cầm Viên",
+      "neighborhood_en": "District 1", "neighborhood_vi": "Quận 1",
+      "emoji": "🦒", "price_vnd": 60000, "price_display": "60k₫", "duration_min": 120, "duration_max": 180, "saved_count": 2,
+      "desc_en": "One of the world's oldest zoos (1865) with giant century-old trees — go early morning before the heat.",
+      "desc_vi": "Một trong những vườn thú lâu đời nhất thế giới (1865) với những cổ thụ trăm tuổi — đi sáng sớm cho mát."
+    },
+    "vinhomes-central-park": {
+      "name_en": "Vinhomes Central Park", "name_vi": "Công viên Vinhomes Central Park",
+      "neighborhood_en": "Bình Thạnh", "neighborhood_vi": "Bình Thạnh",
+      "emoji": "🧺", "price_vnd": 0, "price_display": "0₫", "duration_min": 60, "duration_max": 120, "saved_count": 2,
+      "desc_en": "Riverside lawns under Landmark 81 — rent a mat, watch the skyline light up, and let the kids run wild.",
+      "desc_vi": "Bãi cỏ ven sông dưới chân Landmark 81 — thuê bạt, ngắm skyline lên đèn và để lũ trẻ chạy nhảy thoả thích."
+    },
+
+    "saigon-square": {
+      "name_en": "Saigon Square", "name_vi": "Saigon Square",
+      "neighborhood_en": "Nam Kỳ Khởi Nghĩa, D1", "neighborhood_vi": "Nam Kỳ Khởi Nghĩa, Q1",
+      "emoji": "🛍️", "price_vnd": 0, "price_display": "0₫", "duration_min": 60, "duration_max": 120, "saved_count": 3,
+      "desc_en": "Air-conditioned bargain maze — clothes, bags and shoes at haggle-friendly prices; go with a number in mind and halve it.",
+      "desc_vi": "Mê cung mua sắm máy lạnh giá hời — quần áo, túi, giày thoải mái trả giá; cứ lấy giá họ nói chia đôi."
+    },
+    "vincom-dong-khoi": {
+      "name_en": "Vincom Center Đồng Khởi", "name_vi": "Vincom Center Đồng Khởi",
+      "neighborhood_en": "Đồng Khởi, D1", "neighborhood_vi": "Đồng Khởi, Q1",
+      "emoji": "🏬", "price_vnd": 0, "price_display": "0₫", "duration_min": 60, "duration_max": 120, "saved_count": 1,
+      "desc_en": "Downtown's glossy mall — international brands upstairs, a big food basement below; the reliable rainy-afternoon option.",
+      "desc_vi": "TTTM bóng bẩy giữa trung tâm — thương hiệu quốc tế phía trên, tầng hầm ẩm thực bên dưới; lựa chọn an toàn cho chiều mưa."
+    },
+    "takashimaya": {
+      "name_en": "Takashimaya (Saigon Centre)", "name_vi": "Takashimaya (Saigon Centre)",
+      "neighborhood_en": "Lê Lợi, D1", "neighborhood_vi": "Lê Lợi, Q1",
+      "emoji": "🎁", "price_vnd": 0, "price_display": "0₫", "duration_min": 60, "duration_max": 120, "saved_count": 1,
+      "desc_en": "Japanese department store polish on Lê Lợi — the basement food hall is a destination in itself.",
+      "desc_vi": "Bách hoá chuẩn Nhật trên Lê Lợi — riêng khu ẩm thực tầng hầm đã đáng một chuyến ghé."
+    },
+    "the-new-playground": {
+      "name_en": "The New Playground", "name_vi": "The New Playground",
+      "neighborhood_en": "Lý Tự Trọng, D1", "neighborhood_vi": "Lý Tự Trọng, Q1",
+      "emoji": "🧢", "price_vnd": 0, "price_display": "0₫", "duration_min": 45, "duration_max": 90, "saved_count": 3,
+      "desc_en": "Underground mall of local streetwear brands — where young Saigon shops; come for the fits, stay for the people-watching.",
+      "desc_vi": "Khu mua sắm dưới lòng đất của các brand streetwear Việt — giới trẻ Sài Gòn tụ hội; đến vì đồ, ở lại vì không khí."
+    },
+    "an-dong-market": {
+      "name_en": "An Đông Market", "name_vi": "Chợ An Đông",
+      "neighborhood_en": "District 5", "neighborhood_vi": "Quận 5",
+      "emoji": "🧵", "price_vnd": 0, "price_display": "0₫", "duration_min": 60, "duration_max": 90, "saved_count": 1,
+      "desc_en": "Chợ Lớn's wholesale fabric and fashion market with a serious food floor — less touristy than Bến Thành, better prices.",
+      "desc_vi": "Chợ sỉ vải vóc và thời trang của Chợ Lớn với tầng ẩm thực đáng nể — ít khách du lịch hơn Bến Thành, giá mềm hơn."
+    },
+
+    "bui-vien-walking-street": {
+      "name_en": "Bùi Viện Walking Street", "name_vi": "Phố đi bộ Bùi Viện",
+      "neighborhood_en": "Phạm Ngũ Lão, D1", "neighborhood_vi": "Phạm Ngũ Lão, Q1",
+      "emoji": "🍻", "price_vnd": 150000, "price_display": "150k₫", "duration_min": 120, "duration_max": 180, "saved_count": 4,
+      "desc_en": "Neon, bass and street beer chairs — chaotic, loud, and exactly what some nights need. Weekends peak after 22:00.",
+      "desc_vi": "Đèn neon, tiếng bass và ghế bia vỉa hè — ồn ào, hỗn loạn, và đúng chất cho những đêm cần 'quẩy'. Cuối tuần đông nhất sau 22h."
+    },
+    "acoustic-bar": {
+      "name_en": "Acoustic Bar", "name_vi": "Acoustic Bar",
+      "neighborhood_en": "Ngô Thời Nhiệm, D3", "neighborhood_vi": "Ngô Thời Nhiệm, Q3",
+      "emoji": "🎸", "price_vnd": 150000, "price_display": "150k₫", "duration_min": 120, "duration_max": 180, "saved_count": 3,
+      "desc_en": "Saigon's best-loved live music room — local bands covering everything from V-pop to rock; arrive by 20:30 for a table.",
+      "desc_vi": "Phòng nhạc sống được yêu thích nhất Sài Gòn — ban nhạc chơi từ V-pop đến rock; đến trước 20:30 mới có bàn."
+    },
+    "broma-not-a-bar": {
+      "name_en": "Broma: Not A Bar", "name_vi": "Broma: Not A Bar",
+      "neighborhood_en": "Nguyễn Huệ, D1", "neighborhood_vi": "Nguyễn Huệ, Q1",
+      "emoji": "🌃", "price_vnd": 200000, "price_display": "200k₫", "duration_min": 90, "duration_max": 150, "saved_count": 2,
+      "desc_en": "Grungy rooftop over Nguyễn Huệ with craft cocktails and DJ sets — watch the walking street buzz from above.",
+      "desc_vi": "Rooftop bụi bặm nhìn xuống Nguyễn Huệ với cocktail thủ công và DJ — ngắm phố đi bộ nhộn nhịp từ trên cao."
+    },
+    "carmen-bar": {
+      "name_en": "Carmen Bar", "name_vi": "Carmen Bar",
+      "neighborhood_en": "Lý Tự Trọng, D1", "neighborhood_vi": "Lý Tự Trọng, Q1",
+      "emoji": "💃", "price_vnd": 200000, "price_display": "200k₫", "duration_min": 120, "duration_max": 180, "saved_count": 2,
+      "desc_en": "Cave-like cellar with live flamenco, Latin and Vietnamese classics every night — an old-school Saigon institution.",
+      "desc_vi": "Hầm rượu như hang động với flamenco, nhạc Latin và tình ca Việt mỗi đêm — một 'định chế' Sài Gòn xưa."
+    },
+    "bitexco-skydeck": {
+      "name_en": "Bitexco Saigon Skydeck", "name_vi": "Saigon Skydeck (Bitexco)",
+      "neighborhood_en": "Hồ Tùng Mậu, D1", "neighborhood_vi": "Hồ Tùng Mậu, Q1",
+      "emoji": "🏙️", "price_vnd": 240000, "price_display": "240k₫", "duration_min": 45, "duration_max": 90, "saved_count": 2,
+      "desc_en": "The lotus-shaped tower's 49th-floor deck with 360° views — cheaper than Landmark 81 and right in the old center.",
+      "desc_vi": "Đài quan sát tầng 49 của toà tháp búp sen với view 360° — rẻ hơn Landmark 81 và nằm ngay trung tâm cũ."
+    }
+  }
+}
