@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { api } from '../api.js';
 
 const STATUSES = ['pending', 'approved', 'flagged'];
 const CATEGORIES = [['food', 'Food & drinks'], ['out', 'Outdoors & culture']];
@@ -10,6 +11,8 @@ const fmtCount = (n) => (!n ? null : n >= 1000 ? `${Math.round(n / 100) / 10}k` 
 export default function PlaceList() {
   const [params, setParams] = useSearchParams();
   const [rows, setRows] = useState(null);
+  const [error, setError] = useState(null);
+  const [retryKey, setRetryKey] = useState(0);
   const [q, setQ] = useState(params.get('q') ?? '');
 
   const status = params.get('status') ?? '';
@@ -35,9 +38,14 @@ export default function PlaceList() {
 
   useEffect(() => {
     let live = true;
-    fetch(`/api/places?${params}`).then((r) => r.json()).then((data) => live && setRows(data));
+    setError(null);
+    // api.places throws on non-2xx (e.g. a transient Supabase auth error);
+    // never hand a non-array to the render path.
+    api.places(Object.fromEntries(params))
+      .then((data) => live && setRows(Array.isArray(data) ? data : []))
+      .catch((err) => live && setError(err.message));
     return () => { live = false; };
-  }, [params]);
+  }, [params, retryKey]);
 
   return (
     <>
@@ -68,8 +76,16 @@ export default function PlaceList() {
         />
       </div>
 
-      {!rows && <div className="empty">Loading places…</div>}
-      {rows?.length === 0 && <div className="empty">No places match these filters — clear one and try again.</div>}
+      {error && (
+        <div className="empty">
+          Couldn't load places: {error}
+          <div style={{ marginTop: 12 }}>
+            <button className="syncbtn" onClick={() => setRetryKey((k) => k + 1)}>Retry</button>
+          </div>
+        </div>
+      )}
+      {!error && !rows && <div className="empty">Loading places…</div>}
+      {!error && rows?.length === 0 && <div className="empty">No places match these filters — clear one and try again.</div>}
 
       <div className="rows">
         {rows?.map((p) => (

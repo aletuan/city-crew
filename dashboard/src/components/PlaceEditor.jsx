@@ -59,7 +59,9 @@ export default function PlaceEditor() {
   useEffect(() => {
     const listParams = new URLSearchParams(params);
     listParams.delete('q');
-    api.places(Object.fromEntries(listParams)).then((rows) => setSiblings(rows.map((r) => r.slug)));
+    api.places(Object.fromEntries(listParams))
+      .then((rows) => setSiblings(Array.isArray(rows) ? rows.map((r) => r.slug) : []))
+      .catch(() => setSiblings([]));
   }, [params]);
 
   // Text and photo edits share one dirty state: both light up Save, both are
