@@ -61,7 +61,9 @@ const fmtDuration = (min, max, vi) => {
 };
 
 const toCard = (p) => {
-  const photos = (p.place_photos ?? []).sort((a, b) => a.sort_order - b.sort_order);
+  const photos = (p.place_photos ?? [])
+    .filter((ph) => !ph.is_hidden)
+    .sort((a, b) => a.sort_order - b.sort_order);
   const cover = photos.find((ph) => ph.is_cover) ?? photos[0];
   return {
     id: p.slug,

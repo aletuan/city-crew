@@ -6,3 +6,4 @@
 data/.env
 data/node_modules/
 data/review/.cache/
+dashboard/node_modules/

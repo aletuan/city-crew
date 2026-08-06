@@ -3,9 +3,23 @@
 // Works with the service-role key, or with the anon key while temporary
 // write policies are enabled (see upsert flow in the repo docs).
 //
-// Usage: node --env-file=.env scripts/push-data.mjs
+// Usage: node --env-file=.env scripts/push-data.mjs --force-bootstrap
+//
+// DANGER: this script deletes and reinserts every place's photos from the
+// review JSON. After the curation dashboard exists, the DATABASE is the source
+// of truth — running this would destroy uploaded photos, cover choices, and
+// hidden flags. It refuses to run without --force-bootstrap.
 
 import { readFileSync } from 'node:fs';
+
+if (!process.argv.includes('--force-bootstrap')) {
+  console.error(
+    'push-data.mjs is a one-time bootstrap tool. The database is now curated\n'
+    + 'directly via the dashboard; re-running this would wipe uploads and photo\n'
+    + 'curation. Pass --force-bootstrap only if you really mean to reset from JSON.',
+  );
+  process.exit(1);
+}
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
