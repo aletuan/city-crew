@@ -31,7 +31,7 @@ const patch = (name, fn) => {
 };
 
 // ── 1. PLACES data ──────────────────────────────────────────────────────────
-const toMockupPlace = (p) => ({
+const toMockupPlace = (p, cat) => ({
   id: p.id,
   photo: p.photo_url,           // absolute URL; res() passes it through (patch 2)
   img: 'img-cafe',              // emoji-tile fallback class if the photo fails
@@ -42,11 +42,18 @@ const toMockupPlace = (p) => ({
   desc_en: p.desc_en, desc_vi: p.desc_vi,
   attr_name: p.attr_name,
   dur_en: p.dur_en, dur_vi: p.dur_vi,
+  // fields the runtime itinerary generator needs
+  cat,
+  vibes: p.vibes ?? [],
+  price_vnd: p.price_vnd ?? 0,
+  dur_min: p.dur_min ?? 60,
+  dur_max: p.dur_max ?? 90,
+  lat: p.lat, lng: p.lng,
 });
 const placesJs = 'var PLACES = ' + JSON.stringify({
-  foryou: snapshot.places.foryou.map(toMockupPlace),
-  food: snapshot.places.food.map(toMockupPlace),
-  out: snapshot.places.out.map(toMockupPlace),
+  foryou: snapshot.places.foryou.map((p) => toMockupPlace(p, 'featured')),
+  food: snapshot.places.food.map((p) => toMockupPlace(p, 'food')),
+  out: snapshot.places.out.map((p) => toMockupPlace(p, 'out')),
 }, null, 1) + ';';
 
 patch('places-data', (t) => {
@@ -133,6 +140,119 @@ patch('public-collections', (t) => {
   if (start < 0 || sectionEnd < 0 || start > sectionEnd) throw new Error('collections block bounds not found');
   const end = t.lastIndexOf('</div>', sectionEnd) + '</div>'.length;
   return t.slice(0, start) + S + '\n' + collectionsHtml + '\n' + E + '\n            ' + t.slice(end);
+});
+
+// ── 6. Wizard: vibe slugs + slider ids so the generator can read inputs ─────
+const VIBE_LABELS = [
+  ['Cafés', 'cafes'], ['Food tour', 'food_tour'], ['Outdoors', 'outdoors'],
+  ['Views', 'views'], ['Culture', 'culture'], ['Shopping', 'shopping'],
+  ['Nightlife', 'nightlife'], ['Chill', 'chill'],
+];
+patch('wizard-vibe-slugs', (t) => {
+  if (t.includes('data-vibe=')) return t;
+  for (const [label, slug] of VIBE_LABELS) {
+    const anchor = `onclick="this.classList.toggle('sel')"><span data-lang-en="">${label}</span>`;
+    if (!t.includes(anchor)) throw new Error(`vibe chip not found: ${label}`);
+    t = t.replace(anchor, `data-vibe="${slug}" ${anchor}`);
+  }
+  return t;
+});
+
+patch('wizard-slider-ids', (t) => {
+  if (t.includes('id="durrange"')) return t;
+  const dur = '<input type="range" min="2" max="14" value="12"';
+  const bud = '<input type="range" min="100" max="2000" step="50" value="750"';
+  if (!t.includes(dur) || !t.includes(bud)) throw new Error('wizard sliders not found');
+  return t
+    .replace(dur, '<input type="range" id="durrange" min="2" max="14" value="12"')
+    .replace(bud, '<input type="range" id="budrange" min="100" max="2000" step="50" value="750"');
+});
+
+// ── 7. Itinerary screen: ids + stops wrapper + rebuilt donut ────────────────
+// All replacements are scoped to the s-itinerary section (the same title text
+// also exists on the s-plans hero card, which stays static by design).
+const inItinerary = (t, fn) => {
+  const s = t.indexOf('<section class="screen" id="s-itinerary">');
+  const e = t.indexOf('</section>', s);
+  if (s < 0 || e < 0) throw new Error('s-itinerary section not found');
+  return t.slice(0, s) + fn(t.slice(s, e)) + t.slice(e);
+};
+
+patch('itinerary-header-ids', (t) => {
+  if (t.includes('id="iti-title-en"')) return t;
+  return inItinerary(t, (sec) => {
+    const swaps = [
+      ['<span data-lang-en="">Saturday in District 1</span><span data-lang-vi="">Thứ Bảy ở Quận 1</span>',
+        '<span data-lang-en="" id="iti-title-en">Saturday in District 1</span><span data-lang-vi="" id="iti-title-vi">Thứ Bảy ở Quận 1</span>'],
+      ['<span data-lang-en="">HCMC · Sat Aug 8 · 10:00–22:00</span><span data-lang-vi="">TP.HCM · T7 8/8 · 10:00–22:00</span>',
+        '<span data-lang-en="" id="iti-window-en">HCMC · 10:00–22:00</span><span data-lang-vi="" id="iti-window-vi">TP.HCM · 10:00–22:00</span>'],
+      ["<span data-lang-en=\"\">You're organizing · 5 people</span><span data-lang-vi=\"\">Bạn tổ chức · 5 người</span>",
+        "<span data-lang-en=\"\" id=\"iti-org-en\">You're organizing · 5 people</span><span data-lang-vi=\"\" id=\"iti-org-vi\">Bạn tổ chức · 5 người</span>"],
+    ];
+    for (const [from, to] of swaps) {
+      if (!sec.includes(from)) throw new Error(`itinerary header anchor not found: ${from.slice(0, 50)}…`);
+      sec = sec.replace(from, to);
+    }
+    return sec;
+  });
+});
+
+patch('itinerary-stops-wrap', (t) => {
+  if (t.includes('id="iti-stops"')) return t;
+  return inItinerary(t, (sec) => {
+    const b1 = sec.indexOf('<div class="gcard iti-block">');
+    const donut = sec.indexOf('<div class="gcard donut-wrap">');
+    if (b1 < 0 || donut < 0 || b1 > donut) throw new Error('itinerary stops bounds not found');
+    return sec.slice(0, b1) + '<div id="iti-stops">' + sec.slice(b1, donut) + '</div>\n              ' + sec.slice(donut);
+  });
+});
+
+const DONUT_HTML = `<div class="gcard donut-wrap">
+                <svg width="110" height="110" viewBox="0 0 110 110">
+                  <circle cx="55" cy="55" r="44" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="14"></circle>
+                  <circle id="arc-food" cx="55" cy="55" r="44" fill="none" stroke="#EC6CC9" stroke-width="14" stroke-dasharray="129 276" stroke-dashoffset="0" transform="rotate(-90 55 55)" stroke-linecap="round"></circle>
+                  <circle id="arc-act" cx="55" cy="55" r="44" fill="none" stroke="#8B5CF6" stroke-width="14" stroke-dasharray="110 276" stroke-dashoffset="-134" transform="rotate(-90 55 55)" stroke-linecap="round"></circle>
+                  <circle id="arc-trans" cx="55" cy="55" r="44" fill="none" stroke="#F6A45C" stroke-width="14" stroke-dasharray="27 276" stroke-dashoffset="-249" transform="rotate(-90 55 55)" stroke-linecap="round"></circle>
+                  <text x="55" y="51" text-anchor="middle" fill="#fff" font-size="15" font-weight="700" id="iti-total">750k₫</text>
+                  <text x="55" y="67" text-anchor="middle" fill="rgba(255,255,255,.55)" font-size="9">/ <tspan id="pp">person</tspan></text>
+                </svg>
+                <div class="legend" style="flex:1;">
+                  <div class="row"><span class="dot" style="background:var(--ai-pink);"></span><span data-lang-en="">Food &amp; drinks</span><span data-lang-vi="">Ăn uống</span><span class="amt" id="amt-food">350k₫</span></div>
+                  <div class="row"><span class="dot" style="background:var(--ai-violet);"></span><span data-lang-en="">Activities</span><span data-lang-vi="">Hoạt động</span><span class="amt" id="amt-act">300k₫</span></div>
+                  <div class="row"><span class="dot" style="background:var(--ai-amber);"></span><span data-lang-en="">Transport</span><span data-lang-vi="">Di chuyển</span><span class="amt" id="amt-trans">100k₫</span></div>
+                </div>
+              </div>`;
+
+patch('itinerary-donut-ids', (t) => {
+  if (t.includes('id="arc-food"')) return t;
+  return inItinerary(t, (sec) => {
+    const d = sec.indexOf('<div class="gcard donut-wrap">');
+    const end = sec.indexOf('<div style="height:10px;"></div>', d);
+    if (d < 0 || end < 0) throw new Error('donut bounds not found');
+    return sec.slice(0, d) + DONUT_HTML + '\n              ' + sec.slice(end);
+  });
+});
+
+// ── 8. Generator runtime + wizard hook ──────────────────────────────────────
+const RUNTIME = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'itinerary-runtime.js'), 'utf8');
+
+patch('itinerary-runtime', (t) => {
+  const S = '/*__ITI_START__*/', E = '/*__ITI_END__*/';
+  const block = `${S}\n${RUNTIME}\n${E}\n`;
+  if (t.includes(S)) {
+    return t.slice(0, t.indexOf(S)) + block + t.slice(t.indexOf(E) + E.length + 1);
+  }
+  const boot = 'renderFilters(); renderCards(); wizShow(); icons();';
+  if (!t.includes(boot)) throw new Error('boot line not found');
+  return t.replace(boot, block + boot);
+});
+
+patch('wizard-generate-hook', (t) => {
+  const orig = "else { go('s-itinerary'); toast('generated'); wstep = 0; wizShow(); }";
+  const repl = "else { try { generatePlan(readWizardInputs()); } catch (e) {} go('s-itinerary'); toast('generated'); wstep = 0; wizShow(); }";
+  if (t.includes('catch (e) {} go(')) return t;
+  if (!t.includes(orig)) throw new Error('wizNext generate branch not found');
+  return t.replace(orig, repl);
 });
 
 // ── serialize + self-check ──────────────────────────────────────────────────

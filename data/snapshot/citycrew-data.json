@@ -54,9 +54,12 @@
         "lng": 106.7040596,
         "rating": "4.4/5",
         "price": "60k₫",
+        "price_vnd": 60000,
         "votes": 4,
         "dur_en": "1–2h",
         "dur_vi": "1–2 giờ",
+        "dur_min": 60,
+        "dur_max": 120,
         "vibes": [
           "cafes",
           "views"
@@ -86,9 +89,12 @@
         "lng": 106.6972944,
         "rating": "4.3/5",
         "price": "140k₫",
+        "price_vnd": 140000,
         "votes": 5,
         "dur_en": "1–2h",
         "dur_vi": "1–2 giờ",
+        "dur_min": 60,
+        "dur_max": 120,
         "vibes": [
           "food_tour"
         ],
@@ -152,9 +158,12 @@
         "lng": 106.722096,
         "rating": "4.6/5",
         "price": "300k₫",
+        "price_vnd": 300000,
         "votes": 3,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
         "vibes": [
           "views"
         ],
@@ -218,9 +227,12 @@
         "lng": 106.7068754,
         "rating": "4.4/5",
         "price": "50k₫",
+        "price_vnd": 50000,
         "votes": 3,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
         "vibes": [
           "views",
           "chill"
@@ -285,9 +297,12 @@
         "lng": 106.6953021,
         "rating": "4.5/5",
         "price": "40k₫",
+        "price_vnd": 40000,
         "votes": 4,
         "dur_en": "1.5–2h",
         "dur_vi": "1.5–2 giờ",
+        "dur_min": 90,
+        "dur_max": 120,
         "vibes": [
           "culture"
         ],
@@ -351,9 +366,12 @@
         "lng": 106.6920916,
         "rating": "4.5/5",
         "price": "40k₫",
+        "price_vnd": 40000,
         "votes": 4,
         "dur_en": "1.5–2.5h",
         "dur_vi": "1.5–2.5 giờ",
+        "dur_min": 90,
+        "dur_max": 150,
         "vibes": [
           "culture"
         ],
@@ -402,9 +420,12 @@
         "lng": 106.699902,
         "rating": "4.4/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 4,
         "dur_en": "30–45 min",
         "dur_vi": "30–45 phút",
+        "dur_min": 30,
+        "dur_max": 45,
         "vibes": [
           "culture"
         ],
@@ -468,9 +489,12 @@
         "lng": 106.7037237,
         "rating": "4.5/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 5,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 45,
+        "dur_max": 90,
         "vibes": [
           "outdoors",
           "chill"
@@ -535,9 +559,12 @@
         "lng": 106.6938836,
         "rating": "4.3/5",
         "price": "150k₫",
+        "price_vnd": 150000,
         "votes": 4,
         "dur_en": "2–3h",
         "dur_vi": "2–3 giờ",
+        "dur_min": 120,
+        "dur_max": 180,
         "vibes": [
           "nightlife"
         ],
@@ -591,9 +618,12 @@
         "lng": 106.6923968,
         "rating": "4.1/5",
         "price": "68k₫",
+        "price_vnd": 68000,
         "votes": 6,
         "dur_en": "15–30 min",
         "dur_vi": "15–30 phút",
+        "dur_min": 15,
+        "dur_max": 30,
         "vibes": [
           "food_tour"
         ],
@@ -654,9 +684,12 @@
         "lng": 106.7040596,
         "rating": "4.4/5",
         "price": "60k₫",
+        "price_vnd": 60000,
         "votes": 4,
         "dur_en": "1–2h",
         "dur_vi": "1–2 giờ",
+        "dur_min": 60,
+        "dur_max": 120,
         "vibes": [
           "cafes",
           "views"
@@ -721,9 +754,12 @@
         "lng": 106.7056037,
         "rating": "4.4/5",
         "price": "90k₫",
+        "price_vnd": 90000,
         "votes": 3,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
         "vibes": [
           "cafes"
         ],
@@ -787,9 +823,12 @@
         "lng": 106.7019901,
         "rating": "4.1/5",
         "price": "55k₫",
+        "price_vnd": 55000,
         "votes": 2,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 45,
+        "dur_max": 90,
         "vibes": [
           "cafes",
           "chill"
@@ -854,9 +893,12 @@
         "lng": 106.6960112,
         "rating": "4.8/5",
         "price": "50k₫",
+        "price_vnd": 50000,
         "votes": 3,
         "dur_en": "45–60 min",
         "dur_vi": "45–60 phút",
+        "dur_min": 45,
+        "dur_max": 60,
         "vibes": [
           "cafes"
         ],
@@ -920,9 +962,12 @@
         "lng": 106.6989585,
         "rating": "4.6/5",
         "price": "65k₫",
+        "price_vnd": 65000,
         "votes": 2,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 45,
+        "dur_max": 90,
         "vibes": [
           "cafes"
         ],
@@ -986,9 +1031,12 @@
         "lng": 106.6990638,
         "rating": "4.6/5",
         "price": "80k₫",
+        "price_vnd": 80000,
         "votes": 2,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 45,
+        "dur_max": 90,
         "vibes": [
           "cafes"
         ],
@@ -1042,9 +1090,12 @@
         "lng": 106.6798533,
         "rating": "4.5/5",
         "price": "25k₫",
+        "price_vnd": 25000,
         "votes": 5,
         "dur_en": "45–60 min",
         "dur_vi": "45–60 phút",
+        "dur_min": 45,
+        "dur_max": 60,
         "vibes": [
           "cafes",
           "culture"
@@ -1109,9 +1160,12 @@
         "lng": 106.6983617,
         "rating": "4/5",
         "price": "80k₫",
+        "price_vnd": 80000,
         "votes": 2,
         "dur_en": "1–2h",
         "dur_vi": "1–2 giờ",
+        "dur_min": 60,
+        "dur_max": 120,
         "vibes": [
           "cafes",
           "chill"
@@ -1176,9 +1230,12 @@
         "lng": 106.7005507,
         "rating": "4.4/5",
         "price": "150k₫",
+        "price_vnd": 150000,
         "votes": 2,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
         "vibes": [
           "cafes",
           "shopping"
@@ -1243,9 +1300,12 @@
         "lng": 106.6997544,
         "rating": "4.1/5",
         "price": "150k₫",
+        "price_vnd": 150000,
         "votes": 2,
         "dur_en": "1.5–2h",
         "dur_vi": "1.5–2 giờ",
+        "dur_min": 90,
+        "dur_max": 120,
         "vibes": [
           "food_tour",
           "chill"
@@ -1310,9 +1370,12 @@
         "lng": 106.6735196,
         "rating": "4.2/5",
         "price": "90k₫",
+        "price_vnd": 90000,
         "votes": 4,
         "dur_en": "30–60 min",
         "dur_vi": "30–60 phút",
+        "dur_min": 30,
+        "dur_max": 60,
         "vibes": [
           "food_tour"
         ],
@@ -1361,9 +1424,12 @@
         "lng": 106.66936,
         "rating": "4.2/5",
         "price": "70k₫",
+        "price_vnd": 70000,
         "votes": 5,
         "dur_en": "30–45 min",
         "dur_vi": "30–45 phút",
+        "dur_min": 30,
+        "dur_max": 45,
         "vibes": [
           "food_tour"
         ],
@@ -1427,9 +1493,12 @@
         "lng": 106.6846346,
         "rating": "4.2/5",
         "price": "150k₫",
+        "price_vnd": 150000,
         "votes": 4,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
         "vibes": [
           "food_tour"
         ],
@@ -1458,9 +1527,12 @@
         "lng": 106.6972944,
         "rating": "4.3/5",
         "price": "140k₫",
+        "price_vnd": 140000,
         "votes": 5,
         "dur_en": "1–2h",
         "dur_vi": "1–2 giờ",
+        "dur_min": 60,
+        "dur_max": 120,
         "vibes": [
           "food_tour"
         ],
@@ -1524,9 +1596,12 @@
         "lng": 106.6759953,
         "rating": "4.4/5",
         "price": "120k₫",
+        "price_vnd": 120000,
         "votes": 4,
         "dur_en": "1.5–2h",
         "dur_vi": "1.5–2 giờ",
+        "dur_min": 90,
+        "dur_max": 120,
         "vibes": [
           "food_tour",
           "nightlife"
@@ -1591,9 +1666,12 @@
         "lng": 106.7022361,
         "rating": "4.2/5",
         "price": "150k₫",
+        "price_vnd": 150000,
         "votes": 3,
         "dur_en": "1.5–2h",
         "dur_vi": "1.5–2 giờ",
+        "dur_min": 90,
+        "dur_max": 120,
         "vibes": [
           "food_tour",
           "nightlife"
@@ -1658,9 +1736,12 @@
         "lng": 106.7044226,
         "rating": "3.9/5",
         "price": "90k₫",
+        "price_vnd": 90000,
         "votes": 3,
         "dur_en": "30–60 min",
         "dur_vi": "30–60 phút",
+        "dur_min": 30,
+        "dur_max": 60,
         "vibes": [
           "food_tour"
         ],
@@ -1714,9 +1795,12 @@
         "lng": 106.6943777,
         "rating": "4.4/5",
         "price": "350k₫",
+        "price_vnd": 350000,
         "votes": 3,
         "dur_en": "1.5–2h",
         "dur_vi": "1.5–2 giờ",
+        "dur_min": 90,
+        "dur_max": 120,
         "vibes": [
           "nightlife",
           "views"
@@ -1781,9 +1865,12 @@
         "lng": 106.7443897,
         "rating": "4.4/5",
         "price": "300k₫",
+        "price_vnd": 300000,
         "votes": 2,
         "dur_en": "1.5–2.5h",
         "dur_vi": "1.5–2.5 giờ",
+        "dur_min": 90,
+        "dur_max": 150,
         "vibes": [
           "views",
           "chill"
@@ -1848,9 +1935,12 @@
         "lng": 106.6973331,
         "rating": "4.5/5",
         "price": "250k₫",
+        "price_vnd": 250000,
         "votes": 2,
         "dur_en": "1.5–2h",
         "dur_vi": "1.5–2 giờ",
+        "dur_min": 90,
+        "dur_max": 120,
         "vibes": [
           "views",
           "nightlife"
@@ -1915,9 +2005,12 @@
         "lng": 106.6938836,
         "rating": "4.3/5",
         "price": "150k₫",
+        "price_vnd": 150000,
         "votes": 4,
         "dur_en": "2–3h",
         "dur_vi": "2–3 giờ",
+        "dur_min": 120,
+        "dur_max": 180,
         "vibes": [
           "nightlife"
         ],
@@ -1961,9 +2054,12 @@
         "lng": 106.7047354,
         "rating": "4.3/5",
         "price": "200k₫",
+        "price_vnd": 200000,
         "votes": 2,
         "dur_en": "2–3h",
         "dur_vi": "2–3 giờ",
+        "dur_min": 120,
+        "dur_max": 180,
         "vibes": [
           "nightlife"
         ],
@@ -2007,9 +2103,12 @@
         "lng": 106.7046106,
         "rating": "4.3/5",
         "price": "200k₫",
+        "price_vnd": 200000,
         "votes": 2,
         "dur_en": "1.5–2.5h",
         "dur_vi": "1.5–2.5 giờ",
+        "dur_min": 90,
+        "dur_max": 150,
         "vibes": [
           "nightlife",
           "views"
@@ -2064,9 +2163,12 @@
         "lng": 106.6923968,
         "rating": "4.1/5",
         "price": "68k₫",
+        "price_vnd": 68000,
         "votes": 6,
         "dur_en": "15–30 min",
         "dur_vi": "15–30 phút",
+        "dur_min": 15,
+        "dur_max": 30,
         "vibes": [
           "food_tour"
         ],
@@ -2110,9 +2212,12 @@
         "lng": 106.7050646,
         "rating": "4.3/5",
         "price": "60k₫",
+        "price_vnd": 60000,
         "votes": 2,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
         "vibes": [
           "cafes",
           "chill"
@@ -2167,9 +2272,12 @@
         "lng": 106.6913428,
         "rating": "3.8/5",
         "price": "100k₫",
+        "price_vnd": 100000,
         "votes": 3,
         "dur_en": "45–60 min",
         "dur_vi": "45–60 phút",
+        "dur_min": 45,
+        "dur_max": 60,
         "vibes": [
           "food_tour"
         ],
@@ -2213,9 +2321,12 @@
         "lng": 106.7219238,
         "rating": "4.5/5",
         "price": "250k₫",
+        "price_vnd": 250000,
         "votes": 2,
         "dur_en": "1.5–2h",
         "dur_vi": "1.5–2 giờ",
+        "dur_min": 90,
+        "dur_max": 120,
         "vibes": [
           "views",
           "nightlife"
@@ -2282,9 +2393,12 @@
         "lng": 106.722096,
         "rating": "4.6/5",
         "price": "300k₫",
+        "price_vnd": 300000,
         "votes": 3,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
         "vibes": [
           "views"
         ],
@@ -2348,9 +2462,12 @@
         "lng": 106.7068754,
         "rating": "4.4/5",
         "price": "50k₫",
+        "price_vnd": 50000,
         "votes": 3,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
         "vibes": [
           "views",
           "chill"
@@ -2415,9 +2532,12 @@
         "lng": 106.6953021,
         "rating": "4.5/5",
         "price": "40k₫",
+        "price_vnd": 40000,
         "votes": 4,
         "dur_en": "1.5–2h",
         "dur_vi": "1.5–2 giờ",
+        "dur_min": 90,
+        "dur_max": 120,
         "vibes": [
           "culture"
         ],
@@ -2481,9 +2601,12 @@
         "lng": 106.6920916,
         "rating": "4.5/5",
         "price": "40k₫",
+        "price_vnd": 40000,
         "votes": 4,
         "dur_en": "1.5–2.5h",
         "dur_vi": "1.5–2.5 giờ",
+        "dur_min": 90,
+        "dur_max": 150,
         "vibes": [
           "culture"
         ],
@@ -2547,9 +2670,12 @@
         "lng": 106.6990189,
         "rating": "4.4/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 3,
         "dur_en": "20–40 min",
         "dur_vi": "20–40 phút",
+        "dur_min": 20,
+        "dur_max": 40,
         "vibes": [
           "culture"
         ],
@@ -2598,9 +2724,12 @@
         "lng": 106.699902,
         "rating": "4.4/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 4,
         "dur_en": "30–45 min",
         "dur_vi": "30–45 phút",
+        "dur_min": 30,
+        "dur_max": 45,
         "vibes": [
           "culture"
         ],
@@ -2664,9 +2793,12 @@
         "lng": 106.6981791,
         "rating": "4.7/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 3,
         "dur_en": "30–60 min",
         "dur_vi": "30–60 phút",
+        "dur_min": 30,
+        "dur_max": 60,
         "vibes": [
           "culture"
         ],
@@ -2730,9 +2862,12 @@
         "lng": 106.6611735,
         "rating": "4.6/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 3,
         "dur_en": "30–60 min",
         "dur_vi": "30–60 phút",
+        "dur_min": 30,
+        "dur_max": 60,
         "vibes": [
           "culture"
         ],
@@ -2796,9 +2931,12 @@
         "lng": 106.6992162,
         "rating": "4.4/5",
         "price": "30k₫",
+        "price_vnd": 30000,
         "votes": 2,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
         "vibes": [
           "culture"
         ],
@@ -2862,9 +3000,12 @@
         "lng": 106.7031715,
         "rating": "4.6/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 2,
         "dur_en": "20–40 min",
         "dur_vi": "20–40 phút",
+        "dur_min": 20,
+        "dur_max": 40,
         "vibes": [
           "culture"
         ],
@@ -2928,9 +3069,12 @@
         "lng": 106.7186396,
         "rating": "4.6/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 1,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 45,
+        "dur_max": 90,
         "vibes": [
           "outdoors",
           "views"
@@ -2995,9 +3139,12 @@
         "lng": 106.7037237,
         "rating": "4.5/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 5,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 45,
+        "dur_max": 90,
         "vibes": [
           "outdoors",
           "chill"
@@ -3062,9 +3209,12 @@
         "lng": 106.7243981,
         "rating": "4.6/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 2,
         "dur_en": "1–2h",
         "dur_vi": "1–2 giờ",
+        "dur_min": 60,
+        "dur_max": 120,
         "vibes": [
           "outdoors",
           "chill"
@@ -3129,9 +3279,12 @@
         "lng": 106.7002091,
         "rating": "4.1/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 3,
         "dur_en": "1–2h",
         "dur_vi": "1–2 giờ",
+        "dur_min": 60,
+        "dur_max": 120,
         "vibes": [
           "shopping"
         ],
@@ -3195,9 +3348,12 @@
         "lng": 106.7022087,
         "rating": "4.5/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 1,
         "dur_en": "1–2h",
         "dur_vi": "1–2 giờ",
+        "dur_min": 60,
+        "dur_max": 120,
         "vibes": [
           "shopping"
         ],
@@ -3241,9 +3397,12 @@
         "lng": 106.7000734,
         "rating": "4.6/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 2,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 45,
+        "dur_max": 90,
         "vibes": [
           "culture",
           "chill"
@@ -3308,9 +3467,12 @@
         "lng": 106.7050566,
         "rating": "4.3/5",
         "price": "60k₫",
+        "price_vnd": 60000,
         "votes": 2,
         "dur_en": "2–3h",
         "dur_vi": "2–3 giờ",
+        "dur_min": 120,
+        "dur_max": 180,
         "vibes": [
           "outdoors"
         ],
@@ -3374,9 +3536,12 @@
         "lng": 106.70067,
         "rating": "4.4/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 1,
         "dur_en": "1–2h",
         "dur_vi": "1–2 giờ",
+        "dur_min": 60,
+        "dur_max": 120,
         "vibes": [
           "shopping"
         ],
@@ -3440,9 +3605,12 @@
         "lng": 106.701092,
         "rating": "4.3/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 3,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 45,
+        "dur_max": 90,
         "vibes": [
           "shopping"
         ],
@@ -3506,9 +3674,12 @@
         "lng": 106.6722817,
         "rating": "4.1/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 1,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
         "vibes": [
           "shopping",
           "food_tour"
@@ -3558,9 +3729,12 @@
         "lng": 106.7042465,
         "rating": "4.4/5",
         "price": "240k₫",
+        "price_vnd": 240000,
         "votes": 2,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 45,
+        "dur_max": 90,
         "vibes": [
           "views"
         ],
@@ -3624,9 +3798,12 @@
         "lng": 106.6920797,
         "rating": "4.5/5",
         "price": "0₫",
+        "price_vnd": 0,
         "votes": 1,
         "dur_en": "1–1.5h",
         "dur_vi": "1–1.5 giờ",
+        "dur_min": 60,
+        "dur_max": 90,
         "vibes": [
           "outdoors",
           "chill"
@@ -3663,7 +3840,7 @@
       "desc_en": "The stalls, alleys and night streets locals actually queue for.",
       "desc_vi": "Những quán, hẻm và phố đêm mà chính người Sài Gòn cũng xếp hàng.",
       "curator": "@foodmapvn",
-      "cover_url": null,
+      "cover_url": "https://lh3.googleusercontent.com/place-photos/AG9NLjBW631wzyjXx44oyi0UKBZs2hb-eOGRMsRE57EipB998chJc2VF-kFoP3_ZuZIRypL5mOlxYDAUM9uwUmQ49FCbTutq6zmjyH_qC1-zJtvpvokROidSOQwdVJOs6VEvY9wVUe6yeRuJ19-o8yZ8ZuVnjg=s4800-w800",
       "count": 9,
       "place_slugs": [
         "banh-mi-huynh-hoa",

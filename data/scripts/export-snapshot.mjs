@@ -78,9 +78,12 @@ const toCard = (p) => {
     lat: p.lat, lng: p.lng,
     rating: p.rating ? `${p.rating}/5` : null,
     price: p.price_display,
+    price_vnd: p.price_vnd,
     votes: p.saved_count,
     dur_en: fmtDuration(p.duration_min, p.duration_max, false),
     dur_vi: fmtDuration(p.duration_min, p.duration_max, true),
+    dur_min: p.duration_min,
+    dur_max: p.duration_max,
     vibes: p.vibe_tags,
     desc_en: p.desc_en, desc_vi: p.desc_vi,
   };
@@ -107,7 +110,13 @@ const snapshot = {
       title_en: c.title_en, title_vi: c.title_vi,
       desc_en: c.desc_en, desc_vi: c.desc_vi,
       curator: c.curator_handle,
-      cover_url: c.cover?.photo_uri ?? null,
+      // Fall back to the first member's cover if the collection's own cover
+      // photo was deleted (the FK nulls it) or never set.
+      cover_url: c.cover?.photo_uri
+        ?? places.find((p) => p.slug === memberSlugs[0])?.place_photos
+          ?.filter((ph) => !ph.is_hidden)
+          ?.sort((a, b) => (b.is_cover ? 1 : 0) - (a.is_cover ? 1 : 0))?.[0]?.photo_uri
+        ?? null,
       count: memberSlugs.length,
       place_slugs: memberSlugs,
     };
