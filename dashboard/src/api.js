@@ -18,6 +18,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(fields),
     }).then(handle),
+  deletePlace: (slug) => fetch(`/api/places/${slug}`, { method: 'DELETE' }).then(handle),
   progress: () => fetch('/api/progress').then(handle),
   sync: () => fetch('/api/sync', { method: 'POST' }).then(handle),
   patchPhoto: (id, fields) =>

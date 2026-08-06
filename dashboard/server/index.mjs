@@ -96,6 +96,24 @@ app.patch('/api/places/:slug', route(async (req, res) => {
   res.json({ ok: true });
 }));
 
+app.delete('/api/places/:slug', route(async (req, res) => {
+  const places = db(await supabase.from('places').select('id').eq('slug', req.params.slug).limit(1));
+  if (!places.length) throw bad('not found', 404);
+  const placeId = places[0].id;
+
+  // Collect uploaded objects before the cascade wipes the photo rows.
+  const uploads = db(await supabase.from('place_photos')
+    .select('storage_path').eq('place_id', placeId).eq('source', 'upload'));
+
+  // Deleting the place cascades place_photos and collection_places;
+  // collections.cover_photo_id is ON DELETE SET NULL.
+  db(await supabase.from('places').delete().eq('id', placeId));
+
+  const paths = uploads.map((u) => u.storage_path).filter(Boolean);
+  if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
+  res.json({ ok: true, removed_uploads: paths.length });
+}));
+
 // ── photos ──────────────────────────────────────────────────────────────────
 
 app.post('/api/places/:slug/photos', express.raw({ type: 'image/*', limit: '15mb' }), route(async (req, res) => {

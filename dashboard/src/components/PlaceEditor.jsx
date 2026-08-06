@@ -243,6 +243,26 @@ export default function PlaceEditor() {
             </div>
           </section>
 
+          <div className="dangerrow">
+            <span>Don't want this place in the app at all?</span>
+            <button
+              className="dangerbtn"
+              onClick={async () => {
+                if (!confirm(`Delete “${place.name_en}” permanently?\n\nThis removes the place, all its photos (including your uploads) and its collection entries from the database.`)) return;
+                try {
+                  await api.deletePlace(place.slug);
+                  refreshProgress();
+                  toast(`Deleted ${place.name_en}`);
+                  navigate(`/?${params}`);
+                } catch (err) {
+                  toast(`Delete failed: ${err.message}`);
+                }
+              }}
+            >
+              Delete place
+            </button>
+          </div>
+
           <div style={{ height: 46 }} />
         </div>
       </div>
