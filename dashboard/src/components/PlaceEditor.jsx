@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useProgress, useToast } from '../App.jsx';
-import PhotoManager from './PhotoManager.jsx';
+import PhotoManager, { emptyPhotoEdits, photoEditsDirty } from './PhotoManager.jsx';
 
 const VIBES = ['cafes', 'food_tour', 'outdoors', 'views', 'culture', 'shopping', 'nightlife', 'chill'];
 const FORM_FIELDS = [
@@ -37,6 +37,7 @@ export default function PlaceEditor() {
 
   const [place, setPlace] = useState(null);
   const [form, setForm] = useState(null);
+  const [photoEdits, setPhotoEdits] = useState(emptyPhotoEdits);
   const [siblings, setSiblings] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -50,6 +51,7 @@ export default function PlaceEditor() {
   useEffect(() => {
     setPlace(null);
     setForm(null);
+    setPhotoEdits(emptyPhotoEdits());
     load().catch((err) => toast(err.message));
   }, [load, toast]);
 
@@ -60,9 +62,12 @@ export default function PlaceEditor() {
     api.places(Object.fromEntries(listParams)).then((rows) => setSiblings(rows.map((r) => r.slug)));
   }, [params]);
 
+  // Text and photo edits share one dirty state: both light up Save, both are
+  // applied together, both are discarded together.
   const dirty = useMemo(
-    () => place && form && JSON.stringify(pickForm(place)) !== JSON.stringify(form),
-    [place, form],
+    () => !!(place && form
+      && (JSON.stringify(pickForm(place)) !== JSON.stringify(form) || photoEditsDirty(photoEdits))),
+    [place, form, photoEdits],
   );
 
   useEffect(() => {
@@ -79,6 +84,32 @@ export default function PlaceEditor() {
     setSaving(true);
     try {
       await api.savePlace(slug, { ...form, ...extra });
+
+      // Apply staged photo edits in one batch, same Save as the text.
+      const e = photoEdits;
+      const tempToReal = {};
+      for (const u of e.uploads) {
+        const row = await api.uploadPhoto(slug, u.blob, u.name);
+        tempToReal[u.tempId] = row.id;
+        URL.revokeObjectURL(u.previewUrl);
+      }
+      for (const id of e.deleted) await api.deletePhoto(id);
+      for (const [id, hidden] of Object.entries(e.hidden)) {
+        if (e.deleted.includes(id)) continue;
+        const saved = place.place_photos.find((p) => p.id === id);
+        if (saved && saved.is_hidden !== hidden) await api.patchPhoto(id, { is_hidden: hidden });
+      }
+      if (e.coverId) {
+        const realId = tempToReal[e.coverId] ?? e.coverId;
+        await api.patchPhoto(realId, { is_cover: true });
+      }
+      if (e.order) {
+        const ids = e.order.map((id) => tempToReal[id] ?? id).filter((id) => !e.deleted.includes(id));
+        await api.reorderPhotos(slug, ids);
+      }
+
+      setPhotoEdits(emptyPhotoEdits());
+      setForm(null);
       await load().then((p) => setForm(pickForm(p)));
       refreshProgress();
       toast(extra.review_status ? `Marked ${extra.review_status}` : 'Saved');
@@ -87,15 +118,18 @@ export default function PlaceEditor() {
     } finally {
       setSaving(false);
     }
-  }, [saving, slug, form, load, refreshProgress, toast]);
+  }, [saving, slug, form, photoEdits, place, load, refreshProgress, toast]);
 
   const idx = siblings.indexOf(slug);
   const go = useCallback((delta) => {
     const next = siblings[idx + delta];
     if (!next) return;
-    if (dirty && !confirm('Discard unsaved changes?')) return;
+    if (dirty) {
+      if (!confirm('Discard unsaved changes (text and photo edits)?')) return;
+      photoEdits.uploads.forEach((u) => URL.revokeObjectURL(u.previewUrl));
+    }
     navigate(`/place/${next}?${params}`);
-  }, [siblings, idx, dirty, navigate, params]);
+  }, [siblings, idx, dirty, photoEdits, navigate, params]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -127,7 +161,7 @@ export default function PlaceEditor() {
       </div>
 
       <div className="editor">
-        <PhotoManager place={place} onChange={load} />
+        <PhotoManager place={place} edits={photoEdits} setEdits={setPhotoEdits} />
 
         <div className="facts-col">
           <section className="panel">

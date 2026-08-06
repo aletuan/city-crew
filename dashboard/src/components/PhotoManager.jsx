@@ -1,54 +1,112 @@
+// Controlled photo light-table. Nothing here touches the API: every action
+// (cover, hide, delete, reorder, upload) is staged into `edits` owned by
+// PlaceEditor, and applied in one batch when the reviewer presses Save —
+// the same contract as the text fields.
+
 import React, { useRef, useState } from 'react';
-import { api, resizeImage } from '../api.js';
+import { resizeImage } from '../api.js';
 import { useToast } from '../App.jsx';
 
-export default function PhotoManager({ place, onChange }) {
+export function emptyPhotoEdits() {
+  return { coverId: null, hidden: {}, deleted: [], uploads: [], order: null };
+}
+
+export function photoEditsDirty(edits) {
+  return edits.coverId !== null
+    || Object.keys(edits.hidden).length > 0
+    || edits.deleted.length > 0
+    || edits.uploads.length > 0
+    || edits.order !== null;
+}
+
+// Merge saved photos + staged edits into the list the grid displays.
+export function stagedPhotoList(place, edits) {
+  const deleted = new Set(edits.deleted);
+  const saved = [...place.place_photos]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .filter((p) => !deleted.has(p.id))
+    .map((p) => ({ ...p, is_hidden: edits.hidden[p.id] ?? p.is_hidden }));
+  const uploads = edits.uploads.map((u) => ({
+    id: u.tempId, photo_uri: u.previewUrl, source: 'upload', is_hidden: false,
+    is_cover: false, attribution_name: null, isTemp: true,
+  }));
+  let list = [...saved, ...uploads];
+  if (edits.order) {
+    const pos = new Map(edits.order.map((id, i) => [id, i]));
+    list = [...list].sort((a, b) => (pos.get(a.id) ?? 999) - (pos.get(b.id) ?? 999));
+  }
+  const visible = list.filter((p) => !p.is_hidden);
+  const cover = (edits.coverId && list.find((p) => p.id === edits.coverId))
+    || visible.find((p) => p.is_cover)
+    || visible[0]
+    || null;
+  return { list, cover };
+}
+
+export default function PhotoManager({ place, edits, setEdits }) {
   const toast = useToast();
   const fileInput = useRef(null);
   const [dragId, setDragId] = useState(null);
   const [overId, setOverId] = useState(null);
   const [dropzoneHot, setDropzoneHot] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [preparing, setPreparing] = useState(false);
 
-  const photos = place.place_photos;
-  const visible = photos.filter((p) => !p.is_hidden);
-  const cover = visible.find((p) => p.is_cover) ?? visible[0];
+  const { list, cover } = stagedPhotoList(place, edits);
 
-  const act = async (fn, doneMsg) => {
-    try {
-      await fn();
-      await onChange();
-      if (doneMsg) toast(doneMsg);
-    } catch (err) {
-      toast(`Photo error: ${err.message}`);
-    }
+  const setCover = (p) => {
+    if (cover?.id === p.id || p.is_hidden) return;
+    setEdits((e) => ({ ...e, coverId: p.id }));
   };
 
-  const upload = async (files) => {
-    const images = [...files].filter((f) => f.type.startsWith('image/'));
-    if (!images.length) return;
-    setUploading(true);
-    try {
-      for (const file of images) {
-        const blob = await resizeImage(file);
-        await api.uploadPhoto(place.slug, blob, file.name.replace(/\.\w+$/, ''));
-      }
-      await onChange();
-      toast(images.length > 1 ? `${images.length} photos uploaded` : 'Photo uploaded');
-    } catch (err) {
-      toast(`Upload failed: ${err.message}`);
-    } finally {
-      setUploading(false);
+  const toggleHidden = (p) => setEdits((e) => ({
+    ...e,
+    hidden: { ...e.hidden, [p.id]: !(e.hidden[p.id] ?? p.is_hidden) },
+    coverId: e.coverId === p.id ? null : e.coverId,
+  }));
+
+  const remove = (p) => setEdits((e) => {
+    if (p.isTemp) {
+      const upload = e.uploads.find((u) => u.tempId === p.id);
+      if (upload) URL.revokeObjectURL(upload.previewUrl);
     }
-  };
+    return {
+      ...e,
+      deleted: p.isTemp ? e.deleted : [...e.deleted, p.id],
+      uploads: p.isTemp ? e.uploads.filter((u) => u.tempId !== p.id) : e.uploads,
+      coverId: e.coverId === p.id ? null : e.coverId,
+      order: e.order ? e.order.filter((id) => id !== p.id) : null,
+    };
+  });
 
   const reorder = (fromId, toId) => {
     if (!fromId || fromId === toId) return;
-    const ids = photos.map((p) => p.id);
+    const ids = list.map((p) => p.id);
     const from = ids.indexOf(fromId);
     const to = ids.indexOf(toId);
     ids.splice(to, 0, ...ids.splice(from, 1));
-    act(() => api.reorderPhotos(place.slug, ids));
+    setEdits((e) => ({ ...e, order: ids }));
+  };
+
+  const stageUploads = async (files) => {
+    const images = [...files].filter((f) => f.type.startsWith('image/'));
+    if (!images.length) return;
+    setPreparing(true);
+    try {
+      const prepared = await Promise.all(images.map(async (file) => {
+        const blob = await resizeImage(file);
+        return {
+          tempId: `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          blob,
+          name: file.name.replace(/\.\w+$/, ''),
+          previewUrl: URL.createObjectURL(blob),
+        };
+      }));
+      setEdits((e) => ({ ...e, uploads: [...e.uploads, ...prepared] }));
+    } catch (err) {
+      toast(`Could not read image: ${err.message}`);
+    } finally {
+      setPreparing(false);
+    }
   };
 
   return (
@@ -63,18 +121,18 @@ export default function PhotoManager({ place, onChange }) {
       </div>
 
       <div className="photogrid">
-        {photos.map((p) => (
+        {list.map((p) => (
           <div
             key={p.id}
             role="button"
             tabIndex={0}
-            className={`pcell ${p.is_cover ? 'cover' : ''} ${p.is_hidden ? 'hidden-photo' : ''} ${overId === p.id ? 'dragover' : ''}`}
-            title={p.is_cover ? 'Current cover' : 'Click to set as cover'}
-            onClick={() => !p.is_cover && act(() => api.patchPhoto(p.id, { is_cover: true }), 'Cover updated')}
+            className={`pcell ${cover?.id === p.id ? 'cover' : ''} ${p.is_hidden ? 'hidden-photo' : ''} ${overId === p.id ? 'dragover' : ''}`}
+            title={cover?.id === p.id ? 'Current cover' : 'Click to set as cover'}
+            onClick={() => setCover(p)}
             onKeyDown={(e) => {
               if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
                 e.preventDefault();
-                if (!p.is_cover) act(() => api.patchPhoto(p.id, { is_cover: true }), 'Cover updated');
+                setCover(p);
               }
             }}
             draggable
@@ -84,22 +142,16 @@ export default function PhotoManager({ place, onChange }) {
             onDrop={(e) => { e.preventDefault(); setOverId(null); reorder(dragId, p.id); }}
           >
             <img src={p.photo_uri} alt="" loading="lazy" />
-            {p.source === 'upload' && <span className="badge">YOURS</span>}
-            {p.is_cover && <span className="badge" style={{ left: 'auto', right: 6 }}>COVER</span>}
+            {p.isTemp && <span className="badge">NEW</span>}
+            {!p.isTemp && p.source === 'upload' && <span className="badge">YOURS</span>}
+            {cover?.id === p.id && <span className="badge" style={{ left: 'auto', right: 6 }}>COVER</span>}
             <span className="ops">
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); act(() => api.patchPhoto(p.id, { is_hidden: !p.is_hidden })); }}
-              >
-                {p.is_hidden ? 'Show' : 'Hide'}
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm('Delete this photo permanently?')) act(() => api.deletePhoto(p.id), 'Photo deleted');
-                }}
-              >
+              {!p.isTemp && (
+                <button type="button" onClick={(e) => { e.stopPropagation(); toggleHidden(p); }}>
+                  {p.is_hidden ? 'Show' : 'Hide'}
+                </button>
+              )}
+              <button type="button" onClick={(e) => { e.stopPropagation(); remove(p); }}>
                 Del
               </button>
             </span>
@@ -112,11 +164,11 @@ export default function PhotoManager({ place, onChange }) {
           onClick={() => fileInput.current.click()}
           onDragOver={(e) => { e.preventDefault(); setDropzoneHot(true); }}
           onDragLeave={() => setDropzoneHot(false)}
-          onDrop={(e) => { e.preventDefault(); setDropzoneHot(false); upload(e.dataTransfer.files); }}
+          onDrop={(e) => { e.preventDefault(); setDropzoneHot(false); stageUploads(e.dataTransfer.files); }}
           aria-label="Upload photos"
         >
           <span className="plus">+</span>
-          {uploading ? 'Uploading…' : 'Add photo'}
+          {preparing ? 'Reading…' : 'Add photo'}
         </button>
         <input
           ref={fileInput}
@@ -124,7 +176,7 @@ export default function PhotoManager({ place, onChange }) {
           accept="image/*"
           multiple
           hidden
-          onChange={(e) => { upload(e.target.files); e.target.value = ''; }}
+          onChange={(e) => { stageUploads(e.target.files); e.target.value = ''; }}
         />
       </div>
     </div>
