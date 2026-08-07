@@ -33,6 +33,14 @@ function splitHours(line: string): [string, string] {
   return i > 0 ? [line.slice(0, i), line.slice(i + 2)] : [line, ''];
 }
 
+/** Indices for the page-dot row: all pages up to 7, else a window sliding
+ * with the active page so the strip never gets crowded. */
+function dotWindow(count: number, active: number, max = 7): number[] {
+  if (count <= max) return Array.from({ length: count }, (_, i) => i);
+  const start = Math.min(Math.max(active - Math.floor(max / 2), 0), count - max);
+  return Array.from({ length: max }, (_, i) => start + i);
+}
+
 function vibeLabel(place: Place, t: (en: string, vi: string) => string): string {
   const v = place.vibe_tags[0];
   if (v) return v.replace('_', ' ').replace(/^\w/, (c) => c.toUpperCase());
@@ -132,6 +140,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             <View style={s.counter}>
               <Ionicons name="images-outline" size={13} color="#fff" />
               <Text style={s.counterText}>{photoIndex + 1} / {photos.length}</Text>
+            </View>
+          )}
+          {photos.length > 1 && (
+            <View style={s.dots}>
+              {dotWindow(photos.length, photoIndex).map((i) => (
+                <View key={i} style={[s.dot, i === photoIndex && s.dotOn]} />
+              ))}
             </View>
           )}
           {photos[photoIndex]?.attribution_name ? (
@@ -254,6 +269,14 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(10,8,13,0.65)', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6,
   },
   counterText: { color: '#fff', fontSize: 12.5, fontFamily: font.semibold },
+  dots: {
+    position: 'absolute', bottom: 15, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: 'rgba(10,8,13,0.45)', borderRadius: radius.pill,
+    paddingHorizontal: 11, paddingVertical: 8,
+  },
+  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.38)' },
+  dotOn: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
   attr: {
     position: 'absolute', right: 12, bottom: 14, fontSize: 9.5, color: '#fff', opacity: 0.8,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
