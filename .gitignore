@@ -7,3 +7,5 @@ data/.env
 data/node_modules/
 data/review/.cache/
 dashboard/node_modules/
+dashboard/dist/
+dashboard/.env.local

@@ -307,3 +307,79 @@ input, textarea, select { font-family: inherit; }
 
 .empty { color: var(--text-tertiary); text-align: center; padding: 60px 0; font-size: 14px; }
 .kbd-hint { color: var(--text-tertiary); font-family: var(--font-data); font-size: 10.5px; margin-left: 4px; }
+
+/* ── login ── */
+.login {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; padding: 24px;
+  text-align: center;
+}
+.login .loginlogo { width: 56px; height: 56px; border-radius: 16px; margin-bottom: 8px; }
+.login h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+.login .loginsub { color: var(--text-tertiary); font-size: 14px; margin: 0 0 18px; }
+.login form { display: flex; flex-direction: column; gap: 10px; width: min(320px, 100%); }
+.login input {
+  background: var(--bg-input); border: 1px solid var(--border-glass-soft);
+  border-radius: var(--radius-input); color: var(--text-primary);
+  font-size: 15px; padding: 12px 14px; text-align: center;
+}
+.login button {
+  background: var(--grad-ai); border: none; color: #fff; font-weight: 700;
+  font-size: 14px; padding: 12px 16px; border-radius: var(--radius-pill);
+}
+.login button:disabled { opacity: .6; cursor: wait; }
+.login .loginsent { color: var(--text-secondary); font-size: 14px; max-width: 320px; line-height: 1.6; }
+.login .loginerror { color: var(--bad); font-size: 13px; margin: 0; }
+
+/* ── add place ── */
+.addplace h2 { font-size: 19px; margin: 4px 0 6px; letter-spacing: -0.01em; }
+.addplace .addsub { color: var(--text-tertiary); font-size: 13.5px; max-width: 560px; margin: 0 0 18px; }
+.addsearch { display: flex; gap: 10px; margin-bottom: 12px; max-width: 560px; }
+.addsearch input {
+  flex: 1; background: var(--bg-input); border: 1px solid var(--border-glass-soft);
+  border-radius: var(--radius-pill); color: var(--text-primary);
+  font-size: 14px; padding: 10px 16px;
+}
+.addcat { display: flex; align-items: center; gap: 8px; color: var(--text-tertiary); font-size: 12.5px; margin-bottom: 20px; }
+
+.topbar .addbtn { text-decoration: none; }
+.topbar .signout {
+  border: none; background: transparent; color: var(--text-tertiary);
+  font-size: 16px; padding: 6px 8px; border-radius: var(--radius-pill);
+}
+.topbar .signout:hover { color: var(--bad); background: var(--surface-glass); }
+
+/* ── phone layout — the desk becomes a one-hand tool ── */
+@media (max-width: 720px) {
+  body { font-size: 14px; }
+  .shell { padding: 0 12px 150px; }
+
+  .topbar { flex-wrap: wrap; gap: 8px 10px; padding: 12px 0 10px; }
+  .topbar h1 span { display: none; }
+  .rail { order: 10; flex-basis: 100%; min-width: 0; }
+  .syncbtn { font-size: 12px; padding: 7px 12px; }
+
+  .filters .search { margin-left: 0; width: 100%; order: -1; }
+
+  .prow { grid-template-columns: 84px 1fr auto; gap: 10px; padding: 8px 12px 8px 8px; }
+  .prow .thumb { width: 84px; height: 64px; }
+  .prow .facts { display: none; }
+  .prow .names .loc { font-size: 11px; }
+
+  .editor { grid-template-columns: 1fr; gap: 20px; }
+  .lighttable { position: static; }
+  .photogrid { grid-template-columns: repeat(3, 1fr); }
+  .pcell .ops { opacity: 1; } /* no hover on touch — keep actions visible */
+  .pair { grid-template-columns: 1fr; }
+  .panel { padding: 16px; }
+  .mapframe { height: 150px; }
+
+  .reviewbar {
+    left: 10px; right: 10px; bottom: 10px; transform: none;
+    flex-wrap: wrap; border-radius: 22px; justify-content: center;
+  }
+  .reviewbar .notefield { flex: 1 1 100%; order: -1; width: auto; }
+  .kbd-hint { display: none; }
+
+  .addsearch { flex-direction: column; }
+}

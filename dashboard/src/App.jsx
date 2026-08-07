@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import { api } from './api.js';
+import { signOut } from './auth.jsx';
 
 const ToastCtx = createContext(() => {});
 const ProgressCtx = createContext({ progress: null, refresh: () => {} });
@@ -45,7 +46,7 @@ export default function App() {
         <div className="shell">
           <header className="topbar">
             <Link to="/" aria-label="All places">
-              <img className="logo" src="/logo.png" alt="cityCrew" />
+              <img className="logo" src="logo.png" alt="cityCrew" />
             </Link>
             <h1>
               Data desk <span>· Ho Chi Minh City</span>
@@ -63,9 +64,11 @@ export default function App() {
                 </div>
               </div>
             )}
+            <Link className="syncbtn addbtn" to="/add">＋ Add place</Link>
             <button className="syncbtn" onClick={runSync} disabled={syncing}>
               {syncing ? 'Syncing…' : 'Sync mockup'}
             </button>
+            <button className="signout" onClick={signOut} title="Sign out" aria-label="Sign out">⎋</button>
           </header>
           <Outlet />
           {toast && <div className="toast" role="status">{toast}</div>}
