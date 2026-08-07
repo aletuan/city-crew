@@ -72,6 +72,9 @@ Share → **Add to Home Screen** để dùng như app.
 3. Đứng ở quán mới? **＋ Add place** → gõ tên → Import → chỉnh → Approve.
 4. Xong phiên: bấm **Sync mockup** — GitHub Actions xuất snapshot từ database
    và commit mockup mới lên `main`.
+5. Xem kết quả: mockup mới nhất luôn ở
+   **https://aletuan.github.io/city-crew/mockup.html** (commit sync tự
+   kích hoạt deploy lại Pages, chờ ~1 phút sau khi sync).
 
 ## Ghi chú
 
