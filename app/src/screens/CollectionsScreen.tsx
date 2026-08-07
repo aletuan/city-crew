@@ -10,6 +10,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, Empty, Screen, useTabBarClearance } from '../components/ui';
+import { useAuth } from '../lib/auth';
 import { Collection, coverOf, membersOf, useCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, radius, space, type } from '../theme';
@@ -17,6 +18,8 @@ import type { Nav } from '../nav';
 
 function GuestNotice() {
   const { t } = useI18n();
+  const { session } = useAuth();
+  if (session) return null;
   return (
     <View style={s.notice}>
       <Text style={s.noticeTitle}>

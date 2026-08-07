@@ -30,16 +30,20 @@ export function LangPill() {
   );
 }
 
-export function Screen({ title, children, right }: {
+export function Screen({ title, eyebrow, children, right }: {
   title: string;
+  /** Small uppercase line above the title — e.g. today's date. */
+  eyebrow?: string;
   children: React.ReactNode;
   right?: React.ReactNode;
 }) {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.header}>
-        <Text style={s.title}>{title}</Text>
-        <View style={{ flex: 1 }} />
+        <View style={{ flex: 1 }}>
+          {eyebrow ? <Text style={s.eyebrow}>{eyebrow}</Text> : null}
+          <Text style={s.title}>{title}</Text>
+        </View>
         {right ?? <LangPill />}
       </View>
       {children}
@@ -96,6 +100,10 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
   },
   title: { color: colors.text, ...type.title },
+  eyebrow: {
+    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
+    letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 6,
+  },
   langPill: {
     flexDirection: 'row', borderRadius: radius.pill,
     borderWidth: 1, borderColor: colors.borderGlassSoft, overflow: 'hidden',
