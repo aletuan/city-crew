@@ -36,6 +36,8 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+/* iOS overscroll bounce reveals the html background — keep it on-theme */
+html { background: var(--bg-app); }
 body {
   background: var(--bg-app);
   color: var(--text-primary);
