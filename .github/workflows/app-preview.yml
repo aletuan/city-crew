@@ -1,0 +1,49 @@
+# Publishes the Expo app as an EAS Update whenever app/ changes on main,
+# so the latest build can be opened in Expo Go from the expo.dev project
+# page — no laptop in the loop.
+#
+# One-time setup (optional — without it this workflow skips gracefully):
+#   1. Create a free account at https://expo.dev
+#   2. expo.dev → Account settings → Access tokens → create a token
+#   3. Repo → Settings → Secrets and variables → Actions → Secrets:
+#        EXPO_TOKEN = <the token>
+#
+# Local alternative (needs a computer): cd app && npx expo start,
+# then scan the QR with Expo Go.
+
+name: Publish app preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/app-preview.yml'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Skip when EXPO_TOKEN is not configured
+        if: env.EXPO_TOKEN == ''
+        run: echo "No EXPO_TOKEN secret — skipping EAS publish. See the header of this workflow file for setup."
+      - uses: actions/setup-node@v5
+        if: env.EXPO_TOKEN != ''
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+        if: env.EXPO_TOKEN != ''
+        working-directory: app
+      - name: Publish EAS Update
+        if: env.EXPO_TOKEN != ''
+        working-directory: app
+        run: |
+          npx eas-cli@latest init --non-interactive --force
+          npx eas-cli@latest update:configure --non-interactive
+          npx eas-cli@latest update --branch main --message "${{ github.event.head_commit.message || 'manual run' }}" --non-interactive
