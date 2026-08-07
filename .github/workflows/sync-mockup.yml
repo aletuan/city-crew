@@ -1,0 +1,51 @@
+# Regenerates the mockup from the database — the CI replacement for running
+# export-snapshot + inject-mockup on a laptop. Triggered by the dashboard's
+# "Sync mockup" button (via the sync-mockup Edge Function) or by hand from
+# the GitHub app: Actions → "Sync mockup from database" → Run workflow.
+#
+# Reads with the public anon key: RLS serves only published+approved places,
+# which is exactly what the mockup ships.
+
+name: Sync mockup from database
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-mockup
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: data/package-lock.json
+      - run: npm ci
+        working-directory: data
+      - name: Export snapshot and inject mockup
+        working-directory: data
+        env:
+          SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://amdvitzpogaejzzqroco.supabase.co' }}
+          SUPABASE_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZHZpdHpwb2dhZWp6enFyb2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5MDE0OTMsImV4cCI6MjEwMTQ3NzQ5M30.u-Ol-LikWblJSCArVkrSuBM4e-xRprE7GwjZc-jsKO4' }}
+        run: |
+          node scripts/export-snapshot.mjs
+          node scripts/inject-mockup.mjs
+      - name: Commit the refreshed mockup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add citycrew-mockup-dark.html data/snapshot/citycrew-data.json
+          if git diff --cached --quiet; then
+            echo "Mockup already in sync — nothing to commit."
+          else
+            git commit -m "Sync mockup from database"
+            git push
+          fi

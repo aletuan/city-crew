@@ -1,45 +1,172 @@
-async function handle(res) {
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `${res.status} ${res.statusText}`);
+// Data layer for the curation dashboard. Talks straight to Supabase with the
+// anon key + the signed-in editor's session; Row Level Security (see
+// supabase/migrations/) is what authorizes every write. Same interface the
+// components used against the old localhost Express API.
+
+import { supabase } from './lib/supabase.js';
+
+const BUCKET = 'place-photos';
+
+// Same whitelist the old server enforced — kept client-side so a typo'd field
+// fails loudly here instead of silently bouncing off RLS.
+const EDITABLE = new Set([
+  'name_en', 'name_vi', 'desc_en', 'desc_vi', 'neighborhood_en', 'neighborhood_vi',
+  'address', 'category', 'is_featured', 'vibe_tags', 'emoji',
+  'price_level', 'price_display', 'price_vnd', 'duration_min', 'duration_max',
+  'opening_hours', 'website', 'phone', 'saved_count', 'sort_order', 'is_published',
+  'review_status', 'review_note',
+]);
+
+const db = ({ data, error }) => {
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+// functions.invoke wraps non-2xx in a generic message — surface the body.
+async function invoke(name, body) {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (error) {
+    const detail = await error.context?.json?.().catch(() => null);
+    throw new Error(detail?.error ?? error.message);
   }
-  return res.json();
+  if (data?.error) throw new Error(data.error);
+  return data;
 }
 
 export const api = {
-  places: (params = {}) => {
-    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v));
-    return fetch(`/api/places?${qs}`).then(handle);
+  places: async (params = {}) => {
+    let query = supabase
+      .from('places')
+      .select('slug, name_en, name_vi, category, is_featured, vibe_tags, neighborhood_en, review_status, rating, rating_count, place_photos(photo_uri, is_cover, is_hidden)')
+      .order('slug');
+    if (params.status) query = query.eq('review_status', params.status);
+    if (params.category) query = query.eq('category', params.category);
+    if (params.vibe) query = query.contains('vibe_tags', [params.vibe]);
+    if (params.q) query = query.or(`name_en.ilike.%${params.q}%,name_vi.ilike.%${params.q}%`);
+    const rows = db(await query);
+    return rows.map((r) => {
+      const visible = r.place_photos.filter((p) => !p.is_hidden);
+      const cover = visible.find((p) => p.is_cover) ?? visible[0];
+      const { place_photos, ...rest } = r;
+      return { ...rest, cover_url: cover?.photo_uri ?? null, photo_count: visible.length };
+    });
   },
-  place: (slug) => fetch(`/api/places/${slug}`).then(handle),
-  savePlace: (slug, fields) =>
-    fetch(`/api/places/${slug}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(fields),
-    }).then(handle),
-  deletePlace: (slug) => fetch(`/api/places/${slug}`, { method: 'DELETE' }).then(handle),
-  progress: () => fetch('/api/progress').then(handle),
-  sync: () => fetch('/api/sync', { method: 'POST' }).then(handle),
-  patchPhoto: (id, fields) =>
-    fetch(`/api/photos/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(fields),
-    }).then(handle),
-  deletePhoto: (id) => fetch(`/api/photos/${id}`, { method: 'DELETE' }).then(handle),
-  reorderPhotos: (slug, ids) =>
-    fetch(`/api/places/${slug}/photo-order`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids }),
-    }).then(handle),
-  uploadPhoto: (slug, blob, filename) =>
-    fetch(`/api/places/${slug}/photos?filename=${encodeURIComponent(filename)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'image/jpeg' },
-      body: blob,
-    }).then(handle),
+
+  place: async (slug) => {
+    const rows = db(await supabase.from('places').select('*, place_photos(*)').eq('slug', slug).limit(1));
+    if (!rows.length) throw new Error('not found');
+    const place = rows[0];
+    place.place_photos.sort((a, b) => a.sort_order - b.sort_order);
+    return place;
+  },
+
+  savePlace: async (slug, fields) => {
+    const patch = {};
+    for (const [k, v] of Object.entries(fields)) {
+      if (!EDITABLE.has(k)) throw new Error(`field not editable: ${k}`);
+      patch[k] = v;
+    }
+    if (!Object.keys(patch).length) throw new Error('no fields');
+    if ('review_status' in patch) patch.reviewed_at = new Date().toISOString();
+    patch.updated_at = new Date().toISOString();
+    const rows = db(await supabase.from('places').update(patch).eq('slug', slug).select('slug'));
+    if (!rows.length) throw new Error('not found (or not an editor — check the editors table)');
+    return { ok: true };
+  },
+
+  deletePlace: async (slug) => {
+    const places = db(await supabase.from('places').select('id').eq('slug', slug).limit(1));
+    if (!places.length) throw new Error('not found');
+    const placeId = places[0].id;
+
+    // Collect uploaded objects before the cascade wipes the photo rows.
+    const uploads = db(await supabase.from('place_photos')
+      .select('storage_path').eq('place_id', placeId).eq('source', 'upload'));
+
+    db(await supabase.from('places').delete().eq('id', placeId).select('id'));
+
+    const paths = uploads.map((u) => u.storage_path).filter(Boolean);
+    if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
+    return { ok: true, removed_uploads: paths.length };
+  },
+
+  progress: async () => {
+    const rows = db(await supabase.from('places').select('review_status, category'));
+    const by = (key) => rows.reduce((acc, r) => ((acc[r[key]] = (acc[r[key]] ?? 0) + 1), acc), {});
+    return { total: rows.length, by_status: by('review_status'), by_category: by('category') };
+  },
+
+  sync: () => invoke('sync-mockup', {}),
+
+  searchPlaces: (query) => invoke('fetch-place', { action: 'search', query }),
+  importPlace: (place_id, category) => invoke('fetch-place', { action: 'import', place_id, category }),
+
+  patchPhoto: async (id, { is_cover, is_hidden }) => {
+    if (is_cover === true) {
+      const rows = db(await supabase.from('place_photos').select('place_id').eq('id', id).limit(1));
+      if (!rows.length) throw new Error('not found');
+      db(await supabase.from('place_photos').update({ is_cover: false }).eq('place_id', rows[0].place_id).select('id'));
+      db(await supabase.from('place_photos').update({ is_cover: true, is_hidden: false }).eq('id', id).select('id'));
+    }
+    if (typeof is_hidden === 'boolean') {
+      db(await supabase.from('place_photos').update({ is_hidden }).eq('id', id).select('id'));
+    }
+    return { ok: true };
+  },
+
+  reorderPhotos: async (slug, ids) => {
+    for (const [i, id] of ids.entries()) {
+      db(await supabase.from('place_photos').update({ sort_order: i }).eq('id', id).select('id'));
+    }
+    return { ok: true };
+  },
+
+  uploadPhoto: async (slug, blob, filename) => {
+    const places = db(await supabase.from('places').select('id').eq('slug', slug).limit(1));
+    if (!places.length) throw new Error('place not found');
+    const placeId = places[0].id;
+
+    const safeName = String(filename ?? 'photo').replace(/[^\w.-]/g, '_').slice(0, 60);
+    const path = `${slug}/${Date.now()}-${safeName}.jpg`;
+
+    const { error: upErr } = await supabase.storage.from(BUCKET)
+      .upload(path, blob, { contentType: 'image/jpeg' });
+    if (upErr) throw new Error(upErr.message);
+    const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
+
+    const existing = db(await supabase.from('place_photos').select('sort_order').eq('place_id', placeId));
+    const rows = db(await supabase.from('place_photos').insert({
+      place_id: placeId,
+      photo_ref: null,
+      photo_uri: publicUrl,
+      storage_path: path,
+      source: 'upload',
+      attribution_name: null,
+      attribution_uri: null,
+      sort_order: Math.max(-1, ...existing.map((r) => r.sort_order)) + 1,
+      is_cover: false,
+    }).select('*'));
+    return rows[0];
+  },
+
+  deletePhoto: async (id) => {
+    const rows = db(await supabase.from('place_photos').select('*').eq('id', id).limit(1));
+    if (!rows.length) throw new Error('not found');
+    const photo = rows[0];
+    db(await supabase.from('collections').update({ cover_photo_id: null }).eq('cover_photo_id', photo.id).select('id'));
+    db(await supabase.from('place_photos').delete().eq('id', photo.id).select('id'));
+    if (photo.source === 'upload' && photo.storage_path) {
+      await supabase.storage.from(BUCKET).remove([photo.storage_path]);
+    }
+    // keep a cover: promote the first visible photo if the cover was deleted
+    if (photo.is_cover) {
+      const rest = db(await supabase.from('place_photos')
+        .select('id').eq('place_id', photo.place_id).eq('is_hidden', false)
+        .order('sort_order').limit(1));
+      if (rest.length) db(await supabase.from('place_photos').update({ is_cover: true }).eq('id', rest[0].id).select('id'));
+    }
+    return { ok: true };
+  },
 };
 
 // Client-side resize: longest edge ≤ 1600px, JPEG 0.85 — keeps uploads ~<1MB.

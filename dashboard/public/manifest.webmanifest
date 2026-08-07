@@ -1,0 +1,12 @@
+{
+  "name": "cityCrew Data desk",
+  "short_name": "Data desk",
+  "description": "Curate cityCrew places from anywhere",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0B0910",
+  "theme_color": "#0B0910",
+  "icons": [
+    { "src": "logo.png", "sizes": "any", "type": "image/png" }
+  ]
+}
