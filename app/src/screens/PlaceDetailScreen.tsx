@@ -50,7 +50,7 @@ function vibeLabel(place: Place, t: (en: string, vi: string) => string): string 
 function RoundIcon({ name }: { name: keyof typeof Ionicons.glyphMap }) {
   return (
     <View style={s.roundIcon}>
-      <Ionicons name={name} size={19} color={colors.aiAmber} />
+      <Ionicons name={name} size={19} color={colors.champagne} />
     </View>
   );
 }
@@ -83,7 +83,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const [saved, setSaved] = useState(false);
 
   if (loading && !place) {
-    return <SafeAreaView style={s.screen}><ActivityIndicator color={colors.aiPink} style={{ marginTop: 64 }} /></SafeAreaView>;
+    return <SafeAreaView style={s.screen}><ActivityIndicator color={colors.champagne} style={{ marginTop: 64 }} /></SafeAreaView>;
   }
   if (!place) {
     return <SafeAreaView style={s.screen}><Empty text={t('Place not found.', 'Không tìm thấy địa điểm.')} /></SafeAreaView>;
@@ -133,7 +133,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             <Ionicons name="share-outline" size={20} color="#fff" />
           </Pressable>
           <Pressable onPress={() => setSaved((v) => !v)} style={[s.fab, { right: 12, top: 12 }]} accessibilityLabel="Save">
-            <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? colors.aiPink : '#fff'} />
+            <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? colors.champagne : '#fff'} />
           </Pressable>
 
           {photos.length > 0 && (
@@ -167,7 +167,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             {place.rating ? (
               <View style={s.ratingBadge}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <Ionicons name="star" size={16} color={colors.aiAmber} />
+                  <Ionicons name="star" size={16} color={colors.champagne} />
                   <Text style={s.ratingValue}>{place.rating}</Text>
                 </View>
                 {reviews ? <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá')}</Text> : null}
@@ -268,7 +268,7 @@ const s = StyleSheet.create({
     position: 'absolute', left: 12, bottom: 12, flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: 'rgba(10,8,13,0.65)', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6,
   },
-  counterText: { color: '#fff', fontSize: 12.5, fontFamily: font.semibold },
+  counterText: { color: '#fff', fontSize: 12.5, fontWeight: font.semibold },
   dots: {
     position: 'absolute', bottom: 15, alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 7,
@@ -284,21 +284,21 @@ const s = StyleSheet.create({
 
   body: { paddingHorizontal: 20, paddingTop: 18 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  name: { color: colors.text, fontSize: 27, fontFamily: font.extrabold, letterSpacing: -0.5 },
+  name: { color: colors.text, fontSize: 27, fontWeight: font.extrabold, letterSpacing: -0.5 },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
-  loc: { color: colors.textTertiary, fontSize: 14.5, fontFamily: font.medium },
+  loc: { color: colors.textTertiary, fontSize: 14.5, fontWeight: font.medium },
   ratingBadge: {
     backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.borderGlassSoft,
     borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', gap: 3,
   },
-  ratingValue: { color: colors.text, fontSize: 18, fontFamily: font.extrabold },
-  ratingCount: { color: colors.textTertiary, fontSize: 11.5, fontFamily: font.medium },
+  ratingValue: { color: colors.text, fontSize: 18, fontWeight: font.extrabold },
+  ratingCount: { color: colors.textTertiary, fontSize: 11.5, fontWeight: font.medium },
 
   facts: { flexDirection: 'row', flexWrap: 'wrap', gap: 18, marginTop: 16 },
   fact: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  factText: { color: colors.textSecondary, fontSize: 14, fontFamily: font.semibold },
+  factText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
 
-  desc: { color: colors.textSecondary, fontSize: 15, lineHeight: 23, fontFamily: font.regular, marginTop: 14 },
+  desc: { color: colors.textSecondary, fontSize: 15, lineHeight: 23, fontWeight: font.regular, marginTop: 14 },
   divider: { height: 1, backgroundColor: colors.borderGlassSoft, marginVertical: 18 },
 
   infoCard: {
@@ -311,13 +311,13 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(246,164,92,0.10)', borderWidth: 1, borderColor: 'rgba(246,164,92,0.25)',
   },
   infoLabel: {
-    color: colors.textTertiary, fontSize: 11, fontFamily: font.bold,
+    color: colors.textTertiary, fontSize: 11, fontWeight: font.bold,
     textTransform: 'uppercase', letterSpacing: 1.4, marginBottom: 4,
   },
-  infoValue: { color: colors.textSecondary, fontSize: 14.5, lineHeight: 21, fontFamily: font.regular },
+  infoValue: { color: colors.textSecondary, fontSize: 14.5, lineHeight: 21, fontWeight: font.regular },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  hourDay: { color: colors.textSecondary, fontSize: 13.5, fontFamily: font.medium },
-  hourTime: { color: colors.textSecondary, fontSize: 13.5, fontFamily: font.regular },
-  callTitle: { color: colors.text, fontSize: 15.5, fontFamily: font.bold, marginBottom: 2 },
+  hourDay: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
+  hourTime: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.regular },
+  callTitle: { color: colors.text, fontSize: 15.5, fontWeight: font.bold, marginBottom: 2 },
   goBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 });

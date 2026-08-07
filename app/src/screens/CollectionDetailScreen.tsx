@@ -35,7 +35,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {col && (col.desc_en || col.desc_vi) && (
         <Text style={s.desc}>{t(col.desc_en, col.desc_vi)}</Text>
       )}
-      {loading && members.length === 0 && <ActivityIndicator color={colors.aiPink} style={{ marginTop: 48 }} />}
+      {loading && members.length === 0 && <ActivityIndicator color={colors.champagne} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.')} />}
       <FlatList
         data={members}
@@ -57,7 +57,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   backText: { color: '#fff', fontSize: 26, lineHeight: 30, marginTop: -2 },
-  title: { color: colors.text, fontSize: 21, fontFamily: font.extrabold, letterSpacing: -0.3 },
-  meta: { color: colors.textTertiary, fontSize: 12.5, fontFamily: font.medium, marginTop: 1 },
-  desc: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontFamily: font.regular, paddingHorizontal: 20, paddingBottom: 12 },
+  title: { color: colors.text, fontSize: 21, fontWeight: font.extrabold, letterSpacing: -0.3 },
+  meta: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium, marginTop: 1 },
+  desc: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontWeight: font.regular, paddingHorizontal: 20, paddingBottom: 12 },
 });

@@ -5,12 +5,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold,
-  Figtree_700Bold, Figtree_800ExtraBold, useFonts,
-} from '@expo-google-fonts/figtree';
 import { I18nProvider, useI18n } from './src/lib/i18n';
-import { colors, font } from './src/theme';
+import { colors, font, radius } from './src/theme';
 import type { RootStackParamList } from './src/nav';
 import ExploreScreen from './src/screens/ExploreScreen';
 import PlaceDetailScreen from './src/screens/PlaceDetailScreen';
@@ -43,13 +39,14 @@ function CollectionsStack() {
   );
 }
 
-// [inactive, active] — the focused tab uses the filled glyph.
-const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
-  Ideas: ['sparkles-outline', 'sparkles'],
-  Explore: ['compass-outline', 'compass'],
-  Trips: ['calendar-outline', 'calendar'],
-  Collections: ['bookmark-outline', 'bookmark'],
-  Profile: ['person-outline', 'person'],
+// Thin monochrome glyphs throughout — the selected state is carried by
+// champagne tint alone, never by a filled or highlighted shape.
+const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  Ideas: 'sparkles-outline',
+  Explore: 'compass-outline',
+  Trips: 'calendar-outline',
+  Collections: 'bookmark-outline',
+  Profile: 'person-outline',
 };
 
 function Tabs() {
@@ -67,20 +64,25 @@ function Tabs() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'rgba(13,10,16,0.96)',
-          borderTopColor: 'rgba(255,255,255,0.06)',
-          borderTopLeftRadius: 22,
-          borderTopRightRadius: 22,
+          // A rounded, almost-black translucent container with a single
+          // hairline of warmth along its top edge.
+          backgroundColor: 'rgba(12,13,12,0.94)',
+          borderTopColor: colors.borderGlassSoft,
+          borderTopWidth: 1,
+          borderTopLeftRadius: radius.tabBar,
+          borderTopRightRadius: radius.tabBar,
+          height: 88,
+          paddingTop: 8,
         },
-        tabBarActiveTintColor: colors.aiAmber,
-        tabBarInactiveTintColor: 'rgba(255,255,255,0.5)',
+        tabBarActiveTintColor: colors.champagne,
+        tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabel: ({ color, focused }) => (
-          <Text style={{ color, fontSize: 11, fontFamily: focused ? font.semibold : font.medium }}>
+          <Text style={{ color, fontSize: 11.5, fontWeight: focused ? font.semibold : font.regular }}>
             {labels[route.name]}
           </Text>
         ),
-        tabBarIcon: ({ color, size, focused }) => (
-          <Ionicons name={ICONS[route.name][focused ? 1 : 0]} size={size - 2} color={color} />
+        tabBarIcon: ({ color, size }) => (
+          <Ionicons name={ICONS[route.name]} size={size - 2} color={color} />
         ),
       })}
     >
@@ -99,11 +101,6 @@ const navTheme = {
 };
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
-    Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold,
-    Figtree_700Bold, Figtree_800ExtraBold,
-  });
-  if (!fontsLoaded) return null;
   return (
     <I18nProvider>
       <NavigationContainer theme={navTheme}>

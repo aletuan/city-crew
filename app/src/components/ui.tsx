@@ -1,11 +1,11 @@
 // Shared UI atoms: screen scaffold with header + language pill, chips,
-// glass cards — the mockup's visual language in React Native.
+// translucent charcoal cards — the cityCrew design system in React Native.
 
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius } from '../theme';
+import { colors, font, radius, space, type } from '../theme';
 
 export function LangPill() {
   const { lang, toggle } = useI18n();
@@ -58,29 +58,30 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 12,
+    paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
   },
-  title: { color: colors.text, fontSize: 30, fontFamily: font.extrabold, letterSpacing: -0.5 },
+  title: { color: colors.text, ...type.title },
   langPill: {
     flexDirection: 'row', borderRadius: radius.pill,
-    borderWidth: 1, borderColor: colors.borderGlass, overflow: 'hidden',
+    borderWidth: 1, borderColor: colors.borderGlassSoft, overflow: 'hidden',
   },
   langOpt: {
-    paddingHorizontal: 12, paddingVertical: 6, fontSize: 12,
-    color: colors.textTertiary, fontFamily: font.semibold,
+    paddingHorizontal: 12, paddingVertical: 6, fontSize: 12.5,
+    color: colors.textTertiary, fontWeight: font.medium,
   },
-  langOn: { backgroundColor: colors.surfaceGlassStrong, color: colors.text },
+  // Selected control: champagne, and nothing louder.
+  langOn: { backgroundColor: colors.surfaceGlass, color: colors.champagne },
   chip: {
     borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
     paddingHorizontal: 14, paddingVertical: 7, marginRight: 8,
   },
   chipOn: { backgroundColor: colors.surfaceGlassStrong, borderColor: 'transparent' },
-  chipText: { color: colors.textSecondary, fontSize: 13, fontFamily: font.semibold },
+  chipText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.semibold },
   chipTextOn: { color: colors.text },
   card: {
-    backgroundColor: colors.bgElevated, borderRadius: radius.card,
+    backgroundColor: colors.surfaceCard, borderRadius: radius.card,
     borderWidth: 1, borderColor: colors.borderGlassSoft, overflow: 'hidden',
   },
   empty: { padding: 48, alignItems: 'center' },
-  emptyText: { color: colors.textTertiary, fontSize: 14, fontFamily: font.regular, textAlign: 'center' },
+  emptyText: { color: colors.textTertiary, ...type.meta, textAlign: 'center' },
 });
