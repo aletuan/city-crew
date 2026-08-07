@@ -43,12 +43,13 @@ function CollectionsStack() {
   );
 }
 
-const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  Ideas: 'sparkles-outline',
-  Explore: 'compass-outline',
-  Trips: 'calendar-outline',
-  Collections: 'bookmark-outline',
-  Profile: 'person-outline',
+// [inactive, active] — the focused tab uses the filled glyph.
+const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
+  Ideas: ['sparkles-outline', 'sparkles'],
+  Explore: ['compass-outline', 'compass'],
+  Trips: ['calendar-outline', 'calendar'],
+  Collections: ['bookmark-outline', 'bookmark'],
+  Profile: ['person-outline', 'person'],
 };
 
 function Tabs() {
@@ -68,14 +69,18 @@ function Tabs() {
         tabBarStyle: {
           backgroundColor: 'rgba(13,10,16,0.96)',
           borderTopColor: 'rgba(255,255,255,0.06)',
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
         },
-        tabBarActiveTintColor: colors.text,
+        tabBarActiveTintColor: colors.aiAmber,
         tabBarInactiveTintColor: 'rgba(255,255,255,0.5)',
-        tabBarLabel: ({ color }) => (
-          <Text style={{ color, fontSize: 11, fontFamily: font.medium }}>{labels[route.name]}</Text>
+        tabBarLabel: ({ color, focused }) => (
+          <Text style={{ color, fontSize: 11, fontFamily: focused ? font.semibold : font.medium }}>
+            {labels[route.name]}
+          </Text>
         ),
-        tabBarIcon: ({ color, size }) => (
-          <Ionicons name={ICONS[route.name]} size={size - 2} color={color} />
+        tabBarIcon: ({ color, size, focused }) => (
+          <Ionicons name={ICONS[route.name][focused ? 1 : 0]} size={size - 2} color={color} />
         ),
       })}
     >
