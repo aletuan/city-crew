@@ -2,8 +2,10 @@
 // translucent charcoal cards — the cityCrew design system in React Native.
 
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 
@@ -57,6 +59,28 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
   return <View style={[s.card, style]}>{children}</View>;
 }
 
+/** Reflected city light: heavily diffused amber, strongest across the
+ *  browsing band and falling away to black at both ends. */
+export function AmbientWarmth({ style }: { style?: StyleProp<ViewStyle> }) {
+  return (
+    <LinearGradient
+      colors={['transparent', colors.emberGlow, colors.emberGlowFade, 'transparent']}
+      locations={[0, 0.34, 0.72, 1]}
+      style={[s.ambient, style]}
+      pointerEvents="none"
+    />
+  );
+}
+
+/** In-page back control: 44pt circular glass, shared by detail screens. */
+export function BackButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={s.backBtn} accessibilityLabel="Back">
+      <Ionicons name="chevron-back" size={22} color={colors.text} />
+    </Pressable>
+  );
+}
+
 export function Empty({ text }: { text: string }) {
   return (
     <View style={s.empty}>
@@ -86,12 +110,18 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
     paddingHorizontal: 14, paddingVertical: 7, marginRight: 8,
   },
-  chipOn: { backgroundColor: colors.surfaceGlassStrong, borderColor: 'transparent' },
-  chipText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.semibold },
-  chipTextOn: { color: colors.text },
+  // Selected control carries champagne — same rule as the language pill.
+  chipOn: { backgroundColor: colors.surfaceGlass, borderColor: colors.borderGlass },
+  chipText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
+  chipTextOn: { color: colors.champagne, fontWeight: font.semibold },
   card: {
     backgroundColor: colors.surfaceCard, borderRadius: radius.card,
     borderWidth: 1, borderColor: colors.borderGlassSoft, overflow: 'hidden',
+  },
+  ambient: { position: 'absolute', left: 0, right: 0, top: -40, height: 760 },
+  backBtn: {
+    width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceGlass, borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
   empty: { padding: 48, alignItems: 'center' },
   emptyText: { color: colors.textTertiary, ...type.meta, textAlign: 'center' },

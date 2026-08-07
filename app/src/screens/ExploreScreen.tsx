@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, View } from 'react-native';
 import PlaceCard from '../components/PlaceCard';
-import { Chip, Empty, Screen, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, Screen, useTabBarClearance } from '../components/ui';
 import { usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { colors } from '../theme';
+import { colors, space } from '../theme';
 import type { Nav } from '../nav';
 
 const CATS = [
@@ -26,8 +26,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
 
   return (
     <Screen title={t('Explore', 'Khám phá')}>
+      <View style={{ flex: 1 }}>
+      <AmbientWarmth />
       <View style={{ paddingBottom: 12 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space.page }}>
           {CATS.map((c) => (
             <Chip key={c.key} label={t(c.en, c.vi)} active={cat === c.key} onPress={() => setCat(c.key)} />
           ))}
@@ -44,10 +46,12 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           )}
           ListEmptyComponent={<Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.')} />}
           contentContainerStyle={{ paddingBottom: tabClearance }}
+          showsVerticalScrollIndicator={false}
           onRefresh={reload}
           refreshing={loading}
         />
       )}
+      </View>
     </Screen>
   );
 }

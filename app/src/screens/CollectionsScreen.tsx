@@ -8,26 +8,12 @@
 import React from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Card, Empty, Screen, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, Empty, Screen, useTabBarClearance } from '../components/ui';
 import { Collection, coverOf, membersOf, useCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
-
-/** Reflected city light: heavily diffused amber, strongest across the
- *  browsing band and falling away to black at both ends. */
-function AmbientWarmth() {
-  return (
-    <LinearGradient
-      colors={['transparent', colors.emberGlow, colors.emberGlowFade, 'transparent']}
-      locations={[0, 0.34, 0.72, 1]}
-      style={s.ambient}
-      pointerEvents="none"
-    />
-  );
-}
 
 function GuestNotice() {
   const { t } = useI18n();
@@ -110,8 +96,6 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
-  ambient: { position: 'absolute', left: 0, right: 0, top: -40, height: 760 },
-
   notice: {
     marginHorizontal: space.page, marginBottom: space.titleToContent,
     backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,

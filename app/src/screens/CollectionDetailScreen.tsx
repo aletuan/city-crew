@@ -2,10 +2,10 @@ import React, { useMemo } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PlaceCard from '../components/PlaceCard';
-import { Empty, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, BackButton, Empty, useTabBarClearance } from '../components/ui';
 import { membersOf, useCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { colors, font } from '../theme';
+import { colors, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
@@ -19,10 +19,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
+      <AmbientWarmth />
       <View style={s.header}>
-        <Pressable onPress={() => navigation.goBack()} style={s.back} accessibilityLabel="Back">
-          <Text style={s.backText}>‹</Text>
-        </Pressable>
+        <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
           <Text style={s.title} numberOfLines={1}>{col ? t(col.title_en, col.title_vi) : ''}</Text>
           {col && (
@@ -45,6 +44,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
         )}
         contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );
@@ -52,13 +52,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 },
-  back: {
-    width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surfaceGlass,
-    alignItems: 'center', justifyContent: 'center',
+  header: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingHorizontal: space.page, paddingTop: 10, paddingBottom: 10,
   },
-  backText: { color: '#fff', fontSize: 26, lineHeight: 30, marginTop: -2 },
-  title: { color: colors.text, fontSize: 21, fontWeight: font.extrabold, letterSpacing: -0.3 },
-  meta: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium, marginTop: 1 },
-  desc: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, fontWeight: font.regular, paddingHorizontal: 20, paddingBottom: 12 },
+  title: { color: colors.text, ...type.section },
+  meta: { color: colors.textTertiary, ...type.meta, marginTop: 2 },
+  desc: {
+    color: colors.textSecondary, ...type.body, lineHeight: 24,
+    paddingHorizontal: space.page, paddingBottom: 12,
+  },
 });
