@@ -21,6 +21,28 @@ import ComingSoonScreen from './src/screens/ComingSoonScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+const stackOptions = { headerShown: false, contentStyle: { backgroundColor: colors.bg } } as const;
+
+// Each tab owns its stack, so detail screens keep the bottom tab bar visible.
+function ExploreStack() {
+  return (
+    <Stack.Navigator screenOptions={stackOptions}>
+      <Stack.Screen name="ExploreHome" component={ExploreScreen} />
+      <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function CollectionsStack() {
+  return (
+    <Stack.Navigator screenOptions={stackOptions}>
+      <Stack.Screen name="CollectionsHome" component={CollectionsScreen} />
+      <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
+      <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
+    </Stack.Navigator>
+  );
+}
+
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Ideas: 'sparkles-outline',
   Explore: 'compass-outline',
@@ -58,9 +80,9 @@ function Tabs() {
       })}
     >
       <Tab.Screen name="Ideas">{() => <ComingSoonScreen titleEn="Ideas" titleVi="Ý tưởng" />}</Tab.Screen>
-      <Tab.Screen name="Explore" component={ExploreScreen} />
+      <Tab.Screen name="Explore" component={ExploreStack} />
       <Tab.Screen name="Trips">{() => <ComingSoonScreen titleEn="Trips" titleVi="Chuyến đi" />}</Tab.Screen>
-      <Tab.Screen name="Collections" component={CollectionsScreen} />
+      <Tab.Screen name="Collections" component={CollectionsStack} />
       <Tab.Screen name="Profile">{() => <ComingSoonScreen titleEn="Profile" titleVi="Cá nhân" />}</Tab.Screen>
     </Tab.Navigator>
   );
@@ -81,11 +103,7 @@ export default function App() {
     <I18nProvider>
       <NavigationContainer theme={navTheme}>
         <StatusBar style="light" />
-        <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-          <Stack.Screen name="Tabs" component={Tabs} />
-          <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
-          <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
-        </Stack.Navigator>
+        <Tabs />
       </NavigationContainer>
     </I18nProvider>
   );

@@ -1,8 +1,11 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
+// Detail screens live inside each tab's own stack (Explore, Collections),
+// so the bottom tab bar stays visible everywhere.
 export type RootStackParamList = {
-  Tabs: undefined;
+  ExploreHome: undefined;
+  CollectionsHome: undefined;
   PlaceDetail: { slug: string };
   CollectionDetail: { slug: string };
 };
