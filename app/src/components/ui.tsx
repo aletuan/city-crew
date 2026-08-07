@@ -7,16 +7,15 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 
-// ── floating tab bar geometry ──
-// The bar is position:absolute, so screens must clear it themselves.
-export const TAB_BAR_HEIGHT = 68;
-export const TAB_BAR_GAP = 6;
-export const TAB_BAR_MARGIN = 14;
+// ── tab bar geometry ──
+// A full-width Apple-style bar over blur; position:absolute so content
+// scrolls beneath it, which means screens must clear it themselves.
+export const TAB_BAR_HEIGHT = 62;
 
-/** Bottom padding that clears the floating tab bar plus breathing room. */
+/** Bottom padding that clears the translucent tab bar plus breathing room. */
 export function useTabBarClearance(extra = 18): number {
   const insets = useSafeAreaInsets();
-  return insets.bottom + TAB_BAR_GAP + TAB_BAR_HEIGHT + extra;
+  return insets.bottom + TAB_BAR_HEIGHT + extra;
 }
 
 export function LangPill() {
