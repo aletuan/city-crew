@@ -2,9 +2,11 @@
 // roomy cards: big rounded thumbnail, title, "n places · by @curator" meta,
 // and a circular chevron button (per the reference design).
 //
-// Each card sits on an ambient halo: its own cover photo, blown out beyond
-// the card, heavily blurred and dimmed — the mockup design system's
-// `.ambient` treatment, so the warm light of the photo bleeds into the page.
+// Each card glows: an amber platform shadow with a wide radius. The OS
+// renders the falloff, so the halo is always soft-edged and stays on the
+// brand's warm tone regardless of what colours the cover photo happens to
+// carry — a blurred copy of the photo can't do either (hard view bounds,
+// and a green park would wash the page green).
 
 import React from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -59,35 +61,26 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             const count = membersOf(item, places).length || item.collection_places.length;
             const uri = coverFor(item);
             return (
-              <View style={s.row}>
-                {/* ambient halo — the card's own photo, blurred and dimmed */}
-                {uri && (
-                  <Image
-                    source={{ uri }}
-                    style={s.ambient}
-                    blurRadius={38}
-                    contentFit="cover"
-                    pointerEvents="none"
-                  />
-                )}
-                <Pressable onPress={() => navigation.navigate('CollectionDetail', { slug: item.slug })}>
-                  <Card style={s.card}>
-                    {uri
-                      ? <Image source={{ uri }} style={s.thumb} contentFit="cover" transition={200} />
-                      : <View style={s.thumb} />}
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.title} numberOfLines={2}>{t(item.title_en, item.title_vi)}</Text>
-                      <Text style={s.meta} numberOfLines={1}>
-                        {count} {t('places', 'địa điểm')}
-                        {item.curator_handle ? `  ·  ${t('by', 'bởi')} ${item.curator_handle}` : ''}
-                      </Text>
-                    </View>
-                    <View style={s.chevron}>
-                      <Ionicons name="chevron-forward" size={18} color={colors.text} />
-                    </View>
-                  </Card>
-                </Pressable>
-              </View>
+              <Pressable
+                style={s.row}
+                onPress={() => navigation.navigate('CollectionDetail', { slug: item.slug })}
+              >
+                <Card style={s.card}>
+                  {uri
+                    ? <Image source={{ uri }} style={s.thumb} contentFit="cover" transition={200} />
+                    : <View style={s.thumb} />}
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.title} numberOfLines={2}>{t(item.title_en, item.title_vi)}</Text>
+                    <Text style={s.meta} numberOfLines={1}>
+                      {count} {t('places', 'địa điểm')}
+                      {item.curator_handle ? `  ·  ${t('by', 'bởi')} ${item.curator_handle}` : ''}
+                    </Text>
+                  </View>
+                  <View style={s.chevron}>
+                    <Ionicons name="chevron-forward" size={18} color={colors.text} />
+                  </View>
+                </Card>
+              </Pressable>
             );
           }}
           ListEmptyComponent={<Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.')} />}
@@ -114,21 +107,22 @@ const s = StyleSheet.create({
     paddingHorizontal: 20, marginBottom: 14,
   },
 
-  // Holds the halo and the card; must not clip, so the glow can bleed out.
-  row: { marginHorizontal: 20, marginBottom: 20 },
-  ambient: {
-    position: 'absolute', top: -16, bottom: -16, left: -10, right: -10,
-    borderRadius: 42, opacity: 0.42,
+  // Carries the amber glow. Needs an opaque background and a matching
+  // radius for the platform to cast the shadow from the card's shape.
+  row: {
+    marginHorizontal: 20, marginBottom: 22,
+    borderRadius: radius.card, backgroundColor: colors.bgElevated,
+    shadowColor: colors.aiAmber, shadowOpacity: 0.32, shadowRadius: 20,
+    shadowOffset: { width: 0, height: 4 }, elevation: 10,
   },
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 16, padding: 14,
-    // Translucent so the halo tints the surface; overflow must stay visible
-    // or iOS clips the shadow (the thumbnail rounds itself).
-    backgroundColor: 'rgba(20,17,25,0.80)',
-    borderColor: 'rgba(246,164,92,0.20)',
+    borderColor: 'rgba(246,164,92,0.22)',
+    // Must stay visible or iOS clips the drop shadow; the thumbnail
+    // rounds its own corners, so nothing here needs clipping.
     overflow: 'visible',
-    shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 }, elevation: 8,
+    shadowColor: '#000', shadowOpacity: 0.45, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
   thumb: { width: 104, height: 104, borderRadius: 22, backgroundColor: colors.surfaceGlass },
   title: { color: colors.text, fontSize: 19, fontFamily: font.bold, letterSpacing: -0.3 },
