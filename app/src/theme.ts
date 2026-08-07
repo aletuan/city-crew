@@ -10,14 +10,15 @@ export const colors = {
   bg: '#0A0B0A',
   /** Solid charcoal for surfaces that must be opaque. */
   bgElevated: '#151614',
-  /** Translucent smoky card fill with a faint warm cast. */
-  surfaceCard: 'rgba(32,31,28,0.72)',
+  /** Translucent smoky card fill, warm-cast so the ambient light reads
+   *  through it rather than sitting behind a neutral panel. */
+  surfaceCard: 'rgba(38,34,28,0.72)',
 
   surfaceGlass: 'rgba(247,247,245,0.06)',
   surfaceGlassStrong: 'rgba(247,247,245,0.12)',
   /** Hairlines are warm gray at low opacity, never bright white. */
-  borderGlass: 'rgba(190,180,155,0.18)',
-  borderGlassSoft: 'rgba(190,180,155,0.11)',
+  borderGlass: 'rgba(214,182,132,0.24)',
+  borderGlassSoft: 'rgba(214,182,132,0.16)',
 
   text: '#F7F7F5',
   textSecondary: '#B7B6B1',
@@ -26,8 +27,10 @@ export const colors = {
   /** The one identity colour: warm champagne. Active state only. */
   champagne: '#E8D49B',
   champagneBright: '#F2DFA3',
-  /** Ambient city-light warmth for background glows. */
-  emberGlow: 'rgba(232,196,132,0.055)',
+  /** Ambient city-light warmth for background glows — muted amber, the
+   *  warmest of the sanctioned glow tones, so it carries at low alpha. */
+  emberGlow: 'rgba(226,168,96,0.16)',
+  emberGlowFade: 'rgba(226,168,96,0.05)',
 
   ok: '#8FBF8A',
   bad: '#D98A80',
