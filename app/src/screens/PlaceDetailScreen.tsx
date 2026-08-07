@@ -14,6 +14,7 @@ import { fmtCount, photosOf, Place, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import { AmbientWarmth, Empty, useTabBarClearance } from '../components/ui';
+import PricePill from '../components/PricePill';
 import type { Nav, RootRoute } from '../nav';
 
 function fmtDuration(min: number | null, max: number | null, vi: boolean): string | null {
@@ -179,11 +180,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
           {/* ── fact row ── */}
           <View style={s.facts}>
-            {place.price_display || place.price_vnd ? (
-              <View style={s.fact}>
-                <Ionicons name="pricetag-outline" size={15} color={colors.textSecondary} />
-                <Text style={s.factText}>{place.price_display ?? `${Math.round((place.price_vnd ?? 0) / 1000)}k₫`}</Text>
-              </View>
+            {place.price_display || place.price_vnd != null ? (
+              <PricePill place={place} />
             ) : null}
             {dur ? (
               <View style={s.fact}>
@@ -296,7 +294,7 @@ const s = StyleSheet.create({
   ratingValue: { color: colors.text, fontSize: 18, fontWeight: font.bold },
   ratingCount: { color: colors.textTertiary, fontSize: 12, fontWeight: font.regular },
 
-  facts: { flexDirection: 'row', flexWrap: 'wrap', gap: 18, marginTop: 16 },
+  facts: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 18, marginTop: 16 },
   fact: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   factText: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.medium },
 
