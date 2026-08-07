@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PlaceCard from '../components/PlaceCard';
-import { Empty } from '../components/ui';
+import { Empty, useTabBarClearance } from '../components/ui';
 import { membersOf, useCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font } from '../theme';
@@ -15,6 +15,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const col = useMemo(() => cols.data.find((c) => c.slug === route.params.slug), [cols.data, route.params.slug]);
   const members = useMemo(() => (col ? membersOf(col, places) : []), [col, places]);
   const loading = cols.loading || placesLoading;
+  const tabClearance = useTabBarClearance();
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -43,7 +44,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         renderItem={({ item }) => (
           <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
         )}
-        contentContainerStyle={{ paddingTop: 8, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
       />
     </SafeAreaView>
   );
