@@ -7,6 +7,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { StatusBar } from 'expo-status-bar';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import { AuthProvider } from './src/lib/auth';
 import { I18nProvider, useI18n } from './src/lib/i18n';
 import { colors, font } from './src/theme';
 import { TAB_BAR_HEIGHT } from './src/components/ui';
@@ -16,6 +17,7 @@ import PlaceDetailScreen from './src/screens/PlaceDetailScreen';
 import CollectionsScreen from './src/screens/CollectionsScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
 import ComingSoonScreen from './src/screens/ComingSoonScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -111,7 +113,7 @@ function Tabs() {
       <Tab.Screen name="Explore" component={ExploreStack} />
       <Tab.Screen name="Trips">{() => <ComingSoonScreen titleEn="Trips" titleVi="Chuyến đi" />}</Tab.Screen>
       <Tab.Screen name="Collections" component={CollectionsStack} />
-      <Tab.Screen name="Profile">{() => <ComingSoonScreen titleEn="Profile" titleVi="Cá nhân" />}</Tab.Screen>
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -124,12 +126,14 @@ const navTheme = {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <I18nProvider>
-        <NavigationContainer theme={navTheme}>
-          <StatusBar style="light" />
-          <Tabs />
-        </NavigationContainer>
-      </I18nProvider>
+      <AuthProvider>
+        <I18nProvider>
+          <NavigationContainer theme={navTheme}>
+            <StatusBar style="light" />
+            <Tabs />
+          </NavigationContainer>
+        </I18nProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

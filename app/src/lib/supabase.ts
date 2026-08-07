@@ -1,4 +1,5 @@
 import 'react-native-url-polyfill/auto';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
 // Public client credentials (publishable key) — RLS serves only
@@ -8,5 +9,12 @@ const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://amdvitzpogaejzzqroc
 const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? 'sb_publishable_VVol99Jqs0QYzeVrmOawlw_ZpXqcv7B';
 
 export const supabase = createClient(url, key, {
-  auth: { persistSession: false, autoRefreshToken: false },
+  auth: {
+    storage: AsyncStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+    // No web redirect flow in the app — sign-in is email OTP, so there is
+    // never a session in a URL to detect.
+    detectSessionInUrl: false,
+  },
 });
