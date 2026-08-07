@@ -15,6 +15,7 @@ on:
     branches: [main]
     paths:
       - 'dashboard/**'
+      - 'citycrew-mockup-dark.html'
       - '.github/workflows/deploy-dashboard.yml'
   workflow_dispatch:
 
@@ -45,6 +46,11 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://amdvitzpogaejzzqroco.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'sb_publishable_VVol99Jqs0QYzeVrmOawlw_ZpXqcv7B' }}
+      # Ship the mockup alongside the dashboard so the freshly synced demo is
+      # viewable at <pages-url>/mockup.html — sync commits re-trigger this
+      # workflow via the paths filter above.
+      - name: Include the mockup page
+        run: cp ../citycrew-mockup-dark.html dist/mockup.html
       - uses: actions/configure-pages@v5
         with:
           enablement: true
