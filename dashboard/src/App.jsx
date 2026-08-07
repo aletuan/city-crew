@@ -64,6 +64,8 @@ export default function App() {
                 </div>
               </div>
             )}
+            {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
+            <a className="syncbtn addbtn" href="mockup.html" target="_blank" rel="noreferrer">Mockup ↗</a>
             <Link className="syncbtn addbtn" to="/add">＋ Add place</Link>
             <button className="syncbtn" onClick={runSync} disabled={syncing}>
               {syncing ? 'Syncing…' : 'Sync mockup'}
