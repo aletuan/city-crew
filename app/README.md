@@ -29,6 +29,10 @@ npx expo start          # thêm --tunnel nếu điện thoại khác mạng
 
 Cài **Expo Go** (App Store / Play Store) rồi quét QR.
 
+> **Vì sao SDK 54?** Expo Go trên App Store đang kẹt ở SDK 54 (Apple chưa
+> duyệt bản mới — xem changelog "Expo Go and the App Store in May 2026").
+> App pin SDK 54 để mở được trong Expo Go; nâng SDK khi Expo Go cập nhật.
+
 **Cách 2 — không cần máy tính (qua GitHub Actions):**
 
 1. Tạo tài khoản miễn phí tại expo.dev → Access tokens → tạo token.
