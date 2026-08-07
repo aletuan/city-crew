@@ -8,8 +8,8 @@ import { StatusBar } from 'expo-status-bar';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { I18nProvider, useI18n } from './src/lib/i18n';
-import { colors, font, radius } from './src/theme';
-import { TAB_BAR_GAP, TAB_BAR_HEIGHT, TAB_BAR_MARGIN } from './src/components/ui';
+import { colors, font } from './src/theme';
+import { TAB_BAR_HEIGHT } from './src/components/ui';
 import type { RootStackParamList } from './src/nav';
 import ExploreScreen from './src/screens/ExploreScreen';
 import PlaceDetailScreen from './src/screens/PlaceDetailScreen';
@@ -77,26 +77,22 @@ function Tabs() {
       initialRouteName="Explore"
       screenOptions={({ route }) => ({
         headerShown: false,
-        // §8: a floating rounded container above the home indicator.
-        // Content flows (and blurs) underneath; screens clear it via
-        // useTabBarClearance().
+        // Apple-style bar: full-width, square, a single top hairline, and
+        // true blur material. Content flows (and blurs) underneath;
+        // screens clear it via useTabBarClearance().
         tabBarStyle: {
           position: 'absolute',
-          left: TAB_BAR_MARGIN,
-          right: TAB_BAR_MARGIN,
-          bottom: insets.bottom + TAB_BAR_GAP,
-          height: TAB_BAR_HEIGHT,
-          borderRadius: radius.tabBar,
-          borderWidth: 1,
-          borderTopWidth: 1,
-          borderColor: colors.borderGlassSoft,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: TAB_BAR_HEIGHT + insets.bottom,
+          borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.borderGlass,
           backgroundColor: 'transparent',
-          overflow: 'hidden',
           elevation: 0,
           shadowOpacity: 0,
           paddingTop: 8,
-          paddingBottom: 10,
+          paddingBottom: insets.bottom + 6,
         },
         tabBarBackground: TabBarMaterial,
         tabBarActiveTintColor: colors.champagne,
