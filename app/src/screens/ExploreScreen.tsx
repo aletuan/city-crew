@@ -32,7 +32,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           ))}
         </ScrollView>
       </View>
-      {loading && <ActivityIndicator color={colors.aiPink} style={{ marginTop: 48 }} />}
+      {loading && <ActivityIndicator color={colors.champagne} style={{ marginTop: 48 }} />}
       {error && <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`)} />}
       {!loading && !error && (
         <FlatList
