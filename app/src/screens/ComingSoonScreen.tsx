@@ -1,15 +1,16 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Screen } from '../components/ui';
+import { Screen, useTabBarClearance } from '../components/ui';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI } from '../theme';
 
 export default function ComingSoonScreen({ titleEn, titleVi }: { titleEn: string; titleVi: string }) {
   const { t } = useI18n();
+  const tabClearance = useTabBarClearance();
   return (
     <Screen title={t(titleEn, titleVi)}>
-      <View style={s.wrap}>
+      <View style={[s.wrap, { paddingBottom: tabClearance }]}>
         <LinearGradient {...gradAI} style={s.badge}>
           <Text style={s.badgeText}>✨</Text>
         </LinearGradient>

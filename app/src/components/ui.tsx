@@ -3,9 +3,21 @@
 
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
+
+// ── floating tab bar geometry ──
+// The bar is position:absolute, so screens must clear it themselves.
+export const TAB_BAR_HEIGHT = 68;
+export const TAB_BAR_GAP = 6;
+export const TAB_BAR_MARGIN = 14;
+
+/** Bottom padding that clears the floating tab bar plus breathing room. */
+export function useTabBarClearance(extra = 18): number {
+  const insets = useSafeAreaInsets();
+  return insets.bottom + TAB_BAR_GAP + TAB_BAR_HEIGHT + extra;
+}
 
 export function LangPill() {
   const { lang, toggle } = useI18n();

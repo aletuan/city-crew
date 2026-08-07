@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { fmtCount, photosOf, Place, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius } from '../theme';
-import { Empty } from '../components/ui';
+import { Empty, useTabBarClearance } from '../components/ui';
 import type { Nav, RootRoute } from '../nav';
 
 function fmtDuration(min: number | null, max: number | null, vi: boolean): string | null {
@@ -81,6 +81,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const place = useMemo(() => places.find((p) => p.slug === route.params.slug), [places, route.params.slug]);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [saved, setSaved] = useState(false);
+  const tabClearance = useTabBarClearance();
 
   if (loading && !place) {
     return <SafeAreaView style={s.screen}><ActivityIndicator color={colors.champagne} style={{ marginTop: 64 }} /></SafeAreaView>;
@@ -106,7 +107,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: tabClearance }} showsVerticalScrollIndicator={false}>
         {/* ── hero carousel ── */}
         <View style={s.heroWrap}>
           {photos.length > 0 ? (

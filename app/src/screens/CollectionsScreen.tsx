@@ -10,7 +10,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from '
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Card, Empty, Screen } from '../components/ui';
+import { Card, Empty, Screen, useTabBarClearance } from '../components/ui';
 import { Collection, coverOf, membersOf, useCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, radius, space, type } from '../theme';
@@ -50,6 +50,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const cols = useCollections();
   const { data: places } = usePlaces();
+  const tabClearance = useTabBarClearance();
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
@@ -97,7 +98,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
               );
             }}
             ListEmptyComponent={<Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.')} />}
-            contentContainerStyle={{ paddingBottom: 28 }}
+            contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
             onRefresh={cols.reload}
             refreshing={cols.loading}

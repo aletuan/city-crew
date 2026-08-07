@@ -1,12 +1,15 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { I18nProvider, useI18n } from './src/lib/i18n';
 import { colors, font, radius } from './src/theme';
+import { TAB_BAR_GAP, TAB_BAR_HEIGHT, TAB_BAR_MARGIN } from './src/components/ui';
 import type { RootStackParamList } from './src/nav';
 import ExploreScreen from './src/screens/ExploreScreen';
 import PlaceDetailScreen from './src/screens/PlaceDetailScreen';
@@ -40,8 +43,7 @@ function CollectionsStack() {
 }
 
 // [inactive, active]. Thin monochrome glyphs, and the selected tab takes
-// the solid variant in champagne — the iOS convention. What the system
-// rules out is a filled selection *pill* behind the item, not the glyph.
+// the solid variant in champagne — the iOS convention. No selection pill.
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
   Ideas: ['sparkles-outline', 'sparkles'],
   Explore: ['compass-outline', 'compass'],
@@ -50,8 +52,19 @@ const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionico
   Profile: ['person-outline', 'person'],
 };
 
+/** True translucent material: dark blur with a smoky overlay on top, so
+ *  content scrolling beneath the floating bar reads through it. */
+function TabBarMaterial() {
+  return (
+    <BlurView intensity={42} tint="dark" style={StyleSheet.absoluteFill}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(12,13,12,0.62)' }} />
+    </BlurView>
+  );
+}
+
 function Tabs() {
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const labels: Record<string, string> = {
     Ideas: t('Ideas', 'Ý tưởng'),
     Explore: t('Explore', 'Khám phá'),
@@ -64,17 +77,28 @@ function Tabs() {
       initialRouteName="Explore"
       screenOptions={({ route }) => ({
         headerShown: false,
+        // §8: a floating rounded container above the home indicator.
+        // Content flows (and blurs) underneath; screens clear it via
+        // useTabBarClearance().
         tabBarStyle: {
-          // A rounded, almost-black translucent container with a single
-          // hairline of warmth along its top edge.
-          backgroundColor: 'rgba(12,13,12,0.94)',
-          borderTopColor: colors.borderGlassSoft,
+          position: 'absolute',
+          left: TAB_BAR_MARGIN,
+          right: TAB_BAR_MARGIN,
+          bottom: insets.bottom + TAB_BAR_GAP,
+          height: TAB_BAR_HEIGHT,
+          borderRadius: radius.tabBar,
+          borderWidth: 1,
           borderTopWidth: 1,
-          borderTopLeftRadius: radius.tabBar,
-          borderTopRightRadius: radius.tabBar,
-          height: 88,
+          borderColor: colors.borderGlassSoft,
+          borderTopColor: colors.borderGlass,
+          backgroundColor: 'transparent',
+          overflow: 'hidden',
+          elevation: 0,
+          shadowOpacity: 0,
           paddingTop: 8,
+          paddingBottom: 10,
         },
+        tabBarBackground: TabBarMaterial,
         tabBarActiveTintColor: colors.champagne,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabel: ({ color, focused }) => (
@@ -103,11 +127,13 @@ const navTheme = {
 
 export default function App() {
   return (
-    <I18nProvider>
-      <NavigationContainer theme={navTheme}>
-        <StatusBar style="light" />
-        <Tabs />
-      </NavigationContainer>
-    </I18nProvider>
+    <SafeAreaProvider>
+      <I18nProvider>
+        <NavigationContainer theme={navTheme}>
+          <StatusBar style="light" />
+          <Tabs />
+        </NavigationContainer>
+      </I18nProvider>
+    </SafeAreaProvider>
   );
 }

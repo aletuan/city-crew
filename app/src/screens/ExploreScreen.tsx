@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, View } from 'react-native';
 import PlaceCard from '../components/PlaceCard';
-import { Chip, Empty, Screen } from '../components/ui';
+import { Chip, Empty, Screen, useTabBarClearance } from '../components/ui';
 import { usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors } from '../theme';
@@ -17,6 +17,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { loading, error, data: places, reload } = usePlaces();
   const [cat, setCat] = useState<(typeof CATS)[number]['key']>('foryou');
+  const tabClearance = useTabBarClearance();
 
   const shown = useMemo(() => {
     if (cat === 'foryou') return places.filter((p) => p.is_featured);
@@ -42,7 +43,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
           )}
           ListEmptyComponent={<Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.')} />}
-          contentContainerStyle={{ paddingBottom: 32 }}
+          contentContainerStyle={{ paddingBottom: tabClearance }}
           onRefresh={reload}
           refreshing={loading}
         />
