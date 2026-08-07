@@ -33,7 +33,7 @@ Cài **Expo Go** (App Store / Play Store) rồi quét QR.
 
 1. Tạo tài khoản miễn phí tại expo.dev → Access tokens → tạo token.
 2. Repo → Settings → Secrets → thêm secret `EXPO_TOKEN`.
-3. Mỗi lần `app/` thay đổi trên `main`, workflow *Publish app preview*
+3. ✅ Secret đã cấu hình — mỗi lần `app/` thay đổi trên `main`, workflow *Publish app preview*
    đẩy bản mới lên EAS Update — mở trang project trên expo.dev bằng
    điện thoại → Open in Expo Go.
 
