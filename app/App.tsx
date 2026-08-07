@@ -39,14 +39,15 @@ function CollectionsStack() {
   );
 }
 
-// Thin monochrome glyphs throughout — the selected state is carried by
-// champagne tint alone, never by a filled or highlighted shape.
-const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  Ideas: 'sparkles-outline',
-  Explore: 'compass-outline',
-  Trips: 'calendar-outline',
-  Collections: 'bookmark-outline',
-  Profile: 'person-outline',
+// [inactive, active]. Thin monochrome glyphs, and the selected tab takes
+// the solid variant in champagne — the iOS convention. What the system
+// rules out is a filled selection *pill* behind the item, not the glyph.
+const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
+  Ideas: ['sparkles-outline', 'sparkles'],
+  Explore: ['compass-outline', 'compass'],
+  Trips: ['calendar-outline', 'calendar'],
+  Collections: ['bookmark-outline', 'bookmark'],
+  Profile: ['person-outline', 'person'],
 };
 
 function Tabs() {
@@ -81,8 +82,8 @@ function Tabs() {
             {labels[route.name]}
           </Text>
         ),
-        tabBarIcon: ({ color, size }) => (
-          <Ionicons name={ICONS[route.name]} size={size - 2} color={color} />
+        tabBarIcon: ({ color, size, focused }) => (
+          <Ionicons name={ICONS[route.name][focused ? 1 : 0]} size={size - 2} color={color} />
         ),
       })}
     >

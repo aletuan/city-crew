@@ -16,12 +16,13 @@ import { useI18n } from '../lib/i18n';
 import { colors, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
-/** Reflected city light: heavily diffused, barely there. */
+/** Reflected city light: heavily diffused amber, strongest across the
+ *  browsing band and falling away to black at both ends. */
 function AmbientWarmth() {
   return (
     <LinearGradient
-      colors={['rgba(232,196,132,0.07)', 'rgba(232,196,132,0.022)', 'transparent']}
-      locations={[0, 0.42, 1]}
+      colors={['transparent', colors.emberGlow, colors.emberGlowFade, 'transparent']}
+      locations={[0, 0.34, 0.72, 1]}
       style={s.ambient}
       pointerEvents="none"
     />
@@ -33,7 +34,7 @@ function GuestNotice() {
   return (
     <View style={s.notice}>
       <Text style={s.noticeTitle}>
-        {t("You're browsing as a guest", 'Bạn đang xem với tư cách khách')}
+        👋 {t("You're browsing as a guest", 'Bạn đang xem với tư cách khách')}
       </Text>
       <Text style={s.noticeBody}>
         {t(
@@ -108,7 +109,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
-  ambient: { position: 'absolute', left: 0, right: 0, top: 0, height: 460 },
+  ambient: { position: 'absolute', left: 0, right: 0, top: -40, height: 760 },
 
   notice: {
     marginHorizontal: space.page, marginBottom: space.titleToContent,
