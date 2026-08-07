@@ -64,7 +64,7 @@ async function placeDetails(placeId) {
   const fields = [
     'id', 'displayName', 'formattedAddress', 'location', 'rating', 'userRatingCount',
     'priceLevel', 'regularOpeningHours.weekdayDescriptions', 'photos',
-    'websiteUri', 'internationalPhoneNumber',
+    'websiteUri', 'internationalPhoneNumber', 'nationalPhoneNumber',
   ].join(',');
   return api(`https://places.googleapis.com/v1/places/${placeId}`, {
     headers: { 'X-Goog-Api-Key': API_KEY, 'X-Goog-FieldMask': fields },
@@ -150,7 +150,9 @@ for (const cand of candidates) {
       emoji: '',
       opening_hours: det.regularOpeningHours?.weekdayDescriptions ?? null,
       website: det.websiteUri ?? null,
-      phone: det.internationalPhoneNumber ?? null,
+      // Some places only carry the local format — fall back so phone
+      // coverage is as complete as Google allows.
+      phone: det.internationalPhoneNumber ?? det.nationalPhoneNumber ?? null,
       saved_count: 0,
       photos,
       needs_review: true,
