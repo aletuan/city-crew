@@ -62,6 +62,20 @@ export function coverOf(p: Place): PlacePhoto | undefined {
   return photosOf(p)[0];
 }
 
+/** Explicitly free (0₫) — distinct from a missing price. */
+export function isFree(p: Place): boolean {
+  if (p.price_vnd === 0) return true;
+  const d = (p.price_display ?? '').trim();
+  return d === '0₫' || d === '0đ' || d === '0';
+}
+
+/** Display label for a paid place, or null when no price is known. */
+export function priceLabel(p: Place): string | null {
+  if (p.price_display) return p.price_display;
+  if (p.price_vnd != null) return `${Math.round(p.price_vnd / 1000)}k₫`;
+  return null;
+}
+
 export function fmtCount(n: number | null | undefined): string {
   if (!n) return '';
   return n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n);

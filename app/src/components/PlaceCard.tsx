@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { coverOf, fmtCount, Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
+import PricePill from './PricePill';
 import { Card } from './ui';
 
 export default function PlaceCard({ place, onPress }: { place: Place; onPress: () => void }) {
@@ -26,7 +27,7 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
         <View style={s.body}>
           <View style={s.topRow}>
             <Text style={s.name} numberOfLines={1}>{t(place.name_en, place.name_vi)}</Text>
-            {place.price_display ? <Text style={s.price}>{place.price_display}</Text> : null}
+            <PricePill place={place} compact />
           </View>
           <Text style={s.meta} numberOfLines={1}>
             {t(place.neighborhood_en, place.neighborhood_vi)}
@@ -56,7 +57,6 @@ const s = StyleSheet.create({
   body: { padding: space.cardPadding },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   name: { flex: 1, color: colors.text, ...type.cardTitle },
-  price: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
   meta: { color: colors.textTertiary, ...type.meta, marginTop: 4 },
   vibes: { flexDirection: 'row', gap: 6, marginTop: 9 },
   vibe: {
