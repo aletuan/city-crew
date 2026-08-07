@@ -12,8 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { fmtCount, photosOf, Place, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { colors, font, gradAI, radius } from '../theme';
-import { Empty, useTabBarClearance } from '../components/ui';
+import { colors, font, gradAI, radius, space, type } from '../theme';
+import { AmbientWarmth, Empty, useTabBarClearance } from '../components/ui';
 import type { Nav, RootRoute } from '../nav';
 
 function fmtDuration(min: number | null, max: number | null, vi: boolean): string | null {
@@ -107,6 +107,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
+      <AmbientWarmth style={{ top: 300, height: 620 }} />
       <ScrollView contentContainerStyle={{ paddingBottom: tabClearance }} showsVerticalScrollIndicator={false}>
         {/* ── hero carousel ── */}
         <View style={s.heroWrap}>
@@ -262,7 +263,7 @@ const s = StyleSheet.create({
   hero: { aspectRatio: 4 / 3.4, backgroundColor: colors.surfaceGlass },
   heroFallback: { alignItems: 'center', justifyContent: 'center' },
   fab: {
-    position: 'absolute', width: 42, height: 42, borderRadius: 21,
+    position: 'absolute', width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(10,8,13,0.55)', alignItems: 'center', justifyContent: 'center',
   },
   counter: {
@@ -283,42 +284,42 @@ const s = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
 
-  body: { paddingHorizontal: 20, paddingTop: 18 },
+  body: { paddingHorizontal: space.page, paddingTop: 18 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  name: { color: colors.text, fontSize: 27, fontWeight: font.extrabold, letterSpacing: -0.5 },
+  name: { color: colors.text, fontSize: 28, fontWeight: font.bold, letterSpacing: 0.25 },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
-  loc: { color: colors.textTertiary, fontSize: 14.5, fontWeight: font.medium },
+  loc: { color: colors.textTertiary, ...type.meta },
   ratingBadge: {
-    backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
     borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', gap: 3,
   },
-  ratingValue: { color: colors.text, fontSize: 18, fontWeight: font.extrabold },
-  ratingCount: { color: colors.textTertiary, fontSize: 11.5, fontWeight: font.medium },
+  ratingValue: { color: colors.text, fontSize: 18, fontWeight: font.bold },
+  ratingCount: { color: colors.textTertiary, fontSize: 12, fontWeight: font.regular },
 
   facts: { flexDirection: 'row', flexWrap: 'wrap', gap: 18, marginTop: 16 },
   fact: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  factText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
+  factText: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.medium },
 
-  desc: { color: colors.textSecondary, fontSize: 15, lineHeight: 23, fontWeight: font.regular, marginTop: 14 },
+  desc: { color: colors.textSecondary, ...type.body, lineHeight: 24, marginTop: 14 },
   divider: { height: 1, backgroundColor: colors.borderGlassSoft, marginVertical: 18 },
 
   infoCard: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: 18, padding: 14, marginBottom: 12,
+    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    borderRadius: radius.card, padding: space.cardPadding, marginBottom: space.cardGap,
   },
   roundIcon: {
     width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(246,164,92,0.10)', borderWidth: 1, borderColor: 'rgba(246,164,92,0.25)',
+    backgroundColor: 'rgba(232,212,155,0.10)', borderWidth: 1, borderColor: 'rgba(232,212,155,0.24)',
   },
   infoLabel: {
-    color: colors.textTertiary, fontSize: 11, fontWeight: font.bold,
-    textTransform: 'uppercase', letterSpacing: 1.4, marginBottom: 4,
+    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
+    textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 4,
   },
-  infoValue: { color: colors.textSecondary, fontSize: 14.5, lineHeight: 21, fontWeight: font.regular },
+  infoValue: { color: colors.textSecondary, ...type.meta, lineHeight: 22 },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  hourDay: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
-  hourTime: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.regular },
-  callTitle: { color: colors.text, fontSize: 15.5, fontWeight: font.bold, marginBottom: 2 },
+  hourDay: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.medium },
+  hourTime: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.regular },
+  callTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, marginBottom: 2 },
   goBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 });
