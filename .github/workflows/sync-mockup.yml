@@ -34,7 +34,7 @@ jobs:
         working-directory: data
         env:
           SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://amdvitzpogaejzzqroco.supabase.co' }}
-          SUPABASE_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZHZpdHpwb2dhZWp6enFyb2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5MDE0OTMsImV4cCI6MjEwMTQ3NzQ5M30.u-Ol-LikWblJSCArVkrSuBM4e-xRprE7GwjZc-jsKO4' }}
+          SUPABASE_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'sb_publishable_VVol99Jqs0QYzeVrmOawlw_ZpXqcv7B' }}
         run: |
           node scripts/export-snapshot.mjs
           node scripts/inject-mockup.mjs

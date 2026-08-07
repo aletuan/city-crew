@@ -26,10 +26,13 @@ Những phần này đã được apply trực tiếp lên project `citycrew-dat
 - **Edge Functions `fetch-place` và `sync-mockup`** đã deploy (verify JWT bật,
   kèm kiểm tra allow-list `editors` bên trong). Nguồn: `supabase/functions/`.
 
-Anon key là key công khai theo thiết kế (nằm trong mọi client bundle; RLS mới
-là lớp bảo vệ) nên được nhúng sẵn vào 2 workflow và `.env.example` — không
-cần cấu hình GitHub Variables. Nếu sau này rotate key, đặt repo Variables
-`VITE_SUPABASE_ANON_KEY` / `VITE_SUPABASE_URL` để override.
+Key phía client là **publishable key** (`sb_publishable_…`) — công khai theo
+thiết kế (nằm trong mọi client bundle; RLS mới là lớp bảo vệ) nên được nhúng
+sẵn vào 2 workflow và `.env.example`, không cần cấu hình GitHub Variables.
+Dùng định dạng publishable thay cho anon key JWT legacy để secret scanner
+(GitGuardian…) không báo nhầm, và có thể rotate độc lập tại Supabase →
+Settings → API Keys. Nếu rotate, đặt repo Variables `VITE_SUPABASE_ANON_KEY`
+/ `VITE_SUPABASE_URL` để override.
 
 ## Việc còn lại (làm một lần, từ trình duyệt điện thoại)
 
