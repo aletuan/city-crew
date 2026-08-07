@@ -115,7 +115,8 @@ Deno.serve(async (req) => {
           "X-Goog-Api-Key": apiKey,
           "X-Goog-FieldMask":
             "id,displayName,formattedAddress,location,rating,userRatingCount,"
-            + "priceLevel,regularOpeningHours,websiteUri,internationalPhoneNumber,photos",
+            + "priceLevel,regularOpeningHours,websiteUri,internationalPhoneNumber,"
+            + "nationalPhoneNumber,photos",
         },
       });
 
@@ -145,7 +146,7 @@ Deno.serve(async (req) => {
           price_display: priceLevel ? "₫".repeat(priceLevel) : null,
           opening_hours: d.regularOpeningHours?.weekdayDescriptions ?? null,
           website: d.websiteUri ?? null,
-          phone: d.internationalPhoneNumber ?? null,
+          phone: d.internationalPhoneNumber ?? d.nationalPhoneNumber ?? null,
           saved_count: 0,
           emoji: "📍",
           is_published: false,
