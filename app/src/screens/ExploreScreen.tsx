@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
@@ -122,8 +123,11 @@ function Hero({ place, onExplore, scrollY }: {
               'コレクションとスポットを自由に閲覧 — アカウント不要。',
             )}
           </Text>
-          <PressableScale style={s.heroCta} onPress={onExplore} accessibilityRole="button">
-            <Text style={s.heroCtaText}>{t('Start exploring →', 'Bắt đầu khám phá →', '探索を始める →')}</Text>
+          <PressableScale onPress={onExplore} accessibilityRole="button" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
+            <LinearGradient {...gradAI} style={s.heroCta}>
+              <Text style={s.heroCtaText}>{t('Start exploring', 'Bắt đầu khám phá', '探索を始める')}</Text>
+              <Ionicons name="arrow-forward" size={17} color="#141310" />
+            </LinearGradient>
           </PressableScale>
         </View>
       </View>
