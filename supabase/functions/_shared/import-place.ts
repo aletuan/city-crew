@@ -18,6 +18,24 @@ export const slugify = (name: string) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 48) || "place";
 
+// Curated scan queries, one per category. {en} / {vi} interpolate the city's
+// name_en / name_vi — Vietnamese phrasing where it surfaces better local
+// results. vibes ⊂ the global VIBES taxonomy.
+export const SCAN_CATEGORIES = [
+  { key: "cafes", label_en: "Cafés", label_vi: "Quán cà phê", category: "food", vibes: ["cafes"], q: "best specialty coffee shops in {en}" },
+  { key: "street_food", label_en: "Street food", label_vi: "Ẩm thực đường phố", category: "food", vibes: ["food_tour"], q: "quán ăn đường phố ngon {vi}" },
+  { key: "local_restaurants", label_en: "Local restaurants", label_vi: "Nhà hàng địa phương", category: "food", vibes: ["food_tour"], q: "nhà hàng món Việt ngon {vi}" },
+  { key: "desserts", label_en: "Desserts", label_vi: "Tráng miệng", category: "food", vibes: ["food_tour", "chill"], q: "chè và tráng miệng ngon {vi}" },
+  { key: "rooftops", label_en: "Rooftops", label_vi: "Rooftop", category: "out", vibes: ["views", "nightlife"], q: "rooftop bars with a view in {en}" },
+  { key: "landmarks", label_en: "Landmarks", label_vi: "Địa danh", category: "out", vibes: ["culture"], q: "famous landmarks in {en}" },
+  { key: "museums", label_en: "Museums & heritage", label_vi: "Bảo tàng & di sản", category: "out", vibes: ["culture"], q: "museums and heritage sites in {en}" },
+  { key: "parks", label_en: "Parks & lakes", label_vi: "Công viên & hồ", category: "out", vibes: ["outdoors", "chill"], q: "parks and lakes in {en}" },
+  { key: "markets", label_en: "Markets", label_vi: "Chợ", category: "out", vibes: ["shopping"], q: "chợ địa phương nổi tiếng {vi}" },
+  { key: "nightlife", label_en: "Nightlife", label_vi: "Về đêm", category: "out", vibes: ["nightlife"], q: "best bars and live music in {en}" },
+] as const;
+
+export type ScanCategory = (typeof SCAN_CATEGORIES)[number];
+
 export type CityRow = {
   id: string;
   name_en: string;
