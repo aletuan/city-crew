@@ -35,6 +35,8 @@ function ExploreStack() {
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="ExploreHome" component={ExploreScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
+      {/* The Explore shelf opens collections in place, keeping the tab. */}
+      <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
     </Stack.Navigator>
   );
 }
