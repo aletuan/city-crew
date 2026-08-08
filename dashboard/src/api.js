@@ -94,6 +94,18 @@ export const api = {
     return { ok: true, removed_uploads: paths.length };
   },
 
+  /** Flip every approved-but-unpublished place live, scoped to a city.
+   *  Approve and publish are separate switches; this closes the gap in one tap. */
+  publishApproved: async (city) => {
+    let query = supabase.from('places')
+      .update({ is_published: true, updated_at: new Date().toISOString() })
+      .eq('review_status', 'approved')
+      .eq('is_published', false);
+    if (city) query = query.eq('city_id', city);
+    const rows = db(await query.select('slug'));
+    return { published: rows.length };
+  },
+
   progress: async (city) => {
     let query = supabase.from('places').select('review_status, category');
     if (city) query = query.eq('city_id', city);
