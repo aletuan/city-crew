@@ -40,12 +40,23 @@ function dateline(lang: Lang): string {
     : `${DAYS_EN[d.getDay()]}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`;
 }
 
-/** The hero is a night-out invitation, so it leans on after-dark
- *  photography: a featured place with a views/nightlife vibe first, then
- *  any featured place with a photo — city-agnostic, ordered by sort_order. */
-function heroPlace(places: Place[]): Place | undefined {
+// Per-city hero seasons: a hand-picked cover place and headline override.
+// Cities without an entry keep the default night-out framing.
+const CITY_HERO: Record<string, { slug: string; en: string; vi: string }> = {
+  hanoi: {
+    slug: 'imperial-citadel-of-thang-long',
+    en: 'Autumn ideas in Hanoi',
+    vi: 'Gợi ý mùa thu ở Hà Nội',
+  },
+};
+
+/** Hero photography: the city's hand-picked cover place first, then a
+ *  featured place with a views/nightlife vibe, then anything with a photo. */
+function heroPlace(places: Place[], cityId?: string): Place | undefined {
   const withPhoto = (p: Place) => !!coverOf(p);
+  const pick = cityId ? CITY_HERO[cityId]?.slug : undefined;
   return (
+    (pick ? places.find((p) => p.slug === pick && withPhoto(p)) : undefined) ??
     places.find((p) => p.is_featured && withPhoto(p)
       && p.vibe_tags.some((v) => v === 'views' || v === 'nightlife')) ??
     places.find((p) => p.is_featured && withPhoto(p)) ??
@@ -88,10 +99,12 @@ function Hero({ place, onExplore, scrollY }: {
             </Text>
           </View>
           <Text style={s.heroTitle}>
-            {t(
-              `Ideas for a night in ${city?.name_en ?? 'the city'}`,
-              `Gợi ý cho một đêm ở ${city?.name_vi ?? 'thành phố'}`,
-            )}
+            {city && CITY_HERO[city.id]
+              ? t(CITY_HERO[city.id].en, CITY_HERO[city.id].vi)
+              : t(
+                  `Ideas for a night in ${city?.name_en ?? 'the city'}`,
+                  `Gợi ý cho một đêm ở ${city?.name_vi ?? 'thành phố'}`,
+                )}
           </Text>
           <Text style={s.heroSub}>
             {t(
@@ -209,7 +222,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     return places.filter((p) => p.category === cat);
   }, [places, cat]);
 
-  const hero = useMemo(() => heroPlace(places), [places]);
+  const hero = useMemo(() => heroPlace(places, city?.id), [places, city?.id]);
 
   const scrollToPlaces = () => {
     if (shown.length > 0) {
