@@ -169,7 +169,7 @@ const s = StyleSheet.create({
   },
   // Selected control carries champagne — same rule as the language pill.
   chipOn: { backgroundColor: colors.surfaceGlass, borderColor: colors.borderGlass },
-  chipText: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.medium },
+  chipText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
   chipTextOn: { color: colors.champagne, fontWeight: font.semibold },
   card: {
     backgroundColor: colors.surfaceCard, borderRadius: radius.card,

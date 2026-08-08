@@ -187,7 +187,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                   style={StyleSheet.absoluteFill}
                 />
                 <View style={s.shelfCardText}>
-                  <Text style={[s.shelfCardTitle, serif]} numberOfLines={2}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
+                  <Text style={s.shelfCardTitle} numberOfLines={2}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
                   <Text style={s.shelfCardMeta}>{count} {t('places', 'địa điểm', 'スポット')}</Text>
                 </View>
               </PressableScale>
@@ -330,7 +330,7 @@ const s = StyleSheet.create({
   },
   heroPillText: { color: colors.textSecondary, fontSize: 12.5, fontWeight: font.medium },
   heroTitle: { color: colors.text, ...type.heroTitle },
-  heroSub: { color: colors.textSecondary, fontSize: 16, fontWeight: font.regular, lineHeight: 23 },
+  heroSub: { color: colors.textSecondary, ...type.meta, lineHeight: 21 },
   heroCta: {
     alignSelf: 'flex-start', marginTop: 4,
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlass,
@@ -343,14 +343,14 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
-  seeAll: { color: colors.champagne, fontSize: 15, fontWeight: font.medium },
+  seeAll: { color: colors.champagne, fontSize: 14, fontWeight: font.medium },
   // Same rule as the hero: photo cards end in shadow, not in a hairline.
   shelfCard: {
     width: 176, height: 220, borderRadius: radius.image, overflow: 'hidden',
     justifyContent: 'flex-end',
   },
   shelfCardText: { padding: 13, gap: 3 },
-  shelfCardTitle: { color: colors.text, ...type.cardTitleSerif, lineHeight: 25 },
+  shelfCardTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 20 },
   shelfCardMeta: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
 
   yoursCard: {

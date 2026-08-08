@@ -95,7 +95,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                       ? <Image source={{ uri }} style={s.thumb} contentFit="cover" transition={200} />
                       : <View style={s.thumb} />}
                     <View style={s.cardText}>
-                      <Text style={[s.title, serif]} numberOfLines={2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
+                      <Text style={s.title} numberOfLines={2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
                       <Text style={s.meta} numberOfLines={1}>
                         {count} {t('places', 'địa điểm', 'スポット')}
                         {item.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${item.curator_handle}` : ''}
@@ -144,7 +144,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
   },
   cardText: { flex: 1, gap: 5 },
-  title: { color: colors.text, ...type.cardTitleSerif },
+  title: { color: colors.text, ...type.cardTitle },
   meta: { color: colors.textTertiary, ...type.meta },
   // Circular control: translucent fill, thin hairline, 44pt touch target.
   chevron: {
