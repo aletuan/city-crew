@@ -5,10 +5,11 @@ import { coverOf, fmtCount, Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 import PricePill from './PricePill';
-import { Card, PressableScale } from './ui';
+import { Card, PressableScale, useSerif } from './ui';
 
 export default function PlaceCard({ place, onPress }: { place: Place; onPress: () => void }) {
   const { t } = useI18n();
+  const serif = useSerif();
   const cover = coverOf(place);
   const reviews = fmtCount(place.rating_count);
   return (
@@ -26,7 +27,7 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
         )}
         <View style={s.body}>
           <View style={s.topRow}>
-            <Text style={s.name} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
+            <Text style={[s.name, serif]} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
             <PricePill place={place} compact />
           </View>
           {place.rating ? (
@@ -58,7 +59,7 @@ const s = StyleSheet.create({
   // ~10% tighter than the standard card body: this is a feed, not a form.
   body: { paddingHorizontal: space.cardPadding, paddingVertical: 13 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  name: { flex: 1, color: colors.text, ...type.cardTitle },
+  name: { flex: 1, color: colors.text, ...type.cardTitleSerif, fontSize: 19 },
   // Rating reads in three weights: a barely-there champagne star, a clear
   // value, a whispered count.
   ratingRow: { marginTop: 4 },
