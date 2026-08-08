@@ -31,6 +31,6 @@ const s = StyleSheet.create({
   wrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
   badge: { width: 64, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badgeText: { fontSize: 28 },
-  title: { color: colors.text, fontSize: 20, fontWeight: font.semibold },
+  title: { color: colors.text, fontSize: 20, fontWeight: font.bold },
   sub: { color: colors.textTertiary, fontSize: 14, fontWeight: font.regular, textAlign: 'center', lineHeight: 21 },
 });

@@ -76,30 +76,14 @@ export const font = {
   extrabold: '800',
 } as const;
 
-/**
- * Editorial serif for large headings — a high-contrast display face in
- * the Canela / Editorial New family, with full Vietnamese diacritics.
- * Japanese has no Playfair glyphs, so headings switch to iOS's bundled
- * mincho serif; everything functional stays SF Pro.
- */
-export const SERIF_LATIN = 'PlayfairDisplay_600SemiBold';
-export const SERIF_JA = 'Hiragino Mincho ProN';
-
-export const serifFamily = (lang: string) => (lang === 'ja' ? SERIF_JA : SERIF_LATIN);
-
-/** Type scale. Hierarchy comes from scale, spacing and typeface — not
- *  weight. Headings are serif; UI text is the system sans. */
+/** Type scale. Hierarchy does the organising, so sizes stay few. */
 export const type = {
-  /** Large screen title — editorial serif. */
-  title: { fontFamily: SERIF_LATIN, fontSize: 34, letterSpacing: 0.2 },
-  /** Section heading — editorial serif. */
-  section: { fontFamily: SERIF_LATIN, fontSize: 25, letterSpacing: 0.1 },
-  /** Hero headline — serif, compact leading. */
-  heroTitle: { fontFamily: SERIF_LATIN, fontSize: 30, lineHeight: 36, letterSpacing: 0.1 },
-  /** Card title — functional, stays SF Pro. */
+  /** Large screen title. */
+  title: { fontSize: 34, fontWeight: font.bold, letterSpacing: 0.35 },
+  /** Section heading. */
+  section: { fontSize: 22, fontWeight: font.semibold, letterSpacing: 0.2 },
+  /** Card title. */
   cardTitle: { fontSize: 18, fontWeight: font.semibold, letterSpacing: 0.1 },
-  /** Editorial names on cards (collections, places) — serif. */
-  cardTitleSerif: { fontFamily: SERIF_LATIN, fontSize: 19, letterSpacing: 0.1 },
-  body: { fontSize: 17, fontWeight: font.regular },
-  meta: { fontSize: 14.5, fontWeight: font.regular },
+  body: { fontSize: 16, fontWeight: font.regular },
+  meta: { fontSize: 15, fontWeight: font.regular },
 } as const;

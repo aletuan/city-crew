@@ -9,7 +9,7 @@ import React from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { AmbientWarmth, Card, Empty, PressableScale, Screen, Skeleton, useSerif, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, Empty, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { Collection, coverOf, membersOf, useCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
@@ -41,7 +41,6 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   const cols = useCollections();
   const { data: places, loading: placesLoading } = usePlaces();
   const tabClearance = useTabBarClearance();
-  const serif = useSerif();
   // Counting and filtering need the places catalog — until it's in, hold
   // the skeleton rather than showing raw DB membership numbers.
   const loading = cols.loading || placesLoading;
@@ -57,7 +56,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
         {loading && (
           <View>
             <GuestNotice />
-            <Text style={[s.section, serif]}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
+            <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
             {[0, 1, 2].map((i) => (
               <View key={i} style={s.row}>
                 <Card style={s.card}>
@@ -79,7 +78,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             ListHeaderComponent={
               <>
                 <GuestNotice />
-                <Text style={[s.section, serif]}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
+                <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
               </>
             }
             renderItem={({ item }) => {
@@ -95,7 +94,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                       ? <Image source={{ uri }} style={s.thumb} contentFit="cover" transition={200} />
                       : <View style={s.thumb} />}
                     <View style={s.cardText}>
-                      <Text style={[s.title, serif]} numberOfLines={2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
+                      <Text style={s.title} numberOfLines={2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
                       <Text style={s.meta} numberOfLines={1}>
                         {count} {t('places', 'địa điểm', 'スポット')}
                         {item.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${item.curator_handle}` : ''}
@@ -144,7 +143,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
   },
   cardText: { flex: 1, gap: 5 },
-  title: { color: colors.text, ...type.cardTitleSerif },
+  title: { color: colors.text, ...type.cardTitle },
   meta: { color: colors.textTertiary, ...type.meta },
   // Circular control: translucent fill, thin hairline, 44pt touch target.
   chevron: {

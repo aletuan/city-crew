@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useSerif, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
 import { PrimaryButton } from '../components/authUi';
@@ -205,7 +205,6 @@ function AboutRow({ icon, label, value, last }: {
 
 function AccountProfile({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
-  const serif = useSerif();
   const { email, profile, memberSince, signOut } = useAuth();
   const [busy, setBusy] = useState(false);
   const name = profile.full_name || (email ?? '').split('@')[0];
@@ -232,7 +231,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         </View>
       </View>
 
-      <Text style={[s.section, serif]}>{t('About me', 'Về tôi', '自己紹介')}</Text>
+      <Text style={s.section}>{t('About me', 'Về tôi', '自己紹介')}</Text>
       <Card style={s.featureCard}>
         <AboutRow
           icon="mail-outline"
@@ -259,7 +258,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
 
       <SettingsCard />
 
-      <Text style={[s.section, serif]}>{t('Friends', 'Bạn bè', '友達')}</Text>
+      <Text style={s.section}>{t('Friends', 'Bạn bè', '友達')}</Text>
       <Card style={s.friendsCard}>
         <RoundIcon name="people-outline" />
         <View style={{ flex: 1, gap: 3 }}>
@@ -319,7 +318,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass, borderWidth: 1.5, borderColor: colors.borderGlass,
   },
   avatarInitial: { color: colors.champagne, fontSize: 34, fontWeight: font.semibold },
-  heroTitle: { color: colors.text, fontSize: 19, fontWeight: font.semibold, letterSpacing: 0.1 },
+  heroTitle: { color: colors.text, fontSize: 19, fontWeight: font.bold, letterSpacing: 0.1 },
   heroBody: { color: colors.textSecondary, ...type.meta, lineHeight: 21 },
 
   guestLink: {
@@ -350,7 +349,7 @@ const s = StyleSheet.create({
 
   section: { color: colors.text, ...type.section, marginTop: 10 },
 
-  accountName: { color: colors.text, fontSize: 23, fontWeight: font.semibold, letterSpacing: 0.2 },
+  accountName: { color: colors.text, fontSize: 23, fontWeight: font.bold, letterSpacing: 0.2 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.regular },
   editBtn: {
