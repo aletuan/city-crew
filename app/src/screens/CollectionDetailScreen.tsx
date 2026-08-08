@@ -43,6 +43,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         renderItem={({ item }) => (
           <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
         )}
+        ListEmptyComponent={!loading && col ? (
+          <Empty text={t(
+            'No places in this collection yet.',
+            'Bộ sưu tập này chưa có địa điểm nào.',
+            'このコレクションにはまだスポットがありません。',
+          )} />
+        ) : null}
         contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
       />
