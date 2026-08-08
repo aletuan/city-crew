@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton } from '../components/authUi';
+import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import type { Nav } from '../nav';
@@ -27,6 +28,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         bio: bio.trim(),
         interests: interests.trim(),
       });
+      successHaptic();
       navigation.goBack();
     } catch (err) {
       setError((err as Error).message);

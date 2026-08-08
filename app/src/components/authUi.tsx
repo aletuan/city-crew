@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { BackButton, useTabBarClearance } from './ui';
+import { BackButton, fireHaptic, PressableScale, useTabBarClearance } from './ui';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
 export function AuthScreen({ onBack, children }: { onBack: () => void; children: React.ReactNode }) {
@@ -73,13 +73,13 @@ export function FieldRow({ icon, label, secure, ...input }: {
 
 export function PrimaryButton({ label, onPress, busy }: { label: string; onPress: () => void; busy?: boolean }) {
   return (
-    <Pressable onPress={busy ? undefined : onPress} accessibilityRole="button">
+    <PressableScale onPress={busy ? undefined : onPress} accessibilityRole="button">
       <LinearGradient {...gradAI} style={s.primary}>
         {busy
           ? <ActivityIndicator color="#141310" />
           : <Text style={s.primaryText}>{label}</Text>}
       </LinearGradient>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -88,7 +88,7 @@ export function SwitchRow({ prompt, action, onPress }: { prompt: string; action:
   return (
     <View style={s.switchRow}>
       <Text style={s.switchPrompt}>{prompt}</Text>
-      <Pressable onPress={onPress} hitSlop={8}>
+      <Pressable onPress={() => { fireHaptic('selection'); onPress(); }} hitSlop={8}>
         <Text style={s.switchAction}>{action}</Text>
       </Pressable>
     </View>

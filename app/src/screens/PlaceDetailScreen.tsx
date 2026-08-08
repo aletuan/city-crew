@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { fmtCount, photosOf, Place, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space, type } from '../theme';
-import { AmbientWarmth, Empty, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Empty, PressableScale, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import type { Nav, RootRoute } from '../nav';
 
@@ -129,15 +129,24 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             </View>
           )}
 
-          <Pressable onPress={() => navigation.goBack()} style={[s.fab, { left: 12, top: 12 }]} accessibilityLabel="Back">
+          <PressableScale
+            onPress={() => navigation.goBack()} scaleTo={0.9}
+            containerStyle={{ position: 'absolute', left: 12, top: 12 }} style={s.fab} accessibilityLabel="Back"
+          >
             <Ionicons name="chevron-back" size={22} color="#fff" />
-          </Pressable>
-          <Pressable onPress={share} style={[s.fab, { right: 64, top: 12 }]} accessibilityLabel="Share">
+          </PressableScale>
+          <PressableScale
+            onPress={share} scaleTo={0.9}
+            containerStyle={{ position: 'absolute', right: 64, top: 12 }} style={s.fab} accessibilityLabel="Share"
+          >
             <Ionicons name="share-outline" size={20} color="#fff" />
-          </Pressable>
-          <Pressable onPress={() => setSaved((v) => !v)} style={[s.fab, { right: 12, top: 12 }]} accessibilityLabel="Save">
+          </PressableScale>
+          <PressableScale
+            onPress={() => setSaved((v) => !v)} scaleTo={0.9}
+            containerStyle={{ position: 'absolute', right: 12, top: 12 }} style={s.fab} accessibilityLabel="Save"
+          >
             <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? colors.champagne : '#fff'} />
-          </Pressable>
+          </PressableScale>
 
           {photos.length > 0 && (
             <View style={s.counter}>
@@ -261,7 +270,7 @@ const s = StyleSheet.create({
   hero: { aspectRatio: 4 / 3.4, backgroundColor: colors.surfaceGlass },
   heroFallback: { alignItems: 'center', justifyContent: 'center' },
   fab: {
-    position: 'absolute', width: 44, height: 44, borderRadius: 22,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(10,8,13,0.55)', alignItems: 'center', justifyContent: 'center',
   },
   counter: {

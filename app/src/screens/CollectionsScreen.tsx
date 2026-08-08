@@ -6,10 +6,10 @@
 // surfaces and thin warm hairlines — not from shadows.
 
 import React from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { AmbientWarmth, Card, Empty, Screen, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, Empty, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { Collection, coverOf, membersOf, useCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
@@ -48,7 +48,23 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
     <Screen title={t('Collections', 'Bộ sưu tập')}>
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
-        {cols.loading && <ActivityIndicator color={colors.champagne} style={{ marginTop: 48 }} />}
+        {cols.loading && (
+          <View>
+            <GuestNotice />
+            <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai')}</Text>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={s.row}>
+                <Card style={s.card}>
+                  <Skeleton style={s.thumb} />
+                  <View style={s.cardText}>
+                    <Skeleton style={{ height: 18, width: '70%', borderRadius: 8 }} />
+                    <Skeleton style={{ height: 13, width: '45%', borderRadius: 7 }} />
+                  </View>
+                </Card>
+              </View>
+            ))}
+          </View>
+        )}
         {cols.error && <Empty text={t(`Couldn't load collections: ${cols.error}`, `Không tải được bộ sưu tập: ${cols.error}`)} />}
         {!cols.loading && !cols.error && (
           <FlatList
@@ -64,7 +80,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
               const count = membersOf(item, places).length || item.collection_places.length;
               const uri = coverFor(item);
               return (
-                <Pressable
+                <PressableScale
                   style={s.row}
                   onPress={() => navigation.navigate('CollectionDetail', { slug: item.slug })}
                 >
@@ -83,7 +99,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                       <Ionicons name="chevron-forward" size={17} color={colors.textSecondary} />
                     </View>
                   </Card>
-                </Pressable>
+                </PressableScale>
               );
             }}
             ListEmptyComponent={<Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.')} />}

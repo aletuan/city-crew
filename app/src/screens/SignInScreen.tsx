@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton, SwitchRow } from '../components/authUi';
+import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { colors, font } from '../theme';
@@ -23,6 +24,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
     setError(null);
     try {
       await signIn(email.trim(), password);
+      successHaptic();
       navigation.popToTop();
     } catch (err) {
       setError((err as Error).message);

@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton, SwitchRow } from '../components/authUi';
+import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { colors, type } from '../theme';
@@ -44,12 +45,16 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       }
       const { needsConfirm } = await signUp(name.trim(), email.trim(), password);
       if (needsConfirm) setStep('confirm');
-      else navigation.popToTop();
+      else {
+        successHaptic();
+        navigation.popToTop();
+      }
     });
 
   const verify = () =>
     run(async () => {
       await confirmSignUp(email.trim(), code.trim());
+      successHaptic();
       navigation.popToTop();
     });
 
