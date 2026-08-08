@@ -301,7 +301,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
     borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', gap: 3,
   },
-  ratingValue: { color: colors.text, fontSize: 18, fontWeight: font.bold },
+  ratingValue: { color: colors.text, fontSize: 18, fontWeight: font.semibold },
   ratingCount: { color: colors.textTertiary, fontSize: 12, fontWeight: font.regular },
 
   facts: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 18, marginTop: 16 },
