@@ -332,12 +332,13 @@ const s = StyleSheet.create({
   heroPillText: { color: colors.textSecondary, fontSize: 12.5, fontWeight: font.medium },
   heroTitle: { color: colors.text, fontSize: 24, fontWeight: font.bold, letterSpacing: 0.2, lineHeight: 30 },
   heroSub: { color: colors.textSecondary, ...type.meta, lineHeight: 21 },
+  // The screen's one loud control: solid champagne, dark text — the same
+  // primary-button material the auth screens use.
   heroCta: {
-    alignSelf: 'flex-start', marginTop: 4,
-    borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlass,
-    backgroundColor: 'rgba(10,11,10,0.45)', paddingHorizontal: 18, paddingVertical: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: radius.pill, paddingHorizontal: 20, paddingVertical: 12,
   },
-  heroCtaText: { color: colors.champagne, fontSize: 15, fontWeight: font.semibold },
+  heroCtaText: { color: '#141310', fontSize: 16, fontWeight: font.semibold },
 
   section: {
     color: colors.text, ...type.section,
