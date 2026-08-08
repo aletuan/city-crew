@@ -1,0 +1,148 @@
+// Shared Google Places import logic for fetch-place (single import) and
+// scan-city (batch import): details fetch → unique slug → place row + photos.
+
+export const PRICE_LEVELS: Record<string, number> = {
+  PRICE_LEVEL_INEXPENSIVE: 1,
+  PRICE_LEVEL_MODERATE: 2,
+  PRICE_LEVEL_EXPENSIVE: 3,
+  PRICE_LEVEL_VERY_EXPENSIVE: 4,
+};
+
+export const slugify = (name: string) =>
+  name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "place";
+
+export type CityRow = {
+  id: string;
+  name_en: string;
+  name_vi: string;
+  short_en: string;
+  short_vi: string;
+  center_lat: number;
+  center_lng: number;
+  radius_km: number;
+};
+
+/** Look up an active city; throws a caller-facing error for unknown ids. */
+export async function resolveCity(admin: any, cityId: string): Promise<CityRow> {
+  const { data, error } = await admin
+    .from("cities").select("*").eq("id", cityId).eq("is_active", true).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error(`unknown city: ${cityId}`);
+  return data as CityRow;
+}
+
+export const cityBias = (city: CityRow) => ({
+  circle: {
+    center: { latitude: city.center_lat, longitude: city.center_lng },
+    radius: city.radius_km * 1000,
+  },
+});
+
+type ImportArgs = {
+  admin: any;
+  gapi: (url: string, init?: RequestInit) => Promise<any>;
+  apiKey: string;
+  placeId: string;
+  category: "food" | "out";
+  cityId: string;
+  vibeTags?: string[];
+  maxPhotos?: number;
+};
+
+/**
+ * Import one Google place as a pending, unpublished row with photos.
+ * Slug collisions: base → `${base}-${cityId}` → numeric suffix.
+ * Assumes the caller already checked google_place_id for duplicates.
+ */
+export async function importPlace(
+  { admin, gapi, apiKey, placeId, category, cityId, vibeTags = [], maxPhotos = 6 }: ImportArgs,
+): Promise<{ slug: string; photos: number }> {
+  const d = await gapi(`https://places.googleapis.com/v1/places/${placeId}`, {
+    headers: {
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask":
+        "id,displayName,formattedAddress,location,rating,userRatingCount,"
+        + "priceLevel,regularOpeningHours,websiteUri,internationalPhoneNumber,"
+        + "nationalPhoneNumber,photos",
+    },
+  });
+
+  const name = d.displayName?.text ?? "Unnamed place";
+  let slug = slugify(name);
+  const { data: taken } = await admin
+    .from("places").select("slug").like("slug", `${slug}%`);
+  const exists = (s: string) => taken?.some((r: any) => r.slug === s);
+  if (exists(slug)) {
+    const withCity = `${slug}-${cityId}`;
+    slug = exists(withCity) ? `${slug}-${(taken?.length ?? 0) + 1}` : withCity;
+  }
+
+  const priceLevel = PRICE_LEVELS[d.priceLevel as string] ?? null;
+  const { data: placeRow, error: insErr } = await admin
+    .from("places")
+    .insert({
+      slug,
+      google_place_id: d.id,
+      name_en: name,
+      name_vi: name,
+      category,
+      city_id: cityId,
+      is_featured: false,
+      vibe_tags: vibeTags,
+      address: d.formattedAddress ?? null,
+      lat: d.location?.latitude ?? null,
+      lng: d.location?.longitude ?? null,
+      rating: d.rating ?? null,
+      rating_count: d.userRatingCount ?? null,
+      price_level: priceLevel,
+      price_display: priceLevel ? "₫".repeat(priceLevel) : null,
+      opening_hours: d.regularOpeningHours?.weekdayDescriptions ?? null,
+      website: d.websiteUri ?? null,
+      phone: d.internationalPhoneNumber ?? d.nationalPhoneNumber ?? null,
+      saved_count: 0,
+      emoji: "📍",
+      is_published: false,
+      review_status: "pending",
+      updated_at: new Date().toISOString(),
+    })
+    .select("id, slug")
+    .single();
+  if (insErr) throw new Error(insErr.message);
+
+  // Photo lookups are best-effort; a failed photo never fails the import.
+  const photos = (d.photos ?? []).slice(0, maxPhotos);
+  const rows = [];
+  for (const [i, ph] of photos.entries()) {
+    try {
+      const media = await gapi(
+        `https://places.googleapis.com/v1/${ph.name}/media`
+        + `?maxWidthPx=1600&skipHttpRedirect=true&key=${apiKey}`,
+      );
+      const attr = ph.authorAttributions?.[0];
+      rows.push({
+        place_id: placeRow.id,
+        photo_ref: ph.name,
+        photo_uri: media.photoUri,
+        source: "google",
+        attribution_name: attr?.displayName ?? null,
+        attribution_uri: attr?.uri ?? null,
+        sort_order: i,
+        is_cover: i === 0,
+        is_hidden: false,
+      });
+    } catch (_) { /* skip failed photo */ }
+  }
+  if (rows.length) {
+    const { error: phErr } = await admin.from("place_photos").insert(rows);
+    if (phErr) throw new Error(phErr.message);
+  }
+
+  return { slug, photos: rows.length };
+}

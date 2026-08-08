@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
+import { useCity } from '../App.jsx';
 
 const STATUSES = ['pending', 'approved', 'flagged'];
 const CATEGORIES = [['food', 'Food & drinks'], ['out', 'Outdoors & culture']];
@@ -9,6 +10,7 @@ const VIBES = ['cafes', 'food_tour', 'outdoors', 'views', 'culture', 'shopping',
 const fmtCount = (n) => (!n ? null : n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n));
 
 export default function PlaceList() {
+  const { city } = useCity();
   const [params, setParams] = useSearchParams();
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
@@ -41,11 +43,11 @@ export default function PlaceList() {
     setError(null);
     // api.places throws on non-2xx (e.g. a transient Supabase auth error);
     // never hand a non-array to the render path.
-    api.places(Object.fromEntries(params))
+    api.places({ ...Object.fromEntries(params), city: city?.id })
       .then((data) => live && setRows(Array.isArray(data) ? data : []))
       .catch((err) => live && setError(err.message));
     return () => { live = false; };
-  }, [params, retryKey]);
+  }, [params, retryKey, city?.id]);
 
   return (
     <>

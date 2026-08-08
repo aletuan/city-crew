@@ -5,11 +5,13 @@ import React, { useState } from 'react';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton } from '../components/authUi';
 import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { useCity } from '../lib/city';
 import { useI18n } from '../lib/i18n';
 import type { Nav } from '../nav';
 
 export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
+  const { city } = useCity();
   const { profile, updateProfile } = useAuth();
   const [name, setName] = useState(profile.full_name);
   const [location, setLocation] = useState(profile.location);
@@ -54,7 +56,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       <FieldRow
         icon="location-outline"
         label={t('From', 'Đến từ')}
-        placeholder={t('Ho Chi Minh City, Vietnam', 'TP. Hồ Chí Minh, Việt Nam')}
+        placeholder={t(`${city?.name_en ?? 'Ho Chi Minh City'}, Vietnam`, `${city?.name_vi ?? 'TP. Hồ Chí Minh'}, Việt Nam`)}
         value={location}
         onChangeText={setLocation}
       />

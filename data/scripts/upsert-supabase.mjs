@@ -1,3 +1,7 @@
+// FROZEN — HCMC-only bootstrap pipeline (the bbox check below is HCMC by
+// design). The DB is the source of truth; new cities come in via the
+// dashboard's Scan city / Add place flows. Kept for provenance only.
+//
 // Merge seeds/curation.json over review/places.review.json, validate, and emit
 // idempotent upsert SQL for Supabase (places, place_photos, collections).
 //

@@ -5,12 +5,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import { useProgress, useToast } from '../App.jsx';
+import { useCity, useProgress, useToast } from '../App.jsx';
 
 export default function AddPlace() {
   const navigate = useNavigate();
   const toast = useToast();
   const { refresh: refreshProgress } = useProgress();
+  const { city } = useCity();
 
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('food');
@@ -24,7 +25,7 @@ export default function AddPlace() {
     setBusy(true);
     setCandidates(null);
     try {
-      const { candidates: found } = await api.searchPlaces(query);
+      const { candidates: found } = await api.searchPlaces(query, city?.id);
       setCandidates(found);
     } catch (err) {
       toast(`Search failed: ${err.message}`);
@@ -37,7 +38,7 @@ export default function AddPlace() {
     if (importing) return;
     setImporting(c.place_id);
     try {
-      const { slug, photos } = await api.importPlace(c.place_id, category);
+      const { slug, photos } = await api.importPlace(c.place_id, category, city?.id);
       refreshProgress();
       toast(`Imported ${c.name} (${photos} photos) — review it now`);
       navigate(`/place/${slug}`);
@@ -58,7 +59,7 @@ export default function AddPlace() {
       <div className="addplace">
         <h2>Add a place</h2>
         <p className="addsub">
-          Search Google Places for a spot in Ho Chi Minh City. Importing pulls the
+          Search Google Places for a spot in {city?.name_en ?? 'the selected city'}. Importing pulls the
           address, coordinates, rating, hours and photos into the database as a
           <span className="stamp pending" style={{ margin: '0 6px' }}>pending</span>
           unpublished place — polish and approve it in the editor.
@@ -92,7 +93,7 @@ export default function AddPlace() {
         </div>
 
         {candidates?.length === 0 && (
-          <div className="empty">No matches — try adding the neighborhood or “HCMC”.</div>
+          <div className="empty">No matches — try adding the neighborhood or the city name.</div>
         )}
         <div className="rows">
           {candidates?.map((c) => (

@@ -2,14 +2,18 @@
 // result straight into the database as a pending, unpublished place —
 // the mobile replacement for data/scripts/fetch-places.mjs.
 //
-// POST { action: "search", query }            → { candidates: [...] }
-// POST { action: "import", place_id, category } → { slug }
+// POST { action: "search", query, city? }              → { candidates: [...] }
+// POST { action: "import", place_id, category, city? } → { slug }
+//
+// `city` is a cities.id ('hcmc' | 'hanoi' | 'danang' …); defaults to 'hcmc'
+// so pre-multi-city clients keep working.
 //
 // Secrets (Edge Function settings): GOOGLE_MAPS_API_KEY.
 // SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
 // Callers must be signed in AND on the public.editors allow-list.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { cityBias, importPlace, resolveCity } from "../_shared/import-place.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -22,24 +26,7 @@ const json = (body: unknown, status = 200) =>
     headers: { ...CORS, "Content-Type": "application/json" },
   });
 
-const HCMC = { latitude: 10.7769, longitude: 106.7009 };
 const MAX_API_CALLS = 20; // per request: 1 search or 1 details + ≤6 photo lookups
-const PRICE_LEVELS: Record<string, number> = {
-  PRICE_LEVEL_INEXPENSIVE: 1,
-  PRICE_LEVEL_MODERATE: 2,
-  PRICE_LEVEL_EXPENSIVE: 3,
-  PRICE_LEVEL_VERY_EXPENSIVE: 4,
-};
-
-const slugify = (name: string) =>
-  name
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/đ/gi, "d")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48) || "place";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -72,6 +59,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
+    const city = await resolveCity(admin, String(body.city ?? "hcmc"));
 
     if (body.action === "search") {
       const query = String(body.query ?? "").trim();
@@ -87,7 +75,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           textQuery: query,
           maxResultCount: 5,
-          locationBias: { circle: { center: HCMC, radius: 25000 } },
+          locationBias: cityBias(city),
         }),
       });
       return json({
@@ -110,82 +98,10 @@ Deno.serve(async (req) => {
         .from("places").select("slug").eq("google_place_id", placeId).maybeSingle();
       if (dup) return json({ error: `already imported as “${dup.slug}”`, slug: dup.slug }, 409);
 
-      const d = await gapi(`https://places.googleapis.com/v1/places/${placeId}`, {
-        headers: {
-          "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask":
-            "id,displayName,formattedAddress,location,rating,userRatingCount,"
-            + "priceLevel,regularOpeningHours,websiteUri,internationalPhoneNumber,"
-            + "nationalPhoneNumber,photos",
-        },
+      const { slug, photos } = await importPlace({
+        admin, gapi, apiKey, placeId, category, cityId: city.id, maxPhotos: 6,
       });
-
-      const name = d.displayName?.text ?? "Unnamed place";
-      let slug = slugify(name);
-      const { data: taken } = await admin
-        .from("places").select("slug").like("slug", `${slug}%`);
-      if (taken?.some((r: any) => r.slug === slug)) slug = `${slug}-${(taken?.length ?? 0) + 1}`;
-
-      const priceLevel = PRICE_LEVELS[d.priceLevel as string] ?? null;
-      const { data: placeRow, error: insErr } = await admin
-        .from("places")
-        .insert({
-          slug,
-          google_place_id: d.id,
-          name_en: name,
-          name_vi: name,
-          category,
-          is_featured: false,
-          vibe_tags: [],
-          address: d.formattedAddress ?? null,
-          lat: d.location?.latitude ?? null,
-          lng: d.location?.longitude ?? null,
-          rating: d.rating ?? null,
-          rating_count: d.userRatingCount ?? null,
-          price_level: priceLevel,
-          price_display: priceLevel ? "₫".repeat(priceLevel) : null,
-          opening_hours: d.regularOpeningHours?.weekdayDescriptions ?? null,
-          website: d.websiteUri ?? null,
-          phone: d.internationalPhoneNumber ?? d.nationalPhoneNumber ?? null,
-          saved_count: 0,
-          emoji: "📍",
-          is_published: false,
-          review_status: "pending",
-          updated_at: new Date().toISOString(),
-        })
-        .select("id, slug")
-        .single();
-      if (insErr) throw new Error(insErr.message);
-
-      // Up to 6 photos — resolve each photo resource to a servable URI.
-      const photos = (d.photos ?? []).slice(0, 6);
-      const rows = [];
-      for (const [i, ph] of photos.entries()) {
-        try {
-          const media = await gapi(
-            `https://places.googleapis.com/v1/${ph.name}/media`
-            + `?maxWidthPx=1600&skipHttpRedirect=true&key=${apiKey}`,
-          );
-          const attr = ph.authorAttributions?.[0];
-          rows.push({
-            place_id: placeRow.id,
-            photo_ref: ph.name,
-            photo_uri: media.photoUri,
-            source: "google",
-            attribution_name: attr?.displayName ?? null,
-            attribution_uri: attr?.uri ?? null,
-            sort_order: i,
-            is_cover: i === 0,
-            is_hidden: false,
-          });
-        } catch (_) { /* photo lookups are best-effort */ }
-      }
-      if (rows.length) {
-        const { error: phErr } = await admin.from("place_photos").insert(rows);
-        if (phErr) throw new Error(phErr.message);
-      }
-
-      return json({ slug, photos: rows.length });
+      return json({ slug, photos });
     }
 
     return json({ error: `unknown action: ${body.action}` }, 400);

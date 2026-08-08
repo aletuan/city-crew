@@ -10,8 +10,10 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
+import { CitySwitcherModal } from '../components/CitySwitcher';
 import { PrimaryButton } from '../components/authUi';
 import { useAuth } from '../lib/auth';
+import { useCity } from '../lib/city';
 import { Lang, useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
@@ -49,6 +51,30 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
       </View>
       <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
     </PressableScale>
+  );
+}
+
+/** Which city's catalog the app shows — available to guests and members. */
+function CityCard() {
+  const { t } = useI18n();
+  const { city, mode } = useCity();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Card style={s.featureCard}>
+        <FeatureRow
+          icon="location-outline"
+          title={t('City', 'Thành phố')}
+          sub={
+            (city ? t(city.name_en, city.name_vi) : '…')
+            + (mode === 'auto' ? t(' · from your location', ' · theo vị trí của bạn') : '')
+          }
+          onPress={() => setOpen(true)}
+          last
+        />
+      </Card>
+      <CitySwitcherModal visible={open} onClose={() => setOpen(false)} />
+    </>
   );
 }
 
@@ -125,6 +151,8 @@ function GuestHub({ navigation }: { navigation: Nav }) {
           last
         />
       </Card>
+
+      <CityCard />
 
       <Card style={s.friendsCard}>
         <RoundIcon name="people-outline" />
@@ -211,6 +239,8 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           last
         />
       </Card>
+
+      <CityCard />
 
       <Text style={s.section}>{t('Friends', 'Bạn bè')}</Text>
       <Card style={s.friendsCard}>

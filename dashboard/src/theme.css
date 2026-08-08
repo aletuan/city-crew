@@ -73,6 +73,12 @@ input, textarea, select { font-family: inherit; }
 .topbar .logo { width: 34px; height: 34px; border-radius: 10px; }
 .topbar h1 { font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
 .topbar h1 span { color: var(--text-tertiary); font-weight: 500; }
+.cityselect {
+  margin-left: 8px; border: 1px solid var(--border-glass); background: var(--surface-glass);
+  color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 600;
+  padding: 5px 10px; border-radius: var(--radius-pill); cursor: pointer;
+}
+.cityselect:hover { background: var(--surface-glass-strong); }
 .topbar .spacer { flex: 1; }
 
 /* progress rail — the desk's one glowing measure */

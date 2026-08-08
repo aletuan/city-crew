@@ -50,11 +50,18 @@ const toMockupPlace = (p, cat) => ({
   dur_max: p.dur_max ?? 90,
   lat: p.lat, lng: p.lng,
 });
-const placesJs = 'var PLACES = ' + JSON.stringify({
-  foryou: snapshot.places.foryou.map((p) => toMockupPlace(p, 'featured')),
-  food: snapshot.places.food.map((p) => toMockupPlace(p, 'food')),
-  out: snapshot.places.out.map((p) => toMockupPlace(p, 'out')),
-}, null, 1) + ';';
+// Snapshot is bucketed per city (export-snapshot.mjs); the mockup gets every
+// city's buckets plus a CITY cursor the city toggle moves at runtime.
+const placesByCity = Object.fromEntries(snapshot.cities.map((c) => [c.id, {
+  foryou: snapshot.places[c.id].foryou.map((p) => toMockupPlace(p, 'featured')),
+  food: snapshot.places[c.id].food.map((p) => toMockupPlace(p, 'food')),
+  out: snapshot.places[c.id].out.map((p) => toMockupPlace(p, 'out')),
+}]));
+const placesJs =
+  'var CITIES = ' + JSON.stringify(snapshot.cities, null, 1) + ';\n'
+  + 'var PLACES_BY_CITY = ' + JSON.stringify(placesByCity, null, 1) + ';\n'
+  + 'var CITY = ' + JSON.stringify(snapshot.default_city) + ';\n'
+  + 'var PLACES = PLACES_BY_CITY[CITY];';
 
 patch('places-data', (t) => {
   const S = '/*__DATA_START__*/', E = '/*__DATA_END__*/';
@@ -112,18 +119,13 @@ patch('detail-open-patch', (t) => {
   return t.replace(anchor, insert);
 });
 
-// ── 5. Public collections cards from real data ──────────────────────────────
-const collectionsHtml = snapshot.collections.map((c) => `              <div class="gcard crow" onclick="openCollection('${c.slug}')">
-                <img src="${c.cover_url}" alt="">
-                <div style="flex:1;"><div class="ct"><span data-lang-en="">${c.title_en}</span><span data-lang-vi="">${c.title_vi}</span></div>
-                  <div class="cm">${c.count} <span data-lang-en="">places · by</span><span data-lang-vi="">địa điểm · bởi</span> ${c.curator}</div></div>
-                <button class="gbtn" aria-label="Open"><i data-lucide="chevron-right"></i></button>
-              </div>`).join('\n');
+// ── 5. Collection cards render at runtime (they change with the city) ───────
+const COLS_CONTAINER = '<div id="cols-list"></div>';
 
 patch('public-collections', (t) => {
   const S = '<!--__COLS_START__-->', E = '<!--__COLS_END__-->';
   if (t.includes(S)) {
-    return t.slice(0, t.indexOf(S)) + S + '\n' + collectionsHtml + '\n' + E + t.slice(t.indexOf(E) + E.length);
+    return t.slice(0, t.indexOf(S)) + S + '\n              ' + COLS_CONTAINER + '\n              ' + E + t.slice(t.indexOf(E) + E.length);
   }
   const head = t.indexOf('<span data-lang-en="">Public collections</span>');
   if (head < 0) throw new Error('Public collections heading not found');
@@ -131,7 +133,21 @@ patch('public-collections', (t) => {
   const sectionEnd = t.indexOf('</section>', head);
   if (start < 0 || sectionEnd < 0 || start > sectionEnd) throw new Error('collections block bounds not found');
   const end = t.lastIndexOf('</div>', sectionEnd) + '</div>'.length;
-  return t.slice(0, start) + S + '\n' + collectionsHtml + '\n' + E + '\n            ' + t.slice(end);
+  return t.slice(0, start) + S + '\n              ' + COLS_CONTAINER + '\n              ' + E + '\n            ' + t.slice(end);
+});
+
+// The two "My collections" demo cards become a runtime container too — their
+// contents are per-city. The dashed "New collection" card stays static.
+patch('personal-collections-container', (t) => {
+  const S = '<!--__MYCOLS_START__-->', E = '<!--__MYCOLS_END__-->';
+  const block = S + '\n                <div id="mycols-list"></div>\n                ' + E;
+  if (t.includes(S)) {
+    return t.slice(0, t.indexOf(S)) + block + t.slice(t.indexOf(E) + E.length);
+  }
+  const start = t.indexOf(`<div class="gcard" style="margin:0 20px 10px;padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="openCollection('date-night')">`);
+  const end = t.indexOf('<div class="gcard" style="margin:0 20px 4px;');
+  if (start < 0 || end < 0 || start > end) throw new Error('my-collections cards bounds not found');
+  return t.slice(0, start) + block + '\n                ' + t.slice(end);
 });
 
 // ── 5b. Real review counts: the bookmark badge used to show a fabricated
@@ -172,37 +188,80 @@ patch('real-review-counts', (t) => {
 // category filter; now it opens a real detail screen listing the collection's
 // actual places. The two "My collections" demo cards are backed by real
 // published places too (6 and 9, matching their card labels).
-const PERSONAL_COLLECTIONS = [
+// Personal demo collections, per city: HCMC keeps the hand-picked lists;
+// other cities auto-pick deterministically by vibe + rating. A city whose
+// pick resolves fewer than 3 members hides the card entirely.
+const PERSONAL_DEFS = [
   {
     slug: 'date-night',
-    title_en: 'Date night', title_vi: 'Hẹn hò tối',
+    en: 'Date night', vi: 'Hẹn hò tối',
     desc_en: 'Your private shortlist for the next evening out.',
     desc_vi: 'Danh sách riêng của bạn cho buổi hẹn tối tiếp theo.',
-    curator: null, cover_url: null,
-    place_slugs: ['chill-skybar', 'saigon-night-cruise', 'carmen-bar', 'lusine-le-loi', 'blank-lounge', 'saigon-opera-house'],
+    flavor_en: 'private', flavor_vi: 'riêng tư',
+    vibes: ['nightlife', 'views', 'chill'], size: 6,
+    handPicked: {
+      hcmc: ['chill-skybar', 'saigon-night-cruise', 'carmen-bar', 'lusine-le-loi', 'blank-lounge', 'saigon-opera-house'],
+    },
   },
   {
     slug: 'weekend-family',
-    title_en: 'Weekend with family', title_vi: 'Cuối tuần cùng gia đình',
+    en: 'Weekend with family', vi: 'Cuối tuần cùng gia đình',
     desc_en: 'Easy classics the whole crew can do in a weekend.',
     desc_vi: 'Những điểm kinh điển nhẹ nhàng cả nhà cùng đi trong cuối tuần.',
-    curator: null, cover_url: null,
-    place_slugs: ['book-street', 'independence-palace', 'central-post-office', 'notre-dame-cathedral', 'nguyen-hue-walking-street', 'bitexco-skydeck', 'banh-mi-huynh-hoa', 'fine-arts-museum', 'jade-emperor-pagoda'],
+    flavor_en: 'shared with 3 friends', flavor_vi: 'chia sẻ với 3 người bạn',
+    vibes: ['culture', 'outdoors', 'food_tour'], size: 9,
+    handPicked: {
+      hcmc: ['book-street', 'independence-palace', 'central-post-office', 'notre-dame-cathedral', 'nguyen-hue-walking-street', 'bitexco-skydeck', 'banh-mi-huynh-hoa', 'fine-arts-museum', 'jade-emperor-pagoda'],
+    },
   },
 ];
 
-const publishedIds = new Set(Object.values(snapshot.places).flat().map((p) => p.id));
-const collectionsJs = 'var COLLECTIONS = ' + JSON.stringify(Object.fromEntries(
-  [...snapshot.collections, ...PERSONAL_COLLECTIONS].map((c) => {
-    const slugs = c.place_slugs.filter((s) => publishedIds.has(s));
-    if (!slugs.length) throw new Error(`collection ${c.slug} has no published places`);
-    return [c.slug, {
-      en: c.title_en, vi: c.title_vi,
-      desc_en: c.desc_en, desc_vi: c.desc_vi,
-      curator: c.curator ?? null, cover: c.cover_url ?? null,
+// All of a city's cards, deduped (foryou overlaps food/out via is_featured).
+const cityCards = (cityId) => {
+  const b = snapshot.places[cityId];
+  const seen = new Set();
+  return [...b.foryou, ...b.food, ...b.out].filter((p) => !seen.has(p.id) && seen.add(p.id));
+};
+
+const personalFor = (cityId) => {
+  const cards = cityCards(cityId);
+  const byId = new Map(cards.map((p) => [p.id, p]));
+  return PERSONAL_DEFS.flatMap((def) => {
+    let slugs = (def.handPicked[cityId] ?? []).filter((s) => byId.has(s));
+    if (!slugs.length) {
+      slugs = cards
+        .filter((p) => (p.vibes ?? []).some((v) => def.vibes.includes(v)))
+        .sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0) || a.id.localeCompare(b.id))
+        .slice(0, def.size)
+        .map((p) => p.id);
+    }
+    if (slugs.length < 3) return [];
+    return [{
+      slug: def.slug, en: def.en, vi: def.vi,
+      desc_en: def.desc_en, desc_vi: def.desc_vi,
+      curator: null,
+      cover: byId.get(slugs[0])?.photo_url ?? null,
       place_slugs: slugs,
+      personal: true,
+      flavor_en: def.flavor_en, flavor_vi: def.flavor_vi,
     }];
-  })), null, 1) + ';';
+  });
+};
+
+const collectionsByCity = Object.fromEntries(snapshot.cities.map((city) => {
+  const personal = personalFor(city.id).map((c) => [c.slug, c]);
+  const publicCols = (snapshot.collections[city.id] ?? []).map((c) => [c.slug, {
+    en: c.title_en, vi: c.title_vi,
+    desc_en: c.desc_en, desc_vi: c.desc_vi,
+    curator: c.curator ?? null, cover: c.cover_url ?? null,
+    place_slugs: c.place_slugs,
+  }]);
+  return [city.id, Object.fromEntries([...personal, ...publicCols])];
+}));
+
+const collectionsJs =
+  'var COLLECTIONS_BY_CITY = ' + JSON.stringify(collectionsByCity, null, 1) + ';\n'
+  + 'var COLLECTIONS = COLLECTIONS_BY_CITY[CITY] || {};';
 
 patch('collections-data', (t) => {
   const S = '/*__COLS_DATA_START__*/', E = '/*__COLS_DATA_END__*/';
@@ -309,13 +368,81 @@ patch('detail-back-capture', (t) => {
   return t.replace(anchor, insert);
 });
 
-// "My collections" demo cards point at their real-data collections.
-patch('personal-collection-links', (t) => {
-  if (t.includes("openCollection('date-night')")) return t;
-  const dn = `onclick="openCollection('food')"`;
-  const wf = `onclick="openCollection('out')"`;
-  if (!t.includes(dn) || !t.includes(wf)) throw new Error('personal collection cards not found');
-  return t.replace(dn, `onclick="openCollection('date-night')"`).replace(wf, `onclick="openCollection('weekend-family')"`);
+// ── 5d. City toggle + runtime ───────────────────────────────────────────────
+const cityToggleHtml = '<!--__CITY_TOGGLE_START__--><div class="lang-toggle city-toggle" role="group" aria-label="City / Thành phố">'
+  + snapshot.cities.map((c) =>
+    `<button id="btn-city-${c.id}"${c.id === snapshot.default_city ? ' class="active"' : ''} onclick="setCity('${c.id}')">`
+    + `<span data-lang-en="">${c.short_en}</span><span data-lang-vi="">${c.short_vi}</span></button>`).join('')
+  + '</div><!--__CITY_TOGGLE_END__-->';
+
+patch('city-toggle', (t) => {
+  const S = '<!--__CITY_TOGGLE_START__-->', E = '<!--__CITY_TOGGLE_END__-->';
+  if (t.includes(S)) {
+    return t.slice(0, t.indexOf(S)) + cityToggleHtml + t.slice(t.indexOf(E) + E.length);
+  }
+  const anchor = '<div class="lang-toggle mode-toggle" role="group" aria-label="Guest / Signed in">';
+  if (!t.includes(anchor)) throw new Error('toggles bar anchor not found');
+  return t.replace(anchor, cityToggleHtml + '\n    ' + anchor);
+});
+
+const CITY_RUNTIME = `/*__CITY_RT_START__*/
+function renderCollections() {
+  var pub = document.getElementById('cols-list');
+  var mine = document.getElementById('mycols-list');
+  if (!pub || !mine) return;
+  pub.innerHTML = ''; mine.innerHTML = '';
+  Object.keys(COLLECTIONS).forEach(function (slug) {
+    var c = COLLECTIONS[slug];
+    if (c.personal) {
+      var card = document.createElement('div');
+      card.className = 'gcard';
+      card.style.cssText = 'margin:0 20px 10px;padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;';
+      card.onclick = function () { openCollection(slug); };
+      card.innerHTML = '<img class="thumb" src="' + res(c.cover) + '" alt="">'
+        + '<div style="flex:1;"><div style="font-weight:600;font-size:14px;"><span data-lang-en="">' + c.en + '</span><span data-lang-vi="">' + c.vi + '</span></div>'
+        + '<div class="sub" style="font-size:12px;">' + c.place_slugs.length + ' <span data-lang-en="">places · ' + c.flavor_en + '</span><span data-lang-vi="">địa điểm · ' + c.flavor_vi + '</span></div></div>'
+        + '<button class="gbtn" style="width:34px;height:34px;" aria-label="Share collection"><i data-lucide="share-2" style="width:16px;height:16px;"></i></button>';
+      card.querySelector('button').onclick = function (ev) { ev.stopPropagation(); toast('cshared'); };
+      mine.appendChild(card);
+    } else {
+      var row = document.createElement('div');
+      row.className = 'gcard crow';
+      row.onclick = function () { openCollection(slug); };
+      row.innerHTML = '<img src="' + res(c.cover) + '" alt="">'
+        + '<div style="flex:1;"><div class="ct"><span data-lang-en="">' + c.en + '</span><span data-lang-vi="">' + c.vi + '</span></div>'
+        + '<div class="cm">' + c.place_slugs.length + ' <span data-lang-en="">places · by</span><span data-lang-vi="">địa điểm · bởi</span> ' + (c.curator || '@citycrew') + '</div></div>'
+        + '<button class="gbtn" aria-label="Open"><i data-lucide="chevron-right"></i></button>';
+      pub.appendChild(row);
+    }
+  });
+  icons();
+}
+function setCity(id) {
+  if (!PLACES_BY_CITY[id]) return;
+  CITY = id;
+  PLACES = PLACES_BY_CITY[id];
+  COLLECTIONS = COLLECTIONS_BY_CITY[id] || {};
+  saved = {};
+  document.querySelectorAll('.city-toggle button').forEach(function (b) {
+    b.classList.toggle('active', b.id === 'btn-city-' + id);
+  });
+  renderFilters(); renderCards(); renderCollections();
+  try { generatePlan(readWizardInputs()); } catch (e) { /* wizard not booted yet */ }
+  var scr = document.querySelector('.screen.active');
+  if (scr && (scr.id === 's-collection' || scr.id === 's-detail')) go('s-explore');
+  icons();
+}
+/*__CITY_RT_END__*/
+`;
+
+patch('city-runtime', (t) => {
+  const S = '/*__CITY_RT_START__*/', E = '/*__CITY_RT_END__*/';
+  if (t.includes(S)) {
+    return t.slice(0, t.indexOf(S)) + CITY_RUNTIME + t.slice(t.indexOf(E) + E.length + 1);
+  }
+  const anchor = "var DET_BACK = 's-explore';";
+  if (!t.includes(anchor)) throw new Error('city runtime anchor (DET_BACK) not found');
+  return t.replace(anchor, CITY_RUNTIME + anchor);
 });
 
 // ── 6. Wizard: vibe slugs + slider ids so the generator can read inputs ─────
@@ -431,6 +558,15 @@ patch('wizard-generate-hook', (t) => {
   return t.replace(orig, repl);
 });
 
+// Runs after the itinerary-runtime patch on purpose: that patch's fresh-
+// template fallback anchors on the original boot line this one rewrites.
+patch('boot-render-collections', (t) => {
+  if (t.includes('renderCollections(); wizShow();')) return t;
+  const boot = 'renderFilters(); renderCards(); wizShow(); icons();';
+  if (!t.includes(boot)) throw new Error('boot line not found');
+  return t.replace(boot, 'renderFilters(); renderCards(); renderCollections(); wizShow(); icons();');
+});
+
 // ── serialize + self-check ──────────────────────────────────────────────────
 // JSON.stringify leaves "</script>" unescaped, which would terminate the real
 // script tag early; re-escape the solidus like the original bundler payload.
@@ -442,31 +578,56 @@ const check = out.match(/(<script type="__bundler\/template"[^>]*>)(.*?)(<\/scri
 const checkTpl = JSON.parse(check[2]);
 const ds = checkTpl.indexOf('/*__DATA_START__*/') + '/*__DATA_START__*/'.length;
 const de = checkTpl.indexOf('/*__DATA_END__*/');
-const placesSrc = checkTpl.slice(ds, de).replace(/^var PLACES = /, '').replace(/;$/, '');
-const parsed = JSON.parse(placesSrc);
-const total = parsed.foryou.length + parsed.food.length + parsed.out.length;
-if (!total) throw new Error('self-check: no places after injection');
-for (const key of ['foryou', 'food', 'out']) {
-  for (const p of parsed[key]) {
-    if (!p.en || !p.vi || !p.desc_vi) throw new Error(`self-check: ${key}/${p.id} missing bilingual fields`);
-  }
-}
+const dataBlock = checkTpl.slice(ds, de);
+const parse = (label, re) => {
+  const m = dataBlock.match(re);
+  if (!m) throw new Error(`self-check: ${label} not found in data block`);
+  return JSON.parse(m[1]);
+};
+const checkCities = parse('CITIES', /var CITIES = ([\s\S]*?);\nvar PLACES_BY_CITY/);
+const checkPlaces = parse('PLACES_BY_CITY', /var PLACES_BY_CITY = ([\s\S]*?);\nvar CITY = /);
+if (!checkCities.length) throw new Error('self-check: no cities after injection');
 
 const cs = checkTpl.indexOf('/*__COLS_DATA_START__*/') + '/*__COLS_DATA_START__*/'.length;
 const ce = checkTpl.indexOf('/*__COLS_DATA_END__*/');
 if (ce < 0) throw new Error('self-check: COLLECTIONS block missing');
-const cols = JSON.parse(checkTpl.slice(cs, ce).replace(/^var COLLECTIONS = /, '').replace(/;$/, ''));
-const idSet = new Set([...parsed.foryou, ...parsed.food, ...parsed.out].map((p) => p.id));
-for (const [slug, c] of Object.entries(cols)) {
-  if (!c.place_slugs.some((s) => idSet.has(s))) throw new Error(`self-check: collection ${slug} resolves to no published places`);
-  if (!c.en || !c.vi) throw new Error(`self-check: collection ${slug} missing bilingual titles`);
+const colsMatch = checkTpl.slice(cs, ce).match(/var COLLECTIONS_BY_CITY = ([\s\S]*?);\nvar COLLECTIONS = /);
+if (!colsMatch) throw new Error('self-check: COLLECTIONS_BY_CITY not found');
+const checkCols = JSON.parse(colsMatch[1]);
+
+for (const city of checkCities) {
+  const buckets = checkPlaces[city.id];
+  if (!buckets) throw new Error(`self-check: city ${city.id} has no place buckets`);
+  const cards = [...buckets.foryou, ...buckets.food, ...buckets.out];
+  if (!cards.length) throw new Error(`self-check: city ${city.id} has zero places`);
+  for (const p of cards) {
+    if (!p.en || !p.vi || !p.desc_vi) throw new Error(`self-check: ${city.id}/${p.id} missing bilingual fields`);
+  }
+  const idSet = new Set(cards.map((p) => p.id));
+  for (const [slug, c] of Object.entries(checkCols[city.id] ?? {})) {
+    if (!c.place_slugs.some((s) => idSet.has(s))) {
+      throw new Error(`self-check: ${city.id}/${slug} resolves to no published places in its own city`);
+    }
+    if (!c.en || !c.vi) throw new Error(`self-check: collection ${slug} missing bilingual titles`);
+  }
+  if (!checkTpl.includes(`btn-city-${city.id}`)) throw new Error(`self-check: city toggle missing button for ${city.id}`);
 }
 if (!checkTpl.includes('id="s-collection"')) throw new Error('self-check: collection detail screen missing');
+if (!checkTpl.includes('function setCity(')) throw new Error('self-check: setCity runtime missing');
+if (!checkTpl.includes('id="cols-list"') || !checkTpl.includes('id="mycols-list"')) {
+  throw new Error('self-check: collection list containers missing');
+}
 if (checkTpl.includes("openCollection('food')") || checkTpl.includes("openCollection('out')")) {
   throw new Error('self-check: stale category-based openCollection call remains');
 }
 
 writeFileSync(MOCKUP, out);
 console.log(`OK: patches applied [${applied.join(', ') || 'none (already up to date)'}]`);
-console.log(`Places injected: foryou=${parsed.foryou.length} food=${parsed.food.length} out=${parsed.out.length}; collections=${Object.keys(cols).length}`);
+const perCity = checkCities
+  .map((c) => {
+    const b = checkPlaces[c.id];
+    return `${c.id}: foryou=${b.foryou.length} food=${b.food.length} out=${b.out.length} cols=${Object.keys(checkCols[c.id] ?? {}).length}`;
+  })
+  .join(' | ');
+console.log(`Places injected per city — ${perCity}`);
 console.log(`Wrote ${MOCKUP}`);

@@ -6,6 +6,7 @@ import AuthGate from './auth.jsx';
 import AddPlace from './components/AddPlace.jsx';
 import PlaceList from './components/PlaceList.jsx';
 import PlaceEditor from './components/PlaceEditor.jsx';
+import ScanCity from './components/ScanCity.jsx';
 import './theme.css';
 
 // Hash routing: survives refreshes and deep links on GitHub Pages,
@@ -18,6 +19,7 @@ const router = createHashRouter([
       { index: true, element: <PlaceList /> },
       { path: 'place/:slug', element: <PlaceEditor /> },
       { path: 'add', element: <AddPlace /> },
+      { path: 'scan', element: <ScanCity /> },
     ],
   },
 ]);

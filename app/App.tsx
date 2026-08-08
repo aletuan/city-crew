@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from './src/lib/auth';
+import { CityProvider } from './src/lib/city';
 import { I18nProvider, useI18n } from './src/lib/i18n';
 import { colors, font } from './src/theme';
 import { fireHaptic, TAB_BAR_HEIGHT } from './src/components/ui';
@@ -145,10 +146,12 @@ export default function App() {
     <SafeAreaProvider>
       <AuthProvider>
         <I18nProvider>
-          <NavigationContainer theme={navTheme}>
-            <StatusBar style="light" />
-            <Tabs />
-          </NavigationContainer>
+          <CityProvider>
+            <NavigationContainer theme={navTheme}>
+              <StatusBar style="light" />
+              <Tabs />
+            </NavigationContainer>
+          </CityProvider>
         </I18nProvider>
       </AuthProvider>
     </SafeAreaProvider>

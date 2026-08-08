@@ -1,10 +1,15 @@
 // Export published places + collections into the exact shape the mockup
-// consumes: { places: {foryou, food, out}, collections: [...] }.
+// consumes, bucketed per city:
+//   { generated_from, default_city,
+//     cities: [{ id, name_en, name_vi, short_en, short_vi, sort_order }],
+//     places: { hcmc: { foryou, food, out }, hanoi: {…}, … },
+//     collections: { hcmc: [...], hanoi: [...], … } }
+// Only cities with ≥1 published place appear — a city toggle to an empty
+// demo screen is worse than no toggle.
 //
 // Default: reads from Supabase with the anon key — the same access path the
-// future app would use. With --local, reads the curated repo files instead
-// (review/places.review.json + seeds/collections.json), useful before the DB
-// has been seeded.
+// app uses. With --local, reads the curated repo files instead
+// (review/places.review.json + seeds/collections.json, HCMC-only bootstrap).
 //
 // Usage: node --env-file=.env scripts/export-snapshot.mjs [--local]
 
@@ -15,23 +20,38 @@ import { fileURLToPath } from 'node:url';
 const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
 const local = process.argv.includes('--local');
 
-let places, collections;
+const HCMC_CITY = {
+  id: 'hcmc', name_en: 'Ho Chi Minh City', name_vi: 'TP. Hồ Chí Minh',
+  short_en: 'Saigon', short_vi: 'Sài Gòn', sort_order: 1,
+};
+
+let places, collections, cities;
 if (local) {
   const review = JSON.parse(readFileSync(join(DATA_DIR, 'review', 'places.review.json'), 'utf8'));
   const seeds = JSON.parse(readFileSync(join(DATA_DIR, 'seeds', 'collections.json'), 'utf8'));
   places = Object.values(review.places)
     .filter((p) => !p.needs_review && !p.fetch_failed)
     .filter((p) => (p.review_status ?? 'approved') === 'approved' && (p.is_published ?? true))
-    .map((p) => ({ ...p, place_photos: p.photos.map((ph, i) => ({ ...ph, sort_order: i })) }));
+    .map((p) => ({ ...p, city_id: 'hcmc', place_photos: p.photos.map((ph, i) => ({ ...ph, sort_order: i })) }));
   const bySlug = Object.fromEntries(places.map((p) => [p.slug, p]));
   collections = seeds.collections.map((c) => ({
     ...c,
+    city_id: 'hcmc',
     collection_places: c.places.map((slug, i) => ({ sort_order: i, places: { slug } })),
     cover: { photo_uri: bySlug[c.cover]?.photos.find((ph) => ph.is_cover)?.photo_uri ?? null },
   }));
+  cities = [HCMC_CITY]; // the local bootstrap files predate multi-city
 } else {
   const { createClient } = await import('@supabase/supabase-js');
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
+  const { data: ct, error: ctErr } = await supabase
+    .from('cities')
+    .select('id, name_en, name_vi, short_en, short_vi, sort_order')
+    .eq('is_active', true)
+    .order('sort_order');
+  if (ctErr) throw new Error(ctErr.message);
+  cities = ct;
 
   // The demo ships only reviewer-approved, published places.
   const { data: p, error: pErr } = await supabase
@@ -93,41 +113,62 @@ const toCard = (p) => {
   };
 };
 
-const featured = places.filter((p) => p.is_featured);
+// Per-city buckets. Cities with zero published places are dropped entirely —
+// the mockup's city toggle should never lead to an empty screen.
+const activeCities = cities.filter((city) => places.some((p) => p.city_id === city.id));
+if (!activeCities.length) throw new Error('no city has published places');
+
+const placesByCity = {};
+const collectionsByCity = {};
+for (const city of activeCities) {
+  const cityPlaces = places.filter((p) => p.city_id === city.id);
+  placesByCity[city.id] = {
+    foryou: cityPlaces.filter((p) => p.is_featured).slice(0, 10).map(toCard),
+    food: cityPlaces.filter((p) => p.category === 'food').map(toCard),
+    out: cityPlaces.filter((p) => p.category === 'out').map(toCard),
+  };
+
+  // Count only published members within the same city — with the service key
+  // the nested join is not RLS-filtered, and unpublished places must not
+  // inflate the card count.
+  const publishedSlugs = new Set(cityPlaces.map((p) => p.slug));
+  collectionsByCity[city.id] = collections
+    .filter((c) => c.city_id === city.id)
+    .flatMap((c) => {
+      const memberSlugs = (c.collection_places ?? [])
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((cp) => cp.places?.slug)
+        .filter((slug) => slug && publishedSlugs.has(slug));
+      if (!memberSlugs.length) return []; // hide collections with no approved members
+      return {
+        slug: c.slug,
+        title_en: c.title_en, title_vi: c.title_vi,
+        desc_en: c.desc_en, desc_vi: c.desc_vi,
+        curator: c.curator_handle,
+        // Fall back to the first member's cover if the collection's own cover
+        // photo was deleted (the FK nulls it) or never set.
+        cover_url: c.cover?.photo_uri
+          ?? cityPlaces.find((p) => p.slug === memberSlugs[0])?.place_photos
+            ?.filter((ph) => !ph.is_hidden)
+            ?.sort((a, b) => (b.is_cover ? 1 : 0) - (a.is_cover ? 1 : 0))?.[0]?.photo_uri
+          ?? null,
+        count: memberSlugs.length,
+        place_slugs: memberSlugs,
+      };
+    });
+}
+
 const snapshot = {
   generated_from: local ? 'local review files' : process.env.SUPABASE_URL,
-  places: {
-    foryou: featured.slice(0, 10).map(toCard),
-    food: places.filter((p) => p.category === 'food').map(toCard),
-    out: places.filter((p) => p.category === 'out').map(toCard),
-  },
-  collections: collections.flatMap((c) => {
-    // Count only published members — with the service key the nested join is
-    // not RLS-filtered, and unpublished places must not inflate the card count.
-    const publishedSlugs = new Set(places.map((p) => p.slug));
-    const memberSlugs = (c.collection_places ?? [])
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((cp) => cp.places?.slug)
-      .filter((slug) => slug && publishedSlugs.has(slug));
-    if (!memberSlugs.length) return []; // hide collections with no approved members
-    return {
-      slug: c.slug,
-      title_en: c.title_en, title_vi: c.title_vi,
-      desc_en: c.desc_en, desc_vi: c.desc_vi,
-      curator: c.curator_handle,
-      // Fall back to the first member's cover if the collection's own cover
-      // photo was deleted (the FK nulls it) or never set.
-      cover_url: c.cover?.photo_uri
-        ?? places.find((p) => p.slug === memberSlugs[0])?.place_photos
-          ?.filter((ph) => !ph.is_hidden)
-          ?.sort((a, b) => (b.is_cover ? 1 : 0) - (a.is_cover ? 1 : 0))?.[0]?.photo_uri
-        ?? null,
-      count: memberSlugs.length,
-      place_slugs: memberSlugs,
-    };
-  }),
+  default_city: activeCities.some((c) => c.id === 'hcmc') ? 'hcmc' : activeCities[0].id,
+  cities: activeCities,
+  places: placesByCity,
+  collections: collectionsByCity,
 };
 
 const out = join(DATA_DIR, 'snapshot', 'citycrew-data.json');
 writeFileSync(out, JSON.stringify(snapshot, null, 2));
-console.log(`OK: ${places.length} places (${snapshot.places.foryou.length} featured), ${collections.length} collections → ${out}`);
+const perCity = activeCities
+  .map((c) => `${c.id}=${Object.values(placesByCity[c.id]).flat().length} cards/${collectionsByCity[c.id].length} cols`)
+  .join(', ');
+console.log(`OK: ${places.length} places across ${activeCities.length} cities (${perCity}) → ${out}`);

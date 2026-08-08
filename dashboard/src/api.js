@@ -34,11 +34,15 @@ async function invoke(name, body) {
 }
 
 export const api = {
+  cities: async () =>
+    db(await supabase.from('cities').select('id, name_en, name_vi, short_en, short_vi').order('sort_order')),
+
   places: async (params = {}) => {
     let query = supabase
       .from('places')
       .select('slug, name_en, name_vi, category, is_featured, vibe_tags, neighborhood_en, review_status, rating, rating_count, place_photos(photo_uri, is_cover, is_hidden)')
       .order('slug');
+    if (params.city) query = query.eq('city_id', params.city);
     if (params.status) query = query.eq('review_status', params.status);
     if (params.category) query = query.eq('category', params.category);
     if (params.vibe) query = query.contains('vibe_tags', [params.vibe]);
@@ -90,16 +94,21 @@ export const api = {
     return { ok: true, removed_uploads: paths.length };
   },
 
-  progress: async () => {
-    const rows = db(await supabase.from('places').select('review_status, category'));
+  progress: async (city) => {
+    let query = supabase.from('places').select('review_status, category');
+    if (city) query = query.eq('city_id', city);
+    const rows = db(await query);
     const by = (key) => rows.reduce((acc, r) => ((acc[r[key]] = (acc[r[key]] ?? 0) + 1), acc), {});
     return { total: rows.length, by_status: by('review_status'), by_category: by('category') };
   },
 
   sync: () => invoke('sync-mockup', {}),
 
-  searchPlaces: (query) => invoke('fetch-place', { action: 'search', query }),
-  importPlace: (place_id, category) => invoke('fetch-place', { action: 'import', place_id, category }),
+  searchPlaces: (query, city) => invoke('fetch-place', { action: 'search', query, city }),
+  importPlace: (place_id, category, city) => invoke('fetch-place', { action: 'import', place_id, category, city }),
+
+  scanCategories: () => invoke('scan-city', { action: 'categories' }),
+  scanCity: (city, category_key) => invoke('scan-city', { action: 'scan', city, category_key }),
 
   patchPhoto: async (id, { is_cover, is_hidden }) => {
     if (is_cover === true) {

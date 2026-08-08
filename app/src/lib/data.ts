@@ -3,6 +3,7 @@
 // uses. No app server involved.
 
 import { useCallback, useEffect, useState } from 'react';
+import { useCity } from './city';
 import { supabase } from './supabase';
 
 export type PlacePhoto = {
@@ -97,10 +98,11 @@ function useFetch<T>(fetcher: () => Promise<T>, empty: T): Fetch<T> {
   return { ...state, reload: load };
 }
 
-async function fetchPlaces(): Promise<Place[]> {
+async function fetchPlaces(cityId: string): Promise<Place[]> {
   const { data, error } = await supabase
     .from('places')
     .select('slug, name_en, name_vi, category, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, emoji, opening_hours, website, phone, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)')
+    .eq('city_id', cityId)
     .eq('is_published', true)
     .eq('review_status', 'approved')
     .order('sort_order', { ascending: true, nullsFirst: false });
@@ -108,18 +110,40 @@ async function fetchPlaces(): Promise<Place[]> {
   return (data ?? []) as unknown as Place[];
 }
 
-async function fetchCollections(): Promise<Collection[]> {
+async function fetchCollections(cityId: string): Promise<Collection[]> {
   const { data, error } = await supabase
     .from('collections')
     .select('slug, title_en, title_vi, desc_en, desc_vi, curator_handle, collection_places(sort_order, places(slug)), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)')
+    .eq('city_id', cityId)
     .eq('is_public', true)
     .order('sort_order');
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as Collection[];
 }
 
-export const usePlaces = () => useFetch(fetchPlaces, [] as Place[]);
-export const useCollections = () => useFetch(fetchCollections, [] as Collection[]);
+// Both catalogs scope to the selected city TOGETHER: membersOf() resolves
+// collection members against the in-memory places list, so a mismatched
+// scope would silently render empty collections. A city switch changes the
+// fetcher identity, which makes useFetch reload everywhere automatically.
+const pending = new Promise<never>(() => {}); // keeps skeletons up during city bootstrap
+
+export const usePlaces = () => {
+  const { city } = useCity();
+  const fetcher = useCallback(
+    () => (city ? fetchPlaces(city.id) : (pending as Promise<Place[]>)),
+    [city?.id],
+  );
+  return useFetch(fetcher, [] as Place[]);
+};
+
+export const useCollections = () => {
+  const { city } = useCity();
+  const fetcher = useCallback(
+    () => (city ? fetchCollections(city.id) : (pending as Promise<Collection[]>)),
+    [city?.id],
+  );
+  return useFetch(fetcher, [] as Collection[]);
+};
 
 /** Resolve a collection's member slugs against the published catalog. */
 export function membersOf(c: Collection, places: Place[]): Place[] {

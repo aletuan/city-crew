@@ -8,15 +8,27 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0B0910",
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "cityCrew uses your location once to pick the nearest city for you."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0B0910",
         "foregroundImage": "./assets/icon.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["android.permission.ACCESS_COARSE_LOCATION"]
     },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "cityCrew uses your location once to pick the nearest city for you."
+        }
+      ]
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     },

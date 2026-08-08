@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { useProgress, useToast } from '../App.jsx';
+import { useCity, useProgress, useToast } from '../App.jsx';
 import PhotoManager, { emptyPhotoEdits, photoEditsDirty } from './PhotoManager.jsx';
 
 const VIBES = ['cafes', 'food_tour', 'outdoors', 'views', 'culture', 'shopping', 'nightlife', 'chill'];
@@ -34,6 +34,7 @@ export default function PlaceEditor() {
   const navigate = useNavigate();
   const toast = useToast();
   const { refresh: refreshProgress } = useProgress();
+  const { city } = useCity();
 
   const [place, setPlace] = useState(null);
   const [form, setForm] = useState(null);
@@ -59,10 +60,10 @@ export default function PlaceEditor() {
   useEffect(() => {
     const listParams = new URLSearchParams(params);
     listParams.delete('q');
-    api.places(Object.fromEntries(listParams))
+    api.places({ ...Object.fromEntries(listParams), city: city?.id })
       .then((rows) => setSiblings(Array.isArray(rows) ? rows.map((r) => r.slug) : []))
       .catch(() => setSiblings([]));
-  }, [params]);
+  }, [params, city?.id]);
 
   // Text and photo edits share one dirty state: both light up Save, both are
   // applied together, both are discarded together.

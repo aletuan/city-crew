@@ -10,8 +10,10 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import PlaceCard from '../components/PlaceCard';
-import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { CityChip } from '../components/CitySwitcher';
+import { AmbientWarmth, Chip, Empty, fireHaptic, LangPill, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
 import { Lang, useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space, type } from '../theme';
@@ -39,15 +41,13 @@ function dateline(lang: Lang): string {
 }
 
 /** The hero is a night-out invitation, so it leans on after-dark
- *  aerial photography: the rooftop-bar panorama first, then the night
- *  cruise, then any skyline shot the catalog has. */
+ *  photography: a featured place with a views/nightlife vibe first, then
+ *  any featured place with a photo — city-agnostic, ordered by sort_order. */
 function heroPlace(places: Place[]): Place | undefined {
   const withPhoto = (p: Place) => !!coverOf(p);
   return (
-    places.find((p) => p.slug === 'chill-skybar' && withPhoto(p)) ??
-    places.find((p) => p.slug === 'saigon-night-cruise' && withPhoto(p)) ??
-    places.find((p) => p.slug.includes('landmark') && withPhoto(p)) ??
-    places.find((p) => p.slug.includes('bitexco') && withPhoto(p)) ??
+    places.find((p) => p.is_featured && withPhoto(p)
+      && p.vibe_tags.some((v) => v === 'views' || v === 'nightlife')) ??
     places.find((p) => p.is_featured && withPhoto(p)) ??
     places.find(withPhoto)
   );
@@ -60,6 +60,7 @@ function Hero({ place, onExplore, scrollY }: {
 }) {
   const { t } = useI18n();
   const { session, email } = useAuth();
+  const { city } = useCity();
   const uri = place && coverOf(place)?.photo_uri;
   // The photo trails the scroll slightly; pre-scaled so no edge shows.
   const parallax = scrollY.interpolate({ inputRange: [0, 320], outputRange: [0, 26], extrapolate: 'clamp' });
@@ -87,7 +88,10 @@ function Hero({ place, onExplore, scrollY }: {
             </Text>
           </View>
           <Text style={s.heroTitle}>
-            {t('Ideas for a night in Ho Chi Minh City', 'Gợi ý cho một đêm ở TP. Hồ Chí Minh')}
+            {t(
+              `Ideas for a night in ${city?.name_en ?? 'the city'}`,
+              `Gợi ý cho một đêm ở ${city?.name_vi ?? 'thành phố'}`,
+            )}
           </Text>
           <Text style={s.heroSub}>
             {t(
@@ -193,6 +197,7 @@ function MakeItYours({ navigation }: { navigation: Nav }) {
 
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
+  const { city } = useCity();
   const { loading, error, data: places, reload } = usePlaces();
   const [cat, setCat] = useState<(typeof CATS)[number]['key']>('foryou');
   const tabClearance = useTabBarClearance();
@@ -232,7 +237,16 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   );
 
   return (
-    <Screen eyebrow={dateline(lang)} title={t('Discover Saigon', 'Khám phá Sài Gòn')}>
+    <Screen
+      eyebrow={dateline(lang)}
+      title={t(`Discover ${city?.short_en ?? '…'}`, `Khám phá ${city?.short_vi ?? '…'}`)}
+      right={(
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <CityChip />
+          <LangPill />
+        </View>
+      )}
+    >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {loading && (

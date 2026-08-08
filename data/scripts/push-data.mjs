@@ -1,3 +1,6 @@
+// FROZEN — HCMC-only bootstrap pipeline; rows it pushes land on city_id's
+// DEFAULT ('hcmc'). The DB is the source of truth. Kept for provenance only.
+//
 // Push the curated review data + collections to Supabase via supabase-js.
 // Reads SUPABASE_URL and SUPABASE_KEY from the environment (data/.env).
 // Works with the service-role key, or with the anon key while temporary

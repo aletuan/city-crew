@@ -1,3 +1,7 @@
+// FROZEN — HCMC-only bootstrap pipeline. The DB is the source of truth now;
+// add places for any city via the dashboard's Add place / Scan city flows
+// (supabase/functions/fetch-place, scan-city). Kept for provenance only.
+//
 // Fetch real place data from Google Places API (New) for the candidates list.
 // Writes/merges data/review/places.review.json for human curation; raw API
 // responses are cached in data/review/.cache so re-runs cost nothing.

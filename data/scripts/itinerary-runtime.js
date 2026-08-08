@@ -56,12 +56,24 @@ var ITI_PARTS = {
   afternoon: { emoji: '🌤️', en: 'Afternoon', vi: 'Buổi chiều' },
   evening:   { emoji: '🌙', en: 'Evening',   vi: 'Buổi tối' }
 };
-var ITI_TITLES = {
-  today: { en: 'Today in Saigon',    vi: 'Hôm nay ở Sài Gòn' },
-  sat:   { en: 'Saturday in Saigon', vi: 'Thứ Bảy ở Sài Gòn' },
-  sun:   { en: 'Sunday in Saigon',   vi: 'Chủ Nhật ở Sài Gòn' }
-};
 var ITI_TRANSPORT_PER_HOP = 15000;
+
+/** Short bilingual name of the selected city ("Saigon" / "Sài Gòn"). */
+function itiCity() {
+  var c = (typeof CITIES !== 'undefined' && typeof CITY !== 'undefined')
+    ? CITIES.filter(function (x) { return x.id === CITY; })[0]
+    : null;
+  return c || { short_en: 'Saigon', short_vi: 'Sài Gòn' };
+}
+
+function itiTitle(day) {
+  var m = itiCity();
+  var d = { today: { en: 'Today',    vi: 'Hôm nay' },
+            sat:   { en: 'Saturday', vi: 'Thứ Bảy' },
+            sun:   { en: 'Sunday',   vi: 'Chủ Nhật' } }[day]
+    || { en: 'Saturday', vi: 'Thứ Bảy' };
+  return { en: d.en + ' in ' + m.short_en, vi: d.vi + ' ở ' + m.short_vi };
+}
 
 function itiPool() {
   var seen = {}, pool = [];
@@ -185,12 +197,13 @@ function generatePlan(inputs) {
   put('amt-trans', itiFmtVnd(trans));
 
   // ── header ──
-  var title = ITI_TITLES[inputs.day] || ITI_TITLES.sat;
+  var title = itiTitle(inputs.day);
+  var m = itiCity();
   var win = itiTime(600) + '–' + itiTime(600 + inputs.hours * 60);
   put('iti-title-en', title.en);
   put('iti-title-vi', title.vi);
-  put('iti-window-en', 'HCMC · ' + win);
-  put('iti-window-vi', 'TP.HCM · ' + win);
+  put('iti-window-en', m.short_en + ' · ' + win);
+  put('iti-window-vi', m.short_vi + ' · ' + win);
   put('iti-org-en', "You're organizing · " + inputs.people + ' people');
   put('iti-org-vi', 'Bạn tổ chức · ' + inputs.people + ' người');
 }
