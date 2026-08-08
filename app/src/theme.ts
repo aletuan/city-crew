@@ -34,6 +34,10 @@ export const colors = {
 
   ok: '#8FBF8A',
   bad: '#D98A80',
+
+  /** Live "right now" signals — open now, trending, new. Same hue as the
+   *  ambient warmth so energy stays inside the palette's temperature. */
+  ember: '#E2A860',
 };
 
 /** A restrained champagne wash for the rare small gradient surface. */

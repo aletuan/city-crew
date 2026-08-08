@@ -41,6 +41,8 @@ export type Place = {
   opening_hours: string[] | null;
   website: string | null;
   phone: string | null;
+  saved_count: number | null;
+  created_at: string;
   place_photos: PlacePhoto[];
 };
 
@@ -82,6 +84,18 @@ export function priceLabel(p: Place): string | null {
   return null;
 }
 
+/**
+ * "New" = added within 14 days AND after the city's launch wave — when a
+ * whole catalog is freshly imported, nothing is meaningfully new until
+ * places start arriving on top of it.
+ */
+export function isNew(p: Place, all: Place[]): boolean {
+  const created = Date.parse(p.created_at);
+  if (!created || Date.now() - created > 14 * 86400e3) return false;
+  const oldest = Math.min(...all.map((x) => Date.parse(x.created_at) || Infinity));
+  return created - oldest > 3 * 86400e3;
+}
+
 export function fmtCount(n: number | null | undefined): string {
   if (!n) return '';
   return n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n);
@@ -106,7 +120,7 @@ function useFetch<T>(fetcher: () => Promise<T>, empty: T): Fetch<T> {
 async function fetchPlaces(cityId: string): Promise<Place[]> {
   const { data, error } = await supabase
     .from('places')
-    .select('slug, name_en, name_vi, name_ja, category, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, neighborhood_ja, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, desc_ja, emoji, opening_hours, website, phone, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)')
+    .select('slug, name_en, name_vi, name_ja, category, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, neighborhood_ja, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, desc_ja, emoji, opening_hours, website, phone, saved_count, created_at, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)')
     .eq('city_id', cityId)
     .eq('is_published', true)
     .eq('review_status', 'approved')
