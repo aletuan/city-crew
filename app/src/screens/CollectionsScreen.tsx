@@ -23,12 +23,13 @@ function GuestNotice() {
   return (
     <View style={s.notice}>
       <Text style={s.noticeTitle}>
-        👋 {t("You're browsing as a guest", 'Bạn đang xem với tư cách khách')}
+        👋 {t("You're browsing as a guest", 'Bạn đang xem với tư cách khách', 'ゲストとして閲覧中です')}
       </Text>
       <Text style={s.noticeBody}>
         {t(
           'Public collections are curated by local explorers. Signing in adds your own lists.',
           'Bộ sưu tập công khai do người bản địa tuyển chọn. Đăng nhập để thêm danh sách của riêng bạn.',
+          '公開コレクションは地元の案内人が厳選。サインインすると自分のリストも作れます。',
         )}
       </Text>
     </View>
@@ -45,13 +46,13 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
 
   return (
-    <Screen title={t('Collections', 'Bộ sưu tập')}>
+    <Screen title={t('Collections', 'Bộ sưu tập', 'コレクション')}>
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {cols.loading && (
           <View>
             <GuestNotice />
-            <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai')}</Text>
+            <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
             {[0, 1, 2].map((i) => (
               <View key={i} style={s.row}>
                 <Card style={s.card}>
@@ -65,7 +66,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             ))}
           </View>
         )}
-        {cols.error && <Empty text={t(`Couldn't load collections: ${cols.error}`, `Không tải được bộ sưu tập: ${cols.error}`)} />}
+        {cols.error && <Empty text={t(`Couldn't load collections: ${cols.error}`, `Không tải được bộ sưu tập: ${cols.error}`, `読み込みに失敗しました: ${cols.error}`)} />}
         {!cols.loading && !cols.error && (
           <FlatList
             data={cols.data}
@@ -73,7 +74,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             ListHeaderComponent={
               <>
                 <GuestNotice />
-                <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai')}</Text>
+                <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
               </>
             }
             renderItem={({ item }) => {
@@ -89,10 +90,10 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                       ? <Image source={{ uri }} style={s.thumb} contentFit="cover" transition={200} />
                       : <View style={s.thumb} />}
                     <View style={s.cardText}>
-                      <Text style={s.title} numberOfLines={2}>{t(item.title_en, item.title_vi)}</Text>
+                      <Text style={s.title} numberOfLines={2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
                       <Text style={s.meta} numberOfLines={1}>
-                        {count} {t('places', 'địa điểm')}
-                        {item.curator_handle ? `  ·  ${t('by', 'bởi')} ${item.curator_handle}` : ''}
+                        {count} {t('places', 'địa điểm', 'スポット')}
+                        {item.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${item.curator_handle}` : ''}
                       </Text>
                     </View>
                     <View style={s.chevron}>
@@ -102,7 +103,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                 </PressableScale>
               );
             }}
-            ListEmptyComponent={<Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.')} />}
+            ListEmptyComponent={<Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.', '公開コレクションはまだありません。')} />}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
             onRefresh={cols.reload}

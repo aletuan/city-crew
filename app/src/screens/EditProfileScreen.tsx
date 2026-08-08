@@ -42,41 +42,41 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   return (
     <AuthScreen onBack={() => navigation.goBack()}>
       <AuthHeader
-        title={t('Edit profile', 'Sửa hồ sơ')}
-        lede={t('Tell your crew a little about yourself.', 'Kể cho hội của bạn nghe đôi chút về bạn.')}
+        title={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}
+        lede={t('Tell your crew a little about yourself.', 'Kể cho hội của bạn nghe đôi chút về bạn.', 'あなたのことを少し教えてください。')}
       />
       <FieldRow
         icon="person-outline"
-        label={t('Full name', 'Họ tên')}
-        placeholder={t('What should we call you?', 'Chúng tôi nên gọi bạn là gì?')}
+        label={t('Full name', 'Họ tên', 'お名前')}
+        placeholder={t('What should we call you?', 'Chúng tôi nên gọi bạn là gì?', 'なんとお呼びすれば？')}
         value={name}
         onChangeText={setName}
         autoComplete="name"
       />
       <FieldRow
         icon="location-outline"
-        label={t('From', 'Đến từ')}
+        label={t('From', 'Đến từ', '出身地')}
         placeholder={t(`${city?.name_en ?? 'Ho Chi Minh City'}, Vietnam`, `${city?.name_vi ?? 'TP. Hồ Chí Minh'}, Việt Nam`)}
         value={location}
         onChangeText={setLocation}
       />
       <FieldRow
         icon="chatbubble-ellipses-outline"
-        label={t('Bio', 'Giới thiệu')}
-        placeholder={t('Coffee lover · Weekend explorer', 'Mê cà phê · Thích khám phá cuối tuần')}
+        label={t('Bio', 'Giới thiệu', '自己紹介')}
+        placeholder={t('Coffee lover · Weekend explorer', 'Mê cà phê · Thích khám phá cuối tuần', 'コーヒー好き · 週末の探検家')}
         value={bio}
         onChangeText={setBio}
         multiline
       />
       <FieldRow
         icon="heart-outline"
-        label={t('Interests', 'Sở thích')}
-        placeholder={t('Cafés, nature, local food, city walks', 'Cà phê, thiên nhiên, món ngon, dạo phố')}
+        label={t('Interests', 'Sở thích', '興味')}
+        placeholder={t('Cafés, nature, local food, city walks', 'Cà phê, thiên nhiên, món ngon, dạo phố', 'カフェ、自然、ローカルフード、街歩き')}
         value={interests}
         onChangeText={setInterests}
       />
       {error ? <ErrorText>{error}</ErrorText> : null}
-      <PrimaryButton label={t('Save changes', 'Lưu thay đổi')} onPress={save} busy={busy} />
+      <PrimaryButton label={t('Save changes', 'Lưu thay đổi', '変更を保存')} onPress={save} busy={busy} />
     </AuthScreen>
   );
 }

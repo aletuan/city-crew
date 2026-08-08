@@ -15,8 +15,10 @@ export type City = {
   id: string;
   name_en: string;
   name_vi: string;
+  name_ja: string | null;
   short_en: string;
   short_vi: string;
+  short_ja: string | null;
   center_lat: number;
   center_lng: number;
 };
@@ -34,8 +36,8 @@ const DEFAULT_CITY_ID = 'hcmc';
 
 // Offline / first-paint fallback so the UI never renders city-less.
 const FALLBACK: City = {
-  id: 'hcmc', name_en: 'Ho Chi Minh City', name_vi: 'TP. Hồ Chí Minh',
-  short_en: 'Saigon', short_vi: 'Sài Gòn', center_lat: 10.7769, center_lng: 106.7009,
+  id: 'hcmc', name_en: 'Ho Chi Minh City', name_vi: 'TP. Hồ Chí Minh', name_ja: 'ホーチミン市',
+  short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン', center_lat: 10.7769, center_lng: 106.7009,
 };
 
 const Ctx = createContext<CityContext>({
@@ -78,7 +80,7 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
       const [{ data }, storedRaw] = await Promise.all([
         supabase
           .from('cities')
-          .select('id, name_en, name_vi, short_en, short_vi, center_lat, center_lng')
+          .select('id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng')
           .eq('is_active', true)
           .order('sort_order'),
         AsyncStorage.getItem(KEY),

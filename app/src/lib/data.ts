@@ -18,11 +18,13 @@ export type Place = {
   slug: string;
   name_en: string;
   name_vi: string;
+  name_ja: string | null;
   category: 'food' | 'out';
   is_featured: boolean;
   vibe_tags: string[];
   neighborhood_en: string | null;
   neighborhood_vi: string | null;
+  neighborhood_ja: string | null;
   address: string | null;
   lat: number | null;
   lng: number | null;
@@ -34,6 +36,7 @@ export type Place = {
   duration_max: number | null;
   desc_en: string | null;
   desc_vi: string | null;
+  desc_ja: string | null;
   emoji: string | null;
   opening_hours: string[] | null;
   website: string | null;
@@ -45,8 +48,10 @@ export type Collection = {
   slug: string;
   title_en: string;
   title_vi: string;
+  title_ja: string | null;
   desc_en: string | null;
   desc_vi: string | null;
+  desc_ja: string | null;
   curator_handle: string | null;
   cover: { photo_uri: string } | null;
   collection_places: { sort_order: number; places: { slug: string } | null }[];
@@ -101,7 +106,7 @@ function useFetch<T>(fetcher: () => Promise<T>, empty: T): Fetch<T> {
 async function fetchPlaces(cityId: string): Promise<Place[]> {
   const { data, error } = await supabase
     .from('places')
-    .select('slug, name_en, name_vi, category, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, emoji, opening_hours, website, phone, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)')
+    .select('slug, name_en, name_vi, name_ja, category, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, neighborhood_ja, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, desc_ja, emoji, opening_hours, website, phone, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)')
     .eq('city_id', cityId)
     .eq('is_published', true)
     .eq('review_status', 'approved')
@@ -113,7 +118,7 @@ async function fetchPlaces(cityId: string): Promise<Place[]> {
 async function fetchCollections(cityId: string): Promise<Collection[]> {
   const { data, error } = await supabase
     .from('collections')
-    .select('slug, title_en, title_vi, desc_en, desc_vi, curator_handle, collection_places(sort_order, places(slug)), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)')
+    .select('slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, collection_places(sort_order, places(slug)), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)')
     .eq('city_id', cityId)
     .eq('is_public', true)
     .order('sort_order');

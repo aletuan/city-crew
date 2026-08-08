@@ -26,18 +26,18 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={s.scrim} onPress={onClose}>
         <Pressable style={s.sheet} onPress={() => {}}>
-          <Text style={s.title}>{t('Choose a city', 'Chọn thành phố')}</Text>
+          <Text style={s.title}>{t('Choose a city', 'Chọn thành phố', '都市を選択')}</Text>
 
           <PressableScale haptic="selection" style={s.row} onPress={locate}>
             <Ionicons name="navigate-outline" size={18} color={colors.champagne} />
             <View style={{ flex: 1 }}>
               <Text style={s.rowTitle}>
-                {locating ? t('Locating…', 'Đang định vị…') : t('Use my location', 'Dùng vị trí của tôi')}
+                {locating ? t('Locating…', 'Đang định vị…', '位置情報を取得中…') : t('Use my location', 'Dùng vị trí của tôi', '現在地を使う')}
               </Text>
               <Text style={s.rowSub}>
                 {mode === 'auto'
-                  ? t('On — nearest city is selected for you', 'Đang bật — tự chọn thành phố gần nhất')
-                  : t('Currently picking manually', 'Đang chọn thủ công')}
+                  ? t('On — nearest city is selected for you', 'Đang bật — tự chọn thành phố gần nhất', 'オン — 最寄りの都市を自動選択')
+                  : t('Currently picking manually', 'Đang chọn thủ công', '現在は手動で選択中')}
               </Text>
             </View>
           </PressableScale>
@@ -55,7 +55,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
               >
                 <Ionicons name="business-outline" size={18} color={active ? colors.champagne : colors.textTertiary} />
                 <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.champagne }]}>
-                  {t(c.name_en, c.name_vi)}
+                  {t(c.name_en, c.name_vi, c.name_ja)}
                 </Text>
                 {active && <Ionicons name="checkmark" size={18} color={colors.champagne} />}
               </PressableScale>

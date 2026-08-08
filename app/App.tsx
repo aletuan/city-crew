@@ -87,11 +87,11 @@ function Tabs() {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const labels: Record<string, string> = {
-    Ideas: t('Ideas', 'Ý tưởng'),
-    Explore: t('Explore', 'Khám phá'),
-    Trips: t('Trips', 'Chuyến đi'),
-    Collections: t('Collections', 'Bộ sưu tập'),
-    Profile: t('Profile', 'Cá nhân'),
+    Ideas: t('Ideas', 'Ý tưởng', 'アイデア'),
+    Explore: t('Explore', 'Khám phá', '探索'),
+    Trips: t('Trips', 'Chuyến đi', '旅程'),
+    Collections: t('Collections', 'Bộ sưu tập', 'コレクション'),
+    Profile: t('Profile', 'Cá nhân', 'プロフィール'),
   };
   return (
     <Tab.Navigator
@@ -129,9 +129,9 @@ function Tabs() {
         ),
       })}
     >
-      <Tab.Screen name="Ideas">{() => <ComingSoonScreen titleEn="Ideas" titleVi="Ý tưởng" />}</Tab.Screen>
+      <Tab.Screen name="Ideas">{() => <ComingSoonScreen titleEn="Ideas" titleVi="Ý tưởng" titleJa="アイデア" />}</Tab.Screen>
       <Tab.Screen name="Explore" component={ExploreStack} />
-      <Tab.Screen name="Trips">{() => <ComingSoonScreen titleEn="Trips" titleVi="Chuyến đi" />}</Tab.Screen>
+      <Tab.Screen name="Trips">{() => <ComingSoonScreen titleEn="Trips" titleVi="Chuyến đi" titleJa="旅程" />}</Tab.Screen>
       <Tab.Screen name="Collections" component={CollectionsStack} />
       <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>

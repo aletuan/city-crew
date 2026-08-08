@@ -26,11 +26,11 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
         )}
         <View style={s.body}>
           <View style={s.topRow}>
-            <Text style={s.name} numberOfLines={1}>{t(place.name_en, place.name_vi)}</Text>
+            <Text style={s.name} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
             <PricePill place={place} compact />
           </View>
           <Text style={s.meta} numberOfLines={1}>
-            {t(place.neighborhood_en, place.neighborhood_vi)}
+            {t(place.neighborhood_en, place.neighborhood_vi, place.neighborhood_ja)}
             {place.rating ? `  ·  ★ ${place.rating}${reviews ? ` (${reviews})` : ''}` : ''}
           </Text>
           {place.vibe_tags.length > 0 && (

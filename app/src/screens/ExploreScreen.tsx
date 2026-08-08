@@ -19,9 +19,9 @@ import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 const CATS = [
-  { key: 'foryou', en: 'For you', vi: 'Cho bạn' },
-  { key: 'food', en: 'Food & drinks', vi: 'Ăn uống' },
-  { key: 'out', en: 'Outdoors & culture', vi: 'Ngoài trời & văn hóa' },
+  { key: 'foryou', en: 'For you', vi: 'Cho bạn', ja: 'おすすめ' },
+  { key: 'food', en: 'Food & drinks', vi: 'Ăn uống', ja: 'グルメ' },
+  { key: 'out', en: 'Outdoors & culture', vi: 'Ngoài trời & văn hóa', ja: '外遊び＆カルチャー' },
 ] as const;
 
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -31,21 +31,24 @@ const MONTHS_EN = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-/** Today as an editorial dateline: "Thursday, August 7" / "Thứ Năm, 7 tháng 8". */
+const DAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+
+/** Today as an editorial dateline: "Thursday, August 7" / "Thứ Năm, 7 tháng 8" / "8月7日（木）". */
 function dateline(lang: Lang): string {
   const d = new Date();
-  return lang === 'vi'
-    ? `${DAYS_VI[d.getDay()]}, ${d.getDate()} tháng ${d.getMonth() + 1}`
-    : `${DAYS_EN[d.getDay()]}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`;
+  if (lang === 'vi') return `${DAYS_VI[d.getDay()]}, ${d.getDate()} tháng ${d.getMonth() + 1}`;
+  if (lang === 'ja') return `${d.getMonth() + 1}月${d.getDate()}日（${DAYS_JA[d.getDay()]}）`;
+  return `${DAYS_EN[d.getDay()]}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`;
 }
 
 // Per-city hero seasons: a hand-picked cover place and headline override.
 // Cities without an entry keep the default night-out framing.
-const CITY_HERO: Record<string, { slug: string; en: string; vi: string }> = {
+const CITY_HERO: Record<string, { slug: string; en: string; vi: string; ja: string }> = {
   hanoi: {
     slug: 'imperial-citadel-of-thang-long',
     en: 'Autumn ideas in Hanoi',
     vi: 'Gợi ý mùa thu ở Hà Nội',
+    ja: 'ハノイ、秋のアイデア',
   },
 };
 
@@ -93,26 +96,28 @@ function Hero({ place, onExplore, scrollY }: {
           <View style={s.heroPill}>
             <Text style={s.heroPillText}>
               {session
-                ? `✓ ${t('Signed in as', 'Đã đăng nhập:')} ${email}`
-                : `👋 ${t('Browsing as guest', 'Đang xem với tư cách khách')}`}
+                ? `✓ ${t('Signed in as', 'Đã đăng nhập:', 'サインイン中:')} ${email}`
+                : `👋 ${t('Browsing as guest', 'Đang xem với tư cách khách', 'ゲストとして閲覧中')}`}
             </Text>
           </View>
           <Text style={s.heroTitle}>
             {city && CITY_HERO[city.id]
-              ? t(CITY_HERO[city.id].en, CITY_HERO[city.id].vi)
+              ? t(CITY_HERO[city.id].en, CITY_HERO[city.id].vi, CITY_HERO[city.id].ja)
               : t(
                   `Ideas for a night in ${city?.name_en ?? 'the city'}`,
                   `Gợi ý cho một đêm ở ${city?.name_vi ?? 'thành phố'}`,
+                  `${city?.name_ja ?? city?.name_en ?? 'この街'}、夜のアイデア`,
                 )}
           </Text>
           <Text style={s.heroSub}>
             {t(
               'Browse public collections and places — no account needed.',
               'Xem bộ sưu tập và địa điểm công khai — không cần tài khoản.',
+              'コレクションとスポットを自由に閲覧 — アカウント不要。',
             )}
           </Text>
           <PressableScale style={s.heroCta} onPress={onExplore} accessibilityRole="button">
-            <Text style={s.heroCtaText}>{t('Start exploring →', 'Bắt đầu khám phá →')}</Text>
+            <Text style={s.heroCtaText}>{t('Start exploring →', 'Bắt đầu khám phá →', '探索を始める →')}</Text>
           </PressableScale>
         </View>
       </View>
@@ -133,12 +138,12 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   return (
     <View style={{ marginBottom: space.titleToContent }}>
       <View style={s.shelfHeader}>
-        <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai')}</Text>
+        <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
         <Pressable
           onPress={() => { fireHaptic('selection'); navigation.getParent()?.navigate('Collections'); }}
           hitSlop={10}
         >
-          <Text style={s.seeAll}>{t('See all', 'Xem tất cả')} →</Text>
+          <Text style={s.seeAll}>{t('See all', 'Xem tất cả', 'すべて見る')} →</Text>
         </Pressable>
       </View>
       {cols.loading ? (
@@ -170,8 +175,8 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                   style={StyleSheet.absoluteFill}
                 />
                 <View style={s.shelfCardText}>
-                  <Text style={s.shelfCardTitle} numberOfLines={2}>{t(c.title_en, c.title_vi)}</Text>
-                  <Text style={s.shelfCardMeta}>{count} {t('places', 'địa điểm')}</Text>
+                  <Text style={s.shelfCardTitle} numberOfLines={2}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
+                  <Text style={s.shelfCardMeta}>{count} {t('places', 'địa điểm', 'スポット')}</Text>
                 </View>
               </PressableScale>
             );
@@ -188,11 +193,12 @@ function MakeItYours({ navigation }: { navigation: Nav }) {
   if (session) return null;
   return (
     <View style={s.yoursCard}>
-      <Text style={s.yoursTitle}>{t('Make it yours', 'Biến nơi này thành của bạn')}</Text>
+      <Text style={s.yoursTitle}>{t('Make it yours', 'Biến nơi này thành của bạn', '自分だけのアプリに')}</Text>
       <Text style={s.yoursBody}>
         {t(
           'Sign in to save favorites and build your own collections.',
           'Đăng nhập để lưu địa điểm yêu thích và tạo bộ sưu tập của riêng bạn.',
+          'サインインしてお気に入りを保存し、自分のコレクションを作りましょう。',
         )}
       </Text>
       <PressableScale
@@ -200,7 +206,7 @@ function MakeItYours({ navigation }: { navigation: Nav }) {
         accessibilityRole="button"
       >
         <LinearGradient {...gradAI} style={s.yoursBtn}>
-          <Text style={s.yoursBtnText}>{t('Sign in', 'Đăng nhập')}</Text>
+          <Text style={s.yoursBtnText}>{t('Sign in', 'Đăng nhập', 'サインイン')}</Text>
         </LinearGradient>
       </PressableScale>
     </View>
@@ -233,7 +239,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     <>
       <Hero place={hero} onExplore={scrollToPlaces} scrollY={scrollY} />
       <CollectionShelf navigation={navigation} />
-      <Text style={s.section}>{t('Places', 'Địa điểm')}</Text>
+      <Text style={s.section}>{t('Places', 'Địa điểm', 'スポット')}</Text>
       <View style={{ paddingBottom: space.headingToContent }}>
         <ScrollView
           horizontal
@@ -241,7 +247,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           contentContainerStyle={{ paddingHorizontal: space.page }}
         >
           {CATS.map((c) => (
-            <Chip key={c.key} label={t(c.en, c.vi)} active={cat === c.key} onPress={() => setCat(c.key)} />
+            <Chip key={c.key} label={t(c.en, c.vi, c.ja)} active={cat === c.key} onPress={() => setCat(c.key)} />
           ))}
         </ScrollView>
       </View>
@@ -251,7 +257,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   return (
     <Screen
       eyebrow={dateline(lang)}
-      title={t(`Discover ${city?.short_en ?? '…'}`, `Khám phá ${city?.short_vi ?? '…'}`)}
+      title={t(`Discover ${city?.short_en ?? '…'}`, `Khám phá ${city?.short_vi ?? '…'}`, `${city?.short_ja ?? city?.short_en ?? '…'}を発見`)}
     >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
@@ -265,7 +271,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             <Skeleton style={{ height: 180, borderRadius: 22 }} />
           </View>
         )}
-        {error && <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`)} />}
+        {error && <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`, `読み込みに失敗しました: ${error}`)} />}
         {!loading && !error && (
           <Animated.FlatList
             ref={listRef}
@@ -275,7 +281,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             renderItem={({ item }) => (
               <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
             )}
-            ListEmptyComponent={<Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.')} />}
+            ListEmptyComponent={<Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。')} />}
             ListFooterComponent={<MakeItYours navigation={navigation} />}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}

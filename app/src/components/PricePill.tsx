@@ -12,7 +12,7 @@ export default function PricePill({ place, compact }: { place: Place; compact?: 
   if (isFree(place)) {
     return (
       <View style={s.pill}>
-        <Text style={[s.text, s.upper]}>{t('Free', 'Miễn phí')}</Text>
+        <Text style={[s.text, s.upper]}>{t('Free', 'Miễn phí', '無料')}</Text>
       </View>
     );
   }
@@ -21,7 +21,7 @@ export default function PricePill({ place, compact }: { place: Place; compact?: 
   return (
     <View style={s.pill}>
       <Text style={s.text}>
-        {compact ? `~${label}` : t(`~${label} / person`, `~${label} / người`)}
+        {compact ? `~${label}` : t(`~${label} / person`, `~${label} / người`, `~${label} / 1人`)}
       </Text>
     </View>
   );

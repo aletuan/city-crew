@@ -5,20 +5,21 @@ import { Screen, useTabBarClearance } from '../components/ui';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI } from '../theme';
 
-export default function ComingSoonScreen({ titleEn, titleVi }: { titleEn: string; titleVi: string }) {
+export default function ComingSoonScreen({ titleEn, titleVi, titleJa }: { titleEn: string; titleVi: string; titleJa?: string }) {
   const { t } = useI18n();
   const tabClearance = useTabBarClearance();
   return (
-    <Screen title={t(titleEn, titleVi)}>
+    <Screen title={t(titleEn, titleVi, titleJa)}>
       <View style={[s.wrap, { paddingBottom: tabClearance }]}>
         <LinearGradient {...gradAI} style={s.badge}>
           <Text style={s.badgeText}>✨</Text>
         </LinearGradient>
-        <Text style={s.title}>{t('Coming soon', 'Sắp ra mắt')}</Text>
+        <Text style={s.title}>{t('Coming soon', 'Sắp ra mắt', '近日公開')}</Text>
         <Text style={s.sub}>
           {t(
             'The plan wizard and itineraries from the mockup land here next.',
             'Trình tạo kế hoạch và lịch trình từ bản mockup sẽ xuất hiện ở đây.',
+            'プランウィザードと旅程機能がここに登場予定。',
           )}
         </Text>
       </View>
