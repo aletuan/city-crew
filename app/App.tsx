@@ -18,6 +18,10 @@ import CollectionsScreen from './src/screens/CollectionsScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
 import ComingSoonScreen from './src/screens/ComingSoonScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import SignInScreen from './src/screens/SignInScreen';
+import SignUpScreen from './src/screens/SignUpScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+import EditProfileScreen from './src/screens/EditProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -40,6 +44,18 @@ function CollectionsStack() {
       <Stack.Screen name="CollectionsHome" component={CollectionsScreen} />
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function ProfileStack() {
+  return (
+    <Stack.Navigator screenOptions={stackOptions}>
+      <Stack.Screen name="ProfileHome" component={ProfileScreen} />
+      <Stack.Screen name="SignIn" component={SignInScreen} />
+      <Stack.Screen name="SignUp" component={SignUpScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     </Stack.Navigator>
   );
 }
@@ -113,7 +129,7 @@ function Tabs() {
       <Tab.Screen name="Explore" component={ExploreStack} />
       <Tab.Screen name="Trips">{() => <ComingSoonScreen titleEn="Trips" titleVi="Chuyến đi" />}</Tab.Screen>
       <Tab.Screen name="Collections" component={CollectionsStack} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>
   );
 }
