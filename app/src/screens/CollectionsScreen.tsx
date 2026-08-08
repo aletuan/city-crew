@@ -39,8 +39,12 @@ function GuestNotice() {
 export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const cols = useCollections();
-  const { data: places } = usePlaces();
+  const { data: places, loading: placesLoading } = usePlaces();
   const tabClearance = useTabBarClearance();
+  // Counting and filtering need the places catalog — until it's in, hold
+  // the skeleton rather than showing raw DB membership numbers.
+  const loading = cols.loading || placesLoading;
+  const visible = cols.data.filter((c) => membersOf(c, places).length > 0);
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
@@ -49,7 +53,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
     <Screen title={t('Collections', 'Bộ sưu tập', 'コレクション')}>
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
-        {cols.loading && (
+        {loading && (
           <View>
             <GuestNotice />
             <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
@@ -66,10 +70,10 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             ))}
           </View>
         )}
-        {cols.error && <Empty text={t(`Couldn't load collections: ${cols.error}`, `Không tải được bộ sưu tập: ${cols.error}`, `読み込みに失敗しました: ${cols.error}`)} />}
-        {!cols.loading && !cols.error && (
+        {!loading && cols.error && <Empty text={t(`Couldn't load collections: ${cols.error}`, `Không tải được bộ sưu tập: ${cols.error}`, `読み込みに失敗しました: ${cols.error}`)} />}
+        {!loading && !cols.error && (
           <FlatList
-            data={cols.data}
+            data={visible}
             keyExtractor={(c) => c.slug}
             ListHeaderComponent={
               <>
@@ -78,7 +82,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
               </>
             }
             renderItem={({ item }) => {
-              const count = membersOf(item, places).length || item.collection_places.length;
+              const count = membersOf(item, places).length;
               const uri = coverFor(item);
               return (
                 <PressableScale
@@ -107,7 +111,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
             onRefresh={cols.reload}
-            refreshing={cols.loading}
+            refreshing={loading}
           />
         )}
       </View>

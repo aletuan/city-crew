@@ -128,12 +128,16 @@ function Hero({ place, onExplore, scrollY }: {
 function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const cols = useCollections();
-  const { data: places } = usePlaces();
+  const { data: places, loading: placesLoading } = usePlaces();
+  const loading = cols.loading || placesLoading;
+  // Only collections with at least one visible member — an empty
+  // collection is a dead end for a browsing guest.
+  const visible = cols.data.filter((c) => membersOf(c, places).length > 0);
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
 
-  if (!cols.loading && cols.data.length === 0) return null;
+  if (!loading && visible.length === 0) return null;
 
   return (
     <View style={{ marginBottom: space.titleToContent }}>
@@ -146,7 +150,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
           <Text style={s.seeAll}>{t('See all', 'Xem tất cả', 'すべて見る')} →</Text>
         </Pressable>
       </View>
-      {cols.loading ? (
+      {loading ? (
         <View style={{ flexDirection: 'row', gap: space.cardGap, paddingHorizontal: space.page }}>
           <Skeleton style={{ width: 176, height: 220 }} />
           <Skeleton style={{ width: 176, height: 220 }} />
@@ -157,9 +161,9 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: space.page, gap: space.cardGap }}
         >
-          {cols.data.map((c) => {
+          {visible.map((c) => {
             const uri = coverFor(c);
-            const count = membersOf(c, places).length || c.collection_places.length;
+            const count = membersOf(c, places).length;
             return (
               <PressableScale
                 key={c.slug}
