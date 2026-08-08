@@ -88,7 +88,7 @@ export async function importPlace(
       "X-Goog-FieldMask":
         "id,displayName,formattedAddress,location,rating,userRatingCount,"
         + "priceLevel,regularOpeningHours,websiteUri,internationalPhoneNumber,"
-        + "nationalPhoneNumber,photos",
+        + "nationalPhoneNumber,photos,editorialSummary",
     },
   });
 
@@ -114,6 +114,9 @@ export async function importPlace(
       city_id: cityId,
       is_featured: false,
       vibe_tags: vibeTags,
+      // Google's editorial one-liner where it exists (EN only) — the
+      // Vietnamese description stays editorial work in the dashboard.
+      desc_en: d.editorialSummary?.text ?? null,
       address: d.formattedAddress ?? null,
       lat: d.location?.latitude ?? null,
       lng: d.location?.longitude ?? null,
