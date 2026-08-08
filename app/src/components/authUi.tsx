@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { BackButton, fireHaptic, PressableScale, useSerif, useTabBarClearance } from './ui';
+import { BackButton, fireHaptic, PressableScale, useTabBarClearance } from './ui';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
 export function AuthScreen({ onBack, children }: { onBack: () => void; children: React.ReactNode }) {
@@ -35,11 +35,10 @@ export function AuthScreen({ onBack, children }: { onBack: () => void; children:
 }
 
 export function AuthHeader({ eyebrow, title, lede }: { eyebrow?: string; title: string; lede: string }) {
-  const serif = useSerif();
   return (
     <View style={{ gap: 8, marginBottom: 10 }}>
       {eyebrow ? <Text style={s.eyebrow}>{eyebrow}</Text> : null}
-      <Text style={[s.title, serif]}>{title}</Text>
+      <Text style={s.title}>{title}</Text>
       <Text style={s.lede}>{lede}</Text>
     </View>
   );

@@ -10,7 +10,7 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import PlaceCard from '../components/PlaceCard';
-import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, Screen, Skeleton, useSerif, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
@@ -80,7 +80,6 @@ function Hero({ place, onExplore, scrollY }: {
   const { t } = useI18n();
   const { session, email } = useAuth();
   const { city } = useCity();
-  const serif = useSerif();
   const uri = place && coverOf(place)?.photo_uri;
   // The photo trails the scroll slightly; pre-scaled so no edge shows.
   const parallax = scrollY.interpolate({ inputRange: [0, 320], outputRange: [0, 26], extrapolate: 'clamp' });
@@ -107,7 +106,7 @@ function Hero({ place, onExplore, scrollY }: {
                 : `👋 ${t('Browsing as guest', 'Đang xem với tư cách khách', 'ゲストとして閲覧中')}`}
             </Text>
           </View>
-          <Text style={[s.heroTitle, serif]}>
+          <Text style={s.heroTitle}>
             {city && CITY_HERO[city.id]
               ? t(CITY_HERO[city.id].en, CITY_HERO[city.id].vi, CITY_HERO[city.id].ja)
               : t(
@@ -134,7 +133,6 @@ function Hero({ place, onExplore, scrollY }: {
 
 function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const serif = useSerif();
   const cols = useCollections();
   const { data: places, loading: placesLoading } = usePlaces();
   const loading = cols.loading || placesLoading;
@@ -150,7 +148,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   return (
     <View style={{ marginBottom: space.titleToContent }}>
       <View style={s.shelfHeader}>
-        <Text style={[s.section, serif]}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
+        <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
         <Pressable
           onPress={() => { fireHaptic('selection'); navigation.getParent()?.navigate('Collections'); }}
           hitSlop={10}
@@ -227,7 +225,6 @@ function MakeItYours({ navigation }: { navigation: Nav }) {
 
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
-  const serif = useSerif();
   const { city } = useCity();
   const { loading, error, data: places, reload } = usePlaces();
   const [cat, setCat] = useState<(typeof CATS)[number]['key']>('foryou');
@@ -252,7 +249,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     <>
       <Hero place={hero} onExplore={scrollToPlaces} scrollY={scrollY} />
       <CollectionShelf navigation={navigation} />
-      <Text style={[s.section, serif]}>{t('Places', 'Địa điểm', 'スポット')}</Text>
+      <Text style={s.section}>{t('Places', 'Địa điểm', 'スポット')}</Text>
       <View style={{ paddingBottom: space.headingToContent }}>
         <ScrollView
           horizontal
@@ -329,7 +326,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6,
   },
   heroPillText: { color: colors.textSecondary, fontSize: 12.5, fontWeight: font.medium },
-  heroTitle: { color: colors.text, ...type.heroTitle },
+  heroTitle: { color: colors.text, fontSize: 24, fontWeight: font.bold, letterSpacing: 0.2, lineHeight: 30 },
   heroSub: { color: colors.textSecondary, ...type.meta, lineHeight: 21 },
   heroCta: {
     alignSelf: 'flex-start', marginTop: 4,

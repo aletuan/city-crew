@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius, serifFamily, space, type } from '../theme';
+import { colors, font, radius, space, type } from '../theme';
 
 // ── tab bar geometry ──
 // A full-width Apple-style bar over blur; position:absolute so content
@@ -82,12 +82,6 @@ export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
   );
 }
 
-/** Heading fontFamily for the current language — mincho for Japanese. */
-export function useSerif(): { fontFamily: string } {
-  const { lang } = useI18n();
-  return { fontFamily: serifFamily(lang) };
-}
-
 export function Screen({ title, eyebrow, children, right }: {
   title: string;
   /** Small uppercase line above the title — e.g. today's date. */
@@ -95,13 +89,12 @@ export function Screen({ title, eyebrow, children, right }: {
   children: React.ReactNode;
   right?: React.ReactNode;
 }) {
-  const serif = useSerif();
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.header}>
         <View style={{ flex: 1 }}>
           {eyebrow ? <Text style={s.eyebrow}>{eyebrow}</Text> : null}
-          <Text style={[s.title, serif]}>{title}</Text>
+          <Text style={s.title}>{title}</Text>
         </View>
         {right}
       </View>
