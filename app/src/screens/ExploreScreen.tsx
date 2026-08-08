@@ -14,7 +14,6 @@ import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, Screen, Skeleto
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
-import { openState } from '../lib/hours';
 import { Lang, useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
@@ -126,69 +125,6 @@ function Hero({ place, onExplore, scrollY }: {
   );
 }
 
-/** Which slice of the day we're planning for. */
-function daypart(now: Date = new Date()): 'morning' | 'afternoon' | 'evening' {
-  const h = now.getHours();
-  if (h >= 5 && h < 11) return 'morning';
-  if (h >= 11 && h < 17) return 'afternoon';
-  return 'evening';
-}
-
-const DAYPART_VIBES: Record<ReturnType<typeof daypart>, string[]> = {
-  morning: ['cafes', 'outdoors'],
-  afternoon: ['culture', 'outdoors', 'shopping', 'chill'],
-  evening: ['nightlife', 'views', 'food_tour'],
-};
-
-/** Horizontal photo-card strip of places — the shelf both live rows use. */
-function PlaceShelf({ title, places, navigation }: {
-  title: string;
-  places: Place[];
-  navigation: Nav;
-}) {
-  const { t } = useI18n();
-  if (places.length < 3) return null;
-  return (
-    <View style={{ marginBottom: space.titleToContent }}>
-      <Text style={s.section}>{title}</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: space.page, gap: space.cardGap }}
-      >
-        {places.map((p) => {
-          const uri = coverOf(p)?.photo_uri;
-          const open = openState(p.opening_hours);
-          return (
-            <PressableScale
-              key={p.slug}
-              style={s.shelfCard}
-              onPress={() => navigation.navigate('PlaceDetail', { slug: p.slug })}
-            >
-              {uri
-                ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
-                : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
-              <LinearGradient
-                colors={['rgba(10,11,10,0.22)', 'rgba(10,11,10,0.10)', 'rgba(10,11,10,0.94)']}
-                locations={[0, 0.42, 1]}
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={s.shelfCardText}>
-                <Text style={s.shelfCardTitle} numberOfLines={2}>{t(p.name_en, p.name_vi, p.name_ja)}</Text>
-                <Text style={s.shelfCardMeta} numberOfLines={1}>
-                  {open === 'open'
-                    ? <Text style={s.shelfOpen}>● {t('Open now', 'Đang mở', '営業中')}</Text>
-                    : p.rating ? `★ ${p.rating}` : ''}
-                </Text>
-              </View>
-            </PressableScale>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
-}
-
 function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const cols = useCollections();
@@ -293,33 +229,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
 
   const hero = useMemo(() => heroPlace(places, city?.id), [places, city?.id]);
 
-  // "Right now" shelf: this daypart's vibes, open places first, closed hidden
-  // unless the shelf would starve without them.
-  const part = daypart();
-  const nowPicks = useMemo(() => {
-    const wanted = new Set(DAYPART_VIBES[part]);
-    const fits = places.filter((p) => p.vibe_tags.some((v) => wanted.has(v)));
-    const rank = (p: Place) => (openState(p.opening_hours) === 'open' ? 0 : openState(p.opening_hours) === 'unknown' ? 1 : 2);
-    const sorted = [...fits].sort((a, b) => rank(a) - rank(b) || (b.saved_count ?? 0) - (a.saved_count ?? 0));
-    const alive = sorted.filter((p) => rank(p) < 2);
-    return (alive.length >= 4 ? alive : sorted).slice(0, 8);
-  }, [places, part]);
-
-  const trending = useMemo(() => {
-    return [...places]
-      .filter((p) => (p.saved_count ?? 0) > 0 || (p.rating_count ?? 0) > 0)
-      .sort((a, b) => (b.saved_count ?? 0) - (a.saved_count ?? 0)
-        || (b.rating_count ?? 0) - (a.rating_count ?? 0))
-      .slice(0, 8);
-  }, [places]);
-
-  const short = t(city?.short_en ?? '…', city?.short_vi ?? '…', city?.short_ja ?? city?.short_en ?? '…');
-  const nowTitle = part === 'morning'
-    ? t(`This morning in ${short}`, `Sáng nay ở ${short}`, `今朝の${short}`)
-    : part === 'afternoon'
-      ? t(`This afternoon in ${short}`, `Chiều nay ở ${short}`, `午後の${short}`)
-      : t(`Tonight in ${short}`, `Tối nay ở ${short}`, `今夜の${short}`);
-
   const scrollToPlaces = () => {
     if (shown.length > 0) {
       listRef.current?.scrollToIndex({ index: 0, viewOffset: 116, animated: true });
@@ -329,13 +238,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const header = (
     <>
       <Hero place={hero} onExplore={scrollToPlaces} scrollY={scrollY} />
-      <PlaceShelf title={nowTitle} places={nowPicks} navigation={navigation} />
       <CollectionShelf navigation={navigation} />
-      <PlaceShelf
-        title={t('Trending now', 'Đang hot', '話題のスポット')}
-        places={trending}
-        navigation={navigation}
-      />
       <Text style={s.section}>{t('Places', 'Địa điểm', 'スポット')}</Text>
       <View style={{ paddingBottom: space.headingToContent }}>
         <ScrollView
@@ -376,7 +279,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             keyExtractor={(p) => p.slug}
             ListHeaderComponent={header}
             renderItem={({ item }) => (
-              <PlaceCard place={item} all={places} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
+              <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
             )}
             ListEmptyComponent={<Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。')} />}
             ListFooterComponent={<MakeItYours navigation={navigation} />}
@@ -436,7 +339,6 @@ const s = StyleSheet.create({
   shelfCardText: { padding: 13, gap: 3 },
   shelfCardTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 20 },
   shelfCardMeta: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
-  shelfOpen: { color: colors.ember, fontSize: 12.5, fontWeight: font.semibold },
 
   yoursCard: {
     marginHorizontal: space.page, marginTop: 10,
