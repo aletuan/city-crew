@@ -1,10 +1,11 @@
 // Shared UI atoms: screen scaffold with header + language pill, chips,
 // translucent charcoal cards — the cityCrew design system in React Native.
 
-import React from 'react';
-import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Pressable, PressableProps, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
@@ -20,13 +21,74 @@ export function useTabBarClearance(extra = 18): number {
   return insets.bottom + TAB_BAR_HEIGHT + extra;
 }
 
+export type HapticKind = 'light' | 'selection' | 'none';
+
+export function fireHaptic(kind: HapticKind) {
+  if (kind === 'light') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  else if (kind === 'selection') Haptics.selectionAsync().catch(() => {});
+}
+
+/** Success tick for completed actions (signed in, saved, …). */
+export function successHaptic() {
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+}
+
+/**
+ * Pressable that sinks slightly under the finger (spring scale) and gives
+ * a small haptic tap — the default press feedback for cards and buttons.
+ * `style` lands on the animated inner view, so pass layout styles as usual.
+ */
+export function PressableScale({ children, style, containerStyle, haptic = 'light', scaleTo = 0.97, onPress, onPressIn, onPressOut, ...rest }: PressableProps & {
+  haptic?: HapticKind;
+  scaleTo?: number;
+  style?: StyleProp<ViewStyle>;
+  /** Styles that must stay on the outer Pressable (e.g. absolute position). */
+  containerStyle?: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const springTo = (v: number) =>
+    Animated.spring(scale, { toValue: v, useNativeDriver: true, speed: 40, bounciness: 5 }).start();
+  return (
+    <Pressable
+      {...rest}
+      style={containerStyle}
+      onPressIn={(e) => { springTo(scaleTo); onPressIn?.(e); }}
+      onPressOut={(e) => { springTo(1); onPressOut?.(e); }}
+      onPress={(e) => { fireHaptic(haptic); onPress?.(e); }}
+    >
+      <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
+    </Pressable>
+  );
+}
+
+/** Soft pulsing placeholder shown while content loads. */
+export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
+  const pulse = useRef(new Animated.Value(0.45)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 650, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.45, duration: 650, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  return (
+    <Animated.View
+      style={[{ backgroundColor: colors.surfaceGlass, borderRadius: radius.image, opacity: pulse }, style]}
+    />
+  );
+}
+
 export function LangPill() {
   const { lang, toggle } = useI18n();
   return (
-    <Pressable onPress={toggle} style={s.langPill} accessibilityLabel="Switch language">
+    <PressableScale onPress={toggle} haptic="selection" style={s.langPill} accessibilityLabel="Switch language">
       <Text style={[s.langOpt, lang === 'en' && s.langOn]}>EN</Text>
       <Text style={[s.langOpt, lang === 'vi' && s.langOn]}>VI</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -53,9 +115,9 @@ export function Screen({ title, eyebrow, children, right }: {
 
 export function Chip({ label, active, onPress }: { label: string; active?: boolean; onPress?: () => void }) {
   return (
-    <Pressable onPress={onPress} style={[s.chip, active && s.chipOn]}>
+    <PressableScale onPress={onPress} haptic="selection" scaleTo={0.94} style={[s.chip, active && s.chipOn]}>
       <Text style={[s.chipText, active && s.chipTextOn]}>{label}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -79,9 +141,9 @@ export function AmbientWarmth({ style }: { style?: StyleProp<ViewStyle> }) {
 /** In-page back control: 44pt circular glass, shared by detail screens. */
 export function BackButton({ onPress }: { onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={s.backBtn} accessibilityLabel="Back">
+    <PressableScale onPress={onPress} scaleTo={0.92} style={s.backBtn} accessibilityLabel="Back">
       <Ionicons name="chevron-back" size={22} color={colors.text} />
-    </Pressable>
+    </PressableScale>
   );
 }
 

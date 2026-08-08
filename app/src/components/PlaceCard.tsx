@@ -1,18 +1,18 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { coverOf, fmtCount, Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 import PricePill from './PricePill';
-import { Card } from './ui';
+import { Card, PressableScale } from './ui';
 
 export default function PlaceCard({ place, onPress }: { place: Place; onPress: () => void }) {
   const { t } = useI18n();
   const cover = coverOf(place);
   const reviews = fmtCount(place.rating_count);
   return (
-    <Pressable onPress={onPress}>
+    <PressableScale onPress={onPress}>
       <Card style={s.card}>
         {cover ? (
           <View>
@@ -42,7 +42,7 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
           )}
         </View>
       </Card>
-    </Pressable>
+    </PressableScale>
   );
 }
 

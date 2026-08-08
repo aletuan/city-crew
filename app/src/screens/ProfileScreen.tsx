@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AmbientWarmth, Card, Screen, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import { PrimaryButton } from '../components/authUi';
 import { useAuth } from '../lib/auth';
 import { Lang, useI18n } from '../lib/i18n';
@@ -41,14 +41,14 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
   last?: boolean;
 }) {
   return (
-    <Pressable style={[s.featureRow, !last && s.featureRowDivider]} onPress={onPress}>
+    <PressableScale scaleTo={0.98} style={[s.featureRow, !last && s.featureRowDivider]} onPress={onPress}>
       <RoundIcon name={icon} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.featureTitle}>{title}</Text>
         <Text style={s.featureSub}>{sub}</Text>
       </View>
       <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -96,7 +96,10 @@ function GuestHub({ navigation }: { navigation: Nav }) {
         </View>
       </View>
       <PrimaryButton label={t('Sign in / Sign up', 'Đăng nhập / Đăng ký')} onPress={goSignIn} />
-      <Pressable style={s.guestLink} onPress={() => navigation.getParent()?.navigate('Explore')}>
+      <Pressable
+        style={s.guestLink}
+        onPress={() => { fireHaptic('selection'); navigation.getParent()?.navigate('Explore'); }}
+      >
         <Text style={s.guestLinkText}>{t('Explore as guest', 'Khám phá với tư cách khách')}</Text>
         <Ionicons name="chevron-forward" size={15} color={colors.textSecondary} />
       </Pressable>
@@ -178,9 +181,9 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
             </View>
           ) : null}
           {profile.bio ? <Text style={s.heroBody} numberOfLines={2}>{profile.bio}</Text> : null}
-          <Pressable style={s.editBtn} onPress={() => navigation.navigate('EditProfile')}>
+          <PressableScale scaleTo={0.94} style={s.editBtn} onPress={() => navigation.navigate('EditProfile')}>
             <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ')}</Text>
-          </Pressable>
+          </PressableScale>
         </View>
       </View>
 
@@ -221,7 +224,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         <ComingSoonPill />
       </Card>
 
-      <Pressable
+      <PressableScale
         style={s.signOutBtn}
         onPress={async () => {
           setBusy(true);
@@ -231,7 +234,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         {busy
           ? <ActivityIndicator color={colors.textSecondary} />
           : <Text style={s.signOutText}>{t('Sign out', 'Đăng xuất')}</Text>}
-      </Pressable>
+      </PressableScale>
 
       <Tagline />
     </>

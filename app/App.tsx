@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from './src/lib/auth';
 import { I18nProvider, useI18n } from './src/lib/i18n';
 import { colors, font } from './src/theme';
-import { TAB_BAR_HEIGHT } from './src/components/ui';
+import { fireHaptic, TAB_BAR_HEIGHT } from './src/components/ui';
 import type { RootStackParamList } from './src/nav';
 import ExploreScreen from './src/screens/ExploreScreen';
 import PlaceDetailScreen from './src/screens/PlaceDetailScreen';
@@ -93,6 +93,7 @@ function Tabs() {
   return (
     <Tab.Navigator
       initialRouteName="Explore"
+      screenListeners={{ tabPress: () => fireHaptic('selection') }}
       screenOptions={({ route }) => ({
         headerShown: false,
         // Apple-style bar: full-width, square, a single top hairline, and

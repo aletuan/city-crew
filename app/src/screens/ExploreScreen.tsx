@@ -5,12 +5,12 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View,
+  Animated, FlatList, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import PlaceCard from '../components/PlaceCard';
-import { AmbientWarmth, Chip, Empty, Screen, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
 import { Lang, useI18n } from '../lib/i18n';
@@ -49,15 +49,25 @@ function heroPlace(places: Place[]): Place | undefined {
   );
 }
 
-function Hero({ place, onExplore }: { place: Place | undefined; onExplore: () => void }) {
+function Hero({ place, onExplore, scrollY }: {
+  place: Place | undefined;
+  onExplore: () => void;
+  scrollY: Animated.Value;
+}) {
   const { t } = useI18n();
   const { session, email } = useAuth();
   const uri = place && coverOf(place)?.photo_uri;
+  // The photo trails the scroll slightly; pre-scaled so no edge shows.
+  const parallax = scrollY.interpolate({ inputRange: [0, 320], outputRange: [0, 26], extrapolate: 'clamp' });
   return (
     <View style={s.heroWrap}>
       <View style={s.hero}>
         {uri
-          ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
+          ? (
+            <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: parallax }, { scale: 1.12 }] }]}>
+              <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
+            </Animated.View>
+          )
           : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
         <LinearGradient
           colors={['rgba(10,11,10,0.10)', 'rgba(10,11,10,0.42)', 'rgba(10,11,10,0.92)']}
@@ -81,9 +91,9 @@ function Hero({ place, onExplore }: { place: Place | undefined; onExplore: () =>
               'Xem bộ sưu tập và địa điểm công khai — không cần tài khoản.',
             )}
           </Text>
-          <Pressable style={s.heroCta} onPress={onExplore} accessibilityRole="button">
+          <PressableScale style={s.heroCta} onPress={onExplore} accessibilityRole="button">
             <Text style={s.heroCtaText}>{t('Start exploring →', 'Bắt đầu khám phá →')}</Text>
-          </Pressable>
+          </PressableScale>
         </View>
       </View>
     </View>
@@ -104,12 +114,18 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
     <View style={{ marginBottom: space.titleToContent }}>
       <View style={s.shelfHeader}>
         <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai')}</Text>
-        <Pressable onPress={() => navigation.getParent()?.navigate('Collections')}>
+        <Pressable
+          onPress={() => { fireHaptic('selection'); navigation.getParent()?.navigate('Collections'); }}
+          hitSlop={10}
+        >
           <Text style={s.seeAll}>{t('See all', 'Xem tất cả')} →</Text>
         </Pressable>
       </View>
       {cols.loading ? (
-        <ActivityIndicator color={colors.champagne} style={{ paddingVertical: 36 }} />
+        <View style={{ flexDirection: 'row', gap: space.cardGap, paddingHorizontal: space.page }}>
+          <Skeleton style={{ width: 176, height: 220 }} />
+          <Skeleton style={{ width: 176, height: 220 }} />
+        </View>
       ) : (
         <ScrollView
           horizontal
@@ -120,7 +136,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
             const uri = coverFor(c);
             const count = membersOf(c, places).length || c.collection_places.length;
             return (
-              <Pressable
+              <PressableScale
                 key={c.slug}
                 style={s.shelfCard}
                 onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
@@ -137,7 +153,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                   <Text style={s.shelfCardTitle} numberOfLines={2}>{t(c.title_en, c.title_vi)}</Text>
                   <Text style={s.shelfCardMeta}>{count} {t('places', 'địa điểm')}</Text>
                 </View>
-              </Pressable>
+              </PressableScale>
             );
           })}
         </ScrollView>
@@ -159,14 +175,14 @@ function MakeItYours({ navigation }: { navigation: Nav }) {
           'Đăng nhập để lưu địa điểm yêu thích và tạo bộ sưu tập của riêng bạn.',
         )}
       </Text>
-      <Pressable
+      <PressableScale
         onPress={() => navigation.getParent()?.navigate('Profile', { screen: 'SignIn' })}
         accessibilityRole="button"
       >
         <LinearGradient {...gradAI} style={s.yoursBtn}>
           <Text style={s.yoursBtnText}>{t('Sign in', 'Đăng nhập')}</Text>
         </LinearGradient>
-      </Pressable>
+      </PressableScale>
     </View>
   );
 }
@@ -177,6 +193,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const [cat, setCat] = useState<(typeof CATS)[number]['key']>('foryou');
   const tabClearance = useTabBarClearance();
   const listRef = useRef<FlatList<Place>>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const shown = useMemo(() => {
     if (cat === 'foryou') return places.filter((p) => p.is_featured);
@@ -193,7 +210,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
 
   const header = (
     <>
-      <Hero place={hero} onExplore={scrollToPlaces} />
+      <Hero place={hero} onExplore={scrollToPlaces} scrollY={scrollY} />
       <CollectionShelf navigation={navigation} />
       <Text style={s.section}>{t('Places', 'Địa điểm')}</Text>
       <View style={{ paddingBottom: space.headingToContent }}>
@@ -214,10 +231,19 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     <Screen eyebrow={dateline(lang)} title={t('Discover Saigon', 'Khám phá Sài Gòn')}>
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
-        {loading && <ActivityIndicator color={colors.champagne} style={{ marginTop: 48 }} />}
+        {loading && (
+          <View style={{ paddingHorizontal: space.page, gap: space.cardGap }}>
+            <Skeleton style={{ height: 320, borderRadius: 22 }} />
+            <View style={{ flexDirection: 'row', gap: space.cardGap }}>
+              <Skeleton style={{ width: 176, height: 200 }} />
+              <Skeleton style={{ flex: 1, height: 200 }} />
+            </View>
+            <Skeleton style={{ height: 180, borderRadius: 22 }} />
+          </View>
+        )}
         {error && <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`)} />}
         {!loading && !error && (
-          <FlatList
+          <Animated.FlatList
             ref={listRef}
             data={shown}
             keyExtractor={(p) => p.slug}
@@ -232,6 +258,11 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             onRefresh={reload}
             refreshing={loading}
             onScrollToIndexFailed={() => {}}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: true },
+            )}
+            scrollEventThrottle={16}
           />
         )}
       </View>
