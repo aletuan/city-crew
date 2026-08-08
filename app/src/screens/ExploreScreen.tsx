@@ -336,7 +336,7 @@ const s = StyleSheet.create({
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlass,
     backgroundColor: 'rgba(10,11,10,0.45)', paddingHorizontal: 18, paddingVertical: 10,
   },
-  heroCtaText: { color: colors.champagne, fontSize: 16, fontWeight: font.semibold },
+  heroCtaText: { color: colors.champagne, fontSize: 15, fontWeight: font.semibold },
 
   section: {
     color: colors.text, ...type.section,
