@@ -38,10 +38,14 @@ function dateline(lang: Lang): string {
     : `${DAYS_EN[d.getDay()]}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`;
 }
 
-/** The hero leans on skyline photography when the catalog has it. */
+/** The hero is a night-out invitation, so it leans on after-dark
+ *  aerial photography: the rooftop-bar panorama first, then the night
+ *  cruise, then any skyline shot the catalog has. */
 function heroPlace(places: Place[]): Place | undefined {
   const withPhoto = (p: Place) => !!coverOf(p);
   return (
+    places.find((p) => p.slug === 'chill-skybar' && withPhoto(p)) ??
+    places.find((p) => p.slug === 'saigon-night-cruise' && withPhoto(p)) ??
     places.find((p) => p.slug.includes('landmark') && withPhoto(p)) ??
     places.find((p) => p.slug.includes('bitexco') && withPhoto(p)) ??
     places.find((p) => p.is_featured && withPhoto(p)) ??
@@ -83,7 +87,7 @@ function Hero({ place, onExplore, scrollY }: {
             </Text>
           </View>
           <Text style={s.heroTitle}>
-            {t('Ideas for a day in Ho Chi Minh City', 'Gợi ý cho một ngày ở TP. Hồ Chí Minh')}
+            {t('Ideas for a night in Ho Chi Minh City', 'Gợi ý cho một đêm ở TP. Hồ Chí Minh')}
           </Text>
           <Text style={s.heroSub}>
             {t(
