@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { PlayfairDisplay_600SemiBold, useFonts } from '@expo-google-fonts/playfair-display';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -144,6 +145,9 @@ const navTheme = {
 };
 
 export default function App() {
+  // Hold the charcoal ground until the serif is ready — no font flash.
+  const [fontsLoaded] = useFonts({ PlayfairDisplay_600SemiBold });
+  if (!fontsLoaded) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   return (
     <SafeAreaProvider>
       <AuthProvider>
