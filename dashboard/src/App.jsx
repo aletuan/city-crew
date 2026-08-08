@@ -18,6 +18,7 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [progress, setProgress] = useState(null);
   const [syncing, setSyncing] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [cities, setCities] = useState([]);
   const [cityId, setCityId] = useState(() => localStorage.getItem(CITY_KEY) ?? 'hcmc');
 
@@ -51,6 +52,21 @@ export default function App() {
       showToast(`Sync failed: ${err.message}`);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const publishApproved = async () => {
+    setPublishing(true);
+    try {
+      const { published } = await api.publishApproved(cityId);
+      showToast(published
+        ? `Published ${published} approved place${published === 1 ? '' : 's'} in ${city?.name_en ?? cityId}`
+        : 'Nothing new to publish — all approved places are already live');
+      refreshProgress();
+    } catch (err) {
+      showToast(`Publish failed: ${err.message}`);
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -97,6 +113,9 @@ export default function App() {
               <a className="syncbtn addbtn" href="mockup.html" target="_blank" rel="noreferrer">Mockup ↗</a>
               <Link className="syncbtn addbtn" to="/add">＋ Add place</Link>
               <Link className="syncbtn addbtn" to="/scan">Scan city</Link>
+              <button className="syncbtn" onClick={publishApproved} disabled={publishing}>
+                {publishing ? 'Publishing…' : 'Publish approved'}
+              </button>
               <button className="syncbtn" onClick={runSync} disabled={syncing}>
                 {syncing ? 'Syncing…' : 'Sync mockup'}
               </button>
