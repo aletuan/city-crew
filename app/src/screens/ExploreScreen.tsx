@@ -59,6 +59,34 @@ const CITY_HERO: Record<string, { slug: string; en: string; vi: string; ja: stri
   },
 };
 
+// A collection has no category of its own, so its badge comes from the
+// vibe its members share most — self-maintaining as membership changes.
+const VIBE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  cafes: 'cafe-outline',
+  food_tour: 'restaurant-outline',
+  views: 'business-outline',
+  nightlife: 'wine-outline',
+  culture: 'library-outline',
+  outdoors: 'leaf-outline',
+  chill: 'leaf-outline',
+  shopping: 'bag-outline',
+};
+
+/** Most common mappable vibe among members, or none — never a guess. */
+function collectionIcon(members: Place[]): keyof typeof Ionicons.glyphMap | null {
+  const tally = new Map<string, number>();
+  for (const p of members) {
+    for (const v of p.vibe_tags) {
+      if (VIBE_ICON[v]) tally.set(v, (tally.get(v) ?? 0) + 1);
+    }
+  }
+  let best: string | null = null;
+  for (const [vibe, n] of tally) {
+    if (!best || n > tally.get(best)!) best = vibe;
+  }
+  return best ? VIBE_ICON[best] : null;
+}
+
 /** Hero photography: the city's hand-picked cover place first, then a
  *  featured place with a views/nightlife vibe, then anything with a photo. */
 function heroPlace(places: Place[], cityId?: string): Place | undefined {
@@ -173,7 +201,9 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
         >
           {visible.map((c) => {
             const uri = coverFor(c);
-            const count = membersOf(c, places).length;
+            const members = membersOf(c, places);
+            const count = members.length;
+            const badge = collectionIcon(members);
             return (
               <PressableScale
                 key={c.slug}
@@ -188,6 +218,11 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                   locations={[0, 0.42, 1]}
                   style={StyleSheet.absoluteFill}
                 />
+                {badge && (
+                  <View style={s.shelfBadge}>
+                    <Ionicons name={badge} size={15} color={colors.text} />
+                  </View>
+                )}
                 <View style={s.shelfCardText}>
                   <Text style={s.shelfCardTitle} numberOfLines={2}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
                   <Text style={s.shelfCardMeta}>{count} {t('places', 'địa điểm', 'スポット')}</Text>
@@ -357,6 +392,13 @@ const s = StyleSheet.create({
   shelfCard: {
     width: 176, height: 220, borderRadius: radius.image, overflow: 'hidden',
     justifyContent: 'flex-end',
+  },
+  shelfBadge: {
+    position: 'absolute', left: 10, top: 10,
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(10,11,10,0.55)',
+    borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
   shelfCardText: { padding: 13, gap: 3 },
   shelfCardTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 20 },
