@@ -91,15 +91,15 @@ export const serifFamily = (lang: string) => (lang === 'ja' ? SERIF_JA : SERIF_L
  *  weight. Headings are serif; UI text is the system sans. */
 export const type = {
   /** Large screen title — editorial serif. */
-  title: { fontFamily: SERIF_LATIN, fontSize: 34, letterSpacing: 0.2 },
+  title: { fontFamily: SERIF_LATIN, fontSize: 38, letterSpacing: 0.2 },
   /** Section heading — editorial serif. */
-  section: { fontFamily: SERIF_LATIN, fontSize: 25, letterSpacing: 0.1 },
+  section: { fontFamily: SERIF_LATIN, fontSize: 28, letterSpacing: 0.1 },
   /** Hero headline — serif, compact leading. */
-  heroTitle: { fontFamily: SERIF_LATIN, fontSize: 30, lineHeight: 36, letterSpacing: 0.1 },
+  heroTitle: { fontFamily: SERIF_LATIN, fontSize: 34, lineHeight: 40, letterSpacing: 0.1 },
   /** Card title — functional, stays SF Pro. */
   cardTitle: { fontSize: 18, fontWeight: font.semibold, letterSpacing: 0.1 },
   /** Editorial names on cards (collections, places) — serif. */
-  cardTitleSerif: { fontFamily: SERIF_LATIN, fontSize: 19, letterSpacing: 0.1 },
+  cardTitleSerif: { fontFamily: SERIF_LATIN, fontSize: 20, letterSpacing: 0.1 },
   body: { fontSize: 17, fontWeight: font.regular },
   meta: { fontSize: 14.5, fontWeight: font.regular },
 } as const;

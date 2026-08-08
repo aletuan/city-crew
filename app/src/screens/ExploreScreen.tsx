@@ -350,7 +350,7 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   shelfCardText: { padding: 13, gap: 3 },
-  shelfCardTitle: { color: colors.text, ...type.cardTitleSerif, lineHeight: 24 },
+  shelfCardTitle: { color: colors.text, ...type.cardTitleSerif, lineHeight: 25 },
   shelfCardMeta: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
 
   yoursCard: {

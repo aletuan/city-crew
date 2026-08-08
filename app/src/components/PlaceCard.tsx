@@ -59,7 +59,7 @@ const s = StyleSheet.create({
   // ~10% tighter than the standard card body: this is a feed, not a form.
   body: { paddingHorizontal: space.cardPadding, paddingVertical: 13 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  name: { flex: 1, color: colors.text, ...type.cardTitleSerif, fontSize: 18 },
+  name: { flex: 1, color: colors.text, ...type.cardTitleSerif, fontSize: 19 },
   // Rating reads in three weights: a barely-there champagne star, a clear
   // value, a whispered count.
   ratingRow: { marginTop: 4 },

@@ -294,7 +294,7 @@ const s = StyleSheet.create({
 
   body: { paddingHorizontal: space.page, paddingTop: 18 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  name: { color: colors.text, fontSize: 26, letterSpacing: 0.25 },
+  name: { color: colors.text, fontSize: 28, letterSpacing: 0.25 },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
   loc: { color: colors.textTertiary, ...type.meta },
   ratingBadge: {
