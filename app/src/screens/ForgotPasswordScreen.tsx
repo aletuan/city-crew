@@ -39,7 +39,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
   const reset = () =>
     run(async () => {
       if (password.length < 8) {
-        throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.'));
+        throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
       }
       await resetPassword(email.trim(), code.trim(), password);
       navigation.popToTop();
@@ -49,16 +49,17 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
     return (
       <AuthScreen onBack={() => setStep('email')}>
         <AuthHeader
-          eyebrow={t('Almost there', 'Sắp xong rồi')}
-          title={t('Set a new password', 'Đặt mật khẩu mới')}
+          eyebrow={t('Almost there', 'Sắp xong rồi', 'もう少しです')}
+          title={t('Set a new password', 'Đặt mật khẩu mới', '新しいパスワードを設定')}
           lede={t(
             `We sent a 6-digit recovery code to ${email.trim()}. Enter it with your new password.`,
             `Mã khôi phục 6 số đã được gửi tới ${email.trim()}. Nhập mã cùng mật khẩu mới.`,
+            `${email.trim()} に6桁のリカバリーコードを送信しました。新しいパスワードと一緒に入力してください。`,
           )}
         />
         <FieldRow
           icon="key-outline"
-          label={t('Recovery code', 'Mã khôi phục')}
+          label={t('Recovery code', 'Mã khôi phục', 'リカバリーコード')}
           placeholder="••••••"
           value={code}
           onChangeText={setCode}
@@ -67,8 +68,8 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
         />
         <FieldRow
           icon="lock-closed-outline"
-          label={t('New password', 'Mật khẩu mới')}
-          placeholder={t('Use at least 8 characters', 'Ít nhất 8 ký tự')}
+          label={t('New password', 'Mật khẩu mới', '新しいパスワード')}
+          placeholder={t('Use at least 8 characters', 'Ít nhất 8 ký tự', '8文字以上')}
           value={password}
           onChangeText={setPassword}
           secure
@@ -78,7 +79,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
           returnKeyType="done"
         />
         {error ? <ErrorText>{error}</ErrorText> : null}
-        <PrimaryButton label={t('Reset password', 'Đặt lại mật khẩu')} onPress={reset} busy={busy} />
+        <PrimaryButton label={t('Reset password', 'Đặt lại mật khẩu', 'パスワードをリセット')} onPress={reset} busy={busy} />
       </AuthScreen>
     );
   }
@@ -86,16 +87,17 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
   return (
     <AuthScreen onBack={() => navigation.goBack()}>
       <AuthHeader
-        title={t('Forgot password', 'Quên mật khẩu')}
+        title={t('Forgot password', 'Quên mật khẩu', 'パスワードをお忘れの方')}
         lede={t(
           "Enter your email and we'll send you a recovery code.",
           'Nhập email của bạn, chúng tôi sẽ gửi mã khôi phục.',
+          'メールアドレスを入力すると、リカバリーコードをお送りします。',
         )}
       />
       <FieldRow
         icon="mail-outline"
-        label={t('Email address', 'Địa chỉ email')}
-        placeholder={t('Enter your email', 'Nhập email của bạn')}
+        label={t('Email address', 'Địa chỉ email', 'メールアドレス')}
+        placeholder={t('Enter your email', 'Nhập email của bạn', 'メールアドレスを入力')}
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
@@ -106,7 +108,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
         returnKeyType="send"
       />
       {error ? <ErrorText>{error}</ErrorText> : null}
-      <PrimaryButton label={t('Send recovery code', 'Gửi mã khôi phục')} onPress={send} busy={busy} />
+      <PrimaryButton label={t('Send recovery code', 'Gửi mã khôi phục', 'コードを送信')} onPress={send} busy={busy} />
     </AuthScreen>
   );
 }

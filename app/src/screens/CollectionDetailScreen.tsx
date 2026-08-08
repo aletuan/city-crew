@@ -23,20 +23,20 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <View style={s.header}>
         <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
-          <Text style={s.title} numberOfLines={1}>{col ? t(col.title_en, col.title_vi) : ''}</Text>
+          <Text style={s.title} numberOfLines={1}>{col ? t(col.title_en, col.title_vi, col.title_ja) : ''}</Text>
           {col && (
             <Text style={s.meta}>
-              {members.length} {t('places', 'địa điểm')}
-              {col.curator_handle ? `  ·  ${t('by', 'bởi')} ${col.curator_handle}` : ''}
+              {members.length} {t('places', 'địa điểm', 'スポット')}
+              {col.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${col.curator_handle}` : ''}
             </Text>
           )}
         </View>
       </View>
       {col && (col.desc_en || col.desc_vi) && (
-        <Text style={s.desc}>{t(col.desc_en, col.desc_vi)}</Text>
+        <Text style={s.desc}>{t(col.desc_en, col.desc_vi, col.desc_ja)}</Text>
       )}
       {loading && members.length === 0 && <ActivityIndicator color={colors.champagne} style={{ marginTop: 48 }} />}
-      {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.')} />}
+      {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
       <FlatList
         data={members}
         keyExtractor={(p) => p.slug}

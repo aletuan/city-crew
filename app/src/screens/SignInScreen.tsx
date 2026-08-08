@@ -36,17 +36,18 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
   return (
     <AuthScreen onBack={() => navigation.goBack()}>
       <AuthHeader
-        eyebrow={t('Welcome back', 'Mừng bạn trở lại')}
-        title={t('Sign in', 'Đăng nhập')}
+        eyebrow={t('Welcome back', 'Mừng bạn trở lại', 'おかえりなさい')}
+        title={t('Sign in', 'Đăng nhập', 'サインイン')}
         lede={t(
           'Glad to see you again! Sign in to continue planning amazing trips with your crew.',
           'Rất vui được gặp lại! Đăng nhập để tiếp tục lên kế hoạch cùng hội của bạn.',
+          'また会えて嬉しいです！サインインして仲間との旅の計画を続けましょう。',
         )}
       />
       <FieldRow
         icon="mail-outline"
-        label={t('Email address', 'Địa chỉ email')}
-        placeholder={t('Enter your email', 'Nhập email của bạn')}
+        label={t('Email address', 'Địa chỉ email', 'メールアドレス')}
+        placeholder={t('Enter your email', 'Nhập email của bạn', 'メールアドレスを入力')}
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
@@ -56,8 +57,8 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
       />
       <FieldRow
         icon="lock-closed-outline"
-        label={t('Password', 'Mật khẩu')}
-        placeholder={t('Enter your password', 'Nhập mật khẩu')}
+        label={t('Password', 'Mật khẩu', 'パスワード')}
+        placeholder={t('Enter your password', 'Nhập mật khẩu', 'パスワードを入力')}
         value={password}
         onChangeText={setPassword}
         secure
@@ -68,14 +69,14 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
       />
       <View style={s.metaRow}>
         <Pressable onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8}>
-          <Text style={s.forgot}>{t('Forgot password?', 'Quên mật khẩu?')}</Text>
+          <Text style={s.forgot}>{t('Forgot password?', 'Quên mật khẩu?', 'パスワードをお忘れですか？')}</Text>
         </Pressable>
       </View>
       {error ? <ErrorText>{error}</ErrorText> : null}
-      <PrimaryButton label={t('Sign in', 'Đăng nhập')} onPress={submit} busy={busy} />
+      <PrimaryButton label={t('Sign in', 'Đăng nhập', 'サインイン')} onPress={submit} busy={busy} />
       <SwitchRow
-        prompt={t("Don't have an account?", 'Chưa có tài khoản?')}
-        action={t('Sign up', 'Đăng ký')}
+        prompt={t("Don't have an account?", 'Chưa có tài khoản?', 'アカウントをお持ちでない方は')}
+        action={t('Sign up', 'Đăng ký', '登録')}
         onPress={() => navigation.replace('SignUp')}
       />
     </AuthScreen>

@@ -17,15 +17,15 @@ import { AmbientWarmth, Empty, PressableScale, useTabBarClearance } from '../com
 import PricePill from '../components/PricePill';
 import type { Nav, RootRoute } from '../nav';
 
-function fmtDuration(min: number | null, max: number | null, vi: boolean): string | null {
+function fmtDuration(min: number | null, max: number | null, lang: string): string | null {
   if (!min) return null;
   if ((max ?? min) <= 60) {
     const range = !max || min === max ? `${min}` : `${min}–${max}`;
-    return vi ? `${range} phút` : `${range} min`;
+    return lang === 'vi' ? `${range} phút` : lang === 'ja' ? `${range}分` : `${range} min`;
   }
   const h = (m: number) => Math.round(m / 30) / 2;
   const range = !max || h(min) === h(max) ? `${h(min)}` : `${h(min)}–${h(max)}`;
-  return vi ? `${range} giờ` : `${range}h`;
+  return lang === 'vi' ? `${range} giờ` : lang === 'ja' ? `${range}時間` : `${range}h`;
 }
 
 /** "Monday: 8:00 AM – 11:00 PM" → ["Monday", "8:00 AM – 11:00 PM"] */
@@ -42,10 +42,10 @@ function dotWindow(count: number, active: number, max = 7): number[] {
   return Array.from({ length: max }, (_, i) => start + i);
 }
 
-function vibeLabel(place: Place, t: (en: string, vi: string) => string): string {
+function vibeLabel(place: Place, t: (en: string, vi: string, ja?: string) => string): string {
   const v = place.vibe_tags[0];
   if (v) return v.replace('_', ' ').replace(/^\w/, (c) => c.toUpperCase());
-  return place.category === 'food' ? t('Food & drinks', 'Ăn uống') : t('Outdoors', 'Ngoài trời');
+  return place.category === 'food' ? t('Food & drinks', 'Ăn uống', 'グルメ') : t('Outdoors', 'Ngoài trời', 'アウトドア');
 }
 
 function RoundIcon({ name }: { name: keyof typeof Ionicons.glyphMap }) {
@@ -88,12 +88,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     return <SafeAreaView style={s.screen}><ActivityIndicator color={colors.champagne} style={{ marginTop: 64 }} /></SafeAreaView>;
   }
   if (!place) {
-    return <SafeAreaView style={s.screen}><Empty text={t('Place not found.', 'Không tìm thấy địa điểm.')} /></SafeAreaView>;
+    return <SafeAreaView style={s.screen}><Empty text={t('Place not found.', 'Không tìm thấy địa điểm.', 'スポットが見つかりません。')} /></SafeAreaView>;
   }
 
   const photos = photosOf(place);
   const reviews = fmtCount(place.rating_count);
-  const dur = fmtDuration(place.duration_min, place.duration_max, lang === 'vi');
+  const dur = fmtDuration(place.duration_min, place.duration_max, lang);
   const heroW = width - 24;
   const mapsUrl = place.lat && place.lng
     ? `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`
@@ -102,7 +102,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
   const share = () => {
     Share.share({
-      message: `${t(place.name_en, place.name_vi)} — ${place.address ?? ''}${mapsUrl ? `\n${mapsUrl}` : ''}`,
+      message: `${t(place.name_en, place.name_vi, place.name_ja)} — ${place.address ?? ''}${mapsUrl ? `\n${mapsUrl}` : ''}`,
     }).catch(() => {});
   };
 
@@ -170,10 +170,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           {/* ── title + rating badge ── */}
           <View style={s.titleRow}>
             <View style={{ flex: 1 }}>
-              <Text style={s.name}>{t(place.name_en, place.name_vi)}</Text>
+              <Text style={s.name}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
               <View style={s.locRow}>
                 <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
-                <Text style={s.loc}>{t(place.neighborhood_en, place.neighborhood_vi)}</Text>
+                <Text style={s.loc}>{t(place.neighborhood_en, place.neighborhood_vi, place.neighborhood_ja)}</Text>
               </View>
             </View>
             {place.rating ? (
@@ -182,7 +182,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   <Ionicons name="star" size={16} color={colors.champagne} />
                   <Text style={s.ratingValue}>{place.rating}</Text>
                 </View>
-                {reviews ? <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá')}</Text> : null}
+                {reviews ? <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー')}</Text> : null}
               </View>
             ) : null}
           </View>
@@ -204,14 +204,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             </View>
           </View>
 
-          {(place.desc_en || place.desc_vi) && <Text style={s.desc}>{t(place.desc_en, place.desc_vi)}</Text>}
+          {(place.desc_en || place.desc_vi) && <Text style={s.desc}>{t(place.desc_en, place.desc_vi, place.desc_ja)}</Text>}
           <View style={s.divider} />
 
           {/* ── info cards ── */}
           {place.address && (
             <InfoCard
               icon="location-outline"
-              label={t('Address', 'Địa chỉ')}
+              label={t('Address', 'Địa chỉ', '住所')}
               onPress={mapsUrl ? () => Linking.openURL(mapsUrl) : undefined}
               chevron={!!mapsUrl}
             >
@@ -220,7 +220,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           )}
 
           {hours.length > 0 && (
-            <InfoCard icon="time-outline" label={t('Hours', 'Giờ mở cửa')}>
+            <InfoCard icon="time-outline" label={t('Hours', 'Giờ mở cửa', '営業時間')}>
               {hours.map(([day, time]) => (
                 <View key={day} style={s.hourRow}>
                   <Text style={s.hourDay}>{day}</Text>
@@ -235,7 +235,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               <RoundIcon name="call-outline" />
               <View style={{ flex: 1 }}>
                 <Text style={s.callTitle}>
-                  {place.category === 'food' ? t('Call the place', 'Gọi cho quán') : t('Call', 'Gọi điện')}
+                  {place.category === 'food' ? t('Call the place', 'Gọi cho quán', 'お店に電話') : t('Call', 'Gọi điện', '電話する')}
                 </Text>
                 <Text style={s.infoValue}>{place.phone}</Text>
               </View>
@@ -248,7 +248,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           {place.website && (
             <InfoCard
               icon="globe-outline"
-              label={t('Website', 'Trang web')}
+              label={t('Website', 'Trang web', 'ウェブサイト')}
               onPress={() => Linking.openURL(place.website!)}
               chevron
             >
