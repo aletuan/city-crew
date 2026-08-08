@@ -54,9 +54,11 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
   );
 }
 
-/** Which city's catalog the app shows — available to guests and members. */
-function CityCard() {
-  const { t } = useI18n();
+/** Workspace settings, for guests and members alike: which city's
+ *  catalog the app shows and which language it speaks. The header
+ *  carries no switchers — this card is the one place to change both. */
+function SettingsCard() {
+  const { t, lang, toggle } = useI18n();
   const { city, mode } = useCity();
   const [open, setOpen] = useState(false);
   return (
@@ -70,6 +72,14 @@ function CityCard() {
             + (mode === 'auto' ? t(' · from your location', ' · theo vị trí của bạn') : '')
           }
           onPress={() => setOpen(true)}
+        />
+        <FeatureRow
+          icon="language-outline"
+          title={t('Language', 'Ngôn ngữ')}
+          sub={lang === 'en'
+            ? 'English · chạm để chuyển sang tiếng Việt'
+            : 'Tiếng Việt · tap to switch to English'}
+          onPress={toggle}
           last
         />
       </Card>
@@ -152,7 +162,7 @@ function GuestHub({ navigation }: { navigation: Nav }) {
         />
       </Card>
 
-      <CityCard />
+      <SettingsCard />
 
       <Card style={s.friendsCard}>
         <RoundIcon name="people-outline" />
@@ -240,7 +250,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         />
       </Card>
 
-      <CityCard />
+      <SettingsCard />
 
       <Text style={s.section}>{t('Friends', 'Bạn bè')}</Text>
       <Card style={s.friendsCard}>

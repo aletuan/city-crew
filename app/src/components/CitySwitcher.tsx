@@ -1,5 +1,5 @@
-// City switcher: a header chip (📍 Saigon ⌄) and the modal it opens —
-// one row per supported city plus "Use my location" to re-enable auto.
+// City switcher modal — one row per supported city plus "Use my
+// location" to re-enable auto. Opened from Profile's settings card.
 
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -67,28 +67,6 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
   );
 }
 
-/** Header chip showing the current city; opens the switcher. */
-export function CityChip() {
-  const { t } = useI18n();
-  const { city } = useCity();
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <PressableScale
-        haptic="selection"
-        style={s.chip}
-        onPress={() => setOpen(true)}
-        accessibilityLabel="Switch city"
-      >
-        <Ionicons name="location-outline" size={13} color={colors.champagne} />
-        <Text style={s.chipText}>{t(city?.short_en ?? '…', city?.short_vi ?? '…')}</Text>
-        <Ionicons name="chevron-down" size={12} color={colors.textTertiary} />
-      </PressableScale>
-      <CitySwitcherModal visible={open} onClose={() => setOpen(false)} />
-    </>
-  );
-}
-
 const s = StyleSheet.create({
   scrim: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
@@ -110,10 +88,4 @@ const s = StyleSheet.create({
   rowTitle: { color: colors.text, fontSize: 15.5, fontWeight: font.medium },
   rowSub: { color: colors.textTertiary, fontSize: 12.5, marginTop: 2 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft, marginVertical: 4 },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
-    paddingHorizontal: 11, paddingVertical: 6, marginRight: 8,
-  },
-  chipText: { color: colors.champagne, fontSize: 12.5, fontWeight: font.semibold },
 });
