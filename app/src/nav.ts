@@ -8,6 +8,11 @@ export type RootStackParamList = {
   CollectionsHome: undefined;
   PlaceDetail: { slug: string };
   CollectionDetail: { slug: string };
+  ProfileHome: undefined;
+  SignIn: undefined;
+  SignUp: undefined;
+  ForgotPassword: undefined;
+  EditProfile: undefined;
 };
 
 export type Nav = NativeStackNavigationProp<RootStackParamList>;

@@ -159,7 +159,10 @@ function MakeItYours({ navigation }: { navigation: Nav }) {
           'Đăng nhập để lưu địa điểm yêu thích và tạo bộ sưu tập của riêng bạn.',
         )}
       </Text>
-      <Pressable onPress={() => navigation.getParent()?.navigate('Profile')} accessibilityRole="button">
+      <Pressable
+        onPress={() => navigation.getParent()?.navigate('Profile', { screen: 'SignIn' })}
+        accessibilityRole="button"
+      >
         <LinearGradient {...gradAI} style={s.yoursBtn}>
           <Text style={s.yoursBtnText}>{t('Sign in', 'Đăng nhập')}</Text>
         </LinearGradient>

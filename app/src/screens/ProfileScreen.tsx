@@ -1,150 +1,228 @@
-// Profile: the account surface. Signed out it carries the email-OTP
-// sign-in flow; signed in it shows the account and a quiet sign-out.
+// Profile — two personas, per the reference screens.
 //
-// Same materials as everywhere else: translucent charcoal card, warm
-// hairlines, champagne reserved for the primary action.
+// Guests get a hub: who-you-are hero with one big sign-in action, a
+// preview of what an account unlocks, and a quiet exit to keep
+// browsing. Signed-in users get their identity: avatar, name, bio, an
+// About-me card and account actions. Champagne throughout — the
+// reference's violet gradient is translated, not copied.
 
 import React, { useState } from 'react';
-import {
-  ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable,
-  ScrollView, StyleSheet, Text, TextInput, View,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, Screen, useTabBarClearance } from '../components/ui';
+import { PrimaryButton } from '../components/authUi';
 import { useAuth } from '../lib/auth';
-import { useI18n } from '../lib/i18n';
-import { colors, font, gradAI, radius, space, type } from '../theme';
+import { Lang, useI18n } from '../lib/i18n';
+import { colors, font, radius, space, type } from '../theme';
+import type { Nav } from '../nav';
 
-function PrimaryButton({ label, onPress, busy }: { label: string; onPress: () => void; busy?: boolean }) {
+const MONTHS_EN = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function memberSinceLabel(d: Date, lang: Lang): string {
+  return lang === 'vi' ? `Tháng ${d.getMonth() + 1}, ${d.getFullYear()}` : `${MONTHS_EN[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function RoundIcon({ name }: { name: keyof typeof Ionicons.glyphMap }) {
   return (
-    <Pressable onPress={busy ? undefined : onPress} accessibilityRole="button">
-      <LinearGradient {...gradAI} style={s.primaryBtn}>
-        {busy
-          ? <ActivityIndicator color="#141310" />
-          : <Text style={s.primaryBtnText}>{label}</Text>}
-      </LinearGradient>
+    <View style={s.roundIcon}>
+      <Ionicons name={name} size={20} color={colors.champagne} />
+    </View>
+  );
+}
+
+function FeatureRow({ icon, title, sub, onPress, last }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  sub: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
+  return (
+    <Pressable style={[s.featureRow, !last && s.featureRowDivider]} onPress={onPress}>
+      <RoundIcon name={icon} />
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={s.featureTitle}>{title}</Text>
+        <Text style={s.featureSub}>{sub}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
     </Pressable>
   );
 }
 
-function SignInCard() {
+function ComingSoonPill() {
   const { t } = useI18n();
-  const { requestCode, verifyCode } = useAuth();
-  const [step, setStep] = useState<'email' | 'code'>('email');
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const run = async (fn: () => Promise<void>) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await fn();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const sendCode = () =>
-    run(async () => {
-      Keyboard.dismiss();
-      await requestCode(email.trim());
-      setStep('code');
-    });
-
-  const confirm = () =>
-    run(async () => {
-      Keyboard.dismiss();
-      await verifyCode(email.trim(), code.trim());
-    });
-
   return (
-    <Card style={s.card}>
-      <Text style={s.cardTitle}>{t('Sign in to cityCrew', 'Đăng nhập cityCrew')}</Text>
-      <Text style={s.cardBody}>
-        {step === 'email'
-          ? t(
-              "Enter your email and we'll send you a 6-digit code. No password needed.",
-              'Nhập email của bạn, chúng tôi sẽ gửi mã 6 số. Không cần mật khẩu.',
-            )
-          : t(
-              `We sent a code to ${email.trim()}. Enter it below.`,
-              `Mã đã được gửi tới ${email.trim()}. Nhập mã bên dưới.`,
-            )}
-      </Text>
-
-      {step === 'email' ? (
-        <TextInput
-          style={s.input}
-          value={email}
-          onChangeText={setEmail}
-          placeholder={t('you@email.com', 'ban@email.com')}
-          placeholderTextColor={colors.textTertiary}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="email"
-          onSubmitEditing={sendCode}
-          returnKeyType="send"
-        />
-      ) : (
-        <TextInput
-          style={[s.input, s.codeInput]}
-          value={code}
-          onChangeText={setCode}
-          placeholder="••••••"
-          placeholderTextColor={colors.textTertiary}
-          keyboardType="number-pad"
-          maxLength={6}
-          onSubmitEditing={confirm}
-          returnKeyType="done"
-        />
-      )}
-
-      {error ? <Text style={s.error}>{error}</Text> : null}
-
-      {step === 'email' ? (
-        <PrimaryButton label={t('Send code', 'Gửi mã')} onPress={sendCode} busy={busy} />
-      ) : (
-        <>
-          <PrimaryButton label={t('Verify & sign in', 'Xác nhận & đăng nhập')} onPress={confirm} busy={busy} />
-          <Pressable onPress={() => { setStep('email'); setCode(''); setError(null); }}>
-            <Text style={s.link}>{t('Use a different email', 'Dùng email khác')}</Text>
-          </Pressable>
-        </>
-      )}
-    </Card>
+    <View style={s.soonPill}>
+      <Text style={s.soonPillText}>{t('Coming soon', 'Sắp ra mắt')}</Text>
+    </View>
   );
 }
 
-function AccountCard() {
+function Tagline() {
   const { t } = useI18n();
-  const { email, signOut } = useAuth();
-  const [busy, setBusy] = useState(false);
-  const initial = (email ?? '?').trim().charAt(0).toUpperCase();
-
   return (
-    <Card style={s.card}>
-      <View style={s.accountRow}>
-        <View style={s.avatar}>
-          <Text style={s.avatarText}>{initial}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.accountEmail} numberOfLines={1}>{email}</Text>
-          <Text style={s.accountMeta}>{t('Signed in', 'Đã đăng nhập')}</Text>
-        </View>
-      </View>
-      <Text style={s.cardBody}>
+    <View style={s.tagline}>
+      <Text style={{ fontSize: 18 }}>✨</Text>
+      <Text style={s.taglineText}>
         {t(
-          'Saved places and personal collections are coming to your account next.',
-          'Lưu địa điểm và bộ sưu tập cá nhân sẽ sớm có trong tài khoản của bạn.',
+          'Collect moments, not things.\nShare adventures, not plans.',
+          'Góp nhặt khoảnh khắc, không phải đồ vật.\nChia sẻ hành trình, không chỉ kế hoạch.',
         )}
       </Text>
+    </View>
+  );
+}
+
+function GuestHub({ navigation }: { navigation: Nav }) {
+  const { t } = useI18n();
+  const goSignIn = () => navigation.navigate('SignIn');
+  return (
+    <>
+      <View style={s.heroRow}>
+        <View style={s.avatarBig}>
+          <Ionicons name="person-outline" size={40} color={colors.champagne} />
+        </View>
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text style={s.heroTitle}>{t("You're browsing as a guest", 'Bạn đang xem với tư cách khách')}</Text>
+          <Text style={s.heroBody}>
+            {t(
+              'Sign in to save places, build collections and plan trips with your crew.',
+              'Đăng nhập để lưu địa điểm, tạo bộ sưu tập và lên kế hoạch cùng hội của bạn.',
+            )}
+          </Text>
+        </View>
+      </View>
+      <PrimaryButton label={t('Sign in / Sign up', 'Đăng nhập / Đăng ký')} onPress={goSignIn} />
+      <Pressable style={s.guestLink} onPress={() => navigation.getParent()?.navigate('Explore')}>
+        <Text style={s.guestLinkText}>{t('Explore as guest', 'Khám phá với tư cách khách')}</Text>
+        <Ionicons name="chevron-forward" size={15} color={colors.textSecondary} />
+      </Pressable>
+
+      <Card style={s.featureCard}>
+        <FeatureRow
+          icon="bookmark-outline"
+          title={t('Saved places', 'Địa điểm đã lưu')}
+          sub={t('Sign in to save your favorite places.', 'Đăng nhập để lưu địa điểm yêu thích.')}
+          onPress={goSignIn}
+        />
+        <FeatureRow
+          icon="folder-open-outline"
+          title={t('Collections', 'Bộ sưu tập')}
+          sub={t('Create and organize your collections.', 'Tạo và sắp xếp bộ sưu tập của riêng bạn.')}
+          onPress={goSignIn}
+        />
+        <FeatureRow
+          icon="calendar-outline"
+          title={t('Trips', 'Chuyến đi')}
+          sub={t('Plan trips and invite your friends.', 'Lên kế hoạch và mời bạn bè cùng đi.')}
+          onPress={goSignIn}
+          last
+        />
+      </Card>
+
+      <Card style={s.friendsCard}>
+        <RoundIcon name="people-outline" />
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè')}</Text>
+          <Text style={s.featureSub}>
+            {t('Find friends and plan unforgettable adventures together.', 'Tìm bạn bè và cùng nhau lên những chuyến đi đáng nhớ.')}
+          </Text>
+        </View>
+        <ComingSoonPill />
+      </Card>
+
+      <Tagline />
+    </>
+  );
+}
+
+function AboutRow({ icon, label, value, last }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  last?: boolean;
+}) {
+  return (
+    <View style={[s.featureRow, !last && s.featureRowDivider]}>
+      <RoundIcon name={icon} />
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={s.aboutLabel}>{label}</Text>
+        <Text style={s.aboutValue}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
+function AccountProfile({ navigation }: { navigation: Nav }) {
+  const { t, lang } = useI18n();
+  const { email, profile, memberSince, signOut } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const name = profile.full_name || (email ?? '').split('@')[0];
+  const initial = name.trim().charAt(0).toUpperCase() || '?';
+
+  return (
+    <>
+      <View style={s.heroRow}>
+        <View style={s.avatarBig}>
+          <Text style={s.avatarInitial}>{initial}</Text>
+        </View>
+        <View style={{ flex: 1, gap: 5 }}>
+          <Text style={s.accountName} numberOfLines={1}>{name}</Text>
+          {profile.location ? (
+            <View style={s.locationRow}>
+              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+              <Text style={s.locationText}>{profile.location}</Text>
+            </View>
+          ) : null}
+          {profile.bio ? <Text style={s.heroBody} numberOfLines={2}>{profile.bio}</Text> : null}
+          <Pressable style={s.editBtn} onPress={() => navigation.navigate('EditProfile')}>
+            <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ')}</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <Text style={s.section}>{t('About me', 'Về tôi')}</Text>
+      <Card style={s.featureCard}>
+        <AboutRow
+          icon="mail-outline"
+          label={t('Email', 'Email')}
+          value={email ?? ''}
+        />
+        {profile.location ? (
+          <AboutRow icon="location-outline" label={t('From', 'Đến từ')} value={profile.location} />
+        ) : null}
+        {memberSince ? (
+          <AboutRow
+            icon="calendar-outline"
+            label={t('Member since', 'Thành viên từ')}
+            value={memberSinceLabel(memberSince, lang)}
+          />
+        ) : null}
+        <AboutRow
+          icon="heart-outline"
+          label={t('Interests', 'Sở thích')}
+          value={profile.interests || t('Add your interests in Edit profile.', 'Thêm sở thích trong phần Sửa hồ sơ.')}
+          last
+        />
+      </Card>
+
+      <Text style={s.section}>{t('Friends', 'Bạn bè')}</Text>
+      <Card style={s.friendsCard}>
+        <RoundIcon name="people-outline" />
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè')}</Text>
+          <Text style={s.featureSub}>
+            {t('Find and connect with friends to plan trips together.', 'Tìm và kết nối bạn bè để cùng lên kế hoạch.')}
+          </Text>
+        </View>
+        <ComingSoonPill />
+      </Card>
+
       <Pressable
-        style={s.quietBtn}
+        style={s.signOutBtn}
         onPress={async () => {
           setBusy(true);
           try { await signOut(); } finally { setBusy(false); }
@@ -152,13 +230,15 @@ function AccountCard() {
       >
         {busy
           ? <ActivityIndicator color={colors.textSecondary} />
-          : <Text style={s.quietBtnText}>{t('Sign out', 'Đăng xuất')}</Text>}
+          : <Text style={s.signOutText}>{t('Sign out', 'Đăng xuất')}</Text>}
       </Pressable>
-    </Card>
+
+      <Tagline />
+    </>
   );
 }
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { ready, session } = useAuth();
   const tabClearance = useTabBarClearance();
@@ -167,57 +247,78 @@ export default function ProfileScreen() {
     <Screen title={t('Profile', 'Cá nhân')}>
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: tabClearance, gap: space.cardGap }}
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            contentContainerStyle={{ paddingBottom: tabClearance }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {!ready
-              ? <ActivityIndicator color={colors.champagne} style={{ marginTop: 48 }} />
-              : session ? <AccountCard /> : <SignInCard />}
-          </ScrollView>
-        </KeyboardAvoidingView>
+          {!ready
+            ? <ActivityIndicator color={colors.champagne} style={{ marginTop: 48 }} />
+            : session
+              ? <AccountProfile navigation={navigation} />
+              : <GuestHub navigation={navigation} />}
+        </ScrollView>
       </View>
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  card: { marginHorizontal: space.page, padding: space.cardPadding, gap: 14 },
-  cardTitle: { color: colors.text, ...type.cardTitle },
-  cardBody: { color: colors.textSecondary, ...type.body, lineHeight: 23 },
-
-  input: {
-    backgroundColor: colors.surfaceGlass, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: radius.input, paddingHorizontal: 14, paddingVertical: 12,
-    color: colors.text, fontSize: 16,
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginBottom: 4 },
+  avatarBig: {
+    width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceGlass, borderWidth: 1.5, borderColor: colors.borderGlass,
   },
-  codeInput: { letterSpacing: 8, fontSize: 22, fontWeight: font.semibold, textAlign: 'center' },
-  error: { color: colors.bad, ...type.meta, lineHeight: 21 },
+  avatarInitial: { color: colors.champagne, fontSize: 34, fontWeight: font.semibold },
+  heroTitle: { color: colors.text, fontSize: 19, fontWeight: font.bold, letterSpacing: 0.1 },
+  heroBody: { color: colors.textSecondary, ...type.meta, lineHeight: 21 },
 
-  primaryBtn: {
-    borderRadius: radius.input, paddingVertical: 13,
-    alignItems: 'center', justifyContent: 'center',
+  guestLink: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 3, paddingVertical: 4,
   },
-  primaryBtnText: { color: '#141310', fontSize: 16, fontWeight: font.semibold },
-  link: { color: colors.champagne, ...type.meta, textAlign: 'center', paddingVertical: 2 },
+  guestLinkText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
 
-  accountRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: {
-    width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceGlassStrong, borderWidth: 1, borderColor: colors.borderGlass,
+  featureCard: { paddingHorizontal: space.cardPadding },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  featureRowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft },
+  roundIcon: {
+    width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(232,212,155,0.10)', borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
-  avatarText: { color: colors.champagne, fontSize: 20, fontWeight: font.semibold },
-  accountEmail: { color: colors.text, ...type.cardTitle },
-  accountMeta: { color: colors.textTertiary, ...type.meta, marginTop: 2 },
+  featureTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
+  featureSub: { color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, lineHeight: 19 },
 
-  quietBtn: {
-    borderRadius: radius.input, paddingVertical: 12, alignItems: 'center',
+  friendsCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    padding: space.cardPadding,
+  },
+  soonPill: {
+    borderRadius: radius.pill, borderWidth: 1, borderColor: 'rgba(232,212,155,0.26)',
+    backgroundColor: 'rgba(232,212,155,0.08)', paddingHorizontal: 10, paddingVertical: 4,
+  },
+  soonPillText: { color: colors.champagne, fontSize: 11.5, fontWeight: font.semibold },
+
+  section: { color: colors.text, ...type.section, marginTop: 10 },
+
+  accountName: { color: colors.text, fontSize: 23, fontWeight: font.bold, letterSpacing: 0.2 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  locationText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.regular },
+  editBtn: {
+    alignSelf: 'flex-start', marginTop: 4,
+    borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    backgroundColor: colors.surfaceGlass, paddingHorizontal: 16, paddingVertical: 8,
+  },
+  editBtnText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
+
+  aboutLabel: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
+  aboutValue: { color: colors.text, fontSize: 15.5, fontWeight: font.regular, lineHeight: 21 },
+
+  signOutBtn: {
+    borderRadius: radius.input, paddingVertical: 13, alignItems: 'center', marginTop: 6,
     borderWidth: 1, borderColor: colors.borderGlassSoft, backgroundColor: colors.surfaceGlass,
   },
-  quietBtnText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
+  signOutText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
+
+  tagline: { alignItems: 'center', gap: 8, paddingVertical: 18 },
+  taglineText: { color: colors.textTertiary, ...type.meta, textAlign: 'center', lineHeight: 22 },
 });
