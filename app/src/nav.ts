@@ -5,6 +5,7 @@ import type { RouteProp } from '@react-navigation/native';
 // so the bottom tab bar stays visible everywhere.
 export type RootStackParamList = {
   ExploreHome: undefined;
+  Search: undefined;
   CollectionsHome: undefined;
   PlaceDetail: { slug: string };
   CollectionDetail: { slug: string };

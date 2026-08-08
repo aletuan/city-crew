@@ -128,13 +128,23 @@ export function AmbientWarmth({ style }: { style?: StyleProp<ViewStyle> }) {
   );
 }
 
-/** In-page back control: 44pt circular glass, shared by detail screens. */
-export function BackButton({ onPress }: { onPress: () => void }) {
+/** 44pt circular glass control — headers and in-page actions share it. */
+export function RoundIconButton({ icon, onPress, label, size = 21 }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  label?: string;
+  size?: number;
+}) {
   return (
-    <PressableScale onPress={onPress} scaleTo={0.92} style={s.backBtn} accessibilityLabel="Back">
-      <Ionicons name="chevron-back" size={22} color={colors.text} />
+    <PressableScale onPress={onPress} scaleTo={0.92} style={s.backBtn} accessibilityLabel={label}>
+      <Ionicons name={icon} size={size} color={colors.text} />
     </PressableScale>
   );
+}
+
+/** In-page back control: the round glass button wearing a chevron. */
+export function BackButton({ onPress }: { onPress: () => void }) {
+  return <RoundIconButton icon="chevron-back" size={22} onPress={onPress} label="Back" />;
 }
 
 export function Empty({ text }: { text: string }) {
