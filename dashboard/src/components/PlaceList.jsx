@@ -106,6 +106,11 @@ export default function PlaceList() {
             <div className="facts">
               {p.vibe_tags.map((v) => <span className="tag" key={v}>{v.replace('_', ' ')}</span>)}
               <span className="count">{p.photo_count} photos</span>
+              {p.price_vnd === 0
+                ? <span className="tag">free</span>
+                : p.price_display || p.price_vnd
+                  ? <span className="count">{p.price_display ?? `${Math.round(p.price_vnd / 1000)}k₫`}</span>
+                  : <span className="tag noprice">no price</span>}
             </div>
             <span className={`stamp ${p.review_status}`}>{p.review_status}</span>
           </Link>

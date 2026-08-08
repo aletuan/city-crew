@@ -141,6 +141,7 @@ input, textarea, select { font-family: inherit; }
   padding: 2px 9px; white-space: nowrap;
 }
 .tag.featured { background: var(--grad-ai); border: none; color: #fff; }
+.tag.noprice { border-color: var(--bad); color: var(--bad); }
 .count { font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary); }
 
 /* status stamp — editorial proof mark */

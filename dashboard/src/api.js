@@ -40,7 +40,7 @@ export const api = {
   places: async (params = {}) => {
     let query = supabase
       .from('places')
-      .select('slug, name_en, name_vi, category, is_featured, vibe_tags, neighborhood_en, review_status, rating, rating_count, place_photos(photo_uri, is_cover, is_hidden)')
+      .select('slug, name_en, name_vi, category, is_featured, vibe_tags, neighborhood_en, review_status, rating, rating_count, price_vnd, price_display, place_photos(photo_uri, is_cover, is_hidden)')
       .order('slug');
     if (params.city) query = query.eq('city_id', params.city);
     if (params.status) query = query.eq('review_status', params.status);

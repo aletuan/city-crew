@@ -8,6 +8,16 @@ export const PRICE_LEVELS: Record<string, number> = {
   PRICE_LEVEL_VERY_EXPENSIVE: 4,
 };
 
+// Representative VND per Google price level, so every import speaks the
+// same "150k₫" language as the curated seed data instead of "₫₫" glyphs.
+// Rough by design — editors refine the number during review.
+export const PRICE_LEVEL_VND: Record<number, number> = {
+  1: 50000,
+  2: 150000,
+  3: 300000,
+  4: 500000,
+};
+
 export const slugify = (name: string) =>
   name
     .normalize("NFD")
@@ -123,7 +133,8 @@ export async function importPlace(
       rating: d.rating ?? null,
       rating_count: d.userRatingCount ?? null,
       price_level: priceLevel,
-      price_display: priceLevel ? "₫".repeat(priceLevel) : null,
+      price_vnd: priceLevel ? PRICE_LEVEL_VND[priceLevel] : null,
+      price_display: priceLevel ? `${PRICE_LEVEL_VND[priceLevel] / 1000}k₫` : null,
       opening_hours: d.regularOpeningHours?.weekdayDescriptions ?? null,
       website: d.websiteUri ?? null,
       phone: d.internationalPhoneNumber ?? d.nationalPhoneNumber ?? null,
