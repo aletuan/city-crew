@@ -1,5 +1,5 @@
-// Price as a quiet badge instead of bare text. Free places say so in a
-// soft green — "0₫" read like missing data, and free is a selling point.
+// Price as a small premium badge: champagne on a barely-there champagne
+// tint, one style for free and paid alike — no new semantic colors.
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -11,8 +11,8 @@ export default function PricePill({ place, compact }: { place: Place; compact?: 
   const { t } = useI18n();
   if (isFree(place)) {
     return (
-      <View style={[s.pill, s.free]}>
-        <Text style={[s.text, s.freeText]}>{t('Free', 'Miễn phí')}</Text>
+      <View style={s.pill}>
+        <Text style={[s.text, s.upper]}>{t('Free', 'Miễn phí')}</Text>
       </View>
     );
   }
@@ -29,10 +29,10 @@ export default function PricePill({ place, compact }: { place: Place; compact?: 
 
 const s = StyleSheet.create({
   pill: {
-    borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4,
-    backgroundColor: colors.surfaceGlass, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4,
+    backgroundColor: 'rgba(232,212,155,0.08)',
+    borderWidth: 1, borderColor: 'rgba(232,212,155,0.26)',
   },
-  text: { color: colors.textSecondary, fontSize: 12.5, fontWeight: font.semibold },
-  free: { backgroundColor: 'rgba(143,191,138,0.12)', borderColor: 'rgba(143,191,138,0.30)' },
-  freeText: { color: colors.ok },
+  text: { color: colors.champagne, fontSize: 12.5, fontWeight: font.semibold },
+  upper: { textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 12 },
 });
