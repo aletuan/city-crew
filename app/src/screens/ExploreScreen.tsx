@@ -44,6 +44,12 @@ function dateline(lang: Lang): string {
 // Per-city hero seasons: a hand-picked cover place and headline override.
 // Cities without an entry keep the default night-out framing.
 const CITY_HERO: Record<string, { slug: string; en: string; vi: string; ja: string }> = {
+  hcmc: {
+    slug: 'saigon-night-cruise',
+    en: 'Ideas for a night in Ho Chi Minh City',
+    vi: 'Gợi ý cho một đêm ở TP. Hồ Chí Minh',
+    ja: 'ホーチミン市、夜のアイデア',
+  },
   hanoi: {
     slug: 'imperial-citadel-of-thang-long',
     en: 'Autumn ideas in Hanoi',
