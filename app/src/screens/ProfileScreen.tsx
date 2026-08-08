@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useSerif, useTabBarClearance } from '../components/ui';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
 import { PrimaryButton } from '../components/authUi';
@@ -205,6 +205,7 @@ function AboutRow({ icon, label, value, last }: {
 
 function AccountProfile({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
+  const serif = useSerif();
   const { email, profile, memberSince, signOut } = useAuth();
   const [busy, setBusy] = useState(false);
   const name = profile.full_name || (email ?? '').split('@')[0];
@@ -231,7 +232,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         </View>
       </View>
 
-      <Text style={s.section}>{t('About me', 'Về tôi', '自己紹介')}</Text>
+      <Text style={[s.section, serif]}>{t('About me', 'Về tôi', '自己紹介')}</Text>
       <Card style={s.featureCard}>
         <AboutRow
           icon="mail-outline"
@@ -258,7 +259,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
 
       <SettingsCard />
 
-      <Text style={s.section}>{t('Friends', 'Bạn bè', '友達')}</Text>
+      <Text style={[s.section, serif]}>{t('Friends', 'Bạn bè', '友達')}</Text>
       <Card style={s.friendsCard}>
         <RoundIcon name="people-outline" />
         <View style={{ flex: 1, gap: 3 }}>

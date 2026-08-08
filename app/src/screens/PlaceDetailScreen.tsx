@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { fmtCount, photosOf, Place, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space, type } from '../theme';
-import { AmbientWarmth, Empty, PressableScale, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Empty, PressableScale, useSerif, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import type { Nav, RootRoute } from '../nav';
 
@@ -77,6 +77,7 @@ function InfoCard({ icon, label, onPress, chevron, children }: {
 
 export default function PlaceDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'PlaceDetail'> }) {
   const { t, lang } = useI18n();
+  const serif = useSerif();
   const { width } = useWindowDimensions();
   const { loading, data: places } = usePlaces();
   const place = useMemo(() => places.find((p) => p.slug === route.params.slug), [places, route.params.slug]);
@@ -170,7 +171,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           {/* ── title + rating badge ── */}
           <View style={s.titleRow}>
             <View style={{ flex: 1 }}>
-              <Text style={s.name}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
+              <Text style={[s.name, serif]}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
               <View style={s.locRow}>
                 <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
                 <Text style={s.loc}>{t(place.neighborhood_en, place.neighborhood_vi, place.neighborhood_ja)}</Text>
@@ -293,7 +294,7 @@ const s = StyleSheet.create({
 
   body: { paddingHorizontal: space.page, paddingTop: 18 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  name: { color: colors.text, fontSize: 28, fontWeight: font.bold, letterSpacing: 0.25 },
+  name: { color: colors.text, fontSize: 28, letterSpacing: 0.25 },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
   loc: { color: colors.textTertiary, ...type.meta },
   ratingBadge: {

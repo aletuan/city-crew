@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PlaceCard from '../components/PlaceCard';
-import { AmbientWarmth, BackButton, Empty, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, BackButton, Empty, useSerif, useTabBarClearance } from '../components/ui';
 import { membersOf, useCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, space, type } from '../theme';
@@ -10,6 +10,7 @@ import type { Nav, RootRoute } from '../nav';
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t } = useI18n();
+  const serif = useSerif();
   const cols = useCollections();
   const { data: places, loading: placesLoading } = usePlaces();
   const col = useMemo(() => cols.data.find((c) => c.slug === route.params.slug), [cols.data, route.params.slug]);
@@ -23,7 +24,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <View style={s.header}>
         <BackButton onPress={() => navigation.goBack()} />
         <View style={{ flex: 1 }}>
-          <Text style={s.title} numberOfLines={1}>{col ? t(col.title_en, col.title_vi, col.title_ja) : ''}</Text>
+          <Text style={[s.title, serif]} numberOfLines={1}>{col ? t(col.title_en, col.title_vi, col.title_ja) : ''}</Text>
           {col && (
             <Text style={s.meta}>
               {members.length} {t('places', 'địa điểm', 'スポット')}
