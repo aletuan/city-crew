@@ -136,7 +136,13 @@ export function RoundIconButton({ icon, onPress, label, size = 21 }: {
   size?: number;
 }) {
   return (
-    <PressableScale onPress={onPress} scaleTo={0.92} style={s.backBtn} accessibilityLabel={label}>
+    <PressableScale
+      onPress={onPress}
+      scaleTo={0.92}
+      style={s.backBtn}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
       <Ionicons name={icon} size={size} color={colors.text} />
     </PressableScale>
   );
@@ -144,7 +150,15 @@ export function RoundIconButton({ icon, onPress, label, size = 21 }: {
 
 /** In-page back control: the round glass button wearing a chevron. */
 export function BackButton({ onPress }: { onPress: () => void }) {
-  return <RoundIconButton icon="chevron-back" size={22} onPress={onPress} label="Back" />;
+  const { t } = useI18n();
+  return (
+    <RoundIconButton
+      icon="chevron-back"
+      size={22}
+      onPress={onPress}
+      label={t('Back', 'Quay lại', '戻る')}
+    />
+  );
 }
 
 export function Empty({ text }: { text: string }) {
@@ -157,8 +171,10 @@ export function Empty({ text }: { text: string }) {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
+  // Bottom-aligned so a header action sits on the title's optical centre
+  // whether or not an eyebrow is stacked above it.
   header: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'flex-end',
     paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
   },
   title: { color: colors.text, ...type.title },
