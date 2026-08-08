@@ -43,7 +43,12 @@ jobs:
       - name: Publish EAS Update
         if: env.EXPO_TOKEN != ''
         working-directory: app
+        env:
+          # Via env, not inline template substitution: a multi-line or quoted
+          # commit message would break the shell command (and is injectable).
+          COMMIT_MSG: ${{ github.event.head_commit.message || 'manual run' }}
         run: |
           npx eas-cli@latest init --non-interactive --force
           npx eas-cli@latest update:configure --non-interactive
-          npx eas-cli@latest update --branch main --message "${{ github.event.head_commit.message || 'manual run' }}" --non-interactive
+          MSG="$(printf '%s' "$COMMIT_MSG" | head -n1)"
+          npx eas-cli@latest update --branch main --message "$MSG" --non-interactive
