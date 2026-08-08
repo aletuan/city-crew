@@ -14,6 +14,7 @@ import { colors, font } from './src/theme';
 import { fireHaptic, TAB_BAR_HEIGHT } from './src/components/ui';
 import type { RootStackParamList } from './src/nav';
 import ExploreScreen from './src/screens/ExploreScreen';
+import SearchScreen from './src/screens/SearchScreen';
 import PlaceDetailScreen from './src/screens/PlaceDetailScreen';
 import CollectionsScreen from './src/screens/CollectionsScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
@@ -34,6 +35,7 @@ function ExploreStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="ExploreHome" component={ExploreScreen} />
+      <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       {/* The Explore shelf opens collections in place, keeping the tab. */}
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />

@@ -11,7 +11,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
-import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
@@ -272,6 +272,13 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     <Screen
       eyebrow={dateline(lang)}
       title={t(`Discover ${city?.short_en ?? '…'}`, `Khám phá ${city?.short_vi ?? '…'}`, `${city?.short_ja ?? city?.short_en ?? '…'}を発見`)}
+      right={(
+        <RoundIconButton
+          icon="search-outline"
+          onPress={() => navigation.navigate('Search')}
+          label={t('Search', 'Tìm kiếm', '検索')}
+        />
+      )}
     >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
