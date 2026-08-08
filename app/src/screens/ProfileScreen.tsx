@@ -319,7 +319,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass, borderWidth: 1.5, borderColor: colors.borderGlass,
   },
   avatarInitial: { color: colors.champagne, fontSize: 34, fontWeight: font.semibold },
-  heroTitle: { color: colors.text, fontSize: 19, fontWeight: font.bold, letterSpacing: 0.1 },
+  heroTitle: { color: colors.text, fontSize: 19, fontWeight: font.semibold, letterSpacing: 0.1 },
   heroBody: { color: colors.textSecondary, ...type.meta, lineHeight: 21 },
 
   guestLink: {
@@ -350,7 +350,7 @@ const s = StyleSheet.create({
 
   section: { color: colors.text, ...type.section, marginTop: 10 },
 
-  accountName: { color: colors.text, fontSize: 23, fontWeight: font.bold, letterSpacing: 0.2 },
+  accountName: { color: colors.text, fontSize: 23, fontWeight: font.semibold, letterSpacing: 0.2 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.regular },
   editBtn: {
