@@ -82,16 +82,6 @@ export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
   );
 }
 
-export function LangPill() {
-  const { lang, toggle } = useI18n();
-  return (
-    <PressableScale onPress={toggle} haptic="selection" style={s.langPill} accessibilityLabel="Switch language">
-      <Text style={[s.langOpt, lang === 'en' && s.langOn]}>EN</Text>
-      <Text style={[s.langOpt, lang === 'vi' && s.langOn]}>VI</Text>
-    </PressableScale>
-  );
-}
-
 export function Screen({ title, eyebrow, children, right }: {
   title: string;
   /** Small uppercase line above the title — e.g. today's date. */
@@ -106,7 +96,7 @@ export function Screen({ title, eyebrow, children, right }: {
           {eyebrow ? <Text style={s.eyebrow}>{eyebrow}</Text> : null}
           <Text style={s.title}>{title}</Text>
         </View>
-        {right ?? <LangPill />}
+        {right}
       </View>
       {children}
     </SafeAreaView>
@@ -166,16 +156,6 @@ const s = StyleSheet.create({
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
     letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 6,
   },
-  langPill: {
-    flexDirection: 'row', borderRadius: radius.pill,
-    borderWidth: 1, borderColor: colors.borderGlassSoft, overflow: 'hidden',
-  },
-  langOpt: {
-    paddingHorizontal: 12, paddingVertical: 6, fontSize: 12.5,
-    color: colors.textTertiary, fontWeight: font.medium,
-  },
-  // Selected control: champagne, and nothing louder.
-  langOn: { backgroundColor: colors.surfaceGlass, color: colors.champagne },
   chip: {
     borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
     paddingHorizontal: 14, paddingVertical: 7, marginRight: 8,

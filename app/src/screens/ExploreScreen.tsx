@@ -10,8 +10,7 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import PlaceCard from '../components/PlaceCard';
-import { CityChip } from '../components/CitySwitcher';
-import { AmbientWarmth, Chip, Empty, fireHaptic, LangPill, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
@@ -253,12 +252,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     <Screen
       eyebrow={dateline(lang)}
       title={t(`Discover ${city?.short_en ?? '…'}`, `Khám phá ${city?.short_vi ?? '…'}`)}
-      right={(
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <CityChip />
-          <LangPill />
-        </View>
-      )}
     >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
