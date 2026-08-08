@@ -74,8 +74,8 @@ function Hero({ place, onExplore, scrollY }: {
           )
           : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
         <LinearGradient
-          colors={['rgba(10,11,10,0.10)', 'rgba(10,11,10,0.42)', 'rgba(10,11,10,0.92)']}
-          locations={[0, 0.52, 1]}
+          colors={['rgba(10,11,10,0.45)', 'rgba(10,11,10,0.06)', 'rgba(10,11,10,0.55)', 'rgba(10,11,10,0.97)']}
+          locations={[0, 0.22, 0.64, 1]}
           style={StyleSheet.absoluteFill}
         />
         <View style={s.heroContent}>
@@ -149,8 +149,8 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                   ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
                   : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
                 <LinearGradient
-                  colors={['transparent', 'rgba(10,11,10,0.16)', 'rgba(10,11,10,0.88)']}
-                  locations={[0, 0.45, 1]}
+                  colors={['rgba(10,11,10,0.22)', 'rgba(10,11,10,0.10)', 'rgba(10,11,10,0.94)']}
+                  locations={[0, 0.42, 1]}
                   style={StyleSheet.absoluteFill}
                 />
                 <View style={s.shelfCardText}>
@@ -276,9 +276,12 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
 
 const s = StyleSheet.create({
   heroWrap: { paddingHorizontal: space.page, marginBottom: space.titleToContent },
+  // Full-bleed photography wears no hairline: a translucent border over
+  // an image lights up wherever the photo is bright and vanishes where
+  // it's dark, reading as a broken frame. Edges end in shadow instead.
   hero: {
     borderRadius: radius.card, overflow: 'hidden', minHeight: 340,
-    borderWidth: 1, borderColor: colors.borderGlassSoft, justifyContent: 'flex-end',
+    justifyContent: 'flex-end',
   },
   heroContent: { padding: space.cardPadding + 2, gap: 10 },
   heroPill: {
@@ -302,9 +305,10 @@ const s = StyleSheet.create({
   },
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
   seeAll: { color: colors.champagne, fontSize: 14, fontWeight: font.medium },
+  // Same rule as the hero: photo cards end in shadow, not in a hairline.
   shelfCard: {
     width: 176, height: 220, borderRadius: radius.image, overflow: 'hidden',
-    borderWidth: 1, borderColor: colors.borderGlassSoft, justifyContent: 'flex-end',
+    justifyContent: 'flex-end',
   },
   shelfCardText: { padding: 13, gap: 3 },
   shelfCardTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 20 },
