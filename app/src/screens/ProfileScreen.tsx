@@ -73,7 +73,7 @@ function SettingsCard() {
           icon="location-outline"
           title={t('City', 'Thành phố', '都市')}
           sub={
-            (city ? t(city.name_en, city.name_vi, city.name_ja) : '…')
+            (city ? t(city.short_en, city.short_vi, city.short_ja) : '…')
             + (mode === 'auto' ? t(' · from your location', ' · theo vị trí của bạn', ' · 現在地から') : '')
           }
           onPress={() => setOpen(true)}

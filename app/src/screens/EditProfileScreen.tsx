@@ -56,7 +56,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       <FieldRow
         icon="location-outline"
         label={t('From', 'Đến từ', '出身地')}
-        placeholder={t(`${city?.name_en ?? 'Ho Chi Minh City'}, Vietnam`, `${city?.name_vi ?? 'TP. Hồ Chí Minh'}, Việt Nam`)}
+        placeholder={t(`${city?.short_en ?? 'Saigon'}, Vietnam`, `${city?.short_vi ?? 'Sài Gòn'}, Việt Nam`, `${city?.short_ja ?? 'サイゴン'}、ベトナム`)}
         value={location}
         onChangeText={setLocation}
       />

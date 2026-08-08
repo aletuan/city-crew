@@ -55,7 +55,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
               >
                 <Ionicons name="business-outline" size={18} color={active ? colors.champagne : colors.textTertiary} />
                 <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.champagne }]}>
-                  {t(c.name_en, c.name_vi, c.name_ja)}
+                  {t(c.short_en, c.short_vi, c.short_ja)}
                 </Text>
                 {active && <Ionicons name="checkmark" size={18} color={colors.champagne} />}
               </PressableScale>

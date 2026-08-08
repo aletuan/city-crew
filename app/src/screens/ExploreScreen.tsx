@@ -46,9 +46,9 @@ function dateline(lang: Lang): string {
 const CITY_HERO: Record<string, { slug: string; en: string; vi: string; ja: string }> = {
   hcmc: {
     slug: 'saigon-night-cruise',
-    en: 'Ideas for a night in Ho Chi Minh City',
-    vi: 'Gợi ý cho một đêm ở TP. Hồ Chí Minh',
-    ja: 'ホーチミン市、夜のアイデア',
+    en: 'Ideas for a night in Saigon',
+    vi: 'Gợi ý cho một đêm ở Sài Gòn',
+    ja: 'サイゴン、夜のアイデア',
   },
   hanoi: {
     slug: 'imperial-citadel-of-thang-long',
@@ -110,9 +110,9 @@ function Hero({ place, onExplore, scrollY }: {
             {city && CITY_HERO[city.id]
               ? t(CITY_HERO[city.id].en, CITY_HERO[city.id].vi, CITY_HERO[city.id].ja)
               : t(
-                  `Ideas for a night in ${city?.name_en ?? 'the city'}`,
-                  `Gợi ý cho một đêm ở ${city?.name_vi ?? 'thành phố'}`,
-                  `${city?.name_ja ?? city?.name_en ?? 'この街'}、夜のアイデア`,
+                  `Ideas for a night in ${city?.short_en ?? 'the city'}`,
+                  `Gợi ý cho một đêm ở ${city?.short_vi ?? 'thành phố'}`,
+                  `${city?.short_ja ?? city?.short_en ?? 'この街'}、夜のアイデア`,
                 )}
           </Text>
           <Text style={s.heroSub}>
