@@ -37,7 +37,10 @@ function placeHaystack(p: Place): string {
     p.vibe_tags.join(' '),
     // Category keys plus their labels in every language, so "bảo tàng"
     // and "heritage" both reach the same places.
-    categoriesOf(p).flatMap((c) => [c, ...(CATEGORIES[c] ? Object.values(CATEGORIES[c]) : [])]).join(' '),
+    categoriesOf(p).flatMap((c) => {
+      const cat = CATEGORIES[c];
+      return cat ? [c, cat.en, cat.vi, cat.ja] : [c];
+    }).join(' '),
     p.address,
   ].join(' '));
 }

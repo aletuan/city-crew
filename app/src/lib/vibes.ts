@@ -24,7 +24,9 @@ export const VIBES: Record<string, VibeStyle> = {
   cafes: { color: '#D2A679', icon: 'cafe-outline', en: 'Cafés', vi: 'Cà phê', ja: 'カフェ' },
   food_tour: { color: '#E09A6B', icon: 'restaurant-outline', en: 'Food', vi: 'Ăn uống', ja: 'グルメ' },
   nightlife: { color: '#A98CD9', icon: 'wine-outline', en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ' },
-  views: { color: '#7FC08C', icon: 'business-outline', en: 'Views', vi: 'Ngắm cảnh', ja: '眺望' },
+  // Teal, not green: at 6pt a green dot here was indistinguishable from
+  // outdoors' green next to it.
+  views: { color: '#6FB3C0', icon: 'business-outline', en: 'Views', vi: 'Ngắm cảnh', ja: '眺望' },
   culture: { color: '#D98A80', icon: 'library-outline', en: 'Culture', vi: 'Văn hóa', ja: 'カルチャー' },
   outdoors: { color: '#8FBF8A', icon: 'leaf-outline', en: 'Nature', vi: 'Thiên nhiên', ja: '自然' },
   chill: { color: '#7FA8D9', icon: 'leaf-outline', en: 'Chill', vi: 'Thư giãn', ja: 'のんびり' },

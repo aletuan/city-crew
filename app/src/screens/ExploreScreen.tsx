@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
+import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
 import { Lang, useI18n } from '../lib/i18n';
@@ -21,7 +21,9 @@ import { VIBES } from '../lib/vibes';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
-/** The one chip that filters by curation rather than by category. */
+// Two chips that aren't categories: the whole catalog, and the editors'
+// picks. They carry no glyph — a colourless chip reads as "not a category".
+const ALL = 'all';
 const FOR_YOU = 'foryou';
 
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -280,13 +282,19 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     return CATEGORY_ORDER.filter((c) => present.has(c));
   }, [places]);
 
-  // Switching city can retire the selected chip — fall back rather than
-  // leave the list stuck on a filter that no longer exists.
+  const hasFeatured = useMemo(() => places.some((p) => p.is_featured), [places]);
+
+  // Switching city can retire the selected chip, and a city whose catalog
+  // has nothing featured would land on an empty "For you" — fall back to
+  // the full list rather than an empty screen.
   useEffect(() => {
-    if (cat !== FOR_YOU && places.length > 0 && !cats.includes(cat)) setCat(FOR_YOU);
-  }, [cats, cat, places.length]);
+    if (places.length === 0) return;
+    if (cat === FOR_YOU && !hasFeatured) setCat(ALL);
+    else if (cat !== FOR_YOU && cat !== ALL && !cats.includes(cat)) setCat(FOR_YOU);
+  }, [cats, cat, places.length, hasFeatured]);
 
   const shown = useMemo(() => {
+    if (cat === ALL) return places;
     if (cat === FOR_YOU) return places.filter((p) => p.is_featured);
     return places.filter((p) => categoriesOf(p).includes(cat));
   }, [places, cat]);
@@ -311,12 +319,24 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           contentContainerStyle={{ paddingHorizontal: space.page }}
         >
           <Chip
+            label={t('All', 'Tất cả', 'すべて')}
+            active={cat === ALL}
+            onPress={() => setCat(ALL)}
+          />
+          <Chip
             label={t('For you', 'Cho bạn', 'おすすめ')}
             active={cat === FOR_YOU}
             onPress={() => setCat(FOR_YOU)}
           />
           {cats.map((c) => (
-            <Chip key={c} label={categoryLabel(c, t)} active={cat === c} onPress={() => setCat(c)} />
+            <Chip
+              key={c}
+              label={categoryLabel(c, t)}
+              icon={CATEGORIES[c]?.icon}
+              iconColor={CATEGORIES[c]?.color}
+              active={cat === c}
+              onPress={() => setCat(c)}
+            />
           ))}
         </ScrollView>
       </View>
