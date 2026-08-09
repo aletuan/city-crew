@@ -68,7 +68,7 @@ function ProfileStack() {
 // [inactive, active]. Thin monochrome glyphs, and the selected tab takes
 // the solid variant in champagne — the iOS convention. No selection pill.
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
-  Ideas: ['sparkles-outline', 'sparkles'],
+  Ideas: ['bulb-outline', 'bulb'],
   Explore: ['compass-outline', 'compass'],
   Trips: ['calendar-outline', 'calendar'],
   Collections: ['bookmark-outline', 'bookmark'],
