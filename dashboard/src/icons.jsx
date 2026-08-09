@@ -48,9 +48,22 @@ const PATHS = {
       <path d="M8 7.2V13M5.5 13.5h5" />
     </>
   ),
+  // View-mode toggle — plain UI chrome, not a category concept, so these
+  // ignore the `color` prop's "own hue" convention and just take currentColor.
+  list: (
+    <path d="M3 4.5h10M3 8h10M3 11.5h10" />
+  ),
+  grid: (
+    <>
+      <rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".8" />
+      <rect x="9" y="2.5" width="4.5" height="4.5" rx=".8" />
+      <rect x="2.5" y="9" width="4.5" height="4.5" rx=".8" />
+      <rect x="9" y="9" width="4.5" height="4.5" rx=".8" />
+    </>
+  ),
 };
 
-export function CategoryIcon({ name, color }) {
+export function CategoryIcon({ name, color = 'currentColor' }) {
   const shape = PATHS[name];
   if (!shape) return null;
   return (

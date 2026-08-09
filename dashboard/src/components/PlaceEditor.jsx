@@ -61,7 +61,7 @@ export default function PlaceEditor() {
   useEffect(() => {
     const listParams = new URLSearchParams(params);
     listParams.delete('q');
-    api.places({ ...Object.fromEntries(listParams), city: city?.id })
+    api.places({ ...Object.fromEntries(listParams), city: city?.id, all: true })
       .then((rows) => setSiblings(Array.isArray(rows) ? rows.map((r) => r.slug) : []))
       .catch(() => setSiblings([]));
   }, [params, city?.id]);

@@ -33,27 +33,46 @@ async function invoke(name, body) {
   return data;
 }
 
+const PAGE_SIZE = 24;
+const SORT_COLUMNS = { created_at: 'created_at', rating_count: 'rating_count', rating: 'rating' };
+
 export const api = {
   cities: async () =>
     db(await supabase.from('cities').select('id, name_en, name_vi, short_en, short_vi').order('sort_order')),
 
+  // Paginated by default — {rows, total, pageSize} — for the list page.
+  // PlaceEditor's prev/next needs every matching slug in order, not one
+  // page of it, so it passes `all: true` for the plain, unpaginated array
+  // this returned before pagination existed.
   places: async (params = {}) => {
+    const sortColumn = SORT_COLUMNS[params.sort] ?? 'created_at';
+    const ascending = params.dir === 'asc';
     let query = supabase
       .from('places')
-      .select('slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, rating, rating_count, price_vnd, price_display, place_photos(photo_uri, is_cover, is_hidden)')
-      .order('slug');
+      .select(
+        'slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, rating, rating_count, price_vnd, price_display, created_at, place_photos(photo_uri, is_cover, is_hidden)',
+        { count: 'exact' },
+      )
+      .order(sortColumn, { ascending, nullsFirst: false })
+      .order('slug'); // stable tiebreaker
     if (params.city) query = query.eq('city_id', params.city);
     if (params.status) query = query.eq('review_status', params.status);
     if (params.category) query = query.contains('categories', [params.category]);
     if (params.vibe) query = query.contains('vibe_tags', [params.vibe]);
     if (params.q) query = query.or(`name_en.ilike.%${params.q}%,name_vi.ilike.%${params.q}%`);
-    const rows = db(await query);
-    return rows.map((r) => {
+    if (!params.all) {
+      const page = Math.max(1, Number(params.page) || 1);
+      query = query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+    }
+    const { data, error, count } = await query;
+    if (error) throw new Error(error.message);
+    const rows = data.map((r) => {
       const visible = r.place_photos.filter((p) => !p.is_hidden);
       const cover = visible.find((p) => p.is_cover) ?? visible[0];
       const { place_photos, ...rest } = r;
       return { ...rest, cover_url: cover?.photo_uri ?? null, photo_count: visible.length };
     });
+    return params.all ? rows : { rows, total: count, pageSize: PAGE_SIZE };
   },
 
   place: async (slug) => {
