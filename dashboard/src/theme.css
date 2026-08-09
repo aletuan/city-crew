@@ -2,6 +2,12 @@
    The desk is a dark light-table: photos glow, facts sit in mono beside them. */
 
 :root {
+  /* The desk is dark, so native widgets must be too. Without this the
+     browser paints a <select>'s dropdown in the light scheme — white panel
+     under our near-white option text, i.e. invisible rows. It also fixes
+     scrollbars, date pickers and focus rings in one line. */
+  color-scheme: dark;
+
   --bg-app: #0B0910;
   --bg-elevated: #16131B;
   --bg-input: rgba(10, 8, 13, 0.55);
@@ -51,6 +57,9 @@ body {
 a { color: inherit; }
 button { font-family: inherit; cursor: pointer; }
 input, textarea, select { font-family: inherit; }
+/* Belt to color-scheme's braces: platforms that still paint the popup
+   themselves (Windows, Linux) honour these instead. */
+option { background: var(--bg-elevated); color: var(--text-primary); }
 
 :focus-visible {
   outline: 2px solid var(--ai-pink);
