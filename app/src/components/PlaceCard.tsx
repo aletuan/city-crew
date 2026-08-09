@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { coverOf, fmtCount, Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
+import { vibeColor, vibeLabel } from '../lib/vibes';
 import { colors, font, radius, space, type } from '../theme';
 import PricePill from './PricePill';
 import { Card, PressableScale } from './ui';
@@ -37,9 +38,14 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
             </Text>
           ) : null}
           {place.vibe_tags.length > 0 && (
-            <Text style={s.vibes} numberOfLines={1}>
-              {place.vibe_tags.slice(0, 3).map((v) => v.replace('_', ' ')).join('   ')}
-            </Text>
+            <View style={s.vibeRow}>
+              {place.vibe_tags.slice(0, 3).map((v) => (
+                <View key={v} style={s.vibeChip}>
+                  <View style={[s.vibeDot, { backgroundColor: vibeColor(v) }]} />
+                  <Text style={s.vibeText} numberOfLines={1}>{vibeLabel(v, t)}</Text>
+                </View>
+              ))}
+            </View>
           )}
         </View>
       </Card>
@@ -65,6 +71,16 @@ const s = StyleSheet.create({
   star: { color: 'rgba(232,212,155,0.55)', fontSize: 13.5 },
   ratingValue: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
   ratingCount: { color: colors.textTertiary, fontSize: 13, fontWeight: font.regular },
-  // Categories are a whisper — plain lowered text, no chrome.
-  vibes: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.regular, marginTop: 6 },
+  // Vibes read as small glass pills, each carrying its own colour in a dot
+  // only — the type stays neutral so the row scans without shouting.
+  // One line, never wrapping, so every card keeps the same height.
+  vibeRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: 6, marginTop: 8 },
+  vibeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1,
+    backgroundColor: colors.surfaceGlass, borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
+    paddingHorizontal: 9, paddingVertical: 4,
+  },
+  vibeDot: { width: 6, height: 6, borderRadius: 3 },
+  vibeText: { color: colors.textSecondary, fontSize: 12, fontWeight: font.medium },
 });
