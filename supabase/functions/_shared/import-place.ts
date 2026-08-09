@@ -30,18 +30,21 @@ export const slugify = (name: string) =>
 
 // Curated scan queries, one per category. {en} / {vi} interpolate the city's
 // name_en / name_vi — Vietnamese phrasing where it surfaces better local
-// results. vibes ⊂ the global VIBES taxonomy.
+// results. vibes ⊂ the global VIBES taxonomy; categories ⊂ the functional
+// taxonomy enforced by the places_categories_known constraint. A query knows
+// what it went looking for, so the import writes it down rather than leaving
+// the classification to be guessed back out later.
 export const SCAN_CATEGORIES = [
-  { key: "cafes", label_en: "Cafés", label_vi: "Quán cà phê", category: "food", vibes: ["cafes"], q: "best specialty coffee shops in {en}" },
-  { key: "street_food", label_en: "Street food", label_vi: "Ẩm thực đường phố", category: "food", vibes: ["food_tour"], q: "quán ăn đường phố ngon {vi}" },
-  { key: "local_restaurants", label_en: "Local restaurants", label_vi: "Nhà hàng địa phương", category: "food", vibes: ["food_tour"], q: "nhà hàng món Việt ngon {vi}" },
-  { key: "desserts", label_en: "Desserts", label_vi: "Tráng miệng", category: "food", vibes: ["food_tour", "chill"], q: "chè và tráng miệng ngon {vi}" },
-  { key: "rooftops", label_en: "Rooftops", label_vi: "Rooftop", category: "out", vibes: ["views", "nightlife"], q: "rooftop bars with a view in {en}" },
-  { key: "landmarks", label_en: "Landmarks", label_vi: "Địa danh", category: "out", vibes: ["culture"], q: "famous landmarks in {en}" },
-  { key: "museums", label_en: "Museums & heritage", label_vi: "Bảo tàng & di sản", category: "out", vibes: ["culture"], q: "museums and heritage sites in {en}" },
-  { key: "parks", label_en: "Parks & lakes", label_vi: "Công viên & hồ", category: "out", vibes: ["outdoors", "chill"], q: "parks and lakes in {en}" },
-  { key: "markets", label_en: "Markets", label_vi: "Chợ", category: "out", vibes: ["shopping"], q: "chợ địa phương nổi tiếng {vi}" },
-  { key: "nightlife", label_en: "Nightlife", label_vi: "Về đêm", category: "out", vibes: ["nightlife"], q: "best bars and live music in {en}" },
+  { key: "cafes", label_en: "Cafés", label_vi: "Quán cà phê", category: "food", vibes: ["cafes"], categories: ["cafes"], q: "best specialty coffee shops in {en}" },
+  { key: "street_food", label_en: "Street food", label_vi: "Ẩm thực đường phố", category: "food", vibes: ["food_tour"], categories: ["eats"], q: "quán ăn đường phố ngon {vi}" },
+  { key: "local_restaurants", label_en: "Local restaurants", label_vi: "Nhà hàng địa phương", category: "food", vibes: ["food_tour"], categories: ["eats"], q: "nhà hàng món Việt ngon {vi}" },
+  { key: "desserts", label_en: "Desserts", label_vi: "Tráng miệng", category: "food", vibes: ["food_tour", "chill"], categories: ["eats"], q: "chè và tráng miệng ngon {vi}" },
+  { key: "rooftops", label_en: "Rooftops", label_vi: "Rooftop", category: "out", vibes: ["views", "nightlife"], categories: ["views", "nightlife"], q: "rooftop bars with a view in {en}" },
+  { key: "landmarks", label_en: "Landmarks", label_vi: "Địa danh", category: "out", vibes: ["culture"], categories: ["heritage", "sights"], q: "famous landmarks in {en}" },
+  { key: "museums", label_en: "Museums & heritage", label_vi: "Bảo tàng & di sản", category: "out", vibes: ["culture"], categories: ["heritage"], q: "museums and heritage sites in {en}" },
+  { key: "parks", label_en: "Parks & lakes", label_vi: "Công viên & hồ", category: "out", vibes: ["outdoors", "chill"], categories: ["nature"], q: "parks and lakes in {en}" },
+  { key: "markets", label_en: "Markets", label_vi: "Chợ", category: "out", vibes: ["shopping"], categories: ["markets"], q: "chợ địa phương nổi tiếng {vi}" },
+  { key: "nightlife", label_en: "Nightlife", label_vi: "Về đêm", category: "out", vibes: ["nightlife"], categories: ["nightlife"], q: "best bars and live music in {en}" },
 ] as const;
 
 export type ScanCategory = (typeof SCAN_CATEGORIES)[number];
@@ -81,6 +84,7 @@ type ImportArgs = {
   category: "food" | "out";
   cityId: string;
   vibeTags?: string[];
+  categories?: string[];
   maxPhotos?: number;
 };
 
@@ -90,7 +94,7 @@ type ImportArgs = {
  * Assumes the caller already checked google_place_id for duplicates.
  */
 export async function importPlace(
-  { admin, gapi, apiKey, placeId, category, cityId, vibeTags = [], maxPhotos = 6 }: ImportArgs,
+  { admin, gapi, apiKey, placeId, category, cityId, vibeTags = [], categories, maxPhotos = 6 }: ImportArgs,
 ): Promise<{ slug: string; photos: number }> {
   const d = await gapi(`https://places.googleapis.com/v1/places/${placeId}`, {
     headers: {
@@ -121,6 +125,9 @@ export async function importPlace(
       name_en: name,
       name_vi: name,
       category,
+      // Never empty: the column's check constraint rejects an empty array,
+      // and an uncategorised place would be unreachable from every chip.
+      categories: categories?.length ? categories : [category === "food" ? "eats" : "sights"],
       city_id: cityId,
       is_featured: false,
       vibe_tags: vibeTags,

@@ -11,7 +11,7 @@ const BUCKET = 'place-photos';
 // fails loudly here instead of silently bouncing off RLS.
 const EDITABLE = new Set([
   'name_en', 'name_vi', 'desc_en', 'desc_vi', 'neighborhood_en', 'neighborhood_vi',
-  'address', 'category', 'is_featured', 'vibe_tags', 'emoji',
+  'address', 'category', 'categories', 'is_featured', 'vibe_tags', 'emoji',
   'price_level', 'price_display', 'price_vnd', 'duration_min', 'duration_max',
   'opening_hours', 'website', 'phone', 'saved_count', 'sort_order', 'is_published',
   'review_status', 'review_note',
@@ -40,11 +40,11 @@ export const api = {
   places: async (params = {}) => {
     let query = supabase
       .from('places')
-      .select('slug, name_en, name_vi, category, is_featured, vibe_tags, neighborhood_en, review_status, rating, rating_count, price_vnd, price_display, place_photos(photo_uri, is_cover, is_hidden)')
+      .select('slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, rating, rating_count, price_vnd, price_display, place_photos(photo_uri, is_cover, is_hidden)')
       .order('slug');
     if (params.city) query = query.eq('city_id', params.city);
     if (params.status) query = query.eq('review_status', params.status);
-    if (params.category) query = query.eq('category', params.category);
+    if (params.category) query = query.contains('categories', [params.category]);
     if (params.vibe) query = query.contains('vibe_tags', [params.vibe]);
     if (params.q) query = query.or(`name_en.ilike.%${params.q}%,name_vi.ilike.%${params.q}%`);
     const rows = db(await query);

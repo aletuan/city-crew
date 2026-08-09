@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
+import { CATEGORY_KEYS } from '../categories.js';
 import { useCity, useProgress, useToast } from '../App.jsx';
 import PhotoManager, { emptyPhotoEdits, photoEditsDirty } from './PhotoManager.jsx';
 
 const VIBES = ['cafes', 'food_tour', 'outdoors', 'views', 'culture', 'shopping', 'nightlife', 'chill'];
 const FORM_FIELDS = [
   'name_en', 'name_vi', 'desc_en', 'desc_vi', 'neighborhood_en', 'neighborhood_vi',
-  'address', 'category', 'is_featured', 'vibe_tags', 'emoji',
+  'address', 'category', 'categories', 'is_featured', 'vibe_tags', 'emoji',
   'price_display', 'price_vnd', 'duration_min', 'duration_max',
   'website', 'phone', 'saved_count', 'is_published', 'review_note',
 ];
@@ -189,7 +190,29 @@ export default function PlaceEditor() {
           </section>
 
           <section className="panel">
-            <h3>Vibe &amp; placement</h3>
+            <h3>Categories &amp; placement</h3>
+            {/* What the place is — many per place, and what the Explore
+                filter chips are built from. At least one is required. */}
+            <div className="vibes" style={{ marginBottom: 6 }}>
+              {CATEGORY_KEYS.map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`vibe ${form.categories?.includes(key) ? 'on' : ''}`}
+                  onClick={() => set('categories', form.categories?.includes(key)
+                    ? form.categories.filter((c) => c !== key)
+                    : [...(form.categories ?? []), key])}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {!form.categories?.length && (
+              <p className="hint" style={{ marginBottom: 14 }}>
+                Pick at least one category — a place with none can't be reached from any Explore chip.
+              </p>
+            )}
+            <h4 style={{ margin: '18px 0 8px' }}>Vibes</h4>
             <div className="vibes" style={{ marginBottom: 14 }}>
               {VIBES.map((v) => (
                 <button
@@ -204,14 +227,10 @@ export default function PlaceEditor() {
                 </button>
               ))}
             </div>
+            {/* The legacy food/out column is still written by the import
+                pipeline but no longer drives anything the app shows, so it
+                is not editable here. */}
             <div className="inline-fields">
-              <div className="field">
-                <label htmlFor="category">Category</label>
-                <select id="category" value={form.category} onChange={(e) => set('category', e.target.value)}>
-                  <option value="food">food</option>
-                  <option value="out">out</option>
-                </select>
-              </div>
               <label className="checkline" style={{ alignSelf: 'end', paddingBottom: 9 }}>
                 <input type="checkbox" checked={!!form.is_featured} onChange={(e) => set('is_featured', e.target.checked)} />
                 Featured (“For you” tab)

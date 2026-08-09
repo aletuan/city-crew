@@ -3,7 +3,7 @@
 // photography, a horizontal shelf of public collections, then the
 // browsable places list. Guests get a quiet "Make it yours" close.
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated, FlatList, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
 import { Lang, useI18n } from '../lib/i18n';
@@ -20,11 +21,8 @@ import { VIBES } from '../lib/vibes';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
-const CATS = [
-  { key: 'foryou', en: 'For you', vi: 'Cho bạn', ja: 'おすすめ' },
-  { key: 'food', en: 'Food & drinks', vi: 'Ăn uống', ja: 'グルメ' },
-  { key: 'out', en: 'Outdoors & culture', vi: 'Ngoài trời & văn hóa', ja: '外遊び＆カルチャー' },
-] as const;
+/** The one chip that filters by curation rather than by category. */
+const FOR_YOU = 'foryou';
 
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
@@ -259,14 +257,28 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
   const { loading, error, data: places, reload } = usePlaces();
-  const [cat, setCat] = useState<(typeof CATS)[number]['key']>('foryou');
+  const [cat, setCat] = useState<string>(FOR_YOU);
   const tabClearance = useTabBarClearance();
   const listRef = useRef<FlatList<Place>>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
+  // Only categories this city actually has, so a chip never leads to an
+  // empty list. Order comes from the taxonomy, not from the data.
+  const cats = useMemo<string[]>(() => {
+    const present = new Set<string>();
+    for (const p of places) for (const c of categoriesOf(p)) present.add(c);
+    return CATEGORY_ORDER.filter((c) => present.has(c));
+  }, [places]);
+
+  // Switching city can retire the selected chip — fall back rather than
+  // leave the list stuck on a filter that no longer exists.
+  useEffect(() => {
+    if (cat !== FOR_YOU && places.length > 0 && !cats.includes(cat)) setCat(FOR_YOU);
+  }, [cats, cat, places.length]);
+
   const shown = useMemo(() => {
-    if (cat === 'foryou') return places.filter((p) => p.is_featured);
-    return places.filter((p) => p.category === cat);
+    if (cat === FOR_YOU) return places.filter((p) => p.is_featured);
+    return places.filter((p) => categoriesOf(p).includes(cat));
   }, [places, cat]);
 
   const hero = useMemo(() => heroPlace(places, city?.id), [places, city?.id]);
@@ -288,8 +300,13 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: space.page }}
         >
-          {CATS.map((c) => (
-            <Chip key={c.key} label={t(c.en, c.vi, c.ja)} active={cat === c.key} onPress={() => setCat(c.key)} />
+          <Chip
+            label={t('For you', 'Cho bạn', 'おすすめ')}
+            active={cat === FOR_YOU}
+            onPress={() => setCat(FOR_YOU)}
+          />
+          {cats.map((c) => (
+            <Chip key={c} label={categoryLabel(c, t)} active={cat === c} onPress={() => setCat(c)} />
           ))}
         </ScrollView>
       </View>

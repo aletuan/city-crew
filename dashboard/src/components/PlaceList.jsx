@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
+import { CATEGORY_KEYS, CATEGORY_LABEL } from '../categories.js';
 import { useCity } from '../App.jsx';
 
 const STATUSES = ['pending', 'approved', 'flagged'];
-const CATEGORIES = [['food', 'Food & drinks'], ['out', 'Outdoors & culture']];
 const VIBES = ['cafes', 'food_tour', 'outdoors', 'views', 'culture', 'shopping', 'nightlife', 'chill'];
 
 const fmtCount = (n) => (!n ? null : n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n));
@@ -58,7 +58,7 @@ export default function PlaceList() {
           </button>
         ))}
         <span style={{ width: 8 }} />
-        {CATEGORIES.map(([value, label]) => (
+        {CATEGORY_KEYS.map(([value, label]) => (
           <button key={value} className={`chip ${category === value ? 'on' : ''}`} onClick={() => toggle('category', value)}>
             {label}
           </button>
@@ -104,7 +104,12 @@ export default function PlaceList() {
               </div>
             </div>
             <div className="facts">
-              {p.vibe_tags.map((v) => <span className="tag" key={v}>{v.replace('_', ' ')}</span>)}
+              {p.categories?.length
+                ? p.categories.map((c) => (
+                  <span className="tag" key={c}>{CATEGORY_LABEL[c] ?? c}</span>
+                ))
+                : <span className="tag noprice">no category</span>}
+              {p.vibe_tags.map((v) => <span className="tag vibe" key={v}>{v.replace('_', ' ')}</span>)}
               <span className="count">{p.photo_count} photos</span>
               {p.price_vnd === 0
                 ? <span className="tag">free</span>
