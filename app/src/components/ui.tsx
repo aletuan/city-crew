@@ -103,9 +103,19 @@ export function Screen({ title, eyebrow, children, right }: {
   );
 }
 
-export function Chip({ label, active, onPress }: { label: string; active?: boolean; onPress?: () => void }) {
+export function Chip({ label, active, onPress, icon, iconColor }: {
+  label: string;
+  active?: boolean;
+  onPress?: () => void;
+  /** Optional leading glyph. It keeps its own colour in both states — the
+   *  hue is what ties a chip to the dot the same concept wears on a card,
+   *  so selection must not repaint it. */
+  icon?: keyof typeof Ionicons.glyphMap;
+  iconColor?: string;
+}) {
   return (
     <PressableScale onPress={onPress} haptic="selection" scaleTo={0.94} style={[s.chip, active && s.chipOn]}>
+      {icon ? <Ionicons name={icon} size={15} color={iconColor ?? colors.textSecondary} /> : null}
       <Text style={[s.chipText, active && s.chipTextOn]}>{label}</Text>
     </PressableScale>
   );
@@ -183,6 +193,7 @@ const s = StyleSheet.create({
     letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 6,
   },
   chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
     borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
     paddingHorizontal: 14, paddingVertical: 7, marginRight: 8,
   },

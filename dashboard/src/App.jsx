@@ -83,19 +83,21 @@ export default function App() {
               <Link to="/" aria-label="All places">
                 <img className="logo" src="logo.png" alt="cityCrew" />
               </Link>
-              <h1>
-                Data desk
-                <select
-                  className="cityselect"
-                  value={city?.id ?? 'hcmc'}
-                  onChange={(e) => setCity(e.target.value)}
-                  aria-label="City"
-                >
-                  {(cities.length ? cities : [{ id: 'hcmc', name_en: 'Ho Chi Minh City' }]).map((c) => (
-                    <option key={c.id} value={c.id}>{c.name_en}</option>
-                  ))}
-                </select>
-              </h1>
+              <h1>Data desk</h1>
+              {/* Scope switcher — everything below the bar is filtered to it.
+                  It sits beside the title rather than inside the heading: a
+                  form control nested in an <h1> reads as part of the heading
+                  to a screen reader. */}
+              <select
+                className="cityselect"
+                value={city?.id ?? 'hcmc'}
+                onChange={(e) => setCity(e.target.value)}
+                aria-label="City"
+              >
+                {(cities.length ? cities : [{ id: 'hcmc', name_en: 'Ho Chi Minh City' }]).map((c) => (
+                  <option key={c.id} value={c.id}>{c.name_en}</option>
+                ))}
+              </select>
               <div className="spacer" />
               {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
               <a className="syncbtn addbtn" href="mockup.html" target="_blank" rel="noreferrer">Mockup ↗</a>

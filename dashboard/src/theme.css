@@ -2,6 +2,12 @@
    The desk is a dark light-table: photos glow, facts sit in mono beside them. */
 
 :root {
+  /* The desk is dark, so native widgets must be too. Without this the
+     browser paints a <select>'s dropdown in the light scheme — white panel
+     under our near-white option text, i.e. invisible rows. It also fixes
+     scrollbars, date pickers and focus rings in one line. */
+  color-scheme: dark;
+
   --bg-app: #0B0910;
   --bg-elevated: #16131B;
   --bg-input: rgba(10, 8, 13, 0.55);
@@ -51,11 +57,13 @@ body {
 a { color: inherit; }
 button { font-family: inherit; cursor: pointer; }
 input, textarea, select { font-family: inherit; }
+/* Belt to color-scheme's braces: platforms that still paint the popup
+   themselves (Windows, Linux) honour these instead. */
+option { background: var(--bg-elevated); color: var(--text-primary); }
 
 :focus-visible {
   outline: 2px solid var(--ai-pink);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -71,17 +79,36 @@ input, textarea, select { font-family: inherit; }
 }
 .topbar-inner {
   display: flex; align-items: center; gap: 16px;
+  /* Controls keep their natural width (see .syncbtn); when the window is
+     too narrow for all of them, the bar wraps to a second row rather than
+     squeezing labels onto two lines. */
+  flex-wrap: wrap;
   max-width: 1280px; margin: 0 auto; padding: 14px 28px;
 }
 .topbar .logo { width: 34px; height: 34px; border-radius: 10px; }
-.topbar h1 { font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
-.topbar h1 span { color: var(--text-tertiary); font-weight: 500; }
-.cityselect {
-  margin-left: 8px; border: 1px solid var(--border-glass); background: var(--surface-glass);
-  color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 600;
-  padding: 5px 10px; border-radius: var(--radius-pill); cursor: pointer;
+.topbar h1 {
+  font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em;
+  display: inline-flex; align-items: center; white-space: nowrap; flex-shrink: 0;
 }
-.cityselect:hover { background: var(--surface-glass-strong); }
+.topbar h1 span { color: var(--text-tertiary); font-weight: 500; }
+/* City switcher. appearance:none drops the platform widget — the stock
+   control brings its own bevel, its own chevron and its own metrics, none
+   of which match the desk — and we draw the chevron ourselves so the pill
+   looks identical on every OS. Still a native <select>: the popup, keyboard
+   handling and mobile picker are all things worth not reimplementing. */
+.cityselect {
+  appearance: none; -webkit-appearance: none;
+  border: 1px solid var(--border-glass-soft);
+  background-color: var(--surface-glass);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%23ffffff' stroke-opacity='0.6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 10px 6px;
+  color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 600;
+  padding: 6px 32px 6px 14px; border-radius: var(--radius-pill); cursor: pointer;
+  flex-shrink: 0; transition: background-color 160ms, border-color 160ms;
+}
+.cityselect:hover { background-color: var(--surface-glass-strong); border-color: var(--border-glass); }
 .topbar .spacer { flex: 1; }
 
 /* progress rail — the desk's one glowing measure, now anchored in the body */
@@ -98,6 +125,9 @@ input, textarea, select { font-family: inherit; }
   color: var(--text-primary); font-size: 13px; font-weight: 600;
   padding: 8px 16px; border-radius: var(--radius-pill);
   transition: background 160ms;
+  /* A pill is one line. Without this the label breaks mid-phrase
+     ("Publish / approved") as soon as the bar runs short of room. */
+  white-space: nowrap; flex-shrink: 0;
 }
 .syncbtn:hover { background: var(--surface-glass-strong); }
 .syncbtn:disabled { opacity: .5; cursor: wait; }
@@ -370,6 +400,7 @@ input, textarea, select { font-family: inherit; }
   border: 1px solid var(--border-glass-soft); background: transparent; color: var(--text-tertiary);
   font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: var(--radius-pill);
   transition: background 160ms, color 160ms, border-color 160ms;
+  white-space: nowrap; flex-shrink: 0;
 }
 .topbar .signout svg { width: 15px; height: 15px; flex: none; }
 .topbar .signout:hover { color: var(--bad); border-color: rgba(248, 113, 113, 0.4); background: rgba(248, 113, 113, 0.08); }
@@ -379,7 +410,7 @@ input, textarea, select { font-family: inherit; }
   body { font-size: 14px; }
   .shell { padding: 16px 12px 150px; }
 
-  .topbar-inner { flex-wrap: wrap; gap: 8px 10px; padding: 12px; }
+  .topbar-inner { gap: 8px 10px; padding: 12px; }
   .topbar h1 span { display: none; }
   .subbar { justify-content: stretch; margin-bottom: 14px; }
   .rail { min-width: 0; flex: 1; }

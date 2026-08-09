@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
+import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
 import { Lang, useI18n } from '../lib/i18n';
@@ -21,8 +21,9 @@ import { VIBES } from '../lib/vibes';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
-/** The one chip that filters by curation rather than by category. */
-const FOR_YOU = 'foryou';
+// The one chip that isn't a category: the whole catalog. It carries no
+// glyph — a colourless chip reads as "not a kind of place".
+const ALL = 'all';
 
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
@@ -41,9 +42,10 @@ function dateline(lang: Lang): string {
   return `${DAYS_EN[d.getDay()]}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`;
 }
 
-// Per-city hero seasons: a hand-picked cover place and headline override.
-// Cities without an entry keep the default night-out framing.
-const CITY_HERO: Record<string, { slug: string; en: string; vi: string; ja: string }> = {
+// Per-city hero seasons: a headline override, and optionally a hand-picked
+// cover place. Cities without an entry keep the default night-out framing;
+// cities with no slug keep the automatic photo pick.
+const CITY_HERO: Record<string, { slug?: string; en: string; vi: string; ja: string }> = {
   hcmc: {
     slug: 'saigon-night-cruise',
     en: 'Ideas for a night in Saigon',
@@ -55,6 +57,15 @@ const CITY_HERO: Record<string, { slug: string; en: string; vi: string; ja: stri
     en: 'Autumn ideas in Hanoi',
     vi: 'Gợi ý mùa thu ở Hà Nội',
     ja: 'ハノイ、秋のアイデア',
+  },
+  // Da Nang is read east to west: the sea in the morning, the Hàn and its
+  // bridges after dark. The headline names that rhythm instead of borrowing
+  // Saigon's night framing. No slug yet — the automatic pick holds until a
+  // river or beach photo is published to pin it to.
+  danang: {
+    en: 'Mornings by the sea, nights on the Hàn',
+    vi: 'Sáng ở biển, tối bên sông Hàn',
+    ja: '朝は海へ、夜はハン川へ',
   },
 };
 
@@ -257,7 +268,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
   const { loading, error, data: places, reload } = usePlaces();
-  const [cat, setCat] = useState<string>(FOR_YOU);
+  const [cat, setCat] = useState<string>(ALL);
   const tabClearance = useTabBarClearance();
   const listRef = useRef<FlatList<Place>>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -270,14 +281,15 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     return CATEGORY_ORDER.filter((c) => present.has(c));
   }, [places]);
 
-  // Switching city can retire the selected chip — fall back rather than
-  // leave the list stuck on a filter that no longer exists.
+  // Switching city can retire the selected chip — fall back to the full
+  // list rather than leave the screen stuck on a filter that no longer
+  // matches anything.
   useEffect(() => {
-    if (cat !== FOR_YOU && places.length > 0 && !cats.includes(cat)) setCat(FOR_YOU);
+    if (places.length > 0 && cat !== ALL && !cats.includes(cat)) setCat(ALL);
   }, [cats, cat, places.length]);
 
   const shown = useMemo(() => {
-    if (cat === FOR_YOU) return places.filter((p) => p.is_featured);
+    if (cat === ALL) return places;
     return places.filter((p) => categoriesOf(p).includes(cat));
   }, [places, cat]);
 
@@ -301,12 +313,19 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           contentContainerStyle={{ paddingHorizontal: space.page }}
         >
           <Chip
-            label={t('For you', 'Cho bạn', 'おすすめ')}
-            active={cat === FOR_YOU}
-            onPress={() => setCat(FOR_YOU)}
+            label={t('All', 'Tất cả', 'すべて')}
+            active={cat === ALL}
+            onPress={() => setCat(ALL)}
           />
           {cats.map((c) => (
-            <Chip key={c} label={categoryLabel(c, t)} active={cat === c} onPress={() => setCat(c)} />
+            <Chip
+              key={c}
+              label={categoryLabel(c, t)}
+              icon={CATEGORIES[c]?.icon}
+              iconColor={CATEGORIES[c]?.color}
+              active={cat === c}
+              onPress={() => setCat(c)}
+            />
           ))}
         </ScrollView>
       </View>

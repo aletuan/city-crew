@@ -9,22 +9,38 @@
 // supabase/migrations/20260809000000_place_categories.sql. Adding a key
 // means changing both.
 
-export type CategoryLabels = { en: string; vi: string; ja: string };
+import type { Ionicons } from '@expo/vector-icons';
 
+export type CategoryStyle = {
+  en: string;
+  vi: string;
+  ja: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  /** Carried by the glyph only — never a fill, never type. Matches the dot
+   *  the same concept wears on a place card, so the filter row and the
+   *  cards read as one colour code. */
+  color: string;
+};
+
+// Chip labels are two words at most. A filter row is scanned, not read:
+// past two words the eye starts parsing instead of recognising, and the
+// row stops fitting on one screen. The key stays descriptive; the label
+// is the short name of the same thing.
 /** Filter-row order: eat and drink first, then things to see and do. */
 export const CATEGORY_ORDER = [
   'cafes', 'eats', 'views', 'heritage', 'nature', 'markets', 'nightlife', 'sights',
 ] as const;
 
-export const CATEGORIES: Record<string, CategoryLabels> = {
-  cafes: { en: 'Cafés', vi: 'Cà phê', ja: 'カフェ' },
-  eats: { en: 'Eats', vi: 'Ăn uống', ja: '食事' },
-  views: { en: 'Views', vi: 'Ngắm cảnh', ja: '眺望' },
-  heritage: { en: 'Heritage', vi: 'Di sản & văn hóa', ja: '歴史・文化' },
-  nature: { en: 'Parks & lakes', vi: 'Công viên & hồ', ja: '公園・自然' },
-  markets: { en: 'Markets', vi: 'Chợ & mua sắm', ja: '市場・買い物' },
-  nightlife: { en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ' },
-  sights: { en: 'Sights', vi: 'Điểm tham quan', ja: '見どころ' },
+export const CATEGORIES: Record<string, CategoryStyle> = {
+  cafes: { en: 'Cafés', vi: 'Cà phê', ja: 'カフェ', icon: 'cafe-outline', color: '#D2A679' },
+  eats: { en: 'Eats', vi: 'Ăn uống', ja: '食事', icon: 'restaurant-outline', color: '#E09A6B' },
+  views: { en: 'Views', vi: 'Ngắm cảnh', ja: '眺望', icon: 'business-outline', color: '#6FB3C0' },
+  heritage: { en: 'Culture', vi: 'Văn hóa', ja: '文化', icon: 'library-outline', color: '#D98A80' },
+  nature: { en: 'Nature', vi: 'Thiên nhiên', ja: '自然', icon: 'leaf-outline', color: '#8FBF8A' },
+  markets: { en: 'Shopping', vi: 'Mua sắm', ja: '買い物', icon: 'bag-outline', color: '#C98BB0' },
+  nightlife: { en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ', icon: 'wine-outline', color: '#A98CD9' },
+  // The catch-all stays colourless: it makes no claim about what a place is.
+  sights: { en: 'Sights', vi: 'Tham quan', ja: '見どころ', icon: 'location-outline', color: '#9A9C98' },
 };
 
 /** Same mapping the migration backfills with — see the note in categoriesOf. */
