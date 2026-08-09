@@ -113,6 +113,25 @@ export const api = {
     return { ok: true, removed_uploads: paths.length };
   },
 
+  // Same shape as deletePlace, batched — a bad scan-city run can bring in
+  // a dozen duds at once, and deleting those one at a time (one confirm,
+  // one round-trip each) is the thing this exists to avoid.
+  deletePlaces: async (slugs) => {
+    if (!slugs?.length) return { ok: true, deleted: 0, removed_uploads: 0 };
+    const places = db(await supabase.from('places').select('id').in('slug', slugs));
+    const ids = places.map((p) => p.id);
+    if (!ids.length) return { ok: true, deleted: 0, removed_uploads: 0 };
+
+    const uploads = db(await supabase.from('place_photos')
+      .select('storage_path').in('place_id', ids).eq('source', 'upload'));
+
+    db(await supabase.from('places').delete().in('id', ids).select('id'));
+
+    const paths = uploads.map((u) => u.storage_path).filter(Boolean);
+    if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
+    return { ok: true, deleted: ids.length, removed_uploads: paths.length };
+  },
+
   /** Flip every approved-but-unpublished place live, scoped to a city.
    *  Approve and publish are separate switches; this closes the gap in one tap. */
   publishApproved: async (city) => {

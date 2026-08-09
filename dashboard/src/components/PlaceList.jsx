@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import { CATEGORY_KEYS, CATEGORY_LABEL, CATEGORY_STYLE } from '../categories.js';
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { CategoryIcon } from '../icons.jsx';
-import { useCity, useProgress } from '../App.jsx';
+import { useCity, useProgress, useToast } from '../App.jsx';
 
 const STATUSES = ['pending', 'approved', 'flagged'];
 const VIEW_KEY = 'citycrew.dashboard.view';
@@ -21,7 +21,8 @@ const fmtCount = (n) => (!n ? null : n >= 1000 ? `${Math.round(n / 100) / 10}k` 
 
 export default function PlaceList() {
   const { city } = useCity();
-  const { progress } = useProgress();
+  const { progress, refresh: refreshProgress } = useProgress();
+  const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [rows, setRows] = useState(null);
   const [total, setTotal] = useState(null);
@@ -33,6 +34,10 @@ export default function PlaceList() {
   // the URL params that drive the query (see toggle/setSort for those).
   const [view, setView] = useState(() => localStorage.getItem(VIEW_KEY) ?? 'row');
   useEffect(() => localStorage.setItem(VIEW_KEY, view), [view]);
+  // A bad scan-city run can bring in a dozen duds at once — select several
+  // and delete them together instead of opening each one to delete alone.
+  const [selected, setSelected] = useState(() => new Set());
+  const [deleting, setDeleting] = useState(false);
 
   const status = params.get('status') ?? '';
   const category = params.get('category') ?? '';
@@ -67,6 +72,39 @@ export default function PlaceList() {
     window.scrollTo({ top: 0 });
   };
 
+  const toggleSelect = (slug) => {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  };
+
+  const allOnPageSelected = rows?.length > 0 && rows.every((p) => selected.has(p.slug));
+  const toggleSelectAll = () => setSelected(allOnPageSelected ? new Set() : new Set(rows.map((p) => p.slug)));
+
+  const deleteSelected = async () => {
+    const slugs = [...selected];
+    if (!slugs.length || deleting) return;
+    const msg = `Delete ${slugs.length} place${slugs.length === 1 ? '' : 's'} permanently?\n\n`
+      + 'This removes each place, its photos (including uploads) and its collection entries from the database.';
+    if (!confirm(msg)) return;
+    setDeleting(true);
+    try {
+      await api.deletePlaces(slugs);
+      toast(`Deleted ${slugs.length} place${slugs.length === 1 ? '' : 's'}`);
+      setSelected(new Set());
+      refreshProgress();
+      gotoPage(1);
+      setRetryKey((k) => k + 1);
+    } catch (err) {
+      toast(`Delete failed: ${err.message}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   useEffect(() => {
     const t = setTimeout(() => {
       const next = new URLSearchParams(params);
@@ -90,6 +128,9 @@ export default function PlaceList() {
   useEffect(() => {
     let live = true;
     setError(null);
+    // A different filter, page, sort or city means a different result set —
+    // a selection made against the old one shouldn't carry over silently.
+    setSelected(new Set());
     // api.places throws on non-2xx (e.g. a transient Supabase auth error);
     // never hand a non-array to the render path.
     api.places({ ...Object.fromEntries(params), city: city?.id })
@@ -142,33 +183,48 @@ export default function PlaceList() {
         </div>
       </div>
 
-      <div className="resultsbar">
-        <span className="resultscount">{total != null ? `${total} place${total === 1 ? '' : 's'}` : ''}</span>
-        <div className="resultscontrols">
-          <div className="searchbox">
-            <CategoryIcon name="search" />
-            <input
-              className="search"
-              placeholder="Search places…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              aria-label="Search places"
-            />
-          </div>
-          <select className="sortselect" value={`${sort}:${dir}`} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
-            {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-          <div className="viewtoggle" data-view={view} role="group" aria-label="Layout">
-            <span className="viewtoggle-thumb" />
-            <button className={view === 'row' ? 'on' : ''} onClick={() => setView('row')} aria-pressed={view === 'row'} aria-label="Row view">
-              <CategoryIcon name="list" />
+      {selected.size > 0 ? (
+        <div className="resultsbar">
+          <span className="resultscount">{selected.size} selected</span>
+          <div className="resultscontrols">
+            <button className="syncbtn" onClick={toggleSelectAll}>
+              {allOnPageSelected ? 'Deselect all' : `Select all ${rows?.length ?? 0} on page`}
             </button>
-            <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-pressed={view === 'grid'} aria-label="Grid view">
-              <CategoryIcon name="grid" />
+            <button className="syncbtn" onClick={() => setSelected(new Set())}>Cancel</button>
+            <button className="dangerbtn" onClick={deleteSelected} disabled={deleting}>
+              {deleting ? 'Deleting…' : `Delete ${selected.size}`}
             </button>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="resultsbar">
+          <span className="resultscount">{total != null ? `${total} place${total === 1 ? '' : 's'}` : ''}</span>
+          <div className="resultscontrols">
+            <div className="searchbox">
+              <CategoryIcon name="search" />
+              <input
+                className="search"
+                placeholder="Search places…"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                aria-label="Search places"
+              />
+            </div>
+            <select className="sortselect" value={`${sort}:${dir}`} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
+              {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <div className="viewtoggle" data-view={view} role="group" aria-label="Layout">
+              <span className="viewtoggle-thumb" />
+              <button className={view === 'row' ? 'on' : ''} onClick={() => setView('row')} aria-pressed={view === 'row'} aria-label="Row view">
+                <CategoryIcon name="list" />
+              </button>
+              <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-pressed={view === 'grid'} aria-label="Grid view">
+                <CategoryIcon name="grid" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="empty">
@@ -189,6 +245,14 @@ export default function PlaceList() {
                 {p.cover_url
                   ? <img src={p.cover_url} alt="" loading="lazy" />
                   : null}
+                <input
+                  type="checkbox"
+                  className={`selectbox ${selected.has(p.slug) ? 'checked' : ''}`}
+                  checked={selected.has(p.slug)}
+                  readOnly
+                  aria-label={`Select ${p.name_en}`}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSelect(p.slug); }}
+                />
                 <span className={`stamp ${p.review_status}`}>{p.review_status}</span>
               </div>
               <div className="gcard-body">
@@ -215,9 +279,19 @@ export default function PlaceList() {
         <div className="rows">
           {rows?.map((p) => (
             <Link className="prow" to={`/place/${p.slug}?${params}`} key={p.slug}>
-              {p.cover_url
-                ? <img className="thumb" src={p.cover_url} alt="" loading="lazy" />
-                : <div className="thumb" />}
+              <div className="thumbwrap">
+                {p.cover_url
+                  ? <img className="thumb" src={p.cover_url} alt="" loading="lazy" />
+                  : <div className="thumb" />}
+                <input
+                  type="checkbox"
+                  className={`selectbox ${selected.has(p.slug) ? 'checked' : ''}`}
+                  checked={selected.has(p.slug)}
+                  readOnly
+                  aria-label={`Select ${p.name_en}`}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSelect(p.slug); }}
+                />
+              </div>
               <div className="names">
                 <div className="en">{p.name_en} {p.is_featured && <span className="tag featured">featured</span>}</div>
                 <div className="vi">{p.name_vi}</div>
