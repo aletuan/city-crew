@@ -28,7 +28,7 @@ export type CategoryStyle = {
 // is the short name of the same thing.
 /** Filter-row order: eat and drink first, then things to see and do. */
 export const CATEGORY_ORDER = [
-  'cafes', 'eats', 'views', 'heritage', 'nature', 'markets', 'nightlife', 'sights',
+  'cafes', 'eats', 'views', 'heritage', 'nature', 'markets', 'nightlife',
 ] as const;
 
 export const CATEGORIES: Record<string, CategoryStyle> = {
@@ -39,8 +39,6 @@ export const CATEGORIES: Record<string, CategoryStyle> = {
   nature: { en: 'Nature', vi: 'Thiên nhiên', ja: '自然', icon: 'leaf-outline', color: '#8FBF8A' },
   markets: { en: 'Shopping', vi: 'Mua sắm', ja: '買い物', icon: 'bag-outline', color: '#C98BB0' },
   nightlife: { en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ', icon: 'wine-outline', color: '#A98CD9' },
-  // The catch-all stays colourless: it makes no claim about what a place is.
-  sights: { en: 'Sights', vi: 'Tham quan', ja: '見どころ', icon: 'location-outline', color: '#9A9C98' },
 };
 
 /** Same mapping the migration backfills with — see the note in categoriesOf. */
@@ -57,12 +55,13 @@ const FROM_VIBE: Record<string, string> = {
 type Categorisable = { categories?: string[] | null; vibe_tags?: string[] | null; category?: string };
 
 /**
- * A place's categories, never empty.
+ * A place's categories — possibly none.
  *
  * The stored column wins. The vibe-derived fallback covers a row written
- * before the column existed — or by a writer that has not learned about it
- * yet — so a place is always reachable from some chip rather than silently
- * dropping out of every filter.
+ * before the column existed, or by a writer that has not learned about it
+ * yet. Beyond that there is no guess to make: a place nothing classifies
+ * returns empty and is reached through "All", which is honest, where a
+ * catch-all category would have claimed something the data never said.
  */
 export function categoriesOf(p: Categorisable): string[] {
   if (p.categories?.length) return p.categories;
@@ -71,8 +70,10 @@ export function categoriesOf(p: Categorisable): string[] {
     const c = FROM_VIBE[v];
     if (c) derived.add(c);
   }
-  if (derived.size) return [...derived];
-  return [p.category === 'food' ? 'eats' : 'sights'];
+  // 'food' means eating and drinking whatever else is missing; 'out' means
+  // only "not food", which names nothing.
+  if (!derived.size && p.category === 'food') derived.add('eats');
+  return [...derived];
 }
 
 export function categoryLabel(key: string, t: (en: string, vi: string, ja?: string) => string): string {

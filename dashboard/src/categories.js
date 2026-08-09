@@ -13,7 +13,6 @@ export const CATEGORY_KEYS = [
   ['nature', 'nature'],
   ['markets', 'shopping'],
   ['nightlife', 'nightlife'],
-  ['sights', 'sights'],
 ];
 
 export const CATEGORY_LABEL = Object.fromEntries(CATEGORY_KEYS);

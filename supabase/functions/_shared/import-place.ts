@@ -40,7 +40,7 @@ export const SCAN_CATEGORIES = [
   { key: "local_restaurants", label_en: "Local restaurants", label_vi: "Nhà hàng địa phương", category: "food", vibes: ["food_tour"], categories: ["eats"], q: "nhà hàng món Việt ngon {vi}" },
   { key: "desserts", label_en: "Desserts", label_vi: "Tráng miệng", category: "food", vibes: ["food_tour", "chill"], categories: ["eats"], q: "chè và tráng miệng ngon {vi}" },
   { key: "rooftops", label_en: "Rooftops", label_vi: "Rooftop", category: "out", vibes: ["views", "nightlife"], categories: ["views", "nightlife"], q: "rooftop bars with a view in {en}" },
-  { key: "landmarks", label_en: "Landmarks", label_vi: "Địa danh", category: "out", vibes: ["culture"], categories: ["heritage", "sights"], q: "famous landmarks in {en}" },
+  { key: "landmarks", label_en: "Landmarks", label_vi: "Địa danh", category: "out", vibes: ["culture"], categories: ["heritage"], q: "famous landmarks in {en}" },
   { key: "museums", label_en: "Museums & heritage", label_vi: "Bảo tàng & di sản", category: "out", vibes: ["culture"], categories: ["heritage"], q: "museums and heritage sites in {en}" },
   { key: "parks", label_en: "Parks & lakes", label_vi: "Công viên & hồ", category: "out", vibes: ["outdoors", "chill"], categories: ["nature"], q: "parks and lakes in {en}" },
   { key: "markets", label_en: "Markets", label_vi: "Chợ", category: "out", vibes: ["shopping"], categories: ["markets"], q: "chợ địa phương nổi tiếng {vi}" },
@@ -125,9 +125,10 @@ export async function importPlace(
       name_en: name,
       name_vi: name,
       category,
-      // Never empty: the column's check constraint rejects an empty array,
-      // and an uncategorised place would be unreachable from every chip.
-      categories: categories?.length ? categories : [category === "food" ? "eats" : "sights"],
+      // May be empty — a manual import knows nothing about what the place
+      // is. The dashboard flags those for an editor rather than the
+      // pipeline inventing a category the query never claimed.
+      categories: categories ?? [],
       city_id: cityId,
       is_featured: false,
       vibe_tags: vibeTags,

@@ -209,7 +209,7 @@ export default function PlaceEditor() {
             </div>
             {!form.categories?.length && (
               <p className="hint" style={{ marginBottom: 14 }}>
-                Pick at least one category — a place with none can't be reached from any Explore chip.
+                No category yet — this place only shows under “All” in Explore until it has one.
               </p>
             )}
             <h4 style={{ margin: '18px 0 8px' }}>Vibes</h4>
