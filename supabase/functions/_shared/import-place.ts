@@ -88,6 +88,25 @@ type ImportArgs = {
   maxPhotos?: number;
 };
 
+// District/ward-level address component — the human "what part of town is
+// this in" answer, as opposed to the full street address. Google's exact
+// type for it drifts by region and address depth (more so since Vietnam's
+// 2025 ward mergers), so this checks candidates in priority order and uses
+// the first that's present rather than betting on one.
+const NEIGHBORHOOD_TYPES = [
+  "administrative_area_level_2",
+  "sublocality_level_1",
+  "sublocality",
+  "administrative_area_level_3",
+];
+function neighborhoodOf(components: { longText?: string; types?: string[] }[] | undefined): string | null {
+  for (const type of NEIGHBORHOOD_TYPES) {
+    const match = components?.find((c) => c.types?.includes(type));
+    if (match?.longText) return match.longText;
+  }
+  return null;
+}
+
 /**
  * Import one Google place as a pending, unpublished row with photos.
  * Slug collisions: base → `${base}-${cityId}` → numeric suffix.
@@ -100,7 +119,7 @@ export async function importPlace(
     headers: {
       "X-Goog-Api-Key": apiKey,
       "X-Goog-FieldMask":
-        "id,displayName,formattedAddress,location,rating,userRatingCount,"
+        "id,displayName,formattedAddress,addressComponents,location,rating,userRatingCount,"
         + "priceLevel,regularOpeningHours,websiteUri,internationalPhoneNumber,"
         + "nationalPhoneNumber,photos,editorialSummary",
     },
@@ -135,6 +154,10 @@ export async function importPlace(
       // Google's editorial one-liner where it exists (EN only) — the
       // Vietnamese description stays editorial work in the dashboard.
       desc_en: d.editorialSummary?.text ?? null,
+      // Same value in both languages, like name_en/name_vi above — a
+      // starting point the editor refines, not a translation.
+      neighborhood_en: neighborhoodOf(d.addressComponents),
+      neighborhood_vi: neighborhoodOf(d.addressComponents),
       address: d.formattedAddress ?? null,
       lat: d.location?.latitude ?? null,
       lng: d.location?.longitude ?? null,
