@@ -63,12 +63,15 @@ input, textarea, select { font-family: inherit; }
 }
 
 /* ── shell ── */
-.shell { max-width: 1280px; margin: 0 auto; padding: 0 28px 80px; }
+.shell { max-width: 1280px; margin: 0 auto; padding: 22px 28px 80px; }
 .topbar {
-  display: flex; align-items: center; gap: 16px;
-  padding: 18px 0 14px;
   position: sticky; top: 0; z-index: 40;
-  background: linear-gradient(180deg, var(--bg-app) 78%, transparent);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-glass-soft);
+}
+.topbar-inner {
+  display: flex; align-items: center; gap: 16px;
+  max-width: 1280px; margin: 0 auto; padding: 14px 28px;
 }
 .topbar .logo { width: 34px; height: 34px; border-radius: 10px; }
 .topbar h1 { font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
@@ -81,7 +84,8 @@ input, textarea, select { font-family: inherit; }
 .cityselect:hover { background: var(--surface-glass-strong); }
 .topbar .spacer { flex: 1; }
 
-/* progress rail — the desk's one glowing measure */
+/* progress rail — the desk's one glowing measure, now anchored in the body */
+.subbar { display: flex; justify-content: flex-end; margin: 0 0 18px; }
 .rail { display: flex; flex-direction: column; gap: 5px; min-width: 260px; }
 .rail .counts { display: flex; justify-content: space-between; font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary); }
 .rail .counts b { color: var(--text-secondary); font-weight: 600; }
@@ -360,21 +364,28 @@ input, textarea, select { font-family: inherit; }
 .addcat { display: flex; align-items: center; gap: 8px; color: var(--text-tertiary); font-size: 12.5px; margin-bottom: 20px; }
 
 .topbar .addbtn { text-decoration: none; }
+.topbar-divider { width: 1px; height: 22px; background: var(--border-glass-soft); margin: 0 2px; }
 .topbar .signout {
-  border: none; background: transparent; color: var(--text-tertiary);
-  font-size: 16px; padding: 6px 8px; border-radius: var(--radius-pill);
+  display: flex; align-items: center; gap: 7px;
+  border: 1px solid var(--border-glass-soft); background: transparent; color: var(--text-tertiary);
+  font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: var(--radius-pill);
+  transition: background 160ms, color 160ms, border-color 160ms;
 }
-.topbar .signout:hover { color: var(--bad); background: var(--surface-glass); }
+.topbar .signout svg { width: 15px; height: 15px; flex: none; }
+.topbar .signout:hover { color: var(--bad); border-color: rgba(248, 113, 113, 0.4); background: rgba(248, 113, 113, 0.08); }
 
 /* ── phone layout — the desk becomes a one-hand tool ── */
 @media (max-width: 720px) {
   body { font-size: 14px; }
-  .shell { padding: 0 12px 150px; }
+  .shell { padding: 16px 12px 150px; }
 
-  .topbar { flex-wrap: wrap; gap: 8px 10px; padding: 12px 0 10px; }
+  .topbar-inner { flex-wrap: wrap; gap: 8px 10px; padding: 12px; }
   .topbar h1 span { display: none; }
-  .rail { order: 10; flex-basis: 100%; min-width: 0; }
+  .subbar { justify-content: stretch; margin-bottom: 14px; }
+  .rail { min-width: 0; flex: 1; }
   .syncbtn { font-size: 12px; padding: 7px 12px; }
+  .topbar-divider { display: none; }
+  .signout span { display: none; }
 
   .filters .search { margin-left: 0; width: 100%; order: -1; }
 

@@ -78,8 +78,8 @@ export default function App() {
     <ToastCtx.Provider value={showToast}>
       <ProgressCtx.Provider value={{ progress, refresh: refreshProgress }}>
         <CityCtx.Provider value={{ cities, city, setCity }}>
-          <div className="shell">
-            <header className="topbar">
+          <header className="topbar">
+            <div className="topbar-inner">
               <Link to="/" aria-label="All places">
                 <img className="logo" src="logo.png" alt="cityCrew" />
               </Link>
@@ -97,18 +97,6 @@ export default function App() {
                 </select>
               </h1>
               <div className="spacer" />
-              {total > 0 && (
-                <div className="rail" title={`${approved} approved · ${flagged} flagged · ${total - approved - flagged} pending`}>
-                  <div className="counts">
-                    <span><b>{approved}</b>/{total} approved</span>
-                    {flagged > 0 && <span style={{ color: 'var(--bad)' }}>{flagged} flagged</span>}
-                  </div>
-                  <div className="track">
-                    <div className="fill" style={{ width: `${(approved / total) * 100}%` }} />
-                    <div className="flagged" style={{ width: `${(flagged / total) * 100}%` }} />
-                  </div>
-                </div>
-              )}
               {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
               <a className="syncbtn addbtn" href="mockup.html" target="_blank" rel="noreferrer">Mockup ↗</a>
               <Link className="syncbtn addbtn" to="/add">＋ Add place</Link>
@@ -119,8 +107,32 @@ export default function App() {
               <button className="syncbtn" onClick={runSync} disabled={syncing}>
                 {syncing ? 'Syncing…' : 'Sync mockup'}
               </button>
-              <button className="signout" onClick={signOut} title="Sign out" aria-label="Sign out">⎋</button>
-            </header>
+              <div className="topbar-divider" />
+              <button className="signout" onClick={signOut} aria-label="Sign out">
+                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M6.5 2H3.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M10.5 11.5 14 8l-3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M14 8H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span>Sign out</span>
+              </button>
+            </div>
+          </header>
+          <div className="shell">
+            {total > 0 && (
+              <div className="subbar">
+                <div className="rail" title={`${approved} approved · ${flagged} flagged · ${total - approved - flagged} pending`}>
+                  <div className="counts">
+                    <span><b>{approved}</b>/{total} approved</span>
+                    {flagged > 0 && <span style={{ color: 'var(--bad)' }}>{flagged} flagged</span>}
+                  </div>
+                  <div className="track">
+                    <div className="fill" style={{ width: `${(approved / total) * 100}%` }} />
+                    <div className="flagged" style={{ width: `${(flagged / total) * 100}%` }} />
+                  </div>
+                </div>
+              </div>
+            )}
             <Outlet />
             {toast && <div className="toast" role="status">{toast}</div>}
           </div>
