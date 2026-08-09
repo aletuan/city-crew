@@ -127,6 +127,18 @@ export const api = {
 
   sync: () => invoke('sync-mockup', {}),
 
+  // Keyed by google_place_id — global, not city-scoped, matching the
+  // fetch-place import guard's own duplicate check. Lets "Add a place"
+  // flag a search result that's already in the catalog before the editor
+  // clicks Import and hits the 409.
+  existingByPlaceIds: async (placeIds) => {
+    if (!placeIds?.length) return {};
+    const rows = db(await supabase.from('places')
+      .select('google_place_id, slug, name_en, review_status')
+      .in('google_place_id', placeIds));
+    return Object.fromEntries(rows.map((r) => [r.google_place_id, r]));
+  },
+
   searchPlaces: (query, city) => invoke('fetch-place', { action: 'search', query, city }),
   importPlace: (place_id, category, city) => invoke('fetch-place', { action: 'import', place_id, category, city }),
 

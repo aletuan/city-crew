@@ -438,6 +438,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   font-size: 14px; padding: 10px 16px;
 }
 .addcat { display: flex; align-items: center; gap: 8px; color: var(--text-tertiary); font-size: 12.5px; margin-bottom: 20px; }
+/* A search result already in the catalog — its own status plus a way in,
+   instead of an Import button that would just 409. */
+.addresult { display: flex; align-items: center; gap: 10px; }
+.addresult .addbtn { text-decoration: none; }
 
 .topbar .addbtn { text-decoration: none; }
 .topbar-divider { width: 1px; height: 22px; background: var(--border-glass-soft); margin: 0 2px; }
