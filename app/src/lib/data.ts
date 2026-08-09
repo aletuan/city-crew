@@ -19,8 +19,15 @@ export type Place = {
   name_en: string;
   name_vi: string;
   name_ja: string | null;
+  /** Legacy coarse axis, superseded by `categories`; still written by the
+   *  import pipeline and used by the dashboard. */
   category: 'food' | 'out';
+  /** Functional axis, many per place — see lib/categories. Optional because
+   *  a database that predates the migration simply omits it; read it through
+   *  categoriesOf(), never directly. */
+  categories?: string[];
   is_featured: boolean;
+  /** How a place feels — see lib/vibes. */
   vibe_tags: string[];
   neighborhood_en: string | null;
   neighborhood_vi: string | null;
@@ -103,14 +110,25 @@ function useFetch<T>(fetcher: () => Promise<T>, empty: T): Fetch<T> {
   return { ...state, reload: load };
 }
 
+const PLACE_COLS = (withCategories: boolean) =>
+  `slug, name_en, name_vi, name_ja, category${withCategories ? ', categories' : ''}, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, neighborhood_ja, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, desc_ja, emoji, opening_hours, website, phone, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)`;
+
 async function fetchPlaces(cityId: string): Promise<Place[]> {
-  const { data, error } = await supabase
+  const run = (cols: string) => supabase
     .from('places')
-    .select('slug, name_en, name_vi, name_ja, category, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, neighborhood_ja, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, desc_ja, emoji, opening_hours, website, phone, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)')
+    .select(cols)
     .eq('city_id', cityId)
     .eq('is_published', true)
     .eq('review_status', 'approved')
     .order('sort_order', { ascending: true, nullsFirst: false });
+
+  let { data, error } = await run(PLACE_COLS(true));
+  // A build can reach a database that has not run the categories migration
+  // yet. Drop the column and retry rather than showing an error screen —
+  // categoriesOf() derives a usable value from vibes in the meantime.
+  if (error && error.message.includes('categories')) {
+    ({ data, error } = await run(PLACE_COLS(false)));
+  }
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as Place[];
 }

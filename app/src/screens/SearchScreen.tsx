@@ -14,6 +14,7 @@ import PlaceCard from '../components/PlaceCard';
 import {
   AmbientWarmth, BackButton, Card, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
+import { CATEGORIES, categoriesOf } from '../lib/categories';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
@@ -33,7 +34,11 @@ function placeHaystack(p: Place): string {
     p.name_en, p.name_vi, p.name_ja,
     p.neighborhood_en, p.neighborhood_vi, p.neighborhood_ja,
     p.desc_en, p.desc_vi, p.desc_ja,
-    p.vibe_tags.join(' '), p.category, p.address,
+    p.vibe_tags.join(' '),
+    // Category keys plus their labels in every language, so "bảo tàng"
+    // and "heritage" both reach the same places.
+    categoriesOf(p).flatMap((c) => [c, ...(CATEGORIES[c] ? Object.values(CATEGORIES[c]) : [])]).join(' '),
+    p.address,
   ].join(' '));
 }
 

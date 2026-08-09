@@ -105,6 +105,7 @@ Deno.serve(async (req) => {
             category: cat.category,
             cityId: city.id,
             vibeTags: [...cat.vibes],
+            categories: [...cat.categories],
             maxPhotos: PHOTOS_PER_PLACE,
           });
           imported.push({ slug, name: p.displayName?.text ?? slug });
