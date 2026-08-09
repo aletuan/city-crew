@@ -105,14 +105,7 @@ export default function PlaceList() {
 
   return (
     <>
-      <div className="filters">
-        <input
-          className="search"
-          placeholder="Search places…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          aria-label="Search places"
-        />
+      <div className="filters panel">
         <div className="filtergroup">
           <span className="filterlabel">Status</span>
           {STATUSES.map((s) => (
@@ -152,6 +145,16 @@ export default function PlaceList() {
       <div className="resultsbar">
         <span className="resultscount">{total != null ? `${total} place${total === 1 ? '' : 's'}` : ''}</span>
         <div className="resultscontrols">
+          <div className="searchbox">
+            <CategoryIcon name="search" />
+            <input
+              className="search"
+              placeholder="Search places…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              aria-label="Search places"
+            />
+          </div>
           <select className="sortselect" value={`${sort}:${dir}`} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
             {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>

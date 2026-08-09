@@ -162,7 +162,9 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 /* ── filters ──
    Status, category and vibe are three different questions — some of their
    English words collide ("views", "nightlife"), so each gets its own
-   labelled row instead of one flat, ambiguous chip soup. */
+   labelled row instead of one flat, ambiguous chip soup. Boxed as a .panel
+   so the filter set reads as one distinct region, not chips floating loose
+   on the page background. */
 .filters { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 22px; }
 .filtergroup { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .filterlabel {
@@ -190,18 +192,19 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   color: var(--text-tertiary);
 }
 .chip.on .chipcount { color: inherit; opacity: .75; }
-.filters .search {
-  align-self: flex-end;
-  background: var(--bg-input); border: 1px solid var(--border-glass-soft);
-  border-radius: var(--radius-pill); color: var(--text-primary);
-  font-size: 13px; padding: 7px 16px; width: 210px;
-}
-.filters .search::placeholder { color: var(--text-tertiary); }
 
-/* ── results toolbar: count, sort, row/grid toggle ── */
-.resultsbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+/* ── results toolbar: count, search, sort, row/grid toggle — one row ── */
+.resultsbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 14px; }
 .resultscount { font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary); }
 .resultscontrols { display: flex; align-items: center; gap: 10px; }
+.searchbox { position: relative; display: flex; align-items: center; }
+.searchbox svg { position: absolute; left: 13px; color: var(--text-tertiary); pointer-events: none; }
+.search {
+  background: var(--bg-input); border: 1px solid var(--border-glass-soft);
+  border-radius: var(--radius-pill); color: var(--text-primary);
+  font-size: 13px; padding: 7px 16px 7px 34px; width: 210px;
+}
+.search::placeholder { color: var(--text-tertiary); }
 .sortselect {
   appearance: none; -webkit-appearance: none;
   border: 1px solid var(--border-glass-soft); background-color: var(--surface-glass);
@@ -552,10 +555,11 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .topbar-divider { display: none; }
   .signout span { display: none; }
 
-  .filters .search { align-self: stretch; width: 100%; }
   .filterlabel { flex-basis: 100%; }
 
   .resultsbar { flex-wrap: wrap; }
+  .resultscontrols { flex-wrap: wrap; width: 100%; }
+  .searchbox, .search { width: 100%; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 
   .prow { grid-template-columns: 84px 1fr auto; gap: 10px; padding: 8px 12px 8px 8px; }

@@ -61,6 +61,12 @@ const PATHS = {
       <rect x="9" y="9" width="4.5" height="4.5" rx=".8" />
     </>
   ),
+  search: (
+    <>
+      <circle cx="7" cy="7" r="4.5" />
+      <path d="M10.3 10.3 14 14" />
+    </>
+  ),
 };
 
 export function CategoryIcon({ name, color = 'currentColor' }) {
