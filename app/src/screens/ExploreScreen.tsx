@@ -21,10 +21,9 @@ import { VIBES } from '../lib/vibes';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
-// Two chips that aren't categories: the whole catalog, and the editors'
-// picks. They carry no glyph — a colourless chip reads as "not a category".
+// The one chip that isn't a category: the whole catalog. It carries no
+// glyph — a colourless chip reads as "not a kind of place".
 const ALL = 'all';
-const FOR_YOU = 'foryou';
 
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
@@ -269,7 +268,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
   const { loading, error, data: places, reload } = usePlaces();
-  const [cat, setCat] = useState<string>(FOR_YOU);
+  const [cat, setCat] = useState<string>(ALL);
   const tabClearance = useTabBarClearance();
   const listRef = useRef<FlatList<Place>>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -282,20 +281,15 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     return CATEGORY_ORDER.filter((c) => present.has(c));
   }, [places]);
 
-  const hasFeatured = useMemo(() => places.some((p) => p.is_featured), [places]);
-
-  // Switching city can retire the selected chip, and a city whose catalog
-  // has nothing featured would land on an empty "For you" — fall back to
-  // the full list rather than an empty screen.
+  // Switching city can retire the selected chip — fall back to the full
+  // list rather than leave the screen stuck on a filter that no longer
+  // matches anything.
   useEffect(() => {
-    if (places.length === 0) return;
-    if (cat === FOR_YOU && !hasFeatured) setCat(ALL);
-    else if (cat !== FOR_YOU && cat !== ALL && !cats.includes(cat)) setCat(FOR_YOU);
-  }, [cats, cat, places.length, hasFeatured]);
+    if (places.length > 0 && cat !== ALL && !cats.includes(cat)) setCat(ALL);
+  }, [cats, cat, places.length]);
 
   const shown = useMemo(() => {
     if (cat === ALL) return places;
-    if (cat === FOR_YOU) return places.filter((p) => p.is_featured);
     return places.filter((p) => categoriesOf(p).includes(cat));
   }, [places, cat]);
 
@@ -322,11 +316,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             label={t('All', 'Tất cả', 'すべて')}
             active={cat === ALL}
             onPress={() => setCat(ALL)}
-          />
-          <Chip
-            label={t('For you', 'Cho bạn', 'おすすめ')}
-            active={cat === FOR_YOU}
-            onPress={() => setCat(FOR_YOU)}
           />
           {cats.map((c) => (
             <Chip

@@ -233,7 +233,7 @@ export default function PlaceEditor() {
             <div className="inline-fields">
               <label className="checkline" style={{ alignSelf: 'end', paddingBottom: 9 }}>
                 <input type="checkbox" checked={!!form.is_featured} onChange={(e) => set('is_featured', e.target.checked)} />
-                Featured (“For you” tab)
+                Featured (candidate for the Explore hero)
               </label>
               <label className="checkline" style={{ alignSelf: 'end', paddingBottom: 9 }}>
                 <input type="checkbox" checked={!!form.is_published} onChange={(e) => set('is_published', e.target.checked)} />
