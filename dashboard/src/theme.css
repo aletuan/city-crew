@@ -111,9 +111,13 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .cityselect:hover { background-color: var(--surface-glass-strong); border-color: var(--border-glass); }
 .topbar .spacer { flex: 1; }
 
-/* progress rail — the desk's one glowing measure, now anchored in the body */
-.subbar { display: flex; justify-content: flex-end; margin: 0 0 18px; }
-.rail { display: flex; flex-direction: column; gap: 5px; min-width: 260px; }
+/* page head — every route gets the same anchor point: a title where the
+   list has one, the approval rail wherever there's data to measure. */
+.pagehead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 0 0 18px; }
+.pagetitle { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+
+/* progress rail — the desk's one glowing measure */
+.rail { display: flex; flex-direction: column; gap: 5px; min-width: 260px; margin-left: auto; }
 .rail .counts { display: flex; justify-content: space-between; font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary); }
 .rail .counts b { color: var(--text-secondary); font-weight: 600; }
 .rail .track { height: 6px; border-radius: 999px; background: var(--surface-glass); overflow: hidden; display: flex; }
@@ -131,9 +135,41 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 }
 .syncbtn:hover { background: var(--surface-glass-strong); }
 .syncbtn:disabled { opacity: .5; cursor: wait; }
+/* One accent action per header: the create flow every session starts with. */
+.syncbtn.primary { background: var(--grad-ai); border-color: transparent; color: #fff; }
+.syncbtn.primary:hover { filter: brightness(1.08); }
 
-/* ── filters ── */
-.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 22px; }
+/* Overflow menu — occasional actions (preview, scan, sync) live here so the
+   header itself never grows past four or five controls. */
+.moremenu { position: relative; flex-shrink: 0; }
+.moremenu-panel {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 50;
+  min-width: 180px; padding: 6px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--bg-elevated); border: 1px solid var(--border-glass);
+  border-radius: var(--radius-input); box-shadow: var(--shadow-float);
+}
+.moremenu-item {
+  display: block; width: 100%; text-align: left; text-decoration: none;
+  border: none; background: transparent; color: var(--text-secondary);
+  font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+.moremenu-item:hover { background: var(--surface-glass); color: #fff; }
+.moremenu-item:disabled { opacity: .5; cursor: wait; }
+
+/* ── filters ──
+   Status, category and vibe are three different questions — some of their
+   English words collide ("views", "nightlife"), so each gets its own
+   labelled row instead of one flat, ambiguous chip soup. */
+.filters { display: flex; flex-direction: column; gap: 10px; margin: 10px 0 22px; }
+.filtergroup { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.filterlabel {
+  font-family: var(--font-data); font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);
+  min-width: 60px; flex-shrink: 0;
+}
 .chip {
   border: 1px solid var(--border-glass-soft); background: transparent;
   color: var(--text-secondary); font-size: 12.5px; font-weight: 600;
@@ -145,7 +181,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .chip.on.st-approved { color: var(--ok); }
 .chip.on.st-flagged { color: var(--bad); }
 .filters .search {
-  margin-left: auto;
+  align-self: flex-end;
   background: var(--bg-input); border: 1px solid var(--border-glass-soft);
   border-radius: var(--radius-pill); color: var(--text-primary);
   font-size: 13px; padding: 7px 16px; width: 210px;
@@ -412,13 +448,15 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 
   .topbar-inner { gap: 8px 10px; padding: 12px; }
   .topbar h1 span { display: none; }
-  .subbar { justify-content: stretch; margin-bottom: 14px; }
-  .rail { min-width: 0; flex: 1; }
+  .pagehead { flex-wrap: wrap; margin-bottom: 14px; }
+  .pagetitle { font-size: 19px; }
+  .rail { min-width: 0; flex: 1 1 100%; }
   .syncbtn { font-size: 12px; padding: 7px 12px; }
   .topbar-divider { display: none; }
   .signout span { display: none; }
 
-  .filters .search { margin-left: 0; width: 100%; order: -1; }
+  .filters .search { align-self: stretch; width: 100%; }
+  .filterlabel { flex-basis: 100%; }
 
   .prow { grid-template-columns: 84px 1fr auto; gap: 10px; padding: 8px 12px 8px 8px; }
   .prow .thumb { width: 84px; height: 64px; }

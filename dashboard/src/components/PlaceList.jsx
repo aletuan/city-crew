@@ -52,23 +52,6 @@ export default function PlaceList() {
   return (
     <>
       <div className="filters">
-        {STATUSES.map((s) => (
-          <button key={s} className={`chip st-${s} ${status === s ? 'on' : ''}`} onClick={() => toggle('status', s)}>
-            {s}
-          </button>
-        ))}
-        <span style={{ width: 8 }} />
-        {CATEGORY_KEYS.map(([value, label]) => (
-          <button key={value} className={`chip ${category === value ? 'on' : ''}`} onClick={() => toggle('category', value)}>
-            {label}
-          </button>
-        ))}
-        <span style={{ width: 8 }} />
-        {VIBES.map((v) => (
-          <button key={v} className={`chip ${vibe === v ? 'on' : ''}`} onClick={() => toggle('vibe', v)}>
-            {v.replace('_', ' ')}
-          </button>
-        ))}
         <input
           className="search"
           placeholder="Search places…"
@@ -76,6 +59,34 @@ export default function PlaceList() {
           onChange={(e) => setQ(e.target.value)}
           aria-label="Search places"
         />
+        <div className="filtergroup">
+          <span className="filterlabel">Status</span>
+          {STATUSES.map((s) => (
+            <button key={s} className={`chip st-${s} ${status === s ? 'on' : ''}`} onClick={() => toggle('status', s)}>
+              {s}
+            </button>
+          ))}
+        </div>
+        {/* Category (what a place is) and vibe (how it feels) share some
+            English words — "views", "nightlife" — so each group needs its
+            own labelled row, or the two read as one confusing, duplicated
+            chip list. */}
+        <div className="filtergroup">
+          <span className="filterlabel">Category</span>
+          {CATEGORY_KEYS.map(([value, label]) => (
+            <button key={value} className={`chip ${category === value ? 'on' : ''}`} onClick={() => toggle('category', value)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="filtergroup">
+          <span className="filterlabel">Vibe</span>
+          {VIBES.map((v) => (
+            <button key={v} className={`chip ${vibe === v ? 'on' : ''}`} onClick={() => toggle('vibe', v)}>
+              {v.replace('_', ' ')}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && (

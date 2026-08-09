@@ -1,5 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { api } from './api.js';
 import { signOut } from './auth.jsx';
 
@@ -15,12 +15,29 @@ export const useCity = () => useContext(CityCtx);
 const CITY_KEY = 'citycrew.dashboard.city';
 
 export default function App() {
+  const location = useLocation();
   const [toast, setToast] = useState(null);
   const [progress, setProgress] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [cities, setCities] = useState([]);
   const [cityId, setCityId] = useState(() => localStorage.getItem(CITY_KEY) ?? 'hcmc');
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef(null);
+
+  // Close the overflow menu on outside click or Escape — same contract as
+  // any native menu, so it doesn't strand itself open over the page.
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDocClick = (e) => { if (!moreRef.current?.contains(e.target)) setMoreOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setMoreOpen(false); };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [moreOpen]);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -99,16 +116,37 @@ export default function App() {
                 ))}
               </select>
               <div className="spacer" />
-              {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
-              <a className="syncbtn addbtn" href="mockup.html" target="_blank" rel="noreferrer">Mockup ↗</a>
-              <Link className="syncbtn addbtn" to="/add">＋ Add place</Link>
-              <Link className="syncbtn addbtn" to="/scan">Scan city</Link>
+              {/* The one action every editing session starts with — everything
+                  else here is occasional, so it alone carries the accent. */}
+              <Link className="syncbtn addbtn primary" to="/add">＋ Add place</Link>
               <button className="syncbtn" onClick={publishApproved} disabled={publishing}>
                 {publishing ? 'Publishing…' : 'Publish approved'}
               </button>
-              <button className="syncbtn" onClick={runSync} disabled={syncing}>
-                {syncing ? 'Syncing…' : 'Sync mockup'}
-              </button>
+              <div className="moremenu" ref={moreRef}>
+                <button
+                  className="syncbtn"
+                  onClick={() => setMoreOpen((v) => !v)}
+                  aria-haspopup="true"
+                  aria-expanded={moreOpen}
+                >
+                  More ⋯
+                </button>
+                {moreOpen && (
+                  <div className="moremenu-panel" role="menu">
+                    {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
+                    <a className="moremenu-item" href="mockup.html" target="_blank" rel="noreferrer" role="menuitem">Mockup ↗</a>
+                    <Link className="moremenu-item" to="/scan" role="menuitem" onClick={() => setMoreOpen(false)}>Scan city</Link>
+                    <button
+                      className="moremenu-item"
+                      role="menuitem"
+                      disabled={syncing}
+                      onClick={() => { setMoreOpen(false); runSync(); }}
+                    >
+                      {syncing ? 'Syncing…' : 'Sync mockup'}
+                    </button>
+                  </div>
+                )}
+              </div>
               <div className="topbar-divider" />
               <button className="signout" onClick={signOut} aria-label="Sign out">
                 <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -121,18 +159,21 @@ export default function App() {
             </div>
           </header>
           <div className="shell">
-            {total > 0 && (
-              <div className="subbar">
-                <div className="rail" title={`${approved} approved · ${flagged} flagged · ${total - approved - flagged} pending`}>
-                  <div className="counts">
-                    <span><b>{approved}</b>/{total} approved</span>
-                    {flagged > 0 && <span style={{ color: 'var(--bad)' }}>{flagged} flagged</span>}
+            {(location.pathname === '/' || total > 0) && (
+              <div className="pagehead">
+                {location.pathname === '/' && <h2 className="pagetitle">Places</h2>}
+                {total > 0 && (
+                  <div className="rail" title={`${approved} approved · ${flagged} flagged · ${total - approved - flagged} pending`}>
+                    <div className="counts">
+                      <span><b>{approved}</b>/{total} approved</span>
+                      {flagged > 0 && <span style={{ color: 'var(--bad)' }}>{flagged} flagged</span>}
+                    </div>
+                    <div className="track">
+                      <div className="fill" style={{ width: `${(approved / total) * 100}%` }} />
+                      <div className="flagged" style={{ width: `${(flagged / total) * 100}%` }} />
+                    </div>
                   </div>
-                  <div className="track">
-                    <div className="fill" style={{ width: `${(approved / total) * 100}%` }} />
-                    <div className="flagged" style={{ width: `${(flagged / total) * 100}%` }} />
-                  </div>
-                </div>
+                )}
               </div>
             )}
             <Outlet />
