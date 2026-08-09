@@ -75,12 +75,19 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .shell { max-width: 1280px; margin: 0 auto; padding: 0 28px 80px; }
 .topbar {
   display: flex; align-items: center; gap: 16px;
+  /* Controls keep their natural width (see .syncbtn); when the window is
+     too narrow for all of them, the bar wraps to a second row rather than
+     squeezing labels onto two lines. */
+  flex-wrap: wrap;
   padding: 18px 0 14px;
   position: sticky; top: 0; z-index: 40;
   background: linear-gradient(180deg, var(--bg-app) 78%, transparent);
 }
 .topbar .logo { width: 34px; height: 34px; border-radius: 10px; }
-.topbar h1 { font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+.topbar h1 {
+  font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em;
+  display: inline-flex; align-items: center; white-space: nowrap; flex-shrink: 0;
+}
 .topbar h1 span { color: var(--text-tertiary); font-weight: 500; }
 .cityselect {
   margin-left: 8px; border: 1px solid var(--border-glass); background: var(--surface-glass);
@@ -91,7 +98,8 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .topbar .spacer { flex: 1; }
 
 /* progress rail — the desk's one glowing measure */
-.rail { display: flex; flex-direction: column; gap: 5px; min-width: 260px; }
+/* The one elastic item in the bar: it gives up width so the buttons don't. */
+.rail { display: flex; flex-direction: column; gap: 5px; flex: 0 1 260px; min-width: 140px; }
 .rail .counts { display: flex; justify-content: space-between; font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary); }
 .rail .counts b { color: var(--text-secondary); font-weight: 600; }
 .rail .track { height: 6px; border-radius: 999px; background: var(--surface-glass); overflow: hidden; display: flex; }
@@ -103,6 +111,9 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   color: var(--text-primary); font-size: 13px; font-weight: 600;
   padding: 8px 16px; border-radius: var(--radius-pill);
   transition: background 160ms;
+  /* A pill is one line. Without this the label breaks mid-phrase
+     ("Publish / approved") as soon as the bar runs short of room. */
+  white-space: nowrap; flex-shrink: 0;
 }
 .syncbtn:hover { background: var(--surface-glass-strong); }
 .syncbtn:disabled { opacity: .5; cursor: wait; }
@@ -380,7 +391,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   body { font-size: 14px; }
   .shell { padding: 0 12px 150px; }
 
-  .topbar { flex-wrap: wrap; gap: 8px 10px; padding: 12px 0 10px; }
+  .topbar { gap: 8px 10px; padding: 12px 0 10px; }
   .topbar h1 span { display: none; }
   .rail { order: 10; flex-basis: 100%; min-width: 0; }
   .syncbtn { font-size: 12px; padding: 7px 12px; }
