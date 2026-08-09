@@ -5,9 +5,13 @@
 // and its "Outdoors & culture" catch-all chip. How a place *feels* is a
 // different axis and lives in vibe_tags (see ./vibes).
 //
-// The vocabulary is closed and mirrored by a check constraint in
-// supabase/migrations/20260809000000_place_categories.sql. Adding a key
-// means changing both.
+// The vocabulary is closed and mirrored by the places_categories_known
+// check constraint, whose current form is set by
+// supabase/migrations/20260809120000_drop_sights_category.sql. Adding or
+// removing a key means changing this list, the dashboard's copy in
+// dashboard/src/categories.js, and the constraint — in that last order,
+// since a constraint tightened before the writers know about it fails
+// every import.
 
 import type { Ionicons } from '@expo/vector-icons';
 
