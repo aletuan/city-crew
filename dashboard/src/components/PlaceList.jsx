@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { CATEGORY_KEYS, CATEGORY_LABEL } from '../categories.js';
-import { useCity } from '../App.jsx';
+import { CATEGORY_KEYS, CATEGORY_LABEL, CATEGORY_STYLE } from '../categories.js';
+import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
+import { CategoryIcon } from '../icons.jsx';
+import { useCity, useProgress } from '../App.jsx';
 
 const STATUSES = ['pending', 'approved', 'flagged'];
-const VIBES = ['cafes', 'food_tour', 'outdoors', 'views', 'culture', 'shopping', 'nightlife', 'chill'];
 
 const fmtCount = (n) => (!n ? null : n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n));
 
 export default function PlaceList() {
   const { city } = useCity();
+  const { progress } = useProgress();
   const [params, setParams] = useSearchParams();
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
@@ -64,26 +66,32 @@ export default function PlaceList() {
           {STATUSES.map((s) => (
             <button key={s} className={`chip st-${s} ${status === s ? 'on' : ''}`} onClick={() => toggle('status', s)}>
               {s}
+              <span className="chipcount">({progress?.by_status?.[s] ?? 0})</span>
             </button>
           ))}
         </div>
         {/* Category (what a place is) and vibe (how it feels) share some
             English words — "views", "nightlife" — so each group needs its
             own labelled row, or the two read as one confusing, duplicated
-            chip list. */}
+            chip list. Icon colour mirrors the mobile app (see categories.js
+            and vibes.js) — same hue, same concept, on every surface. */}
         <div className="filtergroup">
           <span className="filterlabel">Category</span>
           {CATEGORY_KEYS.map(([value, label]) => (
             <button key={value} className={`chip ${category === value ? 'on' : ''}`} onClick={() => toggle('category', value)}>
+              <CategoryIcon name={CATEGORY_STYLE[value]?.icon} color={CATEGORY_STYLE[value]?.color} />
               {label}
+              <span className="chipcount">({progress?.by_category_tag?.[value] ?? 0})</span>
             </button>
           ))}
         </div>
         <div className="filtergroup">
           <span className="filterlabel">Vibe</span>
-          {VIBES.map((v) => (
+          {VIBE_ORDER.map((v) => (
             <button key={v} className={`chip ${vibe === v ? 'on' : ''}`} onClick={() => toggle('vibe', v)}>
-              {v.replace('_', ' ')}
+              <CategoryIcon name={VIBE_STYLE[v]?.icon} color={VIBE_STYLE[v]?.color} />
+              {VIBE_STYLE[v]?.label}
+              <span className="chipcount">({progress?.by_vibe?.[v] ?? 0})</span>
             </button>
           ))}
         </div>

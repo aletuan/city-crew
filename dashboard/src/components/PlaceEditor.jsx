@@ -2,10 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { CATEGORY_KEYS } from '../categories.js';
+import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { useCity, useProgress, useToast } from '../App.jsx';
 import PhotoManager, { emptyPhotoEdits, photoEditsDirty } from './PhotoManager.jsx';
 
-const VIBES = ['cafes', 'food_tour', 'outdoors', 'views', 'culture', 'shopping', 'nightlife', 'chill'];
 const FORM_FIELDS = [
   'name_en', 'name_vi', 'desc_en', 'desc_vi', 'neighborhood_en', 'neighborhood_vi',
   'address', 'category', 'categories', 'is_featured', 'vibe_tags', 'emoji',
@@ -214,7 +214,7 @@ export default function PlaceEditor() {
             )}
             <h4 style={{ margin: '18px 0 8px' }}>Vibes</h4>
             <div className="vibes" style={{ marginBottom: 14 }}>
-              {VIBES.map((v) => (
+              {VIBE_ORDER.map((v) => (
                 <button
                   key={v}
                   type="button"
@@ -223,7 +223,7 @@ export default function PlaceEditor() {
                     ? form.vibe_tags.filter((t) => t !== v)
                     : [...(form.vibe_tags ?? []), v])}
                 >
-                  {v.replace('_', ' ')}
+                  {VIBE_STYLE[v]?.label}
                 </button>
               ))}
             </div>

@@ -171,15 +171,25 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   min-width: 60px; flex-shrink: 0;
 }
 .chip {
+  display: inline-flex; align-items: center; gap: 6px;
   border: 1px solid var(--border-glass-soft); background: transparent;
   color: var(--text-secondary); font-size: 12.5px; font-weight: 600;
   padding: 5px 13px; border-radius: var(--radius-pill);
-  transition: all 160ms;
+  transition: background 160ms, border-color 160ms, color 160ms;
 }
 .chip:hover { border-color: var(--border-glass); color: var(--text-primary); }
 .chip.on { background: var(--surface-glass-strong); border-color: transparent; color: #fff; }
 .chip.on.st-approved { color: var(--ok); }
 .chip.on.st-flagged { color: var(--bad); }
+/* The glyph carries the category/vibe's own hue in both states — selection
+   repaints the label, never the icon, since the hue is what's being learned
+   (same rule as the mobile app's chips and card dots). */
+.chip svg { flex: none; }
+.chipcount {
+  font-family: var(--font-data); font-size: 10.5px; font-weight: 600;
+  color: var(--text-tertiary);
+}
+.chip.on .chipcount { color: inherit; opacity: .75; }
 .filters .search {
   align-self: flex-end;
   background: var(--bg-input); border: 1px solid var(--border-glass-soft);

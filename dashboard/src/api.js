@@ -107,11 +107,22 @@ export const api = {
   },
 
   progress: async (city) => {
-    let query = supabase.from('places').select('review_status, category');
+    let query = supabase.from('places').select('review_status, category, categories, vibe_tags');
     if (city) query = query.eq('city_id', city);
     const rows = db(await query);
     const by = (key) => rows.reduce((acc, r) => ((acc[r[key]] = (acc[r[key]] ?? 0) + 1), acc), {});
-    return { total: rows.length, by_status: by('review_status'), by_category: by('category') };
+    // Counts for the multi-valued columns: one place can add to several keys.
+    const byTag = (key) => rows.reduce((acc, r) => {
+      for (const v of r[key] ?? []) acc[v] = (acc[v] ?? 0) + 1;
+      return acc;
+    }, {});
+    return {
+      total: rows.length,
+      by_status: by('review_status'),
+      by_category: by('category'),
+      by_category_tag: byTag('categories'),
+      by_vibe: byTag('vibe_tags'),
+    };
   },
 
   sync: () => invoke('sync-mockup', {}),
