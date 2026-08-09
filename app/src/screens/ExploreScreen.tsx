@@ -16,6 +16,7 @@ import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
 import { Lang, useI18n } from '../lib/i18n';
+import { VIBES } from '../lib/vibes';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -59,32 +60,24 @@ const CITY_HERO: Record<string, { slug: string; en: string; vi: string; ja: stri
   },
 };
 
-// A collection has no category of its own, so its badge comes from the
-// vibe its members share most — self-maintaining as membership changes.
-const VIBE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
-  cafes: 'cafe-outline',
-  food_tour: 'restaurant-outline',
-  views: 'business-outline',
-  nightlife: 'wine-outline',
-  culture: 'library-outline',
-  outdoors: 'leaf-outline',
-  chill: 'leaf-outline',
-  shopping: 'bag-outline',
-};
-
-/** Most common mappable vibe among members, or none — never a guess. */
+/**
+ * A collection has no category of its own, so its badge comes from the vibe
+ * its members share most — self-maintaining as membership changes. Unknown
+ * vibes are skipped, and a collection with none stays badge-free rather
+ * than wearing a guess.
+ */
 function collectionIcon(members: Place[]): keyof typeof Ionicons.glyphMap | null {
   const tally = new Map<string, number>();
   for (const p of members) {
     for (const v of p.vibe_tags) {
-      if (VIBE_ICON[v]) tally.set(v, (tally.get(v) ?? 0) + 1);
+      if (VIBES[v]) tally.set(v, (tally.get(v) ?? 0) + 1);
     }
   }
   let best: string | null = null;
   for (const [vibe, n] of tally) {
     if (!best || n > tally.get(best)!) best = vibe;
   }
-  return best ? VIBE_ICON[best] : null;
+  return best ? VIBES[best].icon : null;
 }
 
 /** Hero photography: the city's hand-picked cover place first, then a
