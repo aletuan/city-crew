@@ -41,9 +41,10 @@ function dateline(lang: Lang): string {
   return `${DAYS_EN[d.getDay()]}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`;
 }
 
-// Per-city hero seasons: a hand-picked cover place and headline override.
-// Cities without an entry keep the default night-out framing.
-const CITY_HERO: Record<string, { slug: string; en: string; vi: string; ja: string }> = {
+// Per-city hero seasons: a headline override, and optionally a hand-picked
+// cover place. Cities without an entry keep the default night-out framing;
+// cities with no slug keep the automatic photo pick.
+const CITY_HERO: Record<string, { slug?: string; en: string; vi: string; ja: string }> = {
   hcmc: {
     slug: 'saigon-night-cruise',
     en: 'Ideas for a night in Saigon',
@@ -55,6 +56,15 @@ const CITY_HERO: Record<string, { slug: string; en: string; vi: string; ja: stri
     en: 'Autumn ideas in Hanoi',
     vi: 'Gợi ý mùa thu ở Hà Nội',
     ja: 'ハノイ、秋のアイデア',
+  },
+  // Da Nang is read east to west: the sea in the morning, the Hàn and its
+  // bridges after dark. The headline names that rhythm instead of borrowing
+  // Saigon's night framing. No slug yet — the automatic pick holds until a
+  // river or beach photo is published to pin it to.
+  danang: {
+    en: 'Mornings by the sea, nights on the Hàn',
+    vi: 'Sáng ở biển, tối bên sông Hàn',
+    ja: '朝は海へ、夜はハン川へ',
   },
 };
 
