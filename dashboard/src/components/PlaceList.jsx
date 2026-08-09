@@ -155,7 +155,8 @@ export default function PlaceList() {
           <select className="sortselect" value={`${sort}:${dir}`} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
             {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
-          <div className="viewtoggle" role="group" aria-label="Layout">
+          <div className="viewtoggle" data-view={view} role="group" aria-label="Layout">
+            <span className="viewtoggle-thumb" />
             <button className={view === 'row' ? 'on' : ''} onClick={() => setView('row')} aria-pressed={view === 'row'} aria-label="Row view">
               <CategoryIcon name="list" />
             </button>
