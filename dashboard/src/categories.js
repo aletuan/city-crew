@@ -9,9 +9,9 @@ export const CATEGORY_KEYS = [
   ['cafes', 'cafés'],
   ['eats', 'eats'],
   ['views', 'views'],
-  ['heritage', 'heritage'],
-  ['nature', 'parks & lakes'],
-  ['markets', 'markets'],
+  ['heritage', 'culture'],
+  ['nature', 'nature'],
+  ['markets', 'shopping'],
   ['nightlife', 'nightlife'],
   ['sights', 'sights'],
 ];
