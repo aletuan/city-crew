@@ -253,10 +253,14 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   text-decoration: none; transition: border-color 160ms, transform 160ms;
 }
 .gcard:hover { border-color: var(--border-glass); transform: translateY(-2px); }
-/* flex: none — without it, this competes with .gcard-body's flex: 1 for
-   space under the default min-height: auto, and the photo silently loses,
-   shrinking below its aspect-ratio on whichever card has the least text. */
-.gcard-media { position: relative; aspect-ratio: 4 / 3; background: var(--surface-glass); flex: none; }
+/* A fixed pixel height, not aspect-ratio: with an <img> child sized to
+   100%, aspect-ratio doesn't reliably resolve through this flex layout —
+   photos were rendering at their own natural ratio instead of the
+   intended 4:3, so two cards in the same row could land 130px apart.
+   We don't need the full photo visible, only a consistent crop, so a
+   fixed height sidesteps the ambiguity entirely. flex: none keeps it
+   from competing with .gcard-body's flex: 1 for space. */
+.gcard-media { position: relative; height: 160px; background: var(--surface-glass); flex: none; }
 .gcard-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .gcard-media .stamp {
   position: absolute; top: 8px; right: 8px; font-size: 9px; padding: 3px 8px;
