@@ -234,8 +234,15 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .viewtoggle button:hover { color: var(--text-secondary); }
 .viewtoggle button.on { color: #fff; }
 
-/* ── grid presentation ── */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; align-items: start; }
+/* ── grid presentation ──
+   Cards carry different amounts of text (name length, whether a category
+   or rating exists), which used to make rows end at ragged, mismatched
+   heights. A curation grid is scanned by row, not browsed like a photo
+   feed, so every text slot below the photo now clamps to a fixed number
+   of lines and reserves that space whether or not it's full — every card
+   ends at the same line, and the grid stays default align-items: stretch
+   rather than opting out of it. */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
 .gcard {
   display: flex; flex-direction: column;
   background: var(--bg-elevated); border: 1px solid var(--border-glass-soft);
@@ -243,16 +250,26 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   text-decoration: none; transition: border-color 160ms, transform 160ms;
 }
 .gcard:hover { border-color: var(--border-glass); transform: translateY(-2px); }
-.gcard-media { position: relative; aspect-ratio: 4 / 3; background: var(--surface-glass); }
+/* flex: none — without it, this competes with .gcard-body's flex: 1 for
+   space under the default min-height: auto, and the photo silently loses,
+   shrinking below its aspect-ratio on whichever card has the least text. */
+.gcard-media { position: relative; aspect-ratio: 4 / 3; background: var(--surface-glass); flex: none; }
 .gcard-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .gcard-media .stamp {
   position: absolute; top: 8px; right: 8px; font-size: 9px; padding: 3px 8px;
   background: rgba(10, 8, 13, 0.75); backdrop-filter: blur(4px);
 }
-.gcard-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
-.gcard-name { font-weight: 700; font-size: 14px; letter-spacing: -0.01em; }
-.gcard-meta { color: var(--text-tertiary); font-size: 11.5px; font-family: var(--font-data); }
-.gcard-tags { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.gcard-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; flex: 1; min-height: 0; }
+.gcard-name {
+  font-weight: 700; font-size: 14px; line-height: 1.3; letter-spacing: -0.01em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; min-height: calc(1.3em * 2);
+}
+.gcard-meta {
+  color: var(--text-tertiary); font-size: 11.5px; font-family: var(--font-data);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gcard-tags { display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 2px; min-height: 18px; }
 
 /* ── pagination ── */
 .pagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 24px 0 8px; }
