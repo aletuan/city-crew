@@ -24,6 +24,16 @@ export type City = {
   short_ja: string | null;
   center_lat: number;
   center_lng: number;
+  // Explore hero, editable from the data desk. All nullable: a missing
+  // title/CTA falls back to the app's generic copy, a missing slug to the
+  // automatic featured-place photo pick (see ExploreScreen).
+  hero_title_en: string | null;
+  hero_title_vi: string | null;
+  hero_title_ja: string | null;
+  hero_cta_en: string | null;
+  hero_cta_vi: string | null;
+  hero_cta_ja: string | null;
+  hero_place_slug: string | null;
 };
 
 type CityContext = {
@@ -44,6 +54,8 @@ const GEO_BUDGET_MS = 1200;
 const FALLBACK: City = {
   id: 'hcmc', name_en: 'Ho Chi Minh City', name_vi: 'TP. Hồ Chí Minh', name_ja: 'ホーチミン市',
   short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン', center_lat: 10.7769, center_lng: 106.7009,
+  hero_title_en: null, hero_title_vi: null, hero_title_ja: null,
+  hero_cta_en: null, hero_cta_vi: null, hero_cta_ja: null, hero_place_slug: null,
 };
 
 const Ctx = createContext<CityContext>({
@@ -107,7 +119,7 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
       const [{ data }, storedRaw] = await Promise.all([
         supabase
           .from('cities')
-          .select('id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng')
+          .select('id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng, hero_title_en, hero_title_vi, hero_title_ja, hero_cta_en, hero_cta_vi, hero_cta_ja, hero_place_slug')
           .eq('is_active', true)
           .order('sort_order'),
         AsyncStorage.getItem(KEY),

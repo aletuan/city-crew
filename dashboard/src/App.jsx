@@ -119,6 +119,7 @@ export default function App() {
               {/* The one action every editing session starts with — everything
                   else here is occasional, so it alone carries the accent. */}
               <Link className="syncbtn addbtn primary" to="/add">＋ Add place</Link>
+              <Link className="syncbtn addbtn" to="/city">City hero</Link>
               <button className="syncbtn" onClick={publishApproved} disabled={publishing}>
                 {publishing ? 'Publishing…' : 'Publish approved'}
               </button>

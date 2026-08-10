@@ -42,32 +42,10 @@ function dateline(lang: Lang): string {
   return `${DAYS_EN[d.getDay()]}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`;
 }
 
-// Per-city hero seasons: a headline override, and optionally a hand-picked
-// cover place. Cities without an entry keep the default night-out framing;
-// cities with no slug keep the automatic photo pick.
-const CITY_HERO: Record<string, { slug?: string; en: string; vi: string; ja: string }> = {
-  hcmc: {
-    slug: 'saigon-night-cruise',
-    en: 'Ideas for a night in Saigon',
-    vi: 'Gợi ý cho một đêm ở Sài Gòn',
-    ja: 'サイゴン、夜のアイデア',
-  },
-  hanoi: {
-    slug: 'imperial-citadel-of-thang-long',
-    en: 'Autumn ideas in Hanoi',
-    vi: 'Gợi ý mùa thu ở Hà Nội',
-    ja: 'ハノイ、秋のアイデア',
-  },
-  // Da Nang is read east to west: the sea in the morning, the Hàn and its
-  // bridges after dark. The headline names that rhythm instead of borrowing
-  // Saigon's night framing. No slug yet — the automatic pick holds until a
-  // river or beach photo is published to pin it to.
-  danang: {
-    en: 'Mornings by the sea, nights on the Hàn',
-    vi: 'Sáng ở biển, tối bên sông Hàn',
-    ja: '朝は海へ、夜はハン川へ',
-  },
-};
+// Per-city hero season — headline, CTA and the pinned cover place — comes
+// from the city row itself, editable in the data desk's City hero screen.
+// Every field is optional: cities keep the default framing, CTA and
+// automatic photo pick until an editor overrides them.
 
 /**
  * A collection has no category of its own, so its badge comes from the vibe
@@ -90,12 +68,13 @@ function collectionIcon(members: Place[]): keyof typeof Ionicons.glyphMap | null
 }
 
 /** Hero photography: the city's hand-picked cover place first, then a
- *  featured place with a views/nightlife vibe, then anything with a photo. */
-function heroPlace(places: Place[], cityId?: string): Place | undefined {
+ *  featured place with a views/nightlife vibe, then anything with a photo.
+ *  A pinned slug that matches nothing (unpublished, deleted, typo) falls
+ *  through to the automatic pick rather than blanking the hero. */
+function heroPlace(places: Place[], pinnedSlug?: string | null): Place | undefined {
   const withPhoto = (p: Place) => !!coverOf(p);
-  const pick = cityId ? CITY_HERO[cityId]?.slug : undefined;
   return (
-    (pick ? places.find((p) => p.slug === pick && withPhoto(p)) : undefined) ??
+    (pinnedSlug ? places.find((p) => p.slug === pinnedSlug && withPhoto(p)) : undefined) ??
     places.find((p) => p.is_featured && withPhoto(p)
       && p.vibe_tags.some((v) => v === 'views' || v === 'nightlife')) ??
     places.find((p) => p.is_featured && withPhoto(p)) ??
@@ -138,8 +117,8 @@ function Hero({ place, onExplore, scrollY }: {
             </Text>
           </View>
           <Text style={s.heroTitle}>
-            {city && CITY_HERO[city.id]
-              ? t(CITY_HERO[city.id].en, CITY_HERO[city.id].vi, CITY_HERO[city.id].ja)
+            {city?.hero_title_en
+              ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja)
               : t(
                   `Ideas for a night in ${city?.short_en ?? 'the city'}`,
                   `Gợi ý cho một đêm ở ${city?.short_vi ?? 'thành phố'}`,
@@ -155,7 +134,11 @@ function Hero({ place, onExplore, scrollY }: {
           </Text>
           <PressableScale onPress={onExplore} accessibilityRole="button" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
             <LinearGradient {...gradAI} style={s.heroCta}>
-              <Text style={s.heroCtaText}>{t('Start exploring', 'Bắt đầu khám phá', '探索を始める')}</Text>
+              <Text style={s.heroCtaText}>
+                {city?.hero_cta_en
+                  ? t(city.hero_cta_en, city.hero_cta_vi, city.hero_cta_ja)
+                  : t('Start exploring', 'Bắt đầu khám phá', '探索を始める')}
+              </Text>
               <Ionicons name="arrow-forward" size={17} color="#141310" />
             </LinearGradient>
           </PressableScale>
@@ -293,7 +276,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     return places.filter((p) => categoriesOf(p).includes(cat));
   }, [places, cat]);
 
-  const hero = useMemo(() => heroPlace(places, city?.id), [places, city?.id]);
+  const hero = useMemo(() => heroPlace(places, city?.hero_place_slug), [places, city?.hero_place_slug]);
 
   const scrollToPlaces = () => {
     if (shown.length > 0) {

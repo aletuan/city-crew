@@ -4,6 +4,7 @@ import { createHashRouter, RouterProvider } from 'react-router-dom';
 import App from './App.jsx';
 import AuthGate from './auth.jsx';
 import AddPlace from './components/AddPlace.jsx';
+import CityHero from './components/CityHero.jsx';
 import PlaceList from './components/PlaceList.jsx';
 import PlaceEditor from './components/PlaceEditor.jsx';
 import ScanCity from './components/ScanCity.jsx';
@@ -20,6 +21,7 @@ const router = createHashRouter([
       { path: 'place/:slug', element: <PlaceEditor /> },
       { path: 'add', element: <AddPlace /> },
       { path: 'scan', element: <ScanCity /> },
+      { path: 'city', element: <CityHero /> },
     ],
   },
 ]);

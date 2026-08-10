@@ -420,6 +420,41 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 }
 .hint { font-size: 12px; color: var(--bad); margin: 0; }
 .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.triple { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+
+/* ── city hero editor ──
+   The preview approximates the app's Explore hero: photo, the same
+   top-and-bottom gradient shade, headline, and the champagne CTA pill
+   (the app's colours, not the desk's violet gradient — the point is to
+   show what the phone will show). */
+.heropreview {
+  position: relative; height: 240px; max-width: 560px;
+  border-radius: var(--radius-card); overflow: hidden;
+  background: var(--surface-glass); margin-bottom: 12px;
+}
+.heropreview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.heropreview-none {
+  height: 100%; display: flex; align-items: center; justify-content: center;
+  color: var(--text-tertiary); font-size: 13px;
+}
+.heropreview-shade {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(10,11,10,.45), rgba(10,11,10,.06) 22%, rgba(10,11,10,.55) 64%, rgba(10,11,10,.97));
+}
+.heropreview-content {
+  position: absolute; left: 18px; right: 18px; bottom: 16px;
+  display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+}
+.heropreview-title { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; }
+.heropreview-cta {
+  background: linear-gradient(96deg, #F2DFA3, #D9BE85); color: #141310;
+  font-size: 13.5px; font-weight: 600; padding: 8px 16px; border-radius: var(--radius-pill);
+}
+.herolangs { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; max-width: 560px; }
+.heropicked {
+  margin-left: auto; font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .field { display: flex; flex-direction: column; gap: 5px; }
 .field label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: .04em; }
 .field label .lang { font-family: var(--font-data); font-size: 9.5px; border: 1px solid var(--border-glass-soft); border-radius: 4px; padding: 0 4px; margin-left: 5px; }
@@ -591,6 +626,9 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .photogrid { grid-template-columns: repeat(3, 1fr); }
   .pcell .ops { opacity: 1; } /* no hover on touch — keep actions visible */
   .pair { grid-template-columns: 1fr; }
+  .triple { grid-template-columns: 1fr; }
+  .herolangs { flex-wrap: wrap; }
+  .heropicked { margin-left: 0; flex-basis: 100%; }
   .panel { padding: 16px; }
   .mapframe { height: 150px; }
 

@@ -40,6 +40,29 @@ export const api = {
   cities: async () =>
     db(await supabase.from('cities').select('id, name_en, name_vi, short_en, short_vi').order('sort_order')),
 
+  // The full row, hero columns included — for the City hero screen.
+  city: async (id) => {
+    const rows = db(await supabase.from('cities').select('*').eq('id', id).limit(1));
+    if (!rows.length) throw new Error('not found');
+    return rows[0];
+  },
+
+  saveCityHero: async (id, fields) => {
+    const editable = new Set([
+      'hero_title_en', 'hero_title_vi', 'hero_title_ja',
+      'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_place_slug',
+    ]);
+    const patch = {};
+    for (const [k, v] of Object.entries(fields)) {
+      if (!editable.has(k)) throw new Error(`field not editable: ${k}`);
+      // '' means "cleared" in the form; the app's fallbacks key off null.
+      patch[k] = v === '' ? null : v;
+    }
+    const rows = db(await supabase.from('cities').update(patch).eq('id', id).select('id'));
+    if (!rows.length) throw new Error('not found (or not an editor — check the editors table)');
+    return { ok: true };
+  },
+
   // Paginated by default — {rows, total, pageSize} — for the list page.
   // PlaceEditor's prev/next needs every matching slug in order, not one
   // page of it, so it passes `all: true` for the plain, unpaginated array
@@ -50,7 +73,7 @@ export const api = {
     let query = supabase
       .from('places')
       .select(
-        'slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, rating, rating_count, price_vnd, price_display, created_at, place_photos(photo_uri, is_cover, is_hidden)',
+        'slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, is_published, rating, rating_count, price_vnd, price_display, created_at, place_photos(photo_uri, is_cover, is_hidden)',
         { count: 'exact' },
       )
       .order(sortColumn, { ascending, nullsFirst: false })
