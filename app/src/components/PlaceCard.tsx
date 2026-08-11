@@ -19,7 +19,9 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
           {cover ? (
             <>
               <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" transition={200} />
-              {cover.attribution_name ? <Text style={s.attr}>📷 {cover.attribution_name}</Text> : null}
+              {cover.attribution_name
+                ? <Text style={s.attr} numberOfLines={1}>{cover.attribution_name}</Text>
+                : null}
             </>
           ) : (
             <View style={[s.photo, s.photoFallback]}>
@@ -60,8 +62,13 @@ const s = StyleSheet.create({
   card: { marginHorizontal: space.page, marginBottom: space.cardGap },
   photo: { width: '100%', aspectRatio: 16 / 10, backgroundColor: colors.surfaceGlass },
   photoFallback: { alignItems: 'center', justifyContent: 'center' },
+  // Google requires the photo's author attribution wherever the photo is
+  // shown, so this cannot be dropped — only made to recede. The camera
+  // glyph is gone (it read as a control), the type is smaller, and it is
+  // capped at half the card so a long name can't cross the frame.
   attr: {
-    position: 'absolute', right: 10, bottom: 8, fontSize: 9, color: '#fff', opacity: 0.75,
+    position: 'absolute', right: 10, bottom: 8, maxWidth: '50%',
+    fontSize: 8.5, color: '#fff', opacity: 0.5,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
   // ~10% tighter than the standard card body: this is a feed, not a form.
