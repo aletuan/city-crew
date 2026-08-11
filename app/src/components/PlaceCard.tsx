@@ -1,29 +1,75 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { LayoutChangeEvent, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { coverOf, fmtCount, Place } from '../lib/data';
+import { fmtCount, Place, photosOf } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { vibeColor, vibeLabel } from '../lib/vibes';
 import { colors, font, radius, space, type } from '../theme';
 import PricePill from './PricePill';
 import { Card, PressableScale } from './ui';
 
+/** More than this on a feed card is scrolling for its own sake. */
+const MAX_SLIDES = 6;
+
 export default function PlaceCard({ place, onPress }: { place: Place; onPress: () => void }) {
   const { t } = useI18n();
-  const cover = coverOf(place);
+  const photos = photosOf(place).slice(0, MAX_SLIDES);
   const reviews = fmtCount(place.rating_count);
+
+  // Slide width is measured rather than derived from the window: the card's
+  // margins and hairline border would each have to be subtracted by hand,
+  // and a slide one point too wide makes paging drift a little further out
+  // with every swipe.
+  const [width, setWidth] = useState(0);
+  const [index, setIndex] = useState(0);
+  // How many slides have been mounted as real images. A feed of cards that
+  // each eagerly loaded six photos would pay for pictures almost nobody
+  // swipes to, so the rest stay empty until a finger arrives.
+  const [mounted, setMounted] = useState(1);
+
+  const carousel = photos.length > 1 && width > 0;
+  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+  const reveal = (upTo: number) => setMounted((m) => Math.max(m, upTo));
+  const current = photos[Math.min(index, photos.length - 1)];
+
   return (
     <PressableScale onPress={onPress}>
       <Card style={s.card}>
-        <View>
-          {cover ? (
-            <>
-              <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" transition={200} />
-              {cover.attribution_name ? <Text style={s.attr}>📷 {cover.attribution_name}</Text> : null}
-            </>
-          ) : (
+        <View onLayout={onLayout}>
+          {photos.length === 0 ? (
             <View style={[s.photo, s.photoFallback]}>
               <Text style={{ fontSize: 44 }}>{place.emoji ?? '📍'}</Text>
+            </View>
+          ) : carousel ? (
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              // Touching the strip is enough of a signal to load the
+              // neighbour, so the next slide is ready before it is needed.
+              onScrollBeginDrag={() => reveal(index + 2)}
+              onMomentumScrollEnd={(e) => {
+                const i = Math.round(e.nativeEvent.contentOffset.x / width);
+                setIndex(i);
+                reveal(i + 2);
+              }}
+            >
+              {photos.map((ph, i) => (
+                i < mounted
+                  ? <Image key={ph.photo_uri} source={{ uri: ph.photo_uri }} style={[s.photo, { width }]} contentFit="cover" transition={200} />
+                  : <View key={ph.photo_uri} style={[s.photo, { width }]} />
+              ))}
+            </ScrollView>
+          ) : (
+            <Image source={{ uri: photos[0].photo_uri }} style={s.photo} contentFit="cover" transition={200} />
+          )}
+          {/* Credit follows the photo on screen, not the cover. */}
+          {current?.attribution_name ? <Text style={s.attr}>📷 {current.attribution_name}</Text> : null}
+          {photos.length > 1 && (
+            <View style={s.dots} pointerEvents="none">
+              {photos.map((ph, i) => (
+                <View key={ph.photo_uri} style={[s.dot, i === index && s.dotOn]} />
+              ))}
             </View>
           )}
           {/* Price rides the photograph, out of the way of the name. */}
@@ -68,6 +114,16 @@ const s = StyleSheet.create({
   body: { paddingHorizontal: space.cardPadding, paddingVertical: 13 },
   // Top-right of the image, mirroring the attribution bottom-right.
   priceSlot: { position: 'absolute', top: 10, right: 10 },
+  // Same dot language as the detail gallery, one size down. The pill behind
+  // them is what makes a white dot survive a bright photograph.
+  dots: {
+    position: 'absolute', bottom: 10, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(10,8,13,0.40)', borderRadius: radius.pill,
+    paddingHorizontal: 9, paddingVertical: 6,
+  },
+  dot: { width: 5.5, height: 5.5, borderRadius: 2.75, backgroundColor: 'rgba(255,255,255,0.38)' },
+  dotOn: { width: 6.5, height: 6.5, borderRadius: 3.25, backgroundColor: '#fff' },
   name: { color: colors.text, ...type.cardTitle },
   // Rating reads in three weights: a barely-there champagne star, a clear
   // value, a whispered count.
