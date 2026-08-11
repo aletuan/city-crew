@@ -15,21 +15,24 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
   return (
     <PressableScale onPress={onPress}>
       <Card style={s.card}>
-        {cover ? (
-          <View>
-            <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" transition={200} />
-            {cover.attribution_name ? <Text style={s.attr}>📷 {cover.attribution_name}</Text> : null}
+        <View>
+          {cover ? (
+            <>
+              <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" transition={200} />
+              {cover.attribution_name ? <Text style={s.attr}>📷 {cover.attribution_name}</Text> : null}
+            </>
+          ) : (
+            <View style={[s.photo, s.photoFallback]}>
+              <Text style={{ fontSize: 44 }}>{place.emoji ?? '📍'}</Text>
+            </View>
+          )}
+          {/* Price rides the photograph, out of the way of the name. */}
+          <View style={s.priceSlot} pointerEvents="none">
+            <PricePill place={place} overlay />
           </View>
-        ) : (
-          <View style={[s.photo, s.photoFallback]}>
-            <Text style={{ fontSize: 44 }}>{place.emoji ?? '📍'}</Text>
-          </View>
-        )}
+        </View>
         <View style={s.body}>
-          <View style={s.topRow}>
-            <Text style={s.name} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
-            <PricePill place={place} compact />
-          </View>
+          <Text style={s.name} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
           {place.rating ? (
             <Text style={s.ratingRow} numberOfLines={1}>
               <Text style={s.star}>★ </Text>
@@ -63,8 +66,9 @@ const s = StyleSheet.create({
   },
   // ~10% tighter than the standard card body: this is a feed, not a form.
   body: { paddingHorizontal: space.cardPadding, paddingVertical: 13 },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  name: { flex: 1, color: colors.text, ...type.cardTitle },
+  // Top-right of the image, mirroring the attribution bottom-right.
+  priceSlot: { position: 'absolute', top: 10, right: 10 },
+  name: { color: colors.text, ...type.cardTitle },
   // Rating reads in three weights: a barely-there champagne star, a clear
   // value, a whispered count.
   ratingRow: { marginTop: 4 },
