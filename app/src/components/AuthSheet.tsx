@@ -54,7 +54,15 @@ export default function AuthSheet({ visible, onClose, onSignIn }: {
             'サインインしてお気に入りを保存し、仲間とコレクションを作りましょう。',
           )}
         </Text>
-        <PressableScale onPress={onSignIn} accessibilityRole="button" style={{ width: '100%' }}>
+        {/* The width has to go on the Pressable itself (containerStyle), not
+            on the animated child: the sheet centres its children, so an
+            un-stretched Pressable shrink-wraps the label and "100%" inside
+            it then resolves against that shrunken box. */}
+        <PressableScale
+          onPress={onSignIn}
+          accessibilityRole="button"
+          containerStyle={{ alignSelf: 'stretch' }}
+        >
           <LinearGradient {...gradAI} style={s.primary}>
             <Text style={s.primaryText}>{t('Sign in', 'Đăng nhập', 'サインイン')}</Text>
           </LinearGradient>
