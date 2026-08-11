@@ -5,6 +5,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import {
+  SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold, useFonts,
+} from '@expo-google-fonts/space-grotesk';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from './src/lib/auth';
@@ -163,6 +166,14 @@ const navTheme = {
 };
 
 export default function App() {
+  // Display type only — see theme.ts. Until the faces are ready the app
+  // holds on its own ground colour rather than rendering titles in the
+  // system font and swapping them a frame later, which reads as a glitch.
+  const [fontsLoaded] = useFonts({
+    SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold,
+  });
+  if (!fontsLoaded) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+
   return (
     <SafeAreaProvider>
       <AuthProvider>
