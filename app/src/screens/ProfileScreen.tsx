@@ -33,7 +33,7 @@ function memberSinceLabel(d: Date, lang: Lang): string {
 function RoundIcon({ name }: { name: keyof typeof Ionicons.glyphMap }) {
   return (
     <View style={s.roundIcon}>
-      <Ionicons name={name} size={20} color={colors.champagne} />
+      <Ionicons name={name} size={20} color={colors.accent} />
     </View>
   );
 }
@@ -124,7 +124,7 @@ function GuestHub({ navigation }: { navigation: Nav }) {
     <>
       <View style={s.heroRow}>
         <View style={s.avatarBig}>
-          <Ionicons name="person-outline" size={40} color={colors.champagne} />
+          <Ionicons name="person-outline" size={40} color={colors.accent} />
         </View>
         <View style={{ flex: 1, gap: 6 }}>
           <Text style={s.heroTitle}>{t("You're browsing as a guest", 'Bạn đang xem với tư cách khách', 'ゲストとして閲覧中です')}</Text>
@@ -301,7 +301,7 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
           showsVerticalScrollIndicator={false}
         >
           {!ready
-            ? <ActivityIndicator color={colors.champagne} style={{ marginTop: 48 }} />
+            ? <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />
             : session
               ? <AccountProfile navigation={navigation} />
               : <GuestHub navigation={navigation} />}
@@ -317,7 +317,7 @@ const s = StyleSheet.create({
     width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surfaceGlass, borderWidth: 1.5, borderColor: colors.borderGlass,
   },
-  avatarInitial: { color: colors.champagne, fontSize: 34, fontWeight: font.semibold },
+  avatarInitial: { color: colors.accent, fontSize: 34, fontWeight: font.semibold },
   heroTitle: { color: colors.text, fontSize: 19, fontWeight: font.bold, letterSpacing: 0.1 },
   heroBody: { color: colors.textSecondary, ...type.meta, lineHeight: 21 },
 
@@ -332,7 +332,7 @@ const s = StyleSheet.create({
   featureRowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft },
   roundIcon: {
     width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(232,212,155,0.10)', borderWidth: 1, borderColor: colors.borderGlassSoft,
+    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
   featureTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   featureSub: { color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, lineHeight: 19 },
@@ -342,10 +342,10 @@ const s = StyleSheet.create({
     padding: space.cardPadding,
   },
   soonPill: {
-    borderRadius: radius.pill, borderWidth: 1, borderColor: 'rgba(232,212,155,0.26)',
-    backgroundColor: 'rgba(232,212,155,0.08)', paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: radius.pill, borderWidth: 1, borderColor: colors.accentLine,
+    backgroundColor: colors.accentSoft, paddingHorizontal: 10, paddingVertical: 4,
   },
-  soonPillText: { color: colors.champagne, fontSize: 11.5, fontWeight: font.semibold },
+  soonPillText: { color: colors.accent, fontSize: 11.5, fontWeight: font.semibold },
 
   section: { color: colors.text, ...type.section, marginTop: 10 },
 

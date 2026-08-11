@@ -1,5 +1,5 @@
 // Price as quiet information, not a badge. Only FREE is a special
-// state and keeps the champagne pill; a paid price is calm text —
+// state and keeps the accented pill; a paid price is calm text —
 // "~70k ₫" — that never competes with the place's name.
 //
 // The `overlay` variant is the exception: sitting on photography it has to
@@ -54,17 +54,17 @@ export default function PricePill({ place, compact, overlay }: {
 const s = StyleSheet.create({
   pill: {
     borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4,
-    backgroundColor: 'rgba(232,212,155,0.08)',
-    borderWidth: 1, borderColor: 'rgba(232,212,155,0.26)',
+    backgroundColor: colors.accentSoft,
+    borderWidth: 1, borderColor: colors.accentLine,
   },
   pillText: {
-    color: colors.champagne, fontSize: 12, fontWeight: font.semibold,
+    color: colors.accent, fontSize: 12, fontWeight: font.semibold,
     textTransform: 'uppercase', letterSpacing: 0.8,
   },
   price: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
 
   // On a photo the pill supplies its own ground: a photograph can be any
-  // brightness, so neither the champagne nor plain text can be trusted to
+  // brightness, so neither the accent nor plain text can be trusted to
   // read against it unaided.
   overlay: {
     borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 7,
@@ -73,7 +73,7 @@ const s = StyleSheet.create({
   },
   overlayText: { color: '#FFFFFF', fontSize: 15, fontWeight: font.semibold },
   overlayFreeText: {
-    color: colors.champagne, fontSize: 12.5, fontWeight: font.semibold,
+    color: colors.accent, fontSize: 12.5, fontWeight: font.semibold,
     textTransform: 'uppercase', letterSpacing: 0.8,
   },
 });

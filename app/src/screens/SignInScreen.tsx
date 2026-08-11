@@ -1,6 +1,6 @@
 // Sign in — email + password, per the reference layout: welcome-back
 // eyebrow, editorial title, list-row fields, forgot-password link and
-// one big champagne action.
+// one big accented action.
 
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -85,5 +85,5 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
 
 const s = StyleSheet.create({
   metaRow: { flexDirection: 'row', justifyContent: 'flex-end' },
-  forgot: { color: colors.champagne, fontSize: 14, fontWeight: font.medium },
+  forgot: { color: colors.accent, fontSize: 14, fontWeight: font.medium },
 });

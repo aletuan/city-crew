@@ -35,7 +35,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {col && (col.desc_en || col.desc_vi) && (
         <Text style={s.desc}>{t(col.desc_en, col.desc_vi, col.desc_ja)}</Text>
       )}
-      {loading && members.length === 0 && <ActivityIndicator color={colors.champagne} style={{ marginTop: 48 }} />}
+      {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
       <FlatList
         data={members}

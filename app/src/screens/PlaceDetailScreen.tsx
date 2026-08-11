@@ -51,7 +51,7 @@ function vibeLabel(place: Place, t: (en: string, vi: string, ja?: string) => str
 function RoundIcon({ name }: { name: keyof typeof Ionicons.glyphMap }) {
   return (
     <View style={s.roundIcon}>
-      <Ionicons name={name} size={19} color={colors.champagne} />
+      <Ionicons name={name} size={19} color={colors.accent} />
     </View>
   );
 }
@@ -85,7 +85,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const tabClearance = useTabBarClearance();
 
   if (loading && !place) {
-    return <SafeAreaView style={s.screen}><ActivityIndicator color={colors.champagne} style={{ marginTop: 64 }} /></SafeAreaView>;
+    return <SafeAreaView style={s.screen}><ActivityIndicator color={colors.accent} style={{ marginTop: 64 }} /></SafeAreaView>;
   }
   if (!place) {
     return <SafeAreaView style={s.screen}><Empty text={t('Place not found.', 'Không tìm thấy địa điểm.', 'スポットが見つかりません。')} /></SafeAreaView>;
@@ -145,7 +145,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             onPress={() => setSaved((v) => !v)} scaleTo={0.9}
             containerStyle={{ position: 'absolute', right: 12, top: 12 }} style={s.fab} accessibilityLabel="Save"
           >
-            <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? colors.champagne : '#fff'} />
+            <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? colors.accent : '#fff'} />
           </PressableScale>
 
           {photos.length > 0 && (
@@ -179,7 +179,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             {place.rating ? (
               <View style={s.ratingBadge}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <Ionicons name="star" size={16} color={colors.champagne} />
+                  <Ionicons name="star" size={16} color={colors.accent} />
                   <Text style={s.ratingValue}>{place.rating}</Text>
                 </View>
                 {reviews ? <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー')}</Text> : null}
@@ -317,7 +317,7 @@ const s = StyleSheet.create({
   },
   roundIcon: {
     width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(232,212,155,0.10)', borderWidth: 1, borderColor: 'rgba(232,212,155,0.24)',
+    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
   },
   infoLabel: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,

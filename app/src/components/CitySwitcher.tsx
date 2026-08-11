@@ -29,7 +29,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
           <Text style={s.title}>{t('Choose a city', 'Chọn thành phố', '都市を選択')}</Text>
 
           <PressableScale haptic="selection" style={s.row} onPress={locate}>
-            <Ionicons name="navigate-outline" size={18} color={colors.champagne} />
+            <Ionicons name="navigate-outline" size={18} color={colors.accent} />
             <View style={{ flex: 1 }}>
               <Text style={s.rowTitle}>
                 {locating ? t('Locating…', 'Đang định vị…', '位置情報を取得中…') : t('Use my location', 'Dùng vị trí của tôi', '現在地を使う')}
@@ -53,11 +53,11 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
                 style={s.row}
                 onPress={() => { fireHaptic('selection'); setCity(c.id); onClose(); }}
               >
-                <Ionicons name="business-outline" size={18} color={active ? colors.champagne : colors.textTertiary} />
-                <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.champagne }]}>
+                <Ionicons name="business-outline" size={18} color={active ? colors.accent : colors.textTertiary} />
+                <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.accent }]}>
                   {t(c.short_en, c.short_vi, c.short_ja)}
                 </Text>
-                {active && <Ionicons name="checkmark" size={18} color={colors.champagne} />}
+                {active && <Ionicons name="checkmark" size={18} color={colors.accent} />}
               </PressableScale>
             );
           })}

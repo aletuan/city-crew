@@ -69,10 +69,10 @@ const s = StyleSheet.create({
   // Top-right of the image, mirroring the attribution bottom-right.
   priceSlot: { position: 'absolute', top: 10, right: 10 },
   name: { color: colors.text, ...type.cardTitle },
-  // Rating reads in three weights: a barely-there champagne star, a clear
+  // Rating reads in three weights: a barely-there accent star, a clear
   // value, a whispered count.
   ratingRow: { marginTop: 4 },
-  star: { color: 'rgba(232,212,155,0.55)', fontSize: 13.5 },
+  star: { color: colors.accentFaint, fontSize: 13.5 },
   ratingValue: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
   ratingCount: { color: colors.textTertiary, fontSize: 13, fontWeight: font.regular },
   // Vibes read as small glass pills, each carrying its own colour in a dot

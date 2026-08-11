@@ -1,7 +1,7 @@
 // Shared pieces for the auth screens: the list-row field with icon and
-// label, the big champagne primary button, and the header block with
+// label, the big accented primary button, and the header block with
 // back control, eyebrow, title and lede — the reference layout rendered
-// in the cityCrew champagne language.
+// in the cityCrew accent language.
 
 import React, { useState } from 'react';
 import {
@@ -52,7 +52,7 @@ export function FieldRow({ icon, label, secure, ...input }: {
   const [hidden, setHidden] = useState(true);
   return (
     <View style={s.field}>
-      <Ionicons name={icon} size={22} color={colors.champagne} />
+      <Ionicons name={icon} size={22} color={colors.accent} />
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={s.fieldLabel}>{label}</Text>
         <TextInput
@@ -76,14 +76,14 @@ export function PrimaryButton({ label, onPress, busy }: { label: string; onPress
     <PressableScale onPress={busy ? undefined : onPress} accessibilityRole="button">
       <LinearGradient {...gradAI} style={s.primary}>
         {busy
-          ? <ActivityIndicator color="#141310" />
+          ? <ActivityIndicator color={colors.accentInk} />
           : <Text style={s.primaryText}>{label}</Text>}
       </LinearGradient>
     </PressableScale>
   );
 }
 
-/** "Don't have an account?  Sign up" — quiet text with a champagne link. */
+/** "Don't have an account?  Sign up" — quiet text with an accented link. */
 export function SwitchRow({ prompt, action, onPress }: { prompt: string; action: string; onPress: () => void }) {
   return (
     <View style={s.switchRow}>
@@ -103,7 +103,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
 
   eyebrow: {
-    color: colors.champagne, fontSize: 12.5, fontWeight: font.semibold,
+    color: colors.accent, fontSize: 12.5, fontWeight: font.semibold,
     letterSpacing: 1.6, textTransform: 'uppercase',
   },
   title: { color: colors.text, ...type.title },
@@ -121,11 +121,11 @@ const s = StyleSheet.create({
     borderRadius: radius.pill, paddingVertical: 16,
     alignItems: 'center', justifyContent: 'center', marginTop: 6,
   },
-  primaryText: { color: '#141310', fontSize: 17, fontWeight: font.semibold },
+  primaryText: { color: colors.accentInk, fontSize: 17, fontWeight: font.semibold },
 
   switchRow: { flexDirection: 'row', justifyContent: 'center', gap: 7, marginTop: 10 },
   switchPrompt: { color: colors.textSecondary, ...type.meta },
-  switchAction: { color: colors.champagne, fontSize: 15, fontWeight: font.semibold },
+  switchAction: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
 
   error: { color: colors.bad, ...type.meta, lineHeight: 21 },
 });

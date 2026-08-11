@@ -1,9 +1,13 @@
 // cityCrew iOS design system.
 //
 // Cinematic dark mode: near-black charcoal ground, translucent smoky
-// surfaces, thin warm-gray hairlines, and champagne used sparingly for
+// surfaces, thin warm-gray hairlines, and one accent used sparingly for
 // active state only. Depth comes from the ground, an almost-invisible
 // ambient warmth, surfaces and type — not from heavy shadows.
+//
+// The accent is coral running to orange. Every accented surface in the app
+// derives from the tokens below, so the identity colour is changed here and
+// nowhere else.
 
 export const colors = {
   /** Near-black charcoal — never pure black, never uniform. */
@@ -24,23 +28,37 @@ export const colors = {
   textSecondary: '#B7B6B1',
   textTertiary: '#6E706D',
 
-  /** The one identity colour: warm champagne. Active state only. */
-  champagne: '#E8D49B',
-  champagneBright: '#F2DFA3',
-  /** Ambient city-light warmth for background glows — muted amber, the
-   *  warmest of the sanctioned glow tones, so it carries at low alpha. */
-  emberGlow: 'rgba(226,168,96,0.16)',
-  emberGlowFade: 'rgba(226,168,96,0.05)',
+  /** The one identity colour: coral. Active state only. */
+  accent: '#FF6F5B',
+  /** The warm end of the accent — gradients run accent → accentBright. */
+  accentBright: '#FF9A5C',
+  /** Type and glyphs that sit *on* the accent. The accent is light enough
+   *  to need dark ink at full strength, but the gradient runs bright, so
+   *  white holds across it where a near-black would band. */
+  accentInk: '#FFFFFF',
+  /** The accent at fill and hairline strength, for pills and tinted wells. */
+  accentSoft: 'rgba(255,111,91,0.10)',
+  accentLine: 'rgba(255,111,91,0.28)',
+  /** The accent whispered — a mark that should register as warmth, not as
+   *  a second thing to read (the rating star). */
+  accentFaint: 'rgba(255,111,91,0.62)',
+  /** Ambient city-light warmth for background glows — the accent diffused,
+   *  so the ground and the accent belong to one light. */
+  emberGlow: 'rgba(226,96,80,0.15)',
+  emberGlowFade: 'rgba(226,96,80,0.05)',
 
   ok: '#8FBF8A',
   bad: '#D98A80',
 };
 
-/** A restrained champagne wash for the rare small gradient surface. */
+/** The accent as a gradient, for the rare loud surface. Left to right
+ *  rather than corner to corner: on a wide pill a diagonal wash puts the
+ *  lightest tone under one end of the label and the darkest under the
+ *  other, and the text stops reading as one weight. */
 export const gradAI = {
-  colors: [colors.champagneBright, '#D9BE85'] as const,
+  colors: [colors.accent, colors.accentBright] as const,
   start: { x: 0, y: 0 },
-  end: { x: 1, y: 1 },
+  end: { x: 1, y: 0 },
 };
 
 /** Corner radii, in iOS points. */
