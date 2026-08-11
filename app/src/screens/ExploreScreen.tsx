@@ -209,7 +209,10 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                   </View>
                 )}
                 <View style={s.shelfCardText}>
-                  <Text style={s.shelfCardTitle} numberOfLines={2}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
+                  {/* One line, always. A second line pushed the count down
+                      on some tiles and not others, so a row of cards that
+                      should read as one band came out ragged. */}
+                  <Text style={s.shelfCardTitle} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
                   <Text style={s.shelfCardMeta}>{count} {t('places', 'địa điểm', 'スポット')}</Text>
                 </View>
               </PressableScale>
