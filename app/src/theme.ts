@@ -83,6 +83,21 @@ export const space = {
 };
 
 /**
+ * Space Grotesk, for display type only — screen titles and the hero.
+ *
+ * React Native has no synthetic weights for a custom family: `fontWeight`
+ * is ignored once `fontFamily` names a specific face, so a weight here is
+ * a different family string, and a style that sets one must not set the
+ * other. That is the whole reason this stays on display type: the app's
+ * ~150 UI text styles keep the system font and keep `fontWeight`.
+ */
+export const display = {
+  medium: 'SpaceGrotesk_500Medium',
+  semibold: 'SpaceGrotesk_600SemiBold',
+  bold: 'SpaceGrotesk_700Bold',
+} as const;
+
+/**
  * System font weights — RN resolves the system family to SF Pro on iOS,
  * so type reads as native rather than as a webfont.
  */
@@ -96,8 +111,8 @@ export const font = {
 
 /** Type scale. Hierarchy does the organising, so sizes stay few. */
 export const type = {
-  /** Large screen title. */
-  title: { fontSize: 34, fontWeight: font.bold, letterSpacing: 0.35 },
+  /** Large screen title — the one place the display face carries a whole line. */
+  title: { fontSize: 34, fontFamily: display.bold, letterSpacing: 0.35 },
   /** Section heading. */
   section: { fontSize: 22, fontWeight: font.semibold, letterSpacing: 0.2 },
   /** Card title. */

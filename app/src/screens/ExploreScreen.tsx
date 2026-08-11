@@ -1,7 +1,8 @@
 // Explore — the guest landing surface, modeled on the mockup's home:
 // dated eyebrow + editorial title, a hero built on a featured place's
 // photography, a horizontal shelf of public collections, then the
-// browsable places list. Guests get a quiet "Make it yours" close.
+// browsable places list. Signing in is offered from the header's profile
+// control, not parked at the end of a feed that has no end.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -10,6 +11,7 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import AuthSheet from '../components/AuthSheet';
 import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
@@ -18,7 +20,7 @@ import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
 import { Lang, useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
-import { colors, font, gradAI, radius, space, type } from '../theme';
+import { colors, display, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 // The one chip that isn't a category: the whole catalog. It carries no
@@ -224,37 +226,13 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   );
 }
 
-function MakeItYours({ navigation }: { navigation: Nav }) {
-  const { t } = useI18n();
-  const { session } = useAuth();
-  if (session) return null;
-  return (
-    <View style={s.yoursCard}>
-      <Text style={s.yoursTitle}>{t('Make it yours', 'Biến nơi này thành của bạn', '自分だけのアプリに')}</Text>
-      <Text style={s.yoursBody}>
-        {t(
-          'Sign in to save favorites and build your own collections.',
-          'Đăng nhập để lưu địa điểm yêu thích và tạo bộ sưu tập của riêng bạn.',
-          'サインインしてお気に入りを保存し、自分のコレクションを作りましょう。',
-        )}
-      </Text>
-      <PressableScale
-        onPress={() => navigation.getParent()?.navigate('Profile', { screen: 'SignIn' })}
-        accessibilityRole="button"
-      >
-        <LinearGradient {...gradAI} style={s.yoursBtn}>
-          <Text style={s.yoursBtnText}>{t('Sign in', 'Đăng nhập', 'サインイン')}</Text>
-        </LinearGradient>
-      </PressableScale>
-    </View>
-  );
-}
-
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
   const { loading, error, data: places, reload } = usePlaces();
+  const { session } = useAuth();
   const [cat, setCat] = useState<string>(ALL);
+  const [authSheet, setAuthSheet] = useState(false);
   const tabClearance = useTabBarClearance();
   const listRef = useRef<FlatList<Place>>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -323,11 +301,24 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       eyebrow={dateline(lang)}
       title={t(`Discover ${city?.short_en ?? '…'}`, `Khám phá ${city?.short_vi ?? '…'}`, `${city?.short_ja ?? city?.short_en ?? '…'}を発見`)}
       right={(
-        <RoundIconButton
-          icon="search-outline"
-          onPress={() => navigation.navigate('Search')}
-          label={t('Search', 'Tìm kiếm', '検索')}
-        />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <RoundIconButton
+            icon="search-outline"
+            onPress={() => navigation.navigate('Search')}
+            label={t('Search', 'Tìm kiếm', '検索')}
+          />
+          <RoundIconButton
+            icon="person-circle-outline"
+            size={24}
+            onPress={() => {
+              // Signed in, the control means "my profile"; signed out it
+              // means "who am I?", which is the sheet's question.
+              if (session) navigation.getParent()?.navigate('Profile');
+              else setAuthSheet(true);
+            }}
+            label={session ? t('Profile', 'Cá nhân', 'プロフィール') : t('Sign in', 'Đăng nhập', 'サインイン')}
+          />
+        </View>
       )}
     >
       <View style={{ flex: 1 }}>
@@ -353,7 +344,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
               <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
             )}
             ListEmptyComponent={<Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。')} />}
-            ListFooterComponent={<MakeItYours navigation={navigation} />}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
             onRefresh={reload}
@@ -367,6 +357,14 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           />
         )}
       </View>
+      <AuthSheet
+        visible={authSheet}
+        onClose={() => setAuthSheet(false)}
+        onSignIn={() => {
+          setAuthSheet(false);
+          navigation.getParent()?.navigate('Profile', { screen: 'SignIn' });
+        }}
+      />
     </Screen>
   );
 }
@@ -387,7 +385,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6,
   },
   heroPillText: { color: colors.textSecondary, fontSize: 12.5, fontWeight: font.medium },
-  heroTitle: { color: colors.text, fontSize: 24, fontWeight: font.bold, letterSpacing: 0.2, lineHeight: 30 },
+  heroTitle: { color: colors.text, fontSize: 24, fontFamily: display.bold, letterSpacing: 0.2, lineHeight: 30 },
   heroSub: { color: colors.textSecondary, ...type.meta, lineHeight: 21 },
   // The screen's one loud control: the accent at full strength — the same
   // primary-button material the auth screens use.
@@ -395,7 +393,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: radius.pill, paddingHorizontal: 20, paddingVertical: 12,
   },
-  heroCtaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
+  heroCtaText: { color: colors.accentInk, fontSize: 16, fontFamily: display.semibold },
 
   section: {
     color: colors.text, ...type.section,
@@ -419,13 +417,4 @@ const s = StyleSheet.create({
   shelfCardTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 20 },
   shelfCardMeta: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
 
-  yoursCard: {
-    marginHorizontal: space.page, marginTop: 10,
-    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: radius.card, padding: space.cardPadding, gap: 12,
-  },
-  yoursTitle: { color: colors.text, ...type.cardTitle },
-  yoursBody: { color: colors.textSecondary, ...type.body, lineHeight: 23 },
-  yoursBtn: { borderRadius: radius.input, paddingVertical: 13, alignItems: 'center' },
-  yoursBtnText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
 });

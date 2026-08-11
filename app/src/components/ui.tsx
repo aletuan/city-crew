@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, display, font, radius, space, type } from '../theme';
 
 // ── tab bar geometry ──
 // A full-width Apple-style bar over blur; position:absolute so content
@@ -192,7 +192,7 @@ const s = StyleSheet.create({
   // "today", which is the app's whole premise, and it is short enough that
   // the accent stays a mark rather than a block of coloured text.
   eyebrow: {
-    color: colors.accent, fontSize: 12, fontWeight: font.semibold,
+    color: colors.accent, fontSize: 12, fontFamily: display.semibold,
     letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 6,
   },
   chip: {
