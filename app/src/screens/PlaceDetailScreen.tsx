@@ -162,7 +162,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             </View>
           )}
           {photos[photoIndex]?.attribution_name ? (
-            <Text style={s.attr}>📷 {photos[photoIndex].attribution_name}</Text>
+            <Text style={s.attr} numberOfLines={1}>{photos[photoIndex].attribution_name}</Text>
           ) : null}
         </View>
 
@@ -286,8 +286,10 @@ const s = StyleSheet.create({
   },
   dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.38)' },
   dotOn: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
+  // Required attribution, kept quiet — see the note in PlaceCard.
   attr: {
-    position: 'absolute', right: 12, bottom: 14, fontSize: 9.5, color: '#fff', opacity: 0.8,
+    position: 'absolute', right: 12, bottom: 14, maxWidth: '55%',
+    fontSize: 9, color: '#fff', opacity: 0.55,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
 
