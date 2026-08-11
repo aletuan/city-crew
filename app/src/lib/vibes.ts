@@ -5,10 +5,10 @@
 // glyph, and its label in each language. Screens read from here rather than
 // keeping their own maps.
 //
-// Colour discipline: champagne stays the only identity colour, so a vibe's
+// Colour discipline: the accent stays the only identity colour, so a vibe's
 // hue lives in a 6pt dot and never in a fill or in type. The palette is
 // desaturated on purpose — on the near-black ground nothing should compete
-// with the champagne used for active state.
+// with the accent used for active state.
 
 import type { Ionicons } from '@expo/vector-icons';
 

@@ -188,8 +188,11 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
   },
   title: { color: colors.text, ...type.title },
+  // The dateline is the one place a screen title gets colour: it says
+  // "today", which is the app's whole premise, and it is short enough that
+  // the accent stays a mark rather than a block of coloured text.
   eyebrow: {
-    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
+    color: colors.accent, fontSize: 12, fontWeight: font.semibold,
     letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 6,
   },
   chip: {
@@ -197,10 +200,10 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
     paddingHorizontal: 14, paddingVertical: 7, marginRight: 8,
   },
-  // Selected control carries champagne — same rule as the language pill.
+  // Selected control carries the accent — same rule as the language pill.
   chipOn: { backgroundColor: colors.surfaceGlass, borderColor: colors.borderGlass },
   chipText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
-  chipTextOn: { color: colors.champagne, fontWeight: font.semibold },
+  chipTextOn: { color: colors.accent, fontWeight: font.semibold },
   card: {
     backgroundColor: colors.surfaceCard, borderRadius: radius.card,
     borderWidth: 1, borderColor: colors.borderGlassSoft, overflow: 'hidden',

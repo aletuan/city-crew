@@ -66,7 +66,7 @@ function ProfileStack() {
 }
 
 // [inactive, active]. Thin monochrome glyphs, and the selected tab takes
-// the solid variant in champagne — the iOS convention. No selection pill.
+// the solid variant in the accent — the iOS convention. No selection pill.
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
   Ideas: ['bulb-outline', 'bulb'],
   Explore: ['compass-outline', 'compass'],
@@ -119,7 +119,7 @@ function Tabs() {
           paddingBottom: insets.bottom + 6,
         },
         tabBarBackground: TabBarMaterial,
-        tabBarActiveTintColor: colors.champagne,
+        tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabel: ({ color, focused }) => (
           <Text style={{ color, fontSize: 11.5, fontWeight: focused ? font.semibold : font.regular }}>

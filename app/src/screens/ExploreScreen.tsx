@@ -139,7 +139,7 @@ function Hero({ place, onExplore, scrollY }: {
                   ? t(city.hero_cta_en, city.hero_cta_vi, city.hero_cta_ja)
                   : t('Start exploring', 'Bắt đầu khám phá', '探索を始める')}
               </Text>
-              <Ionicons name="arrow-forward" size={17} color="#141310" />
+              <Ionicons name="arrow-forward" size={17} color={colors.accentInk} />
             </LinearGradient>
           </PressableScale>
         </View>
@@ -389,20 +389,20 @@ const s = StyleSheet.create({
   heroPillText: { color: colors.textSecondary, fontSize: 12.5, fontWeight: font.medium },
   heroTitle: { color: colors.text, fontSize: 24, fontWeight: font.bold, letterSpacing: 0.2, lineHeight: 30 },
   heroSub: { color: colors.textSecondary, ...type.meta, lineHeight: 21 },
-  // The screen's one loud control: solid champagne, dark text — the same
+  // The screen's one loud control: the accent at full strength — the same
   // primary-button material the auth screens use.
   heroCta: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: radius.pill, paddingHorizontal: 20, paddingVertical: 12,
   },
-  heroCtaText: { color: '#141310', fontSize: 16, fontWeight: font.semibold },
+  heroCtaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
 
   section: {
     color: colors.text, ...type.section,
     paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
-  seeAll: { color: colors.champagne, fontSize: 14, fontWeight: font.medium },
+  seeAll: { color: colors.accent, fontSize: 14, fontWeight: font.medium },
   // Same rule as the hero: photo cards end in shadow, not in a hairline.
   shelfCard: {
     width: 176, height: 220, borderRadius: radius.image, overflow: 'hidden',
@@ -427,5 +427,5 @@ const s = StyleSheet.create({
   yoursTitle: { color: colors.text, ...type.cardTitle },
   yoursBody: { color: colors.textSecondary, ...type.body, lineHeight: 23 },
   yoursBtn: { borderRadius: radius.input, paddingVertical: 13, alignItems: 'center' },
-  yoursBtnText: { color: '#141310', fontSize: 16, fontWeight: font.semibold },
+  yoursBtnText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
 });

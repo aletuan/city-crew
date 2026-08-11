@@ -24,9 +24,9 @@ export function LanguageSwitcherModal({ visible, onClose }: { visible: boolean; 
                 style={s.row}
                 onPress={() => { setLang(l.id); onClose(); }}
               >
-                <Ionicons name="language-outline" size={18} color={active ? colors.champagne : colors.textTertiary} />
-                <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.champagne }]}>{l.label}</Text>
-                {active && <Ionicons name="checkmark" size={18} color={colors.champagne} />}
+                <Ionicons name="language-outline" size={18} color={active ? colors.accent : colors.textTertiary} />
+                <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.accent }]}>{l.label}</Text>
+                {active && <Ionicons name="checkmark" size={18} color={colors.accent} />}
               </PressableScale>
             );
           })}
