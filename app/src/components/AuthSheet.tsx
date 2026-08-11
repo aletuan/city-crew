@@ -92,8 +92,12 @@ const s = StyleSheet.create({
     color: colors.textSecondary, fontSize: 15, lineHeight: 21,
     textAlign: 'center', paddingHorizontal: 8, marginBottom: 6,
   },
+  // A rounded rectangle, not a pill. The reference draws it this way and
+  // it is the right call at full width: a pill's end caps grow with its
+  // height, so a wide one reads as a lozenge floating in the sheet rather
+  // than as the block the sheet is asking you to press.
   primary: {
-    borderRadius: radius.pill, paddingVertical: 15, alignItems: 'center', width: '100%',
+    borderRadius: 18, paddingVertical: 17, alignItems: 'center', width: '100%',
   },
   primaryText: { color: colors.accentInk, fontSize: 17, fontWeight: font.semibold },
   secondary: { paddingVertical: 12 },
