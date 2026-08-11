@@ -65,8 +65,8 @@ function ProfileStack() {
   );
 }
 
-// [inactive, active]. Thin monochrome glyphs, and the selected tab takes
-// the solid variant in the accent — the iOS convention. No selection pill.
+// [inactive, active]. Thin monochrome glyphs when idle; the selected tab
+// takes the solid variant, reversed out of an accent disc.
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
   Ideas: ['bulb-outline', 'bulb'],
   Explore: ['compass-outline', 'compass'],
@@ -115,7 +115,10 @@ function Tabs() {
           backgroundColor: 'transparent',
           elevation: 0,
           shadowOpacity: 0,
-          paddingTop: 8,
+          // The active icon wears a 28pt disc, so the row above the label is
+          // taller than a bare glyph — trim the top padding to keep both
+          // inside the bar's height rather than growing the bar.
+          paddingTop: 6,
           paddingBottom: insets.bottom + 6,
         },
         tabBarBackground: TabBarMaterial,
@@ -126,8 +129,22 @@ function Tabs() {
             {labels[route.name]}
           </Text>
         ),
+        // The selected tab is a filled disc with white ink, not a tinted
+        // glyph: at 22pt an outline and a solid of the same shape read alike
+        // in peripheral vision, and the disc says which tab you are on
+        // without anyone having to compare five icons.
         tabBarIcon: ({ color, size, focused }) => (
-          <Ionicons name={ICONS[route.name][focused ? 1 : 0]} size={size - 2} color={color} />
+          focused
+            ? (
+              <View style={{
+                width: 28, height: 28, borderRadius: 14,
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: colors.accent,
+              }}>
+                <Ionicons name={ICONS[route.name][1]} size={size - 7} color={colors.accentInk} />
+              </View>
+            )
+            : <Ionicons name={ICONS[route.name][0]} size={size - 2} color={color} />
         ),
       })}
     >
