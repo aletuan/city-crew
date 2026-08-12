@@ -13,6 +13,7 @@ import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClear
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
 import { PrimaryButton } from '../components/authUi';
+import AvatarPicker from '../components/AvatarPicker';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { Lang, useI18n } from '../lib/i18n';
@@ -208,14 +209,11 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   const { email, profile, memberSince, signOut } = useAuth();
   const [busy, setBusy] = useState(false);
   const name = profile.full_name || (email ?? '').split('@')[0];
-  const initial = name.trim().charAt(0).toUpperCase() || '?';
 
   return (
     <>
       <View style={s.heroRow}>
-        <View style={s.avatarBig}>
-          <Text style={s.avatarInitial}>{initial}</Text>
-        </View>
+        <AvatarPicker />
         <View style={{ flex: 1, gap: 5 }}>
           <Text style={s.accountName} numberOfLines={1}>{name}</Text>
           {profile.location ? (
@@ -317,7 +315,6 @@ const s = StyleSheet.create({
     width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surfaceGlass, borderWidth: 1.5, borderColor: colors.borderGlass,
   },
-  avatarInitial: { color: colors.accent, fontSize: 34, fontWeight: font.semibold },
   heroTitle: { color: colors.text, fontSize: 19, fontWeight: font.bold, letterSpacing: 0.1 },
   heroBody: { color: colors.textSecondary, ...type.meta, lineHeight: 21 },
 
