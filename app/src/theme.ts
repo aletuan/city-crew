@@ -32,10 +32,12 @@ export const colors = {
   accent: '#FF6F5B',
   /** The warm end of the accent — gradients run accent → accentBright. */
   accentBright: '#FF9A5C',
-  /** Type and glyphs that sit *on* the accent. The accent is light enough
-   *  to need dark ink at full strength, but the gradient runs bright, so
-   *  white holds across it where a near-black would band. */
-  accentInk: '#FFFFFF',
+  /** Type and glyphs that sit *on* the accent — near-black, because the
+   *  accent is a light, saturated warm tone. Measured: near-black on coral
+   *  is 6.8:1, white is 2.7:1, and white on the gradient's orange end falls
+   *  to about 2.2:1 — under the 3:1 that graphical elements need, let alone
+   *  text. White also fringes slightly against a warm ground at glyph size. */
+  accentInk: '#141310',
   /** The accent at fill and hairline strength, for pills and tinted wells. */
   accentSoft: 'rgba(255,111,91,0.10)',
   accentLine: 'rgba(255,111,91,0.28)',
