@@ -127,12 +127,19 @@ function Tabs() {
         tabBarBackground: TabBarMaterial,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textTertiary,
+        // The label needs air the old bare glyph did not: a filled disc has
+        // visual mass right down to its edge, where an outline icon's ink
+        // stops well short of its bounding box, so the same gap now reads
+        // as crowding.
         tabBarLabel: ({ color, focused }) => (
-          <Text style={{ color, fontSize: 11.5, fontWeight: focused ? font.semibold : font.regular }}>
+          <Text style={{
+            color, fontSize: 11.5, marginTop: 4,
+            fontWeight: focused ? font.semibold : font.regular,
+          }}>
             {labels[route.name]}
           </Text>
         ),
-        // The selected tab is a filled disc with white ink, not a tinted
+        // The selected tab is a filled disc with dark ink, not a tinted
         // glyph: at 22pt an outline and a solid of the same shape read alike
         // in peripheral vision, and the disc says which tab you are on
         // without anyone having to compare five icons.
