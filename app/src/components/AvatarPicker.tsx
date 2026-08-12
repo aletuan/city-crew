@@ -47,9 +47,12 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
     }
   };
 
+  // No permission gate here on purpose. On iOS the library opens through
+  // PHPicker, which runs outside the app and needs no authorisation — a
+  // pre-check would only invent a wall, turning away someone whose picker
+  // would have worked. The camera below is the opposite: it genuinely
+  // needs asking.
   const fromLibrary = () => run(async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) throw new Error(t('Photo access is off in Settings.', 'Quyền truy cập ảnh đang tắt trong Cài đặt.', '設定で写真へのアクセスが無効です。'));
     const res = await ImagePicker.launchImageLibraryAsync({ ...EDIT, mediaTypes: ['images'] });
     if (!res.canceled && res.assets[0]) await setAvatar(res.assets[0].uri);
   });
