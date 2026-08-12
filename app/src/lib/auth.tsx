@@ -27,6 +27,19 @@ export type Profile = {
 const AVATAR_PX = 512;
 const AVATAR_QUALITY = 0.8;
 
+/**
+ * A request that never settles is worse than one that fails: the spinner
+ * spins forever and nobody learns anything. Each step names itself, so a
+ * stall says which one stalled instead of just "loading".
+ */
+function withTimeout<T>(work: Promise<T>, ms: number, step: string): Promise<T> {
+  return Promise.race([
+    work,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${step} took longer than ${Math.round(ms / 1000)}s — check your connection and try again.`)), ms)),
+  ]);
+}
+
 type Auth = {
   /** False until the persisted session has been read once. */
   ready: boolean;
@@ -128,39 +141,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setAvatar = useCallback(async (localUri: string) => {
-    const uid = (await supabase.auth.getUser()).data.user?.id;
+    // The id comes from the session already in memory. getUser() would go
+    // to the network for something we hold, and every extra auth call takes
+    // the client's auth lock — the surest way to make an upload appear to
+    // hang forever is to queue it behind a token refresh that stalled.
+    const uid = session?.user?.id;
     if (!uid) throw new Error('Not signed in');
 
-    const shrunk = await manipulateAsync(
-      localUri,
-      [{ resize: { width: AVATAR_PX } }],
-      { compress: AVATAR_QUALITY, format: SaveFormat.JPEG, base64: true },
+    const shrunk = await withTimeout(
+      manipulateAsync(
+        localUri,
+        [{ resize: { width: AVATAR_PX } }],
+        { compress: AVATAR_QUALITY, format: SaveFormat.JPEG, base64: true },
+      ),
+      20_000,
+      'Preparing the photo',
     );
     if (!shrunk.base64) throw new Error('Could not read the picked image');
 
     // One object per person, overwritten. Nothing accumulates, so nothing
     // needs sweeping up — at the cost of a stable URL, handled below.
     const path = `${uid}/avatar.jpg`;
-    const { error } = await supabase.storage
-      .from('avatars')
-      .upload(path, decode(shrunk.base64), { contentType: 'image/jpeg', upsert: true });
+    const { error } = await withTimeout(
+      supabase.storage
+        .from('avatars')
+        .upload(path, decode(shrunk.base64), { contentType: 'image/jpeg', upsert: true }),
+      45_000,
+      'Uploading the photo',
+    );
     if (error) throw new Error(error.message);
 
     const { data } = supabase.storage.from('avatars').getPublicUrl(path);
     // The path never changes, so a plain URL would show the old face from
     // cache long after the new one is stored. The stamp is what makes the
     // change visible.
-    await supabase.auth.updateUser({ data: { avatar_url: `${data.publicUrl}?v=${Date.now()}` } });
-  }, []);
+    await withTimeout(
+      supabase.auth.updateUser({ data: { avatar_url: `${data.publicUrl}?v=${Date.now()}` } }),
+      20_000,
+      'Saving the photo',
+    );
+  }, [session]);
 
   const clearAvatar = useCallback(async () => {
-    const uid = (await supabase.auth.getUser()).data.user?.id;
+    const uid = session?.user?.id;
     if (uid) await supabase.storage.from('avatars').remove([`${uid}/avatar.jpg`]);
     // Clearing the pointer is what removes the avatar; a failed delete
     // leaves an orphan object nobody can reach, not a visible avatar.
     const { error } = await supabase.auth.updateUser({ data: { avatar_url: '' } });
     if (error) throw new Error(error.message);
-  }, []);
+  }, [session]);
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
