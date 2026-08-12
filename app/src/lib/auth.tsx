@@ -57,8 +57,9 @@ type Auth = {
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   updateProfile: (patch: Partial<Profile>) => Promise<void>;
   /** Compress, upload and save in one step — the avatar is its own object,
-   *  not a field of the edit form. */
-  setAvatar: (localUri: string) => Promise<void>;
+   *  not a field of the edit form. `onStep` reports progress so a stall is
+   *  visible on screen rather than being an anonymous spinner. */
+  setAvatar: (localUri: string, onStep?: (step: string) => void) => Promise<void>;
   clearAvatar: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -140,7 +141,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // onAuthStateChange fires USER_UPDATED with the fresh metadata.
   }, []);
 
-  const setAvatar = useCallback(async (localUri: string) => {
+  const setAvatar = useCallback(async (localUri: string, onStep?: (step: string) => void) => {
+    const step = (label: string) => onStep?.(label);
     // The id comes from the session already in memory. getUser() would go
     // to the network for something we hold, and every extra auth call takes
     // the client's auth lock — the surest way to make an upload appear to
@@ -148,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const uid = session?.user?.id;
     if (!uid) throw new Error('Not signed in');
 
+    step('resizing');
     const shrunk = await withTimeout(
       manipulateAsync(
         localUri,
@@ -158,6 +161,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       'Preparing the photo',
     );
     if (!shrunk.base64) throw new Error('Could not read the picked image');
+    // Bytes, not characters: base64 carries 3 bytes per 4 characters.
+    step(`uploading ${Math.round((shrunk.base64.length * 3) / 4 / 1024)} KB`);
 
     // One object per person, overwritten. Nothing accumulates, so nothing
     // needs sweeping up — at the cost of a stable URL, handled below.
@@ -171,6 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
     if (error) throw new Error(error.message);
 
+    step('saving');
     const { data } = supabase.storage.from('avatars').getPublicUrl(path);
     // The path never changes, so a plain URL would show the old face from
     // cache long after the new one is stored. The stamp is what makes the
@@ -180,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       20_000,
       'Saving the photo',
     );
+    step('done');
   }, [session]);
 
   const clearAvatar = useCallback(async () => {
