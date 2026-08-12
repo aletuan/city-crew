@@ -2,11 +2,14 @@
 // user metadata. Same field language as the auth screens.
 
 import React, { useState } from 'react';
+import { Text, View } from 'react-native';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton } from '../components/authUi';
+import AvatarPicker from '../components/AvatarPicker';
 import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { useI18n } from '../lib/i18n';
+import { colors } from '../theme';
 import type { Nav } from '../nav';
 
 export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
@@ -45,6 +48,14 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         title={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}
         lede={t('Tell your crew a little about yourself.', 'Kể cho hội của bạn nghe đôi chút về bạn.', 'あなたのことを少し教えてください。')}
       />
+      {/* Saved on pick, not on submit — see AvatarPicker. The caption says
+          so, because a form with a Save button implies otherwise. */}
+      <View style={{ alignItems: 'center', gap: 10, marginBottom: 22 }}>
+        <AvatarPicker size={96} />
+        <Text style={{ color: colors.textTertiary, fontSize: 13 }}>
+          {t('Tap to change — saved right away', 'Chạm để đổi — lưu ngay', 'タップで変更 — すぐ保存されます')}
+        </Text>
+      </View>
       <FieldRow
         icon="person-outline"
         label={t('Full name', 'Họ tên', 'お名前')}

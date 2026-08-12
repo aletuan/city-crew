@@ -10,7 +10,9 @@
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "cityCrew uses your location once to pick the nearest city for you."
+        "NSLocationWhenInUseUsageDescription": "cityCrew uses your location once to pick the nearest city for you.",
+        "NSPhotoLibraryUsageDescription": "cityCrew needs your photo library so you can pick a profile photo.",
+        "NSCameraUsageDescription": "cityCrew needs the camera so you can take a profile photo."
       }
     },
     "android": {
@@ -19,13 +21,23 @@
         "foregroundImage": "./assets/icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.ACCESS_COARSE_LOCATION"]
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA"
+      ]
     },
     "plugins": [
       [
         "expo-location",
         {
           "locationWhenInUsePermission": "cityCrew uses your location once to pick the nearest city for you."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "cityCrew needs your photo library so you can pick a profile photo.",
+          "cameraPermission": "cityCrew needs the camera so you can take a profile photo."
         }
       ]
     ],

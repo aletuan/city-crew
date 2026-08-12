@@ -9,6 +9,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
+import { decode } from 'base64-arraybuffer';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { supabase } from './supabase';
 
 export type Profile = {
@@ -16,7 +18,14 @@ export type Profile = {
   location: string;
   bio: string;
   interests: string;
+  /** Public URL of the uploaded avatar, with a cache-busting stamp. */
+  avatar_url: string;
 };
+
+/** The circle is 96pt at most; a 4MB camera original would be paid for on
+ *  mobile data and thrown away by the renderer. */
+const AVATAR_PX = 512;
+const AVATAR_QUALITY = 0.8;
 
 type Auth = {
   /** False until the persisted session has been read once. */
@@ -34,16 +43,21 @@ type Auth = {
   requestReset: (email: string) => Promise<void>;
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   updateProfile: (patch: Partial<Profile>) => Promise<void>;
+  /** Compress, upload and save in one step — the avatar is its own object,
+   *  not a field of the edit form. */
+  setAvatar: (localUri: string) => Promise<void>;
+  clearAvatar: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
-const EMPTY_PROFILE: Profile = { full_name: '', location: '', bio: '', interests: '' };
+const EMPTY_PROFILE: Profile = { full_name: '', location: '', bio: '', interests: '', avatar_url: '' };
 
 const Ctx = createContext<Auth>({
   ready: false, session: null, email: null, profile: EMPTY_PROFILE, memberSince: null,
   signIn: async () => {}, signUp: async () => ({ needsConfirm: false }),
   confirmSignUp: async () => {}, requestReset: async () => {}, resetPassword: async () => {},
-  updateProfile: async () => {}, signOut: async () => {},
+  updateProfile: async () => {}, setAvatar: async () => {}, clearAvatar: async () => {},
+  signOut: async () => {},
 });
 
 export const useAuth = () => useContext(Ctx);
@@ -113,6 +127,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // onAuthStateChange fires USER_UPDATED with the fresh metadata.
   }, []);
 
+  const setAvatar = useCallback(async (localUri: string) => {
+    const uid = (await supabase.auth.getUser()).data.user?.id;
+    if (!uid) throw new Error('Not signed in');
+
+    const shrunk = await manipulateAsync(
+      localUri,
+      [{ resize: { width: AVATAR_PX } }],
+      { compress: AVATAR_QUALITY, format: SaveFormat.JPEG, base64: true },
+    );
+    if (!shrunk.base64) throw new Error('Could not read the picked image');
+
+    // One object per person, overwritten. Nothing accumulates, so nothing
+    // needs sweeping up — at the cost of a stable URL, handled below.
+    const path = `${uid}/avatar.jpg`;
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(path, decode(shrunk.base64), { contentType: 'image/jpeg', upsert: true });
+    if (error) throw new Error(error.message);
+
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    // The path never changes, so a plain URL would show the old face from
+    // cache long after the new one is stored. The stamp is what makes the
+    // change visible.
+    await supabase.auth.updateUser({ data: { avatar_url: `${data.publicUrl}?v=${Date.now()}` } });
+  }, []);
+
+  const clearAvatar = useCallback(async () => {
+    const uid = (await supabase.auth.getUser()).data.user?.id;
+    if (uid) await supabase.storage.from('avatars').remove([`${uid}/avatar.jpg`]);
+    // Clearing the pointer is what removes the avatar; a failed delete
+    // leaves an orphan object nobody can reach, not a visible avatar.
+    const { error } = await supabase.auth.updateUser({ data: { avatar_url: '' } });
+    if (error) throw new Error(error.message);
+  }, []);
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(error.message);
@@ -129,11 +178,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         location: meta.location ?? '',
         bio: meta.bio ?? '',
         interests: meta.interests ?? '',
+        avatar_url: meta.avatar_url ?? '',
       },
       memberSince: session?.user?.created_at ? new Date(session.user.created_at) : null,
-      signIn, signUp, confirmSignUp, requestReset, resetPassword, updateProfile, signOut,
+      signIn, signUp, confirmSignUp, requestReset, resetPassword, updateProfile,
+      setAvatar, clearAvatar, signOut,
     };
-  }, [ready, session, signIn, signUp, confirmSignUp, requestReset, resetPassword, updateProfile, signOut]);
+  }, [ready, session, signIn, signUp, confirmSignUp, requestReset, resetPassword,
+      updateProfile, setAvatar, clearAvatar, signOut]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
