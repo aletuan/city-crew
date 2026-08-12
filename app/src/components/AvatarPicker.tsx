@@ -5,8 +5,8 @@
 // tying it to a shared Save means one press can half-succeed, leaving a name
 // stored and a picture not, with nothing on screen to say which.
 
-import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,26 +25,6 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
   const insets = useSafeAreaInsets();
   const [sheet, setSheet] = useState(false);
   const [busy, setBusy] = useState(false);
-  /** The step the upload is on, shown while it runs: a spinner alone can't
-   *  tell anyone where it stopped. */
-  const [status, setStatus] = useState<string | null>(null);
-
-  // iOS refuses to present a view controller while another is dismissing —
-  // launching the picker straight from the row's onPress can leave it never
-  // presented and its promise never settled, which looks exactly like an
-  // upload that hangs. Hold the job until the sheet is really gone.
-  const pending = useRef<null | (() => Promise<void>)>(null);
-  const flush = () => {
-    const job = pending.current;
-    pending.current = null;
-    if (job) run(job);
-  };
-  const start = (job: () => Promise<void>) => {
-    pending.current = job;
-    setSheet(false);
-    // Modal.onDismiss is iOS-only; elsewhere nothing would ever flush it.
-    if (Platform.OS !== 'ios') setTimeout(flush, 250);
-  };
 
   // Same fallback the name row uses, so the letter and the name agree for
   // someone who signed up without giving a name.
@@ -52,21 +32,18 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
     .trim().charAt(0).toUpperCase();
 
   const run = async (job: () => Promise<void>) => {
+    setSheet(false);
     setBusy(true);
-    setStatus('starting');
     try {
       await job();
       successHaptic();
     } catch (e) {
       Alert.alert(
         t('Could not update your photo', 'Không cập nhật được ảnh', '写真を更新できませんでした'),
-        // The step is in the message: "failed at uploading 84 KB" says far
-        // more than the error string on its own.
-        `${e instanceof Error ? e.message : String(e)}\n\n(${status ?? 'unknown step'})`,
+        e instanceof Error ? e.message : String(e),
       );
     } finally {
       setBusy(false);
-      setStatus(null);
     }
   };
 
@@ -75,27 +52,19 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
   // pre-check would only invent a wall, turning away someone whose picker
   // would have worked. The camera below is the opposite: it genuinely
   // needs asking.
-  const fromLibrary = () => start(async () => {
-    setStatus('opening library');
+  const fromLibrary = () => run(async () => {
     const res = await ImagePicker.launchImageLibraryAsync({ ...EDIT, mediaTypes: ['images'] });
-    if (res.canceled || !res.assets[0]) return;
-    await setAvatar(res.assets[0].uri, setStatus);
+    if (!res.canceled && res.assets[0]) await setAvatar(res.assets[0].uri);
   });
 
-  const fromCamera = () => start(async () => {
-    setStatus('asking for camera');
+  const fromCamera = () => run(async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) throw new Error(t('Camera access is off in Settings.', 'Quyền dùng máy ảnh đang tắt trong Cài đặt.', '設定でカメラへのアクセスが無効です。'));
-    setStatus('opening camera');
     const res = await ImagePicker.launchCameraAsync(EDIT);
-    if (res.canceled || !res.assets[0]) return;
-    await setAvatar(res.assets[0].uri, setStatus);
+    if (!res.canceled && res.assets[0]) await setAvatar(res.assets[0].uri);
   });
 
-  const remove = () => start(async () => {
-    setStatus('removing');
-    await clearAvatar();
-  });
+  const remove = () => run(clearAvatar);
 
   return (
     <>
@@ -120,18 +89,8 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
           </View>
         </View>
       </PressableScale>
-      {/* Named while it runs, so a stall can be reported instead of just
-          described as "loading". */}
-      {busy && status ? <Text style={s.status}>{status}…</Text> : null}
 
-      <Modal
-        visible={sheet}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setSheet(false)}
-        onDismiss={flush}
-      >
+      <Modal visible={sheet} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setSheet(false)}>
         <Pressable style={s.backdrop} onPress={() => setSheet(false)} />
         <View style={[s.sheet, { paddingBottom: insets.bottom + 16 }]}>
           <View style={s.grabber} />
@@ -171,7 +130,6 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass, borderWidth: 1.5, borderColor: colors.borderGlass,
   },
   initial: { color: colors.accent, fontWeight: font.semibold },
-  status: { color: colors.textTertiary, fontSize: 11.5, marginTop: 6, textAlign: 'center' },
   busy: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,11,10,0.55)', borderRadius: 999 },
   badge: {
     position: 'absolute', right: -2, bottom: -2,
