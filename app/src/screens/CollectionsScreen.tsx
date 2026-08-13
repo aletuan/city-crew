@@ -13,26 +13,44 @@ import { AmbientWarmth, Card, Empty, PressableScale, Screen, Skeleton, useTabBar
 import { useAuth } from '../lib/auth';
 import { Collection, coverOf, membersOf, useCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { colors, radius, space, type } from '../theme';
+import { colors, font, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
-function GuestNotice() {
+// The notice is the invitation, so the whole card is the target — the
+// sentence that says signing in adds your own lists is exactly what someone
+// would reach for. Sign-in lives in the Profile tab's stack, not this one,
+// so the jump goes through the tab navigator above us.
+function GuestNotice({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { session } = useAuth();
   if (session) return null;
   return (
-    <View style={s.notice}>
-      <Text style={s.noticeTitle}>
-        👋 {t("You're browsing as a guest", 'Bạn đang xem với tư cách khách', 'ゲストとして閲覧中です')}
-      </Text>
-      <Text style={s.noticeBody}>
-        {t(
-          'Public collections are curated by local explorers. Signing in adds your own lists.',
-          'Bộ sưu tập công khai do người bản địa tuyển chọn. Đăng nhập để thêm danh sách của riêng bạn.',
-          '公開コレクションは地元の案内人が厳選。サインインすると自分のリストも作れます。',
-        )}
-      </Text>
-    </View>
+    <PressableScale
+      containerStyle={s.noticeWrap}
+      style={s.notice}
+      onPress={() => navigation.getParent()?.navigate('Profile', { screen: 'SignIn' })}
+      accessibilityRole="button"
+      accessibilityLabel={t('Sign in', 'Đăng nhập', 'サインイン')}
+    >
+      <View>
+        <Text style={s.noticeTitle}>
+          👋 {t("You're browsing as a guest", 'Bạn đang xem với tư cách khách', 'ゲストとして閲覧中です')}
+        </Text>
+        <Text style={s.noticeBody}>
+          {t(
+            'Public collections are curated by local explorers. Signing in adds your own lists.',
+            'Bộ sưu tập công khai do người bản địa tuyển chọn. Đăng nhập để thêm danh sách của riêng bạn.',
+            '公開コレクションは地元の案内人が厳選。サインインすると自分のリストも作れます。',
+          )}
+        </Text>
+        {/* Without a named action the card still reads as a notice; this
+            says what the tap does before it happens. */}
+        <View style={s.noticeCta}>
+          <Text style={s.noticeCtaText}>{t('Sign in', 'Đăng nhập', 'サインイン')}</Text>
+          <Ionicons name="arrow-forward" size={15} color={colors.accent} />
+        </View>
+      </View>
+    </PressableScale>
   );
 }
 
@@ -55,7 +73,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
         <AmbientWarmth />
         {loading && (
           <View>
-            <GuestNotice />
+            <GuestNotice navigation={navigation} />
             <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
             {[0, 1, 2].map((i) => (
               <View key={i} style={s.row}>
@@ -77,7 +95,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             keyExtractor={(c) => c.slug}
             ListHeaderComponent={
               <>
-                <GuestNotice />
+                <GuestNotice navigation={navigation} />
                 <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
               </>
             }
@@ -120,13 +138,16 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
+  // Margins stay on the Pressable; the card itself is what scales.
+  noticeWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
   notice: {
-    marginHorizontal: space.page, marginBottom: space.titleToContent,
     backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
     borderRadius: radius.card, paddingHorizontal: space.cardPadding, paddingVertical: 17,
   },
   noticeTitle: { color: colors.text, ...type.cardTitle },
   noticeBody: { color: colors.textSecondary, ...type.body, lineHeight: 23, marginTop: 6 },
+  noticeCta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
+  noticeCtaText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
 
   section: {
     color: colors.text, ...type.section,
