@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { fmtCount, photosOf, Place, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
+import { useSave } from '../lib/save';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import { AmbientWarmth, Empty, PressableScale, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
@@ -77,11 +78,12 @@ function InfoCard({ icon, label, onPress, chevron, children }: {
 
 export default function PlaceDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'PlaceDetail'> }) {
   const { t, lang } = useI18n();
+  const { save, isSaved } = useSave();
   const { width } = useWindowDimensions();
   const { loading, data: places } = usePlaces();
   const place = useMemo(() => places.find((p) => p.slug === route.params.slug), [places, route.params.slug]);
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [saved, setSaved] = useState(false);
+  const saved = isSaved(route.params.slug);
   const tabClearance = useTabBarClearance();
 
   if (loading && !place) {
@@ -141,11 +143,20 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           >
             <Ionicons name="share-outline" size={20} color="#fff" />
           </PressableScale>
+          {/* The same control as the bookmark on the card that got you
+              here — same glyph, same sheet, same rows underneath. It was a
+              heart wired to component state: it filled in, it meant
+              nothing, and it forgot on the way back. */}
           <PressableScale
-            onPress={() => setSaved((v) => !v)} scaleTo={0.9}
-            containerStyle={{ position: 'absolute', right: 12, top: 12 }} style={s.fab} accessibilityLabel="Save"
+            onPress={() => save(place)} scaleTo={0.9} haptic="selection"
+            containerStyle={{ position: 'absolute', right: 12, top: 12 }} style={s.fab}
+            accessibilityRole="button"
+            accessibilityState={{ selected: saved }}
+            accessibilityLabel={saved
+              ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
+              : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
           >
-            <Ionicons name={saved ? 'heart' : 'heart-outline'} size={20} color={saved ? colors.accent : '#fff'} />
+            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? colors.accent : '#fff'} />
           </PressableScale>
 
           {photos.length > 0 && (
