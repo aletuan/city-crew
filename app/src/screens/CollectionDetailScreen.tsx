@@ -1,20 +1,70 @@
 import React, { useMemo } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
-import { AmbientWarmth, BackButton, Empty, useTabBarClearance } from '../components/ui';
-import { membersOf, useCollections, usePlaces } from '../lib/data';
+import { AmbientWarmth, BackButton, Empty, PressableScale, useTabBarClearance } from '../components/ui';
+import { useAuth } from '../lib/auth';
+import { membersOf, useCollections, useMyCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { colors, space, type } from '../theme';
+import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
+
+/**
+ * The empty state of a list you own.
+ *
+ * A public collection that is empty is a mistake at the desk; one of yours
+ * is just new, and the screen should hand you the way forward instead of
+ * reporting the absence twice.
+ */
+function OwnEmpty({ onExplore }: { onExplore: () => void }) {
+  const { t } = useI18n();
+  return (
+    <View style={s.emptyWrap}>
+      <View style={s.empty}>
+        <View style={s.emptyIcon}>
+          <Ionicons name="bookmark-outline" size={26} color={colors.accent} />
+        </View>
+        <Text style={s.emptyBody}>
+          {/* The reference says "tap the bookmark on any place to add it
+              here". No place can be added to a list yet — the heart on a
+              place detail is local state that forgets itself — so this
+              points at the part that works and stays quiet about the part
+              that does not. */}
+          {t(
+            'Nothing here yet. Go find places worth coming back to.',
+            'Chưa có gì ở đây. Đi tìm những nơi đáng để quay lại đã.',
+            'まだ何もありません。また来たくなる場所を探しに行きましょう。',
+          )}
+        </Text>
+        <PressableScale onPress={onExplore} accessibilityRole="button">
+          <LinearGradient {...gradAI} style={s.emptyCta}>
+            <Ionicons name="compass-outline" size={19} color={colors.accentInk} />
+            <Text style={s.emptyCtaText}>{t('Explore places', 'Khám phá địa điểm', 'スポットを見る')}</Text>
+          </LinearGradient>
+        </PressableScale>
+      </View>
+    </View>
+  );
+}
 
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t } = useI18n();
+  const { session } = useAuth();
+  const uid = session?.user?.id;
   const cols = useCollections();
+  // Both catalogs, because the public query excludes owned rows: a list of
+  // your own would otherwise open on "Collection not found".
+  const mine = useMyCollections(uid);
   const { data: places, loading: placesLoading } = usePlaces();
-  const col = useMemo(() => cols.data.find((c) => c.slug === route.params.slug), [cols.data, route.params.slug]);
+  const col = useMemo(
+    () => [...mine.data, ...cols.data].find((c) => c.slug === route.params.slug),
+    [mine.data, cols.data, route.params.slug],
+  );
   const members = useMemo(() => (col ? membersOf(col, places) : []), [col, places]);
-  const loading = cols.loading || placesLoading;
+  const loading = cols.loading || mine.loading || placesLoading;
+  const owned = !!col?.owner_id && col.owner_id === uid;
   const tabClearance = useTabBarClearance();
 
   return (
@@ -43,13 +93,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         renderItem={({ item }) => (
           <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
         )}
-        ListEmptyComponent={!loading && col ? (
-          <Empty text={t(
-            'No places in this collection yet.',
-            'Bộ sưu tập này chưa có địa điểm nào.',
-            'このコレクションにはまだスポットがありません。',
-          )} />
-        ) : null}
+        ListEmptyComponent={!loading && col
+          ? (owned
+            // One message, not two. The reference stacks "No places in this
+            // collection yet." above a card that says the same thing again.
+            ? <OwnEmpty onExplore={() => navigation.getParent()?.navigate('Explore')} />
+            : <Empty text={t(
+              'No places in this collection yet.',
+              'Bộ sưu tập này chưa có địa điểm nào.',
+              'このコレクションにはまだスポットがありません。',
+            )} />)
+          : null}
         contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
       />
@@ -72,4 +126,24 @@ const s = StyleSheet.create({
     color: colors.textSecondary, ...type.body, lineHeight: 24,
     paddingHorizontal: space.page, paddingBottom: 12,
   },
+
+  emptyWrap: { marginHorizontal: space.page, marginTop: 24 },
+  empty: {
+    alignItems: 'center', gap: 14,
+    paddingHorizontal: space.cardPadding + 6, paddingTop: 26, paddingBottom: 24,
+    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    borderRadius: radius.card,
+  },
+  emptyIcon: {
+    width: 66, height: 66, borderRadius: 33, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
+  },
+  emptyBody: {
+    color: colors.textSecondary, fontSize: 15, lineHeight: 21, textAlign: 'center',
+  },
+  emptyCta: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 22, paddingVertical: 13, borderRadius: radius.pill,
+  },
+  emptyCtaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
 });
