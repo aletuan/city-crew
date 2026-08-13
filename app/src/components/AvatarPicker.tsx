@@ -91,15 +91,21 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
         accessibilityRole="button"
         accessibilityLabel={t('Change profile photo', 'Đổi ảnh đại diện', 'プロフィール写真を変更')}
       >
-        <View style={[s.ring, { width: size, height: size, borderRadius: size / 2 }]}>
-          {profile.avatar_url
-            ? <Image source={{ uri: profile.avatar_url }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
-            : <Text style={[s.initial, { fontSize: size * 0.39 }]}>{initial}</Text>}
-          {busy && (
-            <View style={[StyleSheet.absoluteFill, s.busy]}>
-              <ActivityIndicator color={colors.accent} />
-            </View>
-          )}
+        {/* Two views, because one cannot do both jobs: the ring clips its
+            contents to a circle, and the badge has to hang outside that
+            circle. Put the badge inside the clipping view and it is cut in
+            half; turn clipping off to save it and the photo goes square. */}
+        <View style={{ width: size, height: size }}>
+          <View style={[s.ring, { width: size, height: size, borderRadius: size / 2 }]}>
+            {profile.avatar_url
+              ? <Image source={{ uri: profile.avatar_url }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+              : <Text style={[s.initial, { fontSize: size * 0.39 }]}>{initial}</Text>}
+            {busy && (
+              <View style={[StyleSheet.absoluteFill, s.busy]}>
+                <ActivityIndicator color={colors.accent} />
+              </View>
+            )}
+          </View>
           {/* Without this the circle reads as decoration, not a control. */}
           <View style={s.badge}>
             <Ionicons name="camera" size={13} color={colors.accentInk} />
@@ -150,7 +156,7 @@ function Row({ icon, label, onPress, danger }: {
 
 const s = StyleSheet.create({
   ring: {
-    alignItems: 'center', justifyContent: 'center', overflow: 'visible',
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
     backgroundColor: colors.surfaceGlass, borderWidth: 1.5, borderColor: colors.borderGlass,
   },
   initial: { color: colors.accent, fontWeight: font.semibold },
