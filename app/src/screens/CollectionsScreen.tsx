@@ -5,14 +5,15 @@
 // ambient warmth that all but disappears into it, translucent charcoal
 // surfaces and thin warm hairlines — not from shadows.
 
-import React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useRef } from 'react';
+import { Alert, SectionList, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { AmbientWarmth, Card, Empty, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, Empty, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { Collection, coverOf, membersOf, useCollections, usePlaces } from '../lib/data';
+import { Collection, coverOf, deleteCollection, membersOf, useCollections, useMyCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
@@ -76,19 +77,72 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
 
 export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
+  const { session } = useAuth();
   const cols = useCollections();
+  const mine = useMyCollections(session?.user?.id);
   const { data: places, loading: placesLoading } = usePlaces();
   const tabClearance = useTabBarClearance();
   // Counting and filtering need the places catalog — until it's in, hold
   // the skeleton rather than showing raw DB membership numbers.
   const loading = cols.loading || placesLoading;
+
+  // Reload on return: creating a collection happens on another screen, and
+  // without this you would come back to the list you left. The first focus
+  // is skipped — the hook has already loaded on mount, and refetching there
+  // is a second identical request for nothing.
+  const firstFocus = useRef(true);
+  useFocusEffect(useCallback(() => {
+    if (firstFocus.current) { firstFocus.current = false; return; }
+    mine.reload();
+  }, [mine.reload]));
+
+  // An editorial collection with no visible members is a dead end, so it
+  // stays hidden. Your own is not: you just made it, and it is empty
+  // because it is new.
   const visible = cols.data.filter((c) => membersOf(c, places).length > 0);
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
 
+  const remove = (c: Collection) => {
+    const name = t(c.title_en, c.title_vi, c.title_ja);
+    Alert.alert(
+      t('Delete this collection?', 'Xoá bộ sưu tập này?', 'このコレクションを削除しますか？'),
+      t(`"${name}" will be gone for good.`, `"${name}" sẽ mất hẳn.`, `「${name}」は完全に削除されます。`),
+      [
+        { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+        {
+          text: t('Delete', 'Xoá', '削除'),
+          style: 'destructive',
+          onPress: () => {
+            deleteCollection(c.slug)
+              .then(() => mine.reload())
+              .catch((e: Error) => Alert.alert(t('Could not delete', 'Không xoá được', '削除できませんでした'), e.message));
+          },
+        },
+      ],
+    );
+  };
+
+  const sections = [
+    ...(mine.data.length
+      ? [{ title: t('Your collections', 'Bộ sưu tập của bạn', 'あなたのコレクション'), own: true, data: mine.data }]
+      : []),
+    { title: t('Public collections', 'Bộ sưu tập công khai', '公開コレクション'), own: false, data: visible },
+  ];
+
   return (
-    <Screen title={t('Collections', 'Bộ sưu tập', 'コレクション')}>
+    <Screen
+      title={t('Collections', 'Bộ sưu tập', 'コレクション')}
+      right={session ? (
+        <RoundIconButton
+          icon="add"
+          size={24}
+          onPress={() => navigation.navigate('CreateCollection')}
+          label={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
+        />
+      ) : undefined}
+    >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {loading && (
@@ -110,31 +164,43 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
         )}
         {!loading && cols.error && <Empty text={t(`Couldn't load collections: ${cols.error}`, `Không tải được bộ sưu tập: ${cols.error}`, `読み込みに失敗しました: ${cols.error}`)} />}
         {!loading && !cols.error && (
-          <FlatList
-            data={visible}
+          <SectionList
+            sections={sections}
             keyExtractor={(c) => c.slug}
-            ListHeaderComponent={
-              <>
-                <GuestNotice navigation={navigation} />
-                <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
-              </>
-            }
-            renderItem={({ item }) => {
+            stickySectionHeadersEnabled={false}
+            ListHeaderComponent={<GuestNotice navigation={navigation} />}
+            renderSectionHeader={({ section }) => (
+              <Text style={s.section}>{section.title}</Text>
+            )}
+            renderItem={({ item, section }) => {
               const count = membersOf(item, places).length;
               const uri = coverFor(item);
               return (
                 <PressableScale
                   style={s.row}
                   onPress={() => navigation.navigate('CollectionDetail', { slug: item.slug })}
+                  // No visible affordance for this yet — a delete control on
+                  // every row would compete with the row itself. It is here
+                  // so a list made by mistake is not permanent; a proper
+                  // edit flow can carry it later.
+                  onLongPress={section.own ? () => remove(item) : undefined}
                 >
                   <Card style={s.card}>
                     {uri
                       ? <Image source={{ uri }} style={s.thumb} contentFit="cover" transition={200} />
-                      : <View style={s.thumb} />}
+                      : (
+                        <View style={[s.thumb, s.thumbEmpty]}>
+                          <Ionicons name="bookmark-outline" size={22} color={colors.textTertiary} />
+                        </View>
+                      )}
                     <View style={s.cardText}>
                       <Text style={s.title} numberOfLines={2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
                       <Text style={s.meta} numberOfLines={1}>
-                        {count} {t('places', 'địa điểm', 'スポット')}
+                        {/* "0 places" reads like a broken count; an empty
+                            list you just made deserves a sentence. */}
+                        {count === 0
+                          ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
+                          : `${count} ${t('places', 'địa điểm', 'スポット')}`}
                         {item.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${item.curator_handle}` : ''}
                       </Text>
                     </View>
@@ -145,10 +211,14 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                 </PressableScale>
               );
             }}
-            ListEmptyComponent={<Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.', '公開コレクションはまだありません。')} />}
+            renderSectionFooter={({ section }) => (
+              section.data.length === 0
+                ? <Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.', '公開コレクションはまだありません。')} />
+                : null
+            )}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
-            onRefresh={cols.reload}
+            onRefresh={() => { cols.reload(); mine.reload(); }}
             refreshing={loading}
           />
         )}
@@ -200,6 +270,9 @@ const s = StyleSheet.create({
     width: 92, height: 92, borderRadius: radius.image,
     backgroundColor: colors.surfaceGlass,
   },
+  // A new list has no cover because it has no places. A bare grey square
+  // reads as a photo that failed to load; the glyph says "nothing here yet".
+  thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
   cardText: { flex: 1, gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
   meta: { color: colors.textTertiary, ...type.meta },
