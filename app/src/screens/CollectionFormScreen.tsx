@@ -20,6 +20,7 @@ import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { addPlaceToCollection, createCollection, updateCollection } from '../lib/data';
 import { useI18n } from '../lib/i18n';
+import { useSave } from '../lib/save';
 import { colors, font, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
@@ -33,6 +34,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   const { t } = useI18n();
   const { session } = useAuth();
   const { city } = useCity();
+  const { mine } = useSave();
   const editing = route.params?.slug;
   const addPlaceSlug = route.params?.addPlaceSlug;
   const [title, setTitle] = useState(route.params?.title ?? '');
@@ -68,6 +70,10 @@ export default function CollectionFormScreen({ navigation, route }: {
         // with the save silently dropped on the way here.
         if (addPlaceSlug) await addPlaceToCollection(slug, addPlaceSlug, 0);
       }
+      // Refresh the one shared copy before leaving. Without this the save
+      // sheet keeps the list it fetched on launch, and a collection made
+      // here never appears as somewhere to save to.
+      mine.reload();
       // Back to the list, where the collection is now the first row of your
       // own section. Opening a new one instead would land on an empty screen.
       navigation.goBack();

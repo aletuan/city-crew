@@ -26,9 +26,22 @@ type Save = {
   save: (place: Place) => void;
   /** Is the place in any of their lists? Drives the bookmark's fill. */
   isSaved: (placeSlug: string) => boolean;
+  /**
+   * The user's own collections — the single copy in the app.
+   *
+   * Screens read this rather than calling `useMyCollections` themselves.
+   * Two copies is how the save sheet came to show one list while the
+   * Collections tab showed two: the sheet's copy was fetched before the
+   * second list existed and had no reason to look again.
+   */
+  mine: { data: Collection[]; loading: boolean; reload: () => void };
 };
 
-const Ctx = createContext<Save>({ save: () => {}, isSaved: () => false });
+const Ctx = createContext<Save>({
+  save: () => {},
+  isSaved: () => false,
+  mine: { data: [], loading: false, reload: () => {} },
+});
 
 export const useSave = () => useContext(Ctx);
 
@@ -76,7 +89,8 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<Save>(() => ({
     save,
     isSaved: (slug) => savedSlugs.has(slug),
-  }), [save, savedSlugs]);
+    mine: { data: mine.data, loading: mine.loading, reload: mine.reload },
+  }), [save, savedSlugs, mine.data, mine.loading, mine.reload]);
 
   return (
     <Ctx.Provider value={value}>
