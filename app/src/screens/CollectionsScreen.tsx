@@ -98,6 +98,57 @@ function EmptyCover() {
 }
 
 /**
+ * Signed in, nothing made yet. The `+` in the header is a one-glyph
+ * control that says nothing about what a collection is or why you would
+ * want one, so the empty section carries the pitch instead of vanishing.
+ *
+ * It mirrors the guest card one section up — same tinted well, same
+ * gradient action — because they are the same argument aimed at two
+ * states: sign in to make lists, and now make one.
+ */
+function FirstCollection({ onPress }: { onPress: () => void }) {
+  const { t } = useI18n();
+  return (
+    <View style={s.firstWrap}>
+      <View style={s.first}>
+        <View style={s.firstIcon}>
+          <Ionicons name="bookmark" size={27} color={colors.accent} />
+        </View>
+        <Text style={s.firstTitle}>
+          {t('No collections yet', 'Chưa có bộ sưu tập nào', 'コレクションはまだありません')}
+        </Text>
+        <Text style={s.firstBody}>
+          {t(
+            'Group places into lists — date nights, crew weekends, coffee crawls.',
+            'Nhóm địa điểm thành danh sách — buổi hẹn tối, cuối tuần với hội bạn, tour cà phê.',
+            'スポットをリストにまとめましょう — デートの夜、仲間との週末、カフェ巡り。',
+          )}
+        </Text>
+        {/* A pill here, where the sheet's primary is a rounded rectangle:
+            that one runs the full width, where end caps as tall as the
+            button read as a lozenge. This one is sized to its label, which
+            is exactly where a pill belongs. */}
+        <PressableScale onPress={onPress} accessibilityRole="button">
+          <LinearGradient {...gradAI} style={s.firstCta}>
+            <Ionicons name="add" size={20} color={colors.accentInk} />
+            <Text style={s.firstCtaText}>
+              {t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る')}
+            </Text>
+          </LinearGradient>
+        </PressableScale>
+        {/* The reference offers a second path here — save places as you
+            browse and one gets started for you. Nothing can save a place
+            yet, so this says the true thing instead: a promise the app
+            cannot keep is worse than no line at all. */}
+        <Text style={s.firstFoot}>
+          {t('Only you can see your lists.', 'Chỉ mình bạn thấy danh sách của bạn.', 'リストはあなただけに表示されます。')}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/**
  * Swipe left on your own row to reveal Edit and Delete — the iOS list
  * convention, and the reason the row itself carries no extra controls.
  *
@@ -199,8 +250,12 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
     );
   };
 
+  // The section stays even with nothing in it — that empty is the one place
+  // to say what collections are for. It waits for the fetch, though: a card
+  // announcing "no collections yet" and then replacing itself with a list
+  // is worse than a beat of nothing.
   const sections = [
-    ...(mine.data.length
+    ...(session && !mine.loading
       ? [{ title: t('Your collections', 'Bộ sưu tập của bạn', 'あなたのコレクション'), own: true, data: mine.data }]
       : []),
     { title: t('Public collections', 'Bộ sưu tập công khai', '公開コレクション'), own: false, data: visible },
@@ -297,11 +352,12 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                 </View>
               );
             }}
-            renderSectionFooter={({ section }) => (
-              section.data.length === 0
-                ? <Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.', '公開コレクションはまだありません。')} />
-                : null
-            )}
+            renderSectionFooter={({ section }) => {
+              if (section.data.length > 0) return null;
+              return section.own
+                ? <FirstCollection onPress={() => navigation.navigate('CollectionForm')} />
+                : <Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.', '公開コレクションはまだありません。')} />;
+            }}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
             onRefresh={() => { cols.reload(); mine.reload(); }}
@@ -346,6 +402,30 @@ const s = StyleSheet.create({
     color: colors.text, ...type.section,
     paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
+
+  firstWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
+  first: {
+    alignItems: 'center', gap: 10,
+    paddingHorizontal: space.cardPadding + 6, paddingTop: 26, paddingBottom: 22,
+    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    borderRadius: radius.card,
+  },
+  firstIcon: {
+    width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
+    marginBottom: 2,
+  },
+  firstTitle: { color: colors.text, ...type.headline },
+  firstBody: {
+    color: colors.textSecondary, fontSize: 15, lineHeight: 21,
+    textAlign: 'center', marginBottom: 6,
+  },
+  firstCta: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 24, paddingVertical: 15, borderRadius: radius.pill,
+  },
+  firstCtaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
+  firstFoot: { color: colors.textTertiary, fontSize: 13, lineHeight: 18, textAlign: 'center', marginTop: 4 },
 
   row: { marginHorizontal: space.page, marginBottom: space.cardGap },
   card: {
