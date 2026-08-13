@@ -15,7 +15,8 @@ import {
   AmbientWarmth, BackButton, Card, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
 import { CATEGORIES, categoriesOf } from '../lib/categories';
-import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
+import { Collection, coverOf, membersOf, Place } from '../lib/data';
+import { useCollections, usePlaces } from '../lib/catalog';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
