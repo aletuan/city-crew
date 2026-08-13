@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, BackButton, Empty, PressableScale, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { membersOf, useCollections, useMyCollections, usePlaces } from '../lib/data';
+import { membersOf, useCollections, usePlaces } from '../lib/data';
+import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -50,8 +51,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const uid = session?.user?.id;
   const cols = useCollections();
   // Both catalogs, because the public query excludes owned rows: a list of
-  // your own would otherwise open on "Collection not found".
-  const mine = useMyCollections(uid);
+  // your own would otherwise open on "Collection not found". The owned half
+  // comes from the shared copy, so a place saved from anywhere shows here.
+  const { mine } = useSave();
   const { data: places, loading: placesLoading } = usePlaces();
   const col = useMemo(
     () => [...mine.data, ...cols.data].find((c) => c.slug === route.params.slug),

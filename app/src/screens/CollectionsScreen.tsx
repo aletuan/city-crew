@@ -14,7 +14,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, Empty, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { Collection, coverOf, deleteCollection, membersOf, useCollections, useMyCollections, usePlaces } from '../lib/data';
+import { Collection, coverOf, deleteCollection, membersOf, useCollections, usePlaces } from '../lib/data';
+import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
@@ -234,7 +235,9 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { session } = useAuth();
   const cols = useCollections();
-  const mine = useMyCollections(session?.user?.id);
+  // Shared with the save sheet — see SaveProvider. Reading it here through
+  // its own hook is what let the two disagree.
+  const { mine } = useSave();
   const { data: places, loading: placesLoading } = usePlaces();
   const tabClearance = useTabBarClearance();
   // Counting and filtering need the places catalog — until it's in, hold
