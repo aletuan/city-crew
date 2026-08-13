@@ -283,11 +283,16 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   };
 
   // The section stays even with nothing in it — that empty is the one place
-  // to say what collections are for. It waits for the fetch, though: a card
-  // announcing "no collections yet" and then replacing itself with a list
-  // is worse than a beat of nothing.
+  // to say what collections are for.
+  //
+  // It hides only while the *first* load is in flight. Hiding it for every
+  // load is what made a visit to this tab look like a double load: the
+  // focus refresh flipped `loading` on, the section left the list, and the
+  // same rows came back a moment later. Once there are rows, a refresh
+  // updates them in place.
+  const mineReady = !mine.loading || mine.data.length > 0;
   const sections = [
-    ...(session && !mine.loading
+    ...(session && mineReady
       ? [{ title: t('Your collections', 'Bộ sưu tập của bạn', 'あなたのコレクション'), own: true, data: mine.data }]
       : []),
     { title: t('Public collections', 'Bộ sưu tập công khai', '公開コレクション'), own: false, data: visible },
