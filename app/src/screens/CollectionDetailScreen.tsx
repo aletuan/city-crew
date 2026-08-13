@@ -26,17 +26,12 @@ function OwnEmpty({ onExplore }: { onExplore: () => void }) {
         <View style={s.emptyIcon}>
           <Ionicons name="bookmark-outline" size={26} color={colors.accent} />
         </View>
+        {/* One line. The second sentence was telling you to go looking,
+            which is what the button underneath already says — a card this
+            small should not say the same thing twice, once in prose and
+            once as a control. */}
         <Text style={s.emptyBody}>
-          {/* The reference says "tap the bookmark on any place to add it
-              here". No place can be added to a list yet — the heart on a
-              place detail is local state that forgets itself — so this
-              points at the part that works and stays quiet about the part
-              that does not. */}
-          {t(
-            'Nothing here yet. Go find places worth coming back to.',
-            'Chưa có gì ở đây. Đi tìm những nơi đáng để quay lại đã.',
-            'まだ何もありません。また来たくなる場所を探しに行きましょう。',
-          )}
+          {t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。')}
         </Text>
         <PressableScale onPress={onExplore} accessibilityRole="button">
           <LinearGradient {...gradAI} style={s.emptyCta}>
@@ -138,8 +133,10 @@ const s = StyleSheet.create({
     width: 66, height: 66, borderRadius: 33, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
   },
+  // 16, not 15: it is one short line now rather than a paragraph, and at
+  // the smaller size it read as a caption under the glyph.
   emptyBody: {
-    color: colors.textSecondary, fontSize: 15, lineHeight: 21, textAlign: 'center',
+    color: colors.textSecondary, fontSize: 16, lineHeight: 22, textAlign: 'center',
   },
   emptyCta: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
