@@ -295,7 +295,9 @@ const s = StyleSheet.create({
 
   body: { paddingHorizontal: space.page, paddingTop: 18 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  name: { color: colors.text, fontSize: 28, fontWeight: font.bold, letterSpacing: 0.25 },
+  // 26, not the 28 this was: the display face runs wider than the system
+  // one, and place names are long enough to wrap without help.
+  name: { color: colors.text, ...type.titleDetail },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
   loc: { color: colors.textTertiary, ...type.meta },
   ratingBadge: {

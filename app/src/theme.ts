@@ -115,6 +115,13 @@ export const font = {
 export const type = {
   /** Large screen title — the one place the display face carries a whole line. */
   title: { fontSize: 34, fontFamily: display.bold, letterSpacing: 0.35 },
+  /** Title of a screen that opens over another one, where a back control
+   *  and the title share the top of the page. Same face as `title`: a
+   *  screen's name should not change typeface with how it was reached. */
+  titleDetail: { fontSize: 26, fontFamily: display.bold, letterSpacing: 0.25 },
+  /** A headline standing in for content — empty states, "coming soon".
+   *  Display face, because it is the only title that screen has. */
+  headline: { fontSize: 20, fontFamily: display.bold, letterSpacing: 0.2 },
   /** Section heading. */
   section: { fontSize: 22, fontWeight: font.semibold, letterSpacing: 0.2 },
   /** Card title. */
