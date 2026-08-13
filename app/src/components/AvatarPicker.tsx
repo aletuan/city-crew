@@ -5,8 +5,8 @@
 // tying it to a shared Save means one press can half-succeed, leaving a name
 // stored and a picture not, with nothing on screen to say which.
 
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,13 +26,30 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
   const [sheet, setSheet] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // iOS will not present a view controller while another is dismissing.
+  // Closing the sheet and launching the picker in the same tick leaves the
+  // camera never presented and its promise never settled — which is a
+  // spinner that never stops, with no error to catch. Hold the job until
+  // the sheet has actually gone.
+  const pending = useRef<null | (() => Promise<void>)>(null);
+  const flush = () => {
+    const job = pending.current;
+    pending.current = null;
+    if (job) run(job);
+  };
+  const start = (job: () => Promise<void>) => {
+    pending.current = job;
+    setSheet(false);
+    // Modal.onDismiss is iOS-only; elsewhere nothing would ever flush it.
+    if (Platform.OS !== 'ios') setTimeout(flush, 250);
+  };
+
   // Same fallback the name row uses, so the letter and the name agree for
   // someone who signed up without giving a name.
   const initial = (profile.full_name || (email ?? '').split('@')[0] || '?')
     .trim().charAt(0).toUpperCase();
 
   const run = async (job: () => Promise<void>) => {
-    setSheet(false);
     setBusy(true);
     try {
       await job();
@@ -52,19 +69,19 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
   // pre-check would only invent a wall, turning away someone whose picker
   // would have worked. The camera below is the opposite: it genuinely
   // needs asking.
-  const fromLibrary = () => run(async () => {
+  const fromLibrary = () => start(async () => {
     const res = await ImagePicker.launchImageLibraryAsync({ ...EDIT, mediaTypes: ['images'] });
     if (!res.canceled && res.assets[0]) await setAvatar(res.assets[0].uri);
   });
 
-  const fromCamera = () => run(async () => {
+  const fromCamera = () => start(async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) throw new Error(t('Camera access is off in Settings.', 'Quyền dùng máy ảnh đang tắt trong Cài đặt.', '設定でカメラへのアクセスが無効です。'));
     const res = await ImagePicker.launchCameraAsync(EDIT);
     if (!res.canceled && res.assets[0]) await setAvatar(res.assets[0].uri);
   });
 
-  const remove = () => run(clearAvatar);
+  const remove = () => start(clearAvatar);
 
   return (
     <>
@@ -90,7 +107,14 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
         </View>
       </PressableScale>
 
-      <Modal visible={sheet} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setSheet(false)}>
+      <Modal
+        visible={sheet}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setSheet(false)}
+        onDismiss={flush}
+      >
         <Pressable style={s.backdrop} onPress={() => setSheet(false)} />
         <View style={[s.sheet, { paddingBottom: insets.bottom + 16 }]}>
           <View style={s.grabber} />
