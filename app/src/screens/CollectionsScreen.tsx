@@ -8,18 +8,25 @@
 import React from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, Empty, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { Collection, coverOf, membersOf, useCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
-// The notice is the invitation, so the whole card is the target — the
-// sentence that says signing in adds your own lists is exactly what someone
-// would reach for. Sign-in lives in the Profile tab's stack, not this one,
-// so the jump goes through the tab navigator above us.
+// The card sells signing in, so it leads with what you get rather than with
+// what you are: "browsing as a guest" names a limitation and leaves the
+// reader to work out the offer for themselves.
+//
+// The whole card is the target and the chip inside it is drawn, not pressed —
+// a Pressable nested inside a Pressable gives one action two overlapping hit
+// areas and two stops in VoiceOver, for no gain.
+//
+// Sign-in lives in the Profile tab's stack, not this one, so the jump goes
+// through the tab navigator above us.
 function GuestNotice({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { session } = useAuth();
@@ -30,26 +37,39 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
       style={s.notice}
       onPress={() => navigation.getParent()?.navigate('Profile', { screen: 'SignIn' })}
       accessibilityRole="button"
-      accessibilityLabel={t('Sign in', 'Đăng nhập', 'サインイン')}
+      accessibilityLabel={t(
+        'Sign in to build your own collections',
+        'Đăng nhập để tạo bộ sưu tập của riêng bạn',
+        'サインインして自分のコレクションを作る',
+      )}
     >
-      <View>
-        <Text style={s.noticeTitle}>
-          👋 {t("You're browsing as a guest", 'Bạn đang xem với tư cách khách', 'ゲストとして閲覧中です')}
-        </Text>
-        <Text style={s.noticeBody}>
-          {t(
-            'Public collections are curated by local explorers. Signing in adds your own lists.',
-            'Bộ sưu tập công khai do người bản địa tuyển chọn. Đăng nhập để thêm danh sách của riêng bạn.',
-            '公開コレクションは地元の案内人が厳選。サインインすると自分のリストも作れます。',
-          )}
-        </Text>
-        {/* Without a named action the card still reads as a notice; this
-            says what the tap does before it happens. */}
-        <View style={s.noticeCta}>
-          <Text style={s.noticeCtaText}>{t('Sign in', 'Đăng nhập', 'サインイン')}</Text>
-          <Ionicons name="arrow-forward" size={15} color={colors.accent} />
+      <View style={s.noticeHead}>
+        {/* The Collections tab's own glyph, so the card belongs to this
+            screen instead of reading as a generic account banner. */}
+        <View style={s.noticeIcon}>
+          <Ionicons name="bookmark" size={19} color={colors.accent} />
+        </View>
+        <View style={s.noticeCopy}>
+          <Text style={s.noticeTitle}>
+            {t('Start your own collection', 'Tạo bộ sưu tập của riêng bạn', '自分のコレクションを作る')}
+          </Text>
+          <Text style={s.noticeBody}>
+            {t(
+              'Sign in to save places you like and group them into lists.',
+              'Đăng nhập để lưu địa điểm bạn thích và nhóm lại thành danh sách.',
+              'サインインすると気になるスポットを保存し、リストにまとめられます。',
+            )}
+          </Text>
         </View>
       </View>
+      {/* A rounded rectangle at chip scale, the sheet's primary button
+          scaled down. Sized to its label rather than stretched: the card is
+          already the target, so this names the action — it does not need to
+          be the loudest object on the screen. */}
+      <LinearGradient {...gradAI} style={s.noticeChip}>
+        <Text style={s.noticeChipText}>{t('Sign in', 'Đăng nhập', 'サインイン')}</Text>
+        <Ionicons name="arrow-forward" size={15} color={colors.accentInk} />
+      </LinearGradient>
     </PressableScale>
   );
 }
@@ -144,10 +164,27 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
     borderRadius: radius.card, paddingHorizontal: space.cardPadding, paddingVertical: 17,
   },
+  noticeHead: { flexDirection: 'row', gap: 13 },
+  // Tinted well, not a filled disc: the filled accent shape belongs to the
+  // selected tab, and two of them on one screen both claim to be the
+  // thing you last touched.
+  noticeIcon: {
+    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
+  },
+  noticeCopy: { flex: 1, gap: 4 },
   noticeTitle: { color: colors.text, ...type.cardTitle },
-  noticeBody: { color: colors.textSecondary, ...type.body, lineHeight: 23, marginTop: 6 },
-  noticeCta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
-  noticeCtaText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
+  // A step down from `type.body`: this is the supporting line, and at body
+  // size it read as loud as the collection titles underneath it.
+  noticeBody: { color: colors.textSecondary, fontSize: 14.5, lineHeight: 20 },
+  noticeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start',
+    // 40 + 13: the icon well and its gap, so the chip starts on the text's
+    // left edge rather than under the icon.
+    marginTop: 14, marginLeft: 53,
+    paddingHorizontal: 18, paddingVertical: 11, borderRadius: 14,
+  },
+  noticeChipText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
 
   section: {
     color: colors.text, ...type.section,
