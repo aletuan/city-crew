@@ -97,7 +97,7 @@ export function fmtCount(n: number | null | undefined): string {
   return n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n);
 }
 
-type Fetch<T> = { loading: boolean; error: string | null; data: T; reload: () => void };
+export type Fetch<T> = { loading: boolean; error: string | null; data: T; reload: () => void };
 
 function useFetch<T>(fetcher: () => Promise<T>, empty: T): Fetch<T> {
   const [state, setState] = useState<{ loading: boolean; error: string | null; data: T }>({
@@ -176,9 +176,13 @@ async function fetchMyCollections(cityId: string, ownerId: string): Promise<Coll
 // collection members against the in-memory places list, so a mismatched
 // scope would silently render empty collections. A city switch changes the
 // fetcher identity, which makes useFetch reload everywhere automatically.
+//
+// The two query hooks below are for CatalogProvider and nothing else —
+// screens read the catalog from `lib/catalog`, which holds one copy. Call
+// them directly and you get a private copy that no one will keep in step.
 const pending = new Promise<never>(() => {}); // keeps skeletons up during city bootstrap
 
-export const usePlaces = () => {
+export const usePlacesQuery = () => {
   const { city } = useCity();
   const fetcher = useCallback(
     () => (city ? fetchPlaces(city.id) : (pending as Promise<Place[]>)),
@@ -187,7 +191,7 @@ export const usePlaces = () => {
   return useFetch(fetcher, [] as Place[]);
 };
 
-export const useCollections = () => {
+export const useCollectionsQuery = () => {
   const { city } = useCity();
   const fetcher = useCallback(
     () => (city ? fetchCollections(city.id) : (pending as Promise<Collection[]>)),

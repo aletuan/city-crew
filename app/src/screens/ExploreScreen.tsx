@@ -17,7 +17,8 @@ import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, RoundIconButton
 import { useAuth } from '../lib/auth';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
-import { Collection, coverOf, membersOf, Place, useCollections, usePlaces } from '../lib/data';
+import { Collection, coverOf, membersOf, Place } from '../lib/data';
+import { useCollections, usePlaces } from '../lib/catalog';
 import { Lang, useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, radius, space, type } from '../theme';
