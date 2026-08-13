@@ -265,6 +265,21 @@ export async function createCollection(input: {
   throw new Error('Could not create the collection');
 }
 
+/** Rename one of the user's own lists. RLS scopes this to rows they own. */
+export async function updateCollection(slug: string, input: { title: string; desc?: string }): Promise<void> {
+  const title = input.title.trim();
+  const desc = input.desc?.trim() || null;
+  // All three language columns again, for the same reason as on create.
+  const { error } = await supabase
+    .from('collections')
+    .update({
+      title_en: title, title_vi: title, title_ja: title,
+      desc_en: desc, desc_vi: desc, desc_ja: desc,
+    })
+    .eq('slug', slug);
+  if (error) throw new Error(error.message);
+}
+
 /** Remove one of the user's own lists. RLS scopes this to rows they own. */
 export async function deleteCollection(slug: string): Promise<void> {
   const { error } = await supabase.from('collections').delete().eq('slug', slug);

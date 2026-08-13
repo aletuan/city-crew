@@ -8,6 +8,7 @@
 import React, { useCallback, useRef } from 'react';
 import { Alert, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -75,6 +76,80 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
   );
 }
 
+/**
+ * The cover slot of a list that has nothing in it yet.
+ *
+ * A flat grey square reads as a photo that failed to load — the eye has
+ * seen too many broken images to read it any other way. A warm tinted well
+ * with the tab's own glyph reads as a slot waiting to be filled, which is
+ * what it is.
+ */
+function EmptyCover() {
+  return (
+    <LinearGradient
+      colors={[colors.accentSoft, 'rgba(255,111,91,0.02)']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[s.thumb, s.thumbEmpty]}
+    >
+      <Ionicons name="bookmark-outline" size={26} color={colors.accentFaint} />
+    </LinearGradient>
+  );
+}
+
+/**
+ * Swipe left on your own row to reveal Edit and Delete — the iOS list
+ * convention, and the reason the row itself carries no extra controls.
+ *
+ * Both actions close the row first. Leaving it open behind a pushed screen
+ * or an alert means coming back to a row half off its rails, and the way
+ * out of that is another swipe nobody thinks to try.
+ */
+function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
+  children: React.ReactNode;
+  onEdit: () => void;
+  onDelete: () => void;
+  editLabel: string;
+  deleteLabel: string;
+}) {
+  const ref = useRef<Swipeable>(null);
+  const act = (run: () => void) => { ref.current?.close(); run(); };
+  return (
+    <Swipeable
+      ref={ref}
+      friction={1.6}
+      rightThreshold={38}
+      // No rubber-band past the actions: the row is 92pt tall and an
+      // overshoot on something this small reads as the row coming loose.
+      overshootRight={false}
+      renderRightActions={() => (
+        <View style={s.actions}>
+          <PressableScale
+            onPress={() => act(onEdit)}
+            accessibilityRole="button"
+            accessibilityLabel={editLabel}
+            containerStyle={s.actionWrap}
+            style={[s.action, s.actionEdit]}
+          >
+            <Ionicons name="create-outline" size={21} color={colors.text} />
+          </PressableScale>
+          <PressableScale
+            onPress={() => act(onDelete)}
+            accessibilityRole="button"
+            accessibilityLabel={deleteLabel}
+            containerStyle={s.actionWrap}
+            style={[s.action, s.actionDelete]}
+          >
+            <Ionicons name="trash-outline" size={21} color={colors.accentInk} />
+          </PressableScale>
+        </View>
+      )}
+    >
+      {children}
+    </Swipeable>
+  );
+}
+
 export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { session } = useAuth();
@@ -138,7 +213,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
         <RoundIconButton
           icon="add"
           size={24}
-          onPress={() => navigation.navigate('CreateCollection')}
+          onPress={() => navigation.navigate('CollectionForm')}
           label={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
         />
       ) : undefined}
@@ -175,24 +250,12 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             renderItem={({ item, section }) => {
               const count = membersOf(item, places).length;
               const uri = coverFor(item);
-              return (
-                <PressableScale
-                  style={s.row}
-                  onPress={() => navigation.navigate('CollectionDetail', { slug: item.slug })}
-                  // No visible affordance for this yet — a delete control on
-                  // every row would compete with the row itself. It is here
-                  // so a list made by mistake is not permanent; a proper
-                  // edit flow can carry it later.
-                  onLongPress={section.own ? () => remove(item) : undefined}
-                >
+              const card = (
+                <PressableScale onPress={() => navigation.navigate('CollectionDetail', { slug: item.slug })}>
                   <Card style={s.card}>
                     {uri
                       ? <Image source={{ uri }} style={s.thumb} contentFit="cover" transition={200} />
-                      : (
-                        <View style={[s.thumb, s.thumbEmpty]}>
-                          <Ionicons name="bookmark-outline" size={22} color={colors.textTertiary} />
-                        </View>
-                      )}
+                      : <EmptyCover />}
                     <View style={s.cardText}>
                       <Text style={s.title} numberOfLines={2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
                       <Text style={s.meta} numberOfLines={1}>
@@ -209,6 +272,29 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                     </View>
                   </Card>
                 </PressableScale>
+              );
+              // The margins sit on the wrapper, not on the swipeable row:
+              // actions revealed behind a full-bleed row would slide out
+              // past the page margin the rest of the screen keeps.
+              return (
+                <View style={s.row}>
+                  {section.own
+                    ? (
+                      <SwipeRow
+                        onEdit={() => navigation.navigate('CollectionForm', {
+                          slug: item.slug,
+                          title: t(item.title_en, item.title_vi, item.title_ja),
+                          desc: t(item.desc_en, item.desc_vi, item.desc_ja),
+                        })}
+                        onDelete={() => remove(item)}
+                        editLabel={t('Edit', 'Sửa', '編集')}
+                        deleteLabel={t('Delete', 'Xoá', '削除')}
+                      >
+                        {card}
+                      </SwipeRow>
+                    )
+                    : card}
+                </View>
               );
             }}
             renderSectionFooter={({ section }) => (
@@ -270,9 +356,26 @@ const s = StyleSheet.create({
     width: 92, height: 92, borderRadius: radius.image,
     backgroundColor: colors.surfaceGlass,
   },
-  // A new list has no cover because it has no places. A bare grey square
-  // reads as a photo that failed to load; the glyph says "nothing here yet".
-  thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
+  thumbEmpty: {
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.accentLine,
+  },
+
+  // Revealed behind an owned row. Height comes from the row, so the two
+  // buttons stay square-ish whatever the title wraps to.
+  actions: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginLeft: 8 },
+  // Width on the Pressable, the painted box on its animated child: the
+  // child is what scales on press, and `flex: 1` is what makes it as tall
+  // as the row instead of as tall as its glyph.
+  actionWrap: { width: 62 },
+  action: {
+    flex: 1, borderRadius: radius.image,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  actionEdit: { backgroundColor: colors.surfaceGlassStrong, borderWidth: 1, borderColor: colors.borderGlassSoft },
+  // The one destructive surface in the app, so it is the one place the
+  // soft red is a fill rather than a line of text.
+  actionDelete: { backgroundColor: colors.bad },
   cardText: { flex: 1, gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
   meta: { color: colors.textTertiary, ...type.meta },
