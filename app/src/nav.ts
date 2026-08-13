@@ -7,6 +7,7 @@ export type RootStackParamList = {
   ExploreHome: undefined;
   Search: undefined;
   CollectionsHome: undefined;
+  CreateCollection: undefined;
   PlaceDetail: { slug: string };
   CollectionDetail: { slug: string };
   ProfileHome: undefined;

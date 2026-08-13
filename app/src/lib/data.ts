@@ -62,6 +62,9 @@ export type Collection = {
   curator_handle: string | null;
   cover: { photo_uri: string } | null;
   collection_places: { sort_order: number; places: { slug: string } | null }[];
+  /** Null on the editorial collections — those belong to the desk. Set to a
+   *  user's id on the lists they made for themselves. */
+  owner_id?: string | null;
 };
 
 /** Visible photos, cover first. */
@@ -133,13 +136,38 @@ async function fetchPlaces(cityId: string): Promise<Place[]> {
   return (data ?? []) as unknown as Place[];
 }
 
+const COLLECTION_COLS = (withOwner: boolean) =>
+  `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id' : ''}, collection_places(sort_order, places(slug)), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
+
 async function fetchCollections(cityId: string): Promise<Collection[]> {
+  const run = (withOwner: boolean) => {
+    const q = supabase
+      .from('collections')
+      .select(COLLECTION_COLS(withOwner))
+      .eq('city_id', cityId)
+      .eq('is_public', true);
+    // Editorial rows only. A user's own lists are private and come back
+    // through fetchMyCollections, so nothing appears in both sections.
+    return (withOwner ? q.is('owner_id', null) : q).order('sort_order');
+  };
+
+  let { data, error } = await run(true);
+  // A build can reach a database that has not run the user-collections
+  // migration yet. Drop the column and retry rather than breaking the tab —
+  // every row there is editorial until the migration lands anyway.
+  if (error && error.message.includes('owner_id')) ({ data, error } = await run(false));
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as Collection[];
+}
+
+async function fetchMyCollections(cityId: string, ownerId: string): Promise<Collection[]> {
   const { data, error } = await supabase
     .from('collections')
-    .select('slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, collection_places(sort_order, places(slug)), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)')
+    .select(COLLECTION_COLS(true))
     .eq('city_id', cityId)
-    .eq('is_public', true)
-    .order('sort_order');
+    .eq('owner_id', ownerId)
+    // Newest first: the one you just made is the one you came back for.
+    .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as Collection[];
 }
@@ -167,6 +195,81 @@ export const useCollections = () => {
   );
   return useFetch(fetcher, [] as Collection[]);
 };
+
+/**
+ * The signed-in user's own lists, for the city on screen. Signed out this
+ * resolves empty rather than not existing, so callers need no branch.
+ */
+export const useMyCollections = (ownerId: string | null | undefined) => {
+  const { city } = useCity();
+  const fetcher = useCallback(
+    () => (city && ownerId ? fetchMyCollections(city.id, ownerId) : Promise.resolve([] as Collection[])),
+    [city?.id, ownerId],
+  );
+  return useFetch(fetcher, [] as Collection[]);
+};
+
+/**
+ * A slug from a title the user typed. Diacritics are stripped so "Cà phê
+ * sáng" and "Ca phe sang" land on the same stem; a title with no latin
+ * letters at all (Japanese, say) keeps only the suffix, which is enough —
+ * the slug is a key, not a label.
+ */
+function slugify(title: string): string {
+  const stem = title
+    .toLowerCase()
+    .replace(/đ/g, 'd')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return stem || 'list';
+}
+
+const suffix = () => Math.random().toString(36).slice(2, 8);
+
+/**
+ * Create one of the user's own lists. Private by design — the RLS policy
+ * refuses an owned row with is_public true, and the app never asks for one.
+ *
+ * The title is written into all three language columns: this is the user's
+ * own words, and we do not have a translation of them. Showing their list
+ * under an empty title because the app is in Japanese would be worse than
+ * showing it under the words they chose.
+ */
+export async function createCollection(input: {
+  ownerId: string;
+  cityId: string;
+  title: string;
+  desc?: string;
+}): Promise<string> {
+  const title = input.title.trim();
+  const desc = input.desc?.trim() || null;
+
+  // Two attempts: slugs carry a random suffix, so a collision means bad luck
+  // rather than a name already taken, and retrying costs one round trip.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const slug = `${slugify(title)}-${suffix()}`;
+    const { error } = await supabase.from('collections').insert({
+      slug,
+      city_id: input.cityId,
+      owner_id: input.ownerId,
+      title_en: title, title_vi: title, title_ja: title,
+      desc_en: desc, desc_vi: desc, desc_ja: desc,
+      is_public: false,
+    });
+    if (!error) return slug;
+    // 23505 = unique_violation.
+    if (error.code !== '23505' || attempt === 1) throw new Error(error.message);
+  }
+  throw new Error('Could not create the collection');
+}
+
+/** Remove one of the user's own lists. RLS scopes this to rows they own. */
+export async function deleteCollection(slug: string): Promise<void> {
+  const { error } = await supabase.from('collections').delete().eq('slug', slug);
+  if (error) throw new Error(error.message);
+}
 
 /** Resolve a collection's member slugs against the published catalog. */
 export function membersOf(c: Collection, places: Place[]): Place[] {
