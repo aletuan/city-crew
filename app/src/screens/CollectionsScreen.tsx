@@ -12,7 +12,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { AmbientWarmth, Card, Empty, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, Empty, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { Collection, coverOf, deleteCollection, membersOf, useCollections, useMyCollections, usePlaces } from '../lib/data';
 import { useI18n } from '../lib/i18n';
@@ -98,9 +98,9 @@ function EmptyCover() {
 }
 
 /**
- * Signed in, nothing made yet. The `+` in the header is a one-glyph
- * control that says nothing about what a collection is or why you would
- * want one, so the empty section carries the pitch instead of vanishing.
+ * Signed in, nothing made yet. This is the one state with room to explain
+ * what a collection is and why anyone would want one, so it takes the
+ * whole card and the section's other create controls stand down.
  *
  * It mirrors the guest card one section up — same tinted well, same
  * gradient action — because they are the same argument aimed at two
@@ -144,6 +144,35 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
           {t('Only you can see your lists.', 'Chỉ mình bạn thấy danh sách của bạn.', 'リストはあなただけに表示されます。')}
         </Text>
       </View>
+    </View>
+  );
+}
+
+/**
+ * The last row of your own section: a slot rather than a thing.
+ *
+ * The dashed outline is doing the work — it says "not a collection, a
+ * place where one would go", which no amount of label on a solid card
+ * manages. It sits at the end of the list because that is where you are
+ * looking when you have just decided the list is missing something.
+ */
+function NewCollectionRow({ onPress }: { onPress: () => void }) {
+  const { t } = useI18n();
+  return (
+    <View style={s.row}>
+      <PressableScale onPress={onPress} accessibilityRole="button" style={s.newRow}>
+        <View style={s.newRowIcon}>
+          <Ionicons name="add" size={26} color={colors.accent} />
+        </View>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={s.newRowTitle}>
+            {t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
+          </Text>
+          <Text style={s.newRowSub} numberOfLines={1}>
+            {t('Group places for your next plan', 'Nhóm địa điểm cho kế hoạch tới', '次の予定に向けてスポットをまとめる')}
+          </Text>
+        </View>
+      </PressableScale>
     </View>
   );
 }
@@ -262,17 +291,12 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   ];
 
   return (
-    <Screen
-      title={t('Collections', 'Bộ sưu tập', 'コレクション')}
-      right={session ? (
-        <RoundIconButton
-          icon="add"
-          size={24}
-          onPress={() => navigation.navigate('CollectionForm')}
-          label={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
-        />
-      ) : undefined}
-    >
+    // No control in the header: creating belongs to the section it creates
+    // into, and every signed-in state now shows one there — the "New" pill
+    // beside the heading, the dashed row under the list, or the empty
+    // card's own button. A fourth one up here would be the same action a
+    // fourth time.
+    <Screen title={t('Collections', 'Bộ sưu tập', 'コレクション')}>
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {loading && (
@@ -300,7 +324,27 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             stickySectionHeadersEnabled={false}
             ListHeaderComponent={<GuestNotice navigation={navigation} />}
             renderSectionHeader={({ section }) => (
-              <Text style={s.section}>{section.title}</Text>
+              // The pill rides the heading only where there is already a
+              // list — an empty section has the full card below it making
+              // the same offer, and two invitations to do one thing read as
+              // two different things.
+              section.own && section.data.length > 0
+                ? (
+                  <View style={s.sectionRow}>
+                    <Text style={[s.section, s.sectionFlush]}>{section.title}</Text>
+                    <PressableScale
+                      onPress={() => navigation.navigate('CollectionForm')}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
+                    >
+                      <LinearGradient {...gradAI} style={s.newPill}>
+                        <Ionicons name="add" size={18} color={colors.accentInk} />
+                        <Text style={s.newPillText}>{t('New', 'Tạo mới', '新規')}</Text>
+                      </LinearGradient>
+                    </PressableScale>
+                  </View>
+                )
+                : <Text style={s.section}>{section.title}</Text>
             )}
             renderItem={({ item, section }) => {
               const count = membersOf(item, places).length;
@@ -313,14 +357,23 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                       : <EmptyCover />}
                     <View style={s.cardText}>
                       <Text style={s.title} numberOfLines={2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
-                      <Text style={s.meta} numberOfLines={1}>
-                        {/* "0 places" reads like a broken count; an empty
-                            list you just made deserves a sentence. */}
-                        {count === 0
-                          ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
-                          : `${count} ${t('places', 'địa điểm', 'スポット')}`}
-                        {item.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${item.curator_handle}` : ''}
-                      </Text>
+                      <View style={s.metaRow}>
+                        {/* The padlock says whose it is without spending a
+                            word on it — and every owned list is private,
+                            so the word after it never varies. */}
+                        {section.own && (
+                          <Ionicons name="lock-closed-outline" size={13} color={colors.textTertiary} />
+                        )}
+                        <Text style={s.meta} numberOfLines={1}>
+                          {/* "0 places" reads like a broken count; an empty
+                              list you just made deserves a sentence. */}
+                          {count === 0
+                            ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
+                            : `${count} ${t('places', 'địa điểm', 'スポット')}`}
+                          {section.own ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
+                          {item.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${item.curator_handle}` : ''}
+                        </Text>
+                      </View>
                     </View>
                     <View style={s.chevron}>
                       <Ionicons name="chevron-forward" size={17} color={colors.textSecondary} />
@@ -353,10 +406,14 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
               );
             }}
             renderSectionFooter={({ section }) => {
-              if (section.data.length > 0) return null;
-              return section.own
-                ? <FirstCollection onPress={() => navigation.navigate('CollectionForm')} />
-                : <Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.', '公開コレクションはまだありません。')} />;
+              if (section.own) {
+                return section.data.length === 0
+                  ? <FirstCollection onPress={() => navigation.navigate('CollectionForm')} />
+                  : <NewCollectionRow onPress={() => navigation.navigate('CollectionForm')} />;
+              }
+              return section.data.length === 0
+                ? <Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.', '公開コレクションはまだありません。')} />
+                : null;
             }}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
@@ -402,6 +459,31 @@ const s = StyleSheet.create({
     color: colors.text, ...type.section,
     paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
+  sectionRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: space.page, marginBottom: space.headingToContent,
+  },
+  // The heading keeps its own padding through `s.section`; inside the row
+  // the row owns it, and applying both would indent the title twice.
+  sectionFlush: { paddingHorizontal: 0, marginBottom: 0 },
+  newPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingLeft: 14, paddingRight: 18, paddingVertical: 9,
+    borderRadius: radius.pill,
+  },
+  newPillText: { color: colors.accentInk, fontSize: 15.5, fontWeight: font.semibold },
+
+  newRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    padding: space.cardPadding, borderRadius: radius.card,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderGlass,
+  },
+  newRowIcon: {
+    width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
+  },
+  newRowTitle: { color: colors.text, ...type.cardTitle },
+  newRowSub: { color: colors.textTertiary, fontSize: 14, lineHeight: 19 },
 
   firstWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
   first: {
@@ -457,6 +539,7 @@ const s = StyleSheet.create({
   // soft red is a fill rather than a line of text.
   actionDelete: { backgroundColor: colors.bad },
   cardText: { flex: 1, gap: 5 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
   meta: { color: colors.textTertiary, ...type.meta },
   // Circular control: translucent fill, thin hairline, 44pt touch target.
