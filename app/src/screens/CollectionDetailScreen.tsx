@@ -63,7 +63,10 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingHorizontal: space.page, paddingTop: 10, paddingBottom: 10,
   },
-  title: { color: colors.text, ...type.section },
+  // `headline`, not `titleDetail`: this title shares its line with the back
+  // control and is clipped to one line, so it takes the smaller of the two
+  // display sizes rather than truncating more collection names than before.
+  title: { color: colors.text, ...type.headline },
   meta: { color: colors.textTertiary, ...type.meta, marginTop: 2 },
   desc: {
     color: colors.textSecondary, ...type.body, lineHeight: 24,

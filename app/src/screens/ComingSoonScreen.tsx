@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Screen, useTabBarClearance } from '../components/ui';
 import { useI18n } from '../lib/i18n';
-import { colors, font, gradAI } from '../theme';
+import { colors, font, gradAI, type } from '../theme';
 
 export default function ComingSoonScreen({ titleEn, titleVi, titleJa }: { titleEn: string; titleVi: string; titleJa?: string }) {
   const { t } = useI18n();
@@ -31,6 +31,6 @@ const s = StyleSheet.create({
   wrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
   badge: { width: 64, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   badgeText: { fontSize: 28 },
-  title: { color: colors.text, fontSize: 20, fontWeight: font.bold },
+  title: { color: colors.text, ...type.headline },
   sub: { color: colors.textTertiary, fontSize: 14, fontWeight: font.regular, textAlign: 'center', lineHeight: 21 },
 });
