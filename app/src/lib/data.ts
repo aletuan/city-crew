@@ -286,6 +286,51 @@ export async function deleteCollection(slug: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** The row ids behind two slugs. Both tables key on slug for the app and on
+ *  id for the join table, so one hop is unavoidable. */
+async function idsFor(collectionSlug: string, placeSlug: string) {
+  const [col, place] = await Promise.all([
+    supabase.from('collections').select('id').eq('slug', collectionSlug).single(),
+    supabase.from('places').select('id').eq('slug', placeSlug).single(),
+  ]);
+  if (col.error) throw new Error(col.error.message);
+  if (place.error) throw new Error(place.error.message);
+  return { collectionId: (col.data as { id: string }).id, placeId: (place.data as { id: string }).id };
+}
+
+/**
+ * Put a place in one of the user's lists. RLS checks the list's owner, so
+ * a request naming someone else's list is refused at the database.
+ *
+ * `sortOrder` is where it lands in the list — the caller knows how many
+ * members there already are, so new saves go on the end.
+ */
+export async function addPlaceToCollection(collectionSlug: string, placeSlug: string, sortOrder = 0): Promise<void> {
+  const { collectionId, placeId } = await idsFor(collectionSlug, placeSlug);
+  const { error } = await supabase
+    .from('collection_places')
+    .insert({ collection_id: collectionId, place_id: placeId, sort_order: sortOrder });
+  // 23505 = unique_violation: the place is already in the list, which is
+  // the state the caller wanted. Racing two taps is not an error.
+  if (error && error.code !== '23505') throw new Error(error.message);
+}
+
+export async function removePlaceFromCollection(collectionSlug: string, placeSlug: string): Promise<void> {
+  const { collectionId, placeId } = await idsFor(collectionSlug, placeSlug);
+  const { error } = await supabase
+    .from('collection_places')
+    .delete()
+    .eq('collection_id', collectionId)
+    .eq('place_id', placeId);
+  if (error) throw new Error(error.message);
+}
+
+/** Does this list already hold this place? Read from what is in memory —
+ *  the collection rows carry their members. */
+export function holds(c: Collection, placeSlug: string): boolean {
+  return c.collection_places.some((cp) => cp.places?.slug === placeSlug);
+}
+
 /** Resolve a collection's member slugs against the published catalog. */
 export function membersOf(c: Collection, places: Place[]): Place[] {
   const bySlug = new Map(places.map((p) => [p.slug, p]));

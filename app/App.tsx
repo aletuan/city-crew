@@ -14,9 +14,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from './src/lib/auth';
 import { CityProvider } from './src/lib/city';
 import { I18nProvider, useI18n } from './src/lib/i18n';
+import { SaveProvider } from './src/lib/save';
 import { colors, font } from './src/theme';
 import { fireHaptic, TAB_BAR_HEIGHT } from './src/components/ui';
-import type { RootStackParamList } from './src/nav';
+import { navRef, type RootStackParamList } from './src/nav';
 import ExploreScreen from './src/screens/ExploreScreen';
 import SearchScreen from './src/screens/SearchScreen';
 import PlaceDetailScreen from './src/screens/PlaceDetailScreen';
@@ -193,9 +194,14 @@ export default function App() {
         <AuthProvider>
           <I18nProvider>
             <CityProvider>
-              <NavigationContainer theme={navTheme}>
+              <NavigationContainer theme={navTheme} ref={navRef}>
                 <StatusBar style="light" />
-                <Tabs />
+                {/* Above the navigators, because the save sheets belong to
+                    no single screen — a card on Explore, Search or a
+                    collection all raise the same one. */}
+                <SaveProvider>
+                  <Tabs />
+                </SaveProvider>
               </NavigationContainer>
             </CityProvider>
           </I18nProvider>

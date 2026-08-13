@@ -18,7 +18,7 @@ import { Alert, Text, View } from 'react-native';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton } from '../components/authUi';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
-import { createCollection, updateCollection } from '../lib/data';
+import { addPlaceToCollection, createCollection, updateCollection } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -34,6 +34,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   const { session } = useAuth();
   const { city } = useCity();
   const editing = route.params?.slug;
+  const addPlaceSlug = route.params?.addPlaceSlug;
   const [title, setTitle] = useState(route.params?.title ?? '');
   const [desc, setDesc] = useState(route.params?.desc ?? '');
   const [busy, setBusy] = useState(false);
@@ -58,8 +59,15 @@ export default function CollectionFormScreen({ navigation, route }: {
     setBusy(true);
     setError(null);
     try {
-      if (editing) await updateCollection(editing, { title: name, desc });
-      else await createCollection({ ownerId: uid, cityId: city.id, title: name, desc });
+      if (editing) {
+        await updateCollection(editing, { title: name, desc });
+      } else {
+        const slug = await createCollection({ ownerId: uid, cityId: city.id, title: name, desc });
+        // Reached from a place's bookmark with nowhere to put it: the list
+        // arrives holding the place that prompted it, rather than empty
+        // with the save silently dropped on the way here.
+        if (addPlaceSlug) await addPlaceToCollection(slug, addPlaceSlug, 0);
+      }
       // Back to the list, where the collection is now the first row of your
       // own section. Opening a new one instead would land on an empty screen.
       navigation.goBack();
@@ -86,11 +94,17 @@ export default function CollectionFormScreen({ navigation, route }: {
         title={editing
           ? t('Rename your list', 'Đổi tên danh sách', 'リストの名前を変更')
           : t('Name your list', 'Đặt tên danh sách', 'リストに名前を')}
-        lede={t(
-          'Only you can see this one. Add places to it as you find them.',
-          'Chỉ mình bạn thấy danh sách này. Thêm địa điểm vào khi bạn tìm được.',
-          'このリストはあなただけに表示されます。見つけたスポットを追加していきましょう。',
-        )}
+        lede={addPlaceSlug
+          ? t(
+            'Name it, and the place you just saved goes in first.',
+            'Đặt tên, và địa điểm bạn vừa lưu sẽ vào đầu tiên.',
+            '名前をつければ、いま保存したスポットが最初に入ります。',
+          )
+          : t(
+            'Only you can see this one. Add places to it as you find them.',
+            'Chỉ mình bạn thấy danh sách này. Thêm địa điểm vào khi bạn tìm được.',
+            'このリストはあなただけに表示されます。見つけたスポットを追加していきましょう。',
+          )}
       />
       <FieldRow
         icon="bookmark-outline"
