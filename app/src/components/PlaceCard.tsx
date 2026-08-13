@@ -36,31 +36,36 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
           <View style={s.priceSlot} pointerEvents="none">
             <PricePill place={place} overlay />
           </View>
-          {/* Top-left, the one corner of the frame nothing else claims:
-              price sits opposite it and the attribution runs along the
-              bottom. */}
-          <PressableScale
-            onPress={() => save(place)}
-            scaleTo={0.88}
-            haptic="selection"
-            accessibilityRole="button"
-            accessibilityState={{ selected: saved }}
-            accessibilityLabel={saved
-              ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
-              : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
-            containerStyle={s.saveSlot}
-            hitSlop={8}
-            style={s.saveBtn}
-          >
-            <Ionicons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={17}
-              color={saved ? colors.accent : '#fff'}
-            />
-          </PressableScale>
         </View>
         <View style={s.body}>
-          <Text style={s.name} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
+          {/* The bookmark rides the title line rather than the photograph.
+              On the image it was a fourth thing competing with the price,
+              the attribution and the picture itself, and it had to carry
+              its own scrim to stay visible over any sky. Here it is a
+              control among controls — the same round glass button the
+              collection rows wear — and it lands beside the name it
+              belongs to. */}
+          <View style={s.titleRow}>
+            <Text style={s.name} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
+            <PressableScale
+              onPress={() => save(place)}
+              scaleTo={0.9}
+              haptic="selection"
+              accessibilityRole="button"
+              accessibilityState={{ selected: saved }}
+              accessibilityLabel={saved
+                ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
+                : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
+              hitSlop={6}
+              style={s.saveBtn}
+            >
+              <Ionicons
+                name={saved ? 'bookmark' : 'bookmark-outline'}
+                size={19}
+                color={saved ? colors.accent : colors.textSecondary}
+              />
+            </PressableScale>
+          </View>
           {place.rating ? (
             <Text style={s.ratingRow} numberOfLines={1}>
               <Text style={s.star}>★ </Text>
@@ -101,16 +106,17 @@ const s = StyleSheet.create({
   body: { paddingHorizontal: space.cardPadding, paddingVertical: 13 },
   // Top-right of the image, mirroring the attribution bottom-right.
   priceSlot: { position: 'absolute', top: 10, right: 10 },
-  saveSlot: { position: 'absolute', top: 10, left: 10 },
-  // Dark scrim rather than the app's glass: this one sits on photography,
-  // where a translucent light fill disappears over a pale sky.
+  // The name takes the room the button leaves; `flex: 1` on the text is
+  // what stops a long one pushing the button off the card.
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  name: { flex: 1, color: colors.text, ...type.cardTitle },
+  // The app's glass, now that it sits on a surface rather than on a photo.
   saveBtn: {
-    width: 34, height: 34, borderRadius: 17,
+    width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(10,11,10,0.45)',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
-  name: { color: colors.text, ...type.cardTitle },
   // Rating reads in three weights: a barely-there accent star, a clear
   // value, a whispered count.
   ratingRow: { marginTop: 4 },
