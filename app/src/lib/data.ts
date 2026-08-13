@@ -203,7 +203,17 @@ export const useCollections = () => {
 export const useMyCollections = (ownerId: string | null | undefined) => {
   const { city } = useCity();
   const fetcher = useCallback(
-    () => (city && ownerId ? fetchMyCollections(city.id, ownerId) : Promise.resolve([] as Collection[])),
+    () => {
+      // Signed out is an answer, not a wait: there are no lists, and no
+      // city is going to change that.
+      if (!ownerId) return Promise.resolve([] as Collection[]);
+      // Signed in with the city still resolving is a wait. Hold on the
+      // never-settling promise the way the other two catalogs do —
+      // finishing here with an empty result would report "no collections
+      // yet" to someone who has some, then load again and contradict it.
+      if (!city) return pending as Promise<Collection[]>;
+      return fetchMyCollections(city.id, ownerId);
+    },
     [city?.id, ownerId],
   );
   return useFetch(fetcher, [] as Collection[]);
