@@ -7,7 +7,9 @@ export type RootStackParamList = {
   ExploreHome: undefined;
   Search: undefined;
   CollectionsHome: undefined;
-  CreateCollection: undefined;
+  /** One screen for both verbs: params absent means "new", params present
+   *  means "rename this one". */
+  CollectionForm: { slug: string; title: string; desc: string } | undefined;
   PlaceDetail: { slug: string };
   CollectionDetail: { slug: string };
   ProfileHome: undefined;

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -20,7 +21,7 @@ import ExploreScreen from './src/screens/ExploreScreen';
 import SearchScreen from './src/screens/SearchScreen';
 import PlaceDetailScreen from './src/screens/PlaceDetailScreen';
 import CollectionsScreen from './src/screens/CollectionsScreen';
-import CreateCollectionScreen from './src/screens/CreateCollectionScreen';
+import CollectionFormScreen from './src/screens/CollectionFormScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
 import ComingSoonScreen from './src/screens/ComingSoonScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
@@ -51,7 +52,7 @@ function CollectionsStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="CollectionsHome" component={CollectionsScreen} />
-      <Stack.Screen name="CreateCollection" component={CreateCollectionScreen} />
+      <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
     </Stack.Navigator>
@@ -184,17 +185,22 @@ export default function App() {
   if (!fontsLoaded) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
 
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <I18nProvider>
-          <CityProvider>
-            <NavigationContainer theme={navTheme}>
-              <StatusBar style="light" />
-              <Tabs />
-            </NavigationContainer>
-          </CityProvider>
-        </I18nProvider>
-      </AuthProvider>
-    </SafeAreaProvider>
+    // Gesture handler wants to own the root view: swipe-to-reveal on the
+    // collection rows is its gesture, and on Android nothing outside this
+    // wrapper receives one at all.
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <I18nProvider>
+            <CityProvider>
+              <NavigationContainer theme={navTheme}>
+                <StatusBar style="light" />
+                <Tabs />
+              </NavigationContainer>
+            </CityProvider>
+          </I18nProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -1,7 +1,11 @@
-// Making one of your own lists.
+// Making one of your own lists, and renaming it later.
 //
-// One required field. A collection is a name and, later, some places in it;
-// asking for anything more up front is asking someone to fill a form before
+// One screen for both: the fields are the same, only the verb changes.
+// Two screens would be the same form twice, drifting apart the first time
+// one of them gains a field.
+//
+// One required field. A collection is a name and, later, some places in
+// it; asking for more up front is asking someone to fill a form before
 // they have seen what the thing does. The description is there for people
 // who want it and skipped by everyone else.
 //
@@ -14,20 +18,24 @@ import { Alert, Text, View } from 'react-native';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton } from '../components/authUi';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
-import { createCollection } from '../lib/data';
+import { createCollection, updateCollection } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, space } from '../theme';
-import type { Nav } from '../nav';
+import type { Nav, RootRoute } from '../nav';
 
 /** Long enough for a real name, short enough to stay on one line in a row. */
 const MAX_TITLE = 60;
 
-export default function CreateCollectionScreen({ navigation }: { navigation: Nav }) {
+export default function CollectionFormScreen({ navigation, route }: {
+  navigation: Nav;
+  route: RootRoute<'CollectionForm'>;
+}) {
   const { t } = useI18n();
   const { session } = useAuth();
   const { city } = useCity();
-  const [title, setTitle] = useState('');
-  const [desc, setDesc] = useState('');
+  const editing = route.params?.slug;
+  const [title, setTitle] = useState(route.params?.title ?? '');
+  const [desc, setDesc] = useState(route.params?.desc ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,14 +58,20 @@ export default function CreateCollectionScreen({ navigation }: { navigation: Nav
     setBusy(true);
     setError(null);
     try {
-      await createCollection({ ownerId: uid, cityId: city.id, title: name, desc });
-      // Back to the list, where the new collection is now the first row of
-      // your own section. Opening it instead would land on an empty screen.
+      if (editing) await updateCollection(editing, { title: name, desc });
+      else await createCollection({ ownerId: uid, cityId: city.id, title: name, desc });
+      // Back to the list, where the collection is now the first row of your
+      // own section. Opening a new one instead would land on an empty screen.
       navigation.goBack();
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       setError(message);
-      Alert.alert(t('Could not create the collection', 'Không tạo được bộ sưu tập', 'コレクションを作成できませんでした'), message);
+      Alert.alert(
+        editing
+          ? t('Could not save the changes', 'Không lưu được thay đổi', '変更を保存できませんでした')
+          : t('Could not create the collection', 'Không tạo được bộ sưu tập', 'コレクションを作成できませんでした'),
+        message,
+      );
     } finally {
       setBusy(false);
     }
@@ -66,8 +80,12 @@ export default function CreateCollectionScreen({ navigation }: { navigation: Nav
   return (
     <AuthScreen onBack={() => navigation.goBack()}>
       <AuthHeader
-        eyebrow={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
-        title={t('Name your list', 'Đặt tên danh sách', 'リストに名前を')}
+        eyebrow={editing
+          ? t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')
+          : t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
+        title={editing
+          ? t('Rename your list', 'Đổi tên danh sách', 'リストの名前を変更')
+          : t('Name your list', 'Đặt tên danh sách', 'リストに名前を')}
         lede={t(
           'Only you can see this one. Add places to it as you find them.',
           'Chỉ mình bạn thấy danh sách này. Thêm địa điểm vào khi bạn tìm được.',
@@ -96,7 +114,9 @@ export default function CreateCollectionScreen({ navigation }: { navigation: Nav
       {error ? <ErrorText>{error}</ErrorText> : null}
       <View style={{ marginTop: space.cardGap }}>
         <PrimaryButton
-          label={t('Create collection', 'Tạo bộ sưu tập', 'コレクションを作成')}
+          label={editing
+            ? t('Save changes', 'Lưu thay đổi', '変更を保存')
+            : t('Create collection', 'Tạo bộ sưu tập', 'コレクションを作成')}
           onPress={submit}
           busy={busy}
         />
