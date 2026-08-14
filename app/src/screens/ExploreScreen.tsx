@@ -11,10 +11,8 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AuthSheet from '../components/AuthSheet';
 import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
-import { useAuth } from '../lib/auth';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place } from '../lib/data';
@@ -91,7 +89,6 @@ function Hero({ place, onExplore, scrollY }: {
   scrollY: Animated.Value;
 }) {
   const { t } = useI18n();
-  const { session, email } = useAuth();
   const { city } = useCity();
   const uri = place && coverOf(place)?.photo_uri;
   // The photo trails the scroll slightly; pre-scaled so no edge shows.
@@ -112,13 +109,6 @@ function Hero({ place, onExplore, scrollY }: {
           style={StyleSheet.absoluteFill}
         />
         <View style={s.heroContent}>
-          <View style={s.heroPill}>
-            <Text style={s.heroPillText}>
-              {session
-                ? `✓ ${t('Signed in as', 'Đã đăng nhập:', 'サインイン中:')} ${email}`
-                : `👋 ${t('Browsing as guest', 'Đang xem với tư cách khách', 'ゲストとして閲覧中')}`}
-            </Text>
-          </View>
           <Text style={s.heroTitle}>
             {city?.hero_title_en
               ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja)
@@ -231,9 +221,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
   const { loading, error, data: places, reload } = usePlaces();
-  const { session } = useAuth();
   const [cat, setCat] = useState<string>(ALL);
-  const [authSheet, setAuthSheet] = useState(false);
   const tabClearance = useTabBarClearance();
   const listRef = useRef<FlatList<Place>>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -301,25 +289,15 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     <Screen
       eyebrow={dateline(lang)}
       title={t(`Discover ${city?.short_en ?? '…'}`, `Khám phá ${city?.short_vi ?? '…'}`, `${city?.short_ja ?? city?.short_en ?? '…'}を発見`)}
+      // Search only. A header action should act on the screen it sits
+      // above; getting to your profile is the tab bar's job, and it is
+      // on screen already.
       right={(
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <RoundIconButton
-            icon="search-outline"
-            onPress={() => navigation.navigate('Search')}
-            label={t('Search', 'Tìm kiếm', '検索')}
-          />
-          <RoundIconButton
-            icon="person-circle-outline"
-            size={24}
-            onPress={() => {
-              // Signed in, the control means "my profile"; signed out it
-              // means "who am I?", which is the sheet's question.
-              if (session) navigation.getParent()?.navigate('Profile');
-              else setAuthSheet(true);
-            }}
-            label={session ? t('Profile', 'Cá nhân', 'プロフィール') : t('Sign in', 'Đăng nhập', 'サインイン')}
-          />
-        </View>
+        <RoundIconButton
+          icon="search-outline"
+          onPress={() => navigation.navigate('Search')}
+          label={t('Search', 'Tìm kiếm', '検索')}
+        />
       )}
     >
       <View style={{ flex: 1 }}>
@@ -358,14 +336,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           />
         )}
       </View>
-      <AuthSheet
-        visible={authSheet}
-        onClose={() => setAuthSheet(false)}
-        onSignIn={() => {
-          setAuthSheet(false);
-          navigation.getParent()?.navigate('Profile', { screen: 'SignIn' });
-        }}
-      />
     </Screen>
   );
 }
@@ -380,12 +350,6 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   heroContent: { padding: space.cardPadding + 2, gap: 10 },
-  heroPill: {
-    alignSelf: 'flex-start', borderRadius: radius.pill,
-    backgroundColor: 'rgba(10,11,10,0.55)', borderWidth: 1, borderColor: onPhoto.line,
-    paddingHorizontal: 12, paddingVertical: 6,
-  },
-  heroPillText: { color: onPhoto.textSecondary, fontSize: 12.5, fontWeight: font.medium },
   heroTitle: { color: onPhoto.text, fontSize: 24, fontFamily: display.bold, letterSpacing: 0.2, lineHeight: 30 },
   heroSub: { color: onPhoto.textSecondary, ...type.meta, lineHeight: 21 },
   // The screen's one loud control: the accent at full strength — the same
