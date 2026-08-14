@@ -58,10 +58,24 @@ export const colors = {
   textSecondary: dyn('#5C574E', '#B7B6B1'),
   textTertiary: dyn('#6E695E', '#6E706D'),
 
-  /** The one identity colour. Coral on charcoal; a deeper coral on paper,
-   *  because the bright one is 2.4:1 against white — fine as a fill, not
-   *  as the label or the glyph it also has to be. */
+  /**
+   * The accent **as something to read** — a label, a glyph, a link.
+   *
+   * Coral on charcoal; a deeper coral on paper, because the bright one is
+   * 2.4:1 against white. That split is about legibility, and it must not
+   * leak into the accent as a *surface* — see `accentFill`. When it did,
+   * the app showed three oranges at once: brick discs, coral gradients,
+   * and pink tints, each claiming to be the identity colour.
+   */
   accent: dyn('#C4402C', '#FF6F5B'),
+  /**
+   * The accent **as a surface** — the filled tab disc, the camera badge,
+   * a ticked checkbox. One value for both themes, and the same coral the
+   * gradient and the tints are made of, because a fill has no legibility
+   * problem to solve: whatever sits on it is `accentInk`, which is 6.8:1
+   * either way.
+   */
+  accentFill: '#FF6F5B',
   /** The warm end of the accent. Gradients run accent → accentBright and
    *  stay bright in both themes: they are fills, never type. */
   accentBright: '#FF9A5C',
