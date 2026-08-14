@@ -12,9 +12,10 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
-import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
+import { useSky } from '../lib/sky';
 import { Collection, coverOf, membersOf, Place } from '../lib/data';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { Lang, useI18n } from '../lib/i18n';
@@ -220,6 +221,9 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
+  // The city's centre, never the device's position — someone with the
+  // city set to follow their location still keeps it on their phone.
+  const sky = useSky(city?.center_lat, city?.center_lng);
   const { loading, error, data: places, reload } = usePlaces();
   const [cat, setCat] = useState<string>(ALL);
   const tabClearance = useTabBarClearance();
@@ -287,7 +291,20 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
 
   return (
     <Screen
-      eyebrow={dateline(lang)}
+      // Weather hangs off the end of the date rather than sitting in its
+      // own slot: nothing moves when it arrives, and nothing is missing
+      // when it does not.
+      eyebrow={(
+        <>
+          <EyebrowText>{dateline(lang)}</EyebrowText>
+          {sky ? (
+            <>
+              <Ionicons name={sky.icon} size={14} color={colors.accent} />
+              <EyebrowText>{`${sky.temp}°`}</EyebrowText>
+            </>
+          ) : null}
+        </>
+      )}
       title={t(`Discover ${city?.short_en ?? '…'}`, `Khám phá ${city?.short_vi ?? '…'}`, `${city?.short_ja ?? city?.short_en ?? '…'}を発見`)}
       // Search only. A header action should act on the screen it sits
       // above; getting to your profile is the tab bar's job, and it is
