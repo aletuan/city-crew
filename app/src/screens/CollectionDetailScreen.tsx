@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, Alert, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -179,19 +179,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {col && (col.desc_en || col.desc_vi) && (
         <Text style={s.desc}>{t(col.desc_en, col.desc_vi, col.desc_ja)}</Text>
       )}
-      {/* Scrolls rather than wraps or squeezes. Three labels fit across a
-          phone in English and do not in Vietnamese, and a row that quietly
-          becomes swipeable beats one that truncates "Thêm địa điểm". */}
+      {/* Wraps rather than scrolls. Three labels fit across a phone in
+          English and do not in Vietnamese; a second line costs 50pt and
+          says everything, where a horizontal scroll clipped the pills to
+          a height it had guessed from nothing and hid a control behind a
+          gesture nobody was told about. */}
       {owned && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.actions}
-        >
+        <View style={s.actions}>
           <Action icon="add" label={t('Add place', 'Thêm địa điểm', 'スポットを追加')} onPress={addPlace} primary />
           <Action icon="create-outline" label={t('Edit', 'Sửa', '編集')} onPress={edit} />
           <Action icon="share-outline" label={t('Share', 'Chia sẻ', '共有')} onPress={share} />
-        </ScrollView>
+        </View>
       )}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
@@ -236,9 +234,10 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, paddingBottom: 12,
   },
 
-  // Padding on the content, not the ScrollView: on the view it would clip
-  // the first pill against the edge as the row scrolls.
-  actions: { flexDirection: 'row', gap: 10, paddingHorizontal: space.page, paddingBottom: 14 },
+  actions: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 10,
+    paddingHorizontal: space.page, paddingBottom: 14,
+  },
   action: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     paddingHorizontal: 18, paddingVertical: 12, borderRadius: radius.pill,
@@ -247,7 +246,10 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlassStrong,
     borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
-  actionText: { color: colors.text, fontSize: 15.5, fontWeight: font.semibold },
+  // The line box is stated rather than left to the font. At 15.5 semibold
+  // the metrics leave no room under the baseline, and the first thing to
+  // go is the descender on "Chia sẻ".
+  actionText: { color: colors.text, fontSize: 15.5, lineHeight: 21, fontWeight: font.semibold },
   actionTextPrimary: { color: colors.accentInk },
 
   emptyWrap: { marginHorizontal: space.page, marginTop: 24 },
