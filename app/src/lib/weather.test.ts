@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSky, skyIcon, skyUrl } from './weather';
+import { isClear, parseSky, skyIcon, skyUrl } from './weather';
 
 describe('skyIcon', () => {
   // The one place day and night differ. A sun at ten at night is the
@@ -50,7 +50,7 @@ describe('parseSky', () => {
   const ok = { current: { temperature_2m: 31.7, weather_code: 0, is_day: 1 } };
 
   it('rounds the temperature', () => {
-    expect(parseSky(ok)).toEqual({ temp: 32, icon: 'sunny-outline' });
+    expect(parseSky(ok)).toEqual({ temp: 32, icon: 'sunny-outline', gold: true });
   });
 
   it('reads is_day', () => {
@@ -72,7 +72,7 @@ describe('parseSky', () => {
   // be dropped by a truthiness check.
   it('keeps a temperature of zero', () => {
     expect(parseSky({ current: { temperature_2m: 0, weather_code: 3, is_day: 1 } }))
-      .toEqual({ temp: 0, icon: 'cloud-outline' });
+      .toEqual({ temp: 0, icon: 'cloud-outline', gold: false });
   });
 });
 
@@ -102,4 +102,22 @@ describe('parseSky rejects everything that is not a number', () => {
       expect(parseSky({ current: { temperature_2m: 30, weather_code: bad, is_day: 1 } })).toBeNull();
     });
   }
+});
+
+describe('isClear', () => {
+  // Only the sun gets a colour. A rain glyph in amber says nothing true.
+  it('is true for the sky the sun is in', () => {
+    expect([0, 1, 2].every(isClear)).toBe(true);
+  });
+
+  it('is false once the sun is behind something', () => {
+    expect([3, 45, 61, 71, 80, 95].some(isClear)).toBe(false);
+  });
+
+  // The tint follows the code, so night has a gold moon rather than a
+  // grey one — the sky is still clear.
+  it('does not depend on the hour', () => {
+    expect(parseSky({ current: { temperature_2m: 24, weather_code: 0, is_day: 0 } }))
+      .toEqual({ temp: 24, icon: 'moon-outline', gold: true });
+  });
 });
