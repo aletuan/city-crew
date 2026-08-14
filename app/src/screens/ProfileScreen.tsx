@@ -6,7 +6,7 @@
 // About-me card and account actions. Champagne throughout — the
 // reference's violet gradient is translated, not copied.
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
@@ -15,7 +15,11 @@ import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
 import { schemeLabel, ThemeSwitcherModal } from '../components/ThemeSwitcher';
 import { PrimaryButton } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
+import EngagementRing from '../components/EngagementRing';
+import { levelFromSaves } from '../lib/level';
 import { useAuth } from '../lib/auth';
+import { membersOf } from '../lib/data';
+import { useSave } from '../lib/save';
 import { useCity } from '../lib/city';
 import { Lang, useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
@@ -220,11 +224,30 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   const { email, profile, memberSince, signOut } = useAuth();
   const [busy, setBusy] = useState(false);
   const name = profile.full_name || (email ?? '').split('@')[0];
+  // Distinct places, not rows: a place saved into two of your lists is
+  // one place you have found, and counting it twice would turn the ring
+  // into a measure of tidying rather than of exploring.
+  //
+  // The empty catalog is not an oversight. Your own collections arrive
+  // carrying their members, so `membersOf` returns them without
+  // consulting anything — passing the real catalog would mean this
+  // screen waiting on a fetch it otherwise has no use for.
+  const { mine } = useSave();
+  const saved = useMemo(() => {
+    const seen = new Set<string>();
+    for (const c of mine.data) for (const p of membersOf(c, [])) seen.add(p.slug);
+    return seen.size;
+  }, [mine.data]);
+  const { level, progress } = levelFromSaves(saved);
 
   return (
     <>
       <View style={s.heroRow}>
-        <AvatarPicker />
+        {/* No camera badge here: the level badge takes that corner, and
+            Edit profile shows the same picker with its badge intact. */}
+        <EngagementRing size={88} level={level} progress={progress}>
+          <AvatarPicker showCamera={false} />
+        </EngagementRing>
         <View style={{ flex: 1, gap: 5 }}>
           <Text style={s.accountName} numberOfLines={1}>{name}</Text>
           {profile.location ? (
@@ -360,10 +383,14 @@ const s = StyleSheet.create({
   accountName: { color: colors.text, fontSize: 23, fontWeight: font.bold, letterSpacing: 0.2 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.regular },
+  // The card surface, not the glass tint: on paper the tint is a grey
+  // smudge on a warm page, where the About-me card sitting inches below
+  // it is white. Matching that card makes the button read as part of the
+  // same set of objects rather than a hole in the background.
   editBtn: {
     alignSelf: 'flex-start', marginTop: 4,
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    backgroundColor: colors.surfaceGlass, paddingHorizontal: 16, paddingVertical: 8,
+    backgroundColor: colors.surfaceCard, paddingHorizontal: 16, paddingVertical: 8,
   },
   editBtnText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
 
