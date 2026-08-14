@@ -9,6 +9,7 @@ import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { useI18n } from '../lib/i18n';
+import { HANDLE_MAX, handleProblem, normalizeHandle } from '../lib/handle';
 import { colors } from '../theme';
 import type { Nav } from '../nav';
 
@@ -17,6 +18,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   const { city } = useCity();
   const { profile, updateProfile } = useAuth();
   const [name, setName] = useState(profile.full_name);
+  const [handle, setHandle] = useState(profile.handle);
   const [location, setLocation] = useState(profile.location);
   const [bio, setBio] = useState(profile.bio);
   const [interests, setInterests] = useState(profile.interests);
@@ -27,7 +29,14 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
     setBusy(true);
     setError(null);
     try {
+      const next = normalizeHandle(handle);
+      const bad = handleProblem(next);
+      if (bad) throw new Error(handleMessage(bad));
       await updateProfile({
+        // Sent only when it changed. An unchanged handle would collide
+        // with its own row's unique index on some paths, and asking the
+        // server to set a value to what it already holds is noise.
+        ...(next === profile.handle ? {} : { handle: next }),
         full_name: name.trim(),
         location: location.trim(),
         bio: bio.trim(),
@@ -36,11 +45,29 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       successHaptic();
       navigation.goBack();
     } catch (err) {
-      setError((err as Error).message);
+      const m = (err as Error).message;
+      setError(
+        m === 'handle_taken'
+          ? t(
+            `@${normalizeHandle(handle)} is taken. Try another.`,
+            `@${normalizeHandle(handle)} đã có người dùng. Chọn tên khác.`,
+            `@${normalizeHandle(handle)} は使用されています。別の名前をお試しください。`,
+          )
+          : m === 'handle_reserved'
+            ? t('That handle is reserved.', 'Tên định danh này đã được giữ chỗ.', 'このハンドル名は予約されています。')
+            : m,
+      );
     } finally {
       setBusy(false);
     }
   };
+
+  const handleMessage = (bad: NonNullable<ReturnType<typeof handleProblem>>) => ({
+    empty: t('Choose a handle.', 'Hãy chọn một tên định danh.', 'ハンドル名を選んでください。'),
+    short: t('Handle is too short — at least 3 characters.', 'Tên định danh quá ngắn — ít nhất 3 ký tự.', 'ハンドル名が短すぎます（3文字以上）。'),
+    long: t('Handle is too long — 20 characters at most.', 'Tên định danh quá dài — tối đa 20 ký tự.', 'ハンドル名が長すぎます（20文字以内）。'),
+    chars: t('Handle can use letters, numbers and _ only.', 'Tên định danh chỉ gồm chữ, số và dấu _.', 'ハンドル名は英数字と _ のみ使えます。'),
+  }[bad]);
 
   return (
     <AuthScreen>
@@ -67,6 +94,17 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         value={name}
         onChangeText={setName}
         autoComplete="name"
+      />
+      {/* Right under the name, the way it sits on the profile itself. */}
+      <FieldRow
+        icon="at-outline"
+        label={t('Handle', 'Tên định danh', 'ハンドル名')}
+        placeholder="yourname"
+        value={handle}
+        onChangeText={(v) => setHandle(normalizeHandle(v))}
+        autoCapitalize="none"
+        autoCorrect={false}
+        maxLength={HANDLE_MAX}
       />
       <FieldRow
         icon="location-outline"

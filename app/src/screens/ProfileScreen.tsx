@@ -250,6 +250,11 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         </EngagementRing>
         <View style={{ flex: 1, gap: 5 }}>
           <Text style={s.accountName} numberOfLines={1}>{name}</Text>
+          {/* Under the name and quieter than it: the name is who you are,
+              the handle is how you are found. */}
+          {profile.handle ? (
+            <Text style={s.handle} numberOfLines={1}>{`@${profile.handle}`}</Text>
+          ) : null}
           {profile.location ? (
             <View style={s.locationRow}>
               <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
@@ -381,6 +386,7 @@ const s = StyleSheet.create({
   section: { color: colors.text, ...type.section, marginTop: 10 },
 
   accountName: { color: colors.text, fontSize: 23, fontWeight: font.bold, letterSpacing: 0.2 },
+  handle: { color: colors.textTertiary, ...type.meta },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.regular },
   // The card surface, not the glass tint: on paper the tint is a grey
