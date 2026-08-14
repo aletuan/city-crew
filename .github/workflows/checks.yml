@@ -1,0 +1,37 @@
+# Typecheck and unit tests for the app.
+#
+# Until this existed the only automated gate was whether the bundle built
+# during `eas update` — and TypeScript is erased before bundling, so a type
+# error shipped. Runs on every pull request and every push to main, so a
+# red mark appears before a merge rather than after one.
+#
+# The tests are pure functions in a plain Node process: no React Native, no
+# simulator, no Supabase. See `app/src/lib/place.ts` for why that is
+# possible and what keeps it that way.
+
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      # Runs even when the typecheck failed: two red steps say more about
+      # what broke than one red step and one skipped.
+      - if: '!cancelled()'
+        run: npm test

@@ -12,37 +12,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { fmtCount, photosOf, Place } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
+import { dotWindow, fmtDuration, splitHours } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import { AmbientWarmth, Empty, PressableScale, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import type { Nav, RootRoute } from '../nav';
-
-function fmtDuration(min: number | null, max: number | null, lang: string): string | null {
-  if (!min) return null;
-  if ((max ?? min) <= 60) {
-    const range = !max || min === max ? `${min}` : `${min}–${max}`;
-    return lang === 'vi' ? `${range} phút` : lang === 'ja' ? `${range}分` : `${range} min`;
-  }
-  const h = (m: number) => Math.round(m / 30) / 2;
-  const range = !max || h(min) === h(max) ? `${h(min)}` : `${h(min)}–${h(max)}`;
-  return lang === 'vi' ? `${range} giờ` : lang === 'ja' ? `${range}時間` : `${range}h`;
-}
-
-/** "Monday: 8:00 AM – 11:00 PM" → ["Monday", "8:00 AM – 11:00 PM"] */
-function splitHours(line: string): [string, string] {
-  const i = line.indexOf(': ');
-  return i > 0 ? [line.slice(0, i), line.slice(i + 2)] : [line, ''];
-}
-
-/** Indices for the page-dot row: all pages up to 7, else a window sliding
- * with the active page so the strip never gets crowded. */
-function dotWindow(count: number, active: number, max = 7): number[] {
-  if (count <= max) return Array.from({ length: count }, (_, i) => i);
-  const start = Math.min(Math.max(active - Math.floor(max / 2), 0), count - max);
-  return Array.from({ length: max }, (_, i) => start + i);
-}
 
 function vibeLabel(place: Place, t: (en: string, vi: string, ja?: string) => string): string {
   const v = place.vibe_tags[0];

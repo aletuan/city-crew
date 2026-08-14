@@ -80,7 +80,16 @@ export function categoriesOf(p: Categorisable): string[] {
   return [...derived];
 }
 
+/**
+ * Label for a category key.
+ *
+ * A key this table has not heard of is shown tidied rather than raw —
+ * "street_food" reads as a chip, `street_food` reads as leaked data. The
+ * vibe table has always done this; a test comparing the two is what
+ * turned up that categories did not.
+ */
 export function categoryLabel(key: string, t: (en: string, vi: string, ja?: string) => string): string {
   const c = CATEGORIES[key];
-  return c ? t(c.en, c.vi, c.ja) : key;
+  if (c) return t(c.en, c.vi, c.ja);
+  return key.replace(/_/g, ' ').replace(/^\w/, (ch) => ch.toUpperCase());
 }
