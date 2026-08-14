@@ -19,7 +19,15 @@ import { PressableScale, successHaptic } from './ui';
 /** Square, so the crop the person frames is the crop the circle shows. */
 const EDIT = { allowsEditing: true, aspect: [1, 1] as [number, number], quality: 1 };
 
-export default function AvatarPicker({ size = 88 }: { size?: number }) {
+export default function AvatarPicker({ size = 88, showCamera = true }: {
+  size?: number;
+  /** The camera badge is what says the circle is a control rather than a
+   *  picture. Turn it off only where something else already occupies that
+   *  corner *and* the same picker is reachable elsewhere — on Profile the
+   *  engagement badge takes the corner, and Edit profile still shows this
+   *  control with its badge intact. */
+  showCamera?: boolean;
+}) {
   const { t } = useI18n();
   const { profile, email, setAvatar, clearAvatar } = useAuth();
   const insets = useSafeAreaInsets();
@@ -109,11 +117,13 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
           {/* Without this the circle reads as decoration, not a control.
               The gap between badge and photo is a ring of page behind it
               rather than a border on it — see `badgeRing`. */}
-          <View style={s.badgeRing}>
-            <View style={s.badge}>
-              <Ionicons name="camera" size={13} color={colors.badgeInk} />
+          {showCamera && (
+            <View style={s.badgeRing}>
+              <View style={s.badge}>
+                <Ionicons name="camera" size={13} color={colors.badgeInk} />
+              </View>
             </View>
-          </View>
+          )}
         </View>
       </PressableScale>
 
