@@ -108,7 +108,7 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
           </View>
           {/* Without this the circle reads as decoration, not a control. */}
           <View style={s.badge}>
-            <Ionicons name="camera" size={13} color={colors.accentInk} />
+            <Ionicons name="camera" size={13} color={colors.badgeInk} />
           </View>
         </View>
       </PressableScale>
@@ -165,7 +165,7 @@ const s = StyleSheet.create({
     position: 'absolute', right: -2, bottom: -2,
     width: 26, height: 26, borderRadius: 13,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentFill,
+    backgroundColor: colors.badge,
     borderWidth: 2, borderColor: colors.bg,
   },
 
