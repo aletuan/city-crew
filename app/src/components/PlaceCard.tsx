@@ -36,6 +36,18 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
           <View style={s.priceSlot} pointerEvents="none">
             <PricePill place={place} overlay />
           </View>
+          {/* The score belongs to the picture, not to the name under it:
+              on the photo it is read at a glance with the place, and the
+              body is left to the title and its chips. Bottom-left is the
+              last free corner — price holds the top-right, attribution the
+              bottom-right. */}
+          {place.rating ? (
+            <View style={s.ratingSlot} pointerEvents="none">
+              <Text style={s.star}>★</Text>
+              <Text style={s.ratingValue}>{place.rating}</Text>
+              {reviews ? <Text style={s.ratingCount}>({reviews})</Text> : null}
+            </View>
+          ) : null}
         </View>
         <View style={s.body}>
           {/* The bookmark rides the title line rather than the photograph.
@@ -66,13 +78,6 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
               />
             </PressableScale>
           </View>
-          {place.rating ? (
-            <Text style={s.ratingRow} numberOfLines={1}>
-              <Text style={s.star}>★ </Text>
-              <Text style={s.ratingValue}>{place.rating}</Text>
-              {reviews ? <Text style={s.ratingCount}>  ({reviews})</Text> : null}
-            </Text>
-          ) : null}
           {place.vibe_tags.length > 0 && (
             <View style={s.vibeRow}>
               {place.vibe_tags.slice(0, 3).map((v) => (
@@ -117,12 +122,19 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
     borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
-  // Rating reads in three weights: a barely-there accent star, a clear
-  // value, a whispered count.
-  ratingRow: { marginTop: 4 },
-  star: { color: colors.accentFaint, fontSize: 13.5 },
-  ratingValue: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
-  ratingCount: { color: colors.textTertiary, fontSize: 13, fontWeight: font.regular },
+  // The rating supplies its own ground, like the price pill: a photograph
+  // can be any brightness, and a score has to be legible over all of them.
+  ratingSlot: {
+    position: 'absolute', left: 10, bottom: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 5,
+    backgroundColor: 'rgba(10,11,10,0.58)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
+  },
+  // Three weights: the gold mark, the number, the count in parentheses.
+  star: { color: onPhoto.star, fontSize: 13 },
+  ratingValue: { color: onPhoto.text, fontSize: 14.5, fontWeight: font.semibold },
+  ratingCount: { color: onPhoto.textSecondary, fontSize: 12.5, fontWeight: font.regular },
   // Vibes read as small glass pills, each carrying its own colour in a dot
   // only — the type stays neutral so the row scans without shouting.
   // One line, never wrapping, so every card keeps the same height.
