@@ -127,7 +127,9 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, borderColor: colors.borderGlass,
   },
-  tickOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  // The filled box is a surface, so it takes the fill coral — the same
+  // one the gradients use — and its check is accentInk on top.
+  tickOn: { backgroundColor: colors.accentFill, borderColor: colors.accentFill },
   rowText: { color: colors.text, fontSize: 16, fontWeight: font.medium },
   rowMeta: { color: colors.textTertiary, fontSize: 13, marginTop: 1 },
 

@@ -163,7 +163,7 @@ function Tabs() {
               <View style={{
                 width: 28, height: 28, borderRadius: 14,
                 alignItems: 'center', justifyContent: 'center',
-                backgroundColor: colors.accent,
+                backgroundColor: colors.accentFill,
               }}>
                 <Ionicons name={ICONS[route.name][1]} size={size - 7} color={colors.accentInk} />
               </View>
