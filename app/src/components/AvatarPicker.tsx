@@ -165,7 +165,8 @@ const s = StyleSheet.create({
     position: 'absolute', right: -2, bottom: -2,
     width: 26, height: 26, borderRadius: 13,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.badge,
+    // Opaque, not the tint: this one sits on the photograph it belongs to.
+    backgroundColor: colors.badgeSolid,
     borderWidth: 2, borderColor: colors.bg,
   },
 
