@@ -97,8 +97,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const photos = photosOf(place);
   const reviews = fmtCount(place.rating_count);
   const dur = fmtDuration(place.duration_min, place.duration_max, lang);
-  // The gallery runs the full width of the screen — see `heroWrap`.
-  const heroW = width;
+  const heroW = width - 24;
   const mapsUrl = place.lat && place.lng
     ? `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`
     : null;
@@ -135,13 +134,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
           <PressableScale
             onPress={() => navigation.goBack()} scaleTo={0.9}
-            containerStyle={{ position: 'absolute', left: 16, top: 14 }} style={s.fab} accessibilityLabel="Back"
+            containerStyle={{ position: 'absolute', left: 12, top: 12 }} style={s.fab} accessibilityLabel="Back"
           >
             <Ionicons name="chevron-back" size={22} color={onPhoto.text} />
           </PressableScale>
           <PressableScale
             onPress={share} scaleTo={0.9}
-            containerStyle={{ position: 'absolute', right: 68, top: 14 }} style={s.fab} accessibilityLabel="Share"
+            containerStyle={{ position: 'absolute', right: 64, top: 12 }} style={s.fab} accessibilityLabel="Share"
           >
             <Ionicons name="share-outline" size={20} color={onPhoto.text} />
           </PressableScale>
@@ -151,7 +150,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               nothing, and it forgot on the way back. */}
           <PressableScale
             onPress={() => save(place)} scaleTo={0.9} haptic="selection"
-            containerStyle={{ position: 'absolute', right: 16, top: 14 }} style={s.fab}
+            containerStyle={{ position: 'absolute', right: 12, top: 12 }} style={s.fab}
             accessibilityRole="button"
             accessibilityState={{ selected: saved }}
             accessibilityLabel={saved
@@ -282,22 +281,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
 
-  // Full-bleed, with only the bottom corners turned.
-  //
-  // Inset and rounded on all four sides, the gallery read as a card lying
-  // on the page — one object among the address and hours cards below it.
-  // A detail screen's photography is not a card; it is the top of the
-  // screen. Running it edge to edge says so, and the two turned corners
-  // are what hand it back to the page underneath.
-  //
-  // It still starts below the status bar rather than under it. Going the
-  // last few points would need a scrim and a forced-light status bar for
-  // this screen alone: the light theme draws dark status-bar glyphs, and
-  // over a bright photograph they disappear.
-  heroWrap: {
-    borderBottomLeftRadius: 26, borderBottomRightRadius: 26,
-    overflow: 'hidden',
-  },
+  heroWrap: { marginHorizontal: 12, borderRadius: 24, overflow: 'hidden' },
   hero: { aspectRatio: 4 / 3.4, backgroundColor: colors.surfaceGlass },
   heroFallback: { alignItems: 'center', justifyContent: 'center' },
   fab: {
@@ -305,12 +289,12 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(10,8,13,0.55)', alignItems: 'center', justifyContent: 'center',
   },
   counter: {
-    position: 'absolute', left: 16, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 6,
+    position: 'absolute', left: 12, bottom: 12, flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: 'rgba(10,8,13,0.65)', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6,
   },
   counterText: { color: onPhoto.text, fontSize: 12.5, fontWeight: font.semibold },
   dots: {
-    position: 'absolute', bottom: 16, alignSelf: 'center',
+    position: 'absolute', bottom: 15, alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 7,
     backgroundColor: 'rgba(10,8,13,0.45)', borderRadius: radius.pill,
     paddingHorizontal: 11, paddingVertical: 8,
