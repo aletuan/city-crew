@@ -14,7 +14,7 @@ import { fmtCount, photosOf, Place } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
-import { colors, font, gradAI, radius, space, type } from '../theme';
+import { colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import { AmbientWarmth, Empty, PressableScale, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import type { Nav, RootRoute } from '../nav';
@@ -136,13 +136,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             onPress={() => navigation.goBack()} scaleTo={0.9}
             containerStyle={{ position: 'absolute', left: 12, top: 12 }} style={s.fab} accessibilityLabel="Back"
           >
-            <Ionicons name="chevron-back" size={22} color="#fff" />
+            <Ionicons name="chevron-back" size={22} color={onPhoto.text} />
           </PressableScale>
           <PressableScale
             onPress={share} scaleTo={0.9}
             containerStyle={{ position: 'absolute', right: 64, top: 12 }} style={s.fab} accessibilityLabel="Share"
           >
-            <Ionicons name="share-outline" size={20} color="#fff" />
+            <Ionicons name="share-outline" size={20} color={onPhoto.text} />
           </PressableScale>
           {/* The same control as the bookmark on the card that got you
               here — same glyph, same sheet, same rows underneath. It was a
@@ -157,12 +157,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
               : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
           >
-            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? colors.accent : '#fff'} />
+            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? onPhoto.accent : onPhoto.text} />
           </PressableScale>
 
           {photos.length > 0 && (
             <View style={s.counter}>
-              <Ionicons name="images-outline" size={13} color="#fff" />
+              <Ionicons name="images-outline" size={13} color={onPhoto.text} />
               <Text style={s.counterText}>{photoIndex + 1} / {photos.length}</Text>
             </View>
           )}
@@ -292,7 +292,7 @@ const s = StyleSheet.create({
     position: 'absolute', left: 12, bottom: 12, flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: 'rgba(10,8,13,0.65)', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6,
   },
-  counterText: { color: '#fff', fontSize: 12.5, fontWeight: font.semibold },
+  counterText: { color: onPhoto.text, fontSize: 12.5, fontWeight: font.semibold },
   dots: {
     position: 'absolute', bottom: 15, alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 7,
@@ -300,7 +300,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 11, paddingVertical: 8,
   },
   dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.38)' },
-  dotOn: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
+  dotOn: { width: 8, height: 8, borderRadius: 4, backgroundColor: onPhoto.text },
   // Required attribution, kept quiet — see the note in PlaceCard.
   attr: {
     position: 'absolute', right: 12, bottom: 14, maxWidth: '55%',

@@ -6,7 +6,7 @@ import { coverOf, fmtCount, Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, onPhoto, radius, space, type } from '../theme';
 import PricePill from './PricePill';
 import { Card, PressableScale } from './ui';
 
@@ -99,7 +99,7 @@ const s = StyleSheet.create({
   // capped at half the card so a long name can't cross the frame.
   attr: {
     position: 'absolute', right: 10, bottom: 8, maxWidth: '50%',
-    fontSize: 8.5, color: '#fff', opacity: 0.5,
+    fontSize: 8.5, color: onPhoto.text, opacity: 0.5,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
   // ~10% tighter than the standard card body: this is a feed, not a form.

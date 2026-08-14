@@ -90,6 +90,28 @@ export const colors = {
   bad: dyn('#C2564A', '#D98A80'),
 };
 
+/**
+ * Type, hairlines and marks that sit **on a photograph**.
+ *
+ * These do not belong to either theme, and that is the whole point: their
+ * ground is the picture and the dark scrim laid over it, not the page. A
+ * dynamic colour here follows the wrong thing — switch to the light theme
+ * and the hero's title turns near-black over a dark scrim over a night
+ * photo, which is how this got noticed.
+ *
+ * The rule for a call site: if the thing behind it is `colors.bg` or a
+ * card, use `colors`. If the thing behind it is an image, use these.
+ */
+export const onPhoto = {
+  text: '#F7F7F5',
+  textSecondary: 'rgba(247,247,245,0.82)',
+  /** Hairlines on the scrim pills and badges. */
+  line: 'rgba(247,247,245,0.22)',
+  /** The accent as it must appear over a photograph: the bright coral,
+   *  never the paper theme's darker one, which disappears into a scrim. */
+  accent: '#FF6F5B',
+} as const;
+
 /** The accent as a gradient, for the rare loud surface. Left to right
  *  rather than corner to corner: on a wide pill a diagonal wash puts the
  *  lightest tone under one end of the label and the darkest under the

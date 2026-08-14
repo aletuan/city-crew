@@ -11,7 +11,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { isFree, Place, priceLabel } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius } from '../theme';
+import { colors, font, onPhoto, radius } from '../theme';
 
 /** "70k₫" → "~70k ₫" — a breath before the currency. */
 const quiet = (label: string) => `~${label.replace('₫', ' ₫').trim()}`;
@@ -69,11 +69,11 @@ const s = StyleSheet.create({
   overlay: {
     borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 7,
     backgroundColor: 'rgba(10,11,10,0.58)',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(247,247,245,0.22)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
-  overlayText: { color: '#FFFFFF', fontSize: 15, fontWeight: font.semibold },
+  overlayText: { color: onPhoto.text, fontSize: 15, fontWeight: font.semibold },
   overlayFreeText: {
-    color: colors.accent, fontSize: 12.5, fontWeight: font.semibold,
+    color: onPhoto.accent, fontSize: 12.5, fontWeight: font.semibold,
     textTransform: 'uppercase', letterSpacing: 0.8,
   },
 });

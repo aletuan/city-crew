@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
-import { colors, display, font, radius, space } from '../theme';
+import { colors, display, font, onPhoto, radius, space } from '../theme';
 import { PressableScale, successHaptic } from './ui';
 
 /** Square, so the crop the person frames is the crop the circle shows. */
@@ -102,7 +102,7 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
               : <Text style={[s.initial, { fontSize: size * 0.39 }]}>{initial}</Text>}
             {busy && (
               <View style={[StyleSheet.absoluteFill, s.busy]}>
-                <ActivityIndicator color={colors.accent} />
+                <ActivityIndicator color={onPhoto.accent} />
               </View>
             )}
           </View>
