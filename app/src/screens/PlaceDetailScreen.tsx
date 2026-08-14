@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { fmtCount, photosOf, Place } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
-import { dotWindow, fmtDuration, splitHours } from '../lib/format';
+import { dotWindow, fmtDuration, groupHours } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
@@ -77,7 +77,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const mapsUrl = place.lat && place.lng
     ? `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`
     : null;
-  const hours = (place.opening_hours ?? []).map(splitHours);
+  // Grouped, not one row per day: see groupHours. A place open the same
+  // seven days a week becomes one line instead of seven identical ones.
+  const hours = groupHours(place.opening_hours ?? []);
 
   const share = () => {
     Share.share({
@@ -209,10 +211,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
           {hours.length > 0 && (
             <InfoCard icon="time-outline" label={t('Hours', 'Giờ mở cửa', '営業時間')}>
-              {hours.map(([day, time]) => (
-                <View key={day} style={s.hourRow}>
-                  <Text style={s.hourDay}>{day}</Text>
-                  <Text style={s.hourTime}>{time}</Text>
+              {hours.map((row) => (
+                <View key={row.label} style={s.hourRow}>
+                  <Text style={s.hourDay}>{row.label}</Text>
+                  <Text style={s.hourTime}>{row.hours}</Text>
                 </View>
               ))}
             </InfoCard>
