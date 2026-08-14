@@ -627,7 +627,11 @@ const s = StyleSheet.create({
   // them red. The slab did the opposite — it shouted before you had
   // decided anything, and its near-black glyph made the destructive
   // button the one place the red was *not* on the thing you tap.
-  actionDelete: { backgroundColor: colors.badSoft, borderWidth: 1, borderColor: colors.badLine },
+  // Same hairline as Edit. A red-tinted border of its own came out near
+  // black against the dark ground, which put a hard outline around the
+  // one button that should read as soft. The fill carries the warning;
+  // the edge is just what gives both buttons an edge.
+  actionDelete: { backgroundColor: colors.badSoft, borderWidth: 1, borderColor: colors.borderGlassSoft },
   cardText: { flex: 1, gap: 5 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
