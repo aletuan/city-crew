@@ -31,7 +31,9 @@ type Drag = ReturnType<Animated.Value['interpolate']>;
 const ACTIONS_W = 62 * 2 + 8 + 8;
 const THUMB = 92;
 const THUMB_OPEN = 64;
-const CHEVRON = 44;
+/** The disclosure chevron's own footprint — it is a glyph, not a control,
+ *  so this is the size of the mark rather than a touch target. */
+const CHEVRON = 17;
 
 // The card sells signing in, so it leads with what you get rather than with
 // what you are: "browsing as a guest" names a limitation and leaves the
@@ -460,7 +462,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                         }),
                       }]}
                     >
-                      <Ionicons name="chevron-forward" size={17} color={colors.textSecondary} />
+                      <Ionicons name="chevron-forward" size={CHEVRON} color={colors.textTertiary} />
                     </Animated.View>
                   </Card>
                 </PressableScale>
@@ -636,10 +638,12 @@ const s = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
   meta: { color: colors.textTertiary, ...type.meta },
-  // Circular control: translucent fill, thin hairline, 44pt touch target.
-  chevron: {
-    width: CHEVRON, height: CHEVRON, borderRadius: CHEVRON / 2,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceGlass, borderWidth: 1, borderColor: colors.borderGlassSoft,
-  },
+  // A disclosure indicator, which is a mark and not a control: a bare
+  // chevron, the way the rest of the app already draws one. In a 44pt
+  // well with a fill and a hairline it looked like a button, and a button
+  // beside a tappable row raises a question the row cannot answer — what
+  // does pressing the circle do that pressing the row does not. Nothing:
+  // the row is the target, and always was. `overflow` is what lets the
+  // mark clip away as the swipe closes the space up.
+  chevron: { width: CHEVRON, alignItems: 'center', overflow: 'hidden' },
 });
