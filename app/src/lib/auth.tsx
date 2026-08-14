@@ -12,8 +12,41 @@ import type { Session } from '@supabase/supabase-js';
 import { decode } from 'base64-arraybuffer';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { supabase } from './supabase';
+import { normalizeHandle } from './handle';
+
+/**
+ * Postgres constraint violations, as something a screen can branch on.
+ *
+ * The raw messages are legible to a developer and to nobody else — a
+ * unique-index violation names the index. These two are the ones a person
+ * can act on, so they get names; everything else passes through.
+ */
+export type AuthFail = 'handle_taken' | 'handle_reserved';
+
+function asFail(e: { code?: string; message: string }): string {
+  if (e.code === '23505') return 'handle_taken';
+  if (e.message.includes('handle_reserved')) return 'handle_reserved';
+  return e.message;
+}
+
+/**
+ * Whether a handle is free. UX only — two people can both be told yes in
+ * the same instant. The unique index is what actually decides, which is
+ * why the write path has to handle losing anyway.
+ */
+export async function isHandleFree(input: string): Promise<boolean> {
+  const handle = normalizeHandle(input);
+  if (!handle) return false;
+  const [taken, reserved] = await Promise.all([
+    supabase.from('profiles').select('id').ilike('handle', handle).maybeSingle(),
+    supabase.from('reserved_handles').select('handle').eq('handle', handle).maybeSingle(),
+  ]);
+  return !taken.data && !reserved.data;
+}
 
 export type Profile = {
+  /** Unique, lower case, URL-safe. Set at sign-up; changeable later. */
+  handle: string;
   full_name: string;
   location: string;
   bio: string;
@@ -51,7 +84,7 @@ type Auth = {
   memberSince: Date | null;
   signIn: (email: string, password: string) => Promise<void>;
   /** True result = confirmation required; verify with confirmSignUp. */
-  signUp: (name: string, email: string, password: string) => Promise<{ needsConfirm: boolean }>;
+  signUp: (name: string, handle: string, email: string, password: string) => Promise<{ needsConfirm: boolean }>;
   confirmSignUp: (email: string, code: string) => Promise<void>;
   requestReset: (email: string) => Promise<void>;
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
@@ -63,7 +96,7 @@ type Auth = {
   signOut: () => Promise<void>;
 };
 
-const EMPTY_PROFILE: Profile = { full_name: '', location: '', bio: '', interests: '', avatar_url: '' };
+const EMPTY_PROFILE: Profile = { handle: '', full_name: '', location: '', bio: '', interests: '', avatar_url: '' };
 
 const Ctx = createContext<Auth>({
   ready: false, session: null, email: null, profile: EMPTY_PROFILE, memberSince: null,
@@ -77,6 +110,7 @@ export const useAuth = () => useContext(Ctx);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -87,6 +121,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // The profile is a row now, not a claim inside the token, so it has to
+  // be fetched — and refetched whenever the account changes. Signing out
+  // clears it rather than leaving the last person's name on screen while
+  // the next one loads.
+  const loadProfile = useCallback(async (uid: string | undefined) => {
+    if (!uid) { setProfile(EMPTY_PROFILE); return; }
+    const { data } = await supabase
+      .from('profiles')
+      .select('handle, full_name, bio, location, interests, avatar_url')
+      .eq('id', uid)
+      .maybeSingle();
+    // A miss leaves the empty profile in place. The row is made by a
+    // trigger on sign-up, so the only way to miss is to read before that
+    // commits; the next auth event refetches.
+    if (data) setProfile(data as Profile);
+  }, []);
+
+  useEffect(() => { void loadProfile(session?.user?.id); }, [session?.user?.id, loadProfile]);
 
   // Token refresh runs on a timer; only keep it running while the app is
   // in the foreground (the supabase-js guidance for React Native).
@@ -107,11 +160,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw new Error(error.message);
   }, []);
 
-  const signUp = useCallback(async (name: string, email: string, password: string) => {
+  // The handle rides in the metadata for the `handle_new_user` trigger to
+  // read. It is a request rather than a reservation: if it was taken in
+  // the moment between the check and this call, the trigger falls back to
+  // a generated one rather than failing the account into existence.
+  const signUp = useCallback(async (name: string, handle: string, email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name } },
+      options: { data: { full_name: name, handle: handle.toLowerCase() } },
     });
     if (error) throw new Error(error.message);
     return { needsConfirm: !data.session };
@@ -134,11 +191,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (updateError) throw new Error(updateError.message);
   }, []);
 
+  // Writes the row and keeps the copy in memory in step. There is no auth
+  // event behind a table write, so nothing else will do it.
   const updateProfile = useCallback(async (patch: Partial<Profile>) => {
-    const { error } = await supabase.auth.updateUser({ data: patch });
-    if (error) throw new Error(error.message);
-    // onAuthStateChange fires USER_UPDATED with the fresh metadata.
-  }, []);
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('Not signed in');
+    const clean = patch.handle === undefined ? patch : { ...patch, handle: patch.handle.toLowerCase().trim() };
+    const { error } = await supabase.from('profiles').update(clean).eq('id', uid);
+    if (error) throw new Error(asFail(error));
+    setProfile((p) => ({ ...p, ...clean }));
+  }, [session]);
 
   const setAvatar = useCallback(async (localUri: string) => {
     // The id comes from the session already in memory. getUser() would go
@@ -175,11 +237,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // The path never changes, so a plain URL would show the old face from
     // cache long after the new one is stored. The stamp is what makes the
     // change visible.
-    await withTimeout(
-      supabase.auth.updateUser({ data: { avatar_url: `${data.publicUrl}?v=${Date.now()}` } }),
+    const url = `${data.publicUrl}?v=${Date.now()}`;
+    // Wrapped in a real Promise: PostgREST's builder is thenable but not
+    // one, and withTimeout races a Promise.
+    const { error: saveError } = await withTimeout(
+      Promise.resolve(supabase.from('profiles').update({ avatar_url: url }).eq('id', uid)),
       20_000,
       'Saving the photo',
     );
+    if (saveError) throw new Error(saveError.message);
+    setProfile((p) => ({ ...p, avatar_url: url }));
   }, [session]);
 
   const clearAvatar = useCallback(async () => {
@@ -187,8 +254,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (uid) await supabase.storage.from('avatars').remove([`${uid}/avatar.jpg`]);
     // Clearing the pointer is what removes the avatar; a failed delete
     // leaves an orphan object nobody can reach, not a visible avatar.
-    const { error } = await supabase.auth.updateUser({ data: { avatar_url: '' } });
+    const { error } = await supabase.from('profiles').update({ avatar_url: '' }).eq('id', uid);
     if (error) throw new Error(error.message);
+    setProfile((p) => ({ ...p, avatar_url: '' }));
   }, [session]);
 
   const signOut = useCallback(async () => {
@@ -197,23 +265,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<Auth>(() => {
-    const meta = (session?.user?.user_metadata ?? {}) as Partial<Profile>;
     return {
       ready,
       session,
       email: session?.user?.email ?? null,
-      profile: {
-        full_name: meta.full_name ?? '',
-        location: meta.location ?? '',
-        bio: meta.bio ?? '',
-        interests: meta.interests ?? '',
-        avatar_url: meta.avatar_url ?? '',
-      },
+      profile,
       memberSince: session?.user?.created_at ? new Date(session.user.created_at) : null,
       signIn, signUp, confirmSignUp, requestReset, resetPassword, updateProfile,
       setAvatar, clearAvatar, signOut,
     };
-  }, [ready, session, signIn, signUp, confirmSignUp, requestReset, resetPassword,
+  }, [ready, session, profile, signIn, signUp, confirmSignUp, requestReset, resetPassword,
       updateProfile, setAvatar, clearAvatar, signOut]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

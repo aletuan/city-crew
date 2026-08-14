@@ -7,9 +7,10 @@ import React, { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton, SwitchRow } from '../components/authUi';
 import { successHaptic } from '../components/ui';
-import { useAuth } from '../lib/auth';
+import { isHandleFree, useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
+import { HANDLE_MAX, handleProblem, normalizeHandle, suggestHandle } from '../lib/handle';
 import { colors, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -17,6 +18,11 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { signUp, confirmSignUp } = useAuth();
   const [name, setName] = useState('');
+  // Suggested from the name until the moment it is edited, then left
+  // alone — a suggestion that keeps overwriting what you typed is worse
+  // than none.
+  const [handle, setHandle] = useState('');
+  const [handleTouched, setHandleTouched] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -37,6 +43,13 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
     }
   };
 
+  const handleMessage = (bad: NonNullable<ReturnType<typeof handleProblem>>) => ({
+    empty: t('Choose a handle.', 'Hãy chọn một tên định danh.', 'ハンドル名を選んでください。'),
+    short: t('Handle is too short — at least 3 characters.', 'Tên định danh quá ngắn — ít nhất 3 ký tự.', 'ハンドル名が短すぎます（3文字以上）。'),
+    long: t('Handle is too long — 20 characters at most.', 'Tên định danh quá dài — tối đa 20 ký tự.', 'ハンドル名が長すぎます（20文字以内）。'),
+    chars: t('Handle can use letters, numbers and _ only.', 'Tên định danh chỉ gồm chữ, số và dấu _.', 'ハンドル名は英数字と _ のみ使えます。'),
+  }[bad]);
+
   const submit = () =>
     run(async () => {
       if (password.length < 8) {
@@ -45,7 +58,20 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       if (password !== confirm) {
         throw new Error(t("Passwords don't match.", 'Mật khẩu nhập lại không khớp.', 'パスワードが一致しません。'));
       }
-      const { needsConfirm } = await signUp(name.trim(), email.trim(), password);
+      const chosen = normalizeHandle(handle);
+      const bad = handleProblem(chosen);
+      if (bad) throw new Error(handleMessage(bad));
+      // Checked here so the message names the problem; the database is
+      // what actually decides, and losing a race falls back to a
+      // generated handle rather than to a failed sign-up.
+      if (!(await isHandleFree(chosen))) {
+        throw new Error(t(
+          `@${chosen} is taken. Try another.`,
+          `@${chosen} đã có người dùng. Chọn tên khác.`,
+          `@${chosen} は使用されています。別の名前をお試しください。`,
+        ));
+      }
+      const { needsConfirm } = await signUp(name.trim(), chosen, email.trim(), password);
       if (needsConfirm) setStep('confirm');
       else {
         successHaptic();
@@ -105,8 +131,25 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         label={t('Full name', 'Họ tên', 'お名前')}
         placeholder={t('What should we call you?', 'Chúng tôi nên gọi bạn là gì?', 'なんとお呼びすれば？')}
         value={name}
-        onChangeText={setName}
+        onChangeText={(v) => {
+          setName(v);
+          if (!handleTouched) setHandle(suggestHandle(v));
+        }}
         autoComplete="name"
+      />
+      {/* Below the name because it is proposed from it. The @ is drawn
+          rather than typed — it is not part of the value, and a field
+          that silently eats a character you typed is worse than one that
+          never asked for it. */}
+      <FieldRow
+        icon="at-outline"
+        label={t('Handle', 'Tên định danh', 'ハンドル名')}
+        placeholder="yourname"
+        value={handle}
+        onChangeText={(v) => { setHandleTouched(true); setHandle(normalizeHandle(v)); }}
+        autoCapitalize="none"
+        autoCorrect={false}
+        maxLength={HANDLE_MAX}
       />
       <FieldRow
         icon="mail-outline"

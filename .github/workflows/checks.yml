@@ -35,3 +35,32 @@ jobs:
       # what broke than one red step and one skipped.
       - if: '!cancelled()'
         run: npm test
+
+  # The migrations, run against a real Postgres and then asserted. The app
+  # job above cannot reach any of this: triggers, constraints and backfills
+  # are SQL, and SQL that has only been read is SQL that has not been run.
+  #
+  # Not a Supabase stack — see supabase/tests/_harness.sql for what is
+  # stubbed and what that leaves untested.
+  migrations:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tester
+          POSTGRES_PASSWORD: tester
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo apt-get install -y --no-install-recommends postgresql-client
+      - run: supabase/tests/run.sh
+        env:
+          PG_URL: postgres://tester:tester@localhost:5432
