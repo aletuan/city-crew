@@ -1,10 +1,9 @@
-// Sign in — email + password, per the reference layout: welcome-back
-// eyebrow, editorial title, list-row fields, forgot-password link and
-// one big accented action.
+// Sign in — email + password: inline title beside the back control,
+// list-row fields, forgot-password link and one big accented action.
 
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton, SwitchRow } from '../components/authUi';
+import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton, SwitchRow } from '../components/authUi';
 import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
@@ -34,16 +33,16 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
   };
 
   return (
-    <AuthScreen onBack={() => navigation.goBack()}>
+    <AuthScreen>
       <AuthHeader
-        eyebrow={t('Welcome back', 'Mừng bạn trở lại', 'おかえりなさい')}
+        onBack={() => navigation.goBack()}
         title={t('Sign in', 'Đăng nhập', 'サインイン')}
-        lede={t(
+      />
+      <Lede>{t(
           'Glad to see you again! Sign in to continue planning amazing trips with your crew.',
           'Rất vui được gặp lại! Đăng nhập để tiếp tục lên kế hoạch cùng hội của bạn.',
           'また会えて嬉しいです！サインインして仲間との旅の計画を続けましょう。',
-        )}
-      />
+        )}</Lede>
       <FieldRow
         icon="mail-outline"
         label={t('Email address', 'Địa chỉ email', 'メールアドレス')}

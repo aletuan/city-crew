@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
-import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton } from '../components/authUi';
+import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
 import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
@@ -43,10 +43,10 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   };
 
   return (
-    <AuthScreen onBack={() => navigation.goBack()}>
+    <AuthScreen>
       <AuthHeader
+        onBack={() => navigation.goBack()}
         title={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}
-        lede={t('Tell your crew a little about yourself.', 'Kể cho hội của bạn nghe đôi chút về bạn.', 'あなたのことを少し教えてください。')}
       />
       {/* Saved on pick, not on submit — see AvatarPicker. The caption says
           so, because a form with a Save button implies otherwise. */}
@@ -56,6 +56,10 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
           {t('Tap to change — saved right away', 'Chạm để đổi — lưu ngay', 'タップで変更 — すぐ保存されます')}
         </Text>
       </View>
+      {/* Below the avatar, immediately above the fields it introduces —
+          the avatar is its own self-contained control and needs no
+          sentence of its own. */}
+      <Lede>{t('Tell your crew a little about yourself.', 'Kể cho hội của bạn nghe đôi chút về bạn.', 'あなたのことを少し教えてください。')}</Lede>
       <FieldRow
         icon="person-outline"
         label={t('Full name', 'Họ tên', 'お名前')}

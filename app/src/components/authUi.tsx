@@ -1,7 +1,6 @@
-// Shared pieces for the auth screens: the list-row field with icon and
-// label, the big accented primary button, and the header block with
-// back control, eyebrow, title and lede — the reference layout rendered
-// in the cityCrew accent language.
+// Shared pieces for the form screens: the list-row field with icon and
+// label, the big accented primary button, and the header — a back control
+// with the title on its line, then a lede each screen places for itself.
 
 import React, { useState } from 'react';
 import {
@@ -14,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BackButton, fireHaptic, PressableScale, useTabBarClearance } from './ui';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
-export function AuthScreen({ onBack, children }: { onBack: () => void; children: React.ReactNode }) {
+export function AuthScreen({ children }: { children: React.ReactNode }) {
   const tabClearance = useTabBarClearance();
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
@@ -24,9 +23,6 @@ export function AuthScreen({ onBack, children }: { onBack: () => void; children:
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={{ alignSelf: 'flex-start', marginBottom: 4 }}>
-            <BackButton onPress={onBack} />
-          </View>
           {children}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -34,14 +30,41 @@ export function AuthScreen({ onBack, children }: { onBack: () => void; children:
   );
 }
 
-export function AuthHeader({ eyebrow, title, lede }: { eyebrow?: string; title: string; lede: string }) {
+/**
+ * Back control and title on one line.
+ *
+ * These are screens for doing something and leaving, and iOS gives that
+ * shape an inline title — the large title stacked under the back button is
+ * for places you stay in, which is where the tab roots still use it. On a
+ * form it was costing about 60pt at the top of a screen whose lower half
+ * the keyboard takes.
+ *
+ * `titleDetail`, not `title`: at 34pt beside a 44pt control, "Sign in"
+ * fits and "Đặt tên danh sách" does not. It still wraps to two lines if a
+ * translation needs it, which is why the row aligns to the top rather than
+ * centring on a control whose height it cannot assume.
+ *
+ * The eyebrow that used to sit above the title is gone. It was a device
+ * for introducing a large title; below an inline one it would be read
+ * after the thing it was introducing.
+ */
+export function AuthHeader({ onBack, title }: { onBack: () => void; title: string }) {
   return (
-    <View style={{ gap: 8, marginBottom: 10 }}>
-      {eyebrow ? <Text style={s.eyebrow}>{eyebrow}</Text> : null}
+    <View style={s.header}>
+      <BackButton onPress={onBack} />
       <Text style={s.title}>{title}</Text>
-      <Text style={s.lede}>{lede}</Text>
     </View>
   );
+}
+
+/**
+ * The sentence under the title — now placed by each screen rather than
+ * bolted to the header, because it belongs immediately above the fields it
+ * introduces. On the profile form that means below the avatar, which sits
+ * between the two.
+ */
+export function Lede({ children }: { children: string }) {
+  return <Text style={s.lede}>{children}</Text>;
 }
 
 export function FieldRow({ icon, label, secure, ...input }: {
@@ -102,12 +125,16 @@ export function ErrorText({ children }: { children: string }) {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
 
-  eyebrow: {
-    color: colors.accent, fontSize: 12.5, fontWeight: font.semibold,
-    letterSpacing: 1.6, textTransform: 'uppercase',
+  // Top-aligned, not centred: the title may wrap to two lines and the
+  // control must stay level with the first of them.
+  header: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
+    marginBottom: 2,
   },
-  title: { color: colors.text, ...type.title },
-  lede: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
+  // `paddingTop` optically centres a 26pt line against the 44pt control
+  // without pinning either to the other's height.
+  title: { flex: 1, color: colors.text, ...type.titleDetail, paddingTop: 7 },
+  lede: { color: colors.textSecondary, ...type.body, lineHeight: 24, marginBottom: 2 },
 
   field: {
     flexDirection: 'row', alignItems: 'center', gap: 14,

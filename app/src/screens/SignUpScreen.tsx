@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton, SwitchRow } from '../components/authUi';
+import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton, SwitchRow } from '../components/authUi';
 import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
@@ -60,16 +60,16 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 
   if (step === 'confirm') {
     return (
-      <AuthScreen onBack={() => setStep('form')}>
+      <AuthScreen>
         <AuthHeader
-          eyebrow={t('One last step', 'Bước cuối cùng', 'あと一歩')}
+          onBack={() => setStep('form')}
           title={t('Check your email', 'Kiểm tra email', 'メールをご確認ください')}
-          lede={t(
+        />
+        <Lede>{t(
             `We sent a 6-digit confirmation code to ${email.trim()}. Enter it below to activate your account.`,
             `Mã xác nhận 6 số đã được gửi tới ${email.trim()}. Nhập mã bên dưới để kích hoạt tài khoản.`,
             `${email.trim()} に6桁の確認コードを送信しました。以下に入力してアカウントを有効化してください。`,
-          )}
-        />
+          )}</Lede>
         <FieldRow
           icon="key-outline"
           label={t('Confirmation code', 'Mã xác nhận', '確認コード')}
@@ -88,15 +88,16 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   }
 
   return (
-    <AuthScreen onBack={() => navigation.goBack()}>
+    <AuthScreen>
       <AuthHeader
+        onBack={() => navigation.goBack()}
         title={t('Sign up', 'Đăng ký', '新規登録')}
-        lede={t(
+      />
+      <Lede>{t(
           'Join cityCrew to save places, build collections and plan unforgettable trips with your crew.',
           'Tham gia cityCrew để lưu địa điểm, tạo bộ sưu tập và lên kế hoạch cho những chuyến đi đáng nhớ.',
           'cityCrewに参加して、場所を保存し、コレクションを作り、忘れられない旅を計画しましょう。',
-        )}
-      />
+        )}</Lede>
       <FieldRow
         icon="person-outline"
         label={t('Full name', 'Họ tên', 'お名前')}

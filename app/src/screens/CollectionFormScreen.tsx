@@ -15,7 +15,7 @@
 
 import React, { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
-import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton } from '../components/authUi';
+import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton } from '../components/authUi';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { addPlaceToCollection, createCollection, updateCollection } from '../lib/data';
@@ -92,15 +92,14 @@ export default function CollectionFormScreen({ navigation, route }: {
   };
 
   return (
-    <AuthScreen onBack={() => navigation.goBack()}>
+    <AuthScreen>
       <AuthHeader
-        eyebrow={editing
-          ? t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')
-          : t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
+        onBack={() => navigation.goBack()}
         title={editing
           ? t('Rename your list', 'Đổi tên danh sách', 'リストの名前を変更')
           : t('Name your list', 'Đặt tên danh sách', 'リストに名前を')}
-        lede={addPlaceSlug
+      />
+      <Lede>{addPlaceSlug
           ? t(
             'Name it, and the place you just saved goes in first.',
             'Đặt tên, và địa điểm bạn vừa lưu sẽ vào đầu tiên.',
@@ -110,8 +109,7 @@ export default function CollectionFormScreen({ navigation, route }: {
             'Only you can see this one. Add places to it as you find them.',
             'Chỉ mình bạn thấy danh sách này. Thêm địa điểm vào khi bạn tìm được.',
             'このリストはあなただけに表示されます。見つけたスポットを追加していきましょう。',
-          )}
-      />
+          )}</Lede>
       <FieldRow
         icon="bookmark-outline"
         label={t('Name', 'Tên', '名前')}
