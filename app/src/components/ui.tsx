@@ -83,10 +83,17 @@ export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
   );
 }
 
+/** The small uppercase line above a title. `Screen` wraps a plain string
+ *  in one of these; pass the elements yourself when the line needs more
+ *  than words — see Explore, which hangs the weather off the date. */
+export function EyebrowText({ children }: { children: React.ReactNode }) {
+  return <Text style={s.eyebrow}>{children}</Text>;
+}
+
 export function Screen({ title, eyebrow, children, right }: {
   title: string;
   /** Small uppercase line above the title — e.g. today's date. */
-  eyebrow?: string;
+  eyebrow?: React.ReactNode;
   children: React.ReactNode;
   right?: React.ReactNode;
 }) {
@@ -94,7 +101,11 @@ export function Screen({ title, eyebrow, children, right }: {
     <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.header}>
         <View style={{ flex: 1 }}>
-          {eyebrow ? <Text style={s.eyebrow}>{eyebrow}</Text> : null}
+          {eyebrow ? (
+            <View style={s.eyebrowRow}>
+              {typeof eyebrow === 'string' ? <EyebrowText>{eyebrow}</EyebrowText> : eyebrow}
+            </View>
+          ) : null}
           <Text style={s.title}>{title}</Text>
         </View>
         {right}
@@ -196,9 +207,13 @@ const s = StyleSheet.create({
   // The dateline is the one place a screen title gets colour: it says
   // "today", which is the app's whole premise, and it is short enough that
   // the accent stays a mark rather than a block of coloured text.
+  // The gap between the line and the title lives on the row, so an
+  // eyebrow made of several elements spaces the same as one made of a
+  // string.
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
   eyebrow: {
     color: colors.accent, fontSize: 12, fontFamily: display.semibold,
-    letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 6,
+    letterSpacing: 1.4, textTransform: 'uppercase',
   },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
