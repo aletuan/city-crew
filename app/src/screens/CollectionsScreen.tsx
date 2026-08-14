@@ -258,7 +258,7 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
                 containerStyle={s.actionWrap}
                 style={[s.action, s.actionEdit]}
               >
-                <Ionicons name="create-outline" size={21} color={colors.text} />
+                <Ionicons name="create-outline" size={22} color={colors.text} />
               </PressableScale>
               <PressableScale
                 onPress={() => act(onDelete)}
@@ -267,7 +267,7 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
                 containerStyle={s.actionWrap}
                 style={[s.action, s.actionDelete]}
               >
-                <Ionicons name="trash-outline" size={21} color={colors.accentInk} />
+                <Ionicons name="trash-outline" size={22} color={colors.bad} />
               </PressableScale>
             </View>
           );
@@ -621,9 +621,13 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   actionEdit: { backgroundColor: colors.surfaceGlassStrong, borderWidth: 1, borderColor: colors.borderGlassSoft },
-  // The one destructive surface in the app, so it is the one place the
-  // soft red is a fill rather than a line of text.
-  actionDelete: { backgroundColor: colors.bad },
+  // A tinted well with a red glyph, not a solid red slab with a dark one.
+  // Both buttons are then built the same way and differ only in colour,
+  // which is what makes the pair scan: two shapes of equal weight, one of
+  // them red. The slab did the opposite — it shouted before you had
+  // decided anything, and its near-black glyph made the destructive
+  // button the one place the red was *not* on the thing you tap.
+  actionDelete: { backgroundColor: colors.badSoft, borderWidth: 1, borderColor: colors.badLine },
   cardText: { flex: 1, gap: 5 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
