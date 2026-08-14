@@ -11,7 +11,6 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AuthSheet from '../components/AuthSheet';
 import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
@@ -231,9 +230,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
   const { loading, error, data: places, reload } = usePlaces();
-  const { session } = useAuth();
   const [cat, setCat] = useState<string>(ALL);
-  const [authSheet, setAuthSheet] = useState(false);
   const tabClearance = useTabBarClearance();
   const listRef = useRef<FlatList<Place>>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -301,25 +298,15 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     <Screen
       eyebrow={dateline(lang)}
       title={t(`Discover ${city?.short_en ?? '…'}`, `Khám phá ${city?.short_vi ?? '…'}`, `${city?.short_ja ?? city?.short_en ?? '…'}を発見`)}
+      // Search only. A header action should act on the screen it sits
+      // above; getting to your profile is the tab bar's job, and it is
+      // on screen already.
       right={(
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <RoundIconButton
-            icon="search-outline"
-            onPress={() => navigation.navigate('Search')}
-            label={t('Search', 'Tìm kiếm', '検索')}
-          />
-          <RoundIconButton
-            icon="person-circle-outline"
-            size={24}
-            onPress={() => {
-              // Signed in, the control means "my profile"; signed out it
-              // means "who am I?", which is the sheet's question.
-              if (session) navigation.getParent()?.navigate('Profile');
-              else setAuthSheet(true);
-            }}
-            label={session ? t('Profile', 'Cá nhân', 'プロフィール') : t('Sign in', 'Đăng nhập', 'サインイン')}
-          />
-        </View>
+        <RoundIconButton
+          icon="search-outline"
+          onPress={() => navigation.navigate('Search')}
+          label={t('Search', 'Tìm kiếm', '検索')}
+        />
       )}
     >
       <View style={{ flex: 1 }}>
@@ -358,14 +345,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           />
         )}
       </View>
-      <AuthSheet
-        visible={authSheet}
-        onClose={() => setAuthSheet(false)}
-        onSignIn={() => {
-          setAuthSheet(false);
-          navigation.getParent()?.navigate('Profile', { screen: 'SignIn' });
-        }}
-      />
     </Screen>
   );
 }
