@@ -13,6 +13,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from './supabase';
+// Pure arithmetic, kept where a test runner can reach it.
+import { nearestTo } from './geo';
 
 export type City = {
   id: string;
@@ -64,22 +66,6 @@ const Ctx = createContext<CityContext>({
 
 export const useCity = () => useContext(Ctx);
 
-function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const rad = Math.PI / 180;
-  const a = Math.sin(((lat2 - lat1) * rad) / 2) ** 2
-    + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(((lng2 - lng1) * rad) / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function nearestTo(list: City[], lat: number, lng: number): City | null {
-  let best: City | null = null;
-  let bestD = Infinity;
-  for (const c of list) {
-    const d = distanceKm(lat, lng, c.center_lat, c.center_lng);
-    if (d < bestD) { best = c; bestD = d; }
-  }
-  return best;
-}
 
 /**
  * Fast, bounded location read for bootstrap: cached fix only, no fresh
