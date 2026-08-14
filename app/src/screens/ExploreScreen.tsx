@@ -21,7 +21,7 @@ import { Collection, coverOf, membersOf, Place } from '../lib/data';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { Lang, useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
-import { colors, display, font, gradAI, radius, space, type } from '../theme';
+import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 // The one chip that isn't a category: the whole catalog. It carries no
@@ -208,7 +208,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                 />
                 {badge && (
                   <View style={s.shelfBadge}>
-                    <Ionicons name={badge} size={15} color={colors.text} />
+                    <Ionicons name={badge} size={15} color={onPhoto.text} />
                   </View>
                 )}
                 <View style={s.shelfCardText}>
@@ -382,12 +382,12 @@ const s = StyleSheet.create({
   heroContent: { padding: space.cardPadding + 2, gap: 10 },
   heroPill: {
     alignSelf: 'flex-start', borderRadius: radius.pill,
-    backgroundColor: 'rgba(10,11,10,0.55)', borderWidth: 1, borderColor: colors.borderGlassSoft,
+    backgroundColor: 'rgba(10,11,10,0.55)', borderWidth: 1, borderColor: onPhoto.line,
     paddingHorizontal: 12, paddingVertical: 6,
   },
-  heroPillText: { color: colors.textSecondary, fontSize: 12.5, fontWeight: font.medium },
-  heroTitle: { color: colors.text, fontSize: 24, fontFamily: display.bold, letterSpacing: 0.2, lineHeight: 30 },
-  heroSub: { color: colors.textSecondary, ...type.meta, lineHeight: 21 },
+  heroPillText: { color: onPhoto.textSecondary, fontSize: 12.5, fontWeight: font.medium },
+  heroTitle: { color: onPhoto.text, fontSize: 24, fontFamily: display.bold, letterSpacing: 0.2, lineHeight: 30 },
+  heroSub: { color: onPhoto.textSecondary, ...type.meta, lineHeight: 21 },
   // The screen's one loud control: the accent at full strength — the same
   // primary-button material the auth screens use.
   heroCta: {
@@ -412,10 +412,10 @@ const s = StyleSheet.create({
     width: 30, height: 30, borderRadius: 15,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(10,11,10,0.55)',
-    borderWidth: 1, borderColor: colors.borderGlassSoft,
+    borderWidth: 1, borderColor: onPhoto.line,
   },
   shelfCardText: { padding: 13, gap: 3 },
-  shelfCardTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 20 },
-  shelfCardMeta: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
+  shelfCardTitle: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 20 },
+  shelfCardMeta: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.regular },
 
 });
