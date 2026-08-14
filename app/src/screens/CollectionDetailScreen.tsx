@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator, Alert, Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, View,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +12,7 @@ import { deleteCollection, membersOf } from '../lib/data';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
-import { colors, display, font, gradAI, radius, space, type } from '../theme';
+import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 /**
@@ -46,24 +48,31 @@ function OwnEmpty({ onExplore }: { onExplore: () => void }) {
   );
 }
 
-/** A line in the owner's sheet — the same row the avatar picker uses, so
- *  the two menus in the app are one menu. */
-function SheetRow({ icon, label, onPress, danger }: {
+/**
+ * A line in the overflow menu.
+ *
+ * Glyphs are neutral and only the destructive one is red. The sheet this
+ * replaces tinted every glyph with `accent`, which on paper is `#C4402C`
+ * against `bad`'s `#C2564A` — 1.15:1 apart, indistinguishable. Five red
+ * rows meant Delete was not marked at all. Neutral against `bad` is
+ * 4.11:1, so the red says something again.
+ */
+function MenuRow({ icon, label, onPress, danger, first }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
   danger?: boolean;
+  first?: boolean;
 }) {
   return (
-    <PressableScale
+    <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      containerStyle={{ alignSelf: 'stretch' }}
-      style={s.sheetRow}
+      style={({ pressed }) => [s.menuRow, !first && s.menuDivider, pressed && s.menuRowOn]}
     >
-      <Ionicons name={icon} size={20} color={danger ? colors.bad : colors.accent} />
-      <Text style={[s.sheetRowText, danger && { color: colors.bad }]}>{label}</Text>
-    </PressableScale>
+      <Ionicons name={icon} size={21} color={danger ? colors.bad : colors.text} />
+      <Text style={[s.menuText, danger && { color: colors.bad }]} numberOfLines={1}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -75,14 +84,20 @@ function SheetRow({ icon, label, onPress, danger }: {
  * at the moment you have just finished reading the list and found it
  * short.
  */
-function AddPlaceRow({ onPress, label }: { onPress: () => void; label: string }) {
+function AddPlaceRow({ onPress, label, sub }: { onPress: () => void; label: string; sub: string }) {
   return (
     <View style={s.addWrap}>
       <PressableScale onPress={onPress} accessibilityRole="button" style={s.addRow}>
         <View style={s.addIcon}>
           <Ionicons name="add" size={24} color={colors.accent} />
         </View>
-        <Text style={s.addText} numberOfLines={1}>{label}</Text>
+        {/* The second line names where the places come from. Without it the
+            row is a verb with no object, and "Add place" alone had already
+            sent one reader to Explore expecting a picker. */}
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={s.addText} numberOfLines={1}>{label}</Text>
+          <Text style={s.addSub} numberOfLines={1}>{sub}</Text>
+        </View>
       </PressableScale>
     </View>
   );
@@ -109,11 +124,26 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   const title = col ? t(col.title_en, col.title_vi, col.title_ja) : '';
   const insets = useSafeAreaInsets();
-  const [sheet, setSheet] = useState(false);
-  // Every action leaves this screen or opens an alert over it, and a sheet
+  const [menu, setMenu] = useState(false);
+  // Where the popover hangs from. Measured off the button rather than
+  // computed from paddings, because the header's height moves with the
+  // title and the meta line and a menu that floats away from its control
+  // stops looking like that control's menu.
+  const btn = useRef<View>(null);
+  const [anchor, setAnchor] = useState({ top: insets.top + 58, right: space.page });
+  const openMenu = () => {
+    // Opened first and positioned second: if the measure never calls back
+    // the menu still appears, at the estimate above rather than not at all.
+    setMenu(true);
+    btn.current?.measureInWindow((x, y, w, h) => {
+      if (!w) return;
+      setAnchor({ top: y + h + 6, right: Dimensions.get('window').width - (x + w) });
+    });
+  };
+  // Every action leaves this screen or opens an alert over it, and a menu
   // still standing behind either is the sort of thing you come back to and
   // have to dismiss twice.
-  const act = (run: () => void) => { setSheet(false); run(); };
+  const act = (run: () => void) => { setMenu(false); run(); };
 
   // Explore is where places are, and saving one from there already offers
   // this list by name. A picker that wrote straight back into this
@@ -178,12 +208,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             </View>
           )}
         </View>
+        {/* `collapsable={false}` keeps the wrapper as a real native view,
+            which is what measureInWindow needs to have something to
+            measure. */}
         {owned && (
-          <RoundIconButton
-            icon="ellipsis-horizontal"
-            onPress={() => setSheet(true)}
-            label={t('More', 'Thêm', 'その他')}
-          />
+          <View ref={btn} collapsable={false}>
+            <RoundIconButton
+              icon="ellipsis-horizontal"
+              onPress={openMenu}
+              label={t('More', 'Thêm', 'その他')}
+            />
+          </View>
         )}
       </View>
       {col && (col.desc_en || col.desc_vi) && (
@@ -212,47 +247,58 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         // already asking for the first place, and two invitations to do
         // one thing read as two different things.
         ListFooterComponent={owned && members.length > 0
-          ? <AddPlaceRow onPress={addPlace} label={t('Add place', 'Thêm địa điểm', 'スポットを追加')} />
+          ? (
+            <AddPlaceRow
+              onPress={addPlace}
+              label={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+              sub={t(
+                'From search or your bookmarks',
+                'Từ tìm kiếm hoặc mục đã lưu',
+                '検索や保存済みから',
+              )}
+            />
+          )
           : null}
         contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
       />
 
+      {/* Anchored under the control that opened it, which is the whole
+          argument for a popover over a sheet: the menu is visibly this
+          button's menu. No Cancel row — tapping anywhere off the card is
+          the way out, and a menu that hangs off its own control does not
+          need to explain that. */}
       <Modal
-        visible={sheet}
+        visible={menu}
         transparent
         animationType="fade"
         statusBarTranslucent
-        onRequestClose={() => setSheet(false)}
+        onRequestClose={() => setMenu(false)}
       >
-        <Pressable style={s.backdrop} onPress={() => setSheet(false)} />
-        <View style={[s.sheet, { paddingBottom: insets.bottom + 16 }]}>
-          <View style={s.grabber} />
-          <Text style={s.sheetTitle} numberOfLines={1}>{title}</Text>
-          <SheetRow
-            icon="add"
+        <Pressable style={s.scrim} onPress={() => setMenu(false)} />
+        <View style={[s.menu, { top: anchor.top, right: anchor.right }]}>
+          <MenuRow
+            icon="add-circle-outline"
             label={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
             onPress={() => act(addPlace)}
+            first
           />
-          <SheetRow
+          <MenuRow
             icon="create-outline"
             label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')}
             onPress={() => act(edit)}
           />
-          <SheetRow
+          <MenuRow
             icon="share-outline"
             label={t('Share', 'Chia sẻ', '共有')}
             onPress={() => act(share)}
           />
-          <SheetRow
+          <MenuRow
             icon="trash-outline"
             label={t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除')}
             onPress={() => act(remove)}
             danger
           />
-          <PressableScale onPress={() => setSheet(false)} accessibilityRole="button" style={s.cancel}>
-            <Text style={s.cancelText}>{t('Cancel', 'Huỷ', 'キャンセル')}</Text>
-          </PressableScale>
         </View>
       </Modal>
     </SafeAreaView>
@@ -292,25 +338,26 @@ const s = StyleSheet.create({
   // metrics leave nothing under the baseline, and the descender on
   // "Thêm địa điểm" is the first thing to go.
   addText: { color: colors.text, fontSize: 16.5, lineHeight: 22, fontWeight: font.semibold },
+  addSub: { color: colors.textTertiary, fontSize: 14, lineHeight: 19 },
 
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.62)' },
-  sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    alignItems: 'center', gap: 4,
-    paddingHorizontal: space.page, paddingTop: 10,
-    backgroundColor: colors.bgElevated,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
+  // Lighter than the sheet's scrim was. A popover keeps its context —
+  // you can still read the row you are acting on — where a sheet takes
+  // the screen and has to dim what it covers.
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.22)' },
+  menu: {
+    position: 'absolute', minWidth: 232, maxWidth: 300,
+    backgroundColor: colors.bgElevated, borderRadius: 16, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+    // The one shadow in the app. Depth everywhere else comes from the
+    // ground and hairlines, but this layer genuinely floats above the
+    // page and a hairline alone does not say so.
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
   },
-  grabber: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.textTertiary, marginBottom: 12 },
-  sheetTitle: { color: colors.text, fontSize: 18, fontFamily: display.bold, marginBottom: 8 },
-  sheetRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingVertical: 15, paddingHorizontal: 4,
-  },
-  sheetRowText: { color: colors.text, fontSize: 16, lineHeight: 22, fontWeight: font.medium },
-  cancel: { paddingVertical: 14, marginTop: 4 },
-  cancelText: { color: colors.textSecondary, fontSize: 15.5, lineHeight: 21, fontWeight: font.medium },
+  menuRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 18 },
+  menuRowOn: { backgroundColor: colors.surfaceGlass },
+  menuDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  menuText: { color: colors.text, fontSize: 16.5, lineHeight: 22, fontWeight: font.medium },
 
   emptyWrap: { marginHorizontal: space.page, marginTop: 24 },
   empty: {
