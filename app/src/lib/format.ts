@@ -68,3 +68,117 @@ export function groupHours(lines: string[]): HourRow[] {
   }
   return rows;
 }
+
+/**
+ * Whether a place is open at a given moment, and until when.
+ *
+ * Everything here is derived from the same `weekdayDescriptions` strings
+ * the rows below are drawn from, rather than from Google's structured
+ * `periods`. The import already asks for `regularOpeningHours` and throws
+ * the periods away, so using them would mean a column, a migration and a
+ * re-import of every place before a single row could answer the question.
+ * The strings are already in the database, and their grammar turns out to
+ * be small: across the whole catalogue there are seven shapes, all of them
+ * handled below. The trade is that a shape nobody has seen yet reads as
+ * "no answer" rather than as a wrong one.
+ */
+
+/** Vietnam keeps UTC+7 all year and has run no DST since 1975, and every
+ *  city in the app is in it — so the place's local time is arithmetic
+ *  rather than a timezone database the runtime may not carry. */
+const ICT_OFFSET_MIN = 7 * 60;
+const DAY = 24 * 60;
+
+/** A single opening window, in minutes from the day's midnight. `to` runs
+ *  past 1440 when the window crosses into the next day. */
+type Window = { from: number; to: number; opens: string; closes: string };
+
+/**
+ * "8:00 AM" → 480. A missing meridiem returns null for it: Google drops
+ * the one on the opening time when it matches the closing time, as in
+ * "4:00 – 8:50 PM", so the caller fills it in from the other end.
+ */
+function parseTime(s: string): { mins: number; mer: 'AM' | 'PM' | null } | null {
+  const m = /^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i.exec(s.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 12 || min > 59) return null;
+  const mer = m[3] ? (m[3].toUpperCase() as 'AM' | 'PM') : null;
+  return { mins: (h % 12) * 60 + min, mer };
+}
+
+/** The windows in one day's description, or null if it does not parse. */
+function parseDay(hours: string): Window[] | null {
+  const text = hours.trim();
+  if (!text) return null;
+  if (/^closed$/i.test(text)) return [];
+  if (/^open 24 hours$/i.test(text)) return [{ from: 0, to: DAY, opens: '', closes: '' }];
+
+  const out: Window[] = [];
+  for (const part of text.split(',')) {
+    const [rawFrom, rawTo] = part.split(/[–-]/).map((x) => x.trim());
+    if (!rawTo) return null;
+    const a = parseTime(rawFrom);
+    const b = parseTime(rawTo);
+    // The closing time always carries its own meridiem; the opening one
+    // may borrow it. Neither may be missing outright.
+    if (!a || !b || !b.mer) return null;
+    const mer = a.mer ?? b.mer;
+    let from = a.mins + (mer === 'PM' ? 12 * 60 : 0);
+    let to = b.mins + (b.mer === 'PM' ? 12 * 60 : 0);
+    // Closing at or before opening means the window runs past midnight —
+    // a 7 PM bar closing at 1 AM, or one closing at 12 AM exactly.
+    if (to <= from) to += DAY;
+    out.push({ from, to, opens: rawFrom, closes: rawTo });
+  }
+  return out;
+}
+
+export type OpenState = { open: boolean; until?: string; opensAt?: string };
+
+/**
+ * `null` when the question cannot be answered — no hours stored, or a
+ * description in a shape this does not read. Showing nothing beats showing
+ * "Closed" to someone standing in the doorway of an open café.
+ *
+ * `now` is injected so this is a pure function of its inputs; the screen
+ * passes the real clock.
+ */
+export function openState(lines: string[] | null | undefined, now: Date): OpenState | null {
+  if (!lines?.length) return null;
+  // Shift onto the place's clock, then read the shifted instant in UTC —
+  // the local accessors would apply the device's offset a second time.
+  const local = new Date(now.getTime() + ICT_OFFSET_MIN * 60_000);
+  const mins = local.getUTCHours() * 60 + local.getUTCMinutes();
+  // Google's week starts on Monday; JavaScript's on Sunday.
+  const today = (local.getUTCDay() + 6) % 7;
+
+  const dayAt = (i: number) => {
+    const line = lines[((i % lines.length) + lines.length) % lines.length];
+    return line === undefined ? null : parseDay(splitHours(line)[1]);
+  };
+
+  const wins = dayAt(today);
+  if (!wins) return null;
+
+  for (const w of wins) {
+    if (mins >= w.from && mins < w.to) {
+      // A place open around the clock has no closing time worth naming.
+      return w.to - w.from >= DAY ? { open: true } : { open: true, until: w.closes };
+    }
+  }
+
+  // Still inside a window that opened yesterday — at half past midnight
+  // the bar that opened at 7 PM is open, and today's line does not say so.
+  const before = dayAt(today - 1);
+  for (const w of before ?? []) {
+    if (w.to > DAY && mins + DAY < w.to) {
+      return w.to - w.from >= DAY ? { open: true } : { open: true, until: w.closes };
+    }
+  }
+
+  // Closed, but say when that changes if it changes today.
+  const next = wins.filter((w) => w.from > mins).sort((a, b) => a.from - b.from)[0];
+  return next ? { open: false, opensAt: next.opens } : { open: false };
+}

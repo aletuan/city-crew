@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { fmtCount, photosOf, Place } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
-import { dotWindow, fmtDuration, groupHours } from '../lib/format';
+import { dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
@@ -80,6 +80,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // Grouped, not one row per day: see groupHours. A place open the same
   // seven days a week becomes one line instead of seven identical ones.
   const hours = groupHours(place.opening_hours ?? []);
+  // Read at render rather than on a timer. The screen re-renders on every
+  // visit, which is when the answer is being asked for; a ticking clock
+  // would only matter to someone parked on this screen at closing time,
+  // and would cost a re-render a minute on every place in the app.
+  const openNow = openState(place.opening_hours, new Date());
 
   const share = () => {
     Share.share({
@@ -211,6 +216,33 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
           {hours.length > 0 && (
             <InfoCard icon="time-outline" label={t('Hours', 'Giờ mở cửa', '営業時間')}>
+              {/* The one line most people came for, above the table they
+                  would otherwise have to read today's row out of. Green
+                  when open; closed is a fact about a café, not a fault, so
+                  it stays in the quiet grey rather than going red. */}
+              {openNow && (
+                <Text style={[s.openNow, !openNow.open && s.openNowShut]}>
+                  {/* Whole sentences per language, not a preposition glued
+                      to a time: Japanese puts "まで" after the hour, so
+                      concatenating a translated "until" in front of it
+                      reads backwards. */}
+                  {openNow.open
+                    ? openNow.until
+                      ? t(
+                        `Open now · until ${openNow.until}`,
+                        `Đang mở cửa · đến ${openNow.until}`,
+                        `営業中 · ${openNow.until}まで`,
+                      )
+                      : t('Open now · 24 hours', 'Đang mở cửa · 24 giờ', '営業中 · 24時間')
+                    : openNow.opensAt
+                      ? t(
+                        `Closed · opens ${openNow.opensAt}`,
+                        `Đã đóng cửa · mở lúc ${openNow.opensAt}`,
+                        `閉店中 · ${openNow.opensAt}開店`,
+                      )
+                      : t('Closed today', 'Hôm nay đóng cửa', '本日休業')}
+                </Text>
+              )}
               {hours.map((row) => (
                 <View key={row.label} style={s.hourRow}>
                   <Text style={s.hourDay}>{row.label}</Text>
@@ -321,6 +353,13 @@ const s = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 4,
   },
   infoValue: { color: colors.textSecondary, ...type.meta, lineHeight: 22 },
+  // Semibold and a size up on the rows under it: this is the answer, and
+  // they are the working it was derived from.
+  openNow: {
+    color: colors.ok, fontSize: 15.5, fontWeight: font.semibold,
+    marginBottom: 6,
+  },
+  openNowShut: { color: colors.textTertiary },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   hourDay: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.medium },
   hourTime: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.regular },
