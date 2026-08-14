@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dotWindow, fmtDuration, splitHours } from './format';
+import { dotWindow, fmtDuration, groupHours, splitHours } from './format';
 
 describe('fmtDuration', () => {
   it('stays in minutes up to an hour', () => {
@@ -80,5 +80,65 @@ describe('dotWindow', () => {
     for (let active = 0; active < 20; active++) {
       expect(dotWindow(20, active)).toContain(active);
     }
+  });
+});
+
+describe('groupHours', () => {
+  const week = (...hours: string[]) =>
+    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+      .map((d, i) => `${d}: ${hours[i]}`);
+
+  it('collapses a whole identical week to one row', () => {
+    const rows = groupHours(week(...Array(7).fill('Open 24 hours')));
+    expect(rows).toEqual([{ label: 'Mon–Sun', hours: 'Open 24 hours' }]);
+  });
+
+  it('keeps the day that differs on its own', () => {
+    const rows = groupHours(week('8 AM', '8 AM', '8 AM', '8:30 AM', '8 AM', '8 AM', '8 AM'));
+    expect(rows).toEqual([
+      { label: 'Mon–Wed', hours: '8 AM' },
+      { label: 'Thu', hours: '8:30 AM' },
+      { label: 'Fri–Sun', hours: '8 AM' },
+    ]);
+  });
+
+  it('leaves seven different days as seven rows', () => {
+    expect(groupHours(week('a', 'b', 'c', 'd', 'e', 'f', 'g'))).toHaveLength(7);
+  });
+
+  it('pairs two days without inventing a longer run', () => {
+    const rows = groupHours(week('a', 'a', 'b', 'b', 'c', 'c', 'd'));
+    expect(rows.map((r) => r.label)).toEqual(['Mon–Tue', 'Wed–Thu', 'Fri–Sat', 'Sun']);
+  });
+
+  // Same hours, but not adjacent: merging them would produce a label a
+  // reader has to decode rather than scan.
+  it('does not merge days that are not consecutive', () => {
+    const rows = groupHours(week('a', 'b', 'a', 'c', 'd', 'e', 'f'));
+    expect(rows.slice(0, 3)).toEqual([
+      { label: 'Mon', hours: 'a' },
+      { label: 'Tue', hours: 'b' },
+      { label: 'Wed', hours: 'a' },
+    ]);
+  });
+
+  it('handles a run that reaches the end of the week', () => {
+    const rows = groupHours(week('a', 'b', 'b', 'b', 'b', 'b', 'b'));
+    expect(rows).toEqual([
+      { label: 'Mon', hours: 'a' },
+      { label: 'Tue–Sun', hours: 'b' },
+    ]);
+  });
+
+  it('keeps an unrecognised day name whole rather than truncating it', () => {
+    expect(groupHours(['Thứ Hai: 8 AM'])).toEqual([{ label: 'Thứ Hai', hours: '8 AM' }]);
+  });
+
+  it('survives a line with no separator', () => {
+    expect(groupHours(['Closed'])).toEqual([{ label: 'Closed', hours: '' }]);
+  });
+
+  it('has nothing to say about nothing', () => {
+    expect(groupHours([])).toEqual([]);
   });
 });
