@@ -5,110 +5,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useCity } from './city';
 import { supabase } from './supabase';
+import type { Collection, Place } from './types';
+import { slugify } from './place';
 
-export type PlacePhoto = {
-  photo_uri: string;
-  is_cover: boolean;
-  is_hidden: boolean;
-  sort_order: number;
-  attribution_name: string | null;
-};
-
-export type Place = {
-  slug: string;
-  name_en: string;
-  name_vi: string;
-  name_ja: string | null;
-  /** Legacy coarse axis, superseded by `categories`; still written by the
-   *  import pipeline and used by the dashboard. */
-  category: 'food' | 'out';
-  /** Functional axis, many per place — see lib/categories. Optional because
-   *  a database that predates the migration simply omits it; read it through
-   *  categoriesOf(), never directly. */
-  categories?: string[];
-  is_featured: boolean;
-  /** How a place feels — see lib/vibes. */
-  vibe_tags: string[];
-  neighborhood_en: string | null;
-  neighborhood_vi: string | null;
-  neighborhood_ja: string | null;
-  address: string | null;
-  lat: number | null;
-  lng: number | null;
-  rating: number | null;
-  rating_count: number | null;
-  price_display: string | null;
-  price_vnd: number | null;
-  duration_min: number | null;
-  duration_max: number | null;
-  desc_en: string | null;
-  desc_vi: string | null;
-  desc_ja: string | null;
-  emoji: string | null;
-  opening_hours: string[] | null;
-  website: string | null;
-  phone: string | null;
-  place_photos: PlacePhoto[];
-};
-
-export type Collection = {
-  slug: string;
-  title_en: string;
-  title_vi: string;
-  title_ja: string | null;
-  desc_en: string | null;
-  desc_vi: string | null;
-  desc_ja: string | null;
-  curator_handle: string | null;
-  cover: { photo_uri: string } | null;
-  collection_places: { sort_order: number; places: { slug: string } | null }[];
-  /** Null on the editorial collections — those belong to the desk. Set to a
-   *  user's id on the lists they made for themselves. */
-  owner_id?: string | null;
-  /** Which city's catalog this belongs to. Meaningful for the editorial
-   *  rows; on a user's own list it records where it was made and nothing
-   *  more — a list of your own is not confined to one city. */
-  city_id?: string | null;
-  /**
-   * The member places, carried by the row itself.
-   *
-   * Only the owner query fills this, and it is the whole reason a personal
-   * list survives a change of city: `membersOf` otherwise resolves slugs
-   * against the in-memory catalog, which holds one city at a time. Your
-   * lists are yours; the city boundary is the catalog's problem.
-   */
-  members?: Place[];
-};
-
-/** Visible photos, cover first. */
-export function photosOf(p: Place): PlacePhoto[] {
-  return [...p.place_photos]
-    .filter((ph) => !ph.is_hidden)
-    .sort((a, b) => (b.is_cover ? 1 : 0) - (a.is_cover ? 1 : 0) || a.sort_order - b.sort_order);
-}
-
-export function coverOf(p: Place): PlacePhoto | undefined {
-  return photosOf(p)[0];
-}
-
-/** Explicitly free (0₫) — distinct from a missing price. */
-export function isFree(p: Place): boolean {
-  if (p.price_vnd === 0) return true;
-  const d = (p.price_display ?? '').trim();
-  return d === '0₫' || d === '0đ' || d === '0';
-}
-
-/** Display label for a paid place, or null when no price is known. */
-export function priceLabel(p: Place): string | null {
-  if (p.price_display) return p.price_display;
-  if (p.price_vnd != null) return `${Math.round(p.price_vnd / 1000)}k₫`;
-  return null;
-}
-
-export function fmtCount(n: number | null | undefined): string {
-  if (!n) return '';
-  return n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n);
-}
+// Shapes and pure helpers live next door, where a Node process can reach
+// them without pulling in Supabase and React Native. Re-exported here so
+// that `from '../lib/data'` keeps meaning what it always did.
+export * from './types';
+export * from './place';
 
 export type Fetch<T> = {
   loading: boolean;
@@ -272,23 +176,6 @@ export const useMyCollections = (ownerId: string | null | undefined) => {
   return useFetch(fetcher, [] as Collection[]);
 };
 
-/**
- * A slug from a title the user typed. Diacritics are stripped so "Cà phê
- * sáng" and "Ca phe sang" land on the same stem; a title with no latin
- * letters at all (Japanese, say) keeps only the suffix, which is enough —
- * the slug is a key, not a label.
- */
-function slugify(title: string): string {
-  const stem = title
-    .toLowerCase()
-    .replace(/đ/g, 'd')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
-  return stem || 'list';
-}
-
 const suffix = () => Math.random().toString(36).slice(2, 8);
 
 /**
@@ -386,27 +273,4 @@ export async function removePlaceFromCollection(collectionSlug: string, placeSlu
     .eq('collection_id', collectionId)
     .eq('place_id', placeId);
   if (error) throw new Error(error.message);
-}
-
-/** Does this list already hold this place? Read from what is in memory —
- *  the collection rows carry their members. */
-export function holds(c: Collection, placeSlug: string): boolean {
-  return c.collection_places.some((cp) => cp.places?.slug === placeSlug);
-}
-
-/**
- * A collection's places, in order.
- *
- * A list of the user's own arrives with its members attached and needs no
- * catalog — that is what lets it hold places from a city other than the
- * one on screen. The editorial rows carry slugs and resolve against the
- * catalog, which is scoped to the current city by design.
- */
-export function membersOf(c: Collection, places: Place[]): Place[] {
-  if (c.members) return c.members;
-  const bySlug = new Map(places.map((p) => [p.slug, p]));
-  return [...c.collection_places]
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .map((cp) => (cp.places ? bySlug.get(cp.places.slug) : undefined))
-    .filter((p): p is Place => !!p);
 }

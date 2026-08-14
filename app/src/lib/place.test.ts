@@ -1,0 +1,176 @@
+// The pure catalog helpers. No React Native here, and none in what these
+// import — that is the whole reason they were split out of `data.ts`.
+
+import { describe, expect, it } from 'vitest';
+import {
+  coverOf, fmtCount, holds, isFree, membersOf, photosOf, priceLabel, slugify,
+} from './place';
+import type { Collection, Place, PlacePhoto } from './types';
+
+const photo = (p: Partial<PlacePhoto>): PlacePhoto => ({
+  photo_uri: 'a', is_cover: false, is_hidden: false, sort_order: 0, attribution_name: null, ...p,
+});
+
+const place = (p: Partial<Place> = {}): Place => ({
+  slug: 'p', name_en: 'P', name_vi: 'P', name_ja: null, category: 'food',
+  is_featured: false, vibe_tags: [], neighborhood_en: null, neighborhood_vi: null,
+  neighborhood_ja: null, address: null, lat: null, lng: null, rating: null,
+  rating_count: null, price_display: null, price_vnd: null, duration_min: null,
+  duration_max: null, desc_en: null, desc_vi: null, desc_ja: null, emoji: null,
+  opening_hours: null, website: null, phone: null, place_photos: [], ...p,
+});
+
+const collection = (c: Partial<Collection> = {}): Collection => ({
+  slug: 'c', title_en: 'C', title_vi: 'C', title_ja: null, desc_en: null,
+  desc_vi: null, desc_ja: null, curator_handle: null, cover: null,
+  collection_places: [], ...c,
+});
+
+describe('photosOf', () => {
+  it('puts the cover first, whatever its sort order', () => {
+    const p = place({ place_photos: [
+      photo({ photo_uri: 'b', sort_order: 1 }),
+      photo({ photo_uri: 'cover', sort_order: 9, is_cover: true }),
+      photo({ photo_uri: 'a', sort_order: 0 }),
+    ] });
+    expect(photosOf(p).map((x) => x.photo_uri)).toEqual(['cover', 'a', 'b']);
+  });
+
+  it('drops hidden photos', () => {
+    const p = place({ place_photos: [
+      photo({ photo_uri: 'shown' }),
+      photo({ photo_uri: 'hidden', is_hidden: true }),
+    ] });
+    expect(photosOf(p).map((x) => x.photo_uri)).toEqual(['shown']);
+  });
+
+  it('leaves the original array alone', () => {
+    const photos = [photo({ photo_uri: 'a', sort_order: 1 }), photo({ photo_uri: 'b', sort_order: 0 })];
+    photosOf(place({ place_photos: photos }));
+    expect(photos.map((x) => x.photo_uri)).toEqual(['a', 'b']);
+  });
+
+  it('has no cover when every photo is hidden', () => {
+    expect(coverOf(place({ place_photos: [photo({ is_cover: true, is_hidden: true })] }))).toBeUndefined();
+  });
+});
+
+describe('isFree', () => {
+  it('is true only when the price is explicitly nothing', () => {
+    expect(isFree(place({ price_vnd: 0 }))).toBe(true);
+    expect(isFree(place({ price_display: '0₫' }))).toBe(true);
+    expect(isFree(place({ price_display: '0đ' }))).toBe(true);
+  });
+
+  // The distinction the function exists for: nobody has said what this
+  // costs, which is not the same as saying it costs nothing.
+  it('is false when no price is known at all', () => {
+    expect(isFree(place())).toBe(false);
+  });
+
+  it('is false for a real price', () => {
+    expect(isFree(place({ price_vnd: 50000 }))).toBe(false);
+  });
+});
+
+describe('priceLabel', () => {
+  it('prefers the curated display string', () => {
+    expect(priceLabel(place({ price_display: '~60k ₫', price_vnd: 999 }))).toBe('~60k ₫');
+  });
+
+  it('derives thousands from the number when there is no string', () => {
+    expect(priceLabel(place({ price_vnd: 60000 }))).toBe('60k₫');
+  });
+
+  it('keeps a free place distinguishable from an unpriced one', () => {
+    expect(priceLabel(place({ price_vnd: 0 }))).toBe('0k₫');
+    expect(priceLabel(place())).toBeNull();
+  });
+});
+
+describe('fmtCount', () => {
+  it('leaves counts under a thousand alone', () => {
+    expect(fmtCount(1)).toBe('1');
+    expect(fmtCount(999)).toBe('999');
+  });
+
+  it('abbreviates thousands to one decimal', () => {
+    expect(fmtCount(1000)).toBe('1k');
+    expect(fmtCount(1800)).toBe('1.8k');
+    expect(fmtCount(10100)).toBe('10.1k');
+  });
+
+  it('renders nothing at all for absent or zero counts', () => {
+    expect(fmtCount(0)).toBe('');
+    expect(fmtCount(null)).toBe('');
+    expect(fmtCount(undefined)).toBe('');
+  });
+});
+
+describe('slugify', () => {
+  it('strips Vietnamese diacritics so accented and plain titles agree', () => {
+    expect(slugify('Cà phê sáng')).toBe('ca-phe-sang');
+    expect(slugify('Ca phe sang')).toBe('ca-phe-sang');
+  });
+
+  // đ is a distinct letter, not a d with a mark, so NFD does not touch it.
+  it('handles đ, which decomposition alone would leave behind', () => {
+    expect(slugify('Đà Nẵng')).toBe('da-nang');
+  });
+
+  it('collapses punctuation and trims the edges', () => {
+    expect(slugify('  Weekend — coffee!!  ')).toBe('weekend-coffee');
+  });
+
+  it('falls back rather than returning an empty key', () => {
+    expect(slugify('週末のコーヒー')).toBe('list');
+    expect(slugify('!!!')).toBe('list');
+  });
+
+  it('caps the stem so a long title cannot run away with the key', () => {
+    expect(slugify('a'.repeat(80))).toHaveLength(40);
+  });
+});
+
+describe('holds', () => {
+  const c = collection({ collection_places: [{ sort_order: 0, places: { slug: 'x' } }] });
+
+  it('finds a member', () => expect(holds(c, 'x')).toBe(true));
+  it('does not invent one', () => expect(holds(c, 'y')).toBe(false));
+  it('survives a row whose place went missing', () => {
+    expect(holds(collection({ collection_places: [{ sort_order: 0, places: null }] }), 'x')).toBe(false);
+  });
+});
+
+describe('membersOf', () => {
+  const hanoiPlace = place({ slug: 'h' });
+
+  it('resolves slugs against the catalog, in sort order', () => {
+    const c = collection({ collection_places: [
+      { sort_order: 2, places: { slug: 'b' } },
+      { sort_order: 1, places: { slug: 'a' } },
+    ] });
+    const catalog = [place({ slug: 'a' }), place({ slug: 'b' })];
+    expect(membersOf(c, catalog).map((p) => p.slug)).toEqual(['a', 'b']);
+  });
+
+  it('drops members the catalog does not have', () => {
+    const c = collection({ collection_places: [{ sort_order: 0, places: { slug: 'gone' } }] });
+    expect(membersOf(c, [])).toEqual([]);
+  });
+
+  // The reason a personal list keeps working after a change of city: it
+  // carries its own places and never consults the catalog.
+  it('prefers embedded members over the catalog', () => {
+    const c = collection({ members: [hanoiPlace], collection_places: [] });
+    expect(membersOf(c, [])).toEqual([hanoiPlace]);
+  });
+
+  it('trusts an embedded empty list rather than falling through to slugs', () => {
+    const c = collection({
+      members: [],
+      collection_places: [{ sort_order: 0, places: { slug: 'a' } }],
+    });
+    expect(membersOf(c, [place({ slug: 'a' })])).toEqual([]);
+  });
+});
