@@ -47,6 +47,12 @@ function ExploreStack() {
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       {/* The Explore shelf opens collections in place, keeping the tab. */}
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
+      {/* Registered here only because CollectionDetail is: a screen that
+          lives in two stacks can only navigate to screens both of them
+          have. Its owner actions should never fire from this side — the
+          Explore shelf shows public lists — but "should never" is not a
+          thing to leave a crash behind. */}
+      <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
     </Stack.Navigator>
   );
 }
