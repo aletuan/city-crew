@@ -13,7 +13,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, Chip, Empty, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
-import { useAuth } from '../lib/auth';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, membersOf, Place } from '../lib/data';
@@ -90,7 +89,6 @@ function Hero({ place, onExplore, scrollY }: {
   scrollY: Animated.Value;
 }) {
   const { t } = useI18n();
-  const { session, email } = useAuth();
   const { city } = useCity();
   const uri = place && coverOf(place)?.photo_uri;
   // The photo trails the scroll slightly; pre-scaled so no edge shows.
@@ -111,13 +109,6 @@ function Hero({ place, onExplore, scrollY }: {
           style={StyleSheet.absoluteFill}
         />
         <View style={s.heroContent}>
-          <View style={s.heroPill}>
-            <Text style={s.heroPillText}>
-              {session
-                ? `✓ ${t('Signed in as', 'Đã đăng nhập:', 'サインイン中:')} ${email}`
-                : `👋 ${t('Browsing as guest', 'Đang xem với tư cách khách', 'ゲストとして閲覧中')}`}
-            </Text>
-          </View>
           <Text style={s.heroTitle}>
             {city?.hero_title_en
               ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja)
@@ -359,12 +350,6 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   heroContent: { padding: space.cardPadding + 2, gap: 10 },
-  heroPill: {
-    alignSelf: 'flex-start', borderRadius: radius.pill,
-    backgroundColor: 'rgba(10,11,10,0.55)', borderWidth: 1, borderColor: onPhoto.line,
-    paddingHorizontal: 12, paddingVertical: 6,
-  },
-  heroPillText: { color: onPhoto.textSecondary, fontSize: 12.5, fontWeight: font.medium },
   heroTitle: { color: onPhoto.text, fontSize: 24, fontFamily: display.bold, letterSpacing: 0.2, lineHeight: 30 },
   heroSub: { color: onPhoto.textSecondary, ...type.meta, lineHeight: 21 },
   // The screen's one loud control: the accent at full strength — the same
