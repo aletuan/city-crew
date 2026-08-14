@@ -3,7 +3,7 @@
 // deep-link back into Expo Go.
 
 import React, { useState } from 'react';
-import { AuthHeader, AuthScreen, ErrorText, FieldRow, PrimaryButton } from '../components/authUi';
+import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton } from '../components/authUi';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import type { Nav } from '../nav';
@@ -47,16 +47,16 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
 
   if (step === 'reset') {
     return (
-      <AuthScreen onBack={() => setStep('email')}>
+      <AuthScreen>
         <AuthHeader
-          eyebrow={t('Almost there', 'Sắp xong rồi', 'もう少しです')}
+          onBack={() => setStep('email')}
           title={t('Set a new password', 'Đặt mật khẩu mới', '新しいパスワードを設定')}
-          lede={t(
+        />
+        <Lede>{t(
             `We sent a 6-digit recovery code to ${email.trim()}. Enter it with your new password.`,
             `Mã khôi phục 6 số đã được gửi tới ${email.trim()}. Nhập mã cùng mật khẩu mới.`,
             `${email.trim()} に6桁のリカバリーコードを送信しました。新しいパスワードと一緒に入力してください。`,
-          )}
-        />
+          )}</Lede>
         <FieldRow
           icon="key-outline"
           label={t('Recovery code', 'Mã khôi phục', 'リカバリーコード')}
@@ -85,15 +85,16 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
   }
 
   return (
-    <AuthScreen onBack={() => navigation.goBack()}>
+    <AuthScreen>
       <AuthHeader
+        onBack={() => navigation.goBack()}
         title={t('Forgot password', 'Quên mật khẩu', 'パスワードをお忘れの方')}
-        lede={t(
+      />
+      <Lede>{t(
           "Enter your email and we'll send you a recovery code.",
           'Nhập email của bạn, chúng tôi sẽ gửi mã khôi phục.',
           'メールアドレスを入力すると、リカバリーコードをお送りします。',
-        )}
-      />
+        )}</Lede>
       <FieldRow
         icon="mail-outline"
         label={t('Email address', 'Địa chỉ email', 'メールアドレス')}
