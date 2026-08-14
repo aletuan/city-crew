@@ -134,6 +134,18 @@ export const colors = {
   emberGlow: 'rgba(226,96,80,0.15)',
   emberGlowFade: 'rgba(226,96,80,0.05)',
 
+  /**
+   * The sun in the weather mark, and the second non-coral colour in the
+   * app after the rating star.
+   *
+   * A pair rather than the star's single value because this one sits on
+   * the page rather than on a photograph. The design's amber is 1.64:1
+   * against paper — a mark nobody can see — so light gets a deeper gold
+   * and dark keeps the bright one. Both clear 3:1, which a glyph carrying
+   * the difference between rain and sun has to.
+   */
+  sun: dyn('#B07C10', '#F2B441'),
+
   ok: dyn('#3F7A4A', '#8FBF8A'),
   /** Destructive. The dark theme's soft red is far too pale on paper. */
   bad: dyn('#C2564A', '#D98A80'),

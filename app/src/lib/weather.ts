@@ -19,6 +19,8 @@ export type Sky = {
   /** Celsius, already rounded — nobody wants 31.7°. */
   temp: number;
   icon: keyof typeof Ionicons.glyphMap;
+  /** Whether the glyph should be drawn in gold. See `isClear`. */
+  gold: boolean;
 };
 
 /**
@@ -81,7 +83,19 @@ export function parseSky(json: unknown): Sky | null {
   const temp = num(cur.temperature_2m);
   const code = num(cur.weather_code);
   if (temp === null || code === null) return null;
-  return { temp: Math.round(temp), icon: skyIcon(code, cur.is_day !== 0) };
+  return { temp: Math.round(temp), icon: skyIcon(code, cur.is_day !== 0), gold: isClear(code) };
+}
+
+/**
+ * Whether the sky is clear enough to draw in gold.
+ *
+ * Only the sun gets a colour. A rain glyph in amber says nothing true —
+ * the tint is there because a sun is yellow, which is iconography rather
+ * than decoration, and cloud, rain and snow have no colour of their own
+ * worth spending a second hue on.
+ */
+export function isClear(code: number): boolean {
+  return code >= 0 && code <= 2;
 }
 
 export function skyUrl(lat: number, lng: number): string {

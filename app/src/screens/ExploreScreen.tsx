@@ -1,8 +1,8 @@
 // Explore — the guest landing surface, modeled on the mockup's home:
 // dated eyebrow + editorial title, a hero built on a featured place's
 // photography, a horizontal shelf of public collections, then the
-// browsable places list. Signing in is offered from the header's profile
-// control, not parked at the end of a feed that has no end.
+// browsable places list. Signing in is asked for where it is needed —
+// bookmarking a place — rather than from a permanent control in a corner.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -299,7 +299,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           <EyebrowText>{dateline(lang)}</EyebrowText>
           {sky ? (
             <>
-              <Ionicons name={sky.icon} size={14} color={colors.accent} />
+              <Ionicons name={sky.icon} size={14} color={sky.gold ? colors.sun : colors.textSecondary} />
               <EyebrowText>{`${sky.temp}°`}</EyebrowText>
             </>
           ) : null}

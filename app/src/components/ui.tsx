@@ -211,8 +211,11 @@ const s = StyleSheet.create({
   // eyebrow made of several elements spaces the same as one made of a
   // string.
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  // Grey, not the accent. The line is a date — a fact, not a state — and
+  // in the accent it was the loudest thing above a title that should be
+  // the loudest thing on the screen.
   eyebrow: {
-    color: colors.accent, fontSize: 12, fontFamily: display.semibold,
+    color: colors.textSecondary, fontSize: 12, fontFamily: display.semibold,
     letterSpacing: 1.4, textTransform: 'uppercase',
   },
   chip: {
