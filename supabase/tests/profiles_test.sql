@@ -161,6 +161,35 @@ begin
   assert n_policies = 2, format('expected a read and a write policy, found %s', n_policies);
 end $$;
 
+-- ------------------------------------------------------------- exposure
+
+-- Anything in `public` is reachable at /rest/v1/rpc/. A SECURITY DEFINER
+-- function that anonymous callers can execute is the shape to avoid,
+-- whether or not this particular one would do anything for them.
+do $$
+declare granted boolean;
+begin
+  select has_function_privilege('anon', 'public.handle_new_user()', 'execute')
+    into granted;
+  assert not granted, 'anon can execute the sign-up trigger function';
+  select has_function_privilege('public', 'public.handle_new_user()', 'execute')
+    into granted;
+  assert not granted, 'public can execute the sign-up trigger function';
+end $$;
+
+do $$
+declare unpinned int;
+begin
+  select count(*) into unpinned
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.proname in ('check_handle','random_handle','handle_new_user')
+     and not exists (
+       select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%'
+     );
+  assert unpinned = 0, format('%s handle functions have a mutable search_path', unpinned);
+end $$;
+
 -- Deleting the account takes the profile with it; an orphan profile is a
 -- name with nobody behind it.
 do $$

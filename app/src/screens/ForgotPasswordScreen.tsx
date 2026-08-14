@@ -4,12 +4,17 @@
 //
 // The code's length is not assumed anywhere here. See `lib/otp.ts`.
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton } from '../components/authUi';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
+import { colors, font } from '../theme';
 import type { Nav } from '../nav';
+
+/** Supabase's own limit is one recovery email per address per minute. */
+const RESEND_SECONDS = 60;
 
 export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -20,6 +25,17 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
   const [step, setStep] = useState<'email' | 'reset'>('email');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Seconds before another code may be asked for. Supabase allows one per
+  // address per minute, so a button that ignored that would spend its
+  // taps on rejections.
+  const [cooldown, setCooldown] = useState(0);
+  const [resent, setResent] = useState(false);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown((n) => (n <= 1 ? 0 : n - 1)), 1000);
+    return () => clearInterval(id);
+  }, [cooldown > 0]);
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -36,7 +52,18 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
   const send = () =>
     run(async () => {
       await requestReset(email.trim());
+      setCooldown(RESEND_SECONDS);
       setStep('reset');
+    });
+
+  // The old code dies the moment a new one is issued, so the field is
+  // cleared rather than left holding something that will now be refused.
+  const resend = () =>
+    run(async () => {
+      await requestReset(email.trim());
+      setCode('');
+      setCooldown(RESEND_SECONDS);
+      setResent(true);
     });
 
   const reset = () =>
@@ -81,6 +108,31 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
           onSubmitEditing={reset}
           returnKeyType="done"
         />
+        {/* Between the fields and the action, where someone looks after
+            finding no email to copy from. Disabled rather than hidden
+            during the wait: a control that vanishes reads as one that was
+            never there. */}
+        <Pressable
+          onPress={resend}
+          disabled={busy || cooldown > 0}
+          accessibilityRole="button"
+          style={s.resend}
+        >
+          <Text style={[s.resendText, cooldown > 0 && s.resendWaiting]}>
+            {cooldown > 0
+              ? t(`Resend code in ${cooldown}s`, `Gửi lại mã sau ${cooldown}s`, `${cooldown}秒後に再送信`)
+              : t("Didn't get it? Resend code", 'Chưa nhận được? Gửi lại mã', '届きませんか？コードを再送信')}
+          </Text>
+        </Pressable>
+        {resent && cooldown > 0 ? (
+          <Text style={s.resentNote}>
+            {t(
+              'A new code is on its way. The previous one no longer works.',
+              'Mã mới đang được gửi. Mã cũ không còn dùng được.',
+              '新しいコードを送信しました。前のコードは使えません。',
+            )}
+          </Text>
+        ) : null}
         {error ? <ErrorText>{error}</ErrorText> : null}
         <PrimaryButton label={t('Reset password', 'Đặt lại mật khẩu', 'パスワードをリセット')} onPress={reset} busy={busy} />
       </AuthScreen>
@@ -116,3 +168,12 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
     </AuthScreen>
   );
 }
+
+const s = StyleSheet.create({
+  resend: { alignSelf: 'flex-start', paddingVertical: 10, marginTop: 2 },
+  resendText: { color: colors.accent, fontSize: 15, lineHeight: 20, fontWeight: font.semibold },
+  // Still legible, plainly not pressable — a countdown greyed to the
+  // point of illegibility is a number nobody can use.
+  resendWaiting: { color: colors.textTertiary, fontWeight: font.regular },
+  resentNote: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 19, marginBottom: 4 },
+});
