@@ -138,6 +138,16 @@ export const onPhoto = {
   /** The accent as it must appear over a photograph: the bright coral,
    *  never the paper theme's darker one, which disappears into a scrim. */
   accent: '#FF6F5B',
+  /**
+   * The rating star, and the one colour in the app that is not coral.
+   *
+   * A deliberate exception to the one-accent rule, and a narrow one: a
+   * gold star is a convention old enough that a coral one reads as
+   * decoration rather than as a score. It is confined to this single 13pt
+   * glyph on a photo scrim — it never fills, never underlines, and never
+   * appears on the page itself.
+   */
+  star: '#F2B441',
 } as const;
 
 /** The accent as a gradient, for the rare loud surface. Left to right
