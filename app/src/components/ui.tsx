@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../lib/i18n';
+import { useScheme } from '../lib/theme';
 import { colors, display, font, radius, space, type } from '../theme';
 
 // ── tab bar geometry ──
@@ -128,6 +129,10 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
 /** Reflected city light: heavily diffused amber, strongest across the
  *  browsing band and falling away to black at both ends. */
 export function AmbientWarmth({ style }: { style?: StyleProp<ViewStyle> }) {
+  // Paper gets none of it. The glow is city light bouncing off a dark
+  // room; laid over a warm white page the same haze reads as a stain, and
+  // the light theme's depth comes from the white cards instead.
+  if (useScheme().scheme === 'light') return null;
   return (
     <LinearGradient
       colors={['transparent', colors.emberGlow, colors.emberGlowFade, 'transparent']}

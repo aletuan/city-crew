@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from './src/lib/auth';
 import { CityProvider } from './src/lib/city';
 import { I18nProvider, useI18n } from './src/lib/i18n';
+import { ThemeProvider, useScheme } from './src/lib/theme';
 import { CatalogProvider } from './src/lib/catalog';
 import { SaveProvider } from './src/lib/save';
 import { colors, font } from './src/theme';
@@ -86,9 +87,13 @@ const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionico
 /** True translucent material: dark blur with a smoky overlay on top, so
  *  content scrolling beneath the floating bar reads through it. */
 function TabBarMaterial() {
+  // `tint` is a named material, not a colour, so it cannot be a dynamic
+  // pair — and the overlay on top of it has to match the material it is
+  // deepening, not merely invert.
+  const light = useScheme().scheme === 'light';
   return (
-    <BlurView intensity={42} tint="dark" style={StyleSheet.absoluteFill}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(12,13,12,0.62)' }} />
+    <BlurView intensity={42} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
+      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.68)' : 'rgba(12,13,12,0.62)' }} />
     </BlurView>
   );
 }
@@ -103,6 +108,7 @@ function Tabs() {
     Collections: t('Collections', 'Bộ sưu tập', 'コレクション'),
     Profile: t('Profile', 'Cá nhân', 'プロフィール'),
   };
+  const light = useScheme().scheme === 'light';
   return (
     <Tab.Navigator
       initialRouteName="Explore"
@@ -130,8 +136,11 @@ function Tabs() {
           paddingBottom: insets.bottom + 6,
         },
         tabBarBackground: TabBarMaterial,
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textTertiary,
+        // React Navigation types these as `string`, so they cannot take a
+        // dynamic pair — the scheme picks them instead. Same coral, same
+        // gray, chosen here rather than resolved by UIKit.
+        tabBarActiveTintColor: light ? '#C4402C' : '#FF6F5B',
+        tabBarInactiveTintColor: light ? '#6E695E' : '#6E706D',
         // The label needs air the old bare glyph did not: a filled disc has
         // visual mass right down to its edge, where an outline icon's ink
         // stops well short of its bounding box, so the same gap now reads
@@ -172,19 +181,34 @@ function Tabs() {
   );
 }
 
+// React Navigation types its palette as strings, so the dynamic pairs go
+// in through a cast. They land in ordinary style props, which resolve a
+// dynamic colour the same as any other.
 const navTheme = {
   ...DarkTheme,
-  colors: { ...DarkTheme.colors, background: colors.bg, card: colors.bgElevated, text: colors.text },
+  colors: {
+    ...DarkTheme.colors,
+    background: colors.bg as string,
+    card: colors.bgElevated as string,
+    text: colors.text as string,
+  },
 };
 
-export default function App() {
+/** Everything below the theme, so the scheme is readable from here down. */
+function Root() {
+  const { scheme, ready } = useScheme();
+  // Hold the first frame until the stored choice is in. A dark-mode user
+  // seeing a white flash on every launch would be a worse bug than having
+  // no setting at all.
   // Display type only — see theme.ts. Until the faces are ready the app
   // holds on its own ground colour rather than rendering titles in the
   // system font and swapping them a frame later, which reads as a glitch.
   const [fontsLoaded] = useFonts({
     SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold,
   });
-  if (!fontsLoaded) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  // The same hold covers the stored scheme: a dark-mode user seeing a white
+  // flash on every launch would be a worse bug than having no setting.
+  if (!fontsLoaded || !ready) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
 
   return (
     // Gesture handler wants to own the root view: swipe-to-reveal on the
@@ -196,7 +220,9 @@ export default function App() {
           <I18nProvider>
             <CityProvider>
               <NavigationContainer theme={navTheme} ref={navRef}>
-                <StatusBar style="light" />
+                {/* Dark type on paper, light type on charcoal — the one
+                    thing the window's interface style does not carry. */}
+                <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
                 {/* Both above the navigators: the catalog because five
                     screens read the same two lists, the save sheets
                     because they belong to no single screen — a card on
@@ -212,5 +238,14 @@ export default function App() {
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+export default function App() {
+  // The theme sits above everything, including the frame that waits for it.
+  return (
+    <ThemeProvider>
+      <Root />
+    </ThemeProvider>
   );
 }
