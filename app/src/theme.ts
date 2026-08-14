@@ -87,6 +87,17 @@ export const colors = {
    * which is why this cannot be one value.
    */
   badge: dyn('rgba(255,111,91,0.16)', '#FF6F5B'),
+  /**
+   * The same badge where it overlaps a photograph rather than a surface —
+   * the avatar's camera button.
+   *
+   * On paper this is `badge` already composited over `bg`, so against the
+   * page it is indistinguishable from the tint, and against the photo it
+   * covers. A 16% fill there let the picture through and left the glyph
+   * sitting on whatever pixels happened to be under it. Dark needs no
+   * variant: its badge is opaque already.
+   */
+  badgeSolid: dyn('#F7DCD3', '#FF6F5B'),
   /** What sits inside `badge`: near-black on the solid, the readable coral
    *  on the tint. */
   badgeInk: dyn('#C4402C', '#141310'),
