@@ -156,6 +156,20 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     desc: t(col.desc_en, col.desc_vi, col.desc_ja),
   });
 
+  // Inert, and the reason is the same one that makes Share inert: there
+  // is nowhere for a published list to be. The row exists so the shape of
+  // the menu is settled before the feature lands behind it — and because
+  // the RLS policies currently pin an owned collection to is_public =
+  // false, so today this button could not do its job even if it tried.
+  const makePublic = () => Alert.alert(
+    t('Publishing is coming', 'Sắp có công khai', '公開機能は近日公開'),
+    t(
+      'Making a collection public will put it on the Collections tab for everyone in the city. Not ready yet.',
+      'Công khai bộ sưu tập sẽ đưa nó lên tab Bộ sưu tập cho mọi người trong thành phố. Chưa sẵn sàng.',
+      'コレクションを公開すると、市内のみんなのコレクションタブに表示されます。まだ準備中です。',
+    ),
+  );
+
   // Deliberately inert. A private list has no address to send anyone to,
   // so the honest placeholder says that rather than opening a share sheet
   // onto a link that would 404 for whoever received it.
@@ -292,6 +306,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             icon="share-outline"
             label={t('Share', 'Chia sẻ', '共有')}
             onPress={() => act(share)}
+          />
+          {/* Above Delete, below the rest: it is the one row that changes
+              who else can see this, which is a heavier thing than editing
+              a title and a lighter one than destroying the list. */}
+          <MenuRow
+            icon="globe-outline"
+            label={t('Make public', 'Công khai', '公開する')}
+            onPress={() => act(makePublic)}
           />
           <MenuRow
             icon="trash-outline"
