@@ -140,6 +140,19 @@ begin
     coalesce(new.raw_user_meta_data->>'avatar_url', '')
   )
   on conflict (id) do nothing;
+
+  -- The metadata was a courier, not a cupboard. Sign-up is the only way
+  -- these values can arrive, and nothing updates them afterwards, so a
+  -- copy left here is stale from the first rename onwards — and a second
+  -- place to read a name from is how the two drift apart unnoticed.
+  --
+  -- Safe from recursion: this is an AFTER INSERT trigger and an UPDATE
+  -- does not re-fire it.
+  update auth.users
+     set raw_user_meta_data = raw_user_meta_data
+       - 'handle' - 'full_name' - 'bio' - 'location' - 'interests' - 'avatar_url'
+   where id = new.id;
+
   return new;
 end;
 $$;
@@ -173,6 +186,12 @@ begin
     end if;
   end loop;
 end $$;
+
+-- And the copies the backfill just read from. Ordered after it on
+-- purpose: strip first and the backfill has nothing to copy.
+update auth.users
+   set raw_user_meta_data = raw_user_meta_data
+     - 'handle' - 'full_name' - 'bio' - 'location' - 'interests' - 'avatar_url';
 
 alter table public.profiles enable row level security;
 
