@@ -65,6 +65,19 @@ export type Collection = {
   /** Null on the editorial collections — those belong to the desk. Set to a
    *  user's id on the lists they made for themselves. */
   owner_id?: string | null;
+  /** Which city's catalog this belongs to. Meaningful for the editorial
+   *  rows; on a user's own list it records where it was made and nothing
+   *  more — a list of your own is not confined to one city. */
+  city_id?: string | null;
+  /**
+   * The member places, carried by the row itself.
+   *
+   * Only the owner query fills this, and it is the whole reason a personal
+   * list survives a change of city: `membersOf` otherwise resolves slugs
+   * against the in-memory catalog, which holds one city at a time. Your
+   * lists are yours; the city boundary is the catalog's problem.
+   */
+  members?: Place[];
 };
 
 /** Visible photos, cover first. */
@@ -97,17 +110,32 @@ export function fmtCount(n: number | null | undefined): string {
   return n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n);
 }
 
-export type Fetch<T> = { loading: boolean; error: string | null; data: T; reload: () => void };
+export type Fetch<T> = {
+  loading: boolean;
+  /**
+   * True once this has settled at least once, and never false again.
+   *
+   * `loading` answers "is a request in flight", which flips back on for
+   * every refresh. A screen that hides a section while `loading` therefore
+   * tears it down on every refresh — and inferring "we have been here
+   * before" from a non-empty `data` fails for anyone whose answer is
+   * legitimately empty. This is the flag that actually means it.
+   */
+  loaded: boolean;
+  error: string | null;
+  data: T;
+  reload: () => void;
+};
 
 function useFetch<T>(fetcher: () => Promise<T>, empty: T): Fetch<T> {
-  const [state, setState] = useState<{ loading: boolean; error: string | null; data: T }>({
-    loading: true, error: null, data: empty,
+  const [state, setState] = useState<{ loading: boolean; loaded: boolean; error: string | null; data: T }>({
+    loading: true, loaded: false, error: null, data: empty,
   });
   const load = useCallback(() => {
     setState((s) => ({ ...s, loading: true, error: null }));
     fetcher()
-      .then((data) => setState({ loading: false, error: null, data }))
-      .catch((err: Error) => setState((s) => ({ ...s, loading: false, error: err.message })));
+      .then((data) => setState({ loading: false, loaded: true, error: null, data }))
+      .catch((err: Error) => setState((s) => ({ ...s, loading: false, loaded: true, error: err.message })));
   }, [fetcher]);
   useEffect(load, [load]);
   return { ...state, reload: load };
@@ -137,7 +165,7 @@ async function fetchPlaces(cityId: string): Promise<Place[]> {
 }
 
 const COLLECTION_COLS = (withOwner: boolean) =>
-  `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id' : ''}, collection_places(sort_order, places(slug)), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
+  `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(slug)), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
 
 async function fetchCollections(cityId: string): Promise<Collection[]> {
   const run = (withOwner: boolean) => {
@@ -160,16 +188,45 @@ async function fetchCollections(cityId: string): Promise<Collection[]> {
   return (data ?? []) as unknown as Collection[];
 }
 
-async function fetchMyCollections(cityId: string, ownerId: string): Promise<Collection[]> {
+/**
+ * Every list this user owns, with its places inside it.
+ *
+ * Two differences from the public query, both for the same reason. It is
+ * not filtered by city, and it embeds whole place rows rather than slugs —
+ * so a list made in Hanoi still counts, still shows a cover and still
+ * opens, while the app is looking at Saigon.
+ *
+ * It costs more per row than the public query. It is also one person's own
+ * lists rather than a city's catalog, so there are a handful of them.
+ */
+const MY_COLLECTION_COLS =
+  `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, cover:place_photos!collections_cover_photo_id_fkey(photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
+
+async function fetchMyCollections(ownerId: string): Promise<Collection[]> {
   const { data, error } = await supabase
     .from('collections')
-    .select(COLLECTION_COLS(true))
-    .eq('city_id', cityId)
-    .eq('owner_id', ownerId)
+    .select(MY_COLLECTION_COLS)
     // Newest first: the one you just made is the one you came back for.
+    .eq('owner_id', ownerId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as Collection[];
+
+  type Row = Omit<Collection, 'collection_places' | 'members'> & {
+    collection_places: { sort_order: number; places: Place | null }[];
+  };
+  return ((data ?? []) as unknown as Row[]).map((row) => {
+    const cps = [...(row.collection_places ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+    return {
+      ...row,
+      members: cps.map((cp) => cp.places).filter((p): p is Place => !!p),
+      // Kept in the shape the rest of the app reads, so `holds()` and the
+      // counts do not have to know which query produced the row.
+      collection_places: cps.map((cp) => ({
+        sort_order: cp.sort_order,
+        places: cp.places ? { slug: cp.places.slug } : null,
+      })),
+    };
+  });
 }
 
 // Both catalogs scope to the selected city TOGETHER: membersOf() resolves
@@ -205,20 +262,12 @@ export const useCollectionsQuery = () => {
  * resolves empty rather than not existing, so callers need no branch.
  */
 export const useMyCollections = (ownerId: string | null | undefined) => {
-  const { city } = useCity();
+  // No city in the dependencies, and none in the query: a person's lists
+  // do not belong to a city, so they neither wait for one nor reload when
+  // it changes.
   const fetcher = useCallback(
-    () => {
-      // Signed out is an answer, not a wait: there are no lists, and no
-      // city is going to change that.
-      if (!ownerId) return Promise.resolve([] as Collection[]);
-      // Signed in with the city still resolving is a wait. Hold on the
-      // never-settling promise the way the other two catalogs do —
-      // finishing here with an empty result would report "no collections
-      // yet" to someone who has some, then load again and contradict it.
-      if (!city) return pending as Promise<Collection[]>;
-      return fetchMyCollections(city.id, ownerId);
-    },
-    [city?.id, ownerId],
+    () => (ownerId ? fetchMyCollections(ownerId) : Promise.resolve([] as Collection[])),
+    [ownerId],
   );
   return useFetch(fetcher, [] as Collection[]);
 };
@@ -345,8 +394,16 @@ export function holds(c: Collection, placeSlug: string): boolean {
   return c.collection_places.some((cp) => cp.places?.slug === placeSlug);
 }
 
-/** Resolve a collection's member slugs against the published catalog. */
+/**
+ * A collection's places, in order.
+ *
+ * A list of the user's own arrives with its members attached and needs no
+ * catalog — that is what lets it hold places from a city other than the
+ * one on screen. The editorial rows carry slugs and resolve against the
+ * catalog, which is scoped to the current city by design.
+ */
 export function membersOf(c: Collection, places: Place[]): Place[] {
+  if (c.members) return c.members;
   const bySlug = new Map(places.map((p) => [p.slug, p]));
   return [...c.collection_places]
     .sort((a, b) => a.sort_order - b.sort_order)
