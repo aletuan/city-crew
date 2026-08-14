@@ -138,10 +138,6 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
             </Text>
           </LinearGradient>
         </PressableScale>
-        {/* The reference offers a second path here — save places as you
-            browse and one gets started for you. Nothing can save a place
-            yet, so this says the true thing instead: a promise the app
-            cannot keep is worse than no line at all. */}
         <Text style={s.firstFoot}>
           {t('Only you can see your lists.', 'Chỉ mình bạn thấy danh sách của bạn.', 'リストはあなただけに表示されます。')}
         </Text>
@@ -286,12 +282,14 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   // The section stays even with nothing in it — that empty is the one place
   // to say what collections are for.
   //
-  // It hides only while the *first* load is in flight. Hiding it for every
-  // load is what made a visit to this tab look like a double load: the
-  // focus refresh flipped `loading` on, the section left the list, and the
-  // same rows came back a moment later. Once there are rows, a refresh
-  // updates them in place.
-  const mineReady = !mine.loading || mine.data.length > 0;
+  // It hides only until the first load has settled. `loaded`, not
+  // `!loading`: the focus refresh flips `loading` back on, and hiding the
+  // section for that is what made a visit to this tab look like a double
+  // load. The previous attempt read `data.length > 0` as "we have been
+  // here before", which is true for everyone except the people this card
+  // exists for — anyone whose answer is legitimately empty saw the blink
+  // every time.
+  const mineReady = mine.loaded;
   const sections = [
     ...(session && mineReady
       ? [{ title: t('Your collections', 'Bộ sưu tập của bạn', 'あなたのコレクション'), own: true, data: mine.data }]

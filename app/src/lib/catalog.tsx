@@ -23,8 +23,8 @@ type Catalog = {
 };
 
 const EMPTY: Catalog = {
-  places: { loading: true, error: null, data: [], reload: () => {} },
-  collections: { loading: true, error: null, data: [], reload: () => {} },
+  places: { loading: true, loaded: false, error: null, data: [], reload: () => {} },
+  collections: { loading: true, loaded: false, error: null, data: [], reload: () => {} },
 };
 
 const Ctx = createContext<Catalog>(EMPTY);
