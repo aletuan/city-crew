@@ -98,9 +98,19 @@ export const colors = {
    * variant: its badge is opaque already.
    */
   badgeSolid: dyn('#F7DCD3', '#FF6F5B'),
-  /** What sits inside `badge`: near-black on the solid, the readable coral
-   *  on the tint. */
-  badgeInk: dyn('#C4402C', '#141310'),
+  /**
+   * What sits inside `badge`: near-black on the solid, the readable coral
+   * on the tint.
+   *
+   * The light value is warmer than `accent`, and deliberately so. A glyph
+   * is a graphical object, which needs 3:1 — this clears it at 3.15 on the
+   * composited tint, where the design's own coral would be 2.10 and the
+   * accent's 3.92 was darker than the tab bar wanted to look. The tab
+   * *label* under it stays on `accent`: 11.5pt type is held to 4.5:1, and
+   * this colour reaches 3.64. Same tab, two thresholds, two reds — not an
+   * oversight to tidy up.
+   */
+  badgeInk: dyn('#DC4C33', '#141310'),
   /** The warm end of the accent. Gradients run accent → accentBright and
    *  stay bright in both themes: they are fills, never type. */
   accentBright: '#FF9A5C',

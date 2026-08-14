@@ -139,6 +139,11 @@ function Tabs() {
         // React Navigation types these as `string`, so they cannot take a
         // dynamic pair — the scheme picks them instead. Same coral, same
         // gray, chosen here rather than resolved by UIKit.
+        //
+        // Light stays on the accent's darker red where the glyph inside the
+        // disc has moved to a warmer one: at 11.5pt this is small text, held
+        // to 4.5:1, and the glyph's colour only reaches 3.64. See
+        // `colors.badgeInk`.
         tabBarActiveTintColor: light ? '#C4402C' : '#FF6F5B',
         tabBarInactiveTintColor: light ? '#6E695E' : '#6E706D',
         // The label needs air the old bare glyph did not: a filled disc has
