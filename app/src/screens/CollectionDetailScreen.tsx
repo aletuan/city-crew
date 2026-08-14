@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
@@ -10,7 +10,7 @@ import { deleteCollection, membersOf } from '../lib/data';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
-import { colors, font, gradAI, radius, space, type } from '../theme';
+import { colors, display, font, gradAI, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 /**
@@ -46,32 +46,45 @@ function OwnEmpty({ onExplore }: { onExplore: () => void }) {
   );
 }
 
-/**
- * One of the owner's three actions.
- *
- * The first is the gradient; the rest are the glass pill the app uses for
- * a secondary control. Sized to their labels rather than stretched to
- * thirds, because "Add place" and "Edit" are not the same weight of
- * decision and equal widths would say they were.
- */
-function Action({ icon, label, onPress, primary }: {
+/** A line in the owner's sheet — the same row the avatar picker uses, so
+ *  the two menus in the app are one menu. */
+function SheetRow({ icon, label, onPress, danger }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
-  primary?: boolean;
+  danger?: boolean;
 }) {
-  const body = (
-    <>
-      <Ionicons name={icon} size={18} color={primary ? colors.accentInk : colors.text} />
-      <Text style={[s.actionText, primary && s.actionTextPrimary]} numberOfLines={1}>{label}</Text>
-    </>
-  );
   return (
-    <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
-      {primary
-        ? <LinearGradient {...gradAI} style={s.action}>{body}</LinearGradient>
-        : <View style={[s.action, s.actionGlass]}>{body}</View>}
+    <PressableScale
+      onPress={onPress}
+      accessibilityRole="button"
+      containerStyle={{ alignSelf: 'stretch' }}
+      style={s.sheetRow}
+    >
+      <Ionicons name={icon} size={20} color={danger ? colors.bad : colors.accent} />
+      <Text style={[s.sheetRowText, danger && { color: colors.bad }]}>{label}</Text>
     </PressableScale>
+  );
+}
+
+/**
+ * The last row of a list you own — a slot rather than a place.
+ *
+ * The dashed outline is the same one the collections list ends on, and it
+ * is doing the same job: saying "not a thing, a space where one would go"
+ * at the moment you have just finished reading the list and found it
+ * short.
+ */
+function AddPlaceRow({ onPress, label }: { onPress: () => void; label: string }) {
+  return (
+    <View style={s.addWrap}>
+      <PressableScale onPress={onPress} accessibilityRole="button" style={s.addRow}>
+        <View style={s.addIcon}>
+          <Ionicons name="add" size={24} color={colors.accent} />
+        </View>
+        <Text style={s.addText} numberOfLines={1}>{label}</Text>
+      </PressableScale>
+    </View>
   );
 }
 
@@ -95,6 +108,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const tabClearance = useTabBarClearance();
 
   const title = col ? t(col.title_en, col.title_vi, col.title_ja) : '';
+  const insets = useSafeAreaInsets();
+  const [sheet, setSheet] = useState(false);
+  // Every action leaves this screen or opens an alert over it, and a sheet
+  // still standing behind either is the sort of thing you come back to and
+  // have to dismiss twice.
+  const act = (run: () => void) => { setSheet(false); run(); };
 
   // Explore is where places are, and saving one from there already offers
   // this list by name. A picker that wrote straight back into this
@@ -139,15 +158,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     ],
   );
 
-  // Delete is the only owner action with no other home on this screen, so
-  // the overflow holds exactly it. A menu of one looks thin, but the
-  // alternative is a fourth button in the row giving a destructive action
-  // the same standing as "Edit".
-  const more = () => Alert.alert(title, undefined, [
-    { text: t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除'), style: 'destructive', onPress: remove },
-    { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
-  ]);
-
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <AmbientWarmth />
@@ -171,25 +181,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         {owned && (
           <RoundIconButton
             icon="ellipsis-horizontal"
-            onPress={more}
+            onPress={() => setSheet(true)}
             label={t('More', 'Thêm', 'その他')}
           />
         )}
       </View>
       {col && (col.desc_en || col.desc_vi) && (
         <Text style={s.desc}>{t(col.desc_en, col.desc_vi, col.desc_ja)}</Text>
-      )}
-      {/* Wraps rather than scrolls. Three labels fit across a phone in
-          English and do not in Vietnamese; a second line costs 50pt and
-          says everything, where a horizontal scroll clipped the pills to
-          a height it had guessed from nothing and hid a control behind a
-          gesture nobody was told about. */}
-      {owned && (
-        <View style={s.actions}>
-          <Action icon="add" label={t('Add place', 'Thêm địa điểm', 'スポットを追加')} onPress={addPlace} primary />
-          <Action icon="create-outline" label={t('Edit', 'Sửa', '編集')} onPress={edit} />
-          <Action icon="share-outline" label={t('Share', 'Chia sẻ', '共有')} onPress={share} />
-        </View>
       )}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
@@ -210,9 +208,53 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               'このコレクションにはまだスポットがありません。',
             )} />)
           : null}
+        // Only once there is a list to end. Empty, the card above is
+        // already asking for the first place, and two invitations to do
+        // one thing read as two different things.
+        ListFooterComponent={owned && members.length > 0
+          ? <AddPlaceRow onPress={addPlace} label={t('Add place', 'Thêm địa điểm', 'スポットを追加')} />
+          : null}
         contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
       />
+
+      <Modal
+        visible={sheet}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setSheet(false)}
+      >
+        <Pressable style={s.backdrop} onPress={() => setSheet(false)} />
+        <View style={[s.sheet, { paddingBottom: insets.bottom + 16 }]}>
+          <View style={s.grabber} />
+          <Text style={s.sheetTitle} numberOfLines={1}>{title}</Text>
+          <SheetRow
+            icon="add"
+            label={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+            onPress={() => act(addPlace)}
+          />
+          <SheetRow
+            icon="create-outline"
+            label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')}
+            onPress={() => act(edit)}
+          />
+          <SheetRow
+            icon="share-outline"
+            label={t('Share', 'Chia sẻ', '共有')}
+            onPress={() => act(share)}
+          />
+          <SheetRow
+            icon="trash-outline"
+            label={t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除')}
+            onPress={() => act(remove)}
+            danger
+          />
+          <PressableScale onPress={() => setSheet(false)} accessibilityRole="button" style={s.cancel}>
+            <Text style={s.cancelText}>{t('Cancel', 'Huỷ', 'キャンセル')}</Text>
+          </PressableScale>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -234,23 +276,41 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, paddingBottom: 12,
   },
 
-  actions: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 10,
-    paddingHorizontal: space.page, paddingBottom: 14,
+  // The dashed slot at the end of the list, matching the collections
+  // screen's own last row down to the well and the gap.
+  addWrap: { marginHorizontal: space.page, marginTop: 4, marginBottom: 8 },
+  addRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    padding: space.cardPadding, borderRadius: radius.card,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderGlass,
   },
-  action: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingHorizontal: 18, paddingVertical: 12, borderRadius: radius.pill,
+  addIcon: {
+    width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
   },
-  actionGlass: {
-    backgroundColor: colors.surfaceGlassStrong,
-    borderWidth: 1, borderColor: colors.borderGlassSoft,
+  // Line box stated rather than left to the font: at this size the
+  // metrics leave nothing under the baseline, and the descender on
+  // "Thêm địa điểm" is the first thing to go.
+  addText: { color: colors.text, fontSize: 16.5, lineHeight: 22, fontWeight: font.semibold },
+
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.62)' },
+  sheet: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    alignItems: 'center', gap: 4,
+    paddingHorizontal: space.page, paddingTop: 10,
+    backgroundColor: colors.bgElevated,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
-  // The line box is stated rather than left to the font. At 15.5 semibold
-  // the metrics leave no room under the baseline, and the first thing to
-  // go is the descender on "Chia sẻ".
-  actionText: { color: colors.text, fontSize: 15.5, lineHeight: 21, fontWeight: font.semibold },
-  actionTextPrimary: { color: colors.accentInk },
+  grabber: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.textTertiary, marginBottom: 12 },
+  sheetTitle: { color: colors.text, fontSize: 18, fontFamily: display.bold, marginBottom: 8 },
+  sheetRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 15, paddingHorizontal: 4,
+  },
+  sheetRowText: { color: colors.text, fontSize: 16, lineHeight: 22, fontWeight: font.medium },
+  cancel: { paddingVertical: 14, marginTop: 4 },
+  cancelText: { color: colors.textSecondary, fontSize: 15.5, lineHeight: 21, fontWeight: font.medium },
 
   emptyWrap: { marginHorizontal: space.page, marginTop: 24 },
   empty: {
