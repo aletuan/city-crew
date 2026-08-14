@@ -106,9 +106,13 @@ export default function AvatarPicker({ size = 88 }: { size?: number }) {
               </View>
             )}
           </View>
-          {/* Without this the circle reads as decoration, not a control. */}
-          <View style={s.badge}>
-            <Ionicons name="camera" size={13} color={colors.badgeInk} />
+          {/* Without this the circle reads as decoration, not a control.
+              The gap between badge and photo is a ring of page behind it
+              rather than a border on it — see `badgeRing`. */}
+          <View style={s.badgeRing}>
+            <View style={s.badge}>
+              <Ionicons name="camera" size={13} color={colors.badgeInk} />
+            </View>
           </View>
         </View>
       </PressableScale>
@@ -161,13 +165,28 @@ const s = StyleSheet.create({
   },
   initial: { color: colors.accent, fontWeight: font.semibold },
   busy: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(10,11,10,0.55)', borderRadius: 999 },
+  /**
+   * The ring separating the badge from the photograph, drawn as a disc of
+   * page colour behind it rather than as a border on it.
+   *
+   * A border was the obvious way and it was wrong. `borderColor` ends up
+   * on `layer.borderColor`, which is a CGColor — a fixed value resolved
+   * once — where `backgroundColor` stays a UIColor that iOS re-resolves
+   * against the view's traits. Give both a `DynamicColorIOS` pair and the
+   * same view can come back with the right fill and the wrong edge, which
+   * is exactly what it did: a black ring on a cream page after signing
+   * back in. A background cannot go stale that way.
+   */
+  badgeRing: {
+    position: 'absolute', right: -4, bottom: -4,
+    padding: 2, borderRadius: 15,
+    backgroundColor: colors.bg,
+  },
   badge: {
-    position: 'absolute', right: -2, bottom: -2,
     width: 26, height: 26, borderRadius: 13,
     alignItems: 'center', justifyContent: 'center',
     // Opaque, not the tint: this one sits on the photograph it belongs to.
     backgroundColor: colors.badgeSolid,
-    borderWidth: 2, borderColor: colors.bg,
   },
 
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.62)' },
