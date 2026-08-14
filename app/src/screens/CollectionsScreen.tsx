@@ -5,8 +5,8 @@
 // ambient warmth that all but disappears into it, translucent charcoal
 // surfaces and thin warm hairlines — not from shadows.
 
-import React, { useCallback, useRef } from 'react';
-import { Alert, SectionList, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, Animated, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
@@ -20,6 +20,18 @@ import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
+
+/** What `renderRightActions` hands back, and what the card animates from. */
+type Drag = ReturnType<Animated.Value['interpolate']>;
+
+/** What the two actions take up behind an open row: two 62pt buttons, the
+ *  8pt between them, and the 8pt separating them from the card. The row
+ *  clamps its own travel to whatever they measure, so this figure only sets
+ *  how fast the card's insides shrink on the way there. */
+const ACTIONS_W = 62 * 2 + 8 + 8;
+const THUMB = 92;
+const THUMB_OPEN = 64;
+const CHEVRON = 44;
 
 // The card sells signing in, so it leads with what you get rather than with
 // what you are: "browsing as a guest" names a limitation and leaves the
@@ -92,7 +104,7 @@ function EmptyCover() {
       colors={[colors.accentSoft, 'rgba(255,111,91,0.02)']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[s.thumb, s.thumbEmpty]}
+      style={[s.thumbFill, s.thumbEmpty]}
     >
       <Ionicons name="bookmark-outline" size={26} color={colors.accentFaint} />
     </LinearGradient>
@@ -179,52 +191,91 @@ function NewCollectionRow({ onPress }: { onPress: () => void }) {
  * Swipe left on your own row to reveal Edit and Delete — the iOS list
  * convention, and the reason the row itself carries no extra controls.
  *
+ * Where this parts company with the stock behaviour is what happens to the
+ * row. Swipeable slides its children left by the width of the actions,
+ * which on a full-bleed card pushes the cover and the first half of the
+ * title off the screen: you end up choosing between two buttons for a list
+ * you can no longer read the name of. So the card is pinned — translated
+ * back by exactly what the row translates it — and narrowed by the same
+ * amount instead, so its left edge stays on the page margin and its right
+ * edge stops where the buttons begin.
+ *
  * Both actions close the row first. Leaving it open behind a pushed screen
  * or an alert means coming back to a row half off its rails, and the way
  * out of that is another swipe nobody thinks to try.
  */
 function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
-  children: React.ReactNode;
+  children: (open: boolean, drag: Drag | null) => React.ReactNode;
   onEdit: () => void;
   onDelete: () => void;
   editLabel: string;
   deleteLabel: string;
 }) {
   const ref = useRef<Swipeable>(null);
+  const [width, setWidth] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [drag, setDrag] = useState<Drag | null>(null);
+  // Swipeable rebuilds the node it drags the row with every time it
+  // remeasures, so the one captured on the first pass goes stale. Lifting
+  // it out of the render prop keeps the copy the card animates from and the
+  // one the row moves by the same node.
+  const seen = useRef<Drag | null>(null);
+  useEffect(() => { if (seen.current !== drag) setDrag(seen.current); });
+
   const act = (run: () => void) => { ref.current?.close(); run(); };
+
+  // Until the row has been measured there is nothing to pin against, and
+  // the card sits at its full width the way it always did.
+  const pinned = drag && width > 0
+    ? { width: Animated.add(width, drag), transform: [{ translateX: Animated.multiply(drag, -1) }] }
+    : null;
+
   return (
-    <Swipeable
-      ref={ref}
-      friction={1.6}
-      rightThreshold={38}
-      // No rubber-band past the actions: the row is 92pt tall and an
-      // overshoot on something this small reads as the row coming loose.
-      overshootRight={false}
-      renderRightActions={() => (
-        <View style={s.actions}>
-          <PressableScale
-            onPress={() => act(onEdit)}
-            accessibilityRole="button"
-            accessibilityLabel={editLabel}
-            containerStyle={s.actionWrap}
-            style={[s.action, s.actionEdit]}
-          >
-            <Ionicons name="create-outline" size={21} color={colors.text} />
-          </PressableScale>
-          <PressableScale
-            onPress={() => act(onDelete)}
-            accessibilityRole="button"
-            accessibilityLabel={deleteLabel}
-            containerStyle={s.actionWrap}
-            style={[s.action, s.actionDelete]}
-          >
-            <Ionicons name="trash-outline" size={21} color={colors.accentInk} />
-          </PressableScale>
-        </View>
-      )}
-    >
-      {children}
-    </Swipeable>
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <Swipeable
+        ref={ref}
+        friction={1.6}
+        rightThreshold={38}
+        // No rubber-band past the actions: the row is 92pt tall and an
+        // overshoot on something this small reads as the row coming loose.
+        overshootRight={false}
+        // Width is a layout property, so the pin cannot ride the native
+        // driver — a JS-driven value cannot be composed from a native one.
+        // The cost is a handful of owned rows animating on the JS thread
+        // for the length of a swipe, which is what it takes for the card to
+        // stay legible instead of leaving the screen.
+        useNativeAnimations={false}
+        onSwipeableWillOpen={() => setOpen(true)}
+        onSwipeableWillClose={() => setOpen(false)}
+        renderRightActions={(_progress, dragX) => {
+          seen.current = dragX;
+          return (
+            <View style={s.actions}>
+              <PressableScale
+                onPress={() => act(onEdit)}
+                accessibilityRole="button"
+                accessibilityLabel={editLabel}
+                containerStyle={s.actionWrap}
+                style={[s.action, s.actionEdit]}
+              >
+                <Ionicons name="create-outline" size={21} color={colors.text} />
+              </PressableScale>
+              <PressableScale
+                onPress={() => act(onDelete)}
+                accessibilityRole="button"
+                accessibilityLabel={deleteLabel}
+                containerStyle={s.actionWrap}
+                style={[s.action, s.actionDelete]}
+              >
+                <Ionicons name="trash-outline" size={21} color={colors.accentInk} />
+              </PressableScale>
+            </View>
+          );
+        }}
+      >
+        <Animated.View style={pinned}>{children(open, drag)}</Animated.View>
+      </Swipeable>
+    </View>
   );
 }
 
@@ -356,14 +407,29 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             renderItem={({ item, section }) => {
               const count = membersOf(item, places).length;
               const uri = coverFor(item);
-              const card = (
+              // Narrowed to roughly a third of its width, the card has room
+              // for a name and a count and nothing else. So the cover comes
+              // down to 64pt, the chevron closes up — the row is already
+              // open, it has nothing left to announce — and the title drops
+              // to a single line rather than wrapping into the space the
+              // meta needs. All of it rides the same drag as the pin, so
+              // the card reflows under your thumb instead of snapping when
+              // you let go.
+              const card = (open: boolean, drag: Drag | null) => (
                 <PressableScale onPress={() => navigation.navigate('CollectionDetail', { slug: item.slug })}>
                   <Card style={s.card}>
-                    {uri
-                      ? <Image source={{ uri }} style={s.thumb} contentFit="cover" transition={200} />
-                      : <EmptyCover />}
+                    <Animated.View
+                      style={[s.thumb, drag && {
+                        width: Animated.add(THUMB, Animated.multiply(drag, (THUMB - THUMB_OPEN) / ACTIONS_W)),
+                        height: Animated.add(THUMB, Animated.multiply(drag, (THUMB - THUMB_OPEN) / ACTIONS_W)),
+                      }]}
+                    >
+                      {uri
+                        ? <Image source={{ uri }} style={s.thumbFill} contentFit="cover" transition={200} />
+                        : <EmptyCover />}
+                    </Animated.View>
                     <View style={s.cardText}>
-                      <Text style={s.title} numberOfLines={2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
+                      <Text style={s.title} numberOfLines={open ? 1 : 2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
                       <View style={s.metaRow}>
                         {/* The padlock says whose it is without spending a
                             word on it — and every owned list is private,
@@ -382,9 +448,20 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                         </Text>
                       </View>
                     </View>
-                    <View style={s.chevron}>
+                    <Animated.View
+                      style={[s.chevron, drag && {
+                        // The gap the card lays out before it closes up
+                        // too, or the title keeps paying for a control
+                        // that is no longer there.
+                        width: Animated.add(CHEVRON, Animated.multiply(drag, CHEVRON / ACTIONS_W)),
+                        marginLeft: Animated.multiply(drag, space.cardPadding / ACTIONS_W),
+                        opacity: drag.interpolate({
+                          inputRange: [-40, 0], outputRange: [0, 1], extrapolate: 'clamp',
+                        }),
+                      }]}
+                    >
                       <Ionicons name="chevron-forward" size={17} color={colors.textSecondary} />
-                    </View>
+                    </Animated.View>
                   </Card>
                 </PressableScale>
               );
@@ -408,7 +485,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                         {card}
                       </SwipeRow>
                     )
-                    : card}
+                    : card(false, null)}
                 </View>
               );
             }}
@@ -521,10 +598,12 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: space.cardPadding,
     padding: space.cardPadding,
   },
+  // The box, which is what the swipe resizes; the cover inside fills it.
   thumb: {
-    width: 92, height: 92, borderRadius: radius.image,
+    width: THUMB, height: THUMB, borderRadius: radius.image,
     backgroundColor: colors.surfaceGlass,
   },
+  thumbFill: { width: '100%', height: '100%', borderRadius: radius.image },
   thumbEmpty: {
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.accentLine,
@@ -551,7 +630,8 @@ const s = StyleSheet.create({
   meta: { color: colors.textTertiary, ...type.meta },
   // Circular control: translucent fill, thin hairline, 44pt touch target.
   chevron: {
-    width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
+    width: CHEVRON, height: CHEVRON, borderRadius: CHEVRON / 2,
+    alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surfaceGlass, borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
 });
