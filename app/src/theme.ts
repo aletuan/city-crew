@@ -127,14 +127,15 @@ export const colors = {
   ok: dyn('#3F7A4A', '#8FBF8A'),
   /** Destructive. The dark theme's soft red is far too pale on paper. */
   bad: dyn('#C2564A', '#D98A80'),
-  /** Destructive at fill and hairline strength — the well a delete action
-   *  sits in, with `bad` itself as the glyph on top.
+  /** The well a delete action sits in, with `bad` itself as the glyph on
+   *  top. It takes the ordinary `borderGlassSoft` hairline like any other
+   *  control — a red-tinted edge of its own came out near black against
+   *  the dark ground, and outlined the one button that should read soft.
    *
    *  Opaque per-theme values rather than one translucent red like
    *  `accentSoft`: a tint has to stay pink to read as a warning, and the
    *  alpha that manages that on paper comes out beige over near-black. */
   badSoft: dyn('#F8DFD9', '#2A1A18'),
-  badLine: dyn('#F0C8BF', '#3D2523'),
 };
 
 /**
