@@ -12,11 +12,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
+import { schemeLabel, ThemeSwitcherModal } from '../components/ThemeSwitcher';
 import { PrimaryButton } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { Lang, useI18n } from '../lib/i18n';
+import { useScheme } from '../lib/theme';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -66,6 +68,8 @@ function SettingsCard() {
   const { city, mode } = useCity();
   const [open, setOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const { scheme } = useScheme();
   const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語' }[lang];
   return (
     <>
@@ -84,11 +88,18 @@ function SettingsCard() {
           title={t('Language', 'Ngôn ngữ', '言語')}
           sub={langLabel ?? 'English'}
           onPress={() => setLangOpen(true)}
+        />
+        <FeatureRow
+          icon={scheme === 'light' ? 'sunny-outline' : 'moon-outline'}
+          title={t('Appearance', 'Giao diện', '外観')}
+          sub={schemeLabel(scheme, t)}
+          onPress={() => setThemeOpen(true)}
           last
         />
       </Card>
       <CitySwitcherModal visible={open} onClose={() => setOpen(false)} />
       <LanguageSwitcherModal visible={langOpen} onClose={() => setLangOpen(false)} />
+      <ThemeSwitcherModal visible={themeOpen} onClose={() => setThemeOpen(false)} />
     </>
   );
 }

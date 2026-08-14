@@ -252,7 +252,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 <Text style={s.infoValue}>{place.phone}</Text>
               </View>
               <LinearGradient {...gradAI} style={s.goBtn}>
-                <Ionicons name="arrow-forward" size={18} color="#fff" />
+                {/* accentInk, like every other glyph on the accent
+                    gradient. This one was white — 2.7:1, and worse over the
+                    orange end — and it was the last one left. */}
+                <Ionicons name="arrow-forward" size={18} color={colors.accentInk} />
               </LinearGradient>
             </Pressable>
           )}

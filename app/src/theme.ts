@@ -1,56 +1,93 @@
 // cityCrew iOS design system.
 //
-// Cinematic dark mode: near-black charcoal ground, translucent smoky
-// surfaces, thin warm-gray hairlines, and one accent used sparingly for
-// active state only. Depth comes from the ground, an almost-invisible
-// ambient warmth, surfaces and type — not from heavy shadows.
+// Two grounds, one system. Dark is the cinematic original: near-black
+// charcoal, translucent smoky surfaces, thin warm-gray hairlines. Light is
+// warm paper with white cards and near-black type. Both carry the same
+// coral accent, used sparingly for active state only.
 //
-// The accent is coral running to orange. Every accented surface in the app
-// derives from the tokens below, so the identity colour is changed here and
-// nowhere else.
+// HOW THE SWITCH WORKS. Every colour below is a `DynamicColorIOS` pair, a
+// value UIKit resolves against the window's interface style at draw time.
+// That matters because `StyleSheet.create` runs once at import: a style
+// holding a plain string holds it forever, and no amount of re-rendering
+// would repaint it. A dynamic colour repaints itself, so the eighteen
+// module-scope stylesheets in this app need no restructuring at all —
+// `Appearance.setColorScheme()` flips the window and UIKit does the rest.
+//
+// WHAT STAYS A PLAIN STRING, and why. Gradient stops: the accent gradient
+// is coral in both themes, and the scrims over photography are dark in both
+// because they sit on photographs, not on the ground. Keeping them literal
+// also keeps dynamic colours out of expo-linear-gradient, which processes
+// its stops itself.
+
+import { DynamicColorIOS, Platform, type ColorValue } from 'react-native';
+
+/**
+ * A colour that knows both themes.
+ *
+ * iOS only — it is the platform's own mechanism. Everywhere else (the web
+ * build used for quick checks) it settles on the dark value, which is the
+ * app's original and only shipping ground.
+ */
+const dyn = (light: string, dark: string): ColorValue =>
+  (Platform.OS === 'ios' ? DynamicColorIOS({ light, dark }) : dark);
 
 export const colors = {
-  /** Near-black charcoal — never pure black, never uniform. */
-  bg: '#0A0B0A',
-  /** Solid charcoal for surfaces that must be opaque. */
-  bgElevated: '#151614',
-  /** Translucent smoky card fill, warm-cast so the ambient light reads
-   *  through it rather than sitting behind a neutral panel. */
-  surfaceCard: 'rgba(38,34,28,0.72)',
+  /** The page. Near-black charcoal, or warm paper — never pure black or
+   *  pure white, and never uniform. */
+  bg: dyn('#F5F1EA', '#0A0B0A'),
+  /** Surfaces that must be opaque: sheets, modals, the cards on paper. */
+  bgElevated: dyn('#FFFFFF', '#151614'),
+  /** Card fill. Smoky and translucent on charcoal so the ambient light
+   *  reads through it; plain white on paper, where translucency would only
+   *  muddy the ground it sits on. */
+  surfaceCard: dyn('#FFFFFF', 'rgba(38,34,28,0.72)'),
 
-  surfaceGlass: 'rgba(247,247,245,0.06)',
-  surfaceGlassStrong: 'rgba(247,247,245,0.12)',
-  /** Hairlines are warm gray at low opacity, never bright white. */
-  borderGlass: 'rgba(214,182,132,0.24)',
-  borderGlassSoft: 'rgba(214,182,132,0.16)',
+  /** Tinted wells and quiet controls. The dark theme lifts with white at
+   *  6%; the light theme cannot — white on paper is invisible — so it
+   *  presses down with ink instead. */
+  surfaceGlass: dyn('rgba(23,21,15,0.05)', 'rgba(247,247,245,0.06)'),
+  surfaceGlassStrong: dyn('rgba(23,21,15,0.09)', 'rgba(247,247,245,0.12)'),
+  /** Hairlines: warm gray at low opacity on charcoal, warm ink on paper.
+   *  Never bright white, never true black. */
+  borderGlass: dyn('rgba(23,21,15,0.14)', 'rgba(214,182,132,0.24)'),
+  borderGlassSoft: dyn('rgba(23,21,15,0.08)', 'rgba(214,182,132,0.16)'),
 
-  text: '#F7F7F5',
-  textSecondary: '#B7B6B1',
-  textTertiary: '#6E706D',
+  /** Measured against their own ground: 16:1, 6.4:1 and 4.9:1 on paper,
+   *  comfortably past the 4.5:1 small type needs. */
+  text: dyn('#17150F', '#F7F7F5'),
+  textSecondary: dyn('#5C574E', '#B7B6B1'),
+  textTertiary: dyn('#6E695E', '#6E706D'),
 
-  /** The one identity colour: coral. Active state only. */
-  accent: '#FF6F5B',
-  /** The warm end of the accent — gradients run accent → accentBright. */
+  /** The one identity colour. Coral on charcoal; a deeper coral on paper,
+   *  because the bright one is 2.4:1 against white — fine as a fill, not
+   *  as the label or the glyph it also has to be. */
+  accent: dyn('#C4402C', '#FF6F5B'),
+  /** The warm end of the accent. Gradients run accent → accentBright and
+   *  stay bright in both themes: they are fills, never type. */
   accentBright: '#FF9A5C',
   /** Type and glyphs that sit *on* the accent — near-black, because the
-   *  accent is a light, saturated warm tone. Measured: near-black on coral
-   *  is 6.8:1, white is 2.7:1, and white on the gradient's orange end falls
-   *  to about 2.2:1 — under the 3:1 that graphical elements need, let alone
-   *  text. White also fringes slightly against a warm ground at glyph size. */
+   *  accent is a saturated warm tone in either theme. Measured: near-black
+   *  on coral is 6.8:1, white is 2.7:1, and white on the gradient's orange
+   *  end falls to about 2.2:1 — under the 3:1 that graphical elements need,
+   *  let alone text. */
   accentInk: '#141310',
-  /** The accent at fill and hairline strength, for pills and tinted wells. */
+  /** The accent at fill and hairline strength, for pills and tinted wells.
+   *  Coral at low alpha reads on both grounds, so one value serves both. */
   accentSoft: 'rgba(255,111,91,0.10)',
   accentLine: 'rgba(255,111,91,0.28)',
   /** The accent whispered — a mark that should register as warmth, not as
    *  a second thing to read (the rating star). */
-  accentFaint: 'rgba(255,111,91,0.62)',
+  accentFaint: dyn('rgba(196,64,44,0.72)', 'rgba(226,96,80,0.62)'),
   /** Ambient city-light warmth for background glows — the accent diffused,
-   *  so the ground and the accent belong to one light. */
+   *  so the ground and the accent belong to one light. Plain strings: they
+   *  feed a gradient, and the light theme does without the glow entirely
+   *  (see AmbientWarmth), because a warm haze on paper reads as a stain. */
   emberGlow: 'rgba(226,96,80,0.15)',
   emberGlowFade: 'rgba(226,96,80,0.05)',
 
-  ok: '#8FBF8A',
-  bad: '#D98A80',
+  ok: dyn('#3F7A4A', '#8FBF8A'),
+  /** Destructive. The dark theme's soft red is far too pale on paper. */
+  bad: dyn('#C2564A', '#D98A80'),
 };
 
 /** The accent as a gradient, for the rare loud surface. Left to right
@@ -58,7 +95,10 @@ export const colors = {
  *  lightest tone under one end of the label and the darkest under the
  *  other, and the text stops reading as one weight. */
 export const gradAI = {
-  colors: [colors.accent, colors.accentBright] as const,
+  // The bright coral, literally — not `colors.accent`, which is darker on
+  // paper and dynamic besides. A gradient is a fill, and this one is the
+  // app's loudest surface in both themes.
+  colors: ['#FF6F5B', '#FF9A5C'] as const,
   start: { x: 0, y: 0 },
   end: { x: 1, y: 0 },
 };
