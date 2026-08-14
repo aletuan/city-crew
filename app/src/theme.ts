@@ -69,13 +69,27 @@ export const colors = {
    */
   accent: dyn('#C4402C', '#FF6F5B'),
   /**
-   * The accent **as a surface** — the filled tab disc, the camera badge,
-   * a ticked checkbox. One value for both themes, and the same coral the
+   * The accent **as a surface** — a ticked checkbox, anything that must
+   * read as switched on. One value for both themes, and the same coral the
    * gradient and the tints are made of, because a fill has no legibility
-   * problem to solve: whatever sits on it is `accentInk`, which is 6.8:1
-   * either way.
+   * problem to solve: whatever sits on it is `accentInk`, 6.8:1 either way.
    */
   accentFill: '#FF6F5B',
+  /**
+   * A round emphasis badge: the selected tab's disc, the avatar's camera
+   * button. The one pattern that changes *treatment* between themes rather
+   * than only its value.
+   *
+   * Charcoal needs the solid — a 16% tint on a near-black ground is barely
+   * a shape. Paper needs the tint — a saturated disc there is the heaviest
+   * object on a page whose whole character is lightness, and it drags the
+   * eye to the tab bar over the content. Same reasoning, opposite answer,
+   * which is why this cannot be one value.
+   */
+  badge: dyn('rgba(255,111,91,0.16)', '#FF6F5B'),
+  /** What sits inside `badge`: near-black on the solid, the readable coral
+   *  on the tint. */
+  badgeInk: dyn('#C4402C', '#141310'),
   /** The warm end of the accent. Gradients run accent → accentBright and
    *  stay bright in both themes: they are fills, never type. */
   accentBright: '#FF9A5C',

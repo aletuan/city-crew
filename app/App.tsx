@@ -153,19 +153,21 @@ function Tabs() {
             {labels[route.name]}
           </Text>
         ),
-        // The selected tab is a filled disc with dark ink, not a tinted
-        // glyph: at 22pt an outline and a solid of the same shape read alike
-        // in peripheral vision, and the disc says which tab you are on
-        // without anyone having to compare five icons.
+        // The selected tab wears a disc, not just a tinted glyph: at 22pt
+        // an outline and a solid of the same shape read alike in peripheral
+        // vision, and the disc says which tab you are on without anyone
+        // having to compare five icons. What fills the disc is the one
+        // thing that flips with the theme — solid coral on charcoal, a
+        // coral tint on paper. See `colors.badge`.
         tabBarIcon: ({ color, size, focused }) => (
           focused
             ? (
               <View style={{
                 width: 28, height: 28, borderRadius: 14,
                 alignItems: 'center', justifyContent: 'center',
-                backgroundColor: colors.accentFill,
+                backgroundColor: colors.badge,
               }}>
-                <Ionicons name={ICONS[route.name][1]} size={size - 7} color={colors.accentInk} />
+                <Ionicons name={ICONS[route.name][1]} size={size - 7} color={colors.badgeInk} />
               </View>
             )
             : <Ionicons name={ICONS[route.name][0]} size={size - 2} color={color} />
