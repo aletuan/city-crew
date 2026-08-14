@@ -236,8 +236,28 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <Swipeable
         ref={ref}
-        friction={1.6}
-        rightThreshold={38}
+        // The row tracks the thumb 1:1. At 1.6 it travelled 62% of what
+        // your hand did, and the gap is not felt as weight — it is felt as
+        // the row not having noticed. What people do about a control that
+        // has not noticed them is flick harder and shorter, which is the
+        // one gesture that lands back inside the tap window.
+        friction={1}
+        // Threshold is measured on the row, so with friction it was
+        // 38 × 1.6 ≈ 61pt of thumb to open. A third of the way across the
+        // actions, at friction 1, is ~47pt of thumb and now means what it
+        // says.
+        rightThreshold={ACTIONS_W / 3}
+        // Below this the pan never activates and the press underneath is
+        // still live, so a short drag lifts as a tap and opens the list.
+        // 10 was too much of the screen spent deciding. It cannot go to
+        // zero — some slop has to stay a tap, or nobody can open a row by
+        // touching it.
+        dragOffsetFromRightEdge={6}
+        // Which needs a partner: 6pt of horizontal is cheap enough that a
+        // thumb arc could buy it while scrolling. This fails the pan once
+        // the finger has gone 12pt down, so the split is by angle —
+        // shallower than ~63° opens actions, steeper stays a scroll.
+        failOffsetY={[-12, 12]}
         // No rubber-band past the actions: the row is 92pt tall and an
         // overshoot on something this small reads as the row coming loose.
         overshootRight={false}
