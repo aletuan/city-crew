@@ -1,11 +1,14 @@
-// Forgot password — email first, then the emailed 6-digit recovery code
-// plus a new password. Codes instead of links: recovery links can't
-// deep-link back into Expo Go.
+// Forgot password — email first, then the emailed recovery code plus a
+// new password. Codes instead of links: recovery links can't deep-link
+// back into Expo Go.
+//
+// The code's length is not assumed anywhere here. See `lib/otp.ts`.
 
 import React, { useState } from 'react';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton } from '../components/authUi';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
+import { cleanOtp, OTP_MAX } from '../lib/otp';
 import type { Nav } from '../nav';
 
 export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }) {
@@ -41,7 +44,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
       if (password.length < 8) {
         throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
       }
-      await resetPassword(email.trim(), code.trim(), password);
+      await resetPassword(email.trim(), cleanOtp(code), password);
       navigation.popToTop();
     });
 
@@ -53,18 +56,18 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
           title={t('Set a new password', 'Đặt mật khẩu mới', '新しいパスワードを設定')}
         />
         <Lede>{t(
-            `We sent a 6-digit recovery code to ${email.trim()}. Enter it with your new password.`,
-            `Mã khôi phục 6 số đã được gửi tới ${email.trim()}. Nhập mã cùng mật khẩu mới.`,
-            `${email.trim()} に6桁のリカバリーコードを送信しました。新しいパスワードと一緒に入力してください。`,
+            `We sent a recovery code to ${email.trim()}. Enter it with your new password.`,
+            `Mã khôi phục đã được gửi tới ${email.trim()}. Nhập mã cùng mật khẩu mới.`,
+            `${email.trim()} にリカバリーコードを送信しました。新しいパスワードと一緒に入力してください。`,
           )}</Lede>
         <FieldRow
           icon="key-outline"
           label={t('Recovery code', 'Mã khôi phục', 'リカバリーコード')}
-          placeholder="••••••"
+          placeholder={t('Paste the code from the email', 'Dán mã trong email', 'メールのコードを貼り付け')}
           value={code}
-          onChangeText={setCode}
+          onChangeText={(v) => setCode(cleanOtp(v))}
           keyboardType="number-pad"
-          maxLength={6}
+          maxLength={OTP_MAX}
         />
         <FieldRow
           icon="lock-closed-outline"

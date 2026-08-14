@@ -1,6 +1,7 @@
 // Sign up — name, email, password and confirmation, per the reference.
 // When Supabase requires email confirmation the flow falls back to a
-// 6-digit code (links in the email can't open Expo Go).
+// emailed code (links in the email can't open Expo Go). Its length is
+// a project setting, so nothing here assumes one — see `lib/otp.ts`.
 
 import React, { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
@@ -8,6 +9,7 @@ import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton, Switc
 import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
+import { cleanOtp, OTP_MAX } from '../lib/otp';
 import { colors, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -53,7 +55,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 
   const verify = () =>
     run(async () => {
-      await confirmSignUp(email.trim(), code.trim());
+      await confirmSignUp(email.trim(), cleanOtp(code));
       successHaptic();
       navigation.popToTop();
     });
@@ -66,18 +68,18 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           title={t('Check your email', 'Kiểm tra email', 'メールをご確認ください')}
         />
         <Lede>{t(
-            `We sent a 6-digit confirmation code to ${email.trim()}. Enter it below to activate your account.`,
-            `Mã xác nhận 6 số đã được gửi tới ${email.trim()}. Nhập mã bên dưới để kích hoạt tài khoản.`,
-            `${email.trim()} に6桁の確認コードを送信しました。以下に入力してアカウントを有効化してください。`,
+            `We sent a confirmation code to ${email.trim()}. Enter it below to activate your account.`,
+            `Mã xác nhận đã được gửi tới ${email.trim()}. Nhập mã bên dưới để kích hoạt tài khoản.`,
+            `${email.trim()} に確認コードを送信しました。以下に入力してアカウントを有効化してください。`,
           )}</Lede>
         <FieldRow
           icon="key-outline"
           label={t('Confirmation code', 'Mã xác nhận', '確認コード')}
-          placeholder="••••••"
+          placeholder={t('Paste the code from the email', 'Dán mã trong email', 'メールのコードを貼り付け')}
           value={code}
-          onChangeText={setCode}
+          onChangeText={(v) => setCode(cleanOtp(v))}
           keyboardType="number-pad"
-          maxLength={6}
+          maxLength={OTP_MAX}
           onSubmitEditing={verify}
           returnKeyType="done"
         />
