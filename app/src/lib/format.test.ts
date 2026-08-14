@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dotWindow, fmtDuration, groupHours, splitHours } from './format';
+import { dotWindow, fmtDuration, groupHours, openState, splitHours } from './format';
 
 describe('fmtDuration', () => {
   it('stays in minutes up to an hour', () => {
@@ -140,5 +140,122 @@ describe('groupHours', () => {
 
   it('has nothing to say about nothing', () => {
     expect(groupHours([])).toEqual([]);
+  });
+});
+
+describe('openState', () => {
+  // Every case is pinned to a real instant so the assertions cannot drift
+  // with the machine's clock or its timezone. Vietnam is UTC+7, so 03:00Z
+  // is 10:00 in Saigon.
+  const at = (iso: string) => new Date(iso);
+  const week = (hours: string) =>
+    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+      .map((d) => `${d}: ${hours}`);
+
+  // 2026-08-12 is a Wednesday.
+  const WED_10AM = at('2026-08-12T03:00:00Z');
+  const WED_MIDNIGHT_30 = at('2026-08-12T17:30:00Z'); // 00:30 Thursday in ICT
+
+  it('says nothing when there are no hours at all', () => {
+    expect(openState(null, WED_10AM)).toBeNull();
+    expect(openState([], WED_10AM)).toBeNull();
+  });
+
+  it('is open inside the window, and names the closing time', () => {
+    expect(openState(week('8:00 AM – 11:00 PM'), WED_10AM)).toEqual({ open: true, until: '11:00 PM' });
+  });
+
+  it('is closed before opening, and names the opening time', () => {
+    expect(openState(week('5:00 PM – 10:00 PM'), WED_10AM)).toEqual({ open: false, opensAt: '5:00 PM' });
+  });
+
+  it('is closed after the last window, with nothing left to promise today', () => {
+    expect(openState(week('6:00 AM – 9:00 AM'), WED_10AM)).toEqual({ open: false });
+  });
+
+  // The boundaries themselves: open at the opening minute, shut at the
+  // closing one.
+  it('opens on the minute and closes on the minute', () => {
+    // 10:00 ICT exactly: inside a window that starts then, outside one
+    // that ends then.
+    expect(openState(week('10:00 AM – 11:00 PM'), at('2026-08-12T03:00:00Z')))
+      .toEqual({ open: true, until: '11:00 PM' });
+    expect(openState(week('6:00 AM – 10:00 AM'), at('2026-08-12T03:00:00Z')))
+      .toEqual({ open: false });
+  });
+
+  it('reads the day that actually applies rather than the first line', () => {
+    const lines = [
+      'Monday: 8:00 AM – 9:00 AM', 'Tuesday: 8:00 AM – 9:00 AM',
+      'Wednesday: 9:00 AM – 6:00 PM', 'Thursday: Closed',
+      'Friday: Closed', 'Saturday: Closed', 'Sunday: Closed',
+    ];
+    expect(openState(lines, WED_10AM)).toEqual({ open: true, until: '6:00 PM' });
+  });
+
+  it('stays open past midnight on the window that started yesterday', () => {
+    expect(openState(week('7:00 PM – 1:00 AM'), WED_MIDNIGHT_30))
+      .toEqual({ open: true, until: '1:00 AM' });
+  });
+
+  // Same clock, but nothing ran into today — the small hours are shut.
+  it('is closed after midnight when yesterday did not run over', () => {
+    expect(openState(week('8:00 AM – 11:00 PM'), WED_MIDNIGHT_30))
+      .toEqual({ open: false, opensAt: '8:00 AM' });
+  });
+
+  it('treats a midnight close as the end of the day, not the start', () => {
+    expect(openState(week('8:00 AM – 12:00 AM'), at('2026-08-12T15:00:00Z')))
+      .toEqual({ open: true, until: '12:00 AM' });
+  });
+
+  it('is open around the clock without inventing a closing time', () => {
+    expect(openState(week('Open 24 hours'), WED_10AM)).toEqual({ open: true });
+    expect(openState(week('Open 24 hours'), WED_MIDNIGHT_30)).toEqual({ open: true });
+  });
+
+  it('is shut all day when the day says Closed', () => {
+    expect(openState(week('Closed'), WED_10AM)).toEqual({ open: false });
+  });
+
+  // Google drops the meridiem on the opening time when it matches the
+  // closing one, so "4:00 – 8:50 PM" is an afternoon, not a dawn.
+  it('borrows the missing meridiem from the closing time', () => {
+    expect(openState(week('5:00 – 10:00 PM'), WED_10AM)).toEqual({ open: false, opensAt: '5:00' });
+    expect(openState(week('5:00 – 10:00 PM'), at('2026-08-12T11:00:00Z')))
+      .toEqual({ open: true, until: '10:00 PM' });
+  });
+
+  it('handles a lunch break as two windows', () => {
+    const hours = week('10:00 AM – 1:50 PM, 4:00 – 8:50 PM');
+    expect(openState(hours, WED_10AM)).toEqual({ open: true, until: '1:50 PM' });
+    // 15:00 ICT — after the first window, before the second.
+    expect(openState(hours, at('2026-08-12T08:00:00Z'))).toEqual({ open: false, opensAt: '4:00' });
+    // 17:00 ICT — inside the second.
+    expect(openState(hours, at('2026-08-12T10:00:00Z'))).toEqual({ open: true, until: '8:50 PM' });
+  });
+
+  it('noon and midnight do not collapse into each other', () => {
+    // Both read "12:00"; only the meridiem separates midday from the top
+    // of the morning. At 13:00 ICT one is open and the other shut hours ago.
+    expect(openState(week('12:00 PM – 5:00 PM'), at('2026-08-12T06:00:00Z')))
+      .toEqual({ open: true, until: '5:00 PM' });
+    expect(openState(week('12:00 AM – 6:00 AM'), at('2026-08-12T06:00:00Z')))
+      .toEqual({ open: false });
+  });
+
+  // The whole point of the offset: a phone in London must still be told
+  // what the café in Saigon is doing.
+  it('answers on the place\'s clock, not the reader\'s', () => {
+    // 20:00Z is 03:00 the next morning in Saigon — shut, whatever the
+    // device thinks the hour is.
+    expect(openState(week('8:00 AM – 11:00 PM'), at('2026-08-12T20:00:00Z')))
+      .toEqual({ open: false, opensAt: '8:00 AM' });
+  });
+
+  it('declines to guess at a shape it does not know', () => {
+    expect(openState(week('Opening hours vary'), WED_10AM)).toBeNull();
+    expect(openState(week('8:00 AM'), WED_10AM)).toBeNull();
+    expect(openState(week('25:00 AM – 9:00 PM'), WED_10AM)).toBeNull();
   });
 });
