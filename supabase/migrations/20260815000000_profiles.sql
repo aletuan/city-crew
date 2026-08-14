@@ -162,6 +162,18 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- Everything in `public` is reachable at /rest/v1/rpc/, and a
+-- SECURITY DEFINER function anyone can call is a shape to avoid even
+-- where — as here — calling it does nothing: a trigger function invoked
+-- directly raises before it reaches its first statement. Only the
+-- trigger needs it, and the trigger does not need a grant.
+revoke execute on function public.handle_new_user() from anon, authenticated, public;
+
+-- Pinned so the functions cannot be made to resolve `profiles` or
+-- `reserved_handles` against some other schema a caller put in front.
+alter function public.check_handle()  set search_path = public;
+alter function public.random_handle() set search_path = public;
+
 -- Everyone who signed up before this table existed.
 do $$
 declare

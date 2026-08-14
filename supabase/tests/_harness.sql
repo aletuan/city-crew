@@ -2,6 +2,20 @@
 -- Postgres. Not a simulation of GoTrue — just the two things our SQL
 -- touches: the users table it triggers on, and the uid() the policies
 -- call.
+-- The roles PostgREST connects as. They exist on a real project; here
+-- they matter because EXECUTE on a function is granted to PUBLIC by
+-- default, so `anon` inherits it until something revokes it — which is
+-- the property the exposure checks are about.
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then
+    create role anon nologin;
+  end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then
+    create role authenticated nologin;
+  end if;
+end $$;
+
 create schema if not exists auth;
 
 create table if not exists auth.users (
