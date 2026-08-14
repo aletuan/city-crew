@@ -30,10 +30,12 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const [step, setStep] = useState<'form' | 'confirm'>('form');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
     setError(null);
+    setNameError(null);
     try {
       await fn();
     } catch (err) {
@@ -44,10 +46,10 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   };
 
   const handleMessage = (bad: NonNullable<ReturnType<typeof handleProblem>>) => ({
-    empty: t('Choose a handle.', 'Hãy chọn một tên định danh.', 'ハンドル名を選んでください。'),
-    short: t('Handle is too short — at least 3 characters.', 'Tên định danh quá ngắn — ít nhất 3 ký tự.', 'ハンドル名が短すぎます（3文字以上）。'),
-    long: t('Handle is too long — 20 characters at most.', 'Tên định danh quá dài — tối đa 20 ký tự.', 'ハンドル名が長すぎます（20文字以内）。'),
-    chars: t('Handle can use letters, numbers and _ only.', 'Tên định danh chỉ gồm chữ, số và dấu _.', 'ハンドル名は英数字と _ のみ使えます。'),
+    empty: t('Choose a username.', 'Hãy chọn một tên người dùng.', 'ユーザー名を選んでください。'),
+    short: t('At least 3 characters.', 'Ít nhất 3 ký tự.', '3文字以上にしてください。'),
+    long: t('20 characters at most.', 'Tối đa 20 ký tự.', '20文字以内にしてください。'),
+    chars: t('Letters, numbers and _ only.', 'Chỉ gồm chữ, số và dấu _.', '英数字と _ のみ使えます。'),
   }[bad]);
 
   const submit = () =>
@@ -60,16 +62,17 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       }
       const chosen = normalizeHandle(handle);
       const bad = handleProblem(chosen);
-      if (bad) throw new Error(handleMessage(bad));
+      if (bad) { setNameError(handleMessage(bad)); return; }
       // Checked here so the message names the problem; the database is
       // what actually decides, and losing a race falls back to a
       // generated handle rather than to a failed sign-up.
       if (!(await isHandleFree(chosen))) {
-        throw new Error(t(
+        setNameError(t(
           `@${chosen} is taken. Try another.`,
           `@${chosen} đã có người dùng. Chọn tên khác.`,
           `@${chosen} は使用されています。別の名前をお試しください。`,
         ));
+        return;
       }
       const { needsConfirm } = await signUp(name.trim(), chosen, email.trim(), password);
       if (needsConfirm) setStep('confirm');
@@ -143,10 +146,11 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           never asked for it. */}
       <FieldRow
         icon="at-outline"
-        label={t('Handle', 'Tên định danh', 'ハンドル名')}
+        label={t('Username', 'Tên người dùng', 'ユーザー名')}
         placeholder="yourname"
         value={handle}
-        onChangeText={(v) => { setHandleTouched(true); setHandle(normalizeHandle(v)); }}
+        error={nameError}
+        onChangeText={(v) => { setNameError(null); setHandleTouched(true); setHandle(normalizeHandle(v)); }}
         autoCapitalize="none"
         autoCorrect={false}
         maxLength={HANDLE_MAX}

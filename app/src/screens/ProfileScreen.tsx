@@ -249,18 +249,21 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           <AvatarPicker showCamera={false} />
         </EngagementRing>
         <View style={{ flex: 1, gap: 5 }}>
-          <Text style={s.accountName} numberOfLines={1}>{name}</Text>
-          {/* Under the name and quieter than it: the name is who you are,
-              the handle is how you are found. */}
-          {profile.handle ? (
-            <Text style={s.handle} numberOfLines={1}>{`@${profile.handle}`}</Text>
-          ) : null}
-          {profile.location ? (
-            <View style={s.locationRow}>
-              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-              <Text style={s.locationText}>{profile.location}</Text>
-            </View>
-          ) : null}
+          {/* One line, two things: the name you are called and the name
+              you are found by. The dot between them is the app's own
+              separator, already doing this job on every place card and
+              collection row.
+
+              The name yields and the handle does not. A display name cut
+              to "Tran Thi Tra…" is still a person; a handle cut to
+              "@tra…" is not an address, and the handle is the half that
+              has to stay usable. */}
+          <View style={s.nameRow}>
+            <Text style={s.accountName} numberOfLines={1}>{name}</Text>
+            {profile.handle ? (
+              <Text style={s.handle} numberOfLines={1}>{`  ·  @${profile.handle}`}</Text>
+            ) : null}
+          </View>
           {profile.bio ? <Text style={s.heroBody} numberOfLines={2}>{profile.bio}</Text> : null}
           <PressableScale scaleTo={0.94} style={s.editBtn} onPress={() => navigation.navigate('EditProfile')}>
             <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}</Text>
@@ -385,10 +388,17 @@ const s = StyleSheet.create({
 
   section: { color: colors.text, ...type.section, marginTop: 10 },
 
-  accountName: { color: colors.text, fontSize: 23, fontWeight: font.bold, letterSpacing: 0.2 },
-  handle: { color: colors.textTertiary, ...type.meta },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.regular },
+  // `alignItems: 'baseline'` rather than 'center': the two sit at
+  // different sizes, and sharing a baseline is what makes them read as
+  // one line instead of two things stacked beside each other.
+  nameRow: { flexDirection: 'row', alignItems: 'baseline' },
+  // `flexShrink` on the name only. The handle keeps its width, so a long
+  // name truncates before an address does.
+  accountName: {
+    color: colors.text, fontSize: 23, fontWeight: font.bold, letterSpacing: 0.2,
+    flexShrink: 1,
+  },
+  handle: { color: colors.textTertiary, ...type.meta, flexShrink: 0 },
   // The card surface, not the glass tint: on paper the tint is a grey
   // smudge on a warm page, where the About-me card sitting inches below
   // it is white. Matching that card makes the button read as part of the

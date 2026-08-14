@@ -1,5 +1,9 @@
-// Edit profile — name, location, bio and interests, stored as Supabase
-// user metadata. Same field language as the auth screens.
+// Edit profile — name, username, location, bio and interests, stored as
+// a row in `profiles`. Same field language as the auth screens.
+//
+// "Username" on screen, `handle` in the code and the column: the label is
+// the friendlier of the two words, and renaming the data to match would
+// be churn through a migration for a caption.
 
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
@@ -24,14 +28,18 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   const [interests, setInterests] = useState(profile.interests);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Kept apart from `error`: this one belongs to a field and is drawn
+  // there, where the form-wide one sits by the button that failed.
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const save = async () => {
     setBusy(true);
     setError(null);
+    setNameError(null);
     try {
       const next = normalizeHandle(handle);
       const bad = handleProblem(next);
-      if (bad) throw new Error(handleMessage(bad));
+      if (bad) { setNameError(handleMessage(bad)); return; }
       await updateProfile({
         // Sent only when it changed. An unchanged handle would collide
         // with its own row's unique index on some paths, and asking the
@@ -46,27 +54,27 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       navigation.goBack();
     } catch (err) {
       const m = (err as Error).message;
-      setError(
-        m === 'handle_taken'
-          ? t(
-            `@${normalizeHandle(handle)} is taken. Try another.`,
-            `@${normalizeHandle(handle)} đã có người dùng. Chọn tên khác.`,
-            `@${normalizeHandle(handle)} は使用されています。別の名前をお試しください。`,
-          )
-          : m === 'handle_reserved'
-            ? t('That handle is reserved.', 'Tên định danh này đã được giữ chỗ.', 'このハンドル名は予約されています。')
-            : m,
-      );
+      if (m === 'handle_taken') {
+        setNameError(t(
+          `@${normalizeHandle(handle)} is taken. Try another.`,
+          `@${normalizeHandle(handle)} đã có người dùng. Chọn tên khác.`,
+          `@${normalizeHandle(handle)} は使用されています。別の名前をお試しください。`,
+        ));
+      } else if (m === 'handle_reserved') {
+        setNameError(t('That username is reserved.', 'Tên người dùng này đã được giữ chỗ.', 'このユーザー名は予約されています。'));
+      } else {
+        setError(m);
+      }
     } finally {
       setBusy(false);
     }
   };
 
   const handleMessage = (bad: NonNullable<ReturnType<typeof handleProblem>>) => ({
-    empty: t('Choose a handle.', 'Hãy chọn một tên định danh.', 'ハンドル名を選んでください。'),
-    short: t('Handle is too short — at least 3 characters.', 'Tên định danh quá ngắn — ít nhất 3 ký tự.', 'ハンドル名が短すぎます（3文字以上）。'),
-    long: t('Handle is too long — 20 characters at most.', 'Tên định danh quá dài — tối đa 20 ký tự.', 'ハンドル名が長すぎます（20文字以内）。'),
-    chars: t('Handle can use letters, numbers and _ only.', 'Tên định danh chỉ gồm chữ, số và dấu _.', 'ハンドル名は英数字と _ のみ使えます。'),
+    empty: t('Choose a username.', 'Hãy chọn một tên người dùng.', 'ユーザー名を選んでください。'),
+    short: t('At least 3 characters.', 'Ít nhất 3 ký tự.', '3文字以上にしてください。'),
+    long: t('20 characters at most.', 'Tối đa 20 ký tự.', '20文字以内にしてください。'),
+    chars: t('Letters, numbers and _ only.', 'Chỉ gồm chữ, số và dấu _.', '英数字と _ のみ使えます。'),
   }[bad]);
 
   return (
@@ -98,10 +106,11 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       {/* Right under the name, the way it sits on the profile itself. */}
       <FieldRow
         icon="at-outline"
-        label={t('Handle', 'Tên định danh', 'ハンドル名')}
+        label={t('Username', 'Tên người dùng', 'ユーザー名')}
         placeholder="yourname"
         value={handle}
-        onChangeText={(v) => setHandle(normalizeHandle(v))}
+        error={nameError}
+        onChangeText={(v) => { setNameError(null); setHandle(normalizeHandle(v)); }}
         autoCapitalize="none"
         autoCorrect={false}
         maxLength={HANDLE_MAX}

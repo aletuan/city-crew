@@ -67,28 +67,46 @@ export function Lede({ children }: { children: string }) {
   return <Text style={s.lede}>{children}</Text>;
 }
 
-export function FieldRow({ icon, label, secure, ...input }: {
+/**
+ * A labelled input, and the place its own error is allowed to appear.
+ *
+ * `error` belongs here rather than at the foot of the form because that
+ * is where the eye already is. A message under the Save button leaves
+ * the reader to work out which of five fields it is about — and the one
+ * this was written for named a value three fields further up.
+ */
+export function FieldRow({ icon, label, secure, error, ...input }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   secure?: boolean;
+  error?: string | null;
 } & TextInputProps) {
   const [hidden, setHidden] = useState(true);
   return (
-    <View style={s.field}>
-      <Ionicons name={icon} size={22} color={colors.accent} />
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={s.fieldLabel}>{label}</Text>
-        <TextInput
-          style={s.fieldInput}
-          placeholderTextColor={colors.textTertiary}
-          secureTextEntry={secure && hidden}
-          {...input}
-        />
+    <View>
+      <View style={[s.field, !!error && s.fieldBad]}>
+        {/* The glyph turns with the border. Colour alone should never
+            carry a message, which is why the sentence below exists — but
+            two signals agreeing is what makes the field findable in a
+            scroll. */}
+        <Ionicons name={icon} size={22} color={error ? colors.bad : colors.accent} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={s.fieldLabel}>{label}</Text>
+          <TextInput
+            style={s.fieldInput}
+            placeholderTextColor={colors.textTertiary}
+            secureTextEntry={secure && hidden}
+            {...input}
+          />
+        </View>
+        {secure ? (
+          <Pressable onPress={() => setHidden((h) => !h)} hitSlop={10} accessibilityLabel="Toggle password visibility">
+            <Ionicons name={hidden ? 'eye-outline' : 'eye-off-outline'} size={21} color={colors.textTertiary} />
+          </Pressable>
+        ) : null}
       </View>
-      {secure ? (
-        <Pressable onPress={() => setHidden((h) => !h)} hitSlop={10} accessibilityLabel="Toggle password visibility">
-          <Ionicons name={hidden ? 'eye-outline' : 'eye-off-outline'} size={21} color={colors.textTertiary} />
-        </Pressable>
+      {error ? (
+        <Text style={s.fieldError} accessibilityLiveRegion="polite">{error}</Text>
       ) : null}
     </View>
   );
@@ -141,7 +159,16 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
     borderRadius: radius.card, paddingHorizontal: space.cardPadding, paddingVertical: 12,
   },
+  // The border carries the state; the fill stays as it was. A tinted
+  // field reads as a different kind of field rather than as this field
+  // with something wrong.
+  fieldBad: { borderColor: colors.bad },
   fieldLabel: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
+  // Tucked under the field it belongs to, indented to its text column.
+  fieldError: {
+    color: colors.bad, fontSize: 13.5, lineHeight: 18,
+    marginTop: 6, marginBottom: 2, paddingHorizontal: space.cardPadding,
+  },
   fieldInput: { color: colors.text, fontSize: 15.5, paddingVertical: 2, paddingHorizontal: 0 },
 
   primary: {
