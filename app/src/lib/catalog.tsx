@@ -16,6 +16,7 @@ import React, { createContext, useContext, useMemo } from 'react';
 import {
   Collection, Fetch, Place, useCollectionsQuery, usePlacesQuery,
 } from './data';
+import { useAuth } from './auth';
 
 type Catalog = {
   places: Fetch<Place[]>;
@@ -31,7 +32,12 @@ const Ctx = createContext<Catalog>(EMPTY);
 
 export function CatalogProvider({ children }: { children: React.ReactNode }) {
   const places = usePlacesQuery();
-  const collections = useCollectionsQuery();
+  // Who is looking, so the public query can leave out their own published
+  // lists — those arrive through `useSave().mine` and would otherwise show
+  // up twice on the Collections tab. Signing in or out changes the id and
+  // reloads the query, which is what makes a list you just published leave
+  // the public section on this device and stay in it on every other.
+  const collections = useCollectionsQuery(useAuth().session?.user?.id);
 
   // Depend on the fields rather than on the objects: `useFetch` returns a
   // fresh object every render, so memoising on it would memoise nothing.

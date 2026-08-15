@@ -66,6 +66,10 @@ export type Collection = {
   /** Null on the editorial collections — those belong to the desk. Set to a
    *  user's id on the lists they made for themselves. */
   owner_id?: string | null;
+  /** Whether everyone in the city can see it. Always true on the rows the
+   *  public query returns, so it is only worth reading on your own — where
+   *  it is the difference between a private list and a published one. */
+  is_public?: boolean;
   /** Which city's catalog this belongs to. Meaningful for the editorial
    *  rows; on a user's own list it records where it was made and nothing
    *  more — a list of your own is not confined to one city. */

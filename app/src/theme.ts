@@ -158,6 +158,12 @@ export const colors = {
    *  `accentSoft`: a tint has to stay pink to read as a warning, and the
    *  alpha that manages that on paper comes out beige over near-black. */
   badSoft: dyn('#F8DFD9', '#2A1A18'),
+  /** `badSoft`'s counterpart, for the one thing that goes right loudly
+   *  enough to need a ground: the banner that says a collection is now
+   *  public. Built to the same recipe and the same weight — 1.11:1
+   *  against paper where the red is 1.13:1 — so good news and bad news
+   *  sit at the same distance from the page instead of one shouting. */
+  okSoft: dyn('#D9EBD7', '#182A1C'),
 };
 
 /**
