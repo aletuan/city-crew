@@ -20,6 +20,31 @@ export function distanceKm(lat1: number, lng1: number, lat2: number, lng2: numbe
   return EARTH_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/**
+ * A distance, at the precision the reader can use.
+ *
+ * This exists to answer one question — *which of these three shops called
+ * "So Coffee" is the one I mean* — and the answer is carried entirely by
+ * how far apart the numbers are. So the precision follows the scale:
+ * metres while you could walk it, one decimal while you would ride, whole
+ * kilometres once the decimal has stopped meaning anything.
+ *
+ * Metres are rounded to the nearest fifty. A search result's coordinate is
+ * a pin on a building, not a doorway, and "847 m" claims a precision that
+ * neither the data nor the reader has.
+ *
+ * The decimal separator is a full stop in every language, which is wrong
+ * for Vietnamese and deliberate anyway: the same card already prints a
+ * rating as "4.9", and one row carrying "4.9" beside "1,2 km" reads as a
+ * mistake rather than as two conventions. When ratings move, this moves.
+ */
+export function fmtDistance(km: number): string {
+  if (!isFinite(km) || km < 0) return '';
+  if (km < 1) return `${Math.max(50, Math.round((km * 1000) / 50) * 50)} m`;
+  if (km < 10) return `${Math.round(km * 10) / 10} km`;
+  return `${Math.round(km)} km`;
+}
+
 /** Anything with a centre. */
 export type Centred = { center_lat: number; center_lng: number };
 

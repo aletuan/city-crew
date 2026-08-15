@@ -8,11 +8,27 @@
 // imports one. A typed-in place would land in the same list as a card with
 // six photographs and 669 reviews, as a name in an empty frame.
 //
-// No map. That decision is still open — an interactive Google map needs
-// the native SDK and therefore a development build, which would take this
-// screen out of Expo Go entirely. The list is what gets tapped; the map in
-// the mockup shows roughly where three results are and is not how the
-// screen is used. See issue #146.
+// No map, and that decision is closed rather than deferred.
+//
+// The map in the mockup has exactly one job: telling three shops called
+// "So Coffee" apart. Nobody taps it — the row is the target — and nobody
+// pans it, because they typed the name and already know what they want.
+//
+// It cannot do that job here. Search is scoped to a city, so all five
+// results share one, and the ambiguity is at district scale. A static
+// image the width of a phone has to hold the whole city; five pins
+// cluster in the middle of it and say "all of these are in Hanoi", which
+// the reader knew. Zooming would fix that, and a static image cannot
+// zoom.
+//
+// The interactive one cannot be drawn at all. On iOS, Expo Go can only
+// render Apple Maps, and the Places API terms are explicit — §5.3, "No
+// use with a non-Google map": Google Places content must not be shown in
+// conjunction with a non-Google map. So the free path renders a map we
+// are not allowed to put these results on, and the allowed path is a
+// development build, which costs this project Expo Go.
+//
+// What the map was for, a distance does — see `awayFrom`. See issue #146.
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -21,6 +37,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, BackButton, PressableScale, useTabBarClearance } from '../components/ui';
+import { AddIconButton } from '../components/add';
+import { distanceKm, fmtDistance } from '../lib/geo';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { usePlaces } from '../lib/catalog';
@@ -39,10 +57,13 @@ import type { Nav, RootRoute } from '../nav';
  * that **is already there** — and this hands it to them with a way to open
  * it, rather than telling them they have made a duplicate.
  */
-function Row({ c, known, busy, onAdd, onOpen }: {
+function Row({ c, known, busy, away, onAdd, onOpen }: {
   c: Candidate;
   known: Known;
   busy: boolean;
+  /** How far from the city's centre, already formatted, or '' when the
+   *  function that answered predates the coordinate. */
+  away: string;
   onAdd: () => void;
   onOpen: (slug: string) => void;
 }) {
@@ -66,7 +87,15 @@ function Row({ c, known, busy, onAdd, onOpen }: {
             ? t('Already on cityCrew', 'Đã có trên cityCrew', 'すでに cityCrew にあります')
             : mine
               ? t('You added this — only you can see it', 'Bạn đã thêm — hiện chỉ mình bạn thấy', '追加済み — まだあなただけに表示')
-              : c.address}
+              // Distance first, then the address as far as it fits.
+              //
+              // Three shops called "So Coffee" arrive with three addresses
+              // that are identical for their first several words and get
+              // cut at one line — "…, Hà Nội 1…", "…, Thanh Xuân,…" — so
+              // the one field that tells them apart was the field being
+              // truncated. A distance is four characters, never cut, and
+              // is the actual answer to which one you meant.
+              : away ? `${away} · ${c.address}` : c.address}
         </Text>
       </View>
 
@@ -77,9 +106,10 @@ function Row({ c, known, busy, onAdd, onOpen }: {
       ) : mine ? null : busy ? (
         <ActivityIndicator color={colors.accent} />
       ) : (
-        <PressableScale onPress={onAdd} scaleTo={0.9} style={s.addBtn} accessibilityRole="button">
-          <Ionicons name="add" size={22} color={colors.accentInk} />
-        </PressableScale>
+        <AddIconButton
+          onPress={onAdd}
+          accessibilityLabel={t(`Add ${c.name}`, `Thêm ${c.name}`, `${c.name} を追加`)}
+        />
       )}
     </View>
   );
@@ -138,6 +168,26 @@ export default function AddPlaceScreen({ navigation, route }: { navigation: Nav;
     pending.current = false;
     run();
   }, [city?.id, run]);
+
+  /**
+   * How far a result is from the middle of the city on screen.
+   *
+   * The city's centre, not the reader's position, and that is a choice
+   * rather than a limitation. The app asks for location exactly once, at
+   * launch, to guess which city to open on — and then forgets the
+   * coordinates. Asking again here would put a permission dialog in front
+   * of somebody halfway through contributing a place, to sharpen a number
+   * whose whole job is to be *different* between three rows. The centre
+   * separates them just as well.
+   *
+   * Empty when either end is missing, so a function deployed before the
+   * field mask asked for `location` leaves the row exactly as it was.
+   */
+  const awayFrom = (c: Candidate) => (
+    city && c.lat != null && c.lng != null
+      ? fmtDistance(distanceKm(city.center_lat, city.center_lng, c.lat, c.lng))
+      : ''
+  );
 
   const add = (c: Candidate) => {
     if (!city || adding) return;
@@ -241,6 +291,7 @@ export default function AddPlaceScreen({ navigation, route }: { navigation: Nav;
             c={item}
             known={known[item.place_id] ?? { state: 'none' }}
             busy={adding === item.place_id}
+            away={awayFrom(item)}
             onAdd={() => add(item)}
             onOpen={(slug) => navigation.navigate('PlaceDetail', { slug })}
           />
@@ -319,11 +370,6 @@ const s = StyleSheet.create({
   sub: { color: colors.textTertiary, fontSize: 13.5 },
   subLive: { color: colors.ok, fontWeight: font.medium },
 
-  addBtn: {
-    width: 36, height: 36, borderRadius: 999,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accent,
-  },
   viewBtn: {
     paddingHorizontal: 14, paddingVertical: 8,
     borderRadius: radius.pill,

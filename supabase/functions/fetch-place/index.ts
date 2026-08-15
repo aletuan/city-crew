@@ -95,8 +95,14 @@ Deno.serve(async (req) => {
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": apiKey,
+          // `places.location` sits in the same Pro field tier as
+          // `formattedAddress`, which this mask already asks for, and the
+          // mask already reaches Enterprise via `rating` — so the SKU
+          // this call bills at does not move. The coordinate is what lets
+          // the app tell three shops with the same name apart without a
+          // map: see `fmtDistance`.
           "X-Goog-FieldMask":
-            "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount",
+            "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount",
         },
         body: JSON.stringify({
           textQuery: query,
@@ -109,6 +115,8 @@ Deno.serve(async (req) => {
           place_id: p.id,
           name: p.displayName?.text ?? "",
           address: p.formattedAddress ?? "",
+          lat: p.location?.latitude ?? null,
+          lng: p.location?.longitude ?? null,
           rating: p.rating ?? null,
           rating_count: p.userRatingCount ?? null,
         })),

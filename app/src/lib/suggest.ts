@@ -16,6 +16,11 @@ export type Candidate = {
   place_id: string;
   name: string;
   address: string;
+  /** Where it is. Null on a function deployed before the field mask asked
+   *  for it — the row then falls back to the address alone, which is what
+   *  it always showed. */
+  lat: number | null;
+  lng: number | null;
   rating: number | null;
   rating_count: number | null;
 };
