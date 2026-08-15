@@ -31,13 +31,16 @@ const EMPTY: Catalog = {
 const Ctx = createContext<Catalog>(EMPTY);
 
 export function CatalogProvider({ children }: { children: React.ReactNode }) {
-  const places = usePlacesQuery();
+  // Both queries need to know who is reading: one to include the reader's
+  // own suggestions, the other to leave out their own published lists.
+  const meId = useAuth().session?.user?.id;
+  const places = usePlacesQuery(meId);
   // Who is looking, so the public query can leave out their own published
   // lists — those arrive through `useSave().mine` and would otherwise show
   // up twice on the Collections tab. Signing in or out changes the id and
   // reloads the query, which is what makes a list you just published leave
   // the public section on this device and stay in it on every other.
-  const collections = useCollectionsQuery(useAuth().session?.user?.id);
+  const collections = useCollectionsQuery(meId);
 
   // Depend on the fields rather than on the objects: `useFetch` returns a
   // fresh object every render, so memoising on it would memoise nothing.

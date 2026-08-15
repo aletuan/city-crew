@@ -28,6 +28,13 @@ export type Place = {
    *  categoriesOf(), never directly. */
   categories?: string[];
   is_featured: boolean;
+  /** The two gates that decide whether anyone but the submitter can see
+   *  this. Optional because a database that predates the submissions
+   *  migration omits them; read through `isLive`, never directly. */
+  is_published?: boolean;
+  review_status?: string;
+  /** Who suggested it, when it did not come from the desk. */
+  submitted_by?: string | null;
   /** How a place feels — see lib/vibes. */
   vibe_tags: string[];
   neighborhood_en: string | null;

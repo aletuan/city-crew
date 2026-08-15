@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, BackButton, Empty, PressableScale, RoundIconButton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { deleteCollection, membersOf, setCollectionPublic } from '../lib/data';
+import { deleteCollection, membersOf, publishBlockers, setCollectionPublic } from '../lib/data';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
@@ -103,6 +103,42 @@ function AddPlaceRow({ onPress, label, sub }: { onPress: () => void; label: stri
   );
 }
 
+/**
+ * Why a list cannot be published, said in words rather than counted at
+ * the reader.
+ *
+ * It names both kinds because they end differently. A place still under
+ * review will resolve on its own; one that was not accepted never will,
+ * and the list stays private forever until its owner takes it out. A
+ * sentence that said only "some places are pending" would leave them
+ * waiting for something that is not coming.
+ */
+function blockerSentence(
+  { pending, flagged }: { pending: number; flagged: number },
+  t: (en: string, vi: string, ja: string) => string,
+): string {
+  const parts: string[] = [];
+  if (pending) {
+    parts.push(t(
+      `${pending} ${pending === 1 ? 'place is' : 'places are'} still being reviewed`,
+      `${pending} địa điểm đang chờ duyệt`,
+      `${pending}件が審査中です`,
+    ));
+  }
+  if (flagged) {
+    parts.push(t(
+      `${flagged} ${flagged === 1 ? 'was' : 'were'} not accepted`,
+      `${flagged} địa điểm không được duyệt`,
+      `${flagged}件が不採用です`,
+    ));
+  }
+  return t(
+    `Private until every place is live — ${parts.join(', and ')}.`,
+    `Riêng tư cho tới khi mọi địa điểm hiển thị — ${parts.join(', và ')}.`,
+    `すべてのスポットが公開されるまで非公開です — ${parts.join('、')}。`,
+  );
+}
+
 export default function CollectionDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'CollectionDetail'> }) {
   const { t } = useI18n();
   const { session } = useAuth();
@@ -121,6 +157,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const loading = cols.loading || mine.loading || placesLoading;
   const owned = !!col?.owner_id && col.owner_id === uid;
   const isPublic = !!col?.is_public;
+  // Why this list cannot go out, counted rather than asserted. Derived
+  // from the members every time the screen opens, so it is right after a
+  // review lands without anything having to be told — and it disappears
+  // by itself when the last one clears, which is a truer signal than a
+  // message would be.
+  //
+  // Only the owner can compute this, and only because they are the one
+  // person allowed to see their own unreviewed places. That is the same
+  // permission the reminder exists to explain.
+  const blockers = useMemo(() => publishBlockers(members), [members]);
+  const blocked = blockers.pending + blockers.flagged > 0;
   const tabClearance = useTabBarClearance();
 
   const title = col ? t(col.title_en, col.title_vi, col.title_ja) : '';
@@ -172,10 +219,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * way, but it enters and leaves the public query, and that query is
    * what the other section is drawn from.
    */
-  const [banner, setBanner] = useState<null | 'public' | 'private'>(null);
+  const [banner, setBanner] = useState<null | 'public' | 'private' | 'blocked'>(null);
   const [publishing, setPublishing] = useState(false);
   const setPublic = (next: boolean) => {
     if (!col || publishing) return;
+    // The database refuses this too — that is where the rule lives. This
+    // is so the answer arrives as a sentence about the list rather than
+    // as `collection_has_pending_places` from Postgres.
+    if (next && blocked) { setBanner('blocked'); return; }
     setPublishing(true);
     setCollectionPublic(col.slug, next)
       .then(() => {
@@ -293,28 +344,32 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           accessibilityLiveRegion="polite"
         >
           <Ionicons
-            name={banner === 'public' ? 'checkmark-circle' : 'lock-closed'}
+            name={banner === 'public' ? 'checkmark-circle' : banner === 'blocked' ? 'time-outline' : 'lock-closed'}
             size={19}
             color={banner === 'public' ? colors.ok : colors.textSecondary}
           />
-          <Text style={s.bannerText} numberOfLines={2}>
+          <Text style={s.bannerText} numberOfLines={3}>
             {banner === 'public'
               ? t(
                 'This collection is now public',
                 'Bộ sưu tập này giờ đã công khai',
                 'このコレクションは公開されました',
               )
-              : t(
-                'This collection is private again',
-                'Bộ sưu tập này đã riêng tư trở lại',
-                'このコレクションは非公開に戻りました',
-              )}
+              : banner === 'blocked'
+                ? blockerSentence(blockers, t)
+                : t(
+                  'This collection is private again',
+                  'Bộ sưu tập này đã riêng tư trở lại',
+                  'このコレクションは非公開に戻りました',
+                )}
           </Text>
-          <Pressable onPress={undo} hitSlop={10} disabled={publishing}>
-            <Text style={[s.bannerUndo, publishing && s.bannerUndoBusy]}>
-              {t('Undo', 'Hoàn tác', '元に戻す')}
-            </Text>
-          </Pressable>
+          {banner !== 'blocked' && (
+            <Pressable onPress={undo} hitSlop={10} disabled={publishing}>
+              <Text style={[s.bannerUndo, publishing && s.bannerUndoBusy]}>
+                {t('Undo', 'Hoàn tác', '元に戻す')}
+              </Text>
+            </Pressable>
+          )}
         </Pressable>
       )}
       {col && (col.desc_en || col.desc_vi) && (
