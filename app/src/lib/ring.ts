@@ -66,6 +66,33 @@ export type Segment = { a0: number; a1: number; t: number };
  * most. Progress is already told by the arc's length. The palette's job
  * is to be a sweep, so it gets spent in full at every length.
  */
+/**
+ * The shortest arc the ring will draw.
+ *
+ * At nothing, `arcSweep` draws nothing, and a ring with no arc at all is
+ * not a ring at zero — it is a ring that looks broken. Every account
+ * starts here and most of them stay a while, so "brand new" is the state
+ * the drawing has to survive best.
+ *
+ * This is the same argument `levelFromSaves` makes when it starts
+ * everyone at level 1 rather than level 0: an empty badge says the
+ * account is broken where a full one says it is new. The arc was still
+ * saying the first thing.
+ *
+ * Eight percent, which is a stub anyone can see and nobody can mistake
+ * for progress — the first real step is 20% and the two are not close.
+ * It is the one place the ring is not literal, and the trade is worth
+ * making: what it costs is the difference between "none" and "almost
+ * none", which nothing on this screen turns on, and what it buys is that
+ * a new profile looks made rather than unfinished.
+ */
+export const MIN_ARC = 0.08;
+
+/** `arcSweep`, floored so there is always something to see. */
+export function visibleSweep(pct: number, stepDeg = 6): Segment[] {
+  return arcSweep(Math.max(pct, MIN_ARC), stepDeg);
+}
+
 export function arcSweep(pct: number, stepDeg = 6): Segment[] {
   const total = Math.max(0, Math.min(1, pct)) * 360;
   if (total <= 0) return [];
