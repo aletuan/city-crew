@@ -18,6 +18,8 @@ export type RootStackParamList = {
     addPlaceSlug?: string;
   } | undefined;
   PlaceDetail: { slug: string };
+  /** Search Google for a place the catalog is missing, and suggest it. */
+  AddPlace: undefined;
   CollectionDetail: { slug: string };
   ProfileHome: undefined;
   SignIn: undefined;
