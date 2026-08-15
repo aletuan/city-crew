@@ -40,7 +40,7 @@ import { AmbientWarmth, BackButton, PressableScale, useTabBarClearance } from '.
 import { AddIconButton } from '../components/add';
 import { distanceKm, fmtDistance } from '../lib/geo';
 import { useAuth } from '../lib/auth';
-import { useCity } from '../lib/city';
+import { useCity, useMyPosition } from '../lib/city';
 import { usePlaces } from '../lib/catalog';
 import { useI18n } from '../lib/i18n';
 import {
@@ -61,8 +61,8 @@ function Row({ c, known, busy, away, onAdd, onOpen }: {
   c: Candidate;
   known: Known;
   busy: boolean;
-  /** How far from the city's centre, already formatted, or '' when the
-   *  function that answered predates the coordinate. */
+  /** How far from the reader, already formatted — or '' when there is no
+   *  position to measure from, which is a state the row simply wears. */
   away: string;
   onAdd: () => void;
   onOpen: (slug: string) => void;
@@ -94,7 +94,9 @@ function Row({ c, known, busy, away, onAdd, onOpen }: {
               // cut at one line — "…, Hà Nội 1…", "…, Thanh Xuân,…" — so
               // the one field that tells them apart was the field being
               // truncated. A distance is four characters, never cut, and
-              // is the actual answer to which one you meant.
+              // is the actual answer to which one you meant — when there
+              // is one. Without a position it falls back to the address
+              // alone, which is what it always was.
               : away ? `${away} · ${c.address}` : c.address}
         </Text>
       </View>
@@ -118,6 +120,7 @@ function Row({ c, known, busy, away, onAdd, onOpen }: {
 export default function AddPlaceScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'AddPlace'> }) {
   const { t } = useI18n();
   const { city } = useCity();
+  const me = useMyPosition();
   const { session } = useAuth();
   const meId = session?.user?.id;
   const places = usePlaces();
@@ -170,22 +173,33 @@ export default function AddPlaceScreen({ navigation, route }: { navigation: Nav;
   }, [city?.id, run]);
 
   /**
-   * How far a result is from the middle of the city on screen.
+   * How far a result is from the reader, or nothing at all.
    *
-   * The city's centre, not the reader's position, and that is a choice
-   * rather than a limitation. The app asks for location exactly once, at
-   * launch, to guess which city to open on — and then forgets the
-   * coordinates. Asking again here would put a permission dialog in front
-   * of somebody halfway through contributing a place, to sharpen a number
-   * whose whole job is to be *different* between three rows. The centre
-   * separates them just as well.
+   * From where they are standing, not from the middle of the city, and
+   * the difference is the whole point. "1.2 km from the centre of Hanoi"
+   * is a fact about Hanoi; the reader is deciding whether they can walk
+   * there, and only one of those two numbers answers that. A number that
+   * looks like the answer and is not is worse than a blank.
    *
-   * Empty when either end is missing, so a function deployed before the
-   * field mask asked for `location` leaves the row exactly as it was.
+   * So no position, no distance — no fallback to the centre, no
+   * approximation. Somebody who declined to share their location gets the
+   * row exactly as it read before, which is an honest thing for it to be.
+   *
+   * The permission is read, never asked for: bootstrap already put that
+   * dialog up at launch. See `useMyPosition`.
+   *
+   * The radius guard is for a reader browsing a city they are not in —
+   * picking Hanoi from Saigon is one tap. Every result would then be
+   * "1730 km", true and useless, and five identical numbers disambiguate
+   * nothing. Outside the city's own radius, the distance means the wrong
+   * thing and is not drawn.
    */
+  const inThisCity = !!city && !!me
+    && distanceKm(me.lat, me.lng, city.center_lat, city.center_lng) <= city.radius_km;
+
   const awayFrom = (c: Candidate) => (
-    city && c.lat != null && c.lng != null
-      ? fmtDistance(distanceKm(city.center_lat, city.center_lng, c.lat, c.lng))
+    inThisCity && me && c.lat != null && c.lng != null
+      ? fmtDistance(distanceKm(me.lat, me.lng, c.lat, c.lng))
       : ''
   );
 
