@@ -74,9 +74,13 @@ run "$DB" -f "$HERE/profiles_test.sql"
 echo "→ collections stub"
 run "$DB" -f "$HERE/_collections.sql"
 for f in "$ROOT"/supabase/migrations/*_user_collections.sql \
-         "$ROOT"/supabase/migrations/*_publish_collections.sql; do
+         "$ROOT"/supabase/migrations/*_publish_collections.sql \
+         "$ROOT"/supabase/migrations/*_place_submissions.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 
 echo "→ publish checks"
 run "$DB" -f "$HERE/publish_test.sql"
+
+echo "→ submission checks"
+run "$DB" -f "$HERE/submissions_test.sql"
