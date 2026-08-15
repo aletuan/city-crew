@@ -5,6 +5,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, PressableProps, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../lib/i18n';
@@ -155,6 +156,27 @@ export function AmbientWarmth({ style }: { style?: StyleProp<ViewStyle> }) {
 }
 
 /** 44pt circular glass control — headers and in-page actions share it. */
+/**
+ * True translucent material: blur with a smoky overlay on top, so content
+ * scrolling beneath a floating bar reads through it.
+ *
+ * `tint` is a named material, not a colour, so it cannot be a dynamic pair
+ * — and the overlay deepening it has to match that material rather than
+ * merely invert. Which is why this is a component and not two tokens.
+ *
+ * Shared by the tab bar and the pinned filter row. They are the same
+ * material doing the same job at opposite ends of the screen, and a
+ * second copy of these numbers would drift from the first.
+ */
+export function GlassMaterial() {
+  const light = useScheme().scheme === 'light';
+  return (
+    <BlurView intensity={42} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
+      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.68)' : 'rgba(12,13,12,0.62)' }} />
+    </BlurView>
+  );
+}
+
 export function RoundIconButton({ icon, onPress, label, size = 21 }: {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;

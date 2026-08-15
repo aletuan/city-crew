@@ -6,13 +6,13 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated, FlatList, Pressable, ScrollView, StyleSheet, Text, View,
+  Animated, Pressable, ScrollView, SectionList, StyleSheet, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
-import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, GlassMaterial, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { useSky } from '../lib/sky';
@@ -227,7 +227,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { loading, error, data: places, reload } = usePlaces();
   const [cat, setCat] = useState<string>(ALL);
   const tabClearance = useTabBarClearance();
-  const listRef = useRef<FlatList<Place>>(null);
+  const listRef = useRef<SectionList<Place>>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   // Only categories this city actually has, so a chip never leads to an
@@ -252,9 +252,13 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
 
   const hero = useMemo(() => heroPlace(places, city?.hero_place_slug), [places, city?.hero_place_slug]);
 
+  // Lands on the filter row, which is where it pins anyway. The old
+  // offset of 116 existed to keep the chips in frame after the jump; they
+  // hold that position themselves now, so an offset would only push them
+  // back under the header they are meant to sit below.
   const scrollToPlaces = () => {
     if (shown.length > 0) {
-      listRef.current?.scrollToIndex({ index: 0, viewOffset: 116, animated: true });
+      listRef.current?.scrollToLocation({ sectionIndex: 0, itemIndex: 0, animated: true });
     }
   };
 
@@ -263,30 +267,54 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       <Hero place={hero} onExplore={scrollToPlaces} scrollY={scrollY} />
       <CollectionShelf navigation={navigation} />
       <Text style={s.section}>{t('Places', 'Địa điểm', 'スポット')}</Text>
-      <View style={{ paddingBottom: space.headingToContent }}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: space.page }}
-        >
-          <Chip
-            label={t('All', 'Tất cả', 'すべて')}
-            active={cat === ALL}
-            onPress={() => setCat(ALL)}
-          />
-          {cats.map((c) => (
-            <Chip
-              key={c}
-              label={categoryLabel(c, t)}
-              icon={CATEGORIES[c]?.icon}
-              iconColor={CATEGORIES[c]?.color}
-              active={cat === c}
-              onPress={() => setCat(c)}
-            />
-          ))}
-        </ScrollView>
-      </View>
     </>
+  );
+
+  /**
+   * The filter row, pinned for as long as the places are on screen.
+   *
+   * It is a section header rather than part of the list header, and that
+   * is the whole mechanism: a FlatList can only pin its header entire,
+   * which here would mean pinning the hero photograph too. As a section
+   * header it pins exactly while its own section is showing — not before
+   * the places begin, not after they end.
+   *
+   * Pinning it costs about 56pt of a 611pt reading area, and buys back
+   * something the scroll had been taking away: which chip is lit. A
+   * filtered list of three cards with the filter scrolled out of sight
+   * looks like an app that has run out of places, not like a choice you
+   * made. The state of a filter is context for reading its results, not
+   * a control you touch once at the start.
+   */
+  const filters = (
+    <View style={s.filterBar}>
+      {/* The same material as the tab bar. Without it the chips float over
+          the photographs passing underneath, lighting up over a bright
+          frame and disappearing over a dark one. */}
+      <GlassMaterial />
+      <View style={s.filterHair} />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: space.page }}
+      >
+        <Chip
+          label={t('All', 'Tất cả', 'すべて')}
+          active={cat === ALL}
+          onPress={() => setCat(ALL)}
+        />
+        {cats.map((c) => (
+          <Chip
+            key={c}
+            label={categoryLabel(c, t)}
+            icon={CATEGORIES[c]?.icon}
+            iconColor={CATEGORIES[c]?.color}
+            active={cat === c}
+            onPress={() => setCat(c)}
+          />
+        ))}
+      </ScrollView>
+    </View>
   );
 
   return (
@@ -331,15 +359,31 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         )}
         {error && <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`, `読み込みに失敗しました: ${error}`)} />}
         {!loading && !error && (
-          <Animated.FlatList
+          <Animated.SectionList
             ref={listRef}
-            data={shown}
+            // One section, whose only job is to give the filter row
+            // something to be the header of.
+            sections={[{ data: shown }]}
             keyExtractor={(p) => p.slug}
             ListHeaderComponent={header}
+            renderSectionHeader={() => filters}
+            stickySectionHeadersEnabled
             renderItem={({ item }) => (
               <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
             )}
-            ListEmptyComponent={<Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。')} />}
+            // A footer, not `ListEmptyComponent`, and the difference is not
+            // a preference. A section list counts two rows per section for
+            // its header and footer whether or not the section has any data
+            // (`VirtualizedSectionList.js:197`), so the count is never zero
+            // and the empty component would never have rendered — a filter
+            // matching nothing would have shown the chips and then blank
+            // page. As a footer it lands under the pinned row, which is
+            // where it belongs anyway: an empty result is the one moment
+            // the filter most needs to be reachable, because changing it is
+            // the way out.
+            ListFooterComponent={shown.length === 0
+              ? <Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。')} />
+              : null}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
             onRefresh={reload}
@@ -382,6 +426,22 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
+
+  // The pinned filter row. `overflow: hidden` so the blur is clipped to the
+  // bar rather than bleeding past its edges, and the padding is symmetric
+  // because once it is pinned there is no heading above it to sit under —
+  // it is its own top edge.
+  filterBar: {
+    paddingVertical: 10,
+    overflow: 'hidden',
+  },
+  // Drawn only at the bottom, and only a hairline. Pinned over a moving
+  // photograph the bar needs an edge or the cards appear to slide out of
+  // nothing; a full border would box it in like a control.
+  filterHair: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
+  },
   seeAll: { color: colors.accent, fontSize: 14, fontWeight: font.medium },
   // Same rule as the hero: photo cards end in shadow, not in a hairline.
   shelfCard: {
