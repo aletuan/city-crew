@@ -12,7 +12,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
-import SuggestRow from '../components/SuggestRow';
+import { AddPill, AddSlot } from '../components/add';
 import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
@@ -47,16 +47,96 @@ const FILTER_PAD = 10;
 function ExploreSuggestRow({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
   return (
-    <SuggestRow
+    <AddSlot
       onPress={onPress}
       title={t('Know a spot we are missing?', 'Biết chỗ nào chúng tôi còn thiếu?', '載っていないスポットをご存じですか？')}
       subtitle={t('Search for it — we fetch the rest', 'Tìm tên quán — phần còn lại chúng tôi lo', '名前で検索 — 残りはこちらで取得します')}
+      // What you get, not what you must pass. The line here used to
+      // announce that suggestions are reviewed — a gate, described to
+      // someone who has not even decided to walk through it yet. The
+      // review has not gone anywhere; it is simply not the first thing
+      // worth saying to a person being invited to contribute. What is
+      // worth saying is that the place is theirs immediately.
       note={t(
-        'Suggestions are reviewed before they go live',
-        'Đề xuất sẽ được xem xét trước khi hiển thị',
-        '提案は公開前に審査されます',
+        'Yours shows up on your Explore straight away',
+        'Chỗ bạn thêm sẽ có ngay trong Khám phá của bạn',
+        '追加したスポットはすぐにあなたの探索に表示されます',
       )}
     />
+  );
+}
+
+/**
+ * How many cards have to pass overhead before the screen offers a hand.
+ *
+ * Five, which is roughly two screenfuls. Below that you are reading; past
+ * it you are hunting, and the two look identical from here except for how
+ * far you have come.
+ *
+ * The footer row is still the honest answer to "I reached the end". This
+ * is the other case, and it is a real one: a long list is a list you can
+ * be lost in without ever reaching the end of it.
+ */
+const DEEP_AFTER = 5;
+
+/**
+ * The floating offer, once someone is clearly hunting rather than reading.
+ *
+ * Two things it must not do. It must not say the list is empty — it
+ * plainly is not, there are cards under it — so it asks whether what you
+ * want is here rather than announcing that it is not. And it must not
+ * stay: it goes as soon as you scroll back toward the top, which is what
+ * you do when you have found your bearings again.
+ *
+ * It floats rather than taking a place in the list, and that is not
+ * decoration. Anything appearing *in* the list mid-scroll moves the cards
+ * under the reader's thumb.
+ */
+function ScrollNudge({ top, visible, onSearch, onAdd }: {
+  top: number;
+  visible: boolean;
+  onSearch: () => void;
+  onAdd: () => void;
+}) {
+  const { t } = useI18n();
+  const fade = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fade, {
+      toValue: visible ? 1 : 0,
+      duration: visible ? 220 : 140,
+      useNativeDriver: true,
+    }).start();
+  }, [visible, fade]);
+
+  return (
+    <Animated.View
+      // `box-none` on the wrapper, so the invisible band either side of
+      // the card does not eat scrolls aimed at the list underneath.
+      pointerEvents={visible ? 'box-none' : 'none'}
+      style={[
+        s.nudgeWrap,
+        {
+          top,
+          opacity: fade,
+          transform: [{
+            translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }),
+          }],
+        },
+      ]}
+    >
+      <PressableScale onPress={onSearch} scaleTo={0.985} style={s.nudge} accessibilityRole="button">
+        <Ionicons name="search" size={18} color={colors.textSecondary} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={s.nudgeTitle} numberOfLines={1}>
+            {t('Looking for something?', 'Đang tìm chỗ nào cụ thể?', 'お探しのものがありますか？')}
+          </Text>
+          <Text style={s.nudgeSub} numberOfLines={1}>
+            {t('Search it, or add your own', 'Tìm nhanh, hoặc tự thêm', '検索、または自分で追加')}
+          </Text>
+        </View>
+        <AddPill compact label={t('Add', 'Thêm', '追加')} onPress={onAdd} />
+      </PressableScale>
+    </Animated.View>
   );
 }
 
@@ -287,6 +367,53 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
 
   const hero = useMemo(() => heroPlace(places, city?.hero_place_slug), [places, city?.hero_place_slug]);
 
+  // How far down the list the reader currently is, measured in cards
+  // rather than pixels: a card's height depends on its photograph, so a
+  // pixel threshold would mean something different on every list. This is
+  // the topmost card on screen, so scrolling back up puts the number down
+  // again and the offer withdraws itself.
+  const [firstVisible, setFirstVisible] = useState(0);
+  // Everything below this line is frozen at first render — React Native
+  // refuses a changing `onViewableItemsChanged`, and `Animated.event` is
+  // built once — so the shared setter is a ref too, guarding on its own
+  // mirror of the value rather than on state it cannot see.
+  const firstRef = useRef(0);
+  const setFirst = useRef((n: number) => {
+    if (firstRef.current === n) return;
+    firstRef.current = n;
+    setFirstVisible(n);
+  }).current;
+  const onViewable = useRef(({ viewableItems }: { viewableItems: { index: number | null }[] }) => {
+    const idx = viewableItems.map((v) => v.index).filter((i): i is number => i != null);
+    // An empty batch happens between frames and means nothing; taking it
+    // as zero would blink the offer off and on again.
+    if (idx.length) setFirst(Math.min(...idx));
+  }).current;
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+
+  /**
+   * The offset half of the same question, and it is not redundant.
+   *
+   * Viewability reports changes to a *set*, and a fast fling can carry the
+   * list from "cards 4–6 showing" to "no cards showing" without a batch in
+   * between. The last number the offer saw would then be 4, and it would
+   * sit over the hero photograph at the top of a screen nobody is lost on.
+   * The offset never has that gap.
+   */
+  const onScrollJS = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
+    if (e.nativeEvent.contentOffset.y < 320) setFirst(0);
+  }).current;
+
+  // The pinned filter row's measured height, so the floating offer can sit
+  // directly under it rather than at a number guessed from the chips.
+  const [filterH, setFilterH] = useState(0);
+
+  // Deep into a list long enough to get lost in. The length test is not
+  // belt-and-braces: with four cards you can be five in only by rubber
+  // banding, and an offer that appears when you bounce the list is a
+  // twitch, not a suggestion.
+  const nudge = shown.length > DEEP_AFTER + 2 && firstVisible >= DEEP_AFTER;
+
   // Lands on the filter row, which is where it pins anyway. The old
   // offset of 116 existed to keep the chips in frame after the jump; they
   // hold that position themselves now, so an offset would only push them
@@ -325,7 +452,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * a control you touch once at the start.
    */
   const filters = (
-    <View style={s.filterBar}>
+    <View style={s.filterBar} onLayout={(e) => setFilterH(e.nativeEvent.layout.height)}>
       <View style={s.filterHair} />
       <ScrollView
         horizontal
@@ -437,9 +564,24 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             onScrollToIndexFailed={() => {}}
             onScroll={Animated.event(
               [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-              { useNativeDriver: true },
+              { useNativeDriver: true, listener: onScrollJS },
             )}
             scrollEventThrottle={16}
+            // Both stable refs: React Native refuses to have either of
+            // these change between renders.
+            onViewableItemsChanged={onViewable}
+            viewabilityConfig={viewabilityConfig}
+          />
+        )}
+        {/* Last, so it draws over the list; positioned under the pinned
+            filter row rather than in it, because a row that grows and
+            shrinks mid-scroll moves the cards under the reader's thumb. */}
+        {!loading && !error && (
+          <ScrollNudge
+            top={filterH}
+            visible={nudge}
+            onSearch={() => navigation.navigate('Search')}
+            onAdd={() => navigation.navigate('AddPlace')}
           />
         )}
       </View>
@@ -474,6 +616,25 @@ const s = StyleSheet.create({
   sectionOverFilter: { marginBottom: space.headingToContent - FILTER_PAD },
 
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
+
+  // The floating offer. Absolute so the list scrolls beneath it untouched.
+  nudgeWrap: {
+    position: 'absolute', left: 0, right: 0,
+    paddingHorizontal: space.page, paddingTop: 8,
+  },
+  nudge: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingLeft: 16, paddingRight: 8, paddingVertical: 10,
+    borderRadius: radius.pill,
+    // Opaque, not glass. Everything the app floats over is either still
+    // (the tab bar over a resting list) or its own surface; this one has
+    // photographs travelling under it, and a translucent bar over moving
+    // photographs reads as a smear rather than as a material.
+    backgroundColor: colors.bgElevated,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
+  },
+  nudgeTitle: { color: colors.text, fontSize: 14.5, fontWeight: font.semibold },
+  nudgeSub: { color: colors.textTertiary, fontSize: 12.5 },
 
   // The pinned filter row.
   //

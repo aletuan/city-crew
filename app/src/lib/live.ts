@@ -56,8 +56,8 @@ export function isMineAndUnlive(p: Reviewable, meId: string | null | undefined):
  * Why a collection cannot be published, counted.
  *
  * Both numbers, not a boolean, because the sentence the owner reads has
- * to name what is holding it: *"2 places are still being reviewed, and 1
- * was not accepted"*. A generic "some places are pending" leaves them
+ * to name what is holding it: *"2 places are not public yet, and 1 was
+ * not accepted"*. A generic "some places are pending" leaves them
  * pressing Publish and watching nothing happen, which is the failure
  * this is here to prevent.
  *

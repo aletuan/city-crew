@@ -11,7 +11,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
-import SuggestRow from '../components/SuggestRow';
+import { AddSlot } from '../components/add';
 import {
   AmbientWarmth, BackButton, Card, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
@@ -123,7 +123,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const typed = query.trim();
   const shown = typed.length > 24 ? `${typed.slice(0, 24)}…` : typed;
   const addRow = (
-    <SuggestRow
+    <AddSlot
       onPress={() => navigation.navigate('AddPlace', { query: typed })}
       title={t(`Add “${shown}” yourself`, `Tự thêm “${shown}”`, `「${shown}」を自分で追加`)}
       subtitle={t(
@@ -132,9 +132,9 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         'Google マップで探します — 正しいものをお選びください',
       )}
       note={t(
-        'Suggestions are reviewed before they go live',
-        'Đề xuất sẽ được xem xét trước khi hiển thị',
-        '提案は公開前に審査されます',
+        'Yours shows up on your Explore straight away',
+        'Chỗ bạn thêm sẽ có ngay trong Khám phá của bạn',
+        '追加したスポットはすぐにあなたの探索に表示されます',
       )}
     />
   );

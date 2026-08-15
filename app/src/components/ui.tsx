@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
-import { colors, display, font, radius, space, type } from '../theme';
+import { colors, display, font, gradAI, radius, space, type } from '../theme';
 
 // ── tab bar geometry ──
 // A full-width Apple-style bar over blur; position:absolute so content
@@ -196,6 +196,34 @@ export function RoundIconButton({ icon, onPress, label, size = 21 }: {
   );
 }
 
+/**
+ * The lone action in an empty-state card: gradient, glyph, label.
+ *
+ * There were two of these, written apart and landing 2pt apart —
+ * 24/15 under "No collections yet", 22/13 under an empty list. Nobody
+ * chose that difference, and it is the kind that compounds: the next one
+ * would have been a third figure. One size, and it is the roomier of the
+ * two, which also buys a 46pt touch target instead of 42.
+ *
+ * Distinct from `AddPill` on purpose. That one sits beside a heading or
+ * inside a bar and is sized to stay quiet next to them; this one is the
+ * only thing on its card and carries a full sentence of a label.
+ */
+export function GradientCta({ icon, label, onPress }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <PressableScale onPress={onPress} accessibilityRole="button">
+      <LinearGradient {...gradAI} style={s.cta}>
+        <Ionicons name={icon} size={20} color={colors.accentInk} />
+        <Text style={s.ctaText}>{label}</Text>
+      </LinearGradient>
+    </PressableScale>
+  );
+}
+
 /** In-page back control: the round glass button wearing a chevron. */
 export function BackButton({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
@@ -254,6 +282,11 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlassSoft, overflow: 'hidden',
   },
   ambient: { position: 'absolute', left: 0, right: 0, top: -40, height: 760 },
+  cta: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 24, paddingVertical: 15, borderRadius: radius.pill,
+  },
+  ctaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
   backBtn: {
     width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surfaceGlass, borderWidth: 1, borderColor: colors.borderGlassSoft,
