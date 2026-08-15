@@ -58,13 +58,12 @@ function ExploreSuggestRow({ onPress }: { onPress: () => void }) {
       // địa điểm", and that one adds a place the catalog already has.
       // This one is for a place nobody has put there yet.
       title={t('Add a new place', 'Thêm địa điểm mới', '新しいスポットを追加')}
-      subtitle={t('Type the name, we fetch the rest', 'Gõ tên quán, chúng tôi lo phần còn lại', '名前を入力 — 残りはこちらで取得します')}
-      // What you get, not what you must pass. The line here used to
-      // announce that suggestions are reviewed — a gate, described to
-      // someone who has not even decided to walk through it yet. The
-      // review has not gone anywhere; it is simply not the first thing
-      // worth saying to a person being invited to contribute.
-      note={t('It shows up for you right away', 'Thêm xong là bạn thấy ngay', '追加後すぐ表示されます')}
+      // What you do, not what we do about it. "Chúng tôi lo phần còn lại"
+      // was a promise about our end of the work, which is not the thing
+      // standing between this row and the next screen. What you actually
+      // need to know is what to type — and that an address works, which
+      // is not obvious and is often all anyone has.
+      subtitle={t('Search by name or address', 'Gõ tên quán hoặc địa chỉ để tìm kiếm', '店名や住所で検索')}
     />
   );
 }
