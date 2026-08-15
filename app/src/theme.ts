@@ -206,37 +206,62 @@ export const gradAI = {
 };
 
 /**
- * The engagement ring's arc and its track, resolved by hand per scheme.
+ * The engagement ring's track, resolved by hand per scheme.
  *
- * Same reason as `gradAI`, and then one more. An SVG gradient stop is a
- * fill, so a dynamic pair in it resolves once into CoreGraphics and comes
+ * Literal colours rather than dynamic pairs, for `gradAI`'s reason and
+ * then one more. An SVG fill resolves into CoreGraphics once and comes
  * back stale after a theme change — the CGColor trap that took the camera
  * badge's border. The component reads `useScheme()` and picks a side, the
  * way `lib/theme.tsx` says the handful of non-colour cases have to.
  *
- * The arc mirrors `accent` and `sun` rather than inventing a palette: on
- * charcoal those *are* the coral and gold the ring was drawn with, which
- * is why the dark half here is unchanged. What was missing was the paper
- * half — the original hexes were 2.43:1 and 1.64:1 against it, a line
- * nobody could see. The deeper pair measures 4.53:1 and 3.25:1.
+ * The arc was briefly much darker than it is now, on the grounds that a
+ * graphical object owes the page 3:1. That was wrong twice over.
  *
- * The badge does not follow, and deliberately: it is a filled pill
- * carrying its own ground, so what it owes contrast to is its label, not
- * the page. Deepened to these values it would put `accentInk` at 3.64:1
- * on 11.5pt bold, and the level would become the hardest thing on the
- * screen to read. It keeps `gradAI`'s bright coral.
+ * WCAG's ratio is a *text* measure. It weighs luminance and is blind to
+ * hue and chroma, so it scored a bright amber arc on a light track at
+ * 1.36 — while the two measure ΔE2000 25, ten times the difference at
+ * which a person notices anything at all. Asking "where does the colour
+ * stop against the grey" is a colour-difference question, and that was
+ * the wrong instrument for it.
+ *
+ * And the arc was never what had gone invisible. The track was, at ΔE 4.3
+ * from paper. Darkening the arc was collateral: chroma held (66 → 66)
+ * while lightness fell 18 to 21 points, and a saturated red-orange with
+ * the lightness taken out of it is a brick. It read as old because it
+ * was.
+ *
+ * So the arc goes back to bright and the track carries the separation
+ * instead, at ΔE 9.5 from paper — more than twice what it first had, and
+ * lighter than the correction that overshot. Luminance still does real
+ * work, because chroma is the first thing a red-green deficiency takes
+ * away: every stop stays at least 9 L* below the track, so the ring
+ * survives without it.
+ *
+ * The badge follows none of this. It is a filled pill carrying its own
+ * ground, so what it owes contrast to is its label rather than the page.
+ * It keeps `gradAI`'s bright coral, where `accentInk` sits at 6.79:1.
  *
  * The track is neutral on purpose. Colour on the ring means progress; a
  * tinted track would spend it on the part that has not happened yet.
  */
-export const ringInk = {
-  // Track vs ground 1.42:1 and 1.61:1 — up from the 1.20:1 that made the
-  // headroom invisible on paper. It cannot go much darker without eating
-  // the arc's own edge against it, which is the boundary that carries the
-  // reading; the rest of the visibility comes from a thicker stroke.
-  light: { from: '#C4402C', to: '#B07C10', track: '#D3CCBF' },
-  dark: { from: '#FF6F5B', to: '#F2B441', track: '#38352F' },
-} as const;
+export const ringTrack = { light: '#DDD7CB', dark: '#252320' } as const;
+
+/**
+ * The sweep, warm through to cool, shared by both themes.
+ *
+ * The offsets are not evenly spaced, and that is the point: they are
+ * spaced by ΔE, so the ramp moves at a constant rate to the eye rather
+ * than to the arithmetic. Laid out evenly the gold-to-lime leap is ΔE 42
+ * against ΔE 14 for coral-to-rose, and the green would arrive all at once
+ * while the warm end crawled.
+ */
+export const ringSweep = [
+  { at: 0, hex: '#FF6F5B' },
+  { at: 0.14, hex: '#FF8B72' },
+  { at: 0.32, hex: '#FF9A5C' },
+  { at: 0.58, hex: '#F2B441' },
+  { at: 1, hex: '#A9C46A' },
+] as const;
 
 /** Corner radii, in iOS points. */
 export const radius = {
