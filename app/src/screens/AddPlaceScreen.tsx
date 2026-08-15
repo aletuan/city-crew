@@ -37,7 +37,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AmbientWarmth, BackButton, PressableScale, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, BackButton, GradientCta, PressableScale, useTabBarClearance } from '../components/ui';
 import CandidateRow from '../components/CandidateRow';
 import { useCandidates } from '../lib/candidates';
 import { useCity } from '../lib/city';
@@ -49,10 +49,30 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
   const tabClearance = useTabBarClearance();
-  const { results, known, searching, adding, run, add, awayFrom, clear } = useCandidates();
+  const { results, known, searching, adding, batch, run, addMany, cancel, awayFrom, clear } = useCandidates();
 
   const [query, setQuery] = useState('');
+  const [picked, setPicked] = useState<string[]>([]);
   const input = useRef<TextInput>(null);
+
+  // Only what can actually be added. A result already in the catalog is
+  // shown — that is the point of showing it — but it is not a thing you
+  // can pick, so it must not count toward the button's number either.
+  const addable = (results ?? []).filter(
+    (c) => (known[c.place_id]?.state ?? 'none') === 'none',
+  );
+  const chosen = addable.filter((c) => picked.includes(c.place_id));
+  const finished = batch.total > 0 && !batch.running;
+
+  const go = () => {
+    if (!chosen.length) return;
+    addMany(chosen).then((r) => {
+      // Back to Explore when the run was clean, because that is where the
+      // places now are. Not when something failed: navigating away from a
+      // failure is the app deciding the reader does not need to know.
+      if (r.failed === 0 && !r.cancelled) navigation.goBack();
+    });
+  };
 
   const cityName = city ? t(city.short_en, city.short_vi, city.short_ja) : '';
 
@@ -70,7 +90,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
           ref={input}
           value={query}
           onChangeText={setQuery}
-          onSubmitEditing={() => run(query)}
+          onSubmitEditing={() => { setPicked([]); run(query); }}
           returnKeyType="search"
           autoFocus
           placeholder={t(
@@ -82,13 +102,33 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
           style={s.input}
         />
         {query.length > 0 && (
-          <PressableScale onPress={() => { setQuery(''); clear(); input.current?.focus(); }} scaleTo={0.9} hitSlop={8}>
+          <PressableScale onPress={() => { setQuery(''); clear(); setPicked([]); input.current?.focus(); }} scaleTo={0.9} hitSlop={8}>
             <Ionicons name="close-circle" size={19} color={colors.textTertiary} />
           </PressableScale>
         )}
       </View>
 
       {searching && <ActivityIndicator color={colors.accent} style={{ marginTop: 36 }} />}
+
+      {/* Count and city, above the results rather than under them. Both
+          are answers to "did it search the right place", which is a
+          question you have the moment the list appears — not one you
+          scroll to the bottom to ask. */}
+      {!searching && !!results?.length && (
+        <Text style={s.resultHead}>
+          {batch.total > 0
+            ? t(
+              `ADDING ${batch.total} · ${batch.done} DONE`,
+              `ĐANG THÊM ${batch.total} · XONG ${batch.done}`,
+              `${batch.total}件を追加中 · ${batch.done}件完了`,
+            )
+            : t(
+              `${results.length} RESULTS · ${cityName.toUpperCase()}`,
+              `${results.length} KẾT QUẢ · ${cityName.toUpperCase()}`,
+              `${results.length}件 · ${cityName}`,
+            )}
+        </Text>
+      )}
 
       <FlatList
         data={results ?? []}
@@ -99,7 +139,11 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
             known={known[item.place_id] ?? { state: 'none' }}
             busy={adding === item.place_id}
             away={awayFrom(item)}
-            onAdd={() => add(item)}
+            item={batch.state[item.place_id]}
+            selected={picked.includes(item.place_id)}
+            onToggle={() => setPicked((p) => (
+              p.includes(item.place_id) ? p.filter((x) => x !== item.place_id) : [...p, item.place_id]
+            ))}
             onOpen={(slug) => navigation.navigate('PlaceDetail', { slug })}
           />
         )}
@@ -132,6 +176,73 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
         contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
       />
+
+      {/* The commit, pinned rather than at the end of the list. It acts on
+          a selection that is visible above it, and a button you have to
+          scroll to find is a button you lose track of while choosing. */}
+      {(chosen.length > 0 || batch.running || finished) && (
+        <View style={[s.foot, { paddingBottom: tabClearance - 24 }]}>
+          {batch.running ? (
+            <>
+              <View style={s.progress}>
+                <ActivityIndicator color={colors.accentInk} />
+                <Text style={s.progressText}>
+                  {t(
+                    `Adding ${batch.done + 1} of ${batch.total}…`,
+                    `Đang thêm ${batch.done + 1}/${batch.total}…`,
+                    `${batch.total}件中 ${batch.done + 1}件目…`,
+                  )}
+                </Text>
+              </View>
+              <PressableScale onPress={cancel} accessibilityRole="button">
+                <Text style={s.cancel}>
+                  {t('Stop after this one', 'Dừng sau chỗ này', 'この件で止める')}
+                </Text>
+              </PressableScale>
+            </>
+          ) : chosen.length > 0 ? (
+            // Still something to add — including after a partial failure,
+            // where the ones that did not go through are still selected
+            // and this button is the retry. A screen that only offered
+            // the way out would be making the reader start over.
+            <GradientCta
+              wide
+              icon="add"
+              label={chosen.length === 1
+                ? t('Add this place', 'Thêm địa điểm này', 'このスポットを追加')
+                : t(
+                  `Add ${chosen.length} places`,
+                  `Thêm ${chosen.length} địa điểm`,
+                  `${chosen.length}件を追加`,
+                )}
+              onPress={go}
+            />
+          ) : (
+            // Reached when a run ended and nothing is left to try — either
+            // everything went through and something else failed, or it was
+            // cancelled. Either way the way back is the only thing left.
+            <GradientCta
+              wide
+              icon="arrow-back"
+              label={t('Back to Explore', 'Về Khám phá', '探索に戻る')}
+              onPress={() => navigation.goBack()}
+            />
+          )}
+          <Text style={s.footNote}>
+            {batch.running
+              ? t(
+                'You can keep browsing — this finishes on its own.',
+                'Bạn cứ dùng tiếp — phần này tự chạy xong.',
+                'そのまま閲覧できます — 追加は自動で終わります。',
+              )
+              : t(
+                'We fill in the name, photos and hours.',
+                'Chúng tôi điền tên, ảnh và giờ mở cửa.',
+                '名前・写真・営業時間はこちらで埋めます。',
+              )}
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -162,4 +273,23 @@ const s = StyleSheet.create({
     color: colors.textTertiary, fontSize: 12.5,
     paddingHorizontal: space.page, paddingTop: 6, textAlign: 'center',
   },
+  resultHead: {
+    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
+    letterSpacing: 0.7, paddingHorizontal: space.page, paddingBottom: 10,
+  },
+
+  foot: {
+    paddingHorizontal: space.page, paddingTop: 14, gap: 10,
+    backgroundColor: colors.bg,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
+  },
+  // The running state wears the same gradient the button does, so the bar
+  // does not appear to swap for a different control halfway through.
+  progress: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    paddingVertical: 16, borderRadius: radius.pill, backgroundColor: colors.accent,
+  },
+  progressText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
+  cancel: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold, textAlign: 'center' },
+  footNote: { color: colors.textTertiary, fontSize: 12.5, lineHeight: 18, textAlign: 'center' },
 });

@@ -11,7 +11,7 @@
 // is presentation, which is where they should differ: one lists everything
 // Google returned, the other shows only what is new.
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Alert, Keyboard } from 'react-native';
 import { useAuth } from './auth';
 import { useCity, useMyPosition } from './city';
@@ -20,6 +20,24 @@ import { distanceKm, fmtDistance } from './geo';
 import { useI18n } from './i18n';
 import { Candidate, knownByPlaceId, Known, searchPlaces, suggestPlace } from './suggest';
 
+/**
+ * Where one candidate is in a batch.
+ *
+ * `skipped` is not a failure and must not read as one: the place was
+ * already in the catalog, which is the answer somebody selecting five
+ * results wanted rather than an error they caused.
+ */
+export type ItemState = 'queued' | 'running' | 'done' | 'skipped' | 'failed';
+
+export type Batch = {
+  running: boolean;
+  state: Record<string, ItemState>;
+  done: number;
+  total: number;
+};
+
+export const IDLE_BATCH: Batch = { running: false, state: {}, done: 0, total: 0 };
+
 export type Candidates = {
   /** null before the first search, [] when one found nothing. */
   results: Candidate[] | null;
@@ -27,8 +45,13 @@ export type Candidates = {
   searching: boolean;
   /** place_id currently being submitted, or null. */
   adding: string | null;
+  batch: Batch;
   run: (query: string) => void;
   add: (c: Candidate) => void;
+  /** Submit several, one at a time. Resolves once every one has settled or
+   *  the run was cancelled. */
+  addMany: (list: Candidate[]) => Promise<{ done: number; skipped: number; failed: number; cancelled: boolean }>;
+  cancel: () => void;
   /** Formatted distance from the reader, or '' — see `awayFrom` below. */
   awayFrom: (c: Candidate) => string;
   clear: () => void;
@@ -45,9 +68,12 @@ export function useCandidates(): Candidates {
   const [results, setResults] = useState<Candidate[] | null>(null);
   const [known, setKnown] = useState<Record<string, Known>>({});
   const [searching, setSearching] = useState(false);
-  const [adding, setAdding] = useState<string | null>(null);
+  const [batch, setBatch] = useState<Batch>(IDLE_BATCH);
+  /** Set by `cancel`, and by the daily cap — read between items, never
+   *  mid-flight. */
+  const stop = useRef(false);
 
-  const clear = useCallback(() => { setResults(null); setKnown({}); }, []);
+  const clear = useCallback(() => { setResults(null); setKnown({}); setBatch(IDLE_BATCH); }, []);
 
   const run = useCallback((raw: string) => {
     const q = raw.trim();
@@ -102,63 +128,128 @@ export function useCandidates(): Candidates {
       : ''
   ), [inThisCity, me?.lat, me?.lng]);
 
-  const add = useCallback((c: Candidate) => {
-    if (!city || adding) return;
-    setAdding(c.place_id);
-    suggestPlace(c.place_id, city.id)
-      .then((out) => {
-        if (out.ok) {
-          // Marked here rather than re-searched: the row changes state in
-          // place, so adding several from one search does not mean
-          // starting the search again after each.
-          setKnown((k) => ({ ...k, [c.place_id]: { state: 'mine' } }));
-          places.reload();
-          // What is true, in the order it matters: it worked, it is
-          // yours, and here is why a friend cannot see it yet.
-          //
-          // No mention of review. Being told at that exact moment that
-          // your contribution must first pass an inspection is a strange
-          // way to say thank you, and the only part of it anyone needs is
-          // why nobody else sees the place — a fact about now, not a
-          // process to explain.
-          Alert.alert(
-            t('Thanks — it is in', 'Cảm ơn — đã thêm', 'ありがとうございます'),
-            t(
-              `${c.name} is on your Explore now. Only you can see it for the moment — we will open it up to everyone shortly.`,
-              `${c.name} đã có trong mục Khám phá của bạn. Hiện chỉ mình bạn thấy — chúng tôi sẽ mở cho mọi người sớm thôi.`,
-              `${c.name} はあなたの探索に追加されました。今はあなただけに表示され、まもなく全員に公開されます。`,
-            ),
-          );
-          return;
-        }
-        if (out.reason === 'already_live') {
-          setKnown((k) => ({ ...k, [c.place_id]: { state: 'live', slug: out.slug } }));
-          return;
-        }
-        if (out.reason === 'already_known') {
-          // Somebody else got there first, and whose suggestion it is is
-          // not this reader's business — so the row says the place is
-          // known, and stops.
-          setKnown((k) => ({ ...k, [c.place_id]: { state: 'mine' } }));
-          return;
-        }
-        Alert.alert(
-          out.reason === 'daily_limit'
-            ? t('That is enough for today', 'Hôm nay vậy là đủ', '本日はここまで')
-            : t('Could not add it', 'Không thêm được', '追加できませんでした'),
-          out.reason === 'daily_limit'
-            ? t(
-              `You can suggest ${out.limit} places a day. Come back tomorrow.`,
-              `Mỗi ngày bạn có thể đề xuất ${out.limit} địa điểm. Mai quay lại nhé.`,
-              `1日に${out.limit}件まで提案できます。また明日どうぞ。`,
-            )
-            : out.message,
-        );
-      })
-      .finally(() => setAdding(null));
-  }, [city?.id, adding, places, t]);
+  const mark = (id: string, st: ItemState) =>
+    setBatch((b) => ({ ...b, state: { ...b.state, [id]: st } }));
 
-  return { results, known, searching, adding, run, add, awayFrom, clear };
+  /**
+   * Submit one, and report what became of it.
+   *
+   * Throws nothing. Every outcome the server can give is a state a row can
+   * wear, and a batch that stopped on the first refusal would be a batch
+   * that punishes selecting five results because one of them was already
+   * here.
+   */
+  const suggestOne = useCallback(async (c: Candidate): Promise<ItemState> => {
+    if (!city) return 'failed';
+    const out = await suggestPlace(c.place_id, city.id).catch(() => null);
+    if (!out) return 'failed';
+    if (out.ok) {
+      // Marked here rather than re-searched: the row changes state in
+      // place, so adding several from one search does not mean starting
+      // the search again after each.
+      setKnown((k) => ({ ...k, [c.place_id]: { state: 'mine' } }));
+      return 'done';
+    }
+    if (out.reason === 'already_live') {
+      setKnown((k) => ({ ...k, [c.place_id]: { state: 'live', slug: out.slug } }));
+      return 'skipped';
+    }
+    if (out.reason === 'already_known') {
+      // Somebody else got there first, and whose suggestion it is is not
+      // this reader's business — so the row says the place is known, and
+      // stops.
+      setKnown((k) => ({ ...k, [c.place_id]: { state: 'mine' } }));
+      return 'skipped';
+    }
+    if (out.reason === 'daily_limit') {
+      Alert.alert(
+        t('That is enough for today', 'Hôm nay vậy là đủ', '本日はここまで'),
+        t(
+          `You can suggest ${out.limit} places a day. Come back tomorrow.`,
+          `Mỗi ngày bạn có thể đề xuất ${out.limit} địa điểm. Mai quay lại nhé.`,
+          `1日に${out.limit}件まで提案できます。また明日どうぞ。`,
+        ),
+      );
+      // The cap is per account per day, so every remaining item in this
+      // run would refuse for the same reason. Stopping is kinder than
+      // five identical failures.
+      stop.current = true;
+      return 'failed';
+    }
+    Alert.alert(t('Could not add it', 'Không thêm được', '追加できませんでした'), out.message);
+    return 'failed';
+  }, [city?.id, t]);
+
+  /**
+   * One at a time, on purpose.
+   *
+   * Each import is a Google details call plus up to six photo lookups
+   * inside one Edge Function invocation — `MAX_API_CALLS` in that file is
+   * 20 — so five in parallel is five concurrent invocations doing thirty
+   * outbound calls between them. Sequential also makes the per-row
+   * progress mean something: a row that says "running" is the one the
+   * server is working on, not one of five that might be.
+   */
+  const addMany = useCallback(async (list: Candidate[]) => {
+    if (!city || !list.length) return { done: 0, skipped: 0, failed: 0, cancelled: false };
+    stop.current = false;
+    setBatch({
+      running: true,
+      total: list.length,
+      done: 0,
+      state: Object.fromEntries(list.map((c) => [c.place_id, 'queued' as ItemState])),
+    });
+
+    const tally = { done: 0, skipped: 0, failed: 0 };
+    for (const c of list) {
+      if (stop.current) { mark(c.place_id, 'queued'); continue; }
+      mark(c.place_id, 'running');
+      const st = await suggestOne(c);
+      mark(c.place_id, st);
+      tally[st === 'done' ? 'done' : st === 'skipped' ? 'skipped' : 'failed'] += 1;
+      setBatch((b) => ({ ...b, done: b.done + 1 }));
+    }
+
+    setBatch((b) => ({ ...b, running: false }));
+    // Once, at the end, rather than after each: the catalog is one fetch
+    // and five of them would be four wasted round trips and four list
+    // re-renders under the reader's finger.
+    if (tally.done > 0) places.reload();
+    // Cancelled is not the same as clean, and only the caller can act on
+    // the difference: a run stopped halfway must not be followed by the
+    // screen leaving, however few things went wrong before it stopped.
+    return { ...tally, cancelled: stop.current };
+  }, [city?.id, places, suggestOne]);
+
+  /** The single-row path, for Search's ⊕. Same machinery, plus the thank
+   *  you — which belongs to one deliberate act and would be five alerts
+   *  in a row if the batch said it too. */
+  const add = useCallback((c: Candidate) => {
+    if (batch.running) return;
+    addMany([c]).then((r) => {
+      if (!r.done) return;
+      // What is true, in the order it matters: it worked, it is yours, and
+      // here is why a friend cannot see it yet. No mention of review —
+      // being told at that exact moment that your contribution must pass
+      // an inspection is a strange way to say thank you.
+      Alert.alert(
+        t('Thanks — it is in', 'Cảm ơn — đã thêm', 'ありがとうございます'),
+        t(
+          `${c.name} is on your Explore now. Only you can see it for the moment — we will open it up to everyone shortly.`,
+          `${c.name} đã có trong mục Khám phá của bạn. Hiện chỉ mình bạn thấy — chúng tôi sẽ mở cho mọi người sớm thôi.`,
+          `${c.name} はあなたの探索に追加されました。今はあなただけに表示され、まもなく全員に公開されます。`,
+        ),
+      );
+    });
+  }, [addMany, batch.running, t]);
+
+  /** Stop before the next one starts. The one in flight is already with
+   *  the server and finishing it is cheaper than orphaning it. */
+  const cancel = useCallback(() => { stop.current = true; }, []);
+
+  const adding = Object.keys(batch.state).find((id) => batch.state[id] === 'running') ?? null;
+
+  return { results, known, searching, adding, batch, run, add, addMany, cancel, awayFrom, clear };
 }
 
 /** Only the ones the catalog has never heard of. What Search shows, since
