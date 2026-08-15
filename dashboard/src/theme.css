@@ -567,6 +567,21 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .login .loginsent { color: var(--text-secondary); font-size: 14px; max-width: 320px; line-height: 1.6; }
 .login .loginerror { color: var(--bad); font-size: 13px; margin: 0; }
 
+/* The two ways round a forgotten password, kept quiet: they are the exits
+   from this screen, not competitors to the button above them. */
+.login .loginalt {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 14px; font-size: 13px;
+}
+.login .loginalt span { color: var(--text-tertiary); }
+.login .loginalt button {
+  background: none; border: none; padding: 0;
+  color: var(--text-secondary); font-size: 13px; font-weight: 500;
+  text-decoration: underline; text-underline-offset: 3px;
+  border-radius: 0;
+}
+.login .loginalt button:hover { color: var(--text-primary); }
+
 /* ── add place ── */
 .addplace h2 { font-size: 19px; margin: 4px 0 6px; letter-spacing: -0.01em; }
 .addplace .addsub { color: var(--text-tertiary); font-size: 13.5px; max-width: 560px; margin: 0 0 18px; }
