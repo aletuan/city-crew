@@ -120,10 +120,14 @@ function blockerSentence(
 ): string {
   const parts: string[] = [];
   if (pending) {
+    // Not public *yet* — the state the list is in, rather than the
+    // procedure it is waiting on. The owner does not need to picture a
+    // queue to understand why the switch will not move; they need to know
+    // which places are holding it, and that this one resolves on its own.
     parts.push(t(
-      `${pending} ${pending === 1 ? 'place is' : 'places are'} still being reviewed`,
-      `${pending} địa điểm đang chờ duyệt`,
-      `${pending}件が審査中です`,
+      `${pending} ${pending === 1 ? 'place is' : 'places are'} not public yet`,
+      `${pending} địa điểm chưa công khai`,
+      `${pending}件がまだ公開されていません`,
     ));
   }
   if (flagged) {

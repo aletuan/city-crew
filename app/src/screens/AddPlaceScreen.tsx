@@ -65,7 +65,7 @@ function Row({ c, known, busy, onAdd, onOpen }: {
           {live
             ? t('Already on cityCrew', 'Đã có trên cityCrew', 'すでに cityCrew にあります')
             : mine
-              ? t('You suggested this — awaiting review', 'Bạn đã đề xuất — đang chờ duyệt', '提案済み — 審査待ち')
+              ? t('You added this — only you can see it', 'Bạn đã thêm — hiện chỉ mình bạn thấy', '追加済み — まだあなただけに表示')
               : c.address}
         </Text>
       </View>
@@ -150,12 +150,21 @@ export default function AddPlaceScreen({ navigation, route }: { navigation: Nav;
           // starting the search again after each.
           setKnown((k) => ({ ...k, [c.place_id]: { state: 'mine' } }));
           places.reload();
+          // What is true, in the order it matters: it worked, it is
+          // yours, and here is why a friend cannot see it yet.
+          //
+          // No mention of review. The person contributed something; being
+          // told at that exact moment that their contribution must first
+          // pass an inspection is a strange way to say thank you, and the
+          // only part of it they actually need is why nobody else sees the
+          // place. That much is a fact about now, not a process to
+          // explain.
           Alert.alert(
-            t('Thanks — it is in', 'Cảm ơn — đã nhận', 'ありがとうございます'),
+            t('Thanks — it is in', 'Cảm ơn — đã thêm', 'ありがとうございます'),
             t(
-              `${c.name} is on your Explore now. Suggestions are reviewed before they go live, so nobody else can see it yet.`,
-              `${c.name} đã có trong mục Khám phá của bạn. Đề xuất sẽ được xem xét trước khi hiển thị, nên hiện chưa ai khác thấy được.`,
-              `${c.name} はあなたの探索に表示されます。公開前に審査があるため、まだ他の人には見えません。`,
+              `${c.name} is on your Explore now. Only you can see it for the moment — we will open it up to everyone shortly.`,
+              `${c.name} đã có trong mục Khám phá của bạn. Hiện chỉ mình bạn thấy — chúng tôi sẽ mở cho mọi người sớm thôi.`,
+              `${c.name} はあなたの探索に追加されました。今はあなただけに表示され、まもなく全員に公開されます。`,
             ),
           );
           return;

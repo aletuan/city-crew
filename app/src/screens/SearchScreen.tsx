@@ -132,9 +132,9 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         'Google マップで探します — 正しいものをお選びください',
       )}
       note={t(
-        'Suggestions are reviewed before they go live',
-        'Đề xuất sẽ được xem xét trước khi hiển thị',
-        '提案は公開前に審査されます',
+        'Yours shows up on your Explore straight away',
+        'Chỗ bạn thêm sẽ có ngay trong Khám phá của bạn',
+        '追加したスポットはすぐにあなたの探索に表示されます',
       )}
     />
   );

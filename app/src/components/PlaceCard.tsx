@@ -81,12 +81,19 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
           {/* Only its submitter can see this card at all, so the marker is
               not a warning — it is the answer to "why can nobody else see
               the place I added". Without it the card looks live, they show
-              a friend, the friend sees nothing, and the app reads as broken
-              rather than as pending.
+              a friend, the friend sees nothing, and the app reads as broken.
 
-              Waiting and turned down are separate words on purpose: one is
-              *wait*, the other is *no*, and a person owed the second should
-              not be left expecting the first. */}
+              It says what is true of the card rather than what is being
+              done about it. "Awaiting review" was a worse label twice
+              over: it made a contribution sound like a submission at a
+              counter, and it was not even accurate — a place can be
+              approved and still not published, and that card said the desk
+              had not looked at it when the desk had.
+
+              Turned down keeps its own words. One is *wait*, the other is
+              *no*, and a person owed the second should not be left
+              expecting the first — which is exactly what would happen if
+              this softening reached across to cover it. */}
           {!isLive(place) && (
             <View style={[s.statusRow, isFlagged(place) && s.statusRowBad]}>
               <Ionicons
@@ -97,7 +104,7 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
               <Text style={[s.statusText, isFlagged(place) && s.statusTextBad]} numberOfLines={1}>
                 {isFlagged(place)
                   ? t('Not accepted', 'Không được duyệt', '不採用')
-                  : t('Awaiting review', 'Đang chờ duyệt', '審査待ち')}
+                  : t('Only you can see this', 'Chỉ mình bạn thấy', 'あなただけに表示中')}
               </Text>
             </View>
           )}
