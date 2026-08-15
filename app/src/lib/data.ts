@@ -47,8 +47,12 @@ function useFetch<T>(fetcher: () => Promise<T>, empty: T): Fetch<T> {
   return { ...state, reload: load };
 }
 
+// `city_id` is selected, not just filtered on. A place that travels
+// outside the city query — inside a collection that reaches more than one
+// city — has to be able to say where it is, and a row that only ever
+// matched a `where` clause cannot. See `touchesCity`.
 const PLACE_COLS = (withCategories: boolean) =>
-  `slug, name_en, name_vi, name_ja, category${withCategories ? ', categories' : ''}, is_published, review_status, submitted_by, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, neighborhood_ja, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, desc_ja, emoji, opening_hours, website, phone, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)`;
+  `slug, city_id, name_en, name_vi, name_ja, category${withCategories ? ', categories' : ''}, is_published, review_status, submitted_by, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, neighborhood_ja, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, desc_ja, emoji, opening_hours, website, phone, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)`;
 
 /**
  * The catalog for a city, plus whatever the reader suggested themselves.
@@ -101,15 +105,61 @@ async function fetchPlaces(cityId: string, meId?: string | null): Promise<Place[
 const PLACE_COLS_LEGACY = PLACE_COLS(true)
   .replace(', is_published, review_status, submitted_by', '');
 
+/**
+ * One place, by slug, whatever city it is in.
+ *
+ * The catalog is a city's worth of places, and the place page reads from
+ * it — which was fine while nothing could show you a place from
+ * elsewhere. Collections now can, in both directions: your own lists
+ * have always been able to hold one, and a public list reaches every city
+ * it has a place in. Tapping such a card found nothing in the catalog and
+ * said "Place not found" over a place that exists.
+ *
+ * So the page asks. Only when the catalog missed, which is the uncommon
+ * case, and RLS decides the answer exactly as it does for the catalog —
+ * an unapproved place still comes back to nobody but the person who
+ * suggested it.
+ */
+async function fetchPlaceBySlug(slug: string): Promise<Place | null> {
+  const { data, error } = await supabase
+    .from('places')
+    .select(PLACE_COLS(true))
+    .eq('slug', slug)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data ?? null) as unknown as Place | null;
+}
+
+/**
+ * A public list and everything in it.
+ *
+ * Whole place rows rather than slugs, and no city in the query — the two
+ * halves of the same decision. A collection is stamped with the city it
+ * was made in, but its contents are not bound by that stamp: a list made
+ * in Hanoi can hold a place in Saigon, and until now that place was
+ * silently dropped for everyone. `our-culture-uerras` is the live case:
+ * two members, one in each city. Its owner saw both, a Hanoi reader saw
+ * one and was told nothing, a Saigon reader saw no list at all.
+ *
+ * So the city stops deciding what a list contains and only decides
+ * whether it appears — which it does in every city it has a place in.
+ * That question is asked in `touchesCity`, over these embedded rows.
+ *
+ * It costs more than the slug embed did: every public list arrives with
+ * its places and their photos, rather than one city's worth of ids. At
+ * this catalog's size that is a handful of lists. If it stops being one,
+ * the lever is a narrower column set for embedded members — the shelf
+ * needs a name, a photo and a vibe, not opening hours — not a return to
+ * truncating by city.
+ */
 const COLLECTION_COLS = (withOwner: boolean) =>
-  `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(slug)), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
+  `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(${withOwner ? PLACE_COLS(true) : 'slug'})), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
 
 async function fetchCollections(cityId: string, meId?: string | null): Promise<Collection[]> {
   const run = (withOwner: boolean) => {
     const q = supabase
       .from('collections')
       .select(COLLECTION_COLS(withOwner))
-      .eq('city_id', cityId)
       .eq('is_public', true);
     // Editorial rows and other people's published ones. Your own are
     // excluded whether they are published or not, because they come back
@@ -123,8 +173,10 @@ async function fetchCollections(cityId: string, meId?: string | null): Promise<C
     // matches nothing.
     // `owner_id` and `created_at` arrived in the same migration, so the
     // fallback below cannot mention either — it exists precisely for a
-    // database that has neither.
-    if (!withOwner) return q.order('sort_order');
+    // database that has neither. It keeps the city filter too: a database
+    // that old has no owned lists, so every row in it is editorial and
+    // stamped with the city it belongs to.
+    if (!withOwner) return q.eq('city_id', cityId).order('sort_order');
     const scoped = meId ? q.or(`owner_id.is.null,owner_id.neq.${meId}`) : q;
     // Newest first, with the desk's sequence as the tie-break.
     //
@@ -142,25 +194,55 @@ async function fetchCollections(cityId: string, meId?: string | null): Promise<C
     return scoped.order('created_at', { ascending: false }).order('sort_order', { nullsFirst: false });
   };
 
-  let { data, error } = await run(true);
+  const { data, error } = await run(true);
   // A build can reach a database that has not run the user-collections
   // migration yet. Drop the column and retry rather than breaking the tab —
   // every row there is editorial until the migration lands anyway.
-  if (error && error.message.includes('owner_id')) ({ data, error } = await run(false));
+  if (error && error.message.includes('owner_id')) {
+    const legacy = await run(false);
+    if (legacy.error) throw new Error(legacy.error.message);
+    // Slug embeds on that path, so these rows carry no members and
+    // `membersOf` resolves them against the catalog, as it always did.
+    return (legacy.data ?? []) as unknown as Collection[];
+  }
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as Collection[];
+  return withMembers(data);
+}
+
+/**
+ * A row whose places arrived embedded, put into the shape the app reads.
+ *
+ * `members` is what the screens render — in order, with the rows the
+ * database refused to hand over already gone. `collection_places` is kept
+ * beside it in the slug-only shape, so `holds()` and the counts never
+ * have to know which query produced the row.
+ */
+type EmbeddedRow = Omit<Collection, 'collection_places' | 'members'> & {
+  collection_places: { sort_order: number; places: Place | null }[];
+};
+
+function withMembers(data: unknown): Collection[] {
+  return ((data ?? []) as EmbeddedRow[]).map((row) => {
+    const cps = [...(row.collection_places ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+    return {
+      ...row,
+      members: cps.map((cp) => cp.places).filter((p): p is Place => !!p),
+      collection_places: cps.map((cp) => ({
+        sort_order: cp.sort_order,
+        places: cp.places ? { slug: cp.places.slug } : null,
+      })),
+    };
+  });
 }
 
 /**
  * Every list this user owns, with its places inside it.
  *
- * Two differences from the public query, both for the same reason. It is
- * not filtered by city, and it embeds whole place rows rather than slugs —
- * so a list made in Hanoi still counts, still shows a cover and still
- * opens, while the app is looking at Saigon.
- *
- * It costs more per row than the public query. It is also one person's own
- * lists rather than a city's catalog, so there are a handful of them.
+ * Not filtered by city and embedding whole place rows — so a list made in
+ * Hanoi still counts, still shows a cover and still opens while the app
+ * is looking at Saigon. The public query now does both of those too; the
+ * only difference left is which rows it asks for, and that your own show
+ * whether they are published or not.
  */
 const MY_COLLECTION_COLS =
   `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, cover:place_photos!collections_cover_photo_id_fkey(photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
@@ -173,23 +255,7 @@ async function fetchMyCollections(ownerId: string): Promise<Collection[]> {
     .eq('owner_id', ownerId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-
-  type Row = Omit<Collection, 'collection_places' | 'members'> & {
-    collection_places: { sort_order: number; places: Place | null }[];
-  };
-  return ((data ?? []) as unknown as Row[]).map((row) => {
-    const cps = [...(row.collection_places ?? [])].sort((a, b) => a.sort_order - b.sort_order);
-    return {
-      ...row,
-      members: cps.map((cp) => cp.places).filter((p): p is Place => !!p),
-      // Kept in the shape the rest of the app reads, so `holds()` and the
-      // counts do not have to know which query produced the row.
-      collection_places: cps.map((cp) => ({
-        sort_order: cp.sort_order,
-        places: cp.places ? { slug: cp.places.slug } : null,
-      })),
-    };
-  });
+  return withMembers(data);
 }
 
 // Both catalogs scope to the selected city TOGETHER: membersOf() resolves
@@ -218,6 +284,19 @@ export const useCollectionsQuery = (meId?: string | null) => {
     [city?.id, meId],
   );
   return useFetch(fetcher, [] as Collection[]);
+};
+
+/**
+ * A single place the catalog does not hold. Pass null when it does — the
+ * hook then resolves empty without a request, so the caller can ask for
+ * the fallback unconditionally the way hooks require.
+ */
+export const usePlaceBySlug = (slug: string | null) => {
+  const fetcher = useCallback(
+    () => (slug ? fetchPlaceBySlug(slug) : Promise.resolve(null)),
+    [slug],
+  );
+  return useFetch(fetcher, null as Place | null);
 };
 
 /**

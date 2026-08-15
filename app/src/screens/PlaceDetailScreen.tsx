@@ -10,7 +10,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { fmtCount, photosOf, Place } from '../lib/data';
+import { fmtCount, photosOf, Place, usePlaceBySlug } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
 import { dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
@@ -57,8 +57,18 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const { t, lang } = useI18n();
   const { save, isSaved } = useSave();
   const { width } = useWindowDimensions();
-  const { loading, data: places } = usePlaces();
-  const place = useMemo(() => places.find((p) => p.slug === route.params.slug), [places, route.params.slug]);
+  const { loading: catalogLoading, data: places } = usePlaces();
+  const inCatalog = useMemo(
+    () => places.find((p) => p.slug === route.params.slug),
+    [places, route.params.slug],
+  );
+  // A place reached through a collection can be in another city, and the
+  // catalog is one city's worth. Asked for only when the catalog missed,
+  // and only once the catalog has actually settled — asking while it is
+  // still loading would fire a request for every place you open.
+  const elsewhere = usePlaceBySlug(!catalogLoading && !inCatalog ? route.params.slug : null);
+  const place = inCatalog ?? elsewhere.data ?? undefined;
+  const loading = catalogLoading || elsewhere.loading;
   const [photoIndex, setPhotoIndex] = useState(0);
   const saved = isSaved(route.params.slug);
   const tabClearance = useTabBarClearance();

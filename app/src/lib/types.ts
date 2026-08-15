@@ -20,6 +20,12 @@ export type Place = {
   name_en: string;
   name_vi: string;
   name_ja: string | null;
+  /** Which city this is in. Long a filter and nothing else — a place only
+   *  ever arrived through its own city's query, so it never had to say.
+   *  Collections reach across cities now, so a place travelling inside one
+   *  does. Optional because a legacy query path still omits it; read it
+   *  through `touchesCity`. */
+  city_id?: string | null;
   /** Legacy coarse axis, superseded by `categories`; still written by the
    *  import pipeline and used by the dashboard. */
   category: 'food' | 'out';

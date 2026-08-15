@@ -16,7 +16,7 @@ import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, Ro
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { useSky } from '../lib/sky';
-import { Collection, coverOf, membersOf, Place } from '../lib/data';
+import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { Lang, useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
@@ -195,12 +195,14 @@ function Hero({ place, onExplore, scrollY }: {
 
 function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
+  const { city } = useCity();
   const cols = useCollections();
   const { data: places, loading: placesLoading } = usePlaces();
   const loading = cols.loading || placesLoading;
-  // Only collections with at least one visible member — an empty
-  // collection is a dead end for a browsing guest.
-  const visible = cols.data.filter((c) => membersOf(c, places).length > 0);
+  // Only collections with at least one visible member in this city — an
+  // empty collection is a dead end for a browsing guest, and one whose
+  // places are all somewhere else is a shelf entry for a different trip.
+  const visible = cols.data.filter((c) => touchesCity(membersOf(c, places), city?.id));
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);

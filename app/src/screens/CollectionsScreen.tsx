@@ -14,7 +14,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, Empty, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { Collection, coverOf, deleteCollection, membersOf } from '../lib/data';
+import { useCity } from '../lib/city';
+import { Collection, coverOf, deleteCollection, membersOf, touchesCity } from '../lib/data';
 import { atHandle } from '../lib/handle';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useSave } from '../lib/save';
@@ -305,6 +306,7 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
 export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { session } = useAuth();
+  const { city } = useCity();
   const cols = useCollections();
   // Shared with the save sheet — see SaveProvider. Reading it here through
   // its own hook is what let the two disagree.
@@ -325,10 +327,11 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
     mine.reload();
   }, [mine.reload]));
 
-  // An editorial collection with no visible members is a dead end, so it
-  // stays hidden. Your own is not: you just made it, and it is empty
-  // because it is new.
-  const visible = cols.data.filter((c) => membersOf(c, places).length > 0);
+  // A public collection with nothing in this city is somebody else's trip,
+  // and one with nothing at all is a dead end, so both stay hidden. Your
+  // own are neither: an empty one is new, and one made in another city is
+  // still yours — `mine` is filtered by neither test.
+  const visible = cols.data.filter((c) => touchesCity(membersOf(c, places), city?.id));
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);

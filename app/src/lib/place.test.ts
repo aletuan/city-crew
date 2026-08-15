@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  coverOf, fmtCount, holds, isFree, membersOf, photosOf, priceLabel, slugify,
+  coverOf, fmtCount, holds, isFree, membersOf, photosOf, priceLabel, slugify, touchesCity,
 } from './place';
 import type { Collection, Place, PlacePhoto } from './types';
 
@@ -172,5 +172,52 @@ describe('membersOf', () => {
       collection_places: [{ sort_order: 0, places: { slug: 'a' } }],
     });
     expect(membersOf(c, [place({ slug: 'a' })])).toEqual([]);
+  });
+});
+
+describe('touchesCity', () => {
+  const hanoi = place({ slug: 'h', city_id: 'hanoi' });
+  const saigon = place({ slug: 's', city_id: 'hcmc' });
+
+  it('shows a list in the city its places are in', () => {
+    expect(touchesCity([hanoi], 'hanoi')).toBe(true);
+  });
+
+  it('hides one whose places are all somewhere else', () => {
+    expect(touchesCity([saigon], 'hanoi')).toBe(false);
+  });
+
+  // The whole point. Before this, a list stamped Hanoi with a place in
+  // Saigon was invisible in Saigon and one member short in Hanoi.
+  it('shows a list in every city it reaches', () => {
+    const mixed = [hanoi, saigon];
+    expect(touchesCity(mixed, 'hanoi')).toBe(true);
+    expect(touchesCity(mixed, 'hcmc')).toBe(true);
+  });
+
+  // One place is enough — no proportion, no majority. A member is a
+  // reason to appear, and the alternative is a list disappearing from a
+  // city it demonstrably has something in.
+  it('needs one member, not a share of them', () => {
+    expect(touchesCity([hanoi, hanoi, hanoi, saigon], 'hcmc')).toBe(true);
+  });
+
+  it('hides an empty list from every city', () => {
+    expect(touchesCity([], 'hanoi')).toBe(false);
+    expect(touchesCity([], null)).toBe(false);
+  });
+
+  // During city bootstrap. Answering "no" here would empty the shelf for
+  // a frame; answering the older question keeps it exactly as it was.
+  it('falls back to "has anything at all" before a city is chosen', () => {
+    expect(touchesCity([saigon], undefined)).toBe(true);
+  });
+
+  // A row fetched by a build that did not ask for `city_id` matches
+  // nothing rather than everything. Silent absence beats silent
+  // wrongness, and PLACE_COLS asks for the column precisely so this case
+  // stays theoretical.
+  it('does not match a member with no city on it', () => {
+    expect(touchesCity([place({ slug: 'x' })], 'hanoi')).toBe(false);
   });
 });
