@@ -111,6 +111,30 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .cityselect:hover { background-color: var(--surface-glass-strong); border-color: var(--border-glass); }
 .topbar .spacer { flex: 1; }
 
+/* Notice — the desk telling the editor about a hole in the data, above the
+   list the hole is in. One kind only for now (nothing filed yet); it is
+   deliberately quieter than the publish button, because it reports a state
+   rather than offering a bulk write.
+
+   Amber at 8% over the app background, measured rather than picked: the
+   warn colour reads 8.84:1 on it and the body text 9.59:1, so the tint is
+   a tint and not a contrast problem. The left rule is what makes it a
+   notice at a glance instead of another panel. */
+.notice {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 16px; padding: 10px 14px;
+  border-radius: var(--radius-input);
+  background: rgba(246, 164, 92, 0.08);
+  border: 1px solid rgba(246, 164, 92, 0.22);
+  border-left: 3px solid var(--warn);
+}
+.notice svg { flex-shrink: 0; }
+.noticetext { color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
+.noticetext b { color: var(--warn); font-weight: 700; }
+/* Pushed to the far edge so it reads as the answer to the sentence, and
+   never shrinks below its own label. */
+.noticebtn { margin-left: auto; font-size: 12px; padding: 6px 12px; }
+
 /* page head — every route gets the same anchor point: a title where the
    list has one, the approval rail wherever there's data to measure. */
 .pagehead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 0 0 18px; }

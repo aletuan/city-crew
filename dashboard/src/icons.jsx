@@ -67,6 +67,15 @@ const PATHS = {
       <path d="M10.3 10.3 14 14" />
     </>
   ),
+  // Notice mark. A triangle rather than a circle: the desk's one warning
+  // colour is already the amber in the gradient, so the shape has to carry
+  // the difference between "here is a fact" and "here is a gap".
+  alert: (
+    <>
+      <path d="M8 2.4 14.4 13.2H1.6z" />
+      <path d="M8 6.4v3.1M8 11.4v.1" />
+    </>
+  ),
 };
 
 export function CategoryIcon({ name, color = 'currentColor' }) {
