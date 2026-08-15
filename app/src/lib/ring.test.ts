@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arcSweep, mixHex, sampleSweep, type Stop } from './ring';
+import { arcSweep, MIN_ARC, mixHex, sampleSweep, visibleSweep, type Stop } from './ring';
 
 // The ring's own ramp, so the tests are about the colours that ship
 // rather than about toy inputs.
@@ -126,5 +126,38 @@ describe('arcSweep', () => {
     const segs = arcSweep(0.002, 6);
     expect(segs).toHaveLength(1);
     expect(segs[0].t).toBe(0.5);
+  });
+});
+
+describe('visibleSweep', () => {
+  // The failure this exists to catch: a brand new profile drawing a bare
+  // track and reading as broken rather than as new.
+  it('draws something at nothing', () => {
+    const segs = visibleSweep(0);
+    expect(segs.length).toBeGreaterThan(0);
+    expect(segs[segs.length - 1].a1).toBeCloseTo(MIN_ARC * 360, 9);
+  });
+
+  it('draws something for an account somehow below nothing', () => {
+    expect(visibleSweep(-1).length).toBeGreaterThan(0);
+  });
+
+  it('leaves a real reading alone', () => {
+    // 20% is the first step `PER_LEVEL` can produce, and it has to come
+    // through untouched or the floor would be rewriting the truth.
+    expect(visibleSweep(0.2)).toEqual(arcSweep(0.2));
+    expect(visibleSweep(0.999)).toEqual(arcSweep(0.999));
+  });
+
+  it('keeps the stub well clear of the first real step', () => {
+    // If the floor ever crept up to 20% it would silently claim a save
+    // that had not happened.
+    expect(MIN_ARC).toBeLessThan(0.2 / 2);
+  });
+
+  it('spends the whole ramp on the stub too', () => {
+    const segs = visibleSweep(0);
+    expect(segs[0].t).toBeLessThan(0.3);
+    expect(segs[segs.length - 1].t).toBeGreaterThan(0.7);
   });
 });

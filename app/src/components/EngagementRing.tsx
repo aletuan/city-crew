@@ -24,7 +24,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, font, gradAI, ringSweep, ringTrack } from '../theme';
-import { arcSweep, sampleSweep } from '../lib/ring';
+import { sampleSweep, visibleSweep } from '../lib/ring';
 import { useScheme } from '../lib/theme';
 
 // The arithmetic lives in `lib/level.ts`, which imports nothing, so the
@@ -66,7 +66,9 @@ export default function EngagementRing({ size, level, progress, children }: {
       <Svg width={box} height={box} style={StyleSheet.absoluteFill}>
         {/* The headroom, drawn whole and then covered by the arc. */}
         <Circle cx={c} cy={c} r={r} stroke={track} strokeWidth={STROKE} fill="none" />
-        {arcSweep(pct).map((seg) => {
+        {/* Floored, so a new account gets a ring rather than a bare
+            track — see `MIN_ARC`. */}
+        {visibleSweep(pct).map((seg) => {
           const [x0, y0] = at(seg.a0);
           const [x1, y1] = at(seg.a1);
           return (
