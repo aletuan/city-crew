@@ -93,11 +93,20 @@ async function fetchCollections(cityId: string, meId?: string | null): Promise<C
     // database that has neither.
     if (!withOwner) return q.order('sort_order');
     const scoped = meId ? q.or(`owner_id.is.null,owner_id.neq.${meId}`) : q;
-    // Editorial rows carry a sort_order and owned ones do not, so the
-    // desk's sequence holds and published lists fall in behind it,
-    // newest first among themselves rather than in whatever order the
-    // planner felt like.
-    return scoped.order('sort_order', { nullsFirst: false }).order('created_at', { ascending: false });
+    // Newest first, with the desk's sequence as the tie-break.
+    //
+    // Time leads because a list published this morning is the reason to
+    // open the tab, and it used to arrive last: `sort_order` came first
+    // and owned rows have none, so every published list sank beneath
+    // fifteen editorial ones.
+    //
+    // `sort_order` second is not a hedge. Every editorial row shares one
+    // timestamp — the instant `created_at` was added with a default, not
+    // a date anybody chose — so ordering them by time is ordering them by
+    // nothing, and Postgres is free to return that nothing differently
+    // each call. The tie-break decides exactly the rows where the clock
+    // has no answer, and the desk's order is the answer it has.
+    return scoped.order('created_at', { ascending: false }).order('sort_order', { nullsFirst: false });
   };
 
   let { data, error } = await run(true);
