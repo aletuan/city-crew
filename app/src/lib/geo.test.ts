@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distanceKm, nearestTo } from './geo';
+import { distanceKm, fmtDistance, nearestTo } from './geo';
 
 // The three the app ships with, at the coordinates the cities table
 // holds. Using the real numbers is the point: a formula that passes on
@@ -83,5 +83,49 @@ describe('nearestTo', () => {
     const b = { id: 'b', center_lat: 10, center_lng: 10 };
     expect(nearestTo([a, b], 0, 0)?.id).toBe('a');
     expect(nearestTo([b, a], 0, 0)?.id).toBe('b');
+  });
+});
+
+describe('fmtDistance', () => {
+  it('uses metres while you could walk it', () => {
+    expect(fmtDistance(0.4)).toBe('400 m');
+    expect(fmtDistance(0.85)).toBe('850 m');
+  });
+
+  // A search result's coordinate is a pin on a building, not a doorway.
+  // "847 m" claims a precision neither the data nor the reader has.
+  it('rounds metres to the nearest fifty', () => {
+    expect(fmtDistance(0.847)).toBe('850 m');
+    expect(fmtDistance(0.822)).toBe('800 m');
+  });
+
+  // Never "0 m" — a place is somewhere even when the arithmetic rounds
+  // to nothing, and a zero reads as a missing value rather than a near one.
+  it('never rounds all the way down to nothing', () => {
+    expect(fmtDistance(0.004)).toBe('50 m');
+    expect(fmtDistance(0)).toBe('50 m');
+  });
+
+  it('keeps one decimal in the range you would ride', () => {
+    expect(fmtDistance(1.24)).toBe('1.2 km');
+    expect(fmtDistance(9.96)).toBe('10 km');
+  });
+
+  it('drops the decimal once it has stopped meaning anything', () => {
+    expect(fmtDistance(12.4)).toBe('12 km');
+    expect(fmtDistance(140.6)).toBe('141 km');
+  });
+
+  // The three "So Coffee" results this was written for. What matters is
+  // not any single figure but that the three read as clearly different.
+  it('separates three shops of the same name', () => {
+    const shown = [1.24, 4.51, 2.08].map(fmtDistance);
+    expect(shown).toEqual(['1.2 km', '4.5 km', '2.1 km']);
+    expect(new Set(shown).size).toBe(3);
+  });
+
+  it('says nothing rather than something wrong', () => {
+    expect(fmtDistance(NaN)).toBe('');
+    expect(fmtDistance(-1)).toBe('');
   });
 });
