@@ -627,14 +627,25 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .shell { padding: 16px 12px 150px; }
 
   /* One row, never two. Sorting the bar left one action and one menu,
-     which fits — and the label on that action is the only part that does
-     not, so it goes and the ＋ stays. The glyph was always the meaning of
-     the button; the words were what wrapped the row. */
+     which fits — and the label rides along with it.
+
+     It used to be hidden here, on the grounds that it was what wrapped the
+     row. Measured, that was the wrong culprit: the city pill was
+     `flex-shrink: 0`, so it held 170px whatever the window did and the
+     label had nowhere to go. Letting the pill give way, the label fits at
+     every phone width down to 320 with nothing over the edge — and the bar
+     stopped overflowing by 15px at 320, which it was doing with the label
+     already hidden. A lone ＋ is a guess; ＋ Add place is not. */
   .topbar-inner { flex-wrap: nowrap; gap: 8px 10px; padding: 12px; }
   .topbar h1 { display: none; }
-  .addbtn .btnlabel { display: none; }
-  /* Let the city name shrink rather than push the actions off the edge. */
-  .cityselect { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  /* The one control here that can lose its last few characters and still
+     be read — "Ho Chi Min…" is a city, "Ho …" is not, which is what the
+     floor below is protecting. The tighter padding buys back the points
+     the chevron was reserving. */
+  .cityselect {
+    flex: 0 1 auto; min-width: 110px; overflow: hidden; text-overflow: ellipsis;
+    padding: 6px 26px 6px 12px; background-position: right 10px center;
+  }
   .pagehead { flex-wrap: wrap; margin-bottom: 14px; }
   .pagetitle { font-size: 19px; }
   .rail { min-width: 0; flex: 1 1 100%; }
@@ -672,4 +683,12 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .kbd-hint { display: none; }
 
   .addsearch { flex-direction: column; }
+}
+
+/* ── the narrowest phones (≈2016 hardware) ──
+   "Add place" and a readable city name cannot both have their full width
+   here. The verb is the half that carries the meaning, so "place" is what
+   goes — the button keeps a word rather than reverting to a bare glyph. */
+@media (max-width: 380px) {
+  .btnlabel-more { display: none; }
 }
