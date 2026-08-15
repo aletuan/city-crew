@@ -49,19 +49,22 @@ function ExploreSuggestRow({ onPress }: { onPress: () => void }) {
   return (
     <AddSlot
       onPress={onPress}
-      title={t('Know a spot we are missing?', 'Biết chỗ nào chúng tôi còn thiếu?', '載っていないスポットをご存じですか？')}
-      subtitle={t('Search for it — we fetch the rest', 'Tìm tên quán — phần còn lại chúng tôi lo', '名前で検索 — 残りはこちらで取得します')}
+      // "Thêm địa điểm mới", not "Biết chỗ nào chúng tôi còn thiếu?".
+      // The question was 32 characters into a line that holds about 22
+      // beside a 52pt circle and a chevron, so it arrived clipped —
+      // "Biết chỗ nào chúng tôi còn thi…" — which is worse than blunt.
+      //
+      // `mới` is carrying real weight: a collection has its own "Thêm
+      // địa điểm", and that one adds a place the catalog already has.
+      // This one is for a place nobody has put there yet.
+      title={t('Add a new place', 'Thêm địa điểm mới', '新しいスポットを追加')}
+      subtitle={t('Type the name, we fetch the rest', 'Gõ tên quán, chúng tôi lo phần còn lại', '名前を入力 — 残りはこちらで取得します')}
       // What you get, not what you must pass. The line here used to
       // announce that suggestions are reviewed — a gate, described to
       // someone who has not even decided to walk through it yet. The
       // review has not gone anywhere; it is simply not the first thing
-      // worth saying to a person being invited to contribute. What is
-      // worth saying is that the place is theirs immediately.
-      note={t(
-        'Yours shows up on your Explore straight away',
-        'Chỗ bạn thêm sẽ có ngay trong Khám phá của bạn',
-        '追加したスポットはすぐにあなたの探索に表示されます',
-      )}
+      // worth saying to a person being invited to contribute.
+      note={t('It shows up for you right away', 'Thêm xong là bạn thấy ngay', '追加後すぐ表示されます')}
     />
   );
 }
@@ -128,10 +131,10 @@ function ScrollNudge({ top, visible, onSearch, onAdd }: {
         <Ionicons name="search" size={18} color={colors.textSecondary} />
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={s.nudgeTitle} numberOfLines={1}>
-            {t('Looking for something?', 'Đang tìm chỗ nào cụ thể?', 'お探しのものがありますか？')}
+            {t('Not finding it?', 'Chưa thấy chỗ cần tìm?', '見つかりませんか？')}
           </Text>
           <Text style={s.nudgeSub} numberOfLines={1}>
-            {t('Search it, or add your own', 'Tìm nhanh, hoặc tự thêm', '検索、または自分で追加')}
+            {t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加')}
           </Text>
         </View>
         <AddPill compact label={t('Add', 'Thêm', '追加')} onPress={onAdd} />
