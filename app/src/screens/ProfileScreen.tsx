@@ -64,6 +64,50 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
   );
 }
 
+/**
+ * A setting and what it is currently set to.
+ *
+ * Not `FeatureRow`, though it was for a while and the difference is
+ * what the second line holds. Under a feature it is a sentence —
+ * "Sign in to save your favorite places" — and a sentence needs a
+ * heading above it, which is why that row's title is the loud half.
+ * Under a setting it is a *value*, and a value does not want a heading,
+ * it wants to sit next to the thing it is the value of.
+ *
+ * So it moves to the right, by the chevron, the way every settings row
+ * on the platform puts it — and the label drops to regular weight,
+ * because nothing on iOS's own Settings screen is semibold either. What
+ * made the label shout was never a decision about settings; it was
+ * inherited from a card built to sell features to a signed-out visitor.
+ *
+ * The point of the move is not only the weight. Stacked under About me,
+ * two cards of round-icon-plus-two-lines were reading as one kind of
+ * thing with its typography flipped at random: quiet label over loud
+ * value in the first, loud label over quiet value in the second. Putting
+ * the value on the right makes them plainly two different rows, and the
+ * question of which hierarchy is "right" stops being asked.
+ */
+function SettingRow({ icon, label, value, onPress, last }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
+  return (
+    <PressableScale scaleTo={0.98} style={[s.featureRow, !last && s.featureRowDivider]} onPress={onPress}>
+      <RoundIcon name={icon} />
+      <Text style={s.settingLabel} numberOfLines={1}>{label}</Text>
+      {/* The value takes what is left and truncates rather than wrapping:
+          "Hà Nội · theo vị trí của bạn" is long, and a settings row that
+          grows a second line for one city and not another makes the card
+          look uneven for a reason nobody can see. */}
+      <Text style={s.settingValue} numberOfLines={1}>{value}</Text>
+      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+    </PressableScale>
+  );
+}
+
 /** Workspace settings, for guests and members alike: which city's
  *  catalog the app shows and which language it speaks. The header
  *  carries no switchers — this card is the one place to change both. */
@@ -78,25 +122,25 @@ function SettingsCard() {
   return (
     <>
       <Card style={s.featureCard}>
-        <FeatureRow
+        <SettingRow
           icon="location-outline"
-          title={t('City', 'Thành phố', '都市')}
-          sub={
+          label={t('City', 'Thành phố', '都市')}
+          value={
             (city ? t(city.short_en, city.short_vi, city.short_ja) : '…')
             + (mode === 'auto' ? t(' · from your location', ' · theo vị trí của bạn', ' · 現在地から') : '')
           }
           onPress={() => setOpen(true)}
         />
-        <FeatureRow
+        <SettingRow
           icon="language-outline"
-          title={t('Language', 'Ngôn ngữ', '言語')}
-          sub={langLabel ?? 'English'}
+          label={t('Language', 'Ngôn ngữ', '言語')}
+          value={langLabel ?? 'English'}
           onPress={() => setLangOpen(true)}
         />
-        <FeatureRow
+        <SettingRow
           icon={scheme === 'light' ? 'sunny-outline' : 'moon-outline'}
-          title={t('Appearance', 'Giao diện', '外観')}
-          sub={schemeLabel(scheme, t)}
+          label={t('Appearance', 'Giao diện', '外観')}
+          value={schemeLabel(scheme, t)}
           onPress={() => setThemeOpen(true)}
           last
         />
@@ -374,6 +418,14 @@ const s = StyleSheet.create({
     backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
   featureTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
+  // Regular, not semibold: a settings label names a row, it does not head
+  // a paragraph. The value takes the rest of the line and is pushed right
+  // by its own flex rather than by a spacer view.
+  settingLabel: { color: colors.text, fontSize: 16, fontWeight: font.regular },
+  settingValue: {
+    flex: 1, marginLeft: 10, textAlign: 'right',
+    color: colors.textTertiary, fontSize: 15, fontWeight: font.regular,
+  },
   featureSub: { color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, lineHeight: 19 },
 
   friendsCard: {
