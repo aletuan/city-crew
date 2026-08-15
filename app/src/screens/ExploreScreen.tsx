@@ -251,9 +251,16 @@ function Hero({ place, onExplore, scrollY }: {
           <PressableScale onPress={onExplore} accessibilityRole="button" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
             <LinearGradient {...gradAI} style={s.heroCta}>
               <Text style={s.heroCtaText}>
+                {/* Two words at most, and the arrow beside them already
+                    says "start". "Bắt đầu khám phá" spent half its width
+                    on the verb the button is; the Japanese was doing the
+                    same with 探索を始める. Kept in step with the copy of
+                    this default in the desk's City hero screen — the two
+                    codebases share no module, so the only thing holding
+                    them together is that each says so. */}
                 {city?.hero_cta_en
                   ? t(city.hero_cta_en, city.hero_cta_vi, city.hero_cta_ja)
-                  : t('Start exploring', 'Bắt đầu khám phá', '探索を始める')}
+                  : t("Let's go", 'Khám phá', 'はじめる')}
               </Text>
               <Ionicons name="arrow-forward" size={17} color={colors.accentInk} />
             </LinearGradient>

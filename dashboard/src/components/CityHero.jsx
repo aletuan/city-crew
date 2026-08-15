@@ -22,7 +22,10 @@ const defaultTitle = (city, lang) => {
   if (lang === 'ja') return `${city?.short_ja ?? city?.short_en ?? 'この街'}、夜のアイデア`;
   return `Ideas for a night in ${city?.short_en ?? 'the city'}`;
 };
-const DEFAULT_CTA = { en: 'Start exploring', vi: 'Bắt đầu khám phá', ja: '探索を始める' };
+/** The app's built-in button label, mirrored — the two codebases share no
+ *  module, so the only thing keeping this honest is that both sides say
+ *  where the other one is. See ExploreScreen's hero CTA. */
+const DEFAULT_CTA = { en: "Let's go", vi: 'Khám phá', ja: 'はじめる' };
 /** Cleared, the app falls back to this — the line it used to show in
  *  every city. Shown as the placeholder so an empty field reads as
  *  "this is what they will see", not as "this will be blank". */
