@@ -9,7 +9,6 @@ import { StatusBar } from 'expo-status-bar';
 import {
   SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold, useFonts,
 } from '@expo-google-fonts/space-grotesk';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from './src/lib/auth';
 import { CityProvider } from './src/lib/city';
@@ -18,7 +17,7 @@ import { ThemeProvider, useScheme } from './src/lib/theme';
 import { CatalogProvider } from './src/lib/catalog';
 import { SaveProvider } from './src/lib/save';
 import { colors, font } from './src/theme';
-import { fireHaptic, TAB_BAR_HEIGHT } from './src/components/ui';
+import { fireHaptic, GlassMaterial, TAB_BAR_HEIGHT } from './src/components/ui';
 import { navRef, type RootStackParamList } from './src/nav';
 import ExploreScreen from './src/screens/ExploreScreen';
 import SearchScreen from './src/screens/SearchScreen';
@@ -90,20 +89,6 @@ const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionico
   Profile: ['person-outline', 'person'],
 };
 
-/** True translucent material: dark blur with a smoky overlay on top, so
- *  content scrolling beneath the floating bar reads through it. */
-function TabBarMaterial() {
-  // `tint` is a named material, not a colour, so it cannot be a dynamic
-  // pair — and the overlay on top of it has to match the material it is
-  // deepening, not merely invert.
-  const light = useScheme().scheme === 'light';
-  return (
-    <BlurView intensity={42} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
-      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.68)' : 'rgba(12,13,12,0.62)' }} />
-    </BlurView>
-  );
-}
-
 function Tabs() {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -141,7 +126,7 @@ function Tabs() {
           paddingTop: 6,
           paddingBottom: insets.bottom + 6,
         },
-        tabBarBackground: TabBarMaterial,
+        tabBarBackground: GlassMaterial,
         // React Navigation types these as `string`, so they cannot take a
         // dynamic pair — the scheme picks them instead. Same coral, same
         // gray, chosen here rather than resolved by UIKit.
