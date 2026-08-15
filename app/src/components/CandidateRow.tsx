@@ -14,37 +14,63 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AddIconButton } from './add';
 import { PressableScale } from './ui';
+import type { ItemState } from '../lib/candidates';
 import type { Candidate, Known } from '../lib/suggest';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 
-export default function CandidateRow({ c, known, busy, away, onAdd, onOpen }: {
+export default function CandidateRow({ c, known, busy, away, item, selected, onAdd, onToggle, onOpen }: {
   c: Candidate;
   known: Known;
   busy: boolean;
   /** How far from the reader, already formatted — or '' when there is no
    *  position to measure from, which is a state the row simply wears. */
   away: string;
-  onAdd: () => void;
+  /** Where this one is in a batch, when there is one running or finished.
+   *  Absent on the single-add path, which has no batch to be part of. */
+  item?: ItemState;
+  /** Ticked for a batch. Only meaningful with `onToggle`. */
+  selected?: boolean;
+  /** The single-shot ⊕. Given by Search, which adds one at a time. */
+  onAdd?: () => void;
+  /** Multi-select. Given by Add a place, where the whole row is the
+   *  target — a checkbox you have to hit exactly is a worse row than one
+   *  you can tap anywhere. */
+  onToggle?: () => void;
   onOpen: (slug: string) => void;
 }) {
   const { t } = useI18n();
   const live = known.state === 'live';
   const mine = known.state === 'mine';
+  // What the row says about itself while a batch is running, in place of
+  // the address — the reader is watching progress, not reading streets.
+  const status = item === 'running'
+    ? t('Fetching name, photos and hours…', 'Đang lấy tên, ảnh và giờ mở cửa…', '名前・写真・営業時間を取得中…')
+    : item === 'done'
+      ? t('Added — only you can see it', 'Đã thêm — chỉ mình bạn thấy', '追加済み — あなただけに表示')
+      : item === 'skipped'
+        ? t('Already here — skipped', 'Đã có sẵn — bỏ qua', 'すでにあります — スキップ')
+        : item === 'failed'
+          ? t('Could not add this one', 'Không thêm được chỗ này', '追加できませんでした')
+          : '';
 
-  return (
-    <View style={[s.row, live && s.rowLive]}>
-      <View style={[s.pin, live && s.pinLive]}>
-        <Ionicons
-          name={live || mine ? 'checkmark' : 'location-outline'}
-          size={18}
-          color={live ? colors.ok : mine ? colors.textSecondary : colors.accent}
-        />
+  const body = (
+    <View style={[s.row, live && s.rowLive, selected && s.rowOn]}>
+      <View style={[s.pin, live && s.pinLive, selected && s.pinOn, item === 'done' && s.pinDone]}>
+        {item === 'running' ? (
+          <ActivityIndicator size="small" color={colors.accent} />
+        ) : (
+          <Ionicons
+            name={live || mine || item === 'done' || selected ? 'checkmark' : 'location-outline'}
+            size={18}
+            color={item === 'done' || selected ? colors.accentInk : live ? colors.ok : mine ? colors.textSecondary : colors.accent}
+          />
+        )}
       </View>
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.name} numberOfLines={1}>{c.name}</Text>
-        <Text style={[s.sub, live && s.subLive]} numberOfLines={1}>
-          {live
+        <Text style={[s.sub, live && s.subLive, !!status && s.subStatus, item === 'failed' && s.subBad]} numberOfLines={1}>
+          {status || (live
             ? t('Already on cityCrew', 'Đã có trên cityCrew', 'すでに cityCrew にあります')
             : mine
               ? t('You added this — only you can see it', 'Bạn đã thêm — hiện chỉ mình bạn thấy', '追加済み — まだあなただけに表示')
@@ -57,7 +83,7 @@ export default function CandidateRow({ c, known, busy, away, onAdd, onOpen }: {
               // A distance is four characters, never cut, and is the
               // actual answer to which one you meant. Without a position
               // it falls back to the address alone, as it always was.
-              : away ? `${away} · ${c.address}` : c.address}
+              : away ? `${away} · ${c.address}` : c.address)}
         </Text>
       </View>
 
@@ -65,15 +91,35 @@ export default function CandidateRow({ c, known, busy, away, onAdd, onOpen }: {
         <PressableScale onPress={() => onOpen(known.slug)} scaleTo={0.94} style={s.viewBtn}>
           <Text style={s.viewText}>{t('View', 'Xem', '見る')}</Text>
         </PressableScale>
-      ) : mine ? null : busy ? (
+      ) : mine || item ? null : busy ? (
         <ActivityIndicator color={colors.accent} />
-      ) : (
+      ) : onToggle ? (
+        // Drawn, not pressed. The whole row is the target, so a second hit
+        // area inside it would give one action two of them and VoiceOver
+        // two stops.
+        <View style={[s.tick, selected && s.tickOn]}>
+          {selected ? <Ionicons name="checkmark" size={15} color={colors.accentInk} /> : null}
+        </View>
+      ) : onAdd ? (
         <AddIconButton
           onPress={onAdd}
           accessibilityLabel={t(`Add ${c.name}`, `Thêm ${c.name}`, `${c.name} を追加`)}
         />
-      )}
+      ) : null}
     </View>
+  );
+
+  if (!onToggle || live || mine || item) return body;
+  return (
+    <PressableScale
+      onPress={onToggle}
+      scaleTo={0.985}
+      haptic="selection"
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: !!selected }}
+    >
+      {body}
+    </PressableScale>
   );
 }
 
@@ -105,4 +151,16 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
   viewText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
+
+  rowOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
+  pinOn: { backgroundColor: colors.accent },
+  pinDone: { backgroundColor: colors.accent },
+  subStatus: { color: colors.textSecondary, fontWeight: font.medium },
+  subBad: { color: colors.bad },
+  tick: {
+    width: 26, height: 26, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: colors.borderGlass,
+  },
+  tickOn: { backgroundColor: colors.accent, borderColor: colors.accent },
 });
