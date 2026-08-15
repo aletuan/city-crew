@@ -39,11 +39,16 @@ const json = (body: unknown, status = 200) =>
 
 const MAX_API_CALLS = 20; // per request: 1 search or 1 details + ≤6 photo lookups
 
-// Suggestions per account per day. Generous against any real use — a
-// person who has found ten missing places in a day has been unusually
-// diligent — and small enough that the review queue cannot be buried by
-// one account. Editors are not counted; importing in bulk is their job.
-const DAILY_SUGGESTIONS = 10;
+// Suggestions per account per day, counted over a rolling 24 hours.
+//
+// Was 10, which multi-select made too small to be about abuse: picking
+// six results at a time means two ordinary sessions reach it, and the
+// person it stopped was the one filling in a city. The number that
+// matters is the one the review queue can absorb from a single account,
+// and twenty is still well inside that.
+//
+// Editors are not counted at all; importing in bulk is their job.
+const DAILY_SUGGESTIONS = 20;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
