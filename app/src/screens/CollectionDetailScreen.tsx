@@ -9,6 +9,7 @@ import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, BackButton, Empty, PressableScale, RoundIconButton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { deleteCollection, membersOf, publishBlockers, setCollectionPublic } from '../lib/data';
+import { atHandle } from '../lib/handle';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
@@ -311,7 +312,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 {owned && isPublic ? '·  ' : ''}
                 {members.length} {t('places', 'địa điểm', 'スポット')}
                 {owned && !isPublic ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
-                {col.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${col.curator_handle}` : ''}
+                {col.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${atHandle(col.curator_handle)}` : ''}
               </Text>
             </View>
           )}
