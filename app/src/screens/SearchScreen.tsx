@@ -5,19 +5,22 @@
 // instant, no extra queries, and it matches without diacritics so
 // "banh mi" finds "Bánh mì Huỳnh Hoa".
 
-import React, { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AddSlot } from '../components/add';
+import CandidateRow from '../components/CandidateRow';
 import {
   AmbientWarmth, BackButton, Card, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
 import { CATEGORIES, categoriesOf } from '../lib/categories';
 import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
 import { useCity } from '../lib/city';
+import { freshOnly, useCandidates } from '../lib/candidates';
+import type { Candidate } from '../lib/suggest';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
@@ -63,7 +66,8 @@ function matches(haystack: string, terms: string[]): boolean {
 type Row =
   | { kind: 'header'; key: string; label: string }
   | { kind: 'collection'; key: string; collection: Collection; count: number; cover?: string }
-  | { kind: 'place'; key: string; place: Place };
+  | { kind: 'place'; key: string; place: Place }
+  | { kind: 'candidate'; key: string; candidate: Candidate };
 
 export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -72,6 +76,24 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const { city } = useCity();
   const cols = useCollections();
   const tabClearance = useTabBarClearance();
+  const google = useCandidates();
+
+  // Cleared whenever the words change: a Google section answering the
+  // previous query, sitting under results for this one, would be the
+  // screen quietly lying about what it went and asked.
+  useEffect(() => { google.clear(); }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Only what the catalog has never heard of. Everything else in that list
+  // this screen has already shown, or deliberately not shown, above.
+  //
+  // Memoised because `rows` below depends on it, and a fresh array every
+  // render would make that memo recompute the whole catalog filter on
+  // every keystroke — which is the one thing this screen is built not to
+  // do.
+  const fresh = useMemo(
+    () => (google.results ? freshOnly(google.results, google.known) : null),
+    [google.results, google.known],
+  );
 
   const terms = useMemo(
     () => fold(query).split(/\s+/).filter(Boolean),
@@ -107,8 +129,21 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       out.push({ kind: 'header', key: 'h-place', label: t('Places', 'Địa điểm', 'スポット') });
       for (const p of foundPlaces) out.push({ kind: 'place', key: `p-${p.slug}`, place: p });
     }
+
+    // Under its own heading, never mixed in. The rows above open a place;
+    // these ones propose one that does not exist yet. Two rows that look
+    // alike and do different things on tap is the confusion a heading
+    // costs one line to prevent.
+    if (fresh?.length) {
+      out.push({
+        kind: 'header',
+        key: 'h-google',
+        label: t('On Google Maps', 'Trên Google Maps', 'Google マップ上'),
+      });
+      for (const c of fresh) out.push({ kind: 'candidate', key: `g-${c.place_id}`, candidate: c });
+    }
     return out;
-  }, [terms, places, cols.data, city?.id, t]);
+  }, [terms, places, cols.data, city?.id, fresh, t]);
 
   const searching = terms.length > 0;
 
@@ -127,16 +162,44 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // chỗ nào chúng tôi còn thi…".
   const typed = query.trim();
   const shown = typed.length > 14 ? `${typed.slice(0, 14)}…` : typed;
-  const addRow = (
-    <AddSlot
-      onPress={() => navigation.navigate('AddPlace', { query: typed })}
-      title={t(`Add “${shown}”`, `Thêm “${shown}”`, `「${shown}」を追加`)}
-      subtitle={t(
-        'We look it up on Google Maps',
-        'Chúng tôi tìm trên Google Maps',
-        'Google マップで探します',
+  // The tap stays, and stops being a journey.
+  //
+  // It used to open Add a place, which then ran the same search again on
+  // another screen. The tap was never the problem — it is the one signal
+  // that Google is worth asking, and no heuristic knows that better than
+  // the person who just failed to find something. What was wrong was
+  // making them leave the page to spend it.
+  //
+  // So: same row, same tap, results underneath. And once a search has
+  // run, the row has nothing left to offer and goes.
+  const askedGoogle = google.results !== null || google.searching;
+  const addRow = google.searching
+    ? <ActivityIndicator color={colors.accent} style={{ marginTop: 28 }} />
+    : askedGoogle
+      ? null
+      : (
+        <AddSlot
+          onPress={() => google.run(typed)}
+          title={t(`Add “${shown}”`, `Thêm “${shown}”`, `「${shown}」を追加`)}
+          subtitle={t(
+            'We look it up on Google Maps',
+            'Chúng tôi tìm trên Google Maps',
+            'Google マップで探します',
+          )}
+        />
+      );
+
+  // Asked, and it had nothing the catalog has not got. Said out loud,
+  // because a tap that produces no visible change reads as a broken
+  // button rather than as an answer.
+  const googleEmpty = google.results !== null && fresh?.length === 0 && (
+    <Text style={s.nothing}>
+      {t(
+        'Nothing on Google Maps that is not already here.',
+        'Google Maps không có chỗ nào mà đây chưa có.',
+        'Google マップにも、ここにないものはありませんでした。',
       )}
-    />
+    </Text>
   );
 
   return (
@@ -173,6 +236,18 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         keyboardDismissMode="on-drag"
         renderItem={({ item }) => {
           if (item.kind === 'header') return <Text style={s.section}>{item.label}</Text>;
+          if (item.kind === 'candidate') {
+            return (
+              <CandidateRow
+                c={item.candidate}
+                known={google.known[item.candidate.place_id] ?? { state: 'none' }}
+                busy={google.adding === item.candidate.place_id}
+                away={google.awayFrom(item.candidate)}
+                onAdd={() => google.add(item.candidate)}
+                onOpen={(slug) => navigation.navigate('PlaceDetail', { slug })}
+              />
+            );
+          }
           if (item.kind === 'place') {
             return (
               <PlaceCard
@@ -226,6 +301,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                   `「${query.trim()}」に一致するものはありません。`,
                 )} />
                 {addRow}
+                {googleEmpty}
               </>
             )
             : <Empty text={t(
@@ -238,7 +314,9 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         // for a reason that has nothing to do with the catalog, and
         // offering to go and add a place would be answering a question
         // nobody asked.
-        ListFooterComponent={searching && rows.length > 0 ? addRow : null}
+        ListFooterComponent={searching && rows.length > 0
+          ? <>{addRow}{googleEmpty}</>
+          : null}
         contentContainerStyle={{ paddingTop: 6, paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
       />
@@ -273,5 +351,9 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
   },
   cardTitle: { color: colors.text, ...type.cardTitle },
+  nothing: {
+    color: colors.textSecondary, ...type.meta, lineHeight: 22,
+    paddingHorizontal: space.page, paddingTop: 18, paddingBottom: 6, textAlign: 'center',
+  },
   cardMeta: { color: colors.textTertiary, ...type.meta },
 });

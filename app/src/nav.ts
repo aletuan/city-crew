@@ -19,9 +19,9 @@ export type RootStackParamList = {
   } | undefined;
   PlaceDetail: { slug: string };
   /** Search Google for a place the catalog is missing, and suggest it.
-   *  `query` carries words the person has already typed on Search, so
-   *  arriving here does not mean typing them a second time. */
-  AddPlace: { query?: string } | undefined;
+   *  Reached from Explore's footer and its scroll offer; Search asks
+   *  Google in place now rather than sending anyone here. */
+  AddPlace: undefined;
   CollectionDetail: { slug: string };
   ProfileHome: undefined;
   SignIn: undefined;
