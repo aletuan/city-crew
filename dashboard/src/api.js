@@ -50,6 +50,7 @@ export const api = {
   saveCityHero: async (id, fields) => {
     const editable = new Set([
       'hero_title_en', 'hero_title_vi', 'hero_title_ja',
+      'hero_sub_en', 'hero_sub_vi', 'hero_sub_ja',
       'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_place_slug',
     ]);
     const patch = {};

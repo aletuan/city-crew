@@ -234,12 +234,19 @@ function Hero({ place, onExplore, scrollY }: {
                   `${city?.short_ja ?? city?.short_en ?? 'この街'}、夜のアイデア`,
                 )}
           </Text>
+          {/* The desk's line for this city, the same way the headline is.
+              Cleared, it falls back to the guest-facing sentence it used
+              to always be — which is the right default precisely because
+              the reader with the most to learn from it is the one who has
+              not signed in. */}
           <Text style={s.heroSub}>
-            {t(
-              'Browse public collections and places — no account needed.',
-              'Xem bộ sưu tập và địa điểm công khai — không cần tài khoản.',
-              'コレクションとスポットを自由に閲覧 — アカウント不要。',
-            )}
+            {city?.hero_sub_en
+              ? t(city.hero_sub_en, city.hero_sub_vi, city.hero_sub_ja)
+              : t(
+                  'Browse public collections and places — no account needed.',
+                  'Xem bộ sưu tập và địa điểm công khai — không cần tài khoản.',
+                  'コレクションとスポットを自由に閲覧 — アカウント不要。',
+                )}
           </Text>
           <PressableScale onPress={onExplore} accessibilityRole="button" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
             <LinearGradient {...gradAI} style={s.heroCta}>

@@ -11,6 +11,7 @@ import { useCity, useToast } from '../App.jsx';
 
 const HERO_FIELDS = [
   'hero_title_en', 'hero_title_vi', 'hero_title_ja',
+  'hero_sub_en', 'hero_sub_vi', 'hero_sub_ja',
   'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_place_slug',
 ];
 const pickForm = (row) => Object.fromEntries(HERO_FIELDS.map((k) => [k, row[k] ?? '']));
@@ -22,6 +23,14 @@ const defaultTitle = (city, lang) => {
   return `Ideas for a night in ${city?.short_en ?? 'the city'}`;
 };
 const DEFAULT_CTA = { en: 'Start exploring', vi: 'Bắt đầu khám phá', ja: '探索を始める' };
+/** Cleared, the app falls back to this — the line it used to show in
+ *  every city. Shown as the placeholder so an empty field reads as
+ *  "this is what they will see", not as "this will be blank". */
+const DEFAULT_SUB = {
+  en: 'Browse public collections and places — no account needed.',
+  vi: 'Xem bộ sưu tập và địa điểm công khai — không cần tài khoản.',
+  ja: 'コレクションとスポットを自由に閲覧 — アカウント不要。',
+};
 
 function LangRow({ label, base, form, set, placeholders }) {
   return (
@@ -115,6 +124,11 @@ export default function CityHero() {
     && places.some((p) => p.slug === form.hero_place_slug && !p.is_published);
   const title = form[`hero_title_${previewLang}`] || form.hero_title_en || defaultTitle(city, previewLang);
   const cta = form[`hero_cta_${previewLang}`] || form.hero_cta_en || DEFAULT_CTA[previewLang];
+  // Same precedence the app uses: this language, then English, then the
+  // built-in line. Keyed off the English field there, so a city with a
+  // subtitle set only in Vietnamese still shows it rather than the
+  // fallback — which is what a half-translated desk edit should do.
+  const sub = form[`hero_sub_${previewLang}`] || form.hero_sub_en || DEFAULT_SUB[previewLang];
 
   return (
     <>
@@ -127,9 +141,9 @@ export default function CityHero() {
       <div className="addplace">
         <h2>City hero — {city.name_en}</h2>
         <p className="addsub">
-          The cover of the app's Explore screen for this city: headline, button label, and the
-          place whose photo sits behind them. Cleared fields fall back to the app's default copy
-          and automatic photo pick.
+          The cover of the app's Explore screen for this city: headline, the line under it,
+          button label, and the place whose photo sits behind them. Cleared fields fall back to
+          the app's default copy and automatic photo pick.
         </p>
 
         <div className="heropreview">
@@ -139,6 +153,7 @@ export default function CityHero() {
           <div className="heropreview-shade" />
           <div className="heropreview-content">
             <div className="heropreview-title">{title}</div>
+            <div className="heropreview-sub">{sub}</div>
             <span className="heropreview-cta">{cta} →</span>
           </div>
         </div>
@@ -163,6 +178,9 @@ export default function CityHero() {
         <section className="panel" style={{ maxWidth: 860 }}>
           <h3>Headline</h3>
           <LangRow label="Title" base="hero_title" form={form} set={set} />
+
+          <h4 style={{ margin: '18px 0 8px' }}>Subtitle</h4>
+          <LangRow label="Line" base="hero_sub" form={form} set={set} placeholders={DEFAULT_SUB} />
 
           <h4 style={{ margin: '18px 0 8px' }}>Call to action</h4>
           <LangRow label="Button" base="hero_cta" form={form} set={set} placeholders={DEFAULT_CTA} />
