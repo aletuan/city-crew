@@ -79,3 +79,25 @@ export function membersOf(c: Collection, places: Place[]): Place[] {
     .map((cp) => (cp.places ? bySlug.get(cp.places.slug) : undefined))
     .filter((p): p is Place => !!p);
 }
+
+/**
+ * Does this list belong on the shelf for the city on screen?
+ *
+ * The city decides whether a list appears — not what is inside it. A list
+ * with two places in Hanoi and one in Saigon appears in both, whole in
+ * both: one place is enough to earn the shelf, and nothing here filters
+ * the members it was given. That is the difference between showing a
+ * person a list they can use and showing them a third of one.
+ *
+ * No threshold, deliberately. "Mostly this city" sounds tidier and cannot
+ * be explained to the person whose list has just vanished from the city
+ * it was made in. If a shelf ever fills with lists that barely touch it,
+ * the answer is to order them by how much they do — not to hide them.
+ *
+ * With no city chosen yet the only honest question left is whether the
+ * list has anything at all, which is the test this replaced.
+ */
+export function touchesCity(members: Place[], cityId: string | null | undefined): boolean {
+  if (!cityId) return members.length > 0;
+  return members.some((p) => p.city_id === cityId);
+}

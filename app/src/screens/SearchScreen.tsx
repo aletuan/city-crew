@@ -15,7 +15,8 @@ import {
   AmbientWarmth, BackButton, Card, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
 import { CATEGORIES, categoriesOf } from '../lib/categories';
-import { Collection, coverOf, membersOf, Place } from '../lib/data';
+import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
+import { useCity } from '../lib/city';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
@@ -67,6 +68,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const [query, setQuery] = useState('');
   const { data: places } = usePlaces();
+  const { city } = useCity();
   const cols = useCollections();
   const tabClearance = useTabBarClearance();
 
@@ -79,9 +81,13 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     if (terms.length === 0) return [];
     const out: Row[] = [];
 
+    // Same city test as the shelf and the tab. The public query is no
+    // longer scoped to a city — a list appears wherever it has a place —
+    // so without this, searching in Hanoi would turn up lists that are
+    // entirely in Saigon, which nothing else on this screen does.
     const foundCols = cols.data
       .map((c) => ({ c, members: membersOf(c, places) }))
-      .filter(({ c, members }) => members.length > 0 && matches(collectionHaystack(c), terms));
+      .filter(({ c, members }) => touchesCity(members, city?.id) && matches(collectionHaystack(c), terms));
     if (foundCols.length) {
       out.push({ kind: 'header', key: 'h-col', label: t('Collections', 'Bộ sưu tập', 'コレクション') });
       for (const { c, members } of foundCols) {
@@ -101,7 +107,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       for (const p of foundPlaces) out.push({ kind: 'place', key: `p-${p.slug}`, place: p });
     }
     return out;
-  }, [terms, places, cols.data, t]);
+  }, [terms, places, cols.data, city?.id, t]);
 
   const searching = terms.length > 0;
 
