@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
+import SuggestRow from '../components/SuggestRow';
 import {
   AmbientWarmth, BackButton, Card, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
@@ -111,6 +112,33 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
 
   const searching = terms.length > 0;
 
+  // The words go with them. Someone who typed "Cộng Cà Phê" here and found
+  // nothing should not have to type it again on the one screen whose whole
+  // job is to go and look for it — the tap is the instruction, not the
+  // start of a second attempt.
+  //
+  // Trimmed for the label only. What travels is the whole query; this is
+  // just so a long one does not run off the end of a single line and take
+  // the closing quote with it.
+  const typed = query.trim();
+  const shown = typed.length > 24 ? `${typed.slice(0, 24)}…` : typed;
+  const addRow = (
+    <SuggestRow
+      onPress={() => navigation.navigate('AddPlace', { query: typed })}
+      title={t(`Add “${shown}” yourself`, `Tự thêm “${shown}”`, `「${shown}」を自分で追加`)}
+      subtitle={t(
+        'We look it up on Google Maps — you pick the right one',
+        'Chúng tôi tra trên Google Maps — bạn chọn đúng chỗ',
+        'Google マップで探します — 正しいものをお選びください',
+      )}
+      note={t(
+        'Suggestions are reviewed before they go live',
+        'Đề xuất sẽ được xem xét trước khi hiển thị',
+        '提案は公開前に審査されます',
+      )}
+    />
+  );
+
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <AmbientWarmth />
@@ -175,19 +203,42 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             </PressableScale>
           );
         }}
+        // The end of a search that found nothing, and the end of one that
+        // found the wrong things, are the same dead end — and until now
+        // both of them ended here, with the app reporting the absence and
+        // offering no way through it. Explore has had that way out since
+        // it got a footer; this screen, which is where someone goes when
+        // they have a specific place in mind, did not.
+        //
+        // Nothing at all: the offer belongs in the empty state, because
+        // the empty state is the whole screen. Something, but not the
+        // right thing: the offer goes under the results by the same rule
+        // Explore uses — reaching the end is the moment you have seen
+        // everything there is, and it is the only honest moment to say
+        // "then let us go and find it".
         ListEmptyComponent={
           searching
-            ? <Empty text={t(
-                `Nothing found for “${query.trim()}”.`,
-                `Không tìm thấy gì cho “${query.trim()}”.`,
-                `「${query.trim()}」に一致するものはありません。`,
-              )} />
+            ? (
+              <>
+                <Empty text={t(
+                  `Nothing found for “${query.trim()}”.`,
+                  `Không tìm thấy gì cho “${query.trim()}”.`,
+                  `「${query.trim()}」に一致するものはありません。`,
+                )} />
+                {addRow}
+              </>
+            )
             : <Empty text={t(
                 'Try a name, a neighbourhood, or a vibe — cafés, museums, rooftops.',
                 'Thử tên quán, tên khu, hay một kiểu vibe — cà phê, bảo tàng, rooftop.',
                 '名前・エリア・雰囲気で検索 — カフェ、博物館、ルーフトップ。',
               )} />
         }
+        // Only while searching: before a word is typed the list is empty
+        // for a reason that has nothing to do with the catalog, and
+        // offering to go and add a place would be answering a question
+        // nobody asked.
+        ListFooterComponent={searching && rows.length > 0 ? addRow : null}
         contentContainerStyle={{ paddingTop: 6, paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
       />
