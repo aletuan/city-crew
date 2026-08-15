@@ -205,6 +205,39 @@ export const gradAI = {
   end: { x: 1, y: 0 },
 };
 
+/**
+ * The engagement ring's arc and its track, resolved by hand per scheme.
+ *
+ * Same reason as `gradAI`, and then one more. An SVG gradient stop is a
+ * fill, so a dynamic pair in it resolves once into CoreGraphics and comes
+ * back stale after a theme change — the CGColor trap that took the camera
+ * badge's border. The component reads `useScheme()` and picks a side, the
+ * way `lib/theme.tsx` says the handful of non-colour cases have to.
+ *
+ * The arc mirrors `accent` and `sun` rather than inventing a palette: on
+ * charcoal those *are* the coral and gold the ring was drawn with, which
+ * is why the dark half here is unchanged. What was missing was the paper
+ * half — the original hexes were 2.43:1 and 1.64:1 against it, a line
+ * nobody could see. The deeper pair measures 4.53:1 and 3.25:1.
+ *
+ * The badge does not follow, and deliberately: it is a filled pill
+ * carrying its own ground, so what it owes contrast to is its label, not
+ * the page. Deepened to these values it would put `accentInk` at 3.64:1
+ * on 11.5pt bold, and the level would become the hardest thing on the
+ * screen to read. It keeps `gradAI`'s bright coral.
+ *
+ * The track is neutral on purpose. Colour on the ring means progress; a
+ * tinted track would spend it on the part that has not happened yet.
+ */
+export const ringInk = {
+  // Track vs ground 1.42:1 and 1.61:1 — up from the 1.20:1 that made the
+  // headroom invisible on paper. It cannot go much darker without eating
+  // the arc's own edge against it, which is the boundary that carries the
+  // reading; the rest of the visibility comes from a thicker stroke.
+  light: { from: '#C4402C', to: '#B07C10', track: '#D3CCBF' },
+  dark: { from: '#FF6F5B', to: '#F2B441', track: '#38352F' },
+} as const;
+
 /** Corner radii, in iOS points. */
 export const radius = {
   /** Cards: 20–26. */
