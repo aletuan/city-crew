@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import StartSheet, { Start } from '../components/StartSheet';
 import {
-  AmbientWarmth, Card, Chip, GradientCta, PressableScale, Screen, useTabBarClearance,
+  AmbientWarmth, Card, Chip, GradientCta, PressableScale, Screen, SelectTick, useTabBarClearance,
 } from '../components/ui';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
@@ -182,9 +182,7 @@ export default function IdeasScreen() {
                           )}
                         </Text>
                       </View>
-                      <View style={[s.tick, on && s.tickOn]}>
-                        {on ? <Ionicons name="checkmark" size={15} color={colors.accentInk} /> : null}
-                      </View>
+                      <SelectTick on={on} />
                     </PressableScale>
                   </View>
                 );
@@ -264,12 +262,6 @@ const s = StyleSheet.create({
   thumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
   fromTitle: { color: colors.text, fontSize: 15.5, fontWeight: font.semibold },
   fromMeta: { color: colors.textTertiary, fontSize: 13 },
-  tick: {
-    width: 24, height: 24, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: colors.borderGlass,
-  },
-  tickOn: { backgroundColor: colors.accent, borderColor: colors.accent },
 
   cta: { paddingHorizontal: space.page, marginTop: 4, gap: 10 },
   ctaOff: { opacity: 0.4 },

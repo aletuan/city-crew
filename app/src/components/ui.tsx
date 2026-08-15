@@ -229,6 +229,31 @@ export function GradientCta({ icon, label, onPress, wide }: {
   );
 }
 
+/**
+ * The tick on a row you have chosen.
+ *
+ * Filled with `gradAI`, not `colors.accent`, and the distinction is one
+ * this codebase has now got wrong twice. `colors.accent` is
+ * `dyn('#C4402C', '#FF6F5B')` — on paper a *foreground* colour, dark
+ * enough to read as text on a light page. Filling something with it puts
+ * the `accentInk` glyph at 3.64:1 in the light theme while measuring 6.79
+ * in the dark, so the control is right half the time and muddy the other
+ * half. The theme file says it at the gradient itself: a gradient is a
+ * fill.
+ *
+ * Three rows wanted this — Add a place, Search, and the wizard's
+ * collections — which is why it stopped being a style object copied
+ * between them.
+ */
+export function SelectTick({ on }: { on: boolean }) {
+  if (!on) return <View style={s.tick} />;
+  return (
+    <LinearGradient {...gradAI} style={[s.tick, s.tickOn]}>
+      <Ionicons name="checkmark" size={15} color={colors.accentInk} />
+    </LinearGradient>
+  );
+}
+
 /** In-page back control: the round glass button wearing a chevron. */
 export function BackButton({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
@@ -293,6 +318,12 @@ const s = StyleSheet.create({
   },
   ctaWide: { justifyContent: 'center', paddingVertical: 16 },
   ctaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
+  tick: {
+    width: 26, height: 26, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: colors.borderGlass,
+  },
+  tickOn: { borderColor: 'transparent' },
   backBtn: {
     width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surfaceGlass, borderWidth: 1, borderColor: colors.borderGlassSoft,

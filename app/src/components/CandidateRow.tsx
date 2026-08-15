@@ -13,7 +13,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AddIconButton } from './add';
-import { PressableScale } from './ui';
+import { PressableScale, SelectTick } from './ui';
 import type { ItemState } from '../lib/candidates';
 import type { Candidate, Known } from '../lib/suggest';
 import { useI18n } from '../lib/i18n';
@@ -56,14 +56,17 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onA
 
   const body = (
     <View style={[s.row, live && s.rowLive, selected && s.rowOn]}>
-      <View style={[s.pin, live && s.pinLive, selected && s.pinOn, item === 'done' && s.pinDone]}>
+      {/* Unchanged by selection. The pin says what kind of thing this
+          row is; the tick on the right says whether you chose it, and one
+          mark per question is enough. */}
+      <View style={[s.pin, live && s.pinLive]}>
         {item === 'running' ? (
           <ActivityIndicator size="small" color={colors.accent} />
         ) : (
           <Ionicons
-            name={live || mine || item === 'done' || selected ? 'checkmark' : 'location-outline'}
+            name={live || mine || item === 'done' ? 'checkmark' : 'location-outline'}
             size={18}
-            color={item === 'done' || selected ? colors.accentInk : live ? colors.ok : mine ? colors.textSecondary : colors.accent}
+            color={live || item === 'done' ? colors.ok : mine ? colors.textSecondary : colors.accent}
           />
         )}
       </View>
@@ -97,9 +100,7 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onA
         // Drawn, not pressed. The whole row is the target, so a second hit
         // area inside it would give one action two of them and VoiceOver
         // two stops.
-        <View style={[s.tick, selected && s.tickOn]}>
-          {selected ? <Ionicons name="checkmark" size={15} color={colors.accentInk} /> : null}
-        </View>
+        <SelectTick on={!!selected} />
       ) : onAdd ? (
         <AddIconButton
           onPress={onAdd}
@@ -153,14 +154,6 @@ const s = StyleSheet.create({
   viewText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
 
   rowOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
-  pinOn: { backgroundColor: colors.accent },
-  pinDone: { backgroundColor: colors.accent },
   subStatus: { color: colors.textSecondary, fontWeight: font.medium },
   subBad: { color: colors.bad },
-  tick: {
-    width: 26, height: 26, borderRadius: 13,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: colors.borderGlass,
-  },
-  tickOn: { backgroundColor: colors.accent, borderColor: colors.accent },
 });

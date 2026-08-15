@@ -128,6 +128,9 @@ const s = StyleSheet.create({
     borderRadius: radius.pill, backgroundColor: colors.bgElevated,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
+  // The one legitimate `colors.accent` fill in the app: a bare mark with
+  // nothing drawn on it. The rule it does not break is about contrast for
+  // ink, and there is no ink here.
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
   captionText: { color: colors.text, fontSize: 13, fontWeight: font.medium, flexShrink: 1 },
 });
