@@ -117,25 +117,26 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // job is to go and look for it — the tap is the instruction, not the
   // start of a second attempt.
   //
-  // Trimmed for the label only. What travels is the whole query; this is
-  // just so a long one does not run off the end of a single line and take
-  // the closing quote with it.
+  // Trimmed for the label only — what travels is the whole query.
+  //
+  // Fourteen, because the title sits at 18pt beside a 52pt circle and a
+  // chevron: about 21 characters on a small phone, and `Thêm “…”` spends
+  // six of them before the query starts. A cap chosen without the frame
+  // in mind produces a label the frame cuts anyway, closing quote and
+  // all — which is exactly how the Explore row ended up reading "Biết
+  // chỗ nào chúng tôi còn thi…".
   const typed = query.trim();
-  const shown = typed.length > 24 ? `${typed.slice(0, 24)}…` : typed;
+  const shown = typed.length > 14 ? `${typed.slice(0, 14)}…` : typed;
   const addRow = (
     <AddSlot
       onPress={() => navigation.navigate('AddPlace', { query: typed })}
-      title={t(`Add “${shown}” yourself`, `Tự thêm “${shown}”`, `「${shown}」を自分で追加`)}
+      title={t(`Add “${shown}”`, `Thêm “${shown}”`, `「${shown}」を追加`)}
       subtitle={t(
-        'We look it up on Google Maps — you pick the right one',
-        'Chúng tôi tra trên Google Maps — bạn chọn đúng chỗ',
-        'Google マップで探します — 正しいものをお選びください',
+        'We look it up on Google Maps',
+        'Chúng tôi tìm trên Google Maps',
+        'Google マップで探します',
       )}
-      note={t(
-        'Yours shows up on your Explore straight away',
-        'Chỗ bạn thêm sẽ có ngay trong Khám phá của bạn',
-        '追加したスポットはすぐにあなたの探索に表示されます',
-      )}
+      note={t('It shows up for you right away', 'Thêm xong là bạn thấy ngay', '追加後すぐ表示されます')}
     />
   );
 
