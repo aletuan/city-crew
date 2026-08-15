@@ -17,6 +17,7 @@ import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, Ro
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { useSky } from '../lib/sky';
+import { dateline, dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
 import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { Lang, useI18n } from '../lib/i18n';
@@ -140,23 +141,6 @@ function ScrollNudge({ top, visible, onSearch, onAdd }: {
       </PressableScale>
     </Animated.View>
   );
-}
-
-const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const DAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-const MONTHS_EN = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-const DAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
-
-/** Today as an editorial dateline: "Thursday, August 7" / "Thứ Năm, 7 tháng 8" / "8月7日（木）". */
-function dateline(lang: Lang): string {
-  const d = new Date();
-  if (lang === 'vi') return `${DAYS_VI[d.getDay()]}, ${d.getDate()} tháng ${d.getMonth() + 1}`;
-  if (lang === 'ja') return `${d.getMonth() + 1}月${d.getDate()}日（${DAYS_JA[d.getDay()]}）`;
-  return `${DAYS_EN[d.getDay()]}, ${MONTHS_EN[d.getMonth()]} ${d.getDate()}`;
 }
 
 // Per-city hero season — headline, CTA and the pinned cover place — comes
@@ -501,7 +485,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       // when it does not.
       eyebrow={(
         <>
-          <EyebrowText>{dateline(lang)}</EyebrowText>
+          <EyebrowText>{dateline(lang, new Date())}</EyebrowText>
           {sky ? (
             <>
               <Ionicons name={sky.icon} size={14} color={sky.gold ? colors.sun : colors.textSecondary} />

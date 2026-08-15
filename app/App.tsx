@@ -27,6 +27,7 @@ import CollectionsScreen from './src/screens/CollectionsScreen';
 import CollectionFormScreen from './src/screens/CollectionFormScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
 import ComingSoonScreen from './src/screens/ComingSoonScreen';
+import IdeasScreen from './src/screens/IdeasScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
@@ -172,7 +173,7 @@ function Tabs() {
         ),
       })}
     >
-      <Tab.Screen name="Ideas">{() => <ComingSoonScreen titleEn="Ideas" titleVi="Ý tưởng" titleJa="アイデア" />}</Tab.Screen>
+      <Tab.Screen name="Ideas" component={IdeasScreen} />
       <Tab.Screen name="Explore" component={ExploreStack} />
       <Tab.Screen name="Trips">{() => <ComingSoonScreen titleEn="Trips" titleVi="Chuyến đi" titleJa="旅程" />}</Tab.Screen>
       <Tab.Screen name="Collections" component={CollectionsStack} />

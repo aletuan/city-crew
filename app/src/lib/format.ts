@@ -2,6 +2,30 @@
 // be tested in a plain Node process — the screen itself imports React
 // Native, which a test runner cannot load.
 
+const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+const DAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+const MONTHS_EN = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/**
+ * A date as an editorial dateline: "Thursday, August 7" / "Thứ Năm, 7
+ * tháng 8" / "8月7日（木）".
+ *
+ * Here rather than in a screen because a second screen wanted it, and a
+ * second copy of the day names is how the app ends up saying "Thứ Bảy" in
+ * one place and "T7" in another. `now` is a parameter for the same reason
+ * everything else in this file takes one: a function that reads the clock
+ * itself cannot be tested.
+ */
+export function dateline(lang: string, now: Date): string {
+  if (lang === 'vi') return `${DAYS_VI[now.getDay()]}, ${now.getDate()} tháng ${now.getMonth() + 1}`;
+  if (lang === 'ja') return `${now.getMonth() + 1}月${now.getDate()}日（${DAYS_JA[now.getDay()]}）`;
+  return `${DAYS_EN[now.getDay()]}, ${MONTHS_EN[now.getMonth()]} ${now.getDate()}`;
+}
+
 export function fmtDuration(min: number | null, max: number | null, lang: string): string | null {
   if (!min) return null;
   if ((max ?? min) <= 60) {
