@@ -12,7 +12,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
-import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, GlassMaterial, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { useSky } from '../lib/sky';
@@ -288,10 +288,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    */
   const filters = (
     <View style={s.filterBar}>
-      {/* The same material as the tab bar. Without it the chips float over
-          the photographs passing underneath, lighting up over a bright
-          frame and disappearing over a dark one. */}
-      <GlassMaterial />
       <View style={s.filterHair} />
       <ScrollView
         horizontal
@@ -427,17 +423,29 @@ const s = StyleSheet.create({
   },
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
 
-  // The pinned filter row. `overflow: hidden` so the blur is clipped to the
-  // bar rather than bleeding past its edges, and the padding is symmetric
-  // because once it is pinned there is no heading above it to sit under —
-  // it is its own top edge.
+  // The pinned filter row.
+  //
+  // The page's own colour, not the tab bar's glass, and the difference is
+  // what sits immediately above it. Glass says content is passing beneath
+  // me — true of the tab bar, which floats with the list running under and
+  // past it. Here the thing directly above is the opaque header, which
+  // says the opposite about the very same edge, and two bars making
+  // contradictory claims a hairline apart is the seam you see rather than
+  // a material you read.
+  //
+  // Opaque, the pinned row reads as the bottom of the header instead: one
+  // block that holds the title and the filter, with the list beginning
+  // underneath it.
+  //
+  // Padding is symmetric because once pinned there is no heading above it
+  // to sit under — it is its own top edge.
   filterBar: {
     paddingVertical: 10,
-    overflow: 'hidden',
+    backgroundColor: colors.bg,
   },
-  // Drawn only at the bottom, and only a hairline. Pinned over a moving
-  // photograph the bar needs an edge or the cards appear to slide out of
-  // nothing; a full border would box it in like a control.
+  // Drawn only at the bottom, and only a hairline: it is where the header
+  // block ends and the list begins, which is the one edge that has
+  // anything to say. A full border would box the row in like a control.
   filterHair: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
