@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
+import SuggestRow from '../components/SuggestRow';
 import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
@@ -39,42 +40,23 @@ const ALL = 'all';
 const FILTER_PAD = 10;
 
 /**
- * The last row of the list: a slot, not a place.
- *
- * Same dashed outline the collections list and a collection's own last row
- * wear, saying the same thing — "not a thing, a space where one would
- * go" — at the moment you have finished reading and found the list short.
- *
- * The line about review is required rather than decorative. Without it a
- * submitter who cannot find their place afterwards concludes the app is
- * broken, when it is working exactly as designed.
+ * The last row of the list, at the moment you have finished reading and
+ * found the list short. Explore has nothing to name — you were browsing,
+ * not looking for one thing — so it asks rather than offers.
  */
-function SuggestRow({ onPress }: { onPress: () => void }) {
+function ExploreSuggestRow({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
   return (
-    <View style={s.suggestWrap}>
-      <PressableScale onPress={onPress} accessibilityRole="button" style={s.suggestRow}>
-        <View style={s.suggestIcon}>
-          <Ionicons name="add" size={24} color={colors.accent} />
-        </View>
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={s.suggestText} numberOfLines={1}>
-            {t('Know a spot we are missing?', 'Biết chỗ nào chúng tôi còn thiếu?', '載っていないスポットをご存じですか？')}
-          </Text>
-          <Text style={s.suggestSub} numberOfLines={2}>
-            {t('Search for it — we fetch the rest', 'Tìm tên quán — phần còn lại chúng tôi lo', '名前で検索 — 残りはこちらで取得します')}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
-      </PressableScale>
-      <Text style={s.suggestNote}>
-        {t(
-          'Suggestions are reviewed before they go live',
-          'Đề xuất sẽ được xem xét trước khi hiển thị',
-          '提案は公開前に審査されます',
-        )}
-      </Text>
-    </View>
+    <SuggestRow
+      onPress={onPress}
+      title={t('Know a spot we are missing?', 'Biết chỗ nào chúng tôi còn thiếu?', '載っていないスポットをご存じですか？')}
+      subtitle={t('Search for it — we fetch the rest', 'Tìm tên quán — phần còn lại chúng tôi lo', '名前で検索 — 残りはこちらで取得します')}
+      note={t(
+        'Suggestions are reviewed before they go live',
+        'Đề xuất sẽ được xem xét trước khi hiển thị',
+        '提案は公開前に審査されます',
+      )}
+    />
   );
 }
 
@@ -445,7 +427,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 {shown.length === 0
                   ? <Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。')} />
                   : null}
-                <SuggestRow onPress={() => navigation.navigate('AddPlace')} />
+                <ExploreSuggestRow onPress={() => navigation.navigate('AddPlace')} />
               </>
             )}
             contentContainerStyle={{ paddingBottom: tabClearance }}
@@ -491,23 +473,6 @@ const s = StyleSheet.create({
   },
   sectionOverFilter: { marginBottom: space.headingToContent - FILTER_PAD },
 
-  suggestWrap: { marginHorizontal: space.page, marginTop: 4, marginBottom: 8 },
-  suggestRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    padding: 14, borderRadius: radius.card,
-    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderGlass,
-  },
-  suggestIcon: {
-    width: 44, height: 44, borderRadius: 13,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
-  },
-  suggestText: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
-  suggestSub: { color: colors.textTertiary, fontSize: 13.5, lineHeight: 19 },
-  suggestNote: {
-    color: colors.textTertiary, fontSize: 12.5,
-    textAlign: 'center', paddingTop: 10,
-  },
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
 
   // The pinned filter row.

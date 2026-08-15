@@ -18,8 +18,10 @@ export type RootStackParamList = {
     addPlaceSlug?: string;
   } | undefined;
   PlaceDetail: { slug: string };
-  /** Search Google for a place the catalog is missing, and suggest it. */
-  AddPlace: undefined;
+  /** Search Google for a place the catalog is missing, and suggest it.
+   *  `query` carries words the person has already typed on Search, so
+   *  arriving here does not mean typing them a second time. */
+  AddPlace: { query?: string } | undefined;
   CollectionDetail: { slug: string };
   ProfileHome: undefined;
   SignIn: undefined;

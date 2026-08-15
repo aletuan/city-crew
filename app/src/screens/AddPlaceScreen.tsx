@@ -14,7 +14,7 @@
 // the mockup shows roughly where three results are and is not how the
 // screen is used. See issue #146.
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, FlatList, Keyboard, StyleSheet, Text, TextInput, View,
 } from 'react-native';
@@ -29,7 +29,7 @@ import {
   Candidate, knownByPlaceId, Known, searchPlaces, suggestPlace,
 } from '../lib/suggest';
 import { colors, font, radius, space, type } from '../theme';
-import type { Nav } from '../nav';
+import type { Nav, RootRoute } from '../nav';
 
 /**
  * One result, in whichever of its three states it is in.
@@ -85,7 +85,7 @@ function Row({ c, known, busy, onAdd, onOpen }: {
   );
 }
 
-export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
+export default function AddPlaceScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'AddPlace'> }) {
   const { t } = useI18n();
   const { city } = useCity();
   const { session } = useAuth();
@@ -93,7 +93,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
   const places = usePlaces();
   const tabClearance = useTabBarClearance();
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(route.params?.query ?? '');
   const [results, setResults] = useState<Candidate[] | null>(null);
   const [known, setKnown] = useState<Record<string, Known>>({});
   const [searching, setSearching] = useState(false);
@@ -120,6 +120,24 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
       .catch((e: Error) => Alert.alert(t('Search failed', 'Tìm kiếm thất bại', '検索に失敗しました'), e.message))
       .finally(() => setSearching(false));
   }, [query, city?.id, searching, meId, t]);
+
+  /**
+   * Arrived from Search with the words already typed.
+   *
+   * Search has just told this person their words match nothing, and they
+   * tapped the row that says "let us look it up". Landing on a field
+   * holding their query and waiting to be told to search again would be
+   * asking for the same thing twice — the tap *was* the instruction.
+   *
+   * Once, and only once the city is known: `run` refuses without one, so
+   * firing during the city bootstrap would do nothing and never retry.
+   */
+  const pending = useRef(!!route.params?.query);
+  useEffect(() => {
+    if (!pending.current || !city) return;
+    pending.current = false;
+    run();
+  }, [city?.id, run]);
 
   const add = (c: Candidate) => {
     if (!city || adding) return;
@@ -185,7 +203,10 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
           onChangeText={setQuery}
           onSubmitEditing={run}
           returnKeyType="search"
-          autoFocus
+          // Not when the query arrived with us: the search is already
+          // running, and a keyboard that opens only to be dismissed a
+          // moment later is motion for nothing.
+          autoFocus={!route.params?.query}
           placeholder={t(
             `Name of a place in ${cityName}`,
             `Tên một địa điểm ở ${cityName}`,
