@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, Empty, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { Collection, coverOf, deleteCollection, membersOf } from '../lib/data';
+import { atHandle } from '../lib/handle';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
@@ -482,7 +483,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                               you whose list you are looking at, and on your
                               own it would only tell you your own name. */}
                           {!section.own && item.curator_handle
-                            ? `  ·  ${t('by', 'bởi', 'by')} ${item.curator_handle}`
+                            ? `  ·  ${t('by', 'bởi', 'by')} ${atHandle(item.curator_handle)}`
                             : ''}
                         </Text>
                       </View>

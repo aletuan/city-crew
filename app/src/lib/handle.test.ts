@@ -1,5 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { handleProblem, normalizeHandle, suggestHandle } from './handle';
+import { atHandle, handleProblem, normalizeHandle, suggestHandle } from './handle';
+
+describe('atHandle', () => {
+  // The two conventions actually in the database. Editorial rows were
+  // seeded with the @ inside the value; `stamp_curator` writes what
+  // `profiles.handle` holds, which is bare. Both have to come out the same
+  // or one list reads "by @hanoicrew" beside another reading "by anh".
+  it('gives both stored conventions the same shape', () => {
+    expect(atHandle('@hanoicrew')).toBe('@hanoicrew');
+    expect(atHandle('anh')).toBe('@anh');
+  });
+
+  it('never doubles the sign', () => {
+    expect(atHandle('@@trang')).toBe('@trang');
+  });
+
+  it('has nothing to show for nothing', () => {
+    expect(atHandle('')).toBe('');
+    expect(atHandle('@')).toBe('');
+    expect(atHandle('   ')).toBe('');
+  });
+
+  it('trims and lowercases like the rest of the handle rules', () => {
+    expect(atHandle('  @HanoiCrew ')).toBe('@hanoicrew');
+  });
+});
 
 describe('normalizeHandle', () => {
   it('lowercases and trims', () => {

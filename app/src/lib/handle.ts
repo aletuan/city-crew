@@ -19,6 +19,25 @@ export function normalizeHandle(input: string): string {
   return input.trim().replace(/^@+/, '').toLowerCase();
 }
 
+/**
+ * A handle as it is shown to a reader: always with an `@`, exactly one.
+ *
+ * Normalised at the point of display rather than fixed in the database,
+ * because the two conventions in there are both real. Editorial rows were
+ * seeded with the `@` written into the value — `@hanoicrew` — while
+ * `stamp_curator` writes what `profiles.handle` holds, which is bare. Both
+ * arrive here and both come out the same.
+ *
+ * Doing it this way rather than with a migration is the difference
+ * between a fix and a fixed point. A migration would tidy the rows that
+ * exist and leave the next seed free to write an `@` again; this cannot
+ * drift, because it never trusted the stored form in the first place.
+ */
+export function atHandle(input: string): string {
+  const h = normalizeHandle(input);
+  return h ? `@${h}` : '';
+}
+
 export type HandleProblem = 'empty' | 'short' | 'long' | 'chars' | null;
 
 /**
