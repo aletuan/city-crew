@@ -32,6 +32,9 @@ export type City = {
   hero_title_en: string | null;
   hero_title_vi: string | null;
   hero_title_ja: string | null;
+  hero_sub_en: string | null;
+  hero_sub_vi: string | null;
+  hero_sub_ja: string | null;
   hero_cta_en: string | null;
   hero_cta_vi: string | null;
   hero_cta_ja: string | null;
@@ -57,6 +60,7 @@ const FALLBACK: City = {
   id: 'hcmc', name_en: 'Ho Chi Minh City', name_vi: 'TP. Hồ Chí Minh', name_ja: 'ホーチミン市',
   short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン', center_lat: 10.7769, center_lng: 106.7009,
   hero_title_en: null, hero_title_vi: null, hero_title_ja: null,
+  hero_sub_en: null, hero_sub_vi: null, hero_sub_ja: null,
   hero_cta_en: null, hero_cta_vi: null, hero_cta_ja: null, hero_place_slug: null,
 };
 
@@ -94,6 +98,35 @@ async function preciseNearestCity(list: City[]): Promise<City | null> {
   return nearestTo(list, pos.coords.latitude, pos.coords.longitude);
 }
 
+const CITY_COLS = (withSub: boolean) =>
+  `id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng, hero_title_en, hero_title_vi, hero_title_ja${withSub ? ', hero_sub_en, hero_sub_vi, hero_sub_ja' : ''}, hero_cta_en, hero_cta_vi, hero_cta_ja, hero_place_slug`;
+
+/**
+ * The city list, and a way back when the database is older than the app.
+ *
+ * Everywhere else in this app a query that names a column the database
+ * has not got yet retries without it. This one never did, and it is the
+ * worst place to be missing it: a failed select here does not degrade a
+ * section, it leaves `cities` as the single hardcoded Saigon row and the
+ * switcher with nothing to switch to. The whole app would look like it
+ * had one city.
+ *
+ * `hero_sub_*` is the newest of these columns, so it is the one a client
+ * shipping ahead of a migration would trip on.
+ */
+async function fetchCities(): Promise<City[]> {
+  const run = (withSub: boolean) =>
+    supabase
+      .from('cities')
+      .select(CITY_COLS(withSub))
+      .eq('is_active', true)
+      .order('sort_order');
+
+  let { data, error } = await run(true);
+  if (error && error.message.includes('hero_sub')) ({ data, error } = await run(false));
+  return (data as City[] | null) ?? [];
+}
+
 export function CityProvider({ children }: { children: React.ReactNode }) {
   const [cities, setCities] = useState<City[]>([FALLBACK]);
   const [cityId, setCityId] = useState<string | null>(null);
@@ -102,16 +135,12 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let live = true;
     (async () => {
-      const [{ data }, storedRaw] = await Promise.all([
-        supabase
-          .from('cities')
-          .select('id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng, hero_title_en, hero_title_vi, hero_title_ja, hero_cta_en, hero_cta_vi, hero_cta_ja, hero_place_slug')
-          .eq('is_active', true)
-          .order('sort_order'),
+      const [fetched, storedRaw] = await Promise.all([
+        fetchCities(),
         AsyncStorage.getItem(KEY),
       ]);
       if (!live) return;
-      const list = (data as City[] | null)?.length ? (data as City[]) : [FALLBACK];
+      const list = fetched.length ? fetched : [FALLBACK];
       setCities(list);
 
       let stored: { id?: string; mode?: 'auto' | 'manual' } = {};

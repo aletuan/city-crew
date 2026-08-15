@@ -446,6 +446,9 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
 }
 .heropreview-title { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; }
+/* Quieter than the title and a shade off white, the way the app draws it:
+   the preview is only useful if it lies about nothing. */
+.heropreview-sub { font-size: 14px; line-height: 1.35; color: rgba(247,247,245,0.82); max-width: 42ch; }
 .heropreview-cta {
   background: linear-gradient(96deg, #F2DFA3, #D9BE85); color: #141310;
   font-size: 13.5px; font-weight: 600; padding: 8px 16px; border-radius: var(--radius-pill);
