@@ -75,7 +75,8 @@ echo "→ collections stub"
 run "$DB" -f "$HERE/_collections.sql"
 for f in "$ROOT"/supabase/migrations/*_user_collections.sql \
          "$ROOT"/supabase/migrations/*_publish_collections.sql \
-         "$ROOT"/supabase/migrations/*_place_submissions.sql; do
+         "$ROOT"/supabase/migrations/*_place_submissions.sql \
+         "$ROOT"/supabase/migrations/*_bare_handles.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 
