@@ -86,6 +86,11 @@ type ImportArgs = {
   vibeTags?: string[];
   categories?: string[];
   maxPhotos?: number;
+  /** The account that suggested this place, when it did not come from the
+   *  desk. Stamped here rather than accepted from a request body, for the
+   *  reason `stamp_curator` exists: a caller-supplied identity is the
+   *  caller's choice, not a fact. */
+  submittedBy?: string | null;
 };
 
 // District/ward-level address component — the human "what part of town is
@@ -113,7 +118,10 @@ function neighborhoodOf(components: { longText?: string; types?: string[] }[] | 
  * Assumes the caller already checked google_place_id for duplicates.
  */
 export async function importPlace(
-  { admin, gapi, apiKey, placeId, category, cityId, vibeTags = [], categories, maxPhotos = 6 }: ImportArgs,
+  {
+    admin, gapi, apiKey, placeId, category, cityId,
+    vibeTags = [], categories, maxPhotos = 6, submittedBy = null,
+  }: ImportArgs,
 ): Promise<{ slug: string; photos: number }> {
   const d = await gapi(`https://places.googleapis.com/v1/places/${placeId}`, {
     headers: {
@@ -141,6 +149,7 @@ export async function importPlace(
     .insert({
       slug,
       google_place_id: d.id,
+      submitted_by: submittedBy,
       name_en: name,
       name_vi: name,
       category,
