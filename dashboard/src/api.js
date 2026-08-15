@@ -169,7 +169,7 @@ export const api = {
   },
 
   progress: async (city) => {
-    let query = supabase.from('places').select('review_status, category, categories, vibe_tags');
+    let query = supabase.from('places').select('review_status, is_published, category, categories, vibe_tags');
     if (city) query = query.eq('city_id', city);
     const rows = db(await query);
     const by = (key) => rows.reduce((acc, r) => ((acc[r[key]] = (acc[r[key]] ?? 0) + 1), acc), {});
@@ -181,6 +181,12 @@ export const api = {
     return {
       total: rows.length,
       by_status: by('review_status'),
+      // Approved and still invisible. Two independent flags decide whether
+      // anyone can see a place, and only one of them was ever counted here
+      // — so a city could read "26/26 approved" with three places nobody
+      // could open. This is the number the publish button acts on, and the
+      // number that makes it worth showing at all.
+      unpublished: rows.filter((r) => r.review_status === 'approved' && !r.is_published).length,
       by_category: by('category'),
       by_category_tag: byTag('categories'),
       by_vibe: byTag('vibe_tags'),

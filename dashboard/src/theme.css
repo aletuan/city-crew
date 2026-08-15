@@ -158,6 +158,25 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 }
 .moremenu-item:hover { background: var(--surface-glass); color: #fff; }
 .moremenu-item:disabled { opacity: .5; cursor: wait; }
+/* Kinds, kept apart. Sign out sits below one of these so a thumb travelling
+   down the menu meets a stop before it. */
+.moremenu-sep { height: 1px; margin: 5px 6px; background: var(--border-glass-soft); }
+/* Square-ish, because a lone glyph in a wide pill reads as a label that
+   failed to load. */
+.syncbtn.kebab { padding: 8px 13px; letter-spacing: 0.06em; }
+
+/* The publish action, attached to the measure it moves. Right-aligned to
+   the rail's own edge rather than stretched: it acts on a number, it is
+   not a section. */
+.publishbtn {
+  align-self: flex-end; margin-top: 2px;
+  border: 1px solid var(--warn); background: transparent;
+  color: var(--warn); font: inherit; font-size: 12px; font-weight: 600;
+  padding: 5px 13px; border-radius: var(--radius-pill);
+  white-space: nowrap; transition: background 160ms, color 160ms;
+}
+.publishbtn:hover { background: var(--warn); color: #141310; }
+.publishbtn:disabled { opacity: .5; cursor: wait; }
 
 /* ── filters ──
    Status, category and vibe are three different questions — some of their
@@ -600,31 +619,26 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .addresult { display: flex; align-items: center; gap: 10px; }
 .addresult .addbtn { text-decoration: none; }
 
-.topbar .addbtn { text-decoration: none; }
-.topbar-divider { width: 1px; height: 22px; background: var(--border-glass-soft); margin: 0 2px; }
-.topbar .signout {
-  display: flex; align-items: center; gap: 7px;
-  border: 1px solid var(--border-glass-soft); background: transparent; color: var(--text-tertiary);
-  font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: var(--radius-pill);
-  transition: background 160ms, color 160ms, border-color 160ms;
-  white-space: nowrap; flex-shrink: 0;
-}
-.topbar .signout svg { width: 15px; height: 15px; flex: none; }
-.topbar .signout:hover { color: var(--bad); border-color: rgba(248, 113, 113, 0.4); background: rgba(248, 113, 113, 0.08); }
+.topbar .addbtn { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 
 /* ── phone layout — the desk becomes a one-hand tool ── */
 @media (max-width: 720px) {
   body { font-size: 14px; }
   .shell { padding: 16px 12px 150px; }
 
-  .topbar-inner { gap: 8px 10px; padding: 12px; }
-  .topbar h1 span { display: none; }
+  /* One row, never two. Sorting the bar left one action and one menu,
+     which fits — and the label on that action is the only part that does
+     not, so it goes and the ＋ stays. The glyph was always the meaning of
+     the button; the words were what wrapped the row. */
+  .topbar-inner { flex-wrap: nowrap; gap: 8px 10px; padding: 12px; }
+  .topbar h1 { display: none; }
+  .addbtn .btnlabel { display: none; }
+  /* Let the city name shrink rather than push the actions off the edge. */
+  .cityselect { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .pagehead { flex-wrap: wrap; margin-bottom: 14px; }
   .pagetitle { font-size: 19px; }
   .rail { min-width: 0; flex: 1 1 100%; }
   .syncbtn { font-size: 12px; padding: 7px 12px; }
-  .topbar-divider { display: none; }
-  .signout span { display: none; }
 
   .filterlabel { flex-basis: 100%; }
 

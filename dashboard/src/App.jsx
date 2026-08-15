@@ -90,6 +90,10 @@ export default function App() {
   const approved = progress?.by_status?.approved ?? 0;
   const flagged = progress?.by_status?.flagged ?? 0;
   const total = progress?.total ?? 0;
+  // Approved and still invisible. Both the line and the button vanish at
+  // zero, which makes their absence the signal that nothing is waiting —
+  // a button that is always there says nothing by being there.
+  const unpublished = progress?.unpublished ?? 0;
 
   return (
     <ToastCtx.Provider value={showToast}>
@@ -116,27 +120,42 @@ export default function App() {
                 ))}
               </select>
               <div className="spacer" />
-              {/* The one action every editing session starts with — everything
-                  else here is occasional, so it alone carries the accent. */}
-              <Link className="syncbtn addbtn primary" to="/add">＋ Add place</Link>
-              <Link className="syncbtn addbtn" to="/city">City hero</Link>
-              <button className="syncbtn" onClick={publishApproved} disabled={publishing}>
-                {publishing ? 'Publishing…' : 'Publish approved'}
-              </button>
+              {/* One visible action, and it is the one every editing
+                  session starts with. Everything else in this bar was a
+                  different kind of thing wearing the same pill —
+                  navigation, a bulk write, an account control — so the
+                  bar could not say which of them mattered. They are
+                  sorted now: destinations and occasional actions into the
+                  menu, the bulk write down beside the number it changes.
+
+                  The label hides under 640px, leaving the ＋ alone. The
+                  glyph is the whole meaning of the button; the words were
+                  what made this row wrap onto a second line on a phone. */}
+              <Link className="syncbtn addbtn primary" to="/add">
+                <span aria-hidden="true">＋</span>
+                <span className="btnlabel">Add place</span>
+              </Link>
               <div className="moremenu" ref={moreRef}>
                 <button
-                  className="syncbtn"
+                  className="syncbtn kebab"
                   onClick={() => setMoreOpen((v) => !v)}
                   aria-haspopup="true"
                   aria-expanded={moreOpen}
+                  aria-label="Menu"
                 >
-                  More ⋯
+                  ⋯
                 </button>
                 {moreOpen && (
                   <div className="moremenu-panel" role="menu">
+                    {/* Where you can go, then what you can run, then who
+                        you are — the order they are asked for, and the
+                        separators are what keep the last one from being
+                        pressed by accident on the way past. */}
+                    <Link className="moremenu-item" to="/city" role="menuitem" onClick={() => setMoreOpen(false)}>City hero</Link>
+                    <Link className="moremenu-item" to="/scan" role="menuitem" onClick={() => setMoreOpen(false)}>Scan city</Link>
+                    <div className="moremenu-sep" />
                     {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
                     <a className="moremenu-item" href="mockup.html" target="_blank" rel="noreferrer" role="menuitem">Mockup ↗</a>
-                    <Link className="moremenu-item" to="/scan" role="menuitem" onClick={() => setMoreOpen(false)}>Scan city</Link>
                     <button
                       className="moremenu-item"
                       role="menuitem"
@@ -145,18 +164,11 @@ export default function App() {
                     >
                       {syncing ? 'Syncing…' : 'Sync mockup'}
                     </button>
+                    <div className="moremenu-sep" />
+                    <button className="moremenu-item" role="menuitem" onClick={signOut}>Sign out</button>
                   </div>
                 )}
               </div>
-              <div className="topbar-divider" />
-              <button className="signout" onClick={signOut} aria-label="Sign out">
-                <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M6.5 2H3.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M10.5 11.5 14 8l-3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M14 8H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <span>Sign out</span>
-              </button>
             </div>
           </header>
           <div className="shell">
@@ -168,11 +180,23 @@ export default function App() {
                     <div className="counts">
                       <span><b>{approved}</b>/{total} approved</span>
                       {flagged > 0 && <span style={{ color: 'var(--bad)' }}>{flagged} flagged</span>}
+                      {unpublished > 0 && <span style={{ color: 'var(--warn)' }}>{unpublished} not public</span>}
                     </div>
                     <div className="track">
                       <div className="fill" style={{ width: `${(approved / total) * 100}%` }} />
                       <div className="flagged" style={{ width: `${(flagged / total) * 100}%` }} />
                     </div>
+                    {/* Here rather than in the header, because this is the
+                        number it changes. Pressed from the top bar, the
+                        only evidence it had worked was a stamp in a row
+                        somewhere below — which is how a published place
+                        and a hidden one came to look identical to the
+                        person who had just published it. */}
+                    {unpublished > 0 && (
+                      <button className="publishbtn" onClick={publishApproved} disabled={publishing}>
+                        {publishing ? 'Publishing…' : `Publish ${unpublished}`}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
