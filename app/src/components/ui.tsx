@@ -209,14 +209,19 @@ export function RoundIconButton({ icon, onPress, label, size = 21 }: {
  * inside a bar and is sized to stay quiet next to them; this one is the
  * only thing on its card and carries a full sentence of a label.
  */
-export function GradientCta({ icon, label, onPress }: {
+export function GradientCta({ icon, label, onPress, wide }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
+  /** Full width, for the one action that commits a sheet. Sized to its
+   *  label everywhere else: a button as wide as the screen reads as "the
+   *  only thing here", which is true at the foot of a sheet and false in
+   *  the middle of a card. */
+  wide?: boolean;
 }) {
   return (
-    <PressableScale onPress={onPress} accessibilityRole="button">
-      <LinearGradient {...gradAI} style={s.cta}>
+    <PressableScale onPress={onPress} accessibilityRole="button" containerStyle={wide ? { alignSelf: 'stretch' } : undefined}>
+      <LinearGradient {...gradAI} style={[s.cta, wide && s.ctaWide]}>
         <Ionicons name={icon} size={20} color={colors.accentInk} />
         <Text style={s.ctaText}>{label}</Text>
       </LinearGradient>
@@ -286,6 +291,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 24, paddingVertical: 15, borderRadius: radius.pill,
   },
+  ctaWide: { justifyContent: 'center', paddingVertical: 16 },
   ctaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
   backBtn: {
     width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',

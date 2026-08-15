@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dotWindow, fmtDuration, groupHours, openState, splitHours } from './format';
+import { dateline, dotWindow, fmtDuration, groupHours, openState, splitHours } from './format';
 
 describe('fmtDuration', () => {
   it('stays in minutes up to an hour', () => {
@@ -257,5 +257,36 @@ describe('openState', () => {
     expect(openState(week('Opening hours vary'), WED_10AM)).toBeNull();
     expect(openState(week('8:00 AM'), WED_10AM)).toBeNull();
     expect(openState(week('25:00 AM – 9:00 PM'), WED_10AM)).toBeNull();
+  });
+});
+
+describe('dateline', () => {
+  // A fixed instant, because a function that reads the clock itself
+  // cannot be tested — which is why `now` is a parameter.
+  const sat = new Date(2026, 7, 15); // Saturday, 15 August 2026
+
+  it('spells the day and month out in English', () => {
+    expect(dateline('en', sat)).toBe('Saturday, August 15');
+  });
+
+  it('uses the Vietnamese day names and "tháng"', () => {
+    expect(dateline('vi', sat)).toBe('Thứ Bảy, 15 tháng 8');
+  });
+
+  it('puts the Japanese weekday in its brackets', () => {
+    expect(dateline('ja', sat)).toBe('8月15日（土）');
+  });
+
+  // Sunday is index 0 in both tables, and getting that wrong shifts every
+  // day of the week by one — a bug that looks like a translation problem.
+  it('lines Sunday up with index zero', () => {
+    const sun = new Date(2026, 7, 16);
+    expect(dateline('en', sun)).toBe('Sunday, August 16');
+    expect(dateline('vi', sun)).toBe('Chủ Nhật, 16 tháng 8');
+    expect(dateline('ja', sun)).toBe('8月16日（日）');
+  });
+
+  it('falls back to English for a language it does not know', () => {
+    expect(dateline('fr', sat)).toBe('Saturday, August 15');
   });
 });
