@@ -27,6 +27,17 @@ import type { Nav } from '../nav';
 // glyph — a colourless chip reads as "not a kind of place".
 const ALL = 'all';
 
+/**
+ * The pinned filter row's own breathing room, above and below its chips.
+ *
+ * Named because it has to be subtracted somewhere else. Pinned, the row is
+ * its own top edge and needs this; at rest it sits under the Places
+ * heading, whose `marginBottom` is already the gap the app uses between
+ * any heading and its content — and the two were adding up, so that one
+ * heading stood 26pt off its content where every other stands 16.
+ */
+const FILTER_PAD = 10;
+
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const MONTHS_EN = [
@@ -266,7 +277,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     <>
       <Hero place={hero} onExplore={scrollToPlaces} scrollY={scrollY} />
       <CollectionShelf navigation={navigation} />
-      <Text style={s.section}>{t('Places', 'Địa điểm', 'スポット')}</Text>
+      {/* Short of the usual gap by exactly the filter row's top padding,
+          so the space you see between this heading and its chips is the
+          same 16 that sits under every other heading. */}
+      <Text style={[s.section, s.sectionOverFilter]}>{t('Places', 'Địa điểm', 'スポット')}</Text>
     </>
   );
 
@@ -421,6 +435,7 @@ const s = StyleSheet.create({
     color: colors.text, ...type.section,
     paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
+  sectionOverFilter: { marginBottom: space.headingToContent - FILTER_PAD },
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
 
   // The pinned filter row.
@@ -440,7 +455,7 @@ const s = StyleSheet.create({
   // Padding is symmetric because once pinned there is no heading above it
   // to sit under — it is its own top edge.
   filterBar: {
-    paddingVertical: 10,
+    paddingVertical: FILTER_PAD,
     backgroundColor: colors.bg,
   },
   // Drawn only at the bottom, and only a hairline: it is where the header
