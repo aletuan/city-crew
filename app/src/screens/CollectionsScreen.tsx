@@ -454,10 +454,17 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                       <Text style={s.title} numberOfLines={open ? 1 : 2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
                       <View style={s.metaRow}>
                         {/* The padlock says whose it is without spending a
-                            word on it — and every owned list is private,
-                            so the word after it never varies. */}
+                            word on it. It used to be the only answer,
+                            because every owned list was private; now the
+                            glyph carries which of the two it is, and the
+                            detail screen uses the same pair for the same
+                            fact. */}
                         {section.own && (
-                          <Ionicons name="lock-closed-outline" size={13} color={colors.textTertiary} />
+                          <Ionicons
+                            name={item.is_public ? 'globe-outline' : 'lock-closed-outline'}
+                            size={13}
+                            color={item.is_public ? colors.ok : colors.textTertiary}
+                          />
                         )}
                         <Text style={s.meta} numberOfLines={1}>
                           {/* "0 places" reads like a broken count; an empty
@@ -465,8 +472,18 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                           {count === 0
                             ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
                             : `${count} ${t('places', 'địa điểm', 'スポット')}`}
-                          {section.own ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
-                          {item.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${item.curator_handle}` : ''}
+                          {section.own
+                            ? `  ·  ${item.is_public
+                              ? t('Public', 'Công khai', '公開')
+                              : t('Private', 'Riêng tư', '非公開')}`
+                            : ''}
+                          {/* Your own byline is the padlock's business, not
+                              a credit line: on the public section it tells
+                              you whose list you are looking at, and on your
+                              own it would only tell you your own name. */}
+                          {!section.own && item.curator_handle
+                            ? `  ·  ${t('by', 'bởi', 'by')} ${item.curator_handle}`
+                            : ''}
                         </Text>
                       </View>
                     </View>

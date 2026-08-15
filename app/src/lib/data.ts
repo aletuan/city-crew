@@ -71,16 +71,33 @@ async function fetchPlaces(cityId: string): Promise<Place[]> {
 const COLLECTION_COLS = (withOwner: boolean) =>
   `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(slug)), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
 
-async function fetchCollections(cityId: string): Promise<Collection[]> {
+async function fetchCollections(cityId: string, meId?: string | null): Promise<Collection[]> {
   const run = (withOwner: boolean) => {
     const q = supabase
       .from('collections')
       .select(COLLECTION_COLS(withOwner))
       .eq('city_id', cityId)
       .eq('is_public', true);
-    // Editorial rows only. A user's own lists are private and come back
-    // through fetchMyCollections, so nothing appears in both sections.
-    return (withOwner ? q.is('owner_id', null) : q).order('sort_order');
+    // Editorial rows and other people's published ones. Your own are
+    // excluded whether they are published or not, because they come back
+    // through fetchMyCollections and a list in both sections reads as two
+    // lists — publishing should change who else can see it, not make a
+    // second copy appear under your own.
+    //
+    // Signed out there is nobody to exclude, and `owner_id.neq.null` is
+    // not the same question as `is not null` in PostgREST's grammar, so
+    // that branch drops the clause rather than writing one that quietly
+    // matches nothing.
+    // `owner_id` and `created_at` arrived in the same migration, so the
+    // fallback below cannot mention either — it exists precisely for a
+    // database that has neither.
+    if (!withOwner) return q.order('sort_order');
+    const scoped = meId ? q.or(`owner_id.is.null,owner_id.neq.${meId}`) : q;
+    // Editorial rows carry a sort_order and owned ones do not, so the
+    // desk's sequence holds and published lists fall in behind it,
+    // newest first among themselves rather than in whatever order the
+    // planner felt like.
+    return scoped.order('sort_order', { nullsFirst: false }).order('created_at', { ascending: false });
   };
 
   let { data, error } = await run(true);
@@ -104,7 +121,7 @@ async function fetchCollections(cityId: string): Promise<Collection[]> {
  * lists rather than a city's catalog, so there are a handful of them.
  */
 const MY_COLLECTION_COLS =
-  `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, cover:place_photos!collections_cover_photo_id_fkey(photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
+  `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, cover:place_photos!collections_cover_photo_id_fkey(photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
 
 async function fetchMyCollections(ownerId: string): Promise<Collection[]> {
   const { data, error } = await supabase
@@ -152,11 +169,11 @@ export const usePlacesQuery = () => {
   return useFetch(fetcher, [] as Place[]);
 };
 
-export const useCollectionsQuery = () => {
+export const useCollectionsQuery = (meId?: string | null) => {
   const { city } = useCity();
   const fetcher = useCallback(
-    () => (city ? fetchCollections(city.id) : (pending as Promise<Collection[]>)),
-    [city?.id],
+    () => (city ? fetchCollections(city.id, meId) : (pending as Promise<Collection[]>)),
+    [city?.id, meId],
   );
   return useFetch(fetcher, [] as Collection[]);
 };
@@ -226,6 +243,27 @@ export async function updateCollection(slug: string, input: { title: string; des
       title_en: title, title_vi: title, title_ja: title,
       desc_en: desc, desc_vi: desc, desc_ja: desc,
     })
+    .eq('slug', slug);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Publish one of the user's own lists, or take it back.
+ *
+ * The whole of publishing, as far as the client is concerned: one boolean.
+ * Everything that follows from it happens in the database — the editorial
+ * read policies already select on `is_public` alone, so the list and its
+ * places become visible to everyone the moment this lands, and a trigger
+ * stamps the byline from the owner's profile rather than trusting a
+ * handle sent from here.
+ *
+ * Which is why `curator_handle` is not in this update and must not be.
+ * See `20260815120000_publish_collections.sql`.
+ */
+export async function setCollectionPublic(slug: string, isPublic: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('collections')
+    .update({ is_public: isPublic })
     .eq('slug', slug);
   if (error) throw new Error(error.message);
 }

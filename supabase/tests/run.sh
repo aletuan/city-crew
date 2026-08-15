@@ -67,3 +67,16 @@ done
 
 echo "→ checks"
 run "$DB" -f "$HERE/profiles_test.sql"
+
+# Publishing needs a collections table to attach policies to, and profiles
+# to read a byline from — so it runs after the block above rather than
+# beside it.
+echo "→ collections stub"
+run "$DB" -f "$HERE/_collections.sql"
+for f in "$ROOT"/supabase/migrations/*_user_collections.sql \
+         "$ROOT"/supabase/migrations/*_publish_collections.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+
+echo "→ publish checks"
+run "$DB" -f "$HERE/publish_test.sql"

@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AmbientWarmth, BackButton, Empty, PressableScale, RoundIconButton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { deleteCollection, membersOf } from '../lib/data';
+import { deleteCollection, membersOf, setCollectionPublic } from '../lib/data';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
@@ -120,6 +120,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const members = useMemo(() => (col ? membersOf(col, places) : []), [col, places]);
   const loading = cols.loading || mine.loading || placesLoading;
   const owned = !!col?.owner_id && col.owner_id === uid;
+  const isPublic = !!col?.is_public;
   const tabClearance = useTabBarClearance();
 
   const title = col ? t(col.title_en, col.title_vi, col.title_ja) : '';
@@ -156,19 +157,45 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     desc: t(col.desc_en, col.desc_vi, col.desc_ja),
   });
 
-  // Inert, and the reason is the same one that makes Share inert: there
-  // is nowhere for a published list to be. The row exists so the shape of
-  // the menu is settled before the feature lands behind it — and because
-  // the RLS policies currently pin an owned collection to is_public =
-  // false, so today this button could not do its job even if it tried.
-  const makePublic = () => Alert.alert(
-    t('Publishing is coming', 'Sắp có công khai', '公開機能は近日公開'),
-    t(
-      'Making a collection public will put it on the Collections tab for everyone in the city. Not ready yet.',
-      'Công khai bộ sưu tập sẽ đưa nó lên tab Bộ sưu tập cho mọi người trong thành phố. Chưa sẵn sàng.',
-      'コレクションを公開すると、市内のみんなのコレクションタブに表示されます。まだ準備中です。',
-    ),
-  );
+  /**
+   * Publish, or take it back.
+   *
+   * No confirmation on the way out, and a banner with Undo instead. An
+   * alert asking "are you sure" before a reversible act is a toll on
+   * everyone who meant it, paid so that the few who did not are stopped
+   * one step earlier than the Undo would have stopped them. Publishing is
+   * one boolean and unpublishing is the same boolean — the thing to
+   * provide is a way back, not a gate.
+   *
+   * Both catalogs are reloaded because the row moves between them: it
+   * leaves nothing in `mine`, which returns everything you own either
+   * way, but it enters and leaves the public query, and that query is
+   * what the other section is drawn from.
+   */
+  const [banner, setBanner] = useState<null | 'public' | 'private'>(null);
+  const [publishing, setPublishing] = useState(false);
+  const setPublic = (next: boolean) => {
+    if (!col || publishing) return;
+    setPublishing(true);
+    setCollectionPublic(col.slug, next)
+      .then(() => {
+        mine.reload();
+        cols.reload();
+        setBanner(next ? 'public' : 'private');
+      })
+      .catch((e: Error) => Alert.alert(
+        next
+          ? t('Could not publish', 'Không công khai được', '公開できませんでした')
+          : t('Could not make private', 'Không chuyển riêng tư được', '非公開にできませんでした'),
+        e.message,
+      ))
+      .finally(() => setPublishing(false));
+  };
+
+  // The banner stands until it is dismissed or the screen is left. It
+  // holds the only Undo there is, so a timer would be a deadline on
+  // changing your mind about who can see your list.
+  const undo = () => setPublic(banner === 'public' ? false : true);
 
   // Deliberately inert. A private list has no address to send anyone to,
   // so the honest placeholder says that rather than opening a share sheet
@@ -212,11 +239,27 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           {col && (
             <View style={s.metaRow}>
               {/* The padlock the list already uses for the same fact, so a
-                  private collection looks the same wherever you meet it. */}
-              {owned && <Ionicons name="lock-closed-outline" size={13} color={colors.textTertiary} />}
+                  private collection looks the same wherever you meet it —
+                  and a globe once it is not private any more.
+
+                  Published reads first and in colour, because it is the
+                  state worth checking before you leave the screen. Private
+                  stays grey: it is the resting state and does not need
+                  announcing. */}
+              {owned && (
+                <Ionicons
+                  name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
+                  size={13}
+                  color={isPublic ? colors.ok : colors.textTertiary}
+                />
+              )}
+              {owned && isPublic && (
+                <Text style={s.metaPublic}>{t('Public', 'Công khai', '公開')}</Text>
+              )}
               <Text style={s.meta} numberOfLines={1}>
+                {owned && isPublic ? '·  ' : ''}
                 {members.length} {t('places', 'địa điểm', 'スポット')}
-                {owned ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
+                {owned && !isPublic ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
                 {col.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${col.curator_handle}` : ''}
               </Text>
             </View>
@@ -235,6 +278,45 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           </View>
         )}
       </View>
+      {/* What just happened, and the way back out of it. Above the
+          description rather than floating over the list: it is about the
+          collection as a whole, and a toast that covers the first place
+          card would be reporting on the list by hiding part of it.
+
+          Dismissible by its own tick — the row is the acknowledgement, so
+          tapping it is how you say you have read it. */}
+      {banner && (
+        <Pressable
+          style={[s.banner, banner === 'private' && s.bannerQuiet]}
+          onPress={() => setBanner(null)}
+          accessibilityRole="button"
+          accessibilityLiveRegion="polite"
+        >
+          <Ionicons
+            name={banner === 'public' ? 'checkmark-circle' : 'lock-closed'}
+            size={19}
+            color={banner === 'public' ? colors.ok : colors.textSecondary}
+          />
+          <Text style={s.bannerText} numberOfLines={2}>
+            {banner === 'public'
+              ? t(
+                'This collection is now public',
+                'Bộ sưu tập này giờ đã công khai',
+                'このコレクションは公開されました',
+              )
+              : t(
+                'This collection is private again',
+                'Bộ sưu tập này đã riêng tư trở lại',
+                'このコレクションは非公開に戻りました',
+              )}
+          </Text>
+          <Pressable onPress={undo} hitSlop={10} disabled={publishing}>
+            <Text style={[s.bannerUndo, publishing && s.bannerUndoBusy]}>
+              {t('Undo', 'Hoàn tác', '元に戻す')}
+            </Text>
+          </Pressable>
+        </Pressable>
+      )}
       {col && (col.desc_en || col.desc_vi) && (
         <Text style={s.desc}>{t(col.desc_en, col.desc_vi, col.desc_ja)}</Text>
       )}
@@ -309,11 +391,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           />
           {/* Above Delete, below the rest: it is the one row that changes
               who else can see this, which is a heavier thing than editing
-              a title and a lighter one than destroying the list. */}
+              a title and a lighter one than destroying the list.
+
+              The label is the action, not the state. "Public" with a tick
+              would leave you working out which way the row is pointing;
+              the header already says which one you are in. */}
           <MenuRow
-            icon="globe-outline"
-            label={t('Make public', 'Công khai', '公開する')}
-            onPress={() => act(makePublic)}
+            icon={isPublic ? 'lock-closed-outline' : 'globe-outline'}
+            label={isPublic
+              ? t('Make private', 'Chuyển riêng tư', '非公開にする')
+              : t('Make public', 'Công khai', '公開する')}
+            onPress={() => act(() => setPublic(!isPublic))}
           />
           <MenuRow
             icon="trash-outline"
@@ -339,6 +427,27 @@ const s = StyleSheet.create({
   title: { color: colors.text, ...type.headline },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   meta: { color: colors.textTertiary, ...type.meta },
+  // The one word on the line that is not grey. `ok` is the app's green and
+  // measures 4.35:1 on paper, which small text needs; the padlock beside
+  // it stays tertiary because a resting state does not need a colour.
+  metaPublic: { color: colors.ok, ...type.meta, fontWeight: font.semibold },
+
+  banner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: space.page, marginBottom: 12,
+    paddingVertical: 11, paddingHorizontal: 14,
+    borderRadius: radius.input,
+    // A wash of the same green rather than a filled bar: the message is
+    // good news about a small thing, and a solid green rail across the top
+    // of the screen would announce it like an error.
+    backgroundColor: colors.okSoft,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  bannerQuiet: { backgroundColor: colors.surfaceGlass },
+  bannerText: { flex: 1, color: colors.text, fontSize: 15, fontWeight: font.medium },
+  bannerUndo: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
+  bannerUndoBusy: { opacity: 0.4 },
+
   desc: {
     color: colors.textSecondary, ...type.body, lineHeight: 24,
     paddingHorizontal: space.page, paddingBottom: 12,
