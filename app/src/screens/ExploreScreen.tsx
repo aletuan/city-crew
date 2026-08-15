@@ -12,7 +12,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
-import SuggestRow from '../components/SuggestRow';
+import { AddPill, AddSlot } from '../components/add';
 import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
@@ -47,7 +47,7 @@ const FILTER_PAD = 10;
 function ExploreSuggestRow({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
   return (
-    <SuggestRow
+    <AddSlot
       onPress={onPress}
       title={t('Know a spot we are missing?', 'Biết chỗ nào chúng tôi còn thiếu?', '載っていないスポットをご存じですか？')}
       subtitle={t('Search for it — we fetch the rest', 'Tìm tên quán — phần còn lại chúng tôi lo', '名前で検索 — 残りはこちらで取得します')}
@@ -134,11 +134,7 @@ function ScrollNudge({ top, visible, onSearch, onAdd }: {
             {t('Search it, or add your own', 'Tìm nhanh, hoặc tự thêm', '検索、または自分で追加')}
           </Text>
         </View>
-        <PressableScale onPress={onAdd} scaleTo={0.94} accessibilityRole="button">
-          <LinearGradient {...gradAI} style={s.nudgeBtn}>
-            <Text style={s.nudgeBtnText}>{t('Add', 'Thêm', '追加')}</Text>
-          </LinearGradient>
-        </PressableScale>
+        <AddPill compact label={t('Add', 'Thêm', '追加')} onPress={onAdd} />
       </PressableScale>
     </Animated.View>
   );
@@ -639,8 +635,6 @@ const s = StyleSheet.create({
   },
   nudgeTitle: { color: colors.text, fontSize: 14.5, fontWeight: font.semibold },
   nudgeSub: { color: colors.textTertiary, fontSize: 12.5 },
-  nudgeBtn: { paddingHorizontal: 16, height: 34, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  nudgeBtnText: { color: colors.accentInk, fontSize: 14, fontWeight: font.semibold },
 
   // The pinned filter row.
   //

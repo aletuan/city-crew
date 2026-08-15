@@ -3,17 +3,17 @@ import {
   ActivityIndicator, Alert, Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
-import { AmbientWarmth, BackButton, Empty, PressableScale, RoundIconButton, useTabBarClearance } from '../components/ui';
+import { AddSlot } from '../components/add';
+import { AmbientWarmth, BackButton, Empty, GradientCta, RoundIconButton, useTabBarClearance } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { deleteCollection, membersOf, publishBlockers, setCollectionPublic } from '../lib/data';
 import { atHandle } from '../lib/handle';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
-import { colors, font, gradAI, radius, space, type } from '../theme';
+import { colors, font, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 /**
@@ -38,12 +38,11 @@ function OwnEmpty({ onExplore }: { onExplore: () => void }) {
         <Text style={s.emptyBody}>
           {t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。')}
         </Text>
-        <PressableScale onPress={onExplore} accessibilityRole="button">
-          <LinearGradient {...gradAI} style={s.emptyCta}>
-            <Ionicons name="compass-outline" size={19} color={colors.accentInk} />
-            <Text style={s.emptyCtaText}>{t('Explore places', 'Khám phá địa điểm', 'スポットを見る')}</Text>
-          </LinearGradient>
-        </PressableScale>
+        <GradientCta
+          icon="compass-outline"
+          label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る')}
+          onPress={onExplore}
+        />
       </View>
     </View>
   );
@@ -74,33 +73,6 @@ function MenuRow({ icon, label, onPress, danger, first }: {
       <Ionicons name={icon} size={21} color={danger ? colors.bad : colors.text} />
       <Text style={[s.menuText, danger && { color: colors.bad }]} numberOfLines={1}>{label}</Text>
     </Pressable>
-  );
-}
-
-/**
- * The last row of a list you own — a slot rather than a place.
- *
- * The dashed outline is the same one the collections list ends on, and it
- * is doing the same job: saying "not a thing, a space where one would go"
- * at the moment you have just finished reading the list and found it
- * short.
- */
-function AddPlaceRow({ onPress, label, sub }: { onPress: () => void; label: string; sub: string }) {
-  return (
-    <View style={s.addWrap}>
-      <PressableScale onPress={onPress} accessibilityRole="button" style={s.addRow}>
-        <View style={s.addIcon}>
-          <Ionicons name="add" size={24} color={colors.accent} />
-        </View>
-        {/* The second line names where the places come from. Without it the
-            row is a verb with no object, and "Add place" alone had already
-            sent one reader to Explore expecting a picker. */}
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={s.addText} numberOfLines={1}>{label}</Text>
-          <Text style={s.addSub} numberOfLines={1}>{sub}</Text>
-        </View>
-      </PressableScale>
-    </View>
   );
 }
 
@@ -404,10 +376,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         // one thing read as two different things.
         ListFooterComponent={owned && members.length > 0
           ? (
-            <AddPlaceRow
+            <AddSlot
               onPress={addPlace}
-              label={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
-              sub={t(
+              title={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+              // The second line names where the places come from. Without
+              // it the row is a verb with no object, and "Add place" alone
+              // had already sent one reader to Explore expecting a picker.
+              subtitle={t(
                 'From search or your bookmarks',
                 'Từ tìm kiếm hoặc mục đã lưu',
                 '検索や保存済みから',
@@ -515,21 +490,6 @@ const s = StyleSheet.create({
 
   // The dashed slot at the end of the list, matching the collections
   // screen's own last row down to the well and the gap.
-  addWrap: { marginHorizontal: space.page, marginTop: 4, marginBottom: 8 },
-  addRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    padding: space.cardPadding, borderRadius: radius.card,
-    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderGlass,
-  },
-  addIcon: {
-    width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
-  },
-  // Line box stated rather than left to the font: at this size the
-  // metrics leave nothing under the baseline, and the descender on
-  // "Thêm địa điểm" is the first thing to go.
-  addText: { color: colors.text, fontSize: 16.5, lineHeight: 22, fontWeight: font.semibold },
-  addSub: { color: colors.textTertiary, fontSize: 14, lineHeight: 19 },
 
   // Lighter than the sheet's scrim was. A popover keeps its context —
   // you can still read the row you are acting on — where a sheet takes
@@ -566,9 +526,4 @@ const s = StyleSheet.create({
   emptyBody: {
     color: colors.textSecondary, fontSize: 16, lineHeight: 22, textAlign: 'center',
   },
-  emptyCta: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 22, paddingVertical: 13, borderRadius: radius.pill,
-  },
-  emptyCtaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
 });

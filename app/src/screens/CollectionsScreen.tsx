@@ -12,7 +12,8 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { AmbientWarmth, Card, Empty, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, Empty, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { AddPill, AddSlot } from '../components/add';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, deleteCollection, membersOf, touchesCity } from '../lib/data';
@@ -146,14 +147,11 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
             that one runs the full width, where end caps as tall as the
             button read as a lozenge. This one is sized to its label, which
             is exactly where a pill belongs. */}
-        <PressableScale onPress={onPress} accessibilityRole="button">
-          <LinearGradient {...gradAI} style={s.firstCta}>
-            <Ionicons name="add" size={20} color={colors.accentInk} />
-            <Text style={s.firstCtaText}>
-              {t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る')}
-            </Text>
-          </LinearGradient>
-        </PressableScale>
+        <GradientCta
+          icon="add"
+          label={t('Create your first collection', 'Tạo bộ sưu tập đầu tiên', '最初のコレクションを作る')}
+          onPress={onPress}
+        />
         <Text style={s.firstFoot}>
           {t('Only you can see your lists.', 'Chỉ mình bạn thấy danh sách của bạn.', 'リストはあなただけに表示されます。')}
         </Text>
@@ -165,29 +163,18 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
 /**
  * The last row of your own section: a slot rather than a thing.
  *
- * The dashed outline is doing the work — it says "not a collection, a
- * place where one would go", which no amount of label on a solid card
- * manages. It sits at the end of the list because that is where you are
- * looking when you have just decided the list is missing something.
+ * It sits at the end of the list because that is where you are looking
+ * when you have just decided the list is missing something — the same
+ * moment, and now the same row, as the one under Explore's places.
  */
 function NewCollectionRow({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
   return (
-    <View style={s.row}>
-      <PressableScale onPress={onPress} accessibilityRole="button" style={s.newRow}>
-        <View style={s.newRowIcon}>
-          <Ionicons name="add" size={26} color={colors.accent} />
-        </View>
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={s.newRowTitle}>
-            {t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
-          </Text>
-          <Text style={s.newRowSub} numberOfLines={1}>
-            {t('Group places for your next plan', 'Nhóm địa điểm cho kế hoạch tới', '次の予定に向けてスポットをまとめる')}
-          </Text>
-        </View>
-      </PressableScale>
-    </View>
+    <AddSlot
+      onPress={onPress}
+      title={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
+      subtitle={t('Group places for your next plan', 'Nhóm địa điểm cho kế hoạch tới', '次の予定に向けてスポットをまとめる')}
+    />
   );
 }
 
@@ -416,16 +403,11 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                 ? (
                   <View style={s.sectionRow}>
                     <Text style={[s.section, s.sectionFlush]}>{section.title}</Text>
-                    <PressableScale
+                    <AddPill
+                      label={t('New', 'Tạo mới', '新規')}
                       onPress={() => navigation.navigate('CollectionForm')}
-                      accessibilityRole="button"
                       accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
-                    >
-                      <LinearGradient {...gradAI} style={s.newPill}>
-                        <Ionicons name="add" size={18} color={colors.accentInk} />
-                        <Text style={s.newPillText}>{t('New', 'Tạo mới', '新規')}</Text>
-                      </LinearGradient>
-                    </PressableScale>
+                    />
                   </View>
                 )
                 : <Text style={s.section}>{section.title}</Text>
@@ -593,24 +575,7 @@ const s = StyleSheet.create({
   // The heading keeps its own padding through `s.section`; inside the row
   // the row owns it, and applying both would indent the title twice.
   sectionFlush: { paddingHorizontal: 0, marginBottom: 0 },
-  newPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingLeft: 14, paddingRight: 18, paddingVertical: 9,
-    borderRadius: radius.pill,
-  },
-  newPillText: { color: colors.accentInk, fontSize: 15.5, fontWeight: font.semibold },
 
-  newRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    padding: space.cardPadding, borderRadius: radius.card,
-    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderGlass,
-  },
-  newRowIcon: {
-    width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
-  },
-  newRowTitle: { color: colors.text, ...type.cardTitle },
-  newRowSub: { color: colors.textTertiary, fontSize: 14, lineHeight: 19 },
 
   firstWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
   first: {
@@ -629,11 +594,6 @@ const s = StyleSheet.create({
     color: colors.textSecondary, fontSize: 15, lineHeight: 21,
     textAlign: 'center', marginBottom: 6,
   },
-  firstCta: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 24, paddingVertical: 15, borderRadius: radius.pill,
-  },
-  firstCtaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
   firstFoot: { color: colors.textTertiary, fontSize: 13, lineHeight: 18, textAlign: 'center', marginTop: 4 },
 
   row: { marginHorizontal: space.page, marginBottom: space.cardGap },
