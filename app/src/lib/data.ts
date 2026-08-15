@@ -7,12 +7,14 @@ import { useCity } from './city';
 import { supabase } from './supabase';
 import type { Collection, Place } from './types';
 import { slugify } from './place';
+import { ownPendingFirst } from './live';
 
 // Shapes and pure helpers live next door, where a Node process can reach
 // them without pulling in Supabase and React Native. Re-exported here so
 // that `from '../lib/data'` keeps meaning what it always did.
 export * from './types';
 export * from './place';
+export * from './live';
 
 export type Fetch<T> = {
   loading: boolean;
@@ -46,27 +48,58 @@ function useFetch<T>(fetcher: () => Promise<T>, empty: T): Fetch<T> {
 }
 
 const PLACE_COLS = (withCategories: boolean) =>
-  `slug, name_en, name_vi, name_ja, category${withCategories ? ', categories' : ''}, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, neighborhood_ja, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, desc_ja, emoji, opening_hours, website, phone, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)`;
+  `slug, name_en, name_vi, name_ja, category${withCategories ? ', categories' : ''}, is_published, review_status, submitted_by, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, neighborhood_ja, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, desc_ja, emoji, opening_hours, website, phone, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)`;
 
-async function fetchPlaces(cityId: string): Promise<Place[]> {
-  const run = (cols: string) => supabase
-    .from('places')
-    .select(cols)
-    .eq('city_id', cityId)
-    .eq('is_published', true)
-    .eq('review_status', 'approved')
-    .order('sort_order', { ascending: true, nullsFirst: false });
+/**
+ * The catalog for a city, plus whatever the reader suggested themselves.
+ *
+ * The second half is the whole of rule 4: a place you proposed is yours
+ * from the moment you propose it — it shows here and goes into your own
+ * lists — and it reaches nobody else until the desk says so. RLS enforces
+ * that; this query has to stop excluding it, which is a separate change
+ * in a separate place, and both are needed.
+ *
+ * Signed out, or on a database that predates the column, the filter is
+ * the plain catalog it always was.
+ */
+async function fetchPlaces(cityId: string, meId?: string | null): Promise<Place[]> {
+  const run = (cols: string, withSubmissions: boolean) => {
+    const q = supabase
+      .from('places')
+      .select(cols)
+      .eq('city_id', cityId);
+    // `or` across the two gates and the submitter. Written as one clause
+    // rather than chained `eq`s because it is a disjunction: live, OR
+    // mine. Chaining would ask for both.
+    const scoped = withSubmissions && meId
+      ? q.or(`and(is_published.eq.true,review_status.eq.approved),submitted_by.eq.${meId}`)
+      : q.eq('is_published', true).eq('review_status', 'approved');
+    return scoped.order('sort_order', { ascending: true, nullsFirst: false });
+  };
 
-  let { data, error } = await run(PLACE_COLS(true));
+  let { data, error } = await run(PLACE_COLS(true), true);
   // A build can reach a database that has not run the categories migration
   // yet. Drop the column and retry rather than showing an error screen —
   // categoriesOf() derives a usable value from vibes in the meantime.
   if (error && error.message.includes('categories')) {
-    ({ data, error } = await run(PLACE_COLS(false)));
+    ({ data, error } = await run(PLACE_COLS(false), true));
+  }
+  // And one that has not run the submissions migration: `submitted_by` is
+  // the newest column here, so a client that ships ahead of the database
+  // asks for the catalog alone rather than showing an error screen. There
+  // are no submissions to miss on a database that cannot hold one.
+  if (error && error.message.includes('submitted_by')) {
+    ({ data, error } = await run(PLACE_COLS_LEGACY, false));
   }
   if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as Place[];
+  // Your own suggestions first. See `ownPendingFirst` — sorted here rather
+  // than in the query because `sort_order` cannot express "mine".
+  return ownPendingFirst((data ?? []) as unknown as Place[], meId);
 }
+
+/** The column list without anything the submissions migration added. */
+const PLACE_COLS_LEGACY = PLACE_COLS(true)
+  .replace(', is_published, review_status, submitted_by', '');
 
 const COLLECTION_COLS = (withOwner: boolean) =>
   `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(slug)), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
@@ -169,11 +202,11 @@ async function fetchMyCollections(ownerId: string): Promise<Collection[]> {
 // them directly and you get a private copy that no one will keep in step.
 const pending = new Promise<never>(() => {}); // keeps skeletons up during city bootstrap
 
-export const usePlacesQuery = () => {
+export const usePlacesQuery = (meId?: string | null) => {
   const { city } = useCity();
   const fetcher = useCallback(
-    () => (city ? fetchPlaces(city.id) : (pending as Promise<Place[]>)),
-    [city?.id],
+    () => (city ? fetchPlaces(city.id, meId) : (pending as Promise<Place[]>)),
+    [city?.id, meId],
   );
   return useFetch(fetcher, [] as Place[]);
 };

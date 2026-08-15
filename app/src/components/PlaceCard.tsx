@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { coverOf, fmtCount, Place } from '../lib/data';
+import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
@@ -78,6 +78,29 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
               />
             </PressableScale>
           </View>
+          {/* Only its submitter can see this card at all, so the marker is
+              not a warning — it is the answer to "why can nobody else see
+              the place I added". Without it the card looks live, they show
+              a friend, the friend sees nothing, and the app reads as broken
+              rather than as pending.
+
+              Waiting and turned down are separate words on purpose: one is
+              *wait*, the other is *no*, and a person owed the second should
+              not be left expecting the first. */}
+          {!isLive(place) && (
+            <View style={[s.statusRow, isFlagged(place) && s.statusRowBad]}>
+              <Ionicons
+                name={isFlagged(place) ? 'close-circle-outline' : 'time-outline'}
+                size={13}
+                color={isFlagged(place) ? colors.bad : colors.textSecondary}
+              />
+              <Text style={[s.statusText, isFlagged(place) && s.statusTextBad]} numberOfLines={1}>
+                {isFlagged(place)
+                  ? t('Not accepted', 'Không được duyệt', '不採用')
+                  : t('Awaiting review', 'Đang chờ duyệt', '審査待ち')}
+              </Text>
+            </View>
+          )}
           {place.vibe_tags.length > 0 && (
             <View style={s.vibeRow}>
               {place.vibe_tags.slice(0, 3).map((v) => (
@@ -138,6 +161,16 @@ const s = StyleSheet.create({
   // Vibes read as small glass pills, each carrying its own colour in a dot
   // only — the type stays neutral so the row scans without shouting.
   // One line, never wrapping, so every card keeps the same height.
+  statusRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start', marginTop: 8,
+    paddingHorizontal: 9, paddingVertical: 4,
+    borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
+  },
+  statusRowBad: { backgroundColor: colors.badSoft },
+  statusText: { color: colors.textSecondary, fontSize: 12, fontWeight: font.medium },
+  statusTextBad: { color: colors.bad },
+
   vibeRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: 6, marginTop: 8 },
   vibeChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1,
