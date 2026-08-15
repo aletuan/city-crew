@@ -154,4 +154,53 @@ begin
   assert pinned = 1, 'stamp_curator has a mutable search_path';
 end $$;
 
+-- ───────────────────────────────────────────────── bare handles
+
+-- The column has to be comparable to `profiles.handle`, which is bare and
+-- lowercase. A byline that cannot be joined to the profile behind it is
+-- the actual defect; the mismatched rendering was only what showed first.
+do $$
+declare h text;
+begin
+  insert into public.collections (slug, owner_id, is_public, curator_handle)
+  values ('seeded-with-at', null, true, '@hanoicrew');
+  select curator_handle into h from public.collections where slug = 'seeded-with-at';
+  assert h = 'hanoicrew', format('an editorial byline kept its sign: %s', h);
+end $$;
+
+-- The strip runs on every write, so a seed migration seeded next month is
+-- free to keep writing @ and the column stays clean anyway. Without this
+-- the backfill would be tidying a room with the window open.
+do $$
+declare h text;
+begin
+  update public.collections set curator_handle = '  @HanoiCrew ' where slug = 'seeded-with-at';
+  select curator_handle into h from public.collections where slug = 'seeded-with-at';
+  assert h = 'hanoicrew', format('an update reintroduced the sign or the case: %s', h);
+end $$;
+
+-- A handle that was only ever a sign is nothing, not an empty string.
+do $$
+declare h text;
+begin
+  update public.collections set curator_handle = '@' where slug = 'seeded-with-at';
+  select curator_handle into h from public.collections where slug = 'seeded-with-at';
+  assert h is null, format('an empty handle survived as %L', h);
+end $$;
+
+-- And it must join. This is the check the whole migration exists for.
+do $$
+declare joined int;
+begin
+  update public.collections
+     set curator_handle = (select handle from public.profiles
+                            where id = 'aaaaaaaa-0000-0000-0000-000000000001')
+   where slug = 'seeded-with-at';
+  select count(*) into joined
+    from public.collections c
+    join public.profiles p on p.handle = c.curator_handle
+   where c.slug = 'seeded-with-at';
+  assert joined = 1, 'a byline could not be joined to the profile behind it';
+end $$;
+
 select 'all publish migration checks passed' as result;
