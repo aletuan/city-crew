@@ -83,6 +83,11 @@ export const api = {
     if (params.status) query = query.eq('review_status', params.status);
     if (params.category) query = query.contains('categories', [params.category]);
     if (params.vibe) query = query.contains('vibe_tags', [params.vibe]);
+    // The one filter the chip rows cannot express: a place with no tags at
+    // all is absent from every chip's count, so the row meant to find
+    // things is exactly where it does not appear. Generated in Postgres —
+    // see the needs_classification migration.
+    if (params.needs) query = query.eq('needs_classification', true);
     if (params.q) query = query.or(`name_en.ilike.%${params.q}%,name_vi.ilike.%${params.q}%`);
     if (!params.all) {
       const page = Math.max(1, Number(params.page) || 1);
@@ -169,7 +174,8 @@ export const api = {
   },
 
   progress: async (city) => {
-    let query = supabase.from('places').select('review_status, is_published, category, categories, vibe_tags');
+    let query = supabase.from('places')
+      .select('review_status, is_published, category, categories, vibe_tags, needs_classification');
     if (city) query = query.eq('city_id', city);
     const rows = db(await query);
     const by = (key) => rows.reduce((acc, r) => ((acc[r[key]] = (acc[r[key]] ?? 0) + 1), acc), {});
@@ -187,6 +193,15 @@ export const api = {
       // could open. This is the number the publish button acts on, and the
       // number that makes it worth showing at all.
       unpublished: rows.filter((r) => r.review_status === 'approved' && !r.is_published).length,
+      // Filed by nobody yet. Counted separately for each half so the notice
+      // can say which one is missing when only one is — "no vibe" and "no
+      // category" are different jobs, and lumping them sends the editor
+      // looking for the wrong field.
+      unclassified: {
+        total: rows.filter((r) => r.needs_classification).length,
+        no_category: rows.filter((r) => !r.categories?.length).length,
+        no_vibe: rows.filter((r) => !r.vibe_tags?.length).length,
+      },
       by_category: by('category'),
       by_category_tag: byTag('categories'),
       by_vibe: byTag('vibe_tags'),

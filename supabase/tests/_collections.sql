@@ -23,6 +23,13 @@ create table if not exists public.places (
   google_place_id text unique,
   is_published   boolean not null default false,
   review_status  text not null default 'pending',
+  -- Both `not null default '{}'` exactly as production has them, checked
+  -- against information_schema. The classification migration computes a
+  -- generated column from these two, and it is that "empty is the only
+  -- missing there is" that makes `cardinality` the whole test — a stub
+  -- that allowed nulls would test a column production cannot have.
+  categories     text[] not null default '{}',
+  vibe_tags      text[] not null default '{}',
   created_at     timestamptz not null default now()
 );
 

@@ -85,3 +85,12 @@ run "$DB" -f "$HERE/publish_test.sql"
 
 echo "→ submission checks"
 run "$DB" -f "$HERE/submissions_test.sql"
+
+# Independent of everything above — it needs only the places stub — but it
+# runs last because it leaves the table as it found it and the checks
+# before it do not expect extra rows.
+echo "→ classification"
+for f in "$ROOT"/supabase/migrations/*_needs_classification.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/classification_test.sql"

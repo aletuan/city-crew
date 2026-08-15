@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from './api.js';
 import { signOut } from './auth.jsx';
+import { CategoryIcon } from './icons.jsx';
 
 const ToastCtx = createContext(() => {});
 const ProgressCtx = createContext({ progress: null, refresh: () => {} });
@@ -13,6 +14,66 @@ export const useProgress = () => useContext(ProgressCtx);
 export const useCity = () => useContext(CityCtx);
 
 const CITY_KEY = 'citycrew.dashboard.city';
+
+/**
+ * The places nobody has filed yet.
+ *
+ * Categories and vibes are the two fields Google cannot supply and the app
+ * leans on hardest — Explore filters by one, the cards wear the other. A
+ * place missing them is in the catalog and reachable from nowhere.
+ *
+ * It needs saying here because the filter row cannot say it: every chip
+ * counts places that *have* a tag, so a place with none is missing from
+ * all of them. The screen for finding things is the one screen these do
+ * not appear in.
+ *
+ * No dismiss button. The notice is already conditional on there being
+ * something to fix — a way to silence it without fixing it would turn the
+ * one signal into a thing people learn to click past.
+ */
+function UnfiledNotice({ count }) {
+  const [params, setParams] = useSearchParams();
+  const showing = params.get('needs') === '1';
+  if (!count?.total) return null;
+
+  // Which half is missing. Named separately when both are, because "no
+  // category" and "no vibe" are different jobs in the editor and one
+  // number for the pair sends people looking in the wrong field — but
+  // when only one kind is missing the breakdown just repeats the total,
+  // so the sentence says it once.
+  const one = count.total === 1;
+  const s = one ? '' : 's';
+  const both = count.no_category > 0 && count.no_vibe > 0;
+  const said = both
+    // With one place the two counts are both 1 and say nothing the total
+    // did not; the fields are still worth naming, the numbers are not.
+    ? one
+      ? 'place not filed — no category, no vibe.'
+      : `places not filed — ${count.no_category} no category, ${count.no_vibe} no vibe.`
+    : count.no_category
+      ? `place${s} with no category.`
+      : `place${s} with no vibe.`;
+
+  const filter = (on) => {
+    const next = new URLSearchParams(params);
+    if (on) next.set('needs', '1');
+    else next.delete('needs');
+    next.delete('page');
+    setParams(next, { replace: true });
+  };
+
+  return (
+    <div className="notice" role="status">
+      <CategoryIcon name="alert" color="var(--warn)" />
+      <div className="noticetext">
+        <b>{count.total}</b> {said} {one ? 'It appears' : 'They appear'} in no filter.
+      </div>
+      <button className="syncbtn noticebtn" onClick={() => filter(!showing)}>
+        {showing ? 'Show all' : `Show ${count.total === 1 ? 'it' : 'them'}`}
+      </button>
+    </div>
+  );
+}
 
 export default function App() {
   const location = useLocation();
@@ -173,6 +234,12 @@ export default function App() {
             </div>
           </header>
           <div className="shell">
+            {/* Above the title, because it is about the list under it and
+                its action changes what that list holds. Only on the list:
+                inside an editor the missing fields are on screen already,
+                and a banner pointing at other places is a distraction from
+                the one in front of you. */}
+            {location.pathname === '/' && <UnfiledNotice count={progress?.unclassified} />}
             {(location.pathname === '/' || total > 0) && (
               <div className="pagehead">
                 {location.pathname === '/' && <h2 className="pagetitle">Places</h2>}
