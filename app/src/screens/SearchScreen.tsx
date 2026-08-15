@@ -136,7 +136,6 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         'Chúng tôi tìm trên Google Maps',
         'Google マップで探します',
       )}
-      note={t('It shows up for you right away', 'Thêm xong là bạn thấy ngay', '追加後すぐ表示されます')}
     />
   );
 

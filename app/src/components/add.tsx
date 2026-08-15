@@ -34,13 +34,16 @@ import { colors, font, gradAI, radius, space, type } from '../theme';
 /**
  * The dashed slot at the end of a list.
  *
- * `note` is the quiet line under it, for the one fact the offer cannot
- * make without: what happens after you take it.
+ * Two lines and no third. There used to be a `note` under the outline —
+ * first announcing that suggestions get reviewed, then, softened, that
+ * yours appears straight away. Both were answering a question nobody had
+ * asked yet: the row is an invitation, and an invitation with a footnote
+ * is asking to be read rather than taken. What it replaced it with is
+ * nothing, which is the right size for it.
  */
-export function AddSlot({ title, subtitle, note, onPress }: {
+export function AddSlot({ title, subtitle, onPress }: {
   title: string;
   subtitle: string;
-  note?: string;
   onPress: () => void;
 }) {
   return (
@@ -57,7 +60,6 @@ export function AddSlot({ title, subtitle, note, onPress }: {
             chevron was reading as a card you could not press. */}
         <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
       </PressableScale>
-      {note ? <Text style={s.slotNote}>{note}</Text> : null}
     </View>
   );
 }
@@ -111,10 +113,6 @@ const s = StyleSheet.create({
   // of four places, which is exactly the failure this file exists to end.
   slotTitle: { color: colors.text, ...type.cardTitle, lineHeight: 24 },
   slotSub: { color: colors.textTertiary, fontSize: 14, lineHeight: 19 },
-  slotNote: {
-    color: colors.textTertiary, fontSize: 12.5,
-    textAlign: 'center', paddingTop: 10,
-  },
 
   pill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
