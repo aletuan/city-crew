@@ -128,12 +128,13 @@ export default function App() {
                   sorted now: destinations and occasional actions into the
                   menu, the bulk write down beside the number it changes.
 
-                  The label hides under 640px, leaving the ＋ alone. The
-                  glyph is the whole meaning of the button; the words were
-                  what made this row wrap onto a second line on a phone. */}
+                  Labelled at every width, phones included — a ＋ on its own
+                  is a shape you have to press to find out about. It was
+                  hidden on phones for room the pill next to it was hoarding;
+                  see the phone block in theme.css. */}
               <Link className="syncbtn addbtn primary" to="/add">
                 <span aria-hidden="true">＋</span>
-                <span className="btnlabel">Add place</span>
+                <span className="btnlabel">Add<span className="btnlabel-more"> place</span></span>
               </Link>
               <div className="moremenu" ref={moreRef}>
                 <button
