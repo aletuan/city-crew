@@ -36,19 +36,25 @@ import {
   ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, BackButton, GradientCta, PressableScale, useTabBarClearance } from '../components/ui';
 import CandidateRow from '../components/CandidateRow';
 import { useCandidates } from '../lib/candidates';
 import { useCity } from '../lib/city';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
   const tabClearance = useTabBarClearance();
+  // The bar clears the tab bar itself, so the list must not clear it too —
+  // doing both left a screenful of nothing between the last result and the
+  // button. And `tabClearance - 24` was six points short of the tab bar's
+  // own height, which is what put the note under the button behind it.
+  const footClearance = useTabBarClearance(10);
   const { results, known, searching, adding, batch, run, addMany, cancel, awayFrom, clear } = useCandidates();
 
   const [query, setQuery] = useState('');
@@ -63,6 +69,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
   );
   const chosen = addable.filter((c) => picked.includes(c.place_id));
   const finished = batch.total > 0 && !batch.running;
+  const showFoot = chosen.length > 0 || batch.running || finished;
 
   const go = () => {
     if (!chosen.length) return;
@@ -173,18 +180,18 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
           )
           : null}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
+        contentContainerStyle={{ paddingTop: 8, paddingBottom: showFoot ? 10 : tabClearance }}
         showsVerticalScrollIndicator={false}
       />
 
       {/* The commit, pinned rather than at the end of the list. It acts on
           a selection that is visible above it, and a button you have to
           scroll to find is a button you lose track of while choosing. */}
-      {(chosen.length > 0 || batch.running || finished) && (
-        <View style={[s.foot, { paddingBottom: tabClearance - 24 }]}>
+      {showFoot && (
+        <View style={[s.foot, { paddingBottom: footClearance }]}>
           {batch.running ? (
             <>
-              <View style={s.progress}>
+              <LinearGradient {...gradAI} style={s.progress}>
                 <ActivityIndicator color={colors.accentInk} />
                 <Text style={s.progressText}>
                   {t(
@@ -193,7 +200,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
                     `${batch.total}件中 ${batch.done + 1}件目…`,
                   )}
                 </Text>
-              </View>
+              </LinearGradient>
               <PressableScale onPress={cancel} accessibilityRole="button">
                 <Text style={s.cancel}>
                   {t('Stop after this one', 'Dừng sau chỗ này', 'この件で止める')}
@@ -283,11 +290,13 @@ const s = StyleSheet.create({
     backgroundColor: colors.bg,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
-  // The running state wears the same gradient the button does, so the bar
-  // does not appear to swap for a different control halfway through.
+  // The gradient, literally — the same fill the button wears, so the bar
+  // does not appear to swap for a different control halfway through. It
+  // said this in a comment while being flat `colors.accent`, which put the
+  // `accentInk` label at 3.64:1 on paper. A comment is not a measurement.
   progress: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    paddingVertical: 16, borderRadius: radius.pill, backgroundColor: colors.accent,
+    paddingVertical: 16, borderRadius: radius.pill,
   },
   progressText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
   cancel: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold, textAlign: 'center' },
