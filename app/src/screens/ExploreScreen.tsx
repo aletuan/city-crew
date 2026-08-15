@@ -38,6 +38,46 @@ const ALL = 'all';
  */
 const FILTER_PAD = 10;
 
+/**
+ * The last row of the list: a slot, not a place.
+ *
+ * Same dashed outline the collections list and a collection's own last row
+ * wear, saying the same thing — "not a thing, a space where one would
+ * go" — at the moment you have finished reading and found the list short.
+ *
+ * The line about review is required rather than decorative. Without it a
+ * submitter who cannot find their place afterwards concludes the app is
+ * broken, when it is working exactly as designed.
+ */
+function SuggestRow({ onPress }: { onPress: () => void }) {
+  const { t } = useI18n();
+  return (
+    <View style={s.suggestWrap}>
+      <PressableScale onPress={onPress} accessibilityRole="button" style={s.suggestRow}>
+        <View style={s.suggestIcon}>
+          <Ionicons name="add" size={24} color={colors.accent} />
+        </View>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={s.suggestText} numberOfLines={1}>
+            {t('Know a spot we are missing?', 'Biết chỗ nào chúng tôi còn thiếu?', '載っていないスポットをご存じですか？')}
+          </Text>
+          <Text style={s.suggestSub} numberOfLines={2}>
+            {t('Search for it — we fetch the rest', 'Tìm tên quán — phần còn lại chúng tôi lo', '名前で検索 — 残りはこちらで取得します')}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+      </PressableScale>
+      <Text style={s.suggestNote}>
+        {t(
+          'Suggestions are reviewed before they go live',
+          'Đề xuất sẽ được xem xét trước khi hiển thị',
+          '提案は公開前に審査されます',
+        )}
+      </Text>
+    </View>
+  );
+}
+
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const MONTHS_EN = [
@@ -391,9 +431,21 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             // where it belongs anyway: an empty result is the one moment
             // the filter most needs to be reachable, because changing it is
             // the way out.
-            ListFooterComponent={shown.length === 0
-              ? <Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。')} />
-              : null}
+            //
+            // The suggestion slot rides the same footer, and its placement
+            // is the whole argument: scroll depth is a poor trigger —
+            // scrolling twenty cards means browsing, which is what this
+            // screen is for — but *reaching the end* is not a heuristic. It
+            // is the moment you have seen everything there is, which is the
+            // only moment "we are missing one" is a useful thing to say.
+            ListFooterComponent={(
+              <>
+                {shown.length === 0
+                  ? <Empty text={t('Nothing here yet.', 'Chưa có gì ở đây.', 'まだ何もありません。')} />
+                  : null}
+                <SuggestRow onPress={() => navigation.navigate('AddPlace')} />
+              </>
+            )}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
             onRefresh={reload}
@@ -436,6 +488,24 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
   sectionOverFilter: { marginBottom: space.headingToContent - FILTER_PAD },
+
+  suggestWrap: { marginHorizontal: space.page, marginTop: 4, marginBottom: 8 },
+  suggestRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    padding: 14, borderRadius: radius.card,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: colors.borderGlass,
+  },
+  suggestIcon: {
+    width: 44, height: 44, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft,
+  },
+  suggestText: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
+  suggestSub: { color: colors.textTertiary, fontSize: 13.5, lineHeight: 19 },
+  suggestNote: {
+    color: colors.textTertiary, fontSize: 12.5,
+    textAlign: 'center', paddingTop: 10,
+  },
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
 
   // The pinned filter row.
