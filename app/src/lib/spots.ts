@@ -89,3 +89,30 @@ export function toSpots(rows: SpotRow[]): Spot[] {
   }
   return out;
 }
+
+/**
+ * What the sheet's one big button should do right now.
+ *
+ * There is a single primary button and two things the reader could mean by
+ * pressing it, which is a trap unless the button picks the right one. Text
+ * sitting in the field that has never been searched is an intention that
+ * has not happened yet; committing over it threw it away silently and
+ * started the day somewhere else entirely — you typed "cau giay", pressed
+ * the biggest, warmest thing on the screen, and got Ba Đình.
+ *
+ * So the button follows the field. Unresolved text means the reader's next
+ * move is to search it; anything else means they are done choosing.
+ *
+ * `settled` is the query as of the last search or the last result picked —
+ * not merely "has a search happened". Picking a result writes its name
+ * back into the field, so a plain has-searched flag would leave the button
+ * saying "Search" over text that is already an answer. And editing after a
+ * search makes the text unresolved again, which is why this compares the
+ * strings rather than counting events.
+ */
+export function ctaMode(query: string, settled: string): 'search' | 'commit' {
+  const q = query.trim();
+  // An empty field asks nothing, so there is nothing to resolve.
+  if (!q) return 'commit';
+  return q === settled.trim() ? 'commit' : 'search';
+}

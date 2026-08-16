@@ -44,6 +44,7 @@ import MiniMap from './MiniMap';
 import { Chip, GradientCta, PressableScale } from './ui';
 import { useCity, useMyPosition } from '../lib/city';
 import { findSpots, type Spot } from '../lib/findplace';
+import { ctaMode } from '../lib/spots';
 import { useI18n } from '../lib/i18n';
 import { areaCentre, areasNear, nearestAreaKm } from '../lib/trip';
 import type { Place } from '../lib/types';
@@ -71,6 +72,9 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   const [missed, setMissed] = useState(false);
   /** What the last search turned up. null before there has been one. */
   const [hits, setHits] = useState<Spot[] | null>(null);
+  /** The query as of the last search or the last result taken — see
+   *  `ctaMode`, which compares it against what is in the field now. */
+  const [settled, setSettled] = useState('');
   /**
    * Bumped by the locate button once the permission dialog has closed.
    *
@@ -129,6 +133,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
     setQuery('');
     setMissed(false);
     setHits(null);
+    setSettled('');
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
@@ -151,6 +156,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   // wins over the reader's own position, because a pin is something they
   // placed on purpose.
   const near = pinned ?? me;
+  const cta = ctaMode(query, settled);
 
   // The platform's geocoder, in the other direction: what to call the
   // point the map is showing.
@@ -211,6 +217,10 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
     const found = await findSpots(q, near ?? centre);
     setFinding(false);
     setHits(found);
+    // Asked, so the button stops offering to ask again. A search that came
+    // back empty still counts: the reader has had their answer and may now
+    // want the pin they already have.
+    setSettled(q);
     // Nothing found and a search that failed are one sentence here — see
     // `findSpots`, which throws for neither.
     if (found.length === 0) setMissed(true);
@@ -223,6 +233,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
     setDraft({ district: null, at: { lat: spot.lat, lng: spot.lng } });
     setHits(null);
     setQuery(spot.name);
+    setSettled(spot.name);
     setMissed(false);
     showMap();
   };
@@ -367,7 +378,16 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
                     key={d}
                     label={d}
                     active={draft.district === d}
-                    onPress={() => setDraft({ district: draft.district === d ? null : d, at: null })}
+                    onPress={() => {
+                      setDraft({ district: draft.district === d ? null : d, at: null });
+                      // The heading above says *or*. Taking this answer
+                      // drops the other one rather than leaving half a
+                      // search in the field for the button to insist on.
+                      setQuery('');
+                      setSettled('');
+                      setHits(null);
+                      setMissed(false);
+                    }}
                   />
                 ))}
               </View>
@@ -376,10 +396,18 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
         </ScrollView>
 
         <View style={s.foot}>
+          {/* One button, two things it could mean — so it says which. Text
+              in the field that has never been searched is an intention
+              that has not happened yet, and committing over it used to
+              throw it away without a word: you typed "cau giay", pressed
+              the biggest warmest thing on the screen, and started the day
+              in Ba Đình. See `ctaMode`. */}
           <GradientCta
-            icon="checkmark"
-            label={t('Use this location', 'Dùng chỗ này', 'ここにする')}
-            onPress={() => onDone(draft)}
+            icon={cta === 'search' ? 'search' : 'checkmark'}
+            label={cta === 'search'
+              ? t('Search', 'Tìm', '検索')
+              : t('Use this location', 'Dùng chỗ này', 'ここにする')}
+            onPress={cta === 'search' ? find : () => onDone(draft)}
             wide
           />
         </View>
