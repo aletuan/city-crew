@@ -23,6 +23,20 @@ export type RootStackParamList = {
    *  Google in place now rather than sending anyone here. */
   AddPlace: undefined;
   CollectionDetail: { slug: string };
+  IdeasHome: undefined;
+  /** The "we are working on it" screen. Carries the answers rather than
+   *  re-reading the draft, because the draft lives in the screen behind
+   *  this one and a plan should be built from what was asked at the
+   *  moment it was asked. */
+  Sketching: {
+    company: string | null;
+    categories: string[];
+    /** The district, or a name for the pin — already resolved, since only
+     *  the screen behind knows which of the two the reader chose. */
+    where: string | null;
+    date: string;
+    when: 'day' | 'evening';
+  };
   ProfileHome: undefined;
   SignIn: undefined;
   SignUp: undefined;
