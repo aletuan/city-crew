@@ -78,8 +78,9 @@ for (const cat of cats) {
         maxPhotos: PHOTOS_PER_PLACE,
         // Same pipeline as the Edge Function, so the same word for it —
         // a place does not become a different kind of thing because the
-        // scan was driven from a laptop.
-        source: "scan",
+        // scan was driven from a laptop. No account, though: this runs on
+        // the service role, and nobody was signed in to attribute it to.
+        channel: "scan",
       });
       names.push(slug);
     } catch (err) {

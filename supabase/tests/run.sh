@@ -98,9 +98,10 @@ run "$DB" -f "$HERE/classification_test.sql"
 # The backfill reads rows that already exist, so its test inserts them
 # first and the migration runs *after* — the reverse of every block above,
 # and the only order that exercises what the migration actually did.
-echo "→ source"
-run "$DB" -f "$HERE/source_seed.sql"
-for f in "$ROOT"/supabase/migrations/*_place_source.sql; do
+echo "→ channel"
+run "$DB" -f "$HERE/channel_seed.sql"
+for f in "$ROOT"/supabase/migrations/*_place_source.sql \
+         "$ROOT"/supabase/migrations/*_place_channel.sql; do
   run "$DB" -f "$f" >/dev/null
 done
-run "$DB" -f "$HERE/source_test.sql"
+run "$DB" -f "$HERE/channel_test.sql"

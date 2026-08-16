@@ -389,10 +389,25 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    row is the first thing the phone layout drops — and the question "who
    put this here" is at its most useful while triaging on a phone. */
 .stampcol { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+/* Two facts, stacked, and the order is the order they are asked in: how it
+   arrived, then who did it. The handle is dimmer because it answers the
+   second question — and it is absent on every row created before the
+   column existed, so it cannot be the line carrying the meaning. */
 .srcmark {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
   font-family: var(--font-data); font-size: 10px; letter-spacing: 0.06em;
-  color: var(--text-tertiary); white-space: nowrap; max-width: 96px;
-  overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; max-width: 96px;
+}
+/* Both at tertiary, which measures 4.51:1 on the row and is the floor this
+   text can sit at. Dimming the handle to separate the two was the first
+   try and it read 2.70:1 — a caption nobody with tired eyes could use. So
+   they differ in shape instead: the channel is a machine word, uppercase
+   and spaced like the stamp above it; the handle is a name, and looks
+   like one. */
+.srcchannel { color: var(--text-tertiary); text-transform: uppercase; font-weight: 600; }
+.srcwho {
+  color: var(--text-tertiary); letter-spacing: 0; font-weight: 400;
+  overflow: hidden; text-overflow: ellipsis; max-width: 96px;
 }
 
 .stamp.approved { color: var(--ok); border-color: var(--ok); }

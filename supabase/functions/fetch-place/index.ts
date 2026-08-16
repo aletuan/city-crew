@@ -143,6 +143,10 @@ Deno.serve(async (req) => {
       // reset, and nothing that can drift out of step with what was
       // actually submitted. Editors are exempt: importing in bulk is the
       // job.
+      //
+      // Counted on `submitted_by`, not `added_by`: the first means "a
+      // visitor suggested this" and is what the cap is about, and the
+      // second is on every row including an editor's own desk imports.
       if (!fromDesk) {
         const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const { count } = await admin
@@ -177,7 +181,12 @@ Deno.serve(async (req) => {
       const { slug, photos } = await importPlace({
         admin, gapi, apiKey, placeId, category, cityId: city.id, maxPhotos: 6,
         submittedBy: fromDesk ? null : uid,
-        source: fromDesk ? "desk" : "phone",
+        // Two different facts about the same request: which door it came
+        // through, and who was standing in it. An editor importing at the
+        // desk is `addedBy` without being `submittedBy` — they are not a
+        // contributor and none of the contributor's rules apply to them.
+        channel: fromDesk ? "desk" : "mobile",
+        addedBy: uid,
       });
       return json({ slug, photos });
     }

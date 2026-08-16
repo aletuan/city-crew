@@ -20,37 +20,47 @@ const SORTS = [
 const fmtCount = (n) => (!n ? null : n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n));
 
 // What each door means, in the words a reviewer would use about it.
-const SOURCE_TITLE = {
+const CHANNEL_TITLE = {
   seed: 'From the frozen HCMC bootstrap pipeline',
   scan: 'Brought in by a Scan city run — a batch, unreviewed',
-  desk: 'Imported here at the desk, one place at a time',
-  phone: 'Suggested from the app',
+  desk: 'Searched for and imported here at the desk',
+  mobile: 'Suggested from the app',
 };
 
 /**
- * Where this row came from, under its review stamp.
+ * Where this row came from and who put it there, under its review stamp.
+ *
+ * Two separate facts, and they were one column until they had to answer
+ * two questions: the channel says *how* — a scan brings in twenty nobody
+ * has looked at, a desk import is an editor who already chose — and the
+ * handle says *who*. Neither substitutes for the other, so both are shown
+ * and the handle is the quieter of the two: it is the answer to a second
+ * question, asked less often.
  *
  * Beside the stamp rather than among the tags, because the tag row is the
  * first thing hidden on a phone — and provenance is most worth knowing
- * exactly when you are triaging on one. Quieter than the stamp: it says
- * where a place came from, not what was decided about it.
+ * exactly when you are triaging on one.
  *
- * Nothing at all for a row with no source. Those predate the column and
- * could not be attributed; an "unknown" pill would give every old row a
- * label that means nothing.
+ * A row with no channel shows nothing: those predate the column and could
+ * not be attributed, and an "unknown" pill would label every old row with
+ * a word that means nothing. A row with a channel and no handle shows the
+ * channel alone, which is the honest half — desk and scan rows created
+ * before `added_by` existed have nobody recorded on them.
  */
 function SourceMark({ place }) {
-  if (!place.source) return null;
+  if (!place.channel) return null;
   const who = place.submitter?.handle;
   return (
-    <span
-      className="srcmark"
-      title={who
-        ? `${SOURCE_TITLE[place.source]} by @${who}`
-        : SOURCE_TITLE[place.source] ?? place.source}
-    >
-      {who ? `@${who}` : place.source}
-    </span>
+    <div className="srcmark">
+      <span className="srcchannel" title={CHANNEL_TITLE[place.channel] ?? place.channel}>
+        {place.channel}
+      </span>
+      {who && (
+        <span className="srcwho" title={`Added by ${place.submitter.full_name ?? who}`}>
+          @{who}
+        </span>
+      )}
+    </div>
   );
 }
 

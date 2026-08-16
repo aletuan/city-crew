@@ -46,8 +46,9 @@ Deno.serve(async (req) => {
   // ── editor gate: valid session + email on the allow-list ──
   const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
   const { data: userData } = await admin.auth.getUser(token);
+  const uid = userData?.user?.id;
   const email = userData?.user?.email?.toLowerCase();
-  if (!email) return json({ error: "not signed in" }, 401);
+  if (!uid || !email) return json({ error: "not signed in" }, 401);
   const { data: editor } = await admin
     .from("editors").select("email").eq("email", email).maybeSingle();
   if (!editor) return json({ error: `${email} is not on the editors list` }, 403);
@@ -107,7 +108,11 @@ Deno.serve(async (req) => {
             vibeTags: [...cat.vibes],
             categories: [...cat.categories],
             maxPhotos: PHOTOS_PER_PLACE,
-            source: "scan",
+            channel: "scan",
+            // The editor who pressed Scan. Not a `submittedBy`: a scan is
+            // not somebody vouching for a place, it is somebody asking the
+            // machine to go and look.
+            addedBy: uid,
           });
           imported.push({ slug, name: p.displayName?.text ?? slug });
         } catch (err) {
