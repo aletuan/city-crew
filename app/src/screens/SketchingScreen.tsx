@@ -174,6 +174,13 @@ function StepMark({ state, still }: { state: StepState; still: boolean }) {
   }
   if (state !== 'active') return <View style={[s.mark, s.markPending]} />;
 
+  // Held still, an arc parked at some angle is the broken-looking ring
+  // this screen already shipped once. With nothing turning there is no
+  // reason to draw a segment at all, so the running mark closes into a
+  // solid ring — the third distinct shape, beside the gradient disc that
+  // means done and the dashed outline that means waiting.
+  if (still) return <View style={[s.mark, s.markStill]} />;
+
   return (
     <View style={s.mark}>
       {/* The track. Without it the arc is a gap rather than a segment, and
@@ -200,7 +207,7 @@ function StepRow({ label, state, still }: { label: string; state: StepState; sti
     : 1;
 
   return (
-    <View style={[s.step, state === 'active' && s.stepOn]}>
+    <View style={s.step}>
       <StepMark state={state} still={still} />
       <Animated.Text
         style={[
@@ -229,14 +236,14 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
     paddingVertical: 6,
   },
-  step: {
-    flexDirection: 'row', alignItems: 'center', gap: 13,
-    paddingHorizontal: 16, paddingVertical: 11,
-    marginHorizontal: 6, borderRadius: radius.input,
-  },
-  // A tint under the running row, which says "this one" without moving.
-  // It is the half of the signal that survives reduced motion.
-  stepOn: { backgroundColor: colors.accentSoft },
+  // No tint under the running row. `accentSoft` on a full-width row
+  // already means "you chose this" — see `CandidateRow.rowOn`, where a
+  // ticked search result wears exactly this colour and shape. Borrowing it
+  // for "this one is working" is borrowing a word that is taken, and the
+  // block was heavy enough to outweigh the orb it was meant to sit under.
+  //
+  // The signal lives in the mark instead. See `StepMark`.
+  step: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 16, paddingVertical: 11 },
   mark: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   // The faint full circle the arc rides on.
   markTrack: { borderRadius: 12, borderWidth: 2, borderColor: colors.accentLine },
@@ -246,6 +253,7 @@ const s = StyleSheet.create({
     borderRadius: 12, borderWidth: 2,
     borderColor: 'transparent', borderTopColor: colors.accent,
   },
+  markStill: { borderWidth: 2, borderColor: colors.accent },
   markPending: { borderWidth: 1.5, borderColor: colors.borderGlass, borderStyle: 'dashed' },
   stepText: { flex: 1, color: colors.textSecondary, fontSize: 15 },
   stepTextOn: { color: colors.text, fontWeight: font.semibold },
