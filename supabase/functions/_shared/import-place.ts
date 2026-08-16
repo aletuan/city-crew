@@ -96,7 +96,14 @@ type ImportArgs = {
    *  back into the one bucket this column exists to split, which is the
    *  state the backfill had to reconstruct from photo counts. Each caller
    *  knows what it is; none of them has to work it out. */
-  source: "scan" | "desk" | "phone";
+  channel: "scan" | "desk" | "mobile";
+  /** The account that performed this import, whatever the channel — an
+   *  editor at the desk as much as a visitor on the phone. Distinct from
+   *  `submittedBy`, which stays the narrower "a visitor suggested this"
+   *  and carries the daily cap and the contributor read policy with it.
+   *  Null when no account did it, which is a script under the service
+   *  role. */
+  addedBy?: string | null;
 };
 
 // District/ward-level address component — the human "what part of town is
@@ -126,7 +133,7 @@ function neighborhoodOf(components: { longText?: string; types?: string[] }[] | 
 export async function importPlace(
   {
     admin, gapi, apiKey, placeId, category, cityId,
-    vibeTags = [], categories, maxPhotos = 6, submittedBy = null, source,
+    vibeTags = [], categories, maxPhotos = 6, submittedBy = null, channel, addedBy = null,
   }: ImportArgs,
 ): Promise<{ slug: string; photos: number }> {
   const d = await gapi(`https://places.googleapis.com/v1/places/${placeId}`, {
@@ -156,7 +163,8 @@ export async function importPlace(
       slug,
       google_place_id: d.id,
       submitted_by: submittedBy,
-      source,
+      channel,
+      added_by: addedBy,
       name_en: name,
       name_vi: name,
       category,

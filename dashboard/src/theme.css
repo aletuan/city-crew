@@ -111,29 +111,102 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .cityselect:hover { background-color: var(--surface-glass-strong); border-color: var(--border-glass); }
 .topbar .spacer { flex: 1; }
 
-/* Notice — the desk telling the editor about a hole in the data, above the
-   list the hole is in. One kind only for now (nothing filed yet); it is
-   deliberately quieter than the publish button, because it reports a state
-   rather than offering a bulk write.
+/* ── the unfiled notice ──
+   A bell in the bar with a count, and a panel naming the places behind it.
+   It replaces a banner that sat above the list and could only report a
+   number: the next move after reading it was always "filter and go
+   looking", so the panel does that part itself.
 
-   Amber at 8% over the app background, measured rather than picked: the
-   warn colour reads 8.84:1 on it and the body text 9.59:1, so the tint is
-   a tint and not a contrast problem. The left rule is what makes it a
-   notice at a glance instead of another panel. */
-.notice {
-  display: flex; align-items: center; gap: 10px;
-  margin: 0 0 16px; padding: 10px 14px;
-  border-radius: var(--radius-input);
-  background: rgba(246, 164, 92, 0.08);
-  border: 1px solid rgba(246, 164, 92, 0.22);
-  border-left: 3px solid var(--warn);
+   Amber, because this is the desk's one warning colour, and measured on
+   what it actually sits on rather than picked: the glyph and count read
+   7.38:1 on the tinted button, the heading 9.08:1 on the panel, the row
+   titles 18.37:1 and their meta 4.51:1. */
+.syncbtn.bell {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 13px;
+  background: rgba(246, 164, 92, 0.12);
+  border-color: rgba(246, 164, 92, 0.35);
+  color: var(--warn);
 }
-.notice svg { flex-shrink: 0; }
-.noticetext { color: var(--text-secondary); font-size: 13px; line-height: 1.45; }
-.noticetext b { color: var(--warn); font-weight: 700; }
-/* Pushed to the far edge so it reads as the answer to the sentence, and
-   never shrinks below its own label. */
-.noticebtn { margin-left: auto; font-size: 12px; padding: 6px 12px; }
+.syncbtn.bell:hover { background: rgba(246, 164, 92, 0.2); }
+.bellcount { font-family: var(--font-data); font-size: 12px; font-weight: 700; }
+
+/* Wider than the overflow menu because it holds sentences, not verbs, and
+   capped so a long catalog cannot push it off the screen. */
+.notifypanel {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 50;
+  width: min(360px, calc(100vw - 24px));
+  padding: 4px;
+  background: var(--bg-elevated); border: 1px solid var(--border-glass);
+  border-radius: var(--radius-input); box-shadow: var(--shadow-float);
+}
+.notifyhead {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 12px 6px; color: var(--warn); font-size: 13.5px;
+}
+.notifyhead svg { flex-shrink: 0; }
+.notifywhy {
+  margin: 0; padding: 0 12px 10px;
+  color: var(--text-tertiary); font-size: 12.5px; line-height: 1.45;
+}
+.notifyrow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--border-glass-soft);
+}
+.notifyname { min-width: 0; flex: 1; }
+.notifytitle {
+  font-size: 13.5px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.notifymeta {
+  font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* The one action per row, and it is a link rather than a button because
+   it goes somewhere — the editor for that place, with both empty fields
+   waiting. */
+.fixbtn {
+  flex-shrink: 0; text-decoration: none;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--warn); border: 1px solid rgba(246, 164, 92, 0.45);
+  border-radius: var(--radius-pill); padding: 5px 12px;
+  transition: background 140ms;
+}
+.fixbtn:hover { background: rgba(246, 164, 92, 0.14); }
+.notifymore {
+  display: block; text-align: center; text-decoration: none;
+  padding: 10px; border-top: 1px solid var(--border-glass-soft);
+  color: var(--text-secondary); font-size: 12.5px; font-weight: 600;
+}
+.notifymore:hover { color: #fff; }
+
+/* On a phone the bell is not the rightmost control, so a panel anchored to
+   it hangs 31px off the left edge — measured, not guessed. Anchoring to
+   the viewport instead is the only thing that makes a 360px panel fit a
+   390px screen whatever it hangs from. */
+@media (max-width: 560px) {
+  .notifypanel {
+    position: fixed; top: 64px; left: 10px; right: 10px; width: auto;
+  }
+}
+
+/* A fifth control does not fit the phone bar: with the bell spelled out
+   beside its number the row ran 24px over at 390 and 53px at 320, and the
+   city pill was already at its floor. So on phones the bell becomes the
+   same square the overflow menu is, and the number rides its corner —
+   which is where a count belongs on a bell anyway. */
+@media (max-width: 720px) {
+  .syncbtn.bell { padding: 7px 9px; gap: 0; }
+  .bellcount {
+    position: absolute; top: -6px; right: -6px;
+    min-width: 16px; padding: 0 4px;
+    border-radius: 999px;
+    background: var(--warn); color: var(--bg-app);
+    font-size: 10px; line-height: 16px; text-align: center;
+  }
+}
 
 /* page head — every route gets the same anchor point: a title where the
    list has one, the approval rail wherever there's data to measure. */
@@ -389,10 +462,25 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    row is the first thing the phone layout drops — and the question "who
    put this here" is at its most useful while triaging on a phone. */
 .stampcol { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+/* Two facts, stacked, and the order is the order they are asked in: how it
+   arrived, then who did it. The handle is dimmer because it answers the
+   second question — and it is absent on every row created before the
+   column existed, so it cannot be the line carrying the meaning. */
 .srcmark {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
   font-family: var(--font-data); font-size: 10px; letter-spacing: 0.06em;
-  color: var(--text-tertiary); white-space: nowrap; max-width: 96px;
-  overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; max-width: 96px;
+}
+/* Both at tertiary, which measures 4.51:1 on the row and is the floor this
+   text can sit at. Dimming the handle to separate the two was the first
+   try and it read 2.70:1 — a caption nobody with tired eyes could use. So
+   they differ in shape instead: the channel is a machine word, uppercase
+   and spaced like the stamp above it; the handle is a name, and looks
+   like one. */
+.srcchannel { color: var(--text-tertiary); text-transform: uppercase; font-weight: 600; }
+.srcwho {
+  color: var(--text-tertiary); letter-spacing: 0; font-weight: 400;
+  overflow: hidden; text-overflow: ellipsis; max-width: 96px;
 }
 
 .stamp.approved { color: var(--ok); border-color: var(--ok); }
@@ -674,7 +762,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
      every phone width down to 320 with nothing over the edge — and the bar
      stopped overflowing by 15px at 320, which it was doing with the label
      already hidden. A lone ＋ is a guess; ＋ Add place is not. */
-  .topbar-inner { flex-wrap: nowrap; gap: 8px 10px; padding: 12px; }
+  .topbar-inner { flex-wrap: nowrap; gap: 8px; padding: 12px; }
   .topbar h1 { display: none; }
   /* The one control here that can lose its last few characters and still
      be read — "Ho Chi Min…" is a city, "Ho …" is not, which is what the
@@ -729,4 +817,9 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    goes — the button keeps a word rather than reverting to a bare glyph. */
 @media (max-width: 380px) {
   .btnlabel-more { display: none; }
+  /* And the pill gives up its floor as well. Five controls on a 320px bar
+     leave it 84px, which is "Ho C…" — thin, but the row fits and the name
+     is repeated by nothing else on screen only because there is no room
+     for anything else either. */
+  .cityselect { min-width: 84px; }
 }

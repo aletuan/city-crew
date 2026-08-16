@@ -37,26 +37,32 @@ const PAGE_SIZE = 24;
 const SORT_COLUMNS = { created_at: 'created_at', rating_count: 'rating_count', rating: 'rating' };
 
 /**
- * Put a handle on the rows a person suggested.
+ * Put a handle on the rows somebody added.
  *
- * A second query rather than an embed: `places.submitted_by` points at
+ * Keyed on `added_by`, not `submitted_by`: the first is whoever performed
+ * the import — an editor at the desk as much as a visitor on the phone —
+ * and the second is the narrower "a visitor suggested this", which the
+ * daily cap and the contributor read policy key off. The desk is asking
+ * who did it, so it reads the column that answers that.
+ *
+ * A second query rather than an embed: `places.added_by` points at
  * `auth.users`, and `profiles.id` points at the same place, but there is
  * no foreign key *between the two* — which is what PostgREST needs before
  * it will join them for us. Adding one to satisfy a label would be the
  * schema bending to the dashboard.
  *
- * One round trip per page, only when a page actually holds a suggestion,
- * and the ids are deduplicated first: a person who added six places is
- * one lookup, not six. Failure is silent by design — a missing handle
+ * One round trip per page, only when a page actually holds an attributed
+ * row, and the ids are deduplicated first: a person who added six places
+ * is one lookup, not six. Failure is silent by design — a missing handle
  * costs a caption, and is not worth failing a page of work over.
  */
 async function attachSubmitters(rows) {
-  const ids = [...new Set(rows.map((r) => r.submitted_by).filter(Boolean))];
+  const ids = [...new Set(rows.map((r) => r.added_by).filter(Boolean))];
   if (!ids.length) return rows;
   const { data } = await supabase
     .from('profiles').select('id, handle, full_name').in('id', ids);
   const by = Object.fromEntries((data ?? []).map((p) => [p.id, p]));
-  for (const r of rows) r.submitter = by[r.submitted_by] ?? null;
+  for (const r of rows) r.submitter = by[r.added_by] ?? null;
   return rows;
 }
 
@@ -98,7 +104,7 @@ export const api = {
     let query = supabase
       .from('places')
       .select(
-        'slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, is_published, rating, rating_count, price_vnd, price_display, created_at, source, submitted_by, place_photos(photo_uri, is_cover, is_hidden)',
+        'slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, is_published, rating, rating_count, price_vnd, price_display, created_at, channel, added_by, submitted_by, place_photos(photo_uri, is_cover, is_hidden)',
         { count: 'exact' },
       )
       .order(sortColumn, { ascending, nullsFirst: false })
@@ -112,6 +118,7 @@ export const api = {
     // things is exactly where it does not appear. Generated in Postgres —
     // see the needs_classification migration.
     if (params.needs) query = query.eq('needs_classification', true);
+    if (params.channel) query = query.eq('channel', params.channel);
     if (params.q) query = query.or(`name_en.ilike.%${params.q}%,name_vi.ilike.%${params.q}%`);
     if (!params.all) {
       const page = Math.max(1, Number(params.page) || 1);
@@ -200,7 +207,7 @@ export const api = {
 
   progress: async (city) => {
     let query = supabase.from('places')
-      .select('review_status, is_published, category, categories, vibe_tags, needs_classification');
+      .select('slug, name_en, review_status, is_published, category, categories, vibe_tags, needs_classification');
     if (city) query = query.eq('city_id', city);
     const rows = db(await query);
     const by = (key) => rows.reduce((acc, r) => ((acc[r[key]] = (acc[r[key]] ?? 0) + 1), acc), {});
@@ -218,15 +225,26 @@ export const api = {
       // could open. This is the number the publish button acts on, and the
       // number that makes it worth showing at all.
       unpublished: rows.filter((r) => r.review_status === 'approved' && !r.is_published).length,
-      // Filed by nobody yet. Counted separately for each half so the notice
-      // can say which one is missing when only one is — "no vibe" and "no
-      // category" are different jobs, and lumping them sends the editor
-      // looking for the wrong field.
-      unclassified: {
-        total: rows.filter((r) => r.needs_classification).length,
-        no_category: rows.filter((r) => !r.categories?.length).length,
-        no_vibe: rows.filter((r) => !r.vibe_tags?.length).length,
-      },
+      // Filed by nobody yet — the places themselves, not a number.
+      //
+      // A count could only ever send the editor to a filtered list to find
+      // out which ones; naming them means the answer and the way to fix it
+      // arrive together. Which half is missing rides along for the same
+      // reason: "no vibe" and "no category" are different jobs, and one
+      // word for the pair sends people to the wrong field.
+      //
+      // Off the rows this already fetched, so it costs no round trip.
+      // Capped, because a panel is not a list view: past the cap it says
+      // how many more and hands over to the filter.
+      unclassified: rows
+        .filter((r) => r.needs_classification)
+        .map((r) => ({
+          slug: r.slug,
+          name: r.name_en,
+          status: r.review_status,
+          no_category: !r.categories?.length,
+          no_vibe: !r.vibe_tags?.length,
+        })),
       by_category: by('category'),
       by_category_tag: byTag('categories'),
       by_vibe: byTag('vibe_tags'),
