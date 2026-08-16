@@ -31,24 +31,31 @@ import { defineConfig } from 'vitest/config';
 // writing remembering to.
 //
 // The gate covers `src/lib/*.ts` and nothing else, and the exclusions
-// below are not a convenience — each of those files reaches for React or
-// Supabase at import time, so a Node process cannot load them at all. That
-// boundary is the reason `place.ts` exists as a separate file; see the
-// note at the top of it.
+// below are not a convenience — each of those files needs React at import
+// time or at call time, and a Node process has no renderer. That boundary
+// is the reason `place.ts` exists as a separate file; see the note at the
+// top of it.
 //
-// Which leaves the honest limit: the gate governs about 9% of the app's
-// statements. The other 91% — components and screens — has no test of any
-// kind, and every UI fault found in this repository so far was found by
-// eye. Coverage says a line ran, not that a test would notice it breaking;
-// that is what the mutation passes in the commit log are for. A green gate
-// here means the arithmetic is held, and means nothing at all about how
-// any of it looks.
+// It used to include everything that touched Supabase, which was one step
+// too far. Reaching for the network is not the same problem as reaching
+// for a renderer: a client can be stood in for, and `lib/testing.ts` does
+// exactly that, so `suggest.ts` and `findplace.ts` are now held to the
+// same 100% as the pure half. `data.ts` is tested the same way — see
+// `data.test.ts` — but stays excluded, because half of it is the fetch
+// hooks and the file cannot reach 100% until those can be rendered.
+//
+// Which leaves the honest limit: the gate governs about 12% of the app's
+// statements. The rest — components and screens — has no test of any kind,
+// and every UI fault found in this repository so far was found by eye.
+// Coverage says a line ran, not that a test would notice it breaking; that
+// is what the mutation passes in the commit log are for. A green gate here
+// means the arithmetic and the queries are held, and means nothing at all
+// about how any of it looks.
 const IMPURE = [
   'src/lib/candidates.ts', // a React hook; imports Alert and Keyboard
-  'src/lib/data.ts', // the Supabase queries
-  'src/lib/findplace.ts', // calls an Edge Function
-  'src/lib/suggest.ts', // calls an Edge Function
+  'src/lib/data.ts', // the writes are tested; the fetch hooks need a renderer
   'src/lib/supabase.ts', // the client itself
+  'src/lib/testing.ts', // the stand-in for it — test scaffolding, not shipped
   'src/lib/types.ts', // types only, no statements to cover
 ];
 
