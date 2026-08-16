@@ -44,6 +44,17 @@ jobs:
       # Hanoi, whose phone is on New York time.
       - if: '!cancelled()'
         run: npm run test:tz
+      # The same suite again, with a floor under it. Not to measure what is
+      # covered — every pure module is already at 100% — but to stop that
+      # eroding: a function added to `src/lib` without a test turns this
+      # step red, and nothing else in this repository would notice.
+      #
+      # Scoped to `src/lib/*.ts`, which is about 9% of the app's
+      # statements. The other 91% is components and screens, which no
+      # runner here can load. A green step means the arithmetic is held and
+      # says nothing about how any of it looks — see `vitest.config.ts`.
+      - if: '!cancelled()'
+        run: npm run coverage
 
   # The migrations, run against a real Postgres and then asserted. The app
   # job above cannot reach any of this: triggers, constraints and backfills

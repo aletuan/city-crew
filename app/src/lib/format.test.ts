@@ -15,6 +15,11 @@ describe('fmtDuration', () => {
 
   it('switches to hours past sixty minutes, rounded to the half', () => {
     expect(fmtDuration(120, 240, 'en')).toBe('2–4h');
+    // The hours branch has its own three translations, and only English
+    // had ever been through it — the minutes branch above was carrying the
+    // other two on its own.
+    expect(fmtDuration(120, 240, 'vi')).toBe('2–4 giờ');
+    expect(fmtDuration(120, 240, 'ja')).toBe('2–4時間');
     expect(fmtDuration(90, 90, 'en')).toBe('1.5h');
     // 100 minutes rounds to 1.5, not 1.67.
     expect(fmtDuration(100, 100, 'en')).toBe('1.5h');
@@ -155,6 +160,42 @@ describe('openState', () => {
   // 2026-08-12 is a Wednesday.
   const WED_10AM = at('2026-08-12T03:00:00Z');
   const WED_MIDNIGHT_30 = at('2026-08-12T17:30:00Z'); // 00:30 Thursday in ICT
+
+  // ── the guards below are the paths a malformed week takes. Each was
+  // reachable and untested, which is the state a guard is least useful in:
+  // present, trusted, and never once run. ──
+
+  // `parseTime`: a word where a clock should be.
+  it('says nothing when a time does not parse', () => {
+    expect(openState(week('noon – 5:00 PM'), WED_10AM)).toBeNull();
+  });
+
+  // `parseDay`: the day is listed but carries no hours.
+  it('says nothing when a day line is blank', () => {
+    expect(openState(week(''), WED_10AM)).toBeNull();
+  });
+
+  // `dayAt`: a week with a hole in it, which is what a partial row from
+  // the desk looks like by the time it reaches here.
+  it('says nothing when the day itself is missing from the list', () => {
+    const holed = week('8:00 AM – 11:00 PM');
+    holed[2] = undefined as unknown as string; // Wednesday
+    expect(openState(holed, WED_10AM)).toBeNull();
+  });
+
+  // Yesterday being unreadable must not cost today its answer — the
+  // look-back is an extra chance to say "open", not a prerequisite.
+  it('still answers from today when yesterday does not parse', () => {
+    const mixed = week('5:00 PM – 10:00 PM');
+    mixed[1] = 'Tuesday: ';
+    expect(openState(mixed, WED_10AM)).toEqual({ open: false, opensAt: '5:00 PM' });
+  });
+
+  // Round the clock from yesterday: open, with no closing time worth
+  // naming. The same rule as today's windows, on the other loop.
+  it('names no closing time for a full-day window that began yesterday', () => {
+    expect(openState(week('1:00 AM – 1:00 AM'), WED_MIDNIGHT_30)).toEqual({ open: true });
+  });
 
   it('says nothing when there are no hours at all', () => {
     expect(openState(null, WED_10AM)).toBeNull();

@@ -106,6 +106,16 @@ describe('areasNear', () => {
     expect(areasNear(places, { lat: 21.0287, lng: 105.8546 })[0]).toBe('Hoàn Kiếm');
   });
 
+  // `districtsOf` has had this test since it was written; `ranked` — what
+  // `areasNear` actually calls — never did. Two areas at the same point
+  // with the same number of places tie on both earlier rules, and only the
+  // name decides. Without it the chips can swap places between two renders
+  // of identical data, which is a shuffle nobody can reproduce on demand.
+  it('breaks a full tie on name, so the chips cannot swap', () => {
+    const tied = [put('Tây Hồ', 21.03, 105.82), put('Ba Đình', 21.03, 105.82)];
+    expect(areasNear(tied, { lat: 21.03, lng: 105.82 })).toEqual(['Ba Đình', 'Tây Hồ']);
+  });
+
   // The whole complaint: standing in one district and being offered the
   // busiest one first because it is the busiest.
   it('does not simply repeat the busiest-first order', () => {
