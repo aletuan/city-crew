@@ -1,7 +1,8 @@
 // The wizard's arithmetic. No React here, and none in what it imports.
 
 import { describe, expect, it } from 'vitest';
-import { areaCentre, areasNear, canPlan, districtsOf, EMPTY_DRAFT, nearestAreaKm, toggle } from './trip';
+import { areaCentre, areasNear, canPlan, COMPANY, districtsOf, EMPTY_DRAFT, nearestAreaKm, toggle } from './trip';
+import { CATEGORIES } from './categories';
 import type { Place } from './types';
 
 const at = (neighborhood_en: string | null): Place => ({
@@ -225,6 +226,95 @@ describe('areaCentre', () => {
     const places = [put('Ba Đình', 21.03, 105.82), put('Hoàn Kiếm', 21.0285, 105.8542)];
     for (const name of areasNear(places, { lat: 21.03, lng: 105.82 })) {
       expect(areaCentre(places, name)).not.toBeNull();
+    }
+  });
+});
+
+// The company chips sit directly above the category chips, so their
+// glyph colours have to belong to the same family without pretending to
+// be part of the same code. Those are rules a future sixth option could
+// break silently, so they are written down here rather than in a comment.
+describe('COMPANY colours', () => {
+  const rgb = (c: string) => {
+    const h = c.replace('#', '');
+    return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  };
+  const relLum = (c: string) => {
+    const [r, g, b] = rgb(c).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contrast = (a: string, b: string) => {
+    const [hi, lo] = [relLum(a), relLum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const hue = (c: string) => {
+    const [r, g, b] = rgb(c);
+    const max = Math.max(r, g, b); const min = Math.min(r, g, b);
+    if (max === min) return 0;
+    const d = max - min;
+    const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return ((h * 60) % 360 + 360) % 360;
+  };
+  const apart = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
+
+  const LIGHT = '#F5F1EA';
+  const DARK = '#0A0B0A';
+  const cats = Object.values(CATEGORIES).map((c) => c.color);
+  const coloured = COMPANY.filter((c) => c.color);
+
+  it('gives every option but Other a glyph and a colour', () => {
+    for (const c of COMPANY.filter((x) => x.key !== 'other')) {
+      expect(c.icon, c.key).toBeTruthy();
+      expect(c.color, c.key).toMatch(/^#[0-9A-F]{6}$/i);
+    }
+    expect(coloured).toHaveLength(4);
+  });
+
+  // An ellipsis is a promise of more to tap, and this chip is an answer
+  // like the rest of them.
+  it('leaves Other without a glyph', () => {
+    const other = COMPANY.find((c) => c.key === 'other');
+    expect(other?.icon).toBeUndefined();
+  });
+
+  it('reuses no category colour, which would read as the same thing', () => {
+    for (const c of coloured) expect(cats).not.toContain(c.color!);
+  });
+
+  // Close enough to a category hue and the eye pairs the two rows that
+  // have nothing to do with each other.
+  it('keeps every hue clear of every category hue', () => {
+    for (const c of coloured) {
+      const nearest = Math.min(...cats.map((k) => apart(hue(c.color!), hue(k))));
+      expect(nearest, `${c.key} is ${nearest.toFixed(0)}° from a category hue`)
+        .toBeGreaterThanOrEqual(15);
+    }
+  });
+
+  it('keeps them apart from each other too', () => {
+    for (let i = 0; i < coloured.length; i += 1) {
+      for (let j = i + 1; j < coloured.length; j += 1) {
+        expect(apart(hue(coloured[i].color!), hue(coloured[j].color!)))
+          .toBeGreaterThanOrEqual(15);
+      }
+    }
+  });
+
+  // The one a measurement actually caught: equal HSL lightness across
+  // hues is not equal contrast, and an amber picked that way came out at
+  // 1.52:1 — visibly fainter than everything beside it.
+  it('sits inside the category palette\'s own contrast range', () => {
+    const range = (bg: string) => {
+      const all = cats.map((c) => contrast(c, bg));
+      return [Math.min(...all), Math.max(...all)] as const;
+    };
+    for (const bg of [LIGHT, DARK]) {
+      const [lo, hi] = range(bg);
+      for (const c of coloured) {
+        const got = contrast(c.color!, bg);
+        expect(got, `${c.key} on ${bg}`).toBeGreaterThanOrEqual(lo);
+        expect(got, `${c.key} on ${bg}`).toBeLessThanOrEqual(hi);
+      }
     }
   });
 });
