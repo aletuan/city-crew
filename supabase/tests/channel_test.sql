@@ -76,29 +76,27 @@ begin
     'a mobile row lost the account that submitted it';
 end $$;
 
--- And left alone everywhere else. Desk and scan are gated on an allow-list
--- that keeps no history, and seed ran as a script under no account at all;
--- a handle on either would be a guess wearing a person's name.
+-- Desk and scan carry the one account the allow-list resolves to. Nobody
+-- recorded them at the time; this is the arithmetic of a gate that only
+-- one account can pass, and it is only allowed to run while that stays
+-- true — see the two-editor case below.
 do $$
-declare named int;
+declare wrong text;
 begin
-  select count(*) into named from public.places
-   where added_by is not null and channel <> 'mobile';
-  assert named = 0,
-    format('%s non-mobile rows were given an account nobody recorded', named);
+  select string_agg(slug, ', ') into wrong
+    from public.places
+   where slug like 'src-%' and channel in ('desk', 'scan')
+     and added_by is distinct from 'eee00000-0000-0000-0000-00000000000e';
+  assert wrong is null, format('desk/scan rows without the editor on them: %s', wrong);
 end $$;
 
--- Distinct from `submitted_by`, which keeps its narrower meaning: the cap,
--- the contributor read policy and the app's "only you can see this" all
--- key off it, and widening it would change all three by accident.
+-- Seed keeps its blank, and that one is not a guess either way: the
+-- bootstrap ran as a script under the service role, so no account did it.
 do $$
 begin
-  assert exists (
-    select 1 from information_schema.columns
-     where table_schema = 'public' and table_name = 'places' and column_name = 'submitted_by'
-  ), 'submitted_by was removed — the daily cap and the contributor policy read it';
+  assert not exists (
+    select 1 from public.places where channel = 'seed' and added_by is not null
+  ), 'a seed row was given an account, and no account created one';
 end $$;
-
-delete from public.places where slug like 'src-%' or slug in ('cafe-apartment', 'pho-le');
 
 select 'all channel checks passed' as result;

@@ -101,7 +101,17 @@ run "$DB" -f "$HERE/classification_test.sql"
 echo "→ channel"
 run "$DB" -f "$HERE/channel_seed.sql"
 for f in "$ROOT"/supabase/migrations/*_place_source.sql \
-         "$ROOT"/supabase/migrations/*_place_channel.sql; do
+         "$ROOT"/supabase/migrations/*_place_channel.sql \
+         "$ROOT"/supabase/migrations/*_desk_scan_actor.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/channel_test.sql"
+
+# And the actor backfill's one guard, driven against the migration itself
+# rather than a copy of it: put a second account on the allow-list, run the
+# same file again, and check it declined to choose between them.
+run "$DB" -f "$HERE/channel_two_editors.sql"
+for f in "$ROOT"/supabase/migrations/*_desk_scan_actor.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/channel_guard_test.sql"
