@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AddSlot } from '../components/add';
+import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import CandidateRow from '../components/CandidateRow';
 import {
   AmbientWarmth, BackButton, Card, Empty, PressableScale, useTabBarClearance,
@@ -78,22 +79,38 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const tabClearance = useTabBarClearance();
   const google = useCandidates();
 
+  const [picked, setPicked] = useState<string[]>([]);
+
   // Cleared whenever the words change: a Google section answering the
   // previous query, sitting under results for this one, would be the
   // screen quietly lying about what it went and asked.
-  useEffect(() => { google.clear(); }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { google.clear(); setPicked([]); }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Only what the catalog has never heard of. Everything else in that list
-  // this screen has already shown, or deliberately not shown, above.
+  // Only what the catalog had never heard of *when the search ran*.
+  // Everything else in that list this screen has already shown, or
+  // deliberately not shown, above.
   //
-  // Memoised because `rows` below depends on it, and a fresh array every
-  // render would make that memo recompute the whole catalog filter on
-  // every keystroke — which is the one thing this screen is built not to
-  // do.
+  // Deliberately not recomputed when `known` changes, and that is the
+  // whole subtlety here: adding a place sets its state to 'mine', so a
+  // list filtered live would delete each row at the moment it succeeded —
+  // rows vanishing under the reader's finger, mid-batch, taking the
+  // per-row "Added" with them. `run` sets `known` and `results` together,
+  // so the render that first sees results already has the right map.
+  //
+  // Memoised anyway because `rows` below depends on it, and a fresh array
+  // every render would recompute the whole catalog filter on every
+  // keystroke — the one thing this screen is built not to do.
   const fresh = useMemo(
     () => (google.results ? freshOnly(google.results, google.known) : null),
-    [google.results, google.known],
+    [google.results], // eslint-disable-line react-hooks/exhaustive-deps
   );
+
+  // What is still addable, which does follow `known`: a row stays on
+  // screen after it is added, but it stops counting towards the button.
+  const addable = (fresh ?? []).filter(
+    (c) => (google.known[c.place_id]?.state ?? 'none') === 'none',
+  );
+  const chosen = addable.filter((c) => picked.includes(c.place_id));
 
   const terms = useMemo(
     () => fold(query).split(/\s+/).filter(Boolean),
@@ -146,6 +163,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   }, [terms, places, cols.data, city?.id, fresh, t]);
 
   const searching = terms.length > 0;
+  const showBar = batchBarShown(chosen.length, google.batch);
 
   // The words go with them. Someone who typed "Cộng Cà Phê" here and found
   // nothing should not have to type it again on the one screen whose whole
@@ -243,7 +261,13 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                 known={google.known[item.candidate.place_id] ?? { state: 'none' }}
                 busy={google.adding === item.candidate.place_id}
                 away={google.awayFrom(item.candidate)}
-                onAdd={() => google.add(item.candidate)}
+                item={google.batch.state[item.candidate.place_id]}
+                selected={picked.includes(item.candidate.place_id)}
+                onToggle={() => setPicked((p) => (
+                  p.includes(item.candidate.place_id)
+                    ? p.filter((x) => x !== item.candidate.place_id)
+                    : [...p, item.candidate.place_id]
+                ))}
                 onOpen={(slug) => navigation.navigate('PlaceDetail', { slug })}
               />
             );
@@ -317,8 +341,21 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         ListFooterComponent={searching && rows.length > 0
           ? <>{addRow}{googleEmpty}</>
           : null}
-        contentContainerStyle={{ paddingTop: 6, paddingBottom: tabClearance }}
+        contentContainerStyle={{ paddingTop: 6, paddingBottom: showBar ? 10 : tabClearance }}
         showsVerticalScrollIndicator={false}
+      />
+
+      {/* The same commit Add a place has, for the same reason: choosing
+          five results and pressing ⊕ five times is five round trips the
+          reader waits through one at a time. No way out button here —
+          this screen is somewhere the reader already wanted to be, so
+          when there is nothing left to add the bar simply goes and the
+          rows say what became of each one. */}
+      <AddBatchBar
+        chosen={chosen.length}
+        batch={google.batch}
+        onAdd={() => { if (chosen.length) google.addMany(chosen); }}
+        onCancel={google.cancel}
       />
     </SafeAreaView>
   );

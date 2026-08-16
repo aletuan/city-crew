@@ -12,14 +12,13 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AddIconButton } from './add';
 import { PressableScale, SelectTick } from './ui';
 import type { ItemState } from '../lib/candidates';
 import type { Candidate, Known } from '../lib/suggest';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 
-export default function CandidateRow({ c, known, busy, away, item, selected, onAdd, onToggle, onOpen }: {
+export default function CandidateRow({ c, known, busy, away, item, selected, onToggle, onOpen }: {
   c: Candidate;
   known: Known;
   busy: boolean;
@@ -31,11 +30,11 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onA
   item?: ItemState;
   /** Ticked for a batch. Only meaningful with `onToggle`. */
   selected?: boolean;
-  /** The single-shot ⊕. Given by Search, which adds one at a time. */
-  onAdd?: () => void;
-  /** Multi-select. Given by Add a place, where the whole row is the
-   *  target — a checkbox you have to hit exactly is a worse row than one
-   *  you can tap anywhere. */
+  /** Multi-select — the whole row is the target, because a checkbox you
+   *  have to hit exactly is a worse row than one you can tap anywhere.
+   *  Both screens give this now; the single-shot ⊕ that Search used to
+   *  carry is gone, along with the five round trips it took to add five
+   *  places. */
   onToggle?: () => void;
   onOpen: (slug: string) => void;
 }) {
@@ -101,11 +100,6 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onA
         // area inside it would give one action two of them and VoiceOver
         // two stops.
         <SelectTick on={!!selected} />
-      ) : onAdd ? (
-        <AddIconButton
-          onPress={onAdd}
-          accessibilityLabel={t(`Add ${c.name}`, `Thêm ${c.name}`, `${c.name} を追加`)}
-        />
       ) : null}
     </View>
   );

@@ -24,8 +24,15 @@
 //     bar. Filled, because it is a thing you do rather than a space you
 //     fill.
 //
-//   AddIconButton — the same action with no room for a word, one per row
-//     in a list. Same fill, same ink, no label.
+// There was a third, AddIconButton — the same action as a bare circle,
+// one per row in a list. Search was its only caller, and Search now
+// selects several rows and commits them from one bar (AddBatchBar), so
+// the shape has no job left. Its story is worth keeping even though the
+// code is not: it was filled with `colors.accent`, which is a *foreground*
+// colour, leaving its `accentInk` glyph at 3.64:1 in the light theme and
+// 6.79:1 in the dark — correct half the time and muddy the other half,
+// for one substitution nobody could see in either theme alone. That is
+// the mistake this file exists to stop repeating.
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -98,43 +105,6 @@ export function AddPill({ label, onPress, compact, accessibilityLabel }: {
   );
 }
 
-/**
- * The same action with no room for a word — one per row in a list.
- *
- * The fifth copy of "add" in this app, and the one that got away when the
- * other four were gathered here: it is a circle rather than a row, so it
- * did not look like the same thing. It was filled with `colors.accent`,
- * which is `dyn('#C4402C', '#FF6F5B')` — a value that changes what it *is*
- * between themes. On paper it is a foreground colour, dark enough to read
- * as text on a light page, and filling a button with it left the
- * `accentInk` glyph at 3.64:1. In the dark theme the same line resolves to
- * the bright coral and measures 6.79:1, so the button was correct half the
- * time and muddy the other half, for one substitution nobody could see in
- * either theme alone.
- *
- * `gradAI` is a literal, not a `dyn()` — the theme file says so at the
- * constant itself, "a gradient is a fill" — so this reads at 6.79:1 in
- * both. The label lives in `accessibilityLabel` because a bare glyph
- * announces nothing.
- */
-export function AddIconButton({ onPress, accessibilityLabel }: {
-  onPress: () => void;
-  accessibilityLabel: string;
-}) {
-  return (
-    <PressableScale
-      onPress={onPress}
-      scaleTo={0.9}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-    >
-      <LinearGradient {...gradAI} style={s.iconBtn}>
-        <Ionicons name="add" size={22} color={colors.accentInk} />
-      </LinearGradient>
-    </PressableScale>
-  );
-}
-
 const s = StyleSheet.create({
   slotWrap: { marginHorizontal: space.page, marginTop: 4, marginBottom: 8 },
   slot: {
@@ -160,10 +130,6 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
   },
   pillCompact: { paddingLeft: 11, paddingRight: 14, paddingVertical: 7 },
-  iconBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center',
-  },
   pillText: { color: colors.accentInk, fontSize: 15.5, fontWeight: font.semibold },
   pillTextCompact: { fontSize: 14 },
 });
