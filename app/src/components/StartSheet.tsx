@@ -28,9 +28,10 @@
 // Autocomplete, which needs a Google map, which needs a key, which needs
 // a development build, which costs this project Expo Go.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView,
+  StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -72,6 +73,27 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
    */
   const [asked, setAsked] = useState(0);
   const me = useMyPosition(asked);
+
+  // ── the keyboard ──
+  //
+  // The sheet is anchored to the bottom of the screen, so the keyboard
+  // used to cover the field being typed into, the chips, and the button.
+  //
+  // Two halves, which is how iOS sheets with a search field behave —
+  // Apple Maps, Find My, Stocks all do this. The container gives way, so
+  // the sheet's bottom edge sits on the keyboard rather than behind it;
+  // and focusing the field scrolls it to the top of what is left, which
+  // takes the map off screen. That is the right trade: while you are
+  // typing, the map carries nothing.
+  //
+  // Coming back matters as much as going. After a search lands, the
+  // keyboard closes and this scrolls back to the top — otherwise the map
+  // moves to the address you asked for while scrolled out of sight, and
+  // the only thing you see happen is the keyboard going away.
+  const scroller = useRef<ScrollView>(null);
+  const [fieldY, setFieldY] = useState(0);
+  const showField = () => scroller.current?.scrollTo({ y: Math.max(0, fieldY - 8), animated: true });
+  const showMap = () => scroller.current?.scrollTo({ y: 0, animated: true });
 
   // Re-seeded on each open rather than held between them: the sheet is a
   // question, and closing it without answering must not change the answer
@@ -135,8 +157,10 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
       const cityName = city ? city.name_en : '';
       const hits = await Location.geocodeAsync(cityName ? `${q}, ${cityName}` : q);
       const hit = hits[0];
-      if (hit) setDraft({ district: null, at: { lat: hit.latitude, lng: hit.longitude } });
-      else setMissed(true);
+      if (hit) {
+        setDraft({ district: null, at: { lat: hit.latitude, lng: hit.longitude } });
+        showMap();
+      } else setMissed(true);
     } catch {
       // A geocoder that refused and a geocoder that found nothing are the
       // same answer to the reader: we could not put this on the map.
@@ -167,92 +191,105 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={s.scrim} onPress={onClose} />
-      <View style={s.sheet}>
-        <View style={s.grabber} />
-        <Text style={s.title}>{t('Where should it start?', 'Bắt đầu từ đâu?', 'どこから始めますか？')}</Text>
-        <Text style={s.sub}>
-          {t(
-            'Roughly is fine — we keep everything walkable.',
-            'Áng chừng là được — chúng tôi giữ mọi thứ trong tầm đi bộ.',
-            'だいたいで大丈夫 — 歩ける範囲でまとめます。',
-          )}
-        </Text>
+      {/* `padding` on iOS only. Android resizes the window itself through
+          `windowSoftInputMode`, and doing both is how a sheet ends up
+          lifted twice as far as the keyboard is tall. */}
+      <KeyboardAvoidingView
+        style={StyleSheet.absoluteFill}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <Pressable style={s.scrim} onPress={onClose} />
+        <View style={s.sheet}>
+          <View style={s.grabber} />
+          <Text style={s.title}>{t('Where should it start?', 'Bắt đầu từ đâu?', 'どこから始めますか？')}</Text>
+          <Text style={s.sub}>
+            {t(
+              'Roughly is fine — we keep everything walkable.',
+              'Áng chừng là được — chúng tôi giữ mọi thứ trong tầm đi bộ.',
+              'だいたいで大丈夫 — 歩ける範囲でまとめます。',
+            )}
+          </Text>
 
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: 8 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {centre && (
-            <MiniMap
-              key={asked}
-              lat={centre.lat}
-              lng={centre.lng}
-              height={196}
-              caption={caption}
-              onLocate={locate}
-              onPick={(at) => { setDraft({ district: null, at }); setMissed(false); }}
-            />
-          )}
+          <ScrollView
+            ref={scroller}
+            contentContainerStyle={{ paddingBottom: 8 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            // Drag the list down and the keyboard follows the finger, which
+            // is what every iOS list with a keyboard over it does.
+            keyboardDismissMode="interactive"
+          >
+            {centre && (
+              <MiniMap
+                key={asked}
+                lat={centre.lat}
+                lng={centre.lng}
+                height={196}
+                caption={caption}
+                onLocate={locate}
+                onPick={(at) => { setDraft({ district: null, at }); setMissed(false); }}
+              />
+            )}
 
-          <View style={s.field}>
-            <Ionicons name="search" size={18} color={colors.textTertiary} />
-            <TextInput
-              value={query}
-              onChangeText={(v) => { setQuery(v); setMissed(false); }}
-              onSubmitEditing={find}
-              returnKeyType="search"
-              placeholder={t(
-                'Search an address or place',
-                'Tìm địa chỉ hoặc địa điểm',
-                '住所や場所を検索',
-              )}
-              placeholderTextColor={colors.textTertiary}
-              style={s.input}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {finding ? <ActivityIndicator size="small" color={colors.accent} /> : null}
-          </View>
-          {missed && (
-            <Text style={s.missed}>
-              {t(
-                'No address found for that. Try a street and district.',
-                'Không tìm thấy địa chỉ này. Thử tên đường kèm quận xem sao.',
-                '該当する住所が見つかりません。通りと区で試してください。',
-              )}
-            </Text>
-          )}
-
-          {districts.length > 0 && (
-            <>
-              <Text style={s.label}>
-                {t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ')}
+            <View style={s.field} onLayout={(e) => setFieldY(e.nativeEvent.layout.y)}>
+              <Ionicons name="search" size={18} color={colors.textTertiary} />
+              <TextInput
+                value={query}
+                onChangeText={(v) => { setQuery(v); setMissed(false); }}
+                onFocus={showField}
+                onSubmitEditing={find}
+                returnKeyType="search"
+                placeholder={t(
+                  'Search an address or place',
+                  'Tìm địa chỉ hoặc địa điểm',
+                  '住所や場所を検索',
+                )}
+                placeholderTextColor={colors.textTertiary}
+                style={s.input}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {finding ? <ActivityIndicator size="small" color={colors.accent} /> : null}
+            </View>
+            {missed && (
+              <Text style={s.missed}>
+                {t(
+                  'No address found for that. Try a street and district.',
+                  'Không tìm thấy địa chỉ này. Thử tên đường kèm quận xem sao.',
+                  '該当する住所が見つかりません。通りと区で試してください。',
+                )}
               </Text>
-              <View style={s.chips}>
-                {districts.map((d) => (
-                  <Chip
-                    key={d}
-                    label={d}
-                    active={draft.district === d}
-                    onPress={() => setDraft({ district: draft.district === d ? null : d, at: null })}
-                  />
-                ))}
-              </View>
-            </>
-          )}
-        </ScrollView>
+            )}
 
-        <View style={s.foot}>
-          <GradientCta
-            icon="checkmark"
-            label={t('Use this location', 'Dùng chỗ này', 'ここにする')}
-            onPress={() => onDone(draft)}
-            wide
-          />
+            {districts.length > 0 && (
+              <>
+                <Text style={s.label}>
+                  {t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ')}
+                </Text>
+                <View style={s.chips}>
+                  {districts.map((d) => (
+                    <Chip
+                      key={d}
+                      label={d}
+                      active={draft.district === d}
+                      onPress={() => setDraft({ district: draft.district === d ? null : d, at: null })}
+                    />
+                  ))}
+                </View>
+              </>
+            )}
+          </ScrollView>
+
+          <View style={s.foot}>
+            <GradientCta
+              icon="checkmark"
+              label={t('Use this location', 'Dùng chỗ này', 'ここにする')}
+              onPress={() => onDone(draft)}
+              wide
+            />
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
