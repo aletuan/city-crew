@@ -107,6 +107,7 @@ Deno.serve(async (req) => {
             vibeTags: [...cat.vibes],
             categories: [...cat.categories],
             maxPhotos: PHOTOS_PER_PLACE,
+            source: "scan",
           });
           imported.push({ slug, name: p.displayName?.text ?? slug });
         } catch (err) {
