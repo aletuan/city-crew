@@ -49,6 +49,20 @@ describe('skyIcon', () => {
 describe('parseSky', () => {
   const ok = { current: { temperature_2m: 31.7, weather_code: 0, is_day: 1 } };
 
+  // `num` takes numeric strings because the API has been seen sending
+  // them, but a string that is not a number is not a temperature. It must
+  // not become NaN and render as "NaN°".
+  // The other half of the same guard: the API has been seen sending the
+  // temperature as a string, and a numeric one is a temperature.
+  it('accepts a numeric string', () => {
+    expect(parseSky({ current: { temperature_2m: '31.7', weather_code: '0', is_day: 1 } }))
+      .toEqual({ temp: 32, icon: 'sunny-outline', gold: true });
+  });
+
+  it('refuses a string that is not a number', () => {
+    expect(parseSky({ current: { temperature_2m: 'warm', weather_code: 0, is_day: 1 } })).toBeNull();
+  });
+
   it('rounds the temperature', () => {
     expect(parseSky(ok)).toEqual({ temp: 32, icon: 'sunny-outline', gold: true });
   });
