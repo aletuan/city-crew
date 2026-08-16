@@ -30,8 +30,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView,
-  StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Keyboard, Modal, Platform, Pressable, ScrollView,
+  StyleSheet, Text, TextInput, useWindowDimensions, View,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -77,14 +77,31 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   // ── the keyboard ──
   //
   // The sheet is anchored to the bottom of the screen, so the keyboard
-  // used to cover the field being typed into, the chips, and the button.
+  // covered the field being typed into, the chips, and the button.
   //
-  // Two halves, which is how iOS sheets with a search field behave —
-  // Apple Maps, Find My, Stocks all do this. The container gives way, so
-  // the sheet's bottom edge sits on the keyboard rather than behind it;
-  // and focusing the field scrolls it to the top of what is left, which
-  // takes the map off screen. That is the right trade: while you are
-  // typing, the map carries nothing.
+  // Measured here rather than handed to `KeyboardAvoidingView`, and the
+  // reason is a rule rather than a preference: that component works by
+  // adding bottom padding to itself, and an absolutely positioned child —
+  // which this sheet is, being pinned to the bottom — is laid out against
+  // its parent's *padding box*. Padding therefore moves it not at all.
+  // The first attempt at this did exactly that and changed nothing.
+  //
+  // iOS only. Android resizes its own window through `windowSoftInputMode`,
+  // so lifting the sheet as well would raise it twice.
+  const { height: winH } = useWindowDimensions();
+  const [kb, setKb] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    // `will`, not `did`: the frame is known before the animation starts,
+    // so the sheet travels with the keyboard instead of jumping after it.
+    const up = Keyboard.addListener('keyboardWillShow', (e) => setKb(e.endCoordinates.height));
+    const down = Keyboard.addListener('keyboardWillHide', () => setKb(0));
+    return () => { up.remove(); down.remove(); };
+  }, []);
+
+  // Focusing the field scrolls it to the top of what is left, which takes
+  // the map off screen. That is the right trade rather than a compromise:
+  // while you are typing an address, the map carries nothing.
   //
   // Coming back matters as much as going. After a search lands, the
   // keyboard closes and this scrolls back to the top — otherwise the map
@@ -191,113 +208,113 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      {/* `padding` on iOS only. Android resizes the window itself through
-          `windowSoftInputMode`, and doing both is how a sheet ends up
-          lifted twice as far as the keyboard is tall. */}
-      <KeyboardAvoidingView
-        style={StyleSheet.absoluteFill}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <Pressable style={s.scrim} onPress={onClose} />
-        <View style={s.sheet}>
-          <View style={s.grabber} />
-          <Text style={s.title}>{t('Where should it start?', 'Bắt đầu từ đâu?', 'どこから始めますか？')}</Text>
-          <Text style={s.sub}>
-            {t(
-              'Roughly is fine — we keep everything walkable.',
-              'Áng chừng là được — chúng tôi giữ mọi thứ trong tầm đi bộ.',
-              'だいたいで大丈夫 — 歩ける範囲でまとめます。',
-            )}
-          </Text>
+      <Pressable style={s.scrim} onPress={onClose} />
+      <View style={[s.sheet, { bottom: kb, maxHeight: (winH - kb) * 0.9 }]}>
+        <View style={s.grabber} />
+        <Text style={s.title}>{t('Where should it start?', 'Bắt đầu từ đâu?', 'どこから始めますか？')}</Text>
+        <Text style={s.sub}>
+          {t(
+            'Roughly is fine — we keep everything walkable.',
+            'Áng chừng là được — chúng tôi giữ mọi thứ trong tầm đi bộ.',
+            'だいたいで大丈夫 — 歩ける範囲でまとめます。',
+          )}
+        </Text>
 
-          <ScrollView
-            ref={scroller}
-            contentContainerStyle={{ paddingBottom: 8 }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            // Drag the list down and the keyboard follows the finger, which
-            // is what every iOS list with a keyboard over it does.
-            keyboardDismissMode="interactive"
-          >
-            {centre && (
-              <MiniMap
-                key={asked}
-                lat={centre.lat}
-                lng={centre.lng}
-                height={196}
-                caption={caption}
-                onLocate={locate}
-                onPick={(at) => { setDraft({ district: null, at }); setMissed(false); }}
-              />
-            )}
-
-            <View style={s.field} onLayout={(e) => setFieldY(e.nativeEvent.layout.y)}>
-              <Ionicons name="search" size={18} color={colors.textTertiary} />
-              <TextInput
-                value={query}
-                onChangeText={(v) => { setQuery(v); setMissed(false); }}
-                onFocus={showField}
-                onSubmitEditing={find}
-                returnKeyType="search"
-                placeholder={t(
-                  'Search an address or place',
-                  'Tìm địa chỉ hoặc địa điểm',
-                  '住所や場所を検索',
-                )}
-                placeholderTextColor={colors.textTertiary}
-                style={s.input}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {finding ? <ActivityIndicator size="small" color={colors.accent} /> : null}
-            </View>
-            {missed && (
-              <Text style={s.missed}>
-                {t(
-                  'No address found for that. Try a street and district.',
-                  'Không tìm thấy địa chỉ này. Thử tên đường kèm quận xem sao.',
-                  '該当する住所が見つかりません。通りと区で試してください。',
-                )}
-              </Text>
-            )}
-
-            {districts.length > 0 && (
-              <>
-                <Text style={s.label}>
-                  {t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ')}
-                </Text>
-                <View style={s.chips}>
-                  {districts.map((d) => (
-                    <Chip
-                      key={d}
-                      label={d}
-                      active={draft.district === d}
-                      onPress={() => setDraft({ district: draft.district === d ? null : d, at: null })}
-                    />
-                  ))}
-                </View>
-              </>
-            )}
-          </ScrollView>
-
-          <View style={s.foot}>
-            <GradientCta
-              icon="checkmark"
-              label={t('Use this location', 'Dùng chỗ này', 'ここにする')}
-              onPress={() => onDone(draft)}
-              wide
+        <ScrollView
+          ref={scroller}
+          // Yoga defaults `flexShrink` to 0, unlike CSS. Without this the
+          // list keeps its full content height while the sheet's ceiling
+          // comes down around it — the overflow is clipped rather than
+          // scrolled, which would have made everything above pointless.
+          style={{ flexShrink: 1 }}
+          contentContainerStyle={{ paddingBottom: 8 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          // Drag the list down and the keyboard follows the finger, which
+          // is what every iOS list with a keyboard over it does.
+          keyboardDismissMode="interactive"
+        >
+          {centre && (
+            <MiniMap
+              key={asked}
+              lat={centre.lat}
+              lng={centre.lng}
+              height={196}
+              caption={caption}
+              onLocate={locate}
+              onPick={(at) => { setDraft({ district: null, at }); setMissed(false); }}
             />
+          )}
+
+          <View style={s.field} onLayout={(e) => setFieldY(e.nativeEvent.layout.y)}>
+            <Ionicons name="search" size={18} color={colors.textTertiary} />
+            <TextInput
+              value={query}
+              onChangeText={(v) => { setQuery(v); setMissed(false); }}
+              onFocus={showField}
+              onSubmitEditing={find}
+              returnKeyType="search"
+              placeholder={t(
+                'Search an address or place',
+                'Tìm địa chỉ hoặc địa điểm',
+                '住所や場所を検索',
+              )}
+              placeholderTextColor={colors.textTertiary}
+              style={s.input}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {finding ? <ActivityIndicator size="small" color={colors.accent} /> : null}
           </View>
+          {missed && (
+            <Text style={s.missed}>
+              {t(
+                'No address found for that. Try a street and district.',
+                'Không tìm thấy địa chỉ này. Thử tên đường kèm quận xem sao.',
+                '該当する住所が見つかりません。通りと区で試してください。',
+              )}
+            </Text>
+          )}
+
+          {districts.length > 0 && (
+            <>
+              <Text style={s.label}>
+                {t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ')}
+              </Text>
+              <View style={s.chips}>
+                {districts.map((d) => (
+                  <Chip
+                    key={d}
+                    label={d}
+                    active={draft.district === d}
+                    onPress={() => setDraft({ district: draft.district === d ? null : d, at: null })}
+                  />
+                ))}
+              </View>
+            </>
+          )}
+        </ScrollView>
+
+        <View style={s.foot}>
+          <GradientCta
+            icon="checkmark"
+            label={t('Use this location', 'Dùng chỗ này', 'ここにする')}
+            onPress={() => onDone(draft)}
+            wide
+          />
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
 
 const s = StyleSheet.create({
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.32)' },
+  // `bottom` and `maxHeight` are set inline from the keyboard's height —
+  // a sheet lifted without lowering its ceiling would simply grow off the
+  // top of the screen instead.
   sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '90%',
+    position: 'absolute', left: 0, right: 0,
     backgroundColor: colors.bgElevated,
     borderTopLeftRadius: 26, borderTopRightRadius: 26,
     paddingHorizontal: space.page, paddingTop: 10, paddingBottom: 26,
