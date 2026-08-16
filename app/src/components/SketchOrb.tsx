@@ -23,16 +23,19 @@
 //
 // ── reduced motion ──
 //
-// The CSS asked for `prefers-reduced-motion`. The platform equivalent is
-// `AccessibilityInfo`, read once and then watched, because it can be
-// switched while the screen is open. With it on, the ring is still drawn
-// and still says "working" — it simply holds still. Nothing is removed,
-// which is the point: the reader loses the motion, not the information.
+// Not read here. The screen owns that question — see `useReducedMotion` —
+// and passes the answer down, because the step rows beside this need it
+// too and a screen where half the motion obeys the setting looks broken
+// rather than considerate.
+//
+// With it on, the ring is still drawn and still says "working": it simply
+// holds still. The reader loses the motion, not the information.
 
-import React, { useEffect, useRef } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import { useLoop } from './ui';
 import { arcSweep, sampleSweep, type Stop } from '../lib/ring';
 import { colors, gradAI } from '../theme';
 
@@ -66,46 +69,11 @@ function seg(a0: number, a1: number, r: number, c: number): string {
 }
 
 export default function SketchOrb({ still }: {
-  /** Held still — reduced motion, or the run has ended. */
+  /** Held still — the run has ended, or the reader asked for less motion. */
   still?: boolean;
 }) {
-  const spin = useRef(new Animated.Value(0)).current;
-  const breath = useRef(new Animated.Value(0)).current;
-  const [reduced, setReduced] = React.useState(false);
-
-  useEffect(() => {
-    let live = true;
-    AccessibilityInfo.isReduceMotionEnabled().then((on) => { if (live) setReduced(on); });
-    // Watched, not only read: the setting can be turned on while this
-    // screen is up, which is exactly when somebody would reach for it.
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
-    return () => { live = false; sub.remove(); };
-  }, []);
-
-  const frozen = still || reduced;
-
-  useEffect(() => {
-    if (frozen) return;
-    const turn = Animated.loop(
-      Animated.timing(spin, {
-        toValue: 1,
-        duration: 1600,
-        // Linear, and this is the one easing that must not be eased: a
-        // spinner that speeds up and slows down reads as struggling.
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    );
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(breath, { toValue: 1, duration: 1000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(breath, { toValue: 0, duration: 1000, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      ]),
-    );
-    turn.start();
-    pulse.start();
-    return () => { turn.stop(); pulse.stop(); spin.setValue(0); breath.setValue(0); };
-  }, [frozen, spin, breath]);
+  const spin = useLoop(1600, !!still);
+  const breath = useLoop(2000, !!still, 'inOut');
 
   const c = BOX / 2;
   const r = c - STROKE / 2;

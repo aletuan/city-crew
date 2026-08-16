@@ -2,7 +2,9 @@
 // translucent charcoal cards — the cityCrew design system in React Native.
 
 import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, PressableProps, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import {
+  AccessibilityInfo, Animated, Easing, Pressable, PressableProps, StyleProp, StyleSheet, Text, View, ViewStyle,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -73,6 +75,57 @@ export function PressableScale({ children, style, containerStyle, haptic = 'ligh
       <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
     </Pressable>
   );
+}
+
+/**
+ * Whether the reader has asked the system to calm things down.
+ *
+ * The web equivalent is `prefers-reduced-motion`, which is a media query
+ * and updates itself. This does not, so it is read once and then watched:
+ * the setting can be turned on *while* a screen is animating, which is
+ * precisely when somebody reaches for it.
+ *
+ * Shared rather than read per component, because the first version of the
+ * sketching screen had the orb honouring it and the step rows beside it
+ * carrying on — half a screen obeying the reader is worse than none of it,
+ * since it looks like the setting is broken rather than unsupported.
+ */
+export function useReducedMotion(): boolean {
+  const [on, setOn] = React.useState(false);
+  useEffect(() => {
+    let live = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => { if (live) setOn(v); });
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setOn);
+    return () => { live = false; sub.remove(); };
+  }, []);
+  return on;
+}
+
+/**
+ * A value looping 0 → 1 forever, or held at rest.
+ *
+ * The two animations this screen needs — a rotation and a breath — differ
+ * only in what they map the number onto, so the loop itself is written
+ * once. `useNativeDriver` throughout: every consumer drives `transform` or
+ * `opacity`, and the JS thread is about to be busy.
+ */
+export function useLoop(ms: number, still: boolean, mode: 'linear' | 'inOut' = 'linear') {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (still) { v.setValue(0); return; }
+    const step = (toValue: number) => Animated.timing(v, {
+      toValue,
+      duration: mode === 'linear' ? ms : ms / 2,
+      easing: mode === 'linear' ? Easing.linear : Easing.inOut(Easing.quad),
+      useNativeDriver: true,
+    });
+    // Linear runs 0 → 1 and snaps back, which is invisible on a rotation.
+    // Eased has to come back down, or the breath would jerk at the top.
+    const loop = Animated.loop(mode === 'linear' ? step(1) : Animated.sequence([step(1), step(0)]));
+    loop.start();
+    return () => { loop.stop(); v.setValue(0); };
+  }, [ms, still, mode, v]);
+  return v;
 }
 
 /** Soft pulsing placeholder shown while content loads. */

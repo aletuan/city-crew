@@ -18,11 +18,13 @@
 // where a test can reach them. What is left here is the drawing.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import SketchOrb from '../components/SketchOrb';
-import { GradientCta, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import {
+  GradientCta, Screen, Skeleton, useLoop, useReducedMotion, useTabBarClearance,
+} from '../components/ui';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
@@ -45,6 +47,7 @@ export default function SketchingScreen({ navigation, route }: {
 }) {
   const { t, lang } = useI18n();
   const clearance = useTabBarClearance(10);
+  const calm = useReducedMotion();
   const p = route.params;
 
   // Measured from a ref rather than counted in ticks: a counter drifts
@@ -81,7 +84,7 @@ export default function SketchingScreen({ navigation, route }: {
         contentContainerStyle={[s.body, { paddingBottom: clearance }]}
         showsVerticalScrollIndicator={false}
       >
-        <SketchOrb still={done} />
+        <SketchOrb still={done || calm} />
 
         <Text style={s.title}>
           {done
@@ -95,7 +98,12 @@ export default function SketchingScreen({ navigation, route }: {
 
         <View style={s.card}>
           {SKETCH_STEPS.map((step, i) => (
-            <StepRow key={step.key} label={t(step.en, step.vi, step.ja)} state={states[i]} />
+            <StepRow
+              key={step.key}
+              label={t(step.en, step.vi, step.ja)}
+              state={states[i]}
+              still={calm}
+            />
           ))}
         </View>
 
@@ -139,27 +147,72 @@ export default function SketchingScreen({ navigation, route }: {
   );
 }
 
-function StepRow({ label, state }: { label: string; state: StepState }) {
+/**
+ * The mark beside a step, in whichever of the three states it is in.
+ *
+ * The active one is a bright arc travelling over a faint full ring, and
+ * both halves of that matter. The first version drew only the arc — a
+ * circle with its top border transparent — which is a *hole*, not a
+ * segment, and a hole in a ring that is also standing still does not read
+ * as "working". It reads as broken, which is what it was reported as.
+ *
+ * So: the track goes back, and the arc turns again.
+ *
+ * It turns at the orb's own 1.6s, which answers the objection that put it
+ * on hold. Two spinners at two speeds read as two separate things
+ * happening; two turning in step read as one thing, in two sizes.
+ */
+function StepMark({ state, still }: { state: StepState; still: boolean }) {
+  const spin = useLoop(1600, still || state !== 'active');
+
+  if (state === 'done') {
+    return (
+      <LinearGradient {...gradAI} style={s.mark}>
+        <Ionicons name="checkmark" size={14} color={colors.accentInk} />
+      </LinearGradient>
+    );
+  }
+  if (state !== 'active') return <View style={[s.mark, s.markPending]} />;
+
   return (
-    <View style={s.step}>
-      {state === 'done' ? (
-        <LinearGradient {...gradAI} style={s.mark}>
-          <Ionicons name="checkmark" size={14} color={colors.accentInk} />
-        </LinearGradient>
-      ) : state === 'active' ? (
-        // A ring with one lit quadrant, held still. The design had it
-        // spinning; the orb above is already spinning, and two spinners at
-        // two speeds on one screen read as two separate things happening.
-        <View style={[s.mark, s.markActive]} />
-      ) : (
-        <View style={[s.mark, s.markPending]} />
-      )}
-      <Text
-        style={[s.stepText, state === 'pending' && s.stepTextOff, state === 'active' && s.stepTextOn]}
+    <View style={s.mark}>
+      {/* The track. Without it the arc is a gap rather than a segment, and
+          the ring looks damaged at every angle it stops at. */}
+      <View style={[StyleSheet.absoluteFill, s.markTrack]} />
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          s.markArc,
+          { transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] },
+        ]}
+      />
+    </View>
+  );
+}
+
+function StepRow({ label, state, still }: { label: string; state: StepState; still: boolean }) {
+  // The label breathes while its step is running — the `shimmer` the design
+  // asked for, at 0.62 rather than 0.45 at the bottom. Text that fades most
+  // of the way out is text somebody is mid-sentence with when it goes.
+  const glow = useLoop(1400, still || state !== 'active', 'inOut');
+  const dim = state === 'active'
+    ? glow.interpolate({ inputRange: [0, 1], outputRange: [0.62, 1] })
+    : 1;
+
+  return (
+    <View style={[s.step, state === 'active' && s.stepOn]}>
+      <StepMark state={state} still={still} />
+      <Animated.Text
+        style={[
+          s.stepText,
+          state === 'pending' && s.stepTextOff,
+          state === 'active' && s.stepTextOn,
+          { opacity: dim },
+        ]}
         numberOfLines={2}
       >
         {label}
-      </Text>
+      </Animated.Text>
     </View>
   );
 }
@@ -176,9 +229,23 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
     paddingVertical: 6,
   },
-  step: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 16, paddingVertical: 11 },
+  step: {
+    flexDirection: 'row', alignItems: 'center', gap: 13,
+    paddingHorizontal: 16, paddingVertical: 11,
+    marginHorizontal: 6, borderRadius: radius.input,
+  },
+  // A tint under the running row, which says "this one" without moving.
+  // It is the half of the signal that survives reduced motion.
+  stepOn: { backgroundColor: colors.accentSoft },
   mark: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  markActive: { borderWidth: 2, borderColor: colors.accent, borderTopColor: 'transparent' },
+  // The faint full circle the arc rides on.
+  markTrack: { borderRadius: 12, borderWidth: 2, borderColor: colors.accentLine },
+  // One quadrant of colour. Every other side transparent, so what shows is
+  // an arc on the track rather than a ring with a bite out of it.
+  markArc: {
+    borderRadius: 12, borderWidth: 2,
+    borderColor: 'transparent', borderTopColor: colors.accent,
+  },
   markPending: { borderWidth: 1.5, borderColor: colors.borderGlass, borderStyle: 'dashed' },
   stepText: { flex: 1, color: colors.textSecondary, fontSize: 15 },
   stepTextOn: { color: colors.text, fontWeight: font.semibold },
