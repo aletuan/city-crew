@@ -45,7 +45,7 @@ import { Chip, GradientCta, PressableScale } from './ui';
 import { useCity, useMyPosition } from '../lib/city';
 import { findSpots, type Spot } from '../lib/findplace';
 import { useI18n } from '../lib/i18n';
-import { areasNear, nearestAreaKm } from '../lib/trip';
+import { areaCentre, areasNear, nearestAreaKm } from '../lib/trip';
 import type { Place } from '../lib/types';
 import { colors, font, radius, space, type } from '../theme';
 
@@ -131,13 +131,33 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
     setHits(null);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * The point the sheet is talking about, whichever way it was chosen.
+   *
+   * Three ways lead here and all three are the reader placing a pin on
+   * purpose: a search result, a tap on the map, and — the one this missed
+   * — choosing an area. Picking "Hà Đông" sets a district and no point, so
+   * everything below used to fall back to where the reader was *standing*:
+   * somebody in Thanh Hóa planning a day in Hà Đông chose it, saw the chip
+   * light up, and watched the map go on showing Thanh Hóa.
+   *
+   * Derived here rather than written into the draft, because `Start` keeps
+   * district and point exclusive and the screen above reads them that way.
+   * What the caller gets back is unchanged; what the sheet shows is not.
+   */
+  const pinned = draft.at ?? areaCentre(places, draft.district);
+  const centre = pinned ?? me ?? (city ? { lat: city.center_lat, lng: city.center_lng } : null);
+  // Reordered as the pin moves, which is the whole of "nearby": the pin
+  // wins over the reader's own position, because a pin is something they
+  // placed on purpose.
+  const near = pinned ?? me;
+
   // The platform's geocoder, in the other direction: what to call the
   // point the map is showing.
   useEffect(() => {
-    const at = draft.at ?? me;
-    if (!visible || !at) { setWhere(''); return; }
+    if (!visible || !near) { setWhere(''); return; }
     let live = true;
-    Location.reverseGeocodeAsync({ latitude: at.lat, longitude: at.lng })
+    Location.reverseGeocodeAsync({ latitude: near.lat, longitude: near.lng })
       .then((rows) => {
         const r = rows[0];
         const name = r?.district || r?.subregion || r?.street || r?.city || '';
@@ -145,13 +165,8 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
       })
       .catch(() => { if (live) setWhere(''); });
     return () => { live = false; };
-  }, [visible, draft.at?.lat, draft.at?.lng, me?.lat, me?.lng]);
+  }, [visible, near?.lat, near?.lng]);
 
-  const centre = draft.at ?? me ?? (city ? { lat: city.center_lat, lng: city.center_lng } : null);
-  // Reordered as the pin moves, which is the whole of "nearby": the pin
-  // wins over the reader's own position, because a pin is something they
-  // placed on purpose.
-  const near = draft.at ?? me;
   const districts = useMemo(
     () => areasNear(places, near),
     [places, near?.lat, near?.lng],
