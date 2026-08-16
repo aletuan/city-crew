@@ -66,13 +66,26 @@ export type TripDraft = {
   /** Where the day starts, when the reader dropped a pin instead of
    *  picking a district. */
   at: { lat: number; lng: number } | null;
+  /** The calendar day, `YYYY-MM-DD`, in the reader's own timezone — or ''
+   *  before one has been resolved.
+   *
+   *  A string rather than a `Date` because it is a day and not an instant:
+   *  a Date carries a clock nobody set, and two of them for the same day
+   *  are never equal. See `lib/day`, which also explains why building one
+   *  of these with `toISOString()` is wrong everywhere east of Greenwich. */
+  date: string;
   when: TimeOfDay;
   /** Collection slugs to seed the plan from. */
   from: string[];
 };
 
 export const EMPTY_DRAFT: TripDraft = {
-  company: null, categories: [], district: null, at: null, when: 'evening', from: [],
+  company: null, categories: [], district: null, at: null,
+  // Empty, not today. This is a module-level constant, so `todayISO()`
+  // here would be evaluated once at import and an app left open past
+  // midnight would default to yesterday. The screen resolves it, and
+  // `clampDay` refuses the past anyway.
+  date: '', when: 'evening', from: [],
 };
 
 /** Toggle a value in a list, order preserved. */

@@ -35,6 +35,15 @@ jobs:
       # what broke than one red step and one skipped.
       - if: '!cancelled()'
         run: npm test
+      # The same suite on a clock that has daylight saving. Hanoi does not,
+      # so the run above structurally cannot catch a DST bug — and it did
+      # not: a `daysBetween` that subtracted two local noons returned 1.958
+      # days across the US spring-forward and stayed green here.
+      #
+      # The reader this protects is the one in New York planning a week in
+      # Hanoi, whose phone is on New York time.
+      - if: '!cancelled()'
+        run: npm run test:tz
 
   # The migrations, run against a real Postgres and then asserted. The app
   # job above cannot reach any of this: triggers, constraints and backfills
