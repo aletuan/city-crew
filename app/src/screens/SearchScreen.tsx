@@ -21,6 +21,7 @@ import { CATEGORIES, categoriesOf } from '../lib/categories';
 import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
 import { useCity } from '../lib/city';
 import { freshOnly, useCandidates } from '../lib/candidates';
+import { hintArea } from '../lib/hints';
 import type { Candidate } from '../lib/suggest';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useI18n } from '../lib/i18n';
@@ -319,11 +320,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
           searching
             ? (
               <>
-                <Empty text={t(
-                  `Nothing found for “${query.trim()}”.`,
-                  `Không tìm thấy gì cho “${query.trim()}”.`,
-                  `「${query.trim()}」に一致するものはありません。`,
-                )} />
+                <NoMatches term={shown} area={hintArea(places)} />
                 {addRow}
                 {googleEmpty}
               </>
@@ -361,6 +358,53 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   );
 }
 
+/**
+ * The end of a search that found nothing.
+ *
+ * It used to be one grey sentence. A dead end deserves more than a report
+ * that it is one: a mark to land on, the term quoted back so the reader
+ * can see what was actually searched, and — the part that does the work —
+ * two examples of a query that would have succeeded.
+ *
+ * The neighbourhood in those examples comes out of the catalog rather than
+ * out of the copy, because an example is a promise that typing it returns
+ * something. Naming an area this city does not have would teach a second
+ * thing that fails. When there is no area to name, that half of the
+ * sentence goes rather than being invented — see `hintArea`.
+ */
+function NoMatches({ term, area }: { term: string; area: string | null }) {
+  const { t } = useI18n();
+  return (
+    <View style={s.noneBox}>
+      <View style={s.noneMark}>
+        <Ionicons name="search" size={30} color={colors.textTertiary} />
+        {/* The question mark is the whole difference between "we are
+            looking" and "we looked". A magnifier alone is what a screen
+            shows while it is still searching. */}
+        <View style={s.noneBadge}>
+          <Text style={s.noneBadgeText}>?</Text>
+        </View>
+      </View>
+      <Text style={s.noneTitle}>
+        {t(`No matches for “${term}”`, `Không có kết quả cho “${term}”`, `「${term}」に一致なし`)}
+      </Text>
+      <Text style={s.noneHint}>
+        {area
+          ? t(
+            `Check the spelling, or try a neighbourhood or a vibe — “${area}”, “rooftop”.`,
+            `Kiểm tra chính tả, hoặc thử tên khu hay một kiểu vibe — “${area}”, “rooftop”.`,
+            `つづりを確認するか、エリアや雰囲気で — 「${area}」「ルーフトップ」。`,
+          )
+          : t(
+            'Check the spelling, or try a vibe — “cafés”, “rooftop”.',
+            'Kiểm tra chính tả, hoặc thử một kiểu vibe — “cà phê”, “rooftop”.',
+            'つづりを確認するか、雰囲気で — 「カフェ」「ルーフトップ」。',
+          )}
+      </Text>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   header: {
@@ -388,6 +432,31 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
   },
   cardTitle: { color: colors.text, ...type.cardTitle },
+  noneBox: { alignItems: 'center', paddingTop: 34, paddingHorizontal: space.page },
+  noneMark: {
+    width: 76, height: 76, borderRadius: 38,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceGlass,
+  },
+  // Sat on the rim rather than inside, so the magnifier stays a magnifier
+  // and the badge reads as a note about it.
+  noneBadge: {
+    position: 'absolute', right: -2, bottom: -2,
+    width: 26, height: 26, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.bgElevated,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  noneBadgeText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold, lineHeight: 18 },
+  noneTitle: {
+    color: colors.text, fontSize: 19, fontWeight: font.semibold,
+    textAlign: 'center', marginTop: 18,
+  },
+  noneHint: {
+    color: colors.textTertiary, fontSize: 14.5, lineHeight: 21,
+    textAlign: 'center', marginTop: 8, marginBottom: 4,
+  },
+
   nothing: {
     color: colors.textSecondary, ...type.meta, lineHeight: 22,
     paddingHorizontal: space.page, paddingTop: 18, paddingBottom: 6, textAlign: 'center',
