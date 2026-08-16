@@ -30,17 +30,30 @@ export type Fetch<T> = {
   loaded: boolean;
   error: string | null;
   data: T;
+  /**
+   * When the last *successful* load landed, or null if none has.
+   *
+   * Not `loaded`, which stays true after a failure: this is the one that
+   * can say how old what we are showing actually is, which is what
+   * deciding whether to ask again needs. See `lib/stale`.
+   */
+  loadedAt: number | null;
   reload: () => void;
 };
 
 function useFetch<T>(fetcher: () => Promise<T>, empty: T): Fetch<T> {
-  const [state, setState] = useState<{ loading: boolean; loaded: boolean; error: string | null; data: T }>({
-    loading: true, loaded: false, error: null, data: empty,
+  const [state, setState] = useState<{
+    loading: boolean; loaded: boolean; error: string | null; data: T; loadedAt: number | null;
+  }>({
+    loading: true, loaded: false, error: null, data: empty, loadedAt: null,
   });
   const load = useCallback(() => {
     setState((s) => ({ ...s, loading: true, error: null }));
     fetcher()
-      .then((data) => setState({ loading: false, loaded: true, error: null, data }))
+      .then((data) => setState({ loading: false, loaded: true, error: null, data, loadedAt: Date.now() }))
+      // `loadedAt` is deliberately left where it was: a refresh that failed
+      // has not made what we are showing any newer, and pretending
+      // otherwise would push the next attempt out by another interval.
       .catch((err: Error) => setState((s) => ({ ...s, loading: false, loaded: true, error: err.message })));
   }, [fetcher]);
   useEffect(load, [load]);
