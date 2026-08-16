@@ -113,10 +113,18 @@ export function areasNear(
   return ranked(places, at).slice(0, limit).map((d) => d.name);
 }
 
-/** The areas with their distances, in the order `areasNear` returns them.
- *  Split out so the caller can ask how far the nearest one is without
- *  computing every district centre a second time. */
-function ranked(places: Place[], at: { lat: number; lng: number }): { name: string; km: number }[] {
+/**
+ * Each area, summed: where its places are and how many there are.
+ *
+ * There are no district boundaries anywhere in this app and getting them
+ * would mean sourcing and maintaining a whole administrative-polygon
+ * dataset. What there is, is the coordinates of the places themselves —
+ * so an area's position is the mean of its places. That is not a centre in
+ * any official sense and it is not trying to be: the question it answers
+ * is "which of these six is closest", never "which polygon is this point
+ * inside", and a representative point is enough for the first.
+ */
+function groupAreas(places: Place[]) {
   const sum = new Map<string, { lat: number; lng: number; n: number; total: number }>();
   for (const p of places) {
     const d = p.neighborhood_en?.trim();
@@ -132,8 +140,37 @@ function ranked(places: Place[], at: { lat: number; lng: number }): { name: stri
     }
     sum.set(d, seen);
   }
+  return sum;
+}
 
-  return [...sum.entries()]
+/**
+ * Where an area sits, or null when it cannot be placed.
+ *
+ * Exists because choosing an area is also a way of putting the pin
+ * somewhere, and the sheet did not treat it as one. Picking "Hà Đông" set
+ * a district and cleared the point, so the map — which draws from the
+ * point — stayed wherever the reader was standing. Somebody in Thanh Hóa
+ * planning a day in Hà Đông chose it, watched the chip light up, and saw
+ * the map go on showing Thanh Hóa.
+ */
+export function areaCentre(
+  places: Place[],
+  name: string | null | undefined,
+): { lat: number; lng: number } | null {
+  const key = name?.trim();
+  if (!key) return null;
+  const v = groupAreas(places).get(key);
+  // An area every one of whose places lacks coordinates has a size but no
+  // position. Null says so, rather than handing back (0, 0).
+  if (!v || v.n === 0) return null;
+  return { lat: v.lat / v.n, lng: v.lng / v.n };
+}
+
+/** The areas with their distances, in the order `areasNear` returns them.
+ *  Split out so the caller can ask how far the nearest one is without
+ *  computing every district centre a second time. */
+function ranked(places: Place[], at: { lat: number; lng: number }): { name: string; km: number }[] {
+  return [...groupAreas(places).entries()]
     .map(([name, v]) => ({
       name,
       total: v.total,

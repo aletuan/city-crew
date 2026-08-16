@@ -1,7 +1,7 @@
 // The wizard's arithmetic. No React here, and none in what it imports.
 
 import { describe, expect, it } from 'vitest';
-import { areasNear, canPlan, districtsOf, EMPTY_DRAFT, nearestAreaKm, toggle } from './trip';
+import { areaCentre, areasNear, canPlan, districtsOf, EMPTY_DRAFT, nearestAreaKm, toggle } from './trip';
 import type { Place } from './types';
 
 const at = (neighborhood_en: string | null): Place => ({
@@ -176,5 +176,55 @@ describe('nearestAreaKm', () => {
   // silently drops the claim for a catalog that is perfectly local.
   it('cannot say when no area has coordinates', () => {
     expect(nearestAreaKm(many('Tây Hồ', 3), { lat: 21.03, lng: 105.85 })).toBeNull();
+  });
+});
+
+describe('areaCentre', () => {
+  it('is the mean of the area\'s places', () => {
+    expect(areaCentre([
+      put('Ba Đình', 21.03, 105.82),
+      put('Ba Đình', 21.05, 105.84),
+      put('Hoàn Kiếm', 21.0285, 105.8542),
+    ], 'Ba Đình')).toEqual({ lat: 21.04, lng: 105.83 });
+  });
+
+  // The bug this exists for: choosing an area is a way of placing the pin,
+  // and the sheet treated it as no pin at all. A district that cannot be
+  // placed must say so rather than hand back (0, 0), which is a real point
+  // in the Gulf of Guinea and would move the map there.
+  it('cannot place an area whose every place lacks coordinates', () => {
+    expect(areaCentre(many('Tây Hồ', 3), 'Tây Hồ')).toBeNull();
+  });
+
+  it('ignores the placeless ones when some of the area can be placed', () => {
+    expect(areaCentre([...many('Tây Hồ', 2), put('Tây Hồ', 21.06, 105.82)], 'Tây Hồ'))
+      .toEqual({ lat: 21.06, lng: 105.82 });
+  });
+
+  it('has no answer for an area that is not there', () => {
+    expect(areaCentre([put('Ba Đình', 21.03, 105.82)], 'Nowhere')).toBeNull();
+  });
+
+  // `draft.district` is null whenever the reader has not chosen one, which
+  // is most of the time.
+  it('has no answer without a name', () => {
+    const places = [put('Ba Đình', 21.03, 105.82)];
+    expect(areaCentre(places, null)).toBeNull();
+    expect(areaCentre(places, undefined)).toBeNull();
+    expect(areaCentre(places, '   ')).toBeNull();
+  });
+
+  // The keys are trimmed when the areas are grouped, so the lookup has to
+  // trim too or the two disagree about what a name is.
+  it('finds an area whose name arrives padded', () => {
+    expect(areaCentre([put('Ba Đình', 21.03, 105.82)], '  Ba Đình  '))
+      .toEqual({ lat: 21.03, lng: 105.82 });
+  });
+
+  it('matches the name the chips are drawn from', () => {
+    const places = [put('Ba Đình', 21.03, 105.82), put('Hoàn Kiếm', 21.0285, 105.8542)];
+    for (const name of areasNear(places, { lat: 21.03, lng: 105.82 })) {
+      expect(areaCentre(places, name)).not.toBeNull();
+    }
   });
 });
