@@ -16,8 +16,9 @@
 // screen that has not been written, which is the honest state of it.
 
 import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
 import StartSheet, { Start } from '../components/StartSheet';
 import {
@@ -28,6 +29,7 @@ import { useCity } from '../lib/city';
 import { usePlaces } from '../lib/catalog';
 import { coverOf, membersOf } from '../lib/data';
 import { dateline } from '../lib/format';
+import { addDays, clampDay, dayName, fromISO, toISO, todayISO } from '../lib/day';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, toggle, TripDraft } from '../lib/trip';
@@ -51,6 +53,16 @@ export default function IdeasScreen() {
   const tabClearance = useTabBarClearance();
 
   const [draft, setDraft] = useState<TripDraft>(EMPTY_DRAFT);
+  const [picking, setPicking] = useState(false);
+  /**
+   * The chosen day, resolved and never in the past.
+   *
+   * `EMPTY_DRAFT` carries '' rather than today, because it is a module
+   * constant and today would be frozen at import — an app left open past
+   * midnight would offer to plan yesterday. Resolving here also self-heals
+   * that case for a draft chosen before midnight.
+   */
+  const day = clampDay(draft.date || todayISO());
   const [sheet, setSheet] = useState(false);
 
   // Only categories this city actually has, the same rule Explore's filter
@@ -68,6 +80,17 @@ export default function IdeasScreen() {
     ?? (draft.at
       ? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン')
       : t(`Around ${city?.short_en ?? ''} · near me`, `Quanh ${city?.short_vi ?? ''} · gần tôi`, `${city?.short_ja ?? ''}周辺 · 現在地`));
+
+  // "Today" and "Tomorrow" rather than the date, because that is what the
+  // reader would call them and the date underneath adds nothing. Further
+  // out is a date, since "in four days" is arithmetic they should not have
+  // to do.
+  const named = dayName(day);
+  const dayLabel = named?.kind === 'today'
+    ? t('Today', 'Hôm nay', '今日')
+    : named?.kind === 'tomorrow'
+      ? t('Tomorrow', 'Ngày mai', '明日')
+      : dateline(lang, named?.date ?? new Date());
 
   const ready = canPlan(draft);
 
@@ -123,12 +146,15 @@ export default function IdeasScreen() {
             </PressableScale>
             <View style={s.divider} />
             <View style={s.whenRow}>
-              <Ionicons name="calendar-outline" size={19} color={colors.accent} />
-              {/* Today, and not a picker. The wizard's promise is a day out
-                  rather than a diary entry, and a date field is the fastest
-                  way to turn one into the other. When trips can be saved,
-                  that is when a date becomes worth asking for. */}
-              <Text style={s.whereText} numberOfLines={1}>{dateline(lang, new Date())}</Text>
+              {/* The date used to be a label here, printed from
+                  `new Date()` and not in the draft at all — while sitting
+                  in the same card, directly under a row that *is* a
+                  control, with the same icon and layout. It read as
+                  tappable and was not. */}
+              <PressableScale onPress={() => setPicking(true)} style={s.dayHit} accessibilityRole="button">
+                <Ionicons name="calendar-outline" size={19} color={colors.accent} />
+                <Text style={s.whereText} numberOfLines={1}>{dayLabel}</Text>
+              </PressableScale>
               <View style={s.segment}>
                 <Chip
                   label={t('Day', 'Ban ngày', '昼')}
@@ -221,6 +247,44 @@ export default function IdeasScreen() {
         </View>
       </ScrollView>
 
+      {/* The platform's own, so the gesture is the one the reader already
+          knows. `display="inline"` is the iOS calendar rather than the
+          wheel — this is a question about a day, and a month grid answers
+          it in one glance. */}
+      {picking && (
+        <Modal transparent animationType="fade" onRequestClose={() => setPicking(false)}>
+          <Pressable style={s.pickScrim} onPress={() => setPicking(false)} />
+          <View style={s.pickCard}>
+            <DateTimePicker
+              value={fromISO(day) ?? new Date()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              // The past is refused rather than clamped after the fact:
+              // there is no plan to sketch for last Tuesday, and a picker
+              // that lets you choose one and then silently moves you is
+              // worse than one that never offered.
+              minimumDate={fromISO(todayISO()) ?? undefined}
+              maximumDate={fromISO(addDays(todayISO(), 365)) ?? undefined}
+              onChange={(e, picked) => {
+                // Android fires once with 'set' or 'dismissed' and closes
+                // itself; iOS fires on every scrub and stays open.
+                if (Platform.OS !== 'ios') setPicking(false);
+                if (e.type === 'dismissed' || !picked) return;
+                set('date', clampDay(toISO(picked)));
+              }}
+            />
+            {Platform.OS === 'ios' && (
+              <GradientCta
+                icon="checkmark"
+                label={t('Done', 'Xong', '完了')}
+                onPress={() => setPicking(false)}
+                wide
+              />
+            )}
+          </View>
+        </Modal>
+      )}
+
       <StartSheet
         visible={sheet}
         places={places}
@@ -265,4 +329,22 @@ const s = StyleSheet.create({
   cta: { paddingHorizontal: space.page, marginTop: 4, gap: 10 },
   ctaOff: { opacity: 0.4 },
   ctaHint: { color: colors.textTertiary, fontSize: 13, lineHeight: 19, textAlign: 'center' },
+
+  // The whole left of the row is the target, not the words alone: a date
+  // you have to hit exactly is a worse row than one you can tap across.
+  dayHit: { flexDirection: 'row', alignItems: 'center', gap: 11, flex: 1, paddingVertical: 2 },
+
+  pickScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.32)' },
+  // Centred rather than a bottom sheet: the calendar is a square of dense
+  // targets, and the middle of the screen is where a thumb reaches all of
+  // it. The start sheet is bottom-anchored because it is a form.
+  pickCard: {
+    position: 'absolute', left: space.page, right: space.page,
+    top: '18%',
+    backgroundColor: colors.bgElevated,
+    borderRadius: 22,
+    padding: 14,
+    gap: 10,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
 });
