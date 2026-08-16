@@ -16,7 +16,7 @@
 // screen that has not been written, which is the honest state of it.
 
 import React, { useMemo, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
@@ -33,6 +33,7 @@ import { addDays, clampDay, fromISO, toISO, todayISO } from '../lib/day';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, toggle, TripDraft } from '../lib/trip';
+import type { Nav } from '../nav';
 import { colors, font, radius, space, type } from '../theme';
 
 /** A question and the row of answers under it. */
@@ -45,7 +46,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export default function IdeasScreen() {
+export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
   const { data: places } = usePlaces();
@@ -234,14 +235,16 @@ export default function IdeasScreen() {
               icon="sparkles"
               wide
               label={t('Sketch the day', 'Phác một ngày', '一日を下描き')}
-              onPress={() => Alert.alert(
-                t('Almost', 'Sắp rồi', 'もう少し'),
-                t(
-                  'The itinerary itself lands next. Your answers are ready for it.',
-                  'Phần lịch trình sẽ có ở bước tiếp theo. Các lựa chọn của bạn đã sẵn sàng.',
-                  '旅程はこの次に登場します。回答は保存されています。',
-                ),
-              )}
+              // `whereLabel` rather than the raw draft: only this screen
+              // knows whether the reader chose a district or dropped a
+              // pin, and the next one has no business re-deciding that.
+              onPress={() => navigation.navigate('Sketching', {
+                company: draft.company,
+                categories: draft.categories,
+                where: draft.district ?? (draft.at ? whereLabel : null),
+                date: day,
+                when: draft.when,
+              })}
             />
           </View>
           {!ready && (

@@ -28,6 +28,7 @@ import CollectionFormScreen from './src/screens/CollectionFormScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
 import ComingSoonScreen from './src/screens/ComingSoonScreen';
 import IdeasScreen from './src/screens/IdeasScreen';
+import SketchingScreen from './src/screens/SketchingScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
@@ -40,6 +41,17 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const stackOptions = { headerShown: false, contentStyle: { backgroundColor: colors.bg } } as const;
 
 // Each tab owns its stack, so detail screens keep the bottom tab bar visible.
+// Ideas got a stack of its own when the sketching screen arrived: it is a
+// screen the reader can back out of, not a modal, and the tab bar stays.
+function IdeasStack() {
+  return (
+    <Stack.Navigator screenOptions={stackOptions}>
+      <Stack.Screen name="IdeasHome" component={IdeasScreen} />
+      <Stack.Screen name="Sketching" component={SketchingScreen} />
+    </Stack.Navigator>
+  );
+}
+
 function ExploreStack() {
   return (
     <Stack.Navigator screenOptions={stackOptions}>
@@ -173,7 +185,7 @@ function Tabs() {
         ),
       })}
     >
-      <Tab.Screen name="Ideas" component={IdeasScreen} />
+      <Tab.Screen name="Ideas" component={IdeasStack} />
       <Tab.Screen name="Explore" component={ExploreStack} />
       <Tab.Screen name="Trips">{() => <ComingSoonScreen titleEn="Trips" titleVi="Chuyến đi" titleJa="旅程" />}</Tab.Screen>
       <Tab.Screen name="Collections" component={CollectionsStack} />
