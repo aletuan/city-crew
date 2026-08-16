@@ -30,7 +30,7 @@ import { coverOf, membersOf } from '../lib/data';
 import { dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
-import { canPlan, COMPANY, districtsOf, EMPTY_DRAFT, toggle, TripDraft } from '../lib/trip';
+import { canPlan, COMPANY, EMPTY_DRAFT, toggle, TripDraft } from '../lib/trip';
 import { colors, font, radius, space, type } from '../theme';
 
 /** A question and the row of answers under it. */
@@ -60,8 +60,6 @@ export default function IdeasScreen() {
     for (const p of places) for (const c of categoriesOf(p)) present.add(c);
     return CATEGORY_ORDER.filter((c) => present.has(c));
   }, [places]);
-
-  const districts = useMemo(() => districtsOf(places), [places]);
 
   const set = <K extends keyof TripDraft>(k: K, v: TripDraft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
@@ -224,7 +222,7 @@ export default function IdeasScreen() {
 
       <StartSheet
         visible={sheet}
-        districts={districts}
+        places={places}
         value={{ district: draft.district, at: draft.at }}
         onClose={() => setSheet(false)}
         onDone={(next: Start) => {

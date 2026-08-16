@@ -1,7 +1,7 @@
 // The wizard's arithmetic. No React here, and none in what it imports.
 
 import { describe, expect, it } from 'vitest';
-import { canPlan, districtsOf, EMPTY_DRAFT, toggle } from './trip';
+import { areasNear, canPlan, districtsOf, EMPTY_DRAFT, toggle } from './trip';
 import type { Place } from './types';
 
 const at = (neighborhood_en: string | null): Place => ({
@@ -83,5 +83,61 @@ describe('canPlan', () => {
     expect(canPlan(ready)).toBe(true);
     expect(ready.district).toBeNull();
     expect(ready.from).toEqual([]);
+  });
+});
+
+// A place with a position, for the ordering the chips do.
+const put = (name: string, lat: number, lng: number): Place => ({ ...at(name), lat, lng });
+
+describe('areasNear', () => {
+  // Hanoi-ish coordinates: Hoàn Kiếm in the middle, Ba Đình a couple of
+  // kilometres west, Long Biên across the river.
+  const places = [
+    put('Hoàn Kiếm', 21.0285, 105.8542),
+    put('Hoàn Kiếm', 21.0290, 105.8550),
+    put('Ba Đình', 21.0350, 105.8200),
+    put('Long Biên', 21.0450, 105.8900),
+  ];
+
+  it('puts the closest district first, wherever the pin is', () => {
+    expect(areasNear(places, { lat: 21.0350, lng: 105.8200 })[0]).toBe('Ba Đình');
+    expect(areasNear(places, { lat: 21.0450, lng: 105.8900 })[0]).toBe('Long Biên');
+    expect(areasNear(places, { lat: 21.0287, lng: 105.8546 })[0]).toBe('Hoàn Kiếm');
+  });
+
+  // The whole complaint: standing in one district and being offered the
+  // busiest one first because it is the busiest.
+  it('does not simply repeat the busiest-first order', () => {
+    const busy = [...many('Hoàn Kiếm', 20).map((p) => ({ ...p, lat: 21.0285, lng: 105.8542 })),
+      put('Ba Đình', 21.0350, 105.8200)];
+    expect(districtsOf(busy)[0]).toBe('Hoàn Kiếm');
+    expect(areasNear(busy, { lat: 21.0350, lng: 105.8200 })[0]).toBe('Ba Đình');
+  });
+
+  // Reordered, never filtered: a far chip the reader can see is far beats
+  // no chips at all.
+  it('keeps every district it was given, up to the limit', () => {
+    expect(areasNear(places, { lat: 10.7769, lng: 106.7009 })).toHaveLength(3);
+    expect(areasNear(places, { lat: 21.03, lng: 105.85 }, 2)).toHaveLength(2);
+  });
+
+  // No point to measure from is not an error, it is the state before the
+  // reader has said anything.
+  it('falls back to busiest-first with no position', () => {
+    expect(areasNear(places, null)).toEqual(districtsOf(places));
+    expect(areasNear(places, undefined)).toEqual(districtsOf(places));
+  });
+
+  // A district whose places all lack coordinates cannot be placed, and is
+  // still a district somebody may want.
+  it('keeps a district with no coordinates, at the back', () => {
+    const mixed = [...places, ...many('Tây Hồ', 3)];
+    const out = areasNear(mixed, { lat: 21.0285, lng: 105.8542 });
+    expect(out).toContain('Tây Hồ');
+    expect(out[out.length - 1]).toBe('Tây Hồ');
+  });
+
+  it('ignores places with no district at all', () => {
+    expect(areasNear([...places, ...many(null, 4)], { lat: 21.03, lng: 105.85 })).toHaveLength(3);
   });
 });

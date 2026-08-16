@@ -117,8 +117,14 @@ async function preciseNearestCity(list: City[]): Promise<City | null> {
  * Cached fix first, then one low-accuracy read for a phone whose cache is
  * cold. Nothing here blocks a render: the position arrives when it
  * arrives, and until then the caller draws what it drew before.
+ *
+ * `nonce` is for the one caller that may change the answer while it is on
+ * screen: the start sheet's locate button, which is allowed to raise the
+ * permission dialog. Granting it does nothing on its own — this effect has
+ * already run and returned nothing — so that caller bumps the number and
+ * the read happens again. Everyone else leaves it alone.
  */
-export function useMyPosition(): { lat: number; lng: number } | null {
+export function useMyPosition(nonce = 0): { lat: number; lng: number } | null {
   const [pos, setPos] = useState<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
     let live = true;
@@ -132,7 +138,7 @@ export function useMyPosition(): { lat: number; lng: number } | null {
       } catch { /* no position is a legitimate answer */ }
     })();
     return () => { live = false; };
-  }, []);
+  }, [nonce]);
   return pos;
 }
 

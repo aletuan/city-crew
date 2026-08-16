@@ -29,8 +29,10 @@
 // guard and rendered behind a boundary: if it is missing, or if it throws
 // on mount, the picker loses its map and keeps everything else.
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { PressableScale } from './ui';
 import { colors, font, radius } from '../theme';
 
 /** Resolved once, at module load, so a missing native module is a null
@@ -60,6 +62,12 @@ type Props = {
   /** Shown over the map's bottom edge — where the pin currently is, in
    *  words. Supplied by the caller, which is what does the geocoding. */
   caption?: string;
+  /** Taller than the default when the map is the point of the screen
+   *  rather than the third answer on it. */
+  height?: number;
+  /** Adds the locate button. Absent, there is none — a control that does
+   *  nothing is worse than no control. */
+  onLocate?: () => void;
 };
 
 /**
@@ -80,12 +88,27 @@ class Boundary extends React.Component<{ children: React.ReactNode }, { failed: 
   }
 }
 
-export default function MiniMap({ lat, lng, onPick, caption }: Props) {
+export default function MiniMap({ lat, lng, onPick, caption, height, onLocate }: Props) {
+  const map = useRef<any>(null);
+
+  // `initialRegion` is what its name says: read once, on mount. The sheet
+  // moves this map after a search and after the locate button, and neither
+  // did anything until this existed — the pin moved and the map sat where
+  // it was. Animated rather than jumped, because a map that teleports
+  // leaves the reader working out whether it is the same city.
+  useEffect(() => {
+    map.current?.animateToRegion(
+      { latitude: lat, longitude: lng, latitudeDelta: 0.02, longitudeDelta: 0.02 },
+      450,
+    );
+  }, [lat, lng]);
+
   if (!MapView) return null;
   return (
     <Boundary>
-      <View style={s.wrap}>
+      <View style={[s.wrap, height ? { height } : null]}>
         <MapView
+          ref={map}
           style={StyleSheet.absoluteFill}
           // No provider named, which on iOS means Apple's and on Android
           // the platform default. Naming Google here would need a key this
@@ -102,6 +125,11 @@ export default function MiniMap({ lat, lng, onPick, caption }: Props) {
         >
           {Marker ? <Marker coordinate={{ latitude: lat, longitude: lng }} /> : null}
         </MapView>
+        {onLocate ? (
+          <PressableScale onPress={onLocate} scaleTo={0.9} style={s.locate} accessibilityRole="button">
+            <Ionicons name="navigate" size={17} color={colors.accent} />
+          </PressableScale>
+        ) : null}
         {caption ? (
           <View style={s.caption} pointerEvents="none">
             <View style={s.dot} />
@@ -117,6 +145,15 @@ const s = StyleSheet.create({
   wrap: {
     height: 168, borderRadius: radius.card, overflow: 'hidden',
     backgroundColor: colors.surfaceGlass,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  // Opaque for the same reason the caption is: a control over map tiles
+  // needs its own ground or it is a shape in a photograph.
+  locate: {
+    position: 'absolute', top: 10, right: 10,
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.bgElevated,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
   // Opaque, not glass: map tiles are busy in a way no scrim can settle,
