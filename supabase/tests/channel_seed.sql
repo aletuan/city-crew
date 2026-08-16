@@ -30,3 +30,12 @@ select p.id, 'google' from public.places p, generate_series(1, 3)
 insert into public.place_photos (place_id, source)
 select p.id, 'google' from public.places p, generate_series(1, 6)
  where p.slug in ('src-desk-a', 'src-desk-b', 'src-desk-veto', 'src-phone-a');
+
+-- The allow-list the desk and scan channels are gated on. One account, and
+-- it is what the actor backfill resolves against — with two it must decline
+-- to guess, which the checks drive as well.
+create table if not exists public.editors (email text primary key);
+insert into auth.users (id, email, raw_user_meta_data)
+     values ('eee00000-0000-0000-0000-00000000000e', 'desk@x.com', '{}')
+on conflict (id) do nothing;
+insert into public.editors (email) values ('desk@x.com') on conflict do nothing;
