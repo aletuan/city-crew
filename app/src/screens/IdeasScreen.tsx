@@ -29,7 +29,7 @@ import { useCity } from '../lib/city';
 import { usePlaces } from '../lib/catalog';
 import { coverOf, membersOf } from '../lib/data';
 import { dateline } from '../lib/format';
-import { addDays, clampDay, dayName, fromISO, toISO, todayISO } from '../lib/day';
+import { addDays, clampDay, fromISO, toISO, todayISO } from '../lib/day';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, toggle, TripDraft } from '../lib/trip';
@@ -81,16 +81,13 @@ export default function IdeasScreen() {
       ? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン')
       : t(`Around ${city?.short_en ?? ''} · near me`, `Quanh ${city?.short_vi ?? ''} · gần tôi`, `${city?.short_ja ?? ''}周辺 · 現在地`));
 
-  // "Today" and "Tomorrow" rather than the date, because that is what the
-  // reader would call them and the date underneath adds nothing. Further
-  // out is a date, since "in four days" is arithmetic they should not have
-  // to do.
-  const named = dayName(day);
-  const dayLabel = named?.kind === 'today'
-    ? t('Today', 'Hôm nay', '今日')
-    : named?.kind === 'tomorrow'
-      ? t('Tomorrow', 'Ngày mai', '明日')
-      : dateline(lang, named?.date ?? new Date());
+  // The weekday and the date, always — including for today. "Today" alone
+  // was tried and is worse here: the row sits beside Day/Evening with
+  // about 150pt to spare, so there is no room to print both, and the word
+  // that has to go is the one that says nothing a calendar could not.
+  // Somebody about to open a date picker wants to see which date they are
+  // opening it on.
+  const dayLabel = dateline(lang, fromISO(day) ?? new Date());
 
   const ready = canPlan(draft);
 
@@ -151,7 +148,19 @@ export default function IdeasScreen() {
                   in the same card, directly under a row that *is* a
                   control, with the same icon and layout. It read as
                   tappable and was not. */}
-              <PressableScale onPress={() => setPicking(true)} style={s.dayHit} accessibilityRole="button">
+              {/* `containerStyle`, not `style`: PressableScale puts `style`
+                  on its inner animated view and only `containerStyle` on
+                  the Pressable itself. The row above gets away without it
+                  by being a direct child of the Card, which is a column,
+                  so it stretches. This one is inside a row, so without a
+                  flex on the *outer* element the pressable shrank to its
+                  icon and the date inside it collapsed to nothing. */}
+              <PressableScale
+                onPress={() => setPicking(true)}
+                containerStyle={s.dayBox}
+                style={s.dayHit}
+                accessibilityRole="button"
+              >
                 <Ionicons name="calendar-outline" size={19} color={colors.accent} />
                 <Text style={s.whereText} numberOfLines={1}>{dayLabel}</Text>
               </PressableScale>
@@ -332,7 +341,9 @@ const s = StyleSheet.create({
 
   // The whole left of the row is the target, not the words alone: a date
   // you have to hit exactly is a worse row than one you can tap across.
-  dayHit: { flexDirection: 'row', alignItems: 'center', gap: 11, flex: 1, paddingVertical: 2 },
+  // The box takes the room; the row inside it lays the icon and date out.
+  dayBox: { flex: 1 },
+  dayHit: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 2 },
 
   pickScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.32)' },
   // Centred rather than a bottom sheet: the calendar is a square of dense

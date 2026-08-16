@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, clampDay, dayName, daysBetween, fromISO, toISO, todayISO } from './day';
+import { addDays, clampDay, daysBetween, fromISO, toISO, todayISO } from './day';
 
 describe('toISO', () => {
   // The bug this file exists to prevent. `toISOString()` converts to UTC
@@ -103,30 +103,6 @@ describe('daysBetween', () => {
   it('has no answer when either end is not a day', () => {
     expect(daysBetween('2026-02-30', '2026-08-16')).toBeNull();
     expect(daysBetween('2026-08-16', 'nonsense')).toBeNull();
-  });
-});
-
-describe('dayName', () => {
-  const today = '2026-08-16';
-
-  it('calls the near days what the reader calls them', () => {
-    expect(dayName('2026-08-16', today)).toEqual({ kind: 'today' });
-    expect(dayName('2026-08-17', today)).toEqual({ kind: 'tomorrow' });
-  });
-
-  // "In four days" is arithmetic the reader should not have to do.
-  it('gives a date for anything further out', () => {
-    const out = dayName('2026-08-20', today);
-    expect(out?.kind).toBe('date');
-    expect((out as { date: Date }).date.getDate()).toBe(20);
-  });
-
-  it('gives a date for the past rather than pretending', () => {
-    expect(dayName('2026-08-15', today)?.kind).toBe('date');
-  });
-
-  it('has no name for a day that is not one', () => {
-    expect(dayName('2026-02-30', today)).toBeNull();
   });
 });
 

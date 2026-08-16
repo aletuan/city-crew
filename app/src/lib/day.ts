@@ -68,25 +68,6 @@ export function daysBetween(from: string, to: string): number | null {
 }
 
 /**
- * What to call a day the reader has chosen.
- *
- * "Today" and "Tomorrow" rather than the date, because that is what the
- * reader would call them and the date underneath tells them nothing extra.
- * Anything further out is a date, since "in four days" is arithmetic the
- * reader should not have to do.
- */
-export type DayName = { kind: 'today' } | { kind: 'tomorrow' } | { kind: 'date'; date: Date };
-
-export function dayName(iso: string, today: string = todayISO()): DayName | null {
-  const d = fromISO(iso);
-  if (!d) return null;
-  const away = daysBetween(today, iso);
-  if (away === 0) return { kind: 'today' };
-  if (away === 1) return { kind: 'tomorrow' };
-  return { kind: 'date', date: d };
-}
-
-/**
  * A day the picker is allowed to return.
  *
  * The past is refused: this wizard sketches a day out, and there is no

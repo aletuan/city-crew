@@ -44,7 +44,18 @@ export function PressableScale({ children, style, containerStyle, haptic = 'ligh
   haptic?: HapticKind;
   scaleTo?: number;
   style?: StyleProp<ViewStyle>;
-  /** Styles that must stay on the outer Pressable (e.g. absolute position). */
+  /**
+   * Styles that must stay on the outer Pressable rather than the animated
+   * view inside it — absolute position, and **anything that positions this
+   * element within its parent**: `flex`, `alignSelf`, `width`.
+   *
+   * `flex` is the one that bites, because it fails quietly. Put `flex: 1`
+   * in `style` and it lands on the inner view, whose parent is the
+   * Pressable, which has itself shrunk to fit its content — so the flex
+   * has nothing to divide and any flexing child collapses to zero. A
+   * pressable row in a column parent stretches anyway and looks fine; the
+   * same row inside a *row* loses its text and only its icon survives.
+   */
   containerStyle?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 }) {
