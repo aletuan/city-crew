@@ -110,7 +110,13 @@ export function areasNear(
   limit = 6,
 ): string[] {
   if (!at) return districtsOf(places, limit);
+  return ranked(places, at).slice(0, limit).map((d) => d.name);
+}
 
+/** The areas with their distances, in the order `areasNear` returns them.
+ *  Split out so the caller can ask how far the nearest one is without
+ *  computing every district centre a second time. */
+function ranked(places: Place[], at: { lat: number; lng: number }): { name: string; km: number }[] {
   const sum = new Map<string, { lat: number; lng: number; n: number; total: number }>();
   for (const p of places) {
     const d = p.neighborhood_en?.trim();
@@ -141,8 +147,30 @@ export function areasNear(
     // cannot reshuffle under the reader between two renders of the same
     // data.
     .sort((a, b) => a.km - b.km || b.total - a.total || a.name.localeCompare(b.name))
-    .slice(0, limit)
-    .map((d) => d.name);
+    .map(({ name, km }) => ({ name, km }));
+}
+
+/**
+ * How far the closest of those areas actually is, in km — or null when
+ * that question has no answer yet.
+ *
+ * Exists because "nearby" was a claim the list could not back up. The
+ * catalog holds one city, so the nearest area is a Hanoi district whether
+ * the reader is in Hoàn Kiếm or eighty-five kilometres away in Thanh Hóa
+ * — and it was captioned "or pick a nearby area" in both cases. Sorting by
+ * distance never made the first one *near*; it only made it the least far.
+ *
+ * Null rather than Infinity for "cannot say": no point to measure from,
+ * no areas at all, or every area unplaceable. The caller's honest move in
+ * that case is to drop the claim, not to make a different one.
+ */
+export function nearestAreaKm(
+  places: Place[],
+  at: { lat: number; lng: number } | null | undefined,
+): number | null {
+  if (!at) return null;
+  const km = ranked(places, at)[0]?.km;
+  return km == null || !Number.isFinite(km) ? null : km;
 }
 
 /**

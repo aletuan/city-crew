@@ -1,7 +1,7 @@
 // The wizard's arithmetic. No React here, and none in what it imports.
 
 import { describe, expect, it } from 'vitest';
-import { areasNear, canPlan, districtsOf, EMPTY_DRAFT, toggle } from './trip';
+import { areasNear, canPlan, districtsOf, EMPTY_DRAFT, nearestAreaKm, toggle } from './trip';
 import type { Place } from './types';
 
 const at = (neighborhood_en: string | null): Place => ({
@@ -139,5 +139,42 @@ describe('areasNear', () => {
 
   it('ignores places with no district at all', () => {
     expect(areasNear([...places, ...many(null, 4)], { lat: 21.03, lng: 105.85 })).toHaveLength(3);
+  });
+});
+
+describe('nearestAreaKm', () => {
+  const places = [
+    put('Hoàn Kiếm', 21.0285, 105.8542),
+    put('Ba Đình', 21.0350, 105.8200),
+  ];
+
+  it('measures to the closest area, not to the first one listed', () => {
+    // Standing on Ba Đình: the answer is Ba Đình's distance, near zero,
+    // even though Hoàn Kiếm sorts first by every other rule in this file.
+    expect(nearestAreaKm(places, { lat: 21.0350, lng: 105.8200 })).toBeLessThan(0.1);
+  });
+
+  // The reading that made this function necessary: eighty-five kilometres
+  // from Hanoi, under a heading that said "nearby".
+  it('is large when the reader is nowhere near the catalog', () => {
+    const km = nearestAreaKm(places, { lat: 20.0, lng: 105.6 });
+    expect(km).toBeGreaterThan(25);
+  });
+
+  it('cannot say without a point to measure from', () => {
+    expect(nearestAreaKm(places, null)).toBeNull();
+    expect(nearestAreaKm(places, undefined)).toBeNull();
+  });
+
+  it('cannot say when there are no areas at all', () => {
+    expect(nearestAreaKm([], { lat: 21.03, lng: 105.85 })).toBeNull();
+    expect(nearestAreaKm(many(null, 3), { lat: 21.03, lng: 105.85 })).toBeNull();
+  });
+
+  // Infinity is how `areasNear` keeps an unplaceable district at the back.
+  // It must not escape as a distance, or the caller compares it to 25 and
+  // silently drops the claim for a catalog that is perfectly local.
+  it('cannot say when no area has coordinates', () => {
+    expect(nearestAreaKm(many('Tây Hồ', 3), { lat: 21.03, lng: 105.85 })).toBeNull();
   });
 });

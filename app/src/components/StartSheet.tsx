@@ -14,19 +14,24 @@
 //
 // It shows no places, and cannot: see the note at the top of MiniMap.
 //
-// ── on the address field ──
+// ── on the search field ──
 //
-// `Location.geocodeAsync` is the platform's, not Google's, and that is a
-// licence decision rather than a taste one: Google Places content may not
-// be shown alongside a non-Google map (§5.3), and on iOS in Expo Go the
-// only map that renders is Apple's.
+// It used to call `Location.geocodeAsync`, which on iOS is CLGeocoder, and
+// CLGeocoder resolves addresses: a street and a district in, a point out.
+// It has no opinion about "Ủy ban nhân dân xã Quý Lộc" — that is a name —
+// so the field promised "an address or place" while being able to do only
+// the first half. Apple's own search box is MKLocalSearch, a different
+// API that expo-location does not expose.
 //
-// It costs the thing people expect from an address box. The platform
-// geocoder returns coordinates and nothing else — no names, no list — so
-// there is no as-you-type list of candidates to choose from. One address
-// in, one point out, the map moves. The alternative is Google
-// Autocomplete, which needs a Google map, which needs a key, which needs
-// a development build, which costs this project Expo Go.
+// It asks `find-address` now, which searches OpenStreetMap. Not Google,
+// and that is a licence decision rather than a taste one: Places results
+// may not be displayed on a map that is not Google's (§5.3), and in Expo
+// Go on iOS the only map that renders is Apple's — the same clause is why
+// MiniMap shows no places at all. OSM's ODbL has no such clause.
+//
+// So there is a list of candidates to choose from, which is what people
+// expect from a search box and what the geocoder could never give. The
+// reader picks one and the map moves to it.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -36,10 +41,11 @@ import {
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import MiniMap from './MiniMap';
-import { Chip, GradientCta } from './ui';
+import { Chip, GradientCta, PressableScale } from './ui';
 import { useCity, useMyPosition } from '../lib/city';
+import { findSpots, type Spot } from '../lib/findplace';
 import { useI18n } from '../lib/i18n';
-import { areasNear } from '../lib/trip';
+import { areasNear, nearestAreaKm } from '../lib/trip';
 import type { Place } from '../lib/types';
 import { colors, font, radius, space, type } from '../theme';
 
@@ -63,6 +69,8 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   const [query, setQuery] = useState('');
   const [finding, setFinding] = useState(false);
   const [missed, setMissed] = useState(false);
+  /** What the last search turned up. null before there has been one. */
+  const [hits, setHits] = useState<Spot[] | null>(null);
   /**
    * Bumped by the locate button once the permission dialog has closed.
    *
@@ -120,6 +128,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
     setDraft(value);
     setQuery('');
     setMissed(false);
+    setHits(null);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The platform's geocoder, in the other direction: what to call the
@@ -147,6 +156,14 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
     () => areasNear(places, near),
     [places, near?.lat, near?.lng],
   );
+  // Whether the chips may call themselves *nearby*. The catalog is one
+  // city, so the closest area is a Hanoi district however far away the
+  // reader is standing; twenty-five kilometres is well past anything this
+  // app calls walkable, and past it the heading names the city instead of
+  // claiming a proximity that is not there.
+  const nearestKm = useMemo(() => nearestAreaKm(places, near), [places, near?.lat, near?.lng]);
+  const areasAreNear = nearestKm == null || nearestKm <= 25;
+
   const onMe = !draft.district && !draft.at;
   const caption = useMemo(() => {
     if (!where) return undefined;
@@ -156,35 +173,43 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   }, [where, onMe, t]);
 
   /**
-   * Find an address, once, when the reader says so.
+   * Search, once, when the reader says so.
    *
-   * On submit rather than on every keystroke, which is what the platform
-   * geocoder is for — it is a lookup, not a suggestion engine, and calling
-   * it per character would be both slower and ruder than asking once.
+   * On submit rather than per keystroke. Both providers behind
+   * `find-address` are free and shared, and Nominatim's usage policy makes
+   * one-request-per-character the thing it blocks people for; a search box
+   * that asks once when asked is also the one that stops the list
+   * reshuffling under a moving thumb.
+   *
+   * Biased by coordinates rather than by pasting the city's name onto the
+   * query, which is what this did before and was wrong twice over: it
+   * turned "Ủy ban nhân dân xã Quý Lộc" into a Hanoi question when the
+   * reader was eighty-five kilometres from Hanoi, and it could only ever
+   * bias towards the one city the app happens to be showing.
    */
   const find = async () => {
     const q = query.trim();
     if (!q || finding) return;
+    Keyboard.dismiss();
     setFinding(true);
     setMissed(false);
-    try {
-      // Biased to the city by asking for it in the query: the platform
-      // geocoder takes no region hint, and "Nguyễn Huệ" alone is a street
-      // in several Vietnamese cities.
-      const cityName = city ? city.name_en : '';
-      const hits = await Location.geocodeAsync(cityName ? `${q}, ${cityName}` : q);
-      const hit = hits[0];
-      if (hit) {
-        setDraft({ district: null, at: { lat: hit.latitude, lng: hit.longitude } });
-        showMap();
-      } else setMissed(true);
-    } catch {
-      // A geocoder that refused and a geocoder that found nothing are the
-      // same answer to the reader: we could not put this on the map.
-      setMissed(true);
-    } finally {
-      setFinding(false);
-    }
+    const found = await findSpots(q, near ?? centre);
+    setFinding(false);
+    setHits(found);
+    // Nothing found and a search that failed are one sentence here — see
+    // `findSpots`, which throws for neither.
+    if (found.length === 0) setMissed(true);
+  };
+
+  /** Take one of the results. The pin moves, the list goes, and the map
+   *  comes back into view so the move is something the reader watches
+   *  rather than something they have to scroll up to find. */
+  const take = (spot: Spot) => {
+    setDraft({ district: null, at: { lat: spot.lat, lng: spot.lng } });
+    setHits(null);
+    setQuery(spot.name);
+    setMissed(false);
+    showMap();
   };
 
   /**
@@ -269,17 +294,57 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
           {missed && (
             <Text style={s.missed}>
               {t(
-                'No address found for that. Try a street and district.',
-                'Không tìm thấy địa chỉ này. Thử tên đường kèm quận xem sao.',
-                '該当する住所が見つかりません。通りと区で試してください。',
+                'Nothing found for that. Try fewer words, or a street and district.',
+                'Không tìm thấy gì. Thử bớt chữ, hoặc tên đường kèm quận.',
+                '見つかりませんでした。語を減らすか、通りと区でお試しください。',
               )}
             </Text>
+          )}
+
+          {hits && hits.length > 0 && (
+            <View style={s.hits}>
+              {hits.map((h, i) => (
+                <PressableScale
+                  key={`${h.lat},${h.lng}`}
+                  onPress={() => take(h)}
+                  scaleTo={0.985}
+                  haptic="selection"
+                  accessibilityRole="button"
+                >
+                  <View style={[s.hit, i > 0 && s.hitTop]}>
+                    <Ionicons name="location-outline" size={17} color={colors.accent} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.hitName} numberOfLines={1}>{h.name}</Text>
+                      {/* Only when it says something the name did not —
+                          see `spotLabel`, which drops the parts that
+                          repeat. A blank line under every result is worse
+                          than a row that is simply one line tall. */}
+                      {h.label ? (
+                        <Text style={s.hitSub} numberOfLines={1}>{h.label}</Text>
+                      ) : null}
+                    </View>
+                  </View>
+                </PressableScale>
+              ))}
+              {/* ODbL's side of the bargain, and the reason this search can
+                  sit above an Apple map at all. */}
+              <Text style={s.credit}>
+                {t('Results from OpenStreetMap', 'Kết quả từ OpenStreetMap', '検索結果：OpenStreetMap')}
+              </Text>
+            </View>
           )}
 
           {districts.length > 0 && (
             <>
               <Text style={s.label}>
-                {t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ')}
+                {areasAreNear
+                  ? t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ')
+                  // Not "nearby", because it is not. Naming the city is
+                  // the honest version of the same offer: these are the
+                  // areas cityCrew covers, and you are not in them.
+                  : city
+                    ? t(`Or pick an area in ${city.name_en}`, `Hoặc chọn khu vực ở ${city.name_vi}`, `${city.name_en}のエリアから選ぶ`)
+                    : t('Or pick an area', 'Hoặc chọn một khu vực', 'エリアから選ぶ')}
               </Text>
               <View style={s.chips}>
                 {districts.map((d) => (
@@ -335,6 +400,24 @@ const s = StyleSheet.create({
   },
   input: { flex: 1, color: colors.text, fontSize: 15.5, padding: 0 },
   missed: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 8 },
+
+  hits: {
+    marginTop: 10,
+    borderRadius: radius.card,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+    overflow: 'hidden',
+  },
+  hit: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, paddingVertical: 11 },
+  // A hairline between rows and none above the first, so the list reads as
+  // one card rather than a stack of them.
+  hitTop: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  hitName: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
+  hitSub: { color: colors.textTertiary, fontSize: 12.5, marginTop: 2 },
+  credit: {
+    color: colors.textTertiary, fontSize: 11, textAlign: 'right',
+    paddingHorizontal: 13, paddingBottom: 9, paddingTop: 2,
+  },
 
   label: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
