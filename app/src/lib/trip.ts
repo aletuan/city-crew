@@ -9,6 +9,7 @@
 // `TripDraft` that a planner can read; the planner is a separate problem
 // and a later one.
 
+import { distanceKm } from './geo';
 import type { Place } from './types';
 
 /** Who the day is for. The one answer that changes the *shape* of a plan
@@ -79,6 +80,69 @@ export function districtsOf(places: Place[], limit = 6): string[] {
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, limit)
     .map(([name]) => name);
+}
+
+/**
+ * The same districts, ordered by how far they are from a point.
+ *
+ * The list is the answer to "or pick a nearby area", and until now it
+ * answered a different question: the city's busiest districts, in the same
+ * order however far the reader had moved the pin. Somebody standing in
+ * Thảo Điền was offered District 1 first because District 1 has the most
+ * places in it, which is true and not what they asked.
+ *
+ * A district's position is the mean of its places' coordinates. Not a
+ * boundary — we have none, and the desk has no reason to draw any — but
+ * near enough to sort by, because the question is which of six is closest
+ * rather than which polygon the point falls inside.
+ *
+ * Reordered, never filtered. A radius would be more honest about the word
+ * "nearby" and would sometimes leave the reader with no chips at all,
+ * which is a worse answer than a far one they can see is far.
+ *
+ * With no point to measure from — permission never granted, nothing
+ * picked — this is `districtsOf` exactly, because busiest-first is the
+ * best order available when "near" has no meaning yet.
+ */
+export function areasNear(
+  places: Place[],
+  at: { lat: number; lng: number } | null | undefined,
+  limit = 6,
+): string[] {
+  if (!at) return districtsOf(places, limit);
+
+  const sum = new Map<string, { lat: number; lng: number; n: number; total: number }>();
+  for (const p of places) {
+    const d = p.neighborhood_en?.trim();
+    if (!d) continue;
+    const seen = sum.get(d) ?? { lat: 0, lng: 0, n: 0, total: 0 };
+    seen.total += 1;
+    // A place with no coordinates still counts towards the district's
+    // size — it is in it — but cannot move the district's centre.
+    if (p.lat != null && p.lng != null) {
+      seen.lat += p.lat;
+      seen.lng += p.lng;
+      seen.n += 1;
+    }
+    sum.set(d, seen);
+  }
+
+  return [...sum.entries()]
+    .map(([name, v]) => ({
+      name,
+      total: v.total,
+      // Districts whose every place lacks a coordinate cannot be placed.
+      // They keep their turn at the back rather than being dropped: the
+      // reader may well want one, and Infinity sorts them last without a
+      // special case anywhere else.
+      km: v.n > 0 ? distanceKm(at.lat, at.lng, v.lat / v.n, v.lng / v.n) : Infinity,
+    }))
+    // Distance, then size, then name — each tie-break exists so the list
+    // cannot reshuffle under the reader between two renders of the same
+    // data.
+    .sort((a, b) => a.km - b.km || b.total - a.total || a.name.localeCompare(b.name))
+    .slice(0, limit)
+    .map((d) => d.name);
 }
 
 /**

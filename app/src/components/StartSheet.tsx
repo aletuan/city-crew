@@ -1,45 +1,90 @@
 // Where the day should start.
 //
-// Three answers, in the order people actually have them: near me, a
-// district by name, or a point on a map. The sheet's own subtitle is the
-// promise it keeps — roughly is fine — so none of them asks for an
-// address, and the map is the least prominent of the three rather than
-// the centrepiece the mockup makes it.
+// Three ways to answer, and the map is the first of them now rather than
+// the last. It used to sit under a "Near me" row and a row of chips, on
+// the argument that a map is the most precise answer and the least often
+// wanted. The reader disagreed, with a mockup: the map is what tells you
+// where you are, and everything else on the sheet is a way of moving it.
+//
+// So: the map, the address field that moves it, the areas that reorder
+// around it, and the button. "Near me" is no longer a row of its own —
+// the locate button on the map is that answer, and it keeps it as *near
+// me* rather than as the coordinates you happened to be standing on, so
+// a plan made now and walked to later starts from where you are then.
 //
 // It shows no places, and cannot: see the note at the top of MiniMap.
+//
+// ── on the address field ──
+//
+// `Location.geocodeAsync` is the platform's, not Google's, and that is a
+// licence decision rather than a taste one: Google Places content may not
+// be shown alongside a non-Google map (§5.3), and on iOS in Expo Go the
+// only map that renders is Apple's.
+//
+// It costs the thing people expect from an address box. The platform
+// geocoder returns coordinates and nothing else — no names, no list — so
+// there is no as-you-type list of candidates to choose from. One address
+// in, one point out, the map moves. The alternative is Google
+// Autocomplete, which needs a Google map, which needs a key, which needs
+// a development build, which costs this project Expo Go.
 
-import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+} from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import MiniMap from './MiniMap';
-import { Chip, GradientCta, PressableScale } from './ui';
+import { Chip, GradientCta } from './ui';
 import { useCity, useMyPosition } from '../lib/city';
 import { useI18n } from '../lib/i18n';
+import { areasNear } from '../lib/trip';
+import type { Place } from '../lib/types';
 import { colors, font, radius, space, type } from '../theme';
 
 export type Start = { district: string | null; at: { lat: number; lng: number } | null };
 
-export default function StartSheet({ visible, districts, value, onClose, onDone }: {
+export default function StartSheet({ visible, places, value, onClose, onDone }: {
   visible: boolean;
-  districts: string[];
+  /** The catalog, because the areas are ordered from it — and ordered in
+   *  here rather than by the caller, which was the first version and did
+   *  not work: the sheet keeps its own draft until Done, so a caller
+   *  ordering by *its* draft left the chips still while the pin moved. */
+  places: Place[];
   value: Start;
   onClose: () => void;
   onDone: (next: Start) => void;
 }) {
   const { t } = useI18n();
   const { city } = useCity();
-  const me = useMyPosition();
   const [draft, setDraft] = useState<Start>(value);
   const [where, setWhere] = useState<string>('');
+  const [query, setQuery] = useState('');
+  const [finding, setFinding] = useState(false);
+  const [missed, setMissed] = useState(false);
+  /**
+   * Bumped by the locate button once the permission dialog has closed.
+   *
+   * Granting the permission changes nothing on its own: `useMyPosition`
+   * has already run and found no permission, and the map's own blue dot
+   * was decided when the native view mounted. This number re-reads the
+   * one and remounts the other.
+   */
+  const [asked, setAsked] = useState(0);
+  const me = useMyPosition(asked);
 
   // Re-seeded on each open rather than held between them: the sheet is a
   // question, and closing it without answering must not change the answer
   // that was already there.
-  useEffect(() => { if (visible) setDraft(value); }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!visible) return;
+    setDraft(value);
+    setQuery('');
+    setMissed(false);
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The platform's geocoder, not Google's. Named here because the choice
-  // is a licence one rather than a taste one — see MiniMap.
+  // The platform's geocoder, in the other direction: what to call the
+  // point the map is showing.
   useEffect(() => {
     const at = draft.at ?? me;
     if (!visible || !at) { setWhere(''); return; }
@@ -55,7 +100,70 @@ export default function StartSheet({ visible, districts, value, onClose, onDone 
   }, [visible, draft.at?.lat, draft.at?.lng, me?.lat, me?.lng]);
 
   const centre = draft.at ?? me ?? (city ? { lat: city.center_lat, lng: city.center_lng } : null);
-  const nearMe = !draft.district && !draft.at;
+  // Reordered as the pin moves, which is the whole of "nearby": the pin
+  // wins over the reader's own position, because a pin is something they
+  // placed on purpose.
+  const near = draft.at ?? me;
+  const districts = useMemo(
+    () => areasNear(places, near),
+    [places, near?.lat, near?.lng],
+  );
+  const onMe = !draft.district && !draft.at;
+  const caption = useMemo(() => {
+    if (!where) return undefined;
+    return onMe
+      ? t(`You're here · ${where}`, `Bạn đang ở đây · ${where}`, `現在地 · ${where}`)
+      : where;
+  }, [where, onMe, t]);
+
+  /**
+   * Find an address, once, when the reader says so.
+   *
+   * On submit rather than on every keystroke, which is what the platform
+   * geocoder is for — it is a lookup, not a suggestion engine, and calling
+   * it per character would be both slower and ruder than asking once.
+   */
+  const find = async () => {
+    const q = query.trim();
+    if (!q || finding) return;
+    setFinding(true);
+    setMissed(false);
+    try {
+      // Biased to the city by asking for it in the query: the platform
+      // geocoder takes no region hint, and "Nguyễn Huệ" alone is a street
+      // in several Vietnamese cities.
+      const cityName = city ? city.name_en : '';
+      const hits = await Location.geocodeAsync(cityName ? `${q}, ${cityName}` : q);
+      const hit = hits[0];
+      if (hit) setDraft({ district: null, at: { lat: hit.latitude, lng: hit.longitude } });
+      else setMissed(true);
+    } catch {
+      // A geocoder that refused and a geocoder that found nothing are the
+      // same answer to the reader: we could not put this on the map.
+      setMissed(true);
+    } finally {
+      setFinding(false);
+    }
+  };
+
+  /**
+   * Back to near-me, and the one place in the app that may raise the
+   * permission dialog.
+   *
+   * Everywhere else reads the permission and never asks — see
+   * `useMyPosition`. Here the reader has just pressed a button whose only
+   * meaning is "use where I am", which is the one moment asking is an
+   * answer to a question rather than an interruption of one.
+   */
+  const locate = async () => {
+    setDraft({ district: null, at: null });
+    setMissed(false);
+    const { status } = await Location.getForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      await Location.requestForegroundPermissionsAsync().catch(() => null);
+      setAsked((n) => n + 1);
+    }
+  };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -71,22 +179,57 @@ export default function StartSheet({ visible, districts, value, onClose, onDone 
           )}
         </Text>
 
-        <ScrollView contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
-          <PressableScale
-            onPress={() => setDraft({ district: null, at: null })}
-            style={[s.nearRow, nearMe && s.nearRowOn]}
-            accessibilityRole="button"
-          >
-            <Ionicons name="navigate" size={17} color={nearMe ? colors.accent : colors.textSecondary} />
-            <Text style={[s.nearText, nearMe && s.nearTextOn]}>
-              {t('Near me', 'Gần tôi', '現在地の近く')}
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 8 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {centre && (
+            <MiniMap
+              key={asked}
+              lat={centre.lat}
+              lng={centre.lng}
+              height={196}
+              caption={caption}
+              onLocate={locate}
+              onPick={(at) => { setDraft({ district: null, at }); setMissed(false); }}
+            />
+          )}
+
+          <View style={s.field}>
+            <Ionicons name="search" size={18} color={colors.textTertiary} />
+            <TextInput
+              value={query}
+              onChangeText={(v) => { setQuery(v); setMissed(false); }}
+              onSubmitEditing={find}
+              returnKeyType="search"
+              placeholder={t(
+                'Search an address or place',
+                'Tìm địa chỉ hoặc địa điểm',
+                '住所や場所を検索',
+              )}
+              placeholderTextColor={colors.textTertiary}
+              style={s.input}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {finding ? <ActivityIndicator size="small" color={colors.accent} /> : null}
+          </View>
+          {missed && (
+            <Text style={s.missed}>
+              {t(
+                'No address found for that. Try a street and district.',
+                'Không tìm thấy địa chỉ này. Thử tên đường kèm quận xem sao.',
+                '該当する住所が見つかりません。通りと区で試してください。',
+              )}
             </Text>
-            {nearMe ? <Ionicons name="checkmark" size={17} color={colors.accent} /> : null}
-          </PressableScale>
+          )}
 
           {districts.length > 0 && (
             <>
-              <Text style={s.label}>{t('Or pick an area', 'Hoặc chọn một khu', 'エリアで選ぶ')}</Text>
+              <Text style={s.label}>
+                {t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ')}
+              </Text>
               <View style={s.chips}>
                 {districts.map((d) => (
                   <Chip
@@ -99,27 +242,12 @@ export default function StartSheet({ visible, districts, value, onClose, onDone 
               </View>
             </>
           )}
-
-          {/* Last, and only when there is somewhere to centre it. A map is
-              the most precise of the three answers and the least often
-              wanted, so it sits below the two that are quicker to give. */}
-          {centre && (
-            <>
-              <Text style={s.label}>{t('Or drop a pin', 'Hoặc thả ghim', 'ピンを置く')}</Text>
-              <MiniMap
-                lat={centre.lat}
-                lng={centre.lng}
-                caption={where || undefined}
-                onPick={(at) => setDraft({ district: null, at })}
-              />
-            </>
-          )}
         </ScrollView>
 
         <View style={s.foot}>
           <GradientCta
             icon="checkmark"
-            label={t('Use this', 'Dùng chỗ này', 'これにする')}
+            label={t('Use this location', 'Dùng chỗ này', 'ここにする')}
             onPress={() => onDone(draft)}
             wide
           />
@@ -132,7 +260,7 @@ export default function StartSheet({ visible, districts, value, onClose, onDone 
 const s = StyleSheet.create({
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.32)' },
   sheet: {
-    position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '86%',
+    position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '90%',
     backgroundColor: colors.bgElevated,
     borderTopLeftRadius: 26, borderTopRightRadius: 26,
     paddingHorizontal: space.page, paddingTop: 10, paddingBottom: 26,
@@ -144,15 +272,15 @@ const s = StyleSheet.create({
   title: { color: colors.text, ...type.titleDetail },
   sub: { color: colors.textTertiary, fontSize: 14, lineHeight: 20, marginTop: 4, marginBottom: 16 },
 
-  nearRow: {
+  field: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 14, paddingVertical: 13, borderRadius: radius.card,
+    marginTop: 12, paddingHorizontal: 14, height: 46,
+    borderRadius: radius.input,
     backgroundColor: colors.surfaceGlass,
-    borderWidth: 1, borderColor: 'transparent',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  nearRowOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
-  nearText: { color: colors.text, fontSize: 15.5, fontWeight: font.semibold, flex: 1 },
-  nearTextOn: { color: colors.accent },
+  input: { flex: 1, color: colors.text, fontSize: 15.5, padding: 0 },
+  missed: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 8 },
 
   label: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
