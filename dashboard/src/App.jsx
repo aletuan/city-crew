@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Link, Outlet, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { api } from './api.js';
 import { signOut } from './auth.jsx';
 import { CategoryIcon } from './icons.jsx';
@@ -15,62 +15,104 @@ export const useCity = () => useContext(CityCtx);
 
 const CITY_KEY = 'citycrew.dashboard.city';
 
+const UNFILED_SHOWN = 6;
+
 /**
- * The places nobody has filed yet.
+ * The places nobody has filed yet, behind the bell that counts them.
  *
  * Categories and vibes are the two fields Google cannot supply and the app
  * leans on hardest — Explore filters by one, the cards wear the other. A
- * place missing them is in the catalog and reachable from nowhere.
+ * place with neither is in the catalog and reachable from nowhere.
  *
  * It needs saying here because the filter row cannot say it: every chip
  * counts places that *have* a tag, so a place with none is missing from
  * all of them. The screen for finding things is the one screen these do
  * not appear in.
  *
- * No dismiss button. The notice is already conditional on there being
- * something to fix — a way to silence it without fixing it would turn the
- * one signal into a thing people learn to click past.
+ * A panel rather than the banner this replaces, and the difference is not
+ * decoration: the banner could only ever report a number, so the next move
+ * was always "filter the list and go looking". This names the places and
+ * puts the way in beside each one, which is the whole job.
+ *
+ * The bell is absent at zero rather than empty. A control that is always
+ * there says nothing by being there, and its absence is the signal that
+ * nothing is waiting — the same rule the publish button follows.
+ *
+ * No dismiss, for the same reason it never had one: a way to silence it
+ * without fixing it turns one signal into something people learn to click
+ * past.
  */
-function UnfiledNotice({ count }) {
-  const [params, setParams] = useSearchParams();
-  const showing = params.get('needs') === '1';
-  if (!count?.total) return null;
+function UnfiledBell({ places }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
 
-  // Which half is missing. Named separately when both are, because "no
-  // category" and "no vibe" are different jobs in the editor and one
-  // number for the pair sends people looking in the wrong field — but
-  // when only one kind is missing the breakdown just repeats the total,
-  // so the sentence says it once.
-  const one = count.total === 1;
-  const s = one ? '' : 's';
-  const both = count.no_category > 0 && count.no_vibe > 0;
-  const said = both
-    // With one place the two counts are both 1 and say nothing the total
-    // did not; the fields are still worth naming, the numbers are not.
-    ? one
-      ? 'place not filed — no category, no vibe.'
-      : `places not filed — ${count.no_category} no category, ${count.no_vibe} no vibe.`
-    : count.no_category
-      ? `place${s} with no category.`
-      : `place${s} with no vibe.`;
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
 
-  const filter = (on) => {
-    const next = new URLSearchParams(params);
-    if (on) next.set('needs', '1');
-    else next.delete('needs');
-    next.delete('page');
-    setParams(next, { replace: true });
-  };
+  const n = places?.length ?? 0;
+  if (!n) return null;
+  const shown = places.slice(0, UNFILED_SHOWN);
+  const rest = n - shown.length;
 
   return (
-    <div className="notice" role="status">
-      <CategoryIcon name="alert" color="var(--warn)" />
-      <div className="noticetext">
-        <b>{count.total}</b> {said} {one ? 'It appears' : 'They appear'} in no filter.
-      </div>
-      <button className="syncbtn noticebtn" onClick={() => filter(!showing)}>
-        {showing ? 'Show all' : `Show ${count.total === 1 ? 'it' : 'them'}`}
+    <div className="moremenu" ref={ref}>
+      <button
+        className="syncbtn bell"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-label={`${n} place${n === 1 ? '' : 's'} missing categories or vibes`}
+      >
+        <CategoryIcon name="bell" color="var(--warn)" />
+        <span className="bellcount">{n}</span>
       </button>
+      {open && (
+        <div className="notifypanel" role="dialog" aria-label="Missing categories or vibes">
+          <div className="notifyhead">
+            <CategoryIcon name="alert" color="var(--warn)" />
+            <b>{n} place{n === 1 ? '' : 's'} missing categories or vibes</b>
+          </div>
+          {/* What it costs, in the reader's terms rather than the schema's.
+              "needs_classification" is true and useless; this is why they
+              should care. */}
+          <p className="notifywhy">
+            These only show under “All” in Explore and never match a filter chip.
+          </p>
+          {shown.map((p) => (
+            <div className="notifyrow" key={p.slug}>
+              <div className="notifyname">
+                <div className="notifytitle">{p.name}</div>
+                <div className="notifymeta">
+                  {[
+                    p.status,
+                    p.no_category && 'no categories',
+                    p.no_vibe && 'no vibes',
+                  ].filter(Boolean).join(' · ')}
+                </div>
+              </div>
+              <Link className="fixbtn" to={`/place/${p.slug}`} onClick={() => setOpen(false)}>
+                Fix
+              </Link>
+            </div>
+          ))}
+          {rest > 0 && (
+            // Past the cap the panel stops being a panel. The filter is
+            // the right tool for thirty of them, and it is one press away.
+            <Link className="notifymore" to="/?needs=1" onClick={() => setOpen(false)}>
+              {rest} more →
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -197,6 +239,7 @@ export default function App() {
                 <span aria-hidden="true">＋</span>
                 <span className="btnlabel">Add<span className="btnlabel-more"> place</span></span>
               </Link>
+              <UnfiledBell places={progress?.unclassified} />
               <div className="moremenu" ref={moreRef}>
                 <button
                   className="syncbtn kebab"
@@ -234,12 +277,6 @@ export default function App() {
             </div>
           </header>
           <div className="shell">
-            {/* Above the title, because it is about the list under it and
-                its action changes what that list holds. Only on the list:
-                inside an editor the missing fields are on screen already,
-                and a banner pointing at other places is a distraction from
-                the one in front of you. */}
-            {location.pathname === '/' && <UnfiledNotice count={progress?.unclassified} />}
             {(location.pathname === '/' || total > 0) && (
               <div className="pagehead">
                 {location.pathname === '/' && <h2 className="pagetitle">Places</h2>}

@@ -67,6 +67,14 @@ const PATHS = {
       <path d="M10.3 10.3 14 14" />
     </>
   ),
+  // The one control in the bar that is about the state of the work rather
+  // than a place to go. Outline only, like every other glyph here.
+  bell: (
+    <>
+      <path d="M4.2 6.6a3.8 3.8 0 0 1 7.6 0c0 3 .9 4.1 1.4 4.6H2.8c.5-.5 1.4-1.6 1.4-4.6z" />
+      <path d="M6.6 13.2a1.6 1.6 0 0 0 2.8 0" />
+    </>
+  ),
   // Notice mark. A triangle rather than a circle: the desk's one warning
   // colour is already the amber in the gradient, so the shape has to carry
   // the difference between "here is a fact" and "here is a gap".

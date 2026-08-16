@@ -207,7 +207,7 @@ export const api = {
 
   progress: async (city) => {
     let query = supabase.from('places')
-      .select('review_status, is_published, category, categories, vibe_tags, needs_classification');
+      .select('slug, name_en, review_status, is_published, category, categories, vibe_tags, needs_classification');
     if (city) query = query.eq('city_id', city);
     const rows = db(await query);
     const by = (key) => rows.reduce((acc, r) => ((acc[r[key]] = (acc[r[key]] ?? 0) + 1), acc), {});
@@ -225,15 +225,26 @@ export const api = {
       // could open. This is the number the publish button acts on, and the
       // number that makes it worth showing at all.
       unpublished: rows.filter((r) => r.review_status === 'approved' && !r.is_published).length,
-      // Filed by nobody yet. Counted separately for each half so the notice
-      // can say which one is missing when only one is — "no vibe" and "no
-      // category" are different jobs, and lumping them sends the editor
-      // looking for the wrong field.
-      unclassified: {
-        total: rows.filter((r) => r.needs_classification).length,
-        no_category: rows.filter((r) => !r.categories?.length).length,
-        no_vibe: rows.filter((r) => !r.vibe_tags?.length).length,
-      },
+      // Filed by nobody yet — the places themselves, not a number.
+      //
+      // A count could only ever send the editor to a filtered list to find
+      // out which ones; naming them means the answer and the way to fix it
+      // arrive together. Which half is missing rides along for the same
+      // reason: "no vibe" and "no category" are different jobs, and one
+      // word for the pair sends people to the wrong field.
+      //
+      // Off the rows this already fetched, so it costs no round trip.
+      // Capped, because a panel is not a list view: past the cap it says
+      // how many more and hands over to the filter.
+      unclassified: rows
+        .filter((r) => r.needs_classification)
+        .map((r) => ({
+          slug: r.slug,
+          name: r.name_en,
+          status: r.review_status,
+          no_category: !r.categories?.length,
+          no_vibe: !r.vibe_tags?.length,
+        })),
       by_category: by('category'),
       by_category_tag: byTag('categories'),
       by_vibe: byTag('vibe_tags'),
