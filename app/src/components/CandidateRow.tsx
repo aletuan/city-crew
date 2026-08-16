@@ -13,7 +13,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PressableScale, SelectTick } from './ui';
-import type { ItemState } from '../lib/candidates';
+import { ItemState, locksRow } from '../lib/batch';
 import type { Candidate, Known } from '../lib/suggest';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
@@ -51,7 +51,17 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
         ? t('Already here — skipped', 'Đã có sẵn — bỏ qua', 'すでにあります — スキップ')
         : item === 'failed'
           ? t('Could not add this one', 'Không thêm được chỗ này', '追加できませんでした')
-          : '';
+          // Neither a failure nor the silence this used to be. The
+          // account's goes for the day ran out before this one's turn
+          // came; nothing is wrong with the place, and tomorrow the same
+          // tap works.
+          : item === 'held'
+            ? t(
+              'Not added — no goes left today',
+              'Chưa thêm — hết lượt hôm nay',
+              '未追加 — 本日の上限に達しました',
+            )
+            : '';
 
   const body = (
     <View style={[s.row, live && s.rowLive, selected && s.rowOn]}>
@@ -93,7 +103,7 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
         <PressableScale onPress={() => onOpen(known.slug)} scaleTo={0.94} style={s.viewBtn}>
           <Text style={s.viewText}>{t('View', 'Xem', '見る')}</Text>
         </PressableScale>
-      ) : mine || item ? null : busy ? (
+      ) : mine || locksRow(item) ? null : busy ? (
         <ActivityIndicator color={colors.accent} />
       ) : onToggle ? (
         // Drawn, not pressed. The whole row is the target, so a second hit
@@ -104,7 +114,7 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
     </View>
   );
 
-  if (!onToggle || live || mine || item) return body;
+  if (!onToggle || live || mine || locksRow(item)) return body;
   return (
     <PressableScale
       onPress={onToggle}

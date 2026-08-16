@@ -39,6 +39,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, BackButton, PressableScale, useTabBarClearance } from '../components/ui';
 import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
+import { finished } from '../lib/batch';
 import CandidateRow from '../components/CandidateRow';
 import { useCandidates } from '../lib/candidates';
 import { useCity } from '../lib/city';
@@ -76,9 +77,10 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
     if (!chosen.length) return;
     addMany(chosen).then((r) => {
       // Back to Explore when the run was clean, because that is where the
-      // places now are. Not when something failed: navigating away from a
-      // failure is the app deciding the reader does not need to know.
-      if (r.failed === 0 && !r.cancelled) navigation.goBack();
+      // places now are. Not when something failed, and not when the cap
+      // held anything back: navigating away from either is the app
+      // deciding the reader does not need to know.
+      if (r.failed === 0 && r.held === 0 && !r.cancelled) navigation.goBack();
     });
   };
 
@@ -124,17 +126,26 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
           scroll to the bottom to ask. */}
       {!searching && !!results?.length && (
         <Text style={s.resultHead}>
-          {batch.total > 0
+          {/* "ADDING" only while it is. This asked whether a batch
+              existed, so a run that had stopped an hour ago still read as
+              in progress. */}
+          {batch.running
             ? t(
               `ADDING ${batch.total} · ${batch.done} DONE`,
               `ĐANG THÊM ${batch.total} · XONG ${batch.done}`,
               `${batch.total}件を追加中 · ${batch.done}件完了`,
             )
-            : t(
-              `${results.length} RESULTS · ${cityName.toUpperCase()}`,
-              `${results.length} KẾT QUẢ · ${cityName.toUpperCase()}`,
-              `${results.length}件 · ${cityName}`,
-            )}
+            : finished(batch)
+              ? t(
+                `ADDED ${batch.done} OF ${batch.total}`,
+                `ĐÃ THÊM ${batch.done}/${batch.total}`,
+                `${batch.total}件中 ${batch.done}件を追加`,
+              )
+              : t(
+                `${results.length} RESULTS · ${cityName.toUpperCase()}`,
+                `${results.length} KẾT QUẢ · ${cityName.toUpperCase()}`,
+                `${results.length}件 · ${cityName}`,
+              )}
         </Text>
       )}
 

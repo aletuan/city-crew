@@ -26,24 +26,13 @@ import { usePlaces } from './catalog';
 import { distanceKm, fmtDistance } from './geo';
 import { useI18n } from './i18n';
 import { Candidate, knownByPlaceId, Known, searchPlaces, suggestPlace } from './suggest';
+import { Batch, IDLE_BATCH, ItemState } from './batch';
 
-/**
- * Where one candidate is in a batch.
- *
- * `skipped` is not a failure and must not read as one: the place was
- * already in the catalog, which is the answer somebody selecting five
- * results wanted rather than an error they caused.
- */
-export type ItemState = 'queued' | 'running' | 'done' | 'skipped' | 'failed';
-
-export type Batch = {
-  running: boolean;
-  state: Record<string, ItemState>;
-  done: number;
-  total: number;
-};
-
-export const IDLE_BATCH: Batch = { running: false, state: {}, done: 0, total: 0 };
+// Re-exported so call sites keep one import for the whole idea. The types
+// live in `lib/batch` because they are data and this file is not — see
+// the note at the top of that one.
+export type { Batch, ItemState };
+export { IDLE_BATCH };
 
 export type Candidates = {
   /** null before the first search, [] when one found nothing. */
@@ -56,7 +45,9 @@ export type Candidates = {
   run: (query: string) => void;
   /** Submit several, one at a time. Resolves once every one has settled or
    *  the run was cancelled. */
-  addMany: (list: Candidate[]) => Promise<{ done: number; skipped: number; failed: number; cancelled: boolean }>;
+  addMany: (list: Candidate[]) => Promise<{
+    done: number; skipped: number; failed: number; held: number; cancelled: boolean;
+  }>;
   cancel: () => void;
   /** Formatted distance from the reader, or '' — see `awayFrom` below. */
   awayFrom: (c: Candidate) => string;
@@ -75,11 +66,18 @@ export function useCandidates(): Candidates {
   const [known, setKnown] = useState<Record<string, Known>>({});
   const [searching, setSearching] = useState(false);
   const [batch, setBatch] = useState<Batch>(IDLE_BATCH);
-  /** Set by `cancel`, and by the daily cap — read between items, never
-   *  mid-flight. */
-  const stop = useRef(false);
+  /**
+   * Why the run is stopping, read between items and never mid-flight.
+   *
+   * The reason matters, which is why this is not a boolean any more. A
+   * reader who pressed Stop still has their goes and can try again in a
+   * second; a run the daily cap ended cannot succeed at all today. Both
+   * used to leave the remaining rows looking identical — and looking, in
+   * fact, like nothing had happened to them.
+   */
+  const stop = useRef<null | 'cancel' | 'cap'>(null);
 
-  const clear = useCallback(() => { setResults(null); setKnown({}); setBatch(IDLE_BATCH); }, []);
+  const clear = useCallback(() => { setResults(null); setKnown({}); setBatch(IDLE_BATCH); stop.current = null; }, []);
 
   const run = useCallback((raw: string) => {
     const q = raw.trim();
@@ -179,8 +177,12 @@ export function useCandidates(): Candidates {
       // The cap is per account per day, so every remaining item in this
       // run would refuse for the same reason. Stopping is kinder than
       // five identical failures.
-      stop.current = true;
-      return 'failed';
+      //
+      // `held`, not `failed`: nothing is wrong with this place and nobody
+      // tried to add it. The server refused the account before it looked
+      // at the request, and tomorrow the same tap works.
+      stop.current = 'cap';
+      return 'held';
     }
     Alert.alert(t('Could not add it', 'Không thêm được', '追加できませんでした'), out.message);
     return 'failed';
@@ -197,8 +199,8 @@ export function useCandidates(): Candidates {
    * server is working on, not one of five that might be.
    */
   const addMany = useCallback(async (list: Candidate[]) => {
-    if (!city || !list.length) return { done: 0, skipped: 0, failed: 0, cancelled: false };
-    stop.current = false;
+    if (!city || !list.length) return { done: 0, skipped: 0, failed: 0, held: 0, cancelled: false };
+    stop.current = null;
     setBatch({
       running: true,
       total: list.length,
@@ -206,14 +208,27 @@ export function useCandidates(): Candidates {
       state: Object.fromEntries(list.map((c) => [c.place_id, 'queued' as ItemState])),
     });
 
-    const tally = { done: 0, skipped: 0, failed: 0 };
+    const tally = { done: 0, skipped: 0, failed: 0, held: 0 };
     for (const c of list) {
-      if (stop.current) { mark(c.place_id, 'queued'); continue; }
+      // Whatever stopped the run, these were never attempted — but why
+      // decides what the row is allowed to say. The cap means "not today",
+      // which the reader has to be told; a cancel means "you stopped it",
+      // which they already know, so the row goes back to waiting.
+      if (stop.current) {
+        const rest: ItemState = stop.current === 'cap' ? 'held' : 'queued';
+        mark(c.place_id, rest);
+        if (rest === 'held') tally.held += 1;
+        continue;
+      }
       mark(c.place_id, 'running');
       const st = await suggestOne(c);
       mark(c.place_id, st);
-      tally[st === 'done' ? 'done' : st === 'skipped' ? 'skipped' : 'failed'] += 1;
-      setBatch((b) => ({ ...b, done: b.done + 1 }));
+      tally[st === 'done' ? 'done'
+        : st === 'skipped' ? 'skipped'
+          : st === 'held' ? 'held' : 'failed'] += 1;
+      // Only what was actually attempted counts as progress: "3 of 5" has
+      // to mean three tried, or the line is another thing to disbelieve.
+      if (st !== 'held') setBatch((b) => ({ ...b, done: b.done + 1 }));
     }
 
     setBatch((b) => ({ ...b, running: false }));
@@ -224,12 +239,12 @@ export function useCandidates(): Candidates {
     // Cancelled is not the same as clean, and only the caller can act on
     // the difference: a run stopped halfway must not be followed by the
     // screen leaving, however few things went wrong before it stopped.
-    return { ...tally, cancelled: stop.current };
+    return { ...tally, cancelled: stop.current === 'cancel' };
   }, [city?.id, places, suggestOne]);
 
   /** Stop before the next one starts. The one in flight is already with
    *  the server and finishing it is cheaper than orphaning it. */
-  const cancel = useCallback(() => { stop.current = true; }, []);
+  const cancel = useCallback(() => { stop.current = 'cancel'; }, []);
 
   const adding = Object.keys(batch.state).find((id) => batch.state[id] === 'running') ?? null;
 
