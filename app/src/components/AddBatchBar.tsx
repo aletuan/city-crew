@@ -17,7 +17,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GradientCta, PressableScale, useTabBarClearance } from './ui';
-import type { Batch } from '../lib/candidates';
+import { Batch, finished, heldCount } from '../lib/batch';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space } from '../theme';
 
@@ -31,7 +31,7 @@ type Done = { label: string; onPress: () => void };
  * screenful of nothing between the last result and the button.
  */
 export function batchBarShown(chosen: number, batch: Batch, done?: Done): boolean {
-  return chosen > 0 || batch.running || (!!done && batch.total > 0 && !batch.running);
+  return chosen > 0 || batch.running || heldCount(batch) > 0 || (!!done && finished(batch));
 }
 
 export default function AddBatchBar({ chosen, batch, onAdd, onCancel, done }: {
@@ -49,6 +49,7 @@ export default function AddBatchBar({ chosen, batch, onAdd, onCancel, done }: {
   // be `clearance - 24`, which was six points short of that height — which
   // is what put this bar's note behind the tab bar.
   const clearance = useTabBarClearance(10);
+  const held = heldCount(batch);
   if (!batchBarShown(chosen, batch, done)) return null;
 
   return (
@@ -71,6 +72,25 @@ export default function AddBatchBar({ chosen, batch, onAdd, onCancel, done }: {
             </Text>
           </PressableScale>
         </>
+      ) : held > 0 ? (
+        // Before the CTA, and that order is the point. The cap is per
+        // account per day, so every remaining selection would be refused
+        // for the same reason — and a button offering to add them is the
+        // app inviting the reader to fail. It said "Add 3 places" here,
+        // over three rows that had just been refused.
+        <Text style={s.heldLine}>
+          {held === 1
+            ? t(
+              '1 place still to add — no goes left today',
+              'Còn 1 chỗ chưa thêm — hết lượt hôm nay',
+              'あと1件 — 本日の上限に達しました',
+            )
+            : t(
+              `${held} places still to add — no goes left today`,
+              `Còn ${held} chỗ chưa thêm — hết lượt hôm nay`,
+              `あと${held}件 — 本日の上限に達しました`,
+            )}
+        </Text>
       ) : chosen > 0 ? (
         // Still something to add — including after a partial failure, where
         // the ones that did not go through are still selected and this
@@ -89,10 +109,24 @@ export default function AddBatchBar({ chosen, batch, onAdd, onCancel, done }: {
           onPress={onAdd}
         />
       ) : done ? (
+        // Reached when a run ended and nothing is left to try. Either way
+        // the way back is the only thing left.
+        <GradientCta wide icon="arrow-back" label={done.label} onPress={done.onPress} />
+      ) : null}
+      {/* And under the held line too, on the screen that has somewhere to
+          send the reader: the line says why nothing more will happen, and
+          this is what to do about it. */}
+      {!batch.running && held > 0 && done ? (
         <GradientCta wide icon="arrow-back" label={done.label} onPress={done.onPress} />
       ) : null}
       <Text style={s.footNote}>
-        {batch.running
+        {held > 0 && !batch.running
+          ? t(
+            'They keep their place — come back and add them then.',
+            'Chúng vẫn ở đây — quay lại thêm sau nhé.',
+            'そのまま残ります — またあとで追加できます。',
+          )
+          : batch.running
           ? t(
             'You can keep browsing — this finishes on its own.',
             'Bạn cứ dùng tiếp — phần này tự chạy xong.',
@@ -123,6 +157,12 @@ const s = StyleSheet.create({
     paddingVertical: 16, borderRadius: radius.pill,
   },
   progressText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
+  // A statement, not a control: it replaces the button rather than sitting
+  // beside one, so it carries the weight the button would have had.
+  heldLine: {
+    color: colors.text, fontSize: 15, fontWeight: font.semibold,
+    textAlign: 'center', paddingVertical: 4,
+  },
   cancel: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold, textAlign: 'center' },
   footNote: { color: colors.textTertiary, fontSize: 12.5, lineHeight: 18, textAlign: 'center' },
 });
