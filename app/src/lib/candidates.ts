@@ -1,15 +1,22 @@
-// Asking Google for places the catalog has not got, and adding one.
+// Asking Google for places the catalog has not got, and adding several.
 //
 // Two screens do this now. Add a place has always been the whole of one
 // screen; Search does it in a section, once its own results have come up
 // short and the reader has said the word. The orchestration is identical —
-// search, work out what we already know about each result, suggest one,
-// move that row's state in place — and writing it twice is how this
+// search, work out what we already know about each result, suggest them,
+// move each row's state in place — and writing it twice is how this
 // codebase ended up with four dashed rows and five add buttons.
 //
 // So it is a hook rather than a copy. What the two screens still differ on
 // is presentation, which is where they should differ: one lists everything
 // Google returned, the other shows only what is new.
+//
+// There is one path in, `addMany`. Search used to have a second, `add`,
+// which submitted one candidate and said thank you — five taps and five
+// round trips to add five places, waited through one at a time. Both
+// screens select and commit together now, and the row's own state is the
+// thank you: "Added — only you can see it", written where the reader is
+// already looking.
 
 import { useCallback, useRef, useState } from 'react';
 import { Alert, Keyboard } from 'react-native';
@@ -47,7 +54,6 @@ export type Candidates = {
   adding: string | null;
   batch: Batch;
   run: (query: string) => void;
-  add: (c: Candidate) => void;
   /** Submit several, one at a time. Resolves once every one has settled or
    *  the run was cancelled. */
   addMany: (list: Candidate[]) => Promise<{ done: number; skipped: number; failed: number; cancelled: boolean }>;
@@ -221,35 +227,13 @@ export function useCandidates(): Candidates {
     return { ...tally, cancelled: stop.current };
   }, [city?.id, places, suggestOne]);
 
-  /** The single-row path, for Search's ⊕. Same machinery, plus the thank
-   *  you — which belongs to one deliberate act and would be five alerts
-   *  in a row if the batch said it too. */
-  const add = useCallback((c: Candidate) => {
-    if (batch.running) return;
-    addMany([c]).then((r) => {
-      if (!r.done) return;
-      // What is true, in the order it matters: it worked, it is yours, and
-      // here is why a friend cannot see it yet. No mention of review —
-      // being told at that exact moment that your contribution must pass
-      // an inspection is a strange way to say thank you.
-      Alert.alert(
-        t('Thanks — it is in', 'Cảm ơn — đã thêm', 'ありがとうございます'),
-        t(
-          `${c.name} is on your Explore now. Only you can see it for the moment — we will open it up to everyone shortly.`,
-          `${c.name} đã có trong mục Khám phá của bạn. Hiện chỉ mình bạn thấy — chúng tôi sẽ mở cho mọi người sớm thôi.`,
-          `${c.name} はあなたの探索に追加されました。今はあなただけに表示され、まもなく全員に公開されます。`,
-        ),
-      );
-    });
-  }, [addMany, batch.running, t]);
-
   /** Stop before the next one starts. The one in flight is already with
    *  the server and finishing it is cheaper than orphaning it. */
   const cancel = useCallback(() => { stop.current = true; }, []);
 
   const adding = Object.keys(batch.state).find((id) => batch.state[id] === 'running') ?? null;
 
-  return { results, known, searching, adding, batch, run, add, addMany, cancel, awayFrom, clear };
+  return { results, known, searching, adding, batch, run, addMany, cancel, awayFrom, clear };
 }
 
 /** Only the ones the catalog has never heard of. What Search shows, since
