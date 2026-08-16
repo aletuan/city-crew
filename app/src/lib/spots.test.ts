@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { spotLabel, toSpots, type SpotRow } from './spots';
+import { ctaMode, spotLabel, toSpots, type SpotRow } from './spots';
 
 const row = (over: Partial<SpotRow> = {}): SpotRow => ({
   name: 'Somewhere',
@@ -95,5 +95,49 @@ describe('toSpots', () => {
 
   it('has nothing to say about nothing', () => {
     expect(toSpots([])).toEqual([]);
+  });
+});
+
+describe('ctaMode', () => {
+  // The reported trap: "cau giay" typed, Ba Đình chosen, and the biggest
+  // button on the screen silently starts the day in Ba Đình.
+  it('offers to search text that has never been searched', () => {
+    expect(ctaMode('cau giay', '')).toBe('search');
+  });
+
+  it('commits once that same text has been searched', () => {
+    expect(ctaMode('cau giay', 'cau giay')).toBe('commit');
+  });
+
+  // Picking a result writes its name back into the field, so a plain
+  // has-searched flag would leave the button saying "Search" over text
+  // that is already the answer.
+  it('commits over the name of a result just taken', () => {
+    expect(ctaMode('Cầu Giấy, Hà Nội', 'Cầu Giấy, Hà Nội')).toBe('commit');
+  });
+
+  // And editing after a search makes it unresolved again — which is why
+  // this compares strings rather than counting searches.
+  it('offers to search again once the text is edited', () => {
+    expect(ctaMode('cau giay 2', 'cau giay')).toBe('search');
+  });
+
+  it('commits on an empty field, which asks nothing', () => {
+    expect(ctaMode('', '')).toBe('commit');
+    expect(ctaMode('   ', '')).toBe('commit');
+    expect(ctaMode('', 'cau giay')).toBe('commit');
+  });
+
+  // Whitespace the reader cannot see must not hold the button on "Search"
+  // over text that has already been answered.
+  it('ignores padding on either side of the comparison', () => {
+    expect(ctaMode('  cau giay  ', 'cau giay')).toBe('commit');
+    expect(ctaMode('cau giay', '  cau giay  ')).toBe('commit');
+  });
+
+  // A search that found nothing still counts as asked: the reader has had
+  // their answer and may now want the pin they already have.
+  it('commits after a search that came back empty', () => {
+    expect(ctaMode('nowhere at all', 'nowhere at all')).toBe('commit');
   });
 });
