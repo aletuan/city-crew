@@ -17,12 +17,37 @@ import type { Place } from './types';
  *  want different rooms, not different categories. */
 export type Company = 'solo' | 'couple' | 'friends' | 'family' | 'other';
 
-export const COMPANY: { key: Company; icon: string; en: string; vi: string; ja: string }[] = [
-  { key: 'solo', icon: 'person-outline', en: 'Just me', vi: 'Một mình', ja: 'ひとり' },
-  { key: 'couple', icon: 'heart-outline', en: 'Couple', vi: 'Hai người', ja: 'ふたり' },
-  { key: 'friends', icon: 'people-outline', en: 'Friends', vi: 'Bạn bè', ja: '友だち' },
-  { key: 'family', icon: 'home-outline', en: 'Family', vi: 'Gia đình', ja: '家族' },
-  { key: 'other', icon: 'ellipsis-horizontal', en: 'Other', vi: 'Khác', ja: 'その他' },
+/**
+ * Who the chips are for, and what colour each one's glyph wears.
+ *
+ * Coloured for the same reason the category row below it is: a row of grey
+ * glyphs beside a row of coloured ones reads as the unfinished half of a
+ * screen. The hues are chosen, not decorative — blue for the one person,
+ * rose for the two, amber for a group, green for a household.
+ *
+ * They are not a code. Category colour means something beyond its row —
+ * it is the hue that concept wears on a place card too — and nothing here
+ * appears anywhere else. So these only have to belong to the same family,
+ * stay apart from each other, and avoid reading as one of the seven.
+ *
+ * Which is why they were measured rather than picked. Each sits at least
+ * 15° of hue from every category colour, and each was solved for the same
+ * contrast on the light background — 2.14:1, inside the seven's own
+ * 1.87–2.51 range — because equal HSL lightness across hues does not mean
+ * equal contrast, and a naive amber came out at 1.52:1, visibly fainter
+ * than everything beside it.
+ *
+ * `other` carries no glyph. An ellipsis is a promise of more to tap, and
+ * this chip is an answer like the rest.
+ */
+export const COMPANY: {
+  key: Company; icon?: string; color?: string; en: string; vi: string; ja: string;
+}[] = [
+  { key: 'solo', icon: 'person-outline', color: '#8CA9D0', en: 'Just me', vi: 'Một mình', ja: 'ひとり' },
+  { key: 'couple', icon: 'heart-outline', color: '#D496A5', en: 'Couple', vi: 'Hai người', ja: 'ふたり' },
+  { key: 'friends', icon: 'people-outline', color: '#B9A654', en: 'Friends', vi: 'Bạn bè', ja: '友だち' },
+  { key: 'family', icon: 'home-outline', color: '#65B690', en: 'Family', vi: 'Gia đình', ja: '家族' },
+  { key: 'other', en: 'Other', vi: 'Khác', ja: 'その他' },
 ];
 
 /** Day or evening. Not a clock time: the wizard's own promise is that

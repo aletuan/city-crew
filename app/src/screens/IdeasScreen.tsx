@@ -92,7 +92,8 @@ export default function IdeasScreen() {
             <Chip
               key={c.key}
               label={t(c.en, c.vi, c.ja)}
-              icon={c.icon as keyof typeof Ionicons.glyphMap}
+              icon={c.icon as keyof typeof Ionicons.glyphMap | undefined}
+              iconColor={c.color}
               active={draft.company === c.key}
               onPress={() => set('company', draft.company === c.key ? null : c.key)}
             />
