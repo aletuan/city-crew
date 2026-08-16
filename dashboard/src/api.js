@@ -36,6 +36,30 @@ async function invoke(name, body) {
 const PAGE_SIZE = 24;
 const SORT_COLUMNS = { created_at: 'created_at', rating_count: 'rating_count', rating: 'rating' };
 
+/**
+ * Put a handle on the rows a person suggested.
+ *
+ * A second query rather than an embed: `places.submitted_by` points at
+ * `auth.users`, and `profiles.id` points at the same place, but there is
+ * no foreign key *between the two* — which is what PostgREST needs before
+ * it will join them for us. Adding one to satisfy a label would be the
+ * schema bending to the dashboard.
+ *
+ * One round trip per page, only when a page actually holds a suggestion,
+ * and the ids are deduplicated first: a person who added six places is
+ * one lookup, not six. Failure is silent by design — a missing handle
+ * costs a caption, and is not worth failing a page of work over.
+ */
+async function attachSubmitters(rows) {
+  const ids = [...new Set(rows.map((r) => r.submitted_by).filter(Boolean))];
+  if (!ids.length) return rows;
+  const { data } = await supabase
+    .from('profiles').select('id, handle, full_name').in('id', ids);
+  const by = Object.fromEntries((data ?? []).map((p) => [p.id, p]));
+  for (const r of rows) r.submitter = by[r.submitted_by] ?? null;
+  return rows;
+}
+
 export const api = {
   cities: async () =>
     db(await supabase.from('cities').select('id, name_en, name_vi, short_en, short_vi').order('sort_order')),
@@ -74,7 +98,7 @@ export const api = {
     let query = supabase
       .from('places')
       .select(
-        'slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, is_published, rating, rating_count, price_vnd, price_display, created_at, place_photos(photo_uri, is_cover, is_hidden)',
+        'slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, is_published, rating, rating_count, price_vnd, price_display, created_at, source, submitted_by, place_photos(photo_uri, is_cover, is_hidden)',
         { count: 'exact' },
       )
       .order(sortColumn, { ascending, nullsFirst: false })
@@ -101,6 +125,7 @@ export const api = {
       const { place_photos, ...rest } = r;
       return { ...rest, cover_url: cover?.photo_uri ?? null, photo_count: visible.length };
     });
+    await attachSubmitters(rows);
     return params.all ? rows : { rows, total: count, pageSize: PAGE_SIZE };
   },
 

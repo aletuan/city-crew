@@ -76,6 +76,10 @@ for (const cat of cats) {
         cityId: city.id,
         vibeTags: [...cat.vibes],
         maxPhotos: PHOTOS_PER_PLACE,
+        // Same pipeline as the Edge Function, so the same word for it —
+        // a place does not become a different kind of thing because the
+        // scan was driven from a laptop.
+        source: "scan",
       });
       names.push(slug);
     } catch (err) {

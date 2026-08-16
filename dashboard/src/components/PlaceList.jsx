@@ -19,6 +19,41 @@ const SORTS = [
 
 const fmtCount = (n) => (!n ? null : n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n));
 
+// What each door means, in the words a reviewer would use about it.
+const SOURCE_TITLE = {
+  seed: 'From the frozen HCMC bootstrap pipeline',
+  scan: 'Brought in by a Scan city run — a batch, unreviewed',
+  desk: 'Imported here at the desk, one place at a time',
+  phone: 'Suggested from the app',
+};
+
+/**
+ * Where this row came from, under its review stamp.
+ *
+ * Beside the stamp rather than among the tags, because the tag row is the
+ * first thing hidden on a phone — and provenance is most worth knowing
+ * exactly when you are triaging on one. Quieter than the stamp: it says
+ * where a place came from, not what was decided about it.
+ *
+ * Nothing at all for a row with no source. Those predate the column and
+ * could not be attributed; an "unknown" pill would give every old row a
+ * label that means nothing.
+ */
+function SourceMark({ place }) {
+  if (!place.source) return null;
+  const who = place.submitter?.handle;
+  return (
+    <span
+      className="srcmark"
+      title={who
+        ? `${SOURCE_TITLE[place.source]} by @${who}`
+        : SOURCE_TITLE[place.source] ?? place.source}
+    >
+      {who ? `@${who}` : place.source}
+    </span>
+  );
+}
+
 export default function PlaceList() {
   const { city } = useCity();
   const { progress, refresh: refreshProgress } = useProgress();
@@ -264,6 +299,7 @@ export default function PlaceList() {
                   {p.rating_count ? ` · ${fmtCount(p.rating_count)}` : ''}
                 </div>
                 <div className="gcard-tags">
+                  <SourceMark place={p} />
                   {p.categories?.length
                     ? p.categories.map((c) => (
                       <CategoryIcon key={c} name={CATEGORY_STYLE[c]?.icon} color={CATEGORY_STYLE[c]?.color} />
@@ -314,7 +350,10 @@ export default function PlaceList() {
                     ? <span className="count">{p.price_display ?? `${Math.round(p.price_vnd / 1000)}k₫`}</span>
                     : <span className="tag noprice">no price</span>}
               </div>
-              <span className={`stamp ${p.review_status}`}>{p.review_status}</span>
+              <div className="stampcol">
+                <span className={`stamp ${p.review_status}`}>{p.review_status}</span>
+                <SourceMark place={p} />
+              </div>
             </Link>
           ))}
         </div>

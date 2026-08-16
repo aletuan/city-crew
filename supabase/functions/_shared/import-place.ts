@@ -91,6 +91,12 @@ type ImportArgs = {
    *  reason `stamp_curator` exists: a caller-supplied identity is the
    *  caller's choice, not a fact. */
   submittedBy?: string | null;
+  /** Which door this came in through. Required, and deliberately not
+   *  derived from `submittedBy` — that would collapse 'scan' and 'desk'
+   *  back into the one bucket this column exists to split, which is the
+   *  state the backfill had to reconstruct from photo counts. Each caller
+   *  knows what it is; none of them has to work it out. */
+  source: "scan" | "desk" | "phone";
 };
 
 // District/ward-level address component — the human "what part of town is
@@ -120,7 +126,7 @@ function neighborhoodOf(components: { longText?: string; types?: string[] }[] | 
 export async function importPlace(
   {
     admin, gapi, apiKey, placeId, category, cityId,
-    vibeTags = [], categories, maxPhotos = 6, submittedBy = null,
+    vibeTags = [], categories, maxPhotos = 6, submittedBy = null, source,
   }: ImportArgs,
 ): Promise<{ slug: string; photos: number }> {
   const d = await gapi(`https://places.googleapis.com/v1/places/${placeId}`, {
@@ -150,6 +156,7 @@ export async function importPlace(
       slug,
       google_place_id: d.id,
       submitted_by: submittedBy,
+      source,
       name_en: name,
       name_vi: name,
       category,

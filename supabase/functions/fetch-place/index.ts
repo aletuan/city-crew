@@ -177,6 +177,7 @@ Deno.serve(async (req) => {
       const { slug, photos } = await importPlace({
         admin, gapi, apiKey, placeId, category, cityId: city.id, maxPhotos: 6,
         submittedBy: fromDesk ? null : uid,
+        source: fromDesk ? "desk" : "phone",
       });
       return json({ slug, photos });
     }

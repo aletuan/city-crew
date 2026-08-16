@@ -381,6 +381,20 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   transform: rotate(-2deg);
 }
 .stamp.pending { color: var(--text-tertiary); border-color: rgba(255,255,255,0.22); }
+/* Which door a place came in through, under the stamp that says what was
+   decided about it. Same mono as the other machine facts, and quieter than
+   everything around it: it is context for a judgement, not the judgement.
+
+   In the stamp's own column rather than among the tags, because the tag
+   row is the first thing the phone layout drops — and the question "who
+   put this here" is at its most useful while triaging on a phone. */
+.stampcol { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.srcmark {
+  font-family: var(--font-data); font-size: 10px; letter-spacing: 0.06em;
+  color: var(--text-tertiary); white-space: nowrap; max-width: 96px;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
 .stamp.approved { color: var(--ok); border-color: var(--ok); }
 .stamp.flagged { color: var(--bad); border-color: var(--bad); }
 
