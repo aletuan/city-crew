@@ -290,14 +290,18 @@ export default function PlaceList() {
                 {p.cover_url
                   ? <img src={p.cover_url} alt="" loading="lazy" />
                   : null}
-                <input
-                  type="checkbox"
-                  className={`selectbox ${selected.has(p.slug) ? 'checked' : ''}`}
-                  checked={selected.has(p.slug)}
-                  readOnly
-                  aria-label={`Select ${p.name_en}`}
+                <span
+                  className="selecthit"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSelect(p.slug); }}
-                />
+                >
+                  <input
+                    type="checkbox"
+                    className={`selectbox ${selected.has(p.slug) ? 'checked' : ''}`}
+                    checked={selected.has(p.slug)}
+                    readOnly
+                    aria-label={`Select ${p.name_en}`}
+                  />
+                </span>
                 <span className={`stamp ${p.review_status}`}>{p.review_status}</span>
               </div>
               <div className="gcard-body">
@@ -329,14 +333,18 @@ export default function PlaceList() {
                 {p.cover_url
                   ? <img className="thumb" src={p.cover_url} alt="" loading="lazy" />
                   : <div className="thumb" />}
-                <input
-                  type="checkbox"
-                  className={`selectbox ${selected.has(p.slug) ? 'checked' : ''}`}
-                  checked={selected.has(p.slug)}
-                  readOnly
-                  aria-label={`Select ${p.name_en}`}
+                <span
+                  className="selecthit"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleSelect(p.slug); }}
-                />
+                >
+                  <input
+                    type="checkbox"
+                    className={`selectbox ${selected.has(p.slug) ? 'checked' : ''}`}
+                    checked={selected.has(p.slug)}
+                    readOnly
+                    aria-label={`Select ${p.name_en}`}
+                  />
+                </span>
               </div>
               <div className="names">
                 <div className="en">{p.name_en} {p.is_featured && <span className="tag featured">featured</span>}</div>
