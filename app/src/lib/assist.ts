@@ -239,6 +239,20 @@ export function freshen(
 
 // ── a sentence, turned into wizard answers ───────────────────────────
 //
+// **No screen calls this today.** The box it fed was removed from Ideas,
+// and the reason is worth keeping here rather than only in the history:
+// its output schema is exactly the four fields the chips already set, so
+// it could never say anything the reader could not tap in one gesture —
+// and it charged a network round trip and a model call for the privilege.
+// A funnel whose mouth is no wider than the hand feeding it is a keyboard
+// standing in for a finger.
+//
+// It is kept, tested and working, because the way back is not to write it
+// again but to widen what it may answer: a budget, a tolerance for
+// distance — things `planTrips` already reads (`budgetVnd`, `KM_PENALTY`)
+// and the wizard has no chip to ask for. Then a sentence buys something.
+// See the issue linked from `docs/ai-agent-planner.md`.
+//
 // The other direction, and the failure shape is deliberately different.
 //
 // `narrate` failing costs prose the reader never asked for, so it fails
