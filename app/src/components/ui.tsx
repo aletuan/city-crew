@@ -19,6 +19,25 @@ import { colors, display, font, gradAI, radius, space, type } from '../theme';
 // scrolls beneath it, which means screens must clear it themselves.
 export const TAB_BAR_HEIGHT = 62;
 
+/**
+ * How tall a full-size button is, everywhere.
+ *
+ * Shared because buttons of this class sit next to each other and the eye
+ * reads a few points of difference as a mistake — which it was: the primary
+ * CTA came out 50pt inline and 52pt when `wide`, the pill beside it 44pt,
+ * and the auth form's button ~52pt, all from paddings tuned separately
+ * around glyphs and labels of different sizes. Setting the height directly
+ * takes the guesswork out: a button is this tall whatever is inside it.
+ *
+ * `minHeight` rather than `height`, so a label that wraps — a translation
+ * longer than its English — grows the button instead of being clipped by it.
+ *
+ * This is the size class for buttons that carry an action on their own.
+ * Chips, badges, ghost pills and icon wells are deliberately smaller and
+ * are not this.
+ */
+export const CONTROL_H = 52;
+
 /** Bottom padding that clears the translucent tab bar plus breathing room. */
 export function useTabBarClearance(extra = 18): number {
   const insets = useSafeAreaInsets();
@@ -331,7 +350,7 @@ export function GradientCta({ icon, label, onPress, wide }: {
 }) {
   return (
     <PressableScale onPress={onPress} accessibilityRole="button" containerStyle={wide ? { alignSelf: 'stretch' } : undefined}>
-      <LinearGradient {...gradAI} style={[s.cta, wide && s.ctaWide]}>
+      <LinearGradient {...gradAI} style={s.cta}>
         <Ionicons name={icon} size={20} color={colors.accentInk} />
         <Text style={s.ctaText}>{label}</Text>
       </LinearGradient>
@@ -426,10 +445,14 @@ const s = StyleSheet.create({
   },
   ambient: { position: 'absolute', left: 0, right: 0, top: -40, height: 760 },
   cta: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 24, paddingVertical: 15, borderRadius: radius.pill,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    minHeight: CONTROL_H, paddingHorizontal: 24, paddingVertical: 10,
+    borderRadius: radius.pill,
   },
-  ctaWide: { justifyContent: 'center', paddingVertical: 16 },
+  // Nothing left to say about the wide one but that it is wide — the
+  // centring and the height it used to carry are now what every button of
+  // this class gets. `wide` still stretches it in its parent; see
+  // `GradientCta`.
   ctaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
   tick: {
     width: 26, height: 26, borderRadius: 13,

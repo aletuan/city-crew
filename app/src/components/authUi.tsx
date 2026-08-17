@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { BackButton, fireHaptic, PressableScale, useTabBarClearance } from './ui';
+import { BackButton, CONTROL_H, fireHaptic, PressableScale, useTabBarClearance } from './ui';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
 export function AuthScreen({ children }: { children: React.ReactNode }) {
@@ -172,7 +172,7 @@ const s = StyleSheet.create({
   fieldInput: { color: colors.text, fontSize: 15.5, paddingVertical: 2, paddingHorizontal: 0 },
 
   primary: {
-    borderRadius: radius.pill, paddingVertical: 16,
+    borderRadius: radius.pill, minHeight: CONTROL_H, paddingVertical: 10,
     alignItems: 'center', justifyContent: 'center', marginTop: 6,
   },
   primaryText: { color: colors.accentInk, fontSize: 17, fontWeight: font.semibold },

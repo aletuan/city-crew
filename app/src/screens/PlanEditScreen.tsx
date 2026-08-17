@@ -26,8 +26,8 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  AmbientWarmth, Card, GradientCta, PressableScale, Screen, fireHaptic, successHaptic,
-  useTabBarClearance,
+  AmbientWarmth, Card, CONTROL_H, GradientCta, PressableScale, Screen, fireHaptic,
+  successHaptic, useTabBarClearance,
 } from '../components/ui';
 import { derivedTitle, factLine, freshen, narrate, type Narration } from '../lib/assist';
 import { useAuth } from '../lib/auth';
@@ -509,9 +509,12 @@ const s = StyleSheet.create({
 
   total: { ...CAPTION, color: colors.textSecondary, marginTop: 10, marginBottom: 16 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // Same size class as the button it stands beside — see `CONTROL_H`. It
+  // was 44pt against the CTA's 52pt, which is small enough to look like a
+  // rendering fault and large enough to see.
   share: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 16, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    minHeight: CONTROL_H, paddingHorizontal: 16, paddingVertical: 10,
     borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
   },
   note: { ...CAPTION, color: colors.textTertiary, marginTop: 12 },
