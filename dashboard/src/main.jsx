@@ -5,6 +5,7 @@ import App from './App.jsx';
 import AuthGate from './auth.jsx';
 import AddPlace from './components/AddPlace.jsx';
 import CityHero from './components/CityHero.jsx';
+import Contributors from './components/Contributors.jsx';
 import PlaceList from './components/PlaceList.jsx';
 import PlaceEditor from './components/PlaceEditor.jsx';
 import ScanCity from './components/ScanCity.jsx';
@@ -22,6 +23,7 @@ const router = createHashRouter([
       { path: 'add', element: <AddPlace /> },
       { path: 'scan', element: <ScanCity /> },
       { path: 'city', element: <CityHero /> },
+      { path: 'analytics/contributors', element: <Contributors /> },
     ],
   },
 ]);
