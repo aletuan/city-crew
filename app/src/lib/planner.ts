@@ -135,6 +135,46 @@ const DAY_SLOTS: readonly Slot[] = [
   { part: 'afternoon', pref: ['views', 'cafes'] },
 ];
 
+/**
+ * How much of the shape the reader actually asked for.
+ *
+ * The shapes above are a ceiling, not an answer. The number of stops used
+ * to come from `when` alone — three for an evening, five for a day, always
+ * — and `when` says only *when*, never *what*. Ask for cafés on your own
+ * this evening and you were handed **three cafés**, seventy-five minutes
+ * each: getting on for four hours of sitting in cafés, which is a contest
+ * rather than a plan.
+ *
+ * That happened because a slot's `pref` is a nudge and the reader's
+ * categories are the hard filter — deliberately, so an evening asked for in
+ * cafés never has a restaurant wedged into it. The cost of that choice only
+ * shows at one category, where every slot collapses onto the same kind.
+ *
+ * So the count comes from the ask: **one stop per kind of place**, plus one
+ * for a day, which has the room. One kind is a destination — a coffee, a
+ * meal — and three kinds is an outing. The old ceiling still applies.
+ *
+ * A draft naming no category at all keeps the whole shape: nothing has been
+ * narrowed, so nothing should be.
+ *
+ * The three lenses still run, so one stop returns *three different cafés* —
+ * the best match, the well-known one, the quiet one. That is a better
+ * answer to "I want a coffee" than a crawl, and it needs no new code: the
+ * duplicate check already refuses a second plan that reuses a place.
+ *
+ * Slots are taken from the front rather than spread across the shape, and
+ * that is deliberate. `dress` packs stops back to back from `START_MIN`, so
+ * a two-stop day really is 09:00 and 10:35; picking the afternoon slot for
+ * the second would print `part: 'afternoon'` over a morning hour. The
+ * editor is where a reader moves it later.
+ */
+function slotsFor(draft: TripDraft): readonly Slot[] {
+  const shape = draft.when === 'day' ? DAY_SLOTS : EVENING_SLOTS;
+  if (!draft.categories.length) return shape;
+  const wanted = draft.categories.length + (draft.when === 'day' ? 1 : 0);
+  return shape.slice(0, Math.max(1, Math.min(shape.length, wanted)));
+}
+
 /** When each shape starts, minutes past midnight. */
 const START_MIN: Record<'day' | 'evening', number> = { day: 9 * 60, evening: 18 * 60 };
 
@@ -479,7 +519,7 @@ export function planTrips(
   draft: TripDraft, places: readonly Place[], cityId: string | null = null,
   opts: PlanOptions = {},
 ): TripPlan[] {
-  const slots = draft.when === 'day' ? DAY_SLOTS : EVENING_SLOTS;
+  const slots = slotsFor(draft);
   const rnd = mulberry32(opts.seed ?? 1);
 
   // Filtered once against the middle of the outing rather than per slot:
