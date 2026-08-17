@@ -199,47 +199,65 @@ export function EyebrowText({ children }: { children: React.ReactNode }) {
   return <Text style={s.eyebrow}>{children}</Text>;
 }
 
-export function Screen({ title, eyebrow, children, right, onBack }: {
+export function Screen({ title, subtitle, eyebrow, children, right, onBack }: {
   title: string;
+  /** One quiet line under the title. Only in the pushed-screen header —
+   *  a tab root's large title has an eyebrow above it instead, and a
+   *  screen with both is a screen with three headings. */
+  subtitle?: string;
   /** Small uppercase line above the title — e.g. today's date. */
   eyebrow?: React.ReactNode;
   children: React.ReactNode;
   right?: React.ReactNode;
   /**
-   * A way back, for a screen that was pushed onto something.
+   * A way back, for a screen that was pushed onto something — **and the
+   * switch between this component's two headers.**
    *
-   * On its own line above the title rather than beside it, which is what
-   * iOS does with a large title and is the only placement that survives a
-   * title wrapping to two lines — the header row aligns to `flex-end`, so
-   * a control beside a two-line title ends up level with its last line
-   * instead of at the top of the screen where a back control is looked for.
+   * With it, the header is compact: the control, the title beside it, a
+   * subtitle under that, and whatever `right` holds. Without it, the large
+   * title a tab root wears. That is not two styles to pick between, it is
+   * one rule `authUi` already states — *"these are screens for doing
+   * something and leaving, and iOS gives that shape an inline title; the
+   * large title is for places you stay in"* — which this component ignored
+   * when the control was first added and put on a line of its own above a
+   * 34pt title. It cost about 60pt at the top of every pushed screen.
    *
-   * The tab roots pass nothing and get no control, because there is
-   * nothing behind them. A pushed screen that omits this leaves the reader
-   * with the edge-swipe and no sign that it is there, which is how the
-   * plan editor shipped: three drafts on the screen before it and no way
-   * back to pick a different one.
+   * `titleDetail` at 26pt, not `title` at 34: beside a 44pt control, the
+   * larger one fits "Trips" and does not fit "River first, rooftop last".
+   * The row aligns to the top rather than centring, because the title is
+   * allowed to wrap and a control centred against two lines sits below
+   * where a back control is looked for.
+   *
+   * Tab roots pass nothing and get no control, because there is nothing
+   * behind them. A pushed screen that omits it leaves the reader with the
+   * edge-swipe and no sign that it is there.
    */
   onBack?: () => void;
 }) {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       {onBack ? (
-        <View style={s.backRow}>
+        <View style={s.headerInline}>
           <BackButton onPress={onBack} />
+          <View style={s.headerText}>
+            <Text style={s.titleInline} numberOfLines={2}>{title}</Text>
+            {subtitle ? <Text style={s.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+          </View>
+          {right}
         </View>
-      ) : null}
-      <View style={s.header}>
-        <View style={{ flex: 1 }}>
-          {eyebrow ? (
-            <View style={s.eyebrowRow}>
-              {typeof eyebrow === 'string' ? <EyebrowText>{eyebrow}</EyebrowText> : eyebrow}
-            </View>
-          ) : null}
-          <Text style={s.title}>{title}</Text>
+      ) : (
+        <View style={s.header}>
+          <View style={{ flex: 1 }}>
+            {eyebrow ? (
+              <View style={s.eyebrowRow}>
+                {typeof eyebrow === 'string' ? <EyebrowText>{eyebrow}</EyebrowText> : eyebrow}
+              </View>
+            ) : null}
+            <Text style={s.title}>{title}</Text>
+          </View>
+          {right}
         </View>
-        {right}
-      </View>
+      )}
       {children}
     </SafeAreaView>
   );
@@ -424,9 +442,18 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-end',
     paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
   },
-  // Its own line, and `alignItems: flex-start` so the control keeps its
-  // 44pt without stretching to whatever else lands on the row later.
-  backRow: { alignItems: 'flex-start', paddingHorizontal: space.page, paddingTop: 6 },
+  // `flex-start`, so the control and the `right` slot keep their 44pt and
+  // stay level with the title's first line however many lines it takes.
+  headerInline: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
+    paddingHorizontal: space.page, paddingTop: 6, paddingBottom: 14,
+  },
+  // `paddingTop` optically centres the title's first line against the 44pt
+  // control without pinning either to the other's height — the same trick
+  // `authUi`'s header uses, at this type size.
+  headerText: { flex: 1, gap: 2, paddingTop: 5 },
+  titleInline: { color: colors.text, ...type.titleDetail },
+  subtitle: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 18 },
   title: { color: colors.text, ...type.title },
   // The dateline is the one place a screen title gets colour: it says
   // "today", which is the app's whole premise, and it is short enough that

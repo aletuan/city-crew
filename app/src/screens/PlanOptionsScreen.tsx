@@ -138,6 +138,14 @@ export default function PlanOptionsScreen({ navigation, route }: {
   return (
     <Screen
       title={t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り')}
+      // Moved out of the body and into the header, which is where the
+      // reference design puts it and where it costs no scroll: it is one
+      // quiet line about the screen, not a paragraph on it.
+      subtitle={t(
+        'Distances checked · shortest hops first',
+        'Đã tính quãng đường · chặng ngắn lên trước',
+        '距離を確認済み · 移動の短い順',
+      )}
       onBack={() => navigation.goBack()}
     >
       <AmbientWarmth />
@@ -145,14 +153,6 @@ export default function PlanOptionsScreen({ navigation, route }: {
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={s.lede}>
-          {t(
-            'Drafted from your answers — tap one to fine-tune. Regenerate for another set.',
-            'Phác từ lựa chọn của bạn — chạm vào một cái để chỉnh. Bấm Tạo lại để xem bộ khác.',
-            'あなたの回答から下描きしました。ひとつ選んで調整できます。',
-          )}
-        </Text>
-
         {/* Named for what it is. The plans come out of a scoring function,
             not a model, and calling that AI would be a claim the code does
             not back. */}

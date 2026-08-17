@@ -137,24 +137,21 @@ export default function TripDetailScreen({ navigation, route }: {
   );
 
   return (
-    <Screen title={trip.title} onBack={() => navigation.goBack()}>
+    <Screen
+      title={trip.title}
+      subtitle={summaryLine([
+        day ? dateline(lang, day) : trip.day,
+        window,
+        city ? t(city.short_en, city.short_vi, city.short_ja) : null,
+        company ? t(company.en, company.vi, company.ja) : null,
+      ])}
+      onBack={() => navigation.goBack()}
+    >
       <AmbientWarmth />
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={s.metaRow}>
-          <Ionicons name="calendar-outline" size={14} color={colors.accent} />
-          <Text style={s.meta}>
-            {summaryLine([
-              day ? dateline(lang, day) : trip.day,
-              window,
-              city ? t(city.short_en, city.short_vi, city.short_ja) : null,
-              company ? t(company.en, company.vi, company.ja) : null,
-            ])}
-          </Text>
-        </View>
-
         <Card style={s.card}>
           {stops.map((stop, i) => (
             <View key={`${trip.id}-${i}`}>
@@ -246,11 +243,6 @@ export default function TripDetailScreen({ navigation, route }: {
 const CAPTION = { fontSize: 13, fontWeight: font.regular } as const;
 
 const s = StyleSheet.create({
-  metaRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginBottom: space.titleToContent,
-  },
-  meta: { ...CAPTION, color: colors.textSecondary, flex: 1 },
 
   card: { padding: space.cardPadding, marginBottom: space.cardGap },
   divider: {
