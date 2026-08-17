@@ -94,6 +94,25 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const [ask, setAsk] = useState('');
   const [asking, setAsking] = useState(false);
   const [note, setNote] = useState<null | 'filled' | 'empty' | 'failed'>(null);
+  /**
+   * Shut until asked for, and that is a correction rather than a preference.
+   *
+   * This box was four lines tall at the top of the screen, above the four
+   * questions it exists to *answer* — so the first thing a reader met was a
+   * blank field asking them to compose a sentence, and the easy questions
+   * underneath read as the fallback. It has the whole thing backwards: the
+   * box cannot express anything the chips cannot, since all it does is fill
+   * those same four fields in. Its only advantage is over typing versus
+   * tapping, and paying for that with the top of the screen, a network round
+   * trip and a model call is the wrong trade for the reader who just wants
+   * an evening.
+   *
+   * So it is one line until somebody wants it. Opened it stays open — a
+   * sentence that filled the chips in is worth still being able to see and
+   * edit, and a box that folded itself away after answering would look like
+   * it had thrown the sentence out.
+   */
+  const [askOpen, setAskOpen] = useState(false);
 
   const runAsk = async () => {
     if (asking || !ask.trim()) return;
@@ -154,31 +173,60 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
           )}
         </Text>
 
-        {/* Above the questions, because it is a way of answering them
-            rather than a fifth one. Deliberately not a chat: one line, one
-            button, and the answer appears as chips below rather than as a
-            reply — there is nothing here to have a conversation with. */}
+        {/* Shut, this is one line the eye passes over on its way to the
+            questions. That is the right weight for it: it is a way of
+            answering them, not a fifth question, and it can fill in nothing
+            the chips below cannot. */}
+        {!askOpen && (
+          <PressableScale
+            onPress={() => setAskOpen(true)}
+            containerStyle={s.askShut}
+            accessibilityRole="button"
+          >
+            <Ionicons name="sparkles-outline" size={16} color={colors.accent} />
+            <Text style={s.askShutText} numberOfLines={1}>
+              {t(
+                'or just tell me what you feel like',
+                'hoặc cứ kể tôi nghe bạn muốn gì',
+                'または、やりたいことを書く',
+              )}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={colors.textTertiary} />
+          </PressableScale>
+        )}
+
+        {/* Open, deliberately not a chat: one box, one button, and the answer
+            appears as chips below rather than as a reply — there is nothing
+            here to have a conversation with. */}
+        {askOpen && (
         <Card style={s.askCard}>
           <TextInput
             style={s.askInput}
             value={ask}
             onChangeText={(v) => { setAsk(v); setNote(null); }}
             placeholder={t(
-              'or tell me what you feel like — “Saturday evening, two of us, food then a drink”',
-              'hoặc kể tôi nghe bạn muốn gì — “tối thứ Bảy, hai đứa, ăn rồi kiếm chỗ uống”',
-              'または「土曜の夜、ふたりで、食事のあと一杯」のように書いてください',
+              '“Saturday evening, two of us, food then a drink”',
+              '“tối thứ Bảy, hai đứa, ăn rồi kiếm chỗ uống”',
+              '「土曜の夜、ふたりで、食事のあと一杯」',
             )}
             placeholderTextColor={colors.textTertiary}
             multiline
+            // Focused on open, because the tap that opened it was already the
+            // decision to write something. A box that appears and then waits
+            // for a second tap costs two gestures for one intention.
+            autoFocus
             returnKeyType="done"
             blurOnSubmit
             onSubmitEditing={() => void runAsk()}
             accessibilityLabel={t('Describe your day out', 'Kể về buổi đi chơi', 'おでかけを書く')}
           />
           <View style={s.askRow}>
-            {/* Says what pressing it does, not what it is. "Fill this in"
-                is a promise the screen can keep; "Ask AI" is a promise
-                about who is answering, which is not the reader's problem. */}
+            {/* Says what pressing it does, not what it is — "Ask AI" is a
+                promise about who is answering, which is not the reader's
+                problem. It used to say "Fill this in", which says the right
+                thing and says it ambiguously: sitting next to an empty box,
+                it reads as an instruction to the reader rather than as an
+                offer. Naming what gets filled removes the second reading. */}
             <PressableScale
               onPress={() => void runAsk()}
               disabled={asking || !ask.trim()}
@@ -191,7 +239,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
               <Text style={s.askBtnText}>
                 {asking
                   ? t('Reading…', 'Đang đọc…', '読み取り中…')
-                  : t('Fill this in', 'Điền giúp tôi', '入力する')}
+                  : t('Answer for me', 'Trả lời giúp tôi', '代わりに答える')}
               </Text>
             </PressableScale>
           </View>
@@ -227,6 +275,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
             </Text>
           )}
         </Card>
+        )}
 
         <Section title={t("Who's coming?", 'Đi cùng ai?', '誰と行きますか？')}>
           {COMPANY.map((c) => (
@@ -446,11 +495,38 @@ const s = StyleSheet.create({
   // No heading above it, unlike every question below. A heading would make
   // it a fifth question; without one it reads as an alternative to the four,
   // which is what it is.
-  askCard: { marginHorizontal: space.page, marginBottom: space.titleToContent },
+  // The shut state. No card, no fill, no border: this is a line of text with
+  // a glyph at each end, which is the weight an optional shortcut should
+  // carry next to the questions that are the actual interface. Given a card
+  // it would look like a fourth question again, only emptier.
+  askShut: {
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+    marginHorizontal: space.page, marginBottom: space.titleToContent,
+    paddingVertical: 6,
+  },
+  // `flex: 1` so the chevron stays pinned right whatever the sentence does
+  // in the reader's language — the Japanese line is half the width of the
+  // English one, and a chevron that floats to meet it reads as decoration.
+  askShutText: { flex: 1, color: colors.textSecondary, fontSize: 15 },
+
+  // `Card` carries no padding of its own — every card in this file supplies
+  // its own, and the ones next door do it on the inner rows rather than the
+  // card (`whenCard` is `paddingVertical: 4` with the rows holding the
+  // sides). This one has a single child, so it belongs here. Without it the
+  // text sat against the border on all four sides.
+  askCard: {
+    marginHorizontal: space.page, marginBottom: space.titleToContent,
+    padding: space.cardPadding,
+  },
   askInput: {
     color: colors.text, fontSize: 15.5, lineHeight: 22,
     // Two lines of room before it grows. A one-line box invites three words,
     // and three words is the input this cannot do anything useful with.
+    //
+    // `padding: 0` because the card above holds it. React Native gives a
+    // multiline TextInput its own default padding on Android and a different
+    // one on iOS, so leaving it would put the placeholder in two different
+    // places on the two platforms.
     minHeight: 48, padding: 0, textAlignVertical: 'top',
   },
   askRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 },
