@@ -35,10 +35,22 @@ export type Asked = {
   op: 'select' | 'insert' | 'update' | 'delete' | 'invoke';
   /** The row for a write, the body for an invoke, the column list for a read. */
   payload?: unknown;
+  /** `eq`, `in` and `gte` in the order they were chained. `gte` records the
+   *  operator alongside the value, because "created_at at least X" and
+   *  "created_at is X" are different questions and a test that could not
+   *  tell them apart would pass for either. */
   filters: [string, unknown][];
   or?: string;
   order?: unknown[];
   single?: boolean;
+  /** `maybeSingle`, which differs from `single` in what it does about no
+   *  rows — an error there, a null here. Recorded separately so a test can
+   *  assert the query asked the forgiving question. */
+  maybe?: boolean;
+  /** `upsert` rather than `insert`. The row is the same; what differs is
+   *  whether a second write from the same person is a conflict or a change
+   *  of mind, which for a one-row-per-person table is the whole design. */
+  upsert?: boolean;
 };
 
 export function fakeSupabase() {
@@ -62,12 +74,18 @@ export function fakeSupabase() {
       select: (cols?: unknown) => { asked.payload = cols; return b; },
       insert: (row: unknown) => { asked.op = 'insert'; asked.payload = row; return b; },
       update: (row: unknown) => { asked.op = 'update'; asked.payload = row; return b; },
+      // Recorded as an insert carrying a flag rather than as its own verb:
+      // what a test wants to assert about an upsert is the row, and every
+      // existing assertion for a write already reads `op: 'insert'`.
+      upsert: (row: unknown) => { asked.op = 'insert'; asked.payload = row; asked.upsert = true; return b; },
       delete: () => { asked.op = 'delete'; return b; },
       eq: (k: string, v: unknown) => { asked.filters.push([k, v]); return b; },
       in: (k: string, v: unknown) => { asked.filters.push([k, v]); return b; },
+      gte: (k: string, v: unknown) => { asked.filters.push([`${k}>=`, v]); return b; },
       or: (s: string) => { asked.or = s; return b; },
       order: (...a: unknown[]) => { asked.order = a; return b; },
       single: () => { asked.single = true; return b; },
+      maybeSingle: () => { asked.maybe = true; return b; },
       // The builder is the promise. supabase-js works the same way, which
       // is why `await supabase.from(...).select(...)` reads as it does.
       then: (ok: (r: Reply) => unknown, no?: (e: unknown) => unknown) => settle().then(ok, no),

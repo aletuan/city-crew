@@ -38,6 +38,7 @@ import { dateline } from '../lib/format';
 import { planGap } from '../lib/gaps';
 import { useI18n } from '../lib/i18n';
 import { planTrips } from '../lib/planner';
+import { usePlanProfile } from '../lib/tasteProfile';
 import {
   finished, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, summaryLine, type StepState,
 } from '../lib/sketch';
@@ -56,6 +57,7 @@ export default function SketchingScreen({ navigation, route }: {
   const p = route.params;
   const { data: places, loading } = usePlaces();
   const { city } = useCity();
+  const { taste, budgetVnd } = usePlanProfile();
 
   // The seed is fixed for this visit rather than read at render: a new
   // draw on every re-render would mean the plans the reader is shown are
@@ -71,8 +73,8 @@ export default function SketchingScreen({ navigation, route }: {
   // next screen — it is array arithmetic over a few hundred rows — and
   // running it here is what lets this screen report rather than perform.
   const plans = useMemo(
-    () => (loading ? [] : planTrips(draft, places, city?.id ?? null, { seed })),
-    [loading, places, city?.id, draft, seed],
+    () => (loading ? [] : planTrips(draft, places, city?.id ?? null, { seed, taste, budgetVnd })),
+    [loading, places, city?.id, draft, seed, taste, budgetVnd],
   );
   const gap = useMemo(() => planGap(p.categories, places), [p.categories, places]);
 

@@ -94,6 +94,15 @@ for f in "$ROOT"/supabase/migrations/*_trips.sql; do
 done
 run "$DB" -f "$HERE/trips_test.sql"
 
+# Preferences and history need the accounts and the places stub. Run after
+# trips because both blocks insert into the shared places stub and this one
+# clears only its own tables.
+echo "→ preferences"
+for f in "$ROOT"/supabase/migrations/*_preferences.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/preferences_test.sql"
+
 # Independent of everything above — it needs only the places stub — but it
 # runs last because it leaves the table as it found it and the checks
 # before it do not expect extra rows.

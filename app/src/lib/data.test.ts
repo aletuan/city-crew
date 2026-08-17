@@ -26,8 +26,9 @@ vi.mock('./supabase', async () => {
 vi.mock('./city', () => ({ useCity: () => ({ city: null }) }));
 
 import {
-  addPlaceToCollection, createCollection, deleteCollection,
-  removePlaceFromCollection, setCollectionPublic, updateCollection,
+  addPlaceToCollection, clearMyHistory, createCollection, deleteCollection,
+  fetchPassedOver, logPlaceEvent, NO_PREFERENCES,
+  removePlaceFromCollection, savePreferences, setCollectionPublic, updateCollection,
 } from './data';
 
 const fake = () => h.fake!;
@@ -219,5 +220,124 @@ describe('removePlaceFromCollection', () => {
   it('throws what the database said', async () => {
     fake().replies({ data: { id: 'c-id' } }, { data: { id: 'p-id' } }, { error: { message: 'not yours' } });
     await expect(removePlaceFromCollection('quan-ca-phe-cu', 'cong-caphe')).rejects.toThrow('not yours');
+  });
+});
+
+// ── preferences and history ──────────────────────────────────────────
+//
+// Two tables nothing else in this file touches, and the reason they are
+// worth pinning here is the same as everything above: the rule is invisible
+// at the call site. A missing preferences row is not an error, an event
+// nobody opted into must not be written, and "opened and not saved" is a
+// verdict over a sequence rather than a row you can look up.
+
+describe('savePreferences', () => {
+  it('upserts the one row this person is allowed to have', async () => {
+    await savePreferences('u-1', { categories: ['cafes'], budget_vnd: 400_000, history_on: true });
+    expect(fake().log[0]).toMatchObject({ table: 'preferences', op: 'insert', upsert: true });
+    expect(fake().log[0].payload).toMatchObject({
+      owner_id: 'u-1', categories: ['cafes'], budget_vnd: 400_000, history_on: true,
+    });
+  });
+
+  // Unstated is not zero, and it has to survive the round trip as itself.
+  it('writes an unstated budget as null, not as nothing', async () => {
+    await savePreferences('u-1', { categories: [], budget_vnd: null, history_on: false });
+    expect((fake().log[0].payload as { budget_vnd: unknown }).budget_vnd).toBeNull();
+  });
+
+  it('throws what the database said', async () => {
+    fake().replies({ error: { message: 'not yours' } });
+    await expect(savePreferences('u-1', NO_PREFERENCES)).rejects.toThrow('not yours');
+  });
+});
+
+describe('logPlaceEvent', () => {
+  it('records what happened, once it is allowed to', async () => {
+    fake().replies({ data: { id: 'p-id' } });
+    await logPlaceEvent('u-1', 'cong-caphe', 'open', 'hanoi', true);
+    expect(fake().log[1]).toMatchObject({ table: 'place_events', op: 'insert' });
+    expect(fake().log[1].payload).toMatchObject({
+      user_id: 'u-1', place_id: 'p-id', kind: 'open', city_id: 'hanoi',
+    });
+  });
+
+  // The opt-in, on the cheap side. The insert policy checks it too — that
+  // is the guarantee — but a client that asks anyway spends a round trip to
+  // be told no.
+  it('asks nothing at all when recording is off', async () => {
+    await logPlaceEvent('u-1', 'cong-caphe', 'open', 'hanoi', false);
+    await logPlaceEvent(null, 'cong-caphe', 'open', 'hanoi', true);
+    expect(fake().log).toHaveLength(0);
+  });
+
+  // Recording is a side effect of looking at a place. A screen where
+  // opening a café can show an error is the thing this must never become.
+  it('never throws when the request itself breaks', async () => {
+    fake().replies({ throws: new TypeError('Network request failed') });
+    await expect(logPlaceEvent('u-1', 'cong-caphe', 'open', null, true)).resolves.toBeUndefined();
+  });
+
+  it('writes nothing for a place the catalog no longer holds', async () => {
+    fake().replies({ data: null });
+    await expect(logPlaceEvent('u-1', 'gone', 'open', null, true)).resolves.toBeUndefined();
+    // One query — the slug lookup — and no event, because an event about a
+    // place that is not there is an event about nothing.
+    expect(fake().log).toHaveLength(1);
+    expect(fake().log[0]).toMatchObject({ table: 'places' });
+  });
+});
+
+describe('fetchPassedOver', () => {
+  const row = (slug: string, kind: string) => ({ kind, places: { slug } });
+
+  // The verdict is over a sequence, newest first, and the newest verb wins:
+  // somebody who opened a café, walked away, and saved it a week later has
+  // not passed it over.
+  it('lets a later save overrule an earlier walk-away', async () => {
+    fake().replies({ data: [row('a', 'save'), row('a', 'open')] });
+    expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual([]);
+  });
+
+  it('counts a place opened and left alone', async () => {
+    fake().replies({ data: [row('a', 'open'), row('b', 'save')] });
+    expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual(['a']);
+  });
+
+  it('counts a stop dropped out of a plan', async () => {
+    fake().replies({ data: [row('a', 'plan_drop'), row('b', 'plan_keep')] });
+    expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual(['a']);
+  });
+
+  // Read over a window, because a café passed over last March says nothing
+  // about this Saturday and nothing trims the table yet.
+  it('asks only for the recent half', async () => {
+    fake().replies({ data: [] });
+    await fetchPassedOver('u-1', '2026-08-01');
+    expect(fake().log[0].filters).toEqual([['user_id', 'u-1'], ['created_at>=', '2026-08-01']]);
+  });
+
+  it('ignores a row whose place has left the catalog', async () => {
+    fake().replies({ data: [{ kind: 'open', places: null }] });
+    expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual([]);
+  });
+
+  it('throws what the database said', async () => {
+    fake().replies({ error: { message: 'not yours' } });
+    await expect(fetchPassedOver('u-1', '2026-08-01')).rejects.toThrow('not yours');
+  });
+});
+
+describe('clearMyHistory', () => {
+  it('deletes every row this person left behind', async () => {
+    await clearMyHistory('u-1');
+    expect(fake().log[0]).toMatchObject({
+      table: 'place_events', op: 'delete', filters: [['user_id', 'u-1']],
+    });
+  });
+
+  it('throws what the database said', async () => {
+    fake().replies({ error: { message: 'nope' } });
+    await expect(clearMyHistory('u-1')).rejects.toThrow('nope');
   });
 });

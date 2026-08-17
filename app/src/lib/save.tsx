@@ -16,8 +16,10 @@ import AuthSheet from '../components/AuthSheet';
 import SaveSheet from '../components/SaveSheet';
 import { useAuth } from './auth';
 import {
-  addPlaceToCollection, Collection, holds, Place, removePlaceFromCollection, useMyCollections,
+  addPlaceToCollection, Collection, holds, logPlaceEvent, Place, removePlaceFromCollection,
+  useMyCollections, useMyPreferences,
 } from './data';
+import { useCity } from './city';
 import { useI18n } from './i18n';
 import { goTo } from '../nav';
 
@@ -49,6 +51,10 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const { session } = useAuth();
   const mine = useMyCollections(session?.user?.id);
+  const { city } = useCity();
+  // Only for the opt-in flag. The insert policy checks it too; this saves
+  // a round trip to be told no.
+  const historyOn = useMyPreferences(session?.user?.id).data.history_on;
   const [target, setTarget] = useState<Place | null>(null);
   const [authSheet, setAuthSheet] = useState(false);
 
@@ -75,8 +81,17 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
 
   const toggle = useCallback(async (c: Collection, place: Place) => {
     try {
-      if (holds(c, place.slug)) await removePlaceFromCollection(c.slug, place.slug);
+      const had = holds(c, place.slug);
+      if (had) await removePlaceFromCollection(c.slug, place.slug);
       else await addPlaceToCollection(c.slug, place.slug, c.collection_places.length);
+      // Noted here rather than in the sheet because this is the one place
+      // both verbs pass through, and only after the write succeeded — an
+      // event for a save that did not happen is worse than no event.
+      //
+      // Not `useNoteEvent`: that hook reads this provider, and a provider
+      // that imports the module importing it is a cycle Metro resolves by
+      // handing one of them an empty object at start-up.
+      void logPlaceEvent(session?.user?.id, place.slug, had ? 'unsave' : 'save', city?.id ?? null, historyOn);
       mine.reload();
     } catch (e) {
       Alert.alert(
@@ -84,7 +99,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         e instanceof Error ? e.message : String(e),
       );
     }
-  }, [mine.reload, t]);
+  }, [mine.reload, t, session, city?.id, historyOn]);
 
   const value = useMemo<Save>(() => ({
     save,

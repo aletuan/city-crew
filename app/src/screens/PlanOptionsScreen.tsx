@@ -37,6 +37,7 @@ import { useI18n } from '../lib/i18n';
 import { fmtDistance } from '../lib/geo';
 import { membersOf } from '../lib/place';
 import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
+import { usePlanProfile } from '../lib/tasteProfile';
 import { useSave } from '../lib/save';
 import { summaryLine } from '../lib/sketch';
 import { COMPANY, type TripDraft } from '../lib/trip';
@@ -85,6 +86,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
   const { data: places } = usePlaces();
   const { city } = useCity();
   const { mine } = useSave();
+  const { taste, budgetVnd } = usePlanProfile();
 
   const [seed, setSeed] = useState(p.seed);
   // Everything already offered, so Regenerate moves rather than rolling
@@ -108,8 +110,8 @@ export default function PlanOptionsScreen({ navigation, route }: {
   }, [p.from, mine.data, places]);
 
   const plans = useMemo(
-    () => planTrips(draft, places, city?.id ?? null, { seed, pinned, avoid: shown }),
-    [draft, places, city?.id, seed, pinned, shown],
+    () => planTrips(draft, places, city?.id ?? null, { seed, pinned, avoid: shown, taste, budgetVnd }),
+    [draft, places, city?.id, seed, pinned, shown, taste, budgetVnd],
   );
 
   const company = COMPANY.find((c) => c.key === p.company);
@@ -174,7 +176,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
             plan={plan}
             best={i === 0}
             onPress={() => navigation.navigate('PlanEdit', {
-              ...p, seed, lens: plan.lens, title: plan.title ?? undefined,
+              ...p, seed, lens: plan.lens, title: plan.title ?? undefined, avoid: shown,
             })}
           />
         ))}

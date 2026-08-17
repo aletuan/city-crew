@@ -331,3 +331,63 @@ describe('planTrips with a taste profile', () => {
     }
   });
 });
+
+describe('planTrips with a stated budget', () => {
+  // Same category, same rating, same everything but the bill. Without a
+  // budget the draw is free to take either; with one it should lean.
+  const cheap = Array.from({ length: 6 }, (_, i) =>
+    place({ slug: `cheap-${i}`, categories: ['eats'], price_vnd: 40_000, rating: 4.5, rating_count: 500 }));
+  const dear = Array.from({ length: 6 }, (_, i) =>
+    place({ slug: `dear-${i}`, categories: ['eats'], price_vnd: 900_000, rating: 4.5, rating_count: 500 }));
+  const MIXED = [...cheap, ...dear];
+  const FOOD: TripDraft = { ...EVENING, categories: ['eats'] };
+
+  const spend = (ps: ReturnType<typeof planTrips>) =>
+    ps.flatMap((p) => p.stops).reduce((sum, s) => sum + (s.place.price_vnd ?? 0), 0);
+
+  it('spends less when a budget was stated than when none was', () => {
+    const tight = planTrips(FOOD, MIXED, 'hanoi', { seed: 1, budgetVnd: 150_000 });
+    const open = planTrips(FOOD, MIXED, 'hanoi', { seed: 1 });
+    expect(spend(tight)).toBeLessThan(spend(open));
+  });
+
+  // The same promise taste makes: a budget reorders what was asked for, it
+  // does not answer a different question. Asked for food with a low budget
+  // and only expensive food in the catalog, the answer is expensive food.
+  it('never turns a stated budget into a different day out', () => {
+    const plans = planTrips(FOOD, dear, 'hanoi', { seed: 2, budgetVnd: 100_000 });
+    expect(plans.length).toBeGreaterThan(0);
+    for (const p of plans) {
+      for (const s of p.stops) expect(s.place.categories).toContain('eats');
+    }
+  });
+
+  // Not said, and no budget at all, must be the same call — not merely the
+  // same numbers. Zero would divide into shares of nothing and put every
+  // priced place infinitely over.
+  it('treats an unstated budget and a zero one as no budget', () => {
+    const slugs = (ps: ReturnType<typeof planTrips>) => ps.flatMap((p) => p.stops.map((s) => s.place.slug));
+    const bare = planTrips(FOOD, MIXED, 'hanoi', { seed: 3 });
+    for (const budgetVnd of [null, undefined, 0]) {
+      expect(slugs(planTrips(FOOD, MIXED, 'hanoi', { seed: 3, budgetVnd }))).toEqual(slugs(bare));
+    }
+  });
+
+  // A price the desk has not filled in is not a price of zero anywhere else
+  // in this file, but against a budget it has to behave like one: the
+  // alternative is charging a place for a number nobody wrote down.
+  it('does not charge a place whose price the catalog does not know', () => {
+    const unpriced = Array.from({ length: 6 }, (_, i) =>
+      place({ slug: `unknown-${i}`, categories: ['eats'], price_vnd: null, rating: 4.5, rating_count: 500 }));
+    const plans = planTrips(FOOD, [...unpriced, ...dear], 'hanoi', { seed: 5, budgetVnd: 150_000 });
+    const slugs = plans.flatMap((pl) => pl.stops.map((st) => st.place.slug));
+    expect(slugs.some((slug) => slug.startsWith('unknown-'))).toBe(true);
+  });
+
+  it('stays deterministic with a budget in play', () => {
+    const once = planTrips(FOOD, MIXED, 'hanoi', { seed: 4, budgetVnd: 200_000 });
+    const twice = planTrips(FOOD, MIXED, 'hanoi', { seed: 4, budgetVnd: 200_000 });
+    expect(once.flatMap((p) => p.stops.map((s) => s.place.slug)))
+      .toEqual(twice.flatMap((p) => p.stops.map((s) => s.place.slug)));
+  });
+});

@@ -86,7 +86,14 @@ export type TripPlan = {
 export type Taste = { affinity: (p: Place) => number };
 
 export type PlanOptions = {
-  taste?: Taste;
+  /** Null as well as undefined, so a screen holding "this reader has no
+   *  profile" can pass it straight through instead of converting a null
+   *  that means exactly what the absent value means. */
+  taste?: Taste | null;
+  /** What the reader said an outing is worth to them, per person, in dong
+   *  — `preferences.budget_vnd`. Null and undefined both mean "not said",
+   *  which is not the same as no budget and must not become zero. */
+  budgetVnd?: number | null;
   /** Varies the draw. Same seed, same three plans. */
   seed?: number;
   /** Places from the collections the reader chose to build from. Hard
@@ -153,6 +160,23 @@ const LENSES: readonly Lens[] = [
  *  weight on the answers they just gave: taste breaks ties and orders,
  *  it does not overrule the question they were asked a moment ago. */
 const TASTE_WEIGHT = 2;
+
+/**
+ * Charged against a place that costs more than its share of a stated
+ * budget, per whole share it runs over, capped.
+ *
+ * A budget divides by the number of stops rather than being carried as a
+ * running total, and that is a deliberate simplification: a running total
+ * makes the last slot's choice depend on the first three, which would put
+ * the plan's shape at the mercy of the order the slots happen to be
+ * walked. Per-stop shares reorder the candidates for every slot alike.
+ *
+ * The cap sits below the 3 a category match is worth, so a stated budget
+ * reorders what the reader asked for and never replaces it. Somebody who
+ * asked for cafés and set a low budget gets the cheaper cafés — not a park.
+ */
+const BUDGET_PENALTY = 2;
+const BUDGET_PENALTY_MAX = 2.5;
 
 /** How far apart two scores may be and still count as equally good. Set
  *  against the scale of the terms above — a rating is worth up to 5, a
@@ -272,6 +296,8 @@ function dropReason(p: Place, draft: TripDraft, cityId: string | null, when: num
 function scoreOf(
   p: Place, slot: Slot, draft: TripDraft, lens: Lens,
   prev: Place | null, opts: PlanOptions, used: ReadonlySet<string>,
+  /** One stop's share of a stated budget, or null when none was stated. */
+  share: number | null,
 ): number {
   const cats = categoriesOf(p);
   let s = overlap(cats, draft.categories) * 3
@@ -284,6 +310,15 @@ function scoreOf(
   if (draft.district && p.neighborhood_en?.trim() === draft.district) s += DISTRICT_BONUS;
 
   if (opts.taste) s += opts.taste.affinity(p) * TASTE_WEIGHT;
+
+  if (share) {
+    // Only the overrun is charged. A place at or under its share is not
+    // rewarded for being cheap — `lowkey` already leans that way, and
+    // paying twice for the same fact would make a stated budget quietly
+    // turn every plan into the lowkey one.
+    const over = Math.max(0, (p.price_vnd ?? 0) - share) / share;
+    s -= Math.min(BUDGET_PENALTY_MAX, over * BUDGET_PENALTY);
+  }
 
   if (prev && prev.lat != null && prev.lng != null && p.lat != null && p.lng != null) {
     s -= Math.min(KM_PENALTY_MAX, distanceKm(prev.lat, prev.lng, p.lat, p.lng) * KM_PENALTY);
@@ -353,6 +388,10 @@ function buildPlan(
   const pinnedBudget = Math.max(0, slots.length - 1);
   let pinnedUsed = 0;
 
+  // A budget nobody stated, and a budget of zero, are both "no share to
+  // divide" — zero would make every priced place infinitely over.
+  const share = opts.budgetVnd ? opts.budgetVnd / slots.length : null;
+
   for (let i = 0; i < slots.length; i++) {
     const slot = slots[i];
     const prev = out.length ? out[out.length - 1] : null;
@@ -363,13 +402,13 @@ function buildPlan(
     let chosen: Place | null = null;
     if (pinnedUsed < pinnedBudget) {
       const cands = pinnedOk.filter(fits)
-        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, opts, used) }));
+        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, opts, used, share) }));
       chosen = draw(cands, rnd);
       if (chosen) pinnedUsed++;
     }
     if (!chosen) {
       const cands = pool.filter(fits)
-        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, opts, used) }));
+        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, opts, used, share) }));
       chosen = draw(cands, rnd);
     }
 

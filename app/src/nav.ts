@@ -55,8 +55,13 @@ export type RootStackParamList = {
   PlanOptions: PlanAsk & { seed: number };
   /** One of those drafts, opened for nudging. Named by the lens that
    *  produced it rather than by an index, so the plan the reader tapped is
-   *  the plan they get even if a thin catalog returned fewer than three. */
-  PlanEdit: PlanAsk & { seed: number; lens: string; title?: string };
+   *  the plan they get even if a thin catalog returned fewer than three.
+   *
+   *  `avoid` rides along for the same reason the seed does: the next screen
+   *  rebuilds the plan from pure inputs, and after Regenerate the slugs
+   *  already shown are one of those inputs. Without it the rebuild is a
+   *  different draw wearing the same lens. */
+  PlanEdit: PlanAsk & { seed: number; lens: string; title?: string; avoid?: string[] };
   ProfileHome: undefined;
   SignIn: undefined;
   SignUp: undefined;

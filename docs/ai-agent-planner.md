@@ -145,8 +145,8 @@ Với `day`, slot lấy từ nhóm `morning` + `afternoon` của `ITI_SLOTS`; v�
 
 **Ngân sách: bỏ pass swap ở Phase 1.** Plan chỉ *báo* chi phí chứ không *ép*
 theo một con số nào — trung thực hơn là bịa ra một trần mặc định rồi cắt bỏ
-những chỗ tốt vì nó. Đến Phase 4, `profiles.pref_budget_vnd` trở thành trần
-thật và pass swap được bật lại.
+những chỗ tốt vì nó. Đến Phase 4, `preferences.budget_vnd` bật lại phần này —
+dưới dạng phạt mềm khi chấm điểm chứ không phải pass hoán đổi; xem mục Phase 4.
 
 ### Collection đã lưu là ưu tiên cứng
 
@@ -502,19 +502,51 @@ suy ra được điều đó.
 Profile, mặc định tắt; RLS chỉ chủ đọc; có nút "Xoá lịch sử của tôi" xoá sạch;
 không ghi khi chưa đăng nhập. Thiếu một trong bốn thì chưa ship.
 
-### Preferences tường minh
+### Preferences tường minh — `20260817120000_preferences.sql`
 
-Thêm cột vào `profiles` thay vì bảng mới — `profiles.interests` đang là free
-text không ai đọc, nên đây cũng là dịp cho nó một hình dạng dùng được.
+**Đi ngược bản thiết kế: bảng riêng, không phải cột trên `profiles`.**
+`profiles` có policy `for select using (true)` — ai cũng đọc được, vì hồ sơ có
+byline công khai. Thêm `pref_budget_vnd` vào đó là **công bố ngân sách của mọi
+người**. Không phải chuyện lý thuyết: đó chính là câu SQL bản thiết kế này viết
+ra. Nên preferences nằm trong bảng riêng, RLS chủ-sở-hữu-mới-thấy trên cả bốn
+động từ.
 
 ```sql
-alter table public.profiles
-  add column pref_categories text[] not null default '{}',
-  add column pref_budget_vnd int,
-  add column pref_walk_max_km numeric not null default 1.5,
-  add column pref_pace text not null default 'normal'
-    check (pref_pace in ('relaxed','normal','packed'));
+create table public.preferences (
+  owner_id uuid primary key references auth.users(id) on delete cascade,
+  categories text[] not null default '{}',
+  budget_vnd int,
+  history_on boolean not null default false,
+  updated_at timestamptz not null default now()
+);
 ```
+
+**Bỏ `walk_max_km` và `pace`.** Không hàm nào đọc chúng, và repo này không nuôi
+state không ai đọc — cùng lý do `fetch-place` đếm cap 20/ngày từ chính các row.
+Bao giờ có người đọc thì thêm, một dòng `alter table`.
+
+`budget_vnd` giữ lại vì nó **được đọc thật**: `PlanOptions.budgetVnd` chia
+thành hạn mức mỗi stop và phạt phần vượt, cap `BUDGET_PENALTY_MAX = 2.5` — thấp
+hơn 3 điểm của một category khớp, nên ngân sách xếp lại thứ tự trong cái người
+ta đã hỏi chứ không thay câu hỏi. Người bảo "cà phê, ngân sách thấp" nhận cà
+phê rẻ, không nhận công viên.
+
+`history_on` là công tắc opt-in, và nó **nằm trong chính policy** của
+`place_events` chứ không phải trong lời hứa của client:
+
+```sql
+create policy "owners insert their events" on public.place_events
+  for insert with check (
+    user_id = auth.uid()
+    and exists (
+      select 1 from public.preferences p
+      where p.owner_id = auth.uid() and p.history_on
+    )
+  );
+```
+
+Policy `delete` **không** hỏi `history_on`: tắt ghi mà không xoá được cái đã ghi
+là đúng cái bẫy cả bảng này phải tránh.
 
 ### pgvector — khuyến nghị chưa làm
 
@@ -561,11 +593,28 @@ suy-ra-thay-vì-lưu của repo.
 
 | Tín hiệu | Nguồn | Trọng số | Có từ phase |
 |---|---|---|---|
-| Preferences khai báo | `profiles.pref_*` | 4 | 4 |
+| Preferences khai báo | `preferences.categories` | 4 | 4 |
 | Collections đã lưu | `SaveProvider.mine` | 3 | 1 (đã có sẵn) |
 | Places đã tự suggest | `places.submitted_by = uid` | 2 | 1 (đã có sẵn) |
-| Mở detail rồi không lưu | `place_events` | −1 | 4 |
+| Mở detail rồi không lưu | `place_events` | −1 điểm tròn, **trục riêng** | 4 |
 | Vị trí, thành phố | `useMyPosition`, `CityProvider` | pass khoảng cách | 1 (đã có sẵn) |
+
+**Đi ngược bản thiết kế lần hai: bốn tín hiệu không nằm trên một thang.** Ba
+tín hiệu đầu là bằng chứng về một *category* — yếu, chung, đúng với nhiều chỗ.
+Tín hiệu thứ tư là bằng chứng về *đúng chỗ này*, và nó không yếu chút nào: người
+mở một quán cà phê rồi không lưu đã nói ra một điều rất cụ thể. Đặt chung một
+thang thì tín hiệu mạnh nhất lại mang con số nhỏ nhất. Nên: ba tín hiệu category
+chuẩn hoá về [0, 1] (chia cho tổng trọng số 9), còn một chỗ bị bỏ qua trừ thẳng
+một điểm tròn.
+
+Hệ quả là `affinity` **luôn nằm trong [−1, 1]**, và đó là điều kiện để `W = 2`
+có nghĩa. Trả về một tổng không chặn thì hệ số trong `planner.ts` chỉ là trang
+trí và lời hứa "taste không lấn wizard" không đúng với cái gì cả.
+
+`tasteFrom` trả **null** khi không có tín hiệu nào — không phải affinity 0 cho
+mọi chỗ. `planTrips` bỏ hẳn số hạng đó khi taste null, nên người chưa có lịch sử
+nhận **đúng** những plan app làm ra trước khi file này tồn tại; một `Taste` toàn
+số 0 cho ra cùng con số nhưng lại nói rằng hồ sơ đã được tra.
 
 Đưa vào điểm số như một số hạng cộng có hệ số `W`:
 
@@ -711,13 +760,32 @@ giờ mở cửa, khoảng cách và catalog.
 các chip người dùng đã bấm cũng là câu trả lời — xoá chúng đi là cái ô ghi đè
 lên việc của họ.
 
-### Phase 4 — Hiểu bạn
+### Phase 4 — Hiểu bạn ✅ xong
 
-- Migration preferences + `place_events`
-- Thêm `app/src/lib/taste.ts` + test; `planner.ts` nhận `taste`
-- Sửa `EditProfileScreen`
+- `20260817120000_preferences.sql` (`preferences` + `place_events`) +
+  `supabase/tests/preferences_test.sql`, nối vào `run.sh`
+- `app/src/lib/taste.ts` + 16 test; `planner.ts` nhận `taste` và `budgetVnd`
+- `app/src/lib/tasteProfile.tsx` — gom bốn tín hiệu, và ghi tín hiệu thứ tư
+- `data.ts`: `useMyPreferences`, `savePreferences`, `logPlaceEvent`,
+  `fetchPassedOver`, `clearMyHistory`
+- `EditProfileScreen`: chip category, ngân sách theo dải, công tắc lịch sử
+  (mặc định tắt) và nút "Xoá lịch sử của tôi"
+- Ghi `place_events` tại ba chỗ: mở `PlaceDetailScreen` → `open`; sheet lưu →
+  `save`/`unsave`; lưu chuyến đi → `plan_keep` cho chỗ giữ lại, `plan_drop` cho
+  chỗ bị bỏ ra
 - **Xong khi:** hai người dùng khác hồ sơ, cùng một `TripDraft`, ra hai plan
   khác nhau — và cả hai đều tôn trọng câu trả lời trong wizard.
+  → `taste.test.ts` khẳng định cả hai vế: hai hồ sơ ra hai plan khác nhau và
+  mỗi plan nghiêng đúng hướng hồ sơ của nó; đồng thời một hồ sơ gào lên
+  "nightlife" vẫn không lấy nổi một quán bar nào vào một tối người ta hỏi ăn.
+
+**Ngân sách:** pass swap ở mục Phase 1 nói "đến Phase 4 bật lại" — đã bật, nhưng
+dưới dạng **phạt mềm khi chấm điểm** chứ không phải pass hoán đổi sau khi chọn.
+Lý do: pass swap chạy sau nên phải tháo ra một chỗ đã được chọn vì lý do khác
+(giờ mở cửa, khoảng cách, collection ghim), còn một số hạng trong `scoreOf`
+xếp lại thứ tự trước khi bất cứ gì được chọn. Ngân sách chia đều theo số stop
+chứ không cộng dồn: cộng dồn khiến lựa chọn của slot cuối phụ thuộc ba slot
+đầu, tức hình dạng plan phụ thuộc thứ tự duyệt slot.
 
 ### Phase 5 — Tinh chỉnh
 

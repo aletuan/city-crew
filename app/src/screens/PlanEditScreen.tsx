@@ -42,6 +42,9 @@ import {
   legsOfPlan, move, NUDGE_MIN, nudge, outOfOrder, remove, windowOf, type Editable,
 } from '../lib/itinerary';
 import { planTrips } from '../lib/planner';
+import { membersOf } from '../lib/place';
+import { useSave } from '../lib/save';
+import { useNoteEvent, usePlanProfile } from '../lib/tasteProfile';
 import { summaryLine } from '../lib/sketch';
 import { COMPANY, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
@@ -68,6 +71,9 @@ export default function PlanEditScreen({ navigation, route }: {
   const { data: places } = usePlaces();
   const { city } = useCity();
   const { session } = useAuth();
+  const { mine } = useSave();
+  const { taste, budgetVnd } = usePlanProfile();
+  const note = useNoteEvent();
 
   const day = clampDay(p.date || todayISO());
   const draft: TripDraft = useMemo(() => ({
@@ -75,14 +81,31 @@ export default function PlanEditScreen({ navigation, route }: {
     date: day, when: p.when, from: p.from ?? [],
   }), [p.categories, p.district, day, p.when, p.from]);
 
+  // Resolved here the way the options screen resolves them, because the
+  // rebuild below is only faithful if it gets the same inputs. The planner
+  // still has no business knowing what a collection is.
+  const pinned = useMemo(() => {
+    if (!p.from?.length) return [];
+    const wanted = new Set(p.from);
+    return mine.data.filter((c) => wanted.has(c.slug)).flatMap((c) => membersOf(c, places));
+  }, [p.from, mine.data, places]);
+
   // Rebuilt from the same pure inputs the options screen used, so the plan
   // the reader tapped is the plan they get. Serialising stops through
   // navigation would work too and would drift the first time either screen
   // changed what a stop holds.
+  //
+  // "The same inputs" has to mean all of them. This once passed the seed
+  // alone, which quietly dropped two: a day seeded from a collection lost
+  // its pinned places on the way here, and a plan reached through
+  // Regenerate was redrawn without the slugs that draw had been told to
+  // avoid — so the reader tapped one evening and opened another.
   const picked = useMemo(() => {
-    const plans = planTrips(draft, places, city?.id ?? null, { seed: p.seed });
+    const plans = planTrips(draft, places, city?.id ?? null, {
+      seed: p.seed, pinned, avoid: p.avoid, taste, budgetVnd,
+    });
     return plans.find((pl) => pl.lens === p.lens) ?? plans[0] ?? null;
-  }, [draft, places, city?.id, p.seed, p.lens]);
+  }, [draft, places, city?.id, p.seed, p.lens, p.avoid, pinned, taste, budgetVnd]);
 
   const [stops, setStops] = useState<Editable<Place>[] | null>(null);
   const [saving, setSaving] = useState(false);
@@ -184,6 +207,15 @@ export default function PlanEditScreen({ navigation, route }: {
           whyLang: words.why.has(s.place.slug) ? lang : null,
         })),
       });
+      // The verdict the reader just delivered on a drafted evening, which
+      // is the clearest signal in the app: these ones they kept, that one
+      // they took out. Noted after the write, because a trip that failed to
+      // save is not a decision about anything.
+      const kept = new Set(current.map((st) => st.place.slug));
+      for (const slug of kept) note(slug, 'plan_keep');
+      for (const st of picked?.stops ?? []) {
+        if (!kept.has(st.place.slug)) note(st.place.slug, 'plan_drop');
+      }
       successHaptic();
       // Reset rather than push: the trip is saved, and leaving the editor
       // on the stack means Back lands in a draft of something that already
