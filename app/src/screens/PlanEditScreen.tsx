@@ -26,8 +26,8 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  AmbientWarmth, Card, GradientCta, PressableScale, Screen, fireHaptic, successHaptic,
-  useTabBarClearance,
+  AmbientWarmth, Card, CONTROL_H, GradientCta, PressableScale, Screen, fireHaptic,
+  successHaptic, useTabBarClearance,
 } from '../components/ui';
 import { derivedTitle, factLine, freshen, narrate, type Narration } from '../lib/assist';
 import { useAuth } from '../lib/auth';
@@ -252,7 +252,7 @@ export default function PlanEditScreen({ navigation, route }: {
 
   if (!picked) {
     return (
-      <Screen title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}>
+      <Screen title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')} onBack={() => navigation.goBack()}>
         <Card style={s.card}><Text style={s.body}>
           {t('That plan is no longer available.', 'Phương án đó không còn nữa.', 'そのプランはもう利用できません。')}
         </Text></Card>
@@ -261,7 +261,7 @@ export default function PlanEditScreen({ navigation, route }: {
   }
 
   return (
-    <Screen title={title}>
+    <Screen title={title} onBack={() => navigation.goBack()}>
       <AmbientWarmth />
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
@@ -281,7 +281,7 @@ export default function PlanEditScreen({ navigation, route }: {
             </LinearGradient>
           </View>
           <Text style={s.crewText}>{t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ')}</Text>
-          <PressableScale onPress={() => mock(t('Invite', 'Mời thêm', '招待'))} containerStyle={s.ghost}>
+          <PressableScale onPress={() => mock(t('Invite', 'Mời thêm', '招待'))} style={s.ghost}>
             <Ionicons name="person-add-outline" size={14} color={colors.textSecondary} />
             <Text style={s.ghostText}>{t('Invite', 'Mời', '招待')}</Text>
           </PressableScale>
@@ -407,17 +407,23 @@ export default function PlanEditScreen({ navigation, route }: {
         </Text>
 
         <View style={s.actions}>
-          <GradientCta
-            icon="checkmark"
-            wide
-            label={saving
-              ? t('Saving…', 'Đang lưu…', '保存中…')
-              : t('Save to Trips', 'Lưu vào Chuyến đi', '旅程に保存')}
-            onPress={() => { if (!saving) void onSave(); }}
-          />
+          {/* Wrapped in the flex rather than given it: `wide` puts
+              `alignSelf: 'stretch'` on the button, which in a *row* stretches
+              its height and not its width. The wrapper takes what the row has
+              left, `wide` fills it, and Share keeps its own size. */}
+          <View style={{ flex: 1 }}>
+            <GradientCta
+              icon="checkmark"
+              wide
+              label={saving
+                ? t('Saving…', 'Đang lưu…', '保存中…')
+                : t('Save to Trips', 'Lưu vào Chuyến đi', '旅程に保存')}
+              onPress={() => { if (!saving) void onSave(); }}
+            />
+          </View>
           <PressableScale
             onPress={() => mock(t('Share', 'Chia sẻ', '共有'))}
-            containerStyle={s.share}
+            style={s.share}
           >
             <Ionicons name="paper-plane-outline" size={16} color={colors.textSecondary} />
             <Text style={s.ghostText}>{t('Share', 'Chia sẻ', '共有')}</Text>
@@ -503,9 +509,12 @@ const s = StyleSheet.create({
 
   total: { ...CAPTION, color: colors.textSecondary, marginTop: 10, marginBottom: 16 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // Same size class as the button it stands beside — see `CONTROL_H`. It
+  // was 44pt against the CTA's 52pt, which is small enough to look like a
+  // rendering fault and large enough to see.
   share: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 16, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    minHeight: CONTROL_H, paddingHorizontal: 16, paddingVertical: 10,
     borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
   },
   note: { ...CAPTION, color: colors.textTertiary, marginTop: 12 },

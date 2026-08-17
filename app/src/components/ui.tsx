@@ -19,6 +19,25 @@ import { colors, display, font, gradAI, radius, space, type } from '../theme';
 // scrolls beneath it, which means screens must clear it themselves.
 export const TAB_BAR_HEIGHT = 62;
 
+/**
+ * How tall a full-size button is, everywhere.
+ *
+ * Shared because buttons of this class sit next to each other and the eye
+ * reads a few points of difference as a mistake — which it was: the primary
+ * CTA came out 50pt inline and 52pt when `wide`, the pill beside it 44pt,
+ * and the auth form's button ~52pt, all from paddings tuned separately
+ * around glyphs and labels of different sizes. Setting the height directly
+ * takes the guesswork out: a button is this tall whatever is inside it.
+ *
+ * `minHeight` rather than `height`, so a label that wraps — a translation
+ * longer than its English — grows the button instead of being clipped by it.
+ *
+ * This is the size class for buttons that carry an action on their own.
+ * Chips, badges, ghost pills and icon wells are deliberately smaller and
+ * are not this.
+ */
+export const CONTROL_H = 52;
+
 /** Bottom padding that clears the translucent tab bar plus breathing room. */
 export function useTabBarClearance(extra = 18): number {
   const insets = useSafeAreaInsets();
@@ -45,6 +64,19 @@ export function successHaptic() {
 export function PressableScale({ children, style, containerStyle, haptic = 'light', scaleTo = 0.97, onPress, onPressIn, onPressOut, ...rest }: PressableProps & {
   haptic?: HapticKind;
   scaleTo?: number;
+  /**
+   * Styles for the view the children actually live in — **everything about
+   * how this element lays its own contents out and what it looks like**:
+   * `flexDirection`, `gap`, `padding`, `backgroundColor`, `borderRadius`.
+   *
+   * This is the half that gets mixed up, and it fails in a way that looks
+   * like a styling accident rather than a wiring one. Put `flexDirection:
+   * 'row'` in `containerStyle` and it lands on the Pressable, whose only
+   * child is the animated view — so the row has one item and lays it out
+   * perfectly, while the icon and label inside stack in a column. Four
+   * buttons in this app shipped with their glyph sitting on top of their
+   * word for exactly this reason.
+   */
   style?: StyleProp<ViewStyle>;
   /**
    * Styles that must stay on the outer Pressable rather than the animated
@@ -155,15 +187,36 @@ export function EyebrowText({ children }: { children: React.ReactNode }) {
   return <Text style={s.eyebrow}>{children}</Text>;
 }
 
-export function Screen({ title, eyebrow, children, right }: {
+export function Screen({ title, eyebrow, children, right, onBack }: {
   title: string;
   /** Small uppercase line above the title — e.g. today's date. */
   eyebrow?: React.ReactNode;
   children: React.ReactNode;
   right?: React.ReactNode;
+  /**
+   * A way back, for a screen that was pushed onto something.
+   *
+   * On its own line above the title rather than beside it, which is what
+   * iOS does with a large title and is the only placement that survives a
+   * title wrapping to two lines — the header row aligns to `flex-end`, so
+   * a control beside a two-line title ends up level with its last line
+   * instead of at the top of the screen where a back control is looked for.
+   *
+   * The tab roots pass nothing and get no control, because there is
+   * nothing behind them. A pushed screen that omits this leaves the reader
+   * with the edge-swipe and no sign that it is there, which is how the
+   * plan editor shipped: three drafts on the screen before it and no way
+   * back to pick a different one.
+   */
+  onBack?: () => void;
 }) {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
+      {onBack ? (
+        <View style={s.backRow}>
+          <BackButton onPress={onBack} />
+        </View>
+      ) : null}
       <View style={s.header}>
         <View style={{ flex: 1 }}>
           {eyebrow ? (
@@ -297,7 +350,7 @@ export function GradientCta({ icon, label, onPress, wide }: {
 }) {
   return (
     <PressableScale onPress={onPress} accessibilityRole="button" containerStyle={wide ? { alignSelf: 'stretch' } : undefined}>
-      <LinearGradient {...gradAI} style={[s.cta, wide && s.ctaWide]}>
+      <LinearGradient {...gradAI} style={s.cta}>
         <Ionicons name={icon} size={20} color={colors.accentInk} />
         <Text style={s.ctaText}>{label}</Text>
       </LinearGradient>
@@ -359,6 +412,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-end',
     paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
   },
+  // Its own line, and `alignItems: flex-start` so the control keeps its
+  // 44pt without stretching to whatever else lands on the row later.
+  backRow: { alignItems: 'flex-start', paddingHorizontal: space.page, paddingTop: 6 },
   title: { color: colors.text, ...type.title },
   // The dateline is the one place a screen title gets colour: it says
   // "today", which is the app's whole premise, and it is short enough that
@@ -389,10 +445,14 @@ const s = StyleSheet.create({
   },
   ambient: { position: 'absolute', left: 0, right: 0, top: -40, height: 760 },
   cta: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 24, paddingVertical: 15, borderRadius: radius.pill,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    minHeight: CONTROL_H, paddingHorizontal: 24, paddingVertical: 10,
+    borderRadius: radius.pill,
   },
-  ctaWide: { justifyContent: 'center', paddingVertical: 16 },
+  // Nothing left to say about the wide one but that it is wide — the
+  // centring and the height it used to carry are now what every button of
+  // this class gets. `wide` still stretches it in its parent; see
+  // `GradientCta`.
   ctaText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
   tick: {
     width: 26, height: 26, borderRadius: 13,
