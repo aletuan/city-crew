@@ -37,7 +37,7 @@ import { fromISO, todayISO } from '../lib/day';
 import { deleteTrip, useMyTrips, type Trip, type TripStopRow } from '../lib/data';
 import { dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
-import { summaryLine } from '../lib/sketch';
+import { stopCount, summaryLine } from '../lib/sketch';
 import { spendVnd, splitTrips } from '../lib/trips';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
@@ -76,7 +76,7 @@ function TripCard({ trip, cityName, past, onDelete }: {
     : null;
 
   return (
-    <Card style={past ? s.cardPast : undefined}>
+    <Card style={[s.card, past && s.cardPast]}>
       <View style={s.head}>
         <View style={s.headText}>
           <Text style={s.title} numberOfLines={2}>{trip.title}</Text>
@@ -128,7 +128,7 @@ function TripCard({ trip, cityName, past, onDelete }: {
 
       <Text style={s.foot}>
         {summaryLine([
-          `${stops.length} ${t('stops', 'điểm', 'スポット')}`,
+          stopCount(stops.length, t),
           window,
           spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人')}` : null,
         ])}
@@ -250,7 +250,7 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
       {!trips.loaded && (
         <View style={s.body}>
           {[0, 1].map((i) => (
-            <Card key={i}>
+            <Card key={i} style={s.card}>
               <Skeleton style={{ height: 19, width: '60%', borderRadius: 8 }} />
               <Skeleton style={{ height: 13, width: '40%', borderRadius: 7, marginTop: 8 }} />
               <Skeleton style={{ height: 44, width: '100%', borderRadius: 10, marginTop: 14 }} />
@@ -261,7 +261,7 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
 
       {trips.loaded && !!trips.error && (
         <View style={s.body}>
-          <Card><Text style={s.error}>
+          <Card style={s.card}><Text style={s.error}>
             {t(
               `Couldn't load your trips: ${trips.error}`,
               `Không tải được chuyến đi: ${trips.error}`,
@@ -273,7 +273,7 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
 
       {trips.loaded && !trips.error && (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: clearance }}
+          contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
           showsVerticalScrollIndicator={false}
         >
           {!trips.data.length && (
@@ -318,10 +318,17 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
 const CAPTION = { fontSize: 13, fontWeight: font.regular } as const;
 
 const s = StyleSheet.create({
-  body: { gap: space.cardGap },
+  // The gutter every screen in this app keeps and this one did not: the
+  // cards ran to both edges and the card's own corner radius clipped the
+  // first glyph of every title. `Card` supplies no padding of its own —
+  // that is by design, since half the cards in the app pad their inner rows
+  // instead — so both halves of the gutter are set here.
+  body: { gap: space.cardGap, paddingHorizontal: space.page },
   error: { ...type.body, color: colors.textSecondary },
 
   section: { color: colors.text, ...type.section, marginBottom: space.headingToContent },
+  /** Inside the card, which has none of its own. */
+  card: { padding: space.cardPadding },
   // The second heading needs air above it that the first, sitting under the
   // screen title, already has.
   sectionAfter: { marginTop: space.titleToContent },
@@ -357,7 +364,7 @@ const s = StyleSheet.create({
   cardPast: { opacity: 0.72 },
 
   first: {
-    alignItems: 'center', gap: 10,
+    alignItems: 'center', gap: 10, marginHorizontal: space.page,
     paddingHorizontal: space.cardPadding + 6, paddingTop: 26, paddingBottom: 22,
     backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
     borderRadius: radius.card, marginBottom: space.titleToContent,

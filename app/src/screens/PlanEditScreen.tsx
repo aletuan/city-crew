@@ -45,7 +45,7 @@ import { planTrips } from '../lib/planner';
 import { membersOf } from '../lib/place';
 import { useSave } from '../lib/save';
 import { useNoteEvent, usePlanProfile } from '../lib/tasteProfile';
-import { summaryLine } from '../lib/sketch';
+import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
@@ -234,7 +234,7 @@ export default function PlanEditScreen({ navigation, route }: {
   if (!picked) {
     return (
       <Screen title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}>
-        <Card><Text style={s.body}>
+        <Card style={s.card}><Text style={s.body}>
           {t('That plan is no longer available.', 'Phương án đó không còn nữa.', 'そのプランはもう利用できません。')}
         </Text></Card>
       </Screen>
@@ -244,7 +244,10 @@ export default function PlanEditScreen({ navigation, route }: {
   return (
     <Screen title={title}>
       <AmbientWarmth />
-      <ScrollView contentContainerStyle={{ paddingBottom: clearance }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
+        showsVerticalScrollIndicator={false}
+      >
         {!!line && <Text style={s.sub}>{line}</Text>}
 
         {/* Mocked, and labelled. The avatars are the reader's own initial
@@ -271,7 +274,7 @@ export default function PlanEditScreen({ navigation, route }: {
 
         {current.map((stop, i) => (
           <View key={stop.place.slug}>
-            <Card style={wrong.includes(i) ? s.rowWrong : undefined}>
+            <Card style={[s.card, wrong.includes(i) && s.rowWrong]}>
               <View style={s.row}>
                 <View style={s.timeBox}>
                   <PressableScale
@@ -296,22 +299,6 @@ export default function PlanEditScreen({ navigation, route }: {
                   <Text style={s.area} numberOfLines={1}>
                     {summaryLine([stop.place.neighborhood_en, `${stop.dwellMin}′`])}
                   </Text>
-                  {/* A sentence if one was written, and the facts behind it
-                      if not. Never nothing, and never a spinner: the plan is
-                      complete before the words arrive, and a row that
-                      shuffled its own height when they landed would be the
-                      screen admitting it was waiting. */}
-                  {(() => {
-                    const line = words.why.get(stop.place.slug)
-                      || factLine({
-                        slug: stop.place.slug,
-                        name: stop.place.name_en,
-                        rating: stop.place.rating,
-                        openingHours: stop.place.opening_hours,
-                        arriveMin: stop.arriveMin,
-                      }, now, t);
-                    return line ? <Text style={s.why} numberOfLines={2}>{line}</Text> : null;
-                  })()}
                 </View>
 
                 <View style={s.tools}>
@@ -337,6 +324,29 @@ export default function PlanEditScreen({ navigation, route }: {
                   </PressableScale>
                 </View>
               </View>
+
+              {/* A sentence if one was written, and the facts behind it if
+                  not. Never nothing, and never a spinner: the plan is
+                  complete before the words arrive, and a row that shuffled
+                  its own height when they landed would be the screen
+                  admitting it was waiting.
+
+                  On its own line under the row rather than in the middle
+                  column, because that column is what is left after a time
+                  stepper on one side and three tools on the other — about
+                  a third of the card, which turned every sentence into two
+                  clipped words. Full width it reads. */}
+              {(() => {
+                const line = words.why.get(stop.place.slug)
+                  || factLine({
+                    slug: stop.place.slug,
+                    name: stop.place.name_en,
+                    rating: stop.place.rating,
+                    openingHours: stop.place.opening_hours,
+                    arriveMin: stop.arriveMin,
+                  }, now, t);
+                return line ? <Text style={s.why} numberOfLines={2}>{line}</Text> : null;
+              })()}
 
               {/* Only when the reader made it so. A plan reading backwards
                   with nothing saying so is a plan that gets somebody to a
@@ -364,14 +374,14 @@ export default function PlanEditScreen({ navigation, route }: {
         ))}
 
         {current.length === 0 && (
-          <Card><Text style={s.body}>
+          <Card style={s.card}><Text style={s.body}>
             {t('Nothing left in this plan.', 'Không còn điểm nào trong plan này.', 'このプランには何も残っていません。')}
           </Text></Card>
         )}
 
         <Text style={s.total}>
           {summaryLine([
-            `${current.length} ${t('stops', 'điểm', 'スポット')}`,
+            stopCount(current.length, t),
             current.length ? `${clock(from)}–${clock(to)}` : null,
             spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人')}` : null,
           ])}
@@ -436,6 +446,10 @@ const s = StyleSheet.create({
     letterSpacing: 0.6, marginBottom: 8,
   },
 
+  // `Card` carries no padding of its own — see the note on the component.
+  // Without this the stepper sat against the card's left edge and the
+  // corner radius clipped it.
+  card: { padding: space.cardPadding },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   rowWrong: { borderColor: colors.accentFill, borderWidth: 1 },
   timeBox: { flexDirection: 'row', alignItems: 'center', gap: 2 },
@@ -454,7 +468,10 @@ const s = StyleSheet.create({
   /** The model's sentence, or the facts standing in for it. A step down
    *  from the name and a step up from the area line, because it is the row's
    *  only claim about why this place rather than another. */
-  why: { ...CAPTION, color: colors.textSecondary, lineHeight: 18, marginTop: 3 },
+  // Full width under the row now, so it needs the air a new block needs
+  // rather than the 3pt that separated it from the line above it inside a
+  // column.
+  why: { ...CAPTION, color: colors.textSecondary, lineHeight: 18, marginTop: 10 },
 
   tools: { flexDirection: 'row', gap: 2 },
   tool: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },

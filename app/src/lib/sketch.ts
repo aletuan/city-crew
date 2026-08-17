@@ -122,3 +122,20 @@ export function finished(done: number, steps: readonly Step[] = SKETCH_STEPS): b
 export function summaryLine(parts: readonly (string | null | undefined)[]): string {
   return parts.map((p) => p?.trim()).filter((p): p is string => !!p).join(' · ');
 }
+
+/**
+ * "3 stops", "1 stop".
+ *
+ * Three screens print this figure and all three printed "1 stops", which is
+ * the kind of thing nobody sees until a reader deletes their way down to one
+ * — and then it is the only sentence on the card. A helper rather than the
+ * same ternary three times, because the fourth screen to want it would get
+ * it wrong again.
+ *
+ * Only English inflects here. Vietnamese "điểm" and Japanese "スポット" take
+ * no plural, and forcing them through a singular/plural pair would be an
+ * English grammar rule wearing their vocabulary.
+ */
+export function stopCount(n: number, t: (en: string, vi: string, ja?: string) => string): string {
+  return `${n} ${n === 1 ? t('stop', 'điểm', 'スポット') : t('stops', 'điểm', 'スポット')}`;
+}

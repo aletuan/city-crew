@@ -198,7 +198,19 @@ export function Chip({ label, active, onPress, icon, iconColor }: {
   );
 }
 
-export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
+/**
+ * A surface with a hairline. It has **no padding of its own**, on purpose:
+ * about half the cards in this app pad their inner rows instead, because a
+ * row that has to run to the card's edge — a full-width divider, a pressable
+ * that should take the whole width — cannot do that through card padding.
+ * So every caller supplies the inset it wants.
+ *
+ * `StyleProp<ViewStyle>` rather than `ViewStyle`, so a caller can pass an
+ * array and compose the padding with a conditional. It was the bare type,
+ * which made `[s.card, past && s.cardPast]` a type error and pushed callers
+ * towards one merged style per combination.
+ */
+export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[s.card, style]}>{children}</View>;
 }
 
