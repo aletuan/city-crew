@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { finished, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, summaryLine, type Step } from './sketch';
+import {
+  finished, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, stopCount, summaryLine, type Step,
+} from './sketch';
 
 const steps: Step[] = [
   { key: 'a', en: 'a', vi: 'a', ja: 'a' },
@@ -106,5 +108,34 @@ describe('summaryLine', () => {
   it('is empty when there is nothing to say', () => {
     expect(summaryLine([])).toBe('');
     expect(summaryLine([null, undefined, '  '])).toBe('');
+  });
+});
+
+describe('stopCount', () => {
+  const en = (a: string) => a;
+  const vi = (_a: string, b: string) => b;
+  const ja = (_a: string, _b: string, c?: string) => c ?? '';
+
+  // The case three screens got wrong. Nobody sees it until a reader deletes
+  // their way down to one stop, and then it is the only sentence on the card.
+  it('does not say "1 stops"', () => {
+    expect(stopCount(1, en)).toBe('1 stop');
+    expect(stopCount(3, en)).toBe('3 stops');
+  });
+
+  // Zero is plural in English — "0 stops", the way "0 items" is.
+  it('treats none as plural', () => {
+    expect(stopCount(0, en)).toBe('0 stops');
+  });
+
+  // Vietnamese and Japanese do not inflect for number, so both counts get
+  // the same word. Asserted rather than assumed: the obvious refactor is to
+  // pass a singular and a plural for every language, which would put an
+  // English grammar rule inside their vocabulary.
+  it('leaves the languages that do not inflect alone', () => {
+    expect(stopCount(1, vi)).toBe('1 điểm');
+    expect(stopCount(5, vi)).toBe('5 điểm');
+    expect(stopCount(1, ja)).toBe('1 スポット');
+    expect(stopCount(5, ja)).toBe('5 スポット');
   });
 });

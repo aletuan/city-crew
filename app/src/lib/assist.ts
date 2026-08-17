@@ -184,6 +184,59 @@ export async function narrate(
   return { title, why, fromModel: !!title || why.size > 0 };
 }
 
+/**
+ * The narration, minus the parts the reader has since edited out from
+ * under it.
+ *
+ * A model writes about the plan it was handed. Then the reader deletes a
+ * stop, and the prose is still describing the plan that was: a title
+ * reading "Three coffees around Hoàn Kiếm" over one café, and a line
+ * reading "a second stop to keep the conversation going" under what is now
+ * the only stop. Both were on screen, and one of them got saved into a
+ * trip.
+ *
+ * Re-asking the model on every edit is the wrong fix and was rejected when
+ * this was built: it costs a call per tap and flickers new prose under the
+ * reader's finger. But not re-asking never meant *keeping* a sentence that
+ * has stopped being true. Detecting that needs no model at all — it is a
+ * comparison between the list that was narrated and the list on screen —
+ * and what is dropped falls back to `factLine` and `derivedTitle`, which
+ * are derived from the plan as it stands and cannot go stale.
+ *
+ * The title goes when the list changes **at all**, including order: "Coffee,
+ * then dinner" is a claim about sequence as much as about content.
+ *
+ * A `why` goes when its stop moves, because position is what these
+ * sentences lean on — "an easy first stop", "somewhere to end up". The
+ * *hour* is deliberately not tracked, though a line may well mention it:
+ * every arrival after an edited one shifts, so tracking the clock would
+ * delete the whole narration for a fifteen-minute nudge. "At six" when it
+ * is now 18:15 is a much smaller untruth than "a second stop" on the first
+ * one, and paying for it with all of the prose is the worse trade.
+ */
+export function freshen(
+  words: Narration,
+  /** Slugs in the order they were sent to the model. */
+  narrated: readonly string[],
+  /** Slugs in the order they are on screen now. */
+  current: readonly string[],
+): Narration {
+  const sameList = narrated.length === current.length
+    && narrated.every((slug, i) => slug === current[i]);
+
+  const why = new Map<string, string>();
+  for (const [slug, line] of words.why) {
+    if (narrated.indexOf(slug) === current.indexOf(slug)) why.set(slug, line);
+  }
+
+  const title = sameList ? words.title : null;
+  // `fromModel` goes when the last of the prose goes, because it is what
+  // `generated_by` on the saved trip is read from — and a trip whose name
+  // and every line are derived is a `rules` trip whatever was reached while
+  // making it. Any surviving sentence keeps it true.
+  return { title, why, fromModel: words.fromModel && (title !== null || why.size > 0) };
+}
+
 // ── a sentence, turned into wizard answers ───────────────────────────
 //
 // The other direction, and the failure shape is deliberately different.

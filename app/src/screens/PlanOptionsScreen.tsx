@@ -39,7 +39,7 @@ import { membersOf } from '../lib/place';
 import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
 import { useSave } from '../lib/save';
-import { summaryLine } from '../lib/sketch';
+import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY, type TripDraft } from '../lib/trip';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space, type } from '../theme';
@@ -139,7 +139,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
     <Screen title={t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り')}>
       <AmbientWarmth />
       <ScrollView
-        contentContainerStyle={{ paddingBottom: clearance }}
+        contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
       >
         <Text style={s.lede}>
@@ -182,7 +182,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
         ))}
 
         {plans.length === 0 && (
-          <Card style={s.emptyCard}>
+          <Card style={[s.card, s.emptyCard]}>
             <Text style={s.emptyText}>
               {t(
                 'Nothing here matches those answers now. Try Regenerate, or change what you asked for.',
@@ -226,7 +226,7 @@ function PlanCard({ plan, best, onPress }: { plan: TripPlan; best: boolean; onPr
 
   return (
     <PressableScale scaleTo={0.985} onPress={onPress} containerStyle={s.cardWrap}>
-      <Card style={best ? s.cardBest : undefined}>
+      <Card style={[s.card, best && s.cardBest]}>
         <View style={s.head}>
           {/* Untitled until a model names it. The stops carry the plan
               until then, which is more use than an invented title. */}
@@ -278,7 +278,7 @@ function PlanCard({ plan, best, onPress }: { plan: TripPlan; best: boolean; onPr
         <View style={s.foot}>
           <Text style={s.summary}>
             {summaryLine([
-              `${plan.stops.length} ${t('stops', 'điểm', 'スポット')}`,
+              stopCount(plan.stops.length, t),
               `~${hours(plan.windowMin)}`,
               km > 0 ? fmtDistance(km) : null,
               total > 0 ? `~${money(total)}` : null,
@@ -316,6 +316,10 @@ const s = StyleSheet.create({
   thin: { ...CAPTION, color: colors.textTertiary, marginBottom: 10 },
 
   cardWrap: { marginBottom: space.cardGap },
+  // `Card` carries no padding of its own — see the note on the component.
+  // Without this the cards ran to both screen edges and the corner radius
+  // clipped the first glyph of every plan name.
+  card: { padding: space.cardPadding },
   cardBest: { borderColor: colors.accentFill, borderWidth: 1 },
 
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
