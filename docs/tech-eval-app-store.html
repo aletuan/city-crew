@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cityCrew — Tech Evaluation & Store Readiness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<style>
+  :root{
+    --bg:#0E1116; --panel:#161B22; --panel-2:#1C2530; --code-bg:#11161d;
+    --hair:#283039; --hair-soft:#1f262e;
+    --text:#E6EDF3; --muted:#9BA8B4; --faint:#6E7B88;
+    --teal:#2DD4BF; --amber:#F5A623; --violet:#A78BFA; --blue:#58A6FF;
+    --pink:#F778BA; --red:#F85149; --green:#3FB950;
+    --measure:74ch;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth; -webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',system-ui,sans-serif; line-height:1.65; font-size:16px;
+    background-image:
+      radial-gradient(1000px 560px at 88% -8%, rgba(45,212,191,.06), transparent 60%),
+      radial-gradient(760px 420px at -5% 102%, rgba(167,139,250,.05), transparent 55%);
+  }
+  a{color:var(--teal); text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* language toggle */
+  body.lang-en .vi{display:none}
+  body.lang-vi .en{display:none}
+  .lang-switch{position:fixed; top:14px; right:14px; z-index:50; display:inline-flex;
+    background:rgba(13,18,24,.82); backdrop-filter:blur(8px); border:1px solid var(--hair);
+    border-radius:999px; padding:3px; gap:2px; box-shadow:0 6px 20px rgba(0,0,0,.35)}
+  .lang-switch button{font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:500;
+    color:var(--muted); background:transparent; border:0; cursor:pointer; padding:6px 13px;
+    border-radius:999px; letter-spacing:.06em; transition:.18s}
+  .lang-switch button:hover{color:var(--text)}
+  .lang-switch button.active{background:var(--teal); color:#06231e}
+
+  /* shell */
+  .shell{max-width:1180px; margin:0 auto; padding:0 22px}
+  .masthead{padding:52px 0 30px; border-bottom:1px solid var(--hair)}
+  .kicker{font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--teal); margin:0 0 14px}
+  .masthead h1{font-family:'Space Grotesk',sans-serif; font-weight:700;
+    font-size:clamp(28px,5.4vw,46px); line-height:1.08; letter-spacing:-.015em; margin:0 0 14px}
+  .masthead p.lede{color:var(--muted); font-size:clamp(16px,2.2vw,18px); max-width:62ch; margin:0}
+  .meta-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:24px}
+  .tag{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--muted);
+    border:1px solid var(--hair); border-radius:999px; padding:4px 11px; background:var(--panel)}
+
+  /* layout */
+  .layout{display:block}
+  @media(min-width:960px){.layout{display:grid; grid-template-columns:236px minmax(0,1fr); gap:48px; align-items:start}}
+  nav.toc{padding:30px 0}
+  @media(min-width:960px){nav.toc{position:sticky; top:0; height:100vh; overflow:auto; padding:34px 0; border-right:1px solid var(--hair-soft)}}
+  nav.toc .toc-h{font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin:0 0 14px}
+  nav.toc ol{list-style:none; margin:0; padding:0; counter-reset:toc}
+  nav.toc li{counter-increment:toc; margin:0 0 3px}
+  nav.toc a{display:flex; gap:9px; color:var(--muted); font-size:13.5px; padding:5px 0; line-height:1.35}
+  nav.toc a::before{content:counter(toc,decimal-leading-zero); color:var(--faint); font-family:'JetBrains Mono',monospace; font-size:11px; padding-top:2px}
+  nav.toc a:hover{color:var(--text); text-decoration:none}
+
+  main{padding:34px 0 90px; min-width:0}
+
+  /* typography */
+  section{margin:0 0 14px; padding:24px 0 8px; border-top:1px solid var(--hair-soft)}
+  section:first-of-type{border-top:none; padding-top:8px}
+  .sec-num{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--teal); letter-spacing:.1em}
+  h2{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:clamp(22px,3.4vw,30px); letter-spacing:-.012em; margin:6px 0 16px; line-height:1.15; scroll-margin-top:20px}
+  h3{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:19px; margin:30px 0 10px; color:#F0F4F8}
+  p{max-width:var(--measure); margin:0 0 16px}
+  .muted{color:var(--muted)}
+  ul,ol.steps{max-width:var(--measure); padding-left:22px; margin:0 0 16px}
+  li{margin:0 0 8px}
+  strong{color:#F4F8FB; font-weight:600}
+  code:not(pre code){font-family:'JetBrains Mono',monospace; font-size:.86em; color:var(--amber);
+    background:#1a1206; border:1px solid #2a2310; padding:1px 6px; border-radius:5px}
+  .lead-term{color:var(--teal); font-weight:600}
+
+  /* code blocks */
+  .code-wrap{margin:0 0 22px; border:1px solid var(--hair); border-radius:12px; overflow:hidden; background:var(--code-bg)}
+  .code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-bottom:1px solid var(--hair-soft); background:#0d1218}
+  .code-file{font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted)}
+  .code-lang{font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+  pre{margin:0; overflow-x:auto}
+  pre code.hljs{background:transparent; padding:16px 16px; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.6}
+
+  /* callouts */
+  .callout{border-left:3px solid var(--violet); background:rgba(167,139,250,.06); border-radius:0 10px 10px 0; padding:14px 18px; margin:0 0 22px; max-width:var(--measure)}
+  .callout p{margin:0; font-size:14.5px; color:#D8DEE6}
+  .callout p + p{margin-top:10px}
+  .callout .c-label{font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; display:block; margin-bottom:5px}
+  .callout.tip{border-color:var(--teal); background:rgba(45,212,191,.06)} .callout.tip .c-label{color:var(--teal)}
+  .callout.warn{border-color:var(--amber); background:rgba(245,166,35,.07)} .callout.warn .c-label{color:var(--amber)}
+  .callout.stop{border-color:var(--red); background:rgba(248,81,73,.07)} .callout.stop .c-label{color:var(--red)}
+  .callout.note .c-label{color:var(--violet)}
+
+  /* diagram canvas */
+  .canvas{background:var(--panel); border:1px solid var(--hair); border-radius:14px; padding:20px; overflow-x:auto; margin:0 0 12px}
+  .canvas .mermaid{min-width:540px; display:flex; justify-content:center}
+  .fig-cap{font-size:13px; color:var(--faint); font-family:'JetBrains Mono',monospace; margin:0 0 24px; padding-left:2px}
+
+  /* concept cards */
+  .cards{display:grid; grid-template-columns:1fr; gap:14px; margin:0 0 22px}
+  @media(min-width:620px){.cards{grid-template-columns:1fr 1fr}}
+  .card{border:1px solid var(--hair); border-radius:12px; padding:16px 18px; background:var(--panel)}
+  .card h4{margin:0 0 6px; font-family:'Space Grotesk',sans-serif; font-size:15px; color:#F0F4F8}
+  .card p{margin:0; font-size:14px; color:var(--muted); max-width:none}
+  .card .c-tag{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--teal); letter-spacing:.08em}
+  .card.blocker{border-color:#4a2326}
+  .card.blocker .c-tag{color:var(--red)}
+
+  /* table */
+  .tbl-wrap{overflow-x:auto; margin:0 0 22px; border:1px solid var(--hair); border-radius:12px}
+  table{border-collapse:collapse; width:100%; font-size:14px; min-width:480px}
+  th,td{text-align:left; padding:11px 15px; border-bottom:1px solid var(--hair-soft); vertical-align:top}
+  th{font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); background:#0d1218}
+  tr:last-child td{border-bottom:none}
+  td code{font-size:.85em}
+  .id{font-family:'JetBrains Mono',monospace; color:var(--faint); font-size:12px; white-space:nowrap}
+  .no{color:var(--red); font-weight:600}
+  .yes{color:var(--green); font-weight:600}
+
+  /* verdict strip */
+  .verdict{display:grid; grid-template-columns:1fr; gap:12px; margin:0 0 26px}
+  @media(min-width:760px){.verdict{grid-template-columns:repeat(4,1fr)}}
+  .v{border:1px solid var(--hair); border-radius:12px; padding:14px 16px; background:var(--panel)}
+  .v .vn{font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:500; line-height:1.1}
+  .v .vl{font-size:12.5px; color:var(--muted); margin-top:5px; display:block}
+  .v.ok .vn{color:var(--green)} .v.warn .vn{color:var(--amber)}
+  .v.bad .vn{color:var(--red)} .v.info .vn{color:var(--blue)}
+
+  footer.end{border-top:1px solid var(--hair); padding:28px 0 60px; color:var(--faint); font-size:13px; max-width:var(--measure)}
+  footer.end p{color:var(--faint); font-size:13px}
+</style>
+</head>
+<body class="lang-en">
+
+<div class="lang-switch" id="langSwitch">
+  <button data-lang="en" class="active">EN</button>
+  <button data-lang="vi">VI</button>
+</div>
+
+<div class="shell">
+  <header class="masthead">
+    <p class="kicker">cityCrew · Expo SDK 54 · Supabase · Store readiness audit</p>
+    <h1 class="en">What stands between here and a stranger's phone</h1>
+    <h1 class="vi">Khoảng cách từ đây tới điện thoại của một người lạ</h1>
+    <p class="lede en">A source-level audit of the cityCrew stack and of what it would actually take to ship it to the App Store or open it to pilot users. The short version: the stack is not the problem — the blockers are platform policy and operations, and the longest pole is not ours to shorten.</p>
+    <p class="lede vi">Đánh giá ở mức source code toàn bộ stack cityCrew, và những gì thực sự cần để đưa app lên App Store hoặc mở pilot. Tóm tắt: stack không phải vấn đề — thứ chặn lại là chính sách nền tảng và vận hành, và đường găng dài nhất không nằm trong tay đội phát triển.</p>
+    <div class="meta-row">
+      <span class="tag en">~25 min read</span><span class="tag vi">~25 phút đọc</span>
+      <span class="tag">Expo SDK 54 · RN 0.81</span>
+      <span class="tag">Supabase · Postgres RLS</span>
+      <span class="tag">App Store · Google Play</span>
+      <span class="tag">2026-08-17</span>
+    </div>
+  </header>
+</div>
+
+<div class="shell">
+<div class="layout">
+
+  <nav class="toc">
+    <p class="toc-h en">Contents</p><p class="toc-h vi">Mục lục</p>
+    <ol>
+      <li><a href="#s1"><span class="en">Scope &amp; method</span><span class="vi">Phạm vi &amp; cách làm</span></a></li>
+      <li><a href="#s2"><span class="en">The stack today</span><span class="vi">Stack hiện tại</span></a></li>
+      <li><a href="#s3"><span class="en">Three views of the system</span><span class="vi">Ba góc nhìn hệ thống</span></a></li>
+      <li><a href="#s4"><span class="en">What is already right</span><span class="vi">Những gì đang làm đúng</span></a></li>
+      <li><a href="#s5"><span class="en">Group A — build blockers</span><span class="vi">Nhóm A — chặn build</span></a></li>
+      <li><a href="#s6"><span class="en">Group B — policy blockers</span><span class="vi">Nhóm B — chặn chính sách</span></a></li>
+      <li><a href="#s7"><span class="en">Group C — third-party risk</span><span class="vi">Nhóm C — rủi ro bên thứ ba</span></a></li>
+      <li><a href="#s8"><span class="en">Group D — pilot operations</span><span class="vi">Nhóm D — vận hành pilot</span></a></li>
+      <li><a href="#s9"><span class="en">The roadmap</span><span class="vi">Lộ trình</span></a></li>
+      <li><a href="#s10"><span class="en">Definition of done</span><span class="vi">Tiêu chí hoàn thành</span></a></li>
+      <li><a href="#s11"><span class="en">Takeaways</span><span class="vi">Kết luận</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <!-- ══════════════════════════ 01 ══════════════════════════ -->
+    <section id="s1">
+      <span class="sec-num">01</span>
+      <h2 class="en">Scope &amp; method</h2>
+      <h2 class="vi">Phạm vi &amp; cách làm</h2>
+
+      <p class="en">This audit answers two questions that are usually conflated, and separating them is the single most useful thing in this document. <strong>Is the technology right?</strong> — a question about the code. <strong>What does shipping require?</strong> — a question that is mostly <em>not</em> about the code. Conflating them produces the familiar failure where a team refactors for three months and is still rejected on day one, for a missing delete-account button.</p>
+      <p class="vi">Tài liệu này trả lời hai câu hỏi thường bị gộp làm một, và việc tách chúng ra là điều hữu ích nhất ở đây. <strong>Công nghệ có đúng không?</strong> — câu hỏi về code. <strong>Đưa lên store cần gì?</strong> — câu hỏi phần lớn <em>không</em> nằm ở code. Gộp hai câu hỏi này lại là cách một đội refactor ba tháng rồi vẫn bị từ chối ngay ngày đầu, chỉ vì thiếu một nút xoá tài khoản.</p>
+
+      <div class="verdict">
+        <div class="v ok"><span class="vn">OK</span><span class="vl en">Stack &amp; architecture</span><span class="vl vi">Stack &amp; kiến trúc</span></div>
+        <div class="v warn"><span class="vn">8</span><span class="vl en">Build blockers (small)</span><span class="vl vi">Chặn build (nhỏ)</span></div>
+        <div class="v bad"><span class="vn">4</span><span class="vl en">Hard policy blockers</span><span class="vl vi">Chặn chính sách cứng</span></div>
+        <div class="v info"><span class="vn">14d</span><span class="vl en">Play closed-test floor</span><span class="vl vi">Sàn closed test Play</span></div>
+      </div>
+
+      <h3 class="en">What was examined</h3>
+      <h3 class="vi">Đã khảo sát những gì</h3>
+      <p class="en">Every TypeScript file under <code>app/src</code> and <code>app/App.tsx</code> (~14.5k lines), all 23 SQL migrations, all four Edge Functions, the four GitHub Actions workflows, <code>app.json</code>, and the dashboard and data-pipeline manifests.</p>
+      <p class="vi">Toàn bộ file TypeScript trong <code>app/src</code> và <code>app/App.tsx</code> (~14.5k dòng), cả 23 migration SQL, cả bốn Edge Function, bốn workflow GitHub Actions, <code>app.json</code>, cùng manifest của dashboard và pipeline dữ liệu.</p>
+
+      <div class="callout warn">
+        <span class="c-label en">What was NOT done</span><span class="c-label vi">Chưa làm những gì</span>
+        <p class="en">This is a <strong>source-level read</strong>. No native build was produced, no device was tested, no store submission was attempted, and the live Supabase project was not inspected. Findings about runtime behaviour (New Architecture compatibility, icon rendering, permission prompts) are predictions from configuration, not observations. They need a real <code>preview</code> build to confirm.</p>
+        <p class="vi">Đây là <strong>đọc mã nguồn</strong>. Chưa build native, chưa test trên máy thật, chưa thử nộp store, và chưa kiểm tra project Supabase đang chạy. Các nhận định về hành vi runtime (tương thích New Architecture, cách icon hiển thị, prompt xin quyền) là suy đoán từ cấu hình, không phải quan sát. Cần một bản build <code>preview</code> thật để xác nhận.</p>
+      </div>
+
+      <div class="callout note">
+        <span class="c-label en">On the policy citations</span><span class="c-label vi">Về các trích dẫn chính sách</span>
+        <p class="en">Apple guideline numbers, Google Play program rules, Supabase tier limits and Google Maps Platform terms <strong>all drift</strong>. Every requirement below was accurate as understood at the time of writing and must be re-verified against the live policy pages before you rely on it for a submission date. Where a number matters to scheduling — the 14-day closed test, the $99/year — treat it as a prompt to check, not as a citation.</p>
+        <p class="vi">Số hiệu guideline của Apple, luật chương trình Google Play, giới hạn gói Supabase và điều khoản Google Maps Platform <strong>đều thay đổi theo thời gian</strong>. Mọi yêu cầu bên dưới đúng theo hiểu biết tại thời điểm viết, và phải kiểm chứng lại trên trang chính sách hiện hành trước khi dựa vào đó để chốt ngày nộp. Với các con số ảnh hưởng lịch trình — 14 ngày closed test, 99 USD/năm — hãy coi đó là lời nhắc đi kiểm tra, không phải trích dẫn.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════ 02 ══════════════════════════ -->
+    <section id="s2">
+      <span class="sec-num">02</span>
+      <h2 class="en">The stack today</h2>
+      <h2 class="vi">Stack hiện tại</h2>
+
+      <p class="en">A managed Expo app talking directly to Supabase, with no server of its own. That last clause is the architectural decision everything else follows from: there is no backend to run, so there is no backend to secure, scale, or pay for — and in exchange, <span class="lead-term">Row Level Security is the entire security boundary</span>.</p>
+      <p class="vi">Một app Expo managed nói chuyện thẳng với Supabase, không có server riêng. Mệnh đề cuối cùng đó là quyết định kiến trúc mà mọi thứ khác đi theo: không có backend để chạy, nên không có backend để bảo mật, mở rộng hay trả tiền — đổi lại, <span class="lead-term">Row Level Security là toàn bộ biên bảo mật</span>.</p>
+
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th><span class="en">Layer</span><span class="vi">Lớp</span></th>
+          <th><span class="en">Technology</span><span class="vi">Công nghệ</span></th>
+          <th><span class="en">Assessment</span><span class="vi">Nhận xét</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td><span class="en">Mobile</span><span class="vi">Mobile</span></td><td><code>expo ^54.0.36</code><br><code>react-native 0.81.5</code><br><code>react 19.1.0</code></td><td><span class="en">Current. SDK 54 is pinned because Expo Go on the App Store is stuck there — a constraint that disappears the moment you build natively.</span><span class="vi">Hiện đại. Pin SDK 54 vì Expo Go trên App Store kẹt ở đó — ràng buộc này biến mất ngay khi build native.</span></td></tr>
+          <tr><td><span class="en">Language</span><span class="vi">Ngôn ngữ</span></td><td><code>typescript ~5.9</code></td><td><span class="en"><code>tsc --noEmit</code> gates every PR. A real gate, not decoration.</span><span class="vi"><code>tsc --noEmit</code> gate mọi PR. Là gate thật, không phải trang trí.</span></td></tr>
+          <tr><td><span class="en">Navigation</span><span class="vi">Điều hướng</span></td><td><code>@react-navigation 7</code></td><td><span class="en">native-stack + bottom-tabs. Standard.</span><span class="vi">native-stack + bottom-tabs. Chuẩn.</span></td></tr>
+          <tr><td><span class="en">Maps</span><span class="vi">Bản đồ</span></td><td><code>react-native-maps ^1.20</code></td><td><span class="en">Apple Maps on iOS. Constrains what may be drawn on it — see §07.</span><span class="vi">Apple Maps trên iOS. Ràng buộc thứ được vẽ lên đó — xem §07.</span></td></tr>
+          <tr><td><span class="en">Backend</span><span class="vi">Backend</span></td><td><span class="en">Supabase: Postgres + RLS, Auth, Storage, Edge Functions (Deno)</span><span class="vi">Supabase: Postgres + RLS, Auth, Storage, Edge Functions (Deno)</span></td><td><span class="en">Right call at this size. 23 migrations, 4 functions.</span><span class="vi">Lựa chọn đúng ở quy mô này. 23 migration, 4 function.</span></td></tr>
+          <tr><td><span class="en">Curation dashboard</span><span class="vi">Dashboard curation</span></td><td><code>vite 6</code> + <code>react 18</code> → GitHub Pages</td><td><span class="en">Phone-usable. Same anon key, same RLS.</span><span class="vi">Dùng được từ điện thoại. Cùng anon key, cùng RLS.</span></td></tr>
+          <tr><td><span class="en">Data pipeline</span><span class="vi">Pipeline dữ liệu</span></td><td><span class="en">Node scripts + Google Places API (New)</span><span class="vi">Node scripts + Google Places API (New)</span></td><td><span class="en">Server-side only. The Google key never reaches a client bundle.</span><span class="vi">Chỉ chạy server-side. Key Google không bao giờ vào bundle client.</span></td></tr>
+          <tr><td><span class="en">Tests</span><span class="vi">Test</span></td><td><span class="en">Vitest — 18 pure-Node files · 6 SQL files on real Postgres 16</span><span class="vi">Vitest — 18 file thuần Node · 6 file SQL trên Postgres 16 thật</span></td><td><span class="en">Unusually good for the stage. See §04.</span><span class="vi">Tốt bất thường so với giai đoạn. Xem §04.</span></td></tr>
+          <tr><td>CI/CD</td><td><span class="en">4 GitHub Actions workflows</span><span class="vi">4 workflow GitHub Actions</span></td><td><span class="en"><code>checks</code>, <code>app-preview</code> (EAS Update), <code>deploy-dashboard</code>, <code>sync-mockup</code></span><span class="vi"><code>checks</code>, <code>app-preview</code> (EAS Update), <code>deploy-dashboard</code>, <code>sync-mockup</code></span></td></tr>
+          <tr><td><span class="en">External services</span><span class="vi">Dịch vụ ngoài</span></td><td><span class="en">Google Places · OSM Photon + Nominatim · Open-Meteo</span><span class="vi">Google Places · OSM Photon + Nominatim · Open-Meteo</span></td><td><span class="en">Two are free public instances with usage policies. See §07.</span><span class="vi">Hai trong số đó là instance công cộng miễn phí có usage policy. Xem §07.</span></td></tr>
+          <tr><td>i18n</td><td><code>src/lib/i18n.tsx</code></td><td><span class="en">EN / VI / JA, hand-rolled, no dependency.</span><span class="vi">EN / VI / JA, tự cuộn, không phụ thuộc thư viện.</span></td></tr>
+          <tr><td><span class="en">Distribution</span><span class="vi">Phân phối</span></td><td><span class="en">EAS Update → Expo Go</span><span class="vi">EAS Update → Expo Go</span></td><td><span class="no"><span class="en">No native build has ever been produced.</span><span class="vi">Chưa từng có bản build native nào.</span></span></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout note">
+        <span class="c-label en">The distribution line is the whole story</span><span class="c-label vi">Dòng phân phối là toàn bộ câu chuyện</span>
+        <p class="en">Everything today reaches a phone through <strong>Expo Go</strong> — a container app that already passed Apple review, running your JavaScript inside it. That is a fundamentally different thing from an app of your own on the store, and it is why the gap in §05 exists at all: no bundle identifier has ever been needed, because nothing has ever been built.</p>
+        <p class="vi">Mọi thứ hiện tại tới được điện thoại qua <strong>Expo Go</strong> — một app container đã qua review của Apple, chạy JavaScript của bạn bên trong nó. Đó là một thứ về bản chất khác với app của chính bạn trên store, và đó là lý do khoảng cách ở §05 tồn tại: chưa bao giờ cần bundle identifier, vì chưa bao giờ build gì cả.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════ 03 ══════════════════════════ -->
+    <section id="s3">
+      <span class="sec-num">03</span>
+      <h2 class="en">Three views of the system</h2>
+      <h2 class="vi">Ba góc nhìn hệ thống</h2>
+
+      <p class="en">The same system drawn three ways: <strong>what exists</strong>, <strong>what stops it</strong>, and <strong>why the security model works</strong>. Node labels stay in technical English in both languages — service names read the same either way.</p>
+      <p class="vi">Cùng một hệ thống vẽ ba cách: <strong>cái gì đang có</strong>, <strong>cái gì chặn lại</strong>, và <strong>vì sao mô hình bảo mật đứng vững</strong>. Nhãn trong sơ đồ giữ nguyên tiếng Anh kỹ thuật ở cả hai ngôn ngữ — tên dịch vụ đọc giống nhau.</p>
+
+      <h3 class="en">View A — Topology: what is deployed today</h3>
+      <h3 class="vi">Góc nhìn A — Topology: cái gì đang chạy</h3>
+
+      <div class="canvas"><pre class="mermaid">
+flowchart LR
+    subgraph CD["Delivery"]
+      GH["GitHub Actions<br/>checks · app-preview<br/>deploy-dashboard · sync-mockup"]:::obs
+    end
+
+    subgraph CL["Clients · publishable key only"]
+      direction TB
+      EXPO["Pilot user phone<br/>Expo Go · EAS channel main"]:::cli
+      DASH["Editor phone browser<br/>Dashboard · GitHub Pages"]:::cli
+    end
+
+    subgraph SB["Supabase project"]
+      direction TB
+      AUTH["Auth<br/>email + password · OTP"]:::infra
+      PG[("Postgres 16<br/>RLS = the boundary")]:::mem
+      STORE["Storage<br/>place-photos · avatars"]:::infra
+      EF["Edge Functions · Deno<br/>fetch-place · scan-city<br/>find-address · sync-mockup"]:::agent
+    end
+
+    subgraph EXT["Third-party services"]
+      direction TB
+      GP["Google Places API New"]:::model
+      OSM["Photon + Nominatim<br/>public OSM instances"]:::model
+      OM["Open-Meteo<br/>no key needed"]:::model
+    end
+
+    GH -->|"EAS Update"| EXPO
+    GH -->|"Pages deploy"| DASH
+
+    EXPO --> AUTH
+    EXPO --> PG
+    EXPO --> STORE
+    EXPO -->|"signed-in only"| EF
+    DASH --> PG
+    DASH -->|"editor allow-list"| EF
+
+    EF -->|"service role key<br/>server-side only"| PG
+    EF -->|"GOOGLE_MAPS_API_KEY"| GP
+    EF --> OSM
+    EXPO --> OM
+
+    classDef ext fill:#10242b,stroke:#2DD4BF,color:#CFFAF2;
+    classDef cli fill:#1b2230,stroke:#58A6FF,color:#DCEBFF;
+    classDef infra fill:#1b2230,stroke:#5A6B7B,color:#E6EDF3;
+    classDef agent fill:#1e2a3a,stroke:#58A6FF,color:#DCEBFF;
+    classDef model fill:#241b33,stroke:#A78BFA,color:#EADFFF;
+    classDef obs fill:#10261b,stroke:#3FB950,color:#CFF5DC;
+    classDef mem fill:#231018,stroke:#F778BA,color:#F8CFE2;
+      </pre></div>
+      <p class="fig-cap en">Fig. A · Every arrow into Postgres from a client carries only the publishable key. The service role key exists in exactly one place: inside Edge Functions. Not drawn: <code>sync-mockup</code> calls back into GitHub Actions with a <code>GH_PAT</code>, a mockup-artifact path rather than a product one.</p>
+      <p class="fig-cap vi">Hình A · Mọi mũi tên từ client vào Postgres chỉ mang publishable key. Service role key tồn tại đúng một nơi: bên trong Edge Functions. Không vẽ: <code>sync-mockup</code> gọi ngược về GitHub Actions bằng <code>GH_PAT</code> — đường của mockup artifact, không phải của sản phẩm.</p>
+
+      <h3 class="en">View B — Logic: the release gate, and where it stops</h3>
+      <h3 class="vi">Góc nhìn B — Logic: cổng phát hành, và chỗ nó dừng lại</h3>
+
+      <p class="en">This is the most useful diagram in the document. Read it as the path a commit must travel to reach a stranger. The <strong>red gates are the ones that fail today</strong>; the amber path is the cheap detour discussed in §06.</p>
+      <p class="vi">Đây là sơ đồ hữu ích nhất trong tài liệu. Đọc nó như đường đi của một commit để tới được tay người lạ. <strong>Các cổng đỏ là những cổng hiện đang trượt</strong>; đường màu hổ phách là lối đi tắt rẻ tiền bàn ở §06.</p>
+
+      <div class="canvas"><pre class="mermaid">
+flowchart TD
+    A["Commit on main"]:::client --> B["CI: typecheck · vitest · SQL tests"]:::infra
+    B --> C{"Native build config?"}:::decision
+    C -->|"missing today"| C1["eas build fails<br/>A1 · A2 · A3"]:::err
+    C -->|"present"| D["EAS Build → ipa / aab"]:::agent
+
+    D --> E{"Account deletion?"}:::decision
+    E -->|"absent today"| E1["Rejected · 5.1.1 v<br/>B2"]:::err
+    E -->|"present"| F{"Privacy policy?"}:::decision
+
+    F -->|"absent today"| F1["Cannot submit<br/>B3"]:::err
+    F -->|"present"| G{"Placeholder screens?"}:::decision
+
+    G -->|"Sketching, today"| G1["Rejected · 2.1<br/>B4"]:::err
+    G -->|"removed or finished"| H{"Users see<br/>each other?"}:::decision
+
+    H -->|"yes → publish is on"| I["Needs report + block +<br/>filter + contact + EULA<br/>Guideline 1.2"]:::tool
+    H -->|"no → publish disabled"| J["Guideline 1.2 does not apply"]:::agent
+    I --> K["Review"]:::model
+    J --> K
+
+    K --> L{"Store"}:::decision
+    L -->|"App Store"| M["TestFlight → release"]:::agent
+    L -->|"Google Play"| N["Closed test<br/>12 testers × 14 days"]:::tool
+    N --> O["Production"]:::agent
+    M --> Z["Stranger's phone"]:::client
+    O --> Z
+
+    classDef client fill:#10242b,stroke:#2DD4BF,color:#CFFAF2;
+    classDef infra fill:#1b2230,stroke:#5A6B7B,color:#E6EDF3;
+    classDef agent fill:#1e2a3a,stroke:#58A6FF,color:#DCEBFF;
+    classDef model fill:#241b33,stroke:#A78BFA,color:#EADFFF;
+    classDef tool fill:#2a2310,stroke:#F5A623,color:#F7E6C2;
+    classDef decision fill:#11161c,stroke:#C9D1D9,color:#E6EDF3;
+    classDef err fill:#2b1416,stroke:#F85149,color:#F6C9C9;
+      </pre></div>
+      <p class="fig-cap en">Fig. B · Four red exits. Only the first is a coding problem; the other three are decisions and documents. Note the last amber box — it is on the happy path, not a failure.</p>
+      <p class="fig-cap vi">Hình B · Bốn lối thoát đỏ. Chỉ cái đầu tiên là vấn đề code; ba cái còn lại là quyết định và tài liệu. Chú ý ô hổ phách cuối — nó nằm trên đường đi thành công, không phải lỗi.</p>
+
+      <h3 class="en">View C — Sequence: why the security model holds</h3>
+      <h3 class="vi">Góc nhìn C — Sequence: vì sao mô hình bảo mật đứng vững</h3>
+
+      <p class="en">The argument of §04 as a timeline. Follow where the <strong>service role key</strong> appears and where it does not — that asymmetry is the whole design.</p>
+      <p class="vi">Lập luận của §04 dưới dạng timeline. Theo dõi chỗ <strong>service role key</strong> xuất hiện và chỗ nó không xuất hiện — sự bất đối xứng đó chính là toàn bộ thiết kế.</p>
+
+      <div class="canvas"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as User app
+    participant E as Editor dashboard
+    participant PG as Postgres + RLS
+    participant F as Edge Function
+    participant G as Google Places
+
+    Note over U,PG: Reading the catalog — no privilege needed
+    U->>PG: select places (publishable key)
+    PG-->>U: only is_published AND review_status = approved
+    U->>PG: select own submissions
+    PG-->>U: OR'd policy widens to submitted_by = auth.uid()
+
+    Note over U,PG: Writing your own things — scoped by uid
+    U->>PG: insert collection
+    PG-->>U: forced is_public = false at the policy
+    U->>PG: update is_public = true
+    PG->>PG: trigger stamps curator_handle from profiles
+    PG-->>U: byline is the owner's, or nothing
+
+    Note over E,G: Importing a place — the only privileged path
+    E->>F: POST fetch-place (Bearer user JWT)
+    F->>PG: is_editor(email)? (service role)
+    PG-->>F: allow / deny
+    F->>G: places details (GOOGLE_MAPS_API_KEY)
+    G-->>F: name, rating, hours, photos
+    F->>PG: insert is_published = false, review_status = pending
+    F-->>E: imported, awaiting review
+      </pre></div>
+      <p class="fig-cap en">Fig. C · The user app never holds a key that can write anything it does not own. Every privileged operation is a function call that re-checks the allow-list server-side.</p>
+      <p class="fig-cap vi">Hình C · App người dùng không bao giờ giữ key ghi được thứ không thuộc về mình. Mọi thao tác đặc quyền là một lời gọi function tự kiểm tra lại allow-list ở phía server.</p>
+    </section>
+
+    <!-- ══════════════════════════ 04 ══════════════════════════ -->
+    <section id="s4">
+      <span class="sec-num">04</span>
+      <h2 class="en">What is already right</h2>
+      <h2 class="vi">Những gì đang làm đúng</h2>
+
+      <p class="en">This is not a courtesy section. These are the reasons the rest of the document is shorter than it would otherwise be, and they are the parts you should <strong>not</strong> touch while fixing everything else.</p>
+      <p class="vi">Đây không phải phần viết cho lịch sự. Đây là lý do phần còn lại của tài liệu ngắn hơn nó đáng ra phải dài, và là những phần bạn <strong>không</strong> nên đụng vào khi sửa mọi thứ khác.</p>
+
+      <div class="cards">
+        <div class="card"><span class="c-tag">RLS-FIRST</span>
+          <h4 class="en">No key that can hurt you</h4><h4 class="vi">Không có key nào gây hại được</h4>
+          <p class="en">The client holds a publishable key only. <code>service_role</code> appears nowhere outside Edge Functions — verified by search across the whole repo.</p>
+          <p class="vi">Client chỉ giữ publishable key. <code>service_role</code> không xuất hiện ở đâu ngoài Edge Functions — đã kiểm chứng bằng tìm kiếm toàn repo.</p>
+        </div>
+        <div class="card"><span class="c-tag">STORAGE</span>
+          <h4 class="en">Avatars confined to your own uid</h4><h4 class="vi">Avatar bị khoá trong uid của chính mình</h4>
+          <p class="en">Writes check <code>storage.foldername(name)[1] = auth.uid()</code>. Without it, any signed-in account could overwrite anyone's face.</p>
+          <p class="vi">Policy ghi kiểm tra <code>storage.foldername(name)[1] = auth.uid()</code>. Không có nó, bất kỳ tài khoản đã đăng nhập nào cũng ghi đè được ảnh người khác.</p>
+        </div>
+        <div class="card"><span class="c-tag">PUBLISHING</span>
+          <h4 class="en">Nothing can arrive public</h4><h4 class="vi">Không gì sinh ra đã công khai</h4>
+          <p class="en">A collection is born <code>is_public = false</code>, pinned at the insert policy. Publishing is a separate second act by someone who has seen the contents.</p>
+          <p class="vi">Collection sinh ra luôn <code>is_public = false</code>, pin ở policy insert. Publish là hành động thứ hai riêng biệt của người đã xem nội dung.</p>
+        </div>
+        <div class="card"><span class="c-tag">IDENTITY</span>
+          <h4 class="en">The byline cannot be forged</h4><h4 class="vi">Byline không giả mạo được</h4>
+          <p class="en"><code>curator_handle</code> is written by a trigger reading <code>profiles</code>, never accepted from the request body. A handle in a PATCH is a handle the sender chose.</p>
+          <p class="vi"><code>curator_handle</code> do trigger đọc từ <code>profiles</code> ghi vào, không bao giờ nhận từ body request. Handle nằm trong PATCH là handle người gửi tự chọn.</p>
+        </div>
+        <div class="card"><span class="c-tag">TESTING</span>
+          <h4 class="en">Migrations are run, not read</h4><h4 class="vi">Migration được chạy, không chỉ đọc</h4>
+          <p class="en">CI stands up Postgres 16, applies all 23 migrations, then asserts. Triggers and constraints are SQL, and SQL that has only been reviewed is SQL that has not been run.</p>
+          <p class="vi">CI dựng Postgres 16, apply cả 23 migration, rồi assert. Trigger và constraint là SQL, và SQL mới chỉ được review là SQL chưa từng chạy.</p>
+        </div>
+        <div class="card"><span class="c-tag">TESTING</span>
+          <h4 class="en">A clock that has daylight saving</h4><h4 class="vi">Một chiếc đồng hồ có DST</h4>
+          <p class="en"><code>test:tz</code> re-runs the suite in <code>America/New_York</code>. Hanoi has no DST, so the normal run structurally could not catch a <code>daysBetween</code> returning 1.958 — and did not.</p>
+          <p class="vi"><code>test:tz</code> chạy lại suite ở <code>America/New_York</code>. Hà Nội không có DST nên lần chạy thường về cấu trúc không thể bắt được <code>daysBetween</code> trả về 1.958 — và đã không bắt được.</p>
+        </div>
+        <div class="card"><span class="c-tag">ARCHITECTURE</span>
+          <h4 class="en">A pure boundary that pays for itself</h4><h4 class="vi">Một biên hàm thuần đáng giá</h4>
+          <p class="en">Logic in <code>src/lib/*.ts</code> runs in bare Node — no React Native, no simulator, no Supabase. That is why 18 test files exist at all.</p>
+          <p class="vi">Logic ở <code>src/lib/*.ts</code> chạy được trong Node trần — không React Native, không simulator, không Supabase. Đó là lý do 18 file test tồn tại được.</p>
+        </div>
+        <div class="card"><span class="c-tag">LEGAL</span>
+          <h4 class="en">ToS reasoning sits in the source</h4><h4 class="vi">Lập luận ToS nằm sẵn trong code</h4>
+          <p class="en">Google Places results are kept off the Apple map deliberately (Places ToS §5.3), photo attribution renders on every card, and Nominatim gets a real <code>User-Agent</code>. Rare at this stage.</p>
+          <p class="vi">Kết quả Google Places bị giữ khỏi bản đồ Apple một cách có chủ ý (Places ToS §5.3), attribution ảnh render trên mọi card, và Nominatim nhận <code>User-Agent</code> thật. Hiếm ở giai đoạn này.</p>
+        </div>
+      </div>
+
+      <h3 class="en">The mechanism worth reading</h3>
+      <h3 class="vi">Cơ chế đáng đọc</h3>
+      <p class="en">Write access is not "signed in". It is "signed in <em>and</em> on a list", and the list itself is unreadable from any client — the table has RLS on with <strong>no policies at all</strong>, so only the service role and this security-definer function can see it.</p>
+      <p class="vi">Quyền ghi không phải là "đã đăng nhập". Nó là "đã đăng nhập <em>và</em> có tên trong danh sách", và bản thân danh sách đó không client nào đọc được — bảng bật RLS mà <strong>không có policy nào</strong>, nên chỉ service role và hàm security-definer này thấy được.</p>
+
+      <div class="code-wrap">
+        <div class="code-head"><span class="code-file">supabase/migrations/20260807000000_mobile_editor_auth.sql</span><span class="code-lang">sql</span></div>
+<pre><code class="language-sql">create table if not exists public.editors (
+  email text primary key,
+  added_at timestamptz not null default now()
+);
+-- RLS on, no policies: nothing reads this from a client, ever.
+alter table public.editors enable row level security;
+
+create or replace function public.is_editor()
+returns boolean
+language sql
+stable
+security definer          -- runs as the definer, so it can read the table above
+set search_path = public  -- pinned: a search_path attack cannot swap the table out
+as $$
+  select exists (
+    select 1 from public.editors
+    where email = lower(coalesce(auth.jwt() -&gt;&gt; 'email', ''))
+  );
+$$;
+
+revoke all on function public.is_editor() from public;
+grant execute on function public.is_editor() to anon, authenticated;</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="c-label en">Why this is the right shape</span><span class="c-label vi">Vì sao đây là hình dạng đúng</span>
+        <p class="en">Three details do the work: <code>security definer</code> lets the function read a table nobody else can; <code>set search_path</code> stops the classic attack where a caller creates their own <code>public.editors</code>; and <code>revoke all</code> then <code>grant execute</code> means the function is callable but its body is not inspectable through ordinary privileges. Most projects at this stage get one of the three.</p>
+        <p class="vi">Ba chi tiết làm nên tất cả: <code>security definer</code> cho phép hàm đọc bảng không ai khác đọc được; <code>set search_path</code> chặn kiểu tấn công kinh điển khi caller tự tạo <code>public.editors</code> của mình; và <code>revoke all</code> rồi <code>grant execute</code> nghĩa là hàm gọi được nhưng thân hàm không soi được qua quyền thông thường. Đa số dự án cùng giai đoạn làm được một trong ba.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════ 05 ══════════════════════════ -->
+    <section id="s5">
+      <span class="sec-num">05</span>
+      <h2 class="en">Group A — build blockers</h2>
+      <h2 class="vi">Nhóm A — chặn build</h2>
+
+      <p class="en">Eight items, all small, none of which exist. These make <code>eas build</code> fail <em>immediately</em> — long before any store is involved. Budget half a day for someone who has done it before.</p>
+      <p class="vi">Tám hạng mục, đều nhỏ, và chưa cái nào tồn tại. Chúng khiến <code>eas build</code> <em>thất bại ngay</em> — trước khi động tới store. Ước tính nửa ngày cho người đã từng làm.</p>
+
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th>ID</th>
+          <th><span class="en">Missing</span><span class="vi">Thiếu</span></th>
+          <th><span class="en">Consequence</span><span class="vi">Hậu quả</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="id">A1</td><td><code>ios.bundleIdentifier</code></td><td><span class="en">iOS build stops at once. <strong>Cannot be changed after release</strong> — decide carefully.</span><span class="vi">Build iOS dừng ngay. <strong>Không đổi được sau khi phát hành</strong> — cân nhắc kỹ.</span></td></tr>
+          <tr><td class="id">A2</td><td><code>android.package</code></td><td><span class="en">Android build stops at once. Same permanence.</span><span class="vi">Build Android dừng ngay. Cũng vĩnh viễn như vậy.</span></td></tr>
+          <tr><td class="id">A3</td><td><code>app/eas.json</code></td><td><span class="en">No build profiles, no <code>eas submit</code> configuration.</span><span class="vi">Không có build profile, không có cấu hình <code>eas submit</code>.</span></td></tr>
+          <tr><td class="id">A4</td><td><code>buildNumber</code> / <code>versionCode</code></td><td><span class="en">Version is <code>0.1.0</code> with no build counters — you cannot upload a second binary.</span><span class="vi">Version là <code>0.1.0</code> không có bộ đếm build — không upload được bản thứ hai.</span></td></tr>
+          <tr><td class="id">A5</td><td><span class="en">Splash screen config</span><span class="vi">Cấu hình splash screen</span></td><td><span class="en"><code>splash-icon.png</code> exists in <code>assets/</code> but is never declared. App opens on a bare colour.</span><span class="vi"><code>splash-icon.png</code> có trong <code>assets/</code> nhưng không được khai báo. App mở ra một màu trơn.</span></td></tr>
+          <tr><td class="id">A6</td><td><span class="en">Correct Android icon</span><span class="vi">Icon Android đúng</span></td><td><span class="en"><code>adaptiveIcon.foregroundImage</code> points at the square <code>icon.png</code> while <code>android-icon-foreground/background/monochrome.png</code> sit unused. The square gets cropped by the circular mask.</span><span class="vi"><code>adaptiveIcon.foregroundImage</code> trỏ vào <code>icon.png</code> vuông trong khi <code>android-icon-foreground/background/monochrome.png</code> nằm không dùng. Ảnh vuông bị mặt nạ tròn cắt mất.</span></td></tr>
+          <tr><td class="id">A7</td><td><span class="en">New Architecture decision</span><span class="vi">Quyết định về New Architecture</span></td><td><span class="en">SDK 54 defaults to Fabric. <code>react-native-maps</code> and <code>react-native-svg</code> must be verified on a real build — Expo Go cannot answer this.</span><span class="vi">SDK 54 mặc định bật Fabric. <code>react-native-maps</code> và <code>react-native-svg</code> phải verify trên bản build thật — Expo Go không trả lời được câu này.</span></td></tr>
+          <tr><td class="id">A8</td><td><span class="en">Channel separation</span><span class="vi">Tách channel</span></td><td><span class="en"><code>app-preview.yml</code> pushes <code>--branch main</code>. With real users, an OTA update goes straight into their hands with no staging step.</span><span class="vi"><code>app-preview.yml</code> đẩy <code>--branch main</code>. Với người dùng thật, một OTA update đi thẳng vào tay họ, không có bậc trung gian.</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 class="en">The two files that close Group A</h3>
+      <h3 class="vi">Hai file đóng lại Nhóm A</h3>
+
+      <p class="en">A1, A2, A5 and A6 are edits to <code>app.json</code>. The identifiers below are placeholders — pick a domain you control, because A1 and A2 are permanent once a build reaches a store.</p>
+      <p class="vi">A1, A2, A5 và A6 là sửa <code>app.json</code>. Các identifier bên dưới là placeholder — hãy chọn domain bạn sở hữu, vì A1 và A2 là vĩnh viễn khi một bản build đã lên store.</p>
+
+      <div class="code-wrap">
+        <div class="code-head"><span class="code-file">app/app.json — additions</span><span class="code-lang">json</span></div>
+<pre><code class="language-json">{
+  "expo": {
+    "ios": {
+      "bundleIdentifier": "com.example.citycrew",
+      "buildNumber": "1"
+    },
+    "android": {
+      "package": "com.example.citycrew",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "plugins": [
+      ["expo-splash-screen", {
+        "image": "./assets/splash-icon.png",
+        "backgroundColor": "#0B0910",
+        "imageWidth": 200
+      }]
+    ]
+  }
+}</code></pre>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-head"><span class="code-file">app/eas.json — new file</span><span class="code-lang">json</span></div>
+<pre><code class="language-json">{
+  "cli": { "version": "&gt;= 12.0.0", "appVersionSource": "remote" },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development"
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "android": { "buildType": "apk" }
+    },
+    "production": {
+      "channel": "production",
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="c-label en">Verify before use</span><span class="c-label vi">Kiểm chứng trước khi dùng</span>
+        <p class="en">Both files above are <strong>sketches written from the audit, not tested builds</strong>. EAS schema keys and the <code>expo-splash-screen</code> plugin options change between SDK versions. Run <code>npx expo-doctor</code> and one <code>eas build --profile preview</code> before trusting them. The <code>submit.production</code> block is intentionally empty — it needs your Apple Team ID and Play service-account JSON, which are account-specific and must not be committed.</p>
+        <p class="vi">Cả hai file trên là <strong>bản phác từ đánh giá, chưa qua build thật</strong>. Schema key của EAS và option của plugin <code>expo-splash-screen</code> thay đổi giữa các phiên bản SDK. Chạy <code>npx expo-doctor</code> và một lần <code>eas build --profile preview</code> trước khi tin chúng. Block <code>submit.production</code> cố ý để trống — nó cần Apple Team ID và service-account JSON của Play, là thứ riêng theo tài khoản và không được commit.</p>
+      </div>
+
+      <h3 class="en">Accounts and cost</h3>
+      <h3 class="vi">Tài khoản và chi phí</h3>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th><span class="en">Item</span><span class="vi">Hạng mục</span></th>
+          <th><span class="en">Cost</span><span class="vi">Chi phí</span></th>
+          <th><span class="en">Note</span><span class="vi">Ghi chú</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td>Apple Developer Program</td><td><code>~99 USD / year</code></td><td><span class="en">Required for TestFlight as well as release. Enrolment can take days — start early.</span><span class="vi">Cần cho cả TestFlight lẫn phát hành. Đăng ký có thể mất vài ngày — làm sớm.</span></td></tr>
+          <tr><td>Google Play Console</td><td><code>~25 USD once</code></td><td><span class="en">One-time. But see the closed-testing rule in §09 — that is the real cost.</span><span class="vi">Trả một lần. Nhưng xem luật closed testing ở §09 — đó mới là chi phí thật.</span></td></tr>
+          <tr><td>Expo EAS</td><td><code>free tier</code></td><td><span class="en">Free tier covers a pilot's build volume; queue times are longer.</span><span class="vi">Gói free đủ cho lượng build của một pilot; thời gian chờ hàng đợi lâu hơn.</span></td></tr>
+          <tr><td>Supabase Pro</td><td><code>~25 USD / month</code></td><td><span class="en">Effectively mandatory for a pilot — see D6 in §08.</span><span class="vi">Gần như bắt buộc cho pilot — xem D6 ở §08.</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══════════════════════════ 06 ══════════════════════════ -->
+    <section id="s6">
+      <span class="sec-num">06</span>
+      <h2 class="en">Group B — policy blockers</h2>
+      <h2 class="vi">Nhóm B — chặn chính sách</h2>
+
+      <p class="en">This is the section that decides your submission date. Four items block hard, and only one of them is meaningfully a coding task.</p>
+      <p class="vi">Đây là phần quyết định ngày nộp của bạn. Bốn hạng mục chặn cứng, và chỉ một trong số đó thực sự là việc code.</p>
+
+      <div class="cards">
+        <div class="card blocker"><span class="c-tag">B1 · GUIDELINE 1.2</span>
+          <h4 class="en">User-generated content</h4><h4 class="vi">Nội dung người dùng tạo</h4>
+          <p class="en">Profiles, published collections and place submissions are all visible to other people. Four required mechanisms, zero present.</p>
+          <p class="vi">Profile, collection đã publish và đề xuất địa điểm đều người khác nhìn thấy được. Bốn cơ chế bắt buộc, chưa có cơ chế nào.</p>
+        </div>
+        <div class="card blocker"><span class="c-tag">B2 · GUIDELINE 5.1.1(v)</span>
+          <h4 class="en">In-app account deletion</h4><h4 class="vi">Xoá tài khoản trong app</h4>
+          <p class="en">The app creates accounts, so it must delete them — in the app, not by email. <code>ProfileScreen</code> offers Sign out and nothing else.</p>
+          <p class="vi">App tạo tài khoản thì phải xoá được tài khoản — ngay trong app, không qua email. <code>ProfileScreen</code> chỉ có Sign out.</p>
+        </div>
+        <div class="card blocker"><span class="c-tag">B3 · BOTH STORES</span>
+          <h4 class="en">Privacy policy &amp; disclosure</h4><h4 class="vi">Privacy policy &amp; khai báo</h4>
+          <p class="en">No policy exists in the repo. Both stores need a public URL plus a completed data-disclosure form.</p>
+          <p class="vi">Repo không có privacy policy. Cả hai store cần URL công khai kèm form khai báo dữ liệu đã điền.</p>
+        </div>
+        <div class="card blocker"><span class="c-tag">B4 · GUIDELINE 2.1</span>
+          <h4 class="en">App completeness</h4><h4 class="vi">Tính hoàn thiện của app</h4>
+          <p class="en">The Sketching screen animates a progress bar over work that does not exist. Its own source says so.</p>
+          <p class="vi">Màn hình Sketching chạy thanh tiến trình cho công việc không tồn tại. Chính source của nó nói vậy.</p>
+        </div>
+      </div>
+
+      <h3 class="en">B1 — the four mechanisms, and the cheap way out</h3>
+      <h3 class="vi">B1 — bốn cơ chế, và lối đi rẻ</h3>
+
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th><span class="en">Required mechanism</span><span class="vi">Cơ chế bắt buộc</span></th>
+          <th><span class="en">Status</span><span class="vi">Hiện trạng</span></th>
+          <th><span class="en">Evidence</span><span class="vi">Bằng chứng</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td><span class="en">Filter objectionable content</span><span class="vi">Lọc nội dung phản cảm</span></td><td class="no">✗</td><td><span class="en"><code>handle</code> has a shape regex only. <code>bio</code>, <code>full_name</code>, collection titles are free text.</span><span class="vi"><code>handle</code> chỉ có regex hình dạng. <code>bio</code>, <code>full_name</code>, tên collection là văn bản tự do.</span></td></tr>
+          <tr><td><span class="en">Report mechanism</span><span class="vi">Cơ chế báo cáo</span></td><td class="no">✗</td><td><span class="en">No report affordance on any of the 15 screens.</span><span class="vi">Không có nút báo cáo trên bất kỳ màn nào trong 15 màn.</span></td></tr>
+          <tr><td><span class="en">Block abusive users</span><span class="vi">Chặn người lạm dụng</span></td><td class="no">✗</td><td><span class="en">No blocking table, no blocking UI.</span><span class="vi">Không có bảng chặn, không có UI chặn.</span></td></tr>
+          <tr><td><span class="en">Published contact info</span><span class="vi">Thông tin liên hệ công khai</span></td><td class="no">✗</td><td><span class="en">Not in the app, not in the repo.</span><span class="vi">Không có trong app, không có trong repo.</span></td></tr>
+          <tr><td><span class="en">EULA (or Apple's standard)</span><span class="vi">EULA (hoặc bản chuẩn của Apple)</span></td><td class="no">✗</td><td><span class="en">Not drafted.</span><span class="vi">Chưa soạn.</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <p class="en">Beyond the mechanisms, Apple asks for a commitment to <strong>act on reports and eject violators within 24 hours</strong>. That is an operational promise, not a feature — it needs a person on duty, which a pilot team may not have.</p>
+      <p class="vi">Ngoài các cơ chế, Apple còn yêu cầu cam kết <strong>xử lý báo cáo và loại người vi phạm trong 24 giờ</strong>. Đó là lời hứa vận hành, không phải tính năng — nó cần người trực, thứ mà một đội pilot có thể không có.</p>
+
+      <div class="callout tip">
+        <span class="c-label en">The detour worth taking</span><span class="c-label vi">Lối đi tắt đáng cân nhắc</span>
+        <p class="en">Guideline 1.2 applies to content <em>other users can see</em>. Turn publishing off for the first submission — collections stay private, profiles stop being cross-discoverable — and the whole requirement lapses. Ship report and block in the following release, then turn publishing back on.</p>
+        <p class="vi">Guideline 1.2 áp dụng cho nội dung <em>người dùng khác nhìn thấy được</em>. Tắt publish cho bản nộp đầu tiên — collection giữ riêng tư, profile không tra cứu chéo được — và toàn bộ yêu cầu này không còn áp dụng. Làm report và block ở bản tiếp theo, rồi bật publish trở lại.</p>
+        <p class="en">The architecture already supports this cleanly: publishing was <em>added</em> in one migration and the insert pin was deliberately kept. Reverting is one policy, not a refactor.</p>
+        <p class="vi">Kiến trúc đã hỗ trợ sẵn việc này một cách gọn gàng: publish được <em>thêm vào</em> trong một migration và pin ở insert được giữ lại có chủ ý. Quay lui là một policy, không phải một cuộc refactor.</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-head"><span class="code-file">supabase/migrations/2026xxxx_pause_publishing.sql — the reversible flip</span><span class="code-lang">sql</span></div>
+<pre><code class="language-sql">-- Undo of 20260815120000_publish_collections.sql, on purpose and for one
+-- release. Owners keep full control of their own lists; what they lose is
+-- the ability to hand one to a stranger. Restore by dropping this policy
+-- and re-applying the original.
+drop policy if exists "owners update their collections" on public.collections;
+create policy "owners update their collections" on public.collections
+  for update using (owner_id = auth.uid())
+  with check (owner_id = auth.uid() and is_public = false);
+
+-- Anything already public goes back to private, so the flip is total
+-- rather than "no new ones".
+update public.collections set is_public = false where owner_id is not null;</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="c-label en">Check before running</span><span class="c-label vi">Kiểm tra trước khi chạy</span>
+        <p class="en">The <code>update</code> above is scoped to rows with an <code>owner_id</code> so it does not unpublish the editorial collections, which have none. <strong>Confirm that assumption against live data</strong> before applying — if any editorial row carries an <code>owner_id</code>, this hides it from the app.</p>
+        <p class="vi">Câu <code>update</code> trên giới hạn ở các dòng có <code>owner_id</code> để không gỡ publish các collection biên tập, vốn không có owner. <strong>Xác nhận giả định đó trên dữ liệu thật</strong> trước khi apply — nếu có dòng biên tập nào mang <code>owner_id</code>, câu lệnh này sẽ ẩn nó khỏi app.</p>
+      </div>
+
+      <h3 class="en">B2 — account deletion, the one real coding task</h3>
+      <h3 class="vi">B2 — xoá tài khoản, việc code thật sự duy nhất</h3>
+
+      <p class="en">Deleting the auth user is one call. The interesting part is deciding what goes with it, and the schema has already made one of those decisions correctly and deliberately.</p>
+      <p class="vi">Xoá auth user chỉ là một lời gọi. Phần thú vị là quyết định cái gì đi theo nó, và schema đã đưa ra một trong các quyết định đó một cách đúng đắn và có chủ ý.</p>
+
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th><span class="en">Data</span><span class="vi">Dữ liệu</span></th>
+          <th><span class="en">Behaviour</span><span class="vi">Hành vi</span></th>
+          <th><span class="en">Why</span><span class="vi">Vì sao</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td><code>profiles</code></td><td><code>on delete cascade</code> <span class="yes">✓</span></td><td><span class="en">Already correct. The public identity goes when the account goes.</span><span class="vi">Đã đúng sẵn. Danh tính công khai mất đi cùng tài khoản.</span></td></tr>
+          <tr><td><code>places.submitted_by</code></td><td><code>on delete set null</code> <span class="yes">✓</span></td><td><span class="en">Deliberate, and right: an approved place belongs to the catalog. Deleting an account should not take a café out of Hanoi. What is lost is the credit — the only part that was personal.</span><span class="vi">Có chủ ý, và đúng: một địa điểm đã duyệt thuộc về catalog. Xoá tài khoản không nên lấy một quán cà phê ra khỏi Hà Nội. Cái mất đi là dòng ghi công — phần duy nhất mang tính cá nhân.</span></td></tr>
+          <tr><td><code>collections</code> (owned)</td><td class="no"><span class="en">Must be handled</span><span class="vi">Phải xử lý</span></td><td><span class="en">Delete them, and <code>collection_places</code> with them.</span><span class="vi">Xoá chúng, kèm theo <code>collection_places</code>.</span></td></tr>
+          <tr><td><code>avatars/&lt;uid&gt;/</code></td><td class="no"><span class="en">Must be handled</span><span class="vi">Phải xử lý</span></td><td><span class="en">Storage objects are not touched by a row cascade.</span><span class="vi">Object trong Storage không bị ảnh hưởng bởi cascade của bảng.</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="code-wrap">
+        <div class="code-head"><span class="code-file">supabase/functions/delete-account/index.ts — sketch</span><span class="code-lang">typescript</span></div>
+<pre><code class="language-typescript">// Deleting your own account, and only your own.
+//
+// The uid is never taken from the request body — it is read from the JWT
+// the caller presented. A body-supplied uid is a uid the sender chose,
+// which on a delete endpoint is the whole vulnerability.
+
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+Deno.serve(async (req) =&gt; {
+  if (req.method !== "POST") return new Response("POST only", { status: 405 });
+
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
+  const { data } = await admin.auth.getUser(token);
+  const uid = data?.user?.id;
+  if (!uid) return new Response("not signed in", { status: 401 });
+
+  // Storage first: once the auth row is gone there is no uid to build the
+  // path from, and orphaned objects in a public bucket stay readable.
+  const { data: files } = await admin.storage.from("avatars").list(uid);
+  if (files?.length) {
+    await admin.storage.from("avatars")
+      .remove(files.map((f) =&gt; `${uid}/${f.name}`));
+  }
+
+  // Owned lists go. `places.submitted_by` is `set null` by design, so
+  // approved places survive without their credit — see the migration.
+  await admin.from("collections").delete().eq("owner_id", uid);
+
+  // `profiles` cascades from this. Everything else already resolved above.
+  const { error } = await admin.auth.admin.deleteUser(uid);
+  if (error) return new Response(error.message, { status: 500 });
+
+  return new Response(JSON.stringify({ deleted: true }), {
+    headers: { "Content-Type": "application/json" },
+  });
+});</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="c-label en">Sketch, not shipped code</span><span class="c-label vi">Bản phác, không phải code đã chạy</span>
+        <p class="en">Written from the schema during this audit; never executed. Before shipping it: add the CORS preamble the other functions carry, decide whether <code>collection_places</code> needs an explicit delete or already cascades, confirm the Storage <code>list</code> path convention against live data, and require a re-authentication or typed confirmation in the UI — this endpoint is irreversible.</p>
+        <p class="vi">Viết ra từ schema trong lúc đánh giá; chưa từng chạy. Trước khi ship: thêm phần CORS như các function khác, quyết định <code>collection_places</code> có cần delete tường minh hay đã cascade sẵn, xác nhận quy ước đường dẫn <code>list</code> của Storage trên dữ liệu thật, và bắt xác thực lại hoặc gõ xác nhận ở UI — endpoint này không thể hoàn tác.</p>
+      </div>
+
+      <h3 class="en">B3 — what the privacy policy must actually say</h3>
+      <h3 class="vi">B3 — privacy policy phải nói thật những gì</h3>
+
+      <p class="en">GitHub Pages is already deploying, so hosting costs nothing. The content is the work. Both stores also require a structured disclosure — Apple's App Privacy label and Google's Data Safety form — and <strong>a mismatch between the form and the app's real behaviour is a more common rejection than a code defect</strong>.</p>
+      <p class="vi">GitHub Pages đã chạy sẵn nên hosting không tốn gì. Nội dung mới là việc phải làm. Cả hai store còn yêu cầu khai báo có cấu trúc — App Privacy label của Apple và Data Safety form của Google — và <strong>form khai không khớp hành vi thật của app là lý do bị từ chối phổ biến hơn cả lỗi code</strong>.</p>
+
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th><span class="en">Collected</span><span class="vi">Thu thập</span></th>
+          <th><span class="en">Where</span><span class="vi">Ở đâu</span></th>
+          <th><span class="en">Visibility</span><span class="vi">Mức công khai</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td><span class="en">Email</span><span class="vi">Email</span></td><td>Supabase Auth</td><td><span class="en">Private</span><span class="vi">Riêng tư</span></td></tr>
+          <tr><td><span class="en">Name, handle, bio, location, interests</span><span class="vi">Tên, handle, bio, location, sở thích</span></td><td><code>profiles</code></td><td class="no"><span class="en">Public — readable by anyone with the publishable key</span><span class="vi">Công khai — ai cầm publishable key cũng đọc được</span></td></tr>
+          <tr><td><span class="en">Profile photo</span><span class="vi">Ảnh đại diện</span></td><td><code>avatars</code> bucket</td><td class="no"><span class="en">Public read</span><span class="vi">Public read</span></td></tr>
+          <tr><td><span class="en">Coarse location</span><span class="vi">Vị trí thô</span></td><td><code>expo-location</code></td><td><span class="en">Device only — used to pick the nearest city, never stored</span><span class="vi">Chỉ trên thiết bị — dùng để chọn thành phố gần nhất, không lưu</span></td></tr>
+          <tr><td><span class="en">Camera / photo library</span><span class="vi">Camera / thư viện ảnh</span></td><td><code>expo-image-picker</code></td><td><span class="en">Only what the user picks as an avatar</span><span class="vi">Chỉ ảnh người dùng chọn làm avatar</span></td></tr>
+          <tr><td><span class="en">User content</span><span class="vi">Nội dung người dùng</span></td><td><span class="en">Collections, place submissions</span><span class="vi">Collection, đề xuất địa điểm</span></td><td><span class="en">Private until published</span><span class="vi">Riêng tư cho tới khi publish</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout stop">
+        <span class="c-label en">The line people forget</span><span class="c-label vi">Dòng người ta hay quên</span>
+        <p class="en">The <code>profiles</code> table is readable <strong>in full, by anyone</strong> holding the publishable key. The migration says so plainly and calls it "literal". That is a legitimate design — it is how a handle can be looked up — but the privacy policy must state it, and a user writing a bio must understand it is public. Do not let this surface for the first time in a store reviewer's question.</p>
+        <p class="vi">Bảng <code>profiles</code> <strong>ai cầm publishable key cũng đọc được toàn bộ</strong>. Migration nói thẳng điều đó và gọi nó là "theo nghĩa đen". Đó là thiết kế hợp lệ — nhờ nó mà tra cứu handle được — nhưng privacy policy phải nói rõ, và người dùng viết bio phải hiểu nó là công khai. Đừng để điều này lần đầu xuất hiện trong câu hỏi của reviewer.</p>
+      </div>
+
+      <h3 class="en">B4 — the progress bar that measures nothing</h3>
+      <h3 class="vi">B4 — thanh tiến trình không đo gì cả</h3>
+
+      <p class="en">The strongest evidence against this app in a review is written in the app's own source, and the honesty is worth quoting rather than paraphrasing:</p>
+      <p class="vi">Bằng chứng mạnh nhất chống lại app này khi review nằm trong chính source của app, và sự trung thực đó đáng được trích nguyên văn thay vì diễn giải:</p>
+
+      <div class="code-wrap">
+        <div class="code-head"><span class="code-file">app/src/lib/sketch.ts</span><span class="code-lang">typescript</span></div>
+<pre><code class="language-typescript">// ── on the timings being fiction ──
+//
+// There is no agent yet. `SKETCH_STEPS` runs on a clock rather than on
+// work, and that is a stopgap with a real cost: a progress display that
+// is not measuring anything will eventually lie, because the work will
+// take longer or shorter than the fiction. The one thing it must not do
+// is *finish* on its own and hand back a plan that does not exist — see
+// `finishedAt`, which is where the screen stops rather than pretends.</code></pre>
+      </div>
+
+      <p class="en">A reviewer opens the app, taps Ideas, watches a progress bar run and arrive nowhere. That is the textbook description of placeholder content and of a demo build. The <code>finishedAt</code> design — stopping rather than fabricating a plan — is the right engineering choice and does not rescue the guideline.</p>
+      <p class="vi">Reviewer mở app, bấm vào Ideas, nhìn một thanh tiến trình chạy rồi không dẫn tới đâu. Đó đúng là mô tả sách giáo khoa của placeholder content và của một bản demo. Thiết kế <code>finishedAt</code> — dừng lại thay vì bịa ra một kế hoạch — là lựa chọn kỹ thuật đúng, và nó không cứu được guideline này.</p>
+
+      <p class="en">Two options, no third: <strong>finish the itinerary flow</strong> (the generator logic already exists in <code>data/scripts/itinerary-runtime.js</code>), or <strong>remove the tab from the submitted build</strong>. Keeping it and hoping is the expensive choice, because a rejection costs a review cycle.</p>
+      <p class="vi">Hai lựa chọn, không có lựa chọn thứ ba: <strong>hoàn thiện luồng itinerary</strong> (logic generator đã có sẵn ở <code>data/scripts/itinerary-runtime.js</code>), hoặc <strong>gỡ tab đó khỏi bản nộp</strong>. Giữ lại và hy vọng là lựa chọn đắt nhất, vì một lần bị từ chối tốn nguyên một chu kỳ review.</p>
+
+      <h3 class="en">B5 — permission strings must match behaviour</h3>
+      <h3 class="vi">B5 — chuỗi mô tả quyền phải khớp hành vi</h3>
+      <p class="en">The location string promises the app "uses your location <strong>once</strong> to pick the nearest city". Apple compares such strings against observed behaviour. Verify the app really reads location once and does not re-request on every launch. The camera and photo strings are narrower and match <code>AvatarPicker</code>'s actual use.</p>
+      <p class="vi">Chuỗi mô tả vị trí hứa rằng app "dùng vị trí của bạn <strong>một lần</strong> để chọn thành phố gần nhất". Apple đối chiếu những chuỗi như vậy với hành vi quan sát được. Cần kiểm chứng app thật sự chỉ đọc vị trí một lần và không hỏi lại mỗi lần mở. Chuỗi camera và ảnh hẹp hơn và khớp với cách <code>AvatarPicker</code> dùng thật.</p>
+    </section>
+
+    <!-- ══════════════════════════ 07 ══════════════════════════ -->
+    <section id="s7">
+      <span class="sec-num">07</span>
+      <h2 class="en">Group C — third-party risk</h2>
+      <h2 class="vi">Nhóm C — rủi ro bên thứ ba</h2>
+
+      <p class="en">The codebase reasons about this better than most, which makes the two remaining gaps worth naming precisely rather than vaguely.</p>
+      <p class="vi">Codebase lập luận về mảng này tốt hơn mặt bằng chung, nên hai lỗ hổng còn lại đáng được gọi tên chính xác thay vì nói chung chung.</p>
+
+      <h3 class="en">C1 — Google Places data is cached forever</h3>
+      <h3 class="vi">C1 — dữ liệu Google Places bị cache vĩnh viễn</h3>
+
+      <p class="en"><code>import-place.ts</code> writes a wide slice of Google's response into Postgres permanently: <code>rating</code>, <code>rating_count</code>, <code>price_level</code>, <code>opening_hours</code>, <code>website</code>, <code>phone</code>, and the editorial summary. There is no refresh job and no expiry column anywhere in the 23 migrations.</p>
+      <p class="vi"><code>import-place.ts</code> ghi vĩnh viễn một lát cắt rộng từ response của Google vào Postgres: <code>rating</code>, <code>rating_count</code>, <code>price_level</code>, <code>opening_hours</code>, <code>website</code>, <code>phone</code>, và tóm tắt biên tập. Không có job làm mới và không có cột hết hạn nào trong cả 23 migration.</p>
+
+      <div class="callout warn">
+        <span class="c-label en">Two problems, one fix</span><span class="c-label vi">Hai vấn đề, một cách sửa</span>
+        <p class="en"><strong>Legal:</strong> Google Maps Platform terms permit caching <code>place_id</code> indefinitely but restrict other content to a limited window. Re-read the current terms — this one genuinely changed with Places API (New) and I will not quote a number at you.</p>
+        <p class="vi"><strong>Pháp lý:</strong> điều khoản Google Maps Platform cho phép cache <code>place_id</code> vô thời hạn nhưng giới hạn nội dung khác trong một khoảng thời gian. Hãy đọc lại điều khoản hiện hành — phần này thực sự có thay đổi cùng Places API (New) nên tôi không trích một con số cụ thể.</p>
+        <p class="en"><strong>Product:</strong> <code>opening_hours</code> and <code>rating</code> are the freshest fields Google returns and therefore the ones that hurt most when stale. A pilot user standing outside a closed café is a worse outcome than a licence question.</p>
+        <p class="vi"><strong>Sản phẩm:</strong> <code>opening_hours</code> và <code>rating</code> là hai trường "tươi" nhất Google trả về, nên cũng là hai trường gây hại nhất khi cũ. Một người dùng pilot đứng trước quán đã đóng cửa là hậu quả tệ hơn một câu hỏi về giấy phép.</p>
+      </div>
+
+      <p class="en">The fix is small: a <code>google_refreshed_at timestamptz</code> column, a scheduled function that re-fetches by <code>google_place_id</code> in batches, and a decision about which fields are worth storing at all.</p>
+      <p class="vi">Cách sửa nhỏ gọn: thêm cột <code>google_refreshed_at timestamptz</code>, một scheduled function fetch lại theo <code>google_place_id</code> theo lô, và một quyết định xem trường nào thực sự đáng lưu.</p>
+
+      <h3 class="en">C2 — the Nominatim ceiling</h3>
+      <h3 class="vi">C2 — trần của Nominatim</h3>
+
+      <p class="en"><code>find-address</code> queries <strong>both</strong> free public OSM instances on every search, in parallel. The function's header explains why both — Photon forgives word order, Nominatim resolves administrative names — and the reasoning is sound. The scaling question is separate from the design question.</p>
+      <p class="vi"><code>find-address</code> gọi <strong>cả hai</strong> instance OSM công cộng miễn phí mỗi lần tìm, song song. Header của function giải thích vì sao cần cả hai — Photon dễ tính với thứ tự từ, Nominatim xử lý tên hành chính tốt hơn — và lập luận đó đúng. Câu hỏi về quy mô là câu hỏi khác với câu hỏi về thiết kế.</p>
+
+      <div class="cards">
+        <div class="card"><span class="c-tag">MITIGATED</span>
+          <h4 class="en">Already doing right</h4><h4 class="vi">Đã làm đúng</h4>
+          <p class="en">Sign-in required, a real <code>User-Agent</code> sent, and — most importantly — search fires on <strong>submit</strong>, not on every keystroke. Search-as-you-type against the public Nominatim would be an immediate policy violation.</p>
+          <p class="vi">Bắt đăng nhập, gửi <code>User-Agent</code> thật, và — quan trọng nhất — tìm kiếm chạy khi <strong>submit</strong>, không phải mỗi phím gõ. Search-as-you-type vào Nominatim công cộng là vi phạm policy ngay lập tức.</p>
+        </div>
+        <div class="card"><span class="c-tag">CEILING</span>
+          <h4 class="en">Where it breaks</h4><h4 class="vi">Chỗ nó vỡ</h4>
+          <p class="en">Fine for tens of users. Somewhere in the low hundreds of active users the public instance's rate policy becomes the limit. Add a Postgres cache keyed on the normalized query before the pilot — it is cheap and buys a whole tier of scale.</p>
+          <p class="vi">Ổn với vài chục người. Ở khoảng vài trăm người dùng hoạt động, rate policy của instance công cộng trở thành giới hạn. Thêm cache trong Postgres theo query đã chuẩn hoá trước khi pilot — rẻ và mua thêm nguyên một bậc quy mô.</p>
+        </div>
+      </div>
+
+      <h3 class="en">C3 — attribution still missing</h3>
+      <h3 class="vi">C3 — attribution còn thiếu</h3>
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th><span class="en">Source</span><span class="vi">Nguồn</span></th>
+          <th><span class="en">Requirement</span><span class="vi">Yêu cầu</span></th>
+          <th><span class="en">Status</span><span class="vi">Hiện trạng</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td><span class="en">Google photos</span><span class="vi">Ảnh Google</span></td><td><span class="en">Author attribution wherever the photo appears</span><span class="vi">Ghi tác giả ở mọi nơi ảnh xuất hiện</span></td><td class="yes"><span class="en">✓ rendered on <code>PlaceCard</code></span><span class="vi">✓ render trên <code>PlaceCard</code></span></td></tr>
+          <tr><td>OpenStreetMap</td><td><span class="en">ODbL attribution on results and derived coordinates</span><span class="vi">Attribution ODbL cho kết quả và toạ độ dẫn xuất</span></td><td class="yes"><span class="en">✓ labelled on <code>StartSheet</code></span><span class="vi">✓ có nhãn trên <code>StartSheet</code></span></td></tr>
+          <tr><td>Open-Meteo</td><td><span class="en">CC-BY-4.0 credit</span><span class="vi">Ghi nguồn CC-BY-4.0</span></td><td class="no"><span class="en">✗ nowhere in the app</span><span class="vi">✗ không có ở đâu trong app</span></td></tr>
+          <tr><td>Apple Maps</td><td><span class="en">Logo / legal notice when displaying MapKit</span><span class="vi">Logo / legal notice khi hiển thị MapKit</span></td><td class="no"><span class="en">✗ verify on <code>MiniMap</code></span><span class="vi">✗ cần kiểm tra <code>MiniMap</code></span></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout note">
+        <span class="c-label en">The constraint that already shaped the product</span><span class="c-label vi">Ràng buộc đã định hình sản phẩm</span>
+        <p class="en">Google Places results may not be displayed on a non-Google map. The map here is Apple's, which is why <code>MiniMap</code> shows no places at all and why <code>find-address</code> searches OSM rather than the Places API the app already pays for. That is a real product cost, already paid, correctly. Anyone later tempted to "just use Google here too" needs to read those two file headers first.</p>
+        <p class="vi">Kết quả Google Places không được hiển thị trên bản đồ không phải của Google. Bản đồ ở đây là của Apple, đó là lý do <code>MiniMap</code> không hiển thị địa điểm nào và <code>find-address</code> tìm trên OSM thay vì Places API mà app vốn đã trả tiền. Đó là chi phí sản phẩm thật, đã trả, và trả đúng. Ai sau này định "dùng luôn Google ở đây cho nhanh" cần đọc header của hai file đó trước.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════ 08 ══════════════════════════ -->
+    <section id="s8">
+      <span class="sec-num">08</span>
+      <h2 class="en">Group D — pilot operations</h2>
+      <h2 class="vi">Nhóm D — vận hành pilot</h2>
+
+      <p class="en">Group B decides whether you <em>can</em> ship. Group D decides whether shipping <strong>teaches you anything</strong>. A pilot you cannot measure is not a pilot; it is an early release.</p>
+      <p class="vi">Nhóm B quyết định bạn <em>có</em> ship được không. Nhóm D quyết định việc ship có <strong>dạy cho bạn điều gì</strong> không. Một pilot không đo được thì không phải pilot, chỉ là phát hành sớm.</p>
+
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th>ID</th>
+          <th><span class="en">Gap</span><span class="vi">Thiếu</span></th>
+          <th><span class="en">Why it matters</span><span class="vi">Vì sao quan trọng</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="id">D1</td><td><span class="en"><strong>No crash reporting</strong></span><span class="vi"><strong>Không có crash reporting</strong></span></td><td><span class="en">The single highest-value item in this document. With strangers on real devices, an unreported crash is a crash that did not happen. Sentry or equivalent, before the first external build.</span><span class="vi">Hạng mục giá trị cao nhất trong cả tài liệu. Với người lạ trên máy thật, một crash không được báo cáo là một crash không tồn tại. Sentry hoặc tương đương, trước bản build ngoài đầu tiên.</span></td></tr>
+          <tr><td class="id">D2</td><td><span class="en">No <code>ErrorBoundary</code></span><span class="vi">Không có <code>ErrorBoundary</code></span></td><td><span class="en">One render error becomes a white screen with no message and no recovery. Verified absent from <code>App.tsx</code>.</span><span class="vi">Một lỗi render thành màn hình trắng, không thông báo, không phục hồi. Đã kiểm chứng không có trong <code>App.tsx</code>.</span></td></tr>
+          <tr><td class="id">D3</td><td><span class="en">No analytics</span><span class="vi">Không có analytics</span></td><td><span class="en">Minimum viable set: app open, place viewed, place saved, collection created, collection published. Five events answer most pilot questions.</span><span class="vi">Bộ tối thiểu: mở app, xem place, lưu place, tạo collection, publish collection. Năm sự kiện trả lời được hầu hết câu hỏi của pilot.</span></td></tr>
+          <tr><td class="id">D4</td><td><span class="en">One Supabase environment</span><span class="vi">Một môi trường Supabase duy nhất</span></td><td><span class="en">Migrations are applied to production by hand through the SQL editor, per <code>docs/mobile-setup.md</code>. There is no staging to be wrong in.</span><span class="vi">Migration apply thẳng vào production bằng tay qua SQL editor, theo <code>docs/mobile-setup.md</code>. Không có staging để sai ở đó.</span></td></tr>
+          <tr><td class="id">D5</td><td><span class="en">No migration / function deploy in CI</span><span class="vi">Không deploy migration / function trong CI</span></td><td><span class="en">CI <em>tests</em> migrations but never <em>runs</em> them anywhere. The manual step is where the incident will come from.</span><span class="vi">CI <em>test</em> migration nhưng không <em>chạy</em> chúng ở đâu cả. Bước thủ công là nơi sự cố sẽ đến.</span></td></tr>
+          <tr><td class="id">D6</td><td><span class="en">Supabase free tier</span><span class="vi">Supabase gói free</span></td><td><span class="en">A free project <strong>pauses itself after a week of inactivity</strong>. Mid-pilot that reads as "the app is dead". Pro also brings point-in-time recovery.</span><span class="vi">Project free <strong>tự pause sau một tuần không hoạt động</strong>. Giữa pilot điều đó có nghĩa là "app chết". Gói Pro còn kèm point-in-time recovery.</span></td></tr>
+          <tr><td class="id">D7</td><td><span class="en">No abuse quotas</span><span class="vi">Không có quota chống lạm dụng</span></td><td><span class="en">RLS controls <strong>who</strong>, never <strong>how many</strong>. One account can create unlimited collections, re-upload an avatar endlessly, spam submissions.</span><span class="vi">RLS kiểm soát <strong>ai</strong>, không kiểm soát <strong>bao nhiêu</strong>. Một tài khoản tạo được vô hạn collection, upload lại avatar không giới hạn, spam đề xuất.</span></td></tr>
+          <tr><td class="id">D8</td><td><span class="en">No Google API budget alarm</span><span class="vi">Không có cảnh báo ngân sách Google API</span></td><td><span class="en"><code>scan-city</code> caps calls per invocation at 45 but nothing caps invocations. A compromised editor account is a billing incident.</span><span class="vi"><code>scan-city</code> giới hạn 45 lời gọi mỗi lần chạy nhưng không giới hạn số lần chạy. Một tài khoản editor bị chiếm là một sự cố hoá đơn.</span></td></tr>
+          <tr><td class="id">D9</td><td><span class="en">No offline handling or cache</span><span class="vi">Không xử lý offline, không cache</span></td><td><span class="en">Each screen hits the network directly. <code>auth.tsx</code> has named timeouts (good, and rare) but there is no retry, no data cache, no offline state.</span><span class="vi">Mỗi màn hình gọi mạng trực tiếp. <code>auth.tsx</code> có timeout đặt tên (tốt, và hiếm) nhưng không có retry, không cache dữ liệu, không trạng thái offline.</span></td></tr>
+          <tr><td class="id">D10</td><td><span class="en">No E2E tests, no device matrix</span><span class="vi">Không có E2E test, chưa test dải thiết bị</span></td><td><span class="en">All 18 test files cover pure functions. No test has ever rendered a screen.</span><span class="vi">Cả 18 file test đều phủ hàm thuần. Chưa test nào từng render một màn hình.</span></td></tr>
+          <tr><td class="id">D11</td><td><span class="en">Accessibility unassessed</span><span class="vi">Chưa đánh giá accessibility</span></td><td><span class="en">Dynamic Type, VoiceOver labels, contrast. Apple checks lightly; pilot users do not.</span><span class="vi">Dynamic Type, nhãn VoiceOver, độ tương phản. Apple kiểm nhẹ; người dùng pilot thì không.</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout tip">
+        <span class="c-label en">If you do one thing from this section</span><span class="c-label vi">Nếu chỉ làm một việc trong phần này</span>
+        <p class="en">D1 and D2 together, in the same afternoon, <em>before</em> the first build leaves your hands. Everything else in Group D can be added while the pilot runs. These two cannot — a crash you did not capture on day one is gone.</p>
+        <p class="vi">Làm D1 và D2 cùng nhau, trong một buổi chiều, <em>trước</em> khi bản build đầu tiên rời khỏi tay bạn. Mọi thứ khác trong Nhóm D có thể thêm vào khi pilot đang chạy. Hai cái này thì không — một crash bạn không bắt được ngày đầu là một crash mất luôn.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════ 09 ══════════════════════════ -->
+    <section id="s9">
+      <span class="sec-num">09</span>
+      <h2 class="en">The roadmap</h2>
+      <h2 class="vi">Lộ trình</h2>
+
+      <p class="en">Three phases, but the important structure is that <strong>one track does not depend on you</strong> and should therefore start first, in parallel with everything else.</p>
+      <p class="vi">Ba giai đoạn, nhưng cấu trúc quan trọng là <strong>có một nhánh không phụ thuộc vào bạn</strong> nên phải khởi động trước tiên, song song với mọi thứ khác.</p>
+
+      <div class="canvas"><pre class="mermaid">
+flowchart LR
+    subgraph T1["Track 1 · Engineering — sequential"]
+      direction LR
+      P1["Phase 1 · ~1 week<br/>Group A + Sentry + ErrorBoundary<br/>→ installable preview build"]:::agent
+      P2["Phase 2 · ~2 weeks<br/>delete-account · privacy policy<br/>Ideas decision · publish decision<br/>→ submittable binary"]:::agent
+      P3["Phase 3 · ~2-3 weeks<br/>analytics · quotas · caches<br/>staging + CI deploy"]:::agent
+      P1 --> P2 --> P3
+    end
+
+    subgraph T2["Track 2 · Accounts and review — start on day 1"]
+      direction LR
+      A1["Apple Developer enrolment<br/>days, not hours"]:::tool
+      A2["Play Console signup"]:::tool
+      A3["Closed testing<br/>12 testers × 14 days<br/>WALL CLOCK, cannot compress"]:::tool
+      A1 --> A3
+      A2 --> A3
+    end
+
+    P2 -.->|"first binary feeds"| A3
+    P3 --> LAUNCH["Pilot open"]:::client
+    A3 --> LAUNCH
+
+    classDef agent fill:#1e2a3a,stroke:#58A6FF,color:#DCEBFF;
+    classDef tool fill:#2a2310,stroke:#F5A623,color:#F7E6C2;
+    classDef client fill:#10242b,stroke:#2DD4BF,color:#CFFAF2;
+      </pre></div>
+      <p class="fig-cap en">Fig. D · The amber track is wall-clock time you cannot buy back. Apple enrolment and Play signup should be submitted before any code in Phase 1 is written.</p>
+      <p class="fig-cap vi">Hình D · Nhánh hổ phách là thời gian thực không mua lại được. Đăng ký Apple và Play nên nộp trước khi viết dòng code nào của Giai đoạn 1.</p>
+
+      <div class="callout stop">
+        <span class="c-label en">The scheduling trap</span><span class="c-label vi">Bẫy lịch trình</span>
+        <p class="en">A <strong>personal</strong> Google Play developer account created after November 2023 must run closed testing with a minimum number of testers for a continuous period before it may publish to production — commonly 12 testers for 14 days. Nothing in engineering shortens that clock. Verify the current rule in the Play Console, because if it applies to your account it sets your launch date, not your sprint plan.</p>
+        <p class="vi">Tài khoản developer Google Play <strong>cá nhân</strong> mở sau tháng 11/2023 phải chạy closed testing với số tester tối thiểu trong một khoảng thời gian liên tục trước khi được publish lên production — thường là 12 tester trong 14 ngày. Không việc kỹ thuật nào rút ngắn được đồng hồ đó. Kiểm chứng luật hiện hành trong Play Console, vì nếu nó áp dụng cho tài khoản của bạn thì nó quyết định ngày ra mắt, chứ không phải sprint plan của bạn.</p>
+      </div>
+
+      <h3 class="en">Phase 1 — an installable build (~1 week)</h3>
+      <h3 class="vi">Giai đoạn 1 — một bản build cài được (~1 tuần)</h3>
+      <ul>
+        <li class="en">A1–A6: bundle identifier, package name, <code>eas.json</code>, versioning, splash, Android icon</li>
+        <li class="vi">A1–A6: bundle identifier, package name, <code>eas.json</code>, versioning, splash, icon Android</li>
+        <li class="en">Enrol in Apple Developer and Play Console — <strong>day one, in parallel</strong></li>
+        <li class="vi">Đăng ký Apple Developer và Play Console — <strong>ngày đầu tiên, song song</strong></li>
+        <li class="en"><code>eas build --profile preview</code> for both platforms</li>
+        <li class="vi"><code>eas build --profile preview</code> cho cả hai nền tảng</li>
+        <li class="en">Test on ≥2 real iOS and ≥2 real Android devices — this is where A7 gets answered</li>
+        <li class="vi">Test trên ≥2 máy iOS và ≥2 máy Android thật — đây là chỗ trả lời A7</li>
+        <li class="en">D1 + D2: crash reporting and an error boundary, <em>now</em>, not later</li>
+        <li class="vi">D1 + D2: crash reporting và error boundary, <em>ngay</em>, không để sau</li>
+      </ul>
+
+      <h3 class="en">Phase 2 — submittable (~2 weeks)</h3>
+      <h3 class="vi">Giai đoạn 2 — nộp được (~2 tuần)</h3>
+      <ul>
+        <li class="en"><strong>B2</strong> — the <code>delete-account</code> function plus a two-step confirmation in Profile</li>
+        <li class="vi"><strong>B2</strong> — function <code>delete-account</code> kèm xác nhận hai bước trong Profile</li>
+        <li class="en"><strong>B3</strong> — privacy policy on GitHub Pages; App Privacy and Data Safety forms completed honestly</li>
+        <li class="vi"><strong>B3</strong> — privacy policy trên GitHub Pages; điền trung thực form App Privacy và Data Safety</li>
+        <li class="en"><strong>B4</strong> — finish the Ideas flow or remove the tab from this build</li>
+        <li class="vi"><strong>B4</strong> — hoàn thiện luồng Ideas hoặc gỡ tab khỏi bản build này</li>
+        <li class="en"><strong>B1</strong> — decide: pause publishing (cheap, one policy) or build report + block + filter + contact + EULA</li>
+        <li class="vi"><strong>B1</strong> — quyết định: tạm dừng publish (rẻ, một policy) hoặc làm report + block + filter + contact + EULA</li>
+        <li class="en">B5 permission strings; C3 attribution; D6 Supabase Pro</li>
+        <li class="vi">B5 chuỗi mô tả quyền; C3 attribution; D6 nâng Supabase Pro</li>
+        <li class="en">Screenshots, description, age rating, first TestFlight internal build</li>
+        <li class="vi">Screenshot, mô tả, age rating, bản TestFlight internal đầu tiên</li>
+      </ul>
+
+      <h3 class="en">Phase 3 — open the pilot (~2–3 weeks, overlapping)</h3>
+      <h3 class="vi">Giai đoạn 3 — mở pilot (~2–3 tuần, gối đầu)</h3>
+      <ul>
+        <li class="en">Play closed testing running — started as early as a binary allows</li>
+        <li class="vi">Closed testing trên Play đang chạy — khởi động ngay khi có binary</li>
+        <li class="en">TestFlight external (up to 10,000 testers, light beta review)</li>
+        <li class="vi">TestFlight external (tới 10.000 tester, beta review nhẹ)</li>
+        <li class="en">D3 analytics · D7 abuse quotas · D8 Google budget alarm</li>
+        <li class="vi">D3 analytics · D7 quota chống lạm dụng · D8 cảnh báo ngân sách Google</li>
+        <li class="en">C1 Google refresh job · C2 <code>find-address</code> cache</li>
+        <li class="vi">C1 job làm mới Google · C2 cache <code>find-address</code></li>
+        <li class="en">D4/D5 staging project and automated <code>supabase db push</code> + function deploy</li>
+        <li class="vi">D4/D5 project staging và tự động <code>supabase db push</code> + deploy function</li>
+        <li class="en">D9 caching and offline states · D11 accessibility pass</li>
+        <li class="vi">D9 cache và trạng thái offline · D11 rà accessibility</li>
+      </ul>
+    </section>
+
+    <!-- ══════════════════════════ 10 ══════════════════════════ -->
+    <section id="s10">
+      <span class="sec-num">10</span>
+      <h2 class="en">Definition of done</h2>
+      <h2 class="vi">Tiêu chí hoàn thành</h2>
+
+      <p class="en">The pilot is ready when <strong>all eight</strong> of these are true. Each is checkable by someone who did not write the code — that is the point of phrasing them this way rather than as a task list.</p>
+      <p class="vi">Pilot sẵn sàng khi <strong>cả tám</strong> điều sau đều đúng. Mỗi điều đều kiểm chứng được bởi người không viết code — đó là lý do chúng được viết như thế này thay vì như một danh sách công việc.</p>
+
+      <div class="tbl-wrap"><table>
+        <thead><tr>
+          <th>#</th>
+          <th><span class="en">Criterion</span><span class="vi">Tiêu chí</span></th>
+          <th><span class="en">Covers</span><span class="vi">Bao phủ</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="id">1</td><td><span class="en">A stranger can install, sign up, use, and <strong>delete their account</strong> — entirely in the app, without contacting anyone.</span><span class="vi">Một người lạ cài được, đăng ký, dùng, và <strong>xoá tài khoản</strong> — trọn vẹn trong app, không cần liên hệ ai.</span></td><td class="id">B2</td></tr>
+          <tr><td class="id">2</td><td><span class="en">A crash on a stranger's device <strong>reaches a developer within minutes</strong>, with a stack trace.</span><span class="vi">Một crash trên máy người lạ <strong>tới được người phát triển trong vài phút</strong>, kèm stack trace.</span></td><td class="id">D1, D2</td></tr>
+          <tr><td class="id">3</td><td><span class="en">No screen displays progress for work that does not exist.</span><span class="vi">Không màn hình nào hiển thị tiến trình cho công việc không tồn tại.</span></td><td class="id">B4</td></tr>
+          <tr><td class="id">4</td><td><span class="en">A public privacy policy URL exists and describes what is actually collected — <strong>including that <code>profiles</code> is public</strong>.</span><span class="vi">Có URL privacy policy công khai, mô tả đúng những gì thực sự thu thập — <strong>bao gồm việc <code>profiles</code> là công khai</strong>.</span></td><td class="id">B3</td></tr>
+          <tr><td class="id">5</td><td><span class="en">Supabase is on Pro with no risk of self-pausing mid-pilot, and a restorable backup exists.</span><span class="vi">Supabase ở gói Pro, không có nguy cơ tự pause giữa pilot, và có backup khôi phục được.</span></td><td class="id">D6</td></tr>
+          <tr><td class="id">6</td><td><span class="en">If user content reaches other users: a report path, a block path, and a person who answers within 24 hours.</span><span class="vi">Nếu nội dung người dùng tới được mắt người dùng khác: có đường báo cáo, đường chặn, và người trả lời trong 24 giờ.</span></td><td class="id">B1</td></tr>
+          <tr><td class="id">7</td><td><span class="en">A single account cannot degrade anyone else's experience, nor burn the API budget.</span><span class="vi">Một tài khoản đơn lẻ không làm hỏng được trải nghiệm người khác, cũng không đốt được ngân sách API.</span></td><td class="id">D7, D8</td></tr>
+          <tr><td class="id">8</td><td><span class="en">There is a way back: separate OTA channels for production and preview, and a tested database restore.</span><span class="vi">Có đường quay lui: channel OTA tách riêng cho production và preview, và một lần restore database đã thử.</span></td><td class="id">A8, D6</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══════════════════════════ 11 ══════════════════════════ -->
+    <section id="s11">
+      <span class="sec-num">11</span>
+      <h2 class="en">Takeaways</h2>
+      <h2 class="vi">Kết luận</h2>
+
+      <ul>
+        <li class="en"><strong>The stack is not the problem.</strong> Expo SDK 54 + Supabase with RLS is the right shape at this size, and the foundations — policies that hold, migrations tested against a real Postgres, a pure boundary that lets 18 test files run without a simulator, third-party ToS reasoning already in the source — are better than the stage usually gets. Nothing here asks for a rewrite.</li>
+        <li class="vi"><strong>Stack không phải vấn đề.</strong> Expo SDK 54 + Supabase với RLS là hình dạng đúng ở quy mô này, và nền móng — policy đứng vững, migration test trên Postgres thật, biên hàm thuần cho phép 18 file test chạy không cần simulator, lập luận ToS bên thứ ba nằm sẵn trong source — tốt hơn mặt bằng giai đoạn này. Không có gì đòi phải viết lại.</li>
+
+        <li class="en"><strong>Most of the distance is not code.</strong> Of the four hard blockers, one is an Edge Function; the other three are a document, a decision about one screen, and a decision about who can see whose content.</li>
+        <li class="vi"><strong>Phần lớn khoảng cách không phải code.</strong> Trong bốn thứ chặn cứng, một là Edge Function; ba cái còn lại là một tài liệu, một quyết định về một màn hình, và một quyết định về ai nhìn thấy nội dung của ai.</li>
+
+        <li class="en"><strong>RLS controls who, never how many.</strong> The security model is genuinely good and it is silent on abuse volume. Quotas are a separate layer and they do not exist yet.</li>
+        <li class="vi"><strong>RLS kiểm soát ai, không kiểm soát bao nhiêu.</strong> Mô hình bảo mật thực sự tốt và nó im lặng về khối lượng lạm dụng. Quota là một lớp riêng và lớp đó chưa tồn tại.</li>
+
+        <li class="en"><strong>Crash reporting is the highest-value single item.</strong> Before strangers, blindness is tolerable. After strangers, it is the reason a pilot produces no learning.</li>
+        <li class="vi"><strong>Crash reporting là hạng mục đơn lẻ giá trị nhất.</strong> Trước khi có người lạ, mù thông tin còn chịu được. Sau khi có người lạ, đó là lý do một pilot không thu được bài học nào.</li>
+
+        <li class="en"><strong>A cached third-party field is a promise with an expiry date.</strong> Google's ratings and opening hours are stored forever today — a licence question and, more immediately, a user standing outside a closed café.</li>
+        <li class="vi"><strong>Một trường dữ liệu bên thứ ba đã cache là một lời hứa có hạn sử dụng.</strong> Rating và giờ mở cửa của Google hiện lưu vĩnh viễn — một câu hỏi giấy phép, và trực tiếp hơn, một người dùng đứng trước quán đã đóng cửa.</li>
+
+        <li class="en"><strong>The critical path is not yours.</strong> Fourteen continuous days of closed testing cannot be compressed by any amount of engineering. If the pilot has a date, that is what starts first.</li>
+        <li class="vi"><strong>Đường găng không nằm trong tay bạn.</strong> Mười bốn ngày closed testing liên tục không rút ngắn được bằng bất kỳ nỗ lực kỹ thuật nào. Nếu pilot có mốc thời gian, đó là việc khởi động trước tiên.</li>
+      </ul>
+    </section>
+
+    <footer class="end">
+      <p class="en"><strong>Source:</strong> a source-level audit of <code>aletuan/city-crew</code> at commit <code>740fe8b</code> (2026-08-17) — <code>app/</code>, <code>supabase/</code>, <code>dashboard/</code>, <code>data/</code> and <code>.github/workflows/</code>. Companion Markdown: <code>docs/tech-eval-app-store.md</code>.</p>
+      <p class="vi"><strong>Nguồn:</strong> đánh giá ở mức mã nguồn của <code>aletuan/city-crew</code> tại commit <code>740fe8b</code> (17/08/2026) — <code>app/</code>, <code>supabase/</code>, <code>dashboard/</code>, <code>data/</code> và <code>.github/workflows/</code>. Bản Markdown đi kèm: <code>docs/tech-eval-app-store.md</code>.</p>
+      <p class="en"><strong>Caveats.</strong> No native build was produced and no device was tested — runtime findings are predictions from configuration. The <code>eas.json</code>, <code>app.json</code> and <code>delete-account</code> listings are sketches written during the audit, never executed; verify with <code>npx expo-doctor</code> and a preview build. Store guideline numbers, program rules, service tiers and third-party terms all drift — re-check every policy claim against the current official page before you rely on it for a submission date.</p>
+      <p class="vi"><strong>Lưu ý.</strong> Chưa build native và chưa test trên máy thật — các nhận định về runtime là suy đoán từ cấu hình. Các đoạn <code>eas.json</code>, <code>app.json</code> và <code>delete-account</code> là bản phác viết trong lúc đánh giá, chưa từng chạy; hãy kiểm chứng bằng <code>npx expo-doctor</code> và một bản build preview. Số hiệu guideline của store, luật chương trình, gói dịch vụ và điều khoản bên thứ ba đều thay đổi — kiểm tra lại mọi khẳng định về chính sách trên trang chính thức hiện hành trước khi dựa vào đó để chốt ngày nộp.</p>
+    </footer>
+
+  </main>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+  // Guarded: on a network that cannot reach the CDN, mermaid/hljs are
+  // undefined. Without this the whole block throws on its first line and
+  // takes the language toggle below down with it — the document degrades
+  // to unstyled diagrams instead of to an English-only page.
+  if (typeof mermaid !== 'undefined') mermaid.initialize({
+    startOnLoad:true, theme:'base', securityLevel:'loose',
+    flowchart:{ curve:'basis', nodeSpacing:40, rankSpacing:52, useMaxWidth:true },
+    sequence:{ useMaxWidth:true, mirrorActors:false, actorMargin:46, messageFontSize:13 },
+    themeVariables:{
+      background:'#161B22', primaryColor:'#1C2530', primaryTextColor:'#E6EDF3',
+      primaryBorderColor:'#2DD4BF', lineColor:'#5A6B7B',
+      fontFamily:"Inter, sans-serif", fontSize:'14px',
+      clusterBkg:'#11161c', clusterBorder:'#283039',
+      actorBkg:'#1C2530', actorBorder:'#2DD4BF', actorTextColor:'#E6EDF3', actorLineColor:'#39424d',
+      signalColor:'#7d8893', signalTextColor:'#C9D1D9',
+      labelBoxBkgColor:'#1C2530', labelBoxBorderColor:'#2DD4BF', labelTextColor:'#E6EDF3',
+      loopTextColor:'#F5A623', sequenceNumberColor:'#0E1116',
+      noteBkgColor:'#243018', noteTextColor:'#E6EDF3', noteBorderColor:'#F5A623'
+    }
+  });
+  if (typeof hljs !== 'undefined') hljs.highlightAll();
+</script>
+<script>
+  // Its own block, deliberately: the toggle is the one piece of behaviour
+  // this document cannot do without, so it does not share a failure mode
+  // with anything loaded from a CDN.
+  (function(){
+    var sw = document.getElementById('langSwitch');
+    if(!sw) return;
+    sw.addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      var lang = b.getAttribute('data-lang');
+      document.body.classList.toggle('lang-vi', lang === 'vi');
+      document.body.classList.toggle('lang-en', lang === 'en');
+      document.documentElement.setAttribute('lang', lang);
+      sw.querySelectorAll('button').forEach(function(x){
+        x.classList.toggle('active', x.getAttribute('data-lang') === lang);
+      });
+    });
+  })();
+</script>
+</body>
+</html>
