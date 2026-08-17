@@ -598,6 +598,9 @@ Kiếm, `claude-opus-5`, `effort: "low"`.
 |---|---|---|---|
 | `claude-opus-5` | ~$0.0117 | ~$0.0072 | ~$8 |
 
+`parse` rẻ hơn nhiều — system prompt 1.115 token (cũng cache được), vào ~130,
+ra ~45: **~$0.0023 mỗi lần** khi cache ấm, tức ~$2/1.000 lần. Cũng đo thật.
+
 Regenerate **không tốn gì** — nó chạy lại `planner.ts` thuần ở client, và lời
 gọi model chỉ xảy ra khi người dùng đã bấm vào một phương án. Đây là điều thiết
 kế cũ (đặt tên cả ba ở PlanOptions) không có, và là lý do chính để đổi.
@@ -683,14 +686,30 @@ VoiceOver, và không thả nhầm chỗ. Khi nào kéo thả tới thì nó tha
   bằng `output_config.format` với `slug` là `enum` đúng các slug đã gửi
 - Thêm `app/src/lib/assist.ts` + test — `narrate` không bao giờ ném lỗi,
   `derivedTitle` và `factLine` là đường lui đầy đủ
-- Sửa `PlanEditScreen` (tên + dòng `why`), `data.ts` (`generatedBy`)
+- Thêm action `parse` — câu tự do → `TripDraft` từng phần; mọi giá trị là
+  `enum` dựng từ chính taxonomy client gửi lên, `"unknown"` là thành viên của
+  mọi enum thay cho null
+- Thêm `parseAsk` + `isEmptyAsk` vào `assist.ts` + test
+- Sửa `PlanEditScreen` (tên + dòng `why`), `IdeasScreen` (ô nhập tự do),
+  `data.ts` (`generatedBy`)
 - `ANTHROPIC_API_KEY` vào Supabase function settings
-- **Xong khi:** plan có tên và lý do; gỡ key ra thì vẫn ra plan đầy đủ với
-  đường lui. ✅
+- **Xong khi:** plan có tên và lý do; câu tự do điền được wizard; gỡ key ra
+  thì vẫn ra plan đầy đủ với đường lui. ✅
 
-**Còn lại của Phase 3:** ô "kể tôi nghe bạn muốn gì" ở `IdeasScreen` (action
-`parse`). Chưa làm — `narrate` là lát mang giá trị ngay, `parse` là một màn
-hình nữa và một schema nữa.
+**Hai kiểu hỏng, hai hình dạng khác nhau — có chủ ý.** `narrate` hỏng thì
+người dùng mất phần chữ họ không yêu cầu, nên nó hỏng im lặng vào đường lui.
+`parse` hỏng nghĩa là **ô người ta vừa gõ vào không làm gì cả**, và một ô im
+lặng không làm gì tệ hơn một ô nói "chưa đọc được câu đó". Nên `parse` trả
+`{ ok: false }` và màn hình nói ra.
+
+`parse` **không lập kế hoạch**. Nó trả về câu trả lời cho wizard — người dùng
+nhìn thấy, sửa được, rồi mới bấm — và những câu trả lời đó đi qua đúng
+`planTrips` mà mọi câu trả lời gõ tay đi qua. Nên một câu tự do vẫn tôn trọng
+giờ mở cửa, khoảng cách và catalog.
+
+Ô nhập **gộp chứ không đè**: câu nói về tối thứ Bảy trả lời hai câu hỏi, còn
+các chip người dùng đã bấm cũng là câu trả lời — xoá chúng đi là cái ô ghi đè
+lên việc của họ.
 
 ### Phase 4 — Hiểu bạn
 

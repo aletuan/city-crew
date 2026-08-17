@@ -7,18 +7,31 @@
 //
 // POST { action: "narrate", draft, lang, stops: [...] }
 //   → { title, stops: [{ slug, why }] }
+// POST { action: "parse", text, today, categories, districts }
+//   → { company, categories, district, date, when }   (every field nullable)
 //
 // Secrets (Edge Function settings): ANTHROPIC_API_KEY.
 // SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
 //
-// ── the model never picks a place ──
+// ── the model never picks a place, and never invents a word ──
 //
-// The prompt receives the stops already chosen and may only write about
+// `narrate` receives the stops already chosen and may only write about
 // them. `slug` in the output schema is an `enum` of exactly the slugs sent,
 // so a made-up place is not a thing the model can return; the loop at the
 // bottom checks again anyway, and drops an unknown slug rather than the
 // whole answer. Losing one sentence is a worse outcome than losing the
 // plan, and both are better than printing a café that does not exist.
+//
+// `parse` is the same rule pointed at the taxonomy. It turns a sentence
+// into wizard answers, and every answer it can give is an `enum` built from
+// the lists the client sent — the seven categories, the districts counted
+// off the catalog, the five company chips. A reader who types "somewhere
+// with live jazz" gets `nightlife` or nothing; the function cannot answer
+// with a category the app has no chip for, and the client filters again.
+//
+// It also never *plans*. The output is a `TripDraft`, which then goes
+// through the same `planTrips` every wizard answer goes through — so a
+// parsed request still respects opening hours, distance and the catalog.
 //
 // ── on the cost cap ──
 //
@@ -61,7 +74,24 @@ const MAX_TOKENS = 2000;
  *  reader can already see is worth more than a better sentence about it. */
 const TIMEOUT_MS = 12_000;
 
+/** Longer than any sentence a reader types into a one-line box, short
+ *  enough that pasting an essay cannot turn into a bill. */
+const MAX_TEXT = 600;
+
 const MODEL = "claude-opus-5";
+
+/** What the wizard's first question offers, and therefore the only answers
+ *  `parse` may give to it. Kept here rather than taken from the request:
+ *  these five are the app's own chips and a client cannot widen them. */
+const COMPANY = ["solo", "couple", "friends", "family", "other"];
+
+/** Said instead of null, everywhere in `parse`.
+ *
+ * Structured outputs do take nullable shapes, through `anyOf` — but every
+ * field here is an enum, and adding "I was not told" as a *member* of each
+ * enum is one concept instead of two. The client turns it back into null in
+ * one place, and no field can arrive in a shape the schema did not name. */
+const UNKNOWN = "unknown";
 
 const LANGS: Record<string, string> = {
   en: "English",
@@ -106,6 +136,47 @@ Each "why" line:
 Write in the language you are asked for, in the register a friend would use
 in that language — not a brochure, not a review site.`;
 
+/**
+ * The other half: a sentence in, wizard answers out.
+ *
+ * The hard instruction is the last one. A reader who writes two words has
+ * answered one question, not five, and a model that fills the rest in
+ * plausibly produces a plan they did not ask for and cannot see they did
+ * not ask for — the chips light up and look like their own choices. Saying
+ * "${UNKNOWN}" is always available and is always the right answer to a
+ * question the sentence did not raise.
+ */
+const PARSE_SYSTEM = `You turn one sentence about a day out into the answers a
+form is asking for. You are not planning anything and you never name a place.
+
+The form has five questions. Answer only from what the sentence says.
+
+- company: who it is for. One of: solo, couple, friends, family, other.
+- categories: what kind of places. Zero or more of the list you are given,
+  and nothing else. Map the sense, not the word: "chỗ ngồi lâu" or "coffee"
+  is cafes, "nhậu" or "a few drinks" is nightlife, "đình chùa" or "bảo tàng"
+  is heritage, "công viên" is nature, "chợ" is markets, "rooftop" is views.
+  A place name is not a category. "ở phố cổ", "quanh hồ", "in Thảo Điền" say
+  *where*, and answering them with a category as well puts a chip on screen
+  the reader did not ask for.
+- district: an area, only if the sentence names one and it is in the list of
+  areas you are given. Map the everyday name to the listed one — "phố cổ"
+  and "bờ hồ" are Hoàn Kiếm — but a named place that is not an area in that
+  list is not a district; say ${UNKNOWN}.
+- date: the calendar day as YYYY-MM-DD. You are told today's date and its
+  weekday; resolve "tomorrow", "thứ Bảy này", "next Friday", "cuối tuần"
+  against those. A weekday with no other qualifier means the next one that
+  has not happened yet. Never a date in the past.
+- when: day or evening. "tối", "night", "after work", "drinks" are evening;
+  "sáng", "cả ngày", "brunch" are day.
+
+Say "${UNKNOWN}" for anything the sentence does not tell you, and for
+categories return an empty list. This matters more than being helpful: every
+answer you give is about to appear as a filled-in chip the reader will read
+as their own choice. An answer you inferred from nothing is worse than a
+blank the reader fills in themselves, and it is worse in the way that is
+hardest to notice.`;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -125,8 +196,116 @@ Deno.serve(async (req) => {
   const { data: userData } = await admin.auth.getUser(token);
   if (!userData?.user?.id) return json({ error: "not signed in" }, 401);
 
+  const anthropic = new Anthropic({ apiKey });
+
+  // Held outside the try because the catch needs it and the body can only
+  // be read once — `req.clone()` after `req.json()` is a spent stream.
+  let action: string | null = null;
+
   try {
     const body = await req.json();
+    action = typeof body.action === "string" ? body.action : null;
+
+    // ── parse: a sentence in, wizard answers out ──────────────────────
+    //
+    // Its failure shape is deliberately *not* narrate's. An empty narration
+    // costs the prose and the reader loses nothing they can see; an empty
+    // parse means the box they typed into did nothing, and a silently
+    // ignored box is worse than one that says it could not read that. So
+    // this returns an explicit `{ ok: false }` and the screen says so.
+    if (body.action === "parse") {
+      const text = String(body.text ?? "").trim().slice(0, MAX_TEXT);
+      if (!text) return json({ error: "text required" }, 400);
+
+      // The client's own vocabulary, and the only words that can come back.
+      // Sent rather than hardcoded because the districts are counted off
+      // the catalog per city — see `districtsOf` in `lib/trip.ts`.
+      const cats = (Array.isArray(body.categories) ? body.categories : [])
+        .map(String).filter(Boolean);
+      const districts = (Array.isArray(body.districts) ? body.districts : [])
+        .map(String).filter(Boolean);
+      if (!cats.length) return json({ error: "categories required" }, 400);
+
+      const today = String(body.today ?? "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) return json({ error: "today required" }, 400);
+      // The model has no clock. `weekday` is computed here from the date the
+      // client sent — read as UTC on purpose, because `today` is already the
+      // reader's own calendar day and re-reading it on this server's clock
+      // would shift it by a timezone nobody asked about.
+      const weekday = new Date(`${today}T12:00:00Z`).toLocaleDateString("en-US", {
+        weekday: "long", timeZone: "UTC",
+      });
+
+      const parsed = await anthropic.messages.create(
+        {
+          model: MODEL,
+          max_tokens: MAX_TOKENS,
+          system: [{ type: "text", text: PARSE_SYSTEM, cache_control: { type: "ephemeral" } }],
+          output_config: {
+            effort: "low",
+            format: {
+              type: "json_schema",
+              schema: {
+                type: "object",
+                properties: {
+                  company: { type: "string", enum: [...COMPANY, UNKNOWN] },
+                  categories: { type: "array", items: { type: "string", enum: cats } },
+                  district: { type: "string", enum: [...districts, UNKNOWN] },
+                  date: { type: "string" },
+                  when: { type: "string", enum: ["day", "evening", UNKNOWN] },
+                },
+                required: ["company", "categories", "district", "date", "when"],
+                additionalProperties: false,
+              },
+            },
+          },
+          messages: [{
+            role: "user",
+            content: [
+              `Today is ${today}, a ${weekday}.`,
+              `Areas available: ${districts.length ? districts.join(", ") : "(none)"}.`,
+              `Categories available: ${cats.join(", ")}.`,
+              "",
+              `The sentence: ${text}`,
+            ].join("\n"),
+          }],
+        },
+        { timeout: TIMEOUT_MS },
+      );
+
+      if (parsed.stop_reason === "refusal") {
+        console.log("plan-assist parse refusal", parsed.stop_details?.category);
+        return json({ ok: false });
+      }
+      const out = parsed.content.find((b) => b.type === "text");
+      if (!out || out.type !== "text") return json({ ok: false });
+
+      const draft = JSON.parse(out.text) as Record<string, unknown>;
+      const un = (v: unknown) => (typeof v === "string" && v && v !== UNKNOWN ? v : null);
+
+      console.log("plan-assist parse", {
+        chars: text.length,
+        input_tokens: parsed.usage.input_tokens,
+        output_tokens: parsed.usage.output_tokens,
+        cache_read: parsed.usage.cache_read_input_tokens,
+      });
+
+      return json({
+        ok: true,
+        company: COMPANY.includes(String(draft.company)) ? draft.company : null,
+        // Checked against the list that was sent, in the order the reader's
+        // own chip row uses — the model may return them in any order and
+        // the screen should not reshuffle because of it.
+        categories: cats.filter((c) => (Array.isArray(draft.categories) ? draft.categories : []).includes(c)),
+        district: districts.includes(String(draft.district)) ? draft.district : null,
+        // Shape only. Whether the day is real, and whether it is in the
+        // past, is `clampDay`'s job on the client — that rule already
+        // exists there and must not be written twice.
+        date: /^\d{4}-\d{2}-\d{2}$/.test(String(draft.date)) ? draft.date : null,
+        when: draft.when === "day" || draft.when === "evening" ? draft.when : null,
+      });
+    }
+
     if (body.action !== "narrate") {
       return json({ error: `unknown action: ${body.action}` }, 400);
     }
@@ -159,8 +338,6 @@ Deno.serve(async (req) => {
       "The stops, in order:",
       facts,
     ].join("\n");
-
-    const anthropic = new Anthropic({ apiKey });
 
     // Thinking is on by default on this model and shares `max_tokens` with
     // the answer; `effort: "low"` keeps that share small, which is right for
@@ -239,11 +416,18 @@ Deno.serve(async (req) => {
       stops: out,
     });
   } catch (err) {
-    // The app's fallback is a real plan with a derived name and a line of
-    // facts under each stop, so a failure here costs the prose and nothing
-    // else. Returning 200 with an empty answer rather than an error is what
-    // makes that the *same* code path as a model that had nothing to say.
+    // Two shapes, because the two actions fail differently to a reader.
+    //
+    // For `narrate`, the app's fallback is a real plan with a derived name
+    // and a line of facts under each stop, so a failure costs the prose and
+    // nothing else. Returning 200 with an empty answer rather than an error
+    // is what makes that the *same* code path as a model that had nothing
+    // to say — the screen never learns which happened, and never needs to.
+    //
+    // For `parse` there is nothing to fall back to: the reader typed a
+    // sentence and either it filled the form in or it did not. `ok: false`
+    // is what lets the screen tell them so instead of swallowing it.
     console.log("plan-assist failed", (err as Error).message);
-    return json({ title: null, stops: [] });
+    return json(action === "parse" ? { ok: false } : { title: null, stops: [] });
   }
 });

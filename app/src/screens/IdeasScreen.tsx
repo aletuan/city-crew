@@ -16,7 +16,9 @@
 // screen that has not been written, which is the honest state of it.
 
 import React, { useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
@@ -24,6 +26,7 @@ import StartSheet, { Start } from '../components/StartSheet';
 import {
   AmbientWarmth, Card, Chip, GradientCta, PressableScale, Screen, SelectTick, useTabBarClearance,
 } from '../components/ui';
+import { isEmptyAsk, parseAsk } from '../lib/assist';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { usePlaces } from '../lib/catalog';
@@ -32,7 +35,7 @@ import { dateline } from '../lib/format';
 import { addDays, clampDay, fromISO, toISO, todayISO } from '../lib/day';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
-import { canPlan, COMPANY, EMPTY_DRAFT, toggle, TripDraft } from '../lib/trip';
+import { areasNear, canPlan, COMPANY, EMPTY_DRAFT, toggle, TripDraft } from '../lib/trip';
 import type { Nav } from '../nav';
 import { colors, font, radius, space, type } from '../theme';
 
@@ -77,6 +80,49 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const set = <K extends keyof TripDraft>(k: K, v: TripDraft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
+  /**
+   * The shortcut past the four questions.
+   *
+   * It fills the chips in; it never presses the button. That is the whole
+   * design — a sentence is a fast way to answer four questions, not a
+   * different way to get a plan, so what comes back lands where the reader
+   * can see it, disagree with it, and change it. The plan is still built
+   * from a `TripDraft` by the same `planTrips` a hand-tapped one goes
+   * through, which is also why nothing here can produce a plan that ignores
+   * opening hours or the catalog.
+   */
+  const [ask, setAsk] = useState('');
+  const [asking, setAsking] = useState(false);
+  const [note, setNote] = useState<null | 'filled' | 'empty' | 'failed'>(null);
+
+  const runAsk = async () => {
+    if (asking || !ask.trim()) return;
+    setAsking(true);
+    setNote(null);
+    // The same areas the sheet offers, so a district it fills in is one the
+    // reader could have tapped — see `areasNear`.
+    const parsed = await parseAsk(ask, {
+      today: todayISO(),
+      categories: cats,
+      districts: areasNear(places, draft.at),
+    });
+    setAsking(false);
+    if (!parsed) { setNote('failed'); return; }
+    if (isEmptyAsk(parsed)) { setNote('empty'); return; }
+    // Merged, never replaced. A sentence about Saturday evening answers two
+    // questions; the chips the reader already tapped are answers too, and
+    // clearing them would be the box overwriting their work.
+    setDraft((d) => ({
+      ...d,
+      company: parsed.company ?? d.company,
+      categories: parsed.categories.length ? parsed.categories : d.categories,
+      district: parsed.district ?? d.district,
+      date: parsed.date ?? d.date,
+      when: parsed.when ?? d.when,
+    }));
+    setNote('filled');
+  };
+
   const whereLabel = draft.district
     ?? (draft.at
       ? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン')
@@ -107,6 +153,80 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
             '少し教えてください — 一日を下描きします。あとで全部変えられます。',
           )}
         </Text>
+
+        {/* Above the questions, because it is a way of answering them
+            rather than a fifth one. Deliberately not a chat: one line, one
+            button, and the answer appears as chips below rather than as a
+            reply — there is nothing here to have a conversation with. */}
+        <Card style={s.askCard}>
+          <TextInput
+            style={s.askInput}
+            value={ask}
+            onChangeText={(v) => { setAsk(v); setNote(null); }}
+            placeholder={t(
+              'or tell me what you feel like — “Saturday evening, two of us, food then a drink”',
+              'hoặc kể tôi nghe bạn muốn gì — “tối thứ Bảy, hai đứa, ăn rồi kiếm chỗ uống”',
+              'または「土曜の夜、ふたりで、食事のあと一杯」のように書いてください',
+            )}
+            placeholderTextColor={colors.textTertiary}
+            multiline
+            returnKeyType="done"
+            blurOnSubmit
+            onSubmitEditing={() => void runAsk()}
+            accessibilityLabel={t('Describe your day out', 'Kể về buổi đi chơi', 'おでかけを書く')}
+          />
+          <View style={s.askRow}>
+            {/* Says what pressing it does, not what it is. "Fill this in"
+                is a promise the screen can keep; "Ask AI" is a promise
+                about who is answering, which is not the reader's problem. */}
+            <PressableScale
+              onPress={() => void runAsk()}
+              disabled={asking || !ask.trim()}
+              containerStyle={[s.askBtn, (asking || !ask.trim()) && s.askBtnOff]}
+              accessibilityRole="button"
+            >
+              {asking
+                ? <ActivityIndicator size="small" color={colors.accent} />
+                : <Ionicons name="sparkles-outline" size={15} color={colors.accent} />}
+              <Text style={s.askBtnText}>
+                {asking
+                  ? t('Reading…', 'Đang đọc…', '読み取り中…')
+                  : t('Fill this in', 'Điền giúp tôi', '入力する')}
+              </Text>
+            </PressableScale>
+          </View>
+          {/* Three outcomes, three different sentences. "Filled" is the one
+              that matters most: the chips below are now a guess wearing the
+              same clothes as the reader's own taps, and they should be told
+              so rather than left to notice. */}
+          {note === 'filled' && (
+            <Text style={s.askNote}>
+              {t(
+                'Filled in below — check it, change anything that is not right.',
+                'Đã điền bên dưới — xem lại, chỗ nào chưa đúng thì sửa.',
+                '下に入力しました — 違うところは直してください。',
+              )}
+            </Text>
+          )}
+          {note === 'empty' && (
+            <Text style={s.askNote}>
+              {t(
+                'That did not say enough to fill anything in. Try naming who, what kind of place, or when.',
+                'Câu đó chưa đủ để điền gì. Thử nói rõ đi với ai, kiểu chỗ nào, hoặc khi nào.',
+                '入力するには情報が足りません。誰と、どんな場所か、いつかを書いてみてください。',
+              )}
+            </Text>
+          )}
+          {note === 'failed' && (
+            <Text style={s.askNote}>
+              {t(
+                'Could not read that just now — the questions below still work.',
+                'Chưa đọc được câu đó — các câu hỏi bên dưới vẫn dùng bình thường.',
+                'いま読み取れませんでした — 下の質問はそのまま使えます。',
+              )}
+            </Text>
+          )}
+        </Card>
 
         <Section title={t("Who's coming?", 'Đi cùng ai?', '誰と行きますか？')}>
           {COMPANY.map((c) => (
@@ -322,6 +442,27 @@ const s = StyleSheet.create({
     color: colors.text, ...type.headline,
     paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
+
+  // No heading above it, unlike every question below. A heading would make
+  // it a fifth question; without one it reads as an alternative to the four,
+  // which is what it is.
+  askCard: { marginHorizontal: space.page, marginBottom: space.titleToContent },
+  askInput: {
+    color: colors.text, fontSize: 15.5, lineHeight: 22,
+    // Two lines of room before it grows. A one-line box invites three words,
+    // and three words is the input this cannot do anything useful with.
+    minHeight: 48, padding: 0, textAlignVertical: 'top',
+  },
+  askRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 },
+  askBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: radius.pill, backgroundColor: colors.accentSoft,
+    borderWidth: 1, borderColor: colors.accentLine,
+  },
+  askBtnOff: { opacity: 0.4 },
+  askBtnText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
+  askNote: { color: colors.textTertiary, fontSize: 13, lineHeight: 18, marginTop: 10 },
   wrap: {
     flexDirection: 'row', flexWrap: 'wrap', gap: 8,
     paddingHorizontal: space.page,

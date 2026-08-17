@@ -16,7 +16,9 @@
 // the model is never allowed to choose a place.
 
 import { supabase } from './supabase';
+import { clampDay } from './day';
 import { openState } from './format';
+import { COMPANY, type Company } from './trip';
 
 /** What the screen has to hand about a stop, in the shape both halves of
  *  this file need. Structural rather than `Place` for the reason
@@ -180,4 +182,103 @@ export async function narrate(
   // model's work — `fromModel` says whether one spoke at all, and the
   // screen falls back per field rather than all-or-nothing.
   return { title, why, fromModel: !!title || why.size > 0 };
+}
+
+// ── a sentence, turned into wizard answers ───────────────────────────
+//
+// The other direction, and the failure shape is deliberately different.
+//
+// `narrate` failing costs prose the reader never asked for, so it fails
+// silently into a fallback. `parseAsk` failing means the box they typed a
+// sentence into did nothing — and a box that silently does nothing is worse
+// than one that says it could not read that. So this returns `null` rather
+// than an empty answer, and the screen tells them.
+//
+// Nothing here is a plan. The result is wizard answers, which the reader
+// can see and change before pressing anything, and which then go through
+// the same `planTrips` every hand-tapped answer goes through.
+
+/** What the wizard can be pre-filled with. Every field is separately
+ *  unknown: a sentence naming only an evening answers one question and
+ *  must not be made to look like it answered five. */
+export type ParsedAsk = {
+  company: Company | null;
+  categories: string[];
+  district: string | null;
+  /** `YYYY-MM-DD`, already clamped — never a day in the past. */
+  date: string | null;
+  when: 'day' | 'evening' | null;
+};
+
+/** True when the sentence produced nothing at all. The screen needs this to
+ *  tell "I read it and it said nothing useful" apart from "I could not
+ *  reach the model", which is `null` from `parseAsk`. */
+export function isEmptyAsk(a: ParsedAsk): boolean {
+  return !a.company && !a.categories.length && !a.district && !a.date && !a.when;
+}
+
+/**
+ * Wizard answers read out of one sentence, or `null` when nothing could be
+ * read at all.
+ *
+ * Every value is checked against the vocabulary that was sent, a second
+ * time, after the function checked it and after the schema's `enum`
+ * constrained it. Three layers for the reason `narrate` has three: a chip on
+ * this screen reads as the reader's own choice, and a word the app has no
+ * chip for must not be able to become one.
+ *
+ * `today` is a parameter rather than read here, like everywhere else in this
+ * repo — and it does double duty, because the model has no clock and it is
+ * also what "thứ Bảy này" gets resolved against.
+ */
+export async function parseAsk(
+  text: string,
+  opts: { today: string; categories: readonly string[]; districts: readonly string[] },
+): Promise<ParsedAsk | null> {
+  const sentence = text.trim();
+  if (!sentence || !opts.categories.length) return null;
+
+  let reply: { data?: Record<string, unknown> | null; error?: { message?: string } | null };
+  try {
+    reply = await supabase.functions.invoke('plan-assist', {
+      body: {
+        action: 'parse',
+        text: sentence,
+        today: opts.today,
+        categories: [...opts.categories],
+        districts: [...opts.districts],
+      },
+    });
+  } catch {
+    return null;
+  }
+  if (reply.error || !reply.data || reply.data.ok !== true) return null;
+
+  const d = reply.data;
+  const one = <T extends string>(v: unknown, allowed: readonly T[]): T | null => (
+    typeof v === 'string' && (allowed as readonly string[]).includes(v) ? v as T : null
+  );
+
+  // Filtered through the caller's own order, not the model's. The chip row
+  // has an order the reader recognises, and a pre-filled row that came back
+  // shuffled would read as a different screen.
+  const categories = opts.categories.filter(
+    (c) => Array.isArray(d.categories) && d.categories.includes(c),
+  );
+
+  return {
+    company: one(d.company, COMPANY.map((c) => c.key)),
+    categories,
+    district: one(d.district, opts.districts),
+    // Shape first, then the rule. `clampDay` answers "is this day allowed"
+    // and lives in `day.ts`, so a date resolved into last Tuesday comes back
+    // as today rather than as a plan nobody can go on — but it answers
+    // *today* to anything it cannot read at all, and "next Saturday" turning
+    // silently into today is a filled-in chip nobody chose. Unreadable is
+    // null, and the reader picks the day themselves.
+    date: typeof d.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.date)
+      ? clampDay(d.date, opts.today)
+      : null,
+    when: one(d.when, ['day', 'evening'] as const),
+  };
 }

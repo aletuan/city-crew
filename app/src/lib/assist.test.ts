@@ -7,7 +7,9 @@ vi.mock('./supabase', async () => {
   return { supabase: h.fake.client };
 });
 
-import { derivedTitle, factLine, narrate, type Narratable } from './assist';
+import {
+  derivedTitle, factLine, isEmptyAsk, narrate, parseAsk, type Narratable, type ParsedAsk,
+} from './assist';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -207,5 +209,138 @@ describe('narrate', () => {
     expect(body.stops[0]).toEqual({
       slug: 'bare', name: 'bare', categories: [], neighborhood: null, rating: null, arrive: '19:00',
     });
+  });
+});
+
+const CATS = ['cafes', 'eats', 'views', 'heritage', 'nature', 'markets', 'nightlife'];
+const AREAS = ['Hoàn Kiếm', 'Ba Đình', 'Tây Hồ'];
+const OPTS = { today: '2026-08-17', categories: CATS, districts: AREAS };
+
+const full = {
+  ok: true,
+  company: 'couple',
+  categories: ['nightlife', 'eats'],
+  district: 'Hoàn Kiếm',
+  date: '2026-08-22',
+  when: 'evening',
+};
+
+describe('parseAsk', () => {
+  it('reads a sentence into wizard answers', async () => {
+    fake().replies({ data: full });
+    const out = await parseAsk('tối thứ Bảy này hai đứa đi ăn rồi kiếm chỗ uống', OPTS);
+    expect(out).toEqual({
+      company: 'couple',
+      categories: ['eats', 'nightlife'],
+      district: 'Hoàn Kiếm',
+      date: '2026-08-22',
+      when: 'evening',
+    });
+  });
+
+  // The chip row has an order the reader recognises. The model returned
+  // nightlife first; the screen must not reshuffle because of it.
+  it('keeps the caller’s own chip order', async () => {
+    fake().replies({ data: full });
+    expect((await parseAsk('x', OPTS))!.categories).toEqual(['eats', 'nightlife']);
+  });
+
+  it('sends the vocabulary it wants back', async () => {
+    fake().replies({ data: full });
+    await parseAsk('  đi chơi  ', OPTS);
+    const body = fake().log[0].payload as Record<string, unknown>;
+    expect(fake().log[0].fn).toBe('plan-assist');
+    expect(body.action).toBe('parse');
+    // Trimmed: a trailing space is not part of what anyone typed.
+    expect(body.text).toBe('đi chơi');
+    expect(body.today).toBe('2026-08-17');
+    expect(body.categories).toEqual(CATS);
+    expect(body.districts).toEqual(AREAS);
+  });
+
+  // The third of three checks — the schema's enum, the function's filter,
+  // and here. A chip reads as the reader's own choice, so a word the app has
+  // no chip for must not be able to become one.
+  it('drops every value the app has no chip for', async () => {
+    fake().replies({
+      data: {
+        ok: true,
+        company: 'colleagues',
+        categories: ['karaoke', 'eats'],
+        district: 'Somewhere Else',
+        date: 'next Saturday',
+        when: 'midnight',
+      },
+    });
+    expect(await parseAsk('x', OPTS)).toEqual({
+      company: null, categories: ['eats'], district: null, date: null, when: null,
+    });
+  });
+
+  // `clampDay` owns the rule about days. A model that resolved a weekday
+  // into the past hands back today rather than a plan nobody can go on.
+  it('refuses a day in the past', async () => {
+    fake().replies({ data: { ...full, date: '2026-08-10' } });
+    expect((await parseAsk('x', OPTS))!.date).toBe('2026-08-17');
+  });
+
+  it('answers only the questions the sentence raised', async () => {
+    fake().replies({
+      data: { ok: true, company: null, categories: [], district: null, date: null, when: null },
+    });
+    const out = await parseAsk('kể chuyện gì đó vui đi', OPTS);
+    expect(out).toEqual({ company: null, categories: [], district: null, date: null, when: null });
+    expect(isEmptyAsk(out!)).toBe(true);
+  });
+
+  // `null` and an empty answer are different facts and the screen says
+  // different things about them: "I could not read that" versus "that told
+  // me nothing I could use".
+  it('is null when the call fails, not an empty answer', async () => {
+    fake().replies({ error: { message: 'not signed in' } });
+    expect(await parseAsk('x', OPTS)).toBeNull();
+
+    fake().replies({ throws: new TypeError('Network request failed') });
+    expect(await parseAsk('x', OPTS)).toBeNull();
+
+    fake().replies({ data: null });
+    expect(await parseAsk('x', OPTS)).toBeNull();
+
+    // What the function returns when the model refused or the call threw.
+    fake().replies({ data: { ok: false } });
+    expect(await parseAsk('x', OPTS)).toBeNull();
+  });
+
+  it('asks nothing for an empty sentence or an empty taxonomy', async () => {
+    expect(await parseAsk('   ', OPTS)).toBeNull();
+    expect(await parseAsk('x', { ...OPTS, categories: [] })).toBeNull();
+    expect(fake().log).toHaveLength(0);
+  });
+
+  it('survives a reply with rubbish where the answers go', async () => {
+    fake().replies({ data: { ok: true, categories: 'eats', date: 42 } });
+    expect(await parseAsk('x', OPTS)).toEqual({
+      company: null, categories: [], district: null, date: null, when: null,
+    });
+  });
+});
+
+describe('isEmptyAsk', () => {
+  const none: ParsedAsk = {
+    company: null, categories: [], district: null, date: null, when: null,
+  };
+
+  it('is true only when every answer is missing', () => {
+    expect(isEmptyAsk(none)).toBe(true);
+  });
+
+  // One answer is enough to be worth filling in — that is the whole promise
+  // of the box.
+  it('is false as soon as one answer landed', () => {
+    expect(isEmptyAsk({ ...none, company: 'solo' })).toBe(false);
+    expect(isEmptyAsk({ ...none, categories: ['eats'] })).toBe(false);
+    expect(isEmptyAsk({ ...none, district: 'Tây Hồ' })).toBe(false);
+    expect(isEmptyAsk({ ...none, date: '2026-08-22' })).toBe(false);
+    expect(isEmptyAsk({ ...none, when: 'day' })).toBe(false);
   });
 });
