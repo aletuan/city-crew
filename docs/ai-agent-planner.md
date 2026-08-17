@@ -160,6 +160,83 @@ collection chiếm tối đa `stops - 1` slot, chừa ít nhất một slot cho 
 hoá. Người dùng vẫn thấy cái mình đã lưu nằm trong plan, mà ba thẻ vẫn là ba
 lựa chọn thật.
 
+### Khi catalog không đủ để dựng ba phương án
+
+Đây là tình huống thường gặp chứ không phải ngoại lệ. Đếm trên dữ liệu thật:
+
+| Category | Hà Nội | HCM | Đà Nẵng |
+|---|---|---|---|
+| eats | 39 | 6 | **2** |
+| cafes | 26 | 8 | 5 |
+| heritage | 13 | 6 | 6 |
+| nightlife | 11 | 6 | 10 |
+| views | 7 | 9 | 5 |
+| nature | 4 | 5 | 3 |
+| **markets** | **1** | **2** | **1** |
+
+Chọn "Mua sắm" ở Hà Nội thì cả thành phố có đúng một chỗ; ràng buộc đa dạng
+"khác ít nhất 2 trên 3 stop" không thể thoả mãn. **Ba thẻ gần giống hệt nhau
+tệ hơn một thẻ**, vì nó giả vờ có lựa chọn ở nơi không có.
+
+Thang xuống cấp, theo đúng tiền lệ commit #190 (*"A search that found nothing
+says what would have worked"*):
+
+| Bậc | Dựng được | Màn hình làm gì |
+|---|---|---|
+| 1 | 3 phương án khác nhau ≥2/3 stop | Ba thẻ như thiết kế |
+| 2 | 1–2 phương án | Hiện đúng số dựng được, kèm một dòng nói tại sao: *"Chỉ có 2 cách với những chỗ hiện có ở Đà Nẵng"* |
+| 3 | Không đủ stop cho một plan đầy đủ | Plan ngắn hơn (2 stop thay vì 3) và nói ra, thay vì độn cho đủ |
+| 4 | Không có gì | Không phải màn trắng — xem dưới |
+
+Bậc 4 cần một module thuần song sinh với `hints.ts`:
+
+```ts
+// app/src/lib/gaps.ts
+export type Gap = { emptyCategories: string[]; suggestion: string | null };
+export function planGap(draft: TripDraft, places: Place[]): Gap;
+```
+
+`suggestion` lấy **từ chính catalog** — category đông chỗ nhất của thành phố
+đó — chứ không hardcode. Đây là bài học `hintArea` đã trả giá để rút ra: *"an
+example is a promise that typing it returns something"*, và bản thiết kế gốc
+hardcode "Thảo Điền" nên sai trên mọi màn hình app đang phục vụ. Không có gì
+để gợi ý thì trả `null` và màn hình bỏ nửa câu đó đi, không bịa.
+
+### Chỗ không có giờ mở cửa vẫn được vào plan
+
+`openState()` trả `null` khi không có `opening_hours` hoặc khi chuỗi giờ ở dạng
+nó không đọc được. Planner phải coi `null` là **"không biết, vẫn cho vào,
+nhưng không hứa giờ giấc"** — không phải "đóng cửa".
+
+Điều này không phải sự dễ dãi: `markets` ở Hà Nội và Đà Nẵng có đúng một chỗ
+mỗi nơi và **không chỗ nào lưu giờ mở cửa**. Coi `null` là loại thì chỗ mua sắm
+duy nhất của Hà Nội không bao giờ vào được plan nào, mãi mãi. Comment của
+`openState` đã nói đúng nguyên tắc rồi: *"Showing nothing beats showing
+'Closed' to someone standing in the doorway of an open café."*
+
+Hệ quả cho màn hình: stop dựng từ chỗ không rõ giờ nên hiện nhạt hơn hoặc kèm
+một dấu hiệu — plan hứa với người đọc một buổi tối chạy được, nên chỗ nào không
+kiểm chứng được thì phải nói ra.
+
+### Khi collection người dùng chọn không lọt được vào plan
+
+Ưu tiên cứng vẫn phải qua ba cổng: `isLive()`, mở cửa đúng giờ, hợp slot. Nên
+có trường hợp người dùng seed từ "Cà phê Hà Nội" cho một buổi tối, mọi quán
+đóng cửa lúc 18h, và **không chỗ nào lọt vào**. Plan vẫn ra, vẫn đẹp, và không
+có gì nói tại sao thứ họ vừa chọn biến mất.
+
+Đó là lỗi cần sửa, không phải hành vi cần chấp nhận. `planTrips` trả kèm phần
+lý do: những slug đã được ưu tiên nhưng bị loại, và bị loại vì cổng nào. Màn
+hình dùng nó để nói một câu — *"3 chỗ trong Cà phê Hà Nội đóng cửa vào giờ
+này"* — thay vì im lặng.
+
+```ts
+export type TripPlan = {
+  // ...
+  seededDropped: { slug: string; reason: 'closed' | 'unlive' | 'city' | 'slot' }[];
+};
+```
+
 ### Năm pass
 
 Mỗi pass là một hàm thuần test được riêng:
@@ -178,9 +255,11 @@ Mỗi pass là một hàm thuần test được riêng:
 5. **Ngân sách + giờ** — port nguyên pass swap và pass thời gian.
 
 Test cần có trong `planner.test.ts`: cùng input **và cùng seed** ra cùng
-output, seed khác ra khác; chỗ đóng cửa không bao giờ lọt vào; vượt ngân sách
-thì swap và dừng khi hết chỗ rẻ hơn; catalog rỗng trả plan rỗng chứ không ném
-lỗi; `TripDraft` ở mức tối thiểu `canPlan` cho phép vẫn ra plan.
+output, seed khác ra khác; chỗ đóng cửa không bao giờ lọt vào, nhưng **chỗ
+không có giờ mở cửa thì có**; category chỉ có một chỗ trả về một phương án chứ
+không phải ba bản sao; collection bị loại sạch thì `seededDropped` nói ra lý
+do; `TripDraft` ở mức tối thiểu `canPlan` cho phép — không collection nào — vẫn
+ra plan; catalog rỗng trả plan rỗng chứ không ném lỗi.
 
 ### Ngẫu nhiên là đầu vào, không phải hiệu ứng ngầm
 
@@ -531,13 +610,16 @@ Lát mỏng nhất mang giá trị thật: nút trong Ideas cuối cùng cũng r
 - Thêm `app/src/lib/planner.ts` + `planner.test.ts` (ba lens, ràng buộc đa
   dạng, lấy mẫu theo `seed`)
 - Thêm `app/src/lib/travel.ts` + `travel.test.ts`
+- Thêm `app/src/lib/gaps.ts` + `gaps.test.ts` — thang xuống cấp khi catalog
+  không đủ, song sinh với `hints.ts`
 - Thêm `app/src/screens/PlanOptionsScreen.tsx` — ba thẻ + Regenerate
 - Sửa `app/src/lib/sketch.ts`, `app/src/screens/SketchingScreen.tsx`,
   `app/src/nav.ts`
 - **Xong khi:** bấm "Lên kế hoạch" ra ba phương án khác nhau thật từ catalog
   thật; Regenerate ra bộ khác; mở lại app hôm sau với cùng câu trả lời cũng ra
-  bộ khác; `npm run typecheck && npm test && npm run test:tz` xanh; cùng
-  `(draft, seed)` hai lần ra cùng ba phương án.
+  bộ khác; chọn "Mua sắm" ở Hà Nội ra **một** phương án kèm câu giải thích chứ
+  không phải ba bản sao; `npm run typecheck && npm test && npm run test:tz`
+  xanh; cùng `(draft, seed)` hai lần ra cùng ba phương án.
 
 ### Phase 2 — Sửa và lưu
 
