@@ -71,6 +71,43 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 }
 
 /* ── shell ── */
+/* Sidebar + content. The desk grew past what one bar could hold, so the
+   destinations moved into a left rail (desktop) / bottom tabs (phone) and
+   the layout became this two-column grid. minmax(0,…) so wide content
+   scrolls inside its panels instead of widening the page. */
+.desk { display: grid; grid-template-columns: 224px minmax(0, 1fr); min-height: 100vh; }
+.sidebar {
+  position: sticky; top: 0; height: 100vh; z-index: 41;
+  display: flex; flex-direction: column;
+  padding: 16px 12px;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border-glass-soft);
+}
+.sidebrand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 8px 16px; text-decoration: none;
+  font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
+}
+.sidebrand .logo { width: 30px; height: 30px; border-radius: 9px; }
+.sidenav { display: flex; flex-direction: column; gap: 2px; }
+.side-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; text-align: left; text-decoration: none;
+  border: none; background: transparent; color: var(--text-secondary);
+  font: inherit; font-size: 13.5px; font-weight: 600; white-space: nowrap;
+  padding: 9px 10px; border-radius: 10px; cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+.side-item svg { flex-shrink: 0; opacity: .75; }
+.side-item:hover { background: var(--surface-glass); color: #fff; }
+.side-item:disabled { opacity: .5; cursor: wait; }
+/* Where you are — the fact the old overflow menu could never show. */
+.side-item.active { background: var(--surface-glass-strong); color: #fff; }
+.side-item.active svg { opacity: 1; }
+.side-sep { height: 1px; margin: 8px 6px; background: var(--border-glass-soft); }
+.side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; }
+
+.deskmain { min-width: 0; }
 .shell { max-width: 1280px; margin: 0 auto; padding: 22px 28px 80px; }
 .topbar {
   position: sticky; top: 0; z-index: 40;
@@ -83,14 +120,45 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
      too narrow for all of them, the bar wraps to a second row rather than
      squeezing labels onto two lines. */
   flex-wrap: wrap;
-  max-width: 1280px; margin: 0 auto; padding: 14px 28px;
+  max-width: 1280px; margin: 0 auto; padding: 11px 28px;
 }
 .topbar .logo { width: 34px; height: 34px; border-radius: 10px; }
-.topbar h1 {
-  font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em;
-  display: inline-flex; align-items: center; white-space: nowrap; flex-shrink: 0;
+/* The way home on phones; redundant beside the sidebar's own brand. */
+.mobilebrand { display: none; line-height: 0; }
+
+/* ── phone tab bar + its More sheet ── */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  display: none; grid-template-columns: repeat(4, 1fr);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  background: rgba(22, 19, 27, 0.94); backdrop-filter: blur(18px);
+  border-top: 1px solid var(--border-glass-soft);
 }
-.topbar h1 span { color: var(--text-tertiary); font-weight: 500; }
+.tab-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  border: none; background: transparent; text-decoration: none;
+  color: var(--text-tertiary); font: inherit; font-size: 10.5px; font-weight: 600;
+  padding: 5px 2px; border-radius: 10px; cursor: pointer;
+  transition: color 120ms;
+}
+.tab-item.active { color: #fff; }
+.tab-item.active svg { color: var(--ai-pink); }
+.sheetback { position: fixed; inset: 0; z-index: 54; background: rgba(5, 3, 10, 0.55); }
+.sheet {
+  position: fixed; left: 10px; right: 10px; z-index: 55;
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 2px; padding: 6px;
+  background: var(--bg-elevated); border: 1px solid var(--border-glass);
+  border-radius: 18px; box-shadow: var(--shadow-float);
+}
+
+@media (max-width: 960px) {
+  .desk { display: block; }
+  .sidebar { display: none; }
+  .mobilebrand { display: block; }
+  .tabbar { display: grid; }
+  .shell { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+}
 .topbar .spacer { flex: 1; }
 
 /* The workspace city, as a chip row beside the page title — where the old
@@ -230,16 +298,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .syncbtn.primary { background: var(--grad-ai); border-color: transparent; color: #fff; }
 .syncbtn.primary:hover { filter: brightness(1.08); }
 
-/* Overflow menu — occasional actions (preview, scan, sync) live here so the
-   header itself never grows past four or five controls. */
+/* Anchor wrapper for the bell's dropdown panel (the old overflow menu is
+   gone — its items live in the sidebar / More sheet now, and .moremenu-item
+   is the row style the More sheet reuses). */
 .moremenu { position: relative; flex-shrink: 0; }
-.moremenu-panel {
-  position: absolute; top: calc(100% + 8px); right: 0; z-index: 50;
-  min-width: 180px; padding: 6px;
-  display: flex; flex-direction: column; gap: 2px;
-  background: var(--bg-elevated); border: 1px solid var(--border-glass);
-  border-radius: var(--radius-input); box-shadow: var(--shadow-float);
-}
 .moremenu-item {
   display: block; width: 100%; text-align: left; text-decoration: none;
   border: none; background: transparent; color: var(--text-secondary);
@@ -252,9 +314,6 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 /* Kinds, kept apart. Sign out sits below one of these so a thumb travelling
    down the menu meets a stop before it. */
 .moremenu-sep { height: 1px; margin: 5px 6px; background: var(--border-glass-soft); }
-/* Square-ish, because a lone glyph in a wide pill reads as a label that
-   failed to load. */
-.syncbtn.kebab { padding: 8px 13px; letter-spacing: 0.06em; }
 
 /* The publish action, attached to the measure it moves. Right-aligned to
    the rail's own edge rather than stretched: it acts on a number, it is
@@ -700,6 +759,14 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   font-size: 12.5px; padding: 8px 14px; width: 200px;
 }
 
+/* Fixed and viewport-centred — but the content column is offset by half
+   the sidebar, so on sidebar widths these shift right to centre on the
+   content they float over, not on the chrome. */
+@media (min-width: 961px) {
+  .reviewbar { left: calc(50% + 112px); }
+  .toast { left: calc(50% + 112px); }
+}
+
 .toast {
   position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); z-index: 60;
   background: var(--bg-elevated); border: 1px solid var(--border-glass);
@@ -976,13 +1043,13 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 /* ── phone layout — the desk becomes a one-hand tool ── */
 @media (max-width: 720px) {
   body { font-size: 14px; }
-  .shell { padding: 16px 12px 150px; }
+  /* Bottom room for the review bar riding above the tab bar. */
+  .shell { padding: 16px 12px calc(190px + env(safe-area-inset-bottom)); }
 
   /* One row, never two: with the city pill moved down to the page head,
      the bar is one action, the bell and one menu — which fits with the
      label spelled out at every phone width down to 320. */
   .topbar-inner { flex-wrap: nowrap; gap: 8px; padding: 12px; }
-  .topbar h1 { display: none; }
   .pagehead { flex-wrap: wrap; margin-bottom: 14px; }
   .pagetitle { font-size: 19px; }
   .rail { min-width: 0; flex: 1 1 100%; }
@@ -1013,7 +1080,8 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .mapframe { height: 150px; }
 
   .reviewbar {
-    left: 10px; right: 10px; bottom: 10px; transform: none;
+    left: 10px; right: 10px; transform: none;
+    bottom: calc(70px + env(safe-area-inset-bottom)); /* clear of the tab bar */
     flex-wrap: wrap; border-radius: 22px; justify-content: center;
   }
   .reviewbar .notefield { flex: 1 1 100%; order: -1; width: auto; }
