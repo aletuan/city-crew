@@ -17,7 +17,7 @@ import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, Ro
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { useSky } from '../lib/sky';
-import { dateline, dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
+import { dateline } from '../lib/format';
 import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { Lang, useI18n } from '../lib/i18n';

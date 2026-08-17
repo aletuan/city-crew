@@ -32,7 +32,7 @@ import {
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
-import { dateline } from '../lib/format';
+import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { fmtDistance } from '../lib/geo';
 import { membersOf } from '../lib/place';
@@ -62,14 +62,6 @@ const BADGE: Record<LensKey, { en: string; vi: string; ja: string; star?: boolea
   iconic: { en: 'Iconic views', vi: 'Nổi tiếng', ja: '定番' },
   lowkey: { en: 'Low-key', vi: 'Nhẹ nhàng', ja: '控えめ' },
 };
-
-/** "18:30". Minutes past midnight on the catalog's clock, printed the way
- *  the rest of the app prints a time of day. */
-function clock(minutes: number): string {
-  const h = Math.floor(minutes / 60) % 24;
-  const m = Math.round(minutes) % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
 
 /** "~420k ₫". Per person — see the note under the cards. */
 function money(vnd: number): string {
@@ -309,7 +301,7 @@ function PlanCard({ plan, best, onPress }: { plan: TripPlan; best: boolean; onPr
         {plan.stops.map((st, i) => (
           <View key={st.place.slug}>
             <View style={s.stop}>
-              <Text style={s.time}>{clock(st.arriveMin)}</Text>
+              <Text style={s.time}>{clockOf(st.arriveMin)}</Text>
               <View style={s.dotCol}>
                 <View style={s.dot} />
                 {i + 1 < plan.stops.length && <View style={s.rail} />}

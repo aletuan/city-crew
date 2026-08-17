@@ -30,7 +30,7 @@ import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/
 import { useCity } from '../lib/city';
 import { usePlaces } from '../lib/catalog';
 import { coverOf, membersOf } from '../lib/data';
-import { dateline } from '../lib/format';
+import { clockOf, dateline } from '../lib/format';
 import { addDays, clampDay, fromISO, toISO } from '../lib/day';
 import { useI18n } from '../lib/i18n';
 import { partGone, startMinFor, START_MIN } from '../lib/planner';
@@ -38,11 +38,6 @@ import { useSave } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, toggle, TripDraft } from '../lib/trip';
 import type { Nav } from '../nav';
 import { colors, font, radius, space, type } from '../theme';
-
-/** Minutes past midnight as a wall clock. Always within one day here —
- *  `startMinFor` never returns tomorrow. */
-const clock = (minutes: number) =>
-  `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 
 /** The last instant of a calendar day, for a picker bound. `fromISO` gives
  *  local noon — right for a day, half a day short of a ceiling. */
@@ -225,9 +220,9 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
           {late && (
             <Text style={s.whenNote}>
               {t(
-                `It is already ${clock(startMin)} — this plan starts from there.`,
-                `Bây giờ đã ${clock(startMin)} — kế hoạch sẽ bắt đầu từ đó.`,
-                `もう${clock(startMin)}です — ここから始めるプランにします。`,
+                `It is already ${clockOf(startMin)} — this plan starts from there.`,
+                `Bây giờ đã ${clockOf(startMin)} — kế hoạch sẽ bắt đầu từ đó.`,
+                `もう${clockOf(startMin)}です — ここから始めるプランにします。`,
               )}
             </Text>
           )}

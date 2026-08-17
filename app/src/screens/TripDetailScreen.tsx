@@ -37,19 +37,13 @@ import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO } from '../lib/day';
 import { deleteTrip, useMyTrips, type TripStopRow } from '../lib/data';
-import { dateline } from '../lib/format';
+import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY } from '../lib/trip';
 import { spendVnd } from '../lib/trips';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
-
-const clock = (minutes: number) => {
-  const h = Math.floor(minutes / 60) % 24;
-  const m = Math.round(minutes) % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-};
 
 const money = (vnd: number) => (vnd >= 1_000_000
   ? `${Math.round(vnd / 100_000) / 10}M ₫`
@@ -94,7 +88,7 @@ export default function TripDetailScreen({ navigation, route }: {
   const first = stops[0];
   const last = stops[stops.length - 1];
   const window = first?.arrive_min != null && last?.arrive_min != null
-    ? `${clock(first.arrive_min)}–${clock(last.arrive_min + (last.dwell_min ?? 0))}`
+    ? `${clockOf(first.arrive_min)}–${clockOf(last.arrive_min + (last.dwell_min ?? 0))}`
     : null;
 
   // Split here rather than stored: the prices live on the places, so a
@@ -158,7 +152,7 @@ export default function TripDetailScreen({ navigation, route }: {
               {i > 0 ? <View style={s.divider} /> : null}
               <View style={s.stopRow}>
                 <Text style={s.stopTime}>
-                  {stop.arrive_min != null ? clock(stop.arrive_min) : '—'}
+                  {stop.arrive_min != null ? clockOf(stop.arrive_min) : '—'}
                 </Text>
                 <View style={s.who}>
                   {stop.places
