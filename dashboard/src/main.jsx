@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { createHashRouter, RouterProvider } from 'react-router-dom';
-import App from './App.jsx';
+import App, { CityGate } from './App.jsx';
 import AuthGate from './auth.jsx';
 import AddPlace from './components/AddPlace.jsx';
 import CityHero from './components/CityHero.jsx';
@@ -21,9 +21,11 @@ const router = createHashRouter([
     children: [
       { index: true, element: <PlaceList /> },
       { path: 'place/:slug', element: <PlaceEditor /> },
-      { path: 'add', element: <AddPlace /> },
-      { path: 'scan', element: <ScanCity /> },
-      { path: 'city', element: <CityHero /> },
+      // One-city-at-a-time screens: with "All cities" selected they ask
+      // for a city first instead of inventing a scope.
+      { path: 'add', element: <CityGate><AddPlace /></CityGate> },
+      { path: 'scan', element: <CityGate><ScanCity /></CityGate> },
+      { path: 'city', element: <CityGate><CityHero /></CityGate> },
       { path: 'analytics/contributors', element: <Contributors /> },
       { path: 'analytics/coverage', element: <Coverage /> },
     ],
