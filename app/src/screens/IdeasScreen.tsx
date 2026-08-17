@@ -134,11 +134,24 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
         contentContainerStyle={{ paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
       >
+        {/* "the plan", not "the day". Both this and the button below used
+            to name the day, on a screen whose own Day/Evening control sits
+            between them — so picking Evening left the reader being offered
+            a day, twice, while the two screens after this one correctly
+            said evening.
+
+            Generic rather than switched on `when`, which is the other way
+            to make it true. A call to action that rewrites itself while the
+            reader is still tapping the chips above it is the screen
+            fidgeting under their hand, and this app has just spent a change
+            teaching a row not to do that. The word the reader picked is
+            already on screen, in the control they picked it with; the
+            button does not need to repeat it back. */}
         <Text style={s.lede}>
           {t(
-            'Tell us a little and we will sketch the day. You can change everything later.',
-            'Cho vài gợi ý, chúng tôi phác ra một ngày. Sửa lại lúc nào cũng được.',
-            '少し教えてください — 一日を下描きします。あとで全部変えられます。',
+            'Tell us a little and we will sketch the plan. You can change everything later.',
+            'Cho vài gợi ý, chúng tôi phác ra kế hoạch. Sửa lại lúc nào cũng được.',
+            '少し教えてください — プランを下描きします。あとで全部変えられます。',
           )}
         </Text>
 
@@ -281,7 +294,8 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
             <GradientCta
               icon="sparkles"
               wide
-              label={t('Sketch the day', 'Phác một ngày', '一日を下描き')}
+              // Generic, and it stays generic — see the lede's note.
+              label={t('Sketch the plan', 'Phác kế hoạch', 'プランを下描き')}
               // `whereLabel` rather than the raw draft: only this screen
               // knows whether the reader chose a district or dropped a
               // pin, and the next one has no business re-deciding that.
