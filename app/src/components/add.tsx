@@ -38,7 +38,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { PressableScale } from './ui';
+import { HEADER_CONTROL_H, PressableScale } from './ui';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
 /**
@@ -84,10 +84,42 @@ export function AddSlot({ title, subtitle, onPress }: {
  * ink on it, the radius, the weight — is the same either way, which is
  * the point of it being one component.
  */
-export function AddPill({ label, onPress, compact, accessibilityLabel }: {
+/**
+ * The gradient pill that offers to make one more of something.
+ *
+ * ── what it should say ──
+ *
+ * **The short word.** "New" to create one of this list's own things, "Add"
+ * to offer the catalog a place it does not have. Not "New trip" or "Add
+ * place": the pill sits under a title that has already named the thing, and
+ * repeating it there is the button explaining itself to a reader who has
+ * just read it.
+ *
+ * The whole phrase goes in `accessibilityLabel`, which is not a
+ * consolation — a screen reader announces the button on its own, with no
+ * title above it to lean on, so that is the one place the noun is load
+ * bearing.
+ *
+ * An **empty state** is the exception and takes the full phrase in its
+ * visible label: "Plan a trip", "Create your first collection". There is no
+ * list above it to have named anything, and the sentence is doing the
+ * explaining.
+ *
+ * ── and where it goes ──
+ *
+ * Never twice on one screen. A tab with nothing in it has a card below
+ * making the same offer with more words, and two invitations to do one
+ * thing read as two different things — see how Collections hangs this on a
+ * section heading only when that section has rows, and how Trips hides it
+ * until the first trip exists.
+ */
+export function AddPill({ label, onPress, compact, header, accessibilityLabel }: {
   label: string;
   onPress: () => void;
   compact?: boolean;
+  /** In a screen's header, where it sits beside a 34pt title and next to
+   *  the 44pt round buttons the other tabs put in that slot. */
+  header?: boolean;
   accessibilityLabel?: string;
 }) {
   return (
@@ -97,7 +129,7 @@ export function AddPill({ label, onPress, compact, accessibilityLabel }: {
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
     >
-      <LinearGradient {...gradAI} style={[s.pill, compact && s.pillCompact]}>
+      <LinearGradient {...gradAI} style={[s.pill, compact && s.pillCompact, header && s.pillHeader]}>
         <Ionicons name="add" size={compact ? 16 : 18} color={colors.accentInk} />
         <Text style={[s.pillText, compact && s.pillTextCompact]}>{label}</Text>
       </LinearGradient>
@@ -130,6 +162,11 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
   },
   pillCompact: { paddingLeft: 11, paddingRight: 14, paddingVertical: 7 },
+  // `HEADER_CONTROL_H`, so a pill and a round button in the same header
+  // slot are the same height. Everywhere else the pill sizes to its own
+  // content, which is right beside a section heading and wrong beside a
+  // screen title.
+  pillHeader: { minHeight: HEADER_CONTROL_H, paddingHorizontal: 16, justifyContent: 'center' },
   pillText: { color: colors.accentInk, fontSize: 15.5, fontWeight: font.semibold },
   pillTextCompact: { fontSize: 14 },
 });
