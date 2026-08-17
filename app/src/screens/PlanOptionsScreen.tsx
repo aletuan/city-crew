@@ -126,6 +126,44 @@ export default function PlanOptionsScreen({ navigation, route }: {
     setSeed((n) => n + 1);
   };
 
+  /**
+   * What happened to the places the reader asked to build from.
+   *
+   * Somebody who seeded an evening from a café list should be told their
+   * picks did not all make it, rather than left to notice. Two things this
+   * used to get wrong:
+   *
+   * It named a reason it did not have. `dropReason` returns four — not
+   * published, another city, shut at that hour, or not the kind of place
+   * the reader asked for — and the line called all four "closed or
+   * unavailable at this hour". The last of those is much the commonest:
+   * seed an evening of food from a twenty-place list and every café in it
+   * drops for being a café. Telling somebody their café is closed when it
+   * is merely not a restaurant sends them to check its opening hours.
+   *
+   * So it names the hour only when the hour is the whole of it, and
+   * otherwise says the true, quieter thing. No counts by reason: a reader
+   * looking at three evenings wants a sentence, not a table.
+   *
+   * And it sits under the cards rather than on them. `pinnedDropped` is
+   * computed once and handed to all three plans, so on the cards it was the
+   * same sentence three times — which is exactly why `perPerson` below
+   * lives here too.
+   */
+  const dropped = plans[0]?.pinnedDropped ?? [];
+  const shutOnly = dropped.length > 0 && dropped.every((d) => d.reason === 'closed');
+  const droppedLine = dropped.length === 0 ? null : shutOnly
+    ? t(
+      'Some places from your collections are not open at this hour.',
+      'Một số chỗ trong bộ sưu tập của bạn không mở vào giờ này.',
+      'コレクションの一部はこの時間帯は開いていません。',
+    )
+    : t(
+      'Some places from your collections did not fit this plan.',
+      'Một số chỗ trong bộ sưu tập của bạn chưa hợp với plan này.',
+      'コレクションの一部は今回のプランには入りませんでした。',
+    );
+
   // Said once under the cards rather than on each of them: it is the same
   // sentence three times otherwise, and it is about how every figure on
   // the screen is read.
@@ -195,6 +233,8 @@ export default function PlanOptionsScreen({ navigation, route }: {
             </Text>
           </Card>
         )}
+
+        {!!droppedLine && <Text style={s.dropped}>{droppedLine}</Text>}
 
         {plans.length > 0 && (
           <Text style={s.footnote}>
@@ -289,18 +329,6 @@ function PlanCard({ plan, best, onPress }: { plan: TripPlan; best: boolean; onPr
           </Text>
         </View>
 
-        {/* Only what could not be used, and why. Somebody who built from a
-            café list where everything shuts at six should be told that,
-            not left wondering where their picks went. */}
-        {plan.pinnedDropped.length > 0 && (
-          <Text style={s.dropped}>
-            {t(
-              `${plan.pinnedDropped.length} saved ${plan.pinnedDropped.length === 1 ? 'place is' : 'places are'} closed or unavailable at this hour.`,
-              `${plan.pinnedDropped.length} chỗ bạn đã lưu đóng cửa hoặc không dùng được vào giờ này.`,
-              `保存済みの${plan.pinnedDropped.length}件はこの時間帯は利用できません。`,
-            )}
-          </Text>
-        )}
       </Card>
     </PressableScale>
   );
@@ -355,7 +383,7 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
   summary: { ...CAPTION, color: colors.textSecondary },
-  dropped: { ...CAPTION, color: colors.textTertiary, marginTop: 8 },
+  dropped: { ...CAPTION, color: colors.textTertiary, marginTop: 2, marginBottom: 6 },
 
   emptyCard: { alignItems: 'center' },
   emptyText: { ...type.body, color: colors.textSecondary, textAlign: 'center' },
