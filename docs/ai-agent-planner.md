@@ -131,7 +131,38 @@ export function planTrips(
 ): TripPlan[];          // ba phương án, không phải một — xem mục dưới
 ```
 
-Năm pass, mỗi pass là một hàm thuần test được riêng:
+### Hai thứ thuật toán gốc cần mà wizard không hỏi
+
+`itinerary-runtime.js` tính số stop bằng `clamp(round(hours / 2), 2, 6)` và có
+một pass swap để ép plan vừa ngân sách. Wizard hiện tại không hỏi cả số giờ lẫn
+ngân sách, nên hai cơ chế đó không có đầu vào.
+
+**Số stop suy từ `when`:** `evening` cho 3 stop, `day` cho 5. Không thêm câu hỏi
+nào, khớp với mockup, và đúng với thực tế — một buổi tối không đi được năm chỗ.
+Với `day`, slot lấy từ nhóm `morning` + `afternoon` của `ITI_SLOTS`; với
+`evening` thì lấy nhóm `evening`.
+
+**Ngân sách: bỏ pass swap ở Phase 1.** Plan chỉ *báo* chi phí chứ không *ép*
+theo một con số nào — trung thực hơn là bịa ra một trần mặc định rồi cắt bỏ
+những chỗ tốt vì nó. Đến Phase 4, `profiles.pref_budget_vnd` trở thành trần
+thật và pass swap được bật lại.
+
+### Collection đã lưu là ưu tiên cứng
+
+Câu cuối wizard cho chọn "bắt đầu từ collection đã lưu" (`TripDraft.from`). Chỗ
+nằm trong collection đó **được đảm bảo có mặt** — miễn là vẫn `isLive()`, vẫn
+mở cửa đúng giờ, và vẫn hợp slot. Ba điều kiện đó không nhân nhượng: một plan
+chứa chỗ đóng cửa chỉ vì người ta từng lưu nó là một plan hỏng.
+
+Ưu tiên cứng kéo theo một hệ quả cần chặn: nếu collection đủ chỗ lấp kín mọi
+slot thì ba phương án sẽ giống hệt nhau, chỉ khác thứ tự. Nên giới hạn
+collection chiếm tối đa `stops - 1` slot, chừa ít nhất một slot cho lens phân
+hoá. Người dùng vẫn thấy cái mình đã lưu nằm trong plan, mà ba thẻ vẫn là ba
+lựa chọn thật.
+
+### Năm pass
+
+Mỗi pass là một hàm thuần test được riêng:
 
 1. **Lọc** — `isLive()`, đúng `city_id`, và `openState()` nói chỗ đó mở trong
    khung giờ đã chọn. Đây là nâng cấp lớn nhất so với bản mockup, vốn bỏ qua
@@ -337,9 +368,18 @@ create table public.trip_stops (
   sort_order int not null,
   arrive_min int, dwell_min int,
   why text,                      -- câu LLM viết; null khi chạy đường lui
+  why_lang text,                 -- 'en' | 'vi' | 'ja' — xem ghi chú dưới
   primary key (trip_id, sort_order)
 );
 ```
+
+**`why` chỉ có một thứ tiếng, và đó là lựa chọn có ý thức.** Mọi cột nội dung
+khác trong repo đều có bộ ba `_en`/`_vi`/`_ja`, nhưng những cột đó do desk viết
+một lần cho mọi người đọc. `why` thì viết riêng cho một chuyến của một người,
+nên sinh cả ba thứ tiếng là trả gấp ba token để hai phần ba không ai đọc. Sinh
+theo ngôn ngữ đang chọn, lưu kèm `why_lang`. Đổi ngôn ngữ app sau khi lưu thì
+plan cũ giữ nguyên tiếng cũ — `why_lang` cho phép màn hình nói ra điều đó thay
+vì để người đọc tự đoán.
 
 RLS theo đúng khuôn `collections.owner_id`.
 
@@ -506,9 +546,11 @@ Lát mỏng nhất mang giá trị thật: nút trong Ideas cuối cùng cũng r
 - Migration `trips` + `trip_stops`, `supabase/tests/trips_test.sql` nối vào
   `run.sh`
 - `data.ts`: `saveTrip` / `useMyTrips` / `deleteTrip` / `reorderCollection`
-- Tab Trips thay `ComingSoonScreen`; kéo thả sắp xếp trong
-  `CollectionDetailScreen` — `sort_order` đã có mặt ở mọi chỗ đọc, chỉ thiếu
-  người ghi (theo mẫu `dashboard/src/api.js:reorderPhotos`)
+- Tab Trips thay `ComingSoonScreen`, hai mục **Sắp tới** và **Đã đi**, chia
+  bằng `day >= todayISO()` — không cần cột trạng thái nào, cùng tinh thần với
+  cách repo suy cap 20 suggest/ngày từ chính các row
+- Kéo thả sắp xếp trong `CollectionDetailScreen` — `sort_order` đã có mặt ở mọi
+  chỗ đọc, chỉ thiếu người ghi (theo mẫu `dashboard/src/api.js:reorderPhotos`)
 - **Share, Invite và avatar crew đều là mock ở phase này** — xem mục Crew
 
 ### Phase 3 — Lời dẫn và câu tự do *(LLM vào cuộc)*
