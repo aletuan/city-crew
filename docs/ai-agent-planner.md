@@ -92,9 +92,11 @@ thêm độ trễ và một điểm hỏng.
 | Lý do chọn từng điểm | LLM | dòng dữ kiện: "4.6★ · cách 2.1km · mở tới 23:00" |
 | Hiểu câu tự do | LLM → `TripDraft` | wizard bốn câu như hiện tại |
 
-Tính xác định được bảo toàn tuyệt đối ở phần chọn chỗ: cùng `TripDraft` cộng
-cùng snapshot catalog cho ra cùng danh sách stop, cùng thứ tự, cùng giờ. LLM
-chỉ thêm chữ, nên pitch recorder tiếp tục chạy được.
+Phần chọn chỗ là hàm thuần, xác định theo đầu vào — trong đó `seed` là một đầu
+vào (xem mục *Ngẫu nhiên là đầu vào*). Cùng `TripDraft`, cùng snapshot catalog,
+cùng seed cho ra cùng danh sách stop, cùng thứ tự, cùng giờ. Đó là thứ test cần
+và là thứ khiến mọi hành vi của planner giải thích được. LLM chỉ thêm chữ, nên
+không có gì trong plan phụ thuộc vào việc model trả lời thế nào.
 
 **Chống bịa địa điểm.** LLM không bao giờ được sinh ra place. Prompt chỉ nhận
 tập slug đã chọn sẵn; output ép qua `output_config.format` (structured outputs)
@@ -123,9 +125,10 @@ export type TripPlan = {
   windowMin: [number, number];
 };
 
-export function planTrip(
-  draft: TripDraft, places: Place[], now: Date, taste?: Taste,
-): TripPlan;
+export function planTrips(
+  draft: TripDraft, places: Place[], now: Date,
+  opts?: { taste?: Taste; seed?: number },
+): TripPlan[];          // ba phương án, không phải một — xem mục dưới
 ```
 
 Năm pass, mỗi pass là một hàm thuần test được riêng:
@@ -135,17 +138,137 @@ Năm pass, mỗi pass là một hàm thuần test được riêng:
    giờ mở cửa hoàn toàn.
 2. **Chấm điểm** — `itiScore` port sang `categories` (trục mới) thay vì
    `vibes` (trục cũ), cộng thêm số hạng khoảng cách và taste.
-3. **Chọn** — một chỗ cho mỗi slot, tie-break theo `slug`. Bản gốc tie-break
+3. **Chọn** — một chỗ cho mỗi slot, lấy mẫu có trọng số trong nhóm gần đỉnh
+   (xem mục *Ngẫu nhiên* bên dưới), chốt cuối bằng `slug`. Bản gốc tie-break
    theo `id`; `slug` ổn định hơn và là khoá app dùng ở mọi nơi.
 4. **Xếp lộ trình** — với ≤ 6 stop, thử mọi hoán vị hợp lệ trong cùng buổi và
    chọn tổng quãng đường ngắn nhất. Bản gốc không làm bước này; đây là chỗ câu
    "Tính thời gian đi bộ giữa các điểm" của `sketch.ts` trở thành sự thật.
 5. **Ngân sách + giờ** — port nguyên pass swap và pass thời gian.
 
-Test cần có trong `planner.test.ts`: cùng input ra cùng output; chỗ đóng cửa
-không bao giờ lọt vào; vượt ngân sách thì swap và dừng khi hết chỗ rẻ hơn;
-catalog rỗng trả plan rỗng chứ không ném lỗi; `TripDraft` ở mức tối thiểu
-`canPlan` cho phép vẫn ra plan.
+Test cần có trong `planner.test.ts`: cùng input **và cùng seed** ra cùng
+output, seed khác ra khác; chỗ đóng cửa không bao giờ lọt vào; vượt ngân sách
+thì swap và dừng khi hết chỗ rẻ hơn; catalog rỗng trả plan rỗng chứ không ném
+lỗi; `TripDraft` ở mức tối thiểu `canPlan` cho phép vẫn ra plan.
+
+### Ngẫu nhiên là đầu vào, không phải hiệu ứng ngầm
+
+Bản mockup xác định tuyệt đối vì pitch recorder cần thế. Trong app thì ràng
+buộc đó không còn: recorder chạy chính `itinerary-runtime.js`, một script ES5
+riêng, và việc port sang đây không động tới nó.
+
+Xác định tuyệt đối lại còn có hại. Hà Nội có 85 place, trung bình 1.23 category
+mỗi chỗ; với slot "cà phê buổi tối", luôn lấy ứng viên điểm cao nhất nghĩa là
+**đúng một quán đó xuất hiện trong mọi plan của mọi người, mãi mãi**. Đa dạng ở
+đây là điều kiện để dùng được, không phải để cho vui.
+
+Cách giải là thủ pháp repo đã dùng hai lần: `openState(lines, now)` nhận `now`
+làm tham số — *"`now` is injected so this is a pure function of its inputs; the
+screen passes the real clock"* — và `stepStates(elapsed)` cũng vậy. Làm y hệt
+với `seed`. Hàm vẫn thuần, vẫn xác định, chỉ là xác định **theo seed**: test
+truyền `seed: 42`, màn hình truyền seed mới mỗi lần bấm Regenerate.
+
+Ngẫu nhiên chỉ tác động ở **bước chọn**, không rải lên toàn bộ điểm số — làm
+thế thì plan thành tuỳ tiện. Thay vì luôn lấy `candidates[0]`, lấy mẫu có trọng
+số trong nhóm ứng viên cách người dẫn đầu dưới `EPSILON` điểm. Một quán 4.6★ và
+một quán 4.5★ cùng vibe, cùng quận là hai lựa chọn tốt ngang nhau — chọn cái
+nào là chuyện may mắn chứ không phải chuyện thuật toán. Một quán 3.2★ ở quận
+khác vẫn không bao giờ lọt vào vì nó nằm ngoài nhóm.
+
+Cần một PRNG thuần, gieo được — `mulberry32` hay tương đương, khoảng năm dòng —
+chứ không dùng `Math.random()`, thứ không gieo được và biến hàm thành không
+thuần.
+
+Hai cơ chế đa dạng này khác nhau và không thay thế nhau: **ba lens** lo khác
+biệt *giữa ba thẻ trong một lần sinh*; **seed** lo khác biệt *giữa các lần
+sinh*.
+
+### Ba phương án, không phải một
+
+Người dùng chọn giữa ba bản nháp rồi tinh chỉnh, thay vì nhận một bản rồi phải
+tranh luận với nó. Điều này quan trọng hơn vẻ ngoài: nó **xoá bỏ nhu cầu chat
+tự do sửa plan** — thứ vừa tốn token vừa buộc phải thêm một bảng đếm để cap chi
+phí. Chọn-trong-ba cộng sửa tay cho người dùng nhiều quyền kiểm soát hơn chat,
+với chi phí bằng không.
+
+Ba phương án sinh ra bằng ba **lens** — mỗi lens là một bộ trọng số khác nhau
+trên cùng một hàm chấm điểm, không phải ba thuật toán:
+
+| Lens | Badge | Điều chỉnh trọng số |
+|---|---|---|
+| `match` | ★ Best match | mặc định — bám sát `TripDraft` và taste |
+| `iconic` | Iconic views | tăng hệ số `log10(rating_count)`, ưu tiên `views` |
+| `lowkey` | Low-key | giảm `rating_count`, giảm `price_vnd`, ưu tiên `chill` |
+
+Kèm một ràng buộc đa dạng: phương án sau phải khác phương án trước ít nhất 2
+trên 3 stop; trùng quá thì bỏ và lấy ứng viên kế tiếp. Ba lượt chạy dùng chung
+một seed nên vẫn tái lập được trọn vẹn khi cần.
+
+Badge suy ra từ lens, không do LLM đặt. LLM chỉ đặt **tên** ("River first,
+rooftop last") — một lời gọi cho cả ba phương án, không phải ba lời gọi.
+
+**Nút Regenerate** truyền một `seed` mới. Ngoài ra nên loại trừ các slug vừa
+hiện ở lần trước, để lần bấm thứ hai chắc chắn cho thứ khác chứ không phụ thuộc
+hoàn toàn vào may mắn của bộ gieo.
+
+### Thời gian di chuyển — `app/src/lib/travel.ts`
+
+Màn chọn phương án hiển thị quãng đường và cách đi giữa hai stop ("6.8 km ·
+≈ 15 min ride", "≈ 12 min walk"). `distanceKm()` cho quãng đường; phần còn lại
+là một hàm thuần nữa:
+
+```ts
+export type Leg = { km: number; mode: 'walk' | 'ride'; minutes: number };
+export function legBetween(a: Place, b: Place): Leg | null;
+```
+
+Quy tắc: dưới ~1.2 km thì đi bộ (~12 phút/km), xa hơn thì xe (~2.5 phút/km
+trong nội đô). `null` khi một trong hai chỗ thiếu toạ độ — màn hình bỏ dòng đó
+đi thay vì đoán, cùng tinh thần với `openState()` trả `null`.
+
+Con số này cũng là đầu vào cho pass thời gian: giờ đến của stop kế tiếp bằng
+giờ rời stop trước cộng `leg.minutes`, thay cho hằng số 30 phút của bản mockup.
+
+## Luồng màn hình
+
+```
+IdeasScreen ──▶ SketchingScreen ──▶ PlanOptionsScreen ──▶ PlanEditScreen ──▶ Trips
+  bốn câu hỏi     báo cáo thật        ba phương án           sửa giờ,          tab
+                                      + Regenerate           kéo thả,
+                                                             thêm/bớt stop
+                                                             → Save to Trips
+```
+
+**`PlanOptionsScreen`** — ba thẻ, mỗi thẻ có tên, badge, timeline stop kèm quãng
+đường giữa các chặng, và dòng tổng kết (`3 stops · ~4.5h · ~800k ₫ / two`).
+Nhãn "Made by City Crew AI" đặt ngay dưới tiêu đề: nói thật cái gì do máy dựng,
+cùng tinh thần với cột `generated_by` trong `trips`.
+
+**`PlanEditScreen`** — nhận một `TripPlan` và giữ nó như bản nháp sửa được: ±
+giờ từng stop, kéo thả đổi thứ tự, thêm hoặc bớt stop, rồi Save.
+
+Điểm cần cẩn thận: **khi người dùng sửa giờ bằng tay, planner không được tính
+lại đè lên.** Plan chuyển từ trạng thái `generated` sang `edited` và từ đó chỉ
+người dùng mới đổi được giờ. Nếu không, mỗi lần thêm một stop là mọi giờ người
+ta vừa chỉnh bị quét sạch — đúng kiểu bug không ai nhìn ra khi đọc code.
+
+**Số người.** Dòng `~800k ₫ / two` cần số người mà `TripDraft.company` không
+có: nó cho `solo`/`couple`/`friends`/`family` chứ không cho con số. Hoặc map
+cứng (solo 1, couple 2, friends 4, family 4), hoặc thêm một ô chọn số người vào
+wizard. Cách thứ hai đúng hơn nhưng thêm một câu hỏi vào một wizard đã bốn câu.
+
+## Crew — chỗ hụt lớn nhất, và nó chưa được model hoá
+
+Mockup có "You & Lan", "5 going", nút **Invite** và nút **Share**. Trong repo
+hiện tại, **"crew" hoàn toàn chỉ là chữ**: không bảng group, không membership,
+không sharing. `CollectionDetailScreen.tsx` nói thẳng — *"Your collections are
+private for now. Sharing one with the crew is on the way."*
+
+Nên phần này mock ở giai đoạn đầu, và mock **cả** Invite lẫn avatar chứ không
+riêng Share. Khi làm thật, nó là một thiết kế riêng: bảng `trip_members`, lời
+mời, quyền xem/sửa, và RLS cho phép người khác chủ đọc được một `trip` — tức là
+phá vỡ mô hình owner-only mà `collections` đang dùng. Đó là một tài liệu khác,
+không phải một dòng trong tài liệu này.
 
 ## Contract của agent — `supabase/functions/plan-assist/index.ts`
 
@@ -154,9 +277,14 @@ gate bằng `Authorization: Bearer` → `admin.auth.getUser(token)`.
 
 | action | Vào | Ra | Model |
 |---|---|---|---|
-| `narrate` | draft + danh sách stop (slug, tên, category, rating, khoảng cách) | `{ title, stops: [{slug, why}] }` | `claude-sonnet-5` |
+| `narrate` | draft + **cả ba** phương án (slug, tên, category, rating, khoảng cách) | `{ plans: [{ index, title, stops: [{slug, why}] }] }` | `claude-sonnet-5` |
 | `parse` | câu tự do + taxonomy + danh sách quận | `TripDraft` từng phần | `claude-opus-5` |
 | `revise` | plan hiện tại + yêu cầu sửa | `{ intent, params }` — planner chạy lại | `claude-opus-5` |
+
+`narrate` đặt tên cho **cả ba phương án trong một lời gọi**, không phải ba lời
+gọi — vừa rẻ hơn ba lần, vừa cho model thấy cả ba cùng lúc nên tên phân biệt
+được với nhau. Badge ("Best match", "Iconic views", "Low-key") suy ra từ lens
+trong `planner.ts`, không do model đặt.
 
 Cả ba ép JSON bằng `output_config.format`. Không dùng assistant prefill (trả
 400 trên Opus 5 và Sonnet 5), không truyền `temperature`/`top_p`/`budget_tokens`
@@ -314,12 +442,19 @@ dùng để phá thế hoà và xếp thứ tự, không để đổi câu trả
 
 ## Chi phí và vận hành
 
-Ước lượng mỗi plan 5 stop: vào ~1.5k token, ra ~300 token.
+Một lời gọi `narrate` đặt tên cho cả ba phương án: vào ~3k token (ba bộ ba
+stop cộng draft), ra ~500 token.
 
-| Model | Mỗi plan | 1.000 plan/tháng |
+| Model | Mỗi lần sinh (3 phương án) | 1.000 lần/tháng |
 |---|---|---|
-| `claude-sonnet-5` (giá khuyến mãi) | ~$0.006 | ~$6 |
-| `claude-opus-5` | ~$0.015 | ~$15 |
+| `claude-sonnet-5` (giá khuyến mãi) | ~$0.011 | ~$11 |
+| `claude-opus-5` | ~$0.028 | ~$28 |
+
+Nút Regenerate tính là một lần sinh nữa, nên cap theo ngày cần đếm cả lượt
+regenerate chứ không chỉ số `trips` đã lưu — đây là chỗ duy nhất trong thiết kế
+này mà con số không suy ra được từ dữ liệu sẵn có. Cách rẻ nhất để tránh thêm
+bảng: giới hạn số lần Regenerate **trong phiên** ở client (ví dụ 3 lần), và để
+cap theo ngày ở server vẫn dựa trên `trips`.
 
 - **Cache** — system prompt, taxonomy và slot template là bất biến, đặt
   `cache_control: {type:"ephemeral"}` ở cuối khối system. Ngưỡng cache tối
@@ -337,26 +472,33 @@ dùng để phá thế hoà và xếp thứ tự, không để đổi câu trả
 
 ## Lộ trình
 
-### Phase 1 — Bản phác thật *(không LLM, không migration)*
+### Phase 1 — Ba bản nháp thật *(không LLM, không migration)*
 
-Lát mỏng nhất mang giá trị thật: nút trong Ideas cuối cùng cũng ra một ngày.
+Lát mỏng nhất mang giá trị thật: nút trong Ideas cuối cùng cũng ra ba cách để
+đi chơi một buổi tối.
 
-- Thêm `app/src/lib/planner.ts` + `planner.test.ts`,
-  `app/src/screens/TripScreen.tsx`
+- Thêm `app/src/lib/planner.ts` + `planner.test.ts` (ba lens, ràng buộc đa
+  dạng, lấy mẫu theo `seed`)
+- Thêm `app/src/lib/travel.ts` + `travel.test.ts`
+- Thêm `app/src/screens/PlanOptionsScreen.tsx` — ba thẻ + Regenerate
 - Sửa `app/src/lib/sketch.ts`, `app/src/screens/SketchingScreen.tsx`,
   `app/src/nav.ts`
-- **Xong khi:** bấm "Lên kế hoạch" ra itinerary thật từ catalog thật;
-  `npm run typecheck && npm test && npm run test:tz` xanh; cùng input hai lần
-  ra cùng plan.
+- **Xong khi:** bấm "Lên kế hoạch" ra ba phương án khác nhau thật từ catalog
+  thật; Regenerate ra bộ khác; mở lại app hôm sau với cùng câu trả lời cũng ra
+  bộ khác; `npm run typecheck && npm test && npm run test:tz` xanh; cùng
+  `(draft, seed)` hai lần ra cùng ba phương án.
 
-### Phase 2 — Chuyến đi được lưu
+### Phase 2 — Sửa và lưu
 
+- Thêm `app/src/screens/PlanEditScreen.tsx` — ± giờ, kéo thả, thêm/bớt stop;
+  trạng thái `generated` → `edited` khoá việc tính lại giờ
 - Migration `trips` + `trip_stops`, `supabase/tests/trips_test.sql` nối vào
   `run.sh`
 - `data.ts`: `saveTrip` / `useMyTrips` / `deleteTrip` / `reorderCollection`
 - Tab Trips thay `ComingSoonScreen`; kéo thả sắp xếp trong
   `CollectionDetailScreen` — `sort_order` đã có mặt ở mọi chỗ đọc, chỉ thiếu
   người ghi (theo mẫu `dashboard/src/api.js:reorderPhotos`)
+- **Share, Invite và avatar crew đều là mock ở phase này** — xem mục Crew
 
 ### Phase 3 — Lời dẫn và câu tự do *(LLM vào cuộc)*
 
