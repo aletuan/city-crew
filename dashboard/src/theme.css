@@ -784,6 +784,137 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 
 .topbar .addbtn { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 
+/* ── contributors analytics ──
+   The desk's one measuring room. Same skin as everything else — panels,
+   chips, mono facts — the only new vocabulary is the chart itself. */
+.contribhead {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.contribhead h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
+/* The two gate words in the subtitle wear the data voice: they are column
+   values, quoted, not English. */
+.contribem { font-family: var(--font-data); font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+.contribhint { margin: 6px 0 0; font-family: var(--font-data); font-size: 11.5px; color: var(--text-tertiary); }
+.contribfilter { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 6px; }
+
+.contribcards {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+  margin-bottom: 18px;
+}
+.contribcard {
+  background: var(--bg-elevated); border: 1px solid var(--border-glass-soft);
+  border-radius: var(--radius-card); padding: 18px 22px 16px;
+}
+.contriblabel {
+  font-family: var(--font-data); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.contribstat { display: flex; align-items: baseline; gap: 10px; }
+.contribnum { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+/* Gradient ink is reserved for the one number the page is about — same rule
+   as the header's single accent action. */
+.contribnum.grad {
+  background: var(--grad-ai);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.contribsub { font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary); white-space: nowrap; }
+
+.contribgrid {
+  display: grid; grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px; align-items: start;
+}
+.contribchartpanel { padding: 18px 20px 14px; }
+
+.chartlegend {
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  font-family: var(--font-data); font-size: 11px; margin-bottom: 10px;
+}
+.chartlegend .legendleft { color: var(--text-secondary); }
+.chartlegend .legendright { color: var(--ai-pink); }
+.chartlegend .swatch {
+  display: inline-block; vertical-align: middle;
+  width: 18px; height: 0; margin-right: 7px;
+  border-top: 2px solid currentColor;
+}
+.chartlegend .swatch.dashed { border-top-style: dashed; }
+
+.contribchartwrap { position: relative; }
+.contribchart { display: block; width: 100%; height: auto; }
+.contribchart .axistitle,
+.contribchart .ticklabel { font-family: var(--font-data); font-size: 11px; fill: var(--text-tertiary); }
+.contribchart .ticklabel.left { text-anchor: end; }
+.contribchart .ticklabel.right { text-anchor: start; fill: var(--ai-pink); opacity: .75; }
+.contribchart .ticklabel.x { }
+.contribchart .gridline { stroke: rgba(255, 255, 255, 0.06); }
+.contribchart .gridbase { stroke: rgba(255, 255, 255, 0.16); }
+.contribchart .userline { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.contribchart .allline {
+  fill: none; stroke: var(--ai-pink); stroke-width: 2;
+  stroke-dasharray: 5 5; stroke-linecap: round;
+}
+.contribchart .alltotal {
+  font-family: var(--font-data); font-size: 12.5px; font-weight: 700; fill: var(--ai-pink);
+}
+/* The 2px surface ring: dots sit on lines, so they carry their own gap. */
+.contribchart .enddot { stroke: var(--bg-elevated); stroke-width: 2; }
+.contribchart .crosshair line { stroke: rgba(255, 255, 255, 0.22); stroke-dasharray: 2 3; }
+.contribchart .crosshair circle { stroke: var(--bg-elevated); stroke-width: 2; }
+.contribchart g { transition: opacity 140ms; }
+
+.contribtip {
+  position: absolute; top: 34px; z-index: 5; pointer-events: none;
+  background: rgba(22, 19, 27, 0.94); border: 1px solid var(--border-glass);
+  border-radius: 10px; padding: 8px 11px; box-shadow: var(--shadow-float);
+  font-family: var(--font-data); font-size: 11.5px; color: var(--text-secondary);
+  white-space: nowrap;
+}
+.contribtip .tipdate { color: var(--text-tertiary); font-size: 10.5px; margin-bottom: 3px; }
+.contribtip .tiprow { display: flex; align-items: center; gap: 6px; }
+.contribtip .tiprow b { color: var(--text-primary); }
+.contribtip .tiprow i { width: 8px; height: 8px; border-radius: 50%; }
+.contribtip .tipall { color: var(--ai-pink); }
+.contribtip .tipall b { color: var(--ai-pink); }
+
+.contribboard { padding: 18px 20px 10px; }
+.boardhead {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  margin-bottom: 8px;
+}
+.boardtitle { margin: 0; font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+.boardpct { font-family: var(--font-data); font-size: 11.5px; color: var(--text-tertiary); white-space: nowrap; }
+.boardrow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 2px; border-top: 1px solid var(--border-glass-soft);
+  border-radius: 6px; transition: background 120ms;
+}
+.boardrow.hot { background: var(--surface-glass); }
+.boardrank {
+  font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary);
+  width: 18px; flex-shrink: 0; text-align: right;
+}
+.boarddot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.boardhandle {
+  font-weight: 700; font-size: 14px; letter-spacing: -0.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.boardcities {
+  margin-left: auto; flex-shrink: 0;
+  font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary);
+}
+.boardcities b { color: var(--text-secondary); font-weight: 600; }
+.boardcities .dotsep { opacity: .6; }
+.boardtotal { font-size: 15px; font-weight: 700; width: 26px; text-align: right; flex-shrink: 0; }
+
+@media (max-width: 1080px) {
+  /* minmax(0,…), not bare 1fr: a grid item's min-width:auto would let the
+     chart's phone min-width widen the whole page instead of scrolling
+     inside its own panel. */
+  .contribgrid { grid-template-columns: minmax(0, 1fr); }
+  .contribcards { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* ── phone layout — the desk becomes a one-hand tool ── */
 @media (max-width: 720px) {
   body { font-size: 14px; }
@@ -846,6 +977,18 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .kbd-hint { display: none; }
 
   .addsearch { flex-direction: column; }
+
+  .contribhead h2 { font-size: 20px; }
+  .contribcards { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .contribcard { padding: 14px 16px 12px; }
+  .contribnum { font-size: 26px; }
+  .contribchartpanel { padding: 14px 12px 10px; }
+  /* Mono digits at 11px survive the viewBox squeeze down to ~340px wide;
+     below that the axis text starts aliasing, so let the chart scroll. */
+  .contribchartwrap { overflow-x: auto; }
+  .contribchart { min-width: 480px; }
+  .boardcities { display: none; } /* same rule as .prow .facts — phones keep the verdict, drop the breakdown */
+  .boardtotal { margin-left: auto; } /* the breakdown was what pushed it right */
 }
 
 /* ── the narrowest phones (≈2016 hardware) ──

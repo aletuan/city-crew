@@ -251,6 +251,39 @@ export const api = {
     };
   },
 
+  /**
+   * The rows behind the Contributors screen: places added from the app that
+   * made it all the way through — approved *and* published, because either
+   * flag alone is a place nobody can see. Bounded to the window here rather
+   * than filtered client-side, so the payload stays a few columns times a
+   * month, whatever the catalog grows to.
+   *
+   * Handles ride along the same way attachSubmitters gets them (no foreign
+   * key between places.added_by and profiles.id, so no embed), deduplicated
+   * and fetched once for the whole window. A missing profile is tolerated:
+   * the screen falls back to a truncated id rather than dropping the rows.
+   */
+  contributors: async (days = 30) => {
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    since.setDate(since.getDate() - (days - 1));
+    const rows = db(await supabase.from('places')
+      .select('added_by, city_id, created_at')
+      .eq('channel', 'mobile')
+      .eq('review_status', 'approved')
+      .eq('is_published', true)
+      .not('added_by', 'is', null)
+      .gte('created_at', since.toISOString()));
+    const ids = [...new Set(rows.map((r) => r.added_by))];
+    let profiles = {};
+    if (ids.length) {
+      const { data } = await supabase
+        .from('profiles').select('id, handle, full_name').in('id', ids);
+      profiles = Object.fromEntries((data ?? []).map((p) => [p.id, p]));
+    }
+    return { rows, profiles };
+  },
+
   sync: () => invoke('sync-mockup', {}),
 
   // Keyed by google_place_id — global, not city-scoped, matching the

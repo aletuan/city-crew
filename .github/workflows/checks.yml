@@ -56,6 +56,24 @@ jobs:
       - if: '!cancelled()'
         run: npm run coverage
 
+  # The dashboard's pure modules, same doctrine as the app job: plain
+  # functions in a plain Node process, no React, no Supabase, no install.
+  # Today that is the Contributors screen's arithmetic — the aggregation
+  # every corner of that page reads from (see dashboard/src/contributors.js).
+  dashboard:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      # `node --test` discovers dashboard/tests/ on its own; the modules
+      # under test import nothing outside the repo, so there is no npm ci.
+      - run: node --test
+
   # The migrations, run against a real Postgres and then asserted. The app
   # job above cannot reach any of this: triggers, constraints and backfills
   # are SQL, and SQL that has only been read is SQL that has not been run.
