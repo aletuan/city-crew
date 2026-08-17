@@ -8,7 +8,8 @@ vi.mock('./supabase', async () => {
 });
 
 import {
-  derivedTitle, factLine, isEmptyAsk, narrate, parseAsk, type Narratable, type ParsedAsk,
+  derivedTitle, factLine, freshen, isEmptyAsk, narrate, parseAsk,
+  type Narratable, type Narration, type ParsedAsk,
 } from './assist';
 
 const fake = () => h.fake!;
@@ -209,6 +210,91 @@ describe('narrate', () => {
     expect(body.stops[0]).toEqual({
       slug: 'bare', name: 'bare', categories: [], neighborhood: null, rating: null, arrive: '19:00',
     });
+  });
+});
+
+// ── prose that stopped being true ────────────────────────────────────
+//
+// The bug these came from was on screen and in the database: a title
+// reading "Three coffees around Hoàn Kiếm" over a plan with one café, and
+// "A second stop to keep the conversation going" under what was by then
+// the only stop.
+
+const words = (over: Partial<Narration> = {}): Narration => ({
+  title: 'Three coffees around Hoàn Kiếm',
+  why: new Map([['a', 'An easy first stop at six.'], ['b', 'A second stop to keep it going.']]),
+  fromModel: true,
+  ...over,
+});
+
+describe('freshen', () => {
+  it('keeps everything while nothing has moved', () => {
+    const out = freshen(words(), ['a', 'b'], ['a', 'b']);
+    expect(out.title).toBe('Three coffees around Hoàn Kiếm');
+    expect([...out.why.keys()]).toEqual(['a', 'b']);
+    expect(out.fromModel).toBe(true);
+  });
+
+  // The screenshot: two stops deleted, and a title still counting three.
+  it('drops a title the reader has edited out from under', () => {
+    expect(freshen(words(), ['a', 'b'], ['a']).title).toBeNull();
+  });
+
+  // "Coffee, then dinner" is a claim about sequence as much as content, so
+  // the same stops in another order is a different evening.
+  it('drops the title on a reorder, not only on a deletion', () => {
+    expect(freshen(words(), ['a', 'b'], ['b', 'a']).title).toBeNull();
+  });
+
+  // The other half of the screenshot: the surviving stop is now first, and
+  // its sentence still calls it the second.
+  it('drops a line whose stop has moved', () => {
+    const out = freshen(words(), ['a', 'b'], ['b']);
+    expect(out.why.has('b')).toBe(false);
+  });
+
+  it('keeps a line whose stop stayed where it was', () => {
+    const out = freshen(words(), ['a', 'b'], ['a', 'c']);
+    expect(out.why.get('a')).toBe('An easy first stop at six.');
+    expect(out.why.has('b')).toBe(false);
+  });
+
+  // A stop removed from above shifts everything below it, which is exactly
+  // the case that produced the bug.
+  it('drops the lines below a stop that was removed', () => {
+    const three = words({ why: new Map([['a', 'one'], ['b', 'two'], ['c', 'three']]) });
+    const out = freshen(three, ['a', 'b', 'c'], ['a', 'c']);
+    expect(out.why.get('a')).toBe('one');
+    expect(out.why.has('c')).toBe(false);
+  });
+
+  // `generated_by` is read off this, and a trip whose name and every line
+  // are derived is a `rules` trip whatever was reached while making it.
+  it('stops claiming a model once none of its words are left', () => {
+    expect(freshen(words(), ['a', 'b'], ['z']).fromModel).toBe(false);
+  });
+
+  it('still claims a model while one sentence survives', () => {
+    const out = freshen(words(), ['a', 'b'], ['a', 'z']);
+    expect(out.title).toBeNull();
+    expect(out.fromModel).toBe(true);
+  });
+
+  // The ordinary case before a model has answered, and the case where it
+  // never will: nothing to keep, nothing to drop, and no claim either way.
+  it('is quiet about a narration that never arrived', () => {
+    const empty: Narration = { title: null, why: new Map(), fromModel: false };
+    const out = freshen(empty, [], ['a']);
+    expect(out.title).toBeNull();
+    expect(out.why.size).toBe(0);
+    expect(out.fromModel).toBe(false);
+  });
+
+  it('does not mutate what it was given', () => {
+    const w = words();
+    freshen(w, ['a', 'b'], ['a']);
+    expect(w.title).toBe('Three coffees around Hoàn Kiếm');
+    expect(w.why.size).toBe(2);
   });
 });
 

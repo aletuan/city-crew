@@ -29,7 +29,7 @@ import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, fireHaptic, successHaptic,
   useTabBarClearance,
 } from '../components/ui';
-import { derivedTitle, factLine, narrate, type Narration } from '../lib/assist';
+import { derivedTitle, factLine, freshen, narrate, type Narration } from '../lib/assist';
 import { useAuth } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
@@ -146,6 +146,25 @@ export default function PlanEditScreen({ navigation, route }: {
     ? picked.stops.map((s) => ({ place: s.place, arriveMin: s.arriveMin, dwellMin: s.dwellMin, pinned: false }))
     : []);
 
+  /**
+   * The narration with the stale parts taken out.
+   *
+   * One value for drawing and for saving, deliberately: the bug this fixes
+   * put "A second stop to keep the conversation going" under the only stop
+   * of a trip, and that sentence did not just render — it went into the
+   * database, where nothing downstream can tell it was written about a plan
+   * that no longer exists.
+   *
+   * `picked.stops` is the list the model was handed. It is the planner's
+   * output and does not move when the reader edits, so it needs no state of
+   * its own — `current` is the edited copy, and the difference between them
+   * is exactly what has gone stale.
+   */
+  const live = useMemo(
+    () => freshen(words, picked?.stops.map((st) => st.place.slug) ?? [], current.map((st) => st.place.slug)),
+    [words, picked, current],
+  );
+
   // Taken once, on the way in. `openState` needs an instant, and a fresh
   // `new Date()` per render would make every fact line a new object and
   // re-open the question of whether a café is open on every keystroke.
@@ -167,7 +186,7 @@ export default function PlanEditScreen({ navigation, route }: {
   // called this evening, what the planner's lens called it, and what the
   // catalog alone can say. The last one is always available, which is why
   // the screen never has to render a plan with no name on it.
-  const title = words.title || p.title || derivedTitle(
+  const title = live.title || p.title || derivedTitle(
     current.map((s) => ({ slug: s.place.slug, name: s.place.name_en, neighborhood: s.place.neighborhood_en, arriveMin: s.arriveMin })),
     p.when,
     t,
@@ -195,7 +214,7 @@ export default function PlanEditScreen({ navigation, route }: {
         district: p.district,
         day,
         when: p.when,
-        generatedBy: words.fromModel ? 'rules+llm' : 'rules',
+        generatedBy: live.fromModel ? 'rules+llm' : 'rules',
         stops: current.map((s) => ({
           placeSlug: s.place.slug,
           arriveMin: s.arriveMin,
@@ -203,8 +222,8 @@ export default function PlanEditScreen({ navigation, route }: {
           // Only a model's sentence is stored. The fact line is derived
           // from the place and would go stale the moment its hours change;
           // saving it would freeze last August's opening time into a trip.
-          why: words.why.get(s.place.slug) ?? null,
-          whyLang: words.why.has(s.place.slug) ? lang : null,
+          why: live.why.get(s.place.slug) ?? null,
+          whyLang: live.why.has(s.place.slug) ? lang : null,
         })),
       });
       // The verdict the reader just delivered on a drafted evening, which
@@ -337,7 +356,7 @@ export default function PlanEditScreen({ navigation, route }: {
                   a third of the card, which turned every sentence into two
                   clipped words. Full width it reads. */}
               {(() => {
-                const line = words.why.get(stop.place.slug)
+                const line = live.why.get(stop.place.slug)
                   || factLine({
                     slug: stop.place.slug,
                     name: stop.place.name_en,
