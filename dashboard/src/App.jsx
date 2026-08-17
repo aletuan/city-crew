@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { api } from './api.js';
 import { signOut } from './auth.jsx';
 import { CategoryIcon } from './icons.jsx';
@@ -25,6 +25,10 @@ const UNFILED_SHOWN = 6;
 // the analytics screens.
 const CHIP_LABEL = { hcmc: 'TP.HCM', hanoi: 'Hà Nội', danang: 'Đà Nẵng' };
 const chipLabel = (c) => CHIP_LABEL[c.id] ?? c.short_vi ?? c.id;
+
+// NavLink hands us isActive; the class name is all we do with it.
+const navCls = ({ isActive }) => `side-item${isActive ? ' active' : ''}`;
+const tabCls = ({ isActive }) => `tab-item${isActive ? ' active' : ''}`;
 
 /**
  * For the screens that cannot mean anything across all cities at once —
@@ -158,22 +162,16 @@ export default function App() {
   const [publishing, setPublishing] = useState(false);
   const [cities, setCities] = useState([]);
   const [cityId, setCityId] = useState(() => localStorage.getItem(CITY_KEY) ?? 'hcmc');
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef(null);
-
-  // Close the overflow menu on outside click or Escape — same contract as
-  // any native menu, so it doesn't strand itself open over the page.
+  // The phone tab bar's "More" sheet. Escape closes it; so does going
+  // anywhere — a sheet that outlives the navigation it caused is debris.
+  const [sheetOpen, setSheetOpen] = useState(false);
+  useEffect(() => setSheetOpen(false), [location.pathname]);
   useEffect(() => {
-    if (!moreOpen) return;
-    const onDocClick = (e) => { if (!moreRef.current?.contains(e.target)) setMoreOpen(false); };
-    const onKey = (e) => { if (e.key === 'Escape') setMoreOpen(false); };
-    document.addEventListener('mousedown', onDocClick);
+    if (!sheetOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') setSheetOpen(false); };
     document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [moreOpen]);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [sheetOpen]);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -239,73 +237,56 @@ export default function App() {
     <ToastCtx.Provider value={showToast}>
       <ProgressCtx.Provider value={{ progress, refresh: refreshProgress }}>
         <CityCtx.Provider value={{ cities, city, setCity }}>
-          <header className="topbar">
-            <div className="topbar-inner">
-              <Link to="/" aria-label="All places">
-                <img className="logo" src="logo.png" alt="cityCrew" />
+          <div className="desk">
+            {/* Destinations live here, visible, with the one thing the old
+                overflow menu could never say: where you already are. Order
+                is frequency — the daily list, the two measuring rooms, then
+                the occasional tools — and the utilities sit at the bottom
+                with sign-out behind its own separator, same as the menu
+                this replaces. Hidden on phones; the tab bar takes over. */}
+            <aside className="sidebar">
+              <Link className="sidebrand" to="/" aria-label="All places">
+                <img className="logo" src="logo.png" alt="" />
+                <span>Data desk</span>
               </Link>
-              <h1>Data desk</h1>
-              {/* The scope switcher used to sit here as a <select>. It moved
-                  down beside the page title as a chip row (see .pagehead):
-                  chips can say "All cities", which a workspace pill never
-                  could, and the bar keeps to actions and destinations. */}
-              <div className="spacer" />
-              {/* One visible action, and it is the one every editing
-                  session starts with. Everything else in this bar was a
-                  different kind of thing wearing the same pill —
-                  navigation, a bulk write, an account control — so the
-                  bar could not say which of them mattered. They are
-                  sorted now: destinations and occasional actions into the
-                  menu, the bulk write down beside the number it changes.
-
-                  Labelled at every width, phones included — a ＋ on its own
-                  is a shape you have to press to find out about. It was
-                  hidden on phones for room the pill next to it was hoarding;
-                  see the phone block in theme.css. */}
-              <Link className="syncbtn addbtn primary" to="/add">
-                <span aria-hidden="true">＋</span>
-                <span className="btnlabel">Add<span className="btnlabel-more"> place</span></span>
-              </Link>
-              <UnfiledBell places={progress?.unclassified} />
-              <div className="moremenu" ref={moreRef}>
-                <button
-                  className="syncbtn kebab"
-                  onClick={() => setMoreOpen((v) => !v)}
-                  aria-haspopup="true"
-                  aria-expanded={moreOpen}
-                  aria-label="Menu"
-                >
-                  ⋯
+              <nav className="sidenav" aria-label="Main">
+                <NavLink end to="/" className={navCls}><CategoryIcon name="list" />Places</NavLink>
+                <NavLink to="/analytics/contributors" className={navCls}><CategoryIcon name="users" />Contributors</NavLink>
+                <NavLink to="/analytics/coverage" className={navCls}><CategoryIcon name="pin" />Coverage</NavLink>
+                <div className="side-sep" />
+                <NavLink to="/city" className={navCls}><CategoryIcon name="photo" />City hero</NavLink>
+                <NavLink to="/scan" className={navCls}><CategoryIcon name="radar" />Scan city</NavLink>
+              </nav>
+              <div className="side-foot">
+                {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
+                <a className="side-item" href="mockup.html" target="_blank" rel="noreferrer">Mockup ↗</a>
+                <button className="side-item" disabled={syncing} onClick={runSync}>
+                  {syncing ? 'Syncing…' : 'Sync mockup'}
                 </button>
-                {moreOpen && (
-                  <div className="moremenu-panel" role="menu">
-                    {/* Where you can go, then what you can run, then who
-                        you are — the order they are asked for, and the
-                        separators are what keep the last one from being
-                        pressed by accident on the way past. */}
-                    <Link className="moremenu-item" to="/city" role="menuitem" onClick={() => setMoreOpen(false)}>City hero</Link>
-                    <Link className="moremenu-item" to="/scan" role="menuitem" onClick={() => setMoreOpen(false)}>Scan city</Link>
-                    <Link className="moremenu-item" to="/analytics/contributors" role="menuitem" onClick={() => setMoreOpen(false)}>Contributors</Link>
-                    <Link className="moremenu-item" to="/analytics/coverage" role="menuitem" onClick={() => setMoreOpen(false)}>Coverage</Link>
-                    <div className="moremenu-sep" />
-                    {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
-                    <a className="moremenu-item" href="mockup.html" target="_blank" rel="noreferrer" role="menuitem">Mockup ↗</a>
-                    <button
-                      className="moremenu-item"
-                      role="menuitem"
-                      disabled={syncing}
-                      onClick={() => { setMoreOpen(false); runSync(); }}
-                    >
-                      {syncing ? 'Syncing…' : 'Sync mockup'}
-                    </button>
-                    <div className="moremenu-sep" />
-                    <button className="moremenu-item" role="menuitem" onClick={signOut}>Sign out</button>
-                  </div>
-                )}
+                <div className="side-sep" />
+                <button className="side-item" onClick={signOut}>Sign out</button>
               </div>
-            </div>
-          </header>
-          <div className="shell">
+            </aside>
+
+            <div className="deskmain">
+              <header className="topbar">
+                <div className="topbar-inner">
+                  {/* The brand belongs to the sidebar now; phones, which
+                      have no sidebar, keep the logo here as the way home. */}
+                  <Link className="mobilebrand" to="/" aria-label="All places">
+                    <img className="logo" src="logo.png" alt="cityCrew" />
+                  </Link>
+                  <div className="spacer" />
+                  {/* Actions only — the one every session starts with, and
+                      the one warning worth a badge. Navigation moved out. */}
+                  <Link className="syncbtn addbtn primary" to="/add">
+                    <span aria-hidden="true">＋</span>
+                    <span className="btnlabel">Add<span className="btnlabel-more"> place</span></span>
+                  </Link>
+                  <UnfiledBell places={progress?.unclassified} />
+                </div>
+              </header>
+              <div className="shell">
             {(location.pathname === '/' || total > 0) && (
               <div className="pagehead">
                 {location.pathname === '/' && (
@@ -359,9 +340,49 @@ export default function App() {
                 )}
               </div>
             )}
-            <Outlet />
-            {toast && <div className="toast" role="status">{toast}</div>}
+                <Outlet />
+                {toast && <div className="toast" role="status">{toast}</div>}
+              </div>
+            </div>
           </div>
+
+          {/* Phones: the three daily destinations one thumb-tap away, and a
+              More sheet for the rest — visible beats hidden, and the burger
+              this could have been hides exactly the screens people forget. */}
+          <nav className="tabbar" aria-label="Main">
+            <NavLink end to="/" className={tabCls}><CategoryIcon name="list" />Places</NavLink>
+            <NavLink to="/analytics/contributors" className={tabCls}><CategoryIcon name="users" />Contributors</NavLink>
+            <NavLink to="/analytics/coverage" className={tabCls}><CategoryIcon name="pin" />Coverage</NavLink>
+            <button
+              className={`tab-item${sheetOpen ? ' active' : ''}`}
+              onClick={() => setSheetOpen((v) => !v)}
+              aria-haspopup="true"
+              aria-expanded={sheetOpen}
+            >
+              <CategoryIcon name="dots" />More
+            </button>
+          </nav>
+          {sheetOpen && (
+            <>
+              <div className="sheetback" onClick={() => setSheetOpen(false)} />
+              <div className="sheet" role="menu" aria-label="More">
+                <Link className="moremenu-item" to="/city" role="menuitem">City hero</Link>
+                <Link className="moremenu-item" to="/scan" role="menuitem">Scan city</Link>
+                <div className="moremenu-sep" />
+                <a className="moremenu-item" href="mockup.html" target="_blank" rel="noreferrer" role="menuitem">Mockup ↗</a>
+                <button
+                  className="moremenu-item"
+                  role="menuitem"
+                  disabled={syncing}
+                  onClick={() => { setSheetOpen(false); runSync(); }}
+                >
+                  {syncing ? 'Syncing…' : 'Sync mockup'}
+                </button>
+                <div className="moremenu-sep" />
+                <button className="moremenu-item" role="menuitem" onClick={signOut}>Sign out</button>
+              </div>
+            </>
+          )}
         </CityCtx.Provider>
       </ProgressCtx.Provider>
     </ToastCtx.Provider>

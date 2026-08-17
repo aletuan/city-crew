@@ -104,7 +104,10 @@ export function buildBoard(rows, profiles, days, cityId) {
     if (!byUser.has(r.added_by)) byUser.set(r.added_by, []);
     byUser.get(r.added_by).push(r);
   }
-  const handleOf = (id) => profiles[id]?.handle ?? id.slice(0, 8);
+  // The query already excludes null added_by; the String() is a belt for
+  // any row that arrives without it anyway — a screen never crashes over
+  // a missing caption.
+  const handleOf = (id) => profiles[id]?.handle ?? String(id ?? 'unknown').slice(0, 8);
   const top = [...byUser.entries()]
     .map(([id, userRows]) => ({
       id,

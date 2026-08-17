@@ -84,6 +84,39 @@ const PATHS = {
       <path d="M8 6.4v3.1M8 11.4v.1" />
     </>
   ),
+  // ── navigation glyphs — sidebar and phone tab bar, same outline voice ──
+  users: (
+    <>
+      <circle cx="5.6" cy="5.6" r="2.4" />
+      <path d="M1.8 13.2c.4-2.6 1.9-3.9 3.8-3.9s3.4 1.3 3.8 3.9" />
+      <circle cx="11.3" cy="5.1" r="1.9" />
+      <path d="M10.9 9.2c1.9.1 3 1.4 3.3 3.4" />
+    </>
+  ),
+  pin: (
+    <>
+      <path d="M8 13.8S3.4 9.5 3.4 6.4a4.6 4.6 0 1 1 9.2 0c0 3.1-4.6 7.4-4.6 7.4Z" />
+      <circle cx="8" cy="6.3" r="1.7" />
+    </>
+  ),
+  photo: (
+    <>
+      <rect x="2.4" y="3.2" width="11.2" height="9.6" rx="1.5" />
+      <circle cx="5.9" cy="6.4" r="1.1" />
+      <path d="M3.4 11.4 7 8.2l2.6 2.3 1.8-1.6 2 1.9" />
+    </>
+  ),
+  radar: (
+    <>
+      <circle cx="8" cy="8" r="5.6" />
+      <circle cx="8" cy="8" r="2.8" />
+      <path d="M8 8l3.6-3.6" />
+      <path d="M8 8v.1" />
+    </>
+  ),
+  dots: (
+    <path d="M3.4 8h.1M8 8h.1M12.6 8h.1" />
+  ),
 };
 
 export function CategoryIcon({ name, color = 'currentColor' }) {
