@@ -33,10 +33,16 @@ import { coverOf, membersOf } from '../lib/data';
 import { dateline } from '../lib/format';
 import { addDays, clampDay, fromISO, toISO, todayISO } from '../lib/day';
 import { useI18n } from '../lib/i18n';
+import { partGone, startMinFor, START_MIN } from '../lib/planner';
 import { useSave } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, toggle, TripDraft } from '../lib/trip';
 import type { Nav } from '../nav';
 import { colors, font, radius, space, type } from '../theme';
+
+/** Minutes past midnight as a wall clock. Always within one day here —
+ *  `startMinFor` never returns tomorrow. */
+const clock = (minutes: number) =>
+  `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 
 /** A question and the row of answers under it. */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -58,14 +64,34 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const [draft, setDraft] = useState<TripDraft>(EMPTY_DRAFT);
   const [picking, setPicking] = useState(false);
   /**
-   * The chosen day, resolved and never in the past.
+   * The chosen day, resolved and never in the past — and, when nobody has
+   * chosen one, never a day whose outing has already happened.
    *
    * `EMPTY_DRAFT` carries '' rather than today, because it is a module
    * constant and today would be frozen at import — an app left open past
    * midnight would offer to plan yesterday. Resolving here also self-heals
    * that case for a draft chosen before midnight.
+   *
+   * The default is today only while today can still hold the outing. At
+   * five in the afternoon, "Day" defaulted to today and produced a plan
+   * starting at 09:00 — a morning that had been over for eight hours, with
+   * its places picked against their 09:00 opening hours. Tomorrow is what
+   * that reader meant, and the date box says so before they tap anything,
+   * which is the part that makes this a default rather than a trick.
+   *
+   * Only the default moves. A reader who opens the picker and chooses today
+   * at ten in the evening gets today, and `startMinFor` starts their plan
+   * from ten rather than from six — an odd request, honestly answered,
+   * instead of a silent correction.
    */
-  const day = clampDay(draft.date || todayISO());
+  const now = new Date();
+  const day = clampDay(draft.date || (partGone(draft.when, toISO(now), now)
+    ? addDays(toISO(now), 1)
+    : toISO(now)));
+  /** The hour this plan really starts, which is not the shape's hour when
+   *  the reader has insisted on a day already under way. */
+  const startMin = startMinFor(draft.when, day, now);
+  const late = startMin > START_MIN[draft.when];
   const [sheet, setSheet] = useState(false);
 
   // Only categories this city actually has, the same rule Explore's filter
@@ -180,6 +206,19 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
               </View>
             </View>
           </Card>
+          {/* Only when the clock has moved the start, which is only ever
+              on today. Said here rather than left for the reader to notice
+              on the plan: a day out that begins at 17:15 is a surprise
+              worth having before the sketching starts, not after. */}
+          {late && (
+            <Text style={s.whenNote}>
+              {t(
+                `It is already ${clock(startMin)} — this plan starts from there.`,
+                `Bây giờ đã ${clock(startMin)} — kế hoạch sẽ bắt đầu từ đó.`,
+                `もう${clock(startMin)}です — ここから始めるプランにします。`,
+              )}
+            </Text>
+          )}
         </View>
 
         {mine.data.length > 0 && (
@@ -246,6 +285,11 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
                 district: draft.district,
                 date: day,
                 when: draft.when,
+                // Resolved once, here, and carried. See `PlanAsk.startMin`:
+                // the three screens after this one each rebuild the plan,
+                // and each reading the clock for itself is how one card
+                // opens as a different evening.
+                startMin,
                 from: draft.from,
               })}
             />
@@ -349,6 +393,12 @@ const s = StyleSheet.create({
   cta: { paddingHorizontal: space.page, marginTop: 4, gap: 10 },
   ctaOff: { opacity: 0.4 },
   ctaHint: { color: colors.textTertiary, fontSize: 13, lineHeight: 19, textAlign: 'center' },
+
+  // Under the card, not inside it: the card is the control and this is a
+  // consequence of it, the same relation `ctaHint` has to the button.
+  whenNote: {
+    color: colors.textTertiary, fontSize: 13, lineHeight: 19, marginTop: 8, paddingHorizontal: 4,
+  },
 
   // The whole left of the row is the target, not the words alone: a date
   // you have to hit exactly is a worse row than one you can tap across.

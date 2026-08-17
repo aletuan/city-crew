@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, clampDay, daysBetween, fromISO, toISO, todayISO } from './day';
+import { addDays, clampDay, daysBetween, fromISO, minutesOf, toISO, todayISO } from './day';
 
 describe('toISO', () => {
   // The bug this file exists to prevent. `toISOString()` converts to UTC
@@ -150,5 +150,21 @@ describe('addDays', () => {
 
   it('leaves something that is not a day alone', () => {
     expect(addDays('nope', 3)).toBe('nope');
+  });
+});
+
+describe('minutesOf', () => {
+  it('reads the local wall clock', () => {
+    expect(minutesOf(new Date(2026, 7, 17, 17, 8))).toBe(17 * 60 + 8);
+    expect(minutesOf(new Date(2026, 7, 17, 0, 0))).toBe(0);
+    expect(minutesOf(new Date(2026, 7, 17, 23, 59))).toBe(23 * 60 + 59);
+  });
+
+  // The pair `todayISO`/`minutesOf` is only coherent if both read the same
+  // clock. Reading one in UTC would put them seven hours apart in Vietnam.
+  it('agrees with todayISO about which day it is', () => {
+    const late = new Date(2026, 7, 17, 23, 30);
+    expect(toISO(late)).toBe('2026-08-17');
+    expect(minutesOf(late)).toBeGreaterThan(0);
   });
 });

@@ -14,29 +14,87 @@
 
 import { legsOf, type Located } from './travel';
 
-/** What the split needs, and nothing more: the calendar day, `YYYY-MM-DD`,
- *  which is exactly what `trips.day` is and what `day.ts` produces. */
-export type Dated = { day: string };
+/**
+ * What the split needs: the calendar day, and the stops as the table holds
+ * them so the day can be told from the hour.
+ *
+ * Snake case because these are rows — the same trade `Priced` below makes
+ * with `price_vnd`. The stops are optional: a trip whose times never came
+ * back still has to land on one side or the other.
+ */
+export type Dated = {
+  day: string;
+  trip_stops?: readonly { arrive_min?: number | null; dwell_min?: number | null }[];
+};
+
+/**
+ * When a trip is over, in minutes past midnight on its own day.
+ *
+ * The last stop's arrival plus however long you are staying there — taken
+ * as a maximum over the stops rather than off the end of the array, because
+ * the order the rows arrive in is `sort_order` and a reader who dragged
+ * their dinner later has a trip whose last row is not its last hour.
+ *
+ * Null when no stop carries a time. That is not "ends at midnight" and must
+ * not become zero either; the caller decides what to do with an unknown.
+ */
+export function endMinOf(t: Dated): number | null {
+  let end: number | null = null;
+  for (const s of t.trip_stops ?? []) {
+    if (s.arrive_min == null) continue;
+    const at = s.arrive_min + (s.dwell_min ?? 0);
+    if (end == null || at > end) end = at;
+  }
+  return end;
+}
+
+/**
+ * How long a trip stays "upcoming" after its last stop should have ended.
+ *
+ * Dwell times are the planner's estimate, not a booking, and the reader is
+ * the one sitting there. Moving their evening into "past" while they are
+ * still at the last table — because a guess said seventy-five minutes and
+ * they took two hours — is worse than leaving it a while too long, so the
+ * doubt goes to the reader.
+ */
+const OVER_GRACE_MIN = 60;
 
 /**
  * Trips separated into the ones ahead and the ones behind.
  *
- * `today` counts as upcoming. A trip you are on right now is not a memory,
- * and dropping it into "past" at midnight — hours before the evening it
- * describes has even started — is the kind of bug nobody reports because
- * they assume they mis-tapped.
+ * The split used to compare days alone, and the comment here used to
+ * defend that: a trip you are on right now is not a memory, and dropping it
+ * into "past" at midnight — hours before the evening it describes has even
+ * started — is the kind of bug nobody reports because they assume they
+ * mis-tapped. That is still true, and it was only half the rule. The other
+ * half is the same argument pointing the other way: a Monday morning you
+ * finished at noon is not something you are "upcoming" to at five in the
+ * afternoon, and it sat above tomorrow's plans until midnight saying so.
  *
- * Compared as strings, which works because `YYYY-MM-DD` sorts
+ * So a trip is behind you when its last stop ended, `OVER_GRACE_MIN` ago —
+ * and a trip whose stops carry no times keeps the old day-granular
+ * behaviour, because with no hour to read, the whole of today is still
+ * ahead of you as far as anything here can tell.
+ *
+ * Days are compared as strings, which works because `YYYY-MM-DD` sorts
  * lexicographically the same way it sorts chronologically. Parsing to
  * `Date` here would buy nothing and would reintroduce the timezone trap
- * `day.ts` exists to avoid.
+ * `day.ts` exists to avoid. `nowMin` is passed in rather than read off the
+ * clock, for the reason everything in `lib` is: a Node process has to be
+ * able to run it — and it must come from the same `Date` as `today`, or the
+ * two disagree for one tick either side of midnight.
  */
 export function splitTrips<T extends Dated>(
-  trips: readonly T[], today: string,
+  trips: readonly T[], today: string, nowMin: number,
 ): { upcoming: T[]; past: T[] } {
+  const behind = (t: T) => {
+    if (t.day !== today) return t.day < today;
+    const end = endMinOf(t);
+    return end != null && nowMin >= end + OVER_GRACE_MIN;
+  };
   const upcoming: T[] = [];
   const past: T[] = [];
-  for (const t of trips) (t.day >= today ? upcoming : past).push(t);
+  for (const t of trips) (behind(t) ? past : upcoming).push(t);
   upcoming.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
   past.sort((a, b) => (a.day > b.day ? -1 : a.day < b.day ? 1 : 0));
   return { upcoming, past };
