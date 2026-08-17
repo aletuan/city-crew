@@ -176,15 +176,23 @@ export function instantOn(day: string, minutes: number): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day.trim());
   if (!m) return null;
   const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const out = new Date(Date.UTC(y, mo - 1, d, 0, minutes - ICT_OFFSET_MIN));
-  // Read the rolled-over value back on the same clock the day was written
-  // on, undoing the shift first — otherwise a morning slot before 07:00
-  // ICT reports the previous day and every date looks invalid.
-  const back = new Date(out.getTime() + ICT_OFFSET_MIN * 60_000);
-  if (back.getUTCFullYear() !== y || back.getUTCMonth() !== mo - 1) return null;
-  // `minutes` may legitimately run past midnight — a bar closing at 1am is
-  // 1500 — so only the month and year are checked for overflow.
-  return out;
+  // The day is checked at midnight and `minutes` added afterwards, in that
+  // order and not the other way round. Building the instant first and
+  // validating it is what the first version did, and it refused every
+  // evening on the last day of a month that ran past midnight: 25:00 on
+  // the 31st reads back as the 1st, which is a real hour and looked like
+  // an overflow. The reader saw no error — `openAt` treats null as
+  // "unknown", so those stops silently stopped being checked against
+  // opening hours at all.
+  const midnight = new Date(Date.UTC(y, mo - 1, d, 0, -ICT_OFFSET_MIN));
+  // Read back on the clock the day was written on, undoing the shift
+  // first — otherwise midnight ICT is 17:00 the day before in UTC and
+  // every date in the catalog looks invalid.
+  const back = new Date(midnight.getTime() + ICT_OFFSET_MIN * 60_000);
+  if (back.getUTCFullYear() !== y || back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d) {
+    return null;
+  }
+  return new Date(midnight.getTime() + minutes * 60_000);
 }
 
 export type OpenState = { open: boolean; until?: string; opensAt?: string };

@@ -216,3 +216,118 @@ describe('planTrips avoiding what was already shown', () => {
     expect(plans).toHaveLength(1);
   });
 });
+
+// ── the row the desk has not finished ────────────────────────────────
+//
+// Every column the score reads is nullable, and a place suggested by a
+// reader arrives with almost all of them empty: no rating, no price, no
+// duration, no coordinates. That is not an edge case, it is what
+// `AddPlaceScreen` produces. A planner that throws — or worse, quietly
+// scores `NaN` and puts the sparsest row first every time — would meet
+// those on the day someone's suggestion is approved.
+describe('planTrips on a catalog with holes in it', () => {
+  const bare = (slug: string, cat: string) => place({
+    slug, categories: [cat],
+    rating: null, rating_count: null, price_vnd: null,
+    duration_min: null, duration_max: null,
+  });
+
+  const THIN = [
+    bare('eats-bare', 'eats'), bare('night-bare', 'nightlife'), bare('views-bare', 'views'),
+  ];
+
+  it('plans an evening out of rows with nothing filled in', () => {
+    const plans = planTrips(EVENING, THIN, 'hanoi', { seed: 1 });
+    expect(plans.length).toBeGreaterThan(0);
+    const stops = plans[0].stops;
+    expect(stops.length).toBeGreaterThan(0);
+    for (const s of stops) expect(Number.isFinite(s.arriveMin)).toBe(true);
+  });
+
+  it('costs an unpriced evening at nothing rather than at NaN', () => {
+    const { food, activity } = planTrips(EVENING, THIN, 'hanoi', { seed: 1 })[0].costVnd;
+    expect(food).toBe(0);
+    expect(activity).toBe(0);
+  });
+
+  // 75 minutes, from `DWELL_DEFAULT`. Guessing is the only option, and
+  // guessing the same for everything keeps the times honest about being
+  // guesses.
+  it('gives a place with no stated duration the default', () => {
+    expect(planTrips(EVENING, THIN, 'hanoi', { seed: 1 })[0].stops[0].dwellMin).toBe(75);
+  });
+
+  it('takes one end of a duration range when only one is stated', () => {
+    const lo = [place({ slug: 'lo', categories: ['eats'], duration_min: 120, duration_max: null })];
+    const hi = [place({ slug: 'hi', categories: ['eats'], duration_min: null, duration_max: 120 })];
+    const dwell = (ps: Place[]) =>
+      planTrips({ ...EVENING, categories: ['eats'] }, ps, 'hanoi', { seed: 1 })[0].stops[0].dwellMin;
+    expect(dwell(lo)).toBe(120);
+    expect(dwell(hi)).toBe(120);
+  });
+
+  // The catalog holds places with a district and nothing more precise, and
+  // a plan through one still has to put the next stop somewhere.
+  it('assumes a hop when a stop has no coordinates', () => {
+    const nowhere = [
+      place({ slug: 'a-eats', categories: ['eats'], lat: null, lng: null }),
+      place({ slug: 'b-night', categories: ['nightlife'], lat: null, lng: null }),
+    ];
+    const plan = planTrips({ ...EVENING, categories: ['eats', 'nightlife'] }, nowhere, 'hanoi', { seed: 1 })[0];
+    expect(plan.legs[0]).toBeNull();
+    expect(plan.stops[1].arriveMin).toBe(plan.stops[0].arriveMin + plan.stops[0].dwellMin + 20);
+    expect(plan.costVnd.transport).toBe(0);
+  });
+
+  // Identical rows in every column the score reads. Without a total
+  // tie-break the sort is at the mercy of the engine's, and the same seed
+  // would stop replaying.
+  it('breaks a dead heat on slug, in both directions', () => {
+    const twins = ['c', 'a', 'b', 'd'].map((s) => place({ slug: `${s}-eats`, categories: ['eats'] }));
+    const run = () => planTrips({ ...EVENING, categories: ['eats'] }, twins, 'hanoi', { seed: 4 })[0]
+      .stops.map((s) => s.place.slug);
+    expect(run()).toEqual(run());
+  });
+});
+
+describe('planTrips with no seed and no date', () => {
+  // The screens always pass a seed; a caller in a test or a script may not,
+  // and a planner that returned nothing without one would be a trap.
+  it('draws from a fixed seed when none is given', () => {
+    const a = planTrips(EVENING, CATALOG, 'hanoi');
+    const b = planTrips(EVENING, CATALOG, 'hanoi');
+    expect(a.map((p) => p.stops.map((s) => s.place.slug)))
+      .toEqual(b.map((p) => p.stops.map((s) => s.place.slug)));
+    expect(a.length).toBeGreaterThan(0);
+  });
+
+  // A day that is not a day means the hour cannot be placed on a calendar,
+  // and an unplaceable hour is unknown rather than closed — the same rule
+  // `openState` already applies to a place that posts no hours at all.
+  it('keeps a place with hours when the date cannot be read', () => {
+    const shop = [place({ slug: 'shop', categories: ['eats'], opening_hours: week('9:00 AM – 5:00 PM') })];
+    const plans = planTrips({ ...EVENING, categories: ['eats'], date: 'not-a-day' }, shop, 'hanoi', { seed: 1 });
+    expect(plans[0].stops.map((s) => s.place.slug)).toContain('shop');
+  });
+});
+
+describe('planTrips with a taste profile', () => {
+  // Phase 4 wires this to `profiles.pref_*`; the seam is here now because
+  // the weight it carries is the argument, and an unexercised seam is a
+  // seam that will not fit when the time comes.
+  it('lets affinity move the order without overruling the answers', () => {
+    const loved = 'eats-7'; // the lowest-rated of the eight, so only taste can lift it
+    const taste = { affinity: (p: Place) => (p.slug === loved ? 3 : 0) };
+    const with_ = planTrips(EVENING, CATALOG, 'hanoi', { seed: 1, taste });
+    const without = planTrips(EVENING, CATALOG, 'hanoi', { seed: 1 });
+    const slugs = (ps: ReturnType<typeof planTrips>) => ps.flatMap((p) => p.stops.map((s) => s.place.slug));
+    expect(slugs(with_).filter((s) => s === loved).length)
+      .toBeGreaterThanOrEqual(slugs(without).filter((s) => s === loved).length);
+    // Still an evening of what was asked for, whatever the profile says.
+    for (const p of with_) {
+      for (const s of p.stops) {
+        expect(['eats', 'nightlife', 'views'].some((c) => s.place.categories?.includes(c))).toBe(true);
+      }
+    }
+  });
+});

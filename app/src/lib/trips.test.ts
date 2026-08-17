@@ -68,3 +68,31 @@ describe('spendVnd', () => {
     expect(spendVnd([])).toBe(0);
   });
 });
+
+// Two trips on one day is the ordinary case for a weekend, and it is the
+// only input that reaches the comparators' third answer.
+describe('splitTrips with two trips on the same day', () => {
+  const a = { day: '2026-08-20', id: 'a' };
+  const b = { day: '2026-08-20', id: 'b' };
+
+  it('keeps them both, in the order they arrived', () => {
+    const { upcoming } = splitTrips([a, b], '2026-08-17');
+    expect(upcoming.map((t) => t.id)).toEqual(['a', 'b']);
+  });
+
+  it('does the same on the other side of today', () => {
+    const past = splitTrips(
+      [{ day: '2026-08-10', id: 'a' }, { day: '2026-08-10', id: 'b' }], '2026-08-17',
+    ).past;
+    expect(past.map((t) => t.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('spendVnd with prices missing', () => {
+  // A place the desk has not priced. Counting it as free is the only
+  // honest option — the alternative is refusing to total the trip at all.
+  it('treats an unpriced place as nothing rather than as NaN', () => {
+    expect(spendVnd([{ lat: 21.0287, lng: 105.8524 }])).toBe(0);
+    expect(spendVnd([{ lat: 21.0287, lng: 105.8524, price_vnd: null }, CAFE])).toBe(60000);
+  });
+});

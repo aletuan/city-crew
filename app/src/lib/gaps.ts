@@ -97,9 +97,12 @@ export function plansAvailable(wanted: readonly string[], places: readonly Count
   // No categories asked for is not a reason to refuse: the planner falls
   // back to the whole pool, and a pool with anything in it can carry at
   // least one plan.
-  const asked = wanted.filter((c) => counts.has(c));
+  // The counts themselves rather than the category names: asking the map
+  // twice — once with `has`, once with `get` — needs a fallback for a miss
+  // the first call already ruled out, which is a line no test can reach and
+  // every reader has to work out is dead.
+  const asked = wanted.map((c) => counts.get(c)).filter((n): n is number => n != null);
   if (!asked.length) return wanted.length ? 0 : Math.min(3, places.length);
 
-  const scarcest = Math.min(...asked.map((c) => counts.get(c) ?? 0));
-  return Math.max(1, Math.min(3, scarcest));
+  return Math.max(1, Math.min(3, Math.min(...asked)));
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dateline, dotWindow, fmtDuration, groupHours, openState, splitHours } from './format';
+import { dateline, dotWindow, fmtDuration, groupHours, instantOn, openState, splitHours } from './format';
 
 describe('fmtDuration', () => {
   it('stays in minutes up to an hour', () => {
@@ -329,5 +329,39 @@ describe('dateline', () => {
 
   it('falls back to English for a language it does not know', () => {
     expect(dateline('fr', sat)).toBe('Saturday, August 15');
+  });
+});
+
+describe('instantOn', () => {
+  // Seven in the evening on the 15th, read on the catalog's clock. The
+  // assertion is in UTC because that is the only frame both test clocks
+  // agree on: 19:00 ICT is 12:00 UTC wherever the runner is standing.
+  it('lands on the right instant whatever clock the runner is on', () => {
+    const at = instantOn('2026-08-15', 19 * 60)!;
+    expect(at.toISOString()).toBe('2026-08-15T12:00:00.000Z');
+  });
+
+  // A bar closing at 1am is minute 1500 of the day it opened, so the day
+  // is validated at midnight and the minutes added after. Validating the
+  // finished instant instead refused every month-end evening that ran late
+  // — and refusing meant "hours unknown", so those stops quietly stopped
+  // being checked against opening hours.
+  it('lets a plan run past midnight, including off the end of a month', () => {
+    expect(instantOn('2026-08-15', 25 * 60)!.toISOString()).toBe('2026-08-15T18:00:00.000Z');
+    expect(instantOn('2026-08-31', 25 * 60)!.toISOString()).toBe('2026-08-31T18:00:00.000Z');
+    expect(instantOn('2026-12-31', 25 * 60)!.toISOString()).toBe('2026-12-31T18:00:00.000Z');
+  });
+
+  it('refuses anything that is not a day', () => {
+    expect(instantOn('', 540)).toBeNull();
+    expect(instantOn('15/08/2026', 540)).toBeNull();
+    expect(instantOn('2026-8-15', 540)).toBeNull();
+  });
+
+  // The one `Date.UTC` accepts and rolls forward to the 2nd of March,
+  // which is how a mistyped date becomes a plan for the wrong week.
+  it('refuses a day the calendar does not have', () => {
+    expect(instantOn('2026-02-30', 540)).toBeNull();
+    expect(instantOn('2026-13-01', 540)).toBeNull();
   });
 });

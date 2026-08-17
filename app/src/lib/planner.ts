@@ -311,7 +311,12 @@ function draw(scored: { p: Place; s: number }[], rnd: () => number): Place | nul
   const weights = band.map((c) => c.s - floor + 0.5);
   const total = weights.reduce((n, w) => n + w, 0);
   let roll = rnd() * total;
-  for (let i = 0; i < band.length; i++) {
+  // Stops one short, and the last candidate is the fallthrough rather than
+  // a case in the loop. Running the loop to the end instead leaves a
+  // `return` after it that only floating-point drift can reach — a line no
+  // test can honestly cover, standing in for an outcome the fallthrough
+  // already produces.
+  for (let i = 0; i < band.length - 1; i++) {
     roll -= weights[i];
     if (roll <= 0) return band[i].p;
   }
@@ -323,8 +328,15 @@ function draw(scored: { p: Place; s: number }[], rnd: () => number): Place | nul
 function dwellOf(p: Place): number {
   const lo = p.duration_min;
   const hi = p.duration_max;
-  if (lo == null && hi == null) return DWELL_DEFAULT;
-  const avg = ((lo ?? hi ?? DWELL_DEFAULT) + (hi ?? lo ?? DWELL_DEFAULT)) / 2;
+  // Spelled out rather than `(lo ?? hi ?? DEFAULT)` twice over. That form
+  // reads as three possibilities where there are only four states, and two
+  // of its fallbacks can never fire — the desk fills one end, both, or
+  // neither, and "neither" leaves before the arithmetic.
+  let avg: number;
+  if (lo != null && hi != null) avg = (lo + hi) / 2;
+  else if (lo != null) avg = lo;
+  else if (hi != null) avg = hi;
+  else return DWELL_DEFAULT;
   return Math.min(DWELL_MAX, Math.max(DWELL_MIN, Math.round(avg / 15) * 15));
 }
 
@@ -377,7 +389,9 @@ function dress(lens: LensKey, places: Place[], slots: readonly Slot[], draft: Tr
 
   for (let i = 0; i < places.length; i++) {
     const dwell = dwellOf(places[i]);
-    stops.push({ place: places[i], part: slots[i]?.part ?? slots[slots.length - 1].part, arriveMin: at, dwellMin: dwell, why: null });
+    // `slots[i]` is always there: `buildPlan` walks the slots and pushes at
+    // most one place per slot, so there are never more places than slots.
+    stops.push({ place: places[i], part: slots[i].part, arriveMin: at, dwellMin: dwell, why: null });
     at += dwell + (legs[i]?.minutes ?? (i + 1 < places.length ? HOP_DEFAULT_MIN : 0));
   }
 
@@ -392,14 +406,16 @@ function dress(lens: LensKey, places: Place[], slots: readonly Slot[], draft: Tr
   // added a fare to two stops on the same street.
   const transport = legs.filter((l) => l?.mode === 'ride').length * RIDE_VND;
 
-  const first = stops.length ? stops[0].arriveMin : START_MIN[draft.when];
   return {
     lens,
     title: null,
     stops,
     legs,
     costVnd: { food, activity, transport },
-    windowMin: [first, at],
+    // The window opens where `at` began, which is also where the first stop
+    // was placed — so this is the first arrival when there is one, and the
+    // hour the outing would have started when there is not.
+    windowMin: [START_MIN[draft.when], at],
     pinnedDropped,
   };
 }
