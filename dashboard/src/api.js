@@ -284,6 +284,14 @@ export const api = {
     return { rows, profiles };
   },
 
+  /** The rows behind the Coverage screen: every published place, all cities
+   *  in one round trip — the screen re-cuts per city without refetching.
+   *  Published only, because coverage measures what a user can actually
+   *  open, not what the desk is still deciding about. */
+  coverage: async () => db(await supabase.from('places')
+    .select('slug, name_en, address, neighborhood_en, lat, lng, city_id')
+    .eq('is_published', true)),
+
   sync: () => invoke('sync-mockup', {}),
 
   // Keyed by google_place_id — global, not city-scoped, matching the

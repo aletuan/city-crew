@@ -882,7 +882,12 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
   margin-bottom: 8px;
 }
-.boardtitle { margin: 0; font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; }
+/* Wins over `.panel h3`: this one heading is a name, not a mono section
+   label — uppercasing it garbles Vietnamese diacritics. */
+.panel h3.boardtitle {
+  margin: 0; font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em;
+  font-family: var(--font-ui); text-transform: none; color: var(--text-primary);
+}
 .boardpct { font-family: var(--font-data); font-size: 11.5px; color: var(--text-tertiary); white-space: nowrap; }
 .boardrow {
   display: flex; align-items: center; gap: 10px;
@@ -914,6 +919,65 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .contribgrid { grid-template-columns: minmax(0, 1fr); }
   .contribcards { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── coverage map ──
+   The desk's one look at geography. The map bleeds to the panel's own
+   corners — chrome around a map reads as a photo frame, and this is an
+   instrument, not a photo. */
+.covmappanel { padding: 0; overflow: hidden; }
+.covmap {
+  position: relative; overflow: hidden;
+  background: #0d0a12; /* tile-less ground: bubbles must stand on their own */
+}
+.covtile { position: absolute; width: 256px; height: 256px; user-select: none; }
+.covbubbles { position: absolute; inset: 0; }
+.covbubble .halo { fill: rgba(139, 92, 246, 0.16); }
+.covbubble .body {
+  fill: rgba(196, 92, 200, 0.34);
+  stroke: rgba(236, 150, 233, 0.85); stroke-width: 1.5;
+}
+.covbubble.hot .body { fill: rgba(196, 92, 200, 0.55); stroke: #fff; }
+.covbubble .count {
+  fill: #fff; font-family: var(--font-data); font-size: 13px; font-weight: 700;
+  text-anchor: middle; pointer-events: none;
+}
+.covbubble .name {
+  fill: rgba(255, 255, 255, 0.92); font-family: var(--font-data); font-size: 10.5px;
+  text-anchor: middle; pointer-events: none;
+  /* a halo, not a plate: readable over any tile without boxing the map */
+  stroke: rgba(11, 9, 16, 0.9); stroke-width: 3px; paint-order: stroke;
+}
+.covattr {
+  position: absolute; right: 10px; bottom: 8px;
+  font-family: var(--font-data); font-size: 10px; color: rgba(255, 255, 255, 0.45);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* district rows share the leaderboard's bones; the bar is the one addition */
+.covrow { gap: 12px; }
+.covname {
+  font-weight: 600; font-size: 13.5px; flex: 0 0 112px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.covname.unplaced { color: var(--text-tertiary); font-weight: 400; font-size: 12.5px; }
+.covtrack {
+  flex: 1; height: 6px; border-radius: 999px;
+  background: var(--surface-glass); overflow: hidden;
+}
+.covbar {
+  display: block; height: 100%; border-radius: 999px;
+  background: var(--grad-ai);
+  transition: width 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Amber for the same reason the unfiled bell is: a gap, not a fact. */
+.covwarn {
+  display: flex; gap: 10px; align-items: baseline;
+  margin-top: 14px; padding: 13px 16px;
+  border: 1px dashed rgba(246, 164, 92, 0.45); border-radius: var(--radius-card);
+  color: var(--warn); font-size: 12.5px; line-height: 1.6;
+}
+.covwarn a { color: var(--warn); font-family: var(--font-data); font-size: 12px; }
 
 /* ── phone layout — the desk becomes a one-hand tool ── */
 @media (max-width: 720px) {
