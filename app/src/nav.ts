@@ -17,6 +17,21 @@ export type PlanAsk = {
   district: string | null;
   date: string;
   when: 'day' | 'evening';
+  /**
+   * What time the outing begins, minutes past midnight — resolved once, in
+   * the wizard, by `startMinFor`.
+   *
+   * It rides here rather than being recomputed on each screen because all
+   * three of them rebuild the same plan from these answers, and a value
+   * read off the clock three times is three slightly different values. Two
+   * minutes' drift across a quarter-hour boundary is enough to move a start
+   * from 18:15 to 18:30, change which places are open, and hand the reader
+   * a different evening from the card they tapped.
+   *
+   * Optional so a plan reached without the wizard still means something:
+   * absent is "the hour this shape normally starts at".
+   */
+  startMin?: number;
   /** Collection slugs the reader chose to build from. */
   from: string[];
 };

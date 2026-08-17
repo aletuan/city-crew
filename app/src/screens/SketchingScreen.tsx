@@ -73,8 +73,8 @@ export default function SketchingScreen({ navigation, route }: {
   // next screen — it is array arithmetic over a few hundred rows — and
   // running it here is what lets this screen report rather than perform.
   const plans = useMemo(
-    () => (loading ? [] : planTrips(draft, places, city?.id ?? null, { seed, taste, budgetVnd })),
-    [loading, places, city?.id, draft, seed, taste, budgetVnd],
+    () => (loading ? [] : planTrips(draft, places, city?.id ?? null, { seed, startMin: p.startMin, taste, budgetVnd })),
+    [loading, places, city?.id, draft, seed, p.startMin, taste, budgetVnd],
   );
   const gap = useMemo(() => planGap(p.categories, places), [p.categories, places]);
 

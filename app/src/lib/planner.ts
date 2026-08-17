@@ -36,6 +36,7 @@
 // never appears.
 
 import { categoriesOf } from './categories';
+import { minutesOf, toISO } from './day';
 import { instantOn, openState } from './format';
 import { distanceKm } from './geo';
 import { isLive } from './live';
@@ -94,6 +95,15 @@ export type PlanOptions = {
    *  — `preferences.budget_vnd`. Null and undefined both mean "not said",
    *  which is not the same as no budget and must not become zero. */
   budgetVnd?: number | null;
+  /** What time the outing begins, minutes past midnight — normally
+   *  `startMinFor(draft.when, draft.date, now)`, resolved by the wizard so
+   *  every screen that rebuilds the plan rebuilds the same one.
+   *
+   *  Absent means the shape's own hour, which is right for any day that is
+   *  not today and wrong only for the day that is half gone. It is optional
+   *  rather than required so a test, or a caller with no clock to hand, can
+   *  ask for the shape's natural hours and get them. */
+  startMin?: number | null;
   /** Varies the draw. Same seed, same three plans. */
   seed?: number;
   /** Places from the collections the reader chose to build from. Hard
@@ -175,8 +185,75 @@ function slotsFor(draft: TripDraft): readonly Slot[] {
   return shape.slice(0, Math.max(1, Math.min(shape.length, wanted)));
 }
 
-/** When each shape starts, minutes past midnight. */
-const START_MIN: Record<'day' | 'evening', number> = { day: 9 * 60, evening: 18 * 60 };
+/** When each shape starts, minutes past midnight. Exported so the wizard
+ *  can tell a plan starting at its normal hour from one pushed later by the
+ *  clock, and say so. */
+export const START_MIN: Record<'day' | 'evening', number> = { day: 9 * 60, evening: 18 * 60 };
+
+/**
+ * The last hour at which starting is still the thing the reader asked for.
+ *
+ * Not a limit on the catalog — plenty is open at ten in the evening — but
+ * on the word. A "day out" begun at four in the afternoon is an afternoon,
+ * and an "evening" begun at half past ten is a nightcap. Past these, the
+ * honest move is to offer the same outing tomorrow rather than a stub of it
+ * today, which is what `partGone` is for.
+ *
+ * Read against the shapes above: the day's five stops run about seven
+ * hours, so 15:00 is the point where fewer than half of them fit before the
+ * city closes; the evening's three run about three and a half.
+ */
+const LAST_START: Record<'day' | 'evening', number> = { day: 15 * 60, evening: 21 * 60 };
+
+/** Starts rounded up to this, so a plan never begins at 18:07 and never
+ *  begins in the minute the reader was still reading it. */
+const START_STEP = 15;
+
+/**
+ * When the outing actually starts, given what the clock says.
+ *
+ * The bug this exists for: `START_MIN` is fixed, so at five in the
+ * afternoon "a day out today" was planned from 09:00 — eight hours gone —
+ * and every place in it was checked against its 09:00 opening hours. The
+ * plan was not merely mistimed, it was selected wrong: somewhere that opens
+ * at seven and shuts at ten in the morning was a legitimate first stop.
+ *
+ * Only today is affected. A day named for next Saturday starts at the hour
+ * that shape starts at, because none of it has gone.
+ *
+ * Deliberately *not* clamped to `LAST_START`. Clamping would put the start
+ * back in the past, which is the whole thing being fixed; a reader who
+ * insists on tonight at eleven gets a plan starting at eleven, and the
+ * opening-hours gate will tell them the truth about what is left. The
+ * wizard's job is to make that a choice rather than an accident, and
+ * `partGone` is how it knows.
+ *
+ * `now` is an input rather than a `new Date()` for the reason `seed` is: a
+ * plan rebuilt on the next screen must come out the same, and a function
+ * that reads the clock cannot promise that.
+ */
+export function startMinFor(
+  when: 'day' | 'evening', date: string, now: Date = new Date(),
+): number {
+  const base = START_MIN[when];
+  if (date !== toISO(now)) return base;
+  const at = minutesOf(now);
+  if (at <= base) return base;
+  return Math.ceil(at / START_STEP) * START_STEP;
+}
+
+/**
+ * Has this part of `date` already gone?
+ *
+ * Only ever true for today — yesterday cannot be picked and tomorrow has
+ * not started. The wizard asks this to decide which day to offer by
+ * default; see `IdeasScreen`.
+ */
+export function partGone(
+  when: 'day' | 'evening', date: string, now: Date = new Date(),
+): boolean {
+  return date === toISO(now) && minutesOf(now) > LAST_START[when];
+}
 
 // ── weights ──────────────────────────────────────────────────────────
 
@@ -418,8 +495,8 @@ function dwellOf(p: Place): number {
 function buildPlan(
   lens: Lens, slots: readonly Slot[], pool: readonly Place[], pinnedOk: readonly Place[],
   draft: TripDraft, opts: PlanOptions, used: ReadonlySet<string>, rnd: () => number,
+  start: number,
 ): Place[] {
-  const start = START_MIN[draft.when];
   const taken = new Set<string>();
   const out: Place[] = [];
   // A collection that could fill every slot would make all three plans the
@@ -460,11 +537,11 @@ function buildPlan(
 }
 
 /** Times, legs and money, once the places are settled. */
-function dress(lens: LensKey, places: Place[], slots: readonly Slot[], draft: TripDraft,
+function dress(lens: LensKey, places: Place[], slots: readonly Slot[], start: number,
   pinnedDropped: TripPlan['pinnedDropped']): TripPlan {
   const legs = legsOf(places);
   const stops: Stop[] = [];
-  let at = START_MIN[draft.when];
+  let at = start;
 
   for (let i = 0; i < places.length; i++) {
     const dwell = dwellOf(places[i]);
@@ -494,7 +571,7 @@ function dress(lens: LensKey, places: Place[], slots: readonly Slot[], draft: Tr
     // The window opens where `at` began, which is also where the first stop
     // was placed — so this is the first arrival when there is one, and the
     // hour the outing would have started when there is not.
-    windowMin: [START_MIN[draft.when], at],
+    windowMin: [start, at],
     pinnedDropped,
   };
 }
@@ -521,11 +598,16 @@ export function planTrips(
 ): TripPlan[] {
   const slots = slotsFor(draft);
   const rnd = mulberry32(opts.seed ?? 1);
+  // The shape's own hour unless the caller resolved a later one against the
+  // clock. `?? `, not `||`, so a caller that genuinely means midnight is not
+  // silently moved to nine — and null is accepted alongside undefined so a
+  // screen holding "no start resolved" can pass it straight through.
+  const start = opts.startMin ?? START_MIN[draft.when];
 
   // Filtered once against the middle of the outing rather than per slot:
   // the pool is what could plausibly appear, and each slot re-checks its
   // own hour when it picks.
-  const middle = START_MIN[draft.when] + Math.floor(slots.length / 2) * NOMINAL_STEP;
+  const middle = start + Math.floor(slots.length / 2) * NOMINAL_STEP;
   const pool = places.filter((p) => dropReason(p, draft, cityId, middle) === null);
 
   // Pinned places carry their rejection reason out with them. Somebody who
@@ -543,7 +625,7 @@ export function planTrips(
   const used = new Set<string>();
 
   for (const lens of LENSES) {
-    const picked = buildPlan(lens, slots, pool, pinnedOk, draft, opts, used, rnd);
+    const picked = buildPlan(lens, slots, pool, pinnedOk, draft, opts, used, rnd, start);
     if (!picked.length) continue;
 
     // Two plans sharing all but one stop are one plan shown twice. Dropping
@@ -557,7 +639,7 @@ export function planTrips(
     if (tooSimilar) continue;
 
     for (const s of slugs) used.add(s);
-    plans.push(dress(lens.key, picked, slots, draft, pinnedDropped));
+    plans.push(dress(lens.key, picked, slots, start, pinnedDropped));
   }
 
   return plans;

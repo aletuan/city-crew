@@ -48,7 +48,7 @@ import {
 } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
-import { fromISO, todayISO } from '../lib/day';
+import { fromISO, minutesOf, toISO } from '../lib/day';
 import { useMyTrips, type Trip, type TripStopRow } from '../lib/data';
 import { dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
@@ -247,7 +247,17 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
     trips.reload();
   }, [trips.reload]));
 
-  const { upcoming, past } = splitTrips(trips.data, todayISO());
+  // One `Date` for both halves of the question, because `todayISO()` and
+  // `minutesOf()` read separately can straddle midnight and produce "the
+  // 17th, at 00:00" for a clock that is already on the 18th.
+  //
+  // Read at render rather than on a timer. The list is re-read on every
+  // focus anyway, so a trip that ends while the reader is looking at this
+  // exact screen moves down the next time they come back to it — which is
+  // late by minutes, not by the hours the day-granular split was late by,
+  // and costs no interval nobody would remember to clear.
+  const now = new Date();
+  const { upcoming, past } = splitTrips(trips.data, toISO(now), minutesOf(now));
 
   const cityName = (id: string) => {
     const c = cities.find((x) => x.id === id);

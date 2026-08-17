@@ -83,6 +83,24 @@ export function clampDay(iso: string, today: string = todayISO()): string {
   return iso;
 }
 
+/**
+ * What time it is, as minutes past local midnight.
+ *
+ * The clock half of what this file otherwise refuses to think about. A
+ * calendar day is enough to say *which* day a trip is, and not enough to
+ * say whether it has already happened — an evening planned for today is
+ * ahead of you at five and behind you at eleven, and both are the same
+ * `YYYY-MM-DD`. Callers that need that distinction pass this alongside
+ * `todayISO()`, and both must come from the same `Date` so they cannot
+ * disagree across midnight.
+ *
+ * Local, like everything else here: `getUTCHours` would report 02:00 in
+ * Vietnam while the reader's own clock says 09:00.
+ */
+export function minutesOf(d: Date = new Date()): number {
+  return d.getHours() * 60 + d.getMinutes();
+}
+
 /** `n` days after an ISO day, as an ISO day. */
 export function addDays(iso: string, n: number): string {
   const d = fromISO(iso);

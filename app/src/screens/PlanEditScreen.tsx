@@ -102,10 +102,10 @@ export default function PlanEditScreen({ navigation, route }: {
   // avoid — so the reader tapped one evening and opened another.
   const picked = useMemo(() => {
     const plans = planTrips(draft, places, city?.id ?? null, {
-      seed: p.seed, pinned, avoid: p.avoid, taste, budgetVnd,
+      seed: p.seed, startMin: p.startMin, pinned, avoid: p.avoid, taste, budgetVnd,
     });
     return plans.find((pl) => pl.lens === p.lens) ?? plans[0] ?? null;
-  }, [draft, places, city?.id, p.seed, p.lens, p.avoid, pinned, taste, budgetVnd]);
+  }, [draft, places, city?.id, p.seed, p.startMin, p.lens, p.avoid, pinned, taste, budgetVnd]);
 
   const [stops, setStops] = useState<Editable<Place>[] | null>(null);
   const [saving, setSaving] = useState(false);

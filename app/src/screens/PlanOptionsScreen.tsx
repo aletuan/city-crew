@@ -110,8 +110,9 @@ export default function PlanOptionsScreen({ navigation, route }: {
   }, [p.from, mine.data, places]);
 
   const plans = useMemo(
-    () => planTrips(draft, places, city?.id ?? null, { seed, pinned, avoid: shown, taste, budgetVnd }),
-    [draft, places, city?.id, seed, pinned, shown, taste, budgetVnd],
+    () => planTrips(draft, places, city?.id ?? null,
+      { seed, startMin: p.startMin, pinned, avoid: shown, taste, budgetVnd }),
+    [draft, places, city?.id, seed, p.startMin, pinned, shown, taste, budgetVnd],
   );
 
   const company = COMPANY.find((c) => c.key === p.company);

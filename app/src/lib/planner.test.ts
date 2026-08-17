@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planTrips } from './planner';
+import { partGone, planTrips, startMinFor, START_MIN } from './planner';
 import type { TripDraft } from './trip';
 import type { Place } from './types';
 
@@ -439,5 +439,101 @@ describe('planTrips with a stated budget', () => {
     const twice = planTrips(FOOD, MIXED, 'hanoi', { seed: 4, budgetVnd: 200_000 });
     expect(once.flatMap((p) => p.stops.map((s) => s.place.slug)))
       .toEqual(twice.flatMap((p) => p.stops.map((s) => s.place.slug)));
+  });
+});
+
+// The clock, which the shapes above deliberately do not read.
+//
+// The bug: `START_MIN` is fixed, so at 17:08 on a Monday "a day out today"
+// was planned from 09:00 — eight hours gone — and every place in it was
+// checked against its 09:00 opening hours rather than against any hour the
+// reader could still turn up in.
+describe('startMinFor', () => {
+  const now = (h: number, m = 0) => new Date(2026, 7, 17, h, m);
+
+  it('gives a future day the hour its shape starts at', () => {
+    expect(startMinFor('day', '2026-08-18', now(17, 8))).toBe(START_MIN.day);
+    expect(startMinFor('evening', '2026-08-20', now(23, 30))).toBe(START_MIN.evening);
+  });
+
+  it('gives today the same hour while that hour is still ahead', () => {
+    expect(startMinFor('day', '2026-08-17', now(7))).toBe(START_MIN.day);
+    expect(startMinFor('evening', '2026-08-17', now(9))).toBe(START_MIN.evening);
+  });
+
+  it('starts from now once the shape’s hour has gone', () => {
+    expect(startMinFor('day', '2026-08-17', now(17, 8))).toBe(17 * 60 + 15);
+    expect(startMinFor('evening', '2026-08-17', now(20, 1))).toBe(20 * 60 + 15);
+  });
+
+  // Rounded up, never down: a start at the minute the reader is still
+  // reading the screen is a start they have already missed.
+  it('rounds the start up to the quarter hour', () => {
+    expect(startMinFor('evening', '2026-08-17', now(19, 14))).toBe(19 * 60 + 15);
+    expect(startMinFor('evening', '2026-08-17', now(19, 15))).toBe(19 * 60 + 15);
+    expect(startMinFor('evening', '2026-08-17', now(19, 16))).toBe(19 * 60 + 30);
+  });
+
+  // Deliberately not clamped to `LAST_START`. Clamping would put the start
+  // back in the past, which is the whole thing being fixed; the wizard's
+  // job is to make a late tonight a choice, and `partGone` is how it knows.
+  it('honours a very late tonight rather than winding it back', () => {
+    expect(startMinFor('evening', '2026-08-17', now(23, 0))).toBe(23 * 60);
+  });
+});
+
+describe('partGone', () => {
+  const now = (h: number, m = 0) => new Date(2026, 7, 17, h, m);
+
+  it('is false for any day that is not today', () => {
+    expect(partGone('day', '2026-08-18', now(23, 59))).toBe(false);
+    expect(partGone('evening', '2026-08-18', now(23, 59))).toBe(false);
+  });
+
+  it('says a day out is gone in the late afternoon but an evening is not', () => {
+    expect(partGone('day', '2026-08-17', now(17, 8))).toBe(true);
+    expect(partGone('evening', '2026-08-17', now(17, 8))).toBe(false);
+  });
+
+  it('says an evening is gone once it is nearly over', () => {
+    expect(partGone('evening', '2026-08-17', now(20, 59))).toBe(false);
+    expect(partGone('evening', '2026-08-17', now(21, 1))).toBe(true);
+  });
+});
+
+describe('planTrips with a start pushed later', () => {
+  const late = 20 * 60 + 15;
+
+  it('puts the first stop at the hour it was given', () => {
+    const plans = planTrips(EVENING, CATALOG, 'hanoi', { seed: 1, startMin: late });
+    expect(plans[0].stops[0].arriveMin).toBe(late);
+    expect(plans[0].windowMin[0]).toBe(late);
+  });
+
+  it('leaves the shape’s own hour alone when nothing was given', () => {
+    const plans = planTrips(EVENING, CATALOG, 'hanoi', { seed: 1 });
+    expect(plans[0].stops[0].arriveMin).toBe(START_MIN.evening);
+  });
+
+  // The half of this that matters most: the gate moves with the start, so
+  // a plan built at eight in the evening cannot offer somewhere that shut
+  // at seven. Under the old fixed start it could, and did.
+  it('checks opening hours against the later hour, not the shape’s', () => {
+    const early = many('eats').map((p) => ({ ...p, opening_hours: week('7:00 AM – 7:00 PM') }));
+    const catalog = [...early, ...many('nightlife'), ...many('views')];
+    expect(planTrips({ ...EVENING, categories: ['eats'] }, catalog, 'hanoi',
+      { seed: 1, startMin: 18 * 60 })).not.toHaveLength(0);
+    expect(planTrips({ ...EVENING, categories: ['eats'] }, catalog, 'hanoi',
+      { seed: 1, startMin: late })).toHaveLength(0);
+  });
+
+  // Zero is a real hour, and `||` would quietly make it nine in the
+  // morning. Nobody plans a trip at midnight; the arithmetic still has to
+  // mean what it says.
+  it('takes midnight literally rather than as no answer', () => {
+    const open = many('eats').map((p) => ({ ...p, opening_hours: week('Open 24 hours') }));
+    const plans = planTrips({ ...EVENING, categories: ['eats'] }, open, 'hanoi',
+      { seed: 1, startMin: 0 });
+    expect(plans[0].stops[0].arriveMin).toBe(0);
   });
 });
