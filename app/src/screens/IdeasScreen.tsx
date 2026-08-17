@@ -425,8 +425,18 @@ const s = StyleSheet.create({
 
   // Under the card, not inside it: the card is the control and this is a
   // consequence of it, the same relation `ctaHint` has to the button.
+  //
+  // `space.page`, like every other top-level element here. This screen has
+  // no container padding — the scroll view runs edge to edge and the lede,
+  // the headings, the card and the CTA each declare their own inset. A `4`
+  // slipped in here instead, borrowed from a card's interior, and left the
+  // line starting 18pt to the left of everything it belongs under.
   whenNote: {
-    color: colors.textTertiary, fontSize: 13, lineHeight: 19, marginTop: 8, paddingHorizontal: 4,
+    color: colors.textTertiary,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 8,
+    paddingHorizontal: space.page,
   },
 
   // The whole left of the row is the target, not the words alone: a date
