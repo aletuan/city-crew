@@ -38,6 +38,18 @@ export const TAB_BAR_HEIGHT = 62;
  */
 export const CONTROL_H = 52;
 
+/**
+ * How tall a control in a screen's header is.
+ *
+ * Smaller than `CONTROL_H` on purpose, and not a drift from it: a header
+ * action sits beside a 34pt title in a row that is read as one line, where
+ * a full-size button reads as the screen's main action rather than as an
+ * accessory to its title. The round buttons the other screens put in that
+ * slot have always been this; naming it is what lets a pill join them
+ * without inventing a third number.
+ */
+export const HEADER_CONTROL_H = 44;
+
 /** Bottom padding that clears the translucent tab bar plus breathing room. */
 export function useTabBarClearance(extra = 18): number {
   const insets = useSafeAreaInsets();

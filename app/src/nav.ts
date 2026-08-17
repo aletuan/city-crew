@@ -62,6 +62,12 @@ export type RootStackParamList = {
    *  already shown are one of those inputs. Without it the rebuild is a
    *  different draw wearing the same lens. */
   PlanEdit: PlanAsk & { seed: number; lens: string; title?: string; avoid?: string[] };
+  TripsHome: undefined;
+  /** A saved trip, whole. Carries only the id: the row is already in
+   *  memory from the list, and re-reading it there rather than serialising
+   *  it through navigation is what keeps one copy of a trip in the app —
+   *  the same rule `SaveProvider` follows for collections. */
+  TripDetail: { id: string };
   ProfileHome: undefined;
   SignIn: undefined;
   SignUp: undefined;
