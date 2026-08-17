@@ -268,6 +268,37 @@ export default function PlanOptionsScreen({ navigation, route }: {
   );
 }
 
+/**
+ * Where a plan happens, as a heading — until a model gives it a name.
+ *
+ * The fallback used to be the *first* stop's district, flat. That was one
+ * word repeated: the district column beside every stop already said it, and
+ * on a thin catalog two of the three cards came back headed "Hoàn Kiếm",
+ * which is a title that tells the reader nothing about which card is which.
+ *
+ * Now that each stop prints its own area under its name, the heading is
+ * free to answer the question the rows cannot: does this outing stay put,
+ * or does it cross town? That is the real trade between the three cards —
+ * fifty metres on foot in one district against two kilometres by taxi into
+ * another — and it belongs on the first line rather than in a distance the
+ * reader has to add up.
+ *
+ * Counted over distinct areas in order, so "+1" means one *other* district
+ * and not one more stop. A plan whose places carry no district at all falls
+ * back to naming the outing, which is the only honest thing left to say.
+ */
+function areaLine(plan: TripPlan, t: (en: string, vi: string, ja: string) => string): string {
+  const areas: string[] = [];
+  for (const st of plan.stops) {
+    const a = st.place.neighborhood_en?.trim();
+    if (a && !areas.includes(a)) areas.push(a);
+  }
+  if (!areas.length) return t('An outing', 'Một buổi đi chơi', 'おでかけ');
+  const more = areas.length - 1;
+  if (!more) return areas[0];
+  return t(`${areas[0]} +${more} area`, `${areas[0]} +${more} khu`, `${areas[0]} 他${more}地区`);
+}
+
 /** One draft. Tapping it opens the editor, where times and order become
  *  the reader's rather than the planner's. */
 function PlanCard({ plan, best, onPress }: { plan: TripPlan; best: boolean; onPress: () => void }) {
@@ -283,8 +314,7 @@ function PlanCard({ plan, best, onPress }: { plan: TripPlan; best: boolean; onPr
           {/* Untitled until a model names it. The stops carry the plan
               until then, which is more use than an invented title. */}
           <Text style={s.name} numberOfLines={1}>
-            {plan.title ?? plan.stops.map((st) => st.place.neighborhood_en).filter(Boolean)[0]
-              ?? t('An evening out', 'Một buổi tối', '夜のおでかけ')}
+            {plan.title ?? areaLine(plan, t)}
           </Text>
           {badge.star ? (
             <LinearGradient {...gradAI} style={s.badgeOn}>
@@ -298,32 +328,49 @@ function PlanCard({ plan, best, onPress }: { plan: TripPlan; best: boolean; onPr
           )}
         </View>
 
+        {/* The leg lives *inside* the stop's own column, and that is
+            structural rather than cosmetic. The rail used to be
+            `height: 34` — a number measured once against a one-line row and
+            then load-bearing, so any change to the spacing broke the
+            timeline into disconnected stubs. Nested this way the dot column
+            spans the name, the meta line and the leg together, and the rail
+            is `flex: 1`: it reaches the next dot whatever is between them,
+            and nobody has to remember to re-measure it. */}
         {plan.stops.map((st, i) => (
-          <View key={st.place.slug}>
-            <View style={s.stop}>
-              <Text style={s.time}>{clockOf(st.arriveMin)}</Text>
-              <View style={s.dotCol}>
-                <View style={s.dot} />
-                {i + 1 < plan.stops.length && <View style={s.rail} />}
-              </View>
-              <Text style={s.stopName} numberOfLines={1}>{st.place.name_en}</Text>
-              <Text style={s.area} numberOfLines={1}>{st.place.neighborhood_en ?? ''}</Text>
+          <View key={st.place.slug} style={s.stop}>
+            <Text style={s.time}>{clockOf(st.arriveMin)}</Text>
+            <View style={s.dotCol}>
+              <View style={s.dot} />
+              {i + 1 < plan.stops.length && <View style={s.rail} />}
             </View>
-            {/* Dropped rather than guessed when a stop has no coordinates
-                — `legBetween` returns null and the row would be a number
-                nobody measured. */}
-            {plan.legs[i] && (
-              <View style={s.legRow}>
-                <Ionicons
-                  name={plan.legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
-                  size={12}
-                  color={colors.textTertiary}
-                />
-                <Text style={s.legText}>
-                  {fmtDistance(plan.legs[i]!.km)} · ≈ {plan.legs[i]!.minutes} {t('min', 'phút', '分')}
-                </Text>
-              </View>
-            )}
+            <View style={s.body}>
+              <Text style={s.stopName} numberOfLines={1}>{st.place.name_en}</Text>
+              {/* The district under the name rather than in a column beside
+                  it, which is how the editor and the saved trip already
+                  print it. Right-aligned it took 96pt off every name on the
+                  one screen where the names *are* the choice — and half
+                  this catalog has a name longer than what was left. It also
+                  makes room for the dwell, which this screen never showed
+                  at all while both screens after it did. */}
+              <Text style={s.stopMeta} numberOfLines={1}>
+                {summaryLine([st.place.neighborhood_en, `${st.dwellMin}′`])}
+              </Text>
+              {/* Dropped rather than guessed when a stop has no coordinates
+                  — `legBetween` returns null and the row would be a number
+                  nobody measured. */}
+              {plan.legs[i] && (
+                <View style={s.legRow}>
+                  <Ionicons
+                    name={plan.legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
+                    size={12}
+                    color={colors.textTertiary}
+                  />
+                  <Text style={s.legText}>
+                    {fmtDistance(plan.legs[i]!.km)} · ≈ {plan.legs[i]!.minutes} {t('min', 'phút', '分')}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         ))}
 
@@ -376,15 +423,31 @@ const s = StyleSheet.create({
   },
   badgeOnText: { ...CAPTION, color: colors.accentInk, fontWeight: font.semibold },
 
-  stop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  time: { ...CAPTION, color: colors.textSecondary, width: 44, fontVariant: ['tabular-nums'] },
-  dotCol: { alignItems: 'center', width: 10 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accentFill },
-  rail: { position: 'absolute', top: 8, width: 2, height: 34, backgroundColor: colors.borderGlassSoft },
-  stopName: { ...type.body, color: colors.text, flex: 1, fontWeight: font.semibold },
-  area: { ...CAPTION, color: colors.textTertiary, maxWidth: 96, textAlign: 'right' },
+  // `flex-start`, not `center`: a stop is two lines now, and centred the
+  // hour and the dot would float to the middle of the pair instead of
+  // sitting on the name they belong to.
+  stop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  // The 2 is optical, not arithmetic — the caption's smaller cap height
+  // sits high in its line box, so matching the box tops leaves the digits
+  // reading above the name. TripDetail's own time column does the same.
+  time: {
+    ...CAPTION, color: colors.textSecondary, width: 44,
+    fontVariant: ['tabular-nums'], paddingTop: 2,
+  },
+  dotCol: { alignItems: 'center', width: 10, alignSelf: 'stretch' },
+  dot: {
+    width: 8, height: 8, borderRadius: 4, marginTop: 6, backgroundColor: colors.accentFill,
+  },
+  // No height. It fills whatever the stop beside it turned out to be —
+  // see the note where the leg is nested.
+  rail: { flex: 1, width: 2, backgroundColor: colors.borderGlassSoft },
+  body: { flex: 1, gap: 2 },
+  stopName: { ...type.body, color: colors.text, fontWeight: font.semibold },
+  stopMeta: { ...CAPTION, color: colors.textTertiary },
 
-  legRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginLeft: 60, paddingVertical: 5 },
+  // Doubled from 5. Ten points of air between two stops read as one block
+  // of text with a line in it rather than as two places you go to.
+  legRow: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 10 },
   legText: { ...CAPTION, color: colors.textTertiary },
 
   foot: {

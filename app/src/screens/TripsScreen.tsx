@@ -79,6 +79,21 @@ const money = (vnd: number) => (vnd >= 1_000_000
  */
 const CARD_STOPS = 3;
 
+/**
+ * The pitch of the timeline: one row, and the air under it.
+ *
+ * Named because three styles depend on the pair and one of them is a rail
+ * that has to reach from this dot to the next one. The gap was 2, which is
+ * not a gap — three stops read as one paragraph with dots in the margin
+ * rather than as three places you go to.
+ *
+ * The row stays one line. This card is deliberately a summary — see the
+ * note at the top of the file — so the second line the plan screens give a
+ * stop belongs on the detail screen, not here.
+ */
+const ROW_H = 30;
+const ROW_GAP = 6;
+
 /** The wizard's answer, worn as a badge. Its own glyph colour, like every
  *  other chip in this app — the hue is what ties a concept together across
  *  screens, so a state must not repaint it. */
@@ -445,10 +460,10 @@ const s = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
   meta: { ...CAPTION, color: colors.textSecondary, flex: 1 },
 
-  stops: { marginTop: 14, gap: 2 },
+  stops: { marginTop: 14, gap: ROW_GAP },
   // `alignItems: center` and a fixed row height, so the dot lands on the
   // middle of its line and the rail between two dots has a known length.
-  stopRow: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 30 },
+  stopRow: { flexDirection: 'row', alignItems: 'center', gap: 10, height: ROW_H },
   stopTime: {
     ...CAPTION, color: colors.textSecondary, width: 46,
     fontVariant: ['tabular-nums'],
@@ -457,7 +472,15 @@ const s = StyleSheet.create({
   // an itinerary looks like an itinerary wherever it is drawn.
   dotCol: { width: 9, alignItems: 'center' },
   dot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: colors.accentFill },
-  rail: { position: 'absolute', top: 9, width: 2, height: 30, backgroundColor: colors.borderGlassSoft },
+  // Reaches exactly the next dot, which is why it is spelled as the sum
+  // rather than as a number. It was `30` beside a `gap: 2`, and the two
+  // were only in agreement by luck — the next hand to loosen the list
+  // would have left the rail eight points short of the dot below it and
+  // had no way to see why.
+  rail: {
+    position: 'absolute', top: 9, width: 2, height: ROW_H + ROW_GAP,
+    backgroundColor: colors.borderGlassSoft,
+  },
   stopName: { ...type.body, color: colors.text, flex: 1 },
   // Right-aligned and capped: it is the answer to "whereabouts", read after
   // the name, and letting it grow would push the name into an ellipsis to
