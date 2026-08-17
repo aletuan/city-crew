@@ -760,6 +760,17 @@ giờ mở cửa, khoảng cách và catalog.
 các chip người dùng đã bấm cũng là câu trả lời — xoá chúng đi là cái ô ghi đè
 lên việc của họ.
 
+**Cập nhật 17/08/2026 — ô nhập tự do đã gỡ khỏi màn Ideas.** Lý do: schema đầu
+ra của `parse` đúng bằng bốn trường mà chip đã đặt, nên nó không bao giờ nói
+được điều gì người dùng không tự chạm được — mà lại tính một vòng mạng và một
+lời gọi model cho việc đó. Bốn cú chạm nhanh hơn một câu, gần như luôn luôn.
+
+`parseAsk` trong `assist.ts` và action `parse` trong Edge Function **vẫn còn**,
+có test, đã deploy — chỉ là không màn nào gọi. Đường quay lại không phải viết
+lại, mà là **nới cái nó được phép trả lời**: ngân sách và mức ngại đi xa là hai
+thứ `planTrips` đã đọc (`budgetVnd`, `KM_PENALTY`) mà wizard không có chip nào
+để hỏi. Chi tiết và điều kiện quay lại: [issue #200](https://github.com/aletuan/city-crew/issues/200).
+
 ### Phase 4 — Hiểu bạn ✅ xong
 
 - `20260817120000_preferences.sql` (`preferences` + `place_events`) +
