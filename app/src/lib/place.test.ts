@@ -145,6 +145,16 @@ describe('holds', () => {
 describe('membersOf', () => {
   const hanoiPlace = place({ slug: 'h' });
 
+  // RLS can hide the place behind a join row, so the row survives and its
+  // `places` does not. Dropping it beats rendering a hole in the list.
+  it('skips a join row whose place is not there', () => {
+    const c = collection({ collection_places: [
+      { sort_order: 1, places: null },
+      { sort_order: 2, places: { slug: 'h' } },
+    ] });
+    expect(membersOf(c, [hanoiPlace])).toEqual([hanoiPlace]);
+  });
+
   it('resolves slugs against the catalog, in sort order', () => {
     const c = collection({ collection_places: [
       { sort_order: 2, places: { slug: 'b' } },

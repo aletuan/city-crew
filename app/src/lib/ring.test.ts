@@ -73,6 +73,15 @@ describe('sampleSweep', () => {
   it('handles a ramp of one', () => {
     expect(sampleSweep([{ at: 0, hex: '#123456' }], 0.7)).toBe('#123456');
   });
+
+  // Two stops at the same position have no span to interpolate across.
+  // Dividing by that zero would give NaN and a colour of "#NaNNaNNaN";
+  // the later stop wins instead, which is what a reader would mean by
+  // putting one there.
+  it('takes the later stop when two share a position', () => {
+    const stops = [{ at: 0, hex: '#000000' }, { at: 0, hex: '#ffffff' }, { at: 1, hex: '#ff0000' }];
+    expect(sampleSweep(stops, 0)).toBe('#ffffff');
+  });
 });
 
 describe('arcSweep', () => {
