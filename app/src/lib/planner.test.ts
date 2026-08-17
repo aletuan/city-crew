@@ -43,12 +43,57 @@ describe('planTrips', () => {
     for (const p of plans) expect(p.stops).toHaveLength(3);
   });
 
-  it('plans five stops for a day and three for an evening', () => {
+  it('starts a day in the morning and an evening in the evening', () => {
     const day = planTrips({ ...EVENING, when: 'day', categories: ['cafes', 'eats', 'views'] },
       CATALOG, 'hanoi', { seed: 1 });
-    expect(day[0].stops).toHaveLength(5);
     expect(day[0].stops[0].part).toBe('morning');
     expect(planTrips(EVENING, CATALOG, 'hanoi', { seed: 1 })[0].stops[0].part).toBe('evening');
+  });
+
+  // How long a plan is comes from what was asked for, not from the hour.
+  // The rule this replaced took its length from `when` alone, so somebody
+  // asking for cafés on their own got three cafés at seventy-five minutes
+  // each — a contest rather than a plan.
+  describe('length comes from the ask', () => {
+    const ask = (categories: string[], when: 'day' | 'evening' = 'evening') =>
+      planTrips({ ...EVENING, when, categories }, CATALOG, 'hanoi', { seed: 1 })[0].stops.length;
+
+    it('answers one kind of place with one place', () => {
+      expect(ask(['cafes'])).toBe(1);
+    });
+
+    it('gives a day one more, because a day has the room', () => {
+      expect(ask(['cafes'], 'day')).toBe(2);
+    });
+
+    it('grows a stop per kind asked for', () => {
+      expect(ask(['eats', 'nightlife'])).toBe(2);
+      expect(ask(['eats', 'nightlife', 'views'])).toBe(3);
+    });
+
+    // The shapes are still a ceiling: an evening is three stops however
+    // many kinds are named, because five in an evening is not an evening.
+    it('never exceeds the shape it is filling', () => {
+      expect(ask(['cafes', 'eats', 'nightlife', 'views'])).toBe(3);
+      expect(ask(['cafes', 'eats', 'nightlife', 'views'], 'day')).toBe(5);
+    });
+
+    // Nothing was narrowed, so nothing should be. `canPlan` stops an empty
+    // draft reaching the button, but the planner is called from tests and
+    // from a parsed sentence, and must not read "no answer" as "one stop".
+    it('keeps the whole shape when no kind was named', () => {
+      expect(ask([])).toBe(3);
+      expect(ask([], 'day')).toBe(5);
+    });
+
+    // The payoff, and the reason one stop is not a lesser answer: three
+    // lenses over one slot is three different cafés to choose between.
+    it('turns one stop into three different places to choose from', () => {
+      const plans = planTrips({ ...EVENING, categories: ['cafes'] }, CATALOG, 'hanoi', { seed: 1 });
+      const slugs = plans.map((pl) => pl.stops[0].place.slug);
+      expect(plans.length).toBeGreaterThan(1);
+      expect(new Set(slugs).size).toBe(slugs.length);
+    });
   });
 
   it('replays exactly for the same seed, and moves for a different one', () => {
@@ -136,8 +181,13 @@ describe('planTrips', () => {
   it('leans towards the district the reader chose', () => {
     const elsewhere = many('eats').map((p) => ({ ...p, neighborhood_en: 'Cầu Giấy' }));
     const chosen = [place({ slug: 'ba-dinh-eats', categories: ['eats'], neighborhood_en: 'Ba Đình', rating: 4.0, rating_count: 50 })];
+    // Three kinds asked for, so three stops: the district is a nudge worth
+    // 2.5 and this place is the lowest-rated in the pool, which is the
+    // point — it should still make an evening it would not otherwise. A
+    // one-stop draft would test whether the nudge can beat every rating at
+    // once, which was never the claim.
     const [plan] = planTrips(
-      { ...EVENING, categories: ['eats'], district: 'Ba Đình' },
+      { ...EVENING, district: 'Ba Đình' },
       [...elsewhere, ...chosen], 'hanoi', { seed: 1 },
     );
     expect(plan.stops.map((s) => s.place.slug)).toContain('ba-dinh-eats');
