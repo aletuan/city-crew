@@ -38,6 +38,7 @@ const NUMBERED = /^(?:quận|district|q)\.?\s*0*(\d+)$/i;
 
 const CITY_WORDS = new Set([
   'ho chi minh', 'ho chi minh city', 'thanh pho ho chi minh', 'tp ho chi minh',
+  'sai gon', 'saigon',
   'ha noi', 'hanoi', 'da nang', 'danang', 'viet nam', 'vietnam',
 ]);
 
@@ -59,7 +60,14 @@ export function districtOf(address, neighborhood) {
     const name = seg.replace(PREFIX, '').trim();
     if (!name) continue;
     const key = foldKey(name);
-    if (CITY_WORDS.has(key) || CITY_WORDS.has(foldKey(seg))) continue;
+    if (CITY_WORDS.has(key)) {
+      // "Sài Gòn" bare is the city wearing its old name — never a district.
+      // But "Phường Sài Gòn" is a real ward (the 2025 merger renamed the
+      // Bến Nghé area after the city): the prefix is exactly what keeps it
+      // from reading as the city, so that one keeps its full name.
+      if (!PREFIX.test(seg)) continue;
+      return { key: foldKey(seg), label: seg };
+    }
     return { key, label: name };
   }
   return null;

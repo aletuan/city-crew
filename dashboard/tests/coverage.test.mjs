@@ -32,6 +32,21 @@ test('districtOf strips the unit word, keeps the unit', () => {
   assert.equal(districtOf(null, 'Q. 10').label, 'Quận 10');
 });
 
+test('the city wearing its old name is never a district; the ward named after it is', () => {
+  // Post-2025-merger addresses: the central ward is literally "Phường Sài
+  // Gòn". It keeps its full name — stripped to "Sài Gòn" it reads as the
+  // city, which is the bug this guards.
+  assert.deepEqual(
+    districtOf('74 Hai Bà Trưng, Phường Sài Gòn, Thành phố Hồ Chí Minh 700000, Việt Nam', null),
+    { key: 'phuong sai gon', label: 'Phường Sài Gòn' },
+  );
+  // Bare, with no unit word, it is the city alias — fall through.
+  assert.equal(districtOf(null, 'Sài Gòn'), null);
+  assert.equal(districtOf(null, 'Saigon'), null);
+  assert.deepEqual(districtOf('12 Lê Lợi, Sài Gòn, Thành phố Hồ Chí Minh, Việt Nam', 'Quận 1'),
+    { key: 'q1', label: 'Quận 1' });
+});
+
 test('districtOf falls through junk to the neighborhood, then to null', () => {
   // 3 segments — third-from-last is the street, which starts with a number
   assert.deepEqual(
