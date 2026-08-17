@@ -259,6 +259,7 @@ export default function App() {
                     <Link className="moremenu-item" to="/city" role="menuitem" onClick={() => setMoreOpen(false)}>City hero</Link>
                     <Link className="moremenu-item" to="/scan" role="menuitem" onClick={() => setMoreOpen(false)}>Scan city</Link>
                     <Link className="moremenu-item" to="/analytics/contributors" role="menuitem" onClick={() => setMoreOpen(false)}>Contributors</Link>
+                    <Link className="moremenu-item" to="/analytics/coverage" role="menuitem" onClick={() => setMoreOpen(false)}>Coverage</Link>
                     <div className="moremenu-sep" />
                     {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
                     <a className="moremenu-item" href="mockup.html" target="_blank" rel="noreferrer" role="menuitem">Mockup ↗</a>
