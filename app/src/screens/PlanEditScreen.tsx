@@ -21,7 +21,7 @@
 // they do not own. Wiring a button to nothing would be the same mistake the
 // sketching screen used to make.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,6 +29,7 @@ import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, fireHaptic, successHaptic,
   useTabBarClearance,
 } from '../components/ui';
+import { derivedTitle, factLine, narrate, type Narration } from '../lib/assist';
 import { useAuth } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
@@ -86,12 +87,46 @@ export default function PlanEditScreen({ navigation, route }: {
   const [stops, setStops] = useState<Editable<Place>[] | null>(null);
   const [saving, setSaving] = useState(false);
 
+  /**
+   * The words, asked for once and only for the plan the reader picked.
+   *
+   * Not on the options screen: narrating all three would triple the cost to
+   * name two evenings nobody chose. And not re-asked when the reader edits —
+   * a line about a place is still true after the place above it moved, and
+   * a screen that flickered new prose under every tap would be unreadable.
+   */
+  const [words, setWords] = useState<Narration>({ title: null, why: new Map(), fromModel: false });
+  useEffect(() => {
+    if (!picked?.stops.length) return;
+    let live = true;
+    void narrate(
+      picked.stops.map((s) => ({
+        slug: s.place.slug,
+        name: s.place.name_en,
+        categories: s.place.categories,
+        neighborhood: s.place.neighborhood_en,
+        rating: s.place.rating,
+        arriveMin: s.arriveMin,
+        openingHours: s.place.opening_hours,
+      })),
+      { company: p.company, categories: p.categories, when: p.when, where: p.where },
+      lang,
+    ).then((n) => { if (live) setWords(n); });
+    // Left behind when the screen goes: a plan the reader has walked away
+    // from should not set state on its way out.
+    return () => { live = false; };
+  }, [picked, p.company, p.categories, p.when, p.where, lang]);
+
   // Seeded once from the planner, then owned entirely by the reader. A
   // `useEffect` syncing it back would fight every edit they make.
   const current = stops ?? (picked
     ? picked.stops.map((s) => ({ place: s.place, arriveMin: s.arriveMin, dwellMin: s.dwellMin, pinned: false }))
     : []);
 
+  // Taken once, on the way in. `openState` needs an instant, and a fresh
+  // `new Date()` per render would make every fact line a new object and
+  // re-open the question of whether a café is open on every keystroke.
+  const now = useMemo(() => new Date(), []);
   const legs = useMemo(() => legsOfPlan(current), [current]);
   const wrong = useMemo(() => outOfOrder(current), [current]);
   const [from, to] = windowOf(current);
@@ -105,8 +140,15 @@ export default function PlanEditScreen({ navigation, route }: {
     p.where,
   ]);
 
-  const title = p.title || current[0]?.place.neighborhood_en
-    || t('An evening out', 'Một buổi tối', '夜のおでかけ');
+  // Three names, in falling order of how much anyone knows: what a model
+  // called this evening, what the planner's lens called it, and what the
+  // catalog alone can say. The last one is always available, which is why
+  // the screen never has to render a plan with no name on it.
+  const title = words.title || p.title || derivedTitle(
+    current.map((s) => ({ slug: s.place.slug, name: s.place.name_en, neighborhood: s.place.neighborhood_en, arriveMin: s.arriveMin })),
+    p.when,
+    t,
+  );
 
   const mock = (what: string) => Alert.alert(
     what,
@@ -130,8 +172,16 @@ export default function PlanEditScreen({ navigation, route }: {
         district: p.district,
         day,
         when: p.when,
+        generatedBy: words.fromModel ? 'rules+llm' : 'rules',
         stops: current.map((s) => ({
-          placeSlug: s.place.slug, arriveMin: s.arriveMin, dwellMin: s.dwellMin,
+          placeSlug: s.place.slug,
+          arriveMin: s.arriveMin,
+          dwellMin: s.dwellMin,
+          // Only a model's sentence is stored. The fact line is derived
+          // from the place and would go stale the moment its hours change;
+          // saving it would freeze last August's opening time into a trip.
+          why: words.why.get(s.place.slug) ?? null,
+          whyLang: words.why.has(s.place.slug) ? lang : null,
         })),
       });
       successHaptic();
@@ -214,6 +264,22 @@ export default function PlanEditScreen({ navigation, route }: {
                   <Text style={s.area} numberOfLines={1}>
                     {summaryLine([stop.place.neighborhood_en, `${stop.dwellMin}′`])}
                   </Text>
+                  {/* A sentence if one was written, and the facts behind it
+                      if not. Never nothing, and never a spinner: the plan is
+                      complete before the words arrive, and a row that
+                      shuffled its own height when they landed would be the
+                      screen admitting it was waiting. */}
+                  {(() => {
+                    const line = words.why.get(stop.place.slug)
+                      || factLine({
+                        slug: stop.place.slug,
+                        name: stop.place.name_en,
+                        rating: stop.place.rating,
+                        openingHours: stop.place.opening_hours,
+                        arriveMin: stop.arriveMin,
+                      }, now, t);
+                    return line ? <Text style={s.why} numberOfLines={2}>{line}</Text> : null;
+                  })()}
                 </View>
 
                 <View style={s.tools}>
@@ -353,6 +419,10 @@ const s = StyleSheet.create({
   who: { flex: 1 },
   name: { ...type.body, color: colors.text, fontWeight: font.semibold },
   area: { ...CAPTION, color: colors.textTertiary },
+  /** The model's sentence, or the facts standing in for it. A step down
+   *  from the name and a step up from the area line, because it is the row's
+   *  only claim about why this place rather than another. */
+  why: { ...CAPTION, color: colors.textSecondary, lineHeight: 18, marginTop: 3 },
 
   tools: { flexDirection: 'row', gap: 2 },
   tool: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },

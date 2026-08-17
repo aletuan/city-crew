@@ -400,14 +400,24 @@ gate bằng `Authorization: Bearer` → `admin.auth.getUser(token)`.
 
 | action | Vào | Ra | Model |
 |---|---|---|---|
-| `narrate` | draft + **cả ba** phương án (slug, tên, category, rating, khoảng cách) | `{ plans: [{ index, title, stops: [{slug, why}] }] }` | `claude-sonnet-5` |
+| `narrate` | draft + **phương án người dùng đã chọn** (slug, tên, category, khu vực, rating, giờ đến) | `{ title, stops: [{slug, why}] }` | `claude-opus-5` |
 | `parse` | câu tự do + taxonomy + danh sách quận | `TripDraft` từng phần | `claude-opus-5` |
 | `revise` | plan hiện tại + yêu cầu sửa | `{ intent, params }` — planner chạy lại | `claude-opus-5` |
 
-`narrate` đặt tên cho **cả ba phương án trong một lời gọi**, không phải ba lời
-gọi — vừa rẻ hơn ba lần, vừa cho model thấy cả ba cùng lúc nên tên phân biệt
-được với nhau. Badge ("Best match", "Iconic views", "Low-key") suy ra từ lens
-trong `planner.ts`, không do model đặt.
+**Đi chệch thiết kế ban đầu, có chủ ý.** Bản đầu cho `narrate` đặt tên cho *cả
+ba* phương án trong một lời gọi, ngay ở màn PlanOptions. Bản đã dựng chỉ đặt
+tên cho phương án người dùng **đã bấm vào**, ở màn PlanEdit. Lý do là nút
+Regenerate: theo thiết kế cũ, mỗi lần bấm Regenerate là thêm một lời gọi đặt
+tên cho ba phương án — bấm năm lần là trả tiền cho mười lăm cái tên bị vứt đi.
+Đặt tên sau khi chọn thì Regenerate **không tốn token nào**, và cái tên duy
+nhất được sinh ra là cái tên người dùng thực sự đọc.
+
+Cái mất: ba thẻ ở PlanOptions không có tên do model đặt — chúng có badge theo
+lens, danh sách stop, giờ và chi phí. Nếu muốn quay lại thiết kế cũ thì đó là
+một lời gọi `narrate` ở PlanOptions với ba bộ stop, kèm cap số lần Regenerate.
+
+Badge ("Best match", "Iconic views", "Low-key") suy ra từ lens trong
+`planner.ts`, không do model đặt — kể cả trong thiết kế cũ.
 
 Cả ba ép JSON bằng `output_config.format`. Không dùng assistant prefill (trả
 400 trên Opus 5 và Sonnet 5), không truyền `temperature`/`top_p`/`budget_tokens`
@@ -574,30 +584,42 @@ dùng để phá thế hoà và xếp thứ tự, không để đổi câu trả
 
 ## Chi phí và vận hành
 
-Một lời gọi `narrate` đặt tên cho cả ba phương án: vào ~3k token (ba bộ ba
-stop cộng draft), ra ~500 token.
+Một lời gọi `narrate` đặt tên cho **một** phương án — cái người dùng đã chọn.
+Các con số dưới đây **đo thật**, không ước lượng: một buổi tối ba stop ở Hoàn
+Kiếm, `claude-opus-5`, `effort: "low"`.
 
-| Model | Mỗi lần sinh (3 phương án) | 1.000 lần/tháng |
+| Khoản | Token | Ghi chú |
 |---|---|---|
-| `claude-sonnet-5` (giá khuyến mãi) | ~$0.011 | ~$11 |
-| `claude-opus-5` | ~$0.028 | ~$28 |
+| System prompt | 786 | Trên ngưỡng cache 512 của Opus 5 → cache có hiệu lực |
+| Phần thay đổi (draft + stop) | 260 | Nằm sau breakpoint cache |
+| Ra | 219 | `thinking_tokens: 0` ở `effort: "low"` |
 
-Nút Regenerate tính là một lần sinh nữa, nên cap theo ngày cần đếm cả lượt
-regenerate chứ không chỉ số `trips` đã lưu — đây là chỗ duy nhất trong thiết kế
-này mà con số không suy ra được từ dữ liệu sẵn có. Cách rẻ nhất để tránh thêm
-bảng: giới hạn số lần Regenerate **trong phiên** ở client (ví dụ 3 lần), và để
-cap theo ngày ở server vẫn dựa trên `trips`.
+| Model | Lần đầu (ghi cache) | Lần sau (đọc cache) | 1.000 lần/tháng |
+|---|---|---|---|
+| `claude-opus-5` | ~$0.0117 | ~$0.0072 | ~$8 |
+
+Regenerate **không tốn gì** — nó chạy lại `planner.ts` thuần ở client, và lời
+gọi model chỉ xảy ra khi người dùng đã bấm vào một phương án. Đây là điều thiết
+kế cũ (đặt tên cả ba ở PlanOptions) không có, và là lý do chính để đổi.
 
 - **Cache** — system prompt, taxonomy và slot template là bất biến, đặt
   `cache_control: {type:"ephemeral"}` ở cuối khối system. Ngưỡng cache tối
   thiểu là 512 token trên Opus 5 và 1024 trên Sonnet 5; prompt hệ thống dự kiến
   ~800–1200 token nên cache có hiệu lực trên Opus 5, còn Sonnet 5 thì cần prompt
   đủ dài mới ăn.
-- **Cap** — đường `narrate` suy cap từ chính các row `trips` tạo trong 24h,
-  đúng khuôn `DAILY_SUGGESTIONS = 20`, không thêm bảng counter.
-- **Đường lui** — timeout ~4s cho Claude API. Quá hạn hoặc lỗi thì trả
-  `{ title: null, stops: [] }`; app dùng tên suy ra và dòng dữ kiện. Người dùng
-  vẫn có plan đầy đủ, chỉ khác giọng văn.
+- **Cap** — **không có cap theo tài khoản**, và đây là chỗ tài liệu ban đầu
+  sai. Cap `narrate` không suy được từ `trips`: một người bấm vào phương án rồi
+  không lưu vẫn tốn một lời gọi mà không để lại row nào. Đếm `trips` là đếm
+  nhầm thứ, và một cap đếm nhầm thứ còn tệ hơn không có cap. Thay vào đó chặn
+  **chi phí của từng lời gọi** — tối đa 8 stop vào, `max_tokens` 2000, timeout
+  12s — và ghi rõ như `search` trong `fetch-place` đã làm: rủi ro bị chặn bởi
+  việc phải có tài khoản. Nếu hoá đơn cho thấy vấn đề thì câu trả lời là một
+  bảng counter.
+- **Đường lui** — timeout 12s (không phải 4s: Opus 5 bật thinking mặc định).
+  Quá hạn, lỗi, hoặc model từ chối thì trả `{ title: null, stops: [] }` với
+  status 200 — cùng một đường code như model không có gì để nói. App dùng
+  `derivedTitle` và `factLine` trong `assist.ts`. Người dùng vẫn có plan đầy
+  đủ, chỉ khác giọng văn.
 - **Quan sát** — `console.log` trong Edge Function đã vào Supabase logs; ghi
   `action`, độ trễ, `usage.input_tokens`/`output_tokens`, và có dùng đường lui
   hay không.
@@ -655,13 +677,20 @@ dưới ngón tay, tức là `react-native-reanimated` — một dependency repo
 Hai cái nút xếp xong danh sách sáu điểm trong vài lần chạm, chạy được với
 VoiceOver, và không thả nhầm chỗ. Khi nào kéo thả tới thì nó thay chỗ này.
 
-### Phase 3 — Lời dẫn và câu tự do *(LLM vào cuộc)*
+### Phase 3 — Lời dẫn *(LLM vào cuộc)*
 
-- Thêm `supabase/functions/plan-assist/index.ts`, `app/src/lib/assist.ts`
-- Sửa `SketchingScreen` (hiện `why`), `IdeasScreen` (ô nhập tự do)
+- Thêm `supabase/functions/plan-assist/index.ts` — action `narrate`, ép JSON
+  bằng `output_config.format` với `slug` là `enum` đúng các slug đã gửi
+- Thêm `app/src/lib/assist.ts` + test — `narrate` không bao giờ ném lỗi,
+  `derivedTitle` và `factLine` là đường lui đầy đủ
+- Sửa `PlanEditScreen` (tên + dòng `why`), `data.ts` (`generatedBy`)
 - `ANTHROPIC_API_KEY` vào Supabase function settings
 - **Xong khi:** plan có tên và lý do; gỡ key ra thì vẫn ra plan đầy đủ với
-  đường lui.
+  đường lui. ✅
+
+**Còn lại của Phase 3:** ô "kể tôi nghe bạn muốn gì" ở `IdeasScreen` (action
+`parse`). Chưa làm — `narrate` là lát mang giá trị ngay, `parse` là một màn
+hình nữa và một schema nữa.
 
 ### Phase 4 — Hiểu bạn
 

@@ -526,6 +526,9 @@ export type SaveTripInput = {
   district: string | null;
   day: string;
   when: 'day' | 'evening';
+  /** Set when a model named the trip and wrote its lines. Defaults to
+   *  'rules', which is what a plan saved with no network is. */
+  generatedBy?: 'rules' | 'rules+llm';
   /** In order. `placeSlug` rather than an id: the app keys on slug
    *  everywhere and the join is one hop, the same trade `idsFor` makes. */
   stops: { placeSlug: string; arriveMin: number; dwellMin: number; why?: string | null; whyLang?: string | null }[];
@@ -553,9 +556,11 @@ export async function saveTrip(input: SaveTripInput): Promise<string> {
       district: input.district,
       day: input.day,
       when_part: input.when,
-      // Nothing writes prose yet. When `plan-assist` lands this becomes
-      // 'rules+llm' for the plans a model named, and a reader can tell.
-      generated_by: 'rules',
+      // Which half wrote this trip's words. The places and times are always
+      // the planner's; 'rules+llm' says a model named the evening and wrote
+      // the lines under the stops, and a reader opening a year-old trip can
+      // tell where its prose came from.
+      generated_by: input.generatedBy ?? 'rules',
     })
     .select('id')
     .single();
