@@ -42,10 +42,9 @@ import React, { useCallback, useRef } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { AddPill } from '../components/add';
 import {
-  AmbientWarmth, Card, GradientCta, HEADER_CONTROL_H, PressableScale, Screen, Skeleton,
-  useTabBarClearance,
+  AmbientWarmth, Card, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance,
 } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
@@ -56,7 +55,7 @@ import { useI18n } from '../lib/i18n';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY } from '../lib/trip';
 import { spendVnd, splitTrips } from '../lib/trips';
-import { colors, font, gradAI, radius, space, type } from '../theme';
+import { colors, font, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 const clock = (minutes: number) => {
@@ -291,18 +290,23 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
       // A header action acts on the screen it sits above, and the one thing
       // this screen cannot do for itself is make another trip. It jumps to
       // Ideas, which is where a trip comes from.
-      right={(
-        <PressableScale
+      //
+      // Only once there is a list. With none, `FirstTrip` below is already
+      // making the same offer and saying what a trip is for — two
+      // invitations to do one thing read as two different things, which is
+      // the rule Collections keeps on its own section heading and this
+      // screen shipped without.
+      //
+      // `AddPill` rather than a pill of its own, so the word, the glyph and
+      // the height are the ones every other tab uses.
+      right={trips.data.length > 0 ? (
+        <AddPill
+          header
+          label={t('New', 'Tạo mới', '新規')}
           onPress={() => navigation.getParent()?.navigate('Ideas')}
-          style={s.newBtn}
-          accessibilityRole="button"
-        >
-          <LinearGradient {...gradAI} style={s.newBtnFill}>
-            <Ionicons name="add" size={17} color={colors.accentInk} />
-            <Text style={s.newBtnText}>{t('New trip', 'Chuyến mới', '新しい旅程')}</Text>
-          </LinearGradient>
-        </PressableScale>
-      )}
+          accessibilityLabel={t('New trip', 'Chuyến đi mới', '新しい旅程')}
+        />
+      ) : undefined}
     >
       <AmbientWarmth />
       {!trips.loaded && (
@@ -471,15 +475,6 @@ const s = StyleSheet.create({
   // came here for.
   cardPast: { opacity: 0.72 },
 
-  // A header action, so it matches the 44pt round buttons the other
-  // screens put in the same slot rather than the 52pt of a button that
-  // carries an action on its own. See `CONTROL_H`.
-  newBtn: { borderRadius: radius.pill, overflow: 'hidden' },
-  newBtnFill: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    height: HEADER_CONTROL_H, paddingHorizontal: 16,
-  },
-  newBtnText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
 
   first: {
     alignItems: 'center', gap: 10, marginHorizontal: space.page,
