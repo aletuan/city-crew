@@ -59,6 +59,17 @@ create table if not exists public.collection_places (
   primary key (collection_id, place_id)
 );
 
+-- Only the primary key, and only because `trips` points at it. The real
+-- table carries centres, radii and hero copy in three languages; none of
+-- that is what a trip's ownership rules can get wrong. Seeded with the
+-- three the app ships, so a test can insert a trip without inventing a
+-- city first.
+create table if not exists public.cities (
+  id text primary key
+);
+insert into public.cities (id) values ('hcmc'), ('hanoi'), ('danang')
+  on conflict (id) do nothing;
+
 alter table public.places enable row level security;
 alter table public.place_photos enable row level security;
 alter table public.collections enable row level security;

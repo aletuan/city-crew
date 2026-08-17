@@ -446,3 +446,198 @@ export async function removePlaceFromCollection(collectionSlug: string, placeSlu
     .eq('place_id', placeId);
   if (error) throw new Error(error.message);
 }
+
+// ── trips ────────────────────────────────────────────────────────────
+//
+// The one thing in this file that reads a table the app cannot derive.
+// Everything above is catalog — rows the desk wrote — and a stale copy is
+// only ever a refresh away from being right. A trip is a decision, so
+// these queries read it back exactly as it was saved, including stops
+// whose places have since left the catalog.
+
+/** A stop as it comes back from the database. The place is embedded whole
+ *  so a saved trip renders without needing the catalog to still hold it —
+ *  which it may not: a place can be unpublished after a plan was made. */
+export type TripStopRow = {
+  sort_order: number;
+  arrive_min: number | null;
+  dwell_min: number | null;
+  why: string | null;
+  why_lang: string | null;
+  places: Place | null;
+};
+
+export type Trip = {
+  id: string;
+  city_id: string;
+  title: string;
+  company: string | null;
+  categories: string[];
+  district: string | null;
+  day: string;
+  when_part: 'day' | 'evening';
+  generated_by: string;
+  created_at: string;
+  trip_stops: TripStopRow[];
+};
+
+const TRIP_COLS =
+  `id, city_id, title, company, categories, district, day, when_part, generated_by, created_at, `
+  + `trip_stops(sort_order, arrive_min, dwell_min, why, why_lang, places(${PLACE_COLS(true)}))`;
+
+/**
+ * Every trip this user has saved, soonest first within each half.
+ *
+ * Not scoped to a city, for the reason a user's own collections are not:
+ * a Saturday planned in Hanoi is still theirs while the app is looking at
+ * Saigon, and hiding it would read as having lost it.
+ *
+ * Stops come back in `sort_order`, sorted here rather than in the query —
+ * PostgREST cannot order an embedded table, and the same hand-sort is what
+ * `withMembers` does for collection members.
+ */
+async function fetchMyTrips(ownerId: string): Promise<Trip[]> {
+  const { data, error } = await supabase
+    .from('trips')
+    .select(TRIP_COLS)
+    .eq('owner_id', ownerId)
+    .order('day', { ascending: false });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown as Trip[]).map((t) => ({
+    ...t,
+    trip_stops: [...(t.trip_stops ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+  }));
+}
+
+export const useMyTrips = (ownerId: string | null | undefined) => {
+  const fetcher = useCallback(
+    () => (ownerId ? fetchMyTrips(ownerId) : Promise.resolve([] as Trip[])),
+    [ownerId],
+  );
+  return useFetch(fetcher, [] as Trip[]);
+};
+
+export type SaveTripInput = {
+  ownerId: string;
+  cityId: string;
+  title: string;
+  company: string | null;
+  categories: string[];
+  district: string | null;
+  day: string;
+  when: 'day' | 'evening';
+  /** In order. `placeSlug` rather than an id: the app keys on slug
+   *  everywhere and the join is one hop, the same trade `idsFor` makes. */
+  stops: { placeSlug: string; arriveMin: number; dwellMin: number; why?: string | null; whyLang?: string | null }[];
+};
+
+/**
+ * Write a trip and its stops, and hand back the new id.
+ *
+ * Two round trips rather than one, because there is no RPC here and the
+ * stops need the trip's id. If the second fails the first is rolled back
+ * by hand — a half-saved trip in the list is worse than a failed save the
+ * reader can retry, and without a transaction this is the only way to say
+ * so. RLS makes the cleanup safe: the delete can only reach a row this
+ * user owns anyway.
+ */
+export async function saveTrip(input: SaveTripInput): Promise<string> {
+  const { data, error } = await supabase
+    .from('trips')
+    .insert({
+      owner_id: input.ownerId,
+      city_id: input.cityId,
+      title: input.title.trim(),
+      company: input.company,
+      categories: input.categories,
+      district: input.district,
+      day: input.day,
+      when_part: input.when,
+      // Nothing writes prose yet. When `plan-assist` lands this becomes
+      // 'rules+llm' for the plans a model named, and a reader can tell.
+      generated_by: 'rules',
+    })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  const tripId = (data as { id: string }).id;
+
+  if (!input.stops.length) return tripId;
+
+  const slugs = input.stops.map((s) => s.placeSlug);
+  const { data: rows, error: lookupError } = await supabase
+    .from('places')
+    .select('id, slug')
+    .in('slug', slugs);
+  if (lookupError) {
+    await supabase.from('trips').delete().eq('id', tripId);
+    throw new Error(lookupError.message);
+  }
+
+  const idBySlug = new Map((rows as { id: string; slug: string }[]).map((r) => [r.slug, r.id]));
+  const stops = input.stops
+    .map((s, i) => ({
+      trip_id: tripId,
+      place_id: idBySlug.get(s.placeSlug),
+      sort_order: i,
+      arrive_min: s.arriveMin,
+      dwell_min: s.dwellMin,
+      why: s.why ?? null,
+      why_lang: s.whyLang ?? null,
+    }))
+    // A place the catalog no longer holds is dropped rather than failing
+    // the save. The reader is looking at a plan they can see; refusing it
+    // over a row that has gone quiet since would be the wrong half to
+    // protect.
+    .filter((s) => !!s.place_id);
+
+  const { error: stopsError } = await supabase.from('trip_stops').insert(stops);
+  if (stopsError) {
+    await supabase.from('trips').delete().eq('id', tripId);
+    throw new Error(stopsError.message);
+  }
+  return tripId;
+}
+
+/** Remove one of the user's own trips. Its stops go with it — the foreign
+ *  key cascades — and RLS scopes this to rows they own. */
+export async function deleteTrip(id: string): Promise<void> {
+  const { error } = await supabase.from('trips').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Put the members of a collection in a new order.
+ *
+ * `collection_places.sort_order` has been read everywhere since the table
+ * existed and written in exactly one place — `addPlaceToCollection`, with
+ * the current length, which only ever appends. This is the writer that was
+ * missing.
+ *
+ * A loop of updates rather than an upsert, following
+ * `dashboard/src/api.js:reorderPhotos`. The key is (collection_id,
+ * place_id), so positions may collide mid-loop without anything failing —
+ * which is exactly why the position is not in the key.
+ */
+export async function reorderCollection(collectionSlug: string, placeSlugs: string[]): Promise<void> {
+  const { data: col, error: colError } = await supabase
+    .from('collections').select('id').eq('slug', collectionSlug).single();
+  if (colError) throw new Error(colError.message);
+  const collectionId = (col as { id: string }).id;
+
+  const { data: rows, error: placesError } = await supabase
+    .from('places').select('id, slug').in('slug', placeSlugs);
+  if (placesError) throw new Error(placesError.message);
+  const idBySlug = new Map((rows as { id: string; slug: string }[]).map((r) => [r.slug, r.id]));
+
+  for (let i = 0; i < placeSlugs.length; i++) {
+    const placeId = idBySlug.get(placeSlugs[i]);
+    if (!placeId) continue;
+    const { error } = await supabase
+      .from('collection_places')
+      .update({ sort_order: i })
+      .eq('collection_id', collectionId)
+      .eq('place_id', placeId);
+    if (error) throw new Error(error.message);
+  }
+}
