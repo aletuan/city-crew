@@ -800,11 +800,28 @@ chứ không cộng dồn: cộng dồn khiến lựa chọn của slot cuối p
 
 ### Phase 5 — Tinh chỉnh
 
+Theo dõi ở [issue #205](https://github.com/aletuan/city-crew/issues/205), nơi
+ghi rõ từng mục dùng lại được cái gì đã có.
+
 - Nút sửa plan cụ thể ("đổi bữa tối", "rẻ hơn", "gần hơn") chạy thẳng vào
   planner
 - "Chỗ giống chỗ này" ở PlaceDetail, dựng bằng `categories` + `vibe_tags` +
   khoảng cách
 - `pg_trgm` + `unaccent` nếu tìm kiếm bắt đầu hụt
+- Nới `parse` rồi mang ô nhập tự do trở lại — [issue #200](https://github.com/aletuan/city-crew/issues/200)
+
+**Lỗ hổng mục 1 lấp:** plan ra ba điểm, một điểm sai. Hôm nay chỉ có hai đường
+— bấm × thì còn buổi tối hai điểm và app không đề nghị gì thay thế, hoặc Tạo
+lại thì cả ba phương án đổi hết và mất luôn hai điểm đã ưng. Không có đường nào
+nói "giữ hai cái này, đổi cái kia". Và đây là trường hợp *phổ biến* chứ không
+phải hiếm: `planTrips` rút ngẫu nhiên có seed trong dải ứng viên gần ngang
+nhau, tức là nó được thiết kế để cho ra "tốt, nhưng lệch một chỗ".
+
+**Điểm thiết kế phải chốt trước khi viết:** "đổi chỗ này" **không** được chạy
+lại `planTrips` — làm thế là tính lại mọi giờ đến, phá đúng cái luật
+`itinerary.ts` sinh ra để giữ. Nó cần một hàm nhỏ mới trả về *một* ứng viên cho
+*một* slot, rồi màn hình thay tại chỗ qua `itinerary` để giờ người dùng đặt còn
+nguyên.
 
 ## Những chỗ khuyên không làm
 
