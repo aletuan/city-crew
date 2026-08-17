@@ -86,6 +86,23 @@ run "$DB" -f "$HERE/publish_test.sql"
 echo "→ submission checks"
 run "$DB" -f "$HERE/submissions_test.sql"
 
+# Trips need the accounts, the places stub and the cities stub — all of
+# which the blocks above have already put in place.
+echo "→ trips"
+for f in "$ROOT"/supabase/migrations/*_trips.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/trips_test.sql"
+
+# Preferences and history need the accounts and the places stub. Run after
+# trips because both blocks insert into the shared places stub and this one
+# clears only its own tables.
+echo "→ preferences"
+for f in "$ROOT"/supabase/migrations/*_preferences.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/preferences_test.sql"
+
 # Independent of everything above — it needs only the places stub — but it
 # runs last because it leaves the table as it found it and the checks
 # before it do not expect extra rows.

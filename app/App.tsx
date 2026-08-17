@@ -26,9 +26,11 @@ import PlaceDetailScreen from './src/screens/PlaceDetailScreen';
 import CollectionsScreen from './src/screens/CollectionsScreen';
 import CollectionFormScreen from './src/screens/CollectionFormScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
-import ComingSoonScreen from './src/screens/ComingSoonScreen';
 import IdeasScreen from './src/screens/IdeasScreen';
 import SketchingScreen from './src/screens/SketchingScreen';
+import PlanOptionsScreen from './src/screens/PlanOptionsScreen';
+import PlanEditScreen from './src/screens/PlanEditScreen';
+import TripsScreen from './src/screens/TripsScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
@@ -48,6 +50,8 @@ function IdeasStack() {
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="IdeasHome" component={IdeasScreen} />
       <Stack.Screen name="Sketching" component={SketchingScreen} />
+      <Stack.Screen name="PlanOptions" component={PlanOptionsScreen} />
+      <Stack.Screen name="PlanEdit" component={PlanEditScreen} />
     </Stack.Navigator>
   );
 }
@@ -187,7 +191,7 @@ function Tabs() {
     >
       <Tab.Screen name="Ideas" component={IdeasStack} />
       <Tab.Screen name="Explore" component={ExploreStack} />
-      <Tab.Screen name="Trips">{() => <ComingSoonScreen titleEn="Trips" titleVi="Chuyến đi" titleJa="旅程" />}</Tab.Screen>
+      <Tab.Screen name="Trips" component={TripsScreen} />
       <Tab.Screen name="Collections" component={CollectionsStack} />
       <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>

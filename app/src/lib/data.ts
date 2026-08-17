@@ -446,3 +446,349 @@ export async function removePlaceFromCollection(collectionSlug: string, placeSlu
     .eq('place_id', placeId);
   if (error) throw new Error(error.message);
 }
+
+// ── trips ────────────────────────────────────────────────────────────
+//
+// The one thing in this file that reads a table the app cannot derive.
+// Everything above is catalog — rows the desk wrote — and a stale copy is
+// only ever a refresh away from being right. A trip is a decision, so
+// these queries read it back exactly as it was saved, including stops
+// whose places have since left the catalog.
+
+/** A stop as it comes back from the database. The place is embedded whole
+ *  so a saved trip renders without needing the catalog to still hold it —
+ *  which it may not: a place can be unpublished after a plan was made. */
+export type TripStopRow = {
+  sort_order: number;
+  arrive_min: number | null;
+  dwell_min: number | null;
+  why: string | null;
+  why_lang: string | null;
+  places: Place | null;
+};
+
+export type Trip = {
+  id: string;
+  city_id: string;
+  title: string;
+  company: string | null;
+  categories: string[];
+  district: string | null;
+  day: string;
+  when_part: 'day' | 'evening';
+  generated_by: string;
+  created_at: string;
+  trip_stops: TripStopRow[];
+};
+
+const TRIP_COLS =
+  `id, city_id, title, company, categories, district, day, when_part, generated_by, created_at, `
+  + `trip_stops(sort_order, arrive_min, dwell_min, why, why_lang, places(${PLACE_COLS(true)}))`;
+
+/**
+ * Every trip this user has saved, soonest first within each half.
+ *
+ * Not scoped to a city, for the reason a user's own collections are not:
+ * a Saturday planned in Hanoi is still theirs while the app is looking at
+ * Saigon, and hiding it would read as having lost it.
+ *
+ * Stops come back in `sort_order`, sorted here rather than in the query —
+ * PostgREST cannot order an embedded table, and the same hand-sort is what
+ * `withMembers` does for collection members.
+ */
+async function fetchMyTrips(ownerId: string): Promise<Trip[]> {
+  const { data, error } = await supabase
+    .from('trips')
+    .select(TRIP_COLS)
+    .eq('owner_id', ownerId)
+    .order('day', { ascending: false });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown as Trip[]).map((t) => ({
+    ...t,
+    trip_stops: [...(t.trip_stops ?? [])].sort((a, b) => a.sort_order - b.sort_order),
+  }));
+}
+
+export const useMyTrips = (ownerId: string | null | undefined) => {
+  const fetcher = useCallback(
+    () => (ownerId ? fetchMyTrips(ownerId) : Promise.resolve([] as Trip[])),
+    [ownerId],
+  );
+  return useFetch(fetcher, [] as Trip[]);
+};
+
+export type SaveTripInput = {
+  ownerId: string;
+  cityId: string;
+  title: string;
+  company: string | null;
+  categories: string[];
+  district: string | null;
+  day: string;
+  when: 'day' | 'evening';
+  /** Set when a model named the trip and wrote its lines. Defaults to
+   *  'rules', which is what a plan saved with no network is. */
+  generatedBy?: 'rules' | 'rules+llm';
+  /** In order. `placeSlug` rather than an id: the app keys on slug
+   *  everywhere and the join is one hop, the same trade `idsFor` makes. */
+  stops: { placeSlug: string; arriveMin: number; dwellMin: number; why?: string | null; whyLang?: string | null }[];
+};
+
+/**
+ * Write a trip and its stops, and hand back the new id.
+ *
+ * Two round trips rather than one, because there is no RPC here and the
+ * stops need the trip's id. If the second fails the first is rolled back
+ * by hand — a half-saved trip in the list is worse than a failed save the
+ * reader can retry, and without a transaction this is the only way to say
+ * so. RLS makes the cleanup safe: the delete can only reach a row this
+ * user owns anyway.
+ */
+export async function saveTrip(input: SaveTripInput): Promise<string> {
+  const { data, error } = await supabase
+    .from('trips')
+    .insert({
+      owner_id: input.ownerId,
+      city_id: input.cityId,
+      title: input.title.trim(),
+      company: input.company,
+      categories: input.categories,
+      district: input.district,
+      day: input.day,
+      when_part: input.when,
+      // Which half wrote this trip's words. The places and times are always
+      // the planner's; 'rules+llm' says a model named the evening and wrote
+      // the lines under the stops, and a reader opening a year-old trip can
+      // tell where its prose came from.
+      generated_by: input.generatedBy ?? 'rules',
+    })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  const tripId = (data as { id: string }).id;
+
+  if (!input.stops.length) return tripId;
+
+  const slugs = input.stops.map((s) => s.placeSlug);
+  const { data: rows, error: lookupError } = await supabase
+    .from('places')
+    .select('id, slug')
+    .in('slug', slugs);
+  if (lookupError) {
+    await supabase.from('trips').delete().eq('id', tripId);
+    throw new Error(lookupError.message);
+  }
+
+  const idBySlug = new Map((rows as { id: string; slug: string }[]).map((r) => [r.slug, r.id]));
+  const stops = input.stops
+    .map((s, i) => ({
+      trip_id: tripId,
+      place_id: idBySlug.get(s.placeSlug),
+      sort_order: i,
+      arrive_min: s.arriveMin,
+      dwell_min: s.dwellMin,
+      why: s.why ?? null,
+      why_lang: s.whyLang ?? null,
+    }))
+    // A place the catalog no longer holds is dropped rather than failing
+    // the save. The reader is looking at a plan they can see; refusing it
+    // over a row that has gone quiet since would be the wrong half to
+    // protect.
+    .filter((s) => !!s.place_id);
+
+  const { error: stopsError } = await supabase.from('trip_stops').insert(stops);
+  if (stopsError) {
+    await supabase.from('trips').delete().eq('id', tripId);
+    throw new Error(stopsError.message);
+  }
+  return tripId;
+}
+
+/** Remove one of the user's own trips. Its stops go with it — the foreign
+ *  key cascades — and RLS scopes this to rows they own. */
+export async function deleteTrip(id: string): Promise<void> {
+  const { error } = await supabase.from('trips').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Put the members of a collection in a new order.
+ *
+ * `collection_places.sort_order` has been read everywhere since the table
+ * existed and written in exactly one place — `addPlaceToCollection`, with
+ * the current length, which only ever appends. This is the writer that was
+ * missing.
+ *
+ * A loop of updates rather than an upsert, following
+ * `dashboard/src/api.js:reorderPhotos`. The key is (collection_id,
+ * place_id), so positions may collide mid-loop without anything failing —
+ * which is exactly why the position is not in the key.
+ */
+export async function reorderCollection(collectionSlug: string, placeSlugs: string[]): Promise<void> {
+  const { data: col, error: colError } = await supabase
+    .from('collections').select('id').eq('slug', collectionSlug).single();
+  if (colError) throw new Error(colError.message);
+  const collectionId = (col as { id: string }).id;
+
+  const { data: rows, error: placesError } = await supabase
+    .from('places').select('id, slug').in('slug', placeSlugs);
+  if (placesError) throw new Error(placesError.message);
+  const idBySlug = new Map((rows as { id: string; slug: string }[]).map((r) => [r.slug, r.id]));
+
+  for (let i = 0; i < placeSlugs.length; i++) {
+    const placeId = idBySlug.get(placeSlugs[i]);
+    if (!placeId) continue;
+    const { error } = await supabase
+      .from('collection_places')
+      .update({ sort_order: i })
+      .eq('collection_id', collectionId)
+      .eq('place_id', placeId);
+    if (error) throw new Error(error.message);
+  }
+}
+
+// ── preferences, and the history nobody has to keep ──────────────────
+//
+// Two tables the catalog knows nothing about. `preferences` is what a
+// person told us; `place_events` is what they did, and it does not exist
+// until they say it may. The opt-in is enforced in Postgres — see the
+// migration — so nothing here has to be trusted to check it, and the worst
+// a bug in this file can do is fail to record.
+
+export type Preferences = {
+  categories: string[];
+  /** Per person, per outing, in đồng. Null is "not said", which is not the
+   *  same as no budget and must not be stored as zero. */
+  budget_vnd: number | null;
+  /** Whether `place_events` may be written at all. */
+  history_on: boolean;
+};
+
+export const NO_PREFERENCES: Preferences = {
+  categories: [], budget_vnd: null, history_on: false,
+};
+
+/**
+ * What this person has told us, or the empty answer.
+ *
+ * A missing row and a row of defaults are the same thing to every reader of
+ * this — nobody has an opinion until they say so — so a 404 comes back as
+ * `NO_PREFERENCES` rather than as null. That keeps the "have they opted in"
+ * question a plain boolean everywhere instead of a three-way one.
+ */
+async function fetchPreferences(ownerId: string): Promise<Preferences> {
+  const { data, error } = await supabase
+    .from('preferences')
+    .select('categories, budget_vnd, history_on')
+    .eq('owner_id', ownerId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return NO_PREFERENCES;
+  const row = data as Partial<Preferences>;
+  return {
+    categories: row.categories ?? [],
+    budget_vnd: row.budget_vnd ?? null,
+    history_on: !!row.history_on,
+  };
+}
+
+export const useMyPreferences = (ownerId: string | null | undefined) => {
+  const fetcher = useCallback(
+    () => (ownerId ? fetchPreferences(ownerId) : Promise.resolve(NO_PREFERENCES)),
+    [ownerId],
+  );
+  return useFetch(fetcher, NO_PREFERENCES);
+};
+
+/** Write them, creating the row the first time. An upsert rather than an
+ *  insert-then-update because there is exactly one row per person and the
+ *  primary key says so — there is no state where two writers could disagree
+ *  about which of two rows is current. */
+export async function savePreferences(ownerId: string, p: Preferences): Promise<void> {
+  const { error } = await supabase.from('preferences').upsert({
+    owner_id: ownerId,
+    categories: p.categories,
+    budget_vnd: p.budget_vnd,
+    history_on: p.history_on,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw new Error(error.message);
+}
+
+export type EventKind = 'open' | 'save' | 'unsave' | 'plan_keep' | 'plan_drop';
+
+/**
+ * Note that something happened, if the reader has allowed it.
+ *
+ * Never throws, and that is the whole shape of it. Recording is a side
+ * effect of looking at a place; a screen that had to handle its failure
+ * would be a screen where opening a café can show an error, and the failure
+ * that matters most — "you have not opted in" — is not an error at all,
+ * it is the database keeping the promise the toggle made.
+ *
+ * So a refusal is swallowed on purpose. The client checks `history_on`
+ * first to save a round trip; the insert policy checks it again because a
+ * client-side check is a promise and a policy is a guarantee.
+ */
+export async function logPlaceEvent(
+  ownerId: string | null | undefined,
+  placeSlug: string,
+  kind: EventKind,
+  cityId: string | null,
+  allowed: boolean,
+): Promise<void> {
+  if (!ownerId || !allowed) return;
+  try {
+    const { data } = await supabase
+      .from('places').select('id').eq('slug', placeSlug).maybeSingle();
+    const placeId = (data as { id: string } | null)?.id;
+    if (!placeId) return;
+    await supabase.from('place_events')
+      .insert({ user_id: ownerId, place_id: placeId, kind, city_id: cityId });
+  } catch {
+    // Nothing to do and nobody to tell. A lost event costs a slightly worse
+    // ordering in a future plan; a thrown one costs the screen.
+  }
+}
+
+/** Slugs this person opened and did not save — the strongest single signal
+ *  `taste.ts` takes, and the only one that is about a place rather than a
+ *  category.
+ *
+ *  Read over a window rather than over everything: a café passed over last
+ *  March says nothing about this Saturday, and nothing trims the table yet.
+ *  `since` is a parameter for the same reason `now` is everywhere else. */
+export async function fetchPassedOver(ownerId: string, since: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('place_events')
+    .select('kind, created_at, places(slug)')
+    .eq('user_id', ownerId)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+
+  // Opened, and not saved *since*. Read in reverse order so the newest verb
+  // about a place wins: somebody who opened a café, walked away, and saved
+  // it a week later has not passed it over.
+  const verdict = new Map<string, boolean>();
+  // Through `unknown`, like every other embed in this file: PostgREST
+  // returns the joined row as an object where the generated types expect an
+  // array, and the shape the query actually produces is the one below.
+  const rows = (data ?? []) as unknown as { kind: EventKind; places: { slug: string } | null }[];
+  for (const row of rows) {
+    const slug = row.places?.slug;
+    if (!slug || verdict.has(slug)) continue;
+    if (row.kind === 'save' || row.kind === 'plan_keep') verdict.set(slug, false);
+    else if (row.kind === 'open' || row.kind === 'plan_drop') verdict.set(slug, true);
+  }
+  return [...verdict.entries()].filter(([, passed]) => passed).map(([slug]) => slug);
+}
+
+/** Erase everything recorded about this person. The button the opt-in is
+ *  not allowed to ship without: switching recording off and being unable to
+ *  remove what was already recorded is the trap the whole table has to
+ *  avoid, which is why the delete policy does not consult `history_on`. */
+export async function clearMyHistory(ownerId: string): Promise<void> {
+  const { error } = await supabase.from('place_events').delete().eq('user_id', ownerId);
+  if (error) throw new Error(error.message);
+}

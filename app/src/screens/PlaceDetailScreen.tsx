@@ -1,7 +1,7 @@
 // Place detail — hero carousel with photo counter, floating share/save,
 // rating badge, icon fact row, and Address / Hours / Call / Website cards.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Linking, Pressable, ScrollView, Share, StyleSheet,
   Text, useWindowDimensions, View,
@@ -15,6 +15,7 @@ import { usePlaces } from '../lib/catalog';
 import { dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
+import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import { AmbientWarmth, Empty, PressableScale, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
@@ -72,6 +73,18 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const [photoIndex, setPhotoIndex] = useState(0);
   const saved = isSaved(route.params.slug);
   const tabClearance = useTabBarClearance();
+
+  // Opening a place is the one signal the app has to observe for itself:
+  // everything else the reader tells us out loud. Noted once per visit and
+  // only for a place that actually resolved — a screen that spent its whole
+  // life on the spinner is not somebody looking at a café.
+  //
+  // Above the two early returns, because a hook cannot live below one. It
+  // does nothing until `place` arrives, which is what the guard inside says.
+  const note = useNoteEvent();
+  useEffect(() => {
+    if (place) note(place.slug, 'open');
+  }, [place?.slug, note]);
 
   if (loading && !place) {
     return <SafeAreaView style={s.screen}><ActivityIndicator color={colors.accent} style={{ marginTop: 64 }} /></SafeAreaView>;

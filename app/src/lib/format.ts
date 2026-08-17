@@ -159,6 +159,42 @@ function parseDay(hours: string): Window[] | null {
   return out;
 }
 
+/**
+ * The instant at `minutes` past midnight on `day`, read on the catalog's
+ * own clock.
+ *
+ * Exists so a planner can ask `openState` about seven in the evening next
+ * Saturday. Building that Date at the call site would mean either copying
+ * `ICT_OFFSET_MIN` — a constant with one right home — or going through the
+ * device's offset, and the device is in New York for one of the two clocks
+ * the test suite runs on.
+ *
+ * Null for anything that is not a real day, including "2026-02-30", which
+ * `Date.UTC` would roll forward to the 2nd of March rather than refuse.
+ */
+export function instantOn(day: string, minutes: number): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day.trim());
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  // The day is checked at midnight and `minutes` added afterwards, in that
+  // order and not the other way round. Building the instant first and
+  // validating it is what the first version did, and it refused every
+  // evening on the last day of a month that ran past midnight: 25:00 on
+  // the 31st reads back as the 1st, which is a real hour and looked like
+  // an overflow. The reader saw no error — `openAt` treats null as
+  // "unknown", so those stops silently stopped being checked against
+  // opening hours at all.
+  const midnight = new Date(Date.UTC(y, mo - 1, d, 0, -ICT_OFFSET_MIN));
+  // Read back on the clock the day was written on, undoing the shift
+  // first — otherwise midnight ICT is 17:00 the day before in UTC and
+  // every date in the catalog looks invalid.
+  const back = new Date(midnight.getTime() + ICT_OFFSET_MIN * 60_000);
+  if (back.getUTCFullYear() !== y || back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d) {
+    return null;
+  }
+  return new Date(midnight.getTime() + minutes * 60_000);
+}
+
 export type OpenState = { open: boolean; until?: string; opensAt?: string };
 
 /**

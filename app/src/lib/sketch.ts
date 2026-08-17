@@ -3,103 +3,112 @@
 // Here rather than in the screen for the reason `place.ts` is: a Node
 // process can reach it. What is worth getting right on that screen is not
 // the animation — no test can see an animation — but the sequence: which
-// step is running at a given moment, when the run is over, and what the
-// summary line says about the answers the reader gave. All three are
-// arithmetic over data, and all three are wrong in ways nobody notices by
-// looking.
+// step is running, when the run is over, and what the summary line says
+// about the answers the reader gave. All three are arithmetic over data,
+// and all three are wrong in ways nobody notices by looking.
 //
-// ── on the timings being fiction ──
+// ── on the steps having stopped being fiction ──
 //
-// There is no agent yet. `SKETCH_STEPS` runs on a clock rather than on
-// work, and that is a stopgap with a real cost: a progress display that
-// is not measuring anything will eventually lie, because the work will
-// take longer or shorter than the fiction. The one thing it must not do
-// is *finish* on its own and hand back a plan that does not exist — see
-// `finishedAt`, which is where the screen stops rather than pretends.
+// These used to run on a clock. Each step carried an `ms` and the screen
+// read a stopwatch, because there was no planner to report on and the
+// header said so: "There is no agent yet." There is one now — `planner.ts`
+// — and the note that shipped with the fiction said what should happen
+// when it arrived: the steps stop being a timer and start being reports.
+// That is this file.
+//
+// So a step is done because the work behind it is done, and `stepStates`
+// takes a count of completed stages rather than a stopwatch reading. The
+// screen can no longer show a finished list in front of a plan that does
+// not exist, which is the failure the old shape had to be careful about.
+//
+// ── on there still being a floor ──
+//
+// The work is arithmetic over an array the app already holds, so it
+// finishes in well under a millisecond. `STEP_FLOOR_MS` is not a claim
+// about how long anything takes: it is how long a line has to be on
+// screen to be read. Four claims that flash past have told the reader
+// nothing, and the screen would be a flicker between two others.
+//
+// The one thing that genuinely waits is the catalog. `CatalogProvider`
+// may still be fetching when this screen opens, and step one does not
+// complete until it has — which is a real report, on the one part of this
+// that is really slow.
 
 export type StepState = 'done' | 'active' | 'pending';
 
 export type Step = {
   key: string;
-  /** How long this step appears to take, in ms. */
-  ms: number;
   en: string;
   vi: string;
   ja: string;
 };
 
 /**
- * The four things the screen claims to be doing.
+ * The four things the screen is doing, in the order it does them.
  *
  * Written as things the reader would recognise having asked for, not as
  * machine stages: "Reading your picks" is their collections, "Balancing
- * dinner → views → drinks" is the categories they chose in the order a day
+ * the order of the day" is the categories they chose in the order a day
  * runs. A progress list nobody can map back to their own input is a
  * spinner with extra words.
+ *
+ * They map onto real passes in `planner.ts` — the pool filter, the
+ * opening-hours check, the scoring and draw, and the legs between stops —
+ * which is what lets the screen report rather than perform.
  */
 export const SKETCH_STEPS: readonly Step[] = [
   {
-    key: 'picks', ms: 1400,
+    key: 'picks',
     en: 'Reading your picks', vi: 'Đọc lựa chọn của bạn', ja: 'あなたの好みを読み取り中',
   },
   {
-    key: 'find', ms: 2600,
+    key: 'find',
     en: 'Finding places open then', vi: 'Tìm chỗ mở cửa lúc đó', ja: 'その時間に開いている店を検索',
   },
   {
-    key: 'balance', ms: 2400,
+    key: 'balance',
     en: 'Balancing the order of the day', vi: 'Cân đối thứ tự trong ngày', ja: '一日の流れを調整',
   },
   {
-    key: 'walk', ms: 2000,
+    key: 'walk',
     en: 'Timing the walks between stops', vi: 'Tính thời gian đi bộ giữa các điểm',
     ja: '各スポット間の移動時間を計算',
   },
 ];
 
-/** When each step ends, in ms from the start. */
-export function stepEnds(steps: readonly Step[] = SKETCH_STEPS): number[] {
-  const out: number[] = [];
-  let at = 0;
-  for (const s of steps) { at += s.ms; out.push(at); }
-  return out;
-}
-
-/** How long the whole run appears to take. */
-export function totalMs(steps: readonly Step[] = SKETCH_STEPS): number {
-  return stepEnds(steps)[steps.length - 1] ?? 0;
-}
+/**
+ * How long a step stays on screen before the next one starts, in ms.
+ *
+ * A reading speed, not a work estimate. Short enough that four of them
+ * plus the catalog fetch is under two seconds — the old clock-driven
+ * version made the reader wait 8.4 seconds for a screen that measured
+ * nothing.
+ */
+export const STEP_FLOOR_MS = 420;
 
 /**
- * Where each step stands at `elapsed` ms.
+ * Where each step stands when `done` of them have finished.
  *
- * Exactly one step is `active` until the run ends, after which every step
- * is `done` and none is active — a list with a spinner still turning on it
- * after the work stopped is the bug this shape exists to make impossible.
+ * Exactly one step is `active` until every one is done, after which none
+ * is — a list with a spinner still turning after the work stopped is the
+ * bug this shape exists to make impossible.
  *
- * A step whose end has been reached is done, not active: the boundary
- * belongs to the step that follows, so `elapsed === ends[0]` shows the
- * second step working rather than the first still going.
+ * Counts outside the list are clamped rather than refused. A caller that
+ * has finished more stages than there are steps is not an error worth
+ * throwing over; it is a list with nothing left to show as running.
  */
-export function stepStates(elapsed: number, steps: readonly Step[] = SKETCH_STEPS): StepState[] {
-  const ends = stepEnds(steps);
-  // No clamp on a negative clock: every end is positive, so a negative
-  // `elapsed` already fails every comparison below and lands on the same
-  // first-step-active state that zero does. A `Math.max` here read as
-  // defensive and was provably unobservable — a mutation removing it
-  // could not be made to fail a test, which is the definition of code
-  // that is not doing anything.
-  const at = elapsed;
+export function stepStates(done: number, steps: readonly Step[] = SKETCH_STEPS): StepState[] {
+  const at = Math.max(0, Math.min(steps.length, Math.floor(done)));
   return steps.map((_, i) => {
-    if (at >= ends[i]) return 'done';
-    if (i === 0 || at >= ends[i - 1]) return 'active';
+    if (i < at) return 'done';
+    if (i === at) return 'active';
     return 'pending';
   });
 }
 
 /** True once every step has finished. */
-export function finished(elapsed: number, steps: readonly Step[] = SKETCH_STEPS): boolean {
-  return elapsed >= totalMs(steps);
+export function finished(done: number, steps: readonly Step[] = SKETCH_STEPS): boolean {
+  return done >= steps.length;
 }
 
 /**
