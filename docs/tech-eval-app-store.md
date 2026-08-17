@@ -9,6 +9,12 @@ Tài liệu này trả lời hai câu hỏi tách rời nhau, và việc tách c
    thêm code. Rào cản lớn nhất là chính sách nền tảng (Apple/Google) và
    vận hành, không phải kỹ thuật.
 
+> **Cập nhật 17/08/2026.** Tài liệu viết ngày 16/08. Từ đó Phase 1–4 của
+> `docs/ai-agent-planner.md` đã ship: planner thật, chuyến đi lưu được, lời
+> dẫn do model viết, cá nhân hoá. Điều đó **gỡ hẳn chặn B4** và thêm bốn bảng
+> mà mục B3 phải khai báo. Các mục đã sửa được đánh dấu tại chỗ; phần còn lại
+> giữ nguyên vì vẫn đúng.
+
 Trạng thái tại thời điểm viết: app phân phối qua **EAS Update → Expo Go**,
 chưa từng có bản build native, chưa có Apple/Google developer account.
 Khoảng cách tới "một người lạ tải app từ App Store" lớn hơn vẻ ngoài.
@@ -26,12 +32,12 @@ Khoảng cách tới "một người lạ tải app từ App Store" lớn hơn v
 | Backend | Supabase: Postgres + RLS + Auth + Storage + Edge Functions (Deno) | | Không có server riêng — đúng lựa chọn ở quy mô này |
 | Dashboard curation | Vite 6 + React 18 + react-router 6 → GitHub Pages | | Dùng được từ điện thoại |
 | Pipeline dữ liệu | Node scripts + Google Places API (New) | | Chạy server-side, key không lộ |
-| Test | Vitest, 18 file test thuần Node + 6 file test SQL chạy trên Postgres 16 thật | | Xem §2 |
+| Test | Vitest, 29 file test thuần Node (598 test) + 7 file test SQL chạy trên Postgres 16 thật | | Xem §2 |
 | CI/CD | GitHub Actions: `checks`, `app-preview` (EAS Update), `deploy-dashboard`, `sync-mockup` | | |
 | Dịch vụ ngoài | Google Places (server), OSM Photon + Nominatim (server), Open-Meteo (client, không key) | | |
 | i18n | EN / VI / JA, tự cuộn (`lib/i18n.tsx`) | | |
 
-Quy mô: ~14.5k dòng TS/TSX trong `app/`, 23 migration, 4 Edge Function.
+Quy mô: ~18k dòng TS/TSX trong `app/`, 25 migration, 6 Edge Function.
 
 ---
 
@@ -58,7 +64,7 @@ liệu ngắn hơn nó đáng ra phải dài.
 - **Test múi giờ tách riêng** (`test:tz` với `America/New_York`). Đã bắt
   được bug DST thật mà suite chạy ở giờ Hà Nội không thể thấy.
 - **Biên hàm thuần.** Logic ở `src/lib/*.ts` chạy được trong Node trần —
-  đó là lý do 18 file test tồn tại được mà không cần simulator.
+  đó là lý do 29 file test tồn tại được mà không cần simulator.
 - **Ý thức ToS bên thứ ba đã có sẵn trong code.** Không hiển thị kết quả
   Google Places trên Apple Maps (Places ToS §5.3); attribution ảnh
   Google render trên `PlaceCard`; nhãn "Kết quả từ OpenStreetMap" trên
@@ -159,6 +165,9 @@ Phải khai báo đúng những gì app thực sự thu thập:
 | Vị trí thô (coarse) | `expo-location`, để chọn thành phố gần nhất |
 | Ảnh/camera | `expo-image-picker` cho ảnh đại diện |
 | Nội dung người dùng | Collection, đề xuất địa điểm |
+| Chuyến đi đã lưu | `trips` + `trip_stops` — nơi bạn định đi, ngày nào, mấy giờ |
+| Sở thích khai báo | `preferences` — category ưa thích, ngân sách |
+| **Lịch sử địa điểm đã mở** | `place_events` — **opt-in, mặc định tắt** |
 
 Tương ứng: **App Privacy nutrition label** (Apple) và **Data Safety form**
 (Google Play). Khai sai form này là lý do từ chối phổ biến hơn cả lỗi code.
@@ -167,23 +176,39 @@ Lưu ý riêng: bảng `profiles` **ai cũng đọc được toàn bộ** (đún
 đã ghi rõ trong migration). Privacy policy phải nói thẳng điều đó, và
 người dùng phải hiểu bio của họ là công khai.
 
-### B4. Apple Guideline 2.1 / 4.2 — App Completeness (rủi ro cao)
+**Thêm từ 17/08 — `place_events` là theo dõi hành vi và phải khai đúng như
+thế.** Nó ghi lại chỗ người dùng mở, lưu, bỏ lưu, giữ hoặc bỏ khỏi plan. Bốn
+điều kiện Apple/Google đòi cho loại dữ liệu này thì code đã làm đúng cả bốn:
+opt-in mặc định **tắt**, opt-in cưỡng chế **trong chính policy insert** của
+Postgres chứ không phải lời hứa của client, chủ sở hữu là người duy nhất đọc
+được, và có nút "Xoá lịch sử của tôi" trong Profile (policy delete cố ý
+**không** hỏi `history_on`, để tắt ghi rồi vẫn xoá được cái đã ghi).
 
-`SketchingScreen` chạy trên **đồng hồ giả**: `lib/sketch.ts` ghi rõ
-*"There is no agent yet. `SKETCH_STEPS` runs on a clock rather than on
-work"*. Màn hình Ideas/Trips vẫn là placeholder theo README.
+Nhưng làm đúng không miễn cho việc khai báo: cả App Privacy label lẫn Data
+Safety form đều phải liệt kê nó, và privacy policy phải nói app dùng nó để
+làm gì — xếp lại thứ tự gợi ý, không bán, không chia sẻ. Ba bảng `trips`,
+`preferences`, `place_events` đều là dữ liệu **chỉ chủ sở hữu đọc được**,
+khác hẳn `profiles`, và policy nên nói rõ sự khác nhau đó.
 
-Reviewer Apple mở app, bấm vào tab Ideas, thấy một thanh tiến trình chạy
-rồi không dẫn tới đâu → đây đúng là mô tả của "placeholder content" và
-"demo/trial version". Rủi ro từ chối thật.
+### B4. Apple Guideline 2.1 / 4.2 — App Completeness — ✅ đã gỡ (17/08/2026)
 
-Việc cần làm: **hoặc** hoàn thiện luồng itinerary (logic đã có ở
-`data/scripts/itinerary-runtime.js`), **hoặc** ẩn hẳn tab đó khỏi bản nộp
-store. Không có phương án thứ ba — một tiến trình giả không thể ở lại.
+**Phát hiện gốc (16/08):** `SketchingScreen` chạy trên đồng hồ giả —
+`lib/sketch.ts` khi đó ghi rõ *"There is no agent yet. `SKETCH_STEPS` runs on
+a clock rather than on work"*. Reviewer mở app, bấm tab Ideas, thấy thanh
+tiến trình chạy rồi không dẫn tới đâu: đúng mô tả của "placeholder content"
+và "demo version". Rủi ro từ chối thật.
 
-Điểm cộng: `finishedAt` được thiết kế để màn hình **dừng lại** thay vì
-giả vờ trả về kế hoạch. Đó là hành vi đúng, nhưng nó không cứu được
-guideline này.
+**Đã đóng bằng gì:** Phase 1–4 (PR #195 và các PR sau). Thanh tiến trình giờ
+báo cáo công việc có thật — `planner.ts` chọn chỗ, kiểm giờ mở cửa, xếp lộ
+trình theo khoảng cách, trả về ba phương án; `sketch.ts` giờ ghi *"There is
+one now — `planner.ts`"*. Luồng đi trọn vẹn: Ideas → ba phương án → sửa giờ
+và thứ tự → lưu → tab Trips → màn chi tiết. Logic đã port khỏi
+`data/scripts/itinerary-runtime.js` vào `app/src/lib/planner.ts` với test.
+
+**Còn lại gì cần để ý khi nộp:** hai nút **Share** và **Invite** ở màn sửa
+plan là mock có dán nhãn — bấm vào thì hiện thông báo nói rõ chưa làm. Nhãn
+là đúng cách, nhưng reviewer vẫn có thể coi là tính năng chưa hoàn thiện.
+Cân nhắc ẩn cả hai khỏi bản nộp đầu; chúng không dẫn tới đâu và không mất gì.
 
 ### B5. Chuỗi mô tả quyền
 
@@ -251,6 +276,7 @@ khi pilot — nó rẻ và mua thêm một bậc quy mô.
 | D5 | **Migration/Edge Function không deploy tự động** | CI *test* migration nhưng không *chạy* chúng. Deploy thủ công là nơi lỗi sẽ xảy ra |
 | D6 | Supabase free tier | Project **tự pause sau 7 ngày không hoạt động**, 500MB DB, 5GB egress. Pause giữa pilot = app chết. Cần Pro **25 USD/tháng** (kèm PITR backup) |
 | D7 | **Không có quota chống lạm dụng** | Một tài khoản có thể tạo vô hạn collection, upload lại avatar không giới hạn, spam `place_submissions`. RLS kiểm soát *ai*, không kiểm soát *bao nhiêu* |
+| D7b | **`place_events` không có gì trim** | Thêm 17/08. Chính migration đã ghi ra điều này: taste profile chỉ đọc 90 ngày gần nhất, nên dòng cũ hơn là nợ và là rủi ro. Chặn duy nhất hiện có là nút xoá của người dùng và cascade khi xoá tài khoản. Cách đúng là một job xoá định kỳ — `pg_cron` có sẵn trên project, chưa cài |
 | D8 | **Không có budget alarm trên Google Maps key** | `scan-city` có `MAX_API_CALLS = 45` mỗi lần gọi, nhưng không giới hạn số lần gọi. Một tài khoản editor bị chiếm có thể đốt hết ngân sách |
 | D9 | Không có xử lý offline / retry | Mỗi màn hình gọi mạng trực tiếp. Có timeout trong `auth.tsx` (tốt) nhưng không có cache dữ liệu, không có retry, không có trạng thái offline |
 | D10 | Không có E2E test, chưa test trên dải thiết bị thật | 18 unit test đều là hàm thuần — không test nào từng render một màn hình |
@@ -275,7 +301,8 @@ Mục tiêu: một file `.ipa`/`.aab` cài được, chưa nộp store.
 
 - [ ] **B2: xoá tài khoản trong app** (Edge Function + UI) — chặn cứng
 - [ ] **B3: privacy policy** host trên GitHub Pages + khai App Privacy / Data Safety
-- [ ] **B4: quyết định về tab Ideas** — hoàn thiện itinerary hoặc ẩn khỏi bản nộp
+- [x] ~~**B4: quyết định về tab Ideas**~~ — đã hoàn thiện itinerary (Phase 1–4)
+- [ ] B4b: cân nhắc ẩn hai nút mock Share/Invite khỏi bản nộp đầu
 - [ ] **B1: chọn hướng** — hoặc tắt publish cho bản đầu (rẻ, nhanh), hoặc làm đủ report + block + filter + contact + EULA
 - [ ] B5: rà chuỗi mô tả quyền khớp hành vi thật
 - [ ] C3: thêm attribution Open-Meteo + Apple Maps
@@ -288,6 +315,7 @@ Mục tiêu: một file `.ipa`/`.aab` cài được, chưa nộp store.
 - [ ] TestFlight external (tới 10.000 tester, cần beta review nhẹ)
 - [ ] D3: analytics — tối thiểu là các sự kiện: mở app, xem place, lưu place, tạo collection, publish
 - [ ] D7: quota chống lạm dụng (số collection/người, tần suất upload avatar, tần suất submit)
+- [ ] D7b: `pg_cron` trim `place_events` cũ hơn 90 ngày
 - [ ] D8: budget alarm + quota trên Google Maps key
 - [ ] C2: cache kết quả `find-address` trong Postgres
 - [ ] C1: cơ chế làm mới dữ liệu Google Places

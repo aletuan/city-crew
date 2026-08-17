@@ -114,6 +114,9 @@
   .card .c-tag{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--teal); letter-spacing:.08em}
   .card.blocker{border-color:#4a2326}
   .card.blocker .c-tag{color:var(--red)}
+  .card.done{border-color:#1e4429} .card.done .c-tag{color:var(--green)}
+  .card.done h4::after{content:" ✓"; color:var(--green)}
+  .callout.done{border-color:var(--green); background:rgba(63,185,80,.07)} .callout.done .c-label{color:var(--green)}
 
   /* table */
   .tbl-wrap{overflow-x:auto; margin:0 0 22px; border:1px solid var(--hair); border-radius:12px}
@@ -204,7 +207,13 @@
       <h3 class="en">What was examined</h3>
       <h3 class="vi">Đã khảo sát những gì</h3>
       <p class="en">Every TypeScript file under <code>app/src</code> and <code>app/App.tsx</code> (~14.5k lines), all 23 SQL migrations, all four Edge Functions, the four GitHub Actions workflows, <code>app.json</code>, and the dashboard and data-pipeline manifests.</p>
-      <p class="vi">Toàn bộ file TypeScript trong <code>app/src</code> và <code>app/App.tsx</code> (~14.5k dòng), cả 23 migration SQL, cả bốn Edge Function, bốn workflow GitHub Actions, <code>app.json</code>, cùng manifest của dashboard và pipeline dữ liệu.</p>
+      <p class="vi">Toàn bộ file TypeScript trong <code>app/src</code> và <code>app/App.tsx</code> (~14.5k dòng), cả 25 migration SQL, cả sáu Edge Function, bốn workflow GitHub Actions, <code>app.json</code>, cùng manifest của dashboard và pipeline dữ liệu.</p>
+
+      <div class="callout done">
+        <span class="c-label en">Updated 17 Aug 2026</span><span class="c-label vi">Cập nhật 17/08/2026</span>
+        <p class="en">Audited on 16 Aug. Since then phases 1–4 of <code>docs/ai-agent-planner.md</code> have shipped — a real planner, saved trips, model-written prose, personalisation. That <strong>closes blocker B4 outright</strong> and adds four tables that section B3 must now declare. Items overtaken by that work are marked in place; everything else stands as audited.</p>
+        <p class="vi">Đánh giá ngày 16/08. Từ đó phase 1–4 của <code>docs/ai-agent-planner.md</code> đã ship — planner thật, chuyến đi lưu được, lời dẫn do model viết, cá nhân hoá. Điều đó <strong>gỡ hẳn chặn B4</strong> và thêm bốn bảng mà mục B3 phải khai báo. Các mục bị việc đó vượt qua được đánh dấu tại chỗ; phần còn lại giữ nguyên.</p>
+      </div>
 
       <div class="callout warn">
         <span class="c-label en">What was NOT done</span><span class="c-label vi">Chưa làm những gì</span>
@@ -239,7 +248,7 @@
           <tr><td><span class="en">Language</span><span class="vi">Ngôn ngữ</span></td><td><code>typescript ~5.9</code></td><td><span class="en"><code>tsc --noEmit</code> gates every PR. A real gate, not decoration.</span><span class="vi"><code>tsc --noEmit</code> gate mọi PR. Là gate thật, không phải trang trí.</span></td></tr>
           <tr><td><span class="en">Navigation</span><span class="vi">Điều hướng</span></td><td><code>@react-navigation 7</code></td><td><span class="en">native-stack + bottom-tabs. Standard.</span><span class="vi">native-stack + bottom-tabs. Chuẩn.</span></td></tr>
           <tr><td><span class="en">Maps</span><span class="vi">Bản đồ</span></td><td><code>react-native-maps ^1.20</code></td><td><span class="en">Apple Maps on iOS. Constrains what may be drawn on it — see §07.</span><span class="vi">Apple Maps trên iOS. Ràng buộc thứ được vẽ lên đó — xem §07.</span></td></tr>
-          <tr><td><span class="en">Backend</span><span class="vi">Backend</span></td><td><span class="en">Supabase: Postgres + RLS, Auth, Storage, Edge Functions (Deno)</span><span class="vi">Supabase: Postgres + RLS, Auth, Storage, Edge Functions (Deno)</span></td><td><span class="en">Right call at this size. 23 migrations, 4 functions.</span><span class="vi">Lựa chọn đúng ở quy mô này. 23 migration, 4 function.</span></td></tr>
+          <tr><td><span class="en">Backend</span><span class="vi">Backend</span></td><td><span class="en">Supabase: Postgres + RLS, Auth, Storage, Edge Functions (Deno)</span><span class="vi">Supabase: Postgres + RLS, Auth, Storage, Edge Functions (Deno)</span></td><td><span class="en">Right call at this size. 25 migrations, 6 functions.</span><span class="vi">Lựa chọn đúng ở quy mô này. 25 migration, 6 function.</span></td></tr>
           <tr><td><span class="en">Curation dashboard</span><span class="vi">Dashboard curation</span></td><td><code>vite 6</code> + <code>react 18</code> → GitHub Pages</td><td><span class="en">Phone-usable. Same anon key, same RLS.</span><span class="vi">Dùng được từ điện thoại. Cùng anon key, cùng RLS.</span></td></tr>
           <tr><td><span class="en">Data pipeline</span><span class="vi">Pipeline dữ liệu</span></td><td><span class="en">Node scripts + Google Places API (New)</span><span class="vi">Node scripts + Google Places API (New)</span></td><td><span class="en">Server-side only. The Google key never reaches a client bundle.</span><span class="vi">Chỉ chạy server-side. Key Google không bao giờ vào bundle client.</span></td></tr>
           <tr><td><span class="en">Tests</span><span class="vi">Test</span></td><td><span class="en">Vitest — 18 pure-Node files · 6 SQL files on real Postgres 16</span><span class="vi">Vitest — 18 file thuần Node · 6 file SQL trên Postgres 16 thật</span></td><td><span class="en">Unusually good for the stage. See §04.</span><span class="vi">Tốt bất thường so với giai đoạn. Xem §04.</span></td></tr>
@@ -342,8 +351,8 @@ flowchart TD
     F -->|"absent today"| F1["Cannot submit<br/>B3"]:::err
     F -->|"present"| G{"Placeholder screens?"}:::decision
 
-    G -->|"Sketching, today"| G1["Rejected · 2.1<br/>B4"]:::err
-    G -->|"removed or finished"| H{"Users see<br/>each other?"}:::decision
+    G -->|"was: Sketching"| G1["Rejected · 2.1<br/>B4 — closed 17 Aug"]:::agent
+    G -->|"finished"| H{"Users see<br/>each other?"}:::decision
 
     H -->|"yes → publish is on"| I["Needs report + block +<br/>filter + contact + EULA<br/>Guideline 1.2"]:::tool
     H -->|"no → publish disabled"| J["Guideline 1.2 does not apply"]:::agent
@@ -441,8 +450,8 @@ sequenceDiagram
         </div>
         <div class="card"><span class="c-tag">TESTING</span>
           <h4 class="en">Migrations are run, not read</h4><h4 class="vi">Migration được chạy, không chỉ đọc</h4>
-          <p class="en">CI stands up Postgres 16, applies all 23 migrations, then asserts. Triggers and constraints are SQL, and SQL that has only been reviewed is SQL that has not been run.</p>
-          <p class="vi">CI dựng Postgres 16, apply cả 23 migration, rồi assert. Trigger và constraint là SQL, và SQL mới chỉ được review là SQL chưa từng chạy.</p>
+          <p class="en">CI stands up Postgres 16, applies all 25 migrations, then asserts. Triggers and constraints are SQL, and SQL that has only been reviewed is SQL that has not been run.</p>
+          <p class="vi">CI dựng Postgres 16, apply cả 25 migration, rồi assert. Trigger và constraint là SQL, và SQL mới chỉ được review là SQL chưa từng chạy.</p>
         </div>
         <div class="card"><span class="c-tag">TESTING</span>
           <h4 class="en">A clock that has daylight saving</h4><h4 class="vi">Một chiếc đồng hồ có DST</h4>
@@ -452,7 +461,7 @@ sequenceDiagram
         <div class="card"><span class="c-tag">ARCHITECTURE</span>
           <h4 class="en">A pure boundary that pays for itself</h4><h4 class="vi">Một biên hàm thuần đáng giá</h4>
           <p class="en">Logic in <code>src/lib/*.ts</code> runs in bare Node — no React Native, no simulator, no Supabase. That is why 18 test files exist at all.</p>
-          <p class="vi">Logic ở <code>src/lib/*.ts</code> chạy được trong Node trần — không React Native, không simulator, không Supabase. Đó là lý do 18 file test tồn tại được.</p>
+          <p class="vi">Logic ở <code>src/lib/*.ts</code> chạy được trong Node trần — không React Native, không simulator, không Supabase. Đó là lý do 29 file test tồn tại được.</p>
         </div>
         <div class="card"><span class="c-tag">LEGAL</span>
           <h4 class="en">ToS reasoning sits in the source</h4><h4 class="vi">Lập luận ToS nằm sẵn trong code</h4>
@@ -634,10 +643,10 @@ grant execute on function public.is_editor() to anon, authenticated;</code></pre
           <p class="en">No policy exists in the repo. Both stores need a public URL plus a completed data-disclosure form.</p>
           <p class="vi">Repo không có privacy policy. Cả hai store cần URL công khai kèm form khai báo dữ liệu đã điền.</p>
         </div>
-        <div class="card blocker"><span class="c-tag">B4 · GUIDELINE 2.1</span>
+        <div class="card done"><span class="c-tag">B4 · CLOSED 17 AUG</span>
           <h4 class="en">App completeness</h4><h4 class="vi">Tính hoàn thiện của app</h4>
-          <p class="en">The Sketching screen animates a progress bar over work that does not exist. Its own source says so.</p>
-          <p class="vi">Màn hình Sketching chạy thanh tiến trình cho công việc không tồn tại. Chính source của nó nói vậy.</p>
+          <p class="en">Was: a progress bar over work that did not exist. The planner now does the work it reports.</p>
+          <p class="vi">Trước: thanh tiến trình cho công việc không tồn tại. Giờ planner làm thật đúng cái nó báo cáo.</p>
         </div>
       </div>
 
@@ -782,6 +791,9 @@ Deno.serve(async (req) =&gt; {
           <tr><td><span class="en">Coarse location</span><span class="vi">Vị trí thô</span></td><td><code>expo-location</code></td><td><span class="en">Device only — used to pick the nearest city, never stored</span><span class="vi">Chỉ trên thiết bị — dùng để chọn thành phố gần nhất, không lưu</span></td></tr>
           <tr><td><span class="en">Camera / photo library</span><span class="vi">Camera / thư viện ảnh</span></td><td><code>expo-image-picker</code></td><td><span class="en">Only what the user picks as an avatar</span><span class="vi">Chỉ ảnh người dùng chọn làm avatar</span></td></tr>
           <tr><td><span class="en">User content</span><span class="vi">Nội dung người dùng</span></td><td><span class="en">Collections, place submissions</span><span class="vi">Collection, đề xuất địa điểm</span></td><td><span class="en">Private until published</span><span class="vi">Riêng tư cho tới khi publish</span></td></tr>
+          <tr><td><span class="en">Saved trips</span><span class="vi">Chuyến đi đã lưu</span></td><td><code>trips</code> + <code>trip_stops</code></td><td><span class="en">Owner only — where you plan to be, on which day, at what hour</span><span class="vi">Chỉ chủ sở hữu — bạn định đi đâu, ngày nào, mấy giờ</span></td></tr>
+          <tr><td><span class="en">Stated preferences</span><span class="vi">Sở thích khai báo</span></td><td><code>preferences</code></td><td><span class="en">Owner only — categories, budget</span><span class="vi">Chỉ chủ sở hữu — category, ngân sách</span></td></tr>
+          <tr><td><span class="en"><strong>Places opened</strong></span><span class="vi"><strong>Địa điểm đã mở</strong></span></td><td><code>place_events</code></td><td><span class="en"><strong>Opt-in, off by default.</strong> Owner only</span><span class="vi"><strong>Opt-in, mặc định tắt.</strong> Chỉ chủ sở hữu</span></td></tr>
         </tbody>
       </table></div>
 
@@ -791,29 +803,44 @@ Deno.serve(async (req) =&gt; {
         <p class="vi">Bảng <code>profiles</code> <strong>ai cầm publishable key cũng đọc được toàn bộ</strong>. Migration nói thẳng điều đó và gọi nó là "theo nghĩa đen". Đó là thiết kế hợp lệ — nhờ nó mà tra cứu handle được — nhưng privacy policy phải nói rõ, và người dùng viết bio phải hiểu nó là công khai. Đừng để điều này lần đầu xuất hiện trong câu hỏi của reviewer.</p>
       </div>
 
-      <h3 class="en">B4 — the progress bar that measures nothing</h3>
-      <h3 class="vi">B4 — thanh tiến trình không đo gì cả</h3>
+      <h3 class="en">B4 — the progress bar that measured nothing <span style="color:var(--green)">· closed 17 Aug 2026</span></h3>
+      <h3 class="vi">B4 — thanh tiến trình không đo gì cả <span style="color:var(--green)">· đã đóng 17/08/2026</span></h3>
 
-      <p class="en">The strongest evidence against this app in a review is written in the app's own source, and the honesty is worth quoting rather than paraphrasing:</p>
-      <p class="vi">Bằng chứng mạnh nhất chống lại app này khi review nằm trong chính source của app, và sự trung thực đó đáng được trích nguyên văn thay vì diễn giải:</p>
+      <p class="en">The strongest evidence against this app in a review was written in the app's own source, and the honesty was worth quoting rather than paraphrasing:</p>
+      <p class="vi">Bằng chứng mạnh nhất chống lại app này khi review từng nằm trong chính source của app, và sự trung thực đó đáng được trích nguyên văn thay vì diễn giải:</p>
 
       <div class="code-wrap">
-        <div class="code-head"><span class="code-file">app/src/lib/sketch.ts</span><span class="code-lang">typescript</span></div>
+        <div class="code-head"><span class="code-file">app/src/lib/sketch.ts — as audited, 16 Aug</span><span class="code-lang">typescript</span></div>
 <pre><code class="language-typescript">// ── on the timings being fiction ──
 //
 // There is no agent yet. `SKETCH_STEPS` runs on a clock rather than on
 // work, and that is a stopgap with a real cost: a progress display that
 // is not measuring anything will eventually lie, because the work will
-// take longer or shorter than the fiction. The one thing it must not do
-// is *finish* on its own and hand back a plan that does not exist — see
-// `finishedAt`, which is where the screen stops rather than pretends.</code></pre>
+// take longer or shorter than the fiction.</code></pre>
       </div>
 
-      <p class="en">A reviewer opens the app, taps Ideas, watches a progress bar run and arrive nowhere. That is the textbook description of placeholder content and of a demo build. The <code>finishedAt</code> design — stopping rather than fabricating a plan — is the right engineering choice and does not rescue the guideline.</p>
-      <p class="vi">Reviewer mở app, bấm vào Ideas, nhìn một thanh tiến trình chạy rồi không dẫn tới đâu. Đó đúng là mô tả sách giáo khoa của placeholder content và của một bản demo. Thiết kế <code>finishedAt</code> — dừng lại thay vì bịa ra một kế hoạch — là lựa chọn kỹ thuật đúng, và nó không cứu được guideline này.</p>
+      <p class="en">A reviewer would open the app, tap Ideas, watch a progress bar run and arrive nowhere — the textbook description of placeholder content and of a demo build.</p>
+      <p class="vi">Reviewer sẽ mở app, bấm vào Ideas, nhìn một thanh tiến trình chạy rồi không dẫn tới đâu — đúng mô tả sách giáo khoa của placeholder content và của một bản demo.</p>
 
-      <p class="en">Two options, no third: <strong>finish the itinerary flow</strong> (the generator logic already exists in <code>data/scripts/itinerary-runtime.js</code>), or <strong>remove the tab from the submitted build</strong>. Keeping it and hoping is the expensive choice, because a rejection costs a review cycle.</p>
-      <p class="vi">Hai lựa chọn, không có lựa chọn thứ ba: <strong>hoàn thiện luồng itinerary</strong> (logic generator đã có sẵn ở <code>data/scripts/itinerary-runtime.js</code>), hoặc <strong>gỡ tab đó khỏi bản nộp</strong>. Giữ lại và hy vọng là lựa chọn đắt nhất, vì một lần bị từ chối tốn nguyên một chu kỳ review.</p>
+      <div class="callout done">
+        <span class="c-label en">Closed by phases 1–4</span><span class="c-label vi">Đã đóng bởi phase 1–4</span>
+        <p class="en">The same file now opens with <em>"There is one now — <code>planner.ts</code>"</em>. The bar reports real work: <code>planner.ts</code> picks places, honours opening hours through <code>openState()</code>, orders the route by <code>distanceKm()</code>, and returns three plans. The flow runs end to end — Ideas → three drafts → nudge times and order → save → the Trips tab → a trip's detail. The generator was ported out of <code>data/scripts/itinerary-runtime.js</code> into <code>app/src/lib/planner.ts</code> with tests.</p>
+        <p class="vi">Chính file đó giờ mở đầu bằng <em>"There is one now — <code>planner.ts</code>"</em>. Thanh tiến trình báo cáo công việc thật: <code>planner.ts</code> chọn chỗ, tôn trọng giờ mở cửa qua <code>openState()</code>, xếp lộ trình theo <code>distanceKm()</code>, và trả về ba phương án. Luồng chạy trọn vẹn — Ideas → ba bản phác → chỉnh giờ và thứ tự → lưu → tab Trips → màn chi tiết. Generator đã port khỏi <code>data/scripts/itinerary-runtime.js</code> vào <code>app/src/lib/planner.ts</code> kèm test.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="c-label en">What is left of it</span><span class="c-label vi">Còn sót lại gì</span>
+        <p class="en"><strong>Share</strong> and <strong>Invite</strong> on the plan editor are labelled mocks — pressing either says so. Labelling is the right call, but a reviewer can still read a button that announces it does nothing as an unfinished feature. Consider hiding both from the first submitted build; they lead nowhere and nothing is lost.</p>
+        <p class="vi">Hai nút <strong>Share</strong> và <strong>Invite</strong> ở màn sửa plan là mock có dán nhãn — bấm vào thì nói rõ chưa làm. Dán nhãn là đúng cách, nhưng reviewer vẫn có thể coi một cái nút tự khai là không làm gì như tính năng chưa hoàn thiện. Cân nhắc ẩn cả hai khỏi bản nộp đầu; chúng không dẫn tới đâu và không mất gì.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="c-label en">Added 17 Aug · behaviour tracking now exists</span><span class="c-label vi">Thêm 17/08 · giờ đã có theo dõi hành vi</span>
+        <p class="en"><code>place_events</code> records which places a reader opened, saved, unsaved, kept in a plan or dropped from one. The code does all four of the things this class of data is expected to do: opt-in <strong>off</strong> by default, the opt-in enforced <em>inside the Postgres insert policy</em> rather than promised by the client, owner-only reads, and a "Delete my history" button in Profile — whose delete policy deliberately does <em>not</em> consult the toggle, so switching recording off never traps what was already recorded.</p>
+        <p class="en">Doing it right does not excuse declaring it. Both the App Privacy label and the Data Safety form must list it, and the policy must say what it is for — reordering suggestions; not sold, not shared. <code>trips</code>, <code>preferences</code> and <code>place_events</code> are all owner-only, unlike <code>profiles</code>, and the policy should draw that distinction rather than blur it.</p>
+        <p class="vi"><code>place_events</code> ghi lại chỗ người đọc đã mở, lưu, bỏ lưu, giữ hoặc bỏ khỏi plan. Code làm đúng cả bốn điều loại dữ liệu này đòi hỏi: opt-in <strong>mặc định tắt</strong>, opt-in được cưỡng chế <em>trong chính policy insert của Postgres</em> chứ không phải lời hứa của client, chỉ chủ sở hữu đọc, và có nút "Xoá lịch sử của tôi" trong Profile — mà policy delete cố ý <em>không</em> hỏi công tắc, nên tắt ghi rồi vẫn xoá được cái đã ghi.</p>
+        <p class="vi">Làm đúng không miễn cho việc khai báo. Cả App Privacy label lẫn Data Safety form đều phải liệt kê nó, và policy phải nói nó dùng để làm gì — xếp lại thứ tự gợi ý; không bán, không chia sẻ. <code>trips</code>, <code>preferences</code> và <code>place_events</code> đều chỉ chủ sở hữu đọc được, khác hẳn <code>profiles</code>, và policy nên nói rõ sự khác nhau đó thay vì làm nhoè nó.</p>
+      </div>
 
       <h3 class="en">B5 — permission strings must match behaviour</h3>
       <h3 class="vi">B5 — chuỗi mô tả quyền phải khớp hành vi</h3>
@@ -833,8 +860,8 @@ Deno.serve(async (req) =&gt; {
       <h3 class="en">C1 — Google Places data is cached forever</h3>
       <h3 class="vi">C1 — dữ liệu Google Places bị cache vĩnh viễn</h3>
 
-      <p class="en"><code>import-place.ts</code> writes a wide slice of Google's response into Postgres permanently: <code>rating</code>, <code>rating_count</code>, <code>price_level</code>, <code>opening_hours</code>, <code>website</code>, <code>phone</code>, and the editorial summary. There is no refresh job and no expiry column anywhere in the 23 migrations.</p>
-      <p class="vi"><code>import-place.ts</code> ghi vĩnh viễn một lát cắt rộng từ response của Google vào Postgres: <code>rating</code>, <code>rating_count</code>, <code>price_level</code>, <code>opening_hours</code>, <code>website</code>, <code>phone</code>, và tóm tắt biên tập. Không có job làm mới và không có cột hết hạn nào trong cả 23 migration.</p>
+      <p class="en"><code>import-place.ts</code> writes a wide slice of Google's response into Postgres permanently: <code>rating</code>, <code>rating_count</code>, <code>price_level</code>, <code>opening_hours</code>, <code>website</code>, <code>phone</code>, and the editorial summary. There is no refresh job and no expiry column anywhere in the 25 migrations.</p>
+      <p class="vi"><code>import-place.ts</code> ghi vĩnh viễn một lát cắt rộng từ response của Google vào Postgres: <code>rating</code>, <code>rating_count</code>, <code>price_level</code>, <code>opening_hours</code>, <code>website</code>, <code>phone</code>, và tóm tắt biên tập. Không có job làm mới và không có cột hết hạn nào trong cả 25 migration.</p>
 
       <div class="callout warn">
         <span class="c-label en">Two problems, one fix</span><span class="c-label vi">Hai vấn đề, một cách sửa</span>
@@ -911,10 +938,11 @@ Deno.serve(async (req) =&gt; {
           <tr><td class="id">D4</td><td><span class="en">One Supabase environment</span><span class="vi">Một môi trường Supabase duy nhất</span></td><td><span class="en">Migrations are applied to production by hand through the SQL editor, per <code>docs/mobile-setup.md</code>. There is no staging to be wrong in.</span><span class="vi">Migration apply thẳng vào production bằng tay qua SQL editor, theo <code>docs/mobile-setup.md</code>. Không có staging để sai ở đó.</span></td></tr>
           <tr><td class="id">D5</td><td><span class="en">No migration / function deploy in CI</span><span class="vi">Không deploy migration / function trong CI</span></td><td><span class="en">CI <em>tests</em> migrations but never <em>runs</em> them anywhere. The manual step is where the incident will come from.</span><span class="vi">CI <em>test</em> migration nhưng không <em>chạy</em> chúng ở đâu cả. Bước thủ công là nơi sự cố sẽ đến.</span></td></tr>
           <tr><td class="id">D6</td><td><span class="en">Supabase free tier</span><span class="vi">Supabase gói free</span></td><td><span class="en">A free project <strong>pauses itself after a week of inactivity</strong>. Mid-pilot that reads as "the app is dead". Pro also brings point-in-time recovery.</span><span class="vi">Project free <strong>tự pause sau một tuần không hoạt động</strong>. Giữa pilot điều đó có nghĩa là "app chết". Gói Pro còn kèm point-in-time recovery.</span></td></tr>
+          <tr><td class="id">D7b</td><td><span class="en"><code>place_events</code> is never trimmed</span><span class="vi"><code>place_events</code> không có gì trim</span></td><td><span class="en">Added 17 Aug, and the migration says it itself: the taste profile reads only the last 90 days, so older rows are dead weight and a growing liability. The only bound today is the reader's own delete button and the account cascade. <code>pg_cron</code> is available on the project and not installed.</span><span class="vi">Thêm 17/08, và chính migration đã ghi ra: taste profile chỉ đọc 90 ngày gần nhất, nên dòng cũ hơn là nợ và là rủi ro. Chặn duy nhất hiện có là nút xoá của người dùng và cascade khi xoá tài khoản. <code>pg_cron</code> có sẵn trên project, chưa cài.</span></td></tr>
           <tr><td class="id">D7</td><td><span class="en">No abuse quotas</span><span class="vi">Không có quota chống lạm dụng</span></td><td><span class="en">RLS controls <strong>who</strong>, never <strong>how many</strong>. One account can create unlimited collections, re-upload an avatar endlessly, spam submissions.</span><span class="vi">RLS kiểm soát <strong>ai</strong>, không kiểm soát <strong>bao nhiêu</strong>. Một tài khoản tạo được vô hạn collection, upload lại avatar không giới hạn, spam đề xuất.</span></td></tr>
           <tr><td class="id">D8</td><td><span class="en">No Google API budget alarm</span><span class="vi">Không có cảnh báo ngân sách Google API</span></td><td><span class="en"><code>scan-city</code> caps calls per invocation at 45 but nothing caps invocations. A compromised editor account is a billing incident.</span><span class="vi"><code>scan-city</code> giới hạn 45 lời gọi mỗi lần chạy nhưng không giới hạn số lần chạy. Một tài khoản editor bị chiếm là một sự cố hoá đơn.</span></td></tr>
           <tr><td class="id">D9</td><td><span class="en">No offline handling or cache</span><span class="vi">Không xử lý offline, không cache</span></td><td><span class="en">Each screen hits the network directly. <code>auth.tsx</code> has named timeouts (good, and rare) but there is no retry, no data cache, no offline state.</span><span class="vi">Mỗi màn hình gọi mạng trực tiếp. <code>auth.tsx</code> có timeout đặt tên (tốt, và hiếm) nhưng không có retry, không cache dữ liệu, không trạng thái offline.</span></td></tr>
-          <tr><td class="id">D10</td><td><span class="en">No E2E tests, no device matrix</span><span class="vi">Không có E2E test, chưa test dải thiết bị</span></td><td><span class="en">All 18 test files cover pure functions. No test has ever rendered a screen.</span><span class="vi">Cả 18 file test đều phủ hàm thuần. Chưa test nào từng render một màn hình.</span></td></tr>
+          <tr><td class="id">D10</td><td><span class="en">No E2E tests, no device matrix</span><span class="vi">Không có E2E test, chưa test dải thiết bị</span></td><td><span class="en">All 29 test files cover pure functions. No test has ever rendered a screen.</span><span class="vi">Cả 29 file test đều phủ hàm thuần. Chưa test nào từng render một màn hình.</span></td></tr>
           <tr><td class="id">D11</td><td><span class="en">Accessibility unassessed</span><span class="vi">Chưa đánh giá accessibility</span></td><td><span class="en">Dynamic Type, VoiceOver labels, contrast. Apple checks lightly; pilot users do not.</span><span class="vi">Dynamic Type, nhãn VoiceOver, độ tương phản. Apple kiểm nhẹ; người dùng pilot thì không.</span></td></tr>
         </tbody>
       </table></div>
@@ -940,7 +968,7 @@ flowchart LR
     subgraph T1["Track 1 · Engineering — sequential"]
       direction LR
       P1["Phase 1 · ~1 week<br/>Group A + Sentry + ErrorBoundary<br/>→ installable preview build"]:::agent
-      P2["Phase 2 · ~2 weeks<br/>delete-account · privacy policy<br/>Ideas decision · publish decision<br/>→ submittable binary"]:::agent
+      P2["Phase 2 · ~2 weeks<br/>delete-account · privacy policy<br/>publish decision · hide mocks<br/>→ submittable binary"]:::agent
       P3["Phase 3 · ~2-3 weeks<br/>analytics · quotas · caches<br/>staging + CI deploy"]:::agent
       P1 --> P2 --> P3
     end
@@ -1010,8 +1038,8 @@ flowchart LR
         <li class="vi">Closed testing trên Play đang chạy — khởi động ngay khi có binary</li>
         <li class="en">TestFlight external (up to 10,000 testers, light beta review)</li>
         <li class="vi">TestFlight external (tới 10.000 tester, beta review nhẹ)</li>
-        <li class="en">D3 analytics · D7 abuse quotas · D8 Google budget alarm</li>
-        <li class="vi">D3 analytics · D7 quota chống lạm dụng · D8 cảnh báo ngân sách Google</li>
+        <li class="en">D3 analytics · D7 abuse quotas · D7b trim <code>place_events</code> · D8 Google budget alarm</li>
+        <li class="vi">D3 analytics · D7 quota chống lạm dụng · D7b trim <code>place_events</code> · D8 cảnh báo ngân sách Google</li>
         <li class="en">C1 Google refresh job · C2 <code>find-address</code> cache</li>
         <li class="vi">C1 job làm mới Google · C2 cache <code>find-address</code></li>
         <li class="en">D4/D5 staging project and automated <code>supabase db push</code> + function deploy</li>
