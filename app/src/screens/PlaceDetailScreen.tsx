@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { fmtCount, photosOf, Place, usePlaceBySlug } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
-import { dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
+import { clockOf, dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
@@ -102,7 +102,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     : null;
   // Grouped, not one row per day: see groupHours. A place open the same
   // seven days a week becomes one line instead of seven identical ones.
-  const hours = groupHours(place.opening_hours ?? []);
+  const hours = groupHours(place.opening_hours ?? [], lang);
   // Read at render rather than on a timer. The screen re-renders on every
   // visit, which is when the answer is being asked for; a ticking clock
   // would only matter to someone parked on this screen at closing time,
@@ -250,18 +250,18 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                       concatenating a translated "until" in front of it
                       reads backwards. */}
                   {openNow.open
-                    ? openNow.until
+                    ? openNow.untilMin != null
                       ? t(
-                        `Open now · until ${openNow.until}`,
-                        `Đang mở cửa · đến ${openNow.until}`,
-                        `営業中 · ${openNow.until}まで`,
+                        `Open now · until ${clockOf(openNow.untilMin)}`,
+                        `Đang mở cửa · đến ${clockOf(openNow.untilMin)}`,
+                        `営業中 · ${clockOf(openNow.untilMin)}まで`,
                       )
                       : t('Open now · 24 hours', 'Đang mở cửa · 24 giờ', '営業中 · 24時間')
-                    : openNow.opensAt
+                    : openNow.opensAtMin != null
                       ? t(
-                        `Closed · opens ${openNow.opensAt}`,
-                        `Đã đóng cửa · mở lúc ${openNow.opensAt}`,
-                        `閉店中 · ${openNow.opensAt}開店`,
+                        `Closed · opens ${clockOf(openNow.opensAtMin)}`,
+                        `Đã đóng cửa · mở lúc ${clockOf(openNow.opensAtMin)}`,
+                        `閉店中 · ${clockOf(openNow.opensAtMin)}開店`,
                       )
                       : t('Closed today', 'Hôm nay đóng cửa', '本日休業')}
                 </Text>

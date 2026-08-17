@@ -17,7 +17,7 @@
 
 import { supabase } from './supabase';
 import { clampDay } from './day';
-import { openState } from './format';
+import { clockOf, openState } from './format';
 import { COMPANY, type Company } from './trip';
 
 /** What the screen has to hand about a stop, in the shape both halves of
@@ -44,12 +44,6 @@ export type Narration = {
   /** True when a model actually wrote this. Drives `generated_by` on the
    *  saved trip, so a reader can tell where the prose came from. */
   fromModel: boolean;
-};
-
-const clock = (minutes: number) => {
-  const h = Math.floor(minutes / 60) % 24;
-  const m = Math.round(minutes) % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
 /**
@@ -102,10 +96,12 @@ export function factLine(
   const state = openState(stop.openingHours, now);
   // `null` from `openState` means the hours are unknown, which is not the
   // same as closed and must not be printed as either.
-  if (state?.open && state.until) {
-    bits.push(t(`open until ${state.until}`, `mở tới ${state.until}`, `${state.until}まで営業`));
-  } else if (state && !state.open && state.opensAt) {
-    bits.push(t(`opens ${state.opensAt}`, `mở lúc ${state.opensAt}`, `${state.opensAt}開店`));
+  if (state?.open && state.untilMin != null) {
+    const at = clockOf(state.untilMin);
+    bits.push(t(`open until ${at}`, `mở tới ${at}`, `${at}まで営業`));
+  } else if (state && !state.open && state.opensAtMin != null) {
+    const at = clockOf(state.opensAtMin);
+    bits.push(t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`));
   }
   return bits.join('  ·  ');
 }
@@ -155,7 +151,7 @@ export async function narrate(
           categories: s.categories ?? [],
           neighborhood: s.neighborhood ?? null,
           rating: s.rating ?? null,
-          arrive: clock(s.arriveMin),
+          arrive: clockOf(s.arriveMin),
         })),
       },
     });

@@ -61,7 +61,7 @@ describe('factLine', () => {
       stop({ slug: 'a', rating: 4.6, km: 2.14, openingHours: week('8:00 AM – 11:00 PM') }),
       WED_10AM, t,
     );
-    expect(line).toBe('4.6★  ·  2.1 km  ·  open until 11:00 PM');
+    expect(line).toBe('4.6★  ·  2.1 km  ·  open until 23:00');
   });
 
   it('says metres for anything under a kilometre', () => {
@@ -70,7 +70,7 @@ describe('factLine', () => {
 
   it('says when a closed place opens', () => {
     expect(factLine(stop({ slug: 'a', openingHours: week('5:00 PM – 10:00 PM') }), WED_10AM, t))
-      .toBe('opens 5:00 PM');
+      .toBe('opens 17:00');
   });
 
   // Unknown hours are not closed hours. A place that posts none — a public

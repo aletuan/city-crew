@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dateline, dotWindow, fmtDuration, groupHours, instantOn, openState, splitHours } from './format';
+import { clockOf, dateline, dotWindow, fmtDuration, groupHours, instantOn, openState, splitHours } from './format';
 
 describe('fmtDuration', () => {
   it('stays in minutes up to an hour', () => {
@@ -146,6 +146,57 @@ describe('groupHours', () => {
   it('has nothing to say about nothing', () => {
     expect(groupHours([])).toEqual([]);
   });
+
+  // The rows used to be Google's own string handed straight back — English
+  // and twelve-hour, under a Vietnamese heading, beside a plan the app had
+  // printed as "09:00".
+  it('prints the hours on the app\'s clock, not Google\'s', () => {
+    expect(groupHours(week(...Array(7).fill('8:00 AM – 11:00 PM'))))
+      .toEqual([{ label: 'Mon–Sun', hours: '08:00–23:00' }]);
+  });
+
+  it('keeps a lunch break as two windows', () => {
+    expect(groupHours(['Monday: 10:00 AM – 1:50 PM, 4:00 – 8:50 PM'])[0].hours)
+      .toBe('10:00–13:50, 16:00–20:50');
+  });
+
+  // Past midnight the closing hour wraps, which is what a wall clock does
+  // and what the plan screens already print.
+  it('wraps a window that runs into the next day', () => {
+    expect(groupHours(['Monday: 7:00 PM – 1:00 AM'])[0].hours).toBe('19:00–01:00');
+  });
+
+  it('says closed and all-day in words rather than in hours', () => {
+    expect(groupHours(['Monday: Closed'])[0].hours).toBe('Closed');
+    expect(groupHours(['Monday: Closed'], 'vi')[0].hours).toBe('Đóng cửa');
+    expect(groupHours(['Monday: Closed'], 'ja')[0].hours).toBe('休業');
+    expect(groupHours(['Monday: Open 24 hours'], 'vi')[0].hours).toBe('Mở cả ngày');
+    expect(groupHours(['Monday: Open 24 hours'], 'ja')[0].hours).toBe('24時間営業');
+    // A place whose own hours run the full day is the same answer.
+    expect(groupHours(['Monday: 12:00 AM – 12:00 AM'])[0].hours).toBe('Open 24 hours');
+  });
+
+  it('names the day in the reader\'s language', () => {
+    expect(groupHours(week(...Array(7).fill('Closed')), 'vi'))
+      .toEqual([{ label: 'T2–CN', hours: 'Đóng cửa' }]);
+    expect(groupHours(week(...Array(7).fill('Closed')), 'ja')[0].label).toBe('月–日');
+    expect(groupHours(['Monday: Closed', 'Tuesday: Open 24 hours'], 'vi').map((r) => r.label))
+      .toEqual(['T2', 'T3']);
+  });
+
+  // Google writes the same afternoon two ways, dropping the meridiem on
+  // the opening time when it matches the closing one. Grouping on the raw
+  // text would split them into two rows saying the same thing.
+  it('merges two days Google wrote differently but meant the same', () => {
+    const rows = groupHours(['Monday: 5:00 – 10:00 PM', 'Tuesday: 5:00 PM – 10:00 PM']);
+    expect(rows).toEqual([{ label: 'Mon–Tue', hours: '17:00–22:00' }]);
+  });
+
+  // A shape the parser has never seen keeps Google's words. Awkward beats
+  // blank, and beats a guess.
+  it('falls back to the raw line for a shape it cannot read', () => {
+    expect(groupHours(['Monday: Opening hours vary'], 'vi')[0].hours).toBe('Opening hours vary');
+  });
 });
 
 describe('openState', () => {
@@ -188,7 +239,7 @@ describe('openState', () => {
   it('still answers from today when yesterday does not parse', () => {
     const mixed = week('5:00 PM – 10:00 PM');
     mixed[1] = 'Tuesday: ';
-    expect(openState(mixed, WED_10AM)).toEqual({ open: false, opensAt: '5:00 PM' });
+    expect(openState(mixed, WED_10AM)).toEqual({ open: false, opensAtMin: 17 * 60 });
   });
 
   // Round the clock from yesterday: open, with no closing time worth
@@ -203,11 +254,11 @@ describe('openState', () => {
   });
 
   it('is open inside the window, and names the closing time', () => {
-    expect(openState(week('8:00 AM – 11:00 PM'), WED_10AM)).toEqual({ open: true, until: '11:00 PM' });
+    expect(openState(week('8:00 AM – 11:00 PM'), WED_10AM)).toEqual({ open: true, untilMin: 23 * 60 });
   });
 
   it('is closed before opening, and names the opening time', () => {
-    expect(openState(week('5:00 PM – 10:00 PM'), WED_10AM)).toEqual({ open: false, opensAt: '5:00 PM' });
+    expect(openState(week('5:00 PM – 10:00 PM'), WED_10AM)).toEqual({ open: false, opensAtMin: 17 * 60 });
   });
 
   it('is closed after the last window, with nothing left to promise today', () => {
@@ -220,7 +271,7 @@ describe('openState', () => {
     // 10:00 ICT exactly: inside a window that starts then, outside one
     // that ends then.
     expect(openState(week('10:00 AM – 11:00 PM'), at('2026-08-12T03:00:00Z')))
-      .toEqual({ open: true, until: '11:00 PM' });
+      .toEqual({ open: true, untilMin: 23 * 60 });
     expect(openState(week('6:00 AM – 10:00 AM'), at('2026-08-12T03:00:00Z')))
       .toEqual({ open: false });
   });
@@ -231,23 +282,23 @@ describe('openState', () => {
       'Wednesday: 9:00 AM – 6:00 PM', 'Thursday: Closed',
       'Friday: Closed', 'Saturday: Closed', 'Sunday: Closed',
     ];
-    expect(openState(lines, WED_10AM)).toEqual({ open: true, until: '6:00 PM' });
+    expect(openState(lines, WED_10AM)).toEqual({ open: true, untilMin: 18 * 60 });
   });
 
   it('stays open past midnight on the window that started yesterday', () => {
     expect(openState(week('7:00 PM – 1:00 AM'), WED_MIDNIGHT_30))
-      .toEqual({ open: true, until: '1:00 AM' });
+      .toEqual({ open: true, untilMin: 25 * 60 });
   });
 
   // Same clock, but nothing ran into today — the small hours are shut.
   it('is closed after midnight when yesterday did not run over', () => {
     expect(openState(week('8:00 AM – 11:00 PM'), WED_MIDNIGHT_30))
-      .toEqual({ open: false, opensAt: '8:00 AM' });
+      .toEqual({ open: false, opensAtMin: 8 * 60 });
   });
 
   it('treats a midnight close as the end of the day, not the start', () => {
     expect(openState(week('8:00 AM – 12:00 AM'), at('2026-08-12T15:00:00Z')))
-      .toEqual({ open: true, until: '12:00 AM' });
+      .toEqual({ open: true, untilMin: 24 * 60 });
   });
 
   it('is open around the clock without inventing a closing time', () => {
@@ -262,25 +313,25 @@ describe('openState', () => {
   // Google drops the meridiem on the opening time when it matches the
   // closing one, so "4:00 – 8:50 PM" is an afternoon, not a dawn.
   it('borrows the missing meridiem from the closing time', () => {
-    expect(openState(week('5:00 – 10:00 PM'), WED_10AM)).toEqual({ open: false, opensAt: '5:00' });
+    expect(openState(week('5:00 – 10:00 PM'), WED_10AM)).toEqual({ open: false, opensAtMin: 17 * 60 });
     expect(openState(week('5:00 – 10:00 PM'), at('2026-08-12T11:00:00Z')))
-      .toEqual({ open: true, until: '10:00 PM' });
+      .toEqual({ open: true, untilMin: 22 * 60 });
   });
 
   it('handles a lunch break as two windows', () => {
     const hours = week('10:00 AM – 1:50 PM, 4:00 – 8:50 PM');
-    expect(openState(hours, WED_10AM)).toEqual({ open: true, until: '1:50 PM' });
+    expect(openState(hours, WED_10AM)).toEqual({ open: true, untilMin: 13 * 60 + 50 });
     // 15:00 ICT — after the first window, before the second.
-    expect(openState(hours, at('2026-08-12T08:00:00Z'))).toEqual({ open: false, opensAt: '4:00' });
+    expect(openState(hours, at('2026-08-12T08:00:00Z'))).toEqual({ open: false, opensAtMin: 16 * 60 });
     // 17:00 ICT — inside the second.
-    expect(openState(hours, at('2026-08-12T10:00:00Z'))).toEqual({ open: true, until: '8:50 PM' });
+    expect(openState(hours, at('2026-08-12T10:00:00Z'))).toEqual({ open: true, untilMin: 20 * 60 + 50 });
   });
 
   it('noon and midnight do not collapse into each other', () => {
     // Both read "12:00"; only the meridiem separates midday from the top
     // of the morning. At 13:00 ICT one is open and the other shut hours ago.
     expect(openState(week('12:00 PM – 5:00 PM'), at('2026-08-12T06:00:00Z')))
-      .toEqual({ open: true, until: '5:00 PM' });
+      .toEqual({ open: true, untilMin: 17 * 60 });
     expect(openState(week('12:00 AM – 6:00 AM'), at('2026-08-12T06:00:00Z')))
       .toEqual({ open: false });
   });
@@ -291,7 +342,7 @@ describe('openState', () => {
     // 20:00Z is 03:00 the next morning in Saigon — shut, whatever the
     // device thinks the hour is.
     expect(openState(week('8:00 AM – 11:00 PM'), at('2026-08-12T20:00:00Z')))
-      .toEqual({ open: false, opensAt: '8:00 AM' });
+      .toEqual({ open: false, opensAtMin: 8 * 60 });
   });
 
   it('declines to guess at a shape it does not know', () => {
@@ -363,5 +414,51 @@ describe('instantOn', () => {
   it('refuses a day the calendar does not have', () => {
     expect(instantOn('2026-02-30', 540)).toBeNull();
     expect(instantOn('2026-13-01', 540)).toBeNull();
+  });
+});
+
+// One formatter, because there were six — five identical copies plus a
+// sixth that had quietly drifted — and because next to them the opening
+// hours went out in Google's own "9:00 PM", so a Vietnamese card carried
+// `10:24` and `mở tới 9:00 PM` two lines apart.
+describe('clockOf', () => {
+  it('prints a wall clock, zero-padded, twenty-four hour', () => {
+    expect(clockOf(0)).toBe('00:00');
+    expect(clockOf(9 * 60)).toBe('09:00');
+    expect(clockOf(13 * 60 + 5)).toBe('13:05');
+    expect(clockOf(23 * 60 + 59)).toBe('23:59');
+  });
+
+  // The bug the six copies all carried: `Math.round(m) % 60` rounds the
+  // minute without telling the hour, so a minute rounding up to 60 rolled
+  // back to :00 of the hour it started in.
+  it('rounds the instant rather than the minute', () => {
+    expect(clockOf(119.6)).toBe('02:00');
+    expect(clockOf(59.5)).toBe('01:00');
+    expect(clockOf(90.4)).toBe('01:30');
+  });
+
+  // A window that began yesterday runs past 1440 by design — `openState`
+  // returns 25 * 60 for a bar that shuts at one in the morning.
+  it('wraps past midnight the way a wall clock does', () => {
+    expect(clockOf(24 * 60)).toBe('00:00');
+    expect(clockOf(25 * 60)).toBe('01:00');
+    expect(clockOf(24 * 60 + 30)).toBe('00:30');
+  });
+
+  it('does not fall off the bottom either', () => {
+    expect(clockOf(-30)).toBe('23:30');
+  });
+
+  // The whole reason `openState` stopped handing back Google's strings.
+  // "5:00 – 10:00 PM" borrows its meridiem from the closing time, and the
+  // raw opening string carries none — so the app used to print a bare
+  // "5:00" and leave the reader to guess which one.
+  it('gives an hour a meridiem could not', () => {
+    const lines = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+      .map((d) => `${d}: 5:00 – 10:00 PM`);
+    // Wednesday 10:00 ICT.
+    const state = openState(lines, new Date('2026-08-12T03:00:00Z'));
+    expect(state?.opensAtMin != null && clockOf(state.opensAtMin)).toBe('17:00');
   });
 });

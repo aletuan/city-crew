@@ -50,19 +50,13 @@ import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO, minutesOf, toISO } from '../lib/day';
 import { useMyTrips, type Trip, type TripStopRow } from '../lib/data';
-import { dateline } from '../lib/format';
+import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY } from '../lib/trip';
 import { spendVnd, splitTrips } from '../lib/trips';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
-
-const clock = (minutes: number) => {
-  const h = Math.floor(minutes / 60) % 24;
-  const m = Math.round(minutes) % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-};
 
 const money = (vnd: number) => (vnd >= 1_000_000
   ? `${Math.round(vnd / 100_000) / 10}M ₫`
@@ -138,7 +132,7 @@ function TripCard({ trip, cityName, past, onPress }: {
         <Text style={s.meta} numberOfLines={1}>
           {summaryLine([
             day ? dateline(lang, day) : trip.day,
-            start != null ? t(`from ${clock(start)}`, `từ ${clock(start)}`, `${clock(start)}から`) : null,
+            start != null ? t(`from ${clockOf(start)}`, `từ ${clockOf(start)}`, `${clockOf(start)}から`) : null,
             cityName,
           ])}
         </Text>
@@ -148,7 +142,7 @@ function TripCard({ trip, cityName, past, onPress }: {
         {shown.map((stop, i) => (
           <View key={`${trip.id}-${i}`} style={s.stopRow}>
             <Text style={s.stopTime}>
-              {stop.arrive_min != null ? clock(stop.arrive_min) : '—'}
+              {stop.arrive_min != null ? clockOf(stop.arrive_min) : '—'}
             </Text>
             {/* The rail is drawn by the stop it leaves, so the last one has
                 none — a line running off the bottom of a list claims a stop

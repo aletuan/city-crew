@@ -37,6 +37,41 @@ export function fmtDuration(min: number | null, max: number | null, lang: string
   return lang === 'vi' ? `${range} giờ` : lang === 'ja' ? `${range}時間` : `${range}h`;
 }
 
+/**
+ * Minutes past midnight as a wall clock — "09:00", "21:30".
+ *
+ * The one place in the app that decides what a time of day looks like.
+ * There were six copies of this before, one per screen plus `assist.ts`,
+ * five of them identical and the sixth quietly different; and beside them
+ * the opening hours went out in Google's own "9:00 PM", so a Vietnamese
+ * card could carry `10:24` and `mở tới 9:00 PM` two lines apart.
+ *
+ * **Twenty-four hour, in every language.** Not a preference: Vietnamese
+ * writes a scheduled hour as 21:00 and Japanese does the same, so AM/PM
+ * was only ever right for one of the three, and every time this app
+ * computes itself was already 24-hour. It also costs nothing to read
+ * wrongly — a plan is a schedule, and this app has already shipped one bug
+ * that planned an evening for 09:00, which a 12-hour display would have
+ * hidden rather than exposed.
+ *
+ * Rounds the *instant*, not the minute. `Math.round(m) % 60` was the old
+ * form and it rolls backwards across an hour: 119.6 minutes came out as
+ * "01:00" rather than "02:00", because the minute rounded up to 60 and the
+ * hour never heard about it. No caller passes a fraction today — dwells
+ * land on quarter hours and legs are rounded — so this was latent in all
+ * six copies rather than live in one.
+ *
+ * Wraps past midnight, because a wall clock does: a plan running from
+ * 22:00 to 00:30 is a late night, not an error, and the alternative
+ * ("24:30") is a Japanese broadcast convention that reads as broken
+ * everywhere else. The range it sits in supplies the direction.
+ */
+export function clockOf(minutes: number): string {
+  const at = ((Math.round(minutes) % DAY) + DAY) % DAY;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(Math.floor(at / 60))}:${p(at % 60)}`;
+}
+
 /** "Monday: 8:00 AM – 11:00 PM" → ["Monday", "8:00 AM – 11:00 PM"] */
 export function splitHours(line: string): [string, string] {
   const i = line.indexOf(': ');
@@ -52,37 +87,80 @@ export function dotWindow(count: number, active: number, max = 7): number[] {
 }
 
 /**
- * Google's weekday strings, in short form.
+ * Google's weekday strings, in short form, per language.
  *
- * A map rather than `slice(0, 3)`: the day names are whatever language the
- * Places API replied in, and three characters of "Thứ Năm" is "Thứ" for
- * every day of the week. Today we never ask for another language, so this
- * table always hits — and on the day we do, an unknown name keeps its full
- * spelling instead of collapsing into its neighbours.
+ * A map rather than `slice(0, 3)`: the day names arrive in whatever
+ * language the Places API replied in, and three characters of "Thứ Năm" is
+ * "Thứ" for every day of the week. The import never asks for another
+ * language, so the English keys always hit — and on the day that changes,
+ * an unknown name keeps its full spelling instead of collapsing into its
+ * neighbours.
+ *
+ * Keyed by Google's English name and answering in the reader's language,
+ * because those are two different questions. The table used to answer only
+ * the first, so a Vietnamese reader was told their café opens "Mon–Fri".
  */
-const SHORT_DAY: Record<string, string> = {
-  Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu',
-  Friday: 'Fri', Saturday: 'Sat', Sunday: 'Sun',
+const SHORT_DAY: Record<string, { en: string; vi: string; ja: string }> = {
+  Monday: { en: 'Mon', vi: 'T2', ja: '月' },
+  Tuesday: { en: 'Tue', vi: 'T3', ja: '火' },
+  Wednesday: { en: 'Wed', vi: 'T4', ja: '水' },
+  Thursday: { en: 'Thu', vi: 'T5', ja: '木' },
+  Friday: { en: 'Fri', vi: 'T6', ja: '金' },
+  Saturday: { en: 'Sat', vi: 'T7', ja: '土' },
+  Sunday: { en: 'Sun', vi: 'CN', ja: '日' },
 };
+
+const pick = (v: { en: string; vi: string; ja: string }, lang: string) =>
+  (lang === 'vi' ? v.vi : lang === 'ja' ? v.ja : v.en);
+
+const CLOSED = { en: 'Closed', vi: 'Đóng cửa', ja: '休業' };
+const ALL_DAY = { en: 'Open 24 hours', vi: 'Mở cả ngày', ja: '24時間営業' };
+
+/**
+ * One day's hours, printed on the app's own clock.
+ *
+ * The rows used to be Google's string handed straight back — "8:00 AM –
+ * 11:00 PM", in English, under a Vietnamese heading, beside a plan the app
+ * had printed as "09:00". Rebuilt from the parse instead, so the whole
+ * screen keeps one clock; see `clockOf` for why that clock is 24-hour.
+ *
+ * A shape the parser does not know falls back to Google's own text. That
+ * is the same trade `openState` makes: the raw line is at worst awkward,
+ * where a blank row or an invented guess is worse than awkward.
+ */
+function hoursText(raw: string, lang: string): string {
+  const windows = parseDay(raw);
+  if (windows === null) return raw;
+  if (!windows.length) return pick(CLOSED, lang);
+  if (windows.length === 1 && windows[0].to - windows[0].from >= DAY) return pick(ALL_DAY, lang);
+  return windows.map((w) => `${clockOf(w.from)}–${clockOf(w.to)}`).join(', ');
+}
 
 export type HourRow = { label: string; hours: string };
 
 /**
  * Collapse runs of days that keep the same hours.
  *
- * Seven rows saying "7:30 AM – 3:00 PM" seven times is a wall of
- * repetition that hides the one line a reader is looking for — the day
- * that differs. Grouped, the exception is the only thing with its own row.
+ * Seven rows saying "07:30–15:00" seven times is a wall of repetition that
+ * hides the one line a reader is looking for — the day that differs.
+ * Grouped, the exception is the only thing with its own row.
  *
  * Only *consecutive* days merge. Monday and Wednesday sharing hours while
  * Tuesday differs is three groups, not two: a label reading "Mon, Wed"
  * would be true, and a reader scanning for today would have to parse it.
+ *
+ * Days are compared on their *printed* hours rather than on Google's raw
+ * text, which is a distinction with a case behind it: "5:00 – 10:00 PM"
+ * and "5:00 PM – 10:00 PM" are the same afternoon written two ways, and
+ * grouping on the raw strings would split them into two rows saying the
+ * same thing.
  */
-export function groupHours(lines: string[]): HourRow[] {
+export function groupHours(lines: string[], lang = 'en'): HourRow[] {
   const rows: HourRow[] = [];
   for (const line of lines) {
-    const [day, hours] = splitHours(line);
-    const short = SHORT_DAY[day] ?? day;
+    const [day, raw] = splitHours(line);
+    const short = SHORT_DAY[day] ? pick(SHORT_DAY[day], lang) : day;
+    const hours = hoursText(raw, lang);
     const last = rows[rows.length - 1];
     // Runs are tracked by rewriting the last label rather than by keeping
     // a start/end pair, so a group of two reads "Mon–Tue" and a group of
@@ -113,9 +191,17 @@ export function groupHours(lines: string[]): HourRow[] {
 const ICT_OFFSET_MIN = 7 * 60;
 const DAY = 24 * 60;
 
-/** A single opening window, in minutes from the day's midnight. `to` runs
- *  past 1440 when the window crosses into the next day. */
-type Window = { from: number; to: number; opens: string; closes: string };
+/**
+ * A single opening window, in minutes from the day's midnight. `to` runs
+ * past 1440 when the window crosses into the next day.
+ *
+ * Minutes only. Google's own strings used to ride along so a screen could
+ * print them back — which is how "9:00 PM" ended up under a Vietnamese
+ * card. The parse below already resolves both ends to minutes; printing
+ * from those and not from the raw text is what makes one formatter
+ * possible.
+ */
+type Window = { from: number; to: number };
 
 /**
  * "8:00 AM" → 480. A missing meridiem returns null for it: Google drops
@@ -137,7 +223,7 @@ function parseDay(hours: string): Window[] | null {
   const text = hours.trim();
   if (!text) return null;
   if (/^closed$/i.test(text)) return [];
-  if (/^open 24 hours$/i.test(text)) return [{ from: 0, to: DAY, opens: '', closes: '' }];
+  if (/^open 24 hours$/i.test(text)) return [{ from: 0, to: DAY }];
 
   const out: Window[] = [];
   for (const part of text.split(',')) {
@@ -154,7 +240,7 @@ function parseDay(hours: string): Window[] | null {
     // Closing at or before opening means the window runs past midnight —
     // a 7 PM bar closing at 1 AM, or one closing at 12 AM exactly.
     if (to <= from) to += DAY;
-    out.push({ from, to, opens: rawFrom, closes: rawTo });
+    out.push({ from, to });
   }
   return out;
 }
@@ -195,7 +281,12 @@ export function instantOn(day: string, minutes: number): Date | null {
   return new Date(midnight.getTime() + minutes * 60_000);
 }
 
-export type OpenState = { open: boolean; until?: string; opensAt?: string };
+/**
+ * Whether a place is open, and the hour that changes it — in minutes past
+ * midnight, for `clockOf` to print. `untilMin` runs past 1440 for a bar
+ * that closes at one in the morning, which `clockOf` wraps.
+ */
+export type OpenState = { open: boolean; untilMin?: number; opensAtMin?: number };
 
 /**
  * `null` when the question cannot be answered — no hours stored, or a
@@ -225,7 +316,7 @@ export function openState(lines: string[] | null | undefined, now: Date): OpenSt
   for (const w of wins) {
     if (mins >= w.from && mins < w.to) {
       // A place open around the clock has no closing time worth naming.
-      return w.to - w.from >= DAY ? { open: true } : { open: true, until: w.closes };
+      return w.to - w.from >= DAY ? { open: true } : { open: true, untilMin: w.to };
     }
   }
 
@@ -234,11 +325,11 @@ export function openState(lines: string[] | null | undefined, now: Date): OpenSt
   const before = dayAt(today - 1);
   for (const w of before ?? []) {
     if (w.to > DAY && mins + DAY < w.to) {
-      return w.to - w.from >= DAY ? { open: true } : { open: true, until: w.closes };
+      return w.to - w.from >= DAY ? { open: true } : { open: true, untilMin: w.to };
     }
   }
 
   // Closed, but say when that changes if it changes today.
   const next = wins.filter((w) => w.from > mins).sort((a, b) => a.from - b.from)[0];
-  return next ? { open: false, opensAt: next.opens } : { open: false };
+  return next ? { open: false, opensAtMin: next.from } : { open: false };
 }

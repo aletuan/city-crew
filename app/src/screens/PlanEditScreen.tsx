@@ -35,7 +35,7 @@ import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import { saveTrip } from '../lib/data';
-import { dateline } from '../lib/format';
+import { clockOf, dateline } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import {
@@ -50,12 +50,6 @@ import { COMPANY, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space, type } from '../theme';
-
-const clock = (minutes: number) => {
-  const h = Math.floor(minutes / 60) % 24;
-  const m = Math.round(minutes) % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-};
 
 const money = (vnd: number) => (vnd >= 1_000_000
   ? `${Math.round(vnd / 100_000) / 10}M ₫`
@@ -327,7 +321,7 @@ export default function PlanEditScreen({ navigation, route }: {
                   >
                     <Ionicons name="remove" size={15} color={colors.textSecondary} />
                   </PressableScale>
-                  <Text style={[s.time, stop.pinned && s.timePinned]}>{clock(stop.arriveMin)}</Text>
+                  <Text style={[s.time, stop.pinned && s.timePinned]}>{clockOf(stop.arriveMin)}</Text>
                   <PressableScale
                     haptic="selection"
                     onPress={() => setStops(nudge(current, i, NUDGE_MIN))}
@@ -432,7 +426,7 @@ export default function PlanEditScreen({ navigation, route }: {
         <Text style={s.total}>
           {summaryLine([
             stopCount(current.length, t),
-            current.length ? `${clock(from)}–${clock(to)}` : null,
+            current.length ? `${clockOf(from)}–${clockOf(to)}` : null,
             spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人')}` : null,
           ])}
         </Text>
