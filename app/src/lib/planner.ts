@@ -117,7 +117,7 @@ export type PlanOptions = {
 
 // ── the shape of a day ───────────────────────────────────────────────
 
-type Slot = { part: PartKey; pref: readonly string[] };
+type Slot = { pref: readonly string[] };
 
 /**
  * Three stops for an evening, five for a day.
@@ -130,20 +130,47 @@ type Slot = { part: PartKey; pref: readonly string[] };
  * bars, not a restaurant wedged in because the middle slot likes dinner.
  * The original script made its meal slot a hard `food: true`, which
  * overrides the answer the reader just gave.
+ *
+ * A slot used to name the part of day it belonged to as well, and that was
+ * a second source of truth for something the clock already knows. See
+ * `partAt`.
  */
 const EVENING_SLOTS: readonly Slot[] = [
-  { part: 'evening', pref: ['views', 'heritage'] },
-  { part: 'evening', pref: ['eats'] },
-  { part: 'evening', pref: ['nightlife', 'views'] },
+  { pref: ['views', 'heritage'] },
+  { pref: ['eats'] },
+  { pref: ['nightlife', 'views'] },
 ];
 
 const DAY_SLOTS: readonly Slot[] = [
-  { part: 'morning', pref: ['cafes'] },
-  { part: 'morning', pref: ['nature', 'heritage'] },
-  { part: 'afternoon', pref: ['eats'] },
-  { part: 'afternoon', pref: ['heritage', 'markets'] },
-  { part: 'afternoon', pref: ['views', 'cafes'] },
+  { pref: ['cafes'] },
+  { pref: ['nature', 'heritage'] },
+  { pref: ['eats'] },
+  { pref: ['heritage', 'markets'] },
+  { pref: ['views', 'cafes'] },
 ];
+
+/**
+ * Which part of the day an hour falls in.
+ *
+ * Read off the clock rather than off the slot, and that is the fix for a
+ * plan that could call 20:15 "morning". The shapes above are written for
+ * their usual hours — a day out from 09:00 lands its first two stops before
+ * noon — so at those hours this agrees with the labels they used to carry.
+ * It only disagrees where they were lying: an outing whose start the clock
+ * pushed later, and a short shape whose stops are taken from the front of a
+ * longer one.
+ *
+ * Boundaries are the ordinary ones and are not trying to be more. Noon
+ * divides morning from afternoon; five is where an outing stops being an
+ * afternoon, which is early enough that a 15:20 last stop is still one and
+ * late enough that dinner never is.
+ */
+export function partAt(minutes: number): PartKey {
+  const at = ((minutes % 1440) + 1440) % 1440;
+  if (at < 12 * 60) return 'morning';
+  if (at < 17 * 60) return 'afternoon';
+  return 'evening';
+}
 
 /**
  * How much of the shape the reader actually asked for.
@@ -173,16 +200,29 @@ const DAY_SLOTS: readonly Slot[] = [
  * duplicate check already refuses a second plan that reuses a place.
  *
  * Slots are taken from the front rather than spread across the shape, and
- * that is deliberate. `dress` packs stops back to back from `START_MIN`, so
- * a two-stop day really is 09:00 and 10:35; picking the afternoon slot for
- * the second would print `part: 'afternoon'` over a morning hour. The
- * editor is where a reader moves it later.
+ * that is deliberate: `dress` packs stops back to back from the start, so a
+ * two-stop day really is 09:00 and 10:35 and taking the third and fifth
+ * slots would plan around two gaps nobody asked for. What each stop is
+ * *called* no longer depends on which slot it came from — see `partAt`.
+ *
+ * The last bound is the day itself. A shape that starts at its usual hour
+ * always fits, so this only bites where the clock has pushed the start
+ * later: asking for a five-stop day at eight in the evening used to hand
+ * back an outing running to three the next morning, with hours past 24:00
+ * that the screens print modulo a day — 01:35, on a card headed with
+ * today's date. Two stops and an honest finish is the better answer, and
+ * the wizard has already said out loud where the plan starts.
  */
-function slotsFor(draft: TripDraft): readonly Slot[] {
+function slotsFor(draft: TripDraft, start: number): readonly Slot[] {
   const shape = draft.when === 'day' ? DAY_SLOTS : EVENING_SLOTS;
-  if (!draft.categories.length) return shape;
-  const wanted = draft.categories.length + (draft.when === 'day' ? 1 : 0);
-  return shape.slice(0, Math.max(1, Math.min(shape.length, wanted)));
+  // Nominal, like the pool filter's `middle`: real dwells and legs move
+  // every hour a little, and a ceiling that tracked them exactly would
+  // change the number of stops on a plan because one café closes at nine.
+  const fits = Math.floor((DAY_END - start) / NOMINAL_STEP);
+  const wanted = draft.categories.length
+    ? draft.categories.length + (draft.when === 'day' ? 1 : 0)
+    : shape.length;
+  return shape.slice(0, Math.max(1, Math.min(shape.length, wanted, fits)));
 }
 
 /** When each shape starts, minutes past midnight. Exported so the wizard
@@ -208,6 +248,11 @@ const LAST_START: Record<'day' | 'evening', number> = { day: 15 * 60, evening: 2
 /** Starts rounded up to this, so a plan never begins at 18:07 and never
  *  begins in the minute the reader was still reading it. */
 const START_STEP = 15;
+
+/** Where a day stops being the day it is on. Midnight rather than some
+ *  civilised hour: a plan may honestly run late, it may not run onto a
+ *  date the card does not carry. */
+const DAY_END = 24 * 60;
 
 /**
  * When the outing actually starts, given what the clock says.
@@ -547,7 +592,7 @@ function dress(lens: LensKey, places: Place[], slots: readonly Slot[], start: nu
     const dwell = dwellOf(places[i]);
     // `slots[i]` is always there: `buildPlan` walks the slots and pushes at
     // most one place per slot, so there are never more places than slots.
-    stops.push({ place: places[i], part: slots[i].part, arriveMin: at, dwellMin: dwell, why: null });
+    stops.push({ place: places[i], part: partAt(at), arriveMin: at, dwellMin: dwell, why: null });
     at += dwell + (legs[i]?.minutes ?? (i + 1 < places.length ? HOP_DEFAULT_MIN : 0));
   }
 
@@ -596,13 +641,14 @@ export function planTrips(
   draft: TripDraft, places: readonly Place[], cityId: string | null = null,
   opts: PlanOptions = {},
 ): TripPlan[] {
-  const slots = slotsFor(draft);
   const rnd = mulberry32(opts.seed ?? 1);
   // The shape's own hour unless the caller resolved a later one against the
   // clock. `?? `, not `||`, so a caller that genuinely means midnight is not
   // silently moved to nine — and null is accepted alongside undefined so a
   // screen holding "no start resolved" can pass it straight through.
   const start = opts.startMin ?? START_MIN[draft.when];
+  // After the start, because how many stops fit depends on when it begins.
+  const slots = slotsFor(draft, start);
 
   // Filtered once against the middle of the outing rather than per slot:
   // the pool is what could plausibly appear, and each slot re-checks its

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { partGone, planTrips, startMinFor, START_MIN } from './planner';
+import { partAt, partGone, planTrips, startMinFor, START_MIN } from './planner';
 import type { TripDraft } from './trip';
 import type { Place } from './types';
 
@@ -535,5 +535,68 @@ describe('planTrips with a start pushed later', () => {
     const plans = planTrips({ ...EVENING, categories: ['eats'] }, open, 'hanoi',
       { seed: 1, startMin: 0 });
     expect(plans[0].stops[0].arriveMin).toBe(0);
+  });
+});
+
+// A stop is called what the clock says, not what the slot it came out of
+// used to claim. The slot labels agreed with the clock at the shapes' own
+// hours and lied everywhere else — an evening's worth of stops in a day
+// shape came back headed "morning".
+describe('partAt', () => {
+  it('divides the day at noon and at five', () => {
+    expect(partAt(9 * 60)).toBe('morning');
+    expect(partAt(11 * 60 + 59)).toBe('morning');
+    expect(partAt(12 * 60)).toBe('afternoon');
+    expect(partAt(16 * 60 + 59)).toBe('afternoon');
+    expect(partAt(17 * 60)).toBe('evening');
+    expect(partAt(23 * 60)).toBe('evening');
+  });
+
+  it('agrees with the shapes at the hours they were written for', () => {
+    // A day out, packed back to back from 09:00 at the nominal step.
+    expect([0, 1, 2, 3, 4].map((i) => partAt(9 * 60 + i * 95)))
+      .toEqual(['morning', 'morning', 'afternoon', 'afternoon', 'afternoon']);
+    expect([0, 1, 2].map((i) => partAt(18 * 60 + i * 95)))
+      .toEqual(['evening', 'evening', 'evening']);
+  });
+
+  it('reads an hour past midnight as the small hours of a day, not as nothing', () => {
+    expect(partAt(25 * 60)).toBe('morning');
+  });
+});
+
+describe('a day shape asked for late in the day', () => {
+  const DAY: TripDraft = { ...EVENING, when: 'day', categories: ['cafes', 'eats', 'views'] };
+
+  it('calls its stops what the clock calls them', () => {
+    const plans = planTrips(DAY, CATALOG, 'hanoi', { seed: 1, startMin: 20 * 60 + 15 });
+    for (const stop of plans[0].stops) expect(stop.part).toBe('evening');
+  });
+
+  // Four stops from 20:15 finish at about 03:00, and the screens print an
+  // hour past midnight modulo a day — 01:35, on a card headed with today's
+  // date. Two stops and an honest finish is the better answer.
+  it('is trimmed so it cannot run onto the next day', () => {
+    const plans = planTrips(DAY, CATALOG, 'hanoi', { seed: 1, startMin: 20 * 60 + 15 });
+    expect(plans[0].stops.length).toBe(2);
+    expect(plans[0].windowMin[1]).toBeLessThanOrEqual(24 * 60);
+  });
+
+  it('keeps at least one stop however late it is asked', () => {
+    const plans = planTrips(DAY, CATALOG, 'hanoi', { seed: 1, startMin: 23 * 60 + 45 });
+    expect(plans[0].stops).toHaveLength(1);
+  });
+
+  it('leaves a shape asked for at its own hour alone', () => {
+    expect(planTrips(DAY, CATALOG, 'hanoi', { seed: 1 })[0].stops).toHaveLength(4);
+  });
+
+  // A draft naming no category keeps the whole shape, and that ceiling is
+  // the one the day's end has to bite on too.
+  it('trims a shape nobody narrowed', () => {
+    const open = { ...DAY, categories: [] };
+    expect(planTrips(open, CATALOG, 'hanoi', { seed: 1 })[0].stops).toHaveLength(5);
+    expect(planTrips(open, CATALOG, 'hanoi', { seed: 1, startMin: 20 * 60 })[0].stops)
+      .toHaveLength(2);
   });
 });
