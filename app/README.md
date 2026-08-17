@@ -56,11 +56,14 @@ src/lib/supabase.ts     — public Supabase client
 src/lib/data.ts         — types + hooks usePlaces/useCollections (query y hệt export-snapshot)
 src/lib/i18n.tsx        — chuyển EN/VI toàn app
 src/components/         — Screen/Chip/Card/LangPill, PlaceCard
-src/screens/            — Explore, PlaceDetail, Collections, CollectionDetail, ComingSoon
+src/lib/planner.ts      — chọn/xếp/định giờ ba phương án, thuần và deterministic
+src/lib/itinerary.ts    — sửa plan mà không đè lên giờ người dùng đã đặt
+src/screens/            — Explore, PlaceDetail, Collections, CollectionDetail,
+                          Ideas → Sketching → PlanOptions → PlanEdit, Trips
 ```
 
 ## Bước tiếp theo (đề xuất)
 
-1. Port wizard + itinerary generator (logic thuần JS đã có sẵn).
-2. Trips: lưu kế hoạch (bảng `trips` mới + Supabase Auth như dashboard).
+1. `plan-assist` Edge Function: đặt tên chuyến đi và viết lý do cho từng điểm.
+2. Ô "kể tôi nghe bạn muốn gì" ở Ideas, parse thành `TripDraft`.
 3. EAS Build + TestFlight khi cần chia sẻ ngoài Expo Go ($99/năm Apple).

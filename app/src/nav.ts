@@ -53,6 +53,10 @@ export type RootStackParamList = {
    *  same answers plus the draw, so the plans are rebuilt from pure inputs
    *  rather than carried through navigation as objects. */
   PlanOptions: PlanAsk & { seed: number };
+  /** One of those drafts, opened for nudging. Named by the lens that
+   *  produced it rather than by an index, so the plan the reader tapped is
+   *  the plan they get even if a thin catalog returned fewer than three. */
+  PlanEdit: PlanAsk & { seed: number; lens: string; title?: string };
   ProfileHome: undefined;
   SignIn: undefined;
   SignUp: undefined;

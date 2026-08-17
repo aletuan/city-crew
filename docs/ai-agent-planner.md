@@ -10,7 +10,8 @@ Toàn bộ giá trị hứa hẹn trong `pitch/script.md` nằm ở một khoả
 *"tap ✨ Generate plan → WHOLE DAY. DRAFTED IN 30 SECONDS"*. Khoảnh khắc đó
 chưa tồn tại trong app.
 
-Hôm nay:
+Điểm xuất phát — trạng thái repo trước Phase 1, giữ lại vì nó là lý do của mọi
+quyết định phía dưới:
 
 - `app/src/screens/IdeasScreen.tsx` hỏi đủ bốn câu và dựng được `TripDraft`,
   nhưng nút bấm chỉ dẫn sang một màn chờ.
@@ -624,17 +625,35 @@ Lát mỏng nhất mang giá trị thật: nút trong Ideas cuối cùng cũng r
 
 ### Phase 2 — Sửa và lưu
 
-- Thêm `app/src/screens/PlanEditScreen.tsx` — ± giờ, kéo thả, thêm/bớt stop;
-  trạng thái `generated` → `edited` khoá việc tính lại giờ
+- Thêm `app/src/lib/itinerary.ts` + test — sửa plan mà không đè lên giờ người
+  dùng đã đặt. Cờ `pinned` nằm ở **từng stop**, không phải một trạng thái
+  `generated`/`edited` cho cả plan như bản thiết kế đầu: người ta chỉnh giờ bữa
+  tối rồi vẫn muốn thêm một quán bar và để planner tự tính giờ cho nó. Khoá cả
+  plan là bắt họ chọn giữa hai việc không mâu thuẫn nhau.
+- Thêm `app/src/lib/order.ts` + test (`moveItem`, `sameOrder`) và
+  `app/src/lib/trips.ts` + test (`splitTrips`, `spendVnd`)
+- Thêm `app/src/screens/PlanEditScreen.tsx` — ± 15 phút, đổi thứ tự, bớt stop,
+  cảnh báo khi plan chạy ngược thời gian
+- Thêm `app/src/screens/TripsScreen.tsx` — hai mục **Sắp tới** và **Đã đi**,
+  chia bằng `day >= todayISO()`, không cần cột trạng thái nào; cùng tinh thần
+  với cách repo suy cap 20 suggest/ngày từ chính các row. `ComingSoonScreen`
+  bị xoá cùng lúc — không còn ai render nó.
 - Migration `trips` + `trip_stops`, `supabase/tests/trips_test.sql` nối vào
   `run.sh`
 - `data.ts`: `saveTrip` / `useMyTrips` / `deleteTrip` / `reorderCollection`
-- Tab Trips thay `ComingSoonScreen`, hai mục **Sắp tới** và **Đã đi**, chia
-  bằng `day >= todayISO()` — không cần cột trạng thái nào, cùng tinh thần với
-  cách repo suy cap 20 suggest/ngày từ chính các row
-- Kéo thả sắp xếp trong `CollectionDetailScreen` — `sort_order` đã có mặt ở mọi
+- Sắp xếp thứ tự trong `CollectionDetailScreen` — `sort_order` đã có mặt ở mọi
   chỗ đọc, chỉ thiếu người ghi (theo mẫu `dashboard/src/api.js:reorderPhotos`)
 - **Share, Invite và avatar crew đều là mock ở phase này** — xem mục Crew
+- **Xong khi:** chọn một phương án → sửa giờ và thứ tự → lưu → thấy nó trong
+  tab Trips ở đúng mục; xoá được; sắp xếp lại collection và thứ tự mới sống sót
+  qua lần mở app sau; `typecheck`, `test`, `test:tz` và `supabase/tests/run.sh`
+  đều xanh.
+
+**Một chỗ đi chệch thiết kế, có chủ ý:** cả PlanEdit lẫn CollectionDetail đổi
+thứ tự bằng **nút mũi tên**, không phải kéo thả. Kéo thả cần một list tự dãn ra
+dưới ngón tay, tức là `react-native-reanimated` — một dependency repo chưa có.
+Hai cái nút xếp xong danh sách sáu điểm trong vài lần chạm, chạy được với
+VoiceOver, và không thả nhầm chỗ. Khi nào kéo thả tới thì nó thay chỗ này.
 
 ### Phase 3 — Lời dẫn và câu tự do *(LLM vào cuộc)*
 

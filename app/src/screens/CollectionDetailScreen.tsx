@@ -6,14 +6,21 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AddSlot } from '../components/add';
-import { AmbientWarmth, BackButton, Empty, GradientCta, RoundIconButton, useTabBarClearance } from '../components/ui';
+import {
+  AmbientWarmth, BackButton, Empty, GradientCta, PressableScale, RoundIconButton,
+  fireHaptic, successHaptic, useTabBarClearance,
+} from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { deleteCollection, membersOf, publishBlockers, setCollectionPublic } from '../lib/data';
+import {
+  deleteCollection, membersOf, publishBlockers, reorderCollection, setCollectionPublic,
+} from '../lib/data';
 import { atHandle } from '../lib/handle';
 import { useCollections, usePlaces } from '../lib/catalog';
+import { moveItem, sameOrder } from '../lib/order';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
+import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
 
 /**
@@ -113,6 +120,68 @@ function blockerSentence(
     `Private until every place is live — ${parts.join(', and ')}.`,
     `Riêng tư cho tới khi mọi địa điểm hiển thị — ${parts.join(', và ')}.`,
     `すべてのスポットが公開されるまで非公開です — ${parts.join('、')}。`,
+  );
+}
+
+/**
+ * A place while the list is being put in order.
+ *
+ * Deliberately not a `PlaceCard`. Arranging is about the sequence, not
+ * about the places — full cards mean two of them fill the screen and you
+ * are reordering a list you can only see a fifth of. This is one line each,
+ * with the position spelled out, so the whole list is in front of you.
+ *
+ * ── on arrows rather than dragging ──
+ *
+ * The app carries `react-native-gesture-handler` and uses it for the swipe
+ * rows on the collections list, but a drag-to-reorder list is a different
+ * animal: it needs a layout-animated list that reflows under the finger,
+ * which in practice means `react-native-reanimated` and a dependency this
+ * project does not have. Two buttons reorder a six-place list in a handful
+ * of taps, work under VoiceOver, and cannot drop an item somewhere the
+ * reader did not mean. When the drag arrives it replaces this; until then
+ * this is the feature rather than a placeholder for it.
+ */
+function ArrangeRow({ place, index, count, onUp, onDown }: {
+  place: Place;
+  index: number;
+  count: number;
+  onUp: () => void;
+  onDown: () => void;
+}) {
+  const { t } = useI18n();
+  const first = index === 0;
+  const last = index === count - 1;
+  return (
+    <View style={s.arrangeRow}>
+      <Text style={s.arrangeNum}>{index + 1}</Text>
+      <View style={s.arrangeText}>
+        <Text style={s.arrangeName} numberOfLines={1}>{place.name_en}</Text>
+        {!!place.neighborhood_en && (
+          <Text style={s.arrangeArea} numberOfLines={1}>{place.neighborhood_en}</Text>
+        )}
+      </View>
+      <PressableScale
+        haptic="selection"
+        onPress={onUp}
+        disabled={first}
+        containerStyle={[s.arrangeBtn, first && s.arrangeBtnOff]}
+        accessibilityRole="button"
+        accessibilityLabel={t('Move up', 'Chuyển lên', '上へ移動')}
+      >
+        <Ionicons name="chevron-up" size={17} color={colors.textSecondary} />
+      </PressableScale>
+      <PressableScale
+        haptic="selection"
+        onPress={onDown}
+        disabled={last}
+        containerStyle={[s.arrangeBtn, last && s.arrangeBtnOff]}
+        accessibilityRole="button"
+        accessibilityLabel={t('Move down', 'Chuyển xuống', '下へ移動')}
+      >
+        <Ionicons name="chevron-down" size={17} color={colors.textSecondary} />
+      </PressableScale>
+    </View>
   );
 }
 
@@ -225,6 +294,58 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // changing your mind about who can see your list.
   const undo = () => setPublic(banner === 'public' ? false : true);
 
+  /**
+   * Arranging the list.
+   *
+   * A mode rather than always-on controls. Two arrows on every card would
+   * mean tapping a place is one thumb-width from moving it, and a list you
+   * are browsing is not a list you are editing. `arranging` holds the draft
+   * order as slugs — never places — because the catalog can reload
+   * underneath this screen and slugs are what the write takes anyway.
+   *
+   * Nothing is written until Done. `sort_order` is a column every read in
+   * the app already honours, so a half-applied order would show up
+   * everywhere at once; the whole sequence goes in one go or not at all.
+   */
+  const [arranging, setArranging] = useState<string[] | null>(null);
+  const [ordering, setOrdering] = useState(false);
+  const bySlug = useMemo(() => new Map(members.map((p) => [p.slug, p])), [members]);
+  // Members that have arrived since arranging began are appended rather
+  // than dropped. Saving would otherwise leave them at whatever position
+  // they had, which is not a decision the reader made.
+  const drafted: Place[] = arranging
+    ? [
+      ...arranging.map((slug) => bySlug.get(slug)).filter((p): p is Place => !!p),
+      ...members.filter((p) => !arranging.includes(p.slug)),
+    ]
+    : members;
+  const dirty = !!arranging && !sameOrder(arranging, members.map((p) => p.slug));
+
+  const shuffle = (from: number, to: number) => setArranging(
+    moveItem(drafted.map((p) => p.slug), from, to),
+  );
+
+  const finishArranging = () => {
+    if (!col || !arranging || ordering) return;
+    if (!dirty) { setArranging(null); return; }
+    setOrdering(true);
+    reorderCollection(col.slug, drafted.map((p) => p.slug))
+      .then(() => {
+        successHaptic();
+        setArranging(null);
+        // Both catalogs: the row is in `mine` and, once published, in the
+        // public list too, and the order is read from whichever copy the
+        // screen that draws it happens to hold.
+        mine.reload();
+        cols.reload();
+      })
+      .catch((e: Error) => Alert.alert(
+        t('Could not save the order', 'Không lưu được thứ tự', '並び順を保存できませんでした'),
+        e.message,
+      ))
+      .finally(() => setOrdering(false));
+  };
+
   // Deliberately inert. A private list has no address to send anyone to,
   // so the honest placeholder says that rather than opening a share sheet
   // onto a link that would 404 for whoever received it.
@@ -296,7 +417,21 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         {/* `collapsable={false}` keeps the wrapper as a real native view,
             which is what measureInWindow needs to have something to
             measure. */}
-        {owned && (
+        {/* While arranging, the one control is the way out of it. Leaving
+            the overflow menu up would offer Delete to a thumb that is
+            currently in the business of tapping small buttons in a row. */}
+        {owned && arranging && (
+          <PressableScale onPress={finishArranging} containerStyle={s.done} disabled={ordering}>
+            <Text style={s.doneText}>
+              {ordering
+                ? t('Saving…', 'Đang lưu…', '保存中…')
+                : dirty
+                  ? t('Done', 'Xong', '完了')
+                  : t('Cancel', 'Huỷ', 'キャンセル')}
+            </Text>
+          </PressableScale>
+        )}
+        {owned && !arranging && (
           <View ref={btn} collapsable={false}>
             <RoundIconButton
               icon="ellipsis-horizontal"
@@ -354,11 +489,32 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       )}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
+      {/* What the mode is for, said once at the top of it. Without this the
+          numbered rows read as a different screen the reader arrived at by
+          accident. */}
+      {arranging && (
+        <Text style={s.arrangeHint}>
+          {t(
+            'Set the order these places appear in. This is the order a plan builds from.',
+            'Sắp thứ tự các địa điểm. Đây cũng là thứ tự mà một kế hoạch dựa vào.',
+            'スポットの並び順を決めます。プランもこの順番を参照します。',
+          )}
+        </Text>
+      )}
       <FlatList
-        data={members}
+        data={drafted}
         keyExtractor={(p) => p.slug}
-        renderItem={({ item }) => (
-          <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
+        renderItem={({ item, index }) => (arranging
+          ? (
+            <ArrangeRow
+              place={item}
+              index={index}
+              count={drafted.length}
+              onUp={() => shuffle(index, index - 1)}
+              onDown={() => shuffle(index, index + 1)}
+            />
+          )
+          : <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
         )}
         ListEmptyComponent={!loading && col
           ? (owned
@@ -374,7 +530,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         // Only once there is a list to end. Empty, the card above is
         // already asking for the first place, and two invitations to do
         // one thing read as two different things.
-        ListFooterComponent={owned && members.length > 0
+        ListFooterComponent={owned && !arranging && members.length > 0
           ? (
             <AddSlot
               onPress={addPlace}
@@ -419,6 +575,18 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')}
             onPress={() => act(edit)}
           />
+          {/* Only with something to arrange. One place has no order, and a
+              row that does nothing is worse than a row that is not there. */}
+          {members.length > 1 && (
+            <MenuRow
+              icon="swap-vertical-outline"
+              label={t('Reorder places', 'Sắp xếp thứ tự', '並び順を変更')}
+              onPress={() => act(() => {
+                fireHaptic('light');
+                setArranging(members.map((p) => p.slug));
+              })}
+            />
+          )}
           <MenuRow
             icon="share-outline"
             label={t('Share', 'Chia sẻ', '共有')}
@@ -487,6 +655,38 @@ const s = StyleSheet.create({
     color: colors.textSecondary, ...type.body, lineHeight: 24,
     paddingHorizontal: space.page, paddingBottom: 12,
   },
+
+  // A text button, not a pill: it sits where the overflow control was and
+  // the header already has one round shape in it on the other side.
+  done: { paddingHorizontal: 10, paddingVertical: 8 },
+  doneText: { color: colors.accent, fontSize: 16, fontWeight: font.semibold },
+
+  arrangeHint: {
+    color: colors.textTertiary, fontSize: 13.5, lineHeight: 19,
+    paddingHorizontal: space.page, paddingBottom: 10,
+  },
+  arrangeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: space.page, marginBottom: 8,
+    paddingVertical: 11, paddingHorizontal: 14,
+    backgroundColor: colors.surfaceCard, borderRadius: radius.input,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  // The position, spelled out. The row's place in the list is the one fact
+  // this mode exists to change, and counting rows on screen is what people
+  // do when nothing tells them.
+  arrangeNum: {
+    color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold,
+    width: 18, textAlign: 'center', fontVariant: ['tabular-nums'],
+  },
+  arrangeText: { flex: 1 },
+  arrangeName: { color: colors.text, fontSize: 15.5, fontWeight: font.medium },
+  arrangeArea: { color: colors.textTertiary, ...type.meta, marginTop: 1 },
+  arrangeBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass,
+  },
+  arrangeBtnOff: { opacity: 0.28 },
 
   // The dashed slot at the end of the list, matching the collections
   // screen's own last row down to the well and the gap.

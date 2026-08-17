@@ -27,7 +27,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  AmbientWarmth, Card, GradientCta, Screen, useTabBarClearance,
+  AmbientWarmth, Card, GradientCta, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
@@ -75,7 +75,7 @@ function hours(windowMin: [number, number]): string {
   return `${Math.round(h * 2) / 2}h`;
 }
 
-export default function PlanOptionsScreen({ route }: {
+export default function PlanOptionsScreen({ navigation, route }: {
   navigation: Nav;
   route: RootRoute<'PlanOptions'>;
 }) {
@@ -142,9 +142,9 @@ export default function PlanOptionsScreen({ route }: {
       >
         <Text style={s.lede}>
           {t(
-            'Drafted from your answers. Not the same three twice — Regenerate for another set.',
-            'Phác từ lựa chọn của bạn. Không lần nào giống lần nào — bấm Tạo lại để xem bộ khác.',
-            'あなたの回答から下描きしました。毎回違う組み合わせです。',
+            'Drafted from your answers — tap one to fine-tune. Regenerate for another set.',
+            'Phác từ lựa chọn của bạn — chạm vào một cái để chỉnh. Bấm Tạo lại để xem bộ khác.',
+            'あなたの回答から下描きしました。ひとつ選んで調整できます。',
           )}
         </Text>
 
@@ -169,7 +169,14 @@ export default function PlanOptionsScreen({ route }: {
         )}
 
         {plans.map((plan, i) => (
-          <PlanCard key={`${plan.lens}-${i}`} plan={plan} best={i === 0} />
+          <PlanCard
+            key={`${plan.lens}-${i}`}
+            plan={plan}
+            best={i === 0}
+            onPress={() => navigation.navigate('PlanEdit', {
+              ...p, seed, lens: plan.lens, title: plan.title ?? undefined,
+            })}
+          />
         ))}
 
         {plans.length === 0 && (
@@ -187,9 +194,9 @@ export default function PlanOptionsScreen({ route }: {
         {plans.length > 0 && (
           <Text style={s.footnote}>
             {`${perPerson} ${t(
-              'Picking one to nudge and save lands next.',
-              'Chọn một cái để chỉnh và lưu sẽ có ở bước tiếp theo.',
-              'ひとつ選んで調整・保存する機能はこの次に登場します。',
+              'Tap one to nudge its times and save it.',
+              'Chạm vào một cái để chỉnh giờ và lưu lại.',
+              'ひとつ選ぶと時刻を調整して保存できます。',
             )}`}
           </Text>
         )}
@@ -207,23 +214,16 @@ export default function PlanOptionsScreen({ route }: {
   );
 }
 
-/**
- * One draft.
- *
- * Not pressable, and that is the honest state of it rather than an
- * oversight: picking one leads to a screen for nudging times and
- * reordering stops, and that screen does not exist yet. A card that
- * highlights under the thumb and then does nothing is worse than one that
- * never invited the tap — the line under the list says where this stops.
- */
-function PlanCard({ plan, best }: { plan: TripPlan; best: boolean }) {
+/** One draft. Tapping it opens the editor, where times and order become
+ *  the reader's rather than the planner's. */
+function PlanCard({ plan, best, onPress }: { plan: TripPlan; best: boolean; onPress: () => void }) {
   const { t } = useI18n();
   const badge = BADGE[plan.lens];
   const total = plan.costVnd.food + plan.costVnd.activity + plan.costVnd.transport;
   const km = plan.legs.reduce((n, l) => n + (l?.km ?? 0), 0);
 
   return (
-    <View style={s.cardWrap}>
+    <PressableScale scaleTo={0.985} onPress={onPress} containerStyle={s.cardWrap}>
       <Card style={best ? s.cardBest : undefined}>
         <View style={s.head}>
           {/* Untitled until a model names it. The stops carry the plan
@@ -297,7 +297,7 @@ function PlanCard({ plan, best }: { plan: TripPlan; best: boolean }) {
           </Text>
         )}
       </Card>
-    </View>
+    </PressableScale>
   );
 }
 
