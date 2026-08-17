@@ -45,6 +45,19 @@ export function successHaptic() {
 export function PressableScale({ children, style, containerStyle, haptic = 'light', scaleTo = 0.97, onPress, onPressIn, onPressOut, ...rest }: PressableProps & {
   haptic?: HapticKind;
   scaleTo?: number;
+  /**
+   * Styles for the view the children actually live in — **everything about
+   * how this element lays its own contents out and what it looks like**:
+   * `flexDirection`, `gap`, `padding`, `backgroundColor`, `borderRadius`.
+   *
+   * This is the half that gets mixed up, and it fails in a way that looks
+   * like a styling accident rather than a wiring one. Put `flexDirection:
+   * 'row'` in `containerStyle` and it lands on the Pressable, whose only
+   * child is the animated view — so the row has one item and lays it out
+   * perfectly, while the icon and label inside stack in a column. Four
+   * buttons in this app shipped with their glyph sitting on top of their
+   * word for exactly this reason.
+   */
   style?: StyleProp<ViewStyle>;
   /**
    * Styles that must stay on the outer Pressable rather than the animated
@@ -155,15 +168,36 @@ export function EyebrowText({ children }: { children: React.ReactNode }) {
   return <Text style={s.eyebrow}>{children}</Text>;
 }
 
-export function Screen({ title, eyebrow, children, right }: {
+export function Screen({ title, eyebrow, children, right, onBack }: {
   title: string;
   /** Small uppercase line above the title — e.g. today's date. */
   eyebrow?: React.ReactNode;
   children: React.ReactNode;
   right?: React.ReactNode;
+  /**
+   * A way back, for a screen that was pushed onto something.
+   *
+   * On its own line above the title rather than beside it, which is what
+   * iOS does with a large title and is the only placement that survives a
+   * title wrapping to two lines — the header row aligns to `flex-end`, so
+   * a control beside a two-line title ends up level with its last line
+   * instead of at the top of the screen where a back control is looked for.
+   *
+   * The tab roots pass nothing and get no control, because there is
+   * nothing behind them. A pushed screen that omits this leaves the reader
+   * with the edge-swipe and no sign that it is there, which is how the
+   * plan editor shipped: three drafts on the screen before it and no way
+   * back to pick a different one.
+   */
+  onBack?: () => void;
 }) {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
+      {onBack ? (
+        <View style={s.backRow}>
+          <BackButton onPress={onBack} />
+        </View>
+      ) : null}
       <View style={s.header}>
         <View style={{ flex: 1 }}>
           {eyebrow ? (
@@ -359,6 +393,9 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-end',
     paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
   },
+  // Its own line, and `alignItems: flex-start` so the control keeps its
+  // 44pt without stretching to whatever else lands on the row later.
+  backRow: { alignItems: 'flex-start', paddingHorizontal: space.page, paddingTop: 6 },
   title: { color: colors.text, ...type.title },
   // The dateline is the one place a screen title gets colour: it says
   // "today", which is the app's whole premise, and it is short enough that

@@ -136,7 +136,10 @@ export default function PlanOptionsScreen({ navigation, route }: {
   );
 
   return (
-    <Screen title={t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り')}>
+    <Screen
+      title={t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り')}
+      onBack={() => navigation.goBack()}
+    >
       <AmbientWarmth />
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}

@@ -180,7 +180,8 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
         {!askOpen && (
           <PressableScale
             onPress={() => setAskOpen(true)}
-            containerStyle={s.askShut}
+            containerStyle={s.askShutBox}
+            style={s.askShut}
             accessibilityRole="button"
           >
             <Ionicons name="sparkles-outline" size={16} color={colors.accent} />
@@ -230,7 +231,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
             <PressableScale
               onPress={() => void runAsk()}
               disabled={asking || !ask.trim()}
-              containerStyle={[s.askBtn, (asking || !ask.trim()) && s.askBtnOff]}
+              style={[s.askBtn, (asking || !ask.trim()) && s.askBtnOff]}
               accessibilityRole="button"
             >
               {asking
@@ -499,9 +500,15 @@ const s = StyleSheet.create({
   // a glyph at each end, which is the weight an optional shortcut should
   // carry next to the questions that are the actual interface. Given a card
   // it would look like a fourth question again, only emptier.
+  // Split across the two props on purpose. `PressableScale` puts
+  // `containerStyle` on the Pressable and `style` on the view holding the
+  // children, so the margins — which position this row inside the scroll
+  // view — belong outside, and the row layout belongs inside. Putting the
+  // margins in `style` would make them part of the Pressable's own box and
+  // hand the far edge of the screen a tap that opens the box.
+  askShutBox: { marginHorizontal: space.page, marginBottom: space.titleToContent },
   askShut: {
     flexDirection: 'row', alignItems: 'center', gap: 9,
-    marginHorizontal: space.page, marginBottom: space.titleToContent,
     paddingVertical: 6,
   },
   // `flex: 1` so the chevron stays pinned right whatever the sentence does
