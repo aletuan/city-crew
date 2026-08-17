@@ -240,7 +240,7 @@ IdeasScreen ──▶ SketchingScreen ──▶ PlanOptionsScreen ──▶ Plan
 ```
 
 **`PlanOptionsScreen`** — ba thẻ, mỗi thẻ có tên, badge, timeline stop kèm quãng
-đường giữa các chặng, và dòng tổng kết (`3 stops · ~4.5h · ~800k ₫ / two`).
+đường giữa các chặng, và dòng tổng kết (`3 stops · ~4.5h · ~400k ₫ / người`).
 Nhãn "Made by City Crew AI" đặt ngay dưới tiêu đề: nói thật cái gì do máy dựng,
 cùng tinh thần với cột `generated_by` trong `trips`.
 
@@ -252,10 +252,21 @@ lại đè lên.** Plan chuyển từ trạng thái `generated` sang `edited` v�
 người dùng mới đổi được giờ. Nếu không, mỗi lần thêm một stop là mọi giờ người
 ta vừa chỉnh bị quét sạch — đúng kiểu bug không ai nhìn ra khi đọc code.
 
-**Số người.** Dòng `~800k ₫ / two` cần số người mà `TripDraft.company` không
-có: nó cho `solo`/`couple`/`friends`/`family` chứ không cho con số. Hoặc map
-cứng (solo 1, couple 2, friends 4, family 4), hoặc thêm một ô chọn số người vào
-wizard. Cách thứ hai đúng hơn nhưng thêm một câu hỏi vào một wizard đã bốn câu.
+**Chi phí ước tính theo một người.** Dòng tổng kết ghi `~400k ₫ / người` chứ
+không phải `/ two`, kèm một dòng nhắc dưới thẻ: *"Ước tính cho một người"*.
+Người dùng tự nhân lên theo số người của mình.
+
+Cách này khớp với dữ liệu sẵn có chứ không phải một lựa chọn tuỳ tiện:
+`places.price_vnd` suy từ `priceLevel` của Google (1–4 → 50k/150k/300k/500k
+theo `PRICE_LEVEL_VND` trong `_shared/import-place.ts`), mà price level của
+Google vốn là mức cho một người. Và nó gỡ được nhu cầu hỏi số người — wizard giữ
+nguyên bốn câu.
+
+Một chỗ lệch cần biết: `ITI_TRANSPORT_PER_HOP = 15000` là giá **một chuyến xe**,
+không phải một người — bốn người đi chung một chuyến Grab vẫn trả từng ấy. Con
+số ước tính vì thế đúng cho người đi một mình và **cao hơn thực tế** với nhóm.
+Đó là hướng sai an toàn hơn hướng ngược lại, nhưng nên nói ra trong dòng nhắc
+nếu phần di chuyển chiếm tỷ trọng đáng kể.
 
 ## Crew — chỗ hụt lớn nhất, và nó chưa được model hoá
 
