@@ -31,7 +31,7 @@ import { useCity } from '../lib/city';
 import { usePlaces } from '../lib/catalog';
 import { coverOf, membersOf } from '../lib/data';
 import { dateline } from '../lib/format';
-import { addDays, clampDay, fromISO, toISO, todayISO } from '../lib/day';
+import { addDays, clampDay, fromISO, toISO } from '../lib/day';
 import { useI18n } from '../lib/i18n';
 import { partGone, startMinFor, START_MIN } from '../lib/planner';
 import { useSave } from '../lib/save';
@@ -43,6 +43,15 @@ import { colors, font, radius, space, type } from '../theme';
  *  `startMinFor` never returns tomorrow. */
 const clock = (minutes: number) =>
   `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+
+/** The last instant of a calendar day, for a picker bound. `fromISO` gives
+ *  local noon — right for a day, half a day short of a ceiling. */
+const endOfDay = (iso: string): Date | undefined => {
+  const d = fromISO(iso);
+  if (!d) return undefined;
+  d.setHours(23, 59, 59, 999);
+  return d;
+};
 
 /** A question and the row of answers under it. */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -85,6 +94,9 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
    * instead of a silent correction.
    */
   const now = new Date();
+  /** Today at 00:00 — the picker's floor. Not `fromISO(todayISO())`, which
+   *  is noon; see the picker below. */
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const day = clampDay(draft.date || (partGone(draft.when, toISO(now), now)
     ? addDays(toISO(now), 1)
     : toISO(now)));
@@ -322,8 +334,16 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
               // there is no plan to sketch for last Tuesday, and a picker
               // that lets you choose one and then silently moves you is
               // worse than one that never offered.
-              minimumDate={fromISO(todayISO()) ?? undefined}
-              maximumDate={fromISO(addDays(todayISO(), 365)) ?? undefined}
+              //
+              // The bounds are instants, not days, which is why they are
+              // built here rather than with `fromISO` — that returns local
+              // *noon*, deliberately, so a calendar day survives every
+              // timezone. Handed to a picker as a minimum it means
+              // something else entirely: "today, from 12:00", and every
+              // reader opening this before lunch found today greyed out on
+              // the day they were most likely to want it.
+              minimumDate={startOfToday}
+              maximumDate={endOfDay(addDays(toISO(startOfToday), 365))}
               onChange={(e, picked) => {
                 // Android fires once with 'set' or 'dismissed' and closes
                 // itself; iOS fires on every scrub and stays open.
