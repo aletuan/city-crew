@@ -17,29 +17,46 @@
 // test can see them; `today` counts as upcoming, so an evening you are
 // currently on does not become a memory at midnight.
 //
-// ── no detail screen, on purpose ──
+// ── the card summarises, the detail carries ──
 //
-// The card carries the whole itinerary. A trip is three to five stops, and
-// a tap that leads to the same content one screen deeper is a tap that
-// bought nothing. When editing a saved trip arrives, it gets a row action
-// here rather than a hidden second screen.
+// This file used to argue there should be no detail screen, because the
+// card held the whole itinerary and a tap leading to the same content one
+// screen deeper buys nothing. That was true while the card printed every
+// stop. It stopped being true at `CARD_STOPS`: a day out is five stops, a
+// card showing three of them and saying so is a summary, and a summary
+// needs somewhere to lead. Delete moved with it — a destructive glyph
+// competing for taps with a card that is now itself a tap is the worse of
+// the two places to keep it.
+//
+// ── the crew row is not drawn ──
+//
+// The reference design shows overlapping avatars and "5 going" on every
+// card. Nothing in this app knows who else is on a trip: there is no
+// membership table, no invitation, and no policy letting anybody read a
+// row they do not own. Drawing initials there would be inventing people,
+// which is the same mistake the plan editor's Invite button is labelled a
+// mock to avoid. The footer keeps the shape and fills it with what is
+// true — how many stops, what it costs.
 
 import React, { useCallback, useRef } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
-  AmbientWarmth, Card, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance,
+  AmbientWarmth, Card, GradientCta, HEADER_CONTROL_H, PressableScale, Screen, Skeleton,
+  useTabBarClearance,
 } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO, todayISO } from '../lib/day';
-import { deleteTrip, useMyTrips, type Trip, type TripStopRow } from '../lib/data';
+import { useMyTrips, type Trip, type TripStopRow } from '../lib/data';
 import { dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { stopCount, summaryLine } from '../lib/sketch';
+import { COMPANY } from '../lib/trip';
 import { spendVnd, splitTrips } from '../lib/trips';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 const clock = (minutes: number) => {
@@ -59,81 +76,124 @@ const money = (vnd: number) => (vnd >= 1_000_000
  * legible — greying it into the background would be the app deciding your
  * last weekend mattered less than your next one.
  */
-function TripCard({ trip, cityName, past, onDelete }: {
+/**
+ * How many stops a card prints before it defers to the detail screen.
+ *
+ * Three, because an evening *is* three and a day out is five: the common
+ * case shows whole and the long one shows its shape with a line saying
+ * what is missing. Printing all five would make a card the length of a
+ * screen and leave nothing for a tap to be for.
+ */
+const CARD_STOPS = 3;
+
+/** The wizard's answer, worn as a badge. Its own glyph colour, like every
+ *  other chip in this app — the hue is what ties a concept together across
+ *  screens, so a state must not repaint it. */
+function CompanyChip({ company }: { company: string | null }) {
+  const { t } = useI18n();
+  const c = COMPANY.find((x) => x.key === company);
+  if (!c) return null;
+  return (
+    <View style={s.badge}>
+      {c.icon ? (
+        <Ionicons name={c.icon as keyof typeof Ionicons.glyphMap} size={13} color={c.color} />
+      ) : null}
+      <Text style={s.badgeText}>{t(c.en, c.vi, c.ja)}</Text>
+    </View>
+  );
+}
+
+/**
+ * One saved trip, summarised.
+ *
+ * `past` only dims it. A trip you already went on is still yours and still
+ * legible — greying it into the background would be the app deciding your
+ * last weekend mattered less than your next one.
+ */
+function TripCard({ trip, cityName, past, onPress }: {
   trip: Trip;
   cityName: string | null;
   past: boolean;
-  onDelete: () => void;
+  onPress: () => void;
 }) {
   const { t, lang } = useI18n();
   const day = fromISO(trip.day);
   const stops = trip.trip_stops;
-  const spend = spendVnd(stops.map((s: TripStopRow) => s.places));
-  const first = stops[0];
-  const last = stops[stops.length - 1];
-  const window = first?.arrive_min != null && last?.arrive_min != null
-    ? `${clock(first.arrive_min)}–${clock(last.arrive_min + (last.dwell_min ?? 0))}`
-    : null;
+  const spend = spendVnd(stops.map((st: TripStopRow) => st.places));
+  const shown = stops.slice(0, CARD_STOPS);
+  const hidden = stops.length - shown.length;
+  const start = stops[0]?.arrive_min;
 
   return (
-    <Card style={[s.card, past && s.cardPast]}>
+    <PressableScale onPress={onPress} scaleTo={0.985} style={[s.card, past && s.cardPast]}>
       <View style={s.head}>
-        <View style={s.headText}>
-          <Text style={s.title} numberOfLines={2}>{trip.title}</Text>
-          <Text style={s.meta} numberOfLines={1}>
-            {summaryLine([
-              day ? dateline(lang, day) : trip.day,
-              trip.when_part === 'evening'
-                ? t('Evening', 'Buổi tối', '夜')
-                : t('Day out', 'Cả ngày', '終日'),
-              cityName,
-            ])}
-          </Text>
-        </View>
-        <PressableScale
-          onPress={onDelete}
-          containerStyle={s.trash}
-          accessibilityRole="button"
-          accessibilityLabel={t('Delete this trip', 'Xoá chuyến đi này', 'この旅程を削除')}
-        >
-          <Ionicons name="trash-outline" size={17} color={colors.textTertiary} />
-        </PressableScale>
+        <Text style={s.title} numberOfLines={1}>{trip.title}</Text>
+        <CompanyChip company={trip.company} />
+      </View>
+
+      {/* The glyph earns its place by being the one thing on the card that
+          says "this is a date" at a glance, in a list where every card
+          starts with a name. */}
+      <View style={s.metaRow}>
+        <Ionicons name="calendar-outline" size={14} color={colors.accent} />
+        <Text style={s.meta} numberOfLines={1}>
+          {summaryLine([
+            day ? dateline(lang, day) : trip.day,
+            start != null ? t(`from ${clock(start)}`, `từ ${clock(start)}`, `${clock(start)}から`) : null,
+            cityName,
+          ])}
+        </Text>
       </View>
 
       <View style={s.stops}>
-        {stops.map((stop, i) => (
+        {shown.map((stop, i) => (
           <View key={`${trip.id}-${i}`} style={s.stopRow}>
             <Text style={s.stopTime}>
               {stop.arrive_min != null ? clock(stop.arrive_min) : '—'}
             </Text>
-            <View style={s.stopText}>
-              {stop.places
-                ? (
-                  <>
-                    <Text style={s.stopName} numberOfLines={1}>{stop.places.name_en}</Text>
-                    {/* The line a model will write in Phase 3. Until then
-                        it is null and the row simply has one line. */}
-                    {!!stop.why && <Text style={s.why} numberOfLines={2}>{stop.why}</Text>}
-                  </>
-                )
-                : (
-                  <Text style={s.stopGone} numberOfLines={1}>
-                    {t('No longer listed', 'Không còn trong danh mục', '掲載終了')}
-                  </Text>
-                )}
+            {/* The rail is drawn by the stop it leaves, so the last one has
+                none — a line running off the bottom of a list claims a stop
+                that is not there. */}
+            <View style={s.dotCol}>
+              <View style={s.dot} />
+              {i < shown.length - 1 ? <View style={s.rail} /> : null}
             </View>
+            {stop.places
+              ? (
+                <>
+                  <Text style={s.stopName} numberOfLines={1}>{stop.places.name_en}</Text>
+                  <Text style={s.stopArea} numberOfLines={1}>{stop.places.neighborhood_en}</Text>
+                </>
+              )
+              : (
+                <Text style={s.stopGone} numberOfLines={1}>
+                  {t('No longer listed', 'Không còn trong danh mục', '掲載終了')}
+                </Text>
+              )}
           </View>
         ))}
+        {hidden > 0 && (
+          <Text style={s.more}>
+            {t(`+${hidden} more`, `+${hidden} điểm nữa`, `他${hidden}件`)}
+          </Text>
+        )}
       </View>
 
-      <Text style={s.foot}>
-        {summaryLine([
-          stopCount(stops.length, t),
-          window,
-          spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人')}` : null,
-        ])}
-      </Text>
-    </Card>
+      <View style={s.divider} />
+
+      <View style={s.foot}>
+        <Text style={s.footFacts} numberOfLines={1}>
+          {summaryLine([
+            stopCount(stops.length, t),
+            spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人')}` : null,
+          ])}
+        </Text>
+        <View style={s.open}>
+          <Text style={s.openText}>{t('View plan', 'Xem kế hoạch', 'プランを見る')}</Text>
+          <Ionicons name="chevron-forward" size={15} color={colors.accent} />
+        </View>
+      </View>
+    </PressableScale>
   );
 }
 
@@ -195,25 +255,6 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
     return c ? t(c.short_en, c.short_vi, c.short_ja) : null;
   };
 
-  const confirmDelete = (trip: Trip) => Alert.alert(
-    t('Delete this trip?', 'Xoá chuyến đi này?', 'この旅程を削除しますか？'),
-    t(`"${trip.title}" will be gone for good.`, `"${trip.title}" sẽ mất hẳn.`, `「${trip.title}」は完全に削除されます。`),
-    [
-      { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
-      {
-        text: t('Delete', 'Xoá', '削除'),
-        style: 'destructive',
-        onPress: () => {
-          deleteTrip(trip.id)
-            .then(() => trips.reload())
-            .catch((e: Error) => Alert.alert(
-              t('Could not delete', 'Không xoá được', '削除できませんでした'), e.message,
-            ));
-        },
-      },
-    ],
-  );
-
   // Signed out is not an empty list, it is a different question, so it gets
   // the whole screen rather than a banner above nothing.
   if (!session) {
@@ -245,12 +286,29 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
   }
 
   return (
-    <Screen title={t('Trips', 'Chuyến đi', '旅程')}>
+    <Screen
+      title={t('Trips', 'Chuyến đi', '旅程')}
+      // A header action acts on the screen it sits above, and the one thing
+      // this screen cannot do for itself is make another trip. It jumps to
+      // Ideas, which is where a trip comes from.
+      right={(
+        <PressableScale
+          onPress={() => navigation.getParent()?.navigate('Ideas')}
+          style={s.newBtn}
+          accessibilityRole="button"
+        >
+          <LinearGradient {...gradAI} style={s.newBtnFill}>
+            <Ionicons name="add" size={17} color={colors.accentInk} />
+            <Text style={s.newBtnText}>{t('New trip', 'Chuyến mới', '新しい旅程')}</Text>
+          </LinearGradient>
+        </PressableScale>
+      )}
+    >
       <AmbientWarmth />
       {!trips.loaded && (
         <View style={s.body}>
           {[0, 1].map((i) => (
-            <Card key={i} style={s.card}>
+            <Card key={i} style={s.pad}>
               <Skeleton style={{ height: 19, width: '60%', borderRadius: 8 }} />
               <Skeleton style={{ height: 13, width: '40%', borderRadius: 7, marginTop: 8 }} />
               <Skeleton style={{ height: 44, width: '100%', borderRadius: 10, marginTop: 14 }} />
@@ -261,7 +319,7 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
 
       {trips.loaded && !!trips.error && (
         <View style={s.body}>
-          <Card style={s.card}><Text style={s.error}>
+          <Card style={s.pad}><Text style={s.error}>
             {t(
               `Couldn't load your trips: ${trips.error}`,
               `Không tải được chuyến đi: ${trips.error}`,
@@ -280,8 +338,23 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
             <FirstTrip onPress={() => navigation.getParent()?.navigate('Ideas')} />
           )}
 
+          {!!trips.data.length && (
+            <Text style={s.lede}>
+              {t(
+                'Your next plans, in order.',
+                'Những kế hoạch sắp tới của bạn, theo thứ tự.',
+                'これからの予定を順番に。',
+              )}
+            </Text>
+          )}
+
+          {/* The count belongs on the heading rather than under it: this is
+              a list somebody scans to find one trip, and how many there are
+              is the first thing that tells them how long the scan is. */}
           {!!upcoming.length && (
-            <Text style={s.section}>{t('Upcoming', 'Sắp tới', 'これから')}</Text>
+            <Text style={s.section}>
+              {t('Upcoming', 'Sắp tới', 'これから')} · {upcoming.length}
+            </Text>
           )}
           {upcoming.map((trip) => (
             <View key={trip.id} style={s.row}>
@@ -289,14 +362,14 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
                 trip={trip}
                 cityName={cityName(trip.city_id)}
                 past={false}
-                onDelete={() => confirmDelete(trip)}
+                onPress={() => navigation.navigate('TripDetail', { id: trip.id })}
               />
             </View>
           ))}
 
           {!!past.length && (
             <Text style={[s.section, !!upcoming.length && s.sectionAfter]}>
-              {t('Been there', 'Đã đi', '行った旅')}
+              {t('Been there', 'Đã đi', '行った旅')} · {past.length}
             </Text>
           )}
           {past.map((trip) => (
@@ -305,7 +378,7 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
                 trip={trip}
                 cityName={cityName(trip.city_id)}
                 past
-                onDelete={() => confirmDelete(trip)}
+                onPress={() => navigation.navigate('TripDetail', { id: trip.id })}
               />
             </View>
           ))}
@@ -320,48 +393,93 @@ const CAPTION = { fontSize: 13, fontWeight: font.regular } as const;
 const s = StyleSheet.create({
   // The gutter every screen in this app keeps and this one did not: the
   // cards ran to both edges and the card's own corner radius clipped the
-  // first glyph of every title. `Card` supplies no padding of its own —
-  // that is by design, since half the cards in the app pad their inner rows
-  // instead — so both halves of the gutter are set here.
+  // first glyph of every title.
   body: { gap: space.cardGap, paddingHorizontal: space.page },
   error: { ...type.body, color: colors.textSecondary },
+  lede: { ...type.body, color: colors.textSecondary, marginBottom: space.titleToContent },
 
-  section: { color: colors.text, ...type.section, marginBottom: space.headingToContent },
-  /** Inside the card, which has none of its own. */
-  card: { padding: space.cardPadding },
+  // Caption weight and letterspaced rather than a second title. There is
+  // one title on this screen; these divide it, and at `type.section` they
+  // competed with the card names underneath them.
+  section: {
+    ...CAPTION, color: colors.textTertiary, fontWeight: font.semibold,
+    letterSpacing: 0.8, textTransform: 'uppercase',
+    marginBottom: space.headingToContent,
+  },
   // The second heading needs air above it that the first, sitting under the
   // screen title, already has.
   sectionAfter: { marginTop: space.titleToContent },
   row: { marginBottom: space.cardGap },
 
-  head: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  headText: { flex: 1, gap: 4 },
-  title: { color: colors.text, ...type.cardTitle },
-  meta: { ...CAPTION, color: colors.textTertiary },
-  // A glyph in a hit area, not a filled button: destroying a trip is not
-  // the loudest thing on this card and should not be drawn like it.
-  trash: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-
-  // A hairline above the itinerary, so the stops read as the trip's
-  // contents rather than as more metadata.
-  stops: {
-    marginTop: 12, paddingTop: 12, gap: 9,
-    borderTopWidth: 1, borderTopColor: colors.borderGlassSoft,
+  // The card is the tap now, so it carries its own surface rather than
+  // sitting inside a `Card` — `PressableScale` needs the fill on the view
+  // its children live in, and nesting one inside the other would put a
+  // border around a border.
+  card: {
+    backgroundColor: colors.surfaceCard, borderRadius: radius.card,
+    borderWidth: 1, borderColor: colors.borderGlassSoft,
+    padding: space.cardPadding, overflow: 'hidden',
   },
-  stopRow: { flexDirection: 'row', gap: 10 },
+  /** For the two places that do sit inside a real `Card` — the skeleton
+   *  and the error — where `s.card` would paint a second surface inside
+   *  the first. */
+  pad: { padding: space.cardPadding },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  title: { flex: 1, color: colors.text, ...type.cardTitle },
+
+  badge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 11, paddingVertical: 6, borderRadius: radius.pill,
+    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
+  },
+  badgeText: { ...CAPTION, color: colors.accent, fontWeight: font.semibold },
+
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  meta: { ...CAPTION, color: colors.textSecondary, flex: 1 },
+
+  stops: { marginTop: 14, gap: 2 },
+  // `alignItems: center` and a fixed row height, so the dot lands on the
+  // middle of its line and the rail between two dots has a known length.
+  stopRow: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 30 },
   stopTime: {
-    ...CAPTION, color: colors.textSecondary, width: 44,
+    ...CAPTION, color: colors.textSecondary, width: 46,
     fontVariant: ['tabular-nums'],
   },
-  stopText: { flex: 1, gap: 2 },
-  stopName: { ...type.body, color: colors.text },
-  stopGone: { ...type.body, color: colors.textTertiary, fontStyle: 'italic' },
-  why: { ...CAPTION, color: colors.textTertiary, lineHeight: 18 },
+  // The dot column and the rail beneath it, borrowed from the plan cards so
+  // an itinerary looks like an itinerary wherever it is drawn.
+  dotCol: { width: 9, alignItems: 'center' },
+  dot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: colors.accentFill },
+  rail: { position: 'absolute', top: 9, width: 2, height: 30, backgroundColor: colors.borderGlassSoft },
+  stopName: { ...type.body, color: colors.text, flex: 1 },
+  // Right-aligned and capped: it is the answer to "whereabouts", read after
+  // the name, and letting it grow would push the name into an ellipsis to
+  // print a district nobody was looking for yet.
+  stopArea: { ...CAPTION, color: colors.textTertiary, maxWidth: 108, textAlign: 'right' },
+  stopGone: { ...type.body, color: colors.textTertiary, fontStyle: 'italic', flex: 1 },
+  more: { ...CAPTION, color: colors.textTertiary, marginLeft: 56, marginTop: 4 },
 
-  foot: { ...CAPTION, color: colors.textSecondary, marginTop: 12 },
+  divider: {
+    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
+    marginTop: 14, marginBottom: 12,
+  },
+  foot: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  footFacts: { ...CAPTION, color: colors.textSecondary, flex: 1 },
+  open: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  openText: { ...CAPTION, color: colors.accent, fontWeight: font.semibold },
+
   // Dimmed, not greyed out: still legible, just no longer the thing you
   // came here for.
   cardPast: { opacity: 0.72 },
+
+  // A header action, so it matches the 44pt round buttons the other
+  // screens put in the same slot rather than the 52pt of a button that
+  // carries an action on its own. See `CONTROL_H`.
+  newBtn: { borderRadius: radius.pill, overflow: 'hidden' },
+  newBtnFill: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    height: HEADER_CONTROL_H, paddingHorizontal: 16,
+  },
+  newBtnText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
 
   first: {
     alignItems: 'center', gap: 10, marginHorizontal: space.page,
