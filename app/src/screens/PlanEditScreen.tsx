@@ -26,7 +26,7 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  AmbientWarmth, Card, CONTROL_H, GradientCta, PressableScale, Screen, fireHaptic,
+  AmbientWarmth, Card, GradientCta, PressableScale, RoundIconButton, Screen, fireHaptic,
   successHaptic, useTabBarClearance,
 } from '../components/ui';
 import { derivedTitle, factLine, freshen, narrate, type Narration } from '../lib/assist';
@@ -261,14 +261,38 @@ export default function PlanEditScreen({ navigation, route }: {
   }
 
   return (
-    <Screen title={title} onBack={() => navigation.goBack()}>
+    <Screen
+      title={title}
+      subtitle={line || undefined}
+      onBack={() => navigation.goBack()}
+      /**
+       * Share goes here rather than beside Save, and the reference design
+       * shows it in both places — which is the thing this app just spent a
+       * commit removing from the Trips tab. One offer per screen.
+       *
+       * The header is the right half of that pair. Sharing is a mock: there
+       * is no membership table, no invitation, nothing that lets anybody
+       * read a row they do not own. A button that cannot do its job should
+       * not stand shoulder to shoulder with the one that works, sized and
+       * weighted like its equal — and the bottom row's caption then had to
+       * spend a sentence apologising for it. As a header accessory it is
+       * where iOS puts share, it is quiet, and Save gets the full width it
+       * has earned by being the only thing on this screen that does
+       * anything.
+       */
+      right={(
+        <RoundIconButton
+          icon="share-outline"
+          onPress={() => mock(t('Share', 'Chia sẻ', '共有'))}
+          label={t('Share', 'Chia sẻ', '共有')}
+        />
+      )}
+    >
       <AmbientWarmth />
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
       >
-        {!!line && <Text style={s.sub}>{line}</Text>}
-
         {/* Mocked, and labelled. The avatars are the reader's own initial
             twice over rather than invented names — a fake second person on
             a trip nobody can share is a lie with a face on it. */}
@@ -406,36 +430,26 @@ export default function PlanEditScreen({ navigation, route }: {
           ])}
         </Text>
 
-        <View style={s.actions}>
-          {/* Wrapped in the flex rather than given it: `wide` puts
-              `alignSelf: 'stretch'` on the button, which in a *row* stretches
-              its height and not its width. The wrapper takes what the row has
-              left, `wide` fills it, and Share keeps its own size. */}
-          <View style={{ flex: 1 }}>
-            <GradientCta
-              icon="checkmark"
-              wide
-              label={saving
-                ? t('Saving…', 'Đang lưu…', '保存中…')
-                : t('Save to Trips', 'Lưu vào Chuyến đi', '旅程に保存')}
-              onPress={() => { if (!saving) void onSave(); }}
-            />
-          </View>
-          <PressableScale
-            onPress={() => mock(t('Share', 'Chia sẻ', '共有'))}
-            style={s.share}
-          >
-            <Ionicons name="paper-plane-outline" size={16} color={colors.textSecondary} />
-            <Text style={s.ghostText}>{t('Share', 'Chia sẻ', '共有')}</Text>
-          </PressableScale>
-        </View>
+        {/* One button, the width of the screen. It is the only thing here
+            that does anything. */}
+        <GradientCta
+          icon="checkmark"
+          wide
+          label={saving
+            ? t('Saving…', 'Đang lưu…', '保存中…')
+            : t('Save to Trips', 'Lưu vào Chuyến đi', '旅程に保存')}
+          onPress={() => { if (!saving) void onSave(); }}
+        />
 
         <Text style={s.note}>
           {session?.user?.id
             ? t(
-              'Times and order stay editable after saving. Sharing is not built yet.',
-              'Giờ giấc và thứ tự vẫn sửa được sau khi lưu. Phần chia sẻ thì chưa làm.',
-              '保存後も時刻と順番は編集できます。共有はまだありません。',
+              // The caption no longer has to apologise for the button
+              // beside it, because there is no longer a button beside it —
+              // Share and Invite say they are mocks when pressed.
+              'Times and order stay editable after saving.',
+              'Giờ giấc và thứ tự vẫn sửa được sau khi lưu.',
+              '保存後も時刻と順番は編集できます。',
             )
             : t(
               'Sign in to save this trip.',
@@ -451,7 +465,6 @@ export default function PlanEditScreen({ navigation, route }: {
 const CAPTION = { fontSize: 13, fontWeight: font.regular } as const;
 
 const s = StyleSheet.create({
-  sub: { ...CAPTION, color: colors.textSecondary, marginBottom: 14 },
   body: { ...type.body, color: colors.textSecondary },
 
   crew: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: space.titleToContent },
@@ -508,14 +521,5 @@ const s = StyleSheet.create({
   legText: { ...CAPTION, color: colors.textTertiary },
 
   total: { ...CAPTION, color: colors.textSecondary, marginTop: 10, marginBottom: 16 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  // Same size class as the button it stands beside — see `CONTROL_H`. It
-  // was 44pt against the CTA's 52pt, which is small enough to look like a
-  // rendering fault and large enough to see.
-  share: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    minHeight: CONTROL_H, paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
-  },
   note: { ...CAPTION, color: colors.textTertiary, marginTop: 12 },
 });
