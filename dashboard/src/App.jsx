@@ -14,8 +14,41 @@ export const useProgress = () => useContext(ProgressCtx);
 export const useCity = () => useContext(CityCtx);
 
 const CITY_KEY = 'citycrew.dashboard.city';
+// The stored value for "no city filter". `city` in context is null then —
+// every query that keys off city?.id simply drops its filter, which is what
+// "aggregate across all cities" means everywhere the desk counts anything.
+const ALL = 'all';
 
 const UNFILED_SHOWN = 6;
+
+// The chip spelling for each city — the desk's own abbreviations, matching
+// the analytics screens.
+const CHIP_LABEL = { hcmc: 'TP.HCM', hanoi: 'Hà Nội', danang: 'Đà Nẵng' };
+const chipLabel = (c) => CHIP_LABEL[c.id] ?? c.short_vi ?? c.id;
+
+/**
+ * For the screens that cannot mean anything across all cities at once —
+ * importing a place, scanning, editing a hero. With "All cities" selected
+ * they would otherwise have to invent a scope; instead they ask, and the
+ * answer sets the workspace city the whole desk then follows.
+ */
+export function CityGate({ children }) {
+  const { cities, city, setCity } = useCity();
+  if (city) return children;
+  return (
+    <div className="panel citygate">
+      <h3>One city at a time</h3>
+      <p>This screen works on a single city. Pick one — the whole desk follows.</p>
+      <div className="cityswitch">
+        {cities.map((c) => (
+          <button key={c.id} className="chip" onClick={() => setCity(c.id)}>
+            {chipLabel(c)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * The places nobody has filed yet, behind the bell that counts them.
@@ -156,10 +189,14 @@ export default function App() {
     localStorage.setItem(CITY_KEY, id);
     setCityId(id);
   }, []);
-  const city = cities.find((c) => c.id === cityId) ?? cities[0] ?? null;
+  // null means "all cities" — deliberately, so every consumer that passes
+  // city?.id to the api drops its filter instead of inventing a scope.
+  const city = cityId === ALL
+    ? null
+    : cities.find((c) => c.id === cityId) ?? cities[0] ?? null;
 
   const refreshProgress = useCallback(() => {
-    api.progress(cityId).then(setProgress).catch(() => {});
+    api.progress(cityId === ALL ? undefined : cityId).then(setProgress).catch(() => {});
   }, [cityId]);
   useEffect(refreshProgress, [refreshProgress]);
 
@@ -178,9 +215,9 @@ export default function App() {
   const publishApproved = async () => {
     setPublishing(true);
     try {
-      const { published } = await api.publishApproved(cityId);
+      const { published } = await api.publishApproved(cityId === ALL ? undefined : cityId);
       showToast(published
-        ? `Published ${published} approved place${published === 1 ? '' : 's'} in ${city?.name_en ?? cityId}`
+        ? `Published ${published} approved place${published === 1 ? '' : 's'} in ${city?.name_en ?? 'all cities'}`
         : 'Nothing new to publish — all approved places are already live');
       refreshProgress();
     } catch (err) {
@@ -208,20 +245,10 @@ export default function App() {
                 <img className="logo" src="logo.png" alt="cityCrew" />
               </Link>
               <h1>Data desk</h1>
-              {/* Scope switcher — everything below the bar is filtered to it.
-                  It sits beside the title rather than inside the heading: a
-                  form control nested in an <h1> reads as part of the heading
-                  to a screen reader. */}
-              <select
-                className="cityselect"
-                value={city?.id ?? 'hcmc'}
-                onChange={(e) => setCity(e.target.value)}
-                aria-label="City"
-              >
-                {(cities.length ? cities : [{ id: 'hcmc', name_en: 'Ho Chi Minh City' }]).map((c) => (
-                  <option key={c.id} value={c.id}>{c.name_en}</option>
-                ))}
-              </select>
+              {/* The scope switcher used to sit here as a <select>. It moved
+                  down beside the page title as a chip row (see .pagehead):
+                  chips can say "All cities", which a workspace pill never
+                  could, and the bar keeps to actions and destinations. */}
               <div className="spacer" />
               {/* One visible action, and it is the one every editing
                   session starts with. Everything else in this bar was a
@@ -281,7 +308,31 @@ export default function App() {
           <div className="shell">
             {(location.pathname === '/' || total > 0) && (
               <div className="pagehead">
-                {location.pathname === '/' && <h2 className="pagetitle">Places</h2>}
+                {location.pathname === '/' && (
+                  <div className="pagehead-scope">
+                    <h2 className="pagetitle">Places</h2>
+                    {/* The workspace scope, where the work is: a chip row
+                        beside the title, with the one option the old top-bar
+                        pill could not offer — no filter at all. */}
+                    <div className="cityswitch" role="group" aria-label="City">
+                      <button
+                        className={`chip${city ? '' : ' on'}`}
+                        onClick={() => setCity(ALL)}
+                      >
+                        All cities
+                      </button>
+                      {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
+                        <button
+                          key={c.id}
+                          className={`chip${city?.id === c.id ? ' on' : ''}`}
+                          onClick={() => setCity(c.id)}
+                        >
+                          {chipLabel(c)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {total > 0 && (
                   <div className="rail" title={`${approved} approved · ${flagged} flagged · ${total - approved - flagged} pending`}>
                     <div className="counts">
