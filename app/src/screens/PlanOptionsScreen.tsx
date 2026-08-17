@@ -44,13 +44,22 @@ import { COMPANY, type TripDraft } from '../lib/trip';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
-/** What each lens is called on its card. The badge comes from the lens
- *  rather than from a model: it says which weighting produced this plan,
- *  which is a fact, where the plan's *name* is a piece of writing and
- *  waits for a later phase. */
+/**
+ * What each lens is called on its card. The badge comes from the lens
+ * rather than from a model: it says which weighting produced this plan,
+ * which is a fact, where the plan's *name* is a piece of writing and
+ * waits for a later phase.
+ *
+ * Two of the Vietnamese labels were translations of the English word
+ * rather than of the meaning, and both landed on a different word. "Hợp
+ * nhất" is read as *merge* far more often than as *most suitable*, so the
+ * recommended plan was badged "Merged"; "Biểu tượng" is the noun *symbol*
+ * — a logo — not the adjective. Neither is a near miss a reader corrects
+ * from context, because both are ordinary words meaning something else.
+ */
 const BADGE: Record<LensKey, { en: string; vi: string; ja: string; star?: boolean }> = {
-  match: { en: 'Best match', vi: 'Hợp nhất', ja: '最適', star: true },
-  iconic: { en: 'Iconic views', vi: 'Biểu tượng', ja: '定番' },
+  match: { en: 'Best match', vi: 'Khớp nhất', ja: '最適', star: true },
+  iconic: { en: 'Iconic views', vi: 'Nổi tiếng', ja: '定番' },
   lowkey: { en: 'Low-key', vi: 'Nhẹ nhàng', ja: '控えめ' },
 };
 
@@ -176,7 +185,14 @@ export default function PlanOptionsScreen({ navigation, route }: {
 
   return (
     <Screen
-      title={t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り')}
+      // Which outing this is, not always an evening. The title was a fixed
+      // string, so a day planned from the wizard arrived under the heading
+      // "Your evening, three ways" above three plans starting at 09:00 —
+      // and the screen after it, which derives its name properly, called
+      // the same plan "A day out". Two screens, one plan, two answers.
+      title={p.when === 'day'
+        ? t('Your day, three ways', 'Ngày của bạn, ba cách', 'あなたの一日、三通り')
+        : t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り')}
       // Moved out of the body and into the header, which is where the
       // reference design puts it and where it costs no scroll: it is one
       // quiet line about the screen, not a paragraph on it.

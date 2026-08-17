@@ -378,18 +378,25 @@ export default function PlanEditScreen({ navigation, route }: {
                   column, because that column is what is left after a time
                   stepper on one side and three tools on the other — about
                   a third of the card, which turned every sentence into two
-                  clipped words. Full width it reads. */}
-              {(() => {
-                const line = live.why.get(stop.place.slug)
+                  clipped words. Full width it reads.
+
+                  Rendered even when it is empty, which looks wasteful and
+                  is the point: `s.why` reserves two lines, and a card that
+                  skipped the element would still jump when a sentence
+                  arrived for a place the catalog knows nothing about —
+                  which is exactly the place most likely to get one. The
+                  cost is a blank gap under a stop with neither a rating nor
+                  opening hours, and there are few of those. */}
+              <Text style={s.why} numberOfLines={2}>
+                {live.why.get(stop.place.slug)
                   || factLine({
                     slug: stop.place.slug,
                     name: stop.place.name_en,
                     rating: stop.place.rating,
                     openingHours: stop.place.opening_hours,
                     arriveMin: stop.arriveMin,
-                  }, now, t);
-                return line ? <Text style={s.why} numberOfLines={2}>{line}</Text> : null;
-              })()}
+                  }, now, t)}
+              </Text>
 
               {/* Only when the reader made it so. A plan reading backwards
                   with nothing saying so is a plan that gets somebody to a
@@ -509,7 +516,22 @@ const s = StyleSheet.create({
   // Full width under the row now, so it needs the air a new block needs
   // rather than the 3pt that separated it from the line above it inside a
   // column.
-  why: { ...CAPTION, color: colors.textSecondary, lineHeight: 18, marginTop: 10 },
+  // Two lines' worth of room whether or not two lines arrive.
+  //
+  // The rule above this line in the body — never a spinner, because a row
+  // that shuffled its own height when the words landed would be the screen
+  // admitting it was waiting — was written and then not enforced. The
+  // fallback is one line of facts and a model's sentence is two, so every
+  // card grew 18pt when the narration returned, up to four seconds in.
+  // With two stops that is 36pt, and Save to Trips walked out from under
+  // whichever finger was reaching for it.
+  //
+  // `minHeight` rather than a fixed height: the line is capped at two by
+  // `numberOfLines`, so this reserves the maximum rather than imposing it,
+  // and a language whose caption wraps differently is not clipped.
+  why: {
+    ...CAPTION, color: colors.textSecondary, lineHeight: 18, marginTop: 10, minHeight: 36,
+  },
 
   tools: { flexDirection: 'row', gap: 2 },
   tool: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
