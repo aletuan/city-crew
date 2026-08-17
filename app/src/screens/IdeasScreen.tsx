@@ -242,8 +242,10 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
                 company: draft.company,
                 categories: draft.categories,
                 where: draft.district ?? (draft.at ? whereLabel : null),
+                district: draft.district,
                 date: day,
                 when: draft.when,
+                from: draft.from,
               })}
             />
           </View>

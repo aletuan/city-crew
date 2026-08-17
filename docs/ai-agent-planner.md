@@ -172,11 +172,12 @@ lựa chọn thật.
 | nightlife | 11 | 6 | 10 |
 | views | 7 | 9 | 5 |
 | nature | 4 | 5 | 3 |
-| **markets** | **1** | **2** | **1** |
+| **markets** | **0** | 2 | **0** |
 
-Chọn "Mua sắm" ở Hà Nội thì cả thành phố có đúng một chỗ; ràng buộc đa dạng
-"khác ít nhất 2 trên 3 stop" không thể thoả mãn. **Ba thẻ gần giống hệt nhau
-tệ hơn một thẻ**, vì nó giả vờ có lựa chọn ở nơi không có.
+Chọn "Mua sắm" ở Hà Nội hay Đà Nẵng thì **không có chỗ nào** — một chip dẫn tới
+ngõ cụt ở hai trong ba thành phố. Chọn "Ăn uống" ở Đà Nẵng thì có hai chỗ, nên
+ràng buộc đa dạng "khác ít nhất 2 trên 3 stop" không thể thoả mãn. **Ba thẻ gần
+giống hệt nhau tệ hơn một thẻ**, vì nó giả vờ có lựa chọn ở nơi không có.
 
 Thang xuống cấp, theo đúng tiền lệ commit #190 (*"A search that found nothing
 says what would have worked"*):
@@ -208,9 +209,9 @@ hardcode "Thảo Điền" nên sai trên mọi màn hình app đang phục vụ.
 nó không đọc được. Planner phải coi `null` là **"không biết, vẫn cho vào,
 nhưng không hứa giờ giấc"** — không phải "đóng cửa".
 
-Điều này không phải sự dễ dãi: `markets` ở Hà Nội và Đà Nẵng có đúng một chỗ
-mỗi nơi và **không chỗ nào lưu giờ mở cửa**. Coi `null` là loại thì chỗ mua sắm
-duy nhất của Hà Nội không bao giờ vào được plan nào, mãi mãi. Comment của
+Cả catalog hiện có đúng **một** dòng như vậy: **APEC Park ở Đà Nẵng**, một công
+viên công cộng — nó không lưu giờ vì thực tế không niêm yết giờ nào. Coi `null`
+là loại thì chỗ đó không bao giờ vào được plan nào, mãi mãi. Comment của
 `openState` đã nói đúng nguyên tắc rồi: *"Showing nothing beats showing
 'Closed' to someone standing in the doorway of an open café."*
 

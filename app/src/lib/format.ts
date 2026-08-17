@@ -159,6 +159,34 @@ function parseDay(hours: string): Window[] | null {
   return out;
 }
 
+/**
+ * The instant at `minutes` past midnight on `day`, read on the catalog's
+ * own clock.
+ *
+ * Exists so a planner can ask `openState` about seven in the evening next
+ * Saturday. Building that Date at the call site would mean either copying
+ * `ICT_OFFSET_MIN` — a constant with one right home — or going through the
+ * device's offset, and the device is in New York for one of the two clocks
+ * the test suite runs on.
+ *
+ * Null for anything that is not a real day, including "2026-02-30", which
+ * `Date.UTC` would roll forward to the 2nd of March rather than refuse.
+ */
+export function instantOn(day: string, minutes: number): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day.trim());
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const out = new Date(Date.UTC(y, mo - 1, d, 0, minutes - ICT_OFFSET_MIN));
+  // Read the rolled-over value back on the same clock the day was written
+  // on, undoing the shift first — otherwise a morning slot before 07:00
+  // ICT reports the previous day and every date looks invalid.
+  const back = new Date(out.getTime() + ICT_OFFSET_MIN * 60_000);
+  if (back.getUTCFullYear() !== y || back.getUTCMonth() !== mo - 1) return null;
+  // `minutes` may legitimately run past midnight — a bar closing at 1am is
+  // 1500 — so only the month and year are checked for overflow.
+  return out;
+}
+
 export type OpenState = { open: boolean; until?: string; opensAt?: string };
 
 /**

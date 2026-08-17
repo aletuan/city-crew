@@ -1,6 +1,26 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createNavigationContainerRef, type RouteProp } from '@react-navigation/native';
 
+/**
+ * What the wizard asked, in the shape the two screens after it need.
+ *
+ * `where` and `district` are not a duplication. Only the wizard knows
+ * whether the reader picked an area or dropped a pin, and the screens
+ * after it have no business re-deciding that — so `where` is the sentence
+ * to print, already resolved, and `district` is the datum to plan with,
+ * null when there was no area to name.
+ */
+export type PlanAsk = {
+  company: string | null;
+  categories: string[];
+  where: string | null;
+  district: string | null;
+  date: string;
+  when: 'day' | 'evening';
+  /** Collection slugs the reader chose to build from. */
+  from: string[];
+};
+
 // Detail screens live inside each tab's own stack (Explore, Collections),
 // so the bottom tab bar stays visible everywhere.
 export type RootStackParamList = {
@@ -24,19 +44,15 @@ export type RootStackParamList = {
   AddPlace: undefined;
   CollectionDetail: { slug: string };
   IdeasHome: undefined;
-  /** The "we are working on it" screen. Carries the answers rather than
+  /** The screen that does the work. Carries the answers rather than
    *  re-reading the draft, because the draft lives in the screen behind
    *  this one and a plan should be built from what was asked at the
    *  moment it was asked. */
-  Sketching: {
-    company: string | null;
-    categories: string[];
-    /** The district, or a name for the pin — already resolved, since only
-     *  the screen behind knows which of the two the reader chose. */
-    where: string | null;
-    date: string;
-    when: 'day' | 'evening';
-  };
+  Sketching: PlanAsk;
+  /** The three drafts, and the button that asks for three more. Takes the
+   *  same answers plus the draw, so the plans are rebuilt from pure inputs
+   *  rather than carried through navigation as objects. */
+  PlanOptions: PlanAsk & { seed: number };
   ProfileHome: undefined;
   SignIn: undefined;
   SignUp: undefined;
