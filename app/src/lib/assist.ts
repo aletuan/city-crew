@@ -180,6 +180,96 @@ export async function narrate(
   return { title, why, fromModel: !!title || why.size > 0 };
 }
 
+// ── asking early ─────────────────────────────────────────────────────
+//
+// The editor used to ask for the words on arrival: the plan rendered as
+// facts, and up to four seconds later the model's sentences landed and the
+// card rewrote itself in front of the reader. Reserving the lines' height
+// stopped the layout jumping, but the *text* still changed — a screen that
+// swaps its prose in after the reader has started reading it is answering
+// a question they already moved past.
+//
+// So the options screen asks instead, for every card it shows, while the
+// reader is still comparing them — and by the time one is tapped the words
+// are usually here. This cache is the handoff: keyed by what was narrated,
+// filled by whoever asks first, read synchronously by the editor on its
+// first render.
+
+/**
+ * One narration, one key: the language, and the stops with their hours.
+ *
+ * The hour is in the key because the sentences lean on it — "an easy nine
+ * o'clock start" is about 09:00, and a plan rebuilt to start at 20:15 must
+ * not inherit it. Nothing else that varies (`seed`, the lens) is in the
+ * key, because two plans with the same stops at the same hours *are* the
+ * same plan as far as the words are concerned.
+ */
+export function narrationKey(stops: readonly Narratable[], lang: string): string {
+  return `${lang}|${stops.map((s) => `${s.slug}@${s.arriveMin}`).join(',')}`;
+}
+
+// Module state, which `lib` otherwise avoids — but a cache that lived in a
+// screen would die with it, and the whole point is to outlive the screen
+// that filled it. `resetNarrationCache` exists so tests are not coupled
+// through it.
+const settled = new Map<string, Narration>();
+const asking = new Map<string, Promise<Narration>>();
+
+/** Four generations of three cards, roughly. Insertion order *is* age for
+ *  a Map, so eviction is the front of the iterator; a session that
+ *  regenerates all evening stays bounded. */
+const KEEP = 12;
+
+/** The words for exactly these stops, if somebody already asked. */
+export function cachedNarration(
+  stops: readonly Narratable[], lang: string,
+): Narration | null {
+  return settled.get(narrationKey(stops, lang)) ?? null;
+}
+
+/**
+ * Ask the model now so a later screen does not have to.
+ *
+ * Joins rather than repeats: a second caller with the same key gets the
+ * same in-flight promise, so the options screen and an impatient tap on a
+ * card cost one call between them, not two.
+ *
+ * An empty answer is cached like a full one, deliberately. Empty is what
+ * `narrate` returns when the model is unreachable, and caching it is what
+ * makes the editor's fallback *stable* — the alternative is a screen that
+ * opens on facts and then retries in the background, which is the exact
+ * rewrite-under-the-reader this cache exists to end. The price is that one
+ * failed generation stays flat until the plan itself changes; the next
+ * Regenerate has new keys and asks fresh.
+ */
+export function prefetchNarration(
+  stops: readonly Narratable[],
+  draft: { company: string | null; categories: string[]; when: 'day' | 'evening'; where: string | null },
+  lang: string,
+): Promise<Narration> {
+  const key = narrationKey(stops, lang);
+  const done = settled.get(key);
+  if (done) return Promise.resolve(done);
+  const pending = asking.get(key);
+  if (pending) return pending;
+  const ask = narrate(stops, draft, lang).then((n) => {
+    asking.delete(key);
+    settled.set(key, n);
+    while (settled.size > KEEP) settled.delete(settled.keys().next().value as string);
+    return n;
+  });
+  asking.set(key, ask);
+  return ask;
+}
+
+/** Tests only. A module-level cache is shared between test cases the way
+ *  it is shared between screens, which is the one place that is not a
+ *  feature. */
+export function resetNarrationCache(): void {
+  settled.clear();
+  asking.clear();
+}
+
 /**
  * The narration, minus the parts the reader has since edited out from
  * under it.

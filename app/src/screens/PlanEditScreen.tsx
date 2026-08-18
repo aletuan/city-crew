@@ -29,8 +29,11 @@ import {
   AmbientWarmth, Card, GradientCta, PressableScale, RoundIconButton, Screen, fireHaptic,
   successHaptic, useTabBarClearance,
 } from '../components/ui';
-import { derivedTitle, factLine, freshen, narrate, type Narration } from '../lib/assist';
+import {
+  cachedNarration, derivedTitle, factLine, freshen, prefetchNarration, type Narration,
+} from '../lib/assist';
 import { useAuth } from '../lib/auth';
+import { CATEGORIES, categoriesOf } from '../lib/categories';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
@@ -104,35 +107,62 @@ export default function PlanEditScreen({ navigation, route }: {
   const [stops, setStops] = useState<Editable<Place>[] | null>(null);
   const [saving, setSaving] = useState(false);
 
+  /** What the model was — or would be — asked about, in exactly the shape
+   *  the options screen prefetched with, so the cache key matches. */
+  const asked = useMemo(
+    () => (picked?.stops ?? []).map((s) => ({
+      slug: s.place.slug,
+      name: s.place.name_en,
+      categories: s.place.categories,
+      neighborhood: s.place.neighborhood_en,
+      rating: s.place.rating,
+      arriveMin: s.arriveMin,
+      openingHours: s.place.opening_hours,
+    })),
+    [picked],
+  );
+
   /**
-   * The words, asked for once and only for the plan the reader picked.
+   * The words, read from the cache the options screen filled.
    *
-   * Not on the options screen: narrating all three would triple the cost to
-   * name two evenings nobody chose. And not re-asked when the reader edits —
-   * a line about a place is still true after the place above it moved, and
-   * a screen that flickered new prose under every tap would be unreadable.
+   * This screen used to ask for them itself, on arrival — the deliberate
+   * thrift of narrating only the plan the reader picked — and paid for it
+   * in the worst currency: the card rendered its facts, and the model's
+   * sentences rewrote them under the reader up to four seconds in. The
+   * asking moved to the options screen, where the reading time is the
+   * model's head start, and by the time a card is tapped the answer is
+   * normally sitting in `cachedNarration` for the first render to use.
+   *
+   * The effect covers the two ways that can miss. A tap faster than the
+   * model joins the in-flight call — `prefetchNarration` dedupes on key —
+   * and lands one update, into lines whose height is already reserved. And
+   * a failed generation is *cached as empty*, so this screen opens on
+   * facts and stays on facts: the fallback is a state, not a retry loop.
+   *
+   * Still never re-asked when the reader edits — a line about a place is
+   * still true after the place above it moved, and a screen that flickered
+   * new prose under every tap would be unreadable. `freshen` below is what
+   * retires the lines that editing falsifies.
    */
-  const [words, setWords] = useState<Narration>({ title: null, why: new Map(), fromModel: false });
+  const [words, setWords] = useState<Narration>(() => (asked.length
+    ? cachedNarration(asked, lang)
+    : null) ?? { title: null, why: new Map(), fromModel: false });
   useEffect(() => {
-    if (!picked?.stops.length) return;
+    if (!asked.length) return;
+    const hit = cachedNarration(asked, lang);
+    // Same object the initial state read — React bails on the no-op. Here
+    // for the rare re-run where `picked` itself changed under the screen.
+    if (hit) { setWords(hit); return; }
     let live = true;
-    void narrate(
-      picked.stops.map((s) => ({
-        slug: s.place.slug,
-        name: s.place.name_en,
-        categories: s.place.categories,
-        neighborhood: s.place.neighborhood_en,
-        rating: s.place.rating,
-        arriveMin: s.arriveMin,
-        openingHours: s.place.opening_hours,
-      })),
+    void prefetchNarration(
+      asked,
       { company: p.company, categories: p.categories, when: p.when, where: p.where },
       lang,
     ).then((n) => { if (live) setWords(n); });
     // Left behind when the screen goes: a plan the reader has walked away
     // from should not set state on its way out.
     return () => { live = false; };
-  }, [picked, p.company, p.categories, p.when, p.where, lang]);
+  }, [asked, p.company, p.categories, p.when, p.where, lang]);
 
   // Seeded once from the planner, then owned entirely by the reader. A
   // `useEffect` syncing it back would fight every edit they make.
@@ -309,10 +339,96 @@ export default function PlanEditScreen({ navigation, route }: {
           {t('STOPS · NUDGE A TIME OR MOVE ONE', 'CÁC ĐIỂM · CHỈNH GIỜ HOẶC ĐỔI THỨ TỰ', 'スポット · 時間や順番を調整')}
         </Text>
 
-        {current.map((stop, i) => (
+        {current.map((stop, i) => {
+          // The first category the place carries, worn as a glyph in a
+          // soft well — the same hue this concept wears on Explore's
+          // filter row and the wizard's chips, so a café here looks like
+          // "café" everywhere else. A place nothing classifies gets the
+          // neutral pin on the neutral ground, not a guess.
+          const cat = CATEGORIES[categoriesOf(stop.place)[0]];
+          return (
           <View key={stop.place.slug}>
             <Card style={[s.card, wrong.includes(i) && s.rowWrong]}>
-              <View style={s.row}>
+              {/* What the place is, up top; what you do to it, at the
+                  bottom. The old card led every row with the time stepper,
+                  which put the controls between the reader and the name —
+                  the first thing on a card about a place was a minus
+                  button. The identity band now reads left to right as
+                  glyph, name, rating; the controls share a rail under the
+                  divider, editor-chrome rather than content. */}
+              <View style={s.identity}>
+                <View style={[s.well, cat && { backgroundColor: `${cat.color}24` }]}>
+                  <Ionicons
+                    name={cat?.icon ?? 'location-outline'}
+                    size={20}
+                    color={cat?.color ?? colors.textTertiary}
+                  />
+                </View>
+                <View style={s.headCol}>
+                  <View style={s.nameRow}>
+                    <Text style={s.name} numberOfLines={1}>{stop.place.name_en}</Text>
+                    {/* By the name, where a decision reads it — not buried
+                        in the fallback line where a model's sentence used
+                        to replace it. `sun`, not `onPhoto.star`: the star
+                        colour is confined by its own comment to photo
+                        scrims, and `sun` is the same gold solved for the
+                        page, dark enough on paper to be seen. */}
+                    {stop.place.rating != null && (
+                      <View style={s.rating}>
+                        <Ionicons name="star" size={12} color={colors.sun} />
+                        <Text style={s.ratingText}>{stop.place.rating}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={s.area} numberOfLines={1}>
+                    {summaryLine([stop.place.neighborhood_en, `${stop.dwellMin}′`])}
+                  </Text>
+                </View>
+              </View>
+
+              {/* A sentence if one was written, and the facts behind it if
+                  not. Never nothing, and never a spinner: the plan is
+                  complete before the words arrive — and since the options
+                  screen started asking ahead, they normally arrived before
+                  this screen did. Full width, because a sentence squeezed
+                  into a column beside controls was two clipped words.
+
+                  The rating is left out of the fallback here — `factLine`
+                  would happily print it, but it sits beside the name now,
+                  and a line that repeats the header one row down reads as
+                  a screen stuttering.
+
+                  Rendered even when empty: `s.why` reserves two lines, and
+                  a card that skipped the element would still jump in the
+                  one late-landing case left — the tap faster than the
+                  model. */}
+              <Text style={s.why} numberOfLines={2}>
+                {live.why.get(stop.place.slug)
+                  || factLine({
+                    slug: stop.place.slug,
+                    name: stop.place.name_en,
+                    rating: null,
+                    openingHours: stop.place.opening_hours,
+                    arriveMin: stop.arriveMin,
+                  }, now, t)}
+              </Text>
+
+              {/* Only when the reader made it so. A plan reading backwards
+                  with nothing saying so is a plan that gets somebody to a
+                  closed door. */}
+              {wrong.includes(i) && (
+                <Text style={s.warn}>
+                  {t('Earlier than the stop above.', 'Sớm hơn điểm phía trên.', '前のスポットより早い時刻です。')}
+                </Text>
+              )}
+
+              <View style={s.railDivider} />
+
+              {/* The controls, on their own rail under the divider: nudge
+                  the hour on the left, reorder and remove on the right.
+                  Everything above the divider is the place; everything on
+                  the rail is what you can do to it. */}
+              <View style={s.rail}>
                 <View style={s.timeBox}>
                   <PressableScale
                     haptic="selection"
@@ -329,13 +445,6 @@ export default function PlanEditScreen({ navigation, route }: {
                   >
                     <Ionicons name="add" size={15} color={colors.textSecondary} />
                   </PressableScale>
-                </View>
-
-                <View style={s.who}>
-                  <Text style={s.name} numberOfLines={1}>{stop.place.name_en}</Text>
-                  <Text style={s.area} numberOfLines={1}>
-                    {summaryLine([stop.place.neighborhood_en, `${stop.dwellMin}′`])}
-                  </Text>
                 </View>
 
                 <View style={s.tools}>
@@ -361,45 +470,6 @@ export default function PlanEditScreen({ navigation, route }: {
                   </PressableScale>
                 </View>
               </View>
-
-              {/* A sentence if one was written, and the facts behind it if
-                  not. Never nothing, and never a spinner: the plan is
-                  complete before the words arrive, and a row that shuffled
-                  its own height when they landed would be the screen
-                  admitting it was waiting.
-
-                  On its own line under the row rather than in the middle
-                  column, because that column is what is left after a time
-                  stepper on one side and three tools on the other — about
-                  a third of the card, which turned every sentence into two
-                  clipped words. Full width it reads.
-
-                  Rendered even when it is empty, which looks wasteful and
-                  is the point: `s.why` reserves two lines, and a card that
-                  skipped the element would still jump when a sentence
-                  arrived for a place the catalog knows nothing about —
-                  which is exactly the place most likely to get one. The
-                  cost is a blank gap under a stop with neither a rating nor
-                  opening hours, and there are few of those. */}
-              <Text style={s.why} numberOfLines={2}>
-                {live.why.get(stop.place.slug)
-                  || factLine({
-                    slug: stop.place.slug,
-                    name: stop.place.name_en,
-                    rating: stop.place.rating,
-                    openingHours: stop.place.opening_hours,
-                    arriveMin: stop.arriveMin,
-                  }, now, t)}
-              </Text>
-
-              {/* Only when the reader made it so. A plan reading backwards
-                  with nothing saying so is a plan that gets somebody to a
-                  closed door. */}
-              {wrong.includes(i) && (
-                <Text style={s.warn}>
-                  {t('Earlier than the stop above.', 'Sớm hơn điểm phía trên.', '前のスポットより早い時刻です。')}
-                </Text>
-              )}
             </Card>
 
             {legs[i] && (
@@ -415,7 +485,8 @@ export default function PlanEditScreen({ navigation, route }: {
               </View>
             )}
           </View>
-        ))}
+          );
+        })}
 
         {current.length === 0 && (
           <Card style={s.card}><Text style={s.body}>
@@ -489,8 +560,40 @@ const s = StyleSheet.create({
   // Without this the stepper sat against the card's left edge and the
   // corner radius clipped it.
   card: { padding: space.cardPadding },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   rowWrong: { borderColor: colors.accentFill, borderWidth: 1 },
+
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  /**
+   * The one place a category hue touches a fill.
+   *
+   * The colour discipline everywhere else — the glyph carries the hue,
+   * never a surface — still holds as a rule; this well is its measured
+   * exception, from the reference design. The wash is the glyph's *own*
+   * colour at 14% alpha, so it reads as the glyph's halo rather than as a
+   * second colour, and at that alpha it sits behind the icon as ground in
+   * both the cream and the near-black theme. A place with no category
+   * keeps the neutral glass instead — a guess would colour it wrong.
+   */
+  well: {
+    width: 44, height: 44, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass,
+  },
+  headCol: { flex: 1, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  name: { ...type.body, color: colors.text, fontWeight: font.semibold, flex: 1 },
+  rating: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  ratingText: {
+    ...CAPTION, color: colors.textSecondary,
+    fontWeight: font.semibold, fontVariant: ['tabular-nums'],
+  },
+  area: { ...CAPTION, color: colors.textTertiary },
+
+  railDivider: {
+    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft, marginTop: 12,
+  },
+  rail: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10,
+  },
   timeBox: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   step: {
     width: 26, height: 26, borderRadius: 13,
@@ -500,10 +603,6 @@ const s = StyleSheet.create({
   /** A time the reader set, marked so they can see which ones the planner
    *  will no longer touch. */
   timePinned: { color: colors.accent, fontWeight: font.semibold },
-
-  who: { flex: 1 },
-  name: { ...type.body, color: colors.text, fontWeight: font.semibold },
-  area: { ...CAPTION, color: colors.textTertiary },
   /** The model's sentence, or the facts standing in for it. A step down
    *  from the name and a step up from the area line, because it is the row's
    *  only claim about why this place rather than another. */

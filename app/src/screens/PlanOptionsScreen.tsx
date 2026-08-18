@@ -22,13 +22,14 @@
 // however many that is, with a line saying so. The one thing it must never
 // do is pad.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
+import { prefetchNarration } from '../lib/assist';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
@@ -115,6 +116,40 @@ export default function PlanOptionsScreen({ navigation, route }: {
       { seed, startMin: p.startMin, pinned, avoid: shown, taste, budgetVnd }),
     [draft, places, city?.id, seed, p.startMin, pinned, shown, taste, budgetVnd],
   );
+
+  /**
+   * The words are asked for here, while the reader is still comparing
+   * cards — not on the editor they land on.
+   *
+   * This reverses a documented decision. The editor used to ask on
+   * arrival, precisely because narrating all three triples the calls to
+   * name two evenings nobody chose — and the price of that thrift was paid
+   * on the wrong screen: the plan rendered as facts and the model's
+   * sentences landed up to four seconds later, rewriting the card under
+   * the reader. Three calls is the cost of an editor that is finished when
+   * it opens. The reading time on this screen is the model's head start,
+   * and the daily cap still holds server-side.
+   *
+   * Fire-and-forget into the cache in `assist.ts`; the editor reads it
+   * synchronously. Nothing renders from here, so nothing here flickers.
+   */
+  useEffect(() => {
+    for (const plan of plans) {
+      void prefetchNarration(
+        plan.stops.map((st) => ({
+          slug: st.place.slug,
+          name: st.place.name_en,
+          categories: st.place.categories,
+          neighborhood: st.place.neighborhood_en,
+          rating: st.place.rating,
+          arriveMin: st.arriveMin,
+          openingHours: st.place.opening_hours,
+        })),
+        { company: p.company, categories: p.categories, when: p.when, where: p.where },
+        lang,
+      );
+    }
+  }, [plans, p.company, p.categories, p.when, p.where, lang]);
 
   const company = COMPANY.find((c) => c.key === p.company);
   const line = summaryLine([
