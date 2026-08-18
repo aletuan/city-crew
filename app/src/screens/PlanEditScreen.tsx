@@ -251,9 +251,18 @@ export default function PlanEditScreen({ navigation, route }: {
         if (!kept.has(st.place.slug)) note(st.place.slug, 'plan_drop');
       }
       successHaptic();
-      // Reset rather than push: the trip is saved, and leaving the editor
-      // on the stack means Back lands in a draft of something that already
-      // exists.
+      // Reset, then leave — and for a long time this comment said "reset"
+      // over a line that only left. The Ideas stack kept the whole flow,
+      // so the next visit to the tab landed back on this editor with a
+      // live Save button: a screen that *looks* like "edit my saved trip"
+      // and *is* "insert a duplicate", because nothing here is wired to
+      // the saved row and TripDetail is view-only. The pop happens first,
+      // while this stack is still the visible one, so by the time the
+      // Trips tab shows there is nothing stale behind it; the wizard at
+      // the bottom keeps its answers, because it is the same mounted
+      // screen — completing the flow discards the flow, not the asks.
+      // Same pattern as the auth screens, which popToTop when theirs ends.
+      navigation.popToTop();
       navigation.getParent()?.navigate('Trips');
     } catch (e) {
       Alert.alert(
