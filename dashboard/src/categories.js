@@ -3,7 +3,7 @@
 //
 // This list mirrors app/src/lib/categories.ts and the places_categories_known
 // check constraint, whose current form is set by
-// supabase/migrations/20260809120000_drop_sights_category.sql.
+// supabase/migrations/20260819040000_focus_fun_categories.sql.
 // Adding or removing a key means changing all three.
 //
 // color + icon are copied from app/src/lib/categories.ts so a category reads
@@ -17,6 +17,8 @@ export const CATEGORY_KEYS = [
   ['nature', 'nature'],
   ['markets', 'shopping'],
   ['nightlife', 'nightlife'],
+  ['focus', 'focus'],
+  ['fun', 'fun'],
 ];
 
 export const CATEGORY_LABEL = Object.fromEntries(CATEGORY_KEYS);
@@ -29,4 +31,6 @@ export const CATEGORY_STYLE = {
   nature: { color: '#8FBF8A', icon: 'leaf' },
   markets: { color: '#C98BB0', icon: 'bag' },
   nightlife: { color: '#A98CD9', icon: 'wine' },
+  focus: { color: '#989AD7', icon: 'laptop' },
+  fun: { color: '#C88BD0', icon: 'ticket' },
 };

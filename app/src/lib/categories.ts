@@ -7,7 +7,7 @@
 //
 // The vocabulary is closed and mirrored by the places_categories_known
 // check constraint, whose current form is set by
-// supabase/migrations/20260809120000_drop_sights_category.sql. Adding or
+// supabase/migrations/20260819040000_focus_fun_categories.sql. Adding or
 // removing a key means changing this list, the dashboard's copy in
 // dashboard/src/categories.js, and the constraint — in that last order,
 // since a constraint tightened before the writers know about it fails
@@ -30,9 +30,12 @@ export type CategoryStyle = {
 // past two words the eye starts parsing instead of recognising, and the
 // row stops fitting on one screen. The key stays descriptive; the label
 // is the short name of the same thing.
-/** Filter-row order: eat and drink first, then things to see and do. */
+/** Filter-row order: eat and drink first, then things to see and do.
+ *  `focus` sits beside the cafés because that is where somebody scanning
+ *  for a place to work will look — it is a way of using a café before it
+ *  is anything else — and `fun` beside nightlife, its evening cousin. */
 export const CATEGORY_ORDER = [
-  'cafes', 'eats', 'views', 'heritage', 'nature', 'markets', 'nightlife',
+  'cafes', 'focus', 'eats', 'views', 'heritage', 'nature', 'markets', 'nightlife', 'fun',
 ] as const;
 
 export const CATEGORIES: Record<string, CategoryStyle> = {
@@ -43,6 +46,22 @@ export const CATEGORIES: Record<string, CategoryStyle> = {
   nature: { en: 'Nature', vi: 'Thiên nhiên', ja: '自然', icon: 'leaf-outline', color: '#8FBF8A' },
   markets: { en: 'Shopping', vi: 'Mua sắm', ja: '買い物', icon: 'bag-outline', color: '#C98BB0' },
   nightlife: { en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ', icon: 'wine-outline', color: '#A98CD9' },
+  // The two 2026-08 additions, and why their hues are what they are.
+  //
+  // The obvious picks were wrong, and a test caught it: the seven above
+  // sit at 7°, 24°, 30°, 114°, 190°, 263° and 324°, which leaves gaps at
+  // 213° and 152° — but the company chips in `trip.ts` were *solved
+  // against this table*, and their blue and green sit at 214° and 152°.
+  // Landing there would have made "Just me" and a work café the same
+  // colour two rows apart on the wizard. So these are solved against both
+  // palettes at once: 238° and 293° clear every category hue and every
+  // company hue by 23° or more, at the family's own pastel weight.
+  //
+  // `focus` is a place to sit and work or study. The ticket, not the film
+  // reel, for `fun`: a cinema is what the catalog holds today, but the key
+  // has to be as true for bowling or a show as for a screen.
+  focus: { en: 'Focus', vi: 'Học tập', ja: '作業', icon: 'laptop-outline', color: '#989AD7' },
+  fun: { en: 'Fun', vi: 'Giải trí', ja: 'エンタメ', icon: 'ticket-outline', color: '#C88BD0' },
 };
 
 /** Same mapping the migration backfills with — see the note in categoriesOf. */

@@ -112,6 +112,17 @@ for f in "$ROOT"/supabase/migrations/*_needs_classification.sql; do
 done
 run "$DB" -f "$HERE/classification_test.sql"
 
+# The vocabulary constraint, applied to the stub the blocks above have
+# been writing into. Runs after classification because that block expects
+# the table as it found it, and before channel because from here on every
+# seeded row has to clear the constraint — which is itself part of the
+# test: a seed that stops parsing is a vocabulary change nobody finished.
+echo "→ category vocabulary"
+for f in "$ROOT"/supabase/migrations/*_focus_fun_categories.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/categories_test.sql"
+
 # The backfill reads rows that already exist, so its test inserts them
 # first and the migration runs *after* — the reverse of every block above,
 # and the only order that exercises what the migration actually did.

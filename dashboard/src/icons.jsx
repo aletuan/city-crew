@@ -48,6 +48,21 @@ const PATHS = {
       <path d="M8 7.2V13M5.5 13.5h5" />
     </>
   ),
+  laptop: (
+    <>
+      <rect x="3.5" y="3.5" width="9" height="6.2" rx="1" />
+      <path d="M2.2 12.4h11.6" />
+    </>
+  ),
+  // Perforation drawn as two ticks rather than a dashed stroke: at 14px a
+  // dash pattern collapses into noise, where two marks still read as the
+  // tear line.
+  ticket: (
+    <>
+      <path d="M2.5 6.2V5.5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v.7a1.8 1.8 0 0 0 0 3.6v.7a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-.7a1.8 1.8 0 0 0 0-3.6Z" />
+      <path d="M9.8 6.3v.1M9.8 9.6v.1" />
+    </>
+  ),
   // View-mode toggle — plain UI chrome, not a category concept, so these
   // ignore the `color` prop's "own hue" convention and just take currentColor.
   list: (
