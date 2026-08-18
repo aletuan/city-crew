@@ -10,8 +10,9 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { fmtCount, photosOf, Place, usePlaceBySlug } from '../lib/data';
+import { fmtCount, photosOf, usePlaceBySlug } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
+import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
 import { clockOf, dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
@@ -20,12 +21,6 @@ import { colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import { AmbientWarmth, Empty, PressableScale, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import type { Nav, RootRoute } from '../nav';
-
-function vibeLabel(place: Place, t: (en: string, vi: string, ja?: string) => string): string {
-  const v = place.vibe_tags[0];
-  if (v) return v.replace('_', ' ').replace(/^\w/, (c) => c.toUpperCase());
-  return place.category === 'food' ? t('Food & drinks', 'Ăn uống', 'グルメ') : t('Outdoors', 'Ngoài trời', 'アウトドア');
-}
 
 function RoundIcon({ name }: { name: keyof typeof Ionicons.glyphMap }) {
   return (
@@ -96,6 +91,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const photos = photosOf(place);
   const reviews = fmtCount(place.rating_count);
   const dur = fmtDuration(place.duration_min, place.duration_max, lang);
+  const cats = categoriesOf(place);
+  const servesTable = cats.includes('eats') || cats.includes('cafes');
   const heroW = width - 24;
   const mapsUrl = place.lat && place.lng
     ? `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`
@@ -216,10 +213,28 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 <Text style={s.factText}>{dur}</Text>
               </View>
             ) : null}
-            <View style={s.fact}>
-              <Ionicons name={place.category === 'food' ? 'cafe-outline' : 'leaf-outline'} size={15} color={colors.textSecondary} />
-              <Text style={s.factText}>{vibeLabel(place, t)}</Text>
-            </View>
+            {/* What this place is, on the functional axis — the same
+                `categories` the filter row, the planner and search read.
+                This row used to say something else entirely: the label was
+                `vibe_tags[0]` capitalised and the icon was the legacy
+                two-value `category` column, so a bookstore filed as
+                'food' under the old axis showed a coffee cup beside the
+                word "Culture" — a label from one taxonomy, a glyph from
+                another, and neither of them the place's actual category.
+                It also never translated, because a raw vibe key has no
+                Vietnamese. `categoriesOf` keeps the legacy fallback for
+                rows written before the column existed, so nothing that
+                used to say something now says nothing. */}
+            {cats.map((c) => (
+              <View key={c} style={s.fact}>
+                <Ionicons
+                  name={CATEGORIES[c]?.icon ?? 'pricetag-outline'}
+                  size={15}
+                  color={colors.textSecondary}
+                />
+                <Text style={s.factText}>{categoryLabel(c, t)}</Text>
+              </View>
+            ))}
           </View>
 
           {(place.desc_en || place.desc_vi) && <Text style={s.desc}>{t(place.desc_en, place.desc_vi, place.desc_ja)}</Text>}
@@ -279,8 +294,15 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             <Pressable onPress={() => Linking.openURL(`tel:${place.phone!.replace(/\s/g, '')}`)} style={s.infoCard}>
               <RoundIcon name="call-outline" />
               <View style={{ flex: 1 }}>
+                {/* "Gọi cho quán" only where "quán" is a true word for it.
+                    This also read the legacy column, which is how a
+                    bookstore came to be called a quán: its old row says
+                    'food' because that axis had two values and neither
+                    fitted. Somewhere to eat or drink now decides it. */}
                 <Text style={s.callTitle}>
-                  {place.category === 'food' ? t('Call the place', 'Gọi cho quán', 'お店に電話') : t('Call', 'Gọi điện', '電話する')}
+                  {servesTable
+                    ? t('Call the place', 'Gọi cho quán', 'お店に電話')
+                    : t('Call', 'Gọi điện', '電話する')}
                 </Text>
                 <Text style={s.infoValue}>{place.phone}</Text>
               </View>
