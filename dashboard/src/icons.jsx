@@ -134,12 +134,12 @@ const PATHS = {
   ),
 };
 
-export function CategoryIcon({ name, color = 'currentColor' }) {
+export function CategoryIcon({ name, color = 'currentColor', size = 14 }) {
   const shape = PATHS[name];
   if (!shape) return null;
   return (
     <svg
-      viewBox="0 0 16 16" width="14" height="14" fill="none"
+      viewBox="0 0 16 16" width={size} height={size} fill="none"
       stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"
       aria-hidden="true"
     >
