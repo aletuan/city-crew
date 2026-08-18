@@ -213,6 +213,28 @@ describe('placeHaystack', () => {
     expect(placeHaystack({ name_en: 'A', vibe_tags: null, categories: null })).toContain('a');
     expect(placeHaystack({ desc_vi: 'chỉ có tiếng Việt' })).toContain('chi co tieng viet');
   });
+
+  // The memo, asserted rather than assumed. Search asked for one hundred and
+  // fifty-five of these on every keystroke and got the same answer every
+  // time, because a place's own words do not change while somebody types.
+  // Same string *identity*, not merely equal: a rebuild would produce a new
+  // one, so this fails if the cache is ever dropped.
+  it('builds a haystack once and hands back the same string after', () => {
+    const p = place({ name_en: 'Remembered' });
+    expect(placeHaystack(p)).toBe(placeHaystack(p));
+  });
+
+  // Keyed on the object rather than on anything inside it, which is what
+  // makes a refetch correct with no version to bump: the catalog hands out
+  // new objects and a new object simply misses. So an edit that lands from
+  // the desk is searchable the moment it arrives.
+  it('reads a refetched place afresh rather than from the old one', () => {
+    const before = place({ name_en: 'Old name' });
+    expect(placeHaystack(before)).toContain('old name');
+    const after = place({ name_en: 'New name' });
+    expect(placeHaystack(after)).toContain('new name');
+    expect(placeHaystack(after)).not.toContain('old name');
+  });
 });
 
 describe('kindAnswersTo', () => {
