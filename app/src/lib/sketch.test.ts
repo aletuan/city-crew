@@ -11,12 +11,14 @@ const steps: Step[] = [
 
 describe('SKETCH_STEPS', () => {
   // The shipped list is what a reader waits through. If somebody retunes
-  // it, this says out loud how long that now is — and the number is a
-  // reading speed rather than a claim about the work, which finishes in
-  // under a millisecond.
-  it('is four steps and under two seconds of reading', () => {
-    expect(SKETCH_STEPS).toHaveLength(4);
-    expect(SKETCH_STEPS.length * STEP_FLOOR_MS).toBeLessThan(2000);
+  // it, this says out loud how long that now is — and the floor is a
+  // reading speed, not a claim about the work. Four of the five finish in
+  // under a millisecond; the fifth, the words, is the one step that
+  // genuinely waits, and the screen holds on it rather than the floor.
+  it('is five steps and under three seconds of reading floor', () => {
+    expect(SKETCH_STEPS).toHaveLength(5);
+    expect(SKETCH_STEPS[SKETCH_STEPS.length - 1].key).toBe('words');
+    expect(SKETCH_STEPS.length * STEP_FLOOR_MS).toBeLessThan(3000);
   });
 
   it('says the same thing in all three languages', () => {

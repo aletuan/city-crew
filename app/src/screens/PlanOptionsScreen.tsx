@@ -29,7 +29,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
-import { prefetchNarration } from '../lib/assist';
+import { cachedNarration, narratableOf, prefetchNarration } from '../lib/assist';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
@@ -136,20 +136,28 @@ export default function PlanOptionsScreen({ navigation, route }: {
   useEffect(() => {
     for (const plan of plans) {
       void prefetchNarration(
-        plan.stops.map((st) => ({
-          slug: st.place.slug,
-          name: st.place.name_en,
-          categories: st.place.categories,
-          neighborhood: st.place.neighborhood_en,
-          rating: st.place.rating,
-          arriveMin: st.arriveMin,
-          openingHours: st.place.opening_hours,
-        })),
+        narratableOf(plan.stops),
         { company: p.company, categories: p.categories, when: p.when, where: p.where },
         lang,
       );
     }
   }, [plans, p.company, p.categories, p.when, p.where, lang]);
+
+  /**
+   * The model's names for the cards, captured once per set of plans.
+   *
+   * Read in a memo keyed on the plans rather than live in render, and the
+   * difference is stability: the sketch screen holds until these are
+   * settled, so the ordinary path finds them here on first render — but a
+   * title that settles *after* this render (the sketch's cap fired, or
+   * Regenerate minted fresh keys) waits for the next set of plans instead
+   * of popping onto a card the reader is already comparing.
+   */
+  const titles = useMemo(
+    () => new Map(plans.map((pl) =>
+      [pl.lens, cachedNarration(narratableOf(pl.stops), lang)?.title ?? null] as const)),
+    [plans, lang],
+  );
 
   const company = COMPANY.find((c) => c.key === p.company);
   const line = summaryLine([
@@ -259,9 +267,14 @@ export default function PlanOptionsScreen({ navigation, route }: {
           <PlanCard
             key={`${plan.lens}-${i}`}
             plan={plan}
+            title={titles.get(plan.lens) ?? null}
             best={i === 0}
+            // The card's own name rides along, so the editor's header
+            // matches the card that was tapped even if the cache has let
+            // this narration go by the time it opens.
             onPress={() => navigation.navigate('PlanEdit', {
-              ...p, seed, lens: plan.lens, title: plan.title ?? undefined, avoid: shown,
+              ...p, seed, lens: plan.lens,
+              title: plan.title ?? titles.get(plan.lens) ?? undefined, avoid: shown,
             })}
           />
         ))}
@@ -336,7 +349,9 @@ function areaLine(plan: TripPlan, t: (en: string, vi: string, ja: string) => str
 
 /** One draft. Tapping it opens the editor, where times and order become
  *  the reader's rather than the planner's. */
-function PlanCard({ plan, best, onPress }: { plan: TripPlan; best: boolean; onPress: () => void }) {
+function PlanCard({ plan, title, best, onPress }: {
+  plan: TripPlan; title: string | null; best: boolean; onPress: () => void;
+}) {
   const { t } = useI18n();
   const badge = BADGE[plan.lens];
   const total = plan.costVnd.food + plan.costVnd.activity + plan.costVnd.transport;
@@ -346,10 +361,12 @@ function PlanCard({ plan, best, onPress }: { plan: TripPlan; best: boolean; onPr
     <PressableScale scaleTo={0.985} onPress={onPress} containerStyle={s.cardWrap}>
       <Card style={[s.card, best && s.cardBest]}>
         <View style={s.head}>
-          {/* Untitled until a model names it. The stops carry the plan
-              until then, which is more use than an invented title. */}
+          {/* The model's name when the sketch screen managed to fetch
+              one, the areas when it did not. `title` is captured per set
+              of plans and never changes under the reader — see `titles`
+              on the screen. */}
           <Text style={s.name} numberOfLines={1}>
-            {plan.title ?? areaLine(plan, t)}
+            {plan.title ?? title ?? areaLine(plan, t)}
           </Text>
           {badge.star ? (
             <LinearGradient {...gradAI} style={s.badgeOn}>

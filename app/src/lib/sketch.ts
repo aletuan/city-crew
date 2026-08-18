@@ -74,6 +74,17 @@ export const SKETCH_STEPS: readonly Step[] = [
     en: 'Timing the walks between stops', vi: 'Tính thời gian đi bộ giữa các điểm',
     ja: '各スポット間の移動時間を計算',
   },
+  // The one step that reports something genuinely slow besides the
+  // catalog: the model writing its line for each stop. The screen holds
+  // here until the words land (or its own cap says stop waiting), which is
+  // what lets the editor open finished instead of rewriting itself — see
+  // `SketchingScreen`. Everything above still finishes in a millisecond;
+  // this is the step that earns the orb.
+  {
+    key: 'words',
+    en: 'Writing a line for each stop', vi: 'Viết lời dẫn cho từng điểm',
+    ja: '各スポットにひとこと執筆中',
+  },
 ];
 
 /**

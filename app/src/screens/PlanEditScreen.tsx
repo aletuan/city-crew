@@ -30,7 +30,8 @@ import {
   successHaptic, useTabBarClearance,
 } from '../components/ui';
 import {
-  cachedNarration, derivedTitle, factLine, freshen, prefetchNarration, type Narration,
+  cachedNarration, derivedTitle, factLine, freshen, narratableOf, prefetchNarration,
+  type Narration,
 } from '../lib/assist';
 import { useAuth } from '../lib/auth';
 import { CATEGORIES, categoriesOf } from '../lib/categories';
@@ -109,18 +110,7 @@ export default function PlanEditScreen({ navigation, route }: {
 
   /** What the model was — or would be — asked about, in exactly the shape
    *  the options screen prefetched with, so the cache key matches. */
-  const asked = useMemo(
-    () => (picked?.stops ?? []).map((s) => ({
-      slug: s.place.slug,
-      name: s.place.name_en,
-      categories: s.place.categories,
-      neighborhood: s.place.neighborhood_en,
-      rating: s.place.rating,
-      arriveMin: s.arriveMin,
-      openingHours: s.place.opening_hours,
-    })),
-    [picked],
-  );
+  const asked = useMemo(() => narratableOf(picked?.stops ?? []), [picked]);
 
   /**
    * The words, read from the cache the options screen filled.
@@ -129,9 +119,10 @@ export default function PlanEditScreen({ navigation, route }: {
    * thrift of narrating only the plan the reader picked — and paid for it
    * in the worst currency: the card rendered its facts, and the model's
    * sentences rewrote them under the reader up to four seconds in. The
-   * asking moved to the options screen, where the reading time is the
-   * model's head start, and by the time a card is tapped the answer is
-   * normally sitting in `cachedNarration` for the first render to use.
+   * asking now starts on the sketch screen, whose last step holds until
+   * the words settle, with the options screen prefetching again as a
+   * backstop for Regenerate — so by the time a card is tapped the answer
+   * is normally sitting in `cachedNarration` for the first render to use.
    *
    * The effect covers the two ways that can miss. A tap faster than the
    * model joins the in-flight call — `prefetchNarration` dedupes on key —

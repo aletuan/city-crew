@@ -37,7 +37,10 @@ import { useCity } from '../lib/city';
 import { dateline } from '../lib/format';
 import { planGap } from '../lib/gaps';
 import { useI18n } from '../lib/i18n';
+import { narratableOf, prefetchNarration } from '../lib/assist';
+import { membersOf } from '../lib/place';
 import { planTrips } from '../lib/planner';
+import { useSave } from '../lib/save';
 import { usePlanProfile } from '../lib/tasteProfile';
 import {
   finished, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, summaryLine, type StepState,
@@ -46,6 +49,19 @@ import { COMPANY, type TripDraft } from '../lib/trip';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space } from '../theme';
+
+/**
+ * How long the last step will hold for the model before finishing anyway.
+ *
+ * Sized against the pipeline it waits on: the Edge Function gives the
+ * model twelve seconds before falling back, and a healthy narration takes
+ * three to eight. Eight here means a normal answer is always waited out,
+ * while the pathological one — a call limping toward the server's own
+ * timeout — is not allowed to hold a progress screen hostage. Past the
+ * cap the flow continues and the editor's reserved lines absorb the rare
+ * late landing.
+ */
+const HOLD_MS = 8000;
 
 export default function SketchingScreen({ navigation, route }: {
   navigation: Nav;
@@ -57,6 +73,7 @@ export default function SketchingScreen({ navigation, route }: {
   const p = route.params;
   const { data: places, loading } = usePlaces();
   const { city } = useCity();
+  const { mine } = useSave();
   const { taste, budgetVnd } = usePlanProfile();
 
   // The seed is fixed for this visit rather than read at render: a new
@@ -69,25 +86,75 @@ export default function SketchingScreen({ navigation, route }: {
     date: clampDay(p.date || todayISO()), when: p.when, from: p.from ?? [],
   }), [p.categories, p.district, p.date, p.when, p.from]);
 
+  // Resolved here the way the two screens after this resolve it, and that
+  // used to not be true: this screen planned without the pinned places, so
+  // a day seeded from a collection was sketched as a *different* day from
+  // the one the options screen then showed. Harmless while the plans here
+  // only fed the empty-check; fatal once they feed the narration prefetch,
+  // because words asked about the wrong plan are a cache nobody reads.
+  const pinned = useMemo(() => {
+    if (!p.from?.length) return [];
+    const wanted = new Set(p.from);
+    return mine.data.filter((c) => wanted.has(c.slug)).flatMap((c) => membersOf(c, places));
+  }, [p.from, mine.data, places]);
+
   // Run once the catalog is in. Cheap enough to run here and again on the
   // next screen — it is array arithmetic over a few hundred rows — and
   // running it here is what lets this screen report rather than perform.
   const plans = useMemo(
-    () => (loading ? [] : planTrips(draft, places, city?.id ?? null, { seed, startMin: p.startMin, taste, budgetVnd })),
-    [loading, places, city?.id, draft, seed, p.startMin, taste, budgetVnd],
+    () => (loading ? [] : planTrips(draft, places, city?.id ?? null,
+      { seed, startMin: p.startMin, pinned, taste, budgetVnd })),
+    [loading, places, city?.id, draft, seed, p.startMin, pinned, taste, budgetVnd],
   );
   const gap = useMemo(() => planGap(p.categories, places), [p.categories, places]);
 
-  // Step one waits on the catalog, which is the only part of this that is
-  // really slow. The rest advance on a reading floor, because the work
-  // behind them finishes in under a millisecond and four claims that flash
-  // past have told the reader nothing.
+  /**
+   * Whether the model's words have landed — the one thing besides the
+   * catalog this screen genuinely waits for.
+   *
+   * The prefetch used to start on the options screen, which sounded early
+   * and was not: the reader's few seconds of comparing cards ran against a
+   * model that takes three to eight, so the editor still opened on facts
+   * and rewrote itself. This screen is where the waiting already lives —
+   * an orb, five steps, a reader braced for a pause — so the asking starts
+   * the moment the plans exist, and the last step holds until every
+   * card's words are settled in the cache.
+   *
+   * Held with a cap, not forever. `HOLD_MS` is the point where waiting
+   * longer buys less than moving on costs: past it the screen finishes,
+   * and in the rare case the words land later the editor's reserved lines
+   * absorb them. A model that is *down* never costs the cap — `narrate`
+   * fails fast and settles empty, and empty is an answer.
+   */
+  const [wordsReady, setWordsReady] = useState(false);
+  useEffect(() => {
+    if (loading) return;
+    if (!plans.length) { setWordsReady(true); return; }
+    let live = true;
+    const asks = plans.map((plan) => prefetchNarration(
+      narratableOf(plan.stops),
+      { company: p.company, categories: p.categories, when: p.when, where: p.where },
+      lang,
+    ));
+    void Promise.allSettled(asks).then(() => { if (live) setWordsReady(true); });
+    const cap = setTimeout(() => { if (live) setWordsReady(true); }, HOLD_MS);
+    return () => { live = false; clearTimeout(cap); };
+  }, [loading, plans, p.company, p.categories, p.when, p.where, lang]);
+
+  // Step one waits on the catalog; the last step waits on the words. The
+  // steps between advance on a reading floor, because the work behind them
+  // finishes in under a millisecond and claims that flash past have told
+  // the reader nothing.
   const [step, setStep] = useState(0);
   useEffect(() => {
     if (loading || step >= SKETCH_STEPS.length) return;
+    // Hold on the final step — drawn active, honestly — until the words
+    // settle. The floor still applies after they do, so even an instant
+    // answer leaves the line on screen long enough to read.
+    if (step === SKETCH_STEPS.length - 1 && !wordsReady) return;
     const id = setTimeout(() => setStep((n) => n + 1), STEP_FLOOR_MS);
     return () => clearTimeout(id);
-  }, [loading, step]);
+  }, [loading, step, wordsReady]);
 
   const states = stepStates(step);
   const done = finished(step);
