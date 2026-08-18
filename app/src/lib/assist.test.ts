@@ -8,7 +8,8 @@ vi.mock('./supabase', async () => {
 });
 
 import {
-  derivedTitle, factLine, freshen, isEmptyAsk, narrate, parseAsk,
+  cachedNarration, derivedTitle, factLine, freshen, isEmptyAsk, narrate,
+  narrationKey, parseAsk, prefetchNarration, resetNarrationCache,
   type Narratable, type Narration, type ParsedAsk,
 } from './assist';
 
@@ -428,5 +429,91 @@ describe('isEmptyAsk', () => {
     expect(isEmptyAsk({ ...none, district: 'Tây Hồ' })).toBe(false);
     expect(isEmptyAsk({ ...none, date: '2026-08-22' })).toBe(false);
     expect(isEmptyAsk({ ...none, when: 'day' })).toBe(false);
+  });
+});
+
+describe('the narration cache', () => {
+  const STOPS = [
+    stop({ slug: 'bun-cha', arriveMin: 18 * 60 }),
+    stop({ slug: 'lake-bar', arriveMin: 21 * 60 }),
+  ];
+  const REPLY = {
+    data: { title: 'Lakeside', stops: [{ slug: 'bun-cha', why: 'Go early.' }] },
+  };
+
+  beforeEach(() => resetNarrationCache());
+
+  // The key is what lets two screens ask about "the same plan" and mean
+  // it. The hour is in it because the sentences lean on the hour; the
+  // language because the sentences are in one.
+  it('keys on the stops, their hours, and the language', () => {
+    expect(narrationKey(STOPS, 'vi')).toBe('vi|bun-cha@1080,lake-bar@1260');
+    expect(narrationKey(STOPS, 'en')).not.toBe(narrationKey(STOPS, 'vi'));
+    expect(narrationKey([stop({ slug: 'bun-cha', arriveMin: 20 * 60 })], 'en'))
+      .not.toBe(narrationKey([stop({ slug: 'bun-cha', arriveMin: 18 * 60 })], 'en'));
+  });
+
+  it('has nothing before anybody asks, and the answer after', async () => {
+    expect(cachedNarration(STOPS, 'en')).toBeNull();
+    fake().replies(REPLY);
+    const out = await prefetchNarration(STOPS, DRAFT, 'en');
+    expect(out.title).toBe('Lakeside');
+    // The very object, not a copy: the editor's first render and the
+    // prefetch's resolution must be the same words.
+    expect(cachedNarration(STOPS, 'en')).toBe(out);
+  });
+
+  // The options screen fires three of these; an impatient tap on a card
+  // fires a fourth with the same key. One call between them.
+  it('joins an in-flight ask instead of repeating it', async () => {
+    fake().replies(REPLY);
+    const first = prefetchNarration(STOPS, DRAFT, 'en');
+    const second = prefetchNarration(STOPS, DRAFT, 'en');
+    expect(second).toBe(first);
+    await first;
+    expect(fake().log.filter((c) => c.op === 'invoke')).toHaveLength(1);
+  });
+
+  it('answers a settled ask from the cache, without the network', async () => {
+    fake().replies(REPLY);
+    const out = await prefetchNarration(STOPS, DRAFT, 'en');
+    const again = await prefetchNarration(STOPS, DRAFT, 'en');
+    expect(again).toBe(out);
+    expect(fake().log.filter((c) => c.op === 'invoke')).toHaveLength(1);
+  });
+
+  // Empty is what an unreachable model produces, and it is cached like a
+  // real answer on purpose: the editor's fallback has to be a state, not a
+  // background retry that rewrites the screen when it lands.
+  it('caches an empty answer so the fallback stays put', async () => {
+    fake().replies({ error: { message: 'down' } });
+    const out = await prefetchNarration(STOPS, DRAFT, 'en');
+    expect(out.fromModel).toBe(false);
+    expect(cachedNarration(STOPS, 'en')).toBe(out);
+    await prefetchNarration(STOPS, DRAFT, 'en');
+    expect(fake().log.filter((c) => c.op === 'invoke')).toHaveLength(1);
+  });
+
+  // Different language, different question — a Vietnamese reader must not
+  // be handed the English sentences because English asked first.
+  it('keeps languages apart', async () => {
+    fake().replies(REPLY, { data: { title: 'Hồ Gươm', stops: [] } });
+    await prefetchNarration(STOPS, DRAFT, 'en');
+    const vi = await prefetchNarration(STOPS, DRAFT, 'vi');
+    expect(vi.title).toBe('Hồ Gươm');
+    expect(cachedNarration(STOPS, 'en')?.title).toBe('Lakeside');
+  });
+
+  // A session that regenerates all evening must not hoard every answer it
+  // ever got. Insertion order is age for a Map, so the front goes first.
+  it('lets the oldest answers go once it holds enough', async () => {
+    fake().replies(REPLY);
+    await prefetchNarration(STOPS, DRAFT, 'en');
+    for (let i = 0; i < 12; i++) {
+      fake().replies({ data: { title: `t${i}`, stops: [] } });
+      await prefetchNarration([stop({ slug: `p-${i}` })], DRAFT, 'en');
+    }
+    expect(cachedNarration(STOPS, 'en')).toBeNull();
+    expect(cachedNarration([stop({ slug: 'p-11' })], 'en')?.title).toBe('t11');
   });
 });
