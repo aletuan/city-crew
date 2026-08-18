@@ -4,8 +4,16 @@
 // The gap this closes: somebody searching "cinema" found nothing. No field
 // of a multiplex holds the word — two thirds of this catalog has no
 // description at all — and the category it is filed under is labelled
-// "Fun". The app folds these lists into each place's search text, so a
-// place answers to the words its kind is known by.
+// "Fun". The app keeps these words in a second pass, so a place answers to
+// the words its kind is known by.
+//
+// ── they only fill a blank screen ──
+//
+// A word here belongs to a whole category, so "cinema" and "bowling" are
+// both words for everything filed under Fun. The app therefore uses them
+// *only when the exact search found nothing*, and labels what comes back
+// as related rather than matched. Search "museum" and you get the museums,
+// not every heritage place whose category happens to list the word.
 //
 // ── one list, three languages, on purpose ──
 //
@@ -135,8 +143,10 @@ export default function SearchTerms() {
         <h2>Search words</h2>
         <p className="addsub">
           Words a reader might type that a place’s own record does not contain — “cinema”
-          for a multiplex, “laptop” for somewhere to work. Every place in the category
-          answers to them.
+          for a multiplex, “laptop” for somewhere to work. They are a safety net: the app
+          uses them <em>only</em> when the search found nothing exact, and shows what comes
+          back under “no exact match”. So a word here can rescue an empty screen, and cannot
+          crowd out a real result.
         </p>
         <p className="addsub">
           <strong>One list, all languages.</strong> Search never looks at the reader’s app

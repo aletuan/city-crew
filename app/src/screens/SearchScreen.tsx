@@ -23,7 +23,7 @@ import { freshOnly, useCandidates } from '../lib/candidates';
 import { hintArea } from '../lib/hints';
 import type { Candidate } from '../lib/suggest';
 import { useCollections, usePlaces, useSearchTerms } from '../lib/catalog';
-import { collectionHaystack, matches, placeHaystack, queryTerms } from '../lib/search';
+import { collectionHaystack, findPlaces, matches, queryTerms } from '../lib/search';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
@@ -105,10 +105,28 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       }
     }
 
-    const foundPlaces = places.filter((p) => matches(placeHaystack(p, synonyms), terms));
-    if (foundPlaces.length) {
+    // Two tiers, and the second only ever appears when the first is empty:
+    // a synonym is a guess about what somebody meant, so it fills a blank
+    // screen rather than diluting a real answer. See `findPlaces`.
+    const { hits, related } = findPlaces(places, terms, synonyms);
+    if (hits.length) {
       out.push({ kind: 'header', key: 'h-place', label: t('Places', 'Địa điểm', 'スポット') });
-      for (const p of foundPlaces) out.push({ kind: 'place', key: `p-${p.slug}`, place: p });
+      for (const p of hits) out.push({ kind: 'place', key: `p-${p.slug}`, place: p });
+    }
+    // Labelled as the guess it is. "bowling" reaching a cinema is only
+    // wrong when the screen calls it a match — under this heading it is
+    // the app saying "not that, but this is the nearest kind we have".
+    if (related.length) {
+      out.push({
+        kind: 'header',
+        key: 'h-related',
+        label: t(
+          'No exact match — related places',
+          'Không khớp chính xác — chỗ tương tự',
+          '完全一致なし — 近いスポット',
+        ),
+      });
+      for (const p of related) out.push({ kind: 'place', key: `r-${p.slug}`, place: p });
     }
 
     // Under its own heading, never mixed in. The rows above open a place;

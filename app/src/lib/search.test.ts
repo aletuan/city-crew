@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from './categories';
 import {
-  collectionHaystack, fold, matches, mergeTerms, placeHaystack, queryTerms,
+  collectionHaystack, findPlaces, fold, matches, mergeTerms, placeHaystack, queryTerms,
 } from './search';
 
 const place = (p: Partial<Parameters<typeof placeHaystack>[0]> = {}) => ({
@@ -101,18 +101,14 @@ describe('mergeTerms', () => {
 });
 
 describe('placeHaystack', () => {
-  // The bug this whole feature exists for: the word is in no field of the
-  // record, and the label of the category it is filed under reads "Fun".
-  it('finds a cinema by a word its record never contains', () => {
-    const hay = placeHaystack(place(), { fun: ['cinema', 'rap phim'] });
-    expect(matches(hay, queryTerms('cinema'))).toBe(true);
-    expect(matches(hay, queryTerms('rạp phim'))).toBe(true);
-    expect(matches(hay, queryTerms('CGV'))).toBe(true);
+  it('matches a place by what the place itself says', () => {
+    expect(matches(placeHaystack(place()), queryTerms('CGV'))).toBe(true);
   });
 
-  it('does not lend one category\'s words to another', () => {
-    const cafe = placeHaystack(place({ categories: ['cafes'] }), { fun: ['cinema'] });
-    expect(matches(cafe, queryTerms('cinema'))).toBe(false);
+  // Synonyms live in their own haystack, so a place's own words stay a
+  // place's own words — see `findPlaces` for why that separation matters.
+  it('holds no synonyms', () => {
+    expect(matches(placeHaystack(place()), queryTerms('cinema'))).toBe(false);
   });
 
   // Search never reads the reader's UI language, and the haystack is why:
@@ -147,8 +143,60 @@ describe('placeHaystack', () => {
     expect(placeHaystack({ categories: ['newthing'] })).toContain('newthing');
   });
 
-  it('works with no synonyms at all', () => {
-    expect(matches(placeHaystack(place()), queryTerms('cgv'))).toBe(true);
+});
+
+// The tier rule, which is the whole design: a synonym fills a blank
+// screen, it never dilutes a real answer.
+describe('findPlaces', () => {
+  const TERMS = { fun: ['cinema', 'bowling'], heritage: ['museum', 'temple'] };
+  const cgv = { name_en: 'CGV Ba Trieu', categories: ['fun'] };
+  const vanMieu = { name_en: 'Temple of Literature', categories: ['heritage'] };
+  const museum = { name_en: 'Fine Arts Museum', categories: ['heritage'] };
+  const all = [cgv, vanMieu, museum];
+
+  // The bug this feature exists for: no record in the catalog says
+  // "cinema", so nothing exact is at stake and the guess is welcome.
+  it('reaches a cinema by a word no record contains', () => {
+    const { hits, related } = findPlaces(all, queryTerms('cinema'), TERMS);
+    expect(hits).toEqual([]);
+    expect(related).toEqual([cgv]);
+  });
+
+  // The regression that made this two-tier. Twenty-six heritage places
+  // carry the synonym "museum"; exactly one of them is a museum.
+  it('does not drown a real answer in its category', () => {
+    const { hits, related } = findPlaces(all, queryTerms('museum'), TERMS);
+    expect(hits).toEqual([museum]);
+    expect(related).toEqual([]);
+  });
+
+  // A category is a bucket, so its words are its whole bucket's words.
+  // Honest only because the caller labels this tier as a guess.
+  it('offers the nearest kind when the exact thing is not in the catalog', () => {
+    const { hits, related } = findPlaces(all, queryTerms('bowling'), TERMS);
+    expect(hits).toEqual([]);
+    expect(related).toEqual([cgv]);
+  });
+
+  it('finds nothing for a word nobody uses', () => {
+    expect(findPlaces(all, queryTerms('helicopter'), TERMS))
+      .toEqual({ hits: [], related: [] });
+  });
+
+  it('has nothing to say about an empty box', () => {
+    expect(findPlaces(all, [], TERMS)).toEqual({ hits: [], related: [] });
+  });
+
+  it('needs no synonyms to work at all', () => {
+    expect(findPlaces(all, queryTerms('CGV'), {}).hits).toEqual([cgv]);
+  });
+
+  // A place filed under a category the desk has written no words for
+  // simply has none — it is not a hole to fall into.
+  it('is unbothered by a category with no words', () => {
+    const odd = { name_en: 'Somewhere', categories: ['newthing'] };
+    expect(findPlaces([odd], queryTerms('cinema'), TERMS).related).toEqual([]);
+    expect(findPlaces([odd], queryTerms('somewhere'), TERMS).hits).toEqual([odd]);
   });
 });
 
@@ -181,7 +229,7 @@ describe('the built-in synonyms', () => {
       null,
     );
     const hit = (cat: string, q: string) =>
-      matches(placeHaystack({ name_en: 'x', categories: [cat] }, terms), queryTerms(q));
+      findPlaces([{ name_en: 'x', categories: [cat] }], queryTerms(q), terms).related.length > 0;
     expect(hit('fun', 'cinema')).toBe(true);
     expect(hit('focus', 'laptop')).toBe(true);
     expect(hit('focus', 'làm việc')).toBe(true);

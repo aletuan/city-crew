@@ -94,37 +94,75 @@ export type Searchable = {
 };
 
 /**
- * Everything about a place a query may match, folded into one string.
+ * Everything the place itself says, folded into one string.
  *
- * Category keys carry their labels in every language — so "bảo tàng" and
- * "heritage" reach the same places — and now their synonyms too. The
- * synonyms are why "cinema" finds a multiplex whose record does not
- * contain the word: the catalog knows it is `fun`, and `fun` answers to
- * "cinema".
+ * Its names, its area, its description, its vibes, its address, and the
+ * keys and labels of its categories in every language — so "bảo tàng" and
+ * "heritage" reach the same places. Every word here is a fact about *this*
+ * place, which is what makes a hit exact.
  *
- * The honest limit of that: a synonym belongs to a *category*, so "cinema"
- * returns everything filed as fun, bowling alley included. At two `fun`
- * places that is invisible; at thirty it stops being true, and the fix
- * then is a synonym on the place rather than on its kind — or, better and
- * cheaper, a description, which is what two thirds of this catalog is
- * still missing.
+ * Synonyms are deliberately not in here; see `synonymHaystack`.
  */
-export function placeHaystack(p: Searchable, terms: TermMap = {}): string {
-  const cats = categoriesOf(p);
+export function placeHaystack(p: Searchable): string {
   return fold([
     p.name_en, p.name_vi, p.name_ja,
     p.neighborhood_en, p.neighborhood_vi, p.neighborhood_ja,
     p.desc_en, p.desc_vi, p.desc_ja,
     (p.vibe_tags ?? []).join(' '),
-    cats.flatMap((c) => {
+    categoriesOf(p).flatMap((c) => {
       const cat = CATEGORIES[c];
       return cat ? [c, cat.en, cat.vi, cat.ja] : [c];
     }).join(' '),
     p.address,
-  ].join(' '))
-    // Appended already folded, so a term the desk typed with diacritics
-    // still meets a query that arrives without them.
-    + ' ' + cats.flatMap((c) => terms[c] ?? []).join(' ');
+  ].join(' '));
+}
+
+/**
+ * The words this place's *kind* is known by — and only those.
+ *
+ * Kept apart from the haystack above, and that separation is the whole
+ * design. A synonym belongs to a category, not to a place: `fun` answers
+ * to "cinema", "bowling" and "karaoke" alike, so folding them in beside a
+ * place's own words makes a multiplex an answer to "bowling" and — far
+ * worse on a category with twenty-six places in it — makes every temple an
+ * answer to "museum".
+ *
+ * That was measured, not feared: the first cut of this feature did exactly
+ * that, and it made search worse everywhere the catalog is well filled
+ * while fixing it in the one corner that was empty.
+ *
+ * So these words are a second pass, not a wider first one. See `findPlaces`.
+ *
+ * Already folded on the way in via `mergeTerms`, so a term the desk typed
+ * with diacritics still meets a query that arrives without them.
+ */
+export function synonymHaystack(p: Searchable, terms: TermMap): string {
+  return categoriesOf(p).flatMap((c) => terms[c] ?? []).join(' ');
+}
+
+/**
+ * The places a query finds, in two tiers.
+ *
+ * `hits` are places that say the words themselves. `related` are places
+ * whose *kind* answers to them — and they are returned **only when there
+ * are no hits at all**, because a synonym is a guess about what somebody
+ * meant and a guess must never dilute an answer.
+ *
+ * Search "museum" and you get the museums, not the twenty-six heritage
+ * places one of whose synonyms is "museum". Search "cinema" — a word no
+ * record in this catalog contains — and you get the multiplexes, because
+ * nothing exact existed to protect.
+ *
+ * The caller must label the second tier as the guess it is; a related
+ * place presented as a match is a wrong answer, which is worse than none.
+ */
+export function findPlaces<T extends Searchable>(
+  places: readonly T[], query: readonly string[], terms: TermMap,
+): { hits: T[]; related: T[] } {
+  if (!query.length) return { hits: [], related: [] };
+  const hits = places.filter((p) => matches(placeHaystack(p), query));
+  if (hits.length) return { hits, related: [] };
+  return { hits, related: places.filter((p) => matches(synonymHaystack(p, terms), query)) };
 }
 
 export type SearchableCollection = {
