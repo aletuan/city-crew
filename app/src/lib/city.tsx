@@ -175,6 +175,10 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
   const [cities, setCities] = useState<City[]>([FALLBACK]);
   const [cityId, setCityId] = useState<string | null>(null);
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
+  // True once the bootstrap fetch came back empty — a phone that opened
+  // the app in a tunnel, not a database with one city. Drives the healer
+  // below and nothing else.
+  const [listFailed, setListFailed] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -186,6 +190,7 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
       if (!live) return;
       const list = fetched.length ? fetched : [FALLBACK];
       setCities(list);
+      setListFailed(!fetched.length);
 
       let stored: { id?: string; mode?: 'auto' | 'manual' } = {};
       try { stored = storedRaw ? JSON.parse(storedRaw) : {}; } catch { /* corrupt store */ }
@@ -209,6 +214,37 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
     })();
     return () => { live = false; };
   }, []);
+
+  /**
+   * The list, healed.
+   *
+   * The bootstrap fetch runs once, and the comment on `fetchCities` names
+   * the stakes: a select that fails here does not degrade a section, it
+   * leaves the whole app looking like it has one city. The column-drift
+   * case was handled; the ordinary one — no network at cold start — was
+   * not, and a reader who opened the app in a lift kept the one-row
+   * fallback list for the entire session. Their switcher held a single
+   * city, with two more sitting active in the database.
+   *
+   * So a failed bootstrap keeps asking, quietly, until it is answered.
+   * Only the *list* heals: the city already chosen stays chosen, because
+   * the bootstrap's own rule is that the city never changes on its own
+   * after commit — the reader gets their three rows back and taps if they
+   * meant somewhere else. Fifteen seconds is slow enough to cost nothing
+   * and fast enough that the list is usually whole before anyone opens
+   * the switcher to look.
+   */
+  useEffect(() => {
+    if (!listFailed) return;
+    let live = true;
+    const id = setInterval(async () => {
+      const fetched = await fetchCities();
+      if (!live || !fetched.length) return;
+      setCities(fetched);
+      setListFailed(false);
+    }, 15_000);
+    return () => { live = false; clearInterval(id); };
+  }, [listFailed]);
 
   const setCity = useCallback((id: string) => {
     setCityId(id);
