@@ -48,7 +48,18 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // Cleared whenever the words change: a Google section answering the
   // previous query, sitting under results for this one, would be the
   // screen quietly lying about what it went and asked.
-  useEffect(() => { google.clear(); setPicked([]); }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
+  //
+  // Guarded, because this runs on every keystroke and both calls set
+  // state unconditionally — `setPicked([])` hands React a fresh array
+  // every time, so an untouched screen re-rendered once per letter for no
+  // reason at all. Almost nobody ever has a Google section open while
+  // typing, so almost every keystroke now skips this entirely.
+  const hasAsked = google.results !== null || google.searching;
+  useEffect(() => {
+    if (!hasAsked && picked.length === 0) return;
+    google.clear();
+    setPicked([]);
+  }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Only what the catalog had never heard of *when the search ran*.
   // Everything else in that list this screen has already shown, or
@@ -76,6 +87,15 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   );
   const chosen = addable.filter((c) => picked.includes(c.place_id));
 
+  // Resolved once per catalog, not once per keystroke. `membersOf` builds
+  // an index of every place each time it is called, and this ran it for
+  // all twenty-two lists on every letter — before the filter, so it paid
+  // for the twenty that were never going to match either.
+  const colMembers = useMemo(
+    () => cols.data.map((c) => ({ c, members: membersOf(c, places) })),
+    [cols.data, places],
+  );
+
   const terms = useMemo(() => queryTerms(query), [query]);
   // The desk's synonyms, folded onto the app's own. This is what lets
   // "cinema" reach a multiplex whose record never says the word.
@@ -89,8 +109,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     // longer scoped to a city — a list appears wherever it has a place —
     // so without this, searching in Hanoi would turn up lists that are
     // entirely in Saigon, which nothing else on this screen does.
-    const foundCols = cols.data
-      .map((c) => ({ c, members: membersOf(c, places) }))
+    const foundCols = colMembers
       .filter(({ c, members }) => touchesCity(members, city?.id) && matches(collectionHaystack(c), terms));
     if (foundCols.length) {
       out.push({ kind: 'header', key: 'h-col', label: t('Collections', 'Bộ sưu tập', 'コレクション') });
@@ -142,7 +161,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       for (const c of fresh) out.push({ kind: 'candidate', key: `g-${c.place_id}`, candidate: c });
     }
     return out;
-  }, [terms, places, cols.data, city?.id, fresh, synonyms, t]);
+  }, [terms, query, places, colMembers, city?.id, fresh, synonyms, t]);
 
   const searching = terms.length > 0;
   const showBar = batchBarShown(chosen.length, google.batch);

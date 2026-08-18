@@ -94,6 +94,26 @@ export type Searchable = {
 };
 
 /**
+ * Built once per place, then remembered.
+ *
+ * A haystack costs a dozen string joins and a Unicode normalisation, and
+ * the search box asked for one hundred and fifty-five of them on every
+ * keystroke — the same hundred and fifty-five, because a place's own words
+ * do not change while somebody types. Six letters of "ca phe" rebuilt the
+ * whole catalog six times over, on the thread the keyboard draws on.
+ *
+ * Keyed on the object, so it is correct without a version to invalidate:
+ * the catalog hands out new place objects on every fetch, and a new object
+ * simply misses. Weak, so a refetch's worth of old strings is collected
+ * rather than held.
+ *
+ * The one way to be wrong is to mutate a place in place. Nothing does —
+ * `useFetch` replaces the array — and this comment is here so that stays
+ * true.
+ */
+const haystacks = new WeakMap<object, string>();
+
+/**
  * Everything the place itself says, folded into one string.
  *
  * Its names, its area, its description, its vibes, its address, and the
@@ -104,7 +124,9 @@ export type Searchable = {
  * Synonyms are deliberately not in here; see `synonymHaystack`.
  */
 export function placeHaystack(p: Searchable): string {
-  return fold([
+  const cached = haystacks.get(p);
+  if (cached !== undefined) return cached;
+  const built = fold([
     p.name_en, p.name_vi, p.name_ja,
     p.neighborhood_en, p.neighborhood_vi, p.neighborhood_ja,
     p.desc_en, p.desc_vi, p.desc_ja,
@@ -115,6 +137,8 @@ export function placeHaystack(p: Searchable): string {
     }).join(' '),
     p.address,
   ].join(' '));
+  haystacks.set(p, built);
+  return built;
 }
 
 /**
