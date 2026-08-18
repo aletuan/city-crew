@@ -47,6 +47,35 @@ export type Narration = {
 };
 
 /**
+ * A planner stop in the shape `narrate` asks about.
+ *
+ * One function because three screens do this — the sketch prefetches, the
+ * options screen backstops, the editor reads — and the cache key comes
+ * from the result. Three hand-rolled copies only have to disagree by one
+ * field for two screens to stop meaning the same plan, and nothing would
+ * say so; a miss is indistinguishable from a slow model. Structural
+ * `place` for the reason `Narratable` is: Node has to run this.
+ */
+export function narratableOf(stops: readonly {
+  place: {
+    slug: string; name_en: string; categories?: string[] | null;
+    neighborhood_en?: string | null; rating?: number | null;
+    opening_hours?: string[] | null;
+  };
+  arriveMin: number;
+}[]): Narratable[] {
+  return stops.map((s) => ({
+    slug: s.place.slug,
+    name: s.place.name_en,
+    categories: s.place.categories,
+    neighborhood: s.place.neighborhood_en,
+    rating: s.place.rating,
+    arriveMin: s.arriveMin,
+    openingHours: s.place.opening_hours,
+  }));
+}
+
+/**
  * The name to print when no model named it.
  *
  * Built from the two things a reader would use themselves: when it is and

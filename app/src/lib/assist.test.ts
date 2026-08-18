@@ -8,7 +8,7 @@ vi.mock('./supabase', async () => {
 });
 
 import {
-  cachedNarration, derivedTitle, factLine, freshen, isEmptyAsk, narrate,
+  cachedNarration, derivedTitle, factLine, freshen, isEmptyAsk, narratableOf, narrate,
   narrationKey, parseAsk, prefetchNarration, resetNarrationCache,
   type Narratable, type Narration, type ParsedAsk,
 } from './assist';
@@ -515,5 +515,35 @@ describe('the narration cache', () => {
     }
     expect(cachedNarration(STOPS, 'en')).toBeNull();
     expect(cachedNarration([stop({ slug: 'p-11' })], 'en')?.title).toBe('t11');
+  });
+});
+
+// Three screens hand the planner's stops to the cache — the sketch to
+// prefetch, the options to backstop, the editor to read. One mapper is
+// what guarantees they produce the same key; a copy that drifted by one
+// field would turn a hit into a miss, and a miss is indistinguishable
+// from a slow model.
+describe('narratableOf', () => {
+  it('carries exactly what narrate asks about', () => {
+    const out = narratableOf([{
+      place: {
+        slug: 'bun-cha', name_en: 'Bún chả Hàng Quạt', categories: ['eats'],
+        neighborhood_en: 'Hoàn Kiếm', rating: 4.6, opening_hours: ['Monday: Closed'],
+      },
+      arriveMin: 18 * 60,
+    }]);
+    expect(out).toEqual([{
+      slug: 'bun-cha', name: 'Bún chả Hàng Quạt', categories: ['eats'],
+      neighborhood: 'Hoàn Kiếm', rating: 4.6, arriveMin: 18 * 60,
+      openingHours: ['Monday: Closed'],
+    }]);
+  });
+
+  it('produces the key the cache will look up', () => {
+    const stops = narratableOf([
+      { place: { slug: 'a', name_en: 'A' }, arriveMin: 540 },
+      { place: { slug: 'b', name_en: 'B' }, arriveMin: 635 },
+    ]);
+    expect(narrationKey(stops, 'vi')).toBe('vi|a@540,b@635');
   });
 });
