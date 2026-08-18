@@ -256,6 +256,7 @@ export default function App() {
                 <div className="side-sep" />
                 <NavLink to="/city" className={navCls}><CategoryIcon name="photo" />City hero</NavLink>
                 <NavLink to="/scan" className={navCls}><CategoryIcon name="radar" />Scan city</NavLink>
+                <NavLink to="/search-words" className={navCls}><CategoryIcon name="search" />Search words</NavLink>
               </nav>
               <div className="side-foot">
                 {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
@@ -368,6 +369,7 @@ export default function App() {
               <div className="sheet" role="menu" aria-label="More">
                 <Link className="moremenu-item" to="/city" role="menuitem">City hero</Link>
                 <Link className="moremenu-item" to="/scan" role="menuitem">Scan city</Link>
+                <Link className="moremenu-item" to="/search-words" role="menuitem">Search words</Link>
                 <div className="moremenu-sep" />
                 <a className="moremenu-item" href="mockup.html" target="_blank" rel="noreferrer" role="menuitem">Mockup ↗</a>
                 <button
