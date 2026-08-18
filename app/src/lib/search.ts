@@ -118,26 +118,47 @@ export function placeHaystack(p: Searchable): string {
 }
 
 /**
- * The words this place's *kind* is known by — and only those.
+ * Does this place's *kind* answer to what was typed?
  *
  * Kept apart from the haystack above, and that separation is the whole
  * design. A synonym belongs to a category, not to a place: `fun` answers
  * to "cinema", "bowling" and "karaoke" alike, so folding them in beside a
  * place's own words makes a multiplex an answer to "bowling" and — far
  * worse on a category with twenty-six places in it — makes every temple an
- * answer to "museum".
+ * answer to "museum". That was measured, not feared: the first cut of this
+ * feature did exactly that.
  *
- * That was measured, not feared: the first cut of this feature did exactly
- * that, and it made search worse everywhere the catalog is well filled
- * while fixing it in the one corner that was empty.
+ * ── whole phrase, not tokens ──
  *
- * So these words are a second pass, not a wider first one. See `findPlaces`.
+ * The query is compared *entire* against each term, where the exact tier
+ * splits it into words. That difference was also measured. Tokenised, the
+ * Vietnamese term "quán ăn" breaks into "quan" and "an", and both are
+ * substrings of the café list's "quán cà phê" — so a search for somewhere
+ * to eat came back with cafés. Short fragments of multi-word terms match
+ * almost anything; the phrase they came from does not.
  *
- * Already folded on the way in via `mergeTerms`, so a term the desk typed
- * with diacritics still meets a query that arrives without them.
+ * ── from the start of a word, not from anywhere ──
+ *
+ * The query has to begin a term or begin one of its words. Matching a
+ * substring anywhere was tried and is too loose across languages: "đền"
+ * folds to "den", which sits inside "garden", so a search for a temple
+ * came back with a lake. Prefixes are also what a search box means — it is
+ * how the answer narrows as somebody types, and "cine" still reaches
+ * "cinema".
+ *
+ * Only that direction. "movies" does not reach "movie", and the fix for
+ * that is the desk adding the word it watched somebody type, which is what
+ * the dashboard page is for.
+ *
+ * Word-splitting on spaces suits the two languages that use them and is a
+ * no-op for the third: 映画館 has no spaces, and the whole-term prefix
+ * check answers 映画 anyway.
  */
-export function synonymHaystack(p: Searchable, terms: TermMap): string {
-  return categoriesOf(p).flatMap((c) => terms[c] ?? []).join(' ');
+export function kindAnswersTo(p: Searchable, query: string, terms: TermMap): boolean {
+  const q = query.trim();
+  if (!q) return false;
+  const answers = (t: string) => t.startsWith(q) || t.split(' ').some((w) => w.startsWith(q));
+  return categoriesOf(p).some((c) => (terms[c] ?? []).some(answers));
 }
 
 /**
@@ -155,14 +176,20 @@ export function synonymHaystack(p: Searchable, terms: TermMap): string {
  *
  * The caller must label the second tier as the guess it is; a related
  * place presented as a match is a wrong answer, which is worse than none.
+ *
+ * Takes the raw box rather than tokens, because the two tiers read it
+ * differently: words for the exact pass, the whole phrase for the guess.
+ * See `kindAnswersTo`.
  */
 export function findPlaces<T extends Searchable>(
-  places: readonly T[], query: readonly string[], terms: TermMap,
+  places: readonly T[], query: string, terms: TermMap,
 ): { hits: T[]; related: T[] } {
-  if (!query.length) return { hits: [], related: [] };
-  const hits = places.filter((p) => matches(placeHaystack(p), query));
+  const words = queryTerms(query);
+  if (!words.length) return { hits: [], related: [] };
+  const hits = places.filter((p) => matches(placeHaystack(p), words));
   if (hits.length) return { hits, related: [] };
-  return { hits, related: places.filter((p) => matches(synonymHaystack(p, terms), query)) };
+  const phrase = fold(query).trim();
+  return { hits, related: places.filter((p) => kindAnswersTo(p, phrase, terms)) };
 }
 
 export type SearchableCollection = {

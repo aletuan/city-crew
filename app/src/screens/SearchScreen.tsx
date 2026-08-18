@@ -108,7 +108,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     // Two tiers, and the second only ever appears when the first is empty:
     // a synonym is a guess about what somebody meant, so it fills a blank
     // screen rather than diluting a real answer. See `findPlaces`.
-    const { hits, related } = findPlaces(places, terms, synonyms);
+    const { hits, related } = findPlaces(places, query, synonyms);
     if (hits.length) {
       out.push({ kind: 'header', key: 'h-place', label: t('Places', 'Địa điểm', 'スポット') });
       for (const p of hits) out.push({ kind: 'place', key: `p-${p.slug}`, place: p });
