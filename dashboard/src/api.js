@@ -67,6 +67,36 @@ async function attachSubmitters(rows) {
 }
 
 export const api = {
+  /**
+   * Search synonyms, `category → terms`.
+   *
+   * The words a reader types that the catalog does not otherwise contain:
+   * somebody looking for "cinema" finds nothing, because no field of a
+   * multiplex says the word and its category is labelled "Fun".
+   *
+   * These only ever *add* to the list the app already ships, so a row
+   * cleared here cannot break search — it falls back to the defaults in
+   * app/src/lib/categories.ts. Not scoped to a city: what people call a
+   * cinema does not change between Hanoi and Saigon.
+   */
+  categoryTerms: async () => {
+    const rows = db(await supabase.from('category_terms').select('category, terms'));
+    return Object.fromEntries((rows ?? []).map((r) => [r.category, r.terms ?? []]));
+  },
+
+  saveCategoryTerms: async (category, terms) => {
+    // Trimmed and de-duplicated here rather than trusted from the box:
+    // a stray blank line is the commonest thing to type into a list, and
+    // the app's own guard drops terms under three characters silently —
+    // this is where the desk still has a chance to see it.
+    const clean = [...new Set(terms.map((t) => t.trim()).filter(Boolean))];
+    db(await supabase
+      .from('category_terms')
+      .upsert({ category, terms: clean, updated_at: new Date().toISOString() })
+      .select('category'));
+    return clean;
+  },
+
   cities: async () =>
     db(await supabase.from('cities').select('id, name_en, name_vi, short_en, short_vi').order('sort_order')),
 

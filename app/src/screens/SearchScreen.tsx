@@ -17,53 +17,16 @@ import CandidateRow from '../components/CandidateRow';
 import {
   AmbientWarmth, BackButton, Card, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
-import { CATEGORIES, categoriesOf } from '../lib/categories';
 import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
 import { useCity } from '../lib/city';
 import { freshOnly, useCandidates } from '../lib/candidates';
 import { hintArea } from '../lib/hints';
 import type { Candidate } from '../lib/suggest';
-import { useCollections, usePlaces } from '../lib/catalog';
+import { useCollections, usePlaces, useSearchTerms } from '../lib/catalog';
+import { collectionHaystack, matches, placeHaystack, queryTerms } from '../lib/search';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
-
-/** Lowercase, diacritics stripped, đ folded — the shape we match on. */
-function fold(s: string | null | undefined): string {
-  return (s ?? '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/đ/gi, 'd')
-    .toLowerCase();
-}
-
-function placeHaystack(p: Place): string {
-  return fold([
-    p.name_en, p.name_vi, p.name_ja,
-    p.neighborhood_en, p.neighborhood_vi, p.neighborhood_ja,
-    p.desc_en, p.desc_vi, p.desc_ja,
-    p.vibe_tags.join(' '),
-    // Category keys plus their labels in every language, so "bảo tàng"
-    // and "heritage" both reach the same places.
-    categoriesOf(p).flatMap((c) => {
-      const cat = CATEGORIES[c];
-      return cat ? [c, cat.en, cat.vi, cat.ja] : [c];
-    }).join(' '),
-    p.address,
-  ].join(' '));
-}
-
-function collectionHaystack(c: Collection): string {
-  return fold([
-    c.title_en, c.title_vi, c.title_ja,
-    c.desc_en, c.desc_vi, c.desc_ja, c.curator_handle,
-  ].join(' '));
-}
-
-/** Every word must appear somewhere — "cafe saigon" narrows, not widens. */
-function matches(haystack: string, terms: string[]): boolean {
-  return terms.every((term) => haystack.includes(term));
-}
 
 type Row =
   | { kind: 'header'; key: string; label: string }
@@ -113,10 +76,10 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   );
   const chosen = addable.filter((c) => picked.includes(c.place_id));
 
-  const terms = useMemo(
-    () => fold(query).split(/\s+/).filter(Boolean),
-    [query],
-  );
+  const terms = useMemo(() => queryTerms(query), [query]);
+  // The desk's synonyms, folded onto the app's own. This is what lets
+  // "cinema" reach a multiplex whose record never says the word.
+  const synonyms = useSearchTerms();
 
   const rows = useMemo<Row[]>(() => {
     if (terms.length === 0) return [];
@@ -142,7 +105,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       }
     }
 
-    const foundPlaces = places.filter((p) => matches(placeHaystack(p), terms));
+    const foundPlaces = places.filter((p) => matches(placeHaystack(p, synonyms), terms));
     if (foundPlaces.length) {
       out.push({ kind: 'header', key: 'h-place', label: t('Places', 'Địa điểm', 'スポット') });
       for (const p of foundPlaces) out.push({ kind: 'place', key: `p-${p.slug}`, place: p });
@@ -161,7 +124,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       for (const c of fresh) out.push({ kind: 'candidate', key: `g-${c.place_id}`, candidate: c });
     }
     return out;
-  }, [terms, places, cols.data, city?.id, fresh, t]);
+  }, [terms, places, cols.data, city?.id, fresh, synonyms, t]);
 
   const searching = terms.length > 0;
   const showBar = batchBarShown(chosen.length, google.batch);

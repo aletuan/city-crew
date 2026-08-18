@@ -290,6 +290,32 @@ export const usePlacesQuery = (meId?: string | null) => {
   return useFetch(fetcher, [] as Place[]);
 };
 
+/**
+ * The desk's search synonyms, as `category → terms`.
+ *
+ * Not scoped to a city — what a reader types for "cinema" does not change
+ * between Hanoi and Saigon — so it has no dependency and fetches once.
+ *
+ * Failure is an empty map, never a throw. The app ships its own defaults
+ * and unions this onto them, so a table that is missing, empty, or
+ * unreachable leaves search exactly as it shipped; see `mergeTerms`. That
+ * is what lets this be nine rows of editable text rather than a risk.
+ */
+async function fetchCategoryTerms(): Promise<Record<string, string[]>> {
+  const { data, error } = await supabase.from('category_terms').select('category, terms');
+  if (error || !data) return {};
+  const out: Record<string, string[]> = {};
+  for (const row of data as { category: string; terms: string[] | null }[]) {
+    if (row.category) out[row.category] = row.terms ?? [];
+  }
+  return out;
+}
+
+export const useCategoryTermsQuery = () => {
+  const fetcher = useCallback(() => fetchCategoryTerms(), []);
+  return useFetch(fetcher, {} as Record<string, string[]>);
+};
+
 export const useCollectionsQuery = (meId?: string | null) => {
   const { city } = useCity();
   const fetcher = useCallback(

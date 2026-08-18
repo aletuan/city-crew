@@ -15,19 +15,31 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react';
 import { AppState } from 'react-native';
 import {
-  Collection, Fetch, Place, useCollectionsQuery, usePlacesQuery,
+  Collection, Fetch, Place, useCategoryTermsQuery, useCollectionsQuery, usePlacesQuery,
 } from './data';
+import { CATEGORIES } from './categories';
+import { mergeTerms, type TermMap } from './search';
 import { useAuth } from './auth';
 import { shouldRefresh } from './stale';
 
 type Catalog = {
   places: Fetch<Place[]>;
   collections: Fetch<Collection[]>;
+  /** Search synonyms: the app's shipped defaults, plus whatever the desk
+   *  has added. Already merged and folded — see `mergeTerms`. */
+  terms: TermMap;
 };
+
+/** The shipped floor, lifted out of the category table once rather than on
+ *  every render. */
+const BUILT_IN: TermMap = Object.fromEntries(
+  Object.entries(CATEGORIES).map(([key, c]) => [key, c.terms ?? []]),
+);
 
 const EMPTY: Catalog = {
   places: { loading: true, loaded: false, error: null, data: [], loadedAt: null, reload: () => {} },
   collections: { loading: true, loaded: false, error: null, data: [], loadedAt: null, reload: () => {} },
+  terms: mergeTerms(BUILT_IN, null),
 };
 
 const Ctx = createContext<Catalog>(EMPTY);
@@ -43,6 +55,9 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   // reloads the query, which is what makes a list you just published leave
   // the public section on this device and stay in it on every other.
   const collections = useCollectionsQuery(meId);
+  // No city and no reader in the key: what somebody types for "cinema" is
+  // the same in every city and for everyone. One fetch, for the app's life.
+  const deskTerms = useCategoryTermsQuery();
 
   // ── coming back to the app ──
   //
@@ -76,9 +91,12 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
 
   // Depend on the fields rather than on the objects: `useFetch` returns a
   // fresh object every render, so memoising on it would memoise nothing.
-  const value = useMemo<Catalog>(() => ({ places, collections }), [
+  const terms = useMemo(() => mergeTerms(BUILT_IN, deskTerms.data), [deskTerms.data]);
+
+  const value = useMemo<Catalog>(() => ({ places, collections, terms }), [
     places.data, places.loading, places.error, places.loadedAt, places.reload,
     collections.data, collections.loading, collections.error, collections.loadedAt, collections.reload,
+    terms,
   ]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -91,6 +109,9 @@ export const useCatalog = () => useContext(Ctx);
  * call site does not care that the fetch moved — only the import did.
  */
 export const usePlaces = () => useCatalog().places;
+
+/** Search synonyms, merged and ready for `placeHaystack`. */
+export const useSearchTerms = () => useCatalog().terms;
 
 /** The desk's public collections for the city. */
 export const useCollections = () => useCatalog().collections;
