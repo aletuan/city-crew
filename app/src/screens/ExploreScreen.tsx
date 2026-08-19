@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AddPill, AddSlot } from '../components/add';
-import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, TAB_BAR_GAP, TAB_BAR_HEIGHT, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, glassHalo, GlassMaterial, PressableScale, RoundIconButton, Screen, Skeleton, TAB_BAR_HEIGHT, useTabBarClearance, useTabBarLift } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
@@ -25,7 +25,7 @@ import { useCollections, usePlaces } from '../lib/catalog';
 import { Lang, useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useScheme } from '../lib/theme';
 import type { Nav } from '../nav';
 
 // The one chip that isn't a category: the whole catalog. It carries no
@@ -104,7 +104,7 @@ const DEEP_AFTER = 2;
  * the bar vacates is empty at exactly the moment this offer is earned,
  * and in thumb reach besides. It wears the dock's geometry (the inset,
  * the island radius) so the slot reads as one place that changes content;
- * everything else about it — the text, the two actions, the opaque card —
+ * everything else about it — the text and the two actions —
  * looks nothing like five glyphs, so a hand reaching for a tab is never
  * fooled. The gate in lib/nudge.ts holds the sharing rules: the bar
  * always wins the slot back the same frame, and every time it leaves,
@@ -117,7 +117,8 @@ function ScrollNudge({ visible, onSearch, onAdd }: {
   onAdd: () => void;
 }) {
   const { t } = useI18n();
-  const insets = useSafeAreaInsets();
+  const lift = useTabBarLift();
+  const light = useScheme().scheme === 'light';
   const fade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(fade, {
@@ -133,7 +134,12 @@ function ScrollNudge({ visible, onSearch, onAdd }: {
       style={[
         s.nudgeWrap,
         {
-          bottom: insets.bottom + TAB_BAR_GAP,
+          // The same number the bar uses, from the same hook. These were
+          // two copies of one formula, and when the bar came down to
+          // clear the home indicator rather than the whole safe-area
+          // inset, this one stayed 28pt higher — so the offer arrived in
+          // the dock the bar had left, and sat above it.
+          bottom: lift,
           opacity: fade,
           // Rises into the dock from below — the direction the bar left in.
           transform: [{
@@ -142,13 +148,22 @@ function ScrollNudge({ visible, onSearch, onAdd }: {
         },
       ]}
     >
-      <PressableScale onPress={onSearch} scaleTo={0.985} style={s.nudge} accessibilityRole="button">
-        <Ionicons name="search" size={18} color={colors.textSecondary} />
+      <PressableScale
+        onPress={onSearch}
+        scaleTo={0.985}
+        style={[s.nudge, { shadowOpacity: light ? 0.16 : 0.35 }]}
+        accessibilityRole="button"
+      >
+        {/* Same clip-on-its-own-layer trick the bar uses: iOS draws
+            shadows outside bounds, so overflow:hidden on the shadowed
+            view would eat them. */}
+        <View style={s.nudgeClip}><GlassMaterial /></View>
+        <Ionicons name="search" size={18} color={colors.text} style={glassHalo(light)} />
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={s.nudgeTitle} numberOfLines={1}>
+          <Text style={[s.nudgeTitle, glassHalo(light)]} numberOfLines={1}>
             {t('Not finding it?', 'Chưa thấy chỗ cần tìm?', '見つかりませんか？')}
           </Text>
-          <Text style={s.nudgeSub} numberOfLines={1}>
+          <Text style={[s.nudgeSub, glassHalo(light)]} numberOfLines={1}>
             {t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加')}
           </Text>
         </View>
@@ -663,16 +678,32 @@ const s = StyleSheet.create({
     paddingLeft: 18, paddingRight: 10, paddingVertical: 8,
     borderRadius: radius.tabBar,
     shadowColor: '#000', shadowRadius: 18, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25, elevation: 8,
-    // Opaque, not glass. Everything the app floats over is either still
-    // (the tab bar over a resting list) or its own surface; this one has
-    // photographs travelling under it, and a translucent bar over moving
-    // photographs reads as a smear rather than as a material.
-    backgroundColor: colors.bgElevated,
+    elevation: 8,
+    // The same glass the bar is made of, because this *is* the bar's
+    // dock — it appears in the space the bar vacates, at the same lift,
+    // width, height and radius, and a solid panel arriving where a
+    // translucent one left reads as two different objects sharing a slot.
+    //
+    // It was opaque on the reasoning that photographs travel under it and
+    // a translucent bar over moving pictures smears. The bar has the same
+    // pictures moving under it and does not; what smeared was the heavy
+    // blur, which is now 38. If motion does turn out to be the difference
+    // on a real device, the fix is the blur, not a second material.
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
+    overflow: 'visible',
+  },
+  nudgeClip: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.tabBar,
+    overflow: 'hidden',
   },
   nudgeTitle: { color: colors.text, fontSize: 14.5, fontWeight: font.semibold },
-  nudgeSub: { color: colors.textTertiary, fontSize: 12.5 },
+  // Full strength, where this was `textTertiary` — which is #6E695E, the
+  // exact mid-tone that could not be read on thin glass over a
+  // photograph. Size and weight carry the hierarchy instead of colour:
+  // 12.5 regular under 14.5 semibold is already two steps down, and it is
+  // the pair of steps that survives an unknown ground.
+  nudgeSub: { color: colors.text, fontSize: 12.5, opacity: 0.72 },
 
   // The pinned filter row.
   //
