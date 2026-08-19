@@ -127,22 +127,29 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .mobilebrand { display: none; line-height: 0; }
 
 /* ── phone tab bar + its More sheet ── */
+/* Icon-first, the social-app grammar: four big glyphs, no captions, and
+   the current tab sits in a pill wash — the shape carries "you are here"
+   so no colour has to shout it. Recoloured to the desk: glass pill on the
+   elevated bar instead of a grey squircle on black. */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
   display: none; grid-template-columns: repeat(4, 1fr);
-  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-  background: rgba(22, 19, 27, 0.94); backdrop-filter: blur(18px);
+  padding: 7px 10px calc(7px + env(safe-area-inset-bottom));
+  background: rgba(22, 19, 27, 0.96); backdrop-filter: blur(18px);
   border-top: 1px solid var(--border-glass-soft);
 }
 .tab-item {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  display: flex; align-items: center; justify-content: center;
   border: none; background: transparent; text-decoration: none;
-  color: var(--text-tertiary); font: inherit; font-size: 10.5px; font-weight: 600;
-  padding: 5px 2px; border-radius: 10px; cursor: pointer;
-  transition: color 120ms;
+  color: var(--text-tertiary); padding: 0; cursor: pointer;
 }
-.tab-item.active { color: #fff; }
-.tab-item.active svg { color: var(--ai-pink); }
+.tabpill {
+  display: flex; align-items: center; justify-content: center;
+  width: 58px; height: 38px; border-radius: var(--radius-pill);
+  transition: background 160ms, color 160ms;
+}
+.tab-item.active { color: var(--text-primary); }
+.tab-item.active .tabpill { background: var(--surface-glass-strong); }
 .sheetback { position: fixed; inset: 0; z-index: 54; background: rgba(5, 3, 10, 0.55); }
 .sheet {
   position: fixed; left: 10px; right: 10px; z-index: 55;

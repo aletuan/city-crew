@@ -349,18 +349,29 @@ export default function App() {
 
           {/* Phones: the three daily destinations one thumb-tap away, and a
               More sheet for the rest — visible beats hidden, and the burger
-              this could have been hides exactly the screens people forget. */}
+              this could have been hides exactly the screens people forget.
+              Icon-first, the social-app grammar: no captions, and the tab
+              you are on wears a pill wash instead of a tinted label. The
+              names still exist — for screen readers and long-press. */}
           <nav className="tabbar" aria-label="Main">
-            <NavLink end to="/" className={tabCls}><CategoryIcon name="list" />Places</NavLink>
-            <NavLink to="/analytics/contributors" className={tabCls}><CategoryIcon name="users" />Contributors</NavLink>
-            <NavLink to="/analytics/coverage" className={tabCls}><CategoryIcon name="pin" />Coverage</NavLink>
+            <NavLink end to="/" className={tabCls} aria-label="Places" title="Places">
+              <span className="tabpill"><CategoryIcon name="list" size={22} /></span>
+            </NavLink>
+            <NavLink to="/analytics/contributors" className={tabCls} aria-label="Contributors" title="Contributors">
+              <span className="tabpill"><CategoryIcon name="users" size={22} /></span>
+            </NavLink>
+            <NavLink to="/analytics/coverage" className={tabCls} aria-label="Coverage" title="Coverage">
+              <span className="tabpill"><CategoryIcon name="pin" size={22} /></span>
+            </NavLink>
             <button
               className={`tab-item${sheetOpen ? ' active' : ''}`}
               onClick={() => setSheetOpen((v) => !v)}
               aria-haspopup="true"
               aria-expanded={sheetOpen}
+              aria-label="More"
+              title="More"
             >
-              <CategoryIcon name="dots" />More
+              <span className="tabpill"><CategoryIcon name="dots" size={22} /></span>
             </button>
           </nav>
           {sheetOpen && (
