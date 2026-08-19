@@ -130,30 +130,46 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 /* Icon-first, the social-app grammar: four big glyphs, no captions, and
    the current tab sits in a pill wash — the shape carries "you are here"
    so no colour has to shout it. Recoloured to the desk: glass pill on the
-   elevated bar instead of a grey squircle on black. */
+   elevated bar instead of a grey squircle on black.
+
+   A floating rounded bar rather than a docked strip — the same vocabulary
+   as the review bar, which already floats — and it ducks below the edge
+   while you scroll into the content, returning on the first upward pull
+   (the .ducked class; see the scroll listener in App). */
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  position: fixed; left: 10px; right: 10px; z-index: 50;
+  bottom: calc(8px + env(safe-area-inset-bottom));
   display: none; grid-template-columns: repeat(4, 1fr);
-  padding: 7px 10px calc(7px + env(safe-area-inset-bottom));
-  background: rgba(22, 19, 27, 0.96); backdrop-filter: blur(18px);
-  border-top: 1px solid var(--border-glass-soft);
+  padding: 6px 8px;
+  background: rgba(22, 19, 27, 0.92); backdrop-filter: blur(18px);
+  border: 1px solid var(--border-glass-soft);
+  border-radius: 24px; box-shadow: var(--shadow-float);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms;
+}
+.tabbar.ducked {
+  transform: translateY(calc(100% + 8px + env(safe-area-inset-bottom)));
+  opacity: 0;
+  pointer-events: none;
 }
 .tab-item {
   display: flex; align-items: center; justify-content: center;
   border: none; background: transparent; text-decoration: none;
   color: var(--text-tertiary); padding: 0; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .tabpill {
   display: flex; align-items: center; justify-content: center;
   width: 58px; height: 38px; border-radius: var(--radius-pill);
-  transition: background 160ms, color 160ms;
+  transition: background 160ms, transform 120ms;
 }
+/* Press feedback: the pill answers the thumb, briefly and in place. */
+.tab-item:active .tabpill { transform: scale(0.92); background: var(--surface-glass); }
 .tab-item.active { color: var(--text-primary); }
 .tab-item.active .tabpill { background: var(--surface-glass-strong); }
 .sheetback { position: fixed; inset: 0; z-index: 54; background: rgba(5, 3, 10, 0.55); }
 .sheet {
   position: fixed; left: 10px; right: 10px; z-index: 55;
-  bottom: calc(70px + env(safe-area-inset-bottom));
+  bottom: calc(68px + env(safe-area-inset-bottom)); /* just above the floating bar */
   display: flex; flex-direction: column; gap: 2px; padding: 6px;
   background: var(--bg-elevated); border: 1px solid var(--border-glass);
   border-radius: 18px; box-shadow: var(--shadow-float);
