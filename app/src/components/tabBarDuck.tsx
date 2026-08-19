@@ -2,10 +2,13 @@
 //
 // Scrolling down is "I'm reading"; the bar slips below the edge and gives
 // the content the whole screen. The first pull back up is "I'm going
-// somewhere"; the bar returns. The same grammar as the desk's web bar, and
-// the same guard rails: a few-pixel threshold so a wobbling thumb cannot
-// flicker it, and the top of a screen always shows it — chrome hiding
-// before you have scrolled anywhere reads as a glitch, not a courtesy.
+// somewhere"; the bar returns.
+//
+// The *decision* lives in lib/duck.ts as a pure state machine, with the
+// tests that pin down every way this once went wrong — the strobe, the
+// bounce, the stale anchor after a tab change. This file owns only the
+// React half: turning 'hide'/'show' edges into one native-driven
+// animation, and honouring Reduce Motion by jumping instead of sliding.
 //
 // A context rather than per-screen state because the two halves live in
 // different trees: the screens own the scroll views, the navigator owns
@@ -17,6 +20,7 @@ import React, {
 } from 'react';
 import { AccessibilityInfo, Animated, Easing } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { createDuckTracker } from '../lib/duck';
 
 type Duck = {
   /** 0 = shown, 1 = ducked. Drive transforms off this, native-driven. */
@@ -24,30 +28,20 @@ type Duck = {
   /** Mirror of the animated state, for pointerEvents and the like. */
   ducked: boolean;
   /** Feed a scroll offset in (and the scrollable's max offset, so the
-   *  bottom bounce can be clamped out); the direction logic lives here. */
+   *  bottom bounce can be clamped out); the decision lives in lib/duck. */
   report: (y: number, maxY?: number) => void;
-  /** Surface the bar regardless — navigation, sheets, anything modal. */
+  /** Surface the bar regardless — navigation, sheets, anything modal.
+   *  Stable identity: effects may depend on this without re-firing every
+   *  time the bar moves. */
   show: () => void;
 };
 
 const Ctx = createContext<Duck | null>(null);
 
-// Hysteresis, not a single threshold: travel accumulates per direction
-// and resets when the direction flips, so a slow scroll or a bounce's
-// alternating deltas cannot strobe the bar mid-animation. Hiding takes
-// more conviction than returning — going away is a judgement, coming
-// back is a reach.
-/** Committed descent, in px, before the bar hides. */
-const HIDE_TRAVEL = 24;
-/** Committed ascent, in px, before it returns. */
-const SHOW_TRAVEL = 12;
-/** Within this many px of the top the bar never hides. */
-const TOP_SLACK = 80;
-
 export function TabBarDuckProvider({ children }: { children: React.ReactNode }) {
   const anim = useRef(new Animated.Value(0)).current;
+  const tracker = useRef(createDuckTracker()).current;
   const [ducked, setDucked] = useState(false);
-  const lastY = useRef(0);
   // Reduce Motion swaps the slide for an instant jump — the behaviour
   // stays, the animation goes, which is what the setting asks for.
   const reduceMotion = useRef(false);
@@ -74,24 +68,15 @@ export function TabBarDuckProvider({ children }: { children: React.ReactNode }) 
     });
   }, [anim]);
 
-  const travel = useRef(0);
   const report = useCallback((y: number, maxY?: number) => {
-    // Overscroll is not a direction: clamp both ends so iOS's rubber band
-    // hands the accumulator nothing.
-    const clamped = Math.min(Math.max(0, y), maxY != null && maxY >= 0 ? maxY : Number.MAX_SAFE_INTEGER);
-    const dy = clamped - lastY.current;
-    lastY.current = clamped;
-    if (dy === 0) return;
-    travel.current = Math.sign(dy) === Math.sign(travel.current) ? travel.current + dy : dy;
-    if (clamped <= TOP_SLACK || travel.current < -SHOW_TRAVEL) setTo(false);
-    else if (travel.current > HIDE_TRAVEL) setTo(true);
-  }, [setTo]);
+    const decision = tracker.report(y, maxY);
+    if (decision) setTo(decision === 'hide');
+  }, [tracker, setTo]);
 
   const show = useCallback(() => {
-    lastY.current = 0;
-    travel.current = 0;
+    tracker.reset();
     setTo(false);
-  }, [setTo]);
+  }, [tracker, setTo]);
 
   const value = useMemo(
     () => ({ anim, ducked, report, show }),
