@@ -14,6 +14,47 @@ import { useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
 import { colors, display, font, gradAI, radius, space, type } from '../theme';
 
+/**
+ * Apple's Liquid Glass, if this device has it — otherwise null.
+ *
+ * The effect worth reaching for is refraction: content behind the panel
+ * is bent, the way it is through water, where a blur only softens it.
+ * `expo-blur` cannot do that at any setting, and no combination of
+ * intensity and scrim gets close, so `GlassMaterial` asks for the native
+ * one and keeps the blur as its floor.
+ *
+ * ── why this is a require in a try, and not an import ──
+ *
+ * `GlassView.ios.tsx` calls `requireNativeViewManager('ExpoGlassEffect')`
+ * at *module scope*, so a plain top-level import throws while the module
+ * is being loaded, not when something renders — and this app ships over
+ * the air into Expo Go, where that is a white screen on launch with no
+ * way back except another update. Everything that can throw therefore
+ * happens once, here, behind a catch: the require, and the availability
+ * check, which reaches for the native module too.
+ *
+ * Three separate ways this can come back null, and all of them are
+ * ordinary rather than errors: the package's native side is not in this
+ * binary; the OS is older than iOS 26; or it is Android, where the
+ * package resolves to a plain `View` and reports itself unavailable
+ * without touching native code at all. The last one matters — a plain
+ * `View` would be a *hole* where the bar's material should be, so
+ * "available" has to mean the real effect and nothing else.
+ */
+const LiquidGlass: React.ComponentType<{
+  style?: StyleProp<ViewStyle>;
+  glassEffectStyle?: 'clear' | 'regular' | 'none';
+  colorScheme?: 'auto' | 'light' | 'dark';
+}> | null = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require('expo-glass-effect');
+    return mod.isLiquidGlassAvailable() ? mod.GlassView : null;
+  } catch {
+    return null;
+  }
+})();
+
 // ── tab bar geometry ──
 // A floating glass island (see FloatingTabBar), inset from the screen
 // edges and sitting above the home indicator; position:absolute so
@@ -389,34 +430,49 @@ export function AmbientWarmth({ style }: { style?: StyleProp<ViewStyle> }) {
  * survives it. Reference bars that read as glass use a light blur and let
  * shapes come through.
  *
- * So the blur comes down too — 28 — and the scrim to 0.38. What that
- * costs is worth stating plainly, because it is most of the scrim's
- * remaining job:
+ * So 38, and the scrim to 0.48:
  *
  *              over a dark photo   over a light photo
  *   light 0.48        4.08               17.75
- *   light 0.38        2.83               17.85
  *   dark  0.48       18.88                3.19
- *   dark  0.38       19.02                2.35
  *
- * Below about 0.42 the panel stops carrying legibility at all, and the
- * halo carries it instead — which is a real technique rather than a
- * fudge (it is how type sits on photographs everywhere in this app, see
- * `onPhoto`), but it is a different guarantee and should not be confused
- * with the earlier one. A halo is not a WCAG ratio and is not offered as
- * one: it is a transition of the opposite tone right at the stroke, so
- * the glyph stops depending on what the whole panel averages to.
+ * Which is why the glyphs carry a halo of the opposite tone — see
+ * `glassHalo`. A halo is not a WCAG ratio and is not offered as one; it
+ * is a guaranteed transition right at the stroke, so a glyph stops
+ * depending on what the whole panel averages to.
  *
- * The floor is the halo's, not the scrim's. If this ever needs to go
- * thinner again, thicken the halo; taking the scrim down without it
- * would be the 1.03:1 mistake from two revisions ago wearing new
- * numbers.
+ * These numbers were briefly taken further — 28 and 0.38 — and put back.
+ * Below about 0.42 the panel stops contributing to legibility at all and
+ * the halo is holding it alone, which is a thinner guarantee than it
+ * looks: it works at the stroke and nowhere else, so a glyph reads while
+ * the shape it sits in stops being a surface. That is the wrong floor to
+ * be resting on, and 0.48 is where the two still share the work.
+ *
+ * ── the real answer is not this material ──
+ *
+ * What a reference bar does that no blur can is *refract* — bend what is
+ * behind it, the way water does, rather than only smearing it. That is
+ * Apple's Liquid Glass, and it is a native effect, so the block below
+ * reaches for it when the platform has one and falls back to this
+ * otherwise.
  */
 export function GlassMaterial() {
   const light = useScheme().scheme === 'light';
+  if (LiquidGlass) {
+    return (
+      <LiquidGlass
+        style={StyleSheet.absoluteFill}
+        glassEffectStyle="regular"
+        // The app has its own theme switch, so the effect must not read
+        // the system's. `auto` would put a light bar on a dark page for
+        // anyone whose phone disagrees with their choice in Profile.
+        colorScheme={light ? 'light' : 'dark'}
+      />
+    );
+  }
   return (
-    <BlurView intensity={28} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
-      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.38)' : 'rgba(12,13,12,0.38)' }} />
+    <BlurView intensity={38} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
+      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.48)' : 'rgba(12,13,12,0.48)' }} />
     </BlurView>
   );
 }
@@ -429,17 +485,21 @@ export function GlassMaterial() {
  * a bloom hugging the stroke, not a drop shadow — an offset one reads as
  * a mistake at 11pt.
  *
- * Radius 4, up from 3, because the scrim went to 0.38 and the panel no
- * longer contributes much: below about 0.42 this is what legibility rests
- * on, so it grows as the glass thins. Opaque rather than 0.95 for the
- * same reason — at this radius the falloff is the softening, and a
- * translucent bloom on an unknown ground is a guarantee with a hole in
- * it.
+ * Sized against a 0.48 scrim, where the panel still carries half the
+ * work. It grew to 4 while the scrim was briefly at 0.38 and came back
+ * with it: a halo doing the job alone has to be thick enough to read as
+ * a deliberate edge, and at 11pt that is close to the point where it
+ * stops being invisible and starts being an outline.
+ *
+ * Under Liquid Glass it is doing less again — a refracting panel keeps
+ * its own presence where a thin blur does not — but it stays, because
+ * the same component falls back to the blur on every device without the
+ * native effect.
  */
 export const glassHalo = (light: boolean) => ({
-  textShadowColor: light ? '#FAF8F4' : '#0A0B0A',
+  textShadowColor: light ? 'rgba(250,248,244,0.95)' : 'rgba(10,11,10,0.95)',
   textShadowOffset: { width: 0, height: 0 },
-  textShadowRadius: 4,
+  textShadowRadius: 3,
 });
 
 export function RoundIconButton({ icon, onPress, label, size = 21 }: {
