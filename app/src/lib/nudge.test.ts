@@ -2,50 +2,54 @@ import { describe, expect, it } from 'vitest';
 import { createNudgeGate, NUDGE_SETTLE_MS } from './nudge';
 
 describe('createNudgeGate', () => {
-  it('waits out the settle time before offering', () => {
-    const g = createNudgeGate({ settleMs: 500 });
+  it('follows the bar out by one beat, then shows', () => {
+    const g = createNudgeGate({ settleMs: 120 });
     expect(g.update(true, 0)).toBe(false);
-    expect(g.update(true, 499)).toBe(false);
-    expect(g.update(true, 500)).toBe(true);
+    expect(g.update(true, 119)).toBe(false);
+    expect(g.update(true, 120)).toBe(true);
     expect(g.update(true, 900)).toBe(true); // and stays
   });
 
   it('the bar always wins: losing eligibility hides it the same frame', () => {
-    const g = createNudgeGate({ settleMs: 500 });
+    const g = createNudgeGate({ settleMs: 120 });
     g.update(true, 0);
-    expect(g.update(true, 600)).toBe(true);
-    expect(g.update(false, 601)).toBe(false);
+    expect(g.update(true, 200)).toBe(true);
+    expect(g.update(false, 201)).toBe(false);
   });
 
-  it('an interrupted settle starts over, and never counts as a decline', () => {
-    const g = createNudgeGate({ settleMs: 500 });
+  it('the dock always answers: every departure of the bar re-offers', () => {
+    const g = createNudgeGate({ settleMs: 120 });
     g.update(true, 0);
-    expect(g.update(false, 300)).toBe(false); // never shown — not declined
-    expect(g.update(true, 1000)).toBe(false); // clock restarts…
-    expect(g.update(true, 1499)).toBe(false);
-    expect(g.update(true, 1500)).toBe(true); // …and it still gets its turn
+    expect(g.update(true, 150)).toBe(true); // offered
+    expect(g.update(false, 300)).toBe(false); // bar came back — offer yields
+    // The bar leaves again: the offer returns, after the same beat.
+    expect(g.update(true, 1000)).toBe(false);
+    expect(g.update(true, 1120)).toBe(true);
+    // And again, however many times.
+    g.update(false, 2000);
+    expect(g.update(true, 3000)).toBe(false);
+    expect(g.update(true, 3120)).toBe(true);
   });
 
-  it('declined means declined: once shown and passed over, it stays away', () => {
-    const g = createNudgeGate({ settleMs: 500 });
+  it('an interrupted beat starts over', () => {
+    const g = createNudgeGate({ settleMs: 120 });
     g.update(true, 0);
-    expect(g.update(true, 600)).toBe(true); // offered
-    expect(g.update(false, 700)).toBe(false); // reader pulled up — declined
-    expect(g.update(true, 2000)).toBe(false); // eligible again: no
-    expect(g.update(true, 9000)).toBe(false); // however long it holds
+    expect(g.update(false, 60)).toBe(false);
+    expect(g.update(true, 1000)).toBe(false); // clock restarts
+    expect(g.update(true, 1119)).toBe(false);
+    expect(g.update(true, 1120)).toBe(true);
   });
 
-  it('reset forgives: a fresh visit gets a fresh offer', () => {
-    const g = createNudgeGate({ settleMs: 500 });
+  it('reset starts the beat over without needing an ineligible frame', () => {
+    const g = createNudgeGate({ settleMs: 120 });
     g.update(true, 0);
-    g.update(true, 600); // shown
-    g.update(false, 700); // declined
-    g.reset();
-    expect(g.update(true, 1000)).toBe(false); // settle applies anew
-    expect(g.update(true, 1500)).toBe(true);
+    expect(g.update(true, 150)).toBe(true);
+    g.reset(); // a navigation took the dock
+    expect(g.update(true, 200)).toBe(false); // beat anew
+    expect(g.update(true, 320)).toBe(true);
   });
 
-  it('ships a default settle time', () => {
+  it('ships a default beat', () => {
     const g = createNudgeGate();
     g.update(true, 0);
     expect(g.update(true, NUDGE_SETTLE_MS - 1)).toBe(false);

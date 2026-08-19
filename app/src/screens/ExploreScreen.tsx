@@ -107,8 +107,9 @@ const DEEP_AFTER = 2;
  * everything else about it — the text, the two actions, the opaque card —
  * looks nothing like five glyphs, so a hand reaching for a tab is never
  * fooled. The gate in lib/nudge.ts holds the sharing rules: the bar
- * always wins, the offer waits out a settle, and once passed over it
- * stays away for the visit.
+ * always wins the slot back the same frame, and every time it leaves,
+ * the offer takes the dock again — one barely-visible beat behind, so
+ * the two never cross mid-dock.
  */
 function ScrollNudge({ visible, onSearch, onAdd }: {
   visible: boolean;
