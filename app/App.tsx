@@ -111,20 +111,33 @@ function ProfileStack() {
 
 function Tabs() {
   const { t } = useI18n();
+  // Five names into five cells about 70pt wide, now that the island shows
+  // them rather than only speaking them. Latin script fits: "Collections"
+  // and "Bộ sưu tập" both set to roughly 55pt at 11. Japanese does not,
+  // because a CJK glyph is close to a full em — コレクション and
+  // プロフィール are six characters each, near enough 66pt, and would
+  // have been the two captions that clipped.
+  //
+  // So those two shortened rather than the type shrinking, which would
+  // have cost every language a point of legibility to rescue one. 保存 is
+  // what a Japanese app calls what sits behind a bookmark and マイページ
+  // is what it calls the account tab; neither is a translation of the
+  // English so much as the word that was already there.
   const labels: Record<string, string> = {
     Ideas: t('Ideas', 'Ý tưởng', 'アイデア'),
     Explore: t('Explore', 'Khám phá', '探索'),
     Trips: t('Trips', 'Chuyến đi', '旅程'),
-    Collections: t('Collections', 'Bộ sưu tập', 'コレクション'),
-    Profile: t('Profile', 'Cá nhân', 'プロフィール'),
+    Collections: t('Collections', 'Bộ sưu tập', '保存'),
+    Profile: t('Profile', 'Cá nhân', 'マイページ'),
   };
   return (
     <Tab.Navigator
       initialRouteName="Explore"
       screenListeners={{ tabPress: () => fireHaptic('selection') }}
-      // The bar itself is a component now — a floating icon-only island
-      // that ducks while you scroll. `title` is what it reads out to
-      // VoiceOver: the captions left the screen, not the semantics.
+      // The bar itself is a component now — a floating island that ducks
+      // while you scroll. `title` is the one string it needs: the caption
+      // it draws and the name it reads to VoiceOver are the same word,
+      // which is the point.
       tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={({ route }) => ({
         headerShown: false,

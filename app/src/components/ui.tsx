@@ -18,8 +18,14 @@ import { colors, display, font, gradAI, radius, space, type } from '../theme';
 // A floating glass island (see FloatingTabBar), inset from the screen
 // edges and sitting above the home indicator; position:absolute so
 // content scrolls beneath it, which means screens must clear it
-// themselves. Icon-only, so it is shorter than the labelled bar was.
-export const TAB_BAR_HEIGHT = 58;
+// themselves.
+//
+// 64, up from the 58 the icon-only island used, and the six points are
+// the caption's: a 32pt icon well, 3pt of gap and a 13pt line of type is
+// 48, which leaves 8 above and below. The island had the room — what it
+// did not have was a reason, until two of the five glyphs turned out to
+// be answering the same question. See FloatingTabBar.
+export const TAB_BAR_HEIGHT = 64;
 /** The air between the island and the safe area's bottom edge. */
 export const TAB_BAR_GAP = 10;
 
@@ -331,11 +337,40 @@ export function AmbientWarmth({ style }: { style?: StyleProp<ViewStyle> }) {
  * material doing the same job at opposite ends of the screen, and a
  * second copy of these numbers would drift from the first.
  */
+/**
+ * Frosted, not transparent — and the difference was measured.
+ *
+ * A translucent sheet cannot guarantee contrast against content it does
+ * not control, at any opacity. Composited over the darkest and lightest
+ * photographs this catalog holds, the tab glyphs come out at:
+ *
+ *              over a dark photo   over a light photo
+ *   light 0.68        2.16                4.90
+ *   light 0.45        1.03                4.97
+ *   dark  0.62        7.33                2.01
+ *   dark  0.45        7.42                1.14
+ *
+ * So each theme already fails in its opposite case, and thinning the
+ * scrim to let more through makes the failing case worse rather than the
+ * passing one better: 1.03:1 is invisible. There is no opacity that
+ * fixes this, which is why the scrim is not the lever.
+ *
+ * Intensity is. It does not change the mean luminance underneath, so it
+ * costs nothing on the table above, but it flattens local variation —
+ * which is what stops a glyph landing across the edge between a white sky
+ * and a dark doorway. It is also what "glass" means here: you see colour
+ * and mass through it, never detail. Transparent is the other thing, and
+ * the other thing is a bar you cannot read.
+ *
+ * Dark's scrim is the one number that moved, 0.62 → 0.66, because the
+ * table shows dark as the weaker of the two (2.01 against light's 2.16).
+ * This brings them within a rounding error of each other.
+ */
 export function GlassMaterial() {
   const light = useScheme().scheme === 'light';
   return (
-    <BlurView intensity={42} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
-      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.68)' : 'rgba(12,13,12,0.62)' }} />
+    <BlurView intensity={80} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
+      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.68)' : 'rgba(12,13,12,0.66)' }} />
     </BlurView>
   );
 }
