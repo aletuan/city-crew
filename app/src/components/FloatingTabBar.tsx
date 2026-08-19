@@ -32,7 +32,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useScheme } from '../lib/theme';
 import { colors, font, radius } from '../theme';
-import { GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
+import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
 
 /**
@@ -149,6 +149,10 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               <Ionicons
                 name={ICONS[route.name][focused ? 1 : 0]}
                 size={22}
+                // Only when idle: the selected glyph sits on an opaque
+                // pill, whose ground is known, so a halo there would be
+                // decoration on a problem that does not exist.
+                style={focused ? undefined : glassHalo(light)}
                 // See App's old bar: React Navigation typed these as
                 // strings, and the constraint outlived it — a glyph
                 // colour prop cannot take a dynamic pair either way.
@@ -163,7 +167,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               />
               <Text
                 numberOfLines={1}
-                style={[s.caption, {
+                style={[s.caption, !focused && glassHalo(light), {
                   color: focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5'),
                   fontWeight: focused ? font.semibold : font.regular,
                 }]}

@@ -381,26 +381,49 @@ export function AmbientWarmth({ style }: { style?: StyleProp<ViewStyle> }) {
  *   light 0.60, #17150F        6.08               17.62
  *   dark  0.60, #F7F7F5       18.71                4.78
  *
- * So 0.60 in both themes: eight points thinner than light was, two
- * thinner than dark, and every cell now clears 4.5:1 where the opaque
- * version cleared none of them. More of the page shows through than
- * before *and* it reads better — the two were never in tension, they only
- * looked that way while the glyph was the wrong colour. The paired change
- * lives in FloatingTabBar, and neither half works alone.
+ * That bought the scrim down to 0.60, and it still read as paint. The
+ * reason was the other number: a heavy blur is what makes glass look
+ * opaque. At intensity 80 whatever is behind arrives as one featureless
+ * wash, and a wash gives the eye nothing to recognise as *through* — you
+ * cannot see that a pane is transparent unless something identifiable
+ * survives it. Reference bars that read as glass use a light blur and let
+ * shapes come through.
  *
- * Intensity carries the rest. It leaves the mean luminance underneath
- * alone, so it costs nothing on either table, but it flattens local
- * variation — which is what stops a glyph landing across the edge between
- * a white sky and a dark doorway.
+ * So 38, and the scrim to 0.48. That is genuinely see-through, and it
+ * costs the contrast the earlier fix bought:
+ *
+ *              over a dark photo   over a light photo
+ *   light 0.48        4.02               17.75
+ *   dark  0.48        18.88               3.19
+ *
+ * Which is why the glyphs carry a halo of the opposite tone — see
+ * FloatingTabBar. A halo is not a WCAG number and is not offered as one;
+ * it is a guaranteed transition right at the stroke, so the glyph stops
+ * depending on what the whole panel averages to. The three changes are
+ * one change and none of them works alone.
  */
 export function GlassMaterial() {
   const light = useScheme().scheme === 'light';
   return (
-    <BlurView intensity={80} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
-      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.60)' : 'rgba(12,13,12,0.60)' }} />
+    <BlurView intensity={38} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
+      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.48)' : 'rgba(12,13,12,0.48)' }} />
     </BlurView>
   );
 }
+
+/**
+ * The halo that lets a glyph sit on genuinely thin glass.
+ *
+ * Opposite tone to the ink, so it is a light edge under dark type on
+ * paper and a dark one under light type on charcoal. Zero offset and a
+ * small radius: this is a bloom hugging the stroke, not a drop shadow —
+ * an offset one reads as a mistake at 11pt.
+ */
+export const glassHalo = (light: boolean) => ({
+  textShadowColor: light ? 'rgba(250,248,244,0.95)' : 'rgba(10,11,10,0.95)',
+  textShadowOffset: { width: 0, height: 0 },
+  textShadowRadius: 3,
+});
 
 export function RoundIconButton({ icon, onPress, label, size = 21 }: {
   icon: keyof typeof Ionicons.glyphMap;
