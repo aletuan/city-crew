@@ -157,7 +157,7 @@ function ScrollNudge({ visible, onSearch, onAdd }: {
         {/* Same clip-on-its-own-layer trick the bar uses: iOS draws
             shadows outside bounds, so overflow:hidden on the shadowed
             view would eat them. */}
-        <View style={s.nudgeClip}><GlassMaterial dense /></View>
+        <View style={s.nudgeClip}><GlassMaterial /></View>
         <Ionicons name="search" size={18} color={colors.text} style={glassHalo(light)} />
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={[s.nudgeTitle, glassHalo(light)]} numberOfLines={1}>
