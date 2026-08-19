@@ -1,12 +1,11 @@
 // The tab bar as a floating island — the social-app grammar, in the
 // app's own materials.
 //
-// Five glyphs in coral wells, each under its own name. The selected tab
-// fills its well and tints its caption — the shape still carries "you are
-// here", the word says which here. The island is the same glass the
-// pinned filter row uses, ringed by the same hairline every card wears,
-// and it ducks below the edge while you scroll into content (see
-// tabBarDuck).
+// Five glyphs, each above its own name, and the selected one sits in a
+// coral pill that wraps both — the shape carries "you are here", the word
+// says which here. The island is the same glass the pinned filter row
+// uses, ringed by the same hairline every card wears, and it ducks below
+// the edge while you scroll into content (see tabBarDuck).
 //
 // ── why the captions came back ──
 //
@@ -22,19 +21,42 @@
 // are not a retreat from the icon-first idea; they are the two of five it
 // could not carry.
 //
-// The pill keeps `colors.badge`'s split personality on purpose: solid
-// coral on charcoal, a coral tint on paper — the reasoning documented on
-// the token holds unchanged now the disc grew into a pill.
+// The pill keeps the badge's split personality on purpose: solid coral on
+// charcoal, a pale coral on paper — the reasoning documented on the token
+// holds unchanged now the disc grew into a pill. What did change is
+// *which* badge token, and the ink on it; see PILL_INK_LIGHT.
 
 import React, { useEffect } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useScheme } from '../lib/theme';
 import { colors, font, radius } from '../theme';
-import { GlassMaterial, PressableScale, TAB_BAR_GAP, TAB_BAR_HEIGHT } from './ui';
+import { GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
+
+/**
+ * The ink on the selected pill — not `colors.badgeInk`, and measured.
+ *
+ * Two things changed under that token at once. The pill is `badgeSolid`
+ * rather than `badge`, because `badge` on paper is a 16% coral tint and
+ * the glass beneath it is no longer nearly opaque: a translucent fill on
+ * a translucent bar leaves the pill's ground being whatever photograph is
+ * scrolling past, and the label came out at 1.35:1 over a dark one. The
+ * token's own docs predicted this — `badgeSolid` exists because "a 16%
+ * fill there let the picture through and left the glyph sitting on
+ * whatever pixels happened to be under it".
+ *
+ * And the pill now carries an 11pt word, not only a 22pt glyph, so it is
+ * held to 4.5:1 where the disc only ever needed 3:1. On `badgeSolid`'s
+ * pale coral, `badgeInk`'s #DC4C33 reaches 3.15 — fine for the glyph it
+ * was chosen for, short for the caption beside it. #A33724 is the same
+ * hue carried far enough down to reach 5.16.
+ *
+ * Dark needs no such move: #141310 on solid coral is already 6.79.
+ */
+const PILL_INK_LIGHT = '#A33724';
+const PILL_INK_DARK = '#141310';
 
 // [inactive, active]. Thin monochrome glyphs when idle; the selected tab
 // takes the solid variant, reversed out of the pill.
@@ -47,7 +69,6 @@ const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionico
 };
 
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const insets = useSafeAreaInsets();
   const light = useScheme().scheme === 'light';
   const duck = useTabBarDuck();
 
@@ -63,9 +84,16 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   const { show } = duck;
   useEffect(() => { show(); }, [index, show]);
 
+  // It used to clear the whole safe-area inset — 34pt on a modern iPhone,
+  // plus the gap, put the bar 44pt off the bottom, which reads as an
+  // island adrift rather than a dock. `useTabBarLift` clears the home
+  // indicator instead, and is shared so the screens' bottom padding
+  // cannot drift away from where the bar actually sits.
+  const lift = useTabBarLift();
+
   const slide = duck.anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, TAB_BAR_HEIGHT + TAB_BAR_GAP + insets.bottom + 8],
+    outputRange: [0, TAB_BAR_HEIGHT + lift + 8],
   });
   const fade = duck.anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
 
@@ -73,7 +101,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     <Animated.View
       pointerEvents={duck.ducked ? 'none' : 'auto'}
       style={[s.bar, {
-        bottom: insets.bottom + TAB_BAR_GAP,
+        bottom: lift,
         borderColor: colors.borderGlass,
         transform: [{ translateY: slide }],
         opacity: fade,
@@ -102,7 +130,12 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
             <PressableScale
               key={route.key}
               containerStyle={s.tab}
-              style={s.tabInner}
+              // The pill is this view, so it wraps the glyph *and* the
+              // word rather than sitting behind the glyph alone. A fill
+              // that stops above the caption leaves the selected tab's
+              // name outside the thing marking it selected, which reads
+              // as a highlight that missed.
+              style={[s.tabInner, focused && { backgroundColor: colors.badgeSolid }]}
               scaleTo={0.9}
               // The navigator's tabPress listener already fires the
               // selection haptic; a second one here would double-tap.
@@ -113,24 +146,25 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               accessibilityState={{ selected: focused }}
               accessibilityLabel={label}
             >
-              {/* One well, both states, so the glyph does not shift a
-                  point up or down as the pill appears under it — which is
-                  what a bare icon beside a filled one does when only the
-                  filled one has a box. */}
-              <View style={[s.well, focused && { backgroundColor: colors.badge }]}>
-                <Ionicons
-                  name={ICONS[route.name][focused ? 1 : 0]}
-                  size={focused ? 21 : 22}
-                  // See App's old bar: React Navigation typed these as
-                  // strings, and the constraint outlived it — a glyph
-                  // colour prop cannot take a dynamic pair either way.
-                  color={focused ? colors.badgeInk : (light ? '#6E695E' : '#6E706D')}
-                />
-              </View>
+              <Ionicons
+                name={ICONS[route.name][focused ? 1 : 0]}
+                size={22}
+                // See App's old bar: React Navigation typed these as
+                // strings, and the constraint outlived it — a glyph
+                // colour prop cannot take a dynamic pair either way.
+                //
+                // Full strength when idle, where this used to be a mid
+                // grey. That grey was the reason the glass had to stay
+                // nearly opaque: over an unknown photograph the scrim
+                // averages towards mid-tone, and a mid-tone glyph on it
+                // cannot contrast at any opacity. See GlassMaterial for
+                // the measurements — the two changes are one change.
+                color={focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5')}
+              />
               <Text
                 numberOfLines={1}
                 style={[s.caption, {
-                  color: focused ? colors.accent : (light ? '#6E695E' : '#6E706D'),
+                  color: focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5'),
                   fontWeight: focused ? font.semibold : font.regular,
                 }]}
               >
@@ -162,13 +196,17 @@ const s = StyleSheet.create({
   },
   row: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   tab: { flex: 1, height: '100%' },
-  tabInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  well: {
-    // Shorter and narrower than the icon-only pill it replaces, because
-    // it no longer has the tab to itself — the caption takes the bottom
-    // third. 56 wide leaves air between neighbouring pills on a small
-    // phone, where the tab cell is about 70pt.
-    width: 56, height: 32, borderRadius: 16,
+  tabInner: {
+    // Inset inside the cell so five pills do not touch: 6 top and bottom
+    // leaves a 52pt pill in the 64pt island, 3 each side leaves about
+    // 64pt of width on a small phone — enough for "Bộ sưu tập" at 11pt,
+    // which is the longest caption any of the three languages produces.
+    //
+    // Concentric with the island: inner radius = radius.tabBar − the
+    // inset, so the pill nests inside the island's curve instead of
+    // fighting it. At 52 tall that is a full round end either way.
+    flex: 1, marginVertical: 6, marginHorizontal: 3,
+    borderRadius: radius.tabBar - 6,
     alignItems: 'center', justifyContent: 'center',
   },
   caption: {
