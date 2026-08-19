@@ -1,24 +1,38 @@
 // The tab bar as a floating island — the social-app grammar, in the
 // app's own materials.
 //
-// Icon-first: five glyphs, no captions, and the selected tab sits in a
-// coral pill instead of wearing a tinted label — the shape carries "you
-// are here". The names survive as accessibility labels, so VoiceOver
-// reads what the eye infers. The island is the same glass the pinned
-// filter row uses, ringed by the same hairline every card wears, and it
-// ducks below the edge while you scroll into content (see tabBarDuck).
+// Five glyphs in coral wells, each under its own name. The selected tab
+// fills its well and tints its caption — the shape still carries "you are
+// here", the word says which here. The island is the same glass the
+// pinned filter row uses, ringed by the same hairline every card wears,
+// and it ducks below the edge while you scroll into content (see
+// tabBarDuck).
+//
+// ── why the captions came back ──
+//
+// This bar shipped icon-only, on the reasoning that the pill's shape says
+// enough and the names survive for VoiceOver. That holds for three of the
+// five. It does not hold for the calendar and the bookmark: Trips and
+// Collections are both "things I put aside", and no glyph distinguishes a
+// day I planned from a list I saved — the reader has to open one to find
+// out which. An icon is a reminder of a word you already know, and those
+// two never taught it.
+//
+// The captions cost six points of island height and nothing else. They
+// are not a retreat from the icon-first idea; they are the two of five it
+// could not carry.
 //
 // The pill keeps `colors.badge`'s split personality on purpose: solid
 // coral on charcoal, a coral tint on paper — the reasoning documented on
 // the token holds unchanged now the disc grew into a pill.
 
 import React, { useEffect } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useScheme } from '../lib/theme';
-import { colors, radius } from '../theme';
+import { colors, font, radius } from '../theme';
 import { GlassMaterial, PressableScale, TAB_BAR_GAP, TAB_BAR_HEIGHT } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
 
@@ -99,22 +113,29 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               accessibilityState={{ selected: focused }}
               accessibilityLabel={label}
             >
-              {focused
-                ? (
-                  <View style={[s.pill, { backgroundColor: colors.badge }]}>
-                    <Ionicons name={ICONS[route.name][1]} size={22} color={colors.badgeInk} />
-                  </View>
-                )
-                : (
-                  <Ionicons
-                    name={ICONS[route.name][0]}
-                    size={23}
-                    // See App's old bar: React Navigation typed these as
-                    // strings, and the constraint outlived it — a glyph
-                    // colour prop cannot take a dynamic pair either way.
-                    color={light ? '#6E695E' : '#6E706D'}
-                  />
-                )}
+              {/* One well, both states, so the glyph does not shift a
+                  point up or down as the pill appears under it — which is
+                  what a bare icon beside a filled one does when only the
+                  filled one has a box. */}
+              <View style={[s.well, focused && { backgroundColor: colors.badge }]}>
+                <Ionicons
+                  name={ICONS[route.name][focused ? 1 : 0]}
+                  size={focused ? 21 : 22}
+                  // See App's old bar: React Navigation typed these as
+                  // strings, and the constraint outlived it — a glyph
+                  // colour prop cannot take a dynamic pair either way.
+                  color={focused ? colors.badgeInk : (light ? '#6E695E' : '#6E706D')}
+                />
+              </View>
+              <Text
+                numberOfLines={1}
+                style={[s.caption, {
+                  color: focused ? colors.accent : (light ? '#6E695E' : '#6E706D'),
+                  fontWeight: focused ? font.semibold : font.regular,
+                }]}
+              >
+                {label}
+              </Text>
             </PressableScale>
           );
         })}
@@ -142,12 +163,19 @@ const s = StyleSheet.create({
   row: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   tab: { flex: 1, height: '100%' },
   tabInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  pill: {
-    // Near the island's own edges, the reference's proportions: a 6pt
-    // inset top and bottom, with concentric corners — inner radius =
-    // radius.tabBar − the inset — so the pill nests inside the island's
-    // curve instead of fighting it.
-    width: 64, height: TAB_BAR_HEIGHT - 12, borderRadius: radius.tabBar - 6,
+  well: {
+    // Shorter and narrower than the icon-only pill it replaces, because
+    // it no longer has the tab to itself — the caption takes the bottom
+    // third. 56 wide leaves air between neighbouring pills on a small
+    // phone, where the tab cell is about 70pt.
+    width: 56, height: 32, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
+  },
+  caption: {
+    // 11, not the 11.5 the old full-width bar used: the island is inset
+    // 12pt each side, so its five cells are ~70pt where the old bar's
+    // were 75, and the longest label has to clear a pill rather than sit
+    // in an open row.
+    fontSize: 11, marginTop: 3, lineHeight: 13,
   },
 });
