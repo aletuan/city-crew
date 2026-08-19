@@ -62,8 +62,27 @@ export const HEADER_CONTROL_H = 44;
 
 /** Bottom padding that clears the floating tab bar plus breathing room. */
 export function useTabBarClearance(extra = 18): number {
+  return useTabBarLift() + TAB_BAR_HEIGHT + extra;
+}
+
+/**
+ * How high the island's lower edge rides above the screen edge.
+ *
+ * Shared because three things need the same number and they used to
+ * compute it separately: the bar positions itself by it, the duck
+ * animation slides by it plus the bar's height, and every screen pads its
+ * list by it. When the bar came down to sit closer to the edge, a
+ * clearance still adding the whole safe-area inset left 46pt of dead air
+ * under every list — the kind of drift that only shows up as "the spacing
+ * looks off" months later.
+ *
+ * It clears the home indicator (about 13pt) rather than the whole inset,
+ * which is generous by design, and floors at `TAB_BAR_GAP` for a device
+ * with no inset at all.
+ */
+export function useTabBarLift(): number {
   const insets = useSafeAreaInsets();
-  return insets.bottom + TAB_BAR_GAP + TAB_BAR_HEIGHT + extra;
+  return Math.max(insets.bottom - 18, TAB_BAR_GAP);
 }
 
 export type HapticKind = 'light' | 'selection' | 'none';
@@ -340,37 +359,45 @@ export function AmbientWarmth({ style }: { style?: StyleProp<ViewStyle> }) {
 /**
  * Frosted, not transparent — and the difference was measured.
  *
- * A translucent sheet cannot guarantee contrast against content it does
- * not control, at any opacity. Composited over the darkest and lightest
- * photographs this catalog holds, the tab glyphs come out at:
+ * This sheet spent a long time nearly opaque because thinning it appeared
+ * to destroy legibility. Composited over the darkest and lightest
+ * photographs this catalog holds, against the mid-grey glyph the bar used
+ * to draw:
  *
- *              over a dark photo   over a light photo
- *   light 0.68        2.16                4.90
- *   light 0.45        1.03                4.97
- *   dark  0.62        7.33                2.01
- *   dark  0.45        7.42                1.14
+ *                        over a dark photo   over a light photo
+ *   light 0.68, #6E695E        2.32                5.25
+ *   light 0.45, #6E695E        1.10                5.32
+ *   dark  0.62, #6E706D        4.02                1.03
  *
- * So each theme already fails in its opposite case, and thinning the
- * scrim to let more through makes the failing case worse rather than the
- * passing one better: 1.03:1 is invisible. There is no opacity that
- * fixes this, which is why the scrim is not the lever.
+ * Every one of those is a failure or close to it, and thinning made them
+ * worse — which is how the scrim got the blame. It was the wrong suspect.
+ * A mid-tone scrim over an unknown photograph averages towards mid-grey,
+ * and the glyph on it was *also* mid-grey. Two mid-tones cannot contrast
+ * whatever the opacity between them.
  *
- * Intensity is. It does not change the mean luminance underneath, so it
- * costs nothing on the table above, but it flattens local variation —
- * which is what stops a glyph landing across the edge between a white sky
- * and a dark doorway. It is also what "glass" means here: you see colour
- * and mass through it, never detail. Transparent is the other thing, and
- * the other thing is a bar you cannot read.
+ * Take the glyph to full strength and the same table inverts:
  *
- * Dark's scrim is the one number that moved, 0.62 → 0.66, because the
- * table shows dark as the weaker of the two (2.01 against light's 2.16).
- * This brings them within a rounding error of each other.
+ *                        over a dark photo   over a light photo
+ *   light 0.60, #17150F        6.08               17.62
+ *   dark  0.60, #F7F7F5       18.71                4.78
+ *
+ * So 0.60 in both themes: eight points thinner than light was, two
+ * thinner than dark, and every cell now clears 4.5:1 where the opaque
+ * version cleared none of them. More of the page shows through than
+ * before *and* it reads better — the two were never in tension, they only
+ * looked that way while the glyph was the wrong colour. The paired change
+ * lives in FloatingTabBar, and neither half works alone.
+ *
+ * Intensity carries the rest. It leaves the mean luminance underneath
+ * alone, so it costs nothing on either table, but it flattens local
+ * variation — which is what stops a glyph landing across the edge between
+ * a white sky and a dark doorway.
  */
 export function GlassMaterial() {
   const light = useScheme().scheme === 'light';
   return (
     <BlurView intensity={80} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
-      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.68)' : 'rgba(12,13,12,0.66)' }} />
+      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.60)' : 'rgba(12,13,12,0.60)' }} />
     </BlurView>
   );
 }
