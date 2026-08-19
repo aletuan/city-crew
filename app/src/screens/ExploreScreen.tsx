@@ -75,15 +75,21 @@ function ExploreSuggestRow({ onPress }: { onPress: () => void }) {
 /**
  * How many cards have to pass overhead before the screen offers a hand.
  *
- * Five, which is roughly two screenfuls. Below that you are reading; past
- * it you are hunting, and the two look identical from here except for how
- * far you have come.
+ * Two — it was five when the offer cut into the top of the screen, where
+ * arriving early meant interrupting someone who was merely reading. It
+ * lives in the tab bar's vacated dock now, at the screen's edge, below
+ * the reading line: an offer, not an interruption, and an offer can
+ * afford to arrive as soon as browsing starts to look like looking for
+ * something — past the hero, past the shelf, a couple of cards in. The
+ * bar leaves that slot within the first flick; a dock that then sits
+ * empty for two thousand points reads as the feature not working, which
+ * is exactly how it was reported.
  *
  * The footer row is still the honest answer to "I reached the end". This
- * is the other case, and it is a real one: a long list is a list you can
- * be lost in without ever reaching the end of it.
+ * is the other case: a long list is a list you can be lost in without
+ * ever reaching the end of it.
  */
-const DEEP_AFTER = 5;
+const DEEP_AFTER = 2;
 
 /**
  * The floating offer, once someone is clearly hunting rather than reading.
