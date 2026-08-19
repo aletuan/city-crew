@@ -45,6 +45,9 @@ const LiquidGlass: React.ComponentType<{
   style?: StyleProp<ViewStyle>;
   glassEffectStyle?: 'clear' | 'regular' | 'none';
   colorScheme?: 'auto' | 'light' | 'dark';
+  /** Lands on `UIGlassEffect.tintColor`, so it composites into the
+   *  material rather than sitting over it. */
+  tintColor?: string;
 }> | null = (() => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -455,9 +458,29 @@ export function AmbientWarmth({ style }: { style?: StyleProp<ViewStyle> }) {
  * Apple's Liquid Glass, and it is a native effect, so the block below
  * reaches for it when the platform has one and falls back to this
  * otherwise.
+ *
+ * ── `dense`, and why one number was not enough ──
+ *
+ * The tab bar and the "not finding it?" offer share this material and
+ * came out needing different amounts of it. Untinted, the bar read
+ * correctly and the offer did not: you could see the card behind it
+ * straight through its own two lines of type, so the two sets of words
+ * overlapped and the panel stopped being a surface.
+ *
+ * That difference is not the material's, it is the content's. The bar
+ * holds five sparse glyphs, each with a halo, and its selected tab sits
+ * on an opaque pill — it survives clear glass. The offer holds a title
+ * and a subtitle at reading size, directly over a list of cards whose
+ * own titles are the same size. Type over type needs a ground; glyphs
+ * over photographs do not.
+ *
+ * So `dense` is a statement about what is being laid on the glass, not a
+ * style knob, and it moves both paths at once — a tint on the native
+ * effect, a heavier veil on the blur.
  */
-export function GlassMaterial() {
+export function GlassMaterial({ dense = false }: { dense?: boolean } = {}) {
   const light = useScheme().scheme === 'light';
+  const veil = (a: number) => (light ? `rgba(250,248,244,${a})` : `rgba(12,13,12,${a})`);
   if (LiquidGlass) {
     return (
       <LiquidGlass
@@ -467,12 +490,21 @@ export function GlassMaterial() {
         // the system's. `auto` would put a light bar on a dark page for
         // anyone whose phone disagrees with their choice in Profile.
         colorScheme={light ? 'light' : 'dark'}
+        // Untinted for the bar. Apple's material already carries its own
+        // presence — it refracts, so it declares an edge and a surface
+        // without needing a veil laid over it, and one laid over it
+        // anyway is the flat sheet this was adopted to stop being.
+        //
+        // `tintColor` lands on UIGlassEffect.tintColor, which composites
+        // into the material rather than sitting on top of it — the right
+        // knob when a panel does need holding back.
+        tintColor={dense ? veil(0.45) : undefined}
       />
     );
   }
   return (
     <BlurView intensity={38} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
-      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.48)' : 'rgba(12,13,12,0.48)' }} />
+      <View style={{ flex: 1, backgroundColor: veil(dense ? 0.62 : 0.48) }} />
     </BlurView>
   );
 }
