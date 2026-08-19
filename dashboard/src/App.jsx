@@ -173,6 +173,33 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKey);
   }, [sheetOpen]);
 
+  // The bar ducks while you read and returns the moment you reach back —
+  // scrolling down is "I'm looking at content", up is "I'm going somewhere".
+  // A few-pixel threshold so a wobbling thumb doesn't flicker it, and the
+  // top of the page always shows it: hiding chrome you haven't scrolled
+  // away from reads as a glitch, not a courtesy. Navigation resets it.
+  const [barHidden, setBarHidden] = useState(false);
+  useEffect(() => setBarHidden(false), [location.pathname]);
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const dy = y - lastY;
+        if (Math.abs(dy) > 6) {
+          setBarHidden(y > 80 && dy > 0);
+          lastY = y;
+        }
+        ticking = false;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const showToast = useCallback((msg) => {
     setToast(msg);
     clearTimeout(showToast._t);
@@ -353,7 +380,7 @@ export default function App() {
               Icon-first, the social-app grammar: no captions, and the tab
               you are on wears a pill wash instead of a tinted label. The
               names still exist — for screen readers and long-press. */}
-          <nav className="tabbar" aria-label="Main">
+          <nav className={`tabbar${barHidden && !sheetOpen ? ' ducked' : ''}`} aria-label="Main">
             <NavLink end to="/" className={tabCls} aria-label="Places" title="Places">
               <span className="tabpill"><CategoryIcon name="list" size={22} /></span>
             </NavLink>
