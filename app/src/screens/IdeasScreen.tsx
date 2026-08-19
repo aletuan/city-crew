@@ -26,6 +26,7 @@ import StartSheet, { Start } from '../components/StartSheet';
 import {
   AmbientWarmth, Card, Chip, GradientCta, PressableScale, Screen, SelectTick, useTabBarClearance,
 } from '../components/ui';
+import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { usePlaces } from '../lib/catalog';
@@ -64,6 +65,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const { data: places } = usePlaces();
   const { mine } = useSave();
   const tabClearance = useTabBarClearance();
+  const duckScroll = useDuckOnScroll();
 
   const [draft, setDraft] = useState<TripDraft>(EMPTY_DRAFT);
   const [picking, setPicking] = useState(false);
@@ -133,6 +135,8 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
       <ScrollView
         contentContainerStyle={{ paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
+        onScroll={duckScroll}
+        scrollEventThrottle={16}
       >
         {/* "the plan", not "the day". Both this and the button below used
             to name the day, on a screen whose own Day/Evening control sits

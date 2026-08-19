@@ -46,6 +46,7 @@ import { AddPill } from '../components/add';
 import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance,
 } from '../components/ui';
+import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO, minutesOf, toISO } from '../lib/day';
@@ -244,6 +245,7 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
   const { session } = useAuth();
   const { cities } = useCity();
   const clearance = useTabBarClearance();
+  const duckScroll = useDuckOnScroll();
   const trips = useMyTrips(session?.user?.id);
 
   // Saving happens in the Ideas stack, in another tab, so this list is
@@ -356,6 +358,8 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
         <ScrollView
           contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
           showsVerticalScrollIndicator={false}
+          onScroll={duckScroll}
+          scrollEventThrottle={16}
         >
           {!trips.data.length && (
             <FirstTrip onPress={() => navigation.getParent()?.navigate('Ideas')} />
