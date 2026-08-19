@@ -39,8 +39,15 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
 
   // Landing anywhere surfaces the bar: a navigation is exactly the moment
   // the reader reached for it, or is about to want it.
+  //
+  // Depend on `show` — stable — and NEVER on the context object: that
+  // value is rebuilt every time `ducked` flips, and an effect keyed on it
+  // re-surfaced the bar on the very frame each scroll hid it. Hide, show,
+  // hide, show, at scroll-event rate: the strobe a reader saw as the bar
+  // shivering while they pulled the page up.
   const index = state.index;
-  useEffect(() => { duck.show(); }, [index, duck]);
+  const { show } = duck;
+  useEffect(() => { show(); }, [index, show]);
 
   const slide = duck.anim.interpolate({
     inputRange: [0, 1],
