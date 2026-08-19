@@ -13,8 +13,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AddPill, AddSlot } from '../components/add';
-import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
-import { useDuckOnScroll } from '../components/tabBarDuck';
+import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, TAB_BAR_GAP, TAB_BAR_HEIGHT, useTabBarClearance } from '../components/ui';
+import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
+import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { useSky } from '../lib/sky';
@@ -24,6 +25,7 @@ import { useCollections, usePlaces } from '../lib/catalog';
 import { Lang, useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Nav } from '../nav';
 
 // The one chip that isn't a category: the whole catalog. It carries no
@@ -89,20 +91,26 @@ const DEEP_AFTER = 5;
  * Two things it must not do. It must not say the list is empty — it
  * plainly is not, there are cards under it — so it asks whether what you
  * want is here rather than announcing that it is not. And it must not
- * stay: it goes as soon as you scroll back toward the top, which is what
- * you do when you have found your bearings again.
+ * stay: it goes the moment the tab bar wants its place back.
  *
- * It floats rather than taking a place in the list, and that is not
- * decoration. Anything appearing *in* the list mid-scroll moves the cards
- * under the reader's thumb.
+ * Its place is the tab bar's own dock. Scrolling deep is what hides the
+ * bar, and scrolling deep is also what "hunting" looks like — so the slot
+ * the bar vacates is empty at exactly the moment this offer is earned,
+ * and in thumb reach besides. It wears the dock's geometry (the inset,
+ * the island radius) so the slot reads as one place that changes content;
+ * everything else about it — the text, the two actions, the opaque card —
+ * looks nothing like five glyphs, so a hand reaching for a tab is never
+ * fooled. The gate in lib/nudge.ts holds the sharing rules: the bar
+ * always wins, the offer waits out a settle, and once passed over it
+ * stays away for the visit.
  */
-function ScrollNudge({ top, visible, onSearch, onAdd }: {
-  top: number;
+function ScrollNudge({ visible, onSearch, onAdd }: {
   visible: boolean;
   onSearch: () => void;
   onAdd: () => void;
 }) {
   const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const fade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(fade, {
@@ -114,16 +122,15 @@ function ScrollNudge({ top, visible, onSearch, onAdd }: {
 
   return (
     <Animated.View
-      // `box-none` on the wrapper, so the invisible band either side of
-      // the card does not eat scrolls aimed at the list underneath.
       pointerEvents={visible ? 'box-none' : 'none'}
       style={[
         s.nudgeWrap,
         {
-          top,
+          bottom: insets.bottom + TAB_BAR_GAP,
           opacity: fade,
+          // Rises into the dock from below — the direction the bar left in.
           transform: [{
-            translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }),
+            translateY: fade.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }),
           }],
         },
       ]}
@@ -412,15 +419,29 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     duckRef.current?.(e as never);
   }).current;
 
-  // The pinned filter row's measured height, so the floating offer can sit
-  // directly under it rather than at a number guessed from the chips.
-  const [filterH, setFilterH] = useState(0);
-
   // Deep into a list long enough to get lost in. The length test is not
   // belt-and-braces: with four cards you can be five in only by rubber
   // banding, and an offer that appears when you bounce the list is a
   // twitch, not a suggestion.
-  const nudge = shown.length > DEEP_AFTER + 2 && firstVisible >= DEEP_AFTER;
+  const deep = shown.length > DEEP_AFTER + 2 && firstVisible >= DEEP_AFTER;
+
+  // The offer may borrow the tab bar's dock only while the bar is away —
+  // the sharing rules live in lib/nudge.ts. The gate keeps no timer, so
+  // eligibility re-polls it once the settle time has passed.
+  const { ducked } = useTabBarDuck();
+  const nudgeGate = useRef(createNudgeGate()).current;
+  const [nudge, setNudge] = useState(false);
+  useEffect(() => navigation.addListener('focus', () => {
+    nudgeGate.reset();
+    setNudge(false);
+  }), [navigation, nudgeGate]);
+  useEffect(() => {
+    const eligible = ducked && deep;
+    setNudge(nudgeGate.update(eligible, Date.now()));
+    if (!eligible) return;
+    const id = setTimeout(() => setNudge(nudgeGate.update(true, Date.now())), NUDGE_SETTLE_MS + 20);
+    return () => clearTimeout(id);
+  }, [ducked, deep, nudgeGate]);
 
   // Lands on the filter row, which is where it pins anyway. The old
   // offset of 116 existed to keep the chips in frame after the jump; they
@@ -460,7 +481,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * a control you touch once at the start.
    */
   const filters = (
-    <View style={s.filterBar} onLayout={(e) => setFilterH(e.nativeEvent.layout.height)}>
+    <View style={s.filterBar}>
       <View style={s.filterHair} />
       <ScrollView
         horizontal
@@ -581,12 +602,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             viewabilityConfig={viewabilityConfig}
           />
         )}
-        {/* Last, so it draws over the list; positioned under the pinned
-            filter row rather than in it, because a row that grows and
-            shrinks mid-scroll moves the cards under the reader's thumb. */}
+        {/* Last, so it draws over the list — in the tab bar's own dock,
+            which the bar has vacated whenever this is visible. */}
         {!loading && !error && (
           <ScrollNudge
-            top={filterH}
             visible={nudge}
             onSearch={() => navigation.navigate('Search')}
             onAdd={() => navigation.navigate('AddPlace')}
@@ -625,15 +644,19 @@ const s = StyleSheet.create({
 
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
 
-  // The floating offer. Absolute so the list scrolls beneath it untouched.
+  // The floating offer, wearing the tab bar's dock: same inset, same
+  // island radius, so the bottom slot reads as one place that changes
+  // content rather than two things fighting for it.
   nudgeWrap: {
-    position: 'absolute', left: 0, right: 0,
-    paddingHorizontal: space.page, paddingTop: 8,
+    position: 'absolute', left: 12, right: 12,
   },
   nudge: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingLeft: 16, paddingRight: 8, paddingVertical: 10,
-    borderRadius: radius.pill,
+    minHeight: TAB_BAR_HEIGHT,
+    paddingLeft: 18, paddingRight: 10, paddingVertical: 8,
+    borderRadius: radius.tabBar,
+    shadowColor: '#000', shadowRadius: 18, shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, elevation: 8,
     // Opaque, not glass. Everything the app floats over is either still
     // (the tab bar over a resting list) or its own surface; this one has
     // photographs travelling under it, and a translucent bar over moving
