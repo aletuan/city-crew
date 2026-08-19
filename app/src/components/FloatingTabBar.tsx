@@ -95,7 +95,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               {focused
                 ? (
                   <View style={[s.pill, { backgroundColor: colors.badge }]}>
-                    <Ionicons name={ICONS[route.name][1]} size={21} color={colors.badgeInk} />
+                    <Ionicons name={ICONS[route.name][1]} size={22} color={colors.badgeInk} />
                   </View>
                 )
                 : (
@@ -136,7 +136,11 @@ const s = StyleSheet.create({
   tab: { flex: 1, height: '100%' },
   tabInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   pill: {
-    width: 56, height: 36, borderRadius: radius.pill,
+    // Near the island's own edges, the reference's proportions: a 6pt
+    // inset top and bottom, with concentric corners — inner radius =
+    // radius.tabBar − the inset — so the pill nests inside the island's
+    // curve instead of fighting it.
+    width: 64, height: TAB_BAR_HEIGHT - 12, borderRadius: radius.tabBar - 6,
     alignItems: 'center', justifyContent: 'center',
   },
 });

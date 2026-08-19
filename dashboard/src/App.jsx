@@ -175,25 +175,35 @@ export default function App() {
 
   // The bar ducks while you read and returns the moment you reach back —
   // scrolling down is "I'm looking at content", up is "I'm going somewhere".
-  // A few-pixel threshold so a wobbling thumb doesn't flicker it, and the
-  // top of the page always shows it: hiding chrome you haven't scrolled
-  // away from reads as a glitch, not a courtesy. Navigation resets it.
+  //
+  // Hysteresis, not a single threshold. The first cut compared each event
+  // against a mark that only moved past 6px — so a slow scroll, or iOS's
+  // rubber-band handing back alternating deltas, crossed that stale mark in
+  // both directions and strobed the bar mid-transition. Now the mark moves
+  // every frame and *travel* accumulates per direction, resetting when the
+  // direction flips: hiding takes 24px of committed descent, returning
+  // takes 12px of ascent — going away should need more conviction than
+  // coming back. Overscroll is clamped out at both ends so a bounce is not
+  // a direction. The top always shows it; navigation resets it.
   const [barHidden, setBarHidden] = useState(false);
   useEffect(() => setBarHidden(false), [location.pathname]);
   useEffect(() => {
-    let lastY = window.scrollY;
+    let lastY = Math.max(0, window.scrollY);
+    let travel = 0;
     let ticking = false;
     const onScroll = () => {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
-        const y = window.scrollY;
-        const dy = y - lastY;
-        if (Math.abs(dy) > 6) {
-          setBarHidden(y > 80 && dy > 0);
-          lastY = y;
-        }
         ticking = false;
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        const y = Math.min(Math.max(0, window.scrollY), Math.max(0, max));
+        const dy = y - lastY;
+        lastY = y;
+        if (dy === 0) return;
+        travel = Math.sign(dy) === Math.sign(travel) ? travel + dy : dy;
+        if (y <= 80 || travel < -12) setBarHidden(false);
+        else if (travel > 24) setBarHidden(true);
       });
     };
     window.addEventListener('scroll', onScroll, { passive: true });
