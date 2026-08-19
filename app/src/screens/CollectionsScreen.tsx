@@ -13,6 +13,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, Empty, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddPill, AddSlot } from '../components/add';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
@@ -300,6 +301,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   const { mine } = useSave();
   const { data: places, loading: placesLoading } = usePlaces();
   const tabClearance = useTabBarClearance();
+  const duckScroll = useDuckOnScroll();
   // Counting and filtering need the places catalog — until it's in, hold
   // the skeleton rather than showing raw DB membership numbers.
   const loading = cols.loading || placesLoading;
@@ -393,6 +395,8 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             sections={sections}
             keyExtractor={(c) => c.slug}
             stickySectionHeadersEnabled={false}
+            onScroll={duckScroll}
+            scrollEventThrottle={16}
             ListHeaderComponent={<GuestNotice navigation={navigation} />}
             renderSectionHeader={({ section }) => (
               // The pill rides the heading only where there is already a

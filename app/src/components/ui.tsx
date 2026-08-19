@@ -15,9 +15,13 @@ import { useScheme } from '../lib/theme';
 import { colors, display, font, gradAI, radius, space, type } from '../theme';
 
 // ── tab bar geometry ──
-// A full-width Apple-style bar over blur; position:absolute so content
-// scrolls beneath it, which means screens must clear it themselves.
-export const TAB_BAR_HEIGHT = 62;
+// A floating glass island (see FloatingTabBar), inset from the screen
+// edges and sitting above the home indicator; position:absolute so
+// content scrolls beneath it, which means screens must clear it
+// themselves. Icon-only, so it is shorter than the labelled bar was.
+export const TAB_BAR_HEIGHT = 58;
+/** The air between the island and the safe area's bottom edge. */
+export const TAB_BAR_GAP = 10;
 
 /**
  * How tall a full-size button is, everywhere.
@@ -50,10 +54,10 @@ export const CONTROL_H = 52;
  */
 export const HEADER_CONTROL_H = 44;
 
-/** Bottom padding that clears the translucent tab bar plus breathing room. */
+/** Bottom padding that clears the floating tab bar plus breathing room. */
 export function useTabBarClearance(extra = 18): number {
   const insets = useSafeAreaInsets();
-  return insets.bottom + TAB_BAR_HEIGHT + extra;
+  return insets.bottom + TAB_BAR_GAP + TAB_BAR_HEIGHT + extra;
 }
 
 export type HapticKind = 'light' | 'selection' | 'none';

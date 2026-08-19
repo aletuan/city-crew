@@ -10,6 +10,7 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
+import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
 import { schemeLabel, ThemeSwitcherModal } from '../components/ThemeSwitcher';
@@ -375,6 +376,7 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { ready, session } = useAuth();
   const tabClearance = useTabBarClearance();
+  const duckScroll = useDuckOnScroll();
 
   return (
     <Screen title={t('Profile', 'Cá nhân', 'プロフィール')}>
@@ -383,6 +385,8 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
         <ScrollView
           contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: tabClearance, gap: space.cardGap }}
           showsVerticalScrollIndicator={false}
+          onScroll={duckScroll}
+          scrollEventThrottle={16}
         >
           {!ready
             ? <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />

@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AddPill, AddSlot } from '../components/add';
 import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, PressableScale, RoundIconButton, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { useSky } from '../lib/sky';
@@ -400,8 +401,15 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * sit over the hero photograph at the top of a screen nobody is lost on.
    * The offset never has that gap.
    */
+  // The duck handler is identity-stable, but this listener is created
+  // once and holds its first closure — the ref indirection keeps that
+  // guarantee honest whatever the hook does across renders.
+  const duckScroll = useDuckOnScroll();
+  const duckRef = useRef(duckScroll);
+  duckRef.current = duckScroll;
   const onScrollJS = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
     if (e.nativeEvent.contentOffset.y < 320) setFirst(0);
+    duckRef.current?.(e as never);
   }).current;
 
   // The pinned filter row's measured height, so the floating offer can sit
