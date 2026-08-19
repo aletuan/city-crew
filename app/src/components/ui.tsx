@@ -14,50 +14,6 @@ import { useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
 import { colors, display, font, gradAI, radius, space, type } from '../theme';
 
-/**
- * Apple's Liquid Glass, if this device has it — otherwise null.
- *
- * The effect worth reaching for is refraction: content behind the panel
- * is bent, the way it is through water, where a blur only softens it.
- * `expo-blur` cannot do that at any setting, and no combination of
- * intensity and scrim gets close, so `GlassMaterial` asks for the native
- * one and keeps the blur as its floor.
- *
- * ── why this is a require in a try, and not an import ──
- *
- * `GlassView.ios.tsx` calls `requireNativeViewManager('ExpoGlassEffect')`
- * at *module scope*, so a plain top-level import throws while the module
- * is being loaded, not when something renders — and this app ships over
- * the air into Expo Go, where that is a white screen on launch with no
- * way back except another update. Everything that can throw therefore
- * happens once, here, behind a catch: the require, and the availability
- * check, which reaches for the native module too.
- *
- * Three separate ways this can come back null, and all of them are
- * ordinary rather than errors: the package's native side is not in this
- * binary; the OS is older than iOS 26; or it is Android, where the
- * package resolves to a plain `View` and reports itself unavailable
- * without touching native code at all. The last one matters — a plain
- * `View` would be a *hole* where the bar's material should be, so
- * "available" has to mean the real effect and nothing else.
- */
-const LiquidGlass: React.ComponentType<{
-  style?: StyleProp<ViewStyle>;
-  glassEffectStyle?: 'clear' | 'regular' | 'none';
-  colorScheme?: 'auto' | 'light' | 'dark';
-  /** Lands on `UIGlassEffect.tintColor`, so it composites into the
-   *  material rather than sitting over it. */
-  tintColor?: string;
-}> | null = (() => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('expo-glass-effect');
-    return mod.isLiquidGlassAvailable() ? mod.GlassView : null;
-  } catch {
-    return null;
-  }
-})();
-
 // ── tab bar geometry ──
 // A floating glass island (see FloatingTabBar), inset from the screen
 // edges and sitting above the home indicator; position:absolute so
@@ -451,60 +407,33 @@ export function AmbientWarmth({ style }: { style?: StyleProp<ViewStyle> }) {
  * the shape it sits in stops being a surface. That is the wrong floor to
  * be resting on, and 0.48 is where the two still share the work.
  *
- * ── the real answer is not this material ──
+ * ── refraction, tried and dropped ──
  *
  * What a reference bar does that no blur can is *refract* — bend what is
- * behind it, the way water does, rather than only smearing it. That is
- * Apple's Liquid Glass, and it is a native effect, so the block below
- * reaches for it when the platform has one and falls back to this
- * otherwise.
+ * behind it the way water does, rather than only smearing it. That is
+ * Apple's Liquid Glass, and it was wired in here behind a guarded require
+ * (iOS 26 only, blur everywhere else) and taken back out again.
  *
- * ── `dense`, and why one number was not enough ──
+ * Worth recording, because the reason was not that it failed. It worked,
+ * and the bar looked right. What it cost was a second material to reason
+ * about: two panels made of it needed different amounts of veil, only one
+ * platform ever saw it, and every number tuned for it had to be tuned
+ * again for the blur that everyone else gets. One material with one set
+ * of measurements behind it is worth more here than a better one on a
+ * fraction of devices.
  *
- * The tab bar and the "not finding it?" offer share this material and
- * came out needing different amounts of it. Untinted, the bar read
- * correctly and the offer did not: you could see the card behind it
- * straight through its own two lines of type, so the two sets of words
- * overlapped and the panel stopped being a surface.
- *
- * That difference is not the material's, it is the content's. The bar
- * holds five sparse glyphs, each with a halo, and its selected tab sits
- * on an opaque pill — it survives clear glass. The offer holds a title
- * and a subtitle at reading size, directly over a list of cards whose
- * own titles are the same size. Type over type needs a ground; glyphs
- * over photographs do not.
- *
- * So `dense` is a statement about what is being laid on the glass, not a
- * style knob, and it moves both paths at once — a tint on the native
- * effect, a heavier veil on the blur.
+ * If it comes back: the package is `expo-glass-effect`, its GlassView
+ * calls `requireNativeViewManager` at module scope — so it must be a
+ * require inside a try, never a top-level import, or a device without the
+ * native module gets a white screen on launch — and the veil the blur
+ * carries here has to be re-expressed as `UIGlassEffect.tintColor`, which
+ * composites into the material instead of sitting on it.
  */
-export function GlassMaterial({ dense = false }: { dense?: boolean } = {}) {
+export function GlassMaterial() {
   const light = useScheme().scheme === 'light';
-  const veil = (a: number) => (light ? `rgba(250,248,244,${a})` : `rgba(12,13,12,${a})`);
-  if (LiquidGlass) {
-    return (
-      <LiquidGlass
-        style={StyleSheet.absoluteFill}
-        glassEffectStyle="regular"
-        // The app has its own theme switch, so the effect must not read
-        // the system's. `auto` would put a light bar on a dark page for
-        // anyone whose phone disagrees with their choice in Profile.
-        colorScheme={light ? 'light' : 'dark'}
-        // Untinted for the bar. Apple's material already carries its own
-        // presence — it refracts, so it declares an edge and a surface
-        // without needing a veil laid over it, and one laid over it
-        // anyway is the flat sheet this was adopted to stop being.
-        //
-        // `tintColor` lands on UIGlassEffect.tintColor, which composites
-        // into the material rather than sitting on top of it — the right
-        // knob when a panel does need holding back.
-        tintColor={dense ? veil(0.45) : undefined}
-      />
-    );
-  }
   return (
     <BlurView intensity={38} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
-      <View style={{ flex: 1, backgroundColor: veil(dense ? 0.62 : 0.48) }} />
+      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.48)' : 'rgba(12,13,12,0.48)' }} />
     </BlurView>
   );
 }
@@ -523,10 +452,6 @@ export function GlassMaterial({ dense = false }: { dense?: boolean } = {}) {
  * a deliberate edge, and at 11pt that is close to the point where it
  * stops being invisible and starts being an outline.
  *
- * Under Liquid Glass it is doing less again — a refracting panel keeps
- * its own presence where a thin blur does not — but it stays, because
- * the same component falls back to the blur on every device without the
- * native effect.
  */
 export const glassHalo = (light: boolean) => ({
   textShadowColor: light ? 'rgba(250,248,244,0.95)' : 'rgba(10,11,10,0.95)',
