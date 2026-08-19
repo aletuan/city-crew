@@ -23,16 +23,24 @@ type Duck = {
   anim: Animated.Value;
   /** Mirror of the animated state, for pointerEvents and the like. */
   ducked: boolean;
-  /** Feed a scroll offset in; the direction logic lives here. */
-  report: (y: number) => void;
+  /** Feed a scroll offset in (and the scrollable's max offset, so the
+   *  bottom bounce can be clamped out); the direction logic lives here. */
+  report: (y: number, maxY?: number) => void;
   /** Surface the bar regardless — navigation, sheets, anything modal. */
   show: () => void;
 };
 
 const Ctx = createContext<Duck | null>(null);
 
-/** Committed direction, in px, before the bar reacts. */
-const THRESHOLD = 6;
+// Hysteresis, not a single threshold: travel accumulates per direction
+// and resets when the direction flips, so a slow scroll or a bounce's
+// alternating deltas cannot strobe the bar mid-animation. Hiding takes
+// more conviction than returning — going away is a judgement, coming
+// back is a reach.
+/** Committed descent, in px, before the bar hides. */
+const HIDE_TRAVEL = 24;
+/** Committed ascent, in px, before it returns. */
+const SHOW_TRAVEL = 12;
 /** Within this many px of the top the bar never hides. */
 const TOP_SLACK = 80;
 
@@ -66,15 +74,22 @@ export function TabBarDuckProvider({ children }: { children: React.ReactNode }) 
     });
   }, [anim]);
 
-  const report = useCallback((y: number) => {
-    const dy = y - lastY.current;
-    if (Math.abs(dy) <= THRESHOLD) return;
-    lastY.current = y;
-    setTo(y > TOP_SLACK && dy > 0);
+  const travel = useRef(0);
+  const report = useCallback((y: number, maxY?: number) => {
+    // Overscroll is not a direction: clamp both ends so iOS's rubber band
+    // hands the accumulator nothing.
+    const clamped = Math.min(Math.max(0, y), maxY != null && maxY >= 0 ? maxY : Number.MAX_SAFE_INTEGER);
+    const dy = clamped - lastY.current;
+    lastY.current = clamped;
+    if (dy === 0) return;
+    travel.current = Math.sign(dy) === Math.sign(travel.current) ? travel.current + dy : dy;
+    if (clamped <= TOP_SLACK || travel.current < -SHOW_TRAVEL) setTo(false);
+    else if (travel.current > HIDE_TRAVEL) setTo(true);
   }, [setTo]);
 
   const show = useCallback(() => {
     lastY.current = 0;
+    travel.current = 0;
     setTo(false);
   }, [setTo]);
 
@@ -102,7 +117,17 @@ export function useDuckOnScroll():
   const duck = useContext(Ctx);
   const report = duck?.report;
   return useMemo(
-    () => (report ? (e) => report(e.nativeEvent.contentOffset.y) : undefined),
+    () => (report
+      ? (e) => {
+        const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+        report(
+          contentOffset.y,
+          contentSize && layoutMeasurement
+            ? contentSize.height - layoutMeasurement.height
+            : undefined,
+        );
+      }
+      : undefined),
     [report],
   );
 }
