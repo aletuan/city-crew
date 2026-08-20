@@ -24,7 +24,6 @@ import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data'
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { useAuth } from '../lib/auth';
 import { useSave } from '../lib/save';
-import { likeCollection, unlikeCollection } from '../lib/data';
 import { likesWorthShowing, rankByLikes } from '../lib/likes';
 import { Lang, useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
@@ -293,7 +292,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
   const cols = useCollections();
-  const { likes, myLikes, reloadLikes } = useLikes();
+  const { likes, myLikes, toggleLike } = useLikes();
   const uid = useAuth().session?.user?.id;
   const { askToSignIn } = useSave();
 
@@ -301,18 +300,17 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   // sheet the bookmark opens, because "sign in to keep this" is the same
   // sentence whether the thing kept is a place or a list.
   //
-  // Signed in, both calls can legitimately come back false — the primary
-  // key refuses a second like — and neither is breakage, so the refetch
-  // runs either way. Whatever the server now thinks is the answer, and
-  // the shelf should show that rather than a guess.
-  const toggleLike = useCallback(async (c: Collection) => {
+  // Signed in, everything else belongs to the provider — the write, the
+  // refetch, and the local answer that fills the heart before either has
+  // finished. This screen and the collection's own had a copy each and
+  // the copies had already drifted; worse, a like made here did not show
+  // there until a refetch happened to land.
+  const onHeart = useCallback((c: Collection) => {
     if (!c.id) return;
     if (!uid) { askToSignIn(); return; }
     fireHaptic('light');
-    if (myLikes.includes(c.id)) await unlikeCollection(c.id, uid);
-    else await likeCollection(c.id, uid);
-    reloadLikes();
-  }, [uid, myLikes, reloadLikes, askToSignIn]);
+    void toggleLike({ id: c.id, slug: c.slug });
+  }, [uid, toggleLike, askToSignIn]);
   const { data: places, loading: placesLoading } = usePlaces();
   const loading = cols.loading || placesLoading;
   // Only collections with at least one visible member in this city — an
@@ -393,7 +391,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                     containerStyle={s.shelfHeart}
                     style={s.shelfHeartInner}
                     scaleTo={0.86}
-                    onPress={() => toggleLike(c)}
+                    onPress={() => onHeart(c)}
                     accessibilityRole="button"
                     accessibilityLabel={t(
                       'Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね',

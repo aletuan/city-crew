@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import {
-  AccessibilityInfo, Animated, Easing, Pressable, PressableProps, StyleProp, StyleSheet, Text, View, ViewStyle,
+  AccessibilityInfo, Animated, ColorValue, Easing, Pressable, PressableProps, StyleProp, StyleSheet, Text, View, ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -459,11 +459,27 @@ export const glassHalo = (light: boolean) => ({
   textShadowRadius: 3,
 });
 
-export function RoundIconButton({ icon, onPress, label, size = 21 }: {
+export function RoundIconButton({ icon, onPress, label, size = 21, color }: {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   label?: string;
   size?: number;
+  /**
+   * Ink, when the glyph carries a state rather than an action.
+   *
+   * Every button in this shape used to draw in `colors.text`, which is
+   * right for back and for an overflow menu — both of them are doors, and
+   * a door is not on or off. The heart is: it shipped through here and
+   * came out near-black while the identical heart on the shelf was coral,
+   * so the same gesture wore two colours on two screens.
+   *
+   * Optional, and the default is the one to reach for. A coloured round
+   * button is for a control whose colour *is* the information.
+   *
+   * `ColorValue` rather than `string`, because every token in the theme
+   * is a `dyn()` — a value that resolves per theme, not a hex.
+   */
+  color?: ColorValue;
 }) {
   return (
     <PressableScale
@@ -473,7 +489,7 @@ export function RoundIconButton({ icon, onPress, label, size = 21 }: {
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <Ionicons name={icon} size={size} color={colors.text} />
+      <Ionicons name={icon} size={size} color={color ?? colors.text} />
     </PressableScale>
   );
 }

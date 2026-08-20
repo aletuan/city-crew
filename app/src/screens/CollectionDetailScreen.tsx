@@ -12,7 +12,6 @@ import {
 } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useLikes } from '../lib/catalog';
-import { likeCollection, unlikeCollection } from '../lib/data';
 import { likesWorthShowing } from '../lib/likes';
 import {
   deleteCollection, membersOf, publishBlockers, reorderCollection, setCollectionPublic,
@@ -202,7 +201,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // to attribute the like to, the row's id — the likes table keys on it,
   // not on the slug everything user-facing uses — and a list that is
   // public, since a private one has no shelf to be ordered on.
-  const { likes, myLikes, reloadLikes } = useLikes();
+  const { likes, myLikes, toggleLike } = useLikes();
   const col = useMemo(
     () => [...mine.data, ...cols.data].find((c) => c.slug === route.params.slug),
     [mine.data, cols.data, route.params.slug],
@@ -213,19 +212,16 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const isPublic = !!col?.is_public;
   const canLike = !!uid && !!col?.id && isPublic;
   const liked = !!col?.id && myLikes.includes(col.id);
-  const [liking, setLiking] = useState(false);
-  const toggleLike = useCallback(async () => {
-    if (!uid || !col?.id || liking) return;
-    setLiking(true);
-    // Both calls can legitimately fail — the policy refuses a self-like,
-    // the primary key refuses a second one — and neither is breakage. The
-    // refetch runs either way, because whatever the server thinks is now
-    // the answer and the screen should show that rather than a guess.
-    if (liked) await unlikeCollection(col.id, uid);
-    else await likeCollection(col.id, uid);
-    reloadLikes();
-    setLiking(false);
-  }, [uid, col?.id, liked, liking, reloadLikes]);
+  // The write, the refetch, and the in-flight guard all live on the
+  // provider now — a like taken from the shelf has to show here too, and
+  // a copy of this per screen could not do that. What is left here is the
+  // haptic, which is the one part that belongs to the tap rather than to
+  // the fact.
+  const onHeart = useCallback(() => {
+    if (!col?.id) return;
+    fireHaptic('light');
+    void toggleLike({ id: col.id, slug: col.slug });
+  }, [col?.id, col?.slug, toggleLike]);
   // Why this list cannot go out, counted rather than asserted. Derived
   // from the members every time the screen opens, so it is right after a
   // review lands without anything having to be told — and it disappears
@@ -478,11 +474,19 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             On every public list including your own — the gesture belongs
             to everyone, and the insert policy allows it. What it still
             needs is an account to attribute the like to, which is what
-            `canLike` carries. */}
+            `canLike` carries.
+
+            The liked colour is passed explicitly because this heart had
+            none: it drew in `colors.text` while the identical heart on
+            the shelf drew coral, so one gesture wore two colours
+            depending on which screen you made it from. `colors.accent`
+            rather than the shelf's `onPhoto.accent` — the bright coral is
+            for glyphs over a photograph and is too light on paper. */}
         {canLike && (
           <RoundIconButton
             icon={liked ? 'heart' : 'heart-outline'}
-            onPress={toggleLike}
+            onPress={onHeart}
+            color={liked ? colors.accent : undefined}
             label={liked
               ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
               : t('Like', 'Thích', 'いいね')}
