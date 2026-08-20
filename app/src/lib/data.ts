@@ -168,8 +168,15 @@ async function fetchPlaceBySlug(slug: string): Promise<Place | null> {
 // `id`, `created_at` and `sort_order` ride along for the shelf's ordering
 // and for liking — see `lib/likes.ts`. None of them reach a screen as
 // something to show; `slug` is still the key everything user-facing uses.
+//
+// `is_public` is selected rather than inferred, and that is a bug fixed
+// rather than a preference. The public query filters on it and used not
+// to fetch it, so every row it returned came back with the field
+// `undefined` — true of the rows, absent from the objects. Nothing read
+// it until the like button did, and then the control that only appears
+// on a public list never appeared at all.
 const COLLECTION_COLS = (withOwner: boolean) =>
-  `id, slug, created_at, sort_order, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(${withOwner ? PLACE_COLS(true) : 'slug'})), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
+  `id, slug, is_public, created_at, sort_order, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(${withOwner ? PLACE_COLS(true) : 'slug'})), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
 
 async function fetchCollections(cityId: string, meId?: string | null): Promise<Collection[]> {
   const run = (withOwner: boolean) => {

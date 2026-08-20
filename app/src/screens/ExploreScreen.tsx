@@ -4,7 +4,7 @@
 // browsable places list. Signing in is asked for where it is needed —
 // bookmarking a place — rather than from a permanent control in a corner.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated, Pressable, ScrollView, SectionList, StyleSheet, Text, View,
 } from 'react-native';
@@ -22,6 +22,9 @@ import { useSky } from '../lib/sky';
 import { dateline } from '../lib/format';
 import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
+import { useAuth } from '../lib/auth';
+import { useSave } from '../lib/save';
+import { likeCollection, unlikeCollection } from '../lib/data';
 import { likesWorthShowing, rankByLikes } from '../lib/likes';
 import { Lang, useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
@@ -290,7 +293,26 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
   const cols = useCollections();
-  const { likes } = useLikes();
+  const { likes, myLikes, reloadLikes } = useLikes();
+  const uid = useAuth().session?.user?.id;
+  const { askToSignIn } = useSave();
+
+  // Signed out, the tap is an invitation rather than a failure: the same
+  // sheet the bookmark opens, because "sign in to keep this" is the same
+  // sentence whether the thing kept is a place or a list.
+  //
+  // Signed in, both calls can legitimately come back false — the primary
+  // key refuses a second like — and neither is breakage, so the refetch
+  // runs either way. Whatever the server now thinks is the answer, and
+  // the shelf should show that rather than a guess.
+  const toggleLike = useCallback(async (c: Collection) => {
+    if (!c.id) return;
+    if (!uid) { askToSignIn(); return; }
+    fireHaptic('light');
+    if (myLikes.includes(c.id)) await unlikeCollection(c.id, uid);
+    else await likeCollection(c.id, uid);
+    reloadLikes();
+  }, [uid, myLikes, reloadLikes, askToSignIn]);
   const { data: places, loading: placesLoading } = usePlaces();
   const loading = cols.loading || placesLoading;
   // Only collections with at least one visible member in this city — an
@@ -354,6 +376,35 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                   <View style={s.shelfBadge}>
                     <Ionicons name={badge} size={15} color={onPhoto.text} />
                   </View>
+                )}
+                {/* Opposite corner from the category badge, which is the
+                    only other thing on the photograph.
+
+                    A tappable heart inside a tappable card is two targets
+                    in one place, so this one is a 30pt disc in a corner
+                    with the card's own press deliberately not swallowing
+                    it — the same shape the badge already occupies, so the
+                    thumb has a landmark rather than a surprise. Liking
+                    from here is the point of the feature: having to open a
+                    list to say you like it is most of a social gesture
+                    spent on navigation. */}
+                {c.id && (
+                  <PressableScale
+                    containerStyle={s.shelfHeart}
+                    style={s.shelfHeartInner}
+                    scaleTo={0.86}
+                    onPress={() => toggleLike(c)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(
+                      'Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね',
+                    )}
+                  >
+                    <Ionicons
+                      name={myLikes.includes(c.id) ? 'heart' : 'heart-outline'}
+                      size={16}
+                      color={myLikes.includes(c.id) ? onPhoto.accent : onPhoto.text}
+                    />
+                  </PressableScale>
                 )}
                 <View style={s.shelfCardText}>
                   {/* One line, always. A second line pushed the count down
@@ -759,6 +810,13 @@ const s = StyleSheet.create({
   shelfCard: {
     width: 176, height: 220, borderRadius: radius.image, overflow: 'hidden',
     justifyContent: 'flex-end',
+  },
+  shelfHeart: { position: 'absolute', right: 10, top: 10 },
+  shelfHeartInner: {
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(10,11,10,0.55)',
+    borderWidth: 1, borderColor: onPhoto.line,
   },
   shelfBadge: {
     position: 'absolute', left: 10, top: 10,
