@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, View,
 } from 'react-native';
@@ -11,6 +11,9 @@ import {
   fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { useLikes } from '../lib/catalog';
+import { likeCollection, unlikeCollection } from '../lib/data';
+import { likesWorthShowing } from '../lib/likes';
 import {
   deleteCollection, membersOf, publishBlockers, reorderCollection, setCollectionPublic,
 } from '../lib/data';
@@ -195,6 +198,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // comes from the shared copy, so a place saved from anywhere shows here.
   const { mine } = useSave();
   const { data: places, loading: placesLoading } = usePlaces();
+  // Liking needs three things and refuses without any of them: an account
+  // to attribute the like to, the row's id — the likes table keys on it,
+  // not on the slug everything user-facing uses — and a list that is
+  // public, since a private one has no shelf to be ordered on.
+  const { likes, myLikes, reloadLikes } = useLikes();
   const col = useMemo(
     () => [...mine.data, ...cols.data].find((c) => c.slug === route.params.slug),
     [mine.data, cols.data, route.params.slug],
@@ -203,6 +211,21 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const loading = cols.loading || mine.loading || placesLoading;
   const owned = !!col?.owner_id && col.owner_id === uid;
   const isPublic = !!col?.is_public;
+  const canLike = !!uid && !!col?.id && isPublic;
+  const liked = !!col?.id && myLikes.includes(col.id);
+  const [liking, setLiking] = useState(false);
+  const toggleLike = useCallback(async () => {
+    if (!uid || !col?.id || liking) return;
+    setLiking(true);
+    // Both calls can legitimately fail — the policy refuses a self-like,
+    // the primary key refuses a second one — and neither is breakage. The
+    // refetch runs either way, because whatever the server thinks is now
+    // the answer and the screen should show that rather than a guess.
+    if (liked) await unlikeCollection(col.id, uid);
+    else await likeCollection(col.id, uid);
+    reloadLikes();
+    setLiking(false);
+  }, [uid, col?.id, liked, liking, reloadLikes]);
   // Why this list cannot go out, counted rather than asserted. Derived
   // from the members every time the screen opens, so it is right after a
   // review lands without anything having to be told — and it disappears
@@ -410,6 +433,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 {members.length} {t('places', 'địa điểm', 'スポット')}
                 {owned && !isPublic ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
                 {col.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${atHandle(col.curator_handle)}` : ''}
+                {/* Same rule as the shelf: the tally appears only once it
+                    means something. Below that the heart is still here and
+                    still works — what is hidden is the number, not the
+                    gesture. */}
+                {likesWorthShowing(likes[col.slug])
+                  ? `  ·  ${likes[col.slug]} ${t('likes', 'lượt thích', 'いいね')}`
+                  : ''}
               </Text>
             </View>
           )}
@@ -439,6 +469,24 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               label={t('More', 'Thêm', 'その他')}
             />
           </View>
+        )}
+        {/* The heart lives here rather than on the shelf card: a card on
+            the shelf is one tap that opens the list, and a second tappable
+            thing inside it is a target the thumb hits by accident on the
+            way past.
+
+            On every public list including your own — the gesture belongs
+            to everyone, and the insert policy allows it. What it still
+            needs is an account to attribute the like to, which is what
+            `canLike` carries. */}
+        {canLike && (
+          <RoundIconButton
+            icon={liked ? 'heart' : 'heart-outline'}
+            onPress={toggleLike}
+            label={liked
+              ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
+              : t('Like', 'Thích', 'いいね')}
+          />
         )}
       </View>
       {/* What just happened, and the way back out of it. Above the

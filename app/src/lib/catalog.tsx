@@ -12,10 +12,11 @@
 // Private lists live in SaveProvider for the same reason; this is the
 // public half.
 
-import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, createContext, useContext, useEffect, useMemo, useRef } from 'react';
 import { AppState } from 'react-native';
 import {
-  Collection, Fetch, Place, useCategoryTermsQuery, useCollectionsQuery, usePlacesQuery,
+  Collection, Fetch, Place, useCategoryTermsQuery, useCollectionsQuery, useLikeCountsQuery,
+  useMyLikesQuery, usePlacesQuery,
 } from './data';
 import { CATEGORIES } from './categories';
 import { mergeTerms, type TermMap } from './search';
@@ -28,6 +29,22 @@ type Catalog = {
   /** Search synonyms: the app's shipped defaults, plus whatever the desk
    *  has added. Already merged and folded — see `mergeTerms`. */
   terms: TermMap;
+  /**
+   * How many people liked each public collection, by slug — and which of
+   * them you liked, by id.
+   *
+   * Two shapes because they answer two questions with different
+   * audiences: the count is public and orders a shelf everybody sees, the
+   * set is yours and only fills a heart. They live here together because
+   * both the shelf and a collection's own screen need both, and reading
+   * them separately would let one copy go stale while the other wrote.
+   *
+   * `reloadLikes` is what a tap calls: liking writes one row, and the
+   * count that row changes is on a query this provider owns.
+   */
+  likes: Record<string, number>;
+  myLikes: string[];
+  reloadLikes: () => void;
 };
 
 /** The shipped floor, lifted out of the category table once rather than on
@@ -40,6 +57,9 @@ const EMPTY: Catalog = {
   places: { loading: true, loaded: false, error: null, data: [], loadedAt: null, reload: () => {} },
   collections: { loading: true, loaded: false, error: null, data: [], loadedAt: null, reload: () => {} },
   terms: mergeTerms(BUILT_IN, null),
+  likes: {},
+  myLikes: [],
+  reloadLikes: () => {},
 };
 
 const Ctx = createContext<Catalog>(EMPTY);
@@ -58,6 +78,10 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   // No city and no reader in the key: what somebody types for "cinema" is
   // the same in every city and for everyone. One fetch, for the app's life.
   const deskTerms = useCategoryTermsQuery();
+  // Counts are public and need no reader; the set of your own likes is
+  // empty until there is one, which is the honest answer signed out.
+  const likeCounts = useLikeCountsQuery();
+  const myLikes = useMyLikesQuery(meId);
 
   // ── coming back to the app ──
   //
@@ -93,10 +117,20 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   // fresh object every render, so memoising on it would memoise nothing.
   const terms = useMemo(() => mergeTerms(BUILT_IN, deskTerms.data), [deskTerms.data]);
 
-  const value = useMemo<Catalog>(() => ({ places, collections, terms }), [
+  // One call, both queries: a tap changes a public count and your own set
+  // at the same moment, and refetching one without the other is how a
+  // heart ends up filled beside a number that has not moved.
+  const reloadLikes = useCallback(() => {
+    likeCounts.reload();
+    myLikes.reload();
+  }, [likeCounts.reload, myLikes.reload]);
+
+  const value = useMemo<Catalog>(() => ({
+    places, collections, terms, likes: likeCounts.data, myLikes: myLikes.data, reloadLikes,
+  }), [
     places.data, places.loading, places.error, places.loadedAt, places.reload,
     collections.data, collections.loading, collections.error, collections.loadedAt, collections.reload,
-    terms,
+    terms, likeCounts.data, myLikes.data, reloadLikes,
   ]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -115,3 +149,10 @@ export const useSearchTerms = () => useCatalog().terms;
 
 /** The desk's public collections for the city. */
 export const useCollections = () => useCatalog().collections;
+
+/** Like counts by slug, your own likes by id, and the refetch a tap owes
+ *  them both. */
+export const useLikes = () => {
+  const { likes, myLikes, reloadLikes } = useCatalog();
+  return { likes, myLikes, reloadLikes };
+};

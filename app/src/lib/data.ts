@@ -165,8 +165,11 @@ async function fetchPlaceBySlug(slug: string): Promise<Place | null> {
  * needs a name, a photo and a vibe, not opening hours — not a return to
  * truncating by city.
  */
+// `id`, `created_at` and `sort_order` ride along for the shelf's ordering
+// and for liking — see `lib/likes.ts`. None of them reach a screen as
+// something to show; `slug` is still the key everything user-facing uses.
 const COLLECTION_COLS = (withOwner: boolean) =>
-  `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(${withOwner ? PLACE_COLS(true) : 'slug'})), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
+  `id, slug, created_at, sort_order, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(${withOwner ? PLACE_COLS(true) : 'slug'})), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
 
 async function fetchCollections(cityId: string, meId?: string | null): Promise<Collection[]> {
   const run = (withOwner: boolean) => {
@@ -315,6 +318,96 @@ export const useCategoryTermsQuery = () => {
   const fetcher = useCallback(() => fetchCategoryTerms(), []);
   return useFetch(fetcher, {} as Record<string, string[]>);
 };
+
+/**
+ * How many people liked each public collection, keyed by slug.
+ *
+ * Through `collection_like_counts()` rather than a select on the likes
+ * table, and that is the privacy boundary rather than a convenience: the
+ * table is readable only by the author of each row, so a count can only
+ * come out of a function that returns totals and no user ids. Anyone may
+ * learn a list has forty likes; nobody may learn who the forty are. See
+ * the migration.
+ *
+ * Returned by slug because that is what every screen and `rankByLikes`
+ * key on; the function speaks in ids, so this is where the two meet.
+ *
+ * Failure is an empty map, never a throw. Every count then reads as zero,
+ * `rankByLikes` falls back to the order the shelf had before likes
+ * existed, and no heart shows a tally — which is exactly the state the
+ * feature ships in anyway.
+ */
+async function fetchLikeCounts(): Promise<Record<string, number>> {
+  const [counts, ids] = await Promise.all([
+    supabase.rpc('collection_like_counts'),
+    supabase.from('collections').select('id, slug').eq('is_public', true),
+  ]);
+  if (counts.error || ids.error || !counts.data || !ids.data) return {};
+  const slugOf = new Map<string, string>();
+  for (const row of ids.data as { id: string; slug: string }[]) slugOf.set(row.id, row.slug);
+  const out: Record<string, number> = {};
+  for (const row of counts.data as { collection_id: string; likes: number }[]) {
+    const slug = slugOf.get(row.collection_id);
+    if (slug) out[slug] = row.likes;
+  }
+  return out;
+}
+
+export const useLikeCountsQuery = () => {
+  const fetcher = useCallback(() => fetchLikeCounts(), []);
+  return useFetch(fetcher, {} as Record<string, number>);
+};
+
+/**
+ * Which public collections *you* have liked.
+ *
+ * Its own query rather than a flag on the count above, because the two
+ * answer different questions and only one of them is public. This one
+ * reads the likes table directly and RLS keeps it to your own rows —
+ * signed out it comes back empty, which is the right answer for a set
+ * that is defined as yours.
+ */
+async function fetchMyLikes(meId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('collection_likes')
+    .select('collection_id')
+    .eq('user_id', meId);
+  if (error || !data) return [];
+  return (data as { collection_id: string }[]).map((r) => r.collection_id);
+}
+
+export const useMyLikesQuery = (meId?: string | null) => {
+  const fetcher = useCallback(
+    () => (meId ? fetchMyLikes(meId) : Promise.resolve([] as string[])),
+    [meId],
+  );
+  return useFetch(fetcher, [] as string[]);
+};
+
+/**
+ * Like, or take a like back.
+ *
+ * The insert can legitimately fail and the caller should not treat that
+ * as breakage: the policy refuses a like on your own list, and the
+ * primary key refuses a second one from the same person. Both are the
+ * rules working. What the caller needs back is whether the state changed,
+ * so it knows whether to refetch.
+ */
+export async function likeCollection(collectionId: string, meId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('collection_likes')
+    .insert({ collection_id: collectionId, user_id: meId });
+  return !error;
+}
+
+export async function unlikeCollection(collectionId: string, meId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('collection_likes')
+    .delete()
+    .eq('collection_id', collectionId)
+    .eq('user_id', meId);
+  return !error;
+}
 
 export const useCollectionsQuery = (meId?: string | null) => {
   const { city } = useCity();

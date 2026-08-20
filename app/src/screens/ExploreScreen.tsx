@@ -21,7 +21,8 @@ import { useCity } from '../lib/city';
 import { useSky } from '../lib/sky';
 import { dateline } from '../lib/format';
 import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
-import { useCollections, usePlaces } from '../lib/catalog';
+import { useCollections, useLikes, usePlaces } from '../lib/catalog';
+import { likesWorthShowing, rankByLikes } from '../lib/likes';
 import { Lang, useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
@@ -289,12 +290,19 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
   const cols = useCollections();
+  const { likes } = useLikes();
   const { data: places, loading: placesLoading } = usePlaces();
   const loading = cols.loading || placesLoading;
   // Only collections with at least one visible member in this city — an
   // empty collection is a dead end for a browsing guest, and one whose
   // places are all somewhere else is a shelf entry for a different trip.
-  const visible = cols.data.filter((c) => touchesCity(membersOf(c, places), city?.id));
+  // Most liked first, and the shelf's old order underneath it — see
+  // `rankByLikes`. While every count is zero, which is the state this
+  // ships in, the result is byte-for-byte the shelf that was here before.
+  const visible = rankByLikes(
+    cols.data.filter((c) => touchesCity(membersOf(c, places), city?.id)),
+    likes,
+  );
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
@@ -352,7 +360,21 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                       on some tiles and not others, so a row of cards that
                       should read as one band came out ragged. */}
                   <Text style={s.shelfCardTitle} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
-                  <Text style={s.shelfCardMeta}>{count} {t('places', 'địa điểm', 'スポット')}</Text>
+                  <View style={s.shelfCardFoot}>
+                    <Text style={s.shelfCardMeta}>{count} {t('places', 'địa điểm', 'スポット')}</Text>
+                    {/* The tally, and only once it means something. A `0`
+                        here would not read as "no votes yet" — it would
+                        read as "nobody liked this", about every card on
+                        the shelf. The heart itself lives on the
+                        collection's own screen, where there is room to
+                        press it without hitting the card underneath. */}
+                    {likesWorthShowing(likes[c.slug]) && (
+                      <View style={s.shelfLikes}>
+                        <Ionicons name="heart" size={12} color={onPhoto.accent} />
+                        <Text style={s.shelfCardMeta}>{likes[c.slug]}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </PressableScale>
             );
@@ -748,5 +770,7 @@ const s = StyleSheet.create({
   shelfCardText: { padding: 13, gap: 3 },
   shelfCardTitle: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 20 },
   shelfCardMeta: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.regular },
+  shelfCardFoot: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  shelfLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
 });

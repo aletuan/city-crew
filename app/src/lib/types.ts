@@ -96,4 +96,21 @@ export type Collection = {
    * lists are yours; the city boundary is the catalog's problem.
    */
   members?: Place[];
+  /**
+   * The row's own id, which the shelf needs and the screens do not.
+   *
+   * Everything user-facing keys on `slug`; this is here because a like
+   * points at `collections.id`, and a slug would have meant a second
+   * lookup on every tap. It is not an invitation to key anything else on
+   * it.
+   */
+  id?: string;
+  /**
+   * When the row was written — and on the seeded rows, when the column was
+   * added, which is not the same thing and is why it cannot be the only
+   * key the shelf sorts on. See `lib/likes.ts`.
+   */
+  created_at?: string | null;
+  /** The desk's sequence. Null on anything a reader made. */
+  sort_order?: number | null;
 };
