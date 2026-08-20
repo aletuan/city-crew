@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { likesWorthShowing, LIKES_SHOWN_FROM, rankByLikes, type Rankable } from './likes';
+import {
+  countsNow, likedNow, likesWorthShowing, LIKES_SHOWN_FROM, NO_PENDING, rankByLikes, settled,
+  type Pending, type Rankable,
+} from './likes';
 
 const c = (slug: string, created_at?: string | null, sort_order?: number | null): Rankable =>
   ({ slug, created_at, sort_order });
@@ -84,5 +87,78 @@ describe('likesWorthShowing', () => {
   it('shows a count once it cannot be one person and their friends', () => {
     expect(likesWorthShowing(LIKES_SHOWN_FROM)).toBe(true);
     expect(likesWorthShowing(40)).toBe(true);
+  });
+});
+
+const tap = (slug: string, liked: boolean): Pending[string] => ({ slug, liked });
+
+describe('likedNow', () => {
+  it('is the server answer when nothing has been tapped', () => {
+    expect(likedNow(['a', 'b'], NO_PENDING).sort()).toEqual(['a', 'b']);
+  });
+
+  // The whole point: the heart fills on the tap, not on the round trip.
+  it('fills a heart the server has not heard about yet', () => {
+    expect(likedNow([], { a: tap('alpha', true) })).toEqual(['a']);
+  });
+
+  it('empties one the server still thinks is liked', () => {
+    expect(likedNow(['a'], { a: tap('alpha', false) })).toEqual([]);
+  });
+
+  // A refused write is not a state: the caller drops the entry and the
+  // heart goes back to whatever the database actually holds.
+  it('returns to the server answer once a tap is dropped', () => {
+    expect(likedNow(['a'], NO_PENDING)).toEqual(['a']);
+  });
+
+  it('does not double-count a tap the server has already agreed with', () => {
+    expect(likedNow(['a'], { a: tap('alpha', true) })).toEqual(['a']);
+  });
+});
+
+describe('countsNow', () => {
+  it('hands back the very same map when no tap changes anything', () => {
+    const counts = { alpha: 7 };
+    expect(countsNow(counts, ['a'], { a: tap('alpha', true) })).toBe(counts);
+    expect(countsNow(counts, [], NO_PENDING)).toBe(counts);
+  });
+
+  it('moves the tally with the heart', () => {
+    expect(countsNow({ alpha: 7 }, [], { a: tap('alpha', true) })).toEqual({ alpha: 8 });
+    expect(countsNow({ alpha: 7 }, ['a'], { a: tap('alpha', false) })).toEqual({ alpha: 6 });
+  });
+
+  it('counts a first like on a list that has never been counted', () => {
+    expect(countsNow({}, [], { a: tap('alpha', true) })).toEqual({ alpha: 1 });
+  });
+
+  // The counts are public and a reader's own likes are private, so they
+  // come from two queries and nothing promises they were read together.
+  it('refuses to print a negative tally', () => {
+    expect(countsNow({ alpha: 0 }, ['a'], { a: tap('alpha', false) })).toEqual({ alpha: 0 });
+  });
+
+  it('leaves every other list alone', () => {
+    expect(countsNow({ alpha: 7, beta: 2 }, [], { a: tap('alpha', true) }))
+      .toEqual({ alpha: 8, beta: 2 });
+  });
+});
+
+describe('settled', () => {
+  it('hands back the very same map while every tap is still in flight', () => {
+    const pending: Pending = { a: tap('alpha', true) };
+    expect(settled(pending, [])).toBe(pending);
+    expect(settled(NO_PENDING, ['a'])).toBe(NO_PENDING);
+  });
+
+  it('forgets a tap the server has caught up with', () => {
+    expect(settled({ a: tap('alpha', true) }, ['a'])).toEqual({});
+    expect(settled({ a: tap('alpha', false) }, [])).toEqual({});
+  });
+
+  it('keeps the ones still in flight when only some have landed', () => {
+    const pending: Pending = { a: tap('alpha', true), b: tap('beta', true) };
+    expect(settled(pending, ['a'])).toEqual({ b: tap('beta', true) });
   });
 });

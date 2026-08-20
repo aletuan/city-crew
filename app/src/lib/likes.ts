@@ -89,3 +89,98 @@ export const LIKES_SHOWN_FROM = 5;
 export function likesWorthShowing(n: number | undefined): boolean {
   return (n ?? 0) >= LIKES_SHOWN_FROM;
 }
+
+// ── the tap, before the server has heard about it ──
+//
+// The first version of the heart had no local state at all: a tap awaited
+// the insert, then refetched two queries, and nothing on screen moved
+// until both came back. So every like cost a full round trip of looking
+// broken — the reader taps, the glyph sits there, and the honest reading
+// of that is that the tap missed.
+//
+// What follows is the layer that fills the heart immediately. It is here
+// rather than in either screen for two reasons. The shelf and a
+// collection's own screen must agree — liking from the shelf and opening
+// the list has to show a filled heart, and per-screen state cannot do
+// that. And this is the part with a rule in it, which means it is the
+// part worth proving in a Node process rather than by tapping.
+//
+// The rule is: **a pending tap is a claim about the answer, not a delta
+// applied to it.** Every function below compares what the reader asked
+// for against what the server currently says and does nothing when they
+// agree. That is what makes the layer self-cancelling — once the refetch
+// lands, each entry becomes a no-op on its own, with no window in which a
+// stale delta double-counts. Clearing them afterwards, which `settled`
+// does, is hygiene rather than correctness.
+
+/** One tap: which list, and what the reader just asked it to be. The slug
+ *  rides along because the count is keyed by slug while a like is keyed by
+ *  id, and only the caller holds both. */
+export type PendingLike = { slug: string; liked: boolean };
+
+/** Collection id → the tap not yet confirmed by the server. */
+export type Pending = Readonly<Record<string, PendingLike>>;
+
+/** A stable empty map, so clearing twice does not re-render. */
+export const NO_PENDING: Pending = {};
+
+/**
+ * Which lists to draw filled: what the server said, with anything tapped
+ * since laid over the top.
+ *
+ * A tap wins until the server agrees with it, which covers the failure
+ * case for free. If a write is refused — the row was already there, the
+ * policy said no — the caller drops the entry and this falls straight
+ * back to the server's answer, so a refused like leaves the heart in the
+ * state the database is actually in rather than the one the tap wanted.
+ */
+export function likedNow(server: readonly string[], pending: Pending): string[] {
+  const out = new Set(server);
+  for (const [id, p] of Object.entries(pending)) {
+    if (p.liked) out.add(id);
+    else out.delete(id);
+  }
+  return [...out];
+}
+
+/**
+ * The counts with the same taps applied, so a tally never contradicts the
+ * heart beside it.
+ *
+ * The delta is `wanted − current`, per list: +1 for a like the server has
+ * not recorded, −1 for an unlike it has not yet dropped, and zero the
+ * moment it catches up. A count is never allowed below zero — the counts
+ * come from a public function and a reader's own likes from a private
+ * one, and nothing promises the two were read in the same instant.
+ */
+export function countsNow(
+  counts: LikeCounts,
+  server: readonly string[],
+  pending: Pending,
+): LikeCounts {
+  const has = new Set(server);
+  let out: LikeCounts | null = null;
+  for (const [id, p] of Object.entries(pending)) {
+    const delta = (p.liked ? 1 : 0) - (has.has(id) ? 1 : 0);
+    if (!delta) continue;
+    out = out ?? { ...counts };
+    out[p.slug] = Math.max(0, (out[p.slug] ?? 0) + delta);
+  }
+  // Unchanged means unchanged, reference and all: this feeds a sort that
+  // runs on every render of the shelf.
+  return out ?? counts;
+}
+
+/**
+ * Forget the taps the server has caught up with.
+ *
+ * Returns the map it was given when there is nothing to forget, because
+ * the caller runs this on every refetch and a fresh object each time
+ * would be a render each time.
+ */
+export function settled(pending: Pending, server: readonly string[]): Pending {
+  const has = new Set(server);
+  const live = Object.entries(pending).filter(([id, p]) => p.liked !== has.has(id));
+  if (live.length === Object.keys(pending).length) return pending;
+  return Object.fromEntries(live);
+}

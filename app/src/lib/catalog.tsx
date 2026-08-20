@@ -12,12 +12,15 @@
 // Private lists live in SaveProvider for the same reason; this is the
 // public half.
 
-import React, { useCallback, createContext, useContext, useEffect, useMemo, useRef } from 'react';
+import React, {
+  useCallback, createContext, useContext, useEffect, useMemo, useRef, useState,
+} from 'react';
 import { AppState } from 'react-native';
 import {
-  Collection, Fetch, Place, useCategoryTermsQuery, useCollectionsQuery, useLikeCountsQuery,
-  useMyLikesQuery, usePlacesQuery,
+  Collection, Fetch, Place, likeCollection, unlikeCollection, useCategoryTermsQuery,
+  useCollectionsQuery, useLikeCountsQuery, useMyLikesQuery, usePlacesQuery,
 } from './data';
+import { countsNow, likedNow, NO_PENDING, settled, type Pending } from './likes';
 import { CATEGORIES } from './categories';
 import { mergeTerms, type TermMap } from './search';
 import { useAuth } from './auth';
@@ -39,12 +42,25 @@ type Catalog = {
    * both the shelf and a collection's own screen need both, and reading
    * them separately would let one copy go stale while the other wrote.
    *
-   * `reloadLikes` is what a tap calls: liking writes one row, and the
-   * count that row changes is on a query this provider owns.
+   * Both already carry whatever the reader has just tapped, whether or
+   * not the server has heard about it — see `toggleLike`.
    */
   likes: Record<string, number>;
   myLikes: string[];
-  reloadLikes: () => void;
+  /**
+   * Like a list, or take a like back. The only way to do either.
+   *
+   * It lives on the provider rather than in the screens because a like is
+   * not a fact about one screen: tapping the heart on the shelf and then
+   * opening the list has to show a filled heart there too, and per-screen
+   * state cannot do that. Both screens had their own copy of this and the
+   * copies had already drifted.
+   *
+   * Returns when the write has been sent and the local answer is settled;
+   * callers do not need to await it to draw, because the heart has
+   * already moved by the time the promise exists.
+   */
+  toggleLike: (c: { id: string; slug: string }) => Promise<void>;
 };
 
 /** The shipped floor, lifted out of the category table once rather than on
@@ -59,7 +75,7 @@ const EMPTY: Catalog = {
   terms: mergeTerms(BUILT_IN, null),
   likes: {},
   myLikes: [],
-  reloadLikes: () => {},
+  toggleLike: async () => {},
 };
 
 const Ctx = createContext<Catalog>(EMPTY);
@@ -117,20 +133,63 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   // fresh object every render, so memoising on it would memoise nothing.
   const terms = useMemo(() => mergeTerms(BUILT_IN, deskTerms.data), [deskTerms.data]);
 
-  // One call, both queries: a tap changes a public count and your own set
-  // at the same moment, and refetching one without the other is how a
-  // heart ends up filled beside a number that has not moved.
-  const reloadLikes = useCallback(() => {
-    likeCounts.reload();
-    myLikes.reload();
-  }, [likeCounts.reload, myLikes.reload]);
+  // ── the tap, and the gap before the server answers ──
+  //
+  // The first version awaited the insert and then refetched, and nothing
+  // on screen moved until both had come back — so a like read as a tap
+  // that missed. `pending` is what the reader has asked for and the
+  // server has not confirmed; `lib/likes` decides what that means for the
+  // heart and for the tally, and is self-cancelling, so a stale entry
+  // cannot double-count while the refetch is in the air.
+  const [pending, setPending] = useState<Pending>(NO_PENDING);
+  // Ids with a write in flight. A ref rather than state because nothing
+  // draws from it: it exists so a double tap sends one insert and one
+  // delete that race each other rather than two writes whose order
+  // decides the answer.
+  const inFlight = useRef(new Set<string>());
+
+  useEffect(() => {
+    // Signed out there is no such thing as your own like, so the layer
+    // goes with the session rather than surviving it.
+    setPending((p) => (meId ? settled(p, myLikes.data) : NO_PENDING));
+  }, [meId, myLikes.data]);
+
+  const liked = useMemo(() => likedNow(myLikes.data, pending), [myLikes.data, pending]);
+  const counts = useMemo(
+    () => countsNow(likeCounts.data, myLikes.data, pending),
+    [likeCounts.data, myLikes.data, pending],
+  );
+
+  const toggleLike = useCallback(async (c: { id: string; slug: string }) => {
+    if (!meId || inFlight.current.has(c.id)) return;
+    const want = !liked.includes(c.id);
+    inFlight.current.add(c.id);
+    setPending((p) => ({ ...p, [c.id]: { slug: c.slug, liked: want } }));
+    try {
+      const ok = want
+        ? await likeCollection(c.id, meId)
+        : await unlikeCollection(c.id, meId);
+      // A refused write is not breakage and not a state either: the
+      // primary key refuses a second like, and that means the row is
+      // already there. Dropping the entry falls back to whatever the
+      // server says, which is the one answer that cannot be wrong.
+      if (!ok) setPending(({ [c.id]: _dropped, ...rest }) => rest);
+      // One call, both queries: a tap changes a public count and your own
+      // set at the same moment, and refetching one without the other is
+      // how a heart ends up filled beside a number that has not moved.
+      likeCounts.reload();
+      myLikes.reload();
+    } finally {
+      inFlight.current.delete(c.id);
+    }
+  }, [meId, liked, likeCounts.reload, myLikes.reload]);
 
   const value = useMemo<Catalog>(() => ({
-    places, collections, terms, likes: likeCounts.data, myLikes: myLikes.data, reloadLikes,
+    places, collections, terms, likes: counts, myLikes: liked, toggleLike,
   }), [
     places.data, places.loading, places.error, places.loadedAt, places.reload,
     collections.data, collections.loading, collections.error, collections.loadedAt, collections.reload,
-    terms, likeCounts.data, myLikes.data, reloadLikes,
+    terms, counts, liked, toggleLike,
   ]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -150,9 +209,9 @@ export const useSearchTerms = () => useCatalog().terms;
 /** The desk's public collections for the city. */
 export const useCollections = () => useCatalog().collections;
 
-/** Like counts by slug, your own likes by id, and the refetch a tap owes
- *  them both. */
+/** Like counts by slug, your own likes by id, and the one way to change
+ *  either. All three already include the tap you just made. */
 export const useLikes = () => {
-  const { likes, myLikes, reloadLikes } = useCatalog();
-  return { likes, myLikes, reloadLikes };
+  const { likes, myLikes, toggleLike } = useCatalog();
+  return { likes, myLikes, toggleLike };
 };
