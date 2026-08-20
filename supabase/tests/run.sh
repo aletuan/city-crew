@@ -143,3 +143,12 @@ for f in "$ROOT"/supabase/migrations/*_desk_scan_actor.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/channel_guard_test.sql"
+
+# Likes on a public collection, and the shelf order they decide. The
+# migration needs `collections` to already exist, which the user-collections
+# block above has done by here.
+echo "→ collection likes"
+for f in "$ROOT"/supabase/migrations/*_collection_likes.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/collection_likes_test.sql"
