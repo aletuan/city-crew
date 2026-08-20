@@ -4,10 +4,11 @@
 -- the app, because both decide something a public shelf shows and neither
 -- can be left to whichever screen happens to call.
 --
---   1. A curator cannot like their own list. The shelf claims to show what
---      a community prefers; a self-like is one person voting for
---      themselves, and while the user base is small that single vote is
---      enough to decide the order.
+--   1. A like is attributed to whoever cast it and to nobody else, and
+--      lands only on a list that is public. Anybody may like any public
+--      list, their own included — that was asked for explicitly, and the
+--      primary key is what keeps it one vote per person rather than a
+--      tally somebody can run up.
 --   2. The count is public, the voters are not. Anyone may learn a list
 --      has forty likes. Nobody may learn who the forty are.
 --
@@ -75,17 +76,20 @@ begin
     format('the select policy stopped scoping likes to their author: %s', qual);
 end $$;
 
--- The self-like rule. Asserted on `owner_id` because that is the column
--- the check has to reach through the collection to see, and naming it is
--- proof the rule went that far rather than only checking `is_public`.
+-- What the insert policy still has to hold. Liking your own list is
+-- allowed on purpose, so there is no owner clause to assert — these two
+-- are what is left, and both matter: without the first a like can be
+-- filed under somebody else's name, which turns a count into a forgery;
+-- without the second a private list collects votes for a shelf it is not
+-- on.
 do $$
 declare chk text;
 begin
   select pg_get_expr(polwithcheck, polrelid) into chk
     from pg_policy where polname = 'readers like public collections'
      and polrelid = 'public.collection_likes'::regclass;
-  assert chk like '%owner_id%',
-    format('the insert policy no longer refuses a self-like: %s', chk);
+  assert chk like '%uid%' and chk like '%user_id%',
+    format('the insert policy stopped tying a like to its caster: %s', chk);
   assert chk like '%is_public%',
     format('the insert policy no longer requires the list to be public: %s', chk);
 end $$;
@@ -116,7 +120,7 @@ begin
   insert into auth.users default values returning id into u1;
   insert into auth.users default values returning id into u2;
   -- Only the columns the stub carries: what this migration reasons about
-  -- is `is_public` and `owner_id`, and a title is not part of that.
+  -- is `is_public`, and a title is not part of that.
   insert into public.collections (slug, is_public, city_id)
     values ('t-like-pub', true, 'hanoi') returning id into pub;
   insert into public.collections (slug, is_public, city_id)
@@ -127,6 +131,18 @@ begin
 
   select likes into n from public.collection_like_counts() where collection_id = pub;
   assert n = 2, format('a public list with two likes counted %s', n);
+
+  -- One vote per person, whoever they are. With the self-like rule gone
+  -- this is the only thing between a count and a tally somebody runs up
+  -- by tapping twice, so it is worth proving rather than assuming.
+  begin
+    insert into public.collection_likes (collection_id, user_id) values (pub, u1);
+    raise exception 'a second like from the same person was accepted';
+  exception when unique_violation then null;  -- the key did its job
+  end;
+
+  select likes into n from public.collection_like_counts() where collection_id = pub;
+  assert n = 2, format('the count moved to %s after a refused duplicate', n);
 
   -- A private list has no shelf to be ordered on and its count is nobody's
   -- business.

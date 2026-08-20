@@ -3,9 +3,9 @@
 -- The shelf used to be ordered by `created_at desc, sort_order`. Neither
 -- was a judgement about worth: the fifteen seeded lists share one
 -- timestamp — the instant the column was added — and `sort_order` is the
--- order they happened to be gieo'd in. So the front of the shelf was
--- decided by an accident of the seed script, and the ask is for it to be
--- decided by readers instead.
+-- order the seed script happened to write them in. So the front of the
+-- shelf was decided by an accident, and the ask is for it to be decided
+-- by readers instead.
 --
 -- ── why a table ──
 --
@@ -31,9 +31,10 @@
 -- ── a like is not a save ──
 --
 -- The app already has saving: `collection_places` puts a *place* into a
--- list of *yours*. This is the other direction — a public gesture toward
--- somebody else's list, with no copy taken and nothing added to your own
--- shelf. They wear different glyphs for that reason.
+-- list of *yours*. A like is a different act on a different object — a
+-- public mark on a whole list, anybody's including your own, with no copy
+-- taken and nothing added to your shelf. They wear different glyphs for
+-- that reason.
 
 create table if not exists public.collection_likes (
   collection_id uuid not null references public.collections(id) on delete cascade,
@@ -66,23 +67,30 @@ drop policy if exists "readers see their own likes" on public.collection_likes;
 create policy "readers see their own likes" on public.collection_likes
   for select using (auth.uid() = user_id);
 
--- Like as yourself, on a public list, and never on your own.
+-- Like as yourself, on a public list — including your own.
 --
--- The last clause is the one with a reason beyond hygiene. The shelf is
--- meant to show what a community prefers; a curator liking their own list
--- is one person voting for themselves, and with a small user base that
--- single vote is enough to decide the order. Enforced here rather than in
--- the app because a rule that orders a public shelf has to hold against
--- anything holding the anon key, not just against our own screens.
+-- Two clauses, and both are load-bearing. `auth.uid() = user_id` stops a
+-- like being attributed to somebody else, which is the difference between
+-- a count and a forgery. `is_public` keeps the gesture where the shelf
+-- is: a private list has no shelf to be ordered on.
+--
+-- A curator liking their own list is allowed, deliberately. It was
+-- refused in the first draft on the reasoning that a shelf claiming to
+-- show what a community prefers should not be decided by one person
+-- voting for themselves — a real cost while the user base is small, since
+-- a single self-like is enough to reorder the shelf. That was raised and
+-- the call went the other way: the gesture belongs to everyone, and a
+-- rule that made one person's list unlikeable by its author is a rule the
+-- reader has to learn from a control that does nothing. The primary key
+-- still holds the honest half — one like per person per list, whoever
+-- they are.
 drop policy if exists "readers like public collections" on public.collection_likes;
 create policy "readers like public collections" on public.collection_likes
   for insert with check (
     auth.uid() = user_id
     and exists (
       select 1 from public.collections c
-      where c.id = collection_id
-        and c.is_public
-        and (c.owner_id is null or c.owner_id <> auth.uid())
+      where c.id = collection_id and c.is_public
     )
   );
 

@@ -200,8 +200,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const { data: places, loading: placesLoading } = usePlaces();
   // Liking needs three things and refuses without any of them: an account
   // to attribute the like to, the row's id — the likes table keys on it,
-  // not on the slug everything user-facing uses — and a list that is not
-  // your own, which the header checks separately with `owned`.
+  // not on the slug everything user-facing uses — and a list that is
+  // public, since a private one has no shelf to be ordered on.
   const { likes, myLikes, reloadLikes } = useLikes();
   const col = useMemo(
     () => [...mine.data, ...cols.data].find((c) => c.slug === route.params.slug),
@@ -470,17 +470,16 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             />
           </View>
         )}
-        {/* The heart lives here rather than on the shelf card, and only on
-            a list that is not yours.
+        {/* The heart lives here rather than on the shelf card: a card on
+            the shelf is one tap that opens the list, and a second tappable
+            thing inside it is a target the thumb hits by accident on the
+            way past.
 
-            Here, because a card on the shelf is one tap that opens the
-            list, and a second tappable thing inside it is a target the
-            thumb hits by accident on the way. Not on your own, because the
-            insert policy refuses a self-like — a shelf that claims to show
-            what a community prefers cannot be decided by one person voting
-            for themselves — and a control that always fails is worse than
-            no control. */}
-        {!owned && canLike && (
+            On every public list including your own — the gesture belongs
+            to everyone, and the insert policy allows it. What it still
+            needs is an account to attribute the like to, which is what
+            `canLike` carries. */}
+        {canLike && (
           <RoundIconButton
             icon={liked ? 'heart' : 'heart-outline'}
             onPress={toggleLike}
