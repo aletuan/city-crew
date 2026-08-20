@@ -193,6 +193,126 @@ describe('planTrips', () => {
     expect(plan.stops.map((s) => s.place.slug)).toContain('ba-dinh-eats');
   });
 
+  // ── where the day starts ──
+  //
+  // The bug these cover was found by using the app: a pin dropped on 29
+  // Liễu Giai in Ba Đình came back with all three plans in Hoàn Kiếm,
+  // about four kilometres away, while cafés a few hundred metres from the
+  // pin went unused. Two things were wrong and both are here.
+  //
+  // `draft.at` never reached the planner at all — the only geographic term
+  // was a district *name* matched against `neighborhood_en`, so dropping a
+  // pin contributed nothing. And the distance penalty measured from the
+  // previous stop, which does not exist on the first one, so the opening
+  // stop was chosen by whatever scored highest anywhere in the city and
+  // every later stop then clung to it through the very penalty that had
+  // let it in.
+  describe('from where the day starts', () => {
+    // 29 Liễu Giai, and the tourist core about four kilometres east.
+    const CAPITAL_PLACE = { lat: 21.0325, lng: 105.8135 };
+    const OLD_QUARTER = { lat: 21.028, lng: 105.852 };
+
+    // The asymmetry that made this bug reliable rather than occasional:
+    // the central cafés are not better, they are *reviewed* more, and
+    // `min(3, log10(1 + rating_count))` reads review volume as worth.
+    const near = Array.from({ length: 3 }, (_, i) => place({
+      slug: `near-${i}`, categories: ['cafes'], neighborhood_en: 'Ba Đình',
+      lat: CAPITAL_PLACE.lat + i / 2000, lng: CAPITAL_PLACE.lng,
+      rating: 4.4, rating_count: 40,
+    }));
+    const far = Array.from({ length: 8 }, (_, i) => place({
+      slug: `far-${i}`, categories: ['cafes'], neighborhood_en: 'Hoàn Kiếm',
+      lat: OLD_QUARTER.lat + i / 2000, lng: OLD_QUARTER.lng,
+      rating: 4.6, rating_count: 1000,
+    }));
+    const BOTH = [...near, ...far];
+    const CAFES: TripDraft = { ...EVENING, categories: ['cafes'], when: 'day' };
+    const first = (d: TripDraft, places = BOTH) =>
+      planTrips(d, places, 'hanoi', { seed: 1 })[0].stops[0].place.slug;
+
+    // The regression, stated the way the reader would: two people standing
+    // in different places, asking the same question, must not be told to
+    // start in the same café. Before the fix this failed — both came back
+    // `far-0`, because the pin was not read at all.
+    it('starts somewhere else for a reader standing somewhere else', () => {
+      expect(first({ ...CAFES, at: CAPITAL_PLACE }))
+        .not.toBe(first({ ...CAFES, at: OLD_QUARTER }));
+    });
+
+    it('opens near the pin rather than across town', () => {
+      expect(first({ ...CAFES, at: CAPITAL_PLACE })).toMatch(/^near-/);
+      expect(first({ ...CAFES, at: OLD_QUARTER })).toMatch(/^far-/);
+    });
+
+    // A chosen area is the same answer in a different shape, so it has to
+    // place the reader too. `areaCentre` has no boundaries to work from —
+    // it takes the mean of the area's places — and that is enough to say
+    // which way is out of the reader's way.
+    it('places a reader who picked an area instead of dropping a pin', () => {
+      expect(first({ ...CAFES, district: 'Ba Đình' })).toMatch(/^near-/);
+    });
+
+    // The pin is what places the reader, even with an area also set.
+    //
+    // Tested in the direction that actually discriminates: an area on one
+    // side of town and a pin on the other, where the area's own +2.5 bonus
+    // pulls the opposite way. The pin wins and it is not close.
+    //
+    // The other direction is deliberately not asserted, because the two
+    // terms very nearly cancel there — an area bonus of 2.5 against four
+    // kilometres of penalty comes out inside a tenth of a point, and
+    // pinning a test to which side of that lands first would be pinning it
+    // to arithmetic nobody chose. It is also close to unreachable: picking
+    // an area drops a pin on it, so in the app the two agree.
+    it('is placed by the pin even when an area pulls the other way', () => {
+      expect(first({ ...CAFES, district: 'Ba Đình', at: OLD_QUARTER })).toMatch(/^far-/);
+    });
+
+    // Nobody who said nothing about where they are should have their plan
+    // moved by this. With no pin and no area there is nothing to measure
+    // from, and the first stop goes back to being chosen on merit — which
+    // is exactly what it did before any of this existed.
+    it('leaves the opening stop on merit when the reader is unplaced', () => {
+      expect(first({ ...CAFES, at: null, district: null })).toMatch(/^far-/);
+    });
+
+    // A nudge, not a gate — the same rule `DISTRICT_BONUS` is written to.
+    // The penalty caps at five kilometres precisely so a place that is
+    // genuinely much better can still be worth the journey.
+    it('still crosses town for somewhere genuinely better', () => {
+      const dismal = near.map((p) => ({ ...p, rating: 2, rating_count: 5 }));
+      const superb = far.map((p) => ({ ...p, rating: 4.9, rating_count: 5000 }));
+      expect(first({ ...CAFES, at: CAPITAL_PLACE }, [...dismal, ...superb])).toMatch(/^far-/);
+    });
+
+    // A row with no coordinates is charged nothing, because there is
+    // nothing to measure — and the consequence, which is worth stating out
+    // loud rather than discovering later, is that it can outrank a place
+    // that *is* locatable and far. That is the lesser of the two wrongs
+    // available: the alternative is charging it the cap, which would bury
+    // every row the import pipeline left without coordinates for a fault
+    // that is the catalog's rather than the place's.
+    it('charges nothing to a place the catalog cannot locate', () => {
+      const nowhere = near.map((p) => ({ ...p, lat: null, lng: null }));
+      expect(first({ ...CAFES, at: CAPITAL_PLACE }, [...nowhere, ...far])).toMatch(/^near-/);
+    });
+
+    // An area whose every place lacks a coordinate has a size but no
+    // position, and `areaCentre` says so with null rather than (0, 0) —
+    // which would put the reader in the Gulf of Guinea and charge the cap
+    // against everything equally.
+    it('does not invent a position for an area that has none', () => {
+      const unplaceable = near.map((p) => ({ ...p, lat: null, lng: null }));
+      expect(first({ ...CAFES, district: 'Ba Đình' }, [...unplaceable, ...far])).toMatch(/^far-/);
+    });
+
+    it('stays deterministic once the reader is placed', () => {
+      const twice = () => planTrips({ ...CAFES, at: CAPITAL_PLACE }, BOTH, 'hanoi', { seed: 7 })
+        .flatMap((p) => p.stops.map((s) => s.place.slug));
+      expect(twice()).toEqual(twice());
+    });
+  });
+
   it('does not hand back an empty screen for a quiet district', () => {
     // A hard filter would: Hanoi's quietest district holds two places.
     // The area shapes the plan, it does not gate it.
