@@ -26,6 +26,16 @@ import { goTo } from '../nav';
 type Save = {
   /** Open whatever this person needs next in order to save this place. */
   save: (place: Place) => void;
+  /**
+   * The sign-in invitation on its own, for a gesture that is not saving a
+   * place.
+   *
+   * Liking a collection needs the same sheet and none of the rest of
+   * `save` — no place to put anywhere, no list to choose. Without this a
+   * signed-out reader taps a heart and nothing happens, which is the
+   * "control that does nothing" this app keeps deciding against.
+   */
+  askToSignIn: () => void;
   /** Is the place in any of their lists? Drives the bookmark's fill. */
   isSaved: (placeSlug: string) => boolean;
   /**
@@ -41,6 +51,7 @@ type Save = {
 
 const Ctx = createContext<Save>({
   save: () => {},
+  askToSignIn: () => {},
   isSaved: () => false,
   mine: { data: [], loading: false, loaded: false, reload: () => {} },
 });
@@ -101,13 +112,16 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     }
   }, [mine.reload, t, session, city?.id, historyOn]);
 
+  const askToSignIn = useCallback(() => setAuthSheet(true), []);
+
   const value = useMemo<Save>(() => ({
     save,
+    askToSignIn,
     isSaved: (slug) => savedSlugs.has(slug),
     mine: {
       data: mine.data, loading: mine.loading, loaded: mine.loaded, reload: mine.reload,
     },
-  }), [save, savedSlugs, mine.data, mine.loading, mine.loaded, mine.reload]);
+  }), [save, askToSignIn, savedSlugs, mine.data, mine.loading, mine.loaded, mine.reload]);
 
   return (
     <Ctx.Provider value={value}>
