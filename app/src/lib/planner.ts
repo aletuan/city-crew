@@ -41,7 +41,7 @@ import { instantOn, openState } from './format';
 import { distanceKm } from './geo';
 import { isLive } from './live';
 import { legsOf, type Leg } from './travel';
-import type { TripDraft } from './trip';
+import { areaCentre, type TripDraft } from './trip';
 import type { Place } from './types';
 
 export type PartKey = 'morning' | 'afternoon' | 'evening';
@@ -118,6 +118,38 @@ export type PlanOptions = {
 // ── the shape of a day ───────────────────────────────────────────────
 
 type Slot = { pref: readonly string[] };
+
+/** Somewhere on the map. Both ways of answering "where does this start"
+ *  resolve to one of these — see `originOf`. */
+type Point = { lat: number; lng: number };
+
+/**
+ * Where the day starts, from whatever the reader gave us.
+ *
+ * The wizard offers two ways to say it and they arrive in different
+ * shapes: a dropped pin is already a coordinate, while a chosen area is a
+ * name. Both are answers to the same question, so both become a point
+ * here and the scoring function never learns there were two.
+ *
+ * An area has no boundary anywhere in this app — `areaCentre` takes the
+ * mean of its places, which is not a centre in any official sense and does
+ * not need to be. The question it feeds is "how far out of my way is
+ * this", and a representative point answers that.
+ *
+ * The pin wins when both are set. Picking an area also drops a pin on it,
+ * so the two normally agree; where they do not, the pin is the more
+ * specific of the two and the later thing the reader touched.
+ *
+ * Null is a real answer and not a failure: somebody who has granted no
+ * location and picked no area has told us nothing about where they are,
+ * and inventing a point for them would be worse than letting the first
+ * stop be chosen on merit alone. That is also exactly how this behaved
+ * before the origin existed, which is what keeps the change from moving
+ * plans nobody asked to move.
+ */
+function originOf(draft: TripDraft, places: readonly Place[]): Point | null {
+  return draft.at ?? areaCentre([...places], draft.district);
+}
 
 /**
  * Three stops for an evening, five for a day.
@@ -350,6 +382,37 @@ const EPSILON = 1.2;
 const KM_PENALTY = 0.4;
 const KM_PENALTY_MAX = 4;
 
+/**
+ * The same charge for the first stop, measured from where the day starts —
+ * and deliberately more than twice as steep.
+ *
+ * This exists because the first stop used to be free. `prev` is null on
+ * the opening slot, so the only distance term never fired for it: the day
+ * was anchored by whichever place scored highest anywhere in the city, and
+ * every later stop then clung to that anchor through the penalty above.
+ * The visible symptom was a plan whose hops were 50 and 550 metres sitting
+ * three kilometres from the pin the reader had just dropped — the route
+ * was tight, it was simply tight around the wrong place.
+ *
+ * Steeper than a mid-day hop because the two are not the same kind of
+ * journey. Five hundred metres between two cafés is part of the outing.
+ * Three kilometres before it begins is a cost paid before anything has
+ * been got in return, and the reader who dropped the pin has already said
+ * where they are.
+ *
+ * Sized against what it has to outweigh rather than picked for feel. The
+ * popularity term is worth `min(3, log10(1 + rating_count))`, so a place
+ * with a thousand reviews carries about 1.5 points over one with thirty —
+ * and in Hanoi that difference tracks the tourist centre almost exactly.
+ * At 0.4/km the three kilometres out of Ba Đình cost 1.2 and the centre
+ * still won; at 1.0 they cost 3.0, which a near place needs only to be
+ * roughly comparable to survive. The cap keeps it a nudge: past five
+ * kilometres nothing further is charged, so a genuinely better place
+ * across town is still allowed to win.
+ */
+const ORIGIN_KM_PENALTY = 1.0;
+const ORIGIN_KM_PENALTY_MAX = 5;
+
 /** Applied to a place another plan in this batch already used, and to
  *  anything the screen asked to avoid. Strong enough to move the answer,
  *  soft enough that a category holding one place still returns it. */
@@ -457,7 +520,13 @@ function dropReason(p: Place, draft: TripDraft, cityId: string | null, when: num
 
 function scoreOf(
   p: Place, slot: Slot, draft: TripDraft, lens: Lens,
-  prev: Place | null, opts: PlanOptions, used: ReadonlySet<string>,
+  prev: Place | null,
+  /** Where the day starts, for the opening stop — see `originOf`. Null
+   *  when the reader has said nothing that places them, which is the one
+   *  case where the first stop genuinely has nothing to be measured
+   *  against. */
+  origin: Point | null,
+  opts: PlanOptions, used: ReadonlySet<string>,
   /** One stop's share of a stated budget, or null when none was stated. */
   share: number | null,
 ): number {
@@ -482,8 +551,24 @@ function scoreOf(
     s -= Math.min(BUDGET_PENALTY_MAX, over * BUDGET_PENALTY);
   }
 
-  if (prev && prev.lat != null && prev.lng != null && p.lat != null && p.lng != null) {
-    s -= Math.min(KM_PENALTY_MAX, distanceKm(prev.lat, prev.lng, p.lat, p.lng) * KM_PENALTY);
+  // Two different questions, and the second one used to go unasked. After
+  // the first stop the reference is the stop before, because what is being
+  // charged is a hop inside the day. On the first stop it is where the day
+  // starts, because what is being charged is getting to it at all.
+  //
+  // `prev` does not fall back to the origin when it lacks coordinates.
+  // Once there is a previous stop, the hop is the distance from it; a
+  // place with no coordinates cannot answer that, and answering a
+  // different question instead would be worse than not answering.
+  if (prev) {
+    if (prev.lat != null && prev.lng != null && p.lat != null && p.lng != null) {
+      s -= Math.min(KM_PENALTY_MAX, distanceKm(prev.lat, prev.lng, p.lat, p.lng) * KM_PENALTY);
+    }
+  } else if (origin && p.lat != null && p.lng != null) {
+    s -= Math.min(
+      ORIGIN_KM_PENALTY_MAX,
+      distanceKm(origin.lat, origin.lng, p.lat, p.lng) * ORIGIN_KM_PENALTY,
+    );
   }
 
   if (used.has(p.slug) || opts.avoid?.includes(p.slug)) s -= REPEAT_PENALTY;
@@ -540,7 +625,7 @@ function dwellOf(p: Place): number {
 function buildPlan(
   lens: Lens, slots: readonly Slot[], pool: readonly Place[], pinnedOk: readonly Place[],
   draft: TripDraft, opts: PlanOptions, used: ReadonlySet<string>, rnd: () => number,
-  start: number,
+  start: number, origin: Point | null,
 ): Place[] {
   const taken = new Set<string>();
   const out: Place[] = [];
@@ -564,13 +649,13 @@ function buildPlan(
     let chosen: Place | null = null;
     if (pinnedUsed < pinnedBudget) {
       const cands = pinnedOk.filter(fits)
-        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, opts, used, share) }));
+        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, origin, opts, used, share) }));
       chosen = draw(cands, rnd);
       if (chosen) pinnedUsed++;
     }
     if (!chosen) {
       const cands = pool.filter(fits)
-        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, opts, used, share) }));
+        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, origin, opts, used, share) }));
       chosen = draw(cands, rnd);
     }
 
@@ -650,6 +735,10 @@ export function planTrips(
   // After the start, because how many stops fit depends on when it begins.
   const slots = slotsFor(draft, start);
 
+  // Once for all three lenses. It is a mean over the catalog when the
+  // reader picked an area, and there is no reason to take it three times.
+  const origin = originOf(draft, places);
+
   // Filtered once against the middle of the outing rather than per slot:
   // the pool is what could plausibly appear, and each slot re-checks its
   // own hour when it picks.
@@ -671,7 +760,7 @@ export function planTrips(
   const used = new Set<string>();
 
   for (const lens of LENSES) {
-    const picked = buildPlan(lens, slots, pool, pinnedOk, draft, opts, used, rnd, start);
+    const picked = buildPlan(lens, slots, pool, pinnedOk, draft, opts, used, rnd, start, origin);
     if (!picked.length) continue;
 
     // Two plans sharing all but one stop are one plan shown twice. Dropping
