@@ -480,33 +480,54 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                             ? `  ·  ${t('by', 'bởi', 'by')} ${atHandle(item.curator_handle)}`
                             : ''}
                         </Text>
-                        {/* How many people liked it — the answer to "is
-                            anybody reading this list", which the shelf
-                            could not give before and which a curator has
-                            no other way to find out.
-
-                            Outside the meta string rather than appended to
-                            it, because the heart is the label: a bare
-                            number after "2 places · Public" would have to
-                            be spelled out in three languages to mean
-                            anything, and the glyph is the same one the
-                            reader taps to produce it.
-
-                            Absent counts and zero both draw nothing —
-                            `likesWorthShowing` explains why, and a private
-                            list is always the absent case: the counts come
-                            from a function that returns public rows only,
-                            because a private list is one nobody may like.
-                            So the tally never appears beside the padlock,
-                            and never claims that a list nobody *could*
-                            like is a list nobody *did*. */}
-                        {likesWorthShowing(likes[item.slug]) && (
-                          <View style={s.likes}>
-                            <Ionicons name="heart" size={12} color={colors.accent} />
-                            <Text style={s.meta}>{likes[item.slug]}</Text>
-                          </View>
-                        )}
                       </View>
+                      {/* How many people liked it — the answer to "is
+                          anybody reading this list", which the shelf could
+                          not give before and which a curator has no other
+                          way to find out.
+
+                          Its own line rather than the end of the meta one.
+                          On the meta line it was the fourth clause of a
+                          sentence that already reads "2 places · Public ·
+                          by @minh", competing with the byline for the last
+                          few points of width — and it is not the same kind
+                          of fact as the others. Those describe what the
+                          list *is*; this one is what other people did
+                          about it. A line of its own is also what buys the
+                          word "likes", so the number is read rather than
+                          decoded.
+
+                          Absent counts and zero both draw nothing —
+                          `likesWorthShowing` explains why, and a private
+                          list is always the absent case: the counts come
+                          from a function that returns public rows only,
+                          because a private list is one nobody may like. So
+                          the line never appears under a padlock, and never
+                          claims that a list nobody *could* like is a list
+                          nobody *did*. */}
+                      {likesWorthShowing(likes[item.slug]) && (
+                        <View style={s.likesRow}>
+                          {/* Filled, and quiet. The fill is legibility: an
+                              outline heart at 13pt spends most of its ink
+                              on a hairline and reads as a smudge, while
+                              the solid shape is recognisable at a glance.
+
+                              The colour is what keeps the fill honest. A
+                              coral heart already means two things in this
+                              app — "you liked this" on the detail screen,
+                              and "tap me" on the Explore shelf — and this
+                              heart is neither: it is not your state and it
+                              is not a control. `accentFaint` exists for
+                              exactly this, a mark that registers as warmth
+                              rather than as a second thing to read, and at
+                              that weight nobody's thumb mistakes it for a
+                              button that does not respond. */}
+                          <Ionicons name="heart" size={13} color={colors.accentFaint} />
+                          <Text style={s.meta}>
+                            {likes[item.slug]} {t('likes', 'lượt thích', 'いいね')}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                     <Animated.View
                       style={[s.chevron, drag && {
@@ -673,13 +694,11 @@ const s = StyleSheet.create({
   cardText: { flex: 1, gap: 5 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
-  // `flexShrink` so the tally beside it is never the thing that gets
-  // pushed off the card: the meta line is already truncated to one line,
-  // and a long byline would otherwise take the width the heart needs.
-  meta: { color: colors.textTertiary, ...type.meta, flexShrink: 1 },
-  // Tight against its own glyph, and a little away from the line before
-  // it — the gap the row already keeps would read as another `·`.
-  likes: { flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: 2 },
+  meta: { color: colors.textTertiary, ...type.meta },
+  // Same 5pt gap the meta row keeps between the padlock and its sentence,
+  // so the two lines start on the same optical edge — the heart and the
+  // padlock are both glyphs standing in for a word.
+  likesRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   // A disclosure indicator, which is a mark and not a control: a bare
   // chevron, the way the rest of the app already draws one. In a 44pt
   // well with a fill and a hairline it looked like a button, and a button
