@@ -54,6 +54,14 @@ function IdeasStack() {
       <Stack.Screen name="Sketching" component={SketchingScreen} />
       <Stack.Screen name="PlanOptions" component={PlanOptionsScreen} />
       <Stack.Screen name="PlanEdit" component={PlanEditScreen} />
+      {/* The editor names a place on every card and opens it. Without this
+          the navigate finds no handler here, bubbles up to the tabs, and
+          lands in whichever stack does have it — so tapping a stop in your
+          plan switched to the Explore tab, and Back returned there instead
+          of to the plan you were still editing. Same rule the Explore
+          stack states about CollectionForm: a screen can only navigate to
+          screens its own stack has. */}
+      <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
     </Stack.Navigator>
   );
 }
@@ -63,6 +71,9 @@ function TripsStack() {
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="TripsHome" component={TripsScreen} />
       <Stack.Screen name="TripDetail" component={TripDetailScreen} />
+      {/* And here for the same reason: a saved trip lists places and each
+          one opens. */}
+      <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
     </Stack.Navigator>
   );
 }
