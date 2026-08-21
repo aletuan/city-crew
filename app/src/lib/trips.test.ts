@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endMinOf, spendVnd, splitTrips } from './trips';
+import { endMinOf, spendVnd, splitTrips, tripCover } from './trips';
 
 const trip = (day: string) => ({ day });
 
@@ -169,5 +169,50 @@ describe('spendVnd with prices missing', () => {
   it('treats an unpriced place as nothing rather than as NaN', () => {
     expect(spendVnd([{ lat: 21.0287, lng: 105.8524 }])).toBe(0);
     expect(spendVnd([{ lat: 21.0287, lng: 105.8524, price_vnd: null }, CAFE])).toBe(60000);
+  });
+});
+
+const photo = (uri: string, over: Partial<{ is_cover: boolean; is_hidden: boolean; sort_order: number }> = {}) => ({
+  photo_uri: uri, is_cover: false, is_hidden: false, sort_order: 0, attribution_name: null, ...over,
+});
+
+const withPhotos = (...photos: ReturnType<typeof photo>[]) => ({ places: { place_photos: photos } });
+const gone = { places: null };
+const unphotographed = { places: { place_photos: [] } };
+
+describe('tripCover', () => {
+  it('is the first stop\'s picture on an ordinary day', () => {
+    expect(tripCover([withPhotos(photo('a')), withPhotos(photo('b'))])?.photo_uri).toBe('a');
+  });
+
+  // The distinction the whole function exists for. "First stop's picture"
+  // and "first picture" differ exactly when it matters: an opening stop
+  // that was unpublished after the trip was saved, or imported with no
+  // photographs, would otherwise leave the card blank while every place
+  // after it had one.
+  it('falls through a stop that has no picture to give', () => {
+    expect(tripCover([unphotographed, withPhotos(photo('b'))])?.photo_uri).toBe('b');
+    expect(tripCover([gone, withPhotos(photo('b'))])?.photo_uri).toBe('b');
+  });
+
+  // Through `coverOf`, which is the reason this does not reach into
+  // `place_photos` itself: a photo the desk pulled must not come back as
+  // the face of a trip.
+  it('will not use a picture the desk hid', () => {
+    expect(tripCover([withPhotos(photo('hidden', { is_hidden: true })), withPhotos(photo('b'))])?.photo_uri)
+      .toBe('b');
+  });
+
+  it('prefers the marked cover over the first one listed', () => {
+    expect(tripCover([withPhotos(photo('a'), photo('b', { is_cover: true }))])?.photo_uri).toBe('b');
+  });
+
+  // No band at all, rather than a grey strip with a pin on it. A trip is
+  // not a place: its identity is the title, the date and the stops, all
+  // already on the card.
+  it('has nothing to show for a trip whose stops have no pictures', () => {
+    expect(tripCover([])).toBeUndefined();
+    expect(tripCover([gone, gone])).toBeUndefined();
+    expect(tripCover([unphotographed])).toBeUndefined();
   });
 });

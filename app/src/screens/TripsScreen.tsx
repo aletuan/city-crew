@@ -42,6 +42,7 @@ import React, { useCallback, useRef } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { AddPill } from '../components/add';
 import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance,
@@ -55,8 +56,8 @@ import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY } from '../lib/trip';
-import { spendVnd, splitTrips } from '../lib/trips';
-import { colors, font, radius, space, type } from '../theme';
+import { spendVnd, splitTrips, tripCover } from '../lib/trips';
+import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 const money = (vnd: number) => (vnd >= 1_000_000
@@ -132,74 +133,104 @@ function TripCard({ trip, cityName, past, onPress }: {
   const shown = stops.slice(0, CARD_STOPS);
   const hidden = stops.length - shown.length;
   const start = stops[0]?.arrive_min;
+  const cover = tripCover(stops);
 
   return (
     <PressableScale onPress={onPress} scaleTo={0.985} style={[s.card, past && s.cardPast]}>
-      <View style={s.head}>
-        <Text style={s.title} numberOfLines={1}>{trip.title}</Text>
-        <CompanyChip company={trip.company} />
-      </View>
+      {/* The one picture that says which trip this is.
+          ── why the card has a band and PlaceCard has a hero ──
 
-      {/* The glyph earns its place by being the one thing on the card that
-          says "this is a date" at a glance, in a list where every card
-          starts with a name. */}
-      <View style={s.metaRow}>
-        <Ionicons name="calendar-outline" size={14} color={colors.accent} />
-        <Text style={s.meta} numberOfLines={1}>
-          {summaryLine([
-            day ? dateline(lang, day) : trip.day,
-            start != null ? t(`from ${clockOf(start)}`, `từ ${clockOf(start)}`, `${clockOf(start)}から`) : null,
-            cityName,
-          ])}
-        </Text>
-      </View>
+          On a place card the photograph *is* the content, so it takes
+          16:10 and the words sit under it. Here it is an identifier over
+          a timeline: the card's job is still the day — the rail, the
+          dots, the hours — and a hero would push all of that past the
+          fold on a list that already runs two cards to a screen. 3:1 is
+          enough to recognise a storefront and not enough to take over.
 
-      <View style={s.stops}>
-        {shown.map((stop, i) => (
-          <View key={`${trip.id}-${i}`} style={s.stopRow}>
-            <Text style={s.stopTime}>
-              {stop.arrive_min != null ? clockOf(stop.arrive_min) : '—'}
-            </Text>
-            {/* The rail is drawn by the stop it leaves, so the last one has
-                none — a line running off the bottom of a list claims a stop
-                that is not there. */}
-            <View style={s.dotCol}>
-              <View style={s.dot} />
-              {i < shown.length - 1 ? <View style={s.rail} /> : null}
-            </View>
-            {stop.places
-              ? (
-                <>
-                  <Text style={s.stopName} numberOfLines={1}>{stop.places.name_en}</Text>
-                  <Text style={s.stopArea} numberOfLines={1}>{stop.places.neighborhood_en}</Text>
-                </>
-              )
-              : (
-                <Text style={s.stopGone} numberOfLines={1}>
-                  {t('No longer listed', 'Không còn trong danh mục', '掲載終了')}
-                </Text>
-              )}
-          </View>
-        ))}
-        {hidden > 0 && (
-          <Text style={s.more}>
-            {t(`+${hidden} more`, `+${hidden} điểm nữa`, `他${hidden}件`)}
+          Everything else about it is `PlaceCard`'s, deliberately: the
+          padding comes off the card and onto a body view so the picture
+          can run edge to edge, `overflow: hidden` on the card clips it to
+          the corner radius, and the credit sits bottom-right over it.
+
+          Google requires the photographer's attribution wherever the
+          photo is shown. It is not optional and it is not negotiable by
+          size — so a band big enough to carry a legible credit is part of
+          why this is a band rather than a 52pt thumbnail. */}
+      {cover && (
+        <View>
+          <Image source={{ uri: cover.photo_uri }} style={s.cover} contentFit="cover" transition={200} />
+          {cover.attribution_name
+            ? <Text style={s.attr} numberOfLines={1}>{cover.attribution_name}</Text>
+            : null}
+        </View>
+      )}
+      <View style={s.cardBody}>
+        <View style={s.head}>
+          <Text style={s.title} numberOfLines={1}>{trip.title}</Text>
+          <CompanyChip company={trip.company} />
+        </View>
+
+        {/* The glyph earns its place by being the one thing on the card that
+            says "this is a date" at a glance, in a list where every card
+            starts with a name. */}
+        <View style={s.metaRow}>
+          <Ionicons name="calendar-outline" size={14} color={colors.accent} />
+          <Text style={s.meta} numberOfLines={1}>
+            {summaryLine([
+              day ? dateline(lang, day) : trip.day,
+              start != null ? t(`from ${clockOf(start)}`, `từ ${clockOf(start)}`, `${clockOf(start)}から`) : null,
+              cityName,
+            ])}
           </Text>
-        )}
-      </View>
+        </View>
 
-      <View style={s.divider} />
+        <View style={s.stops}>
+          {shown.map((stop, i) => (
+            <View key={`${trip.id}-${i}`} style={s.stopRow}>
+              <Text style={s.stopTime}>
+                {stop.arrive_min != null ? clockOf(stop.arrive_min) : '—'}
+              </Text>
+              {/* The rail is drawn by the stop it leaves, so the last one has
+                  none — a line running off the bottom of a list claims a stop
+                  that is not there. */}
+              <View style={s.dotCol}>
+                <View style={s.dot} />
+                {i < shown.length - 1 ? <View style={s.rail} /> : null}
+              </View>
+              {stop.places
+                ? (
+                  <>
+                    <Text style={s.stopName} numberOfLines={1}>{stop.places.name_en}</Text>
+                    <Text style={s.stopArea} numberOfLines={1}>{stop.places.neighborhood_en}</Text>
+                  </>
+                )
+                : (
+                  <Text style={s.stopGone} numberOfLines={1}>
+                    {t('No longer listed', 'Không còn trong danh mục', '掲載終了')}
+                  </Text>
+                )}
+            </View>
+          ))}
+          {hidden > 0 && (
+            <Text style={s.more}>
+              {t(`+${hidden} more`, `+${hidden} điểm nữa`, `他${hidden}件`)}
+            </Text>
+          )}
+        </View>
 
-      <View style={s.foot}>
-        <Text style={s.footFacts} numberOfLines={1}>
-          {summaryLine([
-            stopCount(stops.length, t),
-            spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人')}` : null,
-          ])}
-        </Text>
-        <View style={s.open}>
-          <Text style={s.openText}>{t('View plan', 'Xem kế hoạch', 'プランを見る')}</Text>
-          <Ionicons name="chevron-forward" size={15} color={colors.accent} />
+        <View style={s.divider} />
+
+        <View style={s.foot}>
+          <Text style={s.footFacts} numberOfLines={1}>
+            {summaryLine([
+              stopCount(stops.length, t),
+              spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人')}` : null,
+            ])}
+          </Text>
+          <View style={s.open}>
+            <Text style={s.openText}>{t('View plan', 'Xem kế hoạch', 'プランを見る')}</Text>
+            <Ionicons name="chevron-forward" size={15} color={colors.accent} />
+          </View>
         </View>
       </View>
     </PressableScale>
@@ -442,10 +473,28 @@ const s = StyleSheet.create({
   // sitting inside a `Card` — `PressableScale` needs the fill on the view
   // its children live in, and nesting one inside the other would put a
   // border around a border.
+  // The padding lives on `cardBody`, not here, so the cover band can run
+  // to the card's own edges. `overflow: hidden` was already on the card;
+  // it now also does the clipping that keeps the picture inside the
+  // corner radius, which is what makes the band possible without a
+  // second rounded view around it.
   card: {
     backgroundColor: colors.surfaceCard, borderRadius: radius.card,
     borderWidth: 1, borderColor: colors.borderGlassSoft,
-    padding: space.cardPadding, overflow: 'hidden',
+    overflow: 'hidden',
+  },
+  cardBody: { padding: space.cardPadding },
+  // 3:1, not `PlaceCard`'s 16:10 — see the note at the call site. Its own
+  // ground shows for the instant before the image decodes, so the card
+  // does not flash the page colour through a hole in itself.
+  cover: { width: '100%', aspectRatio: 3, backgroundColor: colors.surfaceGlass },
+  // The photographer's credit, required wherever the photo appears.
+  // Identical to `PlaceCard`'s down to the shadow: it has to stay legible
+  // over a bright sky and invisible the rest of the time.
+  attr: {
+    position: 'absolute', right: 10, bottom: 8, maxWidth: '50%',
+    fontSize: 8.5, color: onPhoto.text, opacity: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
   /** For the two places that do sit inside a real `Card` — the skeleton
    *  and the error — where `s.card` would paint a second surface inside

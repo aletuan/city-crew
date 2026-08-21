@@ -12,7 +12,9 @@
 // went on, most recent first because that is the order memory works in. A
 // single sort gets one of those two backwards.
 
+import { coverOf } from './place';
 import { legsOf, type Located } from './travel';
+import type { PlacePhoto } from './types';
 
 /**
  * What the split needs: the calendar day, and the stops as the table holds
@@ -124,4 +126,38 @@ export function spendVnd(stops: readonly (Priced | null | undefined)[]): number 
   const live = stops.filter((s): s is Priced => !!s);
   const rides = legsOf(live).filter((l) => l?.mode === 'ride').length;
   return live.reduce((n, s) => n + (s.price_vnd ?? 0), 0) + rides * RIDE_VND;
+}
+
+/** Just enough of a stop to find a picture on it: the place, or nothing
+ *  where the catalog no longer has one. */
+export type Pictured = { places?: { place_photos: PlacePhoto[] } | null };
+
+/**
+ * The one photograph that stands for a whole trip on its card.
+ *
+ * The first stop that *has* a picture, rather than the first stop's
+ * picture. Those differ exactly when they matter: a day whose opening stop
+ * was unpublished after it was saved, or was imported without photographs,
+ * would otherwise show nothing at all while the four places after it each
+ * had one. Falling through costs the card nothing and saves it from being
+ * the one blank row in the list.
+ *
+ * Undefined when no stop has one, and the card then draws no band. That is
+ * deliberate rather than a gap: `PlaceCard` fills the same hole with an
+ * emoji on grey, because a place with no photograph is still a place and
+ * the cards have to stay the same shape. A trip is not a place — its
+ * identity is its title, its date and its stops, all of which are on the
+ * card already — so a grey strip with a pin on it would be decoration with
+ * nothing behind it.
+ *
+ * Hidden photographs are already excluded: `coverOf` filters them, which
+ * is the whole reason this goes through it rather than reaching into
+ * `place_photos` directly.
+ */
+export function tripCover(stops: readonly Pictured[]): PlacePhoto | undefined {
+  for (const s of stops) {
+    const cover = s.places ? coverOf(s.places as Parameters<typeof coverOf>[0]) : undefined;
+    if (cover) return cover;
+  }
+  return undefined;
 }
