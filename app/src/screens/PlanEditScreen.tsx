@@ -50,7 +50,7 @@ import { membersOf } from '../lib/place';
 import { useSave } from '../lib/save';
 import { useNoteEvent, usePlanProfile } from '../lib/tasteProfile';
 import { stopCount, summaryLine } from '../lib/sketch';
-import { COMPANY, type TripDraft } from '../lib/trip';
+import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space, type } from '../theme';
@@ -74,10 +74,7 @@ export default function PlanEditScreen({ navigation, route }: {
   const note = useNoteEvent();
 
   const day = clampDay(p.date || todayISO());
-  const draft: TripDraft = useMemo(() => ({
-    company: null, categories: p.categories, district: p.district, at: null,
-    date: day, when: p.when, from: p.from ?? [],
-  }), [p.categories, p.district, day, p.when, p.from]);
+  const draft: TripDraft = useMemo(() => draftFrom(p, day), [p, day]);
 
   // Resolved here the way the options screen resolves them, because the
   // rebuild below is only faithful if it gets the same inputs. The planner
@@ -227,6 +224,8 @@ export default function PlanEditScreen({ navigation, route }: {
         company: p.company,
         categories: p.categories,
         district: p.district,
+        atLat: p.atLat,
+        atLng: p.atLng,
         day,
         when: p.when,
         generatedBy: live.fromModel ? 'rules+llm' : 'rules',

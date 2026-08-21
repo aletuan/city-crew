@@ -650,6 +650,14 @@ export type SaveTripInput = {
   company: string | null;
   categories: string[];
   district: string | null;
+  /** Where the day started, when the reader dropped a pin rather than
+   *  picking an area. Stored for the same reason `district` is: these are
+   *  the answers a plan was built from, and a trip that cannot say where
+   *  it started cannot be rebuilt into the plan that was saved. The
+   *  columns have been on `trips` since it was created and went unwritten
+   *  while the coordinate was being dropped in navigation. */
+  atLat?: number | null;
+  atLng?: number | null;
   day: string;
   when: 'day' | 'evening';
   /** Set when a model named the trip and wrote its lines. Defaults to
@@ -680,6 +688,8 @@ export async function saveTrip(input: SaveTripInput): Promise<string> {
       company: input.company,
       categories: input.categories,
       district: input.district,
+      at_lat: input.atLat ?? null,
+      at_lng: input.atLng ?? null,
       day: input.day,
       when_part: input.when,
       // Which half wrote this trip's words. The places and times are always

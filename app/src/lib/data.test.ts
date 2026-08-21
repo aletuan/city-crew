@@ -28,7 +28,7 @@ vi.mock('./city', () => ({ useCity: () => ({ city: null }) }));
 import {
   addPlaceToCollection, clearMyHistory, createCollection, deleteCollection,
   fetchPassedOver, logPlaceEvent, NO_PREFERENCES,
-  removePlaceFromCollection, savePreferences, setCollectionPublic, updateCollection,
+  removePlaceFromCollection, savePreferences, saveTrip, setCollectionPublic, updateCollection,
 } from './data';
 
 const fake = () => h.fake!;
@@ -339,5 +339,34 @@ describe('clearMyHistory', () => {
   it('throws what the database said', async () => {
     fake().replies({ error: { message: 'nope' } });
     await expect(clearMyHistory('u-1')).rejects.toThrow('nope');
+  });
+});
+
+describe('saveTrip', () => {
+  const input = {
+    ownerId: 'u-1', cityId: 'hanoi', title: 'Two coffees before noon',
+    company: 'couple', categories: ['cafes'], district: null,
+    day: '2026-08-21', when: 'day' as const, stops: [],
+  };
+
+  // A trip stores the answers it was built from, because that is what
+  // lets it be rebuilt into the plan that was saved rather than into a
+  // different one. `district` was stored from the start; the coordinate
+  // was not, even though `at_lat` and `at_lng` have been on the table
+  // since it was created — it was being dropped in navigation long before
+  // it reached here, so nothing noticed the columns were never written.
+  it('stores where the day started', async () => {
+    fake().replies({ data: { id: 't-1' } });
+    await saveTrip({ ...input, atLat: 21.0325, atLng: 105.8135 });
+    expect(fake().log[0]).toMatchObject({ table: 'trips', op: 'insert' });
+    expect(fake().log[0].payload).toMatchObject({ at_lat: 21.0325, at_lng: 105.8135 });
+  });
+
+  // Null and not absent: the column is nullable and "no pin" is a fact
+  // about the trip, not a field that failed to arrive.
+  it('says so plainly when there was no pin', async () => {
+    fake().replies({ data: { id: 't-1' } });
+    await saveTrip(input);
+    expect(fake().log[0].payload).toMatchObject({ at_lat: null, at_lng: null });
   });
 });
