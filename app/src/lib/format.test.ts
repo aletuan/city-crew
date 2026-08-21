@@ -1,5 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import { clockOf, dateline, dotWindow, fmtDuration, groupHours, instantOn, openState, splitHours } from './format';
+import { clockOf, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, instantOn, openState, splitHours } from './format';
+import { fmtDistance } from './geo';
+
+describe('fmtMinutes', () => {
+  it('spells the unit in the reader\'s own language', () => {
+    expect(fmtMinutes(75, 'en')).toBe('75 min');
+    expect(fmtMinutes(75, 'vi')).toBe('75 phút');
+    expect(fmtMinutes(75, 'ja')).toBe('75分');
+  });
+
+  // The reason the prime went. `fmtDistance` prints metres as `m` under a
+  // kilometre, and a plan card puts that line between two dwells — so the
+  // two units have to be told apart at a glance rather than by one letter.
+  it('cannot be mistaken for the metres on the line beside it', () => {
+    expect(fmtDistance(0.05)).toBe('50 m');
+    expect(fmtMinutes(50, 'en')).toBe('50 min');
+    expect(fmtMinutes(50, 'en')).not.toBe(fmtDistance(0.05));
+  });
+
+  // Where `fmtDuration` would fold this into "1.5h". Right for "how long
+  // people spend here", wrong for a dwell the editor sets to the quarter
+  // hour and has to print back exactly.
+  it('does not fold into hours the way a stay does', () => {
+    expect(fmtMinutes(90, 'en')).toBe('90 min');
+    expect(fmtDuration(90, 90, 'en')).toBe('1.5h');
+  });
+
+  it('says nothing clever about zero or one', () => {
+    expect(fmtMinutes(0, 'en')).toBe('0 min');
+    expect(fmtMinutes(1, 'en')).toBe('1 min');
+  });
+});
 
 describe('fmtDuration', () => {
   it('stays in minutes up to an hour', () => {

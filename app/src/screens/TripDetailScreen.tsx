@@ -37,7 +37,7 @@ import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO } from '../lib/day';
 import { deleteTrip, useMyTrips, type TripStopRow } from '../lib/data';
-import { clockOf, dateline } from '../lib/format';
+import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY } from '../lib/trip';
@@ -188,7 +188,7 @@ export default function TripDetailScreen({ navigation, route }: {
                         <Text style={s.area}>
                           {summaryLine([
                             stop.places.neighborhood_en,
-                            stop.dwell_min ? `${stop.dwell_min}′` : null,
+                            stop.dwell_min ? fmtMinutes(stop.dwell_min, lang) : null,
                           ])}
                         </Text>
                       </>

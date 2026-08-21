@@ -39,7 +39,7 @@ import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import { saveTrip } from '../lib/data';
-import { clockOf, dateline } from '../lib/format';
+import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import {
@@ -399,7 +399,7 @@ export default function PlanEditScreen({ navigation, route }: {
                     )}
                   </View>
                   <Text style={s.area} numberOfLines={1}>
-                    {summaryLine([stop.place.neighborhood_en, `${stop.dwellMin}′`])}
+                    {summaryLine([stop.place.neighborhood_en, fmtMinutes(stop.dwellMin, lang)])}
                   </Text>
                 </View>
               </PressableScale>

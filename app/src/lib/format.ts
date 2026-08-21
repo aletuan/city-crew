@@ -26,6 +26,43 @@ export function dateline(lang: string, now: Date): string {
   return `${DAYS_EN[now.getDay()]}, ${MONTHS_EN[now.getMonth()]} ${now.getDate()}`;
 }
 
+/**
+ * A count of minutes, spelled: "75 min" / "75 phút" / "75分".
+ *
+ * ── the collision this ends ──
+ *
+ * A plan card was printing three units in three consecutive lines, and
+ * two of them were one letter apart meaning opposite things:
+ *
+ *     99/81 Coffee    Hoàn Kiếm · 75′      ← minutes, as a prime
+ *       50 m · ≈ 2 min                     ← metres, then minutes
+ *     The Running Bean  Hoàn Kiếm · 75′
+ *
+ * `m` there is **metres**, from `fmtDistance`. Beside a `min` on the same
+ * line and a `′` on the lines above and below it, the card asks the
+ * reader to hold three notations for two quantities — and the one that
+ * looks most like "minutes" is the distance.
+ *
+ * So the prime goes, and this is why it goes rather than the `min`:
+ *
+ *   - **it does not translate.** `′` is a chess and football convention
+ *     from one writing tradition. A Vietnamese reader got `75′` on one
+ *     line and `2 phút` on the next; a Japanese reader got `75′` above
+ *     `2分`. The word is in the language, the symbol is not.
+ *   - **it was the only unspelled unit on the card.** `km`, `h` and `đ`
+ *     are conventional everywhere the app ships. A prime for minutes is
+ *     not, and a reader who has to learn a notation to read a duration
+ *     has been charged for the designer's brevity.
+ *
+ * Distinct from `fmtDuration`, which is a *range* that folds into hours
+ * past sixty minutes — right for "how long people spend here", wrong for
+ * a dwell the editor lets you set to the quarter hour and then has to
+ * print back exactly.
+ */
+export function fmtMinutes(n: number, lang: string): string {
+  return lang === 'vi' ? `${n} phút` : lang === 'ja' ? `${n}分` : `${n} min`;
+}
+
 export function fmtDuration(min: number | null, max: number | null, lang: string): string | null {
   if (!min) return null;
   if ((max ?? min) <= 60) {
