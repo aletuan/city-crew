@@ -19,7 +19,8 @@ import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, deleteCollection, membersOf, touchesCity } from '../lib/data';
 import { atHandle } from '../lib/handle';
-import { useCollections, usePlaces } from '../lib/catalog';
+import { useCollections, useLikes, usePlaces } from '../lib/catalog';
+import { likesWorthShowing } from '../lib/likes';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space, type } from '../theme';
@@ -299,6 +300,10 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   // Shared with the save sheet — see SaveProvider. Reading it here through
   // its own hook is what let the two disagree.
   const { mine } = useSave();
+  // Counts only — the heart itself is not on these cards. A tappable heart
+  // inside a swipeable row is a third gesture competing for the same
+  // thumb, and the collection's own screen already has the room for it.
+  const { likes } = useLikes();
   const { data: places, loading: placesLoading } = usePlaces();
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
@@ -475,6 +480,32 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                             ? `  ·  ${t('by', 'bởi', 'by')} ${atHandle(item.curator_handle)}`
                             : ''}
                         </Text>
+                        {/* How many people liked it — the answer to "is
+                            anybody reading this list", which the shelf
+                            could not give before and which a curator has
+                            no other way to find out.
+
+                            Outside the meta string rather than appended to
+                            it, because the heart is the label: a bare
+                            number after "2 places · Public" would have to
+                            be spelled out in three languages to mean
+                            anything, and the glyph is the same one the
+                            reader taps to produce it.
+
+                            Absent counts and zero both draw nothing —
+                            `likesWorthShowing` explains why, and a private
+                            list is always the absent case: the counts come
+                            from a function that returns public rows only,
+                            because a private list is one nobody may like.
+                            So the tally never appears beside the padlock,
+                            and never claims that a list nobody *could*
+                            like is a list nobody *did*. */}
+                        {likesWorthShowing(likes[item.slug]) && (
+                          <View style={s.likes}>
+                            <Ionicons name="heart" size={12} color={colors.accent} />
+                            <Text style={s.meta}>{likes[item.slug]}</Text>
+                          </View>
+                        )}
                       </View>
                     </View>
                     <Animated.View
@@ -642,7 +673,13 @@ const s = StyleSheet.create({
   cardText: { flex: 1, gap: 5 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
-  meta: { color: colors.textTertiary, ...type.meta },
+  // `flexShrink` so the tally beside it is never the thing that gets
+  // pushed off the card: the meta line is already truncated to one line,
+  // and a long byline would otherwise take the width the heart needs.
+  meta: { color: colors.textTertiary, ...type.meta, flexShrink: 1 },
+  // Tight against its own glyph, and a little away from the line before
+  // it — the gap the row already keeps would read as another `·`.
+  likes: { flexDirection: 'row', alignItems: 'center', gap: 3, marginLeft: 2 },
   // A disclosure indicator, which is a mark and not a control: a bare
   // chevron, the way the rest of the app already draws one. In a 44pt
   // well with a fill and a hairline it looked like a button, and a button
