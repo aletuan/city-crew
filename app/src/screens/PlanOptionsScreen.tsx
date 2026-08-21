@@ -33,7 +33,7 @@ import { cachedNarration, narratableOf, prefetchNarration } from '../lib/assist'
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
-import { clockOf, dateline } from '../lib/format';
+import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { fmtDistance } from '../lib/geo';
 import { membersOf } from '../lib/place';
@@ -349,7 +349,7 @@ function areaLine(plan: TripPlan, t: (en: string, vi: string, ja: string) => str
 function PlanCard({ plan, title, best, onPress }: {
   plan: TripPlan; title: string | null; best: boolean; onPress: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const badge = BADGE[plan.lens];
   const total = plan.costVnd.food + plan.costVnd.activity + plan.costVnd.transport;
   const km = plan.legs.reduce((n, l) => n + (l?.km ?? 0), 0);
@@ -402,7 +402,7 @@ function PlanCard({ plan, title, best, onPress }: {
                   makes room for the dwell, which this screen never showed
                   at all while both screens after it did. */}
               <Text style={s.stopMeta} numberOfLines={1}>
-                {summaryLine([st.place.neighborhood_en, `${st.dwellMin}′`])}
+                {summaryLine([st.place.neighborhood_en, fmtMinutes(st.dwellMin, lang)])}
               </Text>
               {/* Dropped rather than guessed when a stop has no coordinates
                   — `legBetween` returns null and the row would be a number
@@ -415,7 +415,7 @@ function PlanCard({ plan, title, best, onPress }: {
                     color={colors.textTertiary}
                   />
                   <Text style={s.legText}>
-                    {fmtDistance(plan.legs[i]!.km)} · ≈ {plan.legs[i]!.minutes} {t('min', 'phút', '分')}
+                    {fmtDistance(plan.legs[i]!.km)} · ≈ {fmtMinutes(plan.legs[i]!.minutes, lang)}
                   </Text>
                 </View>
               )}
