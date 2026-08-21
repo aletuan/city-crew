@@ -176,35 +176,78 @@ const photo = (uri: string, over: Partial<{ is_cover: boolean; is_hidden: boolea
   photo_uri: uri, is_cover: false, is_hidden: false, sort_order: 0, attribution_name: null, ...over,
 });
 
-const withPhotos = (...photos: ReturnType<typeof photo>[]) => ({ places: { place_photos: photos } });
 const gone = { places: null };
 const unphotographed = { places: { place_photos: [] } };
 
 describe('tripCover', () => {
-  it('is the first stop\'s picture on an ordinary day', () => {
-    expect(tripCover([withPhotos(photo('a')), withPhotos(photo('b'))])?.photo_uri).toBe('a');
+  const rated = (rating: number | null, count: number | null, uri: string) =>
+    ({ places: { place_photos: [photo(uri)], rating, rating_count: count } });
+
+  // The bug this rule replaces. Two saved days that begin at the same café
+  // — which is what happens, because mornings start where you live — came
+  // out wearing the same face. The best stop is almost never the shared
+  // one.
+  it('shows the best place in the day, not the first', () => {
+    expect(tripCover([rated(4.2, 100, 'first'), rated(4.8, 100, 'best')])?.photo_uri)
+      .toBe('best');
   });
 
-  // The distinction the whole function exists for. "First stop's picture"
-  // and "first picture" differ exactly when it matters: an opening stop
-  // that was unpublished after the trip was saved, or imported with no
-  // photographs, would otherwise leave the card blank while every place
-  // after it had one.
-  it('falls through a stop that has no picture to give', () => {
-    expect(tripCover([unphotographed, withPhotos(photo('b'))])?.photo_uri).toBe('b');
-    expect(tripCover([gone, withPhotos(photo('b'))])?.photo_uri).toBe('b');
+  // A bare rating is not enough: five stars from three friends is not
+  // better than 4.6 from five thousand strangers, and it is the second
+  // one whose photograph belongs on a card.
+  it('weighs how many people said so, not just what they said', () => {
+    expect(tripCover([rated(5, 3, 'friends'), rated(4.6, 5000, 'crowd')])?.photo_uri)
+      .toBe('crowd');
+  });
+
+  // The cap, inherited from `scoreOf`: past a few thousand reviews more of
+  // them stop meaning anything, so the ratings decide again.
+  it('stops letting review counts decide once they are enormous', () => {
+    expect(tripCover([rated(4.9, 1_000_000, 'huge'), rated(4.5, 900_000, 'also-huge')])?.photo_uri)
+      .toBe('huge');
+  });
+
+  // Order settles what the ratings cannot, so a card cannot change its
+  // face between two openings of the same screen.
+  it('keeps the earlier stop when nothing separates them', () => {
+    expect(tripCover([rated(4.5, 200, 'earlier'), rated(4.5, 200, 'later')])?.photo_uri)
+      .toBe('earlier');
+  });
+
+  // The best place in the day is no use as a cover if nobody photographed
+  // it. This is also the old fall-through, still working: a delisted or
+  // unphotographed opening stop does not leave the card blank.
+  it('skips the best stop when it has no picture to give', () => {
+    expect(tripCover([
+      { places: { place_photos: [], rating: 4.9, rating_count: 5000 } },
+      rated(3.1, 10, 'only-one-with-a-photo'),
+    ])?.photo_uri).toBe('only-one-with-a-photo');
+    expect(tripCover([gone, rated(3.1, 10, 'b')])?.photo_uri).toBe('b');
+  });
+
+  // A place nobody has rated scores 0 and loses to anything rated at all —
+  // which is right, and worth pinning: it must still win when it is the
+  // only picture on offer.
+  it('uses an unrated place rather than nothing', () => {
+    expect(tripCover([rated(null, null, 'unrated')])?.photo_uri).toBe('unrated');
+    expect(tripCover([rated(null, null, 'unrated'), rated(3, 5, 'rated')])?.photo_uri)
+      .toBe('rated');
   });
 
   // Through `coverOf`, which is the reason this does not reach into
   // `place_photos` itself: a photo the desk pulled must not come back as
-  // the face of a trip.
+  // the face of a trip — not even from the best place in the day.
   it('will not use a picture the desk hid', () => {
-    expect(tripCover([withPhotos(photo('hidden', { is_hidden: true })), withPhotos(photo('b'))])?.photo_uri)
-      .toBe('b');
+    expect(tripCover([
+      { places: { place_photos: [photo('hidden', { is_hidden: true })], rating: 5, rating_count: 9000 } },
+      rated(3, 10, 'b'),
+    ])?.photo_uri).toBe('b');
   });
 
   it('prefers the marked cover over the first one listed', () => {
-    expect(tripCover([withPhotos(photo('a'), photo('b', { is_cover: true }))])?.photo_uri).toBe('b');
+    expect(tripCover([{
+      places: { place_photos: [photo('a'), photo('b', { is_cover: true })], rating: 4, rating_count: 10 },
+    }])?.photo_uri).toBe('b');
   });
 
   // No band at all, rather than a grey strip with a pin on it. A trip is

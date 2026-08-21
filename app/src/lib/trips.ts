@@ -128,36 +128,86 @@ export function spendVnd(stops: readonly (Priced | null | undefined)[]): number 
   return live.reduce((n, s) => n + (s.price_vnd ?? 0), 0) + rides * RIDE_VND;
 }
 
-/** Just enough of a stop to find a picture on it: the place, or nothing
- *  where the catalog no longer has one. */
-export type Pictured = { places?: { place_photos: PlacePhoto[] } | null };
+/** Just enough of a stop to find a picture on it, and to judge it: the
+ *  place, or nothing where the catalog no longer has one. */
+export type Pictured = {
+  places?: {
+    place_photos: PlacePhoto[];
+    rating?: number | null;
+    rating_count?: number | null;
+  } | null;
+};
+
+/**
+ * How good a place is, in the one expression this app already uses to
+ * decide that — `scoreOf` in `planner.ts`, minus everything that depends
+ * on what the reader asked for.
+ *
+ * The log term is why a bare rating is not enough: a 5.0 from three
+ * friends would otherwise beat a 4.6 from five thousand strangers, and it
+ * is the second one whose photograph is worth putting on a card. Capped
+ * at 3 for the same reason it is capped there — past a few thousand
+ * reviews, more of them stop meaning anything.
+ *
+ * Reimplemented rather than imported because `planner.ts` pulls in the
+ * whole planning apparatus for a two-line sum, and this file is the one
+ * the Trips tab loads.
+ */
+function standing(p: { rating?: number | null; rating_count?: number | null }): number {
+  return (p.rating ?? 0) + Math.min(3, Math.log10(1 + (p.rating_count ?? 0)));
+}
 
 /**
  * The one photograph that stands for a whole trip on its card.
  *
- * The first stop that *has* a picture, rather than the first stop's
- * picture. Those differ exactly when they matter: a day whose opening stop
- * was unpublished after it was saved, or was imported without photographs,
- * would otherwise show nothing at all while the four places after it each
- * had one. Falling through costs the card nothing and saves it from being
- * the one blank row in the list.
+ * ── the bug this replaces ──
  *
- * Undefined when no stop has one, and the card then draws no band. That is
- * deliberate rather than a gap: `PlaceCard` fills the same hole with an
- * emoji on grey, because a place with no photograph is still a place and
- * the cards have to stay the same shape. A trip is not a place — its
- * identity is its title, its date and its stops, all of which are on the
- * card already — so a grey strip with a pin on it would be decoration with
- * nothing behind it.
+ * It used to be the first stop that had a picture, and that is a rule
+ * about the trip's *shape* rather than about the trip. Two saved days
+ * that begin at the same café — which is exactly what happens, because
+ * mornings start where you live — came out wearing the same face. Two
+ * different cards, one photograph, and the honest reading of that is not
+ * "these are related", it is "this app is broken".
+ *
+ * ── the rule now ──
+ *
+ * The best place in the day, by the measure the planner already uses to
+ * mean *good*: rating, plus a capped log of how many people said so. The
+ * card shows the day at its best, which is both a better picture and a
+ * more distinguishing one — two trips sharing a first stop almost never
+ * share a best one.
+ *
+ * It does not promise uniqueness and cannot: two days out to the same
+ * famous place will still match. What it removes is the *systematic*
+ * collision, which was every pair of trips leaving from the same corner.
+ *
+ * Ties go to the earlier stop — a strict comparison, so the order the
+ * reader arranged is what settles anything the ratings cannot. Without
+ * that the answer would depend on the sort, and a card could change its
+ * face between two openings of the same screen.
+ *
+ * Stops with no picture are skipped rather than winning and drawing
+ * nothing: the best place in the day is not much use as a cover if
+ * nobody photographed it. Undefined when no stop has one, and the card
+ * then draws no band — `PlaceCard` fills that hole with an emoji on grey
+ * because a place with no photograph is still a place and the cards must
+ * keep their shape, but a trip is not a place. Its identity is its
+ * title, its date and its stops, all already on the card, so a grey
+ * strip with a pin on it would be decoration with nothing behind it.
  *
  * Hidden photographs are already excluded: `coverOf` filters them, which
  * is the whole reason this goes through it rather than reaching into
  * `place_photos` directly.
  */
 export function tripCover(stops: readonly Pictured[]): PlacePhoto | undefined {
+  let best: PlacePhoto | undefined;
+  let bestScore = -Infinity;
   for (const s of stops) {
-    const cover = s.places ? coverOf(s.places as Parameters<typeof coverOf>[0]) : undefined;
-    if (cover) return cover;
+    if (!s.places) continue;
+    const cover = coverOf(s.places as Parameters<typeof coverOf>[0]);
+    if (!cover) continue;
+    const score = standing(s.places);
+    if (score > bestScore) { best = cover; bestScore = score; }
   }
-  return undefined;
+  return best;
 }
