@@ -71,20 +71,32 @@ export function rankByLikes<T extends Rankable>(items: readonly T[], likes: Like
 /**
  * Whether a count is worth printing next to the heart.
  *
- * Below the threshold the heart draws bare. This is not coyness about a
- * small number, it is that a small number says the wrong thing: a list
- * showing `0` does not read as "nobody has voted yet", it reads as "nobody
- * liked this" — and it would say that about every list on the shelf,
- * including the ones the desk just wrote.
+ * The rule is about zero, and now only about zero. A list showing `0` does
+ * not read as "nobody has voted yet", it reads as "nobody liked this" —
+ * and it would say that about every list on the shelf, including the ones
+ * the desk wrote this morning. Below the threshold the heart draws bare.
  *
- * Five, because that is the first count that cannot be one person and
- * their friends, and because a shelf where two lists show `1` and `2` has
- * turned a rounding error into a ranking.
+ * ── why this was five, and why it is one ──
+ *
+ * The first version put the floor at five: five is the first count that
+ * cannot be one person and their friends, and a shelf where two lists show
+ * `1` and `2` has turned a rounding error into a ranking. That was written
+ * before anybody had tapped anything, and the data since says it was the
+ * wrong trade. There are five likes in the entire database, one each on
+ * five different lists — so every count is `1`, and a floor of five does
+ * not soften the tally, it deletes it. A curator asking "does anyone like
+ * my list?" would get the same blank answer whether one person did or
+ * nobody had, which is the question the tally exists to answer.
+ *
+ * One is a real answer to it. The rounding-error worry was not wrong, and
+ * it is paid for where it belongs: `rankByLikes` still sorts on the count,
+ * so a single like already moves a list up the shelf. All that changes
+ * here is whether the reader can see the number that moved it.
  *
  * The heart is tappable either way. What is hidden is the tally, not the
  * gesture.
  */
-export const LIKES_SHOWN_FROM = 5;
+export const LIKES_SHOWN_FROM = 1;
 
 export function likesWorthShowing(n: number | undefined): boolean {
   return (n ?? 0) >= LIKES_SHOWN_FROM;

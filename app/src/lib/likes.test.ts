@@ -80,12 +80,23 @@ describe('likesWorthShowing', () => {
   // it reads as "nobody liked this", about every list on the shelf.
   it('hides a count that would libel the list', () => {
     expect(likesWorthShowing(0)).toBe(false);
-    expect(likesWorthShowing(undefined)).toBe(false);
-    expect(likesWorthShowing(LIKES_SHOWN_FROM - 1)).toBe(false);
   });
 
-  it('shows a count once it cannot be one person and their friends', () => {
-    expect(likesWorthShowing(LIKES_SHOWN_FROM)).toBe(true);
+  // A private list is never in the counts at all — `collection_like_counts()`
+  // returns public rows only, and the insert policy refuses a like on
+  // anything else. So `undefined` is not a gap in the data, it is a list
+  // nobody *can* like, and printing `0` beside it would answer a question
+  // that was never asked.
+  it('hides a list that cannot be liked in the first place', () => {
+    expect(likesWorthShowing(undefined)).toBe(false);
+  });
+
+  // One, not five. Every count in the database is currently `1`, so a
+  // higher floor would not soften the tally, it would delete it — see the
+  // constant's own note.
+  it('shows the first real like', () => {
+    expect(LIKES_SHOWN_FROM).toBe(1);
+    expect(likesWorthShowing(1)).toBe(true);
     expect(likesWorthShowing(40)).toBe(true);
   });
 });
