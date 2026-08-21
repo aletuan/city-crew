@@ -35,8 +35,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Keyboard, Modal, Platform, Pressable, ScrollView,
-  StyleSheet, Text, TextInput, useWindowDimensions, View,
+  ActivityIndicator, AppState, Keyboard, Linking, Modal, Platform, Pressable,
+  ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -85,6 +85,50 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
    */
   const [asked, setAsked] = useState(0);
   const me = useMyPosition(asked);
+  /**
+   * True once the reader has asked to be located and the system has no
+   * dialog left to show them.
+   *
+   * iOS raises the location prompt **once per install**. After "Don't
+   * Allow", every later `requestForegroundPermissionsAsync` returns
+   * denied with no interface at all — so the locate button was calling
+   * it, getting denied, bumping `asked`, re-reading nothing, and leaving
+   * the screen exactly as it was. A button that does nothing and says
+   * nothing is read as a broken button, and correctly.
+   *
+   * The only way back is Settings, which the app cannot open on the
+   * reader's behalf without being asked. So this state exists to ask.
+   */
+  const [blocked, setBlocked] = useState(false);
+
+  /**
+   * Coming back from Settings, having granted it.
+   *
+   * Without this the notice is a dead end in the other direction: the
+   * reader does the thing it asked for, returns, and finds the same
+   * sentence telling them to do it — because nothing in the app re-reads
+   * a permission that changed while it was in the background. The nonce
+   * does double duty here, re-running `useMyPosition` and remounting the
+   * map so its blue dot appears too.
+   *
+   * Only while the notice is up. An always-on listener would re-read the
+   * permission every time a notification shade closed, for a sheet that
+   * is usually not even on screen.
+   */
+  useEffect(() => {
+    if (!visible || !blocked) return;
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') return;
+      Location.getForegroundPermissionsAsync()
+        .then(({ status }) => {
+          if (status !== 'granted') return;
+          setBlocked(false);
+          setAsked((n) => n + 1);
+        })
+        .catch(() => {});
+    });
+    return () => sub.remove();
+  }, [visible, blocked]);
 
   // ── the keyboard ──
   //
@@ -250,11 +294,16 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   const locate = async () => {
     setDraft({ district: null, at: null });
     setMissed(false);
-    const { status } = await Location.getForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      await Location.requestForegroundPermissionsAsync().catch(() => null);
-      setAsked((n) => n + 1);
-    }
+    const held = await Location.getForegroundPermissionsAsync();
+    if (held.status === 'granted') { setBlocked(false); return; }
+    // `canAskAgain` is the difference between a question and a wall. The
+    // first press on a fresh install can still raise the dialog; every
+    // press after a refusal cannot, and pretending otherwise is what made
+    // this button silent.
+    if (!held.canAskAgain) { setBlocked(true); return; }
+    const got = await Location.requestForegroundPermissionsAsync().catch(() => null);
+    setBlocked(got != null && got.status !== 'granted' && !got.canAskAgain);
+    setAsked((n) => n + 1);
   };
 
   return (
@@ -295,6 +344,42 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
               onLocate={locate}
               onPick={(at) => { setDraft({ district: null, at }); setMissed(false); }}
             />
+          )}
+
+          {/* What the locate button used to do silently, said out loud.
+
+              It names what is missing and what it costs — not "permission
+              denied", which is the system's word for its own state and
+              tells the reader nothing about their plan. Then the one
+              action that can change it. `openSettings` lands on this
+              app's own page, so it is a tap and a switch rather than a
+              hunt through Privacy.
+
+              Only after they ask to be located. Nobody who has picked a
+              district or dropped a pin needs to be told about a
+              permission they are not using, and a notice that appears
+              unbidden is a nag. */}
+          {blocked && (
+            <View style={s.blocked}>
+              <Ionicons name="location-outline" size={17} color={colors.textSecondary} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <Text style={s.missed}>
+                  {t(
+                    "cityCrew is not allowed to know where you are, so plans start from the city rather than from you. iOS only asks once — after that it is a switch in Settings.",
+                    'cityCrew chưa được phép biết bạn ở đâu, nên kế hoạch sẽ bắt đầu từ thành phố thay vì từ chỗ bạn đứng. iOS chỉ hỏi một lần — sau đó phải bật lại trong Cài đặt.',
+                    'cityCrew は現在地を取得できないため、プランはあなたの居場所ではなく街を起点にします。iOS が尋ねるのは一度きりで、あとは設定でのオンオフになります。',
+                  )}
+                </Text>
+                <PressableScale
+                  onPress={() => Linking.openSettings().catch(() => {})}
+                  accessibilityRole="button"
+                >
+                  <Text style={s.blockedCta}>
+                    {t('Open Settings', 'Mở Cài đặt', '設定を開く')}
+                  </Text>
+                </PressableScale>
+              </View>
+            </View>
           )}
 
           <View style={s.field} onLayout={(e) => setFieldY(e.nativeEvent.layout.y)}>
@@ -443,6 +528,17 @@ const s = StyleSheet.create({
   },
   input: { flex: 1, color: colors.text, fontSize: 15.5, padding: 0 },
   missed: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 8 },
+  // A tinted well rather than a bare line, unlike `missed`: that one
+  // answers a search the reader just ran and is read in passing, while
+  // this one is asking them to leave the app and come back.
+  blocked: {
+    flexDirection: 'row', gap: 10, marginTop: 12,
+    paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12,
+    borderRadius: radius.card,
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  blockedCta: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
 
   hits: {
     marginTop: 10,

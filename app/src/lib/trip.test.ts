@@ -1,7 +1,7 @@
 // The wizard's arithmetic. No React here, and none in what it imports.
 
 import { describe, expect, it } from 'vitest';
-import { areaCentre, areasNear, canPlan, COMPANY, draftFrom, districtsOf, EMPTY_DRAFT, nearestAreaKm, toggle } from './trip';
+import { areaCentre, areasNear, canPlan, COMPANY, draftFrom, districtsOf, EMPTY_DRAFT, nearestAreaKm, startPoint, toggle } from './trip';
 import { CATEGORIES } from './categories';
 import type { Place } from './types';
 
@@ -187,6 +187,55 @@ describe('nearestAreaKm', () => {
   // silently drops the claim for a catalog that is perfectly local.
   it('cannot say when no area has coordinates', () => {
     expect(nearestAreaKm(many('Tây Hồ', 3), { lat: 21.03, lng: 105.85 })).toBeNull();
+  });
+});
+
+describe('startPoint', () => {
+  const ME = { lat: 21.0313, lng: 105.8135 };      // 29 Liễu Giai
+  const PIN = { lat: 21.0333, lng: 105.8500 };     // Old Quarter
+  const none = { district: null, at: null };
+
+  // The bug. "Around Hanoi · near me" is drawn for the state where
+  // nothing has been chosen, and for months that state carried no
+  // coordinate at all — so the planner had no origin, charged the opening
+  // stop no distance, and picked it from anywhere in the city while the
+  // label went on saying "near me".
+  it('starts the day where the reader is when they chose nothing', () => {
+    expect(startPoint(none, ME)).toEqual(ME);
+  });
+
+  it('prefers the pin, which is the thing they actually pointed at', () => {
+    expect(startPoint({ district: null, at: PIN }, ME)).toEqual(PIN);
+  });
+
+  // The one that is easy to get backwards. A district must return *null*,
+  // not the reader's position: `originOf` prefers a supplied point over
+  // the district's own centre, so answering `me` here would plan a day in
+  // Hà Đông around a sofa in Thanh Xuân.
+  it('stands aside for a district instead of overriding it', () => {
+    expect(startPoint({ district: 'Ba Đình', at: null }, ME)).toBeNull();
+  });
+
+  // Both set is not a contradiction to resolve by precedence alone —
+  // picking an area drops a pin on it, so in the app the two agree. The
+  // pin still wins, because it is the later and more specific of the two.
+  it('lets the pin win when an area is also set', () => {
+    expect(startPoint({ district: 'Ba Đình', at: PIN }, ME)).toEqual(PIN);
+  });
+
+  // Permission refused, or simply not read back yet. Null is the honest
+  // floor and it is the behaviour that shipped for months: no origin,
+  // rather than an origin somebody invented.
+  it('has no answer when there is no position to be had', () => {
+    expect(startPoint(none, null)).toBeNull();
+  });
+
+  // Not a hedge. `useMyPosition` resolves after the first render, so the
+  // wizard draws at least once with a null position and the tap can land
+  // in that window — and a district chosen in that window must still
+  // suppress, or a late position would arrive and quietly take over.
+  it('keeps the district suppressed even before a position arrives', () => {
+    expect(startPoint({ district: 'Ba Đình', at: null }, null)).toBeNull();
   });
 });
 

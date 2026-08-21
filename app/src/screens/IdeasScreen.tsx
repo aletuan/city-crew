@@ -28,7 +28,7 @@ import {
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
-import { useCity } from '../lib/city';
+import { useCity, useMyPosition } from '../lib/city';
 import { usePlaces } from '../lib/catalog';
 import { coverOf, membersOf } from '../lib/data';
 import { clockOf, dateline } from '../lib/format';
@@ -36,7 +36,7 @@ import { addDays, clampDay, fromISO, toISO } from '../lib/day';
 import { useI18n } from '../lib/i18n';
 import { partGone, startMinFor, START_MIN } from '../lib/planner';
 import { useSave } from '../lib/save';
-import { canPlan, COMPANY, EMPTY_DRAFT, toggle, TripDraft } from '../lib/trip';
+import { canPlan, COMPANY, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '../lib/trip';
 import type { Nav } from '../nav';
 import { colors, font, radius, space, type } from '../theme';
 
@@ -118,6 +118,41 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
     ?? (draft.at
       ? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン')
       : t(`Around ${city?.short_en ?? ''} · near me`, `Quanh ${city?.short_vi ?? ''} · gần tôi`, `${city?.short_ja ?? ''}周辺 · 現在地`));
+
+  /**
+   * Where the reader is, for the default the label has always claimed.
+   *
+   * "Around Hanoi · near me" is the state where neither a district nor a
+   * pin has been chosen — which is to say, the empty one. It read as a
+   * promise and was not one: the draft carried no coordinate, `originOf`
+   * therefore had no origin, and the first stop was chosen on merit from
+   * anywhere in the city. The label said "near me" and the planner had
+   * never been told where that was.
+   *
+   * Read here rather than written into the draft, and that is the whole
+   * of why this is small. `draft.at` means *the point the reader chose*,
+   * and the label two lines up distinguishes it from this one; filling it
+   * with a position nobody pointed at would make "A pin you dropped"
+   * appear over a pin nobody dropped. The two facts stay separate and
+   * meet once, below, in the coordinate handed to the next screen.
+   *
+   * Never prompts — `useMyPosition` reads the permission and does not ask.
+   * Denied means null means the old behaviour, which is the honest floor:
+   * no origin rather than an invented one.
+   */
+  const me = useMyPosition();
+
+  /**
+   * The point the day starts from — pin, else district-suppresses, else
+   * where they are. The rule and its reasoning live in `startPoint`.
+   *
+   * Frozen into the route params at the tap rather than re-read
+   * downstream. Three screens after this one rebuild the plan from these
+   * params, and a position that arrived between two of them would be two
+   * different plans for one draft — the same hazard `startMin` is
+   * carried to avoid.
+   */
+  const origin = startPoint(draft, me);
 
   // The weekday and the date, always — including for today. "Today" alone
   // was tried and is worse here: the row sits beside Day/Evening with
@@ -301,19 +336,29 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
               // Generic, and it stays generic — see the lede's note.
               label={t('Sketch the plan', 'Phác kế hoạch', 'プランを下描き')}
               // `whereLabel` rather than the raw draft: only this screen
-              // knows whether the reader chose a district or dropped a
-              // pin, and the next one has no business re-deciding that.
+              // knows which of the three the reader ended up with — a
+              // district, a pin, or the position behind "near me" — and
+              // the next one has no business re-deciding that.
               onPress={() => navigation.navigate('Sketching', {
                 company: draft.company,
                 categories: draft.categories,
-                where: draft.district ?? (draft.at ? whereLabel : null),
+                // `origin`, so the near-me case gets its words too. It
+                // used to fall to null here, and a plan that really did
+                // start where the reader was standing arrived with no
+                // answer to "starting from where".
+                where: draft.district ?? (origin ? whereLabel : null),
                 district: draft.district,
                 // The coordinate behind that label. `where` is words and
                 // has always been words; sending it without these is how
                 // a pin came out as a plan across town, with the header
                 // still claiming the pin had been read.
-                atLat: draft.at?.lat,
-                atLng: draft.at?.lng,
+                //
+                // `origin`, not `draft.at`: the default is the reader's
+                // own position, and it travels the same wire the pin
+                // does. See the note on `origin` for why a district
+                // suppresses it rather than losing to it.
+                atLat: origin?.lat,
+                atLng: origin?.lng,
                 date: day,
                 when: draft.when,
                 // Resolved once, here, and carried. See `PlanAsk.startMin`:
