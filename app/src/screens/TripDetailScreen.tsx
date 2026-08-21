@@ -147,14 +147,40 @@ export default function TripDetailScreen({ navigation, route }: {
         showsVerticalScrollIndicator={false}
       >
         <Card style={s.card}>
-          {stops.map((stop, i) => (
+          {stops.map((stop, i) => {
+            const place = stop.places;
+            // The same band the editor makes tappable, for the same
+            // reason: a saved trip names places, and a named place that
+            // will not open is a dead end. Only when there is a place to
+            // open — a row drawn as "no longer listed" has no detail
+            // screen behind it, and a press that goes nowhere is worse
+            // than no press at all.
+            const Who = place ? PressableScale : View;
+            const whoProps = place
+              ? {
+                // Split across the two halves on purpose: `flex` has to
+                // land on the outer Pressable or the column collapses,
+                // `gap` on the inner view or it spaces nothing. See
+                // `PressableScale`, which documents this exact trap.
+                containerStyle: s.whoOuter,
+                style: s.whoInner,
+                onPress: () => navigation.navigate('PlaceDetail', { slug: place.slug }),
+                accessibilityRole: 'button' as const,
+                accessibilityLabel: t(
+                  `Open ${place.name_en}`,
+                  `Mở ${place.name_en}`,
+                  `${place.name_en}を開く`,
+                ),
+              }
+              : { style: s.who };
+            return (
             <View key={`${trip.id}-${i}`}>
               {i > 0 ? <View style={s.divider} /> : null}
               <View style={s.stopRow}>
                 <Text style={s.stopTime}>
                   {stop.arrive_min != null ? clockOf(stop.arrive_min) : '—'}
                 </Text>
-                <View style={s.who}>
+                <Who {...whoProps}>
                   {stop.places
                     ? (
                       <>
@@ -188,10 +214,11 @@ export default function TripDetailScreen({ navigation, route }: {
                       ) : null}
                     </Text>
                   )}
-                </View>
+                </Who>
               </View>
             </View>
-          ))}
+            );
+          })}
         </Card>
 
         <Card style={[s.card, s.spend]}>
@@ -250,6 +277,9 @@ const s = StyleSheet.create({
     fontVariant: ['tabular-nums'], paddingTop: 2,
   },
   who: { flex: 1, gap: 2 },
+  /** The same column, taken apart for the pressable branch. */
+  whoOuter: { flex: 1 },
+  whoInner: { gap: 2 },
   name: { ...type.body, color: colors.text, fontWeight: font.semibold },
   area: { ...CAPTION, color: colors.textTertiary },
   gone: { ...type.body, color: colors.textTertiary, fontStyle: 'italic' },

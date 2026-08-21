@@ -355,7 +355,26 @@ export default function PlanEditScreen({ navigation, route }: {
                   button. The identity band now reads left to right as
                   glyph, name, rating; the controls share a rail under the
                   divider, editor-chrome rather than content. */}
-              <View style={s.identity}>
+              {/* The band is the way into the place; the rail underneath
+                  is the way into the plan. Tapping a name asked for the
+                  place and got nothing — the one card in the app that
+                  names a place and would not open it.
+
+                  The whole card is deliberately not the target. Its lower
+                  half is a time stepper and three small buttons, and a
+                  press swallowing those is how a reader nudging nine
+                  o'clock ends up on a different screen. So the identity
+                  band takes the tap and the controls keep theirs. */}
+              <PressableScale
+                style={s.identity}
+                onPress={() => navigation.navigate('PlaceDetail', { slug: stop.place.slug })}
+                accessibilityRole="button"
+                accessibilityLabel={t(
+                  `Open ${stop.place.name_en}`,
+                  `Mở ${stop.place.name_en}`,
+                  `${stop.place.name_en}を開く`,
+                )}
+              >
                 <View style={[s.well, cat && { backgroundColor: `${cat.color}24` }]}>
                   <Ionicons
                     name={cat?.icon ?? 'location-outline'}
@@ -383,7 +402,7 @@ export default function PlanEditScreen({ navigation, route }: {
                     {summaryLine([stop.place.neighborhood_en, `${stop.dwellMin}′`])}
                   </Text>
                 </View>
-              </View>
+              </PressableScale>
 
               {/* A sentence if one was written, and the facts behind it if
                   not. Never nothing, and never a spinner: the plan is
