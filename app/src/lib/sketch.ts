@@ -80,10 +80,27 @@ export const SKETCH_STEPS: readonly Step[] = [
   // what lets the editor open finished instead of rewriting itself — see
   // `SketchingScreen`. Everything above still finishes in a millisecond;
   // this is the step that earns the orb.
+  //
+  // ── the only line here that reassures rather than reports ──
+  //
+  // It said "Writing a line for each stop", which is exactly what happens
+  // and was still the wrong sentence. The four above describe work the
+  // reader recognises asking for and are done before they are read; this
+  // one is the only place in the app where somebody is genuinely kept
+  // waiting, and a description of the work does not answer the question
+  // they are actually holding, which is *how much longer*.
+  //
+  // "Almost there", not "Almost done" — the four rows above are already
+  // in a state literally called `done` and drawn with a tick. Spending
+  // the same word on the row that is still running gives one word two
+  // meanings in one list.
+  //
+  // It keeps the ellipsis the others do without, because it is the only
+  // one that is still going when you read it.
   {
     key: 'words',
-    en: 'Writing a line for each stop', vi: 'Viết lời dẫn cho từng điểm',
-    ja: '各スポットにひとこと執筆中',
+    en: 'Almost there…', vi: 'Sắp xong rồi…',
+    ja: 'もうすぐです…',
   },
 ];
 
