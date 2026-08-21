@@ -210,7 +210,16 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const loading = cols.loading || mine.loading || placesLoading;
   const owned = !!col?.owner_id && col.owner_id === uid;
   const isPublic = !!col?.is_public;
-  const canLike = !!uid && !!col?.id && isPublic;
+  // `!owned` is the app's half of a rule the database now enforces: a
+  // curator cannot like their own list. Both halves are needed and neither
+  // is redundant — the policy is what makes the rule true, and this is
+  // what keeps the reader from meeting it as a heart that does nothing.
+  //
+  // Only this screen needs it. The public shelf already leaves your own
+  // lists out (`owner_id.is.null,owner_id.neq.<uid>` in fetchCollections),
+  // so the heart there never meets one; here the row can arrive through
+  // `mine` as well as through the public query.
+  const canLike = !!uid && !!col?.id && isPublic && !owned;
   const liked = !!col?.id && myLikes.includes(col.id);
   // The write, the refetch, and the in-flight guard all live on the
   // provider now — a like taken from the shelf has to show here too, and
