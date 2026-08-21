@@ -308,6 +308,12 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
                 categories: draft.categories,
                 where: draft.district ?? (draft.at ? whereLabel : null),
                 district: draft.district,
+                // The coordinate behind that label. `where` is words and
+                // has always been words; sending it without these is how
+                // a pin came out as a plan across town, with the header
+                // still claiming the pin had been read.
+                atLat: draft.at?.lat,
+                atLng: draft.at?.lng,
                 date: day,
                 when: draft.when,
                 // Resolved once, here, and carried. See `PlanAsk.startMin`:

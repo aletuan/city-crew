@@ -41,7 +41,7 @@ import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
 import { useSave } from '../lib/save';
 import { stopCount, summaryLine } from '../lib/sketch';
-import { COMPANY, type TripDraft } from '../lib/trip';
+import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
@@ -97,10 +97,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
   const [shown, setShown] = useState<string[]>([]);
 
   const day = clampDay(p.date || todayISO());
-  const draft: TripDraft = useMemo(() => ({
-    company: null, categories: p.categories, district: p.district, at: null,
-    date: day, when: p.when, from: p.from ?? [],
-  }), [p.categories, p.district, day, p.when, p.from]);
+  const draft: TripDraft = useMemo(() => draftFrom(p, day), [p, day]);
 
   // Collections resolve to places here rather than in the planner: only a
   // screen has the reader's own lists, and the planner has no business

@@ -13,8 +13,29 @@ import { createNavigationContainerRef, type RouteProp } from '@react-navigation/
 export type PlanAsk = {
   company: string | null;
   categories: string[];
+  /** What to *print* for where the day starts — a district name, "a pin
+   *  you dropped", or "near me". A label and nothing else: only the wizard
+   *  knows which of the three the reader chose, and the screens after it
+   *  have no business re-deciding that. It is not a location. */
   where: string | null;
   district: string | null;
+  /**
+   * Where the day starts, when the reader dropped a pin.
+   *
+   * Absent until this was added, which was a real bug rather than a gap:
+   * `where` carried the *words* "A pin you dropped" while the coordinate
+   * behind them had nowhere to ride, so every screen after the wizard
+   * rebuilt the draft with `at: null` and the planner chose a first stop
+   * as though the reader had said nothing. A pin on 29 Liễu Giai returned
+   * three plans in Hoàn Kiếm, four kilometres away, past cafés three
+   * hundred metres from the pin.
+   *
+   * Two numbers rather than a point, matching `startMin` here and
+   * `at_lat`/`at_lng` on the `trips` table. Both or neither — see
+   * `draftFrom`.
+   */
+  atLat?: number;
+  atLng?: number;
   date: string;
   when: 'day' | 'evening';
   /**

@@ -94,6 +94,66 @@ export function toggle<T>(list: T[], value: T): T[] {
 }
 
 /**
+ * The wizard's answers as they travel between screens.
+ *
+ * Declared structurally rather than imported from `nav.ts`, which is what
+ * actually holds them: that module pulls in React Navigation, and
+ * everything in `lib` has to stay reachable from a plain Node process.
+ * `PlanAsk` satisfies this shape, so the screens pass their route params
+ * straight in.
+ *
+ * The coordinate arrives as two numbers rather than a nested point for the
+ * same reason `startMin` is a number: these are navigation params, and the
+ * `trips` table stores them the same way, in `at_lat` and `at_lng`.
+ */
+export type PlanAnswers = {
+  categories: string[];
+  district: string | null;
+  atLat?: number;
+  atLng?: number;
+  when: TimeOfDay;
+  from?: string[];
+};
+
+/**
+ * One draft, built in one place.
+ *
+ * This exists because of a bug rather than for tidiness. Three screens —
+ * Sketching, PlanOptions and PlanEdit — each rebuilt this object from the
+ * route params, and all three wrote `at: null` into it because there was
+ * nothing in the params to put there. So a reader could drop a pin, watch
+ * the header say "A pin you dropped", and get a plan built as though they
+ * had said nothing about where they were: the *label* survived navigation
+ * and the *coordinate* did not.
+ *
+ * The planner reading `draft.at` is only half of that fix. The other half
+ * is that there is now one place where a draft is made, so the next field
+ * added to the answers cannot be silently dropped by two screens out of
+ * three.
+ *
+ * `day` is passed in already resolved. The screens each need it for their
+ * own reasons — a header, a save — and resolving it twice against a clock
+ * that moves is how one card opens as a different evening.
+ *
+ * Both halves of the coordinate or neither. A lone latitude is not a place
+ * and must not become one; `at` goes null and the first stop is chosen on
+ * merit, which is what happens for a reader who said nothing at all.
+ */
+export function draftFrom(a: PlanAnswers, day: string): TripDraft {
+  return {
+    // Not carried, and not an oversight: nothing in the planner reads it.
+    // It rides in the params for the model that names the plan.
+    company: null,
+    categories: a.categories,
+    district: a.district,
+    at: a.atLat != null && a.atLng != null ? { lat: a.atLat, lng: a.atLng } : null,
+    date: day,
+    when: a.when,
+    from: a.from ?? [],
+  };
+}
+
+/**
  * The districts worth offering, busiest first.
  *
  * Derived from the catalog rather than kept in a table, and that is the

@@ -45,7 +45,7 @@ import { usePlanProfile } from '../lib/tasteProfile';
 import {
   finished, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, summaryLine, type StepState,
 } from '../lib/sketch';
-import { COMPANY, type TripDraft } from '../lib/trip';
+import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space } from '../theme';
@@ -81,10 +81,10 @@ export default function SketchingScreen({ navigation, route }: {
   // not the plans this screen decided existed.
   const seed = useRef(Date.now()).current;
 
-  const draft: TripDraft = useMemo(() => ({
-    company: null, categories: p.categories, district: p.district, at: null,
-    date: clampDay(p.date || todayISO()), when: p.when, from: p.from ?? [],
-  }), [p.categories, p.district, p.date, p.when, p.from]);
+  const draft: TripDraft = useMemo(
+    () => draftFrom(p, clampDay(p.date || todayISO())),
+    [p],
+  );
 
   // Resolved here the way the two screens after this resolve it, and that
   // used to not be true: this screen planned without the pinned places, so

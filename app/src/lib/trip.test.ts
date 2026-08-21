@@ -1,7 +1,7 @@
 // The wizard's arithmetic. No React here, and none in what it imports.
 
 import { describe, expect, it } from 'vitest';
-import { areaCentre, areasNear, canPlan, COMPANY, districtsOf, EMPTY_DRAFT, nearestAreaKm, toggle } from './trip';
+import { areaCentre, areasNear, canPlan, COMPANY, draftFrom, districtsOf, EMPTY_DRAFT, nearestAreaKm, toggle } from './trip';
 import { CATEGORIES } from './categories';
 import type { Place } from './types';
 
@@ -326,5 +326,65 @@ describe('COMPANY colours', () => {
         expect(got, `${c.key} on ${bg}`).toBeLessThanOrEqual(hi);
       }
     }
+  });
+});
+describe('draftFrom', () => {
+  // The answers as they arrive off the route, minus the parts a draft
+  // does not carry.
+  const ask = {
+    categories: ['cafes'], district: null, when: 'day' as const, from: ['a-list'],
+  };
+
+  // The bug this whole helper exists for. Three screens each built this
+  // object and all three wrote `at: null`, because nothing in the params
+  // carried a coordinate — so the header could say "A pin you dropped"
+  // while the planner chose a first stop as though the reader had said
+  // nothing about where they were.
+  it('carries the pin the reader dropped', () => {
+    expect(draftFrom({ ...ask, atLat: 21.0325, atLng: 105.8135 }, '2026-08-21').at)
+      .toEqual({ lat: 21.0325, lng: 105.8135 });
+  });
+
+  it('has no pin when the reader dropped none', () => {
+    expect(draftFrom(ask, '2026-08-21').at).toBeNull();
+  });
+
+  // Half a coordinate is not a place. It must not become one, and it must
+  // not become (0, 0) either — that is in the Gulf of Guinea, and every
+  // place in Hanoi would be charged the same distance from it.
+  it('refuses half a coordinate', () => {
+    expect(draftFrom({ ...ask, atLat: 21.0325 }, '2026-08-21').at).toBeNull();
+    expect(draftFrom({ ...ask, atLng: 105.8135 }, '2026-08-21').at).toBeNull();
+  });
+
+  // Zero is a real latitude and a real longitude. A truthiness check here
+  // would throw away the Gulf of Guinea for real, which matters less than
+  // the habit does.
+  it('keeps a coordinate that happens to be zero', () => {
+    expect(draftFrom({ ...ask, atLat: 0, atLng: 0 }, '2026-08-21').at)
+      .toEqual({ lat: 0, lng: 0 });
+  });
+
+  it('takes the day it was given rather than reading a clock', () => {
+    expect(draftFrom(ask, '2027-01-09').date).toBe('2027-01-09');
+  });
+
+  it('carries the rest of the answers through', () => {
+    const d = draftFrom({ ...ask, district: 'Ba Đình' }, '2026-08-21');
+    expect(d.categories).toEqual(['cafes']);
+    expect(d.district).toBe('Ba Đình');
+    expect(d.when).toBe('day');
+    expect(d.from).toEqual(['a-list']);
+  });
+
+  // `company` rides in the params for the model that names the plan and is
+  // read by nothing in the planner, so the draft does not carry it.
+  it('leaves company out, which nothing downstream reads', () => {
+    expect(draftFrom(ask, '2026-08-21').company).toBeNull();
+  });
+
+  it('gives a draft with no collections an empty list rather than undefined', () => {
+    expect(draftFrom({ categories: [], district: null, when: 'evening' }, '2026-08-21').from)
+      .toEqual([]);
   });
 });

@@ -71,7 +71,14 @@ export function fakeSupabase() {
     const asked: Asked = { table, op: 'select', filters: [] };
     log.push(asked);
     const b: Record<string, unknown> = {
-      select: (cols?: unknown) => { asked.payload = cols; return b; },
+      // Only a read records its column list. A write that chains `.select()`
+      // to get its own row back — `insert(...).select('id').single()`, which
+      // is how every insert here that needs an id is written — would
+      // otherwise overwrite the row with the string `'id'`, leaving the one
+      // thing a test wants to assert about a write unassertable. `op` is
+      // still `'select'` until a verb changes it, so a plain read is
+      // unaffected.
+      select: (cols?: unknown) => { if (asked.op === 'select') asked.payload = cols; return b; },
       insert: (row: unknown) => { asked.op = 'insert'; asked.payload = row; return b; },
       update: (row: unknown) => { asked.op = 'update'; asked.payload = row; return b; },
       // Recorded as an insert carrying a flag rather than as its own verb:
