@@ -194,7 +194,10 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       />
       <FieldRow
         icon="location-outline"
-        label={t('From', 'Đến từ', '出身地')}
+        // Same word the profile shows it under. The field and the row that
+        // displays it drifting apart is how a reader ends up unsure whether
+        // they are two different things.
+        label={t('Hometown', 'Quê quán', '出身地')}
         placeholder={t(`${city?.short_en ?? 'Saigon'}, Vietnam`, `${city?.short_vi ?? 'Sài Gòn'}, Việt Nam`, `${city?.short_ja ?? 'サイゴン'}、ベトナム`)}
         value={location}
         onChangeText={setLocation}
