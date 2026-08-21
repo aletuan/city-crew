@@ -38,8 +38,10 @@ import { useCity } from '../lib/city';
 import { fromISO } from '../lib/day';
 import { deleteTrip, useMyTrips, type TripStopRow } from '../lib/data';
 import { clockOf, dateline, fmtMinutes } from '../lib/format';
+import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { stopCount, summaryLine } from '../lib/sketch';
+import { legsOf } from '../lib/travel';
 import { COMPANY } from '../lib/trip';
 import { spendVnd } from '../lib/trips';
 import { colors, font, radius, space, type } from '../theme';
@@ -102,6 +104,25 @@ export default function TripDetailScreen({ navigation, route }: {
     else doing += v;
   }
   const spend = spendVnd(stops.map((st: TripStopRow) => st.places));
+
+  /**
+   * The journeys between the stops, derived rather than read back.
+   *
+   * Nothing about a leg is stored — `trip_stops` keeps the decision (which
+   * places, in what order, at what time) and the distance falls out of the
+   * places' own coordinates, exactly as the money above is worked out from
+   * their prices rather than frozen at save time.
+   *
+   * A stop whose place has since left the catalog stands in as a pair of
+   * nulls, which is the input `legBetween` already refuses to guess from:
+   * the row either side of a delisted place simply has no leg, rather than
+   * a distance measured to somewhere nobody can name.
+   *
+   * `legsOf` keeps unmeasurable legs in place as null so index `i` is
+   * always the journey *out of* stop `i` — hence `legs[i - 1]` at the row
+   * that leg arrives at.
+   */
+  const legs = legsOf(stops.map((st) => st.places ?? { lat: null, lng: null }));
 
   const confirmDelete = () => Alert.alert(
     t('Delete this trip?', 'Xoá chuyến đi này?', 'この旅程を削除しますか？'),
@@ -176,6 +197,39 @@ export default function TripDetailScreen({ navigation, route }: {
             return (
             <View key={`${trip.id}-${i}`}>
               {i > 0 ? <View style={s.divider} /> : null}
+              {/* How you get here from the stop before.
+
+                  Not decoration: the options screen and the editor both
+                  print this line, and saving the plan was losing it. A
+                  reader chose between "6.2 km · ≈ 20 min" and "50 m · ≈ 2
+                  min", saved the one they wanted, opened it again and
+                  found neither — the distance that decided the choice had
+                  gone. Nothing was stored to lose, and nothing needs to
+                  be: `legsOf` measures it from coordinates the query
+                  already carries.
+
+                  Drawn the way the other two screens draw it, down to the
+                  glyph and the separator, rather than the pill the design
+                  reference uses — one journey should not have two
+                  appearances depending on which screen the reader is
+                  standing on.
+
+                  Under the rule and above the stop it leads to, because
+                  that is what it answers: *how you got here*. Indented to
+                  the name column, so the time gutter stays a column of
+                  times only. */}
+              {i > 0 && legs[i - 1] && (
+                <View style={s.legRow}>
+                  <Ionicons
+                    name={legs[i - 1]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
+                    size={12}
+                    color={colors.textTertiary}
+                  />
+                  <Text style={s.legText}>
+                    {fmtDistance(legs[i - 1]!.km)} · ≈ {fmtMinutes(legs[i - 1]!.minutes, lang)}
+                  </Text>
+                </View>
+              )}
               <View style={s.stopRow}>
                 <Text style={s.stopTime}>
                   {stop.arrive_min != null ? clockOf(stop.arrive_min) : '—'}
@@ -276,6 +330,15 @@ const s = StyleSheet.create({
     ...CAPTION, color: colors.textSecondary, width: 46,
     fontVariant: ['tabular-nums'], paddingTop: 2,
   },
+  // The same row the options screen and the editor draw, at the same size
+  // and in the same colour. Indented past the time gutter (46 + the row's
+  // 12pt gap) so the leg lines up with the names rather than with the
+  // clock — the times are a column, and a distance is not a time.
+  legRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    marginLeft: 46 + 12, marginBottom: 10,
+  },
+  legText: { ...CAPTION, color: colors.textTertiary },
   who: { flex: 1, gap: 2 },
   /** The same column, taken apart for the pressable branch. */
   whoOuter: { flex: 1 },

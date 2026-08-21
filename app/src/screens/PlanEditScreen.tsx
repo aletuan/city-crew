@@ -498,7 +498,7 @@ export default function PlanEditScreen({ navigation, route }: {
                   color={colors.textTertiary}
                 />
                 <Text style={s.legText}>
-                  {fmtDistance(legs[i]!.km)} · ≈ {legs[i]!.minutes} {t('min', 'phút', '分')}
+                  {fmtDistance(legs[i]!.km)} · ≈ {fmtMinutes(legs[i]!.minutes, lang)}
                 </Text>
               </View>
             )}
