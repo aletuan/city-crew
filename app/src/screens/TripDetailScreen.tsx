@@ -28,7 +28,7 @@
 // seen what it is.
 
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   AmbientWarmth, Card, Empty, PressableScale, Screen, useTabBarClearance,
@@ -40,6 +40,7 @@ import { deleteTrip, useMyTrips, type TripStopRow } from '../lib/data';
 import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
+import { mapsRouteUrl, routeMode } from '../lib/maps';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { legsOf } from '../lib/travel';
 import { COMPANY } from '../lib/trip';
@@ -123,6 +124,22 @@ export default function TripDetailScreen({ navigation, route }: {
    * that leg arrives at.
    */
   const legs = legsOf(stops.map((st) => st.places ?? { lat: null, lng: null }));
+
+  /**
+   * The whole day as one Google Maps route.
+   *
+   * A link rather than a map drawn here, and that is a licence rather
+   * than a preference: every place in this catalog is Google Places
+   * Content, the Places terms forbid showing it on a non-Google map
+   * (§5.3), and the only map that renders on iOS in Expo Go is Apple's.
+   * `MiniMap` carries the long version. Opening Google's own app is the
+   * one route that is not a workaround — and it hands the reader
+   * turn-by-turn and live traffic, which a thumbnail never could.
+   */
+  const mapRoute = mapsRouteUrl(
+    stops.map((st) => st.places ?? {}),
+    routeMode(legs),
+  );
 
   const confirmDelete = () => Alert.alert(
     t('Delete this trip?', 'Xoá chuyến đi này?', 'この旅程を削除しますか？'),
@@ -275,6 +292,55 @@ export default function TripDetailScreen({ navigation, route }: {
           })}
         </Card>
 
+        {/* Between the stops and the money, which is where it belongs in
+            the reading: you have just seen the day, and this is the way
+            out of the app and onto the street. Below the money it would
+            be past the point most readers stop.
+
+            Drawn as the row PlaceDetail already uses for its address and
+            its phone number — round icon well, label, chevron — because
+            it is the same kind of thing: a fact that opens something
+            outside the app. */}
+        {mapRoute && (
+          <PressableScale
+            onPress={() => { Linking.openURL(mapRoute.url).catch(() => {}); }}
+            style={s.route}
+            accessibilityRole="button"
+          >
+            <View style={s.routeIcon}>
+              <Ionicons name="navigate-outline" size={18} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.routeLabel}>
+                {t('Open the route', 'Mở lộ trình', 'ルートを開く')}
+              </Text>
+              <Text style={s.routeSub}>
+                {/* What it will actually do, not what it is called. The
+                    mode is the day's, collapsed by `routeMode` — and it
+                    is worth printing because Google opens on it and a
+                    reader who expected the other one should find that out
+                    here rather than three screens into another app. */}
+                {summaryLine([
+                  t('Google Maps', 'Google Maps', 'Google マップ'),
+                  stopCount(stops.length, t),
+                ])}
+                {/* Never silent about a cap. Google takes nine stops
+                    between the first and the last; a twelfth stop would
+                    otherwise vanish from the route with the link still
+                    looking complete. */}
+                {mapRoute.dropped > 0
+                  ? `  ·  ${t(
+                    `first ${stops.length - mapRoute.dropped} only`,
+                    `chỉ ${stops.length - mapRoute.dropped} điểm đầu`,
+                    `最初の${stops.length - mapRoute.dropped}件のみ`,
+                  )}`
+                  : ''}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </PressableScale>
+        )}
+
         <Card style={[s.card, s.spend]}>
           <Text style={s.spendTitle}>{t('Roughly', 'Ước chừng', 'おおよそ')}</Text>
           <View style={s.spendRow}>
@@ -348,6 +414,22 @@ const s = StyleSheet.create({
   gone: { ...type.body, color: colors.textTertiary, fontStyle: 'italic' },
   why: { ...CAPTION, color: colors.textSecondary, lineHeight: 18, marginTop: 4 },
   whyLang: { color: colors.textTertiary, fontWeight: font.semibold },
+
+  // The card chrome PlaceDetail gives its address and phone rows, because
+  // this is the same kind of row: a fact you tap to leave the app with.
+  // The type pairing inside is this screen's own — a stop's name over its
+  // meta line — so the row belongs to both at once.
+  route: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    borderRadius: radius.card, padding: space.cardPadding, marginBottom: space.cardGap,
+  },
+  routeIcon: {
+    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
+  },
+  routeLabel: { ...type.body, color: colors.text, fontWeight: font.semibold },
+  routeSub: { ...CAPTION, color: colors.textTertiary, marginTop: 2 },
 
   spend: { gap: 10 },
   spendTitle: { ...CAPTION, color: colors.textTertiary, fontWeight: font.semibold, letterSpacing: 0.6, textTransform: 'uppercase' },

@@ -15,6 +15,7 @@ import { usePlaces } from '../lib/catalog';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
 import { clockOf, dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import { mapsSearchUrl } from '../lib/maps';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
@@ -94,9 +95,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const cats = categoriesOf(place);
   const servesTable = cats.includes('eats') || cats.includes('cafes');
   const heroW = width - 24;
-  const mapsUrl = place.lat && place.lng
-    ? `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`
-    : null;
+  // Through `lib/maps` rather than spelled out here, now that the saved
+  // trip links out too. It also fixes a narrower bug than it looks: the
+  // old test was `place.lat && place.lng`, and a place sitting exactly on
+  // the equator or the prime meridian has a legitimate coordinate of 0,
+  // which is falsy. None of these three cities is near either — but the
+  // check was reading "has a position" off a value that means something
+  // else, and `mapsSearchUrl` asks the question it means.
+  const mapsUrl = mapsSearchUrl(place);
   // Grouped, not one row per day: see groupHours. A place open the same
   // seven days a week becomes one line instead of seven identical ones.
   const hours = groupHours(place.opening_hours ?? [], lang);
