@@ -30,7 +30,22 @@ create table if not exists public.places (
   -- that allowed nulls would test a column production cannot have.
   categories     text[] not null default '{}',
   vibe_tags      text[] not null default '{}',
-  created_at     timestamptz not null default now()
+  created_at     timestamptz not null default now(),
+  -- `not null default now()` exactly as production has it. The stamping
+  -- migration reasons about this column, and a stub that let it be null
+  -- would let a trigger look correct while writing into a shape the real
+  -- table does not have.
+  updated_at     timestamptz not null default now()
+);
+
+-- Search synonyms, stubbed to the two columns the stamping migration
+-- touches. The real migration cannot run here — its editor policy calls
+-- `is_editor()`, which lives in `mobile_editor_auth` and needs cities and
+-- an editors table this harness does not build.
+create table if not exists public.category_terms (
+  key        text primary key,
+  terms      text[] not null default '{}',
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists public.place_photos (

@@ -5,6 +5,11 @@
 *.jpeg
 data/.env
 data/node_modules/
+# The root one, which had no rule at all. `data/` and `dashboard/` were
+# listed and `app/` has its own file, so the gap only showed once something
+# put a `node_modules/` at the top level — and by then a vitest results
+# cache had already been committed from inside it.
+node_modules/
 data/review/.cache/
 dashboard/node_modules/
 dashboard/dist/

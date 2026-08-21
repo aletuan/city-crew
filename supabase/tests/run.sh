@@ -157,3 +157,13 @@ for f in "$ROOT"/supabase/migrations/*_collection_likes.sql \
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/collection_likes_test.sql"
+
+# `updated_at` stamping. Last, because it attaches a trigger to four tables
+# and every one of them has to exist by the time it runs — `places` and
+# `category_terms` from the stub, `trips` and `preferences` from their own
+# migrations above.
+echo "→ updated_at"
+for f in "$ROOT"/supabase/migrations/*_stamp_updated_at.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/updated_at_test.sql"
