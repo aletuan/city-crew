@@ -242,6 +242,53 @@ function groupAreas(places: Place[]) {
 }
 
 /**
+ * Where the day starts from: what the reader pointed at, or where they
+ * are.
+ *
+ * ── the bug this is ──
+ *
+ * The wizard's default row reads "Around Hanoi · near me", and that
+ * label is drawn for the state where *neither* a district nor a pin has
+ * been chosen — which is to say, the empty one. It was a promise nobody
+ * kept. The draft carried no coordinate, so `planner`'s `originOf` had no
+ * origin, so the first stop was charged no distance at all and could be
+ * chosen from anywhere in the city. The screen said "near me" and the
+ * planner had never been told where that was.
+ *
+ * Worse, the locate button in the start sheet set `{district: null, at:
+ * null}` — the same empty state — so pressing the one control whose
+ * entire meaning is "use where I am" also left the planner with nothing.
+ *
+ * ── the order, and why a district *suppresses* rather than loses ──
+ *
+ * A pin wins outright: it is the most specific thing the reader has
+ * touched.
+ *
+ * A district returns null, and that is not the same as losing. Downstream,
+ * `originOf` prefers a supplied point over the district's own centre — so
+ * handing back a position while a district is chosen would quietly plan
+ * the day around the reader's sofa instead of the area they asked for.
+ * Null here is what lets the district's centre be found there.
+ *
+ * Only the empty case falls through to `me`, which is exactly the case
+ * whose label has been promising it all along. Null `me` — permission
+ * refused, or not yet read — keeps the old behaviour: no origin rather
+ * than an invented one.
+ *
+ * Here rather than in the screen because a rule that lives in a render
+ * body is a rule nothing can prove. The version this replaces was one
+ * expression long and wrong for months.
+ */
+export function startPoint(
+  chosen: { district: string | null; at: { lat: number; lng: number } | null },
+  me: { lat: number; lng: number } | null,
+): { lat: number; lng: number } | null {
+  if (chosen.at) return chosen.at;
+  if (chosen.district) return null;
+  return me;
+}
+
+/**
  * Where an area sits, or null when it cannot be placed.
  *
  * Exists because choosing an area is also a way of putting the pin
