@@ -1,6 +1,8 @@
 // Shared Google Places import logic for fetch-place (single import) and
 // scan-city (batch import): details fetch → unique slug → place row + photos.
 
+import { classify } from "./classify.ts";
+
 export const PRICE_LEVELS: Record<string, number> = {
   PRICE_LEVEL_INEXPENSIVE: 1,
   PRICE_LEVEL_MODERATE: 2,
@@ -142,9 +144,17 @@ export async function importPlace(
       "X-Goog-FieldMask":
         "id,displayName,formattedAddress,addressComponents,location,rating,userRatingCount,"
         + "priceLevel,regularOpeningHours,websiteUri,internationalPhoneNumber,"
-        + "nationalPhoneNumber,photos,editorialSummary",
+        // `types` and `primaryType` are what `classify` reads. Two words in
+        // a string, and until they were here the import had nothing to say
+        // what a place *was* — every suggestion arrived with empty
+        // categories for somebody to fill in by hand.
+        + "nationalPhoneNumber,photos,editorialSummary,types,primaryType",
     },
   });
+
+  // Read once, used twice below. Empty when Google's types say nothing we
+  // recognise, which leaves the row for the desk exactly as before.
+  const auto = classify(d.primaryType, d.types);
 
   const name = d.displayName?.text ?? "Unnamed place";
   let slug = slugify(name);
@@ -168,13 +178,27 @@ export async function importPlace(
       name_en: name,
       name_vi: name,
       category,
-      // May be empty — a manual import knows nothing about what the place
-      // is. The dashboard flags those for an editor rather than the
-      // pipeline inventing a category the query never claimed.
-      categories: categories ?? [],
+      // What the caller said, and only if it said nothing, what Google's
+      // types say — see `classify`.
+      //
+      // The caller wins because the only caller that supplies these is the
+      // curated scan, where the categories come from the query that found
+      // the place: an editor searched for rooftop bars, so a rooftop bar is
+      // what it is. That is a stronger claim than a type list, and it must
+      // not be second-guessed.
+      //
+      // What is left may still be empty — `classify` says nothing about a
+      // type it does not know, on purpose. The dashboard then flags the row
+      // for an editor exactly as it did before, which is the behaviour this
+      // replaces for recognised types and preserves for the rest.
+      categories: categories ?? auto.categories,
       city_id: cityId,
       is_featured: false,
-      vibe_tags: vibeTags,
+      // Same rule, and the empty array has to be read as "said nothing"
+      // rather than "said none" — it is the parameter's default, so a
+      // caller that never mentions vibes is indistinguishable from one that
+      // means no vibes. The scan is the only caller that mentions them.
+      vibe_tags: vibeTags.length ? vibeTags : auto.vibes,
       // Google's editorial one-liner where it exists (EN only) — the
       // Vietnamese description stays editorial work in the dashboard.
       desc_en: d.editorialSummary?.text ?? null,
