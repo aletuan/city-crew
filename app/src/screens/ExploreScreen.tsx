@@ -6,7 +6,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated, Pressable, ScrollView, SectionList, StyleSheet, Text, View,
+  Animated, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,7 +29,7 @@ import { Lang, useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import { useScheme } from '../lib/theme';
-import type { Nav } from '../nav';
+import { goTo, type Nav } from '../nav';
 
 // The one chip that isn't a category: the whole catalog. It carries no
 // glyph — a colourless chip reads as "not a kind of place".
@@ -216,9 +216,14 @@ function heroPlace(places: Place[], pinnedSlug?: string | null): Place | undefin
   );
 }
 
-function Hero({ place, onExplore, scrollY }: {
+function Hero({ place, onStart, scrollY }: {
   place: Place | undefined;
-  onExplore: () => void;
+  /** What the button does. It used to scroll to the places list a little
+   *  further down the same screen — a jump the reader could make with a
+   *  thumb, on a card whose whole job is to be the invitation into the
+   *  app. It now opens the planner, which is the one thing on this screen
+   *  a reader cannot get to by scrolling. */
+  onStart: () => void;
   scrollY: Animated.Value;
 }) {
   const { t } = useI18n();
@@ -265,7 +270,7 @@ function Hero({ place, onExplore, scrollY }: {
                   'コレクションとスポットを自由に閲覧 — アカウント不要。',
                 )}
           </Text>
-          <PressableScale onPress={onExplore} accessibilityRole="button" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
+          <PressableScale onPress={onStart} accessibilityRole="button" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
             <LinearGradient {...gradAI} style={s.heroCta}>
               <Text style={s.heroCtaText}>
                 {/* Two words at most, and the arrow beside them already
@@ -443,7 +448,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { loading, error, data: places, reload } = usePlaces();
   const [cat, setCat] = useState<string>(ALL);
   const tabClearance = useTabBarClearance();
-  const listRef = useRef<SectionList<Place>>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   // Only categories this city actually has, so a chip never leads to an
@@ -536,19 +540,17 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     return () => clearTimeout(id);
   }, [ducked, deep, nudgeGate]);
 
-  // Lands on the filter row, which is where it pins anyway. The old
-  // offset of 116 existed to keep the chips in frame after the jump; they
-  // hold that position themselves now, so an offset would only push them
-  // back under the header they are meant to sit below.
-  const scrollToPlaces = () => {
-    if (shown.length > 0) {
-      listRef.current?.scrollToLocation({ sectionIndex: 0, itemIndex: 0, animated: true });
-    }
-  };
-
   const header = (
     <>
-      <Hero place={hero} onExplore={scrollToPlaces} scrollY={scrollY} />
+      {/* Across to the Ideas tab, not down this screen.
+          `goTo` rather than `navigation`: the planner lives in a sibling
+          tab's stack, which this screen's own navigator cannot address —
+          which is exactly what that helper exists for. */}
+      <Hero
+        place={hero}
+        onStart={() => goTo('Ideas', { screen: 'IdeasHome' })}
+        scrollY={scrollY}
+      />
       <CollectionShelf navigation={navigation} />
       {/* Short of the usual gap by exactly the filter row's top padding,
           so the space you see between this heading and its chips is the
@@ -643,7 +645,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         {error && <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`, `読み込みに失敗しました: ${error}`)} />}
         {!loading && !error && (
           <Animated.SectionList
-            ref={listRef}
             // One section, whose only job is to give the filter row
             // something to be the header of.
             sections={[{ data: shown }]}
