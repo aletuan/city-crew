@@ -65,6 +65,17 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       // `*.ts` only: every `.tsx` in `src/lib` is a React context.
+      //
+      // One pure module is knowingly outside this gate:
+      // `supabase/functions/_shared/classify.ts`. It runs inside an Edge
+      // Function so it lives with the function, and `classify.test.ts`
+      // exercises it here — 18 cases, including loops over every row of its
+      // lookup table. Two ways of pulling it under the threshold were tried
+      // and both were worse: `include: ['../supabase/…']` matches nothing
+      // and reports a confident 100% of the files it did find, and
+      // re-rooting the whole gate at the repository took every other file
+      // to zero. Naming the exception is better than contorting the gate
+      // for one file, or than a silent hole that reads as coverage.
       include: ['src/lib/*.ts'],
       exclude: ['src/lib/*.test.ts', ...IMPURE],
       // All four at 100, because a threshold at 97 is a number nobody can
