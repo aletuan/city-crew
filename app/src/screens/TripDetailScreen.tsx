@@ -27,9 +27,10 @@
 // Here it is at the bottom of the thing it destroys, after the reader has
 // seen what it is.
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import {
   AmbientWarmth, Card, Empty, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
@@ -37,15 +38,16 @@ import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO } from '../lib/day';
 import { deleteTrip, useMyTrips, type TripStopRow } from '../lib/data';
-import { clockOf, dateline, fmtMinutes } from '../lib/format';
+import { clockOf, dateline, dotWindow, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { mapsRouteUrl, routeMode } from '../lib/maps';
+import { coverOf } from '../lib/place';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { legsOf } from '../lib/travel';
 import { COMPANY } from '../lib/trip';
-import { spendVnd } from '../lib/trips';
-import { colors, font, radius, space, type } from '../theme';
+import { spendVnd, tripCover } from '../lib/trips';
+import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 const money = (vnd: number) => (vnd >= 1_000_000
@@ -66,6 +68,24 @@ export default function TripDetailScreen({ navigation, route }: {
   const { cities } = useCity();
   const clearance = useTabBarClearance();
   const trips = useMyTrips(session?.user?.id);
+
+  /**
+   * Which page of the gallery is showing, and how wide a page is.
+   *
+   * Above the early return, because a hook cannot live below one. This
+   * screen renders "not found" while the trips list is still loading —
+   * deep-linked, or restored from a cold start — and a `useState`
+   * declared under that branch would be skipped on the first render and
+   * present on the second. React counts hooks, so the second render
+   * throws rather than misbehaving quietly.
+   *
+   * The width is measured rather than taken from the window, because the
+   * gallery sits inside the screen's own horizontal padding.
+   * `Dimensions.get` minus a constant is the version that breaks on the
+   * next screen that pads differently.
+   */
+  const [shot, setShot] = useState(0);
+  const [galleryW, setGalleryW] = useState(0);
 
   const trip = trips.data.find((x) => x.id === route.params.id) ?? null;
 
@@ -141,6 +161,19 @@ export default function TripDetailScreen({ navigation, route }: {
     routeMode(legs),
   );
 
+  /**
+   * Whether there is a gallery at all, and the credit its current page
+   * owes.
+   *
+   * `tripCover` is asked only whether *any* stop has a usable picture —
+   * the gallery itself pages over the stops in order, so the answer's
+   * own photograph is not used. Reusing it rather than writing a second
+   * `.some()` keeps one rule about what counts as usable: a photograph
+   * the desk hid is excluded there and stays excluded here.
+   */
+  const cover = tripCover(stops);
+  const shotAttr = stops[shot]?.places ? coverOf(stops[shot].places!)?.attribution_name : null;
+
   const confirmDelete = () => Alert.alert(
     t('Delete this trip?', 'Xoá chuyến đi này?', 'この旅程を削除しますか？'),
     t(
@@ -184,9 +217,77 @@ export default function TripDetailScreen({ navigation, route }: {
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
       >
+        {/* The day, one place at a time.
+
+            ── one page per stop, not one page per photograph ──
+
+            `PlaceDetailScreen`'s carousel pages through a place's own
+            pictures, because there the subject is one place. Here the
+            subject is the sequence, so page `i` is stop `i` and stays
+            stop `i` — including for a stop with no picture, which draws
+            its emoji on the same grey `PlaceCard` uses. Dropping those
+            pages would be tidier and would break the one thing that
+            makes this more than decoration: that the index means
+            something to the list underneath.
+
+            A stop whose place left the catalog keeps its page too, with
+            a pin on it. The list below already draws it as a gap; a
+            carousel that quietly skipped it would put the reader's
+            fourth stop under the third name.
+
+            Nothing here when no stop has a picture at all — `tripCover`
+            already answers that, and a row of grey panels with pins on
+            them is a control that costs a swipe and returns nothing. */}
+        {cover && (
+          <View style={s.gallery} onLayout={(e) => setGalleryW(e.nativeEvent.layout.width)}>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) =>
+                setShot(Math.round(e.nativeEvent.contentOffset.x / galleryW))}
+            >
+              {stops.map((stop, i) => {
+                const ph = stop.places ? coverOf(stop.places) : undefined;
+                return ph
+                  ? (
+                    <Image
+                      key={`${trip.id}-shot-${i}`}
+                      source={{ uri: ph.photo_uri }}
+                      style={[s.shot, { width: galleryW }]}
+                      contentFit="cover"
+                      transition={200}
+                    />
+                  )
+                  : (
+                    <View key={`${trip.id}-shot-${i}`} style={[s.shot, s.shotBare, { width: galleryW }]}>
+                      <Text style={{ fontSize: 52 }}>{stop.places?.emoji ?? '📍'}</Text>
+                    </View>
+                  );
+              })}
+            </ScrollView>
+            {/* The credit belongs to the picture on screen, so it is read
+                from the current page rather than printed once. This is
+                also why a carousel is easier to license than a strip of
+                thumbnails: one photograph visible, one credit owed. */}
+            {shotAttr ? <Text style={s.attr} numberOfLines={1}>{shotAttr}</Text> : null}
+            {stops.length > 1 && (
+              <View style={s.dots}>
+                {dotWindow(stops.length, shot).map((i) => (
+                  <View key={i} style={[s.dot, i === shot && s.dotOn]} />
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
         <Card style={s.card}>
           {stops.map((stop, i) => {
             const place = stop.places;
+            // Whether the gallery is currently showing this one. False
+            // for every row when there is no gallery, which is what
+            // keeps a trip with no photographs looking exactly as it did.
+            const here = !!cover && i === shot;
             // The same band the editor makes tappable, for the same
             // reason: a saved trip names places, and a named place that
             // will not open is a dead end. Only when there is a place to
@@ -248,14 +349,28 @@ export default function TripDetailScreen({ navigation, route }: {
                 </View>
               )}
               <View style={s.stopRow}>
-                <Text style={s.stopTime}>
+                <Text style={[s.stopTime, here && s.stopTimeHere]}>
                   {stop.arrive_min != null ? clockOf(stop.arrive_min) : '—'}
                 </Text>
                 <Who {...whoProps}>
                   {stop.places
                     ? (
                       <>
-                        <Text style={s.name}>{stop.places.name_en}</Text>
+                        {/* Which name the picture above belongs to.
+
+                            The weight only, and nothing dimmed. Fading
+                            the other four would make the itinerary
+                            harder to read to say something about the
+                            carousel, and the itinerary is why the screen
+                            exists. Semibold to bold is a small shift on
+                            purpose: it should be findable when you go
+                            looking and invisible when you are not.
+
+                            The hour beside it takes the accent, which is
+                            the louder half of the pair and the one that
+                            carries at a glance. Two quiet marks rather
+                            than one shout. */}
+                        <Text style={[s.name, here && s.nameHere]}>{stop.places.name_en}</Text>
                         <Text style={s.area}>
                           {summaryLine([
                             stop.places.neighborhood_en,
@@ -410,6 +525,10 @@ const s = StyleSheet.create({
   whoOuter: { flex: 1 },
   whoInner: { gap: 2 },
   name: { ...type.body, color: colors.text, fontWeight: font.semibold },
+  // The stop the gallery is on. Weight only — see the note at the call
+  // site for why nothing else is dimmed to make this stand out.
+  nameHere: { fontWeight: font.bold },
+  stopTimeHere: { color: colors.accent, fontWeight: font.semibold },
   area: { ...CAPTION, color: colors.textTertiary },
   gone: { ...type.body, color: colors.textTertiary, fontStyle: 'italic' },
   why: { ...CAPTION, color: colors.textSecondary, lineHeight: 18, marginTop: 4 },
@@ -419,6 +538,34 @@ const s = StyleSheet.create({
   // this is the same kind of row: a fact you tap to leave the app with.
   // The type pairing inside is this screen's own — a stop's name over its
   // meta line — so the row belongs to both at once.
+  // Rounded and clipping, so the pages are the card and not a filmstrip
+  // running under one. Same corner radius as everything else on the page.
+  gallery: {
+    borderRadius: radius.card, overflow: 'hidden', marginBottom: space.cardGap,
+  },
+  // 16:10, `PlaceCard`'s ratio rather than the Trips card's 3:1 band. The
+  // roles are reversed here: on the list the picture identifies a card
+  // among cards, and here it is the thing being looked at.
+  shot: { aspectRatio: 16 / 10, backgroundColor: colors.surfaceGlass },
+  shotBare: { alignItems: 'center', justifyContent: 'center' },
+  // Required wherever the photo is shown; read from the page on screen.
+  attr: {
+    position: 'absolute', right: 12, bottom: 12, maxWidth: '50%',
+    fontSize: 9, color: onPhoto.text, opacity: 0.55,
+    textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
+  },
+  // The same pill of dots `PlaceDetailScreen` floats over its hero, and
+  // the same `dotWindow` behind it, so a long day gets a fixed strip
+  // instead of a row that runs off the picture.
+  dots: {
+    position: 'absolute', bottom: 12, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: 'rgba(10,8,13,0.45)', borderRadius: radius.pill,
+    paddingHorizontal: 11, paddingVertical: 8,
+  },
+  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.38)' },
+  dotOn: { width: 8, height: 8, borderRadius: 4, backgroundColor: onPhoto.text },
+
   route: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
