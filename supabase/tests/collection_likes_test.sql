@@ -76,12 +76,13 @@ begin
     format('the select policy stopped scoping likes to their author: %s', qual);
 end $$;
 
--- What the insert policy still has to hold. Liking your own list is
--- allowed on purpose, so there is no owner clause to assert — these two
--- are what is left, and both matter: without the first a like can be
--- filed under somebody else's name, which turns a count into a forgery;
--- without the second a private list collects votes for a shelf it is not
--- on.
+-- Three things the insert policy has to hold, and all three decide what a
+-- public number means. Without the first a like can be filed under
+-- somebody else's name, which turns a count into a forgery. Without the
+-- second a private list collects votes for a shelf it is not on. Without
+-- the third a curator can vote for themselves, and at nine owned lists and
+-- a handful of accounts that one vote is enough to take the front of a
+-- shelf that claims to show what readers chose.
 do $$
 declare chk text;
 begin
@@ -92,6 +93,15 @@ begin
     format('the insert policy stopped tying a like to its caster: %s', chk);
   assert chk like '%is_public%',
     format('the insert policy no longer requires the list to be public: %s', chk);
+  assert chk like '%owner_id%',
+    format('the insert policy stopped excluding your own list: %s', chk);
+  -- The operator, and it is not a style note. Fifteen of the collections
+  -- are the desk's and carry `owner_id is null`; `<>` against null is
+  -- null, which `with check` refuses. Simplified to `<>`, this policy
+  -- would break liking on every editorial list on the shelf while looking
+  -- entirely correct.
+  assert upper(chk) like '%IS DISTINCT FROM%',
+    format('the owner clause uses a plain comparison, so an unowned desk list can no longer be liked: %s', chk);
 end $$;
 
 -- --------------------------------------------------------------- counting
@@ -114,6 +124,37 @@ begin
 end $$;
 
 -- And the behaviour, which needs no RLS to check.
+-- The owner clause, run against the two shapes it has to tell apart.
+--
+-- Not the policy — the harness is not a client and RLS does not apply to
+-- it — but the expression inside the policy, which is where the whole risk
+-- of this rule sits. A desk list has no owner and must stay likeable by
+-- everyone; a list with an owner must be likeable by everyone except them.
+-- Asserting the operator by name above says the right words are there;
+-- this says they answer correctly against a real null.
+do $$
+declare mine uuid; desk uuid; u1 uuid; u2 uuid; ok bool;
+begin
+  insert into auth.users default values returning id into u1;
+  insert into auth.users default values returning id into u2;
+  insert into public.collections (slug, is_public, city_id)
+    values ('t-own-desk', true, 'hanoi') returning id into desk;
+  insert into public.collections (slug, is_public, city_id, owner_id)
+    values ('t-own-mine', true, 'hanoi', u1) returning id into mine;
+
+  select (owner_id is distinct from u1) into ok from public.collections where id = desk;
+  assert ok, 'a list the desk wrote stopped being likeable — the null owner is being read as a match';
+
+  select (owner_id is distinct from u1) into ok from public.collections where id = mine;
+  assert not ok, 'a curator can still like their own list';
+
+  select (owner_id is distinct from u2) into ok from public.collections where id = mine;
+  assert ok, 'somebody else lost the ability to like a list they did not write';
+
+  delete from public.collections where slug like 't-own-%';
+  delete from auth.users where id in (u1, u2);
+end $$;
+
 do $$
 declare pub uuid; priv uuid; u1 uuid; u2 uuid; n int;
 begin
