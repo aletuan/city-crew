@@ -18,9 +18,8 @@ import { PrimaryButton } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
-import { categoryLabel } from '../lib/categories';
 import { useAuth } from '../lib/auth';
-import { membersOf, useMyPreferences } from '../lib/data';
+import { membersOf } from '../lib/data';
 import { useSave } from '../lib/save';
 import { useCity } from '../lib/city';
 import { Lang, useI18n } from '../lib/i18n';
@@ -110,57 +109,23 @@ function SettingRow({ icon, label, value, onPress, last }: {
   );
 }
 
-/**
- * Workspace settings: which catalog the app shows, which language it
- * speaks, how it looks — and, for a signed-in reader, what the planner
- * should assume about them. The header carries no switchers; this card is
- * the one place to change any of it.
- *
- * The first row is the only one that needs an account, and it is first on
- * purpose. Preferences were reachable only through Edit profile, filed
- * behind a name and a bio, so the one thing on the screen that changes
- * what the app *makes for you* was the hardest thing on it to find.
- */
-function SettingsCard({ navigation }: { navigation: Nav }) {
+/** Workspace settings, for guests and members alike: which city's
+ *  catalog the app shows, which language it speaks, how it looks. The
+ *  header carries no switchers — this card is the one place to change
+ *  any of them. Its heading is written at each call site, beside the
+ *  card, the way About me and Friends are. */
+function SettingsCard() {
   const { t, lang } = useI18n();
   const { city, mode } = useCity();
   const [open, setOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const { scheme } = useScheme();
-  const { session } = useAuth();
-  const uid = session?.user?.id;
-  const prefs = useMyPreferences(uid);
   const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語' }[lang];
-
-  // What the planner should assume about you, summarised in the width of a
-  // settings row. The categories and not the budget: this line answers
-  // "what kind of places", which is the half a reader recognises as theirs,
-  // and the number is one tap away on the same screen.
-  //
-  // The three rows below are settings that *show* their value; this one is
-  // a door to a form. It still carries a value because a row in this card
-  // without one reads as broken next to the others — and because "Not set"
-  // is worth seeing: nothing else in the app says the planner is running
-  // without a word from you.
-  const prefValue = prefs.data.categories.length
-    ? prefs.data.categories.map((c) => categoryLabel(c, t)).join(', ')
-    : t('Not set', 'Chưa đặt', '未設定');
 
   return (
     <>
       <Card style={s.featureCard}>
-        {/* Only with an account. `preferences` is keyed on `owner_id`, so
-            there is nowhere to put a guest's answer — and this card is
-            deliberately the one thing on the screen that works signed out. */}
-        {!!uid && (
-          <SettingRow
-            icon="options-outline"
-            label={t('Preferences', 'Tuỳ chọn', '好み')}
-            value={prefValue}
-            onPress={() => navigation.navigate('EditProfile')}
-          />
-        )}
         <SettingRow
           icon="location-outline"
           // "City" alone read as a fact about the reader, sitting one card
@@ -270,7 +235,7 @@ function GuestHub({ navigation }: { navigation: Nav }) {
         />
       </Card>
 
-      <SettingsCard navigation={navigation} />
+      <SettingsCard />
 
       <Card style={s.friendsCard}>
         <RoundIcon name="people-outline" />
@@ -382,7 +347,13 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         />
       </Card>
 
-      <SettingsCard navigation={navigation} />
+      {/* Named the way About me and Friends are, so this screen reads
+          as three sections rather than two and a stray card between
+          them. Only here: the guest view's cards carry no headings at
+          all, and one heading among them would be the odd thing out in
+          the other direction. */}
+      <Text style={s.section}>{t('Preferences', 'Tuỳ chọn', '設定')}</Text>
+      <SettingsCard />
 
       <Text style={s.section}>{t('Friends', 'Bạn bè', '友達')}</Text>
       <Card style={s.friendsCard}>
