@@ -9,3 +9,7 @@ data/review/.cache/
 dashboard/node_modules/
 dashboard/dist/
 dashboard/.env.local
+# Supabase CLI scratch state — a cache marker it writes on any invocation,
+# including the `functions deploy` this repo has no workflow for. Not
+# project content and not reproducible from it.
+supabase/.temp/
