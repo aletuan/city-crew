@@ -24,8 +24,10 @@
 /** The slice of a place this module reads. Structural, so Node can run it. */
 export type Dated = { slug: string; created_at?: string | null };
 
-/** How many arrivals the zero-state shows. */
-export const NEWEST_SHOWN = 10;
+/** How many arrivals the zero-state shows. Five, matching POPULAR_SHOWN:
+ *  the zero-state is a foyer of sections, and any one of them running to
+ *  ten turns the others into things you scroll past to reach. */
+export const NEWEST_SHOWN = 5;
 
 /**
  * The newest places, newest first, at most `n`.

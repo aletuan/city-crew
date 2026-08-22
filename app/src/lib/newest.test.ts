@@ -13,14 +13,14 @@ describe('newestPlaces', () => {
     expect(out.map((p) => p.slug)).toEqual(['new', 'mid', 'old']);
   });
 
-  it('shows at most the cap, and the cap is ten', () => {
+  it('shows at most the cap, and the cap is five', () => {
     const many = Array.from({ length: 15 }, (_, i) =>
       at(`p${String(i).padStart(2, '0')}`, `2026-03-${String(i + 1).padStart(2, '0')}T00:00:00Z`));
-    expect(NEWEST_SHOWN).toBe(10);
+    expect(NEWEST_SHOWN).toBe(5);
     const out = newestPlaces(many);
-    expect(out).toHaveLength(10);
+    expect(out).toHaveLength(5);
     expect(out[0].slug).toBe('p14');
-    expect(out[9].slug).toBe('p05');
+    expect(out[4].slug).toBe('p10');
   });
 
   it('takes a different cap when asked', () => {

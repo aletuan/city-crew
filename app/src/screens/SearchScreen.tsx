@@ -30,6 +30,7 @@ import type { Candidate } from '../lib/suggest';
 import { useCollections, useLikes, usePlaces, useSearchTerms } from '../lib/catalog';
 import { parseRecents, RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
 import { newestPlaces } from '../lib/newest';
+import { openNowPlaces } from '../lib/opennow';
 import { rankPopular } from '../lib/popular';
 import { collectionHaystack, findPlaces, matches, queryTerms } from '../lib/search';
 import { useI18n } from '../lib/i18n';
@@ -44,7 +45,7 @@ type Row =
   // The zero-state — what the screen offers before anyone has typed.
   // Small-caps section marks (`eyebrow`), the remembered searches, one
   // row of category chips, and the ranked "most popular" places.
-  | { kind: 'eyebrow'; key: string; label: string; clear?: boolean }
+  | { kind: 'eyebrow'; key: string; label: string; clear?: boolean; dot?: boolean }
   | { kind: 'recent'; key: string; term: string }
   | { kind: 'chips'; key: string }
   | { kind: 'popular'; key: string; place: Place }
@@ -53,7 +54,11 @@ type Row =
   // than a reused one so a place in both sections keys twice without a
   // collision, and so the two lists can ever diverge in rendering
   // without an archaeology dig.
-  | { kind: 'latest'; key: string; place: Place };
+  | { kind: 'latest'; key: string; place: Place }
+  // The reference's time-aware section: doors that are open at this
+  // minute. Selection lives in lib/opennow; the row renders exactly as
+  // its two neighbours do.
+  | { kind: 'open'; key: string; place: Place };
 
 export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -169,6 +174,16 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // ordering caveats live with the ranking, in lib/newest.
   const latest = useMemo(() => newestPlaces(places.filter(isLive)), [places]);
 
+  // The doors open at this minute — see lib/opennow. `now` is taken per
+  // render and deliberately left out of the deps: recomputing on every
+  // keystroke would walk every place's hours to reach the same answer
+  // within the same minute, and a screen left open across a closing time
+  // corrects itself on its next real render.
+  const openNow = useMemo(
+    () => openNowPlaces(places.filter(isLive), now),
+    [places], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   // Only categories this city actually has — the same rule the Explore
   // filter row states: a chip never leads to an empty list. Counted over
   // the live catalog for the same reason `popular` is.
@@ -199,6 +214,17 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       if (cats.length) {
         out.push({ kind: 'eyebrow', key: 'z-browse', label: t('Browse', 'Duyệt theo', 'カテゴリー') });
         out.push({ kind: 'chips', key: 'z-chips' });
+      }
+      // Above Most popular, because its answer expires first: a ranking
+      // holds for weeks, an open door for hours. Skipped entirely when
+      // nothing is open — a section titled "open right now" with no rows
+      // would read as the city being shut, which 3 a.m. aside it is not.
+      if (openNow.length) {
+        out.push({
+          kind: 'eyebrow', key: 'z-open', dot: true,
+          label: t('Open right now', 'Đang mở cửa', '営業中'),
+        });
+        for (const pl of openNow) out.push({ kind: 'open', key: `on-${pl.slug}`, place: pl });
       }
       if (popular.length) {
         out.push({ kind: 'eyebrow', key: 'z-popular', label: t('Most popular', 'Phổ biến nhất', '人気スポット') });
@@ -268,7 +294,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       for (const c of fresh) out.push({ kind: 'candidate', key: `g-${c.place_id}`, candidate: c });
     }
     return out;
-  }, [terms, query, places, colMembers, city?.id, fresh, synonyms, t, recents, popular, latest, cats]);
+  }, [terms, query, places, colMembers, city?.id, fresh, synonyms, t, recents, popular, latest, openNow, cats]);
 
   const searching = terms.length > 0;
   const showBar = batchBarShown(chosen.length, google.batch);
@@ -376,6 +402,11 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             return (
               <View style={s.eyebrowRow}>
                 <Text style={s.eyebrow}>{item.label}</Text>
+                {/* The reference's live mark: a small green dot beside
+                    "Open right now", the same green the detail screen
+                    says "Open now" in — a colour that already means
+                    "the doors are open" in this app. */}
+                {item.dot ? <View style={s.liveDot} /> : null}
                 {/* Clear wipes the whole memory — the reference design has
                     no per-row delete, and a memory you can prune one line
                     at a time invites tidying a list that exists to be
@@ -445,7 +476,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
               </View>
             );
           }
-          if (item.kind === 'popular' || item.kind === 'latest') {
+          if (item.kind === 'popular' || item.kind === 'latest' || item.kind === 'open') {
             const pl = item.place;
             const cover = coverOf(pl)?.photo_uri;
             // The reference layout, followed exactly: the meta line is
@@ -455,17 +486,25 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             // every row lead with the one figure that least separates
             // rows on a shelf where everything is 4-and-something.
             //
-            // "until" only while the place is actually open and the hours
-            // actually say when that ends; a closed place or an unknown
-            // schedule just shows its area rather than a guess. `openState`
-            // returning null is "cannot answer", and showing nothing beats
-            // telling someone an open café is closed.
+            // The time half of the line answers whichever question the
+            // clock poses: open now says when that ends ("until 22:00"),
+            // closed says when it stops being so ("opens 08:00") — the
+            // compact form of the sentence the detail screen spells out.
+            // An unknown schedule says nothing: `openState` returning
+            // null is "cannot answer", and showing nothing beats telling
+            // someone an open café is closed. A 24-hour place has no
+            // closing time to name and also stays quiet, which is honest
+            // — "until never" is not an hour.
             const state = openState(pl.opening_hours, now);
-            const until = state?.open && state.untilMin != null
-              ? t(`until ${clockOf(state.untilMin)}`, `đến ${clockOf(state.untilMin)}`, `${clockOf(state.untilMin)}まで`)
-              : null;
+            const when = state?.open
+              ? state.untilMin != null
+                ? t(`until ${clockOf(state.untilMin)}`, `đến ${clockOf(state.untilMin)}`, `${clockOf(state.untilMin)}まで`)
+                : null
+              : state?.opensAtMin != null
+                ? t(`opens ${clockOf(state.opensAtMin)}`, `mở lúc ${clockOf(state.opensAtMin)}`, `${clockOf(state.opensAtMin)}開店`)
+                : null;
             const area = t(pl.neighborhood_en, pl.neighborhood_vi, pl.neighborhood_ja);
-            const meta = [area, until].filter(Boolean).join(' · ');
+            const meta = [area, when].filter(Boolean).join(' · ');
             return (
               <PressableScale
                 style={s.row}
@@ -817,6 +856,7 @@ const s = StyleSheet.create({
   // else — the count stays on the detail screen. Same gold the photo
   // overlay uses, so a star means one thing everywhere.
   rowRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.ok },
   rowStar: { color: onPhoto.star, fontSize: 13 },
   rowRatingValue: { color: colors.text, fontSize: 14.5, fontWeight: font.semibold },
 
