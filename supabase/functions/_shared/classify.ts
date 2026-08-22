@@ -167,7 +167,25 @@ export const BY_TYPE: Record<string, string> = {
   shoe_store: 'markets',
   home_goods_store: 'markets',
   furniture_store: 'markets',
-  store: 'markets',
+  // `store` is deliberately absent, and it used to be here.
+  //
+  // It is not a kind of place, it is Google's parent bucket, and nearly
+  // every business that sells anything across a counter carries it —
+  // bakeries, cafés with a shelf of beans, restaurants with a shopfront.
+  // A tiệm bánh comes back as `["bakery", "store", "food", …]`, so the
+  // row four lines up got it right as a café and this one bolted
+  // "Shopping" on underneath.
+  //
+  // Which is the rule this table already states at the top: types are
+  // omitted when they say nothing about how a visitor would use the place
+  // — `point_of_interest`, `establishment`, `food`. `store` is the same
+  // class of word and slipped through anyway.
+  //
+  // Two places in the catalog wore the mistake: Crumbs Artelier and
+  // Caffeinerush Châu Long, both cafés, both carrying `markets`. Its
+  // absence costs a genuinely generic shop its pre-fill, and that is the
+  // right trade: an empty category asks the desk a question, while a
+  // wrong one is an answer nobody thinks to check.
 
   // ── a view ──
   observation_deck: 'views',

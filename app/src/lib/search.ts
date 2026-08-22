@@ -23,11 +23,27 @@ import { CATEGORIES, categoriesOf } from './categories';
 /** Lowercase, diacritics stripped, đ folded — the shape we match on.
  *
  *  `đ` needs its own rule because it is a distinct letter rather than a
- *  d with a mark on it, so NFD leaves it alone and "da nang" would miss
- *  "Đà Nẵng". */
+ *  d with a mark on it, so decomposition leaves it alone and "da nang"
+ *  would miss "Đà Nẵng".
+ *
+ *  ── NFKD, not NFD ──
+ *
+ *  NFD is canonical decomposition and does not touch styled characters: a
+ *  mathematical bold `𝐜` is not a `c` with something added, it is its own
+ *  codepoint that looks like one. Businesses name themselves in those and
+ *  Google hands the name over verbatim, so the catalog holds a café
+ *  called `𝐂𝐫𝐮𝐦𝐛𝐬 𝐀𝐫𝐭𝐞𝐥𝐢𝐞𝐫` — and typing "crumbs" found nothing, because
+ *  the folded haystack still held the styled letters while the folded
+ *  needle held plain ones.
+ *
+ *  NFKD is the compatibility form that maps them back, and it leaves
+ *  Vietnamese exactly where NFD left it. Fixing it here rather than
+ *  rewriting the stored name is the smaller change and the more honest
+ *  one: the name on the sign really is styled, and search is what has to
+ *  see past it. */
 export function fold(s: string | null | undefined): string {
   return (s ?? '')
-    .normalize('NFD')
+    .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/đ/gi, 'd')
     .toLowerCase();
