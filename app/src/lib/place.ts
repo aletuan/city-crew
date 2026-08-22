@@ -44,12 +44,36 @@ export function fmtCount(n: number | null | undefined): string {
  * sáng" and "Ca phe sang" land on the same stem; a title with no latin
  * letters at all (Japanese, say) keeps only the suffix, which is enough —
  * the slug is a key, not a label.
+ *
+ * ── NFKD, not NFD ──
+ *
+ * NFD is *canonical* decomposition. It separates the marks off Vietnamese
+ * letters, which is what this wants it for, and it leaves styled
+ * characters alone — a mathematical bold `A` is not an `A` with something
+ * added, it is its own codepoint that merely looks like one. So a title
+ * typed in one of those fonts loses every character and falls out as the
+ * bare `'list'` below.
+ *
+ * The place importer hit this for real and wrote a row whose key is
+ * `place`; `_shared/import-place.ts` carries the measurements. A
+ * collection is likelier to hit it than a place, not less: people name
+ * their own lists with whatever their keyboard offers.
+ *
+ * NFKD is *compatibility* decomposition, which maps those back — and
+ * leaves Vietnamese exactly where NFD left it, because its diacritics are
+ * canonical either way. It also recovers fullwidth digits and ligatures,
+ * both of which NFD silently dropped.
  */
 export function slugify(title: string): string {
   const stem = title
+    // Order matters, and it was wrong. Lowercasing first meant anything
+    // NFKD handed back as a capital arrived after the only step that
+    // could lower it, and the `[^a-z0-9]` sweep then threw it away — so
+    // `𝐂𝐫𝐮𝐦𝐛𝐬` came out `rumbs`, missing exactly its first letter.
+    // Normalise, strip, fold `đ`, and lowercase last.
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/gi, 'd')
     .toLowerCase()
-    .replace(/đ/g, 'd')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40);

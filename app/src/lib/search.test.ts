@@ -14,7 +14,26 @@ describe('fold', () => {
     expect(fold('Bánh mì Huỳnh Hoa')).toBe('banh mi huynh hoa');
   });
 
-  // `đ` is its own letter, not a d with a mark, so NFD leaves it alone.
+  // ── the café nobody could find ──
+  //
+  // The catalog holds `\u{1D402}\u{1D42B}\u{1D42E}\u{1D426}\u{1D41B}\u{1D42C}
+  // \u{1D400}\u{1D42B}\u{1D42D}\u{1D41E}\u{1D425}\u{1D422}\u{1D41E}\u{1D42B}` —
+  // Mathematical Bold, straight from Google's display name. NFD is
+  // canonical decomposition and does not touch a codepoint that merely
+  // looks like a letter, so the folded haystack kept the styled letters
+  // while the folded needle held plain ones, and "crumbs" matched
+  // nothing.
+  it('reads a name written in styled characters', () => {
+    expect(fold('\u{1D402}\u{1D42B}\u{1D42E}\u{1D426}\u{1D41B}\u{1D42C}')).toBe('crumbs');
+  });
+
+  it('reads fullwidth and ligatured names too', () => {
+    expect(fold('\uFF13\uFF23 Roastery')).toBe('3c roastery');
+    expect(fold('\uFB01nest')).toBe('finest');
+  });
+
+  // `đ` is its own letter, not a d with a mark, so no decomposition form
+  // takes it apart. The explicit fold stays.
   it('folds đ, which decomposition does not', () => {
     expect(fold('Đà Nẵng')).toBe('da nang');
     expect(fold('ĐỐNG ĐA')).toBe('dong da');

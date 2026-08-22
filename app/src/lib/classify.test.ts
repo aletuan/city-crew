@@ -38,6 +38,45 @@ describe('the mirrored taxonomies', () => {
       .map(([type, category]) => `${type} → ${category}`);
     expect(unknown).toEqual([]);
   });
+
+  // ── the rule the table states, enforced ──
+  //
+  // The table's own note says a type is omitted when it says nothing about
+  // how a visitor would use the place. `store` was in it anyway, and it is
+  // Google's parent bucket for anything sold across a counter — a tiệm
+  // bánh comes back as `["bakery", "store", "food", …]`, so `bakery` got
+  // it right as a café and `store` bolted "Shopping" on underneath. Two
+  // rows in the catalog wore the mistake before anyone noticed.
+  //
+  // Named individually rather than pattern-matched: `book_store` and
+  // `clothing_store` are exactly the specific types that *do* belong, so a
+  // rule keyed on the suffix would take the good ones with the bad.
+  //
+  // `restaurant` is deliberately not on this list, and the distinction is
+  // the point rather than an exception to it. Google does hand it to
+  // cafés that serve meals — but `eats` is then *true* of them, and it
+  // sits in the same family the app already treats as one: `servesTable`
+  // reads `eats` or `cafes` and does not care which. `store` was not a
+  // broad answer, it was a wrong one, moving a bakery onto a different
+  // shelf entirely.
+  it('keeps Google\'s non-categories out', () => {
+    for (const generic of ['store', 'food', 'establishment', 'point_of_interest']) {
+      expect(BY_TYPE[generic], generic).toBeUndefined();
+    }
+  });
+
+  // The other half of that: a bakery is a café and nothing else, whatever
+  // else Google lists alongside it.
+  it('classifies a bakery the way Google actually describes one', () => {
+    expect(classify('bakery', ['bakery', 'store', 'food', 'point_of_interest', 'establishment']))
+      .toEqual({ categories: ['cafes'], vibes: ['cafes'] });
+  });
+
+  // And a real shop still lands, because the specific types stayed.
+  it('still recognises a shop that says which kind it is', () => {
+    expect(classify('book_store', ['book_store', 'store', 'establishment']).categories)
+      .toEqual(['markets']);
+  });
 });
 
 describe('classify', () => {

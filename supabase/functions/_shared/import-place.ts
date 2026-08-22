@@ -20,9 +20,47 @@ export const PRICE_LEVEL_VND: Record<number, number> = {
   4: 500000,
 };
 
+/**
+ * A slug from Google's display name.
+ *
+ * ── NFKD, not NFD, and that is the whole of it ──
+ *
+ * NFD is *canonical* decomposition: it separates the marks off Vietnamese
+ * letters, which is what this needs it for. It does not touch styled
+ * characters, because a mathematical bold `𝐂` is not an `C` with
+ * something added — it is its own codepoint that merely looks like one.
+ *
+ * Businesses name themselves in those. Google returns the styled name
+ * verbatim and this function used to strip every character of it, hit the
+ * `|| "place"` at the end, and write that as the row's key. One place in
+ * the catalog is called `place` for exactly this reason: `𝐂𝐫𝐮𝐦𝐛𝐬
+ * 𝐀𝐫𝐭𝐞𝐥𝐢𝐞𝐫`, which is Mathematical Bold throughout.
+ *
+ * That is worse than an ugly slug. The slug is the app's key everywhere —
+ * deep links, `usePlaceBySlug`, collection membership, the planner's
+ * tie-break — and the *next* unslugifiable import collides with it, at
+ * which point the fallback below starts minting `place-hanoi` and
+ * `place-12`.
+ *
+ * NFKD is *compatibility* decomposition, which is the one that maps those
+ * back. Measured on real names:
+ *
+ *   𝐂𝐫𝐮𝐦𝐛𝐬 𝐀𝐫𝐭𝐞𝐥𝐢𝐞𝐫   place      →  crumbs-artelier
+ *   ３Ｃ Roastery       roastery   →  3c-roastery      (fullwidth digits)
+ *   ﬁnest Café         nest-cafe  →  finest-cafe      (ﬁ ligature)
+ *   Đông Đô            dong-do    →  dong-do          (unchanged)
+ *   Mai Hỷ tea         mai-hy-tea →  mai-hy-tea       (unchanged)
+ *
+ * Vietnamese is untouched: its diacritics are canonical, so both forms
+ * decompose them identically. What NFKD adds is precisely the styled
+ * layer, which is precisely what was being lost.
+ *
+ * The `Đ` line stays and has to: `Đ`/`đ` is a letter with a stroke rather
+ * than a base plus a mark, so no normalisation form takes it apart.
+ */
 export const slugify = (name: string) =>
   name
-    .normalize("NFD")
+    .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/đ/gi, "d")
     .toLowerCase()

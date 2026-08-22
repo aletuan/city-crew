@@ -113,9 +113,41 @@ describe('slugify', () => {
     expect(slugify('Ca phe sang')).toBe('ca-phe-sang');
   });
 
-  // đ is a distinct letter, not a d with a mark, so NFD does not touch it.
+  // đ is a distinct letter, not a d with a mark, so no normalisation form
+  // takes it apart — neither NFD nor NFKD. The explicit replace stays.
   it('handles đ, which decomposition alone would leave behind', () => {
     expect(slugify('Đà Nẵng')).toBe('da-nang');
+  });
+
+  // ── the styled-name bug ──
+  //
+  // This shipped in production. The place importer shares this rule and
+  // wrote a row whose key is literally `place`, because the café is named
+  // in Mathematical Bold and NFD — canonical decomposition — does not
+  // touch a codepoint that merely *looks* like a letter. Every character
+  // was stripped and the fallback fired.
+  //
+  // A slug is the app's key: deep links, membership, the planner's
+  // tie-break. Two unslugifiable names in a row is a collision.
+  it('reads a name written in styled characters', () => {
+    expect(slugify('\u{1D402}\u{1D42B}\u{1D42E}\u{1D426}\u{1D41B}\u{1D42C}')).toBe('crumbs');
+  });
+
+  it('keeps fullwidth digits a NFD pass would have thrown away', () => {
+    expect(slugify('\uFF13\uFF23 Roastery')).toBe('3c-roastery');
+  });
+
+  it('keeps a ligature whole rather than losing half of it', () => {
+    expect(slugify('\uFB01nest Caf\u00E9')).toBe('finest-cafe');
+  });
+
+  // The half that must not change. Vietnamese diacritics are canonical, so
+  // both forms take them apart identically — the switch to NFKD buys the
+  // styled layer and costs nothing here.
+  it('leaves Vietnamese exactly where it was', () => {
+    expect(slugify('Mai Hỷ tea & dining')).toBe('mai-hy-tea-dining');
+    expect(slugify('Caffeinerush Châu Long')).toBe('caffeinerush-chau-long');
+    expect(slugify('Đông Đô')).toBe('dong-do');
   });
 
   it('collapses punctuation and trims the edges', () => {
