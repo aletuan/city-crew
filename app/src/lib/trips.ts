@@ -211,3 +211,18 @@ export function tripCover(stops: readonly Pictured[]): PlacePhoto | undefined {
   }
   return best;
 }
+
+/**
+ * Whether these trips are spread over more than one city.
+ *
+ * The Trips list is the one screen that ignores the city switcher — it
+ * shows everything the reader planned, wherever they planned it — so the
+ * card used to name its city on every row. For a reader whose trips are
+ * all in one place, that is the same word repeated down the screen: a
+ * label that distinguishes nothing is noise. It only starts meaning
+ * something at the moment a second city appears, so that is the moment
+ * the cards start saying it.
+ */
+export function spansCities(trips: readonly { city_id: string }[]): boolean {
+  return new Set(trips.map((t) => t.city_id)).size > 1;
+}

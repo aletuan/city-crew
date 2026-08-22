@@ -56,7 +56,7 @@ import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY } from '../lib/trip';
-import { spendVnd, splitTrips, tripCover } from '../lib/trips';
+import { spansCities, spendVnd, splitTrips, tripCover } from '../lib/trips';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -301,7 +301,13 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
   const now = new Date();
   const { upcoming, past } = splitTrips(trips.data, toISO(now), minutesOf(now));
 
+  // Named only when it distinguishes: one reader's trips are usually all
+  // in one city, and repeating that city down the list is noise. The
+  // moment a second city appears, every card starts saying which one it
+  // is — see spansCities.
+  const multiCity = spansCities(trips.data);
   const cityName = (id: string) => {
+    if (!multiCity) return null;
     const c = cities.find((x) => x.id === id);
     return c ? t(c.short_en, c.short_vi, c.short_ja) : null;
   };
