@@ -81,26 +81,28 @@ export const SKETCH_STEPS: readonly Step[] = [
   // `SketchingScreen`. Everything above still finishes in a millisecond;
   // this is the step that earns the orb.
   //
-  // ── the only line here that reassures rather than reports ──
+  // ── the one line that names the wait instead of describing the work ──
   //
-  // It said "Writing a line for each stop", which is exactly what happens
-  // and was still the wrong sentence. The four above describe work the
-  // reader recognises asking for and are done before they are read; this
-  // one is the only place in the app where somebody is genuinely kept
-  // waiting, and a description of the work does not answer the question
-  // they are actually holding, which is *how much longer*.
+  // It has been three things. "Writing a line for each stop" was exactly
+  // what happens and still the wrong sentence: the four rows above
+  // describe work the reader recognises asking for and are finished
+  // before they are read, while this one is the only place in the app
+  // where somebody is genuinely kept waiting. Then "Almost there…",
+  // which answered *how much longer* and said nothing about what for.
   //
-  // "Almost there", not "Almost done" — the four rows above are already
-  // in a state literally called `done` and drawn with a tick. Spending
-  // the same word on the row that is still running gives one word two
-  // meanings in one list.
+  // This says both. "Finalizing" is a verb in progress, which is honest
+  // here and nowhere else on this list — the model really is still
+  // writing — and "your itinerary" is what keeps it from being the empty
+  // word a progress bar uses. Bare "Finalizing" would be the Google
+  // Flights register the top of this file exists to argue against; naming
+  // the object is what makes it a report.
   //
-  // It keeps the ellipsis the others do without, because it is the only
-  // one that is still going when you read it.
+  // No ellipsis. The `-ing` already says it is running, and the row is
+  // the only one drawn with a turning arc besides.
   {
     key: 'words',
-    en: 'Almost there…', vi: 'Sắp xong rồi…',
-    ja: 'もうすぐです…',
+    en: 'Finalizing your itinerary', vi: 'Đang hoàn thiện lịch trình của bạn',
+    ja: '旅程を仕上げています',
   },
 ];
 
