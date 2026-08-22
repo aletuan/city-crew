@@ -78,6 +78,46 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
               />
             </PressableScale>
           </View>
+          {/* Which part of town, before you have to open it to find out.
+              ── the question this answers ──
+
+              This catalog holds three Hadu Sushi and two Artemis Pastry,
+              and they are not duplicates: separate businesses with
+              separate Google ids, kilometres apart, in different
+              districts. Search "Hadu" and three cards came back that were
+              identical — same name, same chips, differing only in a
+              photograph — and telling them apart meant opening each one
+              and coming back.
+
+              `PlaceDetailScreen` has carried the district and the full
+              address all along. That is one screen too late: the
+              disambiguating happens in the list, and the detail only
+              confirms whichever guess you already made.
+
+              ── unconditional, not only-when-ambiguous ──
+
+              Showing it only for names that repeat would need the card to
+              know the whole catalog, through a prop or a context read.
+              That is more machinery for a card that is *harder* to
+              predict: one that sometimes carries a district and sometimes
+              does not reads as a bug. It is also useful on every card —
+              "what part of town is this in" is a question about a place,
+              not about a collision.
+
+              Drawn as the plan and trip screens draw it, so a place named
+              in a list and the same place named in an itinerary say the
+              same thing the same way. Dropped rather than left blank when
+              the catalog has no district for a row: an empty line under a
+              name is a gap that looks like a loading state. */}
+          {!!place.neighborhood_en && (
+            <View style={s.whereRow}>
+              <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+              <Text style={s.where} numberOfLines={1}>
+                {t(place.neighborhood_en, place.neighborhood_vi ?? place.neighborhood_en,
+                  place.neighborhood_ja ?? place.neighborhood_en)}
+              </Text>
+            </View>
+          )}
           {/* Only its submitter can see this card at all, so the marker is
               not a warning — it is the answer to "why can nobody else see
               the place I added". Without it the card looks live, they show
@@ -145,6 +185,13 @@ const s = StyleSheet.create({
   // what stops a long one pushing the button off the card.
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   name: { flex: 1, color: colors.text, ...type.cardTitle },
+  // Tight under the name it qualifies — 3pt, not the 8 the status row and
+  // the chips take, because those are separate statements and this is the
+  // second half of the first one.
+  whereRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  // The same tertiary weight the plan and trip screens give a district, so
+  // the fact wears one face across the app.
+  where: { flex: 1, color: colors.textTertiary, ...type.meta },
   // The app's glass, now that it sits on a surface rather than on a photo.
   saveBtn: {
     width: 40, height: 40, borderRadius: 20,
