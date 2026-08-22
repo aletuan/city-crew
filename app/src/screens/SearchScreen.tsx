@@ -5,8 +5,9 @@
 // instant, no extra queries, and it matches without diacritics so
 // "banh mi" finds "Bánh mì Huỳnh Hoa".
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,14 +16,19 @@ import { AddSlot } from '../components/add';
 import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import CandidateRow from '../components/CandidateRow';
 import {
-  AmbientWarmth, BackButton, Card, Empty, PressableScale, useTabBarClearance,
+  AmbientWarmth, BackButton, Card, Chip, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
-import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
+import {
+  Collection, coverOf, fmtCount, isLive, membersOf, Place, touchesCity,
+} from '../lib/data';
+import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { freshOnly, useCandidates } from '../lib/candidates';
 import { hintArea } from '../lib/hints';
 import type { Candidate } from '../lib/suggest';
-import { useCollections, usePlaces, useSearchTerms } from '../lib/catalog';
+import { useCollections, useLikes, usePlaces, useSearchTerms } from '../lib/catalog';
+import { parseRecents, RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
+import { rankPopular } from '../lib/popular';
 import { collectionHaystack, findPlaces, matches, queryTerms } from '../lib/search';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
@@ -32,7 +38,14 @@ type Row =
   | { kind: 'header'; key: string; label: string }
   | { kind: 'collection'; key: string; collection: Collection; count: number; cover?: string }
   | { kind: 'place'; key: string; place: Place }
-  | { kind: 'candidate'; key: string; candidate: Candidate };
+  | { kind: 'candidate'; key: string; candidate: Candidate }
+  // The zero-state — what the screen offers before anyone has typed.
+  // Small-caps section marks (`eyebrow`), the remembered searches, one
+  // row of category chips, and the ranked "most popular" places.
+  | { kind: 'eyebrow'; key: string; label: string; clear?: boolean }
+  | { kind: 'recent'; key: string; term: string }
+  | { kind: 'chips'; key: string }
+  | { kind: 'popular'; key: string; place: Place };
 
 export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -44,6 +57,35 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const google = useCandidates();
 
   const [picked, setPicked] = useState<string[]>([]);
+
+  // The box, reachable: the ↗ on a recent row puts the term *into* the
+  // field for editing — a different promise from the row itself, which
+  // runs the search as typed — and putting it there without focusing the
+  // field would strand the reader one tap short of the edit they asked for.
+  const inputRef = useRef<TextInput>(null);
+
+  // What this box remembered from earlier visits. Loaded once; the pure
+  // rules for what gets kept live in lib/recents where the gate can see
+  // them, and this screen only ferries the list to and from storage. A
+  // read that fails (fresh install, cleared storage) is an empty memory,
+  // not an error.
+  const [recents, setRecents] = useState<string[]>([]);
+  useEffect(() => {
+    AsyncStorage.getItem(RECENTS_KEY)
+      .then((raw) => setRecents(parseRecents(raw)))
+      .catch(() => {});
+  }, []);
+  const keepRecents = (next: string[]) => {
+    setRecents(next);
+    AsyncStorage.setItem(RECENTS_KEY, JSON.stringify(next)).catch(() => {});
+  };
+  // A search is worth remembering when it *worked* — the reader opened
+  // one of its results. Called from every result row's onPress; blank
+  // queries no-op inside rememberSearch.
+  const noteSearch = () => {
+    const next = rememberSearch(recents, query);
+    if (next !== recents) keepRecents(next);
+  };
 
   // Cleared whenever the words change: a Google section answering the
   // previous query, sitting under results for this one, would be the
@@ -96,13 +138,53 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     [cols.data, places],
   );
 
+  // The zero-state's third section. Ranked over the live catalog only —
+  // `usePlaces` includes the reader's own still-pending submissions, and
+  // "most popular" must not recommend a place nobody else can open yet.
+  // The scoring itself lives in lib/popular; see the essay there.
+  const { likes } = useLikes();
+  const popular = useMemo(
+    () => rankPopular(places.filter(isLive), cols.data, likes),
+    [places, cols.data, likes],
+  );
+
+  // Only categories this city actually has — the same rule the Explore
+  // filter row states: a chip never leads to an empty list. Counted over
+  // the live catalog for the same reason `popular` is.
+  const cats = useMemo<string[]>(() => {
+    const present = new Set<string>();
+    for (const pl of places.filter(isLive)) for (const c of categoriesOf(pl)) present.add(c);
+    return CATEGORY_ORDER.filter((c) => present.has(c));
+  }, [places]);
+
   const terms = useMemo(() => queryTerms(query), [query]);
   // The desk's synonyms, folded onto the app's own. This is what lets
   // "cinema" reach a multiplex whose record never says the word.
   const synonyms = useSearchTerms();
 
   const rows = useMemo<Row[]>(() => {
-    if (terms.length === 0) return [];
+    // Before a word is typed the list is the zero-state: the searches
+    // this box remembers, the taxonomy to browse, and the places the
+    // ranking calls most popular. The moment a term exists, all of it
+    // yields to results — the sections below never mix with them.
+    if (terms.length === 0) {
+      const out: Row[] = [];
+      if (recents.length) {
+        out.push({ kind: 'eyebrow', key: 'z-recent', label: t('Recent', 'Gần đây', '最近'), clear: true });
+        for (const term of recents.slice(0, RECENTS_SHOWN)) {
+          out.push({ kind: 'recent', key: `rc-${term}`, term });
+        }
+      }
+      if (cats.length) {
+        out.push({ kind: 'eyebrow', key: 'z-browse', label: t('Browse', 'Duyệt theo', 'カテゴリー') });
+        out.push({ kind: 'chips', key: 'z-chips' });
+      }
+      if (popular.length) {
+        out.push({ kind: 'eyebrow', key: 'z-popular', label: t('Most popular', 'Phổ biến nhất', '人気スポット') });
+        for (const pl of popular) out.push({ kind: 'popular', key: `mp-${pl.slug}`, place: pl });
+      }
+      return out;
+    }
     const out: Row[] = [];
 
     // Same city test as the shelf and the tab. The public query is no
@@ -161,7 +243,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       for (const c of fresh) out.push({ kind: 'candidate', key: `g-${c.place_id}`, candidate: c });
     }
     return out;
-  }, [terms, query, places, colMembers, city?.id, fresh, synonyms, t]);
+  }, [terms, query, places, colMembers, city?.id, fresh, synonyms, t, recents, popular, cats]);
 
   const searching = terms.length > 0;
   const showBar = batchBarShown(chosen.length, google.batch);
@@ -229,6 +311,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         <View style={s.field}>
           <Ionicons name="search-outline" size={19} color={colors.textTertiary} />
           <TextInput
+            ref={inputRef}
             style={s.input}
             value={query}
             onChangeText={setQuery}
@@ -254,6 +337,109 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         renderItem={({ item }) => {
+          if (item.kind === 'eyebrow') {
+            return (
+              <View style={s.eyebrowRow}>
+                <Text style={s.eyebrow}>{item.label}</Text>
+                {/* Clear wipes the whole memory — the reference design has
+                    no per-row delete, and a memory you can prune one line
+                    at a time invites tidying a list that exists to be
+                    overwritten anyway. */}
+                {item.clear ? (
+                  <PressableScale
+                    onPress={() => keepRecents([])}
+                    scaleTo={0.92}
+                    hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Clear recent searches', 'Xóa tìm kiếm gần đây', '最近の検索を消去')}
+                  >
+                    <Text style={s.clear}>{t('Clear', 'Xóa', '消去')}</Text>
+                  </PressableScale>
+                ) : null}
+              </View>
+            );
+          }
+          if (item.kind === 'recent') {
+            return (
+              <PressableScale
+                style={s.recentRow}
+                scaleTo={0.97}
+                onPress={() => setQuery(item.term)}
+                accessibilityRole="button"
+                accessibilityLabel={item.term}
+              >
+                <Ionicons name="time-outline" size={18} color={colors.textTertiary} />
+                <Text style={s.recentTerm} numberOfLines={1}>{item.term}</Text>
+                {/* Two promises on one row, the standard split: the row
+                    re-runs the search as typed, the ↗ only lifts the term
+                    into the box so it can be edited before it runs. */}
+                <PressableScale
+                  onPress={() => { setQuery(item.term); inputRef.current?.focus(); }}
+                  scaleTo={0.85}
+                  hitSlop={{ top: 12, bottom: 12, left: 14, right: 14 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Edit this search', 'Sửa tìm kiếm này', 'この検索を編集')}
+                >
+                  <Ionicons
+                    name="arrow-up"
+                    size={17}
+                    color={colors.textTertiary}
+                    style={{ transform: [{ rotate: '45deg' }] }}
+                  />
+                </PressableScale>
+              </PressableScale>
+            );
+          }
+          if (item.kind === 'chips') {
+            return (
+              <View style={s.chipWrap}>
+                {cats.map((key) => (
+                  /* A chip *is* a search: it types the category's own
+                     label into the box, and the haystack — which carries
+                     every category's labels in all three languages — does
+                     the rest. No second code path, so a chip can never
+                     disagree with what typing the same word finds. */
+                  <Chip
+                    key={key}
+                    label={categoryLabel(key, t)}
+                    icon={CATEGORIES[key]?.icon}
+                    iconColor={CATEGORIES[key]?.color}
+                    onPress={() => setQuery(categoryLabel(key, t))}
+                  />
+                ))}
+              </View>
+            );
+          }
+          if (item.kind === 'popular') {
+            const pl = item.place;
+            const cover = coverOf(pl)?.photo_uri;
+            return (
+              <PressableScale
+                style={s.row}
+                onPress={() => navigation.navigate('PlaceDetail', { slug: pl.slug })}
+              >
+                <Card style={s.card}>
+                  {cover
+                    ? <Image source={{ uri: cover }} style={s.thumb} contentFit="cover" transition={200} />
+                    : <View style={s.thumb} />}
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Text style={s.cardTitle} numberOfLines={1}>
+                      {t(pl.name_en, pl.name_vi, pl.name_ja ?? pl.name_en)}
+                    </Text>
+                    <Text style={s.cardMeta} numberOfLines={1}>
+                      {pl.rating != null
+                        ? `★ ${pl.rating.toFixed(1)}${pl.rating_count ? ` (${fmtCount(pl.rating_count)})` : ''}`
+                        : t('New here', 'Mới có mặt', '新着')}
+                      {t(pl.neighborhood_en, pl.neighborhood_vi, pl.neighborhood_ja)
+                        ? ` · ${t(pl.neighborhood_en, pl.neighborhood_vi, pl.neighborhood_ja)}`
+                        : ''}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+                </Card>
+              </PressableScale>
+            );
+          }
           if (item.kind === 'header') return <Text style={s.section}>{item.label}</Text>;
           if (item.kind === 'candidate') {
             return (
@@ -269,7 +455,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                     ? p.filter((x) => x !== item.candidate.place_id)
                     : [...p, item.candidate.place_id]
                 ))}
-                onOpen={(slug) => navigation.navigate('PlaceDetail', { slug })}
+                onOpen={(slug) => { noteSearch(); navigation.navigate('PlaceDetail', { slug }); }}
               />
             );
           }
@@ -277,14 +463,22 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             return (
               <PlaceCard
                 place={item.place}
-                onPress={() => navigation.navigate('PlaceDetail', { slug: item.place.slug })}
+                onPress={() => {
+                  // This tap is what makes the query worth remembering:
+                  // it found the thing. See lib/recents.
+                  noteSearch();
+                  navigation.navigate('PlaceDetail', { slug: item.place.slug });
+                }}
               />
             );
           }
           return (
             <PressableScale
               style={s.row}
-              onPress={() => navigation.navigate('CollectionDetail', { slug: item.collection.slug })}
+              onPress={() => {
+                noteSearch();
+                navigation.navigate('CollectionDetail', { slug: item.collection.slug });
+              }}
             >
               <Card style={s.card}>
                 {item.cover
@@ -325,16 +519,18 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                 {googleEmpty}
               </>
             )
+            // Reached only while the catalog is still loading, or in a
+            // city with nothing in it yet: with places come chips and a
+            // ranking, and with either the zero-state rows exist instead.
             : <Empty text={t(
                 'Try a name, a neighbourhood, or a vibe — cafés, museums, rooftops.',
                 'Thử tên quán, tên khu, hay một kiểu vibe — cà phê, bảo tàng, rooftop.',
                 '名前・エリア・雰囲気で検索 — カフェ、博物館、ルーフトップ。',
               )} />
         }
-        // Only while searching: before a word is typed the list is empty
-        // for a reason that has nothing to do with the catalog, and
-        // offering to go and add a place would be answering a question
-        // nobody asked.
+        // Only while searching: before a word is typed the list holds the
+        // zero-state, and offering to go and add a place would be
+        // answering a question nobody asked.
         ListFooterComponent={searching && rows.length > 0
           ? <>{addRow}{googleEmpty}</>
           : null}
@@ -421,6 +617,32 @@ const s = StyleSheet.create({
   section: {
     color: colors.text, ...type.section,
     paddingHorizontal: space.page, marginTop: 10, marginBottom: space.headingToContent,
+  },
+
+  // ── the zero-state ──
+  // Small caps rather than the 22pt section face: these are shelf labels
+  // over a resting screen, not headings over results the reader asked
+  // for, and three of them at full section weight would shout over a
+  // page that is meant to feel idle.
+  eyebrowRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: space.page, marginTop: 18, marginBottom: 10,
+  },
+  eyebrow: {
+    color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
+    letterSpacing: 1.1, textTransform: 'uppercase',
+  },
+  clear: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
+  recentRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: space.page, paddingVertical: 11,
+  },
+  recentTerm: { flex: 1, color: colors.text, fontSize: 15.5 },
+  // The shared Chip carries its own right margin; the wrap only owes the
+  // vertical rhythm between lines.
+  chipWrap: {
+    flexDirection: 'row', flexWrap: 'wrap', rowGap: 10,
+    paddingHorizontal: space.page, marginBottom: 4,
   },
   row: { marginHorizontal: space.page, marginBottom: space.cardGap },
   card: {
