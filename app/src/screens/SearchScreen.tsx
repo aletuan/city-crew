@@ -28,6 +28,7 @@ import { escapeRoutes } from '../lib/deadend';
 import type { Candidate } from '../lib/suggest';
 import { useCollections, useLikes, usePlaces, useSearchTerms } from '../lib/catalog';
 import { parseRecents, RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
+import { newestPlaces } from '../lib/newest';
 import { rankPopular } from '../lib/popular';
 import { collectionHaystack, findPlaces, matches, queryTerms } from '../lib/search';
 import { useI18n } from '../lib/i18n';
@@ -45,7 +46,13 @@ type Row =
   | { kind: 'eyebrow'; key: string; label: string; clear?: boolean }
   | { kind: 'recent'; key: string; term: string }
   | { kind: 'chips'; key: string }
-  | { kind: 'popular'; key: string; place: Place };
+  | { kind: 'popular'; key: string; place: Place }
+  // Same row, different question: 'popular' answers "what is good
+  // here", 'latest' answers "what just landed". A separate kind rather
+  // than a reused one so a place in both sections keys twice without a
+  // collision, and so the two lists can ever diverge in rendering
+  // without an archaeology dig.
+  | { kind: 'latest'; key: string; place: Place };
 
 export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -148,6 +155,13 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     [places, cols.data, likes],
   );
 
+  // The zero-state's fourth section: the catalog's newest arrivals, for
+  // the reader who already knows this city and opens Search to ask what
+  // changed. Live rows only, for the same reason `popular` filters —
+  // this must not advertise a place nobody else can open yet. The
+  // ordering caveats live with the ranking, in lib/newest.
+  const latest = useMemo(() => newestPlaces(places.filter(isLive)), [places]);
+
   // Only categories this city actually has — the same rule the Explore
   // filter row states: a chip never leads to an empty list. Counted over
   // the live catalog for the same reason `popular` is.
@@ -182,6 +196,10 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       if (popular.length) {
         out.push({ kind: 'eyebrow', key: 'z-popular', label: t('Most popular', 'Phổ biến nhất', '人気スポット') });
         for (const pl of popular) out.push({ kind: 'popular', key: `mp-${pl.slug}`, place: pl });
+      }
+      if (latest.length) {
+        out.push({ kind: 'eyebrow', key: 'z-latest', label: t('Recently added', 'Mới thêm gần đây', '新着スポット') });
+        for (const pl of latest) out.push({ kind: 'latest', key: `la-${pl.slug}`, place: pl });
       }
       return out;
     }
@@ -243,7 +261,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       for (const c of fresh) out.push({ kind: 'candidate', key: `g-${c.place_id}`, candidate: c });
     }
     return out;
-  }, [terms, query, places, colMembers, city?.id, fresh, synonyms, t, recents, popular, cats]);
+  }, [terms, query, places, colMembers, city?.id, fresh, synonyms, t, recents, popular, latest, cats]);
 
   const searching = terms.length > 0;
   const showBar = batchBarShown(chosen.length, google.batch);
@@ -420,7 +438,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
               </View>
             );
           }
-          if (item.kind === 'popular') {
+          if (item.kind === 'popular' || item.kind === 'latest') {
             const pl = item.place;
             const cover = coverOf(pl)?.photo_uri;
             return (
