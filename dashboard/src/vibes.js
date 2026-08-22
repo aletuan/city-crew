@@ -7,6 +7,10 @@
 
 export const VIBE_ORDER = [
   'cafes', 'food_tour', 'nightlife', 'views', 'culture', 'outdoors', 'chill', 'shopping',
+  // Suitability — hand-assigned only; the importer never writes these.
+  // The desk is the producer, this picker is the tool, and the planner's
+  // COMPANY_LEAN is the consumer.
+  'kid_friendly', 'romantic', 'quiet',
 ];
 
 export const VIBE_STYLE = {
@@ -20,6 +24,9 @@ export const VIBE_STYLE = {
   // borrows the nearest concept's icon rather than inventing one.
   chill: { label: 'chill', color: '#7FA8D9', icon: 'leaf' },
   shopping: { label: 'shopping', color: '#C98BB0', icon: 'bag' },
+  kid_friendly: { label: 'kid-friendly', color: '#D9C37A', icon: 'balloon' },
+  romantic: { label: 'romantic', color: '#E08FA8', icon: 'heart' },
+  quiet: { label: 'quiet', color: '#A8A79B', icon: 'hush' },
 };
 
 export const VIBE_LABEL = Object.fromEntries(VIBE_ORDER.map((v) => [v, VIBE_STYLE[v].label]));

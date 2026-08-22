@@ -31,6 +31,27 @@ export const VIBES: Record<string, VibeStyle> = {
   outdoors: { color: '#8FBF8A', icon: 'leaf-outline', en: 'Nature', vi: 'Thiên nhiên', ja: '自然' },
   chill: { color: '#7FA8D9', icon: 'leaf-outline', en: 'Chill', vi: 'Thư giãn', ja: 'のんびり' },
   shopping: { color: '#C98BB0', icon: 'bag-outline', en: 'Shopping', vi: 'Mua sắm', ja: 'ショッピング' },
+
+  // ── suitability, which is what this axis was for ──
+  //
+  // Measured before these existed: 114 of 198 published places carried
+  // vibe_tags fully derivable from their categories by the importer's own
+  // mapping, and of the rest, 76 differed only by `chill`. The axis meant
+  // to say how a place *feels* was a renamed copy of what it *is* — the
+  // one hand-assigned value was the only information on it.
+  //
+  // These three are the same kind of judgement `chill` is: about a room,
+  // not a business type. Google has no type for any of them, `classify`
+  // never emits them (asserted in its tests), and only the desk assigns
+  // them — which is exactly what made `chill` worth having. Each ships
+  // with a consumer already waiting: `COMPANY_LEAN` in the planner reads
+  // them, so every tag the desk adds immediately changes somebody's plan.
+  //
+  // Three, not eight. Every value here is desk work on two hundred rows,
+  // and a value nothing consumes is the redundancy this note opens with.
+  kid_friendly: { color: '#D9C37A', icon: 'balloon-outline', en: 'Kid-friendly', vi: 'Hợp trẻ em', ja: '子連れOK' },
+  romantic: { color: '#E08FA8', icon: 'heart-outline', en: 'Romantic', vi: 'Lãng mạn', ja: 'ロマンチック' },
+  quiet: { color: '#A8A79B', icon: 'volume-low-outline', en: 'Quiet', vi: 'Yên tĩnh', ja: '静か' },
 };
 
 /** Neutral dot for a vibe the catalog grew before this table knew about it. */
