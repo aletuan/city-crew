@@ -638,9 +638,20 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.borderGlass,
   },
   tickOn: { borderColor: 'transparent' },
+  // Every round action in the app wears this: header search, back, share,
+  // the overflow menu, the heart, person-add, reorder Done. Glass fill,
+  // 44pt target, no hairline — the ring came off in the borderless pass,
+  // because a filled circle is already unmistakably a button and the
+  // stroke was the app's most-repeated one, on screens carrying four of
+  // these at once.
+  //
+  // Two things this is deliberately *not*. The discs on a photograph keep
+  // their dark scrim: that fill is doing contrast work over imagery
+  // nobody has seen, not saying "button". And accent-tinted controls keep
+  // their coral hairline, which is information rather than chrome.
   backBtn: {
     width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceGlass, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    backgroundColor: colors.surfaceGlass,
   },
   empty: { padding: 48, alignItems: 'center' },
   emptyText: { color: colors.textTertiary, ...type.meta, textAlign: 'center' },

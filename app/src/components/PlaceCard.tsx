@@ -192,12 +192,20 @@ const s = StyleSheet.create({
   // The same tertiary weight the plan and trip screens give a district, so
   // the fact wears one face across the app.
   where: { flex: 1, color: colors.textTertiary, ...type.meta },
-  // The app's glass, now that it sits on a surface rather than on a photo.
+  // The app's glass, now that it sits on a surface rather than on a photo
+  // — and only the glass. The hairline that used to ring it went with the
+  // borderless pass: fill and circle already say "button", where the
+  // stroke was the heaviest repeated mark on the card, drawn once per
+  // place down a list of them.
+  //
+  // The circle itself stays, and it is not decoration. It is what
+  // separates this tap from the card's own — press the disc and you save,
+  // press anywhere else and the place opens — and it is what holds the
+  // 40pt target that makes that separation reachable.
   saveBtn: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surfaceGlass,
-    borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
   // The rating supplies its own ground, like the price pill: a photograph
   // can be any brightness, and a score has to be legible over all of them.
