@@ -41,14 +41,17 @@ const MAX_API_CALLS = 20; // per request: 1 search or 1 details + ≤6 photo loo
 
 // Suggestions per account per day, counted over a rolling 24 hours.
 //
-// Was 10, which multi-select made too small to be about abuse: picking
-// six results at a time means two ordinary sessions reach it, and the
-// person it stopped was the one filling in a city. The number that
-// matters is the one the review queue can absorb from a single account,
-// and twenty is still well inside that.
+// Was 10, then 20, now 50, and each raise had the same shape: the person
+// the cap stopped was the one filling in a city, not an abuser. The
+// number that matters is the one the review queue can absorb from a
+// single account — every suggestion lands pending and unpublished, so
+// the desk is the real gate and this cap is only a brake on the queue's
+// growth. Fifty is a long afternoon of genuine contribution and still a
+// bounded bill: each import is one details call and up to six photo
+// lookups against a keyed quota.
 //
 // Editors are not counted at all; importing in bulk is their job.
-const DAILY_SUGGESTIONS = 20;
+const DAILY_SUGGESTIONS = 50;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
