@@ -24,7 +24,7 @@ import {
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { freshOnly, useCandidates } from '../lib/candidates';
-import { hintArea } from '../lib/hints';
+import { escapeRoutes } from '../lib/deadend';
 import type { Candidate } from '../lib/suggest';
 import { useCollections, useLikes, usePlaces, useSearchTerms } from '../lib/catalog';
 import { parseRecents, RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
@@ -247,6 +247,16 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
 
   const searching = terms.length > 0;
   const showBar = batchBarShown(chosen.length, google.batch);
+
+  // The fork out of a dead end: the part of town and the kind of place
+  // hiding inside the failed query, offered as chips. Computed only when
+  // the screen is actually empty — on any other frame the answer is
+  // thrown away, and this walks the whole catalog.
+  const dead = searching && rows.length === 0;
+  const routes = useMemo(
+    () => (dead ? escapeRoutes(query, places, synonyms) : []),
+    [dead, query, places, synonyms],
+  );
 
   // The words go with them. Someone who typed "Cộng Cà Phê" here and found
   // nothing should not have to type it again on the one screen whose whole
@@ -514,9 +524,19 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
           searching
             ? (
               <>
-                <NoMatches term={shown} area={hintArea(places)} />
+                <NoMatches term={shown} />
                 {addRow}
                 {googleEmpty}
+                {/* Under the Google row, not above it: the primary door
+                    stays primary, and the fork is the "or try" it reads
+                    as. Rendered after the not-found note too, so the
+                    chips survive Google coming back empty-handed — that
+                    is the moment they matter most. */}
+                <Fork
+                  routes={routes}
+                  onSearch={setQuery}
+                  onExplore={() => navigation.goBack()}
+                />
               </>
             )
             // Reached only while the catalog is still loading, or in a
@@ -557,18 +577,14 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
 /**
  * The end of a search that found nothing.
  *
- * It used to be one grey sentence. A dead end deserves more than a report
- * that it is one: a mark to land on, the term quoted back so the reader
- * can see what was actually searched, and — the part that does the work —
- * two examples of a query that would have succeeded.
- *
- * The neighbourhood in those examples comes out of the catalog rather than
- * out of the copy, because an example is a promise that typing it returns
- * something. Naming an area this city does not have would teach a second
- * thing that fails. When there is no area to name, that half of the
- * sentence goes rather than being invented — see `hintArea`.
+ * It used to be one grey sentence, then a sentence with worked examples
+ * baked into the copy. The examples have moved out of the prose and into
+ * the `Fork` chips below, where they are tappable and derived from the
+ * query itself — so the sentence here contracts to the one fact left to
+ * state: the catalog has not got this, yet. "Yet" is load-bearing; the
+ * row directly underneath offers to go and fetch it.
  */
-function NoMatches({ term, area }: { term: string; area: string | null }) {
+function NoMatches({ term }: { term: string }) {
   const { t } = useI18n();
   return (
     <View style={s.noneBox}>
@@ -585,19 +601,81 @@ function NoMatches({ term, area }: { term: string; area: string | null }) {
         {t(`No matches for “${term}”`, `Không có kết quả cho “${term}”`, `「${term}」に一致なし`)}
       </Text>
       <Text style={s.noneHint}>
-        {area
-          ? t(
-            `Check the spelling, or try a neighbourhood or a vibe — “${area}”, “rooftop”.`,
-            `Kiểm tra chính tả, hoặc thử tên khu hay một kiểu vibe — “${area}”, “rooftop”.`,
-            `つづりを確認するか、エリアや雰囲気で — 「${area}」「ルーフトップ」。`,
-          )
-          : t(
-            'Check the spelling, or try a vibe — “cafés”, “rooftop”.',
-            'Kiểm tra chính tả, hoặc thử một kiểu vibe — “cà phê”, “rooftop”.',
-            'つづりを確認するか、雰囲気で — 「カフェ」「ルーフトップ」。',
-          )}
+        {t('Not in cityCrew yet.', 'Chưa có trong cityCrew.', 'cityCrew にはまだありません。')}
       </Text>
     </View>
+  );
+}
+
+/**
+ * The fork out of a dead end: what the failed query *did* contain.
+ *
+ * "Pizza 4P's Thảo Điền" finding nothing still told the app two true
+ * things — a part of town and a kind of place — and each becomes a chip
+ * that re-runs the search with just that part. Re-running rather than
+ * navigating is the design: the box refills with the working query, so
+ * the reader sees *why* the chip worked and learns the shape of a query
+ * that succeeds. A jump to another screen would fix this search and
+ * teach nothing.
+ *
+ * "Back to Explore" is always last: the fork must never be a cul-de-sac,
+ * and someone whose query held nothing recognisable still deserves a
+ * door that is not the keyboard.
+ */
+function Fork({ routes, onSearch, onExplore }: {
+  routes: ReturnType<typeof escapeRoutes>;
+  onSearch: (q: string) => void;
+  onExplore: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <View style={s.forkBox}>
+      <Text style={s.forkLabel}>{t('OR TRY', 'HOẶC THỬ', 'または')}</Text>
+      <View style={s.forkRow}>
+        {routes.map((r) => {
+          if (r.kind === 'area') {
+            const name = t(r.en, r.vi, r.ja);
+            return (
+              <ForkChip
+                key={`a-${r.en}`}
+                icon="location-outline"
+                label={t(`Browse ${r.en}`, `Xem quanh ${r.vi}`, `${r.ja}を見る`)}
+                onPress={() => onSearch(name)}
+              />
+            );
+          }
+          const cat = CATEGORIES[r.key];
+          return (
+            <ForkChip
+              key={`c-${r.key}`}
+              icon={cat.icon}
+              label={t(`All ${cat.en}`, `Tất cả ${cat.vi}`, `${cat.ja}すべて`)}
+              onPress={() => onSearch(t(cat.en, cat.vi, cat.ja))}
+            />
+          );
+        })}
+        <ForkChip
+          icon="compass-outline"
+          label={t('Back to Explore', 'Về Khám phá', '探索に戻る')}
+          onPress={onExplore}
+        />
+      </View>
+    </View>
+  );
+}
+
+function ForkChip({ icon, label, onPress }: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <PressableScale onPress={onPress} haptic="selection" accessibilityRole="button">
+      <View style={s.forkChip}>
+        <Ionicons name={icon} size={15} color={colors.accent} />
+        <Text style={s.forkChipText} numberOfLines={1}>{label}</Text>
+      </View>
+    </PressableScale>
   );
 }
 
@@ -684,4 +762,22 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, paddingTop: 18, paddingBottom: 6, textAlign: 'center',
   },
   cardMeta: { color: colors.textTertiary, ...type.meta },
+
+  // The fork wears the app's glass pills — the same face the vibe chips
+  // and the save button have — because it is an offer, not a result. The
+  // eyebrow label is the reference mockup's "OR TRY": small caps, quiet,
+  // clearly a heading over choices rather than a sentence.
+  forkBox: { paddingHorizontal: space.page, marginTop: 26 },
+  forkLabel: {
+    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
+    letterSpacing: 1.2, marginBottom: 10,
+  },
+  forkRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  forkChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: colors.surfaceGlass, borderWidth: 1,
+    borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
+    paddingHorizontal: 14, paddingVertical: 9,
+  },
+  forkChipText: { color: colors.text, fontSize: 14, fontWeight: font.medium },
 });
