@@ -41,7 +41,7 @@ import { instantOn, openState } from './format';
 import { distanceKm } from './geo';
 import { isLive } from './live';
 import { legsOf, type Leg } from './travel';
-import { areaCentre, type TripDraft } from './trip';
+import { areaCentre, type Company, type TripDraft } from './trip';
 import type { Place } from './types';
 
 export type PartKey = 'morning' | 'afternoon' | 'evening';
@@ -356,6 +356,55 @@ const LENSES: readonly Lens[] = [
 const TASTE_WEIGHT = 2;
 
 /**
+ * Who is coming, as a lean on the shelf.
+ *
+ * ── the dead input this revives ──
+ *
+ * "Who's coming?" is the wizard's first question, and until this table
+ * existed nothing in the planner read the answer. It was stored on the
+ * trip, worn as a badge, and handed to the model to colour the prose —
+ * so a family with children and a couple on a date night were given
+ * identical stops, differing only in the sentence underneath. The first
+ * question a screen asks should not be the one question the answer to
+ * which changes nothing.
+ *
+ * ── a lean, never a gate, and weighted to lose on purpose ──
+ *
+ * `favour` earns the same 1.5 a lens's leaning does, `avoid` charges 2 —
+ * both strictly below the 3 the reader's own categories carry. The
+ * ordering of those three numbers is the contract: what the reader *said*
+ * outranks who they are with, which outranks the card's flavour. A family
+ * that explicitly picks nightlife has told us something more specific
+ * than this table knows, and the gate in `dropReason` already honours it —
+ * their chosen categories are the filter, and this term can only reorder
+ * inside what survives.
+ *
+ * The values are deliberately mild and deliberately few. `family` avoids
+ * nightlife — the one pairing where a wrong pick is a real cost, a bar in
+ * a plan with children in it — and leans to the shelves a day out with
+ * kids actually uses. `solo` leans to the two categories built around one
+ * person and a seat. `couple` leans to the evening's own shelves.
+ * `friends` leans loud. `other` says nothing, because it means "none of
+ * the above" and inventing a taste for it would be answering a question
+ * the reader deliberately declined.
+ *
+ * Null falls through to `NOBODY` rather than throwing: `TripDraft`
+ * permits it, and a draft built outside the wizard should plan the way
+ * every draft did before this table existed.
+ */
+type Lean = { favour: readonly string[]; avoid: readonly string[] };
+const NOBODY: Lean = { favour: [], avoid: [] };
+export const COMPANY_LEAN: Record<Company, Lean> = {
+  solo: { favour: ['cafes', 'focus'], avoid: [] },
+  couple: { favour: ['views', 'nightlife'], avoid: [] },
+  friends: { favour: ['nightlife', 'fun', 'eats'], avoid: [] },
+  family: { favour: ['nature', 'fun', 'heritage'], avoid: ['nightlife'] },
+  other: NOBODY,
+};
+const COMPANY_FAVOUR = 1.5;
+const COMPANY_AVOID = 2;
+
+/**
  * Charged against a place that costs more than its share of a stated
  * budget, per whole share it runs over, capped.
  *
@@ -539,6 +588,12 @@ function scoreOf(
     + lens.price * ((p.price_vnd ?? 0) / 100_000);
 
   if (draft.district && p.neighborhood_en?.trim() === draft.district) s += DISTRICT_BONUS;
+
+  // Who is coming — see COMPANY_LEAN for why this is a lean and not a
+  // gate, and why both weights sit below the reader's own categories.
+  const lean = draft.company ? COMPANY_LEAN[draft.company] : NOBODY;
+  s += overlap(cats, lean.favour) * COMPANY_FAVOUR
+    - overlap(cats, lean.avoid) * COMPANY_AVOID;
 
   if (opts.taste) s += opts.taste.affinity(p) * TASTE_WEIGHT;
 
