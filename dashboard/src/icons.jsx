@@ -132,6 +132,21 @@ const PATHS = {
   dots: (
     <path d="M3.4 8h.1M8 8h.1M12.6 8h.1" />
   ),
+  heart: (
+    <path d="M8 13C5.2 10.8 2.8 9 2.8 6.6a2.7 2.7 0 0 1 5.2-1.1A2.7 2.7 0 0 1 13.2 6.6C13.2 9 10.8 10.8 8 13Z" />
+  ),
+  balloon: (
+    <>
+      <ellipse cx="8" cy="6" rx="3.2" ry="3.6" />
+      <path d="M8 9.6l-.7 1.2h1.4L8 13.4" />
+    </>
+  ),
+  hush: (
+    <>
+      <path d="M3 6.4h2l3-2.4v8l-3-2.4H3Z" />
+      <path d="M10.4 6.6a2.2 2.2 0 0 1 0 2.8" />
+    </>
+  ),
 };
 
 export function CategoryIcon({ name, color = 'currentColor', size = 14 }) {

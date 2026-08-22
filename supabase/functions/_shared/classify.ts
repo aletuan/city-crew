@@ -40,6 +40,12 @@ export const CATEGORY_KEYS = [
 /** How a place feels, mirrored from `app/src/lib/vibes.ts`. */
 export const VIBE_KEYS = [
   'cafes', 'food_tour', 'nightlife', 'views', 'culture', 'outdoors', 'chill', 'shopping',
+  // Suitability — kid_friendly, romantic, quiet. Listed because the
+  // mirror test walks this list against the app's, and never emitted for
+  // the same reason `chill` never is: each is a judgement about a room,
+  // which Google's types cannot make and the desk can. `VIBE_OF` below
+  // deliberately maps no category to any of them.
+  'kid_friendly', 'romantic', 'quiet',
 ] as const;
 
 /**

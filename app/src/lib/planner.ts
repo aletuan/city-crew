@@ -392,17 +392,33 @@ const TASTE_WEIGHT = 2;
  * permits it, and a draft built outside the wizard should plan the way
  * every draft did before this table existed.
  */
-type Lean = { favour: readonly string[]; avoid: readonly string[] };
-const NOBODY: Lean = { favour: [], avoid: [] };
+type Lean = {
+  favour: readonly string[];
+  avoid: readonly string[];
+  /** Suitability vibes — `kid_friendly`, `romantic`, `quiet`. A different
+   *  kind of evidence from the two lists above: those are guesses from a
+   *  place's *type*, these are a person's judgement about the *room*,
+   *  hand-assigned at the desk the way `chill` always was. The importer
+   *  never writes them, so a place that carries one carries it because
+   *  somebody meant it. */
+  favourVibes: readonly string[];
+};
+const NOBODY: Lean = { favour: [], avoid: [], favourVibes: [] };
 export const COMPANY_LEAN: Record<Company, Lean> = {
-  solo: { favour: ['cafes', 'focus'], avoid: [] },
-  couple: { favour: ['views', 'nightlife'], avoid: [] },
-  friends: { favour: ['nightlife', 'fun', 'eats'], avoid: [] },
-  family: { favour: ['nature', 'fun', 'heritage'], avoid: ['nightlife'] },
+  solo: { favour: ['cafes', 'focus'], avoid: [], favourVibes: ['quiet'] },
+  couple: { favour: ['views', 'nightlife'], avoid: [], favourVibes: ['romantic'] },
+  friends: { favour: ['nightlife', 'fun', 'eats'], avoid: [], favourVibes: [] },
+  family: { favour: ['nature', 'fun', 'heritage'], avoid: ['nightlife'], favourVibes: ['kid_friendly'] },
   other: NOBODY,
 };
 const COMPANY_FAVOUR = 1.5;
 const COMPANY_AVOID = 2;
+/** Above the category lean, below the reader's own answers — and the gap
+ *  is the argument. The category lean is this table guessing from what a
+ *  place is; a suitability vibe is the desk having sat in the room. Better
+ *  evidence earns more weight, and 2.5 still loses to the 3 the reader's
+ *  explicit categories carry, so the contract in the note above holds. */
+const COMPANY_VIBE = 2.5;
 
 /**
  * Charged against a place that costs more than its share of a stated
@@ -593,7 +609,8 @@ function scoreOf(
   // gate, and why both weights sit below the reader's own categories.
   const lean = draft.company ? COMPANY_LEAN[draft.company] : NOBODY;
   s += overlap(cats, lean.favour) * COMPANY_FAVOUR
-    - overlap(cats, lean.avoid) * COMPANY_AVOID;
+    - overlap(cats, lean.avoid) * COMPANY_AVOID
+    + overlap(p.vibe_tags, lean.favourVibes) * COMPANY_VIBE;
 
   if (opts.taste) s += opts.taste.affinity(p) * TASTE_WEIGHT;
 

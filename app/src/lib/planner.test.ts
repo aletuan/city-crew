@@ -771,4 +771,49 @@ describe('who is coming', () => {
   it('stays deterministic with a company set', () => {
     expect(first('family')).toEqual(first('family'));
   });
+
+  // ── suitability vibes, the desk's half of this table ──
+  //
+  // Category leans are this table guessing from what a place is; a
+  // suitability vibe is a person having judged the room. Same category on
+  // both shelves here, so nothing separates them but the tag — which is
+  // exactly the situation the desk creates by assigning one.
+  describe('reads the room when the desk has judged it', () => {
+    const tagged = (cat: string, vibe: string) =>
+      many(cat).map((p, i) => (i % 2 === 0 ? { ...p, vibe_tags: [vibe] } : p));
+
+    const opening = (company: TripDraft['company'], places: Place[]) =>
+      planTrips({ ...openAsk, company, categories: [] }, places, 'hanoi', { seed: 2 })[0]
+        .stops.map((s) => s.place.vibe_tags);
+
+    it('seats a family at the kid-friendly half of the shelf', () => {
+      for (const v of opening('family', tagged('nature', 'kid_friendly'))) {
+        expect(v).toContain('kid_friendly');
+      }
+    });
+
+    it('books a couple into the romantic rooms', () => {
+      for (const v of opening('couple', tagged('views', 'romantic'))) {
+        expect(v).toContain('romantic');
+      }
+    });
+
+    it('finds somebody on their own a quiet seat', () => {
+      for (const v of opening('solo', tagged('cafes', 'quiet'))) {
+        expect(v).toContain('quiet');
+      }
+    });
+
+    // The tag moves nothing for the answers that carry no vibe lean — a
+    // catalog the desk has started tagging must not change plans for
+    // readers the tags say nothing about.
+    it('means nothing to friends, and to no answer at all', () => {
+      const shelf = tagged('eats', 'kid_friendly');
+      const bare = shelf.map((p) => ({ ...p, vibe_tags: [] }));
+      const stops = (places: Place[]) =>
+        planTrips({ ...openAsk, company: 'friends', categories: [] }, places, 'hanoi', { seed: 3 })[0]
+          .stops.map((s) => s.place.slug);
+      expect(stops(shelf)).toEqual(stops(bare));
+    });
+  });
 });

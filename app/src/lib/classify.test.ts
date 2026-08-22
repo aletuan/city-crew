@@ -168,6 +168,18 @@ describe('classify', () => {
     }
   });
 
+  // The suitability trio is hand-assigned for the same reason chill is: a
+  // judgement about a room, which a type list cannot make. If one of
+  // these ever comes out of classify, somebody wired a category to it.
+  it('never claims a place is kid-friendly, romantic or quiet', () => {
+    for (const type of Object.keys(BY_TYPE)) {
+      const { vibes } = classify(type, [type]);
+      for (const v of ['kid_friendly', 'romantic', 'quiet']) {
+        expect(vibes, type).not.toContain(v);
+      }
+    }
+  });
+
   it('never claims a place is chill', () => {
     for (const type of Object.keys(BY_TYPE)) {
       expect(classify(type, [type]).vibes, type).not.toContain('chill');
