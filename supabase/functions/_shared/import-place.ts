@@ -230,6 +230,11 @@ export async function importPlace(
       // for an editor exactly as it did before, which is the behaviour this
       // replaces for recognised types and preserves for the rest.
       categories: categories ?? auto.categories,
+      // Google's own answer to "what is this, mainly", kept verbatim.
+      // `classify` distils it into our taxonomy above; this keeps the
+      // original so a future change of taxonomy can re-distil without
+      // re-buying the details call. Nothing reads it yet, on purpose.
+      primary_type: d.primaryType ?? null,
       city_id: cityId,
       is_featured: false,
       // Same rule, and the empty array has to be read as "said nothing"
