@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  finished, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, stopCount, summaryLine, type Step,
+  finished, findingsOf, latestFinding, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, stopCount, summaryLine, type Step,
 } from './sketch';
 
 const steps: Step[] = [
@@ -18,7 +18,12 @@ describe('SKETCH_STEPS', () => {
   it('is five steps and under three seconds of reading floor', () => {
     expect(SKETCH_STEPS).toHaveLength(5);
     expect(SKETCH_STEPS[SKETCH_STEPS.length - 1].key).toBe('words');
-    expect(SKETCH_STEPS.length * STEP_FLOOR_MS).toBeLessThan(3000);
+    // Under the model's own floor: a healthy narration takes three
+    // seconds at least, and the last step waits for it anyway, so the
+    // reading floor must not be what decides how long the screen lasts.
+    expect((SKETCH_STEPS.length - 1) * STEP_FLOOR_MS).toBeLessThan(4000);
+    // And long enough to read the sentence each row now carries.
+    expect(STEP_FLOOR_MS).toBeGreaterThan(700);
   });
 
   it('says the same thing in all three languages', () => {
@@ -139,5 +144,92 @@ describe('stopCount', () => {
     expect(stopCount(5, vi)).toBe('5 điểm');
     expect(stopCount(1, ja)).toBe('1 スポット');
     expect(stopCount(5, ja)).toBe('5 スポット');
+  });
+});
+
+const t3 = (en: string) => en;
+const FMT = {
+  clock: (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`,
+  distance: (km: number) => `${km} km`,
+  minutes: (n: number) => `${n} min`,
+};
+const FULL = {
+  openNow: 17,
+  startMin: 9 * 60,
+  opening: 'Artemis Pastry',
+  hop: { km: 6.2, minutes: 20 },
+  window: [9 * 60, 11 * 60 + 42] as [number, number],
+};
+
+describe('findingsOf', () => {
+  it('lines up one finding per step', () => {
+    expect(findingsOf(FULL, t3, FMT)).toHaveLength(SKETCH_STEPS.length);
+  });
+
+  // The first step is answered by the summary line already printed above
+  // the card. Repeating the reader's own answers back at them is not a
+  // finding.
+  it('says nothing about the reader\'s own picks', () => {
+    expect(findingsOf(FULL, t3, FMT)[0]).toBeNull();
+  });
+
+  it('reports what it found, not what it is doing', () => {
+    const [, open, start, hop, window] = findingsOf(FULL, t3, FMT);
+    expect(open).toBe('17 places open at 09:00');
+    expect(start).toBe('Starting at Artemis Pastry');
+    expect(hop).toBe('6.2 km to the next stop, about 20 min');
+    expect(window).toBe('Your day runs 09:00–11:42');
+  });
+
+  // Every one of these is missing in a real case: a catalog that could not
+  // be read, a plan with a single stop and therefore no journey. A box
+  // that printed "0 places open" or "undefined km" would be worse than a
+  // box that says nothing.
+  it('has nothing to say rather than something wrong', () => {
+    const bare = findingsOf(
+      { openNow: 0, startMin: 540, opening: null, hop: null, window: null }, t3, FMT,
+    );
+    expect(bare).toEqual([null, null, null, null, null]);
+  });
+
+  it('drops only the part it is missing', () => {
+    const [, open, start, hop] = findingsOf({ ...FULL, hop: null }, t3, FMT);
+    expect(open).not.toBeNull();
+    expect(start).not.toBeNull();
+    expect(hop).toBeNull();
+  });
+});
+
+describe('latestFinding', () => {
+  const lines = findingsOf(FULL, t3, FMT);
+
+  // The first step has no finding by design, so the screen keeps its
+  // skeleton until there is a fact to put in its place.
+  it('has nothing before the first finding exists', () => {
+    expect(latestFinding(lines, 0)).toBeNull();
+  });
+
+  it('shows the finding for the step that is running', () => {
+    expect(latestFinding(lines, 1)).toBe('17 places open at 09:00');
+    expect(latestFinding(lines, 3)).toBe('6.2 km to the next stop, about 20 min');
+  });
+
+  // Falls forward rather than blanking. An element that disappears reads
+  // as something having gone wrong, not as a step with nothing to add.
+  it('holds the last line through a step that says nothing', () => {
+    const gappy = ['a', null, null, 'd', null];
+    expect(latestFinding(gappy, 2)).toBe('a');
+    expect(latestFinding(gappy, 4)).toBe('d');
+  });
+
+  // The screen finishes on the last frame and hands over; a box that goes
+  // blank on the way out is a flicker.
+  it('holds rather than clearing once the steps are done', () => {
+    expect(latestFinding(lines, 99)).toBe('Your day runs 09:00–11:42');
+  });
+
+  it('has nothing to hold when nothing was found', () => {
+    expect(latestFinding([null, null], 5)).toBeNull();
+    expect(latestFinding([], 0)).toBeNull();
   });
 });

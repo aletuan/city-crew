@@ -34,16 +34,19 @@ import {
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
-import { dateline } from '../lib/format';
+import { clockOf, dateline, fmtMinutes, instantOn, openState } from '../lib/format';
+import { fmtDistance } from '../lib/geo';
 import { planGap } from '../lib/gaps';
 import { useI18n } from '../lib/i18n';
 import { narratableOf, prefetchNarration } from '../lib/assist';
 import { membersOf } from '../lib/place';
 import { planTrips } from '../lib/planner';
+import { legsOf } from '../lib/travel';
 import { useSave } from '../lib/save';
 import { usePlanProfile } from '../lib/tasteProfile';
 import {
-  finished, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, summaryLine, type StepState,
+  finished, findingsOf, latestFinding, SKETCH_STEPS, STEP_FLOOR_MS, stepStates,
+  summaryLine, type StepState,
 } from '../lib/sketch';
 import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
 import { clampDay, fromISO, todayISO } from '../lib/day';
@@ -62,6 +65,56 @@ import { colors, font, gradAI, radius, space } from '../theme';
  * late landing.
  */
 const HOLD_MS = 8000;
+
+/**
+ * One finding, arriving.
+ *
+ * ── the animation, and what it is allowed to imply ──
+ *
+ * Each line fades up and settles. It does not loop, and there is no
+ * marquee: a status line that comes back round is the tell of a progress
+ * bar with nothing behind it, and this screen spent its first life being
+ * exactly that. Every line here is a fact about a plan that already
+ * exists, shown once, and replaced when the step above it changes.
+ *
+ * ── why the whole box does not resize ──
+ *
+ * The lines are different lengths and two of them wrap. Animating a box
+ * that also changes height makes the steps above it jump, so the height
+ * is held at two lines' worth and the text is centred in it. A little
+ * empty space under a short line is cheaper than a list that twitches
+ * every time a fact lands.
+ *
+ * ── reduced motion ──
+ *
+ * `still` cuts the transition rather than shortening it. Somebody who has
+ * asked the system for less movement is not asking for faster movement,
+ * and this screen already honours the same flag on the orb.
+ */
+function Finding({ text, still }: { text: string; still: boolean }) {
+  const fade = useRef(new Animated.Value(0)).current;
+  const rise = useRef(new Animated.Value(6)).current;
+
+  useEffect(() => {
+    if (still) { fade.setValue(1); rise.setValue(0); return; }
+    fade.setValue(0);
+    rise.setValue(6);
+    const run = Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration: 260, useNativeDriver: true }),
+      Animated.timing(rise, { toValue: 0, duration: 260, useNativeDriver: true }),
+    ]);
+    run.start();
+    return () => run.stop();
+    // Keyed on the text: a new fact is a new arrival, and the same fact
+    // held across two steps must not blink.
+  }, [text, still, fade, rise]);
+
+  return (
+    <Animated.View style={[s.finding, { opacity: fade, transform: [{ translateY: rise }] }]}>
+      <Text style={s.findingText}>{text}</Text>
+    </Animated.View>
+  );
+}
 
 export default function SketchingScreen({ navigation, route }: {
   navigation: Nav;
@@ -107,6 +160,47 @@ export default function SketchingScreen({ navigation, route }: {
     [loading, places, city?.id, draft, seed, p.startMin, pinned, taste, budgetVnd],
   );
   const gap = useMemo(() => planGap(p.categories, places), [p.categories, places]);
+
+  /**
+   * What the box under the steps has to report, measured from the plan
+   * that already exists.
+   *
+   * The count of open places is worked out here rather than taken from
+   * the planner, and the phrasing is written to match what is actually
+   * counted: every place in the city's catalog whose hours say it is open
+   * at the starting hour. The planner's own pool is narrower — it also
+   * wants the right city, a live listing and a matching category — so
+   * quoting *its* number under the words "places open at 09:00" would be
+   * a true number under a false description.
+   *
+   * `openState` returns null for a place that posts no hours, and null is
+   * not "closed": those simply are not counted, which is the same thing
+   * `dropReason` does with them.
+   *
+   * Everything else comes from the first plan, because that is the one
+   * the reader is about to see recommended.
+   */
+  const findings = useMemo(() => {
+    const day = clampDay(p.date || todayISO());
+    const startMin = p.startMin ?? plans[0]?.windowMin[0] ?? 0;
+    const at = instantOn(day, startMin);
+    const openNow = at
+      ? places.filter((pl) => openState(pl.opening_hours, at)?.open).length
+      : 0;
+    const best = plans[0];
+    return findingsOf(
+      {
+        openNow,
+        startMin,
+        opening: best?.stops[0]?.place.name_en ?? null,
+        hop: best ? legsOf(best.stops.map((st) => st.place))[0] ?? null : null,
+        window: best?.windowMin ?? null,
+      },
+      t,
+      { clock: clockOf, distance: fmtDistance, minutes: (n) => fmtMinutes(n, lang) },
+    );
+  }, [places, plans, p.date, p.startMin, t, lang]);
+
 
   /**
    * Whether the model's words have landed — the one thing besides the
@@ -155,6 +249,11 @@ export default function SketchingScreen({ navigation, route }: {
     const id = setTimeout(() => setStep((n) => n + 1), STEP_FLOOR_MS);
     return () => clearTimeout(id);
   }, [loading, step, wordsReady]);
+
+  /** The line in the box: this step's finding, or the last one before it
+   *  that had something to say. Null until the second step, when the
+   *  first fact exists — until then the skeleton stands. */
+  const finding = latestFinding(findings, step);
 
   const states = stepStates(step);
   const done = finished(step);
@@ -215,9 +314,15 @@ export default function SketchingScreen({ navigation, route }: {
             matches those choices" makes the screen argue with itself. */}
         {!empty && (
           <View style={s.preview}>
-            <Skeleton style={{ height: 12, width: '46%', borderRadius: 6 }} />
-            <Skeleton style={{ height: 12, width: '88%', borderRadius: 6 }} />
-            <Skeleton style={{ height: 12, width: '72%', borderRadius: 6 }} />
+            {finding
+              ? <Finding text={finding} still={calm} />
+              : (
+                <>
+                  <Skeleton style={{ height: 12, width: '46%', borderRadius: 6 }} />
+                  <Skeleton style={{ height: 12, width: '88%', borderRadius: 6 }} />
+                  <Skeleton style={{ height: 12, width: '72%', borderRadius: 6 }} />
+                </>
+              )}
           </View>
         )}
 
@@ -374,10 +479,22 @@ const s = StyleSheet.create({
   stepTextOn: { color: colors.text, fontWeight: font.semibold },
   stepTextOff: { color: colors.textTertiary },
 
+  // A fixed height, because the box now holds sentences of different
+  // lengths and a box that resizes under the step list makes the list
+  // jump every time a fact lands. Two lines' worth, centred — the
+  // skeleton's three bars fit the same room.
   preview: {
     alignSelf: 'stretch', gap: 10, padding: 16, marginTop: 2,
+    minHeight: 96, justifyContent: 'center',
     backgroundColor: colors.surfaceCard, borderRadius: radius.card,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  finding: { alignSelf: 'stretch' },
+  // A size up from `note` and in the reading colour, because this is
+  // content rather than a footnote about the screen — it is the first
+  // piece of the answer the reader gets.
+  findingText: {
+    color: colors.textSecondary, fontSize: 15, lineHeight: 21, textAlign: 'center',
   },
   note: { color: colors.textTertiary, fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 2 },
 });
