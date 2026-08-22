@@ -475,10 +475,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             />
           </View>
         )}
-        {/* The heart lives here rather than on the shelf card: a card on
-            the shelf is one tap that opens the list, and a second tappable
-            thing inside it is a target the thumb hits by accident on the
-            way past.
+        {/* The same gesture the shelf card carries in its foot, at the
+            size a screen with room can give it. Two places, one meaning —
+            what changes is only the shape: a 15pt glyph beside a tally
+            down there, where the card is 176pt wide and the photograph is
+            the point, and a full round button here, where the list's own
+            screen has a header to put it in.
 
             On every public list including your own — the gesture belongs
             to everyone, and the insert policy allows it. What it still
