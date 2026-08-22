@@ -492,14 +492,19 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             // compact form of the sentence the detail screen spells out.
             // An unknown schedule says nothing: `openState` returning
             // null is "cannot answer", and showing nothing beats telling
-            // someone an open café is closed. A 24-hour place has no
-            // closing time to name and also stays quiet, which is honest
-            // — "until never" is not an hour.
+            // someone an open café is closed.
+            //
+            // A 24-hour place says so in words. It used to stay quiet on
+            // the logic that "until never" is not an hour — but on a
+            // shelf where every neighbour names a time, silence reads as
+            // a hole in the data, not as always-open. Xofa and the parks
+            // looked like the rows somebody forgot to fill in, when they
+            // are the rows with the *best* answer on the shelf.
             const state = openState(pl.opening_hours, now);
             const when = state?.open
               ? state.untilMin != null
                 ? t(`until ${clockOf(state.untilMin)}`, `đến ${clockOf(state.untilMin)}`, `${clockOf(state.untilMin)}まで`)
-                : null
+                : t('open 24 hours', 'mở 24/24', '24時間営業')
               : state?.opensAtMin != null
                 ? t(`opens ${clockOf(state.opensAtMin)}`, `mở lúc ${clockOf(state.opensAtMin)}`, `${clockOf(state.opensAtMin)}開店`)
                 : null;
