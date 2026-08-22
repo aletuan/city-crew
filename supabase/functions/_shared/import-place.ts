@@ -2,6 +2,7 @@
 // scan-city (batch import): details fetch → unique slug → place row + photos.
 
 import { classify } from "./classify.ts";
+import { wardFromAddress } from "./ward.ts";
 
 export const PRICE_LEVELS: Record<string, number> = {
   PRICE_LEVEL_INEXPENSIVE: 1,
@@ -247,8 +248,16 @@ export async function importPlace(
       desc_en: d.editorialSummary?.text ?? null,
       // Same value in both languages, like name_en/name_vi above — a
       // starting point the editor refines, not a translation.
-      neighborhood_en: neighborhoodOf(d.addressComponents),
-      neighborhood_vi: neighborhoodOf(d.addressComponents),
+      //
+      // Components first, address second. The components stopped naming
+      // this tier for Ho Chi Minh City after the 2025 ward mergers while
+      // the formatted address kept it, so the string is the fallback —
+      // see ward.ts for the anatomy it reads. Without it every Saigon
+      // import landed with no neighbourhood and the card showed no 📍
+      // line, while Hanoi's — whose quận still arrive as components —
+      // always did.
+      neighborhood_en: neighborhoodOf(d.addressComponents) ?? wardFromAddress(d.formattedAddress),
+      neighborhood_vi: neighborhoodOf(d.addressComponents) ?? wardFromAddress(d.formattedAddress),
       address: d.formattedAddress ?? null,
       lat: d.location?.latitude ?? null,
       lng: d.location?.longitude ?? null,
