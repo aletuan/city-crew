@@ -380,35 +380,6 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                     <Ionicons name={badge} size={15} color={onPhoto.text} />
                   </View>
                 )}
-                {/* Opposite corner from the category badge, which is the
-                    only other thing on the photograph.
-
-                    A tappable heart inside a tappable card is two targets
-                    in one place, so this one is a 30pt disc in a corner
-                    with the card's own press deliberately not swallowing
-                    it — the same shape the badge already occupies, so the
-                    thumb has a landmark rather than a surprise. Liking
-                    from here is the point of the feature: having to open a
-                    list to say you like it is most of a social gesture
-                    spent on navigation. */}
-                {c.id && (
-                  <PressableScale
-                    containerStyle={s.shelfHeart}
-                    style={s.shelfHeartInner}
-                    scaleTo={0.86}
-                    onPress={() => onHeart(c)}
-                    accessibilityRole="button"
-                    accessibilityLabel={t(
-                      'Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね',
-                    )}
-                  >
-                    <Ionicons
-                      name={myLikes.includes(c.id) ? 'heart' : 'heart-outline'}
-                      size={16}
-                      color={myLikes.includes(c.id) ? onPhoto.accent : onPhoto.text}
-                    />
-                  </PressableScale>
-                )}
                 <View style={s.shelfCardText}>
                   {/* One line, always. A second line pushed the count down
                       on some tiles and not others, so a row of cards that
@@ -416,17 +387,56 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                   <Text style={s.shelfCardTitle} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
                   <View style={s.shelfCardFoot}>
                     <Text style={s.shelfCardMeta}>{count} {t('places', 'địa điểm', 'スポット')}</Text>
-                    {/* The tally, and only once it means something. A `0`
-                        here would not read as "no votes yet" — it would
-                        read as "nobody liked this", about every card on
-                        the shelf. The heart itself lives on the
-                        collection's own screen, where there is room to
-                        press it without hitting the card underneath. */}
-                    {likesWorthShowing(likes[c.slug]) && (
-                      <View style={s.shelfLikes}>
-                        <Ionicons name="heart" size={12} color={onPhoto.accent} />
-                        <Text style={s.shelfCardMeta}>{likes[c.slug]}</Text>
-                      </View>
+                    {/* One heart, and it is both the gesture and the
+                        tally.
+
+                        There were two: a 30pt disc in the photograph's
+                        top corner that you could press, and a small mark
+                        down here that only counted. Two hearts on one
+                        card is one heart too many — the reader has to
+                        work out which of them is theirs — and the
+                        counting one sat next to a number it looked like
+                        it was labelling rather than a state it could
+                        change. Merged, the shape says both things at
+                        once: outline is a list you have not liked, coral
+                        filled is one you have, and the figure beside it
+                        is how many people agree.
+
+                        The tally still only prints from one, per
+                        `likesWorthShowing` — a `0` reads as "nobody liked
+                        this" rather than "no votes yet". The heart draws
+                        bare below that, which is exactly when it is most
+                        obviously an invitation.
+
+                        Pushed to the card's right edge, away from the
+                        places count, so the two facts do not read as one
+                        phrase and the thumb has a corner rather than the
+                        middle of a line. `hitSlop` takes the target past
+                        44pt without a disc: the glyph can stay small
+                        because the touchable does not have to. */}
+                    {c.id && (
+                      <PressableScale
+                        containerStyle={s.shelfLikeHit}
+                        style={s.shelfLikes}
+                        scaleTo={0.82}
+                        haptic="none"
+                        hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
+                        onPress={() => onHeart(c)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: myLikes.includes(c.id) }}
+                        accessibilityLabel={myLikes.includes(c.id)
+                          ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
+                          : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                      >
+                        <Ionicons
+                          name={myLikes.includes(c.id) ? 'heart' : 'heart-outline'}
+                          size={15}
+                          color={myLikes.includes(c.id) ? onPhoto.accent : onPhoto.text}
+                        />
+                        {likesWorthShowing(likes[c.slug]) && (
+                          <Text style={s.shelfCardMeta}>{likes[c.slug]}</Text>
+                        )}
+                      </PressableScale>
                     )}
                   </View>
                 </View>
@@ -810,13 +820,6 @@ const s = StyleSheet.create({
     width: 176, height: 220, borderRadius: radius.image, overflow: 'hidden',
     justifyContent: 'flex-end',
   },
-  shelfHeart: { position: 'absolute', right: 10, top: 10 },
-  shelfHeartInner: {
-    width: 30, height: 30, borderRadius: 15,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(10,11,10,0.55)',
-    borderWidth: 1, borderColor: onPhoto.line,
-  },
   shelfBadge: {
     position: 'absolute', left: 10, top: 10,
     width: 30, height: 30, borderRadius: 15,
@@ -828,6 +831,9 @@ const s = StyleSheet.create({
   shelfCardTitle: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 20 },
   shelfCardMeta: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.regular },
   shelfCardFoot: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // Right edge of the foot row, so the gesture is a corner rather than
+  // a word in the middle of a sentence.
+  shelfLikeHit: { marginLeft: 'auto' },
   shelfLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
 });
