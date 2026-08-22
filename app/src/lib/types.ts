@@ -63,6 +63,15 @@ export type Place = {
   website: string | null;
   phone: string | null;
   place_photos: PlacePhoto[];
+  /**
+   * When the row was written. Optional, because most of the app never
+   * reads it and the test fixtures should not have to invent a timestamp
+   * to construct a place. The same caveat Collection's copy carries
+   * applies here: on the seeded rows this is the instant the catalog was
+   * loaded, not when anywhere opened — which is exactly why "recently
+   * added" reads it and nothing ranks on it alone. See `lib/newest.ts`.
+   */
+  created_at?: string | null;
 };
 
 export type Collection = {
