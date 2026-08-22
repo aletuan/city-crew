@@ -191,9 +191,11 @@ describe('knownByPlaceId', () => {
       row({ google_place_id: 'a', is_published: false }),
       row({ google_place_id: 'b', review_status: 'pending' }),
     ] });
+    // With the slug aboard: RLS only returns live rows and your own, so
+    // a non-live row is yours and the row can open it. See `Known`.
     expect(await knownByPlaceId(['a', 'b'], 'me')).toEqual({
-      a: { state: 'mine' },
-      b: { state: 'mine' },
+      a: { state: 'mine', slug: 'cong-caphe' },
+      b: { state: 'mine', slug: 'cong-caphe' },
     });
   });
 

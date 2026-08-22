@@ -41,6 +41,18 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
   const { t } = useI18n();
   const live = known.state === 'live';
   const mine = known.state === 'mine';
+  // A row that can name its place can open it. Both flavours of known
+  // carry a slug now — `live` always, `mine` when it is *your* place (a
+  // fresh import, or your pending submission found by the lookup). The
+  // one 'mine' without a slug is somebody else's suggestion, which the
+  // server will not name and this row honestly cannot open.
+  //
+  // This is what makes the end of an import consistent: "Added — only
+  // you can see it" used to be a dead end unless the typed query also
+  // happened to substring-match the new place's record, which a
+  // Google-loose query like "xoa socialroom" does not. Now the road to
+  // the detail screen is on the row itself, every time.
+  const openable = known.state !== 'none' && known.slug ? known.slug : null;
   // What the row says about itself while a batch is running, in place of
   // the address — the reader is watching progress, not reading streets.
   const status = item === 'running'
@@ -99,8 +111,8 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
         </Text>
       </View>
 
-      {live ? (
-        <PressableScale onPress={() => onOpen(known.slug)} scaleTo={0.94} style={s.viewBtn}>
+      {openable ? (
+        <PressableScale onPress={() => onOpen(openable)} scaleTo={0.94} style={s.viewBtn}>
           <Text style={s.viewText}>{t('View', 'Xem', '見る')}</Text>
         </PressableScale>
       ) : mine || locksRow(item) ? null : busy ? (
