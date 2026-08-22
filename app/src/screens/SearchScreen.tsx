@@ -19,12 +19,13 @@ import {
   AmbientWarmth, BackButton, Card, Chip, Empty, PressableScale, useTabBarClearance,
 } from '../components/ui';
 import {
-  Collection, coverOf, fmtCount, isLive, membersOf, Place, touchesCity,
+  Collection, coverOf, isLive, membersOf, Place, touchesCity,
 } from '../lib/data';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { freshOnly, useCandidates } from '../lib/candidates';
 import { escapeRoutes } from '../lib/deadend';
+import { clockOf, openState } from '../lib/format';
 import type { Candidate } from '../lib/suggest';
 import { useCollections, useLikes, usePlaces, useSearchTerms } from '../lib/catalog';
 import { parseRecents, RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
@@ -32,7 +33,7 @@ import { newestPlaces } from '../lib/newest';
 import { rankPopular } from '../lib/popular';
 import { collectionHaystack, findPlaces, matches, queryTerms } from '../lib/search';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 type Row =
@@ -64,6 +65,12 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   const google = useCandidates();
 
   const [picked, setPicked] = useState<string[]>([]);
+
+  // The clock the zero-state rows read "until 22:00" against. Taken per
+  // render rather than memoised: a memo would freeze the screen at the
+  // minute it mounted, and this screen is exactly the kind that stays
+  // open across a closing time.
+  const now = new Date();
 
   // The box, reachable: the ↗ on a recent row puts the term *into* the
   // field for editing — a different promise from the row itself, which
@@ -441,6 +448,24 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
           if (item.kind === 'popular' || item.kind === 'latest') {
             const pl = item.place;
             const cover = coverOf(pl)?.photo_uri;
+            // The reference layout, followed exactly: the meta line is
+            // *where and until when* — "Bình Thạnh · until 22:00" — and
+            // the rating stands alone on the right, where the eye checks
+            // it last. The rating used to open the meta line, which made
+            // every row lead with the one figure that least separates
+            // rows on a shelf where everything is 4-and-something.
+            //
+            // "until" only while the place is actually open and the hours
+            // actually say when that ends; a closed place or an unknown
+            // schedule just shows its area rather than a guess. `openState`
+            // returning null is "cannot answer", and showing nothing beats
+            // telling someone an open café is closed.
+            const state = openState(pl.opening_hours, now);
+            const until = state?.open && state.untilMin != null
+              ? t(`until ${clockOf(state.untilMin)}`, `đến ${clockOf(state.untilMin)}`, `${clockOf(state.untilMin)}まで`)
+              : null;
+            const area = t(pl.neighborhood_en, pl.neighborhood_vi, pl.neighborhood_ja);
+            const meta = [area, until].filter(Boolean).join(' · ');
             return (
               <PressableScale
                 style={s.row}
@@ -454,16 +479,24 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                     <Text style={s.cardTitle} numberOfLines={1}>
                       {t(pl.name_en, pl.name_vi, pl.name_ja ?? pl.name_en)}
                     </Text>
-                    <Text style={s.cardMeta} numberOfLines={1}>
-                      {pl.rating != null
-                        ? `★ ${pl.rating.toFixed(1)}${pl.rating_count ? ` (${fmtCount(pl.rating_count)})` : ''}`
-                        : t('New here', 'Mới có mặt', '新着')}
-                      {t(pl.neighborhood_en, pl.neighborhood_vi, pl.neighborhood_ja)
-                        ? ` · ${t(pl.neighborhood_en, pl.neighborhood_vi, pl.neighborhood_ja)}`
-                        : ''}
-                    </Text>
+                    {meta
+                      ? <Text style={s.cardMeta} numberOfLines={1}>{meta}</Text>
+                      : null}
                   </View>
-                  <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+                  {/* The rating takes the chevron's seat rather than
+                      sharing the meta line. A row that is plainly a place
+                      does not need an arrow to say it opens; it needs the
+                      score, right-aligned, the way the reference draws
+                      it. Unrated places keep the chevron so the right
+                      edge is never simply empty. */}
+                  {pl.rating != null
+                    ? (
+                      <View style={s.rowRating}>
+                        <Text style={s.rowStar}>★</Text>
+                        <Text style={s.rowRatingValue}>{pl.rating.toFixed(1)}</Text>
+                      </View>
+                    )
+                    : <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />}
                 </Card>
               </PressableScale>
             );
@@ -780,6 +813,12 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, paddingTop: 18, paddingBottom: 6, textAlign: 'center',
   },
   cardMeta: { color: colors.textTertiary, ...type.meta },
+  // The reference's right edge: a gold mark and the number, nothing
+  // else — the count stays on the detail screen. Same gold the photo
+  // overlay uses, so a star means one thing everywhere.
+  rowRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  rowStar: { color: onPhoto.star, fontSize: 13 },
+  rowRatingValue: { color: colors.text, fontSize: 14.5, fontWeight: font.semibold },
 
   // The fork wears the app's glass pills — the same face the vibe chips
   // and the save button have — because it is an offer, not a result. The
