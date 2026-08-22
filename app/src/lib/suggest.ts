@@ -39,7 +39,14 @@ export type Candidate = {
 export type Known =
   | { state: 'none' }
   | { state: 'live'; slug: string }
-  | { state: 'mine' };
+  // Optional, not always-there, because 'mine' covers two different
+  // facts. Your own submission has a slug you can open — RLS only hands
+  // back live rows and your own, so a non-live row here is yours, and a
+  // fresh import's outcome carries its slug too. But `already_known`
+  // means somebody *else* suggested it first, the server tells you no
+  // more than that, and a row it cannot open should not pretend to a
+  // slug it does not have.
+  | { state: 'mine'; slug?: string };
 
 export type SuggestOutcome =
   | { ok: true; slug: string; photos: number }
@@ -140,7 +147,9 @@ export async function knownByPlaceId(
     if (!r.google_place_id) continue;
     out[r.google_place_id] = r.is_published && r.review_status === 'approved'
       ? { state: 'live', slug: r.slug }
-      : { state: 'mine' };
+      // Yours, per the RLS note above — so the slug travels, and the row
+      // can open the place instead of only reporting that it exists.
+      : { state: 'mine', slug: r.slug };
   }
   return out;
 }

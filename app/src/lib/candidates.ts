@@ -151,7 +151,14 @@ export function useCandidates(): Candidates {
       // Marked here rather than re-searched: the row changes state in
       // place, so adding several from one search does not mean starting
       // the search again after each.
-      setKnown((k) => ({ ...k, [c.place_id]: { state: 'mine' } }));
+      //
+      // The slug goes with it. The server names the place it just made,
+      // and dropping that name was why an added row ended as a dead end:
+      // the only other road to the detail screen ran through the
+      // catalog's own text match, which a query like "xoa socialroom" —
+      // loose enough for Google, too loose for a substring — never
+      // reaches. See CandidateRow: a 'mine' row with a slug can View.
+      setKnown((k) => ({ ...k, [c.place_id]: { state: 'mine', slug: out.slug } }));
       return 'done';
     }
     if (out.reason === 'already_live') {
