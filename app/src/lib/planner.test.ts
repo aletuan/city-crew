@@ -528,7 +528,7 @@ describe('planTrips with a stated budget', () => {
     const plans = planTrips(FOOD, dear, 'hanoi', { seed: 2, budgetVnd: 100_000 });
     expect(plans.length).toBeGreaterThan(0);
     for (const p of plans) {
-      for (const s of p.stops) expect(s.place.categories).toContain('eats');
+      for (const s of p.stops) expect(s.place.categories ?? []).toContain('eats');
     }
   });
 
@@ -718,5 +718,57 @@ describe('a day shape asked for late in the day', () => {
     expect(planTrips(open, CATALOG, 'hanoi', { seed: 1 })[0].stops).toHaveLength(5);
     expect(planTrips(open, CATALOG, 'hanoi', { seed: 1, startMin: 20 * 60 })[0].stops)
       .toHaveLength(2);
+  });
+});
+
+describe('who is coming', () => {
+  // Two shelves, deliberately equal in every scored respect, so the only
+  // thing separating them is who is along. `at` pins the reader so the
+  // distance term cannot tip the draw either way by accident.
+  const bars = many('nightlife');
+  const parks = many('nature');
+  const HERE = { lat: 21.028, lng: 105.852 };
+  const openAsk: TripDraft = {
+    company: 'family', categories: [], district: null, at: HERE,
+    date: '2026-08-16', when: 'evening', from: [],
+  };
+  const first = (company: TripDraft['company']) =>
+    planTrips({ ...openAsk, company }, [...bars, ...parks], 'hanoi', { seed: 1 })[0]
+      .stops.map((s) => (s.place.categories ?? [])[0]);
+
+  // The question this whole table exists to answer: the wizard's first
+  // question used to change nothing but the prose. A family and a group
+  // of friends with the same open ask now get different evenings.
+  it('keeps a family out of the bars it never asked for', () => {
+    expect(first('family')).not.toContain('nightlife');
+  });
+
+  it('leans a group of friends the other way', () => {
+    expect(first('friends')).toContain('nightlife');
+  });
+
+  // A lean, never a gate. The reader's own categories carry weight 3
+  // against the avoid's 2 — and more structurally, chosen categories are
+  // the *filter*: a family that says nightlife gets nightlife, because
+  // what they said is more specific than what this table knows.
+  it('never overrules what a family explicitly asked for', () => {
+    const plans = planTrips(
+      { ...openAsk, company: 'family', categories: ['nightlife'] },
+      [...bars, ...parks], 'hanoi', { seed: 1 },
+    );
+    for (const p of plans) {
+      for (const s of p.stops) expect(s.place.categories ?? []).toContain('nightlife');
+    }
+  });
+
+  // "None of the above" is an answer the reader gave on purpose, and a
+  // draft built outside the wizard carries null. Both must plan exactly
+  // as every draft did before the table existed.
+  it('says nothing for other, and for no answer at all', () => {
+    expect(first('other')).toEqual(first(null));
+  });
+
+  it('stays deterministic with a company set', () => {
+    expect(first('family')).toEqual(first('family'));
   });
 });
