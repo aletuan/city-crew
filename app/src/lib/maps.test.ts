@@ -4,6 +4,9 @@ import type { Leg } from './travel';
 
 const p = (lat: number, lng: number) => ({ lat, lng });
 const NOWHERE = { lat: null, lng: null };
+const named = (lat: number, lng: number, name: string, id: string) => (
+  { lat, lng, name_en: name, google_place_id: id }
+);
 
 // Two real Hanoi cafés, from the catalog.
 const ARTEMIS = p(21.0028, 105.8065);
@@ -39,15 +42,81 @@ describe('mapsRouteUrl', () => {
     expect(q.get('destination')).toBe('21.0354187,105.8093521');
   });
 
-  // Coordinates, never names. This catalog holds three Hadu Sushi and two
-  // Artemis Pastry; a name would let Google pick the wrong branch and send
-  // somebody across town with the app's confidence behind it.
-  it('never puts a name in the link', () => {
+  // Coordinates for a stop that is only a coordinate. This catalog holds
+  // three Hadu Sushi and two Artemis Pastry; a *bare* name would let
+  // Google pick the wrong branch and send somebody across town with the
+  // app's confidence behind it. A name may only travel beside the place
+  // id that resolves it exactly — the tests below — and without one the
+  // link stays numeric.
+  it('never puts a bare name in the link', () => {
     const pair = /^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/;
     const q = params(mapsRouteUrl([ARTEMIS, MAISON, THREE_C])!.url);
     expect(q.get('origin')).toMatch(pair);
     expect(q.get('destination')).toMatch(pair);
     for (const w of q.get('waypoints')!.split('|')) expect(w).toMatch(pair);
+    expect(q.has('origin_place_id')).toBe(false);
+    expect(q.has('destination_place_id')).toBe(false);
+    expect(q.has('waypoint_place_ids')).toBe(false);
+  });
+
+  // The whole reason the sheet used to read "Dropped pin": a stop that
+  // knows its Google identity now travels by name, and the id beside it
+  // is what stops Google resolving the name to a same-named branch.
+  it('sends name and place id together when a stop has both', () => {
+    const q = params(mapsRouteUrl([
+      named(21.0028, 105.8065, 'Artemis Pastry', 'ChIJartemis'),
+      named(21.0354, 105.8093, '3C Roastery', 'ChIJ3c'),
+    ])!.url);
+    expect(q.get('origin')).toBe('Artemis Pastry');
+    expect(q.get('origin_place_id')).toBe('ChIJartemis');
+    expect(q.get('destination')).toBe('3C Roastery');
+    expect(q.get('destination_place_id')).toBe('ChIJ3c');
+  });
+
+  it('each end decides for itself', () => {
+    const q = params(mapsRouteUrl([
+      named(21.0028, 105.8065, 'Artemis Pastry', 'ChIJartemis'),
+      THREE_C,
+    ])!.url);
+    expect(q.get('origin')).toBe('Artemis Pastry');
+    expect(q.get('origin_place_id')).toBe('ChIJartemis');
+    expect(q.get('destination')).toBe('21.0354187,105.8093521');
+    expect(q.has('destination_place_id')).toBe(false);
+  });
+
+  // Google requires waypoint_place_ids to match waypoints one for one, so
+  // the middle stops decide together: all named, or all coordinates.
+  it('names the waypoints only when every one carries its id', () => {
+    const all = params(mapsRouteUrl([
+      named(21.0, 105.8, 'A', 'idA'),
+      named(21.01, 105.81, 'B', 'idB'),
+      named(21.02, 105.82, 'C', 'idC'),
+      named(21.03, 105.83, 'D', 'idD'),
+    ])!.url);
+    expect(all.get('waypoints')).toBe('B|C');
+    expect(all.get('waypoint_place_ids')).toBe('idB|idC');
+
+    const some = params(mapsRouteUrl([
+      named(21.0, 105.8, 'A', 'idA'),
+      named(21.01, 105.81, 'B', 'idB'),
+      p(21.02, 105.82),
+      named(21.03, 105.83, 'D', 'idD'),
+    ])!.url);
+    expect(some.get('waypoints')).toBe('21.01,105.81|21.02,105.82');
+    expect(some.has('waypoint_place_ids')).toBe(false);
+    // The ends still keep their names — the one-for-one rule is only
+    // about the middle.
+    expect(some.get('origin')).toBe('A');
+    expect(some.get('destination')).toBe('D');
+  });
+
+  // A name with an id but no coordinates is still an unplaced row: the
+  // route is drawn between stops the catalog can place, same as ever.
+  it('still requires a coordinate even of a named stop', () => {
+    expect(mapsRouteUrl([
+      { name_en: 'Ghost Cafe', google_place_id: 'ChIJghost' },
+      ARTEMIS,
+    ])).toBeNull();
   });
 
   // A day longer than Google will take. The end of the day survives — a
@@ -133,6 +202,11 @@ describe('mapsSearchUrl', () => {
   it('points at one place by its coordinates', () => {
     expect(mapsSearchUrl(ARTEMIS))
       .toBe('https://www.google.com/maps/search/?api=1&query=21.0028%2C105.8065');
+  });
+
+  it('opens by name when the place knows its Google identity', () => {
+    expect(mapsSearchUrl(named(21.0028, 105.8065, 'Artemis Pastry', 'ChIJartemis')))
+      .toBe('https://www.google.com/maps/search/?api=1&query=Artemis%20Pastry&query_place_id=ChIJartemis');
   });
 
   it('has nothing to point at for a place with no position', () => {

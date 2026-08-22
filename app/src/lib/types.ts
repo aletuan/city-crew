@@ -41,6 +41,13 @@ export type Place = {
   review_status?: string;
   /** Who suggested it, when it did not come from the desk. */
   submitted_by?: string | null;
+  /** Google's identity for the row, on every import and every seed. The
+   *  Maps links ride on it — a name plus this id resolves the exact
+   *  business, where a name alone lets Google pick a same-named branch
+   *  across town. Optional for the same reason its neighbours are: a
+   *  stub or an old fixture without it must still typecheck, and the
+   *  links fall back to coordinates when it is absent. */
+  google_place_id?: string | null;
   /** How a place feels — see lib/vibes. */
   vibe_tags: string[];
   neighborhood_en: string | null;
