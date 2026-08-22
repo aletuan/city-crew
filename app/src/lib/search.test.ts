@@ -102,11 +102,39 @@ describe('matches', () => {
     expect(matches('anything', [])).toBe(true);
   });
 
-  // Substring, not word — which is what makes a search box feel like it is
-  // keeping up as you type. "caf" finding "café" is the same mechanism.
-  it('matches inside a word, so a half-typed query still narrows', () => {
+  // From the start of a word, not from anywhere inside one. "caf" finding
+  // "cafeteria" is what makes the box feel like it keeps up as you type —
+  // a word start is where typing begins, so prefixes cost nothing.
+  it('matches from the start of a word, so a half-typed query still narrows', () => {
     expect(matches('cafeteria', ['cafe'])).toBe(true);
     expect(matches('bun cha huong lien', ['huong'])).toBe(true);
+  });
+
+  // The rule the old substring behaviour got wrong, measured on real
+  // words: "đền" folds to "den", which sits inside "garden", so a search
+  // for a temple answered with a lake. `kindAnswersTo` had already
+  // learned this for synonyms; the exact tier had the same hole.
+  it('does not match the middle of a word — a temple is not inside a garden', () => {
+    expect(matches('secret garden restaurant', ['den'])).toBe(false);
+  });
+
+  it('keeps scanning past a mid-word hit for a real word start', () => {
+    expect(matches('garden of den tran', ['den'])).toBe(true);
+  });
+
+  // Word edges are anything that is not a letter or digit after folding,
+  // not only spaces — the haystack joins vibe keys with underscores and
+  // real names carry hyphens.
+  it('treats punctuation as a word edge, not part of the word', () => {
+    expect(matches('kid_friendly quiet', ['friendly'])).toBe(true);
+    expect(matches('deep sii - van bao', ['van'])).toBe(true);
+  });
+
+  // Japanese writes without spaces, so a CJK term has no word edge to
+  // start at and stays a plain substring — the same exemption `usable`
+  // gives the length rule.
+  it('matches Japanese inside a run, which has no word edges', () => {
+    expect(matches('東京映画館', ['映画'])).toBe(true);
   });
 
   it('is order-blind — the words may arrive any way round', () => {
@@ -388,8 +416,11 @@ describe('findPlaces', () => {
     expect(related).toEqual([both]);
   });
 
+  // "f" begins a word in two of the three haystacks — "fun" on the
+  // cinema's category, "fine" in the museum's name — so the assertion is
+  // about which order they come back in, not about who is in it.
   it('keeps the catalog\'s own order in both tiers', () => {
-    expect(findPlaces(all, 'e', TERMS).hits).toEqual([cgv, vanMieu, museum]);
+    expect(findPlaces(all, 'f', TERMS).hits).toEqual([cgv, museum]);
     expect(findPlaces(all, 'temple', TERMS).hits).toEqual([vanMieu]);
   });
 
