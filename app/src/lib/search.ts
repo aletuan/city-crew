@@ -255,7 +255,43 @@ export function queryTerms(query: string): string[] {
   return fold(query).split(/\s+/).filter(Boolean);
 }
 
-/** Every word must appear somewhere — "cafe saigon" narrows, not widens. */
+/** A letter or digit after folding — the stuff words are made of. Anything
+ *  else is an edge a word can start after: the space in "van bao", the
+ *  hyphen in "deep sii - van bao", the underscore in "kid_friendly". */
+const WORD_CHAR = /[a-z0-9]/;
+
+/**
+ * Does the term begin a word of the haystack?
+ *
+ * Anywhere-inside was the shipped rule, and it had the same hole across
+ * languages that `kindAnswersTo` documents having fixed for synonyms:
+ * "đền" folds to "den", which sits inside "garden", so a search for a
+ * temple answered with anything leafy enough to mention one. The exact
+ * tier kept the loose rule longer only because nobody had measured it
+ * there too.
+ *
+ * A word start is also where typing begins, so nothing a person actually
+ * does gets slower: "caf" still reaches "café", "hok" still reaches
+ * "Sushi Hokkaido". What stops matching is the middle of a word — and the
+ * middle of a word is not a thing anybody types on purpose.
+ *
+ * The scan keeps going past a mid-word hit rather than judging only the
+ * first: "garden of den tran" really does contain a word starting "den",
+ * three characters after a hit that does not.
+ */
+function atWordStart(haystack: string, term: string): boolean {
+  for (let i = haystack.indexOf(term); i !== -1; i = haystack.indexOf(term, i + 1)) {
+    if (i === 0 || !WORD_CHAR.test(haystack[i - 1])) return true;
+  }
+  return false;
+}
+
+/** Every word must appear somewhere — "cafe saigon" narrows, not widens.
+ *
+ *  Each word must begin a word of the haystack, except a CJK term, which
+ *  stays a plain substring: 映画館 has no word edges for 映画 to start at,
+ *  and the scripts that write without spaces are the same ones `usable`
+ *  already exempts from the length rule. */
 export function matches(haystack: string, terms: readonly string[]): boolean {
-  return terms.every((term) => haystack.includes(term));
+  return terms.every((term) => (CJK.test(term) ? haystack.includes(term) : atWordStart(haystack, term)));
 }
