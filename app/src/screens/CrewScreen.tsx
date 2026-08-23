@@ -24,14 +24,13 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { FieldRow, PrimaryButton } from '../components/authUi';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import {
-  Card, Empty, PressableScale, RoundIconButton, Screen, successHaptic, useTabBarClearance,
+  Avatar, Card, Empty, PressableScale, RoundIconButton, Screen, successHaptic, useTabBarClearance,
 } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import {
@@ -333,16 +332,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     () => { unblockUser(me!, p.id).then(() => blocks.reload()).catch(() => {}); },
   );
 
-  /** The face, or the space one would take. Shared by every row here so
-   *  a missing avatar never changes a row's height. */
+  /** The face, or the space one would take — every row here draws it, so
+   *  a missing avatar never changes a row's height. The circle itself is
+   *  `Avatar` now; what stays local is only the unwrapping of a profile
+   *  that may not have arrived yet, which is this screen's own problem. */
   const Face = ({ p, size = 44 }: { p?: FriendProfile; size?: number }) => (
-    p?.avatar_url
-      ? <Image source={{ uri: p.avatar_url }} style={[s.face, { width: size, height: size, borderRadius: size / 2 }]} contentFit="cover" transition={150} />
-      : (
-        <View style={[s.face, s.faceBlank, { width: size, height: size, borderRadius: size / 2 }]}>
-          <Ionicons name="person-outline" size={size * 0.4} color={colors.textTertiary} />
-        </View>
-      )
+    <Avatar url={p?.avatar_url} size={size} />
   );
 
   const savesLine = (n?: number) => (n != null && n > 0
@@ -747,8 +742,6 @@ const s = StyleSheet.create({
     paddingHorizontal: space.cardPadding, paddingVertical: 13,
   },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
-  face: { width: 44, height: 44, borderRadius: 22 },
-  faceBlank: { backgroundColor: colors.surfaceGlass, alignItems: 'center', justifyContent: 'center' },
   name: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   meta: { color: colors.textTertiary, ...type.meta },
 

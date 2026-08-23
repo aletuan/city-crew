@@ -984,6 +984,32 @@ export async function profileByHandle(handle: string): Promise<FriendProfile | n
   return (data as FriendProfile | null) ?? null;
 }
 
+/**
+ * The same lookup as a hook, for a screen that has a handle and wants the
+ * face behind it — a collection's byline is the one caller today.
+ *
+ * Keyed on the handle rather than on the owner's id, and the difference
+ * shows the day somebody renames themselves. `curator_handle` is a stamp:
+ * `stamp_curator` writes it when a list is published and rewrites it only
+ * when the row is next touched, so a renamed curator's byline is stale
+ * until then. Looking the face up by that same stale handle keeps the two
+ * halves agreeing — the face goes when the words go. An id would put the
+ * current person's photograph beside their old name, which is the one
+ * outcome a reader could call wrong. It also works for the rows that have
+ * no owner id at all.
+ *
+ * Null resolves empty without a request, the way `usePlaceBySlug` does, so
+ * a caller with nothing to ask can still call it unconditionally — which
+ * hooks require.
+ */
+export const useProfileByHandle = (handle: string | null) => {
+  const fetcher = useCallback(
+    () => (handle ? profileByHandle(handle) : Promise.resolve(null)),
+    [handle],
+  );
+  return useFetch(fetcher, null as FriendProfile | null);
+};
+
 /** Ask. The insert policy holds the rest: as yourself, as pending, under
  *  the daily cap — a refusal surfaces as this throwing. */
 export async function sendFriendRequest(meId: string, otherId: string): Promise<void> {
