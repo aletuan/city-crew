@@ -22,8 +22,9 @@ import { AuthHeader, AuthScreen, FieldRow } from '../components/authUi';
 import { Card, Empty, PressableScale, RoundIconButton } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import {
-  fetchMutualSaves, fetchProfilesById, type FriendProfile, profileByHandle,
-  removeFriendship, searchHandles, sendFriendRequest, useFriendships,
+  blockUser, fetchMutualSaves, fetchProfilesById, type FriendProfile,
+  profileByHandle, removeFriendship, searchHandles, sendFriendRequest,
+  unblockUser, useFriendships, useMyBlocks,
 } from '../lib/data';
 import { MIN_SUGGEST_CHARS, splitFriendships, standingWith, suggestable } from '../lib/friends';
 import { atHandle, handleProblem, normalizeHandle } from '../lib/handle';
@@ -36,7 +37,8 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const { session } = useAuth();
   const me = session?.user?.id ?? null;
   const ships = useFriendships(me);
-  useFocusEffect(useCallback(() => { ships.reload(); }, [ships.reload]));
+  const blocks = useMyBlocks(me);
+  useFocusEffect(useCallback(() => { ships.reload(); blocks.reload(); }, [ships.reload, blocks.reload]));
 
   const crew = useMemo(() => splitFriendships(ships.data, me ?? ''), [ships.data, me]);
 
@@ -46,11 +48,11 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const [people, setPeople] = useState<Record<string, FriendProfile>>({});
   const [mutual, setMutual] = useState<Record<string, number>>({});
   useEffect(() => {
-    const ids = [...crew.friends, ...crew.incoming.map((r) => r.requester)];
+    const ids = [...crew.friends, ...crew.incoming.map((r) => r.requester), ...blocks.data];
     if (!ids.length) return;
     fetchProfilesById(ids).then(setPeople).catch(() => {});
     fetchMutualSaves(crew.friends).then(setMutual).catch(() => {});
-  }, [ships.loadedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ships.loadedAt, blocks.loadedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── the add flow ──
   const [adding, setAdding] = useState(false);
@@ -69,11 +71,11 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     if (bare.length < MIN_SUGGEST_CHARS) { setFound([]); return; }
     const timer = setTimeout(() => {
       searchHandles(bare).then((rows) => {
-        setFound((prev) => (normalizeHandle(handle) === bare ? suggestable(rows, me ?? '') : prev));
+        setFound((prev) => (normalizeHandle(handle) === bare ? suggestable(rows, me ?? '', blocks.data) : prev));
       }).catch(() => {});
     }, 250);
     return () => clearTimeout(timer);
-  }, [handle, me]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handle, me, blocks.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = async () => {
     const bare = normalizeHandle(handle);
@@ -111,21 +113,53 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         );
       }
     } catch (e) {
-      setNote((e as Error).message);
+      // A policy refusal is worded neutrally on purpose: the one way an
+      // insert fails for a signed-in user under the cap is a block, and
+      // a block must not announce itself. The cap has its own honest
+      // sentence because the server names it in the count check's wake.
+      const msg = (e as Error).message;
+      setNote(/row-level security/i.test(msg)
+        ? t('Could not send this request.', 'Không gửi được lời mời này.', 'リクエストを送信できませんでした。')
+        : msg);
     } finally {
       setBusy(false);
     }
   };
 
+  // One sheet, both boundaries. Unfriend cuts the edge and nothing else;
+  // Block cuts it and keeps it cut — no future request from either side
+  // gets through, and their likes leave your Activity. Neither is
+  // announced to the other person.
   const confirmUnfriend = (p: FriendProfile) => Alert.alert(
-    t(`Unfriend ${atHandle(p.handle)}?`, `Hủy kết bạn với ${atHandle(p.handle)}?`, `${atHandle(p.handle)} と友達をやめますか？`),
-    t('They will not be told.', 'Họ sẽ không được báo.', '相手に通知されません。'),
+    atHandle(p.handle),
+    t('They will not be told either way.', 'Họ sẽ không được báo, dù chọn gì.', 'どちらを選んでも相手に通知されません。'),
     [
       { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
       {
         text: t('Unfriend', 'Hủy kết bạn', '友達をやめる'),
         style: 'destructive',
         onPress: () => { removeFriendship(me!, p.id).then(() => ships.reload()).catch(() => {}); },
+      },
+      {
+        text: t('Block', 'Chặn', 'ブロック'),
+        style: 'destructive',
+        onPress: () => {
+          blockUser(p.id)
+            .then(() => { ships.reload(); blocks.reload(); })
+            .catch(() => {});
+        },
+      },
+    ],
+  );
+
+  const confirmUnblock = (p: FriendProfile) => Alert.alert(
+    t(`Unblock ${atHandle(p.handle)}?`, `Bỏ chặn ${atHandle(p.handle)}?`, `${atHandle(p.handle)} のブロックを解除しますか？`),
+    t('They will be able to send you requests again.', 'Họ sẽ có thể gửi lời mời cho bạn lại.', '相手は再びリクエストを送れるようになります。'),
+    [
+      { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+      {
+        text: t('Unblock', 'Bỏ chặn', '解除'),
+        onPress: () => { unblockUser(me!, p.id).then(() => blocks.reload()).catch(() => {}); },
       },
     ],
   );
@@ -252,6 +286,38 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
           'まだ友達がいません。ユーザー名を聞いて追加しましょう。',
         )} />
       )}
+
+      {/* The boundary, visible and reversible — a block managed from the
+          same screen it was made on, per the store guideline that asks
+          for the control and the plain decency that asks for the undo. */}
+      {blocks.data.length > 0 && (
+        <>
+          <Text style={s.blockedHead}>{t('Blocked', 'Đã chặn', 'ブロック中')}</Text>
+          <Card>
+            {blocks.data.map((id, i) => {
+              const p = people[id];
+              return (
+                <View key={id} style={[s.row, i > 0 && s.rowDivider]}>
+                  {p?.avatar_url
+                    ? <Image source={{ uri: p.avatar_url }} style={s.face} contentFit="cover" transition={150} />
+                    : (
+                      <View style={[s.face, s.faceBlank]}>
+                        <Ionicons name="person-outline" size={18} color={colors.textTertiary} />
+                      </View>
+                    )}
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={s.name} numberOfLines={1}>{p?.full_name || (p ? atHandle(p.handle) : '…')}</Text>
+                    <Text style={s.meta} numberOfLines={1}>{p ? atHandle(p.handle) : ''}</Text>
+                  </View>
+                  <PressableScale style={s.unblockBtn} onPress={() => p && confirmUnblock(p)} accessibilityRole="button">
+                    <Text style={s.unblockText}>{t('Unblock', 'Bỏ chặn', '解除')}</Text>
+                  </PressableScale>
+                </View>
+              );
+            })}
+          </Card>
+        </>
+      )}
     </AuthScreen>
   );
 }
@@ -304,4 +370,14 @@ const s = StyleSheet.create({
   },
   name: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   meta: { color: colors.textTertiary, ...type.meta },
+
+  blockedHead: {
+    color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
+    letterSpacing: 1.1, textTransform: 'uppercase', marginTop: 8,
+  },
+  unblockBtn: {
+    borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill,
+    paddingHorizontal: 14, paddingVertical: 8,
+  },
+  unblockText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.semibold },
 });

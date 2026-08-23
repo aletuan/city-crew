@@ -154,13 +154,17 @@ export const SUGGEST_LIMIT = 6;
  * The rows worth offering, from whatever the lookup returned.
  *
  * Your own account is dropped — a suggestion you cannot befriend is a
- * dead row — and the rest keep their order and are capped. Friends and
- * already-asked accounts deliberately stay: tapping one gets the same
- * specific sentence the send flow already speaks, which teaches more
- * than their absence would.
+ * dead row — and so is anyone you blocked: a block is a decision not to
+ * be offered this person again, and the dropdown re-offering them would
+ * be the app forgetting it on your behalf. The rest keep their order
+ * and are capped. Friends and already-asked accounts deliberately stay:
+ * tapping one gets the same specific sentence the send flow already
+ * speaks, which teaches more than their absence would.
  */
-export function suggestable<T extends { id: string }>(found: readonly T[], me: string): T[] {
-  return found.filter((p) => p.id !== me).slice(0, SUGGEST_LIMIT);
+export function suggestable<T extends { id: string }>(
+  found: readonly T[], me: string, hidden: readonly string[] = [],
+): T[] {
+  return found.filter((p) => p.id !== me && !hidden.includes(p.id)).slice(0, SUGGEST_LIMIT);
 }
 
 /**

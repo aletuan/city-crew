@@ -120,6 +120,9 @@ describe('suggestable', () => {
   it('a list without the reader passes through short', () => {
     expect(suggestable([person('a')], 'me')).toEqual([person('a')]);
   });
+  it('the blocked are not re-offered', () => {
+    expect(suggestable([person('a'), person('b')], 'me', ['a'])).toEqual([person('b')]);
+  });
 });
 
 describe('the caps', () => {

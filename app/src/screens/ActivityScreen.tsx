@@ -13,7 +13,7 @@
 // "the public" that the likes table's privacy promise protects against.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -22,8 +22,9 @@ import { Card, Empty, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCollections } from '../lib/catalog';
 import {
-  acceptFriendRequest, fetchApplause, fetchProfilesById, type FriendProfile,
-  removeFriendship, useFriendships, useMyCollections, useMyTrips,
+  acceptFriendRequest, blockUser, fetchApplause, fetchProfilesById,
+  type FriendProfile, removeFriendship, useFriendships, useMyCollections,
+  useMyTrips,
 } from '../lib/data';
 import { todayISO } from '../lib/day';
 import {
@@ -86,6 +87,27 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
     done.then(() => { if (yes) successHaptic(); ships.reload(); }).catch(() => {});
   };
 
+  // The stronger no, one press deeper. Decline alone lets the same
+  // person ask again tomorrow; holding it offers the door that stays
+  // shut. Neither says anything to the other side.
+  const declineHard = (requester: string, p?: FriendProfile) => Alert.alert(
+    p ? atHandle(p.handle) : t('This request', 'Lời mời này', 'このリクエスト'),
+    t(
+      'Decline once, or block so they cannot ask again?',
+      'Từ chối lần này, hay chặn để họ không mời lại được?',
+      '今回だけ拒否しますか、それともブロックして今後のリクエストを止めますか？',
+    ),
+    [
+      { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+      { text: t('Decline', 'Từ chối', '拒否'), onPress: () => answer(requester, false) },
+      {
+        text: t('Block', 'Chặn', 'ブロック'),
+        style: 'destructive',
+        onPress: () => { blockUser(requester).then(() => ships.reload()).catch(() => {}); },
+      },
+    ],
+  );
+
   const agoLabel = (iso: string): string => {
     const ago = agoOf(iso, Date.now());
     if (ago.unit === 'now') return t('just now', 'vừa xong', 'たった今');
@@ -135,7 +157,14 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                     <Ionicons name="checkmark" size={17} color={colors.accentInk} />
                     <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認')}</Text>
                   </PressableScale>
-                  <PressableScale containerStyle={s.half} style={s.decline} onPress={() => answer(r.requester, false)} accessibilityRole="button">
+                  <PressableScale
+                    containerStyle={s.half}
+                    style={s.decline}
+                    onPress={() => answer(r.requester, false)}
+                    onLongPress={() => declineHard(r.requester, p)}
+                    accessibilityRole="button"
+                    accessibilityHint={t('Hold to block', 'Giữ để chặn', '長押しでブロック')}
+                  >
                     <Text style={s.declineText}>{t('Decline', 'Từ chối', '拒否')}</Text>
                   </PressableScale>
                 </View>
@@ -176,7 +205,12 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
               );
             }
             const title = titleOf(item.collection_id);
-            const who = item.liker_name || (item.liker_handle ? atHandle(item.liker_handle) : null);
+            // The handle, not the full name: it is how the rest of the
+            // app names a person in public ("by @trang"), and it is the
+            // name they chose to be known by. The full name stays on
+            // the request card, where recognising a human is the
+            // decision being made.
+            const who = item.liker_handle ? atHandle(item.liker_handle) : null;
             return (
               <PressableScale
                 key={`a-${item.collection_id}-${item.at}`}
