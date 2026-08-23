@@ -342,6 +342,20 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                       : ''}
                   </Text>
                 </View>
+                {/* The visible door to Unfriend and Block. The long-press
+                    stays, but a gesture with no mark on the screen is a
+                    feature only its author knows about — the review's
+                    "I still don't see Block" was this row telling on
+                    itself. */}
+                <PressableScale
+                  onPress={() => p && confirmUnfriend(p)}
+                  scaleTo={0.85}
+                  hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション')}
+                >
+                  <Ionicons name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
+                </PressableScale>
               </PressableScale>
             );
           })}

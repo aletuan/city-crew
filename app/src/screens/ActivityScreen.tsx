@@ -148,6 +148,18 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                     </Text>
                     {p ? <Text style={s.meta}>{atHandle(p.handle)}</Text> : null}
                   </View>
+                  {/* Same reason the crew rows grew one: Block lived
+                      behind a long-press on Decline, which no screen can
+                      teach. The ⋯ opens the same decline-or-block ask. */}
+                  <PressableScale
+                    onPress={() => declineHard(r.requester, p)}
+                    scaleTo={0.85}
+                    hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション')}
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
+                  </PressableScale>
                 </View>
                 <View style={s.answers}>
                   {/* `flex: 1` must ride the outer Pressable — in `style`
