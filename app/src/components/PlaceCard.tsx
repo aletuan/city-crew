@@ -8,7 +8,6 @@ import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
-import PricePill from './PricePill';
 import { Card, PressableScale } from './ui';
 
 export default function PlaceCard({ place, onPress }: { place: Place; onPress: () => void }) {
@@ -41,15 +40,50 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
               <Text style={{ fontSize: 44 }}>{place.emoji ?? '📍'}</Text>
             </View>
           )}
-          {/* Price rides the photograph, out of the way of the name. */}
-          <View style={s.priceSlot} pointerEvents="none">
-            <PricePill place={place} overlay />
-          </View>
+          {/* The bookmark holds the photo's top-right corner — the same
+              disc, in the same corner, that the detail screen hangs its
+              own bookmark in, so the card and the screen it opens keep
+              one save control between them. It is also the corner every
+              catalog app puts it in, which is the better argument: a
+              thumb arrives here already knowing what lives there.
+
+              The price pill used to hold this corner, and it did not
+              move — it went. A tile price was an inferred number wearing
+              a badge, and "roughly how much" is a question about a place
+              you are already considering; the detail screen answers it
+              two lines under the name, on a ground where its type can
+              actually be read. The tile keeps to what browsing needs:
+              what, where, open till when, and now *keep this*.
+
+              The old objection to a bookmark up here — a fourth mark
+              crowding the photograph, carrying its own scrim to survive
+              any sky — went with the price too. Three corners, three
+              marks, one dark-glass material shared with the rating pill
+              beside it. */}
+          <PressableScale
+            onPress={() => save(place)}
+            scaleTo={0.9}
+            haptic="selection"
+            accessibilityRole="button"
+            accessibilityState={{ selected: saved }}
+            accessibilityLabel={saved
+              ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
+              : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
+            hitSlop={8}
+            containerStyle={s.saveSlot}
+            style={s.saveFab}
+          >
+            <Ionicons
+              name={saved ? 'bookmark' : 'bookmark-outline'}
+              size={19}
+              color={saved ? onPhoto.accent : onPhoto.text}
+            />
+          </PressableScale>
           {/* The score belongs to the picture, not to the name under it:
               on the photo it is read at a glance with the place, and the
               body is left to the title and its chips. Bottom-left is the
-              last free corner — price holds the top-right, attribution the
-              bottom-right. */}
+              last free corner — the bookmark holds the top-right,
+              attribution the bottom-right. */}
           {place.rating ? (
             <View style={s.ratingSlot} pointerEvents="none">
               <Text style={s.star}>★</Text>
@@ -59,34 +93,12 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
           ) : null}
         </View>
         <View style={s.body}>
-          {/* The bookmark rides the title line rather than the photograph.
-              On the image it was a fourth thing competing with the price,
-              the attribution and the picture itself, and it had to carry
-              its own scrim to stay visible over any sky. Here it is a
-              control among controls — the same round glass button the
-              collection rows wear — and it lands beside the name it
-              belongs to. */}
-          <View style={s.titleRow}>
-            <Text style={s.name} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
-            <PressableScale
-              onPress={() => save(place)}
-              scaleTo={0.9}
-              haptic="selection"
-              accessibilityRole="button"
-              accessibilityState={{ selected: saved }}
-              accessibilityLabel={saved
-                ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
-                : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
-              hitSlop={6}
-              style={s.saveBtn}
-            >
-              <Ionicons
-                name={saved ? 'bookmark' : 'bookmark-outline'}
-                size={19}
-                color={saved ? colors.accent : colors.textSecondary}
-              />
-            </PressableScale>
-          </View>
+          {/* The whole line is the name's now that the bookmark rides the
+              photograph — a 40pt disc used to sit beside it, and the
+              names this catalog actually holds are long enough that the
+              disc's width was the difference between reading one and
+              reading "Bún chả Hàng Quạt — quán g…". */}
+          <Text style={s.name} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
           {/* Which part of town, before you have to open it to find out.
               ── the question this answers ──
 
@@ -203,11 +215,19 @@ const s = StyleSheet.create({
   // ~10% tighter than the standard card body: this is a feed, not a form.
   body: { paddingHorizontal: space.cardPadding, paddingVertical: 13 },
   // Top-right of the image, mirroring the attribution bottom-right.
-  priceSlot: { position: 'absolute', top: 10, right: 10 },
-  // The name takes the room the button leaves; `flex: 1` on the text is
-  // what stops a long one pushing the button off the card.
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  name: { flex: 1, color: colors.text, ...type.cardTitle },
+  saveSlot: { position: 'absolute', top: 10, right: 10 },
+  // The rating pill's exact ground, one hairline and all: two marks on
+  // one photograph should be made of one material. The circle is not
+  // decoration — it separates this tap from the card's own (press the
+  // disc and you save, press anywhere else and the place opens) and it
+  // holds the 40pt target that makes that separation reachable.
+  saveFab: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(10,11,10,0.58)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
+  },
+  name: { color: colors.text, ...type.cardTitle },
   // Tight under the name it qualifies — 3pt, not the 8 the status row and
   // the chips take, because those are separate statements and this is the
   // second half of the first one.
@@ -215,22 +235,7 @@ const s = StyleSheet.create({
   // The same tertiary weight the plan and trip screens give a district, so
   // the fact wears one face across the app.
   where: { flex: 1, color: colors.textTertiary, ...type.meta },
-  // The app's glass, now that it sits on a surface rather than on a photo
-  // — and only the glass. The hairline that used to ring it went with the
-  // borderless pass: fill and circle already say "button", where the
-  // stroke was the heaviest repeated mark on the card, drawn once per
-  // place down a list of them.
-  //
-  // The circle itself stays, and it is not decoration. It is what
-  // separates this tap from the card's own — press the disc and you save,
-  // press anywhere else and the place opens — and it is what holds the
-  // 40pt target that makes that separation reachable.
-  saveBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceGlass,
-  },
-  // The rating supplies its own ground, like the price pill: a photograph
+  // The rating supplies its own ground, like the bookmark: a photograph
   // can be any brightness, and a score has to be legible over all of them.
   ratingSlot: {
     position: 'absolute', left: 10, bottom: 10,
