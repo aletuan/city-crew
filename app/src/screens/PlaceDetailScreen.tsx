@@ -1,5 +1,6 @@
 // Place detail — hero carousel with photo counter, floating share/save,
-// rating badge, icon fact row, and Address / Hours / Call / Website cards.
+// rating badge, icon fact row, and one grouped card of Address / Hours /
+// Call / Website rows, the weekly table folded behind the open-now line.
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -7,7 +8,6 @@ import {
   Text, useWindowDimensions, View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { fmtCount, photosOf, usePlaceBySlug } from '../lib/data';
@@ -18,34 +18,36 @@ import { useI18n } from '../lib/i18n';
 import { mapsSearchUrl } from '../lib/maps';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
-import { colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
-import { AmbientWarmth, Empty, PressableScale, useTabBarClearance } from '../components/ui';
+import { colors, font, onPhoto, radius, space, type } from '../theme';
+import { AmbientWarmth, Card, Empty, PressableScale, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import type { Nav, RootRoute } from '../nav';
 
-function RoundIcon({ name }: { name: keyof typeof Ionicons.glyphMap }) {
-  return (
-    <View style={s.roundIcon}>
-      <Ionicons name={name} size={19} color={colors.accent} />
-    </View>
-  );
-}
-
-function InfoCard({ icon, label, onPress, chevron, children }: {
+// One row of the grouped info card. These were four stacked cards, each
+// wearing a 44pt accent circle and an uppercase label — four accent marks
+// for zero states, on a screen whose colour discipline says the accent
+// marks state and action. The glyph goes quiet, the label goes (an address
+// reads as an address), and the accent is spent on the words that do
+// something: Route and Call. The whole row is the target; the accent word
+// only names what a tap anywhere already does.
+function InfoRow({ icon, first, onPress, right, children }: {
   icon: keyof typeof Ionicons.glyphMap;
-  label: string;
+  /** The row that opens the card draws no hairline above itself. */
+  first?: boolean;
   onPress?: () => void;
-  chevron?: boolean;
+  right?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <Pressable onPress={onPress} disabled={!onPress} style={s.infoCard}>
-      <RoundIcon name={icon} />
-      <View style={{ flex: 1 }}>
-        <Text style={s.infoLabel}>{label}</Text>
-        {children}
-      </View>
-      {chevron && <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />}
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={[s.infoRow, !first && s.rowDivider]}
+      accessibilityRole={onPress ? 'button' : undefined}
+    >
+      <Ionicons name={icon} size={18} color={colors.textSecondary} />
+      <View style={{ flex: 1 }}>{children}</View>
+      {right}
     </Pressable>
   );
 }
@@ -67,6 +69,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const place = inCatalog ?? elsewhere.data ?? undefined;
   const loading = catalogLoading || elsewhere.loading;
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [hoursOpen, setHoursOpen] = useState(false);
   const saved = isSaved(route.params.slug);
   const tabClearance = useTabBarClearance();
 
@@ -93,7 +96,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const reviews = fmtCount(place.rating_count);
   const dur = fmtDuration(place.duration_min, place.duration_max, lang);
   const cats = categoriesOf(place);
-  const servesTable = cats.includes('eats') || cats.includes('cafes');
   const heroW = width - 24;
   // Through `lib/maps` rather than spelled out here, now that the saved
   // trip links out too. It also fixes a narrower bug than it looks: the
@@ -111,6 +113,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // would only matter to someone parked on this screen at closing time,
   // and would cost a re-render a minute on every place in the app.
   const openNow = openState(place.opening_hours, new Date());
+  // Which row opens the grouped card decides where the hairlines fall:
+  // every row below the first draws one above itself, whatever subset of
+  // the four a place actually has.
+  const firstRow = place.address ? 'address'
+    : hours.length ? 'hours'
+    : place.phone ? 'phone'
+    : place.website ? 'website' : null;
 
   const share = () => {
     Share.share({
@@ -244,94 +253,110 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           </View>
 
           {(place.desc_en || place.desc_vi) && <Text style={s.desc}>{t(place.desc_en, place.desc_vi, place.desc_ja)}</Text>}
-          <View style={s.divider} />
 
-          {/* ── info cards ── */}
-          {place.address && (
-            <InfoCard
-              icon="location-outline"
-              label={t('Address', 'Địa chỉ', '住所')}
-              onPress={mapsUrl ? () => Linking.openURL(mapsUrl) : undefined}
-              chevron={!!mapsUrl}
-            >
-              <Text style={s.infoValue}>{place.address}</Text>
-            </InfoCard>
-          )}
-
-          {hours.length > 0 && (
-            <InfoCard icon="time-outline" label={t('Hours', 'Giờ mở cửa', '営業時間')}>
-              {/* The one line most people came for, above the table they
-                  would otherwise have to read today's row out of. Green
-                  when open; closed is a fact about a café, not a fault, so
-                  it stays in the quiet grey rather than going red. */}
-              {openNow && (
-                <Text style={[s.openNow, !openNow.open && s.openNowShut]}>
-                  {/* Whole sentences per language, not a preposition glued
-                      to a time: Japanese puts "まで" after the hour, so
-                      concatenating a translated "until" in front of it
-                      reads backwards. */}
-                  {openNow.open
-                    ? openNow.untilMin != null
-                      ? t(
-                        `Open now · until ${clockOf(openNow.untilMin)}`,
-                        `Đang mở cửa · đến ${clockOf(openNow.untilMin)}`,
-                        `営業中 · ${clockOf(openNow.untilMin)}まで`,
-                      )
-                      : t('Open now · 24 hours', 'Đang mở cửa · 24 giờ', '営業中 · 24時間')
-                    : openNow.opensAtMin != null
-                      ? t(
-                        `Closed · opens ${clockOf(openNow.opensAtMin)}`,
-                        `Đã đóng cửa · mở lúc ${clockOf(openNow.opensAtMin)}`,
-                        `閉店中 · ${clockOf(openNow.opensAtMin)}開店`,
-                      )
-                      : t('Closed today', 'Hôm nay đóng cửa', '本日休業')}
-                </Text>
+          {/* ── info card ── */}
+          {firstRow != null && (
+            <Card style={s.infoGroup}>
+              {place.address && (
+                <InfoRow
+                  icon="location-outline"
+                  first={firstRow === 'address'}
+                  onPress={mapsUrl ? () => Linking.openURL(mapsUrl) : undefined}
+                  right={mapsUrl ? (
+                    <View style={s.action}>
+                      <Text style={s.actionText}>{t('Route', 'Chỉ đường', '経路')}</Text>
+                      <Ionicons name="navigate" size={14} color={colors.accent} />
+                    </View>
+                  ) : undefined}
+                >
+                  <Text style={s.infoValue}>{place.address}</Text>
+                </InfoRow>
               )}
-              {hours.map((row) => (
-                <View key={row.label} style={s.hourRow}>
-                  <Text style={s.hourDay}>{row.label}</Text>
-                  <Text style={s.hourTime}>{row.hours}</Text>
+
+              {hours.length > 0 && (
+                <View style={firstRow !== 'hours' && s.rowDivider}>
+                  {/* The one line most people came for is the whole row;
+                      the table it was derived from waits behind the
+                      chevron instead of pushing Call and Website off the
+                      screen. Green when open; closed is a fact about a
+                      café, not a fault, so it stays in the quiet grey
+                      rather than going red. */}
+                  <Pressable
+                    onPress={() => setHoursOpen((v) => !v)}
+                    style={s.infoRow}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: hoursOpen }}
+                  >
+                    <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
+                    <View style={{ flex: 1 }}>
+                      {openNow ? (
+                        <Text style={[s.openNow, !openNow.open && s.openNowShut]}>
+                          {/* Whole sentences per language, not a preposition
+                              glued to a time: Japanese puts "まで" after the
+                              hour, so concatenating a translated "until" in
+                              front of it reads backwards. */}
+                          {openNow.open
+                            ? openNow.untilMin != null
+                              ? t(
+                                `Open now · until ${clockOf(openNow.untilMin)}`,
+                                `Đang mở cửa · đến ${clockOf(openNow.untilMin)}`,
+                                `営業中 · ${clockOf(openNow.untilMin)}まで`,
+                              )
+                              : t('Open now · 24 hours', 'Đang mở cửa · 24 giờ', '営業中 · 24時間')
+                            : openNow.opensAtMin != null
+                              ? t(
+                                `Closed · opens ${clockOf(openNow.opensAtMin)}`,
+                                `Đã đóng cửa · mở lúc ${clockOf(openNow.opensAtMin)}`,
+                                `閉店中 · ${clockOf(openNow.opensAtMin)}開店`,
+                              )
+                              : t('Closed today', 'Hôm nay đóng cửa', '本日休業')}
+                        </Text>
+                      ) : (
+                        // Hours stored in a shape openState cannot read
+                        // still deserve their table; the row then needs a
+                        // name where the answer line would have stood.
+                        <Text style={s.infoValue}>{t('Hours', 'Giờ mở cửa', '営業時間')}</Text>
+                      )}
+                    </View>
+                    <Ionicons name={hoursOpen ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textTertiary} />
+                  </Pressable>
+                  {hoursOpen && (
+                    <View style={s.hoursTable}>
+                      {hours.map((row) => (
+                        <View key={row.label} style={s.hourRow}>
+                          <Text style={s.hourDay}>{row.label}</Text>
+                          <Text style={s.hourTime}>{row.hours}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              ))}
-            </InfoCard>
-          )}
+              )}
 
-          {place.phone && (
-            <Pressable onPress={() => Linking.openURL(`tel:${place.phone!.replace(/\s/g, '')}`)} style={s.infoCard}>
-              <RoundIcon name="call-outline" />
-              <View style={{ flex: 1 }}>
-                {/* "Gọi cho quán" only where "quán" is a true word for it.
-                    This also read the legacy column, which is how a
-                    bookstore came to be called a quán: its old row says
-                    'food' because that axis had two values and neither
-                    fitted. Somewhere to eat or drink now decides it. */}
-                <Text style={s.callTitle}>
-                  {servesTable
-                    ? t('Call the place', 'Gọi cho quán', 'お店に電話')
-                    : t('Call', 'Gọi điện', '電話する')}
-                </Text>
-                <Text style={s.infoValue}>{place.phone}</Text>
-              </View>
-              <LinearGradient {...gradAI} style={s.goBtn}>
-                {/* accentInk, like every other glyph on the accent
-                    gradient. This one was white — 2.7:1, and worse over the
-                    orange end — and it was the last one left. */}
-                <Ionicons name="arrow-forward" size={18} color={colors.accentInk} />
-              </LinearGradient>
-            </Pressable>
-          )}
+              {place.phone && (
+                <InfoRow
+                  icon="call-outline"
+                  first={firstRow === 'phone'}
+                  onPress={() => Linking.openURL(`tel:${place.phone!.replace(/\s/g, '')}`)}
+                  right={<Text style={s.actionText}>{t('Call', 'Gọi', '電話')}</Text>}
+                >
+                  <Text style={s.infoValue}>{place.phone}</Text>
+                </InfoRow>
+              )}
 
-          {place.website && (
-            <InfoCard
-              icon="globe-outline"
-              label={t('Website', 'Trang web', 'ウェブサイト')}
-              onPress={() => Linking.openURL(place.website!)}
-              chevron
-            >
-              <Text style={s.infoValue} numberOfLines={1}>
-                {place.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
-              </Text>
-            </InfoCard>
+              {place.website && (
+                <InfoRow
+                  icon="globe-outline"
+                  first={firstRow === 'website'}
+                  onPress={() => Linking.openURL(place.website!)}
+                  right={<Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />}
+                >
+                  <Text style={s.infoValue} numberOfLines={1}>
+                    {place.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+                  </Text>
+                </InfoRow>
+              )}
+            </Card>
           )}
         </View>
       </ScrollView>
@@ -388,32 +413,24 @@ const s = StyleSheet.create({
   factText: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.medium },
 
   desc: { color: colors.textSecondary, ...type.body, lineHeight: 24, marginTop: 14 },
-  divider: { height: 1, backgroundColor: colors.borderGlassSoft, marginVertical: 18 },
 
-  infoCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: radius.card, padding: space.cardPadding, marginBottom: space.cardGap,
-  },
-  roundIcon: {
-    width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentLine,
-  },
-  infoLabel: {
-    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
-    textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 4,
-  },
+  // The Card supplies ground, border and radius; the horizontal inset
+  // lives here so each row's hairline can run to the card's edge.
+  infoGroup: { marginTop: 18, paddingHorizontal: space.cardPadding },
+  // 15pt over a 22pt line keeps every row a ≥52pt target.
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15 },
+  rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  action: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingLeft: 12 },
+  actionText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
   infoValue: { color: colors.textSecondary, ...type.meta, lineHeight: 22 },
-  // Semibold and a size up on the rows under it: this is the answer, and
-  // they are the working it was derived from.
-  openNow: {
-    color: colors.ok, fontSize: 15.5, fontWeight: font.semibold,
-    marginBottom: 6,
-  },
+  // Semibold and a size up on the table under it: this is the answer, and
+  // it is the working it was derived from.
+  openNow: { color: colors.ok, fontSize: 15.5, fontWeight: font.semibold },
   openNowShut: { color: colors.textTertiary },
+  // Indented to the text column (18pt glyph + 14 gap) so the days hang
+  // under the answer line, not under its icon.
+  hoursTable: { paddingLeft: 32, paddingBottom: 14 },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   hourDay: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.medium },
   hourTime: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.regular },
-  callTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, marginBottom: 2 },
-  goBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 });
