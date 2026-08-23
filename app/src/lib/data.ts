@@ -1022,8 +1022,25 @@ export async function fetchMutualSaves(others: string[]): Promise<Record<string,
   return out;
 }
 
-/** Recent likes on your public lists — the liker named only when they
- *  are already your friend; see `likes_on_mine`. */
+/** Handles that begin with what was typed — the add flow's suggestions.
+ *  Prefix only, never substring: "an" finds @anh and @anna and does not
+ *  drag in every handle with those letters somewhere inside. Profiles
+ *  are world-readable, so this reveals nothing the table did not. The
+ *  pattern is built from the normalised form, which strips anything a
+ *  LIKE could read as a wildcard. */
+export async function searchHandles(prefix: string): Promise<FriendProfile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, handle, full_name, avatar_url')
+    .ilike('handle', `${prefix}%`)
+    .order('handle')
+    .limit(8);
+  if (error) return [];
+  return (data ?? []) as FriendProfile[];
+}
+
+/** Recent likes on your public lists, each with its liker's name — see
+ *  `likes_on_mine` (second cut: the owner always sees who). */
 export async function fetchApplause(sinceISO: string): Promise<import('./friends').Applause[]> {
   const { data, error } = await supabase.rpc('likes_on_mine', { since: sinceISO });
   if (error) return [];

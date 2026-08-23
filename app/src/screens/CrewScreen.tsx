@@ -23,9 +23,9 @@ import { Card, Empty, PressableScale, RoundIconButton } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import {
   fetchMutualSaves, fetchProfilesById, type FriendProfile, profileByHandle,
-  removeFriendship, sendFriendRequest, useFriendships,
+  removeFriendship, searchHandles, sendFriendRequest, useFriendships,
 } from '../lib/data';
-import { splitFriendships, standingWith } from '../lib/friends';
+import { MIN_SUGGEST_CHARS, splitFriendships, standingWith, suggestable } from '../lib/friends';
 import { atHandle, handleProblem, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
@@ -57,6 +57,23 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const [handle, setHandle] = useState('');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+
+  // Suggestions under the field, from two typed letters up. Prefix only
+  // — see `searchHandles` — debounced a beat so a fast typist costs one
+  // query, not one per letter; and answers are checked against the text
+  // still in the box, so a slow reply for "an" cannot overwrite the
+  // suggestions for "anh" that already landed.
+  const [found, setFound] = useState<FriendProfile[]>([]);
+  useEffect(() => {
+    const bare = normalizeHandle(handle);
+    if (bare.length < MIN_SUGGEST_CHARS) { setFound([]); return; }
+    const timer = setTimeout(() => {
+      searchHandles(bare).then((rows) => {
+        setFound((prev) => (normalizeHandle(handle) === bare ? suggestable(rows, me ?? '') : prev));
+      }).catch(() => {});
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [handle, me]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = async () => {
     const bare = normalizeHandle(handle);
@@ -127,7 +144,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         <RoundIconButton
           icon="person-add-outline"
           label={t('Add a friend', 'Thêm bạn', '友達を追加')}
-          onPress={() => { setAdding((v) => !v); setNote(null); }}
+          onPress={() => { setAdding((v) => !v); setNote(null); setFound([]); }}
         />
       </View>
 
@@ -145,7 +162,31 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
             onSubmitEditing={send}
             error={note}
           />
-          <PressableScale style={s.sendBtn} onPress={send} accessibilityRole="button">
+          {found.length > 0 && (
+            <View>
+              {found.map((f, i) => (
+                <PressableScale
+                  key={f.id}
+                  style={[s.suggestRow, i > 0 && s.suggestDivider]}
+                  scaleTo={0.97}
+                  onPress={() => { setHandle(f.handle); setFound([]); setNote(null); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={atHandle(f.handle)}
+                >
+                  {f.avatar_url
+                    ? <Image source={{ uri: f.avatar_url }} style={s.suggestFace} contentFit="cover" transition={120} />
+                    : (
+                      <View style={[s.suggestFace, s.faceBlank]}>
+                        <Ionicons name="person-outline" size={14} color={colors.textTertiary} />
+                      </View>
+                    )}
+                  <Text style={s.suggestName} numberOfLines={1}>{f.full_name || atHandle(f.handle)}</Text>
+                  <Text style={s.suggestHandle} numberOfLines={1}>{atHandle(f.handle)}</Text>
+                </PressableScale>
+              ))}
+            </View>
+          )}
+          <PressableScale containerStyle={s.sendWrap} style={s.sendBtn} onPress={send} accessibilityRole="button">
             {busy
               ? <ActivityIndicator color={colors.accentInk} size="small" />
               : <Text style={s.sendText}>{t('Send request', 'Gửi lời mời', 'リクエスト送信')}</Text>}
@@ -220,11 +261,22 @@ const s = StyleSheet.create({
   sub: { color: colors.textTertiary, ...type.meta, marginTop: -6, marginBottom: 4 },
 
   addCard: { padding: space.cardPadding, gap: 12 },
+  suggestRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 9,
+  },
+  suggestDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  suggestFace: { width: 30, height: 30, borderRadius: 15 },
+  suggestName: { color: colors.text, fontSize: 14.5, fontWeight: font.medium, flexShrink: 1 },
+  suggestHandle: { color: colors.textTertiary, fontSize: 13.5 },
+
+  // Position on the container, look on the inner view — see
+  // PressableScale's doc block for why the split matters.
+  sendWrap: { alignSelf: 'flex-start', minWidth: 132 },
   sendBtn: {
-    alignSelf: 'flex-start',
     backgroundColor: colors.accent, borderRadius: radius.pill,
     paddingHorizontal: 18, paddingVertical: 10,
-    minWidth: 132, alignItems: 'center',
+    alignItems: 'center',
   },
   sendText: { color: colors.accentInk, fontSize: 14.5, fontWeight: font.semibold },
 

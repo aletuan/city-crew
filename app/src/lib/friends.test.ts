@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  agoOf, buildActivity, REQUEST_DAILY_CAP, splitFriendships, standingWith,
-  TRIP_REMINDER_DAYS, type Applause, type FriendshipRow,
+  agoOf, buildActivity, MIN_SUGGEST_CHARS, REQUEST_DAILY_CAP, splitFriendships,
+  standingWith, SUGGEST_LIMIT, suggestable, TRIP_REMINDER_DAYS,
+  type Applause, type FriendshipRow,
 } from './friends';
 
 const edge = (
@@ -11,7 +12,7 @@ const edge = (
 ): FriendshipRow => ({ requester, addressee, status, created_at });
 
 const like = (collection_id: string, liked_at: string, handle: string | null = null): Applause => ({
-  collection_id, liked_at, friend_handle: handle, friend_name: handle && 'Some One',
+  collection_id, liked_at, liker_handle: handle, liker_name: handle && 'Some One',
 });
 
 describe('splitFriendships', () => {
@@ -66,8 +67,8 @@ describe('buildActivity', () => {
       like('c2', '2026-08-23T09:00:00Z', 'lanphuong'),
     ], [], today);
     expect(items.map((i) => i.kind)).toEqual(['applause', 'applause']);
-    expect(items[0]).toMatchObject({ collection_id: 'c2', friend_handle: 'lanphuong', friend_name: 'Some One' });
-    expect(items[1]).toMatchObject({ collection_id: 'c1', friend_handle: null });
+    expect(items[0]).toMatchObject({ collection_id: 'c2', liker_handle: 'lanphuong', liker_name: 'Some One' });
+    expect(items[1]).toMatchObject({ collection_id: 'c1', liker_handle: null });
   });
 
   it('the nearest upcoming trip leads, with its distance in days', () => {
@@ -108,8 +109,22 @@ describe('agoOf', () => {
   });
 });
 
-describe('the cap', () => {
-  it('mirrors the policy', () => {
+describe('suggestable', () => {
+  const person = (id: string) => ({ id });
+  it('drops the reader and caps the list, keeping the order', () => {
+    const found = ['me', 'a', 'b', 'c', 'd', 'e', 'f', 'g'].map(person);
+    const out = suggestable(found, 'me');
+    expect(out.map((p) => p.id)).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+    expect(out).toHaveLength(SUGGEST_LIMIT);
+  });
+  it('a list without the reader passes through short', () => {
+    expect(suggestable([person('a')], 'me')).toEqual([person('a')]);
+  });
+});
+
+describe('the caps', () => {
+  it('mirror the policy and the field', () => {
     expect(REQUEST_DAILY_CAP).toBe(20);
+    expect(MIN_SUGGEST_CHARS).toBe(2);
   });
 });
