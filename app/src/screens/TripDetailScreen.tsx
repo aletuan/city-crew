@@ -610,7 +610,7 @@ const s = StyleSheet.create({
   dots: {
     position: 'absolute', bottom: 12, alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 7,
-    backgroundColor: 'rgba(10,8,13,0.45)', borderRadius: radius.pill,
+    backgroundColor: 'rgba(10,11,10,0.45)', borderRadius: radius.pill,
     paddingHorizontal: 11, paddingVertical: 8,
   },
   dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.38)' },

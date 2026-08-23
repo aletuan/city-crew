@@ -444,11 +444,16 @@ const s = StyleSheet.create({
   // Bottom corners only. The top three edges are the screen's own now, and
   // a radius there would draw the card outline this stopped being; the
   // bottom pair is what tells the eye the picture has ended and the page
-  // has begun. 30, between the app's card 22 and the tab bar's 32: a
-  // full-width edge needs a wider curve than a card to read as the same
-  // softness.
+  // has begun.
+  //
+  // `radius.card`, the same number Explore's hero rounds to. This briefly
+  // shipped at 30, on the argument that a full-width edge wants a wider
+  // curve than a card — which may be true, but Explore's hero is just as
+  // full-width, and two screens doing one thing at two radii is the
+  // inconsistency you see rather than the softness you don't. If the
+  // curve is ever revisited it moves for both, from the token.
   heroWrap: {
-    borderBottomLeftRadius: 30, borderBottomRightRadius: 30,
+    borderBottomLeftRadius: radius.card, borderBottomRightRadius: radius.card,
     overflow: 'hidden', backgroundColor: colors.surfaceGlass,
   },
   // Height comes from the call site — it is the safe-area inset plus the
@@ -458,19 +463,33 @@ const s = StyleSheet.create({
   heroScrimTop: { position: 'absolute', left: 0, right: 0, top: 0 },
   heroScrimBottom: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 116 },
   fabSlot: { position: 'absolute' },
+  // Everything this screen floats on a photograph is made of one material:
+  // `rgba(10,11,10, …)` with an `onPhoto.line` hairline — the ground the
+  // search disc on Explore, the bookmark and rating on a place card, and
+  // the avatar's busy state are all made of.
+  //
+  // These were `rgba(10,8,13, …)` and bare. Ten-eight-thirteen is black
+  // pulled towards violet where the app's is pulled towards green, which
+  // nobody can name at a glance and everybody can see when the two sit a
+  // screen apart; the missing hairline is what let a disc dissolve into a
+  // dark photograph. The alphas are each sibling's own: a 44pt disc is
+  // Explore's 0.55, a labelled pill is the rating pill's 0.58, and the
+  // dot track stays lightest because it holds no type.
   fab: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(10,8,13,0.55)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(10,11,10,0.55)', alignItems: 'center', justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
   counter: {
     position: 'absolute', left: space.page, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(10,8,13,0.65)', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6,
+    backgroundColor: 'rgba(10,11,10,0.58)', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
   counterText: { color: onPhoto.text, fontSize: 12.5, fontWeight: font.semibold },
   dots: {
     position: 'absolute', bottom: 15, alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 7,
-    backgroundColor: 'rgba(10,8,13,0.45)', borderRadius: radius.pill,
+    backgroundColor: 'rgba(10,11,10,0.45)', borderRadius: radius.pill,
     paddingHorizontal: 11, paddingVertical: 8,
   },
   dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.38)' },
