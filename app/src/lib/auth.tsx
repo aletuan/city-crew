@@ -94,6 +94,11 @@ type Auth = {
   setAvatar: (localUri: string) => Promise<void>;
   clearAvatar: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Delete the account and everything personal under it. The server
+   *  deletes exactly the account the token proves — see the
+   *  delete-account function — and the local session is cleared after,
+   *  best-effort, since the server has already invalidated it. */
+  deleteAccount: () => Promise<void>;
 };
 
 const EMPTY_PROFILE: Profile = { handle: '', full_name: '', location: '', bio: '', interests: '', avatar_url: '' };
@@ -104,6 +109,7 @@ const Ctx = createContext<Auth>({
   confirmSignUp: async () => {}, requestReset: async () => {}, resetPassword: async () => {},
   updateProfile: async () => {}, setAvatar: async () => {}, clearAvatar: async () => {},
   signOut: async () => {},
+  deleteAccount: async () => {},
 });
 
 export const useAuth = () => useContext(Ctx);
@@ -264,6 +270,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw new Error(error.message);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    const { data, error } = await supabase.functions.invoke('delete-account', { body: {} });
+    if (error) throw new Error(error.message);
+    if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+    // The account is gone server-side; the local sign-out only clears
+    // this device's stored session, and failing at that must not make a
+    // completed deletion look like it did not happen.
+    await supabase.auth.signOut().catch(() => {});
+  }, []);
+
   const value = useMemo<Auth>(() => {
     return {
       ready,
@@ -272,10 +288,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profile,
       memberSince: session?.user?.created_at ? new Date(session.user.created_at) : null,
       signIn, signUp, confirmSignUp, requestReset, resetPassword, updateProfile,
-      setAvatar, clearAvatar, signOut,
+      setAvatar, clearAvatar, signOut, deleteAccount,
     };
   }, [ready, session, profile, signIn, signUp, confirmSignUp, requestReset, resetPassword,
-      updateProfile, setAvatar, clearAvatar, signOut]);
+      updateProfile, setAvatar, clearAvatar, signOut, deleteAccount]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
