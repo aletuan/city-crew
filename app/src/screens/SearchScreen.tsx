@@ -25,7 +25,7 @@ import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/
 import { useCity } from '../lib/city';
 import { freshOnly, useCandidates } from '../lib/candidates';
 import { escapeRoutes } from '../lib/deadend';
-import { clockOf, openState } from '../lib/format';
+import { openFragment, openState } from '../lib/format';
 import type { Candidate } from '../lib/suggest';
 import { useCollections, useLikes, usePlaces, useSearchTerms } from '../lib/catalog';
 import { parseRecents, RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
@@ -487,27 +487,12 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             // rows on a shelf where everything is 4-and-something.
             //
             // The time half of the line answers whichever question the
-            // clock poses: open now says when that ends ("until 22:00"),
-            // closed says when it stops being so ("opens 08:00") — the
-            // compact form of the sentence the detail screen spells out.
-            // An unknown schedule says nothing: `openState` returning
-            // null is "cannot answer", and showing nothing beats telling
-            // someone an open café is closed.
-            //
-            // A 24-hour place says so in words. It used to stay quiet on
-            // the logic that "until never" is not an hour — but on a
-            // shelf where every neighbour names a time, silence reads as
-            // a hole in the data, not as always-open. Xofa and the parks
-            // looked like the rows somebody forgot to fill in, when they
-            // are the rows with the *best* answer on the shelf.
-            const state = openState(pl.opening_hours, now);
-            const when = state?.open
-              ? state.untilMin != null
-                ? t(`until ${clockOf(state.untilMin)}`, `đến ${clockOf(state.untilMin)}`, `${clockOf(state.untilMin)}まで`)
-                : t('open 24 hours', 'mở 24/24', '24時間営業')
-              : state?.opensAtMin != null
-                ? t(`opens ${clockOf(state.opensAtMin)}`, `mở lúc ${clockOf(state.opensAtMin)}`, `${clockOf(state.opensAtMin)}開店`)
-                : null;
+            // clock poses — "until 22:00" open, "opens 08:00" closed,
+            // "mở 24/24" for the places that never stop, silence when
+            // the hours cannot be read. The grammar lives in
+            // `openFragment`, shared with the Explore cards, so the two
+            // lists can never learn to disagree about what an hour says.
+            const when = openFragment(openState(pl.opening_hours, now), t);
             const area = t(pl.neighborhood_en, pl.neighborhood_vi, pl.neighborhood_ja);
             const meta = [area, when].filter(Boolean).join(' · ');
             return (

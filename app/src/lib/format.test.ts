@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clockOf, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, instantOn, openState, splitHours } from './format';
+import { clockOf, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, instantOn, openFragment, openState, splitHours } from './format';
 import { fmtDistance } from './geo';
 
 describe('fmtMinutes', () => {
@@ -491,5 +491,45 @@ describe('clockOf', () => {
     // Wednesday 10:00 ICT.
     const state = openState(lines, new Date('2026-08-12T03:00:00Z'));
     expect(state?.opensAtMin != null && clockOf(state.opensAtMin)).toBe('17:00');
+  });
+});
+
+describe('openFragment', () => {
+  const en = (e: string) => e;
+  const vi = (_e: string, v: string) => v;
+  const ja = (_e: string, _v: string, j?: string) => j ?? '';
+
+  it('reads an open place as the hour it stops being one', () => {
+    expect(openFragment({ open: true, untilMin: 1320 }, en)).toBe('until 22:00');
+    expect(openFragment({ open: true, untilMin: 1320 }, vi)).toBe('đến 22:00');
+    // Japanese puts まで after the hour — the whole-phrase rule, visible.
+    expect(openFragment({ open: true, untilMin: 1320 }, ja)).toBe('22:00まで');
+  });
+
+  it('says a place that never closes never closes', () => {
+    expect(openFragment({ open: true }, en)).toBe('open 24 hours');
+    expect(openFragment({ open: true }, vi)).toBe('mở 24/24');
+    expect(openFragment({ open: true }, ja)).toBe('24時間営業');
+  });
+
+  it('reads a closed place as the hour it stops being one', () => {
+    expect(openFragment({ open: false, opensAtMin: 480 }, en)).toBe('opens 08:00');
+    expect(openFragment({ open: false, opensAtMin: 480 }, vi)).toBe('mở lúc 08:00');
+    expect(openFragment({ open: false, opensAtMin: 480 }, ja)).toBe('08:00開店');
+  });
+
+  // On a row, the bare word "closed" reads as a fact about the business
+  // rather than about the hour — so a closed place with nothing more to
+  // say today says nothing.
+  it('stays quiet when closed with no reopening today', () => {
+    expect(openFragment({ open: false }, en)).toBeNull();
+  });
+
+  it('stays quiet when the hours could not be read at all', () => {
+    expect(openFragment(null, en)).toBeNull();
+  });
+
+  it('wraps a past-midnight closing time like the clock it is', () => {
+    expect(openFragment({ open: true, untilMin: 1560 }, en)).toBe('until 02:00');
   });
 });

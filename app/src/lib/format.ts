@@ -370,3 +370,38 @@ export function openState(lines: string[] | null | undefined, now: Date): OpenSt
   const next = wins.filter((w) => w.from > mins).sort((a, b) => a.from - b.from)[0];
   return next ? { open: false, opensAtMin: next.from } : { open: false };
 }
+
+/**
+ * The list-row reading of an `OpenState`: the short fragment that rides
+ * a card's meta line after the district — "until 22:00", "opens 08:00",
+ * "open 24 hours" — or null when there is nothing true to say.
+ *
+ * One function rather than the same ternary in every list, because the
+ * Search zero-state grew it first and the Explore cards wanted it next —
+ * and three languages times three cases inlined twice is eighteen
+ * strings waiting to drift apart. The detail screen keeps its own longer
+ * sentences ("Open now · until 22:00"); this is the compact grammar for
+ * rows, where the district before it supplies the subject.
+ *
+ * Whole phrases per language, not a translated preposition glued to a
+ * time: Japanese puts まで and 開店 after the hour, so concatenation
+ * would read backwards — the same reasoning the detail screen documents.
+ *
+ * Closed with no reopening today says nothing rather than "closed": on a
+ * row the word alone reads as a permanent fact about the business, which
+ * is the misreading `openState`'s own docs warn against.
+ */
+export function openFragment(
+  state: OpenState | null,
+  t: (en: string, vi: string, ja?: string) => string,
+): string | null {
+  if (!state) return null;
+  if (state.open) {
+    if (state.untilMin == null) return t('open 24 hours', 'mở 24/24', '24時間営業');
+    const at = clockOf(state.untilMin);
+    return t(`until ${at}`, `đến ${at}`, `${at}まで`);
+  }
+  if (state.opensAtMin == null) return null;
+  const at = clockOf(state.opensAtMin);
+  return t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`);
+}
