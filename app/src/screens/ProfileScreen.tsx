@@ -396,13 +396,21 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           : <Text style={s.signOutText}>{t('Sign out', 'Đăng xuất', 'サインアウト')}</Text>}
       </PressableScale>
 
+      <Tagline />
+
       {/* The way out, whole. The store requires it (5.1.1(v)) and it was
           owed anyway: an account you can open but not close is a trap
           with good manners. Two asks, because the second is the only
           protection a destructive tap has — the server deliberately asks
           nothing (see delete-account). Quiet type, not a red button: it
           must be findable by someone looking and invisible to someone
-          scrolling. */}
+          scrolling.
+
+          Last on the page, below the tagline, and not a point nearer:
+          it sat directly under Sign out — the button this screen is
+          actually visited for — and two taps that close together must
+          not have consequences that far apart. The tagline in between
+          is the buffer a thumb needs. */}
       <PressableScale
         style={s.deleteBtn}
         onPress={() => Alert.alert(
@@ -447,8 +455,6 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
       >
         <Text style={s.deleteText}>{t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}</Text>
       </PressableScale>
-
-      <Tagline />
     </>
   );
 }
@@ -557,7 +563,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlassSoft, backgroundColor: colors.surfaceGlass,
   },
   signOutText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
-  deleteBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 2 },
+  deleteBtn: { alignItems: 'center', paddingVertical: 14, marginTop: 22 },
   deleteText: { color: colors.bad, fontSize: 14, fontWeight: font.medium },
 
   tagline: { alignItems: 'center', gap: 8, paddingVertical: 18 },
