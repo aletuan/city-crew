@@ -11,6 +11,7 @@ import { isHandleFree, useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
 import { HANDLE_MAX, handleProblem, normalizeHandle, suggestHandle } from '../lib/handle';
+import { PASSWORD_MIN } from '../lib/password';
 import { colors, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -54,7 +55,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 
   const submit = () =>
     run(async () => {
-      if (password.length < 8) {
+      if (password.length < PASSWORD_MIN) {
         throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
       }
       if (password !== confirm) {
@@ -173,6 +174,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         value={password}
         onChangeText={setPassword}
         secure
+        strength
         autoCapitalize="none"
         autoComplete="new-password"
       />

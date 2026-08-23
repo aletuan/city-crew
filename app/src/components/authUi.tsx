@@ -11,6 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { BackButton, CONTROL_H, fireHaptic, PressableScale, useTabBarClearance } from './ui';
+import { useI18n } from '../lib/i18n';
+import { PASSWORD_MIN, passwordStrength } from '../lib/password';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
 export function AuthScreen({ children }: { children: React.ReactNode }) {
@@ -75,10 +77,13 @@ export function Lede({ children }: { children: string }) {
  * the reader to work out which of five fields it is about — and the one
  * this was written for named a value three fields further up.
  */
-export function FieldRow({ icon, label, secure, error, ...input }: {
+export function FieldRow({ icon, label, secure, strength, error, ...input }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   secure?: boolean;
+  /** Score the value as a password being invented. Sign-up and reset
+   *  only — grading a password that already exists helps nobody. */
+  strength?: boolean;
   error?: string | null;
 } & TextInputProps) {
   const [hidden, setHidden] = useState(true);
@@ -105,9 +110,65 @@ export function FieldRow({ icon, label, secure, error, ...input }: {
           </Pressable>
         ) : null}
       </View>
+      {strength ? <PasswordStrengthMeter password={input.value ?? ''} /> : null}
       {error ? (
         <Text style={s.fieldError} accessibilityLiveRegion="polite">{error}</Text>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * The verdict at Good. The ring sweep's terminal lime (see `ringSweep`),
+ * literal for `gradAI`'s reason: these segments are fills, never type,
+ * and the sweep already puts this exact value on both grounds.
+ */
+const METER_GOOD = '#A9C46A';
+
+/**
+ * Four segments and a word, under the field where a password is being
+ * invented.
+ *
+ * Every filled segment takes the current verdict's colour rather than
+ * each segment keeping its own — the count says how far along, the
+ * colour says where that lands, and the two must not disagree. The ramp
+ * runs bad → sun → lime → ok: red for a password that will be guessed,
+ * through the sweep's own warm-to-cool, to green.
+ *
+ * The word is there because colour alone should never carry a message —
+ * the rule the field's own error state already follows — and it stays
+ * `textSecondary` rather than taking the verdict's colour: `sun` was
+ * measured for glyphs at 3:1, not for 13.5pt type, and a label that
+ * fails on paper is worse than a quiet one. Under the minimum it says
+ * "Too short", which is an instruction, where "Weak" is only a verdict.
+ *
+ * Nothing renders until something is typed: a meter reading an empty
+ * field is noise on a form five fields tall.
+ */
+export function PasswordStrengthMeter({ password }: { password: string }) {
+  const { t } = useI18n();
+  const level = passwordStrength(password);
+  if (level === 0) return null;
+  const label = password.length < PASSWORD_MIN
+    ? t('Too short', 'Quá ngắn', '短すぎます')
+    : [
+        t('Weak', 'Yếu', '弱い'),
+        t('Fair', 'Trung bình', '普通'),
+        t('Good', 'Khá', '良い'),
+        t('Strong', 'Mạnh', '強い'),
+      ][level - 1];
+  const fill = [colors.bad, colors.sun, METER_GOOD, colors.ok][level - 1];
+  return (
+    <View
+      style={s.meter}
+      accessibilityLabel={`${t('Password strength', 'Độ mạnh mật khẩu', 'パスワードの強度')}: ${label}`}
+    >
+      <View style={s.meterTrack} accessible={false}>
+        {[1, 2, 3, 4].map((n) => (
+          <View key={n} style={[s.meterSeg, n <= level && { backgroundColor: fill }]} />
+        ))}
+      </View>
+      <Text style={s.meterLabel} accessibilityLiveRegion="polite">{label}</Text>
     </View>
   );
 }
@@ -170,6 +231,19 @@ const s = StyleSheet.create({
     marginTop: 6, marginBottom: 2, paddingHorizontal: space.cardPadding,
   },
   fieldInput: { color: colors.text, fontSize: 15.5, paddingVertical: 2, paddingHorizontal: 0 },
+
+  // Indented like `fieldError`: this is the same under-field zone, and
+  // the two must line up on the one screen that can show both.
+  meter: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginTop: 8, paddingHorizontal: space.cardPadding,
+  },
+  meterTrack: { flex: 1, flexDirection: 'row', gap: 5 },
+  // Empty segments sit on the tinted well, not on a colour: the track is
+  // what has not happened yet, and the ring already settled that it
+  // stays neutral so the colour is spent on progress alone.
+  meterSeg: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.surfaceGlassStrong },
+  meterLabel: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 18, fontWeight: font.medium },
 
   primary: {
     borderRadius: radius.pill, minHeight: CONTROL_H, paddingVertical: 10,
