@@ -1022,6 +1022,40 @@ export async function fetchMutualSaves(others: string[]): Promise<Record<string,
   return out;
 }
 
+// ── blocks ──
+//
+// A block is contact policy, not content policy: it cuts the friendship
+// edge, refuses future requests across the pair (the insert policy asks
+// `is_blocked_pair`), and keeps the blocked person's likes out of your
+// applause feed. Their public collections stay public. Only the blocker
+// can see the list, and lifting a block is a plain delete of your own row.
+
+async function fetchMyBlocks(): Promise<string[]> {
+  const { data, error } = await supabase.from('blocks').select('blocked');
+  if (error) return [];
+  return ((data ?? []) as { blocked: string }[]).map((r) => r.blocked);
+}
+
+export const useMyBlocks = (meId: string | null | undefined) => {
+  const fetcher = useCallback(
+    () => (meId ? fetchMyBlocks() : Promise.resolve([] as string[])),
+    [meId],
+  );
+  return useFetch(fetcher, [] as string[]);
+};
+
+/** One act on the server — the row in, any edge out — see `block_user`. */
+export async function blockUser(targetId: string): Promise<void> {
+  const { error } = await supabase.rpc('block_user', { target: targetId });
+  if (error) throw new Error(error.message);
+}
+
+export async function unblockUser(meId: string, targetId: string): Promise<void> {
+  const { error } = await supabase
+    .from('blocks').delete().eq('blocker', meId).eq('blocked', targetId);
+  if (error) throw new Error(error.message);
+}
+
 /** Handles that begin with what was typed — the add flow's suggestions.
  *  Prefix only, never substring: "an" finds @anh and @anna and does not
  *  drag in every handle with those letters somewhere inside. Profiles
