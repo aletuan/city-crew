@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
+import { openFragment, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
@@ -16,6 +17,14 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
   const saved = isSaved(place.slug);
   const cover = coverOf(place);
   const reviews = fmtCount(place.rating_count);
+  // The clock is read per render, not memoised, for the reason the Search
+  // zero-state gives: a list left open across a closing time should not
+  // keep insisting the door is open.
+  const where = place.neighborhood_en
+    ? t(place.neighborhood_en, place.neighborhood_vi ?? place.neighborhood_en,
+      place.neighborhood_ja ?? place.neighborhood_en)
+    : null;
+  const when = openFragment(openState(place.opening_hours, new Date()), t);
   return (
     <PressableScale onPress={onPress}>
       <Card style={s.card}>
@@ -109,12 +118,26 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
               same thing the same way. Dropped rather than left blank when
               the catalog has no district for a row: an empty line under a
               name is a gap that looks like a loading state. */}
-          {!!place.neighborhood_en && (
+          {/* The hour rides the district's line — "Ngọc Hà · đến 21:00"
+              — because "can I actually go" is the same question at the
+              same moment as "what part of town". The grammar is
+              `openFragment`'s, shared with the Search zero-state rows,
+              so two lists of places can never learn to disagree about
+              what an hour says. A place near closing announces itself
+              while you scroll, which no amount of opening its page
+              earlier could do.
+
+              The pin still belongs to the district alone: with no
+              district the row can still carry an hour, and an icon
+              pointing at a closing time would label the wrong half of
+              the sentence. */}
+          {(where || when) && (
             <View style={s.whereRow}>
-              <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+              {where
+                ? <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+                : null}
               <Text style={s.where} numberOfLines={1}>
-                {t(place.neighborhood_en, place.neighborhood_vi ?? place.neighborhood_en,
-                  place.neighborhood_ja ?? place.neighborhood_en)}
+                {[where, when].filter(Boolean).join(' · ')}
               </Text>
             </View>
           )}
