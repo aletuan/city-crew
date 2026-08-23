@@ -307,19 +307,28 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           <AvatarPicker showCamera={false} />
         </EngagementRing>
         <View style={{ flex: 1, gap: 5 }}>
-          {/* One line, two things: the name you are called and the name
-              you are found by. The dot between them is the app's own
-              separator, already doing this job on every place card and
-              collection row.
+          {/* Two lines, two things: the name you are called, then the
+              name you are found by.
 
-              The name yields and the handle does not. A display name cut
-              to "Tran Thi Tra…" is still a person; a handle cut to
-              "@tra…" is not an address, and the handle is the half that
-              has to stay usable. */}
-          <View style={s.nameRow}>
-            <Text style={s.accountName} numberOfLines={1}>{name}</Text>
+              These shared a line, separated by the app's own dot, with
+              the name set to yield and the handle set to hold its width —
+              on the argument that a handle cut to "@tra…" is not an
+              address while "Tran Thi Tra…" is still a person. Both halves
+              of that were true and the conclusion was still wrong: what
+              it produced was "Le Nguy…  ·  @lenguyenngocminh", a screen
+              that hides your name to protect an address nobody reads off
+              their own profile.
+
+              Stacked, neither has to yield. The measure here is about
+              247pt beside the 88pt ring, which fits most display names
+              whole on one line — the handle was what pushed them over,
+              not the width. A name long enough to need two takes two and
+              truncates after that; the dot goes with the shared line that
+              made it a separator. */}
+          <View style={s.nameBlock}>
+            <Text style={s.accountName} numberOfLines={2}>{name}</Text>
             {profile.handle ? (
-              <Text style={s.handle} numberOfLines={1}>{`  ·  @${profile.handle}`}</Text>
+              <Text style={s.handle} numberOfLines={1}>{`@${profile.handle}`}</Text>
             ) : null}
           </View>
           {profile.bio ? <Text style={s.heroBody} numberOfLines={2}>{profile.bio}</Text> : null}
@@ -533,17 +542,19 @@ const s = StyleSheet.create({
 
   section: { color: colors.text, ...type.section, marginTop: 10 },
 
-  // `alignItems: 'baseline'` rather than 'center': the two sit at
-  // different sizes, and sharing a baseline is what makes them read as
-  // one line instead of two things stacked beside each other.
-  nameRow: { flexDirection: 'row', alignItems: 'baseline' },
-  // `flexShrink` on the name only. The handle keeps its width, so a long
-  // name truncates before an address does.
+  // 2, not the 5 the column around it uses: a name and the handle under
+  // it are one identity read top to bottom, and at the column's gap they
+  // read as two separate facts that happen to be adjacent. Everything
+  // below — the bio, the button — keeps the wider spacing.
+  nameBlock: { gap: 2 },
+  // No `flexShrink` on either any more: on their own lines neither is
+  // competing for width with the other, and each wraps or truncates
+  // against the column instead.
   accountName: {
     color: colors.text, fontSize: 23, fontWeight: font.bold, letterSpacing: 0.2,
-    flexShrink: 1,
+    lineHeight: 28,
   },
-  handle: { color: colors.textTertiary, ...type.meta, flexShrink: 0 },
+  handle: { color: colors.textTertiary, ...type.meta },
   // The card surface, not the glass tint: on paper the tint is a grey
   // smudge on a warm page, where the About-me card sitting inches below
   // it is white. Matching that card makes the button read as part of the
