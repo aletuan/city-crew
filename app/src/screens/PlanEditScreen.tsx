@@ -46,6 +46,7 @@ import {
   legsOfPlan, move, NUDGE_MIN, nudge, outOfOrder, remove, windowOf, type Editable,
 } from '../lib/itinerary';
 import { planTrips } from '../lib/planner';
+import { scheduleTripReminder } from '../lib/reminders';
 import { membersOf } from '../lib/place';
 import { useSave } from '../lib/save';
 import { useNoteEvent, usePlanProfile } from '../lib/tasteProfile';
@@ -217,7 +218,7 @@ export default function PlanEditScreen({ navigation, route }: {
     if (!session?.user?.id || !city || !current.length) return;
     setSaving(true);
     try {
-      await saveTrip({
+      const tripId = await saveTrip({
         ownerId: session.user.id,
         cityId: city.id,
         title,
@@ -244,6 +245,20 @@ export default function PlanEditScreen({ navigation, route }: {
       // is the clearest signal in the app: these ones they kept, that one
       // they took out. Noted after the write, because a trip that failed to
       // save is not a decision about anything.
+      // The evening-before nudge, planted while the day is known. After
+      // the save and fire-and-forget: a reminder is a courtesy, and the
+      // reader is not kept waiting on the permission sheet's animation.
+      scheduleTripReminder(
+        { id: tripId, day },
+        {
+          title: t('Tomorrow: ' + title, 'Ngày mai: ' + title, '明日：' + title),
+          body: t(
+            'Your plan starts in the morning. Sleep well.',
+            'Kế hoạch bắt đầu vào sáng mai. Ngủ ngon nhé.',
+            '予定は明日の朝から。おやすみなさい。',
+          ),
+        },
+      );
       const kept = new Set(current.map((st) => st.place.slug));
       for (const slug of kept) note(slug, 'plan_keep');
       for (const st of picked?.stops ?? []) {

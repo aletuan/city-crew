@@ -38,6 +38,7 @@ import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO } from '../lib/day';
 import { deleteTrip, useMyTrips, type TripStopRow } from '../lib/data';
+import { cancelTripReminder } from '../lib/reminders';
 import { clockOf, dateline, dotWindow, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
@@ -191,6 +192,7 @@ export default function TripDetailScreen({ navigation, route }: {
         // exists would put it through its own "no longer here" state on
         // the way out.
         onPress: () => {
+          cancelTripReminder(trip.id);
           deleteTrip(trip.id)
             .then(() => { navigation.goBack(); trips.reload(); })
             .catch((e: Error) => Alert.alert(
