@@ -75,6 +75,17 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // Landing anywhere surfaces the bar: a navigation is exactly the moment
   // the reader reached for it, or is about to want it.
   //
+  // Keyed on the whole navigation state, not on `state.index`. The index
+  // only changes when the *tab* changes, so a push inside a tab — Explore
+  // to a place's page — kept whatever the bar was doing, and a reader who
+  // had scrolled (bar ducked) arrived on PlaceDetail with no bar and no
+  // way to get it back: detail screens feed no scroll, so nothing ever
+  // called it home. The screens plainly expect it — both detail screens
+  // reserve `useTabBarClearance` at the bottom for a bar that was not
+  // there. The state object is replaced on every navigation action,
+  // nested pushes included, and on nothing else — scrolling never touches
+  // it, which is what keeps this from re-growing the strobe below.
+  //
   // Depend on `show` — stable — and NEVER on the context object: that
   // value is rebuilt every time `ducked` flips, and an effect keyed on it
   // re-surfaced the bar on the very frame each scroll hid it. Hide, show,
@@ -82,7 +93,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // shivering while they pulled the page up.
   const index = state.index;
   const { show } = duck;
-  useEffect(() => { show(); }, [index, show]);
+  useEffect(() => { show(); }, [state, show]);
 
   // It used to clear the whole safe-area inset — 34pt on a modern iPhone,
   // plus the gap, put the bar 44pt off the bottom, which reads as an
