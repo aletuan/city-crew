@@ -21,10 +21,9 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PressableScale } from './ui';
+import { Avatar, PressableScale } from './ui';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space } from '../theme';
 
@@ -76,13 +75,7 @@ export default function PersonSheet({
         {/* Who this is about. A menu that names nobody is a menu you have
             to trust you opened on the right row. */}
         <View style={s.who}>
-          {avatarUrl
-            ? <Image source={{ uri: avatarUrl }} style={s.face} contentFit="cover" transition={150} />
-            : (
-              <View style={[s.face, s.faceBlank]}>
-                <Ionicons name="person-outline" size={22} color={colors.textTertiary} />
-              </View>
-            )}
+          <Avatar url={avatarUrl} size={52} />
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={s.name} numberOfLines={1}>{name}</Text>
             {meta ? <Text style={s.meta} numberOfLines={1}>{meta}</Text> : null}
@@ -143,8 +136,6 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceCard,
     borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.card,
   },
-  face: { width: 52, height: 52, borderRadius: 26 },
-  faceBlank: { backgroundColor: colors.surfaceGlass, alignItems: 'center', justifyContent: 'center' },
   name: { color: colors.text, fontSize: 18, fontFamily: display.semibold },
   meta: { color: colors.textTertiary, fontSize: 14 },
 

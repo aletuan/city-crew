@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AddSlot } from '../components/add';
 import {
-  AmbientWarmth, BackButton, Empty, GradientCta, PressableScale, RoundIconButton,
+  AmbientWarmth, Avatar, BackButton, Empty, GradientCta, PressableScale, RoundIconButton,
   fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
@@ -16,8 +16,9 @@ import { useLikes } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
   deleteCollection, membersOf, publishBlockers, reorderCollection, setCollectionPublic,
+  useProfileByHandle,
 } from '../lib/data';
-import { atHandle } from '../lib/handle';
+import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { moveItem, sameOrder } from '../lib/order';
 import { useSave } from '../lib/save';
@@ -221,6 +222,31 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // so the heart there never meets one; here the row can arrive through
   // `mine` as well as through the public query.
   const canLike = !!uid && !!col?.id && isPublic && !owned;
+
+  /**
+   * The curator's face, for a list somebody else made.
+   *
+   * `normalizeHandle` before the lookup, and it is not belt-and-braces:
+   * `profileByHandle` matches with `ilike`, and the editorial rows were
+   * seeded with the `@` written into the value — `@hanoicrew` — so the
+   * raw column would find nothing and find it silently. `lib/handle`
+   * states the rule this follows: never trust the stored form.
+   *
+   * Null for your own list, which is not an optimisation but the correct
+   * answer: the byline below says nothing about you either, and asking
+   * would spend a request to be told what `useAuth` already holds.
+   *
+   * Nothing here has a failure state to draw. A handle with no profile
+   * behind it is the normal case, not an error — every editorial list is
+   * one, their handles living in `reserved_handles` with no `profiles`
+   * row anywhere — and a request that fails leaves the byline exactly as
+   * it reads today. So the face is the only thing conditional on this,
+   * and it simply does not appear.
+   */
+  const curatorHandle = !owned && col?.curator_handle
+    ? normalizeHandle(col.curator_handle) || null
+    : null;
+  const curatorAvatar = useProfileByHandle(curatorHandle).data?.avatar_url || null;
   const liked = !!col?.id && myLikes.includes(col.id);
   // The write, the refetch, and the in-flight guard all live on the
   // provider now — a like taken from the shelf has to show here too, and
@@ -441,11 +467,32 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               {owned && isPublic && (
                 <Text style={s.metaPublic}>{t('Public', 'Công khai', '公開')}</Text>
               )}
+              {/* The face leads the line and the handle follows it, which
+                  is a reordering rather than an insertion: a photograph
+                  belongs beside the name it is of, and the only way to
+                  keep the byline a single `Text` — which `numberOfLines`
+                  needs, or the ellipsis arrives twice — is to put the
+                  person first and the counts after.
+
+                  18pt against a 15pt line, and that is the whole answer
+                  to the two round controls this header already has. A
+                  face at the size of the type it sits in is never
+                  mistaken for the 44pt glass one, and it costs the header
+                  no height. The rule is written where the controls are,
+                  in `ui.tsx`.
+
+                  No self-credit. `CollectionsScreen` already states it —
+                  your own byline is the padlock's business, not a credit
+                  line — and this screen was the one place contradicting
+                  it. Above a ⋯ menu only an owner gets, beside a padlock
+                  only an owner sees, your own name was a third way of
+                  saying the same thing. */}
+              {curatorAvatar ? <Avatar url={curatorAvatar} size={18} /> : null}
               <Text style={s.meta} numberOfLines={1}>
                 {owned && isPublic ? '·  ' : ''}
+                {!owned && col.curator_handle ? `${atHandle(col.curator_handle)}  ·  ` : ''}
                 {members.length} {t('places', 'địa điểm', 'スポット')}
                 {owned && !isPublic ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
-                {col.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${atHandle(col.curator_handle)}` : ''}
                 {/* Same rule as the shelf: the tally appears only once it
                     means something. Below that the heart is still here and
                     still works — what is hidden is the number, not the

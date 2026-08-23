@@ -14,13 +14,12 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthHeader, AuthScreen } from '../components/authUi';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
-import { Card, Empty, PressableScale, successHaptic } from '../components/ui';
+import { Avatar, Card, Empty, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCollections } from '../lib/catalog';
 import {
@@ -165,13 +164,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
             return (
               <Card key={r.requester} style={s.reqCard}>
                 <View style={s.reqRow}>
-                  {p?.avatar_url
-                    ? <Image source={{ uri: p.avatar_url }} style={s.face} contentFit="cover" transition={150} />
-                    : (
-                      <View style={[s.face, s.faceBlank]}>
-                        <Ionicons name="person-outline" size={18} color={colors.textTertiary} />
-                      </View>
-                    )}
+                  <Avatar url={p?.avatar_url} size={46} />
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={s.reqTitle}>
                       <Text style={{ fontWeight: font.bold }}>{p?.full_name || (p ? atHandle(p.handle) : '…')}</Text>
@@ -313,11 +306,6 @@ const s = StyleSheet.create({
   },
   reqCard: { padding: space.cardPadding, gap: 14 },
   reqRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  face: { width: 46, height: 46, borderRadius: 23 },
-  faceBlank: {
-    backgroundColor: colors.surfaceGlass,
-    alignItems: 'center', justifyContent: 'center',
-  },
   reqTitle: { color: colors.text, fontSize: 15.5, lineHeight: 21 },
   meta: { color: colors.textTertiary, ...type.meta },
   answers: { flexDirection: 'row', gap: 10 },

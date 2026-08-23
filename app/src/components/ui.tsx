@@ -10,6 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { setStatusBarStyle, type StatusBarStyle } from 'expo-status-bar';
 import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../lib/i18n';
@@ -602,6 +603,45 @@ export function SelectTick({ on }: { on: boolean }) {
   );
 }
 
+/**
+ * Somebody's face, or the fact that they have not shown one.
+ *
+ * Four screens had drawn this circle for themselves — the crew list, the
+ * activity rows, the person sheet, and now a collection's byline — with
+ * the same `expo-image`, the same `contentFit`, the same 150ms fade and
+ * the same person glyph, at five sizes and two glyph scales, because each
+ * chose locally. One of them had drifted already: the activity rows drew
+ * an 18pt glyph where the others compute `size * 0.4`.
+ *
+ * `size` has no default, and that is the point. `Face` in the crew list
+ * defaulted to 44 — which is exactly `HEADER_CONTROL_H`, and exactly the
+ * geometry of `backBtn` below. A caller has to say how big, so nobody
+ * arrives at a button's diameter by not deciding.
+ *
+ * `accessible={false}`: this always sits beside the name or the handle it
+ * belongs to, and VoiceOver announcing an image before that line adds a
+ * word to every row and information to none of them.
+ */
+export function Avatar({ url, size }: { url?: string | null; size: number }) {
+  const round = { width: size, height: size, borderRadius: size / 2 };
+  if (url) {
+    return (
+      <Image
+        source={{ uri: url }}
+        style={round}
+        contentFit="cover"
+        transition={150}
+        accessible={false}
+      />
+    );
+  }
+  return (
+    <View style={[round, s.avatarBlank]} accessible={false}>
+      <Ionicons name="person-outline" size={size * 0.4} color={colors.textTertiary} />
+    </View>
+  );
+}
+
 /** In-page back control: the round glass button wearing a chevron. */
 export function BackButton({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
@@ -695,13 +735,29 @@ const s = StyleSheet.create({
   // stroke was the app's most-repeated one, on screens carrying four of
   // these at once.
   //
-  // Two things this is deliberately *not*. The discs on a photograph keep
-  // their dark scrim: that fill is doing contrast work over imagery
-  // nobody has seen, not saying "button". And accent-tinted controls keep
+  // Three things this is deliberately *not*. The discs on a photograph
+  // keep their dark scrim: that fill is doing contrast work over imagery
+  // nobody has seen, not saying "button". Accent-tinted controls keep
   // their coral hairline, which is information rather than chrome.
+  //
+  // And a circle holding a *photograph of a person* is not a button
+  // either — see `Avatar`. Nothing distinguishes the two shapes except
+  // scale, so scale is what has to carry it: this size class is a
+  // control, and a face belongs at the size of the type it sits beside.
+  // A curator's face on a collection is 18pt against a 15pt line, which
+  // no thumb has ever tried to press. The rule only fails if a face is
+  // ever drawn at 44 next to one of these, which is why `Avatar` refuses
+  // to have a default size.
   backBtn: {
     width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surfaceGlass,
+  },
+  // No hairline, matching the three screens this was lifted from: the ring
+  // would be a fifth visual difference to argue about on a migration whose
+  // whole point is that there is nothing left to argue about.
+  avatarBlank: {
+    backgroundColor: colors.surfaceGlass,
+    alignItems: 'center', justifyContent: 'center',
   },
   empty: { padding: 48, alignItems: 'center' },
   emptyText: { color: colors.textTertiary, ...type.meta, textAlign: 'center' },
