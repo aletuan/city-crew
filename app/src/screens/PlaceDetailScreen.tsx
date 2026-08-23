@@ -1,14 +1,24 @@
 // Place detail — hero carousel with photo counter, floating share/save,
 // rating badge, icon fact row, and one grouped card of Address / Hours /
 // Call / Website rows, the weekly table folded behind the open-now line.
+//
+// The hero is full-bleed: edge to edge, and up under the status bar, with
+// only its bottom corners rounded. It was a 12pt-inset rounded card, which
+// read as a picture *placed on* the page rather than as the place's own
+// front door — the same argument Explore's hero settled, and the two
+// screens now open the same way. What that costs is spelled out where it
+// is paid: the safe area (the screen no longer insets its top, the hero
+// swallows it), the ink under the clock (`useOwnedStatusBar`), and the
+// two scrims that keep white glyphs readable over an unknown photograph.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Linking, Pressable, ScrollView, Share, StyleSheet,
   Text, useWindowDimensions, View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { fmtCount, photosOf, usePlaceBySlug } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
@@ -19,7 +29,7 @@ import { mapsSearchUrl } from '../lib/maps';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
-import { AmbientWarmth, Card, Empty, PressableScale, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, Empty, PressableScale, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import type { Nav, RootRoute } from '../nav';
 
@@ -76,6 +86,27 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const [hoursOpen, setHoursOpen] = useState(false);
   const saved = isSaved(route.params.slug);
   const tabClearance = useTabBarClearance();
+  const insets = useSafeAreaInsets();
+
+  // Light ink for as long as a photograph is what sits under the clock,
+  // and null — the scheme's own — the rest of the time: while this screen
+  // is still resolving, and again once the page has scrolled up past the
+  // hero, where the ground under the clock is paper and white ink would
+  // be white on cream. A place reached from another city arrives a beat
+  // late, which is the render that has to re-ask.
+  const pastHeroRef = useRef(false);
+  const heroEndRef = useRef(0);
+  const applyBar = useOwnedStatusBar(() => (place && !pastHeroRef.current ? 'light' : null));
+  useEffect(applyBar, [!!place, applyBar]);
+  // Built once and holding its first closure, so the threshold it compares
+  // against is read through a ref — the same arrangement, and the same
+  // reason, as Explore's.
+  const onScroll = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
+    const past = e.nativeEvent.contentOffset.y > heroEndRef.current;
+    if (past === pastHeroRef.current) return;
+    pastHeroRef.current = past;
+    applyBar();
+  }).current;
 
   // Opening a place is the one signal the app has to observe for itself:
   // everything else the reader tells us out loud. Noted once per visit and
@@ -100,7 +131,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const reviews = fmtCount(place.rating_count);
   const dur = fmtDuration(place.duration_min, place.duration_max, lang);
   const cats = categoriesOf(place);
-  const heroW = width - 24;
+  // Full width, and tall enough that what shows *below* the status bar is
+  // still the 4:3.4 frame the inset card had — the inset's worth of
+  // picture behind the clock is added, not taken out of the composition.
+  const heroW = width;
+  const heroH = Math.round(width * (3.4 / 4)) + insets.top;
+  // Past once the photo's last 44pt are leaving — the moment the picture
+  // stops being what is under the clock.
+  heroEndRef.current = heroH - insets.top - 44;
   // Through `lib/maps` rather than spelled out here, now that the saved
   // trip links out too. It also fixes a narrower bug than it looks: the
   // old test was `place.lat && place.lng`, and a place sitting exactly on
@@ -132,11 +170,19 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   };
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
-      <AmbientWarmth style={{ top: 300, height: 620 }} />
-      <ScrollView contentContainerStyle={{ paddingBottom: tabClearance }} showsVerticalScrollIndicator={false}>
+    // No top safe area: the photograph is what belongs against the top of
+    // the glass, and insetting the screen is exactly what put a beige band
+    // above it. The bottom is cleared by `tabClearance`, as before.
+    <View style={s.screen}>
+      <AmbientWarmth style={{ top: heroH - 60, height: 620 }} />
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: tabClearance }}
+        showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
         {/* ── hero carousel ── */}
-        <View style={s.heroWrap}>
+        <View style={[s.heroWrap, { height: heroH }]}>
           {photos.length > 0 ? (
             <ScrollView
               horizontal
@@ -145,24 +191,44 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               onMomentumScrollEnd={(e) => setPhotoIndex(Math.round(e.nativeEvent.contentOffset.x / heroW))}
             >
               {photos.map((ph) => (
-                <Image key={ph.photo_uri} source={{ uri: ph.photo_uri }} style={[s.hero, { width: heroW }]} contentFit="cover" transition={200} />
+                <Image key={ph.photo_uri} source={{ uri: ph.photo_uri }} style={[s.hero, { width: heroW, height: heroH }]} contentFit="cover" transition={200} />
               ))}
             </ScrollView>
           ) : (
-            <View style={[s.hero, s.heroFallback, { width: heroW }]}>
+            <View style={[s.hero, s.heroFallback, { width: heroW, height: heroH }]}>
               <Text style={{ fontSize: 64 }}>{place.emoji ?? '📍'}</Text>
             </View>
           )}
 
+          {/* Two scrims, and neither is a wash over the picture.
+              The top one exists for the clock and the three discs and for
+              nothing else: it is strongest at the very top edge and gone
+              within the status bar's own height plus a little, so on most
+              photographs you cannot point at where it ends.
+              The bottom one is the older job — the counter, the dots and
+              the credit sit on it — and it now also gives the rounded
+              corners something to end in rather than a hard cut. */}
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(10,11,10,0.36)', 'rgba(10,11,10,0.10)', 'transparent']}
+            locations={[0, 0.45, 1]}
+            style={[s.heroScrimTop, { height: insets.top + 78 }]}
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={['transparent', 'rgba(10,11,10,0.34)']}
+            style={s.heroScrimBottom}
+          />
+
           <PressableScale
             onPress={() => navigation.goBack()} scaleTo={0.9}
-            containerStyle={{ position: 'absolute', left: 12, top: 12 }} style={s.fab} accessibilityLabel="Back"
+            containerStyle={[s.fabSlot, { left: space.page, top: insets.top + 8 }]} style={s.fab} accessibilityLabel="Back"
           >
             <Ionicons name="chevron-back" size={22} color={onPhoto.text} />
           </PressableScale>
           <PressableScale
             onPress={share} scaleTo={0.9}
-            containerStyle={{ position: 'absolute', right: 64, top: 12 }} style={s.fab} accessibilityLabel="Share"
+            containerStyle={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} style={s.fab} accessibilityLabel="Share"
           >
             <Ionicons name="share-outline" size={20} color={onPhoto.text} />
           </PressableScale>
@@ -172,7 +238,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               nothing, and it forgot on the way back. */}
           <PressableScale
             onPress={() => save(place)} scaleTo={0.9} haptic="selection"
-            containerStyle={{ position: 'absolute', right: 12, top: 12 }} style={s.fab}
+            containerStyle={[s.fabSlot, { right: space.page, top: insets.top + 8 }]} style={s.fab}
             accessibilityRole="button"
             accessibilityState={{ selected: saved }}
             accessibilityLabel={saved
@@ -368,22 +434,36 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
 
-  heroWrap: { marginHorizontal: 12, borderRadius: 24, overflow: 'hidden' },
-  hero: { aspectRatio: 4 / 3.4, backgroundColor: colors.surfaceGlass },
+  // Bottom corners only. The top three edges are the screen's own now, and
+  // a radius there would draw the card outline this stopped being; the
+  // bottom pair is what tells the eye the picture has ended and the page
+  // has begun. 30, between the app's card 22 and the tab bar's 32: a
+  // full-width edge needs a wider curve than a card to read as the same
+  // softness.
+  heroWrap: {
+    borderBottomLeftRadius: 30, borderBottomRightRadius: 30,
+    overflow: 'hidden', backgroundColor: colors.surfaceGlass,
+  },
+  // Height comes from the call site — it is the safe-area inset plus the
+  // frame, and only the screen knows the inset.
+  hero: { backgroundColor: colors.surfaceGlass },
   heroFallback: { alignItems: 'center', justifyContent: 'center' },
+  heroScrimTop: { position: 'absolute', left: 0, right: 0, top: 0 },
+  heroScrimBottom: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 116 },
+  fabSlot: { position: 'absolute' },
   fab: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(10,8,13,0.55)', alignItems: 'center', justifyContent: 'center',
   },
   counter: {
-    position: 'absolute', left: 12, bottom: 12, flexDirection: 'row', alignItems: 'center', gap: 6,
+    position: 'absolute', left: space.page, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: 'rgba(10,8,13,0.65)', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6,
   },
   counterText: { color: onPhoto.text, fontSize: 12.5, fontWeight: font.semibold },
@@ -397,7 +477,7 @@ const s = StyleSheet.create({
   dotOn: { width: 8, height: 8, borderRadius: 4, backgroundColor: onPhoto.text },
   // Required attribution, kept quiet — see the note in PlaceCard.
   attr: {
-    position: 'absolute', right: 12, bottom: 14, maxWidth: '55%',
+    position: 'absolute', right: space.page, bottom: 16, maxWidth: '55%',
     fontSize: 9, color: '#fff', opacity: 0.55,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },

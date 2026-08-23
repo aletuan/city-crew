@@ -14,12 +14,11 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { setStatusBarStyle } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PlaceCard from '../components/PlaceCard';
 import { AddPill, AddSlot } from '../components/add';
-import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useTabBarClearance, useTabBarLift } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useOwnedStatusBar, useTabBarClearance, useTabBarLift } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
@@ -524,50 +523,26 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const heroH = Math.min(500, Math.max(330, Math.round(winH * 0.48)));
 
   /**
-   * Which type the status bar wants, now that the clock sits on the
+   * Which ink the status bar wants, now that the clock sits on the
    * photograph. Over the hero the scrim is dark whatever the theme, so
    * both want light type there; past it the page is its own ground again
-   * and the scheme decides. Dark theme is light type either way — this
-   * only ever moves anything on paper.
+   * and the scheme decides.
    *
-   * Applied imperatively, never via a mounted <StatusBar>. The component
-   * version was focus-scoped, and both halves of that made the jump to
-   * Search stutter: `useIsFocused` re-rendered this whole screen at the
-   * transition's edges, and the unmount snapped the bar's ink from light
-   * to dark with no animation, mid-slide. `setStatusBarStyle` costs
-   * neither — no render, and it fades. Everything it reads lives in refs
-   * because its callers are frozen closures: the scroll listener below
-   * and the navigation listeners.
+   * The crossing is tracked in a ref rather than state because the scroll
+   * listener below is built once and holds its first closure — and
+   * because the answer changing must not cost this screen a render
+   * mid-transition. See `useOwnedStatusBar`.
    */
-  const light = useScheme().scheme === 'light';
-  const lightRef = useRef(light);
-  lightRef.current = light;
   const pastHeroRef = useRef(false);
-  const focusedRef = useRef(false);
   const heroEndRef = useRef(0);
   // Past once the photo's last 44pt are leaving — the moment the dark
   // ground stops being what is under the clock.
   heroEndRef.current = heroH - insets.top - 44;
-  const applyBar = useRef(() => {
-    setStatusBarStyle(pastHeroRef.current && lightRef.current ? 'dark' : 'light', true);
-  }).current;
-  useEffect(() => {
-    // Take the bar on arrival, hand it back on leaving — to the scheme's
-    // own style, which is what the app-level <StatusBar> asserts for
-    // every screen that is not this one.
-    const focus = () => { focusedRef.current = true; applyBar(); };
-    const blur = () => {
-      focusedRef.current = false;
-      setStatusBarStyle(lightRef.current ? 'dark' : 'light', true);
-    };
-    // The initial focus event can land before these listeners exist.
-    if (navigation.isFocused()) focus();
-    const a = navigation.addListener('focus', focus);
-    const b = navigation.addListener('blur', blur);
-    return () => { a(); b(); };
-  }, [navigation, applyBar]);
-  // The scheme can flip while this screen holds the bar.
-  useEffect(() => { if (focusedRef.current) applyBar(); }, [light, applyBar]);
+  // Null past the hero: there the page is its own ground again and the
+  // right ink is exactly the scheme's own, which is what the hook's null
+  // means. Taking, handing back, and the mid-transition cost all live in
+  // `useOwnedStatusBar` — a place's screen wants the same thing.
+  const applyBar = useOwnedStatusBar(() => (pastHeroRef.current ? null : 'light'));
 
   // Only categories this city actually has, so a chip never leads to an
   // empty list. Order comes from the taxonomy, not from the data.
@@ -639,7 +614,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     const past = y > heroEndRef.current;
     if (past !== pastHeroRef.current) {
       pastHeroRef.current = past;
-      if (focusedRef.current) applyBar();
+      applyBar();
     }
     duckRef.current?.(e as never);
   }).current;
