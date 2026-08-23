@@ -77,8 +77,9 @@ const pinned = (p: Point): boolean => !!p.google_place_id && !!p.name_en;
  * stop, or a day whose places the catalog could never place. A single
  * stop is deliberately null rather than a link to that one place — the
  * row this feeds says "open the route", and a route through one point is
- * a promise the link would not keep. The place's own screen already
- * offers exactly that link for exactly that case.
+ * a promise the link would not keep. The trip screen answers that day
+ * itself: its row falls back to `mapsSearchUrl` for the one stop,
+ * relabelled to say what it honestly does.
  *
  * Rows with no coordinates drop out rather than collapsing the route.
  * They are already drawn as "no longer listed" on the screen, and a

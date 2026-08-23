@@ -41,7 +41,7 @@ import { deleteTrip, useMyTrips, type TripStopRow } from '../lib/data';
 import { clockOf, dateline, dotWindow, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
-import { mapsRouteUrl, routeMode } from '../lib/maps';
+import { mapsRouteUrl, mapsSearchUrl, routeMode } from '../lib/maps';
 import { coverOf } from '../lib/place';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { legsOf } from '../lib/travel';
@@ -160,6 +160,22 @@ export default function TripDetailScreen({ navigation, route }: {
     stops.map((st) => st.places ?? {}),
     routeMode(legs),
   );
+
+  /**
+   * The same row for a day the route link cannot serve, saying what it
+   * can honestly do instead.
+   *
+   * `mapsRouteUrl` is deliberately null below two placed stops — "open
+   * the route" through one point is a promise the link would not keep —
+   * but the reader heading out for a one-stop evening needs directions
+   * exactly as much as anyone else, and the place's own screen is two
+   * taps deep and easy not to know about. So when exactly one stop can
+   * be opened, the row stays and relabels itself: it opens that place,
+   * by the same link the place's address row uses. Zero openable stops
+   * is still no row — there is nowhere to send anyone.
+   */
+  const placeable = stops.filter((st) => st.places && mapsSearchUrl(st.places));
+  const solo = !mapRoute && placeable.length === 1 ? placeable[0].places! : null;
 
   /**
    * Whether there is a gallery at all, and the credit its current page
@@ -436,17 +452,24 @@ export default function TripDetailScreen({ navigation, route }: {
                 inside a card: the `View plan ›` row on a trip card in the
                 Trips tab. Accent text, chevron, a rule above it, no
                 chrome of its own. */}
-            {mapRoute && (
+            {(mapRoute || solo) && (
               <>
                 <View style={s.divider} />
                 <PressableScale
-                  onPress={() => { Linking.openURL(mapRoute.url).catch(() => {}); }}
+                  onPress={() => {
+                    const url = mapRoute ? mapRoute.url : mapsSearchUrl(solo!);
+                    if (url) Linking.openURL(url).catch(() => {});
+                  }}
                   style={s.route}
                   accessibilityRole="button"
                 >
                   <Ionicons name="navigate-outline" size={16} color={colors.accent} />
                   <Text style={s.routeText}>
-                    {t('Open the route', 'Mở lộ trình', 'ルートを開く')}
+                    {/* One stop is not a route, and the label does not
+                        pretend it is — see `solo` above. */}
+                    {mapRoute
+                      ? t('Open the route', 'Mở lộ trình', 'ルートを開く')
+                      : t('Open in Google Maps', 'Mở trong Google Maps', 'Google マップで開く')}
                   </Text>
                   <Text style={s.routeSub} numberOfLines={1}>
                     {/* What it will actually do, not what it is called.
@@ -457,17 +480,23 @@ export default function TripDetailScreen({ navigation, route }: {
                         Never silent about a cap either: Google takes nine
                         stops between the first and the last, and a twelfth
                         would otherwise vanish from the route with the link
-                        still looking complete. */}
-                    {summaryLine([
-                      t('Google Maps', 'Google Maps', 'Google マップ'),
-                      mapRoute.dropped > 0
-                        ? t(
-                          `first ${stops.length - mapRoute.dropped} only`,
-                          `chỉ ${stops.length - mapRoute.dropped} điểm đầu`,
-                          `最初の${stops.length - mapRoute.dropped}件のみ`,
-                        )
-                        : null,
-                    ])}
+                        still looking complete.
+
+                        The solo row already says where it goes, so its
+                        quiet half names the place instead — the same
+                        English name the stop rows above print. */}
+                    {mapRoute
+                      ? summaryLine([
+                          t('Google Maps', 'Google Maps', 'Google マップ'),
+                          mapRoute.dropped > 0
+                            ? t(
+                              `first ${stops.length - mapRoute.dropped} only`,
+                              `chỉ ${stops.length - mapRoute.dropped} điểm đầu`,
+                              `最初の${stops.length - mapRoute.dropped}件のみ`,
+                            )
+                            : null,
+                        ])
+                      : solo!.name_en}
                   </Text>
                   <Ionicons name="chevron-forward" size={15} color={colors.accent} />
                 </PressableScale>
