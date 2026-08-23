@@ -10,6 +10,7 @@ import {
   AmbientWarmth, BackButton, Empty, GradientCta, PressableScale, RoundIconButton,
   fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
+import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useAuth } from '../lib/auth';
 import { useLikes } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
@@ -243,6 +244,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const blockers = useMemo(() => publishBlockers(members), [members]);
   const blocked = blockers.pending + blockers.flagged > 0;
   const tabClearance = useTabBarClearance();
+  // The same scroll etiquette the tab home screens keep: reading down a
+  // long list tucks the bar away, the first pull back up recalls it. A
+  // collection with thirty places is as much a reading surface as the
+  // Explore feed, and it was the one long list where the bar refused to
+  // move. Navigation still surfaces the bar on arrival (FloatingTabBar
+  // keys on the nav state), so this can only ever hide it mid-read.
+  const duckScroll = useDuckOnScroll();
 
   const title = col ? t(col.title_en, col.title_vi, col.title_ja) : '';
   const insets = useSafeAreaInsets();
@@ -567,6 +575,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <FlatList
         data={drafted}
         keyExtractor={(p) => p.slug}
+        onScroll={duckScroll}
+        scrollEventThrottle={16}
         renderItem={({ item, index }) => (arranging
           ? (
             <ArrangeRow
