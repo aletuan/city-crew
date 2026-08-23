@@ -82,6 +82,23 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // runs the search as typed — and putting it there without focusing the
   // field would strand the reader one tap short of the edit they asked for.
   const inputRef = useRef<TextInput>(null);
+  // The keyboard waits for the push to land. `autoFocus` raised it during
+  // the slide itself — two animations fighting for the same frames, which
+  // is the stutter this screen was reported for. `transitionEnd` is the
+  // moment the screen has stopped moving; the timer is the fallback for
+  // any path that never emits one, and the gate keeps a later pop back to
+  // this screen from re-summoning a keyboard nobody asked for.
+  const summoned = useRef(false);
+  useEffect(() => {
+    const summon = () => {
+      if (summoned.current) return;
+      summoned.current = true;
+      inputRef.current?.focus();
+    };
+    const un = navigation.addListener('transitionEnd', summon);
+    const t = setTimeout(summon, 600);
+    return () => { un(); clearTimeout(t); };
+  }, [navigation]);
 
   // What this box remembered from earlier visits. Loaded once; the pure
   // rules for what gets kept live in lib/recents where the gate can see
@@ -378,7 +395,6 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             onChangeText={setQuery}
             placeholder={t('Search places and collections', 'Tìm địa điểm và bộ sưu tập', 'スポットやコレクションを検索')}
             placeholderTextColor={colors.textTertiary}
-            autoFocus
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
