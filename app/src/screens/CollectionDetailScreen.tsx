@@ -615,6 +615,10 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   reason the header can lose a round control without
                   losing a tap.
 
+                  It sits immediately after the counts rather than out at
+                  the margin, which is the correction to how this first
+                  shipped — see `s.like`.
+
                   Same rule as the shelf on the number itself: it prints
                   from one. A `0` reads as "nobody liked this" rather than
                   "no votes yet", and below that the heart draws bare —
@@ -622,33 +626,38 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   invitation. */}
               {isPublic && col.id ? (
                 !owned ? (
-                  <PressableScale
-                    containerStyle={s.likeHit}
-                    style={s.like}
-                    scaleTo={0.82}
-                    haptic="none"
-                    hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
-                    onPress={onHeart}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: liked }}
-                    accessibilityLabel={liked
-                      ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
-                      : t('Like', 'Thích', 'いいね')}
-                  >
-                    <Ionicons
-                      name={liked ? 'heart' : 'heart-outline'}
-                      size={15}
-                      color={liked ? colors.accent : colors.textTertiary}
-                    />
-                    {likesWorthShowing(likes[col.slug])
-                      ? <Text style={s.meta}>{likes[col.slug]}</Text>
-                      : null}
-                  </PressableScale>
+                  <>
+                    <Text style={[s.meta, s.sep]}>·</Text>
+                    <PressableScale
+                      style={s.like}
+                      scaleTo={0.82}
+                      haptic="none"
+                      hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
+                      onPress={onHeart}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: liked }}
+                      accessibilityLabel={liked
+                        ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
+                        : t('Like', 'Thích', 'いいね')}
+                    >
+                      <Ionicons
+                        name={liked ? 'heart' : 'heart-outline'}
+                        size={15}
+                        color={liked ? colors.accent : colors.textTertiary}
+                      />
+                      {likesWorthShowing(likes[col.slug])
+                        ? <Text style={s.meta}>{likes[col.slug]}</Text>
+                        : null}
+                    </PressableScale>
+                  </>
                 ) : likesWorthShowing(likes[col.slug]) ? (
-                  <View style={[s.likeHit, s.like]}>
-                    <Ionicons name="heart" size={15} color={colors.textTertiary} />
-                    <Text style={s.meta}>{likes[col.slug]}</Text>
-                  </View>
+                  <>
+                    <Text style={[s.meta, s.sep]}>·</Text>
+                    <View style={s.like}>
+                      <Ionicons name="heart" size={15} color={colors.textTertiary} />
+                      <Text style={s.meta}>{likes[col.slug]}</Text>
+                    </View>
+                  </>
                 ) : null
               ) : null}
             </View>
@@ -925,16 +934,26 @@ const s = StyleSheet.create({
   // "button", which this is not while it is spinning.
   busy: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   meta: { color: colors.textTertiary, ...type.meta },
-  // The tally sits at the end of the line rather than in the middle of
-  // it: a gesture wants a corner, and the counts before it are facts you
-  // read past. `marginLeft: 'auto'` is what the shelf's foot uses for the
-  // same reason.
   // The words yield, the heart does not. Without this a long handle
   // sizes the byline to its own content and pushes the tally off the
   // right edge — `numberOfLines` alone only stops a second line, it does
   // not make a row's text give way to its siblings.
   byline: { flexShrink: 1 },
-  likeHit: { marginLeft: 'auto' },
+  // The join between the byline and the tally, as an element rather than
+  // two more characters inside the Text: a trailing "  ·  " would go
+  // under the ellipsis with the words it trails, leaving a heart with
+  // nothing attaching it to the line. The 3 is what makes it match the
+  // separators it is standing in for — the row's own `gap` is 5, and the
+  // dots inside the Text are written "  ·  ", about 8 either side.
+  sep: { marginHorizontal: 3 },
+  // Next to the count it belongs to, not out at the margin. This shipped
+  // with `marginLeft: 'auto'` on the argument that a gesture wants a
+  // corner. True of a gesture — but the whole point of bringing the heart
+  // down here was that the mark and its tally are one fact, and a fact
+  // belongs in the line that states the others. Pushed to the edge it sat
+  // directly under the ⋯ button with a hand's width of nothing between it
+  // and the byline, and read as a second header control that had slipped
+  // a line, which is exactly what it had stopped being.
   like: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // The one word on the line that is not grey. `ok` is the app's green and
   // measures 4.35:1 on paper, which small text needs; the padlock beside
