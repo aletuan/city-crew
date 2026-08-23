@@ -22,8 +22,14 @@
 
 import type { Leg } from './travel';
 
-/** Somewhere on the earth, or a row the catalog could not place. */
-export type Point = { lat?: number | null; lng?: number | null };
+/** Somewhere on the earth, or a row the catalog could not place. A stop
+ *  may also carry its Google identity — see `pinned`. */
+export type Point = {
+  lat?: number | null;
+  lng?: number | null;
+  google_place_id?: string | null;
+  name_en?: string | null;
+};
 
 /**
  * Google's own limit on `waypoints`, which is the stops between the first
@@ -52,6 +58,19 @@ const placed = (p: Point): boolean =>
   p.lat != null && p.lng != null && isFinite(p.lat) && isFinite(p.lng);
 
 /**
+ * Whether a stop can travel under its own name.
+ *
+ * Both halves, because they do different work in the link: the place id
+ * is what Google *resolves* — the exact business, never a same-named
+ * branch across town — and the name is what the reader sees in the
+ * directions sheet instead of "Dropped pin". A name without an id must
+ * never be sent: that is the ambiguous case the coordinate policy below
+ * exists to prevent. An id without a name would resolve, but the import
+ * writes both or neither, so the simpler rule costs nothing.
+ */
+const pinned = (p: Point): boolean => !!p.google_place_id && !!p.name_en;
+
+/**
  * One journey through every stop, for Google Maps to draw and navigate.
  *
  * Null when there is no journey to describe: an empty trip, a single
@@ -66,10 +85,27 @@ const placed = (p: Point): boolean =>
  * detour through a null island is not a better answer than a route
  * between the stops that do exist.
  *
- * Coordinates rather than names, everywhere. A name is ambiguous — this
- * catalog holds three Hadu Sushi and two Artemis Pastry — and Google
- * resolving "Artemis Pastry" to the wrong branch would send somebody to
- * the wrong side of Hanoi with the app's confidence behind it.
+ * ── names when they are safe, coordinates when they are not ──
+ *
+ * This used to send coordinates for everything, on the argument that a
+ * name is ambiguous — this catalog holds three Hadu Sushi and two
+ * Artemis Pastry, and Google resolving "Artemis Pastry" to the wrong
+ * branch would send somebody across Hanoi with the app's confidence
+ * behind it. The argument was right and the medicine was too strong:
+ * Google shows a raw coordinate as "Dropped pin", so every stop in the
+ * directions sheet lost its name.
+ *
+ * The Maps URLs API has the parameter this actually wanted: a place id
+ * beside each name (`origin_place_id`, `destination_place_id`,
+ * `waypoint_place_ids`) resolves the exact business — no branch
+ * roulette — while the name is what the sheet displays. So a stop that
+ * carries both travels by name, and a stop that does not falls back to
+ * its coordinate, which cannot mislead anyone.
+ *
+ * The ends decide independently; the waypoints decide together, because
+ * Google requires `waypoint_place_ids` to match `waypoints` one for one
+ * — a middle list where one stop has no id sends coordinates for all of
+ * them rather than names for none of the readers to trust.
  */
 export function mapsRouteUrl(
   stops: readonly Point[],
@@ -84,12 +120,21 @@ export function mapsRouteUrl(
   // The end of the day is kept, not the ninth waypoint: whatever else a
   // route is for, it has to arrive where the reader is going.
   const waypoints = middle.slice(0, WAYPOINT_MAX);
+  const namedWaypoints = waypoints.length > 0 && waypoints.every(pinned);
 
   const q = [
     'api=1',
-    `origin=${encodeURIComponent(at(origin))}`,
-    `destination=${encodeURIComponent(at(destination))}`,
-    waypoints.length ? `waypoints=${encodeURIComponent(waypoints.map(at).join('|'))}` : null,
+    `origin=${encodeURIComponent(pinned(origin) ? origin.name_en! : at(origin))}`,
+    pinned(origin) ? `origin_place_id=${encodeURIComponent(origin.google_place_id!)}` : null,
+    `destination=${encodeURIComponent(pinned(destination) ? destination.name_en! : at(destination))}`,
+    pinned(destination)
+      ? `destination_place_id=${encodeURIComponent(destination.google_place_id!)}` : null,
+    waypoints.length
+      ? `waypoints=${encodeURIComponent(waypoints.map((w) => (namedWaypoints ? w.name_en! : at(w))).join('|'))}`
+      : null,
+    namedWaypoints
+      ? `waypoint_place_ids=${encodeURIComponent(waypoints.map((w) => w.google_place_id!).join('|'))}`
+      : null,
     `travelmode=${mode}`,
   ].filter(Boolean).join('&');
 
@@ -133,5 +178,13 @@ export function routeMode(legs: readonly (Leg | null)[]): 'walking' | 'driving' 
  */
 export function mapsSearchUrl(p: Point): string | null {
   if (!placed(p)) return null;
+  // The same bargain the route makes: the id resolves the exact place,
+  // the name is what the sheet shows, and a stop without its identity
+  // opens on its coordinate rather than on a guess.
+  if (pinned(p)) {
+    return 'https://www.google.com/maps/search/?api=1'
+      + `&query=${encodeURIComponent(p.name_en!)}`
+      + `&query_place_id=${encodeURIComponent(p.google_place_id!)}`;
+  }
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(at(p))}`;
 }
