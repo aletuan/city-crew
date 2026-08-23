@@ -7,7 +7,7 @@
 // reference's violet gradient is translated, not copied.
 
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
@@ -230,16 +230,21 @@ function GuestHub({ navigation }: { navigation: Nav }) {
       <SettingsCard />
 
       {/* Real now, so it behaves like every other locked row here:
-          the tap leads to signing in, which is where friends begin. */}
-      <PressableScale style={s.friendsCard} onPress={goSignIn}>
-        <RoundIcon name="people-outline" />
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
-          <Text style={s.featureSub}>
-            {t('Find friends and plan unforgettable adventures together.', 'Tìm bạn bè và cùng nhau lên những chuyến đi đáng nhớ.', '友達を見つけて、忘れられない冒険を一緒に。')}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+          the tap leads to signing in, which is where friends begin.
+          The Card stays inside the pressable — `friendsCard` is only
+          the row's inner layout, and without the Card around it the
+          block lost its surface and sat bare on the page. */}
+      <PressableScale onPress={goSignIn}>
+        <Card style={s.friendsCard}>
+          <RoundIcon name="people-outline" />
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
+            <Text style={s.featureSub}>
+              {t('Find friends and plan unforgettable adventures together.', 'Tìm bạn bè và cùng nhau lên những chuyến đi đáng nhớ.', '友達を見つけて、忘れられない冒険を一緒に。')}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+        </Card>
       </PressableScale>
 
       <Tagline />
@@ -266,7 +271,7 @@ function AboutRow({ icon, label, value, last }: {
 
 function AccountProfile({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
-  const { email, profile, memberSince, signOut, session } = useAuth();
+  const { email, profile, memberSince, signOut, deleteAccount, session } = useAuth();
   const [busy, setBusy] = useState(false);
   // The number on the friends card and the dot beside it. Sorted by the
   // pure half in lib/friends; the fetch itself is scoped by RLS to edges
@@ -362,19 +367,21 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           the card opens the crew now. The number is friends, the dot is
           requests — two different facts, and neither borrows the other's
           mark. */}
-      <PressableScale style={s.friendsCard} onPress={() => navigation.navigate('Crew')}>
-        <View>
-          <RoundIcon name="people-outline" />
-          {crew.incoming.length > 0 ? <View style={s.reqDot} /> : null}
-        </View>
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
-          <Text style={s.featureSub}>
-            {t('Find friends and plan trips together.', 'Tìm bạn bè và cùng lên kế hoạch.', '友達を見つけて一緒に旅を計画。')}
-          </Text>
-        </View>
-        {crew.friends.length > 0 ? <Text style={s.friendCount}>{crew.friends.length}</Text> : null}
-        <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+      <PressableScale onPress={() => navigation.navigate('Crew')}>
+        <Card style={s.friendsCard}>
+          <View>
+            <RoundIcon name="people-outline" />
+            {crew.incoming.length > 0 ? <View style={s.reqDot} /> : null}
+          </View>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
+            <Text style={s.featureSub}>
+              {t('Find friends and plan trips together.', 'Tìm bạn bè và cùng lên kế hoạch.', '友達を見つけて一緒に旅を計画。')}
+            </Text>
+          </View>
+          {crew.friends.length > 0 ? <Text style={s.friendCount}>{crew.friends.length}</Text> : null}
+          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+        </Card>
       </PressableScale>
 
       <PressableScale
@@ -387,6 +394,58 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         {busy
           ? <ActivityIndicator color={colors.textSecondary} />
           : <Text style={s.signOutText}>{t('Sign out', 'Đăng xuất', 'サインアウト')}</Text>}
+      </PressableScale>
+
+      {/* The way out, whole. The store requires it (5.1.1(v)) and it was
+          owed anyway: an account you can open but not close is a trap
+          with good manners. Two asks, because the second is the only
+          protection a destructive tap has — the server deliberately asks
+          nothing (see delete-account). Quiet type, not a red button: it
+          must be findable by someone looking and invisible to someone
+          scrolling. */}
+      <PressableScale
+        style={s.deleteBtn}
+        onPress={() => Alert.alert(
+          t('Delete your account?', 'Xoá tài khoản của bạn?', 'アカウントを削除しますか？'),
+          t(
+            'Your profile, collections, likes, trips and friends will be gone for good. Places you added stay in the catalog, no longer linked to you.',
+            'Hồ sơ, bộ sưu tập, lượt thích, chuyến đi và bạn bè sẽ mất hẳn. Địa điểm bạn đã thêm vẫn ở lại catalog, không còn gắn với bạn.',
+            'プロフィール・コレクション・いいね・旅程・友達は完全に削除されます。追加したスポットはカタログに残り、あなたとの関連は消えます。',
+          ),
+          [
+            { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+            {
+              text: t('Delete', 'Xoá', '削除'),
+              style: 'destructive',
+              onPress: () => Alert.alert(
+                t('This cannot be undone', 'Không thể hoàn tác', '元に戻せません'),
+                t('Delete the account now?', 'Xoá tài khoản ngay bây giờ?', '今すぐアカウントを削除しますか？'),
+                [
+                  { text: t('Keep my account', 'Giữ tài khoản', 'アカウントを残す'), style: 'cancel' },
+                  {
+                    text: t('Delete for good', 'Xoá vĩnh viễn', '完全に削除'),
+                    style: 'destructive',
+                    onPress: async () => {
+                      setBusy(true);
+                      try {
+                        await deleteAccount();
+                      } catch (e) {
+                        Alert.alert(
+                          t('Could not delete the account', 'Không xoá được tài khoản', 'アカウントを削除できませんでした'),
+                          (e as Error).message,
+                        );
+                      } finally {
+                        setBusy(false);
+                      }
+                    },
+                  },
+                ],
+              ),
+            },
+          ],
+        )}
+      >
+        <Text style={s.deleteText}>{t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}</Text>
       </PressableScale>
 
       <Tagline />
@@ -498,6 +557,8 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlassSoft, backgroundColor: colors.surfaceGlass,
   },
   signOutText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
+  deleteBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 2 },
+  deleteText: { color: colors.bad, fontSize: 14, fontWeight: font.medium },
 
   tagline: { alignItems: 'center', gap: 8, paddingVertical: 18 },
   taglineText: { color: colors.textTertiary, ...type.meta, textAlign: 'center', lineHeight: 22 },
