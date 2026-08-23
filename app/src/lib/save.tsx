@@ -79,16 +79,31 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
 
   const save = useCallback((place: Place) => {
     if (!session) { setAuthSheet(true); return; }
-    // Nowhere to put it yet. Rather than open a sheet with one row in it
-    // that says "make a list first", go straight to making the list and
-    // carry the place along — the collection arrives with its first member
-    // instead of arriving empty.
-    if (mine.data.length === 0) {
-      goTo('Collections', { screen: 'CollectionForm', params: { addPlaceSlug: place.slug } });
+    // Nowhere to put it yet — *known*, not merely not-yet-known. Rather
+    // than open a sheet with one row in it that says "make a list first",
+    // go straight to making the list and carry the place along — the
+    // collection arrives with its first member instead of arriving empty.
+    //
+    // `loaded` is doing real work in that sentence. `data` is just as
+    // empty while the first fetch is still out — which is exactly the
+    // moment after launch a bookmark is likeliest to be tapped — and
+    // branching on that emptiness sent people who *have* collections to
+    // "Name your list" as though they had none. `initial: false` is the
+    // other half of the same report: without it, reaching the form while
+    // the Collections tab had never been opened made the form that
+    // stack's first screen — nothing beneath it to go back to, and the
+    // tab showed "create" forever after, which read as every list being
+    // lost.
+    if (mine.loaded && !mine.error && mine.data.length === 0) {
+      goTo('Collections', { screen: 'CollectionForm', initial: false, params: { addPlaceSlug: place.slug } });
       return;
     }
+    // Still loading, or the load failed: the sheet, whose rows follow
+    // `mine.data` and fill in as the answer lands. Asked again on the way
+    // up, so a failed fetch at launch is not the sheet's final answer.
+    if (!mine.loading && (!mine.loaded || mine.error)) mine.reload();
     setTarget(place);
-  }, [session, mine.data.length]);
+  }, [session, mine.loaded, mine.loading, mine.error, mine.data.length, mine.reload]);
 
   const toggle = useCallback(async (c: Collection, place: Place) => {
     try {
@@ -129,7 +144,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       <AuthSheet
         visible={authSheet}
         onClose={() => setAuthSheet(false)}
-        onSignIn={() => { setAuthSheet(false); goTo('Profile', { screen: 'SignIn' }); }}
+        onSignIn={() => { setAuthSheet(false); goTo('Profile', { screen: 'SignIn', initial: false }); }}
       />
       <SaveSheet
         place={target}
@@ -139,7 +154,10 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         onNew={() => {
           const place = target;
           setTarget(null);
-          if (place) goTo('Collections', { screen: 'CollectionForm', params: { addPlaceSlug: place.slug } });
+          // `initial: false` for the same reason as in `save`: on a cold
+          // Collections stack the form must arrive *over* the list, not
+          // instead of it.
+          if (place) goTo('Collections', { screen: 'CollectionForm', initial: false, params: { addPlaceSlug: place.slug } });
         }}
       />
     </Ctx.Provider>

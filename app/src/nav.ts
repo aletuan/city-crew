@@ -129,7 +129,15 @@ export type RootRoute<T extends keyof RootStackParamList> = RouteProp<RootStackP
 export const navRef = createNavigationContainerRef<RootStackParamList>();
 
 /** Jump to a screen inside another tab's stack. Silently does nothing
- *  before the container has mounted, which is only ever true at launch. */
+ *  before the container has mounted, which is only ever true at launch.
+ *
+ *  A caller naming a screen that is not the stack's first must also pass
+ *  `initial: false` beside `screen`. Without it, React Navigation makes
+ *  the named screen the *initial* route of a stack that has not mounted
+ *  yet — nothing beneath it to go back to, and the tab keeps showing it.
+ *  That is how a bookmark tapped before the Collections tab was ever
+ *  opened left the tab stuck on "Name your list" with every list
+ *  seemingly gone. */
 export function goTo(tab: string, params: object) {
   if (!navRef.isReady()) return;
   // The tab route names are not in RootStackParamList — that type covers
