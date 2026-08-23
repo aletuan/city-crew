@@ -16,6 +16,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthHeader, AuthScreen } from '../components/authUi';
 import { Card, Empty, PressableScale, successHaptic } from '../components/ui';
@@ -32,7 +33,7 @@ import {
 } from '../lib/friends';
 import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 /** How far back the applause reaches. Two weeks: long enough that a
@@ -153,9 +154,16 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                       it lands on the inner view with nothing to divide,
                       and both buttons shrank onto each other. The exact
                       failure PressableScale's own doc block names. */}
-                  <PressableScale containerStyle={s.half} style={s.accept} onPress={() => answer(r.requester, true)} accessibilityRole="button">
-                    <Ionicons name="checkmark" size={17} color={colors.accentInk} />
-                    <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認')}</Text>
+                  {/* The gradient, not solid accent: gradAI is what every
+                      primary commit in this app wears — PrimaryButton,
+                      GradientCta, the hero — and solid accent in the
+                      light theme is a darker brick that read as a
+                      different app sitting in this one. */}
+                  <PressableScale containerStyle={s.half} onPress={() => answer(r.requester, true)} accessibilityRole="button">
+                    <LinearGradient {...gradAI} style={s.accept}>
+                      <Ionicons name="checkmark" size={17} color={colors.accentInk} />
+                      <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認')}</Text>
+                    </LinearGradient>
                   </PressableScale>
                   <PressableScale
                     containerStyle={s.half}
@@ -190,7 +198,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
               return (
                 <View key={`t-${item.tripId}`} style={[s.row, i > 0 && s.rowDivider]}>
                   <View style={s.mark}>
-                    <Ionicons name="calendar" size={17} color={colors.accent} />
+                    <Ionicons name="calendar-outline" size={20} color={colors.accent} />
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={s.line}>
@@ -218,7 +226,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                 onPress={title ? () => navigation.navigate('CollectionDetail', { slug: slugFor(item.collection_id, [...mine.data, ...cols.data]) ?? '' }) : undefined}
               >
                 <View style={s.mark}>
-                  <Ionicons name="heart" size={17} color={colors.accent} />
+                  <Ionicons name="heart-outline" size={20} color={colors.accent} />
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={s.line} numberOfLines={2}>
@@ -265,7 +273,7 @@ const s = StyleSheet.create({
   accept: {
     flexDirection: 'row', gap: 7,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accent, borderRadius: radius.pill, paddingVertical: 11,
+    borderRadius: radius.pill, paddingVertical: 11,
   },
   acceptText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
   decline: {
@@ -279,9 +287,16 @@ const s = StyleSheet.create({
     paddingHorizontal: space.cardPadding, paddingVertical: 13,
   },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  // The same box Profile's RoundIcon draws — 44pt, radius 13, soft fill
+  // under a hairline, outline glyph at 20 — so the feed's marks and the
+  // settings rows' read as one family. Filled glyphs at solid accent
+  // were the "darker" the review named: in the light theme accent is a
+  // brick, and a filled heart of it carries far more ink than the
+  // outline the rest of the app draws.
   mark: {
-    width: 38, height: 38, borderRadius: 12,
+    width: 44, height: 44, borderRadius: 13,
     backgroundColor: colors.accentSoft,
+    borderWidth: 1, borderColor: colors.borderGlassSoft,
     alignItems: 'center', justifyContent: 'center',
   },
   line: { color: colors.text, fontSize: 15, lineHeight: 21 },

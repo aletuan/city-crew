@@ -230,16 +230,21 @@ function GuestHub({ navigation }: { navigation: Nav }) {
       <SettingsCard />
 
       {/* Real now, so it behaves like every other locked row here:
-          the tap leads to signing in, which is where friends begin. */}
-      <PressableScale style={s.friendsCard} onPress={goSignIn}>
-        <RoundIcon name="people-outline" />
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
-          <Text style={s.featureSub}>
-            {t('Find friends and plan unforgettable adventures together.', 'Tìm bạn bè và cùng nhau lên những chuyến đi đáng nhớ.', '友達を見つけて、忘れられない冒険を一緒に。')}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+          the tap leads to signing in, which is where friends begin.
+          The Card stays inside the pressable — `friendsCard` is only
+          the row's inner layout, and without the Card around it the
+          block lost its surface and sat bare on the page. */}
+      <PressableScale onPress={goSignIn}>
+        <Card style={s.friendsCard}>
+          <RoundIcon name="people-outline" />
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
+            <Text style={s.featureSub}>
+              {t('Find friends and plan unforgettable adventures together.', 'Tìm bạn bè và cùng nhau lên những chuyến đi đáng nhớ.', '友達を見つけて、忘れられない冒険を一緒に。')}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+        </Card>
       </PressableScale>
 
       <Tagline />
@@ -362,19 +367,21 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           the card opens the crew now. The number is friends, the dot is
           requests — two different facts, and neither borrows the other's
           mark. */}
-      <PressableScale style={s.friendsCard} onPress={() => navigation.navigate('Crew')}>
-        <View>
-          <RoundIcon name="people-outline" />
-          {crew.incoming.length > 0 ? <View style={s.reqDot} /> : null}
-        </View>
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
-          <Text style={s.featureSub}>
-            {t('Find friends and plan trips together.', 'Tìm bạn bè và cùng lên kế hoạch.', '友達を見つけて一緒に旅を計画。')}
-          </Text>
-        </View>
-        {crew.friends.length > 0 ? <Text style={s.friendCount}>{crew.friends.length}</Text> : null}
-        <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+      <PressableScale onPress={() => navigation.navigate('Crew')}>
+        <Card style={s.friendsCard}>
+          <View>
+            <RoundIcon name="people-outline" />
+            {crew.incoming.length > 0 ? <View style={s.reqDot} /> : null}
+          </View>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
+            <Text style={s.featureSub}>
+              {t('Find friends and plan trips together.', 'Tìm bạn bè và cùng lên kế hoạch.', '友達を見つけて一緒に旅を計画。')}
+            </Text>
+          </View>
+          {crew.friends.length > 0 ? <Text style={s.friendCount}>{crew.friends.length}</Text> : null}
+          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+        </Card>
       </PressableScale>
 
       <PressableScale

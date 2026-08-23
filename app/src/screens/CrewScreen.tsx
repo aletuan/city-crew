@@ -18,7 +18,7 @@ import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { AuthHeader, AuthScreen, FieldRow } from '../components/authUi';
+import { AuthHeader, AuthScreen, FieldRow, PrimaryButton } from '../components/authUi';
 import { Card, Empty, PressableScale, RoundIconButton } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import {
@@ -220,11 +220,10 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
               ))}
             </View>
           )}
-          <PressableScale containerStyle={s.sendWrap} style={s.sendBtn} onPress={send} accessibilityRole="button">
-            {busy
-              ? <ActivityIndicator color={colors.accentInk} size="small" />
-              : <Text style={s.sendText}>{t('Send request', 'Gửi lời mời', 'リクエスト送信')}</Text>}
-          </PressableScale>
+          {/* The same button every form in this app commits with —
+              gradient, busy spinner and all — instead of a one-off solid
+              accent pill that read darker than everything around it. */}
+          <PrimaryButton label={t('Send request', 'Gửi lời mời', 'リクエスト送信')} onPress={send} busy={busy} />
         </Card>
       )}
 
@@ -335,16 +334,6 @@ const s = StyleSheet.create({
   suggestFace: { width: 30, height: 30, borderRadius: 15 },
   suggestName: { color: colors.text, fontSize: 14.5, fontWeight: font.medium, flexShrink: 1 },
   suggestHandle: { color: colors.textTertiary, fontSize: 13.5 },
-
-  // Position on the container, look on the inner view — see
-  // PressableScale's doc block for why the split matters.
-  sendWrap: { alignSelf: 'flex-start', minWidth: 132 },
-  sendBtn: {
-    backgroundColor: colors.accent, borderRadius: radius.pill,
-    paddingHorizontal: 18, paddingVertical: 10,
-    alignItems: 'center',
-  },
-  sendText: { color: colors.accentInk, fontSize: 14.5, fontWeight: font.semibold },
 
   waiting: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
