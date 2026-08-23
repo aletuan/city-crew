@@ -48,7 +48,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const [people, setPeople] = useState<Record<string, FriendProfile>>({});
   const [mutual, setMutual] = useState<Record<string, number>>({});
   useEffect(() => {
-    const ids = [...crew.friends, ...crew.incoming.map((r) => r.requester), ...blocks.data];
+    const ids = [
+      ...crew.friends,
+      ...crew.incoming.map((r) => r.requester),
+      ...crew.outgoing.map((r) => r.addressee),
+      ...blocks.data,
+    ];
     if (!ids.length) return;
     fetchProfilesById(ids).then(setPeople).catch(() => {});
     fetchMutualSaves(crew.friends).then(setMutual).catch(() => {});
@@ -152,6 +157,22 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     ],
   );
 
+  // Withdrawing is the same delete declining is — see the migration —
+  // and just as silent: the other person is never told a request was
+  // taken back, any more than they are told one was refused.
+  const confirmWithdraw = (p: FriendProfile) => Alert.alert(
+    t(`Cancel the request to ${atHandle(p.handle)}?`, `Huỷ lời mời tới ${atHandle(p.handle)}?`, `${atHandle(p.handle)} へのリクエストを取り消しますか？`),
+    t('They will not be told.', 'Họ sẽ không được báo.', '相手に通知されません。'),
+    [
+      { text: t('Keep waiting', 'Chờ tiếp', 'このまま待つ'), style: 'cancel' },
+      {
+        text: t('Cancel request', 'Huỷ lời mời', '取り消す'),
+        style: 'destructive',
+        onPress: () => { removeFriendship(me!, p.id).then(() => ships.reload()).catch(() => {}); },
+      },
+    ],
+  );
+
   const confirmUnblock = (p: FriendProfile) => Alert.alert(
     t(`Unblock ${atHandle(p.handle)}?`, `Bỏ chặn ${atHandle(p.handle)}?`, `${atHandle(p.handle)} のブロックを解除しますか？`),
     t('They will be able to send you requests again.', 'Họ sẽ có thể gửi lời mời cho bạn lại.', '相手は再びリクエストを送れるようになります。'),
@@ -240,6 +261,42 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
           </Text>
           <Ionicons name="chevron-forward" size={17} color={colors.accent} />
         </PressableScale>
+      )}
+
+      {/* What you asked and are still waiting on. Without this the send
+          looked like it vanished — the request lived only on the other
+          person's screen. The row answers the only two questions a
+          sender has: is it still pending, and how do I take it back. */}
+      {crew.outgoing.length > 0 && (
+        <>
+          <Text style={s.sentHead}>{t('Sent', 'Đã gửi', '送信済み')}</Text>
+          <Card>
+            {crew.outgoing.map((r, i) => {
+              const p = people[r.addressee];
+              return (
+                <View key={r.addressee} style={[s.row, i > 0 && s.rowDivider]}>
+                  {p?.avatar_url
+                    ? <Image source={{ uri: p.avatar_url }} style={s.face} contentFit="cover" transition={150} />
+                    : (
+                      <View style={[s.face, s.faceBlank]}>
+                        <Ionicons name="person-outline" size={18} color={colors.textTertiary} />
+                      </View>
+                    )}
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={s.name} numberOfLines={1}>{p?.full_name || (p ? atHandle(p.handle) : '…')}</Text>
+                    <Text style={s.meta} numberOfLines={1}>
+                      {p ? `${atHandle(p.handle)} · ` : ''}
+                      {t('waiting on their answer', 'đang chờ trả lời', '返事待ち')}
+                    </Text>
+                  </View>
+                  <PressableScale style={s.withdrawBtn} onPress={() => p && confirmWithdraw(p)} accessibilityRole="button">
+                    <Text style={s.withdrawText}>{t('Cancel', 'Huỷ', '取り消す')}</Text>
+                  </PressableScale>
+                </View>
+              );
+            })}
+          </Card>
+        </>
       )}
 
       {crew.friends.length > 0 ? (
@@ -359,6 +416,16 @@ const s = StyleSheet.create({
   },
   name: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   meta: { color: colors.textTertiary, ...type.meta },
+
+  sentHead: {
+    color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
+    letterSpacing: 1.1, textTransform: 'uppercase', marginTop: 8,
+  },
+  withdrawBtn: {
+    borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill,
+    paddingHorizontal: 14, paddingVertical: 8,
+  },
+  withdrawText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.semibold },
 
   blockedHead: {
     color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
