@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  finished, findingsOf, latestFinding, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, stopCount, summaryLine, type Step,
+  findingFeed, finished, findingsOf, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, stopCount, summaryLine, type Step,
 } from './sketch';
 
 const steps: Step[] = [
@@ -175,10 +175,21 @@ describe('findingsOf', () => {
 
   it('reports what it found, not what it is doing', () => {
     const [, open, start, hop, window] = findingsOf(FULL, t3, FMT);
-    expect(open).toBe('17 places open at 09:00');
-    expect(start).toBe('Starting at Artemis Pastry');
-    expect(hop).toBe('6.2 km to the next stop, about 20 min');
-    expect(window).toBe('Your day runs 09:00–11:42');
+    expect(open?.text).toBe('17 places open at 09:00');
+    expect(start?.text).toBe('Starting at Artemis Pastry');
+    expect(hop?.text).toBe('6.2 km to the next stop, about 20 min');
+    expect(window?.text).toBe('Your day runs 09:00–11:42');
+  });
+
+  // The mark is part of the fact's meaning — a clock for hours, a pin
+  // for the starting stop, a walker for the leg, a calendar for the
+  // window — decided here so the screen only draws it.
+  it('types each finding with the mark its kind wears', () => {
+    const [, open, start, hop, window] = findingsOf(FULL, t3, FMT);
+    expect(open?.icon).toBe('time-outline');
+    expect(start?.icon).toBe('location-outline');
+    expect(hop?.icon).toBe('walk-outline');
+    expect(window?.icon).toBe('calendar-outline');
   });
 
   // Every one of these is missing in a real case: a catalog that could not
@@ -200,36 +211,57 @@ describe('findingsOf', () => {
   });
 });
 
-describe('latestFinding', () => {
+describe('findingFeed', () => {
   const lines = findingsOf(FULL, t3, FMT);
+  const texts = (f: ReturnType<typeof findingFeed>) => ({
+    previous: f.previous?.text ?? null,
+    current: f.current?.text ?? null,
+  });
 
   // The first step has no finding by design, so the screen keeps its
   // skeleton until there is a fact to put in its place.
   it('has nothing before the first finding exists', () => {
-    expect(latestFinding(lines, 0)).toBeNull();
+    expect(findingFeed(lines, 0)).toEqual({ previous: null, current: null });
   });
 
-  it('shows the finding for the step that is running', () => {
-    expect(latestFinding(lines, 1)).toBe('17 places open at 09:00');
-    expect(latestFinding(lines, 3)).toBe('6.2 km to the next stop, about 20 min');
+  // The mockup's mid-state before there is any history: one bright line
+  // standing alone, no dimmed line above it.
+  it('starts as a single line, with no previous to show', () => {
+    expect(texts(findingFeed(lines, 1)))
+      .toEqual({ previous: null, current: '17 places open at 09:00' });
+  });
+
+  it('carries the settled fact above the one being worked out', () => {
+    expect(texts(findingFeed(lines, 2))).toEqual({
+      previous: '17 places open at 09:00',
+      current: 'Starting at Artemis Pastry',
+    });
+    expect(texts(findingFeed(lines, 3))).toEqual({
+      previous: 'Starting at Artemis Pastry',
+      current: '6.2 km to the next stop, about 20 min',
+    });
   });
 
   // Falls forward rather than blanking. An element that disappears reads
   // as something having gone wrong, not as a step with nothing to add.
-  it('holds the last line through a step that says nothing', () => {
-    const gappy = ['a', null, null, 'd', null];
-    expect(latestFinding(gappy, 2)).toBe('a');
-    expect(latestFinding(gappy, 4)).toBe('d');
+  it('holds the last frame through a step that says nothing', () => {
+    const l = (text: string) => ({ icon: 'time-outline', text });
+    const gappy = [l('a'), null, null, l('d'), null];
+    expect(texts(findingFeed(gappy, 2))).toEqual({ previous: null, current: 'a' });
+    expect(texts(findingFeed(gappy, 4))).toEqual({ previous: 'a', current: 'd' });
   });
 
-  // The screen finishes on the last frame and hands over; a box that goes
-  // blank on the way out is a flicker.
+  // The screen finishes on the last frame and hands over; a feed that
+  // goes blank on the way out is a flicker.
   it('holds rather than clearing once the steps are done', () => {
-    expect(latestFinding(lines, 99)).toBe('Your day runs 09:00–11:42');
+    expect(texts(findingFeed(lines, 99))).toEqual({
+      previous: '6.2 km to the next stop, about 20 min',
+      current: 'Your day runs 09:00–11:42',
+    });
   });
 
   it('has nothing to hold when nothing was found', () => {
-    expect(latestFinding([null, null], 5)).toBeNull();
-    expect(latestFinding([], 0)).toBeNull();
+    expect(findingFeed([null, null], 5)).toEqual({ previous: null, current: null });
+    expect(findingFeed([], 0)).toEqual({ previous: null, current: null });
   });
 });
