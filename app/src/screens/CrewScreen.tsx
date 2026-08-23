@@ -162,16 +162,28 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 
   // Withdrawing is the same delete declining is — see the migration —
   // and just as silent: the other person is never told a request was
-  // taken back, any more than they are told one was refused.
+  // taken back, any more than they are told one was refused. Block from
+  // here cuts the very request it sits beside: the server does that in
+  // the same act (see block_user), so a regretted ask and its sender's
+  // boundary are one tap, not two.
   const confirmWithdraw = (p: FriendProfile) => Alert.alert(
     t(`Cancel the request to ${atHandle(p.handle)}?`, `Huỷ lời mời tới ${atHandle(p.handle)}?`, `${atHandle(p.handle)} へのリクエストを取り消しますか？`),
-    t('They will not be told.', 'Họ sẽ không được báo.', '相手に通知されません。'),
+    t('They will not be told either way.', 'Họ sẽ không được báo, dù chọn gì.', 'どちらを選んでも相手に通知されません。'),
     [
       { text: t('Keep waiting', 'Chờ tiếp', 'このまま待つ'), style: 'cancel' },
       {
         text: t('Cancel request', 'Huỷ lời mời', '取り消す'),
         style: 'destructive',
         onPress: () => { removeFriendship(me!, p.id).then(() => ships.reload()).catch(() => {}); },
+      },
+      {
+        text: t('Cancel and block', 'Huỷ và chặn', '取り消してブロック'),
+        style: 'destructive',
+        onPress: () => {
+          blockUser(p.id)
+            .then(() => { ships.reload(); blocks.reload(); })
+            .catch(() => {});
+        },
       },
     ],
   );
