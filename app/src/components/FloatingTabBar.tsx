@@ -30,6 +30,9 @@ import React, { useEffect } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../lib/auth';
+import { useFriendships } from '../lib/data';
+import { splitFriendships } from '../lib/friends';
 import { useScheme } from '../lib/theme';
 import { colors, font, radius } from '../theme';
 import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
@@ -95,6 +98,19 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   const { show } = duck;
   useEffect(() => { show(); }, [state, show]);
 
+  // The waiting-request dot on the Profile tab — the one signal worth
+  // carrying on the bar itself, because a request is a person waiting on
+  // an answer and the card that says so lives three taps deep. Re-read
+  // on every tab change: the query is tiny (RLS scopes it to this
+  // account's own edges) and a badge that only updates on app restart
+  // is a badge that lies for hours.
+  const { session } = useAuth();
+  const me = session?.user?.id;
+  const ships = useFriendships(me);
+  const { reload } = ships;
+  useEffect(() => { if (me) reload(); }, [index, me, reload]);
+  const waiting = me ? splitFriendships(ships.data, me).incoming.length > 0 : false;
+
   // It used to clear the whole safe-area inset — 34pt on a modern iPhone,
   // plus the gap, put the bar 44pt off the bottom, which reads as an
   // island adrift rather than a dock. `useTabBarLift` clears the home
@@ -157,6 +173,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               accessibilityState={{ selected: focused }}
               accessibilityLabel={label}
             >
+              <View>
               <Ionicons
                 name={ICONS[route.name][focused ? 1 : 0]}
                 size={22}
@@ -176,6 +193,12 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                 // the measurements — the two changes are one change.
                 color={focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5')}
               />
+              {/* Same mark the Profile card wears, one level up where
+                  every screen can see it. Drawn beside the glyph rather
+                  than tinting it: a dot is news, a recoloured icon is a
+                  different icon. */}
+              {route.name === 'Profile' && waiting ? <View style={s.reqDot} /> : null}
+              </View>
               <Text
                 numberOfLines={1}
                 style={[s.caption, !focused && glassHalo(light), {
@@ -223,6 +246,12 @@ const s = StyleSheet.create({
     flex: 1, marginVertical: 6, marginHorizontal: 3,
     borderRadius: radius.tabBar - 6,
     alignItems: 'center', justifyContent: 'center',
+  },
+  reqDot: {
+    position: 'absolute', top: -1, right: -4,
+    width: 9, height: 9, borderRadius: 4.5,
+    backgroundColor: colors.badgeSolid as string,
+    borderWidth: 1.5, borderColor: colors.bgElevated as string,
   },
   caption: {
     // 11, not the 11.5 the old full-width bar used: the island is inset

@@ -53,6 +53,7 @@ import { defineConfig } from 'vitest/config';
 // about how any of it looks.
 const IMPURE = [
   'src/lib/candidates.ts', // a React hook; imports Alert and Keyboard
+  'src/lib/reminders.ts', // talks to expo-notifications; the maths it uses is remind.ts, which the gate holds
   'src/lib/data.ts', // the writes are tested; the fetch hooks need a renderer
   'src/lib/supabase.ts', // the client itself
   'src/lib/testing.ts', // the stand-in for it — test scaffolding, not shipped
