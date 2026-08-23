@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  agoOf, buildActivity, MIN_SUGGEST_CHARS, REQUEST_DAILY_CAP, splitFriendships,
-  standingWith, SUGGEST_LIMIT, suggestable, TRIP_REMINDER_DAYS,
-  type Applause, type FriendshipRow,
+  agoOf, buildActivity, MIN_SUGGEST_CHARS, openSuggestions, REQUEST_DAILY_CAP,
+  splitFriendships, standingWith, SUGGEST_LIMIT, suggestable, SUGGESTED_SHOWN,
+  TRIP_REMINDER_DAYS, type Applause, type FriendshipRow,
 } from './friends';
 
 const edge = (
@@ -122,6 +122,45 @@ describe('suggestable', () => {
   });
   it('the blocked are not re-offered', () => {
     expect(suggestable([person('a'), person('b')], 'me', ['a'])).toEqual([person('b')]);
+  });
+});
+
+describe('openSuggestions', () => {
+  const rows = [
+    { other: 'stranger', mutual: 6 },
+    { other: 'friend', mutual: 4 },
+    { other: 'asked', mutual: 3 },
+    { other: 'asker', mutual: 2 },
+    { other: 'blocked', mutual: 1 },
+  ];
+  const ships = [
+    edge('me', 'friend', 'accepted'),
+    edge('me', 'asked'),
+    edge('asker', 'me'),
+  ];
+
+  it('keeps only the people nothing already stands between', () => {
+    expect(openSuggestions(rows, 'me', ships, ['blocked']).map((r) => r.other))
+      .toEqual(['stranger']);
+  });
+
+  it('an untouched list passes through in the order the server gave', () => {
+    const fresh = [{ other: 'a', mutual: 9 }, { other: 'b', mutual: 2 }];
+    expect(openSuggestions(fresh, 'me', [])).toEqual(fresh);
+  });
+
+  it('caps at SUGGESTED_SHOWN', () => {
+    const many = Array.from({ length: 9 }, (_, i) => ({ other: `p${i}`, mutual: 9 - i }));
+    expect(openSuggestions(many, 'me', [])).toHaveLength(SUGGESTED_SHOWN);
+    expect(openSuggestions(many, 'me', [], [], 2)).toHaveLength(2);
+  });
+
+  it('a suggestion acted on this second is gone this second', () => {
+    const one = [{ other: 'stranger', mutual: 3 }];
+    expect(openSuggestions(one, 'me', [])).toHaveLength(1);
+    // The Add tap lands: an outgoing edge now exists, and the row goes
+    // without waiting for the server to be asked again.
+    expect(openSuggestions(one, 'me', [edge('me', 'stranger')])).toEqual([]);
   });
 });
 

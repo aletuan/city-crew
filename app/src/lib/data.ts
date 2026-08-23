@@ -1012,6 +1012,15 @@ export async function removeFriendship(a: string, b: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** Accounts whose public shelves overlap yours, strongest first — the
+ *  crew screen's introductions. Excludes everyone already tied to you
+ *  and anyone either side of a block; see `suggested_friends`. */
+export async function fetchSuggestedFriends(): Promise<import('./friends').Suggestion[]> {
+  const { data, error } = await supabase.rpc('suggested_friends');
+  if (error) return [];
+  return (data ?? []) as import('./friends').Suggestion[];
+}
+
 /** places you have both put in public collections, by friend id. */
 export async function fetchMutualSaves(others: string[]): Promise<Record<string, number>> {
   if (!others.length) return {};
