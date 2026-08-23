@@ -10,6 +10,7 @@ import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton } from
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
+import { PASSWORD_MIN } from '../lib/password';
 import { colors, font } from '../theme';
 import type { Nav } from '../nav';
 
@@ -68,7 +69,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
 
   const reset = () =>
     run(async () => {
-      if (password.length < 8) {
+      if (password.length < PASSWORD_MIN) {
         throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
       }
       await resetPassword(email.trim(), cleanOtp(code), password);
@@ -103,6 +104,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
           value={password}
           onChangeText={setPassword}
           secure
+          strength
           autoCapitalize="none"
           autoComplete="new-password"
           onSubmitEditing={reset}
