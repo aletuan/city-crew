@@ -14,10 +14,9 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StatusBar } from 'expo-status-bar';
+import { setStatusBarStyle } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useIsFocused } from '@react-navigation/native';
 import PlaceCard from '../components/PlaceCard';
 import { AddPill, AddSlot } from '../components/add';
 import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useTabBarClearance, useTabBarLift } from '../components/ui';
@@ -513,12 +512,16 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  // A little over half the window, banded: enough photograph to be the
-  // front door, never so much that the shelf drops entirely below the
-  // fold. One number, decided here, because the hero draws it and the
-  // status-bar threshold below reads it.
+  // Just under half the window, banded: enough photograph to be the
+  // front door — and no more. At 56% the shelf barely cleared the fold
+  // and not one place card did; 48% buys the fold back for the content
+  // this screen exists to show, with the first card's top edge peeking
+  // in as the scroll invitation. The floor came down with it (330, was
+  // 380) so small phones share the ratio instead of being clamped back
+  // to a taller cover than anyone else's. One number, decided here,
+  // because the hero draws it and the status-bar threshold reads it.
   const { height: winH } = useWindowDimensions();
-  const heroH = Math.min(560, Math.max(380, Math.round(winH * 0.56)));
+  const heroH = Math.min(500, Math.max(330, Math.round(winH * 0.48)));
 
   /**
    * Which type the status bar wants, now that the clock sits on the
@@ -527,18 +530,44 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * and the scheme decides. Dark theme is light type either way — this
    * only ever moves anything on paper.
    *
-   * Tracked as a crossing rather than derived per frame: the scroll
-   * listener below is created once, so it reads the threshold through a
-   * ref and only touches state when the answer changes.
+   * Applied imperatively, never via a mounted <StatusBar>. The component
+   * version was focus-scoped, and both halves of that made the jump to
+   * Search stutter: `useIsFocused` re-rendered this whole screen at the
+   * transition's edges, and the unmount snapped the bar's ink from light
+   * to dark with no animation, mid-slide. `setStatusBarStyle` costs
+   * neither — no render, and it fades. Everything it reads lives in refs
+   * because its callers are frozen closures: the scroll listener below
+   * and the navigation listeners.
    */
   const light = useScheme().scheme === 'light';
-  const focused = useIsFocused();
-  const [pastHero, setPastHero] = useState(false);
+  const lightRef = useRef(light);
+  lightRef.current = light;
   const pastHeroRef = useRef(false);
+  const focusedRef = useRef(false);
   const heroEndRef = useRef(0);
   // Past once the photo's last 44pt are leaving — the moment the dark
   // ground stops being what is under the clock.
   heroEndRef.current = heroH - insets.top - 44;
+  const applyBar = useRef(() => {
+    setStatusBarStyle(pastHeroRef.current && lightRef.current ? 'dark' : 'light', true);
+  }).current;
+  useEffect(() => {
+    // Take the bar on arrival, hand it back on leaving — to the scheme's
+    // own style, which is what the app-level <StatusBar> asserts for
+    // every screen that is not this one.
+    const focus = () => { focusedRef.current = true; applyBar(); };
+    const blur = () => {
+      focusedRef.current = false;
+      setStatusBarStyle(lightRef.current ? 'dark' : 'light', true);
+    };
+    // The initial focus event can land before these listeners exist.
+    if (navigation.isFocused()) focus();
+    const a = navigation.addListener('focus', focus);
+    const b = navigation.addListener('blur', blur);
+    return () => { a(); b(); };
+  }, [navigation, applyBar]);
+  // The scheme can flip while this screen holds the bar.
+  useEffect(() => { if (focusedRef.current) applyBar(); }, [light, applyBar]);
 
   // Only categories this city actually has, so a chip never leads to an
   // empty list. Order comes from the taxonomy, not from the data.
@@ -604,13 +633,13 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const onScrollJS = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
     const y = e.nativeEvent.contentOffset.y;
     if (y < 320) setFirst(0);
-    // The status-bar crossing, guarded on its own mirror for the same
-    // reason `setFirst` is: this closure is built once and state it set
-    // every frame would render every frame.
+    // The status-bar crossing — everything through refs, because this
+    // closure is built once. Only while focused: a background screen
+    // repainting the bar would fight whoever owns it now.
     const past = y > heroEndRef.current;
     if (past !== pastHeroRef.current) {
       pastHeroRef.current = past;
-      setPastHero(past);
+      if (focusedRef.current) applyBar();
     }
     duckRef.current?.(e as never);
   }).current;
@@ -741,10 +770,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     // the hero itself, and the screen's title went entirely: the hero's
     // headline names the city, and two headings were saying one thing.
     <View style={s.screen}>
-      {/* Rendered only while this tab is focused — expo's StatusBar is a
-          stack, so the app-level one takes back over the moment another
-          screen covers this one or the reader switches tabs. */}
-      {focused && <StatusBar animated style={pastHero ? (light ? 'dark' : 'light') : 'light'} />}
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {loading && (
