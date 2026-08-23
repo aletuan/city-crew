@@ -1,8 +1,24 @@
 // Edit profile — name, username, location, bio and interests, stored as
-// a row in `profiles`; plus what plans should lean towards, stored in
+// a row in `profiles`; plus the recording opt-in, stored in
 // `preferences`, which is a different table for a reason worth repeating
 // here: `profiles` is readable by everyone (`for select using (true)`),
-// and a budget is nobody else's business.
+// and what you have been opening is nobody else's business.
+//
+// This screen used to ask two more things — a set of categories your
+// plans should lean towards, and a budget band. Both are gone, and the
+// argument is that the wizard already asks. `canPlan` will not let a
+// plan start without a company and at least one category, so the stored
+// chips could only ever re-order what the wizard had already let
+// through: the same question, answered twice, with the standing answer
+// the weaker of the two. Budget went with them for the opposite reason —
+// it is the *most* situational of the three, and asking for it here
+// meant leaving the planner to change it. What the plan costs is on
+// every plan card, every editor and every saved trip, which is the
+// honest way to let somebody decide with their own eyes.
+//
+// Nothing was migrated. The columns stay, the planner keeps its budget
+// arithmetic, and `taste.ts` keeps its `preferred` term — see
+// `usePlanProfile`, which is where the feeding stopped.
 //
 // "Username" on screen, `handle` in the code and the column: the label is
 // the friendlier of the two words, and renaming the data to match would
@@ -13,31 +29,14 @@ import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
-import { Card, Chip, PressableScale, successHaptic } from '../components/ui';
+import { Card, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { CATEGORIES, CATEGORY_ORDER, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { clearMyHistory, savePreferences, useMyPreferences } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { HANDLE_MAX, handleProblem, normalizeHandle } from '../lib/handle';
 import { colors, font, space, type as type_ } from '../theme';
 import type { Nav } from '../nav';
-
-/**
- * Budget as bands rather than as a number to type.
- *
- * The column holds an int and could take any figure, but nobody knows what
- * an outing is worth to them to the nearest thousand đồng — and a keypad
- * on a phone asking for six digits is six chances to add a zero. The bands
- * are what the answer is actually shaped like, and the planner only uses
- * it to divide into per-stop shares anyway.
- */
-const BUDGETS: readonly { vnd: number | null; en: string; vi: string; ja: string }[] = [
-  { vnd: null, en: 'No limit', vi: 'Không đặt', ja: '指定なし' },
-  { vnd: 200_000, en: 'Up to 200k', vi: 'Tới 200k', ja: '20万まで' },
-  { vnd: 500_000, en: 'Up to 500k', vi: 'Tới 500k', ja: '50万まで' },
-  { vnd: 1_000_000, en: 'Up to 1M', vi: 'Tới 1 triệu', ja: '100万まで' },
-];
 
 export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -53,8 +52,6 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
 
   const uid = session?.user?.id ?? null;
   const prefs = useMyPreferences(uid);
-  const [cats, setCats] = useState<string[]>([]);
-  const [budget, setBudget] = useState<number | null>(null);
   const [history, setHistory] = useState(false);
   // Seeded once the row lands, not on every render: `useMyPreferences`
   // starts at `NO_PREFERENCES` and fills in a moment later, and copying
@@ -63,8 +60,6 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   // and must not re-seed the form from the empty answer.
   useEffect(() => {
     if (prefs.loadedAt === null) return;
-    setCats(prefs.data.categories);
-    setBudget(prefs.data.budget_vnd);
     setHistory(prefs.data.history_on);
   }, [prefs.loadedAt, prefs.data]);
   // Kept apart from `error`: this one belongs to a field and is drawn
@@ -126,7 +121,17 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       // what the reader can see they changed, so it lands first, and a
       // preferences write that fails leaves the form open saying so
       // rather than closing over a half-saved change.
-      if (uid) await savePreferences(uid, { categories: cats, budget_vnd: budget, history_on: history });
+      // The two this screen no longer edits are written back as they
+      // were found. Saving `[]` and `null` instead would be this screen
+      // deciding, on somebody's behalf and without asking, to discard an
+      // answer they gave — and the row is theirs, not this form's.
+      if (uid) {
+        await savePreferences(uid, {
+          categories: prefs.data.categories,
+          budget_vnd: prefs.data.budget_vnd,
+          history_on: history,
+        });
+      }
       successHaptic();
       navigation.goBack();
     } catch (err) {
@@ -218,45 +223,16 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         onChangeText={setInterests}
       />
 
-      {/* Everything below is about plans rather than about the person, and
-          none of it is visible to anybody else. Signed out there is no row
-          to write to, so the whole block goes rather than sitting there
-          collecting taps that cannot be saved. */}
+      {/* One thing, and it is not a preference about outings — it is
+          permission. Signed out there is no row to write to, so the block
+          goes rather than sitting there collecting taps that cannot be
+          saved.
+
+          The section heading went with the chips above it: the card names
+          itself, and a heading over a single card is a label for a list
+          of one. */}
       {uid ? (
         <View style={{ gap: 10, marginTop: 8 }}>
-          <Text style={s.heading}>{t('Your plans', 'Kế hoạch của bạn', 'あなたのプラン')}</Text>
-          <Text style={s.note}>
-            {t(
-              'Used to break ties when we draft a day. Your answers in the moment always win.',
-              'Dùng để phá thế hoà khi phác một ngày. Câu bạn trả lời lúc lên kế hoạch luôn thắng.',
-              '日程を組むときの決め手に使います。その場での回答がつねに優先されます。',
-            )}
-          </Text>
-          <View style={s.chips}>
-            {CATEGORY_ORDER.map((c) => (
-              <Chip
-                key={c}
-                label={categoryLabel(c, t)}
-                icon={CATEGORIES[c]?.icon}
-                iconColor={CATEGORIES[c]?.color}
-                active={cats.includes(c)}
-                onPress={() => setCats((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]))}
-              />
-            ))}
-          </View>
-
-          <Text style={s.subheading}>{t('Budget per outing', 'Ngân sách mỗi lần đi', '1回あたりの予算')}</Text>
-          <View style={s.chips}>
-            {BUDGETS.map((b) => (
-              <Chip
-                key={b.en}
-                label={t(b.en, b.vi, b.ja)}
-                active={budget === b.vnd}
-                onPress={() => setBudget(b.vnd)}
-              />
-            ))}
-          </View>
-
           <Card style={s.privacy}>
             <View style={s.toggleRow}>
               <View style={{ flex: 1, gap: 3 }}>
@@ -304,10 +280,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
-  heading: { color: colors.text, ...type_.headline, marginTop: 6 },
-  subheading: { color: colors.text, fontSize: 15, fontWeight: font.semibold, marginTop: 4 },
   note: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 19 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 
   // The privacy block gets a card of its own. The chips above are
   // preferences; this one is a promise, and a promise sitting in the same

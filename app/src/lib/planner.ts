@@ -91,9 +91,15 @@ export type PlanOptions = {
    *  profile" can pass it straight through instead of converting a null
    *  that means exactly what the absent value means. */
   taste?: Taste | null;
-  /** What the reader said an outing is worth to them, per person, in dong
-   *  — `preferences.budget_vnd`. Null and undefined both mean "not said",
-   *  which is not the same as no budget and must not become zero. */
+  /** What the reader said an outing is worth to them, per person, in dong.
+   *  Null and undefined both mean "not said", which is not the same as no
+   *  budget and must not become zero.
+   *
+   *  Nothing in the app asks the question today — `usePlanProfile` explains
+   *  why and is where an answer would arrive — so this is null on every
+   *  real call and the arithmetic below runs only under test. Kept rather
+   *  than deleted: the weighting took care to get right, and the day the
+   *  wizard asks, it should not have to be reinvented. */
   budgetVnd?: number | null;
   /** What time the outing begins, minutes past midnight — normally
    *  `startMinFor(draft.when, draft.date, now)`, resolved by the wizard so
