@@ -24,14 +24,15 @@ import PricePill from '../components/PricePill';
 import type { Nav, RootRoute } from '../nav';
 
 // One row of the grouped info card. These were four stacked cards, each
-// wearing a 44pt accent circle and an uppercase label — four accent marks
-// for zero states, on a screen whose colour discipline says the accent
-// marks state and action. The glyph goes quiet, the label goes (an address
-// reads as an address), and the accent is spent on the words that do
-// something: Route and Call. The whole row is the target; the accent word
-// only names what a tap anywhere already does.
-function InfoRow({ icon, first, onPress, right, children }: {
+// wearing a 44pt accent circle — four accent marks for zero states, on a
+// screen whose colour discipline says the accent marks state and action.
+// The glyph stays monochrome and the accent is spent on the words that do
+// something: Route and Call. Each row keeps a small caps label over its
+// value — it names the row without shouting — and the whole row is the
+// target; the accent word only names what a tap anywhere already does.
+function InfoRow({ icon, label, first, onPress, right, children }: {
   icon: keyof typeof Ionicons.glyphMap;
+  label: string;
   /** The row that opens the card draws no hairline above itself. */
   first?: boolean;
   onPress?: () => void;
@@ -46,7 +47,10 @@ function InfoRow({ icon, first, onPress, right, children }: {
       accessibilityRole={onPress ? 'button' : undefined}
     >
       <Ionicons name={icon} size={18} color={colors.textSecondary} />
-      <View style={{ flex: 1 }}>{children}</View>
+      <View style={{ flex: 1 }}>
+        <Text style={s.infoLabel}>{label}</Text>
+        {children}
+      </View>
       {right}
     </Pressable>
   );
@@ -260,6 +264,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               {place.address && (
                 <InfoRow
                   icon="location-outline"
+                  label={t('Address', 'Địa chỉ', '住所')}
                   first={firstRow === 'address'}
                   onPress={mapsUrl ? () => Linking.openURL(mapsUrl) : undefined}
                   right={mapsUrl ? (
@@ -289,6 +294,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   >
                     <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
                     <View style={{ flex: 1 }}>
+                      <Text style={s.infoLabel}>{t('Hours', 'Giờ mở cửa', '営業時間')}</Text>
                       {openNow ? (
                         <Text style={[s.openNow, !openNow.open && s.openNowShut]}>
                           {/* Whole sentences per language, not a preposition
@@ -311,12 +317,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                               )
                               : t('Closed today', 'Hôm nay đóng cửa', '本日休業')}
                         </Text>
-                      ) : (
-                        // Hours stored in a shape openState cannot read
-                        // still deserve their table; the row then needs a
-                        // name where the answer line would have stood.
-                        <Text style={s.infoValue}>{t('Hours', 'Giờ mở cửa', '営業時間')}</Text>
-                      )}
+                      ) : null}
+                      {/* Hours in a shape openState cannot read still get
+                          their table behind the chevron; the label alone
+                          heads the row until it is opened. */}
                     </View>
                     <Ionicons name={hoursOpen ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textTertiary} />
                   </Pressable>
@@ -336,6 +340,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               {place.phone && (
                 <InfoRow
                   icon="call-outline"
+                  // 電話番号, not 電話: the row's action word is 電話, and a
+                  // label that repeats its own button names nothing.
+                  label={t('Phone', 'Điện thoại', '電話番号')}
                   first={firstRow === 'phone'}
                   onPress={() => Linking.openURL(`tel:${place.phone!.replace(/\s/g, '')}`)}
                   right={<Text style={s.actionText}>{t('Call', 'Gọi', '電話')}</Text>}
@@ -347,6 +354,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               {place.website && (
                 <InfoRow
                   icon="globe-outline"
+                  label={t('Website', 'Trang web', 'ウェブサイト')}
                   first={firstRow === 'website'}
                   onPress={() => Linking.openURL(place.website!)}
                   right={<Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />}
@@ -417,19 +425,23 @@ const s = StyleSheet.create({
   // The Card supplies ground, border and radius; the horizontal inset
   // lives here so each row's hairline can run to the card's edge.
   infoGroup: { marginTop: 18, paddingHorizontal: space.cardPadding },
-  // 15pt over a 22pt line keeps every row a ≥52pt target.
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15 },
+  // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 17 },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
   action: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingLeft: 12 },
   actionText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
-  infoValue: { color: colors.textSecondary, ...type.meta, lineHeight: 22 },
+  infoLabel: {
+    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
+    textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 5,
+  },
+  infoValue: { color: colors.textSecondary, ...type.meta, lineHeight: 24 },
   // Semibold and a size up on the table under it: this is the answer, and
   // it is the working it was derived from.
   openNow: { color: colors.ok, fontSize: 15.5, fontWeight: font.semibold },
   openNowShut: { color: colors.textTertiary },
-  // Indented to the text column (18pt glyph + 14 gap) so the days hang
+  // Indented to the text column (18pt glyph + 18 gap) so the days hang
   // under the answer line, not under its icon.
-  hoursTable: { paddingLeft: 32, paddingBottom: 14 },
+  hoursTable: { paddingLeft: 36, paddingBottom: 16 },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   hourDay: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.medium },
   hourTime: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.regular },
