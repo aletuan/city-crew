@@ -48,7 +48,23 @@ export type PlanProfile = {
    *  so both get exactly the plans the app made before any of this
    *  existed. */
   taste: Taste | null;
-  /** `preferences.budget_vnd`, straight through. */
+  /**
+   * What a stop may cost before the planner starts marking it down.
+   *
+   * **Always null today, and that is deliberate rather than unfinished.**
+   * The band used to be asked for in Edit profile and is not any more:
+   * budget is the most situational thing about an outing — tonight with
+   * the family is not tonight alone — and a standing answer buried two
+   * screens from the planner was the wrong shape for it. What a plan
+   * costs is printed on every plan card, every editor and every saved
+   * trip instead, and the reader decides with that.
+   *
+   * The field, the column and `planTrips`'s arithmetic all stay. The
+   * arithmetic is carefully weighted — only the overrun is charged, and
+   * being under is never rewarded, so a stated budget cannot quietly turn
+   * every plan into the lowkey one — and it is covered by tests. If the
+   * wizard ever asks the question, this is where the answer arrives.
+   */
   budgetVnd: number | null;
 };
 
@@ -92,17 +108,32 @@ export function usePlanProfile(): PlanProfile {
     [places, uid],
   );
 
+  /**
+   * Taste from what this reader has *done*, and no longer from what they
+   * declared.
+   *
+   * `preferences.categories` used to arrive here as `preferred`, the
+   * heaviest of the three category terms. It is not passed any more, and
+   * the reason is that the wizard asks the same question with more force:
+   * `canPlan` refuses to start a plan without at least one category, and
+   * `dropReason` then removes everything outside the chosen ones. A
+   * standing set of chips could only ever re-order what that gate had
+   * already let through — the same question, asked twice, with the
+   * older answer the weaker of the two.
+   *
+   * What is left is the half a form cannot collect: the categories your
+   * saved collections lean towards, the places you added yourself, and
+   * the places you opened and walked away from. `taste.ts` keeps its
+   * `preferred` term and its weight; nothing feeds it today.
+   */
   const taste = useMemo(() => {
     if (!uid) return null;
-    return tasteFrom({
-      preferred: prefs.data.categories,
-      saved,
-      suggested,
-      passedOver,
-    });
-  }, [uid, prefs.data.categories, saved, suggested, passedOver]);
+    return tasteFrom({ saved, suggested, passedOver });
+  }, [uid, saved, suggested, passedOver]);
 
-  const budgetVnd = uid ? prefs.data.budget_vnd : null;
+  // See `PlanProfile.budgetVnd`: nothing asks for a band any more, so
+  // nothing has one to give.
+  const budgetVnd = null;
   return useMemo(() => ({ taste, budgetVnd }), [taste, budgetVnd]);
 }
 

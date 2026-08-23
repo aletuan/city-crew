@@ -42,9 +42,13 @@ import type { Taste } from './planner';
 export type Categorised = { categories?: string[] | null; vibe_tags?: string[] | null };
 
 export type TasteSignals = {
-  /** Category keys the reader chose in their profile. The strongest of the
-   *  three category signals, because they were said out loud rather than
-   *  inferred from behaviour. */
+  /** Category keys the reader said out loud. The strongest of the three
+   *  category signals, because saying beats inferring.
+   *
+   *  Nothing passes it today: the profile stopped asking, on the argument
+   *  that the wizard asks the same question harder — see `usePlanProfile`,
+   *  which is the seam. The term stays weighted and tested for whatever
+   *  asks next. */
   preferred?: readonly string[];
   /** Places in the reader's own collections. */
   saved?: readonly Categorised[];
