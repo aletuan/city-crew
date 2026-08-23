@@ -14,12 +14,14 @@
 // accounts — lives in lib/friends, under the gate.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { AuthHeader, AuthScreen, FieldRow, PrimaryButton } from '../components/authUi';
-import { Card, Empty, PressableScale, RoundIconButton } from '../components/ui';
+import { FieldRow, PrimaryButton } from '../components/authUi';
+import {
+  Card, Empty, PressableScale, RoundIconButton, Screen, useTabBarClearance,
+} from '../components/ui';
 import { useAuth } from '../lib/auth';
 import {
   blockUser, fetchMutualSaves, fetchProfilesById, type FriendProfile,
@@ -36,6 +38,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { session } = useAuth();
   const me = session?.user?.id ?? null;
+  const tabClearance = useTabBarClearance();
   const ships = useFriendships(me);
   const blocks = useMyBlocks(me);
   useFocusEffect(useCallback(() => { ships.reload(); blocks.reload(); }, [ships.reload, blocks.reload]));
@@ -185,23 +188,33 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     ],
   );
 
+  // The one header every pushed screen wears — Screen's inline form,
+  // with its measured column (2pt gap, 13.5pt subtitle in textSecondary).
+  // The first cut hand-rolled this with a negative margin and the wrong
+  // tokens, and the subtitle sat cramped against the title in a way no
+  // other screen's does.
   return (
-    <AuthScreen>
-      <View style={s.headRow}>
-        <View style={{ flex: 1 }}>
-          <AuthHeader onBack={() => navigation.goBack()} title={t('Your crew', 'Crew của bạn', 'あなたのクルー')} />
-          <Text style={s.sub}>
-            {crew.friends.length === 1
-              ? t('1 friend · plans get better together', '1 người bạn · kế hoạch vui hơn khi có nhau', '友達1人 · 計画は一緒がいい')
-              : t(`${crew.friends.length} friends · plans get better together`, `${crew.friends.length} người bạn · kế hoạch vui hơn khi có nhau`, `友達${crew.friends.length}人 · 計画は一緒がいい`)}
-          </Text>
-        </View>
+    <Screen
+      title={t('Your crew', 'Crew của bạn', 'あなたのクルー')}
+      subtitle={crew.friends.length === 1
+        ? t('1 friend · plans get better together', '1 người bạn · kế hoạch vui hơn khi có nhau', '友達1人 · 計画は一緒がいい')
+        : t(`${crew.friends.length} friends · plans get better together`, `${crew.friends.length} người bạn · kế hoạch vui hơn khi có nhau`, `友達${crew.friends.length}人 · 計画は一緒がいい`)}
+      onBack={() => navigation.goBack()}
+      right={(
         <RoundIconButton
           icon="person-add-outline"
           label={t('Add a friend', 'Thêm bạn', '友達を追加')}
           onPress={() => { setAdding((v) => !v); setNote(null); setFound([]); }}
         />
-      </View>
+      )}
+    >
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: space.page, paddingBottom: tabClearance, gap: space.cardGap,
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
 
       {adding && (
         <Card style={s.addCard}>
@@ -374,14 +387,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
           </Card>
         </>
       )}
-    </AuthScreen>
+      </ScrollView>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  headRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  sub: { color: colors.textTertiary, ...type.meta, marginTop: -6, marginBottom: 4 },
-
   addCard: { padding: space.cardPadding, gap: 12 },
   suggestRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
