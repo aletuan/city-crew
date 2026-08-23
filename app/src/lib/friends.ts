@@ -72,17 +72,19 @@ export function standingWith(rows: readonly FriendshipRow[], me: string, other: 
 
 // ── the activity feed ──
 
-/** A like on one of the reader's lists, as `likes_on_mine` returns it:
- *  the liker's name only when they are an accepted friend. */
+/** A like on one of the reader's lists, as `likes_on_mine` returns it.
+ *  Named, since the second cut of that function: the owner of a list
+ *  always sees who liked it, the way every mainstream feed attributes
+ *  likes on your own work. Null only when the liker's profile is gone. */
 export type Applause = {
   collection_id: string;
   liked_at: string;
-  friend_handle: string | null;
-  friend_name: string | null;
+  liker_handle: string | null;
+  liker_name: string | null;
 };
 
 export type ActivityItem =
-  | { kind: 'applause'; at: string; collection_id: string; friend_handle: string | null; friend_name: string | null }
+  | { kind: 'applause'; at: string; collection_id: string; liker_handle: string | null; liker_name: string | null }
   | { kind: 'trip'; at: string; tripId: string; title: string; inDays: number };
 
 /** How far ahead a trip may be and still be worth a reminder. A week: any
@@ -116,7 +118,7 @@ export function buildActivity(
   for (const a of likes) {
     out.push({
       kind: 'applause', at: a.liked_at, collection_id: a.collection_id,
-      friend_handle: a.friend_handle, friend_name: a.friend_name,
+      liker_handle: a.liker_handle, liker_name: a.liker_name,
     });
   }
   return out;
@@ -136,6 +138,29 @@ function isoParts(s: string): [number, number, number] | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
   if (!m) return null;
   return [Number(m[1]), Number(m[2]) - 1, Number(m[3])];
+}
+
+// ── the add flow's suggestions ──
+
+/** Suggest only once two letters exist: a single letter matches half the
+ *  handles there are, and a list that long is noise wearing a dropdown. */
+export const MIN_SUGGEST_CHARS = 2;
+
+/** At most this many rows under the field. Enough to pick from, few
+ *  enough that the keyboard stays the main event. */
+export const SUGGEST_LIMIT = 6;
+
+/**
+ * The rows worth offering, from whatever the lookup returned.
+ *
+ * Your own account is dropped — a suggestion you cannot befriend is a
+ * dead row — and the rest keep their order and are capped. Friends and
+ * already-asked accounts deliberately stay: tapping one gets the same
+ * specific sentence the send flow already speaks, which teaches more
+ * than their absence would.
+ */
+export function suggestable<T extends { id: string }>(found: readonly T[], me: string): T[] {
+  return found.filter((p) => p.id !== me).slice(0, SUGGEST_LIMIT);
 }
 
 /**

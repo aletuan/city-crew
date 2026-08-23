@@ -6,10 +6,11 @@
 // happen. News rows do nothing on tap except the applause rows, which
 // open the list that earned it.
 //
-// The applause comes through `likes_on_mine`, which names a liker only
-// when they are already your friend — a stranger's like arrives as
-// "Someone liked…", because who liked what is private and friendship is
-// the one thing that unlocks attribution. See the friendships migration.
+// The applause comes through `likes_on_mine`, which names every liker
+// to the one person allowed to ask — the owner of the list. "Someone
+// liked…" survives only as the fallback for a liker whose profile is
+// gone. See the named_applause migration for why the owner is not
+// "the public" that the likes table's privacy promise protects against.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -126,11 +127,15 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                   </View>
                 </View>
                 <View style={s.answers}>
-                  <PressableScale style={s.accept} onPress={() => answer(r.requester, true)} accessibilityRole="button">
+                  {/* `flex: 1` must ride the outer Pressable — in `style`
+                      it lands on the inner view with nothing to divide,
+                      and both buttons shrank onto each other. The exact
+                      failure PressableScale's own doc block names. */}
+                  <PressableScale containerStyle={s.half} style={s.accept} onPress={() => answer(r.requester, true)} accessibilityRole="button">
                     <Ionicons name="checkmark" size={17} color={colors.accentInk} />
                     <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認')}</Text>
                   </PressableScale>
-                  <PressableScale style={s.decline} onPress={() => answer(r.requester, false)} accessibilityRole="button">
+                  <PressableScale containerStyle={s.half} style={s.decline} onPress={() => answer(r.requester, false)} accessibilityRole="button">
                     <Text style={s.declineText}>{t('Decline', 'Từ chối', '拒否')}</Text>
                   </PressableScale>
                 </View>
@@ -171,7 +176,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
               );
             }
             const title = titleOf(item.collection_id);
-            const who = item.friend_name || (item.friend_handle ? atHandle(item.friend_handle) : null);
+            const who = item.liker_name || (item.liker_handle ? atHandle(item.liker_handle) : null);
             return (
               <PressableScale
                 key={`a-${item.collection_id}-${item.at}`}
@@ -222,14 +227,15 @@ const s = StyleSheet.create({
   reqTitle: { color: colors.text, fontSize: 15.5, lineHeight: 21 },
   meta: { color: colors.textTertiary, ...type.meta },
   answers: { flexDirection: 'row', gap: 10 },
+  half: { flex: 1 },
   accept: {
-    flex: 1, flexDirection: 'row', gap: 7,
+    flexDirection: 'row', gap: 7,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.accent, borderRadius: radius.pill, paddingVertical: 11,
   },
   acceptText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
   decline: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill, paddingVertical: 11,
   },
   declineText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.semibold },
