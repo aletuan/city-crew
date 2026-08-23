@@ -523,8 +523,24 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                     <Text style={s.cardTitle} numberOfLines={1}>
                       {t(pl.name_en, pl.name_vi, pl.name_ja ?? pl.name_en)}
                     </Text>
+                    {/* The pin belongs to the area, the same mark at
+                        the same size PlaceCard's district row wears — so
+                        "what part of town" carries one symbol across the
+                        app. The time half stays bare text on purpose:
+                        "until", "opens" and "mở 24/24" already say what
+                        kind of fact follows, and a clock glyph would
+                        repeat them in grey. No area, no pin — an icon
+                        pointing at a closing time would be labelling the
+                        wrong half of the sentence. */}
                     {meta
-                      ? <Text style={s.cardMeta} numberOfLines={1}>{meta}</Text>
+                      ? (
+                        <View style={s.metaRow}>
+                          {area
+                            ? <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+                            : null}
+                          <Text style={s.cardMeta} numberOfLines={1}>{meta}</Text>
+                        </View>
+                      )
                       : null}
                   </View>
                   {/* The rating takes the chevron's seat rather than
@@ -857,6 +873,8 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, paddingTop: 18, paddingBottom: 6, textAlign: 'center',
   },
   cardMeta: { color: colors.textTertiary, ...type.meta },
+  // The same 4pt the pin keeps from the district on PlaceCard.
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // The reference's right edge: a gold mark and the number, nothing
   // else — the count stays on the detail screen. Same gold the photo
   // overlay uses, so a star means one thing everywhere.
