@@ -19,7 +19,8 @@ import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
 import { useAuth } from '../lib/auth';
-import { membersOf } from '../lib/data';
+import { membersOf, useFriendships } from '../lib/data';
+import { splitFriendships } from '../lib/friends';
 import { useSave } from '../lib/save';
 import { useCity } from '../lib/city';
 import { Lang, useI18n } from '../lib/i18n';
@@ -159,15 +160,6 @@ function SettingsCard() {
   );
 }
 
-function ComingSoonPill() {
-  const { t } = useI18n();
-  return (
-    <View style={s.soonPill}>
-      <Text style={s.soonPillText}>{t('Coming soon', 'Sắp ra mắt', '近日公開')}</Text>
-    </View>
-  );
-}
-
 function Tagline() {
   const { t } = useI18n();
   return (
@@ -237,7 +229,9 @@ function GuestHub({ navigation }: { navigation: Nav }) {
 
       <SettingsCard />
 
-      <Card style={s.friendsCard}>
+      {/* Real now, so it behaves like every other locked row here:
+          the tap leads to signing in, which is where friends begin. */}
+      <PressableScale style={s.friendsCard} onPress={goSignIn}>
         <RoundIcon name="people-outline" />
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
@@ -245,8 +239,8 @@ function GuestHub({ navigation }: { navigation: Nav }) {
             {t('Find friends and plan unforgettable adventures together.', 'Tìm bạn bè và cùng nhau lên những chuyến đi đáng nhớ.', '友達を見つけて、忘れられない冒険を一緒に。')}
           </Text>
         </View>
-        <ComingSoonPill />
-      </Card>
+        <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+      </PressableScale>
 
       <Tagline />
     </>
@@ -272,8 +266,16 @@ function AboutRow({ icon, label, value, last }: {
 
 function AccountProfile({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
-  const { email, profile, memberSince, signOut } = useAuth();
+  const { email, profile, memberSince, signOut, session } = useAuth();
   const [busy, setBusy] = useState(false);
+  // The number on the friends card and the dot beside it. Sorted by the
+  // pure half in lib/friends; the fetch itself is scoped by RLS to edges
+  // this account is on.
+  const ships = useFriendships(session?.user?.id);
+  const crew = useMemo(
+    () => splitFriendships(ships.data, session?.user?.id ?? ''),
+    [ships.data, session?.user?.id],
+  );
   const name = profile.full_name || (email ?? '').split('@')[0];
   // Distinct places, not rows: a place saved into two of your lists is
   // one place you have found, and counting it twice would turn the ring
@@ -356,16 +358,24 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
       <SettingsCard />
 
       <Text style={s.section}>{t('Friends', 'Bạn bè', '友達')}</Text>
-      <Card style={s.friendsCard}>
-        <RoundIcon name="people-outline" />
+      {/* The pill said "Coming soon" from the day this screen shipped;
+          the card opens the crew now. The number is friends, the dot is
+          requests — two different facts, and neither borrows the other's
+          mark. */}
+      <PressableScale style={s.friendsCard} onPress={() => navigation.navigate('Crew')}>
+        <View>
+          <RoundIcon name="people-outline" />
+          {crew.incoming.length > 0 ? <View style={s.reqDot} /> : null}
+        </View>
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
           <Text style={s.featureSub}>
-            {t('Find and connect with friends to plan trips together.', 'Tìm và kết nối bạn bè để cùng lên kế hoạch.', '友達を見つけて一緒に旅を計画。')}
+            {t('Find friends and plan trips together.', 'Tìm bạn bè và cùng lên kế hoạch.', '友達を見つけて一緒に旅を計画。')}
           </Text>
         </View>
-        <ComingSoonPill />
-      </Card>
+        {crew.friends.length > 0 ? <Text style={s.friendCount}>{crew.friends.length}</Text> : null}
+        <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+      </PressableScale>
 
       <PressableScale
         style={s.signOutBtn}
@@ -444,15 +454,17 @@ const s = StyleSheet.create({
   },
   featureSub: { color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, lineHeight: 19 },
 
+  reqDot: {
+    position: 'absolute', top: -2, right: -2,
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: colors.accent,
+    borderWidth: 2, borderColor: colors.bgElevated,
+  },
+  friendCount: { color: colors.textTertiary, fontSize: 15.5, fontWeight: font.semibold },
   friendsCard: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     padding: space.cardPadding,
   },
-  soonPill: {
-    borderRadius: radius.pill, borderWidth: 1, borderColor: colors.accentLine,
-    backgroundColor: colors.accentSoft, paddingHorizontal: 10, paddingVertical: 4,
-  },
-  soonPillText: { color: colors.accent, fontSize: 11.5, fontWeight: font.semibold },
 
   section: { color: colors.text, ...type.section, marginTop: 10 },
 

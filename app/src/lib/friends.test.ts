@@ -1,0 +1,115 @@
+import { describe, expect, it } from 'vitest';
+import {
+  agoOf, buildActivity, REQUEST_DAILY_CAP, splitFriendships, standingWith,
+  TRIP_REMINDER_DAYS, type Applause, type FriendshipRow,
+} from './friends';
+
+const edge = (
+  requester: string, addressee: string,
+  status: 'pending' | 'accepted' = 'pending',
+  created_at = '2026-08-20T10:00:00Z',
+): FriendshipRow => ({ requester, addressee, status, created_at });
+
+const like = (collection_id: string, liked_at: string, handle: string | null = null): Applause => ({
+  collection_id, liked_at, friend_handle: handle, friend_name: handle && 'Some One',
+});
+
+describe('splitFriendships', () => {
+  it('sorts every edge into the three piles, whichever side I am on', () => {
+    const crew = splitFriendships([
+      edge('me', 'an', 'accepted', '2026-08-01T00:00:00Z'),
+      edge('binh', 'me', 'accepted', '2026-08-10T00:00:00Z'),
+      edge('chi', 'me'),
+      edge('me', 'dung'),
+    ], 'me');
+    // Newest friendship first.
+    expect(crew.friends).toEqual(['binh', 'an']);
+    expect(crew.incoming.map((r) => r.requester)).toEqual(['chi']);
+    expect(crew.outgoing.map((r) => r.addressee)).toEqual(['dung']);
+  });
+
+  it('drops an edge that does not name me — impossible under RLS, routine in a test', () => {
+    const crew = splitFriendships([edge('an', 'binh', 'accepted')], 'me');
+    expect(crew).toEqual({ friends: [], incoming: [], outgoing: [] });
+  });
+
+  it('newest request first, so the banner names the latest asker', () => {
+    const crew = splitFriendships([
+      edge('an', 'me', 'pending', '2026-08-01T00:00:00Z'),
+      edge('binh', 'me', 'pending', '2026-08-02T00:00:00Z'),
+    ], 'me');
+    expect(crew.incoming.map((r) => r.requester)).toEqual(['binh', 'an']);
+  });
+});
+
+describe('standingWith', () => {
+  const rows = [
+    edge('me', 'friend', 'accepted'),
+    edge('me', 'asked'),
+    edge('asker', 'me'),
+  ];
+  it('names each state the add flow has a sentence for', () => {
+    expect(standingWith(rows, 'me', 'friend')).toBe('friends');
+    expect(standingWith(rows, 'me', 'asked')).toBe('asked');
+    expect(standingWith(rows, 'me', 'asker')).toBe('asks_you');
+    expect(standingWith(rows, 'me', 'stranger')).toBe('none');
+    expect(standingWith(rows, 'me', 'me')).toBe('yourself');
+  });
+});
+
+describe('buildActivity', () => {
+  const today = '2026-08-23';
+
+  it('applause newest first', () => {
+    const items = buildActivity([
+      like('c1', '2026-08-22T10:00:00Z'),
+      like('c2', '2026-08-23T09:00:00Z', 'lanphuong'),
+    ], [], today);
+    expect(items.map((i) => i.kind)).toEqual(['applause', 'applause']);
+    expect(items[0]).toMatchObject({ collection_id: 'c2', friend_handle: 'lanphuong', friend_name: 'Some One' });
+    expect(items[1]).toMatchObject({ collection_id: 'c1', friend_handle: null });
+  });
+
+  it('the nearest upcoming trip leads, with its distance in days', () => {
+    const items = buildActivity([like('c1', '2026-08-22T10:00:00Z')], [
+      { id: 't-far', title: 'Far', day: '2026-08-29' },
+      { id: 't-near', title: 'Rooftops, then the river', day: '2026-08-26' },
+    ], today);
+    expect(items[0]).toMatchObject({ kind: 'trip', tripId: 't-near', inDays: 3 });
+    expect(items).toHaveLength(2);
+  });
+
+  it('today still counts; yesterday and beyond the window say nothing', () => {
+    expect(buildActivity([], [{ id: 't', title: 'Now', day: today }], today)[0])
+      .toMatchObject({ kind: 'trip', inDays: 0 });
+    expect(buildActivity([], [{ id: 't', title: 'Gone', day: '2026-08-22' }], today)).toEqual([]);
+    const far = `2026-08-${23 + TRIP_REMINDER_DAYS + 1}`;
+    expect(buildActivity([], [{ id: 't', title: 'Later', day: far }], today)).toEqual([]);
+  });
+
+  it('a trip whose day does not parse is silence, not a crash', () => {
+    expect(buildActivity([], [{ id: 't', title: 'Broken', day: 'someday' }], today)).toEqual([]);
+    expect(buildActivity([], [{ id: 't', title: 'Broken', day: '2026-08-25' }], 'not-a-day')).toEqual([]);
+  });
+});
+
+describe('agoOf', () => {
+  const now = Date.parse('2026-08-23T12:00:00Z');
+  it('speaks in the largest honest unit', () => {
+    expect(agoOf('2026-08-23T11:59:30Z', now)).toEqual({ unit: 'now' });
+    expect(agoOf('2026-08-23T11:15:00Z', now)).toEqual({ unit: 'minutes', n: 45 });
+    expect(agoOf('2026-08-23T09:00:00Z', now)).toEqual({ unit: 'hours', n: 3 });
+    expect(agoOf('2026-08-20T09:00:00Z', now)).toEqual({ unit: 'days', n: 3 });
+  });
+
+  it('the future and the unreadable both clamp to now', () => {
+    expect(agoOf('2026-08-23T13:00:00Z', now)).toEqual({ unit: 'now' });
+    expect(agoOf('garbage', now)).toEqual({ unit: 'now' });
+  });
+});
+
+describe('the cap', () => {
+  it('mirrors the policy', () => {
+    expect(REQUEST_DAILY_CAP).toBe(20);
+  });
+});
