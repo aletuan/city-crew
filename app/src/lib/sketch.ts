@@ -217,6 +217,19 @@ export function stopCount(n: number, t: (en: string, vi: string, ja?: string) =>
 // Nothing loops. A line that comes back round is the tell of a progress
 // bar with nothing behind it.
 
+/**
+ * A finding, ready for the feed: what was worked out, and the mark that
+ * says what *kind* of fact it is — a clock for opening hours, a pin for
+ * the starting stop, a walker for the first leg, a calendar for the
+ * day's window.
+ *
+ * The icon names are Ionicons keys, the same convention `vibes.ts` and
+ * `categories.ts` keep: the lib decides which mark a fact wears, because
+ * that pairing is part of the fact's meaning, and the screen only draws
+ * it. A test walks the list and asserts every finding carries one.
+ */
+export type FindingLine = { icon: string; text: string };
+
 /** Everything the box can say, measured from the plan that already
  *  exists. Nulls are honest: a catalog that could not be read, a day with
  *  one stop and therefore no journey. */
@@ -256,55 +269,80 @@ export function findingsOf(
     distance: (km: number) => string;
     minutes: (n: number) => string;
   },
-): (string | null)[] {
+): (FindingLine | null)[] {
   const open = f.openNow > 0
-    ? t(
-      `${f.openNow} places open at ${fmt.clock(f.startMin)}`,
-      `${f.openNow} chỗ mở lúc ${fmt.clock(f.startMin)}`,
-      `${fmt.clock(f.startMin)}に開いているのは${f.openNow}件`,
-    )
+    ? {
+      icon: 'time-outline',
+      text: t(
+        `${f.openNow} places open at ${fmt.clock(f.startMin)}`,
+        `${f.openNow} chỗ mở lúc ${fmt.clock(f.startMin)}`,
+        `${fmt.clock(f.startMin)}に開いているのは${f.openNow}件`,
+      ),
+    }
     : null;
 
   const start = f.opening
-    ? t(`Starting at ${f.opening}`, `Bắt đầu ở ${f.opening}`, `${f.opening}から`)
+    ? {
+      icon: 'location-outline',
+      text: t(`Starting at ${f.opening}`, `Bắt đầu ở ${f.opening}`, `${f.opening}から`),
+    }
     : null;
 
   const hop = f.hop
-    ? t(
-      `${fmt.distance(f.hop.km)} to the next stop, about ${fmt.minutes(f.hop.minutes)}`,
-      `${fmt.distance(f.hop.km)} tới điểm sau, khoảng ${fmt.minutes(f.hop.minutes)}`,
-      `次のスポットまで${fmt.distance(f.hop.km)}、約${fmt.minutes(f.hop.minutes)}`,
-    )
+    ? {
+      icon: 'walk-outline',
+      text: t(
+        `${fmt.distance(f.hop.km)} to the next stop, about ${fmt.minutes(f.hop.minutes)}`,
+        `${fmt.distance(f.hop.km)} tới điểm sau, khoảng ${fmt.minutes(f.hop.minutes)}`,
+        `次のスポットまで${fmt.distance(f.hop.km)}、約${fmt.minutes(f.hop.minutes)}`,
+      ),
+    }
     : null;
 
   const window = f.window
-    ? t(
-      `Your day runs ${fmt.clock(f.window[0])}–${fmt.clock(f.window[1])}`,
-      `Ngày của bạn từ ${fmt.clock(f.window[0])}–${fmt.clock(f.window[1])}`,
-      `${fmt.clock(f.window[0])}–${fmt.clock(f.window[1])}の一日`,
-    )
+    ? {
+      icon: 'calendar-outline',
+      text: t(
+        `Your day runs ${fmt.clock(f.window[0])}–${fmt.clock(f.window[1])}`,
+        `Ngày của bạn từ ${fmt.clock(f.window[0])}–${fmt.clock(f.window[1])}`,
+        `${fmt.clock(f.window[0])}–${fmt.clock(f.window[1])}の一日`,
+      ),
+    }
     : null;
 
   return [null, open, start, hop, window];
 }
 
 /**
- * The line to show while step `step` is running: that step's finding, or
- * the last one before it that had something to say.
+ * The feed's two slots while step `step` is running: the fact being
+ * worked out now, and the one just settled above it.
  *
- * Falling forward rather than blanking, because the alternative is a box
- * that empties and refills — and an element that disappears reads as
- * something having gone wrong, not as a step having nothing to add. The
- * first step has no finding by design, so this returns null there and the
- * screen keeps its skeleton until there is a fact to replace it with.
+ * `current` is this step's finding, or the last one before it that had
+ * something to say — falling forward rather than blanking, because a box
+ * that empties and refills reads as something having gone wrong, not as
+ * a step with nothing to add. `previous` is the settled fact before
+ * *that* one, found the same way, and null while the feed holds only its
+ * first line — the mockup's mid-state, one bright line standing alone.
  *
- * A step past the end holds the last line rather than clearing: the
- * screen finishes on that frame and hands over, and a box that goes blank
- * on the way out is a flicker.
+ * Two slots and never more, matching the reference: a third line would
+ * be history for its own sake, and the box under the steps is a report,
+ * not a transcript.
+ *
+ * A step past the end holds the last frame rather than clearing: the
+ * screen finishes on it and hands over, and a feed that goes blank on
+ * the way out is a flicker.
  */
-export function latestFinding(findings: readonly (string | null)[], step: number): string | null {
+export function findingFeed(
+  findings: readonly (FindingLine | null)[], step: number,
+): { previous: FindingLine | null; current: FindingLine | null } {
+  let current: FindingLine | null = null;
+  let previous: FindingLine | null = null;
   for (let i = Math.min(step, findings.length - 1); i >= 0; i--) {
-    if (findings[i]) return findings[i];
+    const line = findings[i];
+    if (!line) continue;
+    if (!current) { current = line; continue; }
+    previous = line;
+    break;
   }
-  return null;
+  return { previous, current };
 }

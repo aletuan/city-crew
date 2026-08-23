@@ -45,7 +45,7 @@ import { legsOf } from '../lib/travel';
 import { useSave } from '../lib/save';
 import { usePlanProfile } from '../lib/tasteProfile';
 import {
-  finished, findingsOf, latestFinding, SKETCH_STEPS, STEP_FLOOR_MS, stepStates,
+  findingFeed, type FindingLine, finished, findingsOf, SKETCH_STEPS, STEP_FLOOR_MS, stepStates,
   summaryLine, type StepState,
 } from '../lib/sketch';
 import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
@@ -67,15 +67,18 @@ import { colors, font, gradAI, radius, space } from '../theme';
 const HOLD_MS = 8000;
 
 /**
- * One finding, arriving.
+ * The reasoning feed: the fact being worked out, over the one just
+ * settled.
  *
  * ── the animation, and what it is allowed to imply ──
  *
- * Each line fades up and settles. It does not loop, and there is no
- * marquee: a status line that comes back round is the tell of a progress
- * bar with nothing behind it, and this screen spent its first life being
- * exactly that. Every line here is a fact about a plan that already
- * exists, shown once, and replaced when the step above it changes.
+ * Two slots, never more. The current line fades up bright with its mark
+ * pulsing; when the next fact lands, it slides into the seat above —
+ * dimmed, behind a small check — and the feed moves on. Nothing loops
+ * and there is no marquee: a status line that comes back round is the
+ * tell of a progress bar with nothing behind it, and this screen spent
+ * its first life being exactly that. Every line here is a fact about a
+ * plan that already exists, shown once, settled once.
  *
  * ── why the whole box does not resize ──
  *
@@ -91,10 +94,14 @@ const HOLD_MS = 8000;
  * asked the system for less movement is not asking for faster movement,
  * and this screen already honours the same flag on the orb.
  */
-function Finding({ text, still }: { text: string; still: boolean }) {
+function FindingFeed({ previous, current, still }: {
+  previous: FindingLine | null; current: FindingLine; still: boolean;
+}) {
+  // The current line arrives the way the single line always did: a short
+  // fade-and-rise, keyed on the text so a fact held across two steps
+  // does not blink.
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(6)).current;
-
   useEffect(() => {
     if (still) { fade.setValue(1); rise.setValue(0); return; }
     fade.setValue(0);
@@ -105,14 +112,68 @@ function Finding({ text, still }: { text: string; still: boolean }) {
     ]);
     run.start();
     return () => run.stop();
-    // Keyed on the text: a new fact is a new arrival, and the same fact
-    // held across two steps must not blink.
-  }, [text, still, fade, rise]);
+  }, [current.text, still, fade, rise]);
+
+  // The settled line slides up into its seat — the same frame the fact
+  // it names stops being current — and lands dimmed. The dim is the
+  // whole costume: a real blur is Android-only in RN and a milky overlay
+  // everywhere else, and a line at 60% in the footnote colour says
+  // "already handled" just as clearly on both platforms.
+  const prevIn = useRef(new Animated.Value(0)).current;
+  const prevRise = useRef(new Animated.Value(12)).current;
+  useEffect(() => {
+    if (!previous) return;
+    if (still) { prevIn.setValue(1); prevRise.setValue(0); return; }
+    prevIn.setValue(0);
+    prevRise.setValue(12);
+    const run = Animated.parallel([
+      Animated.timing(prevIn, { toValue: 1, duration: 260, useNativeDriver: true }),
+      Animated.timing(prevRise, { toValue: 0, duration: 260, useNativeDriver: true }),
+    ]);
+    run.start();
+    return () => run.stop();
+  }, [previous?.text, previous, still, prevIn, prevRise]);
+
+  // The soft pulse on the current line's mark — "being worked out", said
+  // without words. A loop, which is exactly what the box's own rules
+  // forbid for *content*; a glow is not content, and it stops the moment
+  // the line settles into the seat above. Reduce Motion stills it, the
+  // same courtesy the orb and the tab bar already pay.
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (still) { pulse.setValue(1); return; }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 0.55, duration: 700, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [still, pulse]);
 
   return (
-    <Animated.View style={[s.finding, { opacity: fade, transform: [{ translateY: rise }] }]}>
-      <Text style={s.findingText}>{text}</Text>
-    </Animated.View>
+    <View style={s.finding}>
+      {previous ? (
+        <Animated.View
+          style={[s.findingRow, {
+            opacity: prevIn.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6] }),
+            transform: [{ translateY: prevRise }],
+          }]}
+        >
+          <Ionicons name="checkmark" size={13} color={colors.textTertiary} />
+          <Text style={s.findingPrevText} numberOfLines={1}>{previous.text}</Text>
+        </Animated.View>
+      ) : null}
+      <Animated.View style={[s.findingRow, { opacity: fade, transform: [{ translateY: rise }] }]}>
+        <Animated.View style={{ opacity: pulse }}>
+          <Ionicons
+            name={current.icon as React.ComponentProps<typeof Ionicons>['name']}
+            size={16}
+            color={colors.accent}
+          />
+        </Animated.View>
+        <Text style={s.findingText}>{current.text}</Text>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -250,10 +311,10 @@ export default function SketchingScreen({ navigation, route }: {
     return () => clearTimeout(id);
   }, [loading, step, wordsReady]);
 
-  /** The line in the box: this step's finding, or the last one before it
-   *  that had something to say. Null until the second step, when the
-   *  first fact exists — until then the skeleton stands. */
-  const finding = latestFinding(findings, step);
+  /** The feed's two slots: this step's finding over the one before it.
+   *  Both null until the second step, when the first fact exists — until
+   *  then the skeleton stands. */
+  const feed = findingFeed(findings, step);
 
   const states = stepStates(step);
   const done = finished(step);
@@ -314,8 +375,8 @@ export default function SketchingScreen({ navigation, route }: {
             matches those choices" makes the screen argue with itself. */}
         {!empty && (
           <View style={s.preview}>
-            {finding
-              ? <Finding text={finding} still={calm} />
+            {feed.current
+              ? <FindingFeed previous={feed.previous} current={feed.current} still={calm} />
               : (
                 <>
                   <Skeleton style={{ height: 12, width: '46%', borderRadius: 6 }} />
@@ -489,12 +550,22 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceCard, borderRadius: radius.card,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  finding: { alignSelf: 'stretch' },
+  finding: { alignSelf: 'stretch', gap: 8 },
+  findingRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  // The settled line, a size down and in the footnote colour — the
+  // animated 0.6 opacity above does the rest of the receding.
+  findingPrevText: {
+    color: colors.textTertiary, fontSize: 13, lineHeight: 18,
+    textAlign: 'center', flexShrink: 1,
+  },
   // A size up from `note` and in the reading colour, because this is
   // content rather than a footnote about the screen — it is the first
   // piece of the answer the reader gets.
   findingText: {
-    color: colors.textSecondary, fontSize: 15, lineHeight: 21, textAlign: 'center',
+    color: colors.textSecondary, fontSize: 15, lineHeight: 21,
+    textAlign: 'center', flexShrink: 1,
   },
   note: { color: colors.textTertiary, fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 2 },
 });
