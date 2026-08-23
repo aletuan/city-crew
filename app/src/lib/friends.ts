@@ -167,6 +167,40 @@ export function suggestable<T extends { id: string }>(
   return found.filter((p) => p.id !== me && !hidden.includes(p.id)).slice(0, SUGGEST_LIMIT);
 }
 
+// ── people worth asking ──
+
+/** One introduction, as `suggested_friends` returns it: an account and
+ *  how many places you have both saved publicly. */
+export type Suggestion = { other: string; mutual: number };
+
+/** How many introductions the crew screen offers at once. Five: enough
+ *  to find somebody, few enough that the section stays an aside rather
+ *  than becoming the screen. */
+export const SUGGESTED_SHOWN = 5;
+
+/**
+ * The suggestions still worth showing, given what the reader has done
+ * since the server answered.
+ *
+ * The function already excludes friends, pending edges and blocks — but
+ * it answered a moment ago, and a tap on Add changes the truth without
+ * asking it again. Re-checking here is what makes a row vanish the
+ * instant it is acted on, rather than sitting there inviting a second
+ * request the policy would refuse. `standingWith` is the same reading
+ * the add flow uses, so one rule decides in both places.
+ */
+export function openSuggestions(
+  rows: readonly Suggestion[],
+  me: string,
+  ships: readonly FriendshipRow[],
+  blocked: readonly string[] = [],
+  limit: number = SUGGESTED_SHOWN,
+): Suggestion[] {
+  return rows
+    .filter((r) => standingWith(ships, me, r.other) === 'none' && !blocked.includes(r.other))
+    .slice(0, limit);
+}
+
 /**
  * How long ago, as a unit the screen can put words to.
  *

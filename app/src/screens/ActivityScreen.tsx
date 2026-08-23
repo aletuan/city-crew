@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthHeader, AuthScreen } from '../components/authUi';
+import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import { Card, Empty, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCollections } from '../lib/catalog';
@@ -88,26 +89,57 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
     done.then(() => { if (yes) successHaptic(); ships.reload(); }).catch(() => {});
   };
 
-  // The stronger no, one press deeper. Decline alone lets the same
-  // person ask again tomorrow; holding it offers the door that stays
-  // shut. Neither says anything to the other side.
-  const declineHard = (requester: string, p?: FriendProfile) => Alert.alert(
-    p ? atHandle(p.handle) : t('This request', 'Lời mời này', 'このリクエスト'),
-    t(
-      'Decline once, or block so they cannot ask again?',
-      'Từ chối lần này, hay chặn để họ không mời lại được?',
-      '今回だけ拒否しますか、それともブロックして今後のリクエストを止めますか？',
-    ),
-    [
-      { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
-      { text: t('Decline', 'Từ chối', '拒否'), onPress: () => answer(requester, false) },
+  // The stronger no, one press deeper — and in the same sheet the crew
+  // screen uses, so a request answered from here and one answered from
+  // there present the same two choices in the same words. See
+  // PersonSheet for why this is not an Alert any more.
+  const [sheet, setSheet] = useState<{
+    name: string; meta?: string; avatar?: string; actions: PersonAction[];
+  } | null>(null);
+
+  const openRequestSheet = (requester: string, p?: FriendProfile) => setSheet({
+    name: p ? (p.full_name || atHandle(p.handle)) : t('This request', 'Lời mời này', 'このリクエスト'),
+    meta: p ? atHandle(p.handle) : undefined,
+    avatar: p?.avatar_url || undefined,
+    actions: [
       {
-        text: t('Block', 'Chặn', 'ブロック'),
-        style: 'destructive',
-        onPress: () => { blockUser(requester).then(() => ships.reload()).catch(() => {}); },
+        key: 'decline',
+        icon: 'close-circle-outline',
+        title: t('Decline', 'Từ chối', '拒否'),
+        desc: t(
+          'The request goes, silently. They can ask again another day.',
+          'Lời mời biến mất, im lặng. Hôm khác họ vẫn có thể mời lại.',
+          'リクエストは静かに消えます。相手はまた後日申請できます。',
+        ),
+        onPress: () => answer(requester, false),
+      },
+      {
+        key: 'block',
+        icon: 'ban-outline',
+        title: t('Decline and block', 'Từ chối và chặn', '拒否してブロック'),
+        desc: t(
+          'Refuse it and stop them asking again.',
+          'Từ chối và chặn họ mời lại.',
+          '拒否して、今後の申請も止めます。',
+        ),
+        destructive: true,
+        onPress: () => Alert.alert(
+          p
+            ? t(`Block ${atHandle(p.handle)}?`, `Chặn ${atHandle(p.handle)}?`, `${atHandle(p.handle)} をブロックしますか？`)
+            : t('Block this person?', 'Chặn người này?', 'この人をブロックしますか？'),
+          t('They will not be told. You can undo this from Your crew.', 'Họ sẽ không được báo. Bạn có thể bỏ chặn trong Crew của bạn.', '相手に通知されません。クルー画面から解除できます。'),
+          [
+            { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+            {
+              text: t('Block', 'Chặn', 'ブロック'),
+              style: 'destructive',
+              onPress: () => { blockUser(requester).then(() => ships.reload()).catch(() => {}); },
+            },
+          ],
+        ),
       },
     ],
-  );
+  });
 
   const agoLabel = (iso: string): string => {
     const ago = agoOf(iso, Date.now());
@@ -152,7 +184,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                       behind a long-press on Decline, which no screen can
                       teach. The ⋯ opens the same decline-or-block ask. */}
                   <PressableScale
-                    onPress={() => declineHard(r.requester, p)}
+                    onPress={() => openRequestSheet(r.requester, p)}
                     scaleTo={0.85}
                     hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
                     accessibilityRole="button"
@@ -181,7 +213,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                     containerStyle={s.half}
                     style={s.decline}
                     onPress={() => answer(r.requester, false)}
-                    onLongPress={() => declineHard(r.requester, p)}
+                    onLongPress={() => openRequestSheet(r.requester, p)}
                     accessibilityRole="button"
                     accessibilityHint={t('Hold to block', 'Giữ để chặn', '長押しでブロック')}
                   >
@@ -253,6 +285,14 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
           })}
         </Card>
       )}
+      <PersonSheet
+        visible={sheet !== null}
+        name={sheet?.name ?? ''}
+        meta={sheet?.meta}
+        avatarUrl={sheet?.avatar}
+        actions={sheet?.actions ?? []}
+        onClose={() => setSheet(null)}
+      />
     </AuthScreen>
   );
 }
