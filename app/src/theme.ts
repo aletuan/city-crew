@@ -196,6 +196,15 @@ export const onPhoto = {
    * appears on the page itself.
    */
   star: '#F2B441',
+  /**
+   * The sun in the weather mark where it rides a photograph. `colors.sun`
+   * is a pair that follows the page, and its paper-side deep gold is
+   * exactly the mid-tone that vanishes into a scrim — over a photo the
+   * bright one is right in both themes. The same value as the star, but a
+   * different slot on purpose: the star's note above confines *it* to the
+   * rating glyph, and this mark is not a rating.
+   */
+  sun: '#F2B441',
 } as const;
 
 /** The accent as a gradient, for the rare loud surface. Left to right

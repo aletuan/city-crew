@@ -1,19 +1,26 @@
-// Explore — the guest landing surface, modeled on the mockup's home:
-// dated eyebrow + editorial title, a hero built on a featured place's
-// photography, a horizontal shelf of public collections, then the
-// browsable places list. Signing in is asked for where it is needed —
-// bookmarking a place — rather than from a permanent control in a corner.
+// Explore — the guest landing surface. It opens on photography: a
+// full-bleed hero built on a featured place's picture, wearing the
+// dateline, the sky and the search control the old fixed header used to
+// hold, then a horizontal shelf of public collections and the browsable
+// places list. The screen has no title of its own — the hero's headline
+// names the city, and "Discover Saigon" over "Ideas for a night in
+// Saigon" was two headings saying one thing. Signing in is asked for
+// where it is needed — bookmarking a place — rather than from a
+// permanent control in a corner.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated, Pressable, ScrollView, StyleSheet, Text, View,
+  Animated, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
 import PlaceCard from '../components/PlaceCard';
 import { AddPill, AddSlot } from '../components/add';
-import { AmbientWarmth, Chip, Empty, EyebrowText, fireHaptic, glassHalo, GlassMaterial, PressableScale, RoundIconButton, Screen, Skeleton, TAB_BAR_HEIGHT, useTabBarClearance, useTabBarLift } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useTabBarClearance, useTabBarLift } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
@@ -43,6 +50,13 @@ const ALL = 'all';
  * heading, whose `marginBottom` is already the gap the app uses between
  * any heading and its content — and the two were adding up, so that one
  * heading stood 26pt off its content where every other stands 16.
+ *
+ * Since the screen went full-bleed the row's real top padding is this
+ * *plus the safe-area inset*: with no fixed header left above it, pinning
+ * means pinning to the raw top of the glass, and without the inset the
+ * chips would sit under the clock. The subtraction at the heading grows
+ * by the same amount, so the at-rest geometry is unchanged — see the
+ * heading's own comment.
  */
 const FILTER_PAD = 10;
 
@@ -216,78 +230,119 @@ function heroPlace(places: Place[], pinnedSlug?: string | null): Place | undefin
   );
 }
 
-function Hero({ place, onStart, scrollY }: {
+function Hero({ place, heroH, onStart, onSearch, scrollY }: {
   place: Place | undefined;
+  /** Decided by the screen, not here: the screen needs the same number
+   *  for its status-bar threshold, so there is exactly one of it. */
+  heroH: number;
   /** What the button does. It used to scroll to the places list a little
    *  further down the same screen — a jump the reader could make with a
    *  thumb, on a card whose whole job is to be the invitation into the
    *  app. It now opens the planner, which is the one thing on this screen
    *  a reader cannot get to by scrolling. */
   onStart: () => void;
+  /** Search rides the photograph now that there is no header to hold it.
+   *  It scrolls away with the hero, and that is accepted on purpose: the
+   *  pinned filter keeps the list navigable, and the scroll-nudge dock
+   *  re-offers search the moment browsing starts to look like hunting. */
+  onSearch: () => void;
   scrollY: Animated.Value;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { city } = useCity();
+  const insets = useSafeAreaInsets();
+  // The city's centre, never the device's position — someone with the
+  // city set to follow their location still keeps it on their phone.
+  const sky = useSky(city?.center_lat, city?.center_lng);
   const uri = place && coverOf(place)?.photo_uri;
   // The photo trails the scroll slightly; pre-scaled so no edge shows.
-  const parallax = scrollY.interpolate({ inputRange: [0, 320], outputRange: [0, 26], extrapolate: 'clamp' });
+  const parallax = scrollY.interpolate({
+    inputRange: [0, heroH], outputRange: [0, Math.round(heroH * 0.08)], extrapolate: 'clamp',
+  });
   return (
-    <View style={s.heroWrap}>
-      <View style={s.hero}>
-        {uri
-          ? (
-            <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: parallax }, { scale: 1.12 }] }]}>
-              <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
-            </Animated.View>
-          )
-          : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
-        <LinearGradient
-          colors={['rgba(10,11,10,0.45)', 'rgba(10,11,10,0.06)', 'rgba(10,11,10,0.55)', 'rgba(10,11,10,0.97)']}
-          locations={[0, 0.22, 0.64, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={s.heroContent}>
-          <Text style={s.heroTitle}>
-            {city?.hero_title_en
-              ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja)
-              : t(
-                  `Ideas for a night in ${city?.short_en ?? 'the city'}`,
-                  `Gợi ý cho một đêm ở ${city?.short_vi ?? 'thành phố'}`,
-                  `${city?.short_ja ?? city?.short_en ?? 'この街'}、夜のアイデア`,
-                )}
-          </Text>
-          {/* The desk's line for this city, the same way the headline is.
-              Cleared, it falls back to the guest-facing sentence it used
-              to always be — which is the right default precisely because
-              the reader with the most to learn from it is the one who has
-              not signed in. */}
-          <Text style={s.heroSub}>
-            {city?.hero_sub_en
-              ? t(city.hero_sub_en, city.hero_sub_vi, city.hero_sub_ja)
-              : t(
-                  'Browse public collections and places — no account needed.',
-                  'Xem bộ sưu tập và địa điểm công khai — không cần tài khoản.',
-                  'コレクションとスポットを自由に閲覧 — アカウント不要。',
-                )}
-          </Text>
-          <PressableScale onPress={onStart} accessibilityRole="button" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
-            <LinearGradient {...gradAI} style={s.heroCta}>
-              <Text style={s.heroCtaText}>
-                {/* Two words at most, and the arrow beside them already
-                    says "start". "Bắt đầu khám phá" spent half its width
-                    on the verb the button is; the Japanese was doing the
-                    same with 探索を始める. Kept in step with the copy of
-                    this default in the desk's City hero screen — the two
-                    codebases share no module, so the only thing holding
-                    them together is that each says so. */}
-                {city?.hero_cta_en
-                  ? t(city.hero_cta_en, city.hero_cta_vi, city.hero_cta_ja)
-                  : t("Let's go", 'Khám phá', 'はじめる')}
-              </Text>
-              <Ionicons name="arrow-forward" size={17} color={colors.accentInk} />
-            </LinearGradient>
-          </PressableScale>
+    <View style={[s.hero, { height: heroH }]}>
+      {uri
+        ? (
+          <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateY: parallax }, { scale: 1.12 }] }]}>
+            <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
+          </Animated.View>
+        )
+        // No photo: the scrim below still lays its wash over this, so the
+        // panel reads as a quiet dark ground in both themes and the type
+        // keeps its contrast. A city with no photography at all is a
+        // catalog problem, not a layout to design around.
+        : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
+      <LinearGradient
+        colors={['rgba(10,11,10,0.45)', 'rgba(10,11,10,0.06)', 'rgba(10,11,10,0.55)', 'rgba(10,11,10,0.97)']}
+        locations={[0, 0.22, 0.64, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+      {/* What the fixed header used to hold, embedded in the photograph:
+          the dateline with the weather hanging off its end — nothing
+          moves when the temperature arrives, nothing is missing when it
+          does not — and the search control. Both carry their own dark
+          glass, because the top of this picture can be any sky. */}
+      <View style={[s.heroTop, { top: insets.top + 6 }]}>
+        <View style={s.heroDate}>
+          <Text style={s.heroDateText}>{dateline(lang, new Date())}</Text>
+          {sky ? (
+            <>
+              <Ionicons name={sky.icon} size={14} color={sky.gold ? onPhoto.sun : onPhoto.textSecondary} />
+              <Text style={s.heroDateText}>{`${sky.temp}°`}</Text>
+            </>
+          ) : null}
         </View>
+        <PressableScale
+          onPress={onSearch}
+          scaleTo={0.9}
+          style={s.heroSearch}
+          accessibilityRole="button"
+          accessibilityLabel={t('Search', 'Tìm kiếm', '検索')}
+        >
+          <Ionicons name="search-outline" size={22} color={onPhoto.text} />
+        </PressableScale>
+      </View>
+      <View style={s.heroContent}>
+        <Text style={s.heroTitle}>
+          {city?.hero_title_en
+            ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja)
+            : t(
+                `Ideas for a night in ${city?.short_en ?? 'the city'}`,
+                `Gợi ý cho một đêm ở ${city?.short_vi ?? 'thành phố'}`,
+                `${city?.short_ja ?? city?.short_en ?? 'この街'}、夜のアイデア`,
+              )}
+        </Text>
+        {/* The desk's line for this city, the same way the headline is.
+            Cleared, it falls back to the guest-facing sentence it used
+            to always be — which is the right default precisely because
+            the reader with the most to learn from it is the one who has
+            not signed in. */}
+        <Text style={s.heroSub}>
+          {city?.hero_sub_en
+            ? t(city.hero_sub_en, city.hero_sub_vi, city.hero_sub_ja)
+            : t(
+                'Browse public collections and places — no account needed.',
+                'Xem bộ sưu tập và địa điểm công khai — không cần tài khoản.',
+                'コレクションとスポットを自由に閲覧 — アカウント不要。',
+              )}
+        </Text>
+        <PressableScale onPress={onStart} accessibilityRole="button" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
+          <LinearGradient {...gradAI} style={s.heroCta}>
+            <Text style={s.heroCtaText}>
+              {/* Two words at most, and the arrow beside them already
+                  says "start". "Bắt đầu khám phá" spent half its width
+                  on the verb the button is; the Japanese was doing the
+                  same with 探索を始める. Kept in step with the copy of
+                  this default in the desk's City hero screen — the two
+                  codebases share no module, so the only thing holding
+                  them together is that each says so. */}
+              {city?.hero_cta_en
+                ? t(city.hero_cta_en, city.hero_cta_vi, city.hero_cta_ja)
+                : t("Let's go", 'Khám phá', 'はじめる')}
+            </Text>
+            <Ionicons name="arrow-forward" size={17} color={colors.accentInk} />
+          </LinearGradient>
+        </PressableScale>
       </View>
     </View>
   );
@@ -450,15 +505,40 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
 }
 
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { city } = useCity();
-  // The city's centre, never the device's position — someone with the
-  // city set to follow their location still keeps it on their phone.
-  const sky = useSky(city?.center_lat, city?.center_lng);
   const { loading, error, data: places, reload } = usePlaces();
   const [cat, setCat] = useState<string>(ALL);
   const tabClearance = useTabBarClearance();
+  const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  // A little over half the window, banded: enough photograph to be the
+  // front door, never so much that the shelf drops entirely below the
+  // fold. One number, decided here, because the hero draws it and the
+  // status-bar threshold below reads it.
+  const { height: winH } = useWindowDimensions();
+  const heroH = Math.min(560, Math.max(380, Math.round(winH * 0.56)));
+
+  /**
+   * Which type the status bar wants, now that the clock sits on the
+   * photograph. Over the hero the scrim is dark whatever the theme, so
+   * both want light type there; past it the page is its own ground again
+   * and the scheme decides. Dark theme is light type either way — this
+   * only ever moves anything on paper.
+   *
+   * Tracked as a crossing rather than derived per frame: the scroll
+   * listener below is created once, so it reads the threshold through a
+   * ref and only touches state when the answer changes.
+   */
+  const light = useScheme().scheme === 'light';
+  const focused = useIsFocused();
+  const [pastHero, setPastHero] = useState(false);
+  const pastHeroRef = useRef(false);
+  const heroEndRef = useRef(0);
+  // Past once the photo's last 44pt are leaving — the moment the dark
+  // ground stops being what is under the clock.
+  heroEndRef.current = heroH - insets.top - 44;
 
   // Only categories this city actually has, so a chip never leads to an
   // empty list. Order comes from the taxonomy, not from the data.
@@ -522,7 +602,16 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const duckRef = useRef(duckScroll);
   duckRef.current = duckScroll;
   const onScrollJS = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
-    if (e.nativeEvent.contentOffset.y < 320) setFirst(0);
+    const y = e.nativeEvent.contentOffset.y;
+    if (y < 320) setFirst(0);
+    // The status-bar crossing, guarded on its own mirror for the same
+    // reason `setFirst` is: this closure is built once and state it set
+    // every frame would render every frame.
+    const past = y > heroEndRef.current;
+    if (past !== pastHeroRef.current) {
+      pastHeroRef.current = past;
+      setPastHero(past);
+    }
     duckRef.current?.(e as never);
   }).current;
 
@@ -550,24 +639,57 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     return () => clearTimeout(id);
   }, [ducked, deep, nudgeGate]);
 
+  /**
+   * The list header's measured height **is** the offset at which the
+   * filter row pins — the row is the very next cell — and the pinning
+   * moment is when its backing must be opaque. Measured rather than
+   * summed: the shelf's height depends on whether this city has
+   * collections at all.
+   */
+  const [headerH, setHeaderH] = useState(0);
   const header = (
-    <>
+    <View onLayout={(e) => setHeaderH(Math.round(e.nativeEvent.layout.height))}>
       {/* Across to the Ideas tab, not down this screen.
           `goTo` rather than `navigation`: the planner lives in a sibling
           tab's stack, which this screen's own navigator cannot address —
           which is exactly what that helper exists for. */}
       <Hero
         place={hero}
+        heroH={heroH}
         onStart={() => goTo('Ideas', { screen: 'IdeasHome' })}
+        onSearch={() => navigation.navigate('Search')}
         scrollY={scrollY}
       />
       <CollectionShelf navigation={navigation} />
-      {/* Short of the usual gap by exactly the filter row's top padding,
-          so the space you see between this heading and its chips is the
-          same 16 that sits under every other heading. */}
-      <Text style={[s.section, s.sectionOverFilter]}>{t('Places', 'Địa điểm', 'スポット')}</Text>
-    </>
+      {/* Short of the usual gap by exactly the filter row's top padding —
+          FILTER_PAD and the safe-area inset the row carries for its
+          pinned life — so the space you see between this heading and its
+          chips is the same 16 that sits under every other heading. The
+          inset's worth of the row overlaps this heading at rest, and
+          harmlessly: the row's backing is transparent until it pins, and
+          neither the heading nor the row's padding is a touch target. */}
+      <Text style={[s.section, { marginBottom: space.headingToContent - FILTER_PAD - insets.top }]}>
+        {t('Places', 'Địa điểm', 'スポット')}
+      </Text>
+    </View>
   );
+
+  /**
+   * The row's backing, faded in just before it pins. At rest the row must
+   * be transparent — its safe-area padding overlaps the Places heading —
+   * and pinned it must be opaque, or the list would read through the
+   * chips and the status bar. The crossover is the pin offset, which is
+   * `headerH`: fully opaque 8pt early, so the backing is already solid
+   * when the first card slides under. Until the header has reported a
+   * height nothing has scrolled, so the plain 0 stands in.
+   */
+  const filterBg = headerH > 0
+    ? scrollY.interpolate({
+        inputRange: [Math.max(0, headerH - 28), Math.max(1, headerH - 8)],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+      })
+    : 0;
 
   /**
    * The filter row, pinned for as long as the places are on screen.
@@ -586,7 +708,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * a control you touch once at the start.
    */
   const filters = (
-    <View style={s.filterBar}>
+    <View style={[s.filterBar, { paddingTop: FILTER_PAD + insets.top }]}>
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, s.filterBarBg, { opacity: filterBg }]} />
       <View style={s.filterHair} />
       <ScrollView
         horizontal
@@ -613,46 +736,34 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   );
 
   return (
-    <Screen
-      // Weather hangs off the end of the date rather than sitting in its
-      // own slot: nothing moves when it arrives, and nothing is missing
-      // when it does not.
-      eyebrow={(
-        <>
-          <EyebrowText>{dateline(lang, new Date())}</EyebrowText>
-          {sky ? (
-            <>
-              <Ionicons name={sky.icon} size={14} color={sky.gold ? colors.sun : colors.textSecondary} />
-              <EyebrowText>{`${sky.temp}°`}</EyebrowText>
-            </>
-          ) : null}
-        </>
-      )}
-      title={t(`Discover ${city?.short_en ?? '…'}`, `Khám phá ${city?.short_vi ?? '…'}`, `${city?.short_ja ?? city?.short_en ?? '…'}を発見`)}
-      // Search only. A header action should act on the screen it sits
-      // above; getting to your profile is the tab bar's job, and it is
-      // on screen already.
-      right={(
-        <RoundIconButton
-          icon="search-outline"
-          onPress={() => navigation.navigate('Search')}
-          label={t('Search', 'Tìm kiếm', '検索')}
-        />
-      )}
-    >
+    // No `Screen`, no safe-area top: the photograph owns the top edge.
+    // The dateline, the sky and search — the old header's contents — ride
+    // the hero itself, and the screen's title went entirely: the hero's
+    // headline names the city, and two headings were saying one thing.
+    <View style={s.screen}>
+      {/* Rendered only while this tab is focused — expo's StatusBar is a
+          stack, so the app-level one takes back over the moment another
+          screen covers this one or the reader switches tabs. */}
+      {focused && <StatusBar animated style={pastHero ? (light ? 'dark' : 'light') : 'light'} />}
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {loading && (
-          <View style={{ paddingHorizontal: space.page, gap: space.cardGap }}>
-            <Skeleton style={{ height: 320, borderRadius: 22 }} />
-            <View style={{ flexDirection: 'row', gap: space.cardGap }}>
-              <Skeleton style={{ width: 176, height: 200 }} />
-              <Skeleton style={{ flex: 1, height: 200 }} />
+          <View style={{ gap: space.cardGap }}>
+            <Skeleton style={{ height: heroH, borderRadius: 0, borderBottomLeftRadius: radius.card, borderBottomRightRadius: radius.card }} />
+            <View style={{ paddingHorizontal: space.page, gap: space.cardGap }}>
+              <View style={{ flexDirection: 'row', gap: space.cardGap }}>
+                <Skeleton style={{ width: 176, height: 200 }} />
+                <Skeleton style={{ flex: 1, height: 200 }} />
+              </View>
+              <Skeleton style={{ height: 180, borderRadius: 22 }} />
             </View>
-            <Skeleton style={{ height: 180, borderRadius: 22 }} />
           </View>
         )}
-        {error && <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`, `読み込みに失敗しました: ${error}`)} />}
+        {error && (
+          <View style={{ paddingTop: insets.top + 12 }}>
+            <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`, `読み込みに失敗しました: ${error}`)} />
+          </View>
+        )}
         {!loading && !error && (
           <Animated.SectionList
             // One section, whose only job is to give the filter row
@@ -716,21 +827,56 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           />
         )}
       </View>
-    </Screen>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  heroWrap: { paddingHorizontal: space.page, marginBottom: space.titleToContent },
+  screen: { flex: 1, backgroundColor: colors.bg },
   // Full-bleed photography wears no hairline: a translucent border over
   // an image lights up wherever the photo is bright and vanishes where
   // it's dark, reading as a broken frame. Edges end in shadow instead.
+  //
+  // Only the bottom corners round now that the photo owns the top edge.
+  // The gradient's last stop is near-opaque dark, so in the dark theme
+  // the edge dissolves into the page and reads as the mockup's fade; on
+  // paper the same corners read as a dark sheet ending — a deliberate
+  // edge, not a failed blend into white.
   hero: {
-    borderRadius: radius.card, overflow: 'hidden', minHeight: 340,
-    justifyContent: 'flex-end',
+    borderBottomLeftRadius: radius.card, borderBottomRightRadius: radius.card,
+    overflow: 'hidden', justifyContent: 'flex-end',
+    marginBottom: space.titleToContent,
   },
-  heroContent: { padding: space.cardPadding + 2, gap: 10 },
-  heroTitle: { color: onPhoto.text, fontSize: 24, fontFamily: display.bold, letterSpacing: 0.2, lineHeight: 30 },
+  // The old fixed header's row, laid on the photograph: dateline left,
+  // search right. `top` is inline — it owes the safe area its offset.
+  heroTop: {
+    position: 'absolute', left: space.page, right: space.page,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  // The eyebrow's voice on the header's glass: photography can be any
+  // sky, so unlike the page eyebrow this one brings its own ground.
+  heroDate: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: radius.pill, paddingHorizontal: 13, paddingVertical: 8,
+    backgroundColor: 'rgba(10,11,10,0.55)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
+  },
+  heroDateText: {
+    color: onPhoto.text, fontSize: 12, fontFamily: display.semibold,
+    letterSpacing: 1.4, textTransform: 'uppercase',
+  },
+  // The same disc the detail screen floats on its photos, in the pill's
+  // material, so the pair reads as one set.
+  heroSearch: {
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(10,11,10,0.55)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
+  },
+  heroContent: { paddingHorizontal: space.page, paddingBottom: space.cardPadding + 6, gap: 10 },
+  // The screen title's scale, because this is the screen's title now —
+  // the display face carrying a whole line, per theme.ts.
+  heroTitle: { color: onPhoto.text, ...type.title, lineHeight: 40 },
   heroSub: { color: onPhoto.textSecondary, ...type.meta, lineHeight: 21 },
   // The screen's one loud control: the accent at full strength — the same
   // primary-button material the auth screens use.
@@ -744,7 +890,6 @@ const s = StyleSheet.create({
     color: colors.text, ...type.section,
     paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
-  sectionOverFilter: { marginBottom: space.headingToContent - FILTER_PAD },
 
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
 
@@ -787,26 +932,20 @@ const s = StyleSheet.create({
   // the pair of steps that survives an unknown ground.
   nudgeSub: { color: colors.text, fontSize: 12.5, opacity: 0.72 },
 
-  // The pinned filter row.
+  // The pinned filter row. Its top padding is inline — FILTER_PAD plus
+  // the safe-area inset — because pinned it is the top edge of the whole
+  // screen and the chips must clear the clock; the at-rest arithmetic
+  // that keeps this invisible lives on the Places heading.
   //
-  // The page's own colour, not the tab bar's glass, and the difference is
-  // what sits immediately above it. Glass says content is passing beneath
-  // me — true of the tab bar, which floats with the list running under and
-  // past it. Here the thing directly above is the opaque header, which
-  // says the opposite about the very same edge, and two bars making
-  // contradictory claims a hairline apart is the seam you see rather than
-  // a material you read.
-  //
-  // Opaque, the pinned row reads as the bottom of the header instead: one
-  // block that holds the title and the filter, with the list beginning
-  // underneath it.
-  //
-  // Padding is symmetric because once pinned there is no heading above it
-  // to sit under — it is its own top edge.
+  // No background of its own: that belongs to `filterBarBg`, faded in as
+  // the row approaches the top. The page's own colour there, not the tab
+  // bar's glass — glass says content is passing beneath me, which is true
+  // of the floating bar, but this row pinned is the page's own top edge,
+  // the place the list begins under, and it should read as the page.
   filterBar: {
-    paddingVertical: FILTER_PAD,
-    backgroundColor: colors.bg,
+    paddingBottom: FILTER_PAD,
   },
+  filterBarBg: { backgroundColor: colors.bg },
   // Drawn only at the bottom, and only a hairline: it is where the header
   // block ends and the list begins, which is the one edge that has
   // anything to say. A full border would box the row in like a control.
