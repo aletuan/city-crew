@@ -114,7 +114,7 @@ const FROM_VIBE: Record<string, string> = {
   nightlife: 'nightlife',
 };
 
-type Categorisable = { categories?: string[] | null; vibe_tags?: string[] | null; category?: string };
+export type Categorisable = { categories?: string[] | null; vibe_tags?: string[] | null; category?: string };
 
 /**
  * A place's categories — possibly none.
