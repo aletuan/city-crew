@@ -105,6 +105,11 @@ export type RootStackParamList = {
    *  the same rule `SaveProvider` follows for collections. */
   TripDetail: { id: string };
   ProfileHome: undefined;
+  /** The crew list, and the screen that answers what happened while you
+   *  were away. Both live in the Profile stack: friends are a fact about
+   *  the account, not about any city. */
+  Crew: undefined;
+  Activity: undefined;
   SignIn: undefined;
   SignUp: undefined;
   ForgotPassword: undefined;

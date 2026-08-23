@@ -38,6 +38,8 @@ import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
+import CrewScreen from './src/screens/CrewScreen';
+import ActivityScreen from './src/screens/ActivityScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -116,6 +118,18 @@ function ProfileStack() {
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      {/* Friends live under Profile: they are a fact about the account,
+          not about any city, and the card that opens them sits here. */}
+      <Stack.Screen name="Crew" component={CrewScreen} />
+      <Stack.Screen name="Activity" component={ActivityScreen} />
+      {/* Activity's applause rows open the list that earned the like,
+          so the stack needs the detail — and the rule the Explore stack
+          states follows it here: a screen registered in several stacks
+          can only navigate to screens all of them have, so the detail
+          brings its form and its place screen with it. */}
+      <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
+      <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
+      <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
     </Stack.Navigator>
   );
 }

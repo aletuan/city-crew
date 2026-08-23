@@ -268,7 +268,7 @@ function withMembers(data: unknown): Collection[] {
  * whether they are published or not.
  */
 const MY_COLLECTION_COLS =
-  `slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, cover:place_photos!collections_cover_photo_id_fkey(photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
+  `id, slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, cover:place_photos!collections_cover_photo_id_fkey(photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
 
 async function fetchMyCollections(ownerId: string): Promise<Collection[]> {
   const { data, error } = await supabase
@@ -927,4 +927,105 @@ export async function fetchPassedOver(ownerId: string, since: string): Promise<s
 export async function clearMyHistory(ownerId: string): Promise<void> {
   const { error } = await supabase.from('place_events').delete().eq('user_id', ownerId);
   if (error) throw new Error(error.message);
+}
+
+// ── friends ──
+//
+// The edges live in `friendships` (see that migration): one row per
+// pair, pending until the addressee accepts, declined rows deleted.
+// RLS scopes every read to edges the caller is on, so these fetchers
+// take no filters beyond the session itself; the sorting-into-piles is
+// pure and lives in lib/friends where the gate can see it.
+
+export type FriendProfile = {
+  id: string; handle: string; full_name: string; avatar_url: string;
+};
+
+async function fetchFriendships(): Promise<import('./friends').FriendshipRow[]> {
+  const { data, error } = await supabase
+    .from('friendships')
+    .select('requester, addressee, status, created_at');
+  if (error) throw new Error(error.message);
+  return (data ?? []) as import('./friends').FriendshipRow[];
+}
+
+export const useFriendships = (meId: string | null | undefined) => {
+  const fetcher = useCallback(
+    () => (meId ? fetchFriendships() : Promise.resolve([] as import('./friends').FriendshipRow[])),
+    [meId],
+  );
+  return useFetch(fetcher, [] as import('./friends').FriendshipRow[]);
+};
+
+/** The public identities behind a set of account ids — profiles are
+ *  world-readable, so this is the same data a curator byline shows. */
+export async function fetchProfilesById(ids: string[]): Promise<Record<string, FriendProfile>> {
+  if (!ids.length) return {};
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, handle, full_name, avatar_url')
+    .in('id', ids);
+  if (error) throw new Error(error.message);
+  const out: Record<string, FriendProfile> = {};
+  for (const p of (data ?? []) as FriendProfile[]) out[p.id] = p;
+  return out;
+}
+
+/** One profile by its bare handle, or null — the add flow's lookup.
+ *  `ilike` for the same reason auth's own availability check uses it:
+ *  the stored value is lowercase and the typed one may not be. */
+export async function profileByHandle(handle: string): Promise<FriendProfile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, handle, full_name, avatar_url')
+    .ilike('handle', handle)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as FriendProfile | null) ?? null;
+}
+
+/** Ask. The insert policy holds the rest: as yourself, as pending, under
+ *  the daily cap — a refusal surfaces as this throwing. */
+export async function sendFriendRequest(meId: string, otherId: string): Promise<void> {
+  const { error } = await supabase
+    .from('friendships')
+    .insert({ requester: meId, addressee: otherId });
+  if (error) throw new Error(error.message);
+}
+
+export async function acceptFriendRequest(requesterId: string, meId: string): Promise<void> {
+  const { error } = await supabase
+    .from('friendships')
+    .update({ status: 'accepted', responded_at: new Date().toISOString() })
+    .eq('requester', requesterId)
+    .eq('addressee', meId);
+  if (error) throw new Error(error.message);
+}
+
+/** Decline, cancel and unfriend are all the same delete — see the
+ *  migration for why none of them needs its own state. */
+export async function removeFriendship(a: string, b: string): Promise<void> {
+  const { error } = await supabase
+    .from('friendships')
+    .delete()
+    .or(`and(requester.eq.${a},addressee.eq.${b}),and(requester.eq.${b},addressee.eq.${a})`);
+  if (error) throw new Error(error.message);
+}
+
+/** places you have both put in public collections, by friend id. */
+export async function fetchMutualSaves(others: string[]): Promise<Record<string, number>> {
+  if (!others.length) return {};
+  const { data, error } = await supabase.rpc('mutual_saves_counts', { others });
+  if (error) return {};
+  const out: Record<string, number> = {};
+  for (const row of (data ?? []) as { other: string; mutual: number }[]) out[row.other] = row.mutual;
+  return out;
+}
+
+/** Recent likes on your public lists — the liker named only when they
+ *  are already your friend; see `likes_on_mine`. */
+export async function fetchApplause(sinceISO: string): Promise<import('./friends').Applause[]> {
+  const { data, error } = await supabase.rpc('likes_on_mine', { since: sinceISO });
+  if (error) return [];
+  return (data ?? []) as import('./friends').Applause[];
 }
