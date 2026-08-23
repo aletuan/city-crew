@@ -15,17 +15,18 @@ import { useAuth } from '../lib/auth';
 import { useLikes } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
-  deleteCollection, membersOf, publishBlockers, reorderCollection, setCollectionPublic,
-  useProfileByHandle,
+  copyCollection, deleteCollection, membersOf, publishBlockers, reorderCollection,
+  setCollectionPublic, useProfileByHandle,
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCollections, usePlaces } from '../lib/catalog';
+import { useCity } from '../lib/city';
 import { moveItem, sameOrder } from '../lib/order';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 import type { Place } from '../lib/types';
-import type { Nav, RootRoute } from '../nav';
+import { goTo, type Nav, type RootRoute } from '../nav';
 
 /**
  * The empty state of a list you own.
@@ -197,8 +198,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // Both catalogs, because the public query excludes owned rows: a list of
   // your own would otherwise open on "Collection not found". The owned half
   // comes from the shared copy, so a place saved from anywhere shows here.
-  const { mine } = useSave();
+  const { mine, askToSignIn } = useSave();
   const { data: places, loading: placesLoading } = usePlaces();
+  const { city } = useCity();
   // Liking needs three things and refuses without any of them: an account
   // to attribute the like to, the row's id — the likes table keys on it,
   // not on the slug everything user-facing uses — and a list that is
@@ -212,17 +214,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const loading = cols.loading || mine.loading || placesLoading;
   const owned = !!col?.owner_id && col.owner_id === uid;
   const isPublic = !!col?.is_public;
-  // `!owned` is the app's half of a rule the database now enforces: a
-  // curator cannot like their own list. Both halves are needed and neither
-  // is redundant — the policy is what makes the rule true, and this is
-  // what keeps the reader from meeting it as a heart that does nothing.
-  //
-  // Only this screen needs it. The public shelf already leaves your own
-  // lists out (`owner_id.is.null,owner_id.neq.<uid>` in fetchCollections),
-  // so the heart there never meets one; here the row can arrive through
-  // `mine` as well as through the public query.
-  const canLike = !!uid && !!col?.id && isPublic && !owned;
-
   /**
    * The curator's face, for a list somebody else made.
    *
@@ -254,10 +245,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // haptic, which is the one part that belongs to the tap rather than to
   // the fact.
   const onHeart = useCallback(() => {
+    // Signed out the heart is an invitation rather than a dead control —
+    // the same answer Explore's shelf gives to the same tap. It used to
+    // not be drawn at all here, which was defensible while it was a 44pt
+    // button in the header; in the byline it sits beside a tally everyone
+    // can see, and a heart drawn next to a number the reader cannot join
+    // has to do something when pressed.
+    if (!uid) { askToSignIn(); return; }
     if (!col?.id) return;
     fireHaptic('light');
     void toggleLike({ id: col.id, slug: col.slug });
-  }, [col?.id, col?.slug, toggleLike]);
+  }, [uid, askToSignIn, col?.id, col?.slug, toggleLike]);
   // Why this list cannot go out, counted rather than asserted. Derived
   // from the members every time the screen opens, so it is right after a
   // review lands without anything having to be told — and it disappears
@@ -408,17 +406,104 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       .finally(() => setOrdering(false));
   };
 
-  // Deliberately inert. A private list has no address to send anyone to,
-  // so the honest placeholder says that rather than opening a share sheet
-  // onto a link that would 404 for whoever received it.
+  // Deliberately inert, and now inert for two different reasons — which
+  // is why the sentence branches. A private list has no address to send
+  // anyone to; a published one is visible to everybody but the app still
+  // has no link to hand over, because nothing here registers a URL scheme
+  // or a web address for a collection. Either way the honest placeholder
+  // says which wall you have hit rather than opening a share sheet onto a
+  // link that would 404 for whoever received it.
   const share = () => Alert.alert(
     t('Sharing is coming', 'Sắp có chia sẻ', '共有は近日公開'),
-    t(
-      'Your collections are private for now. Sharing one with the crew is on the way.',
-      'Bộ sưu tập của bạn hiện đang riêng tư. Tính năng chia sẻ với hội bạn sẽ sớm có.',
-      'コレクションは現在非公開です。共有機能は近日公開予定です。',
-    ),
+    isPublic
+      ? t(
+        'This list is public, but there is no link to send yet. Sharing one is on the way.',
+        'Bộ sưu tập này đã công khai, nhưng chưa có liên kết để gửi. Tính năng chia sẻ sẽ sớm có.',
+        'このコレクションは公開中ですが、送れるリンクはまだありません。共有機能は近日公開予定です。',
+      )
+      : t(
+        'Your collections are private for now. Sharing one with the crew is on the way.',
+        'Bộ sưu tập của bạn hiện đang riêng tư. Tính năng chia sẻ với hội bạn sẽ sớm có.',
+        'コレクションは現在非公開です。共有機能は近日公開予定です。',
+      ),
   );
+
+  /**
+   * Take this list into your own collections.
+   *
+   * The answer to a question the app could not answer before: you find a
+   * list you like, and the only things you can do with it are like it and
+   * leave. Liking is a compliment. This is the one that lets you use it —
+   * your copy, your order, your additions, and the original untouched.
+   *
+   * ── the title, kept ──
+   *
+   * Verbatim, with no "(copy)" hung off the end. The reader recognises
+   * the list by its name, that name is the reason they took it, and the
+   * suffix would be the app narrating its own plumbing into something a
+   * person now owns. Two lists with one name is the price, and it is a
+   * rename away in the menu they are already holding.
+   *
+   * ── the credit, added ──
+   *
+   * The curator's handle goes into the description, under whatever the
+   * curator wrote. It is the only durable place for it: `curator_handle`
+   * on the new row is not ours to set — a database trigger stamps it from
+   * the owner's profile on publish, precisely so a byline cannot be
+   * forged from the client — so a copy that is later published would go
+   * out under the copier's name with nothing recording where it came
+   * from. A line of description travels with the list and survives that.
+   *
+   * ── the city, from the list rather than from the tab ──
+   *
+   * `col.city_id`, falling back to the city on screen. The two agree in
+   * every path that reaches this button — a list you do not own arrives
+   * through the public query, which is city-scoped — and the fallback
+   * exists for the legacy select that omits the column.
+   */
+  const [copying, setCopying] = useState(false);
+  const copy = () => {
+    if (!col || copying) return;
+    // Signed out this is the sheet, not an error: wanting somebody's list
+    // is a good moment to be offered an account, and a disabled row would
+    // have explained nothing.
+    if (!uid) { askToSignIn(); return; }
+    const cityId = col.city_id || city?.id;
+    if (!cityId) return;
+    const sourceDesc = t(col.desc_en, col.desc_vi, col.desc_ja)?.trim() || '';
+    const credit = col.curator_handle
+      ? t(
+        `Copied from ${atHandle(col.curator_handle)}`,
+        `Sao chép từ ${atHandle(col.curator_handle)}`,
+        `${atHandle(col.curator_handle)} からコピー`,
+      )
+      : '';
+    setCopying(true);
+    copyCollection({
+      ownerId: uid,
+      cityId,
+      title,
+      desc: [sourceDesc, credit].filter(Boolean).join('\n\n'),
+      // The order on screen, which is `sort_order` already resolved by
+      // `membersOf` — copying the list means copying the sequence the
+      // curator chose, not the order the rows happen to come back in.
+      placeSlugs: members.map((p) => p.slug),
+    })
+      .then((slug) => {
+        successHaptic();
+        mine.reload();
+        // Into the Collections tab rather than pushing onto whichever
+        // stack we are in. The copy is not a thing you were browsing, it
+        // is a thing you now own, and Back should lead to your lists —
+        // which is only true in the tab that holds them.
+        goTo('Collections', { screen: 'CollectionDetail', initial: false, params: { slug } });
+      })
+      .catch((e: Error) => Alert.alert(
+        t('Could not save a copy', 'Không lưu được bản sao', 'コピーを保存できませんでした'),
+        e.message,
+      ))
+      .finally(() => setCopying(false));
+  };
 
   const remove = () => Alert.alert(
     t('Delete this collection?', 'Xoá bộ sưu tập này?', 'このコレクションを削除しますか？'),
@@ -484,23 +569,88 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   No self-credit. `CollectionsScreen` already states it —
                   your own byline is the padlock's business, not a credit
                   line — and this screen was the one place contradicting
-                  it. Above a ⋯ menu only an owner gets, beside a padlock
-                  only an owner sees, your own name was a third way of
-                  saying the same thing. */}
+                  it. Beside a padlock only an owner sees, above a menu
+                  that offers only an owner Delete, your own name was a
+                  third way of saying the same thing. */}
               {curatorAvatar ? <Avatar url={curatorAvatar} size={18} /> : null}
-              <Text style={s.meta} numberOfLines={1}>
+              <Text style={[s.meta, s.byline]} numberOfLines={1}>
                 {owned && isPublic ? '·  ' : ''}
                 {!owned && col.curator_handle ? `${atHandle(col.curator_handle)}  ·  ` : ''}
                 {members.length} {t('places', 'địa điểm', 'スポット')}
                 {owned && !isPublic ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
-                {/* Same rule as the shelf: the tally appears only once it
-                    means something. Below that the heart is still here and
-                    still works — what is hidden is the number, not the
-                    gesture. */}
-                {likesWorthShowing(likes[col.slug])
-                  ? `  ·  ${likes[col.slug]} ${t('likes', 'lượt thích', 'いいね')}`
-                  : ''}
               </Text>
+
+              {/* One heart, and it is both the gesture and the tally — the
+                  shape the shelf card settled on and the argument written
+                  there: two marks for one meaning is one too many, and a
+                  number sitting beside a control it does not belong to
+                  reads as that control's label.
+
+                  This screen had exactly that split. A 44pt heart in the
+                  header did the liking; the words "1 likes" down here did
+                  the counting; and the number was nowhere near the thing
+                  it counted. Merged, outline is a list you have not liked,
+                  coral filled is one you have, and the figure beside it is
+                  how many people agree — which is also how Instagram, X
+                  and every app that stopped shipping "N likes" as prose
+                  now says it.
+
+                  Pressable for everyone except the curator, and that is
+                  the only exception. A curator cannot like their own
+                  list — the database enforces it, and `!owned` here is
+                  the app's half of the same rule: the policy is what
+                  makes it true, this is what keeps the reader from
+                  meeting it as a heart that does nothing. Only this
+                  screen needs the check. The public shelf already leaves
+                  your own lists out of the query it draws from, so the
+                  heart there never meets one; here the row arrives
+                  through `mine` as readily as through the public read.
+
+                  So the owner gets the same shape drawn grey and inert —
+                  they still want to know how the list is doing. Signed
+                  out it stays pressable and opens the sign-in sheet; see
+                  `onHeart`.
+                  `hitSlop` is what buys a 15pt glyph a 44pt target
+                  without drawing a disc — the shelf's trick, and the
+                  reason the header can lose a round control without
+                  losing a tap.
+
+                  Same rule as the shelf on the number itself: it prints
+                  from one. A `0` reads as "nobody liked this" rather than
+                  "no votes yet", and below that the heart draws bare —
+                  which is exactly when it is most obviously an
+                  invitation. */}
+              {isPublic && col.id ? (
+                !owned ? (
+                  <PressableScale
+                    containerStyle={s.likeHit}
+                    style={s.like}
+                    scaleTo={0.82}
+                    haptic="none"
+                    hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
+                    onPress={onHeart}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: liked }}
+                    accessibilityLabel={liked
+                      ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
+                      : t('Like', 'Thích', 'いいね')}
+                  >
+                    <Ionicons
+                      name={liked ? 'heart' : 'heart-outline'}
+                      size={15}
+                      color={liked ? colors.accent : colors.textTertiary}
+                    />
+                    {likesWorthShowing(likes[col.slug])
+                      ? <Text style={s.meta}>{likes[col.slug]}</Text>
+                      : null}
+                  </PressableScale>
+                ) : likesWorthShowing(likes[col.slug]) ? (
+                  <View style={[s.likeHit, s.like]}>
+                    <Ionicons name="heart" size={15} color={colors.textTertiary} />
+                    <Text style={s.meta}>{likes[col.slug]}</Text>
+                  </View>
+                ) : null
+              ) : null}
             </View>
           )}
         </View>
@@ -521,7 +671,24 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             </Text>
           </PressableScale>
         )}
-        {owned && !arranging && (
+        {/* The slot the heart used to hold, and now the one control this
+            header keeps. Everybody gets it, not only the owner: what the
+            menu offers branches, but "there is more you can do with this
+            list" is true on both sides of that line, and a header whose
+            right-hand side is empty for half its visitors reads as a
+            screen that forgot something.
+
+            While a copy is in flight the spinner stands here rather than
+            anywhere else on screen. Three round trips is long enough for
+            a tap to look dead, and the control that started the work is
+            the honest place to say it is still going — reopening the menu
+            mid-copy to press the row again is also the one mistake this
+            makes impossible. */}
+        {copying ? (
+          <View style={s.busy}>
+            <ActivityIndicator color={colors.textSecondary} />
+          </View>
+        ) : !arranging ? (
           <View ref={btn} collapsable={false}>
             <RoundIconButton
               icon="ellipsis-horizontal"
@@ -529,35 +696,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               label={t('More', 'Thêm', 'その他')}
             />
           </View>
-        )}
-        {/* The same gesture the shelf card carries in its foot, at the
-            size a screen with room can give it. Two places, one meaning —
-            what changes is only the shape: a 15pt glyph beside a tally
-            down there, where the card is 176pt wide and the photograph is
-            the point, and a full round button here, where the list's own
-            screen has a header to put it in.
-
-            On every public list including your own — the gesture belongs
-            to everyone, and the insert policy allows it. What it still
-            needs is an account to attribute the like to, which is what
-            `canLike` carries.
-
-            The liked colour is passed explicitly because this heart had
-            none: it drew in `colors.text` while the identical heart on
-            the shelf drew coral, so one gesture wore two colours
-            depending on which screen you made it from. `colors.accent`
-            rather than the shelf's `onPhoto.accent` — the bright coral is
-            for glyphs over a photograph and is too light on paper. */}
-        {canLike && (
-          <RoundIconButton
-            icon={liked ? 'heart' : 'heart-outline'}
-            onPress={onHeart}
-            color={liked ? colors.accent : undefined}
-            label={liked
-              ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
-              : t('Like', 'Thích', 'いいね')}
-          />
-        )}
+        ) : null}
       </View>
       {/* What just happened, and the way back out of it. Above the
           description rather than floating over the list: it is about the
@@ -684,54 +823,85 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       >
         <Pressable style={s.scrim} onPress={() => setMenu(false)} />
         <View style={[s.menu, { top: anchor.top, right: anchor.right }]}>
-          <MenuRow
-            icon="add-circle-outline"
-            label={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
-            onPress={() => act(addPlace)}
-            first
-          />
-          <MenuRow
-            icon="create-outline"
-            label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')}
-            onPress={() => act(edit)}
-          />
-          {/* Only with something to arrange. One place has no order, and a
-              row that does nothing is worse than a row that is not there. */}
-          {members.length > 1 && (
-            <MenuRow
-              icon="swap-vertical-outline"
-              label={t('Reorder places', 'Sắp xếp thứ tự', '並び順を変更')}
-              onPress={() => act(() => {
-                fireHaptic('light');
-                setArranging(members.map((p) => p.slug));
-              })}
-            />
-          )}
-          <MenuRow
-            icon="share-outline"
-            label={t('Share', 'Chia sẻ', '共有')}
-            onPress={() => act(share)}
-          />
-          {/* Above Delete, below the rest: it is the one row that changes
-              who else can see this, which is a heavier thing than editing
-              a title and a lighter one than destroying the list.
+          {owned ? (
+            <>
+              <MenuRow
+                icon="add-circle-outline"
+                label={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+                onPress={() => act(addPlace)}
+                first
+              />
+              <MenuRow
+                icon="create-outline"
+                label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')}
+                onPress={() => act(edit)}
+              />
+              {/* Only with something to arrange. One place has no order, and a
+                  row that does nothing is worse than a row that is not there. */}
+              {members.length > 1 && (
+                <MenuRow
+                  icon="swap-vertical-outline"
+                  label={t('Reorder places', 'Sắp xếp thứ tự', '並び順を変更')}
+                  onPress={() => act(() => {
+                    fireHaptic('light');
+                    setArranging(members.map((p) => p.slug));
+                  })}
+                />
+              )}
+              <MenuRow
+                icon="share-outline"
+                label={t('Share', 'Chia sẻ', '共有')}
+                onPress={() => act(share)}
+              />
+              {/* Above Delete, below the rest: it is the one row that changes
+                  who else can see this, which is a heavier thing than editing
+                  a title and a lighter one than destroying the list.
 
-              The label is the action, not the state. "Public" with a tick
-              would leave you working out which way the row is pointing;
-              the header already says which one you are in. */}
-          <MenuRow
-            icon={isPublic ? 'lock-closed-outline' : 'globe-outline'}
-            label={isPublic
-              ? t('Make private', 'Chuyển riêng tư', '非公開にする')
-              : t('Make public', 'Công khai', '公開する')}
-            onPress={() => act(() => setPublic(!isPublic))}
-          />
-          <MenuRow
-            icon="trash-outline"
-            label={t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除')}
-            onPress={() => act(remove)}
-            danger
-          />
+                  The label is the action, not the state. "Public" with a tick
+                  would leave you working out which way the row is pointing;
+                  the header already says which one you are in. */}
+              <MenuRow
+                icon={isPublic ? 'lock-closed-outline' : 'globe-outline'}
+                label={isPublic
+                  ? t('Make private', 'Chuyển riêng tư', '非公開にする')
+                  : t('Make public', 'Công khai', '公開する')}
+                onPress={() => act(() => setPublic(!isPublic))}
+              />
+              <MenuRow
+                icon="trash-outline"
+                label={t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除')}
+                onPress={() => act(remove)}
+                danger
+              />
+            </>
+          ) : (
+            /* Somebody else's list, so the menu is the two things you can
+               do to a thing you do not own: take it, or pass it on. No
+               Edit, no Delete, no publish switch — not because they are
+               kept from you but because they are not yours to press, and
+               a menu listing what the database will refuse lies twice.
+
+               "Save a copy" and not "Follow", and the wording is the
+               promise. Following would leave the curator in charge of
+               what you see — they drop a place, you lose it — and the
+               reason to want this list was to make it yours: reorder it,
+               cut the two you have been to, add the four you know. It
+               copies, and the row says so before the tap rather than
+               after it. */
+            <>
+              <MenuRow
+                icon="duplicate-outline"
+                label={t('Save a copy', 'Lưu bản sao', 'コピーを保存')}
+                onPress={() => act(copy)}
+                first
+              />
+              <MenuRow
+                icon="share-outline"
+                label={t('Share', 'Chia sẻ', '共有')}
+                onPress={() => act(share)}
+              />
+            </>
+          )}
         </View>
       </Modal>
     </SafeAreaView>
@@ -749,7 +919,23 @@ const s = StyleSheet.create({
   // display sizes rather than truncating more collection names than before.
   title: { color: colors.text, ...type.headline },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  // The ⋯ button's footprint without its glass. A spinner standing in for
+  // a control has to hold that control's space or the title beside it
+  // jumps sideways the moment you press — and the circle is what says
+  // "button", which this is not while it is spinning.
+  busy: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   meta: { color: colors.textTertiary, ...type.meta },
+  // The tally sits at the end of the line rather than in the middle of
+  // it: a gesture wants a corner, and the counts before it are facts you
+  // read past. `marginLeft: 'auto'` is what the shelf's foot uses for the
+  // same reason.
+  // The words yield, the heart does not. Without this a long handle
+  // sizes the byline to its own content and pushes the tally off the
+  // right edge — `numberOfLines` alone only stops a second line, it does
+  // not make a row's text give way to its siblings.
+  byline: { flexShrink: 1 },
+  likeHit: { marginLeft: 'auto' },
+  like: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // The one word on the line that is not grey. `ok` is the app's green and
   // measures 4.35:1 on paper, which small text needs; the padlock beside
   // it stays tertiary because a resting state does not need a colour.

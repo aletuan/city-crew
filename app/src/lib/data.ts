@@ -573,6 +573,80 @@ export async function removePlaceFromCollection(collectionSlug: string, placeSlu
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Take somebody else's list into your own.
+ *
+ * A copy, not a follow. The distinction is the whole feature: following
+ * would keep one list and add a viewer to it, and the reader who asked
+ * for this asked so they could *edit* — rename it, drop two places, add
+ * four of their own. That needs rows they own, so this makes them.
+ *
+ * The copy is private, because `createCollection` cannot make anything
+ * else: the insert policy refuses an owned row with `is_public` true.
+ * Which is the right default anyway — republishing someone's work is a
+ * decision, and it should be one the copier takes deliberately from the
+ * menu rather than one this button takes for them.
+ *
+ * ── one insert, not one per place ──
+ *
+ * `addPlaceToCollection` resolves its two ids per call, so looping it
+ * over a nine-place list would be twenty-seven round trips for what is
+ * one write. The slugs are resolved together here — the shape
+ * `reorderCollection` already uses — and the memberships go in as a
+ * single insert, which also makes the order arrive whole instead of
+ * settling row by row.
+ *
+ * A slug the catalog no longer has is skipped rather than failing the
+ * copy. The source list is drawn from the same catalog, so this only
+ * happens if a place is retired between the read and the tap, and losing
+ * one place is a better answer than losing the list.
+ *
+ * ── what a half-finished copy leaves behind ──
+ *
+ * The collection is created before its members, so a failure on the
+ * second call leaves an empty list the reader owns. That is deliberate:
+ * it is visible, it is theirs, and the menu they just used has Delete in
+ * it. The alternative — deleting it from here — is a second write that
+ * can fail for the same reason the first one did, and a silent rollback
+ * that half-works is worse than a list you can see and remove.
+ */
+export async function copyCollection(input: {
+  ownerId: string;
+  cityId: string;
+  title: string;
+  desc?: string;
+  placeSlugs: readonly string[];
+}): Promise<string> {
+  const slug = await createCollection({
+    ownerId: input.ownerId,
+    cityId: input.cityId,
+    title: input.title,
+    desc: input.desc,
+  });
+  if (!input.placeSlugs.length) return slug;
+
+  const [col, places] = await Promise.all([
+    supabase.from('collections').select('id').eq('slug', slug).single(),
+    supabase.from('places').select('id, slug').in('slug', input.placeSlugs as string[]),
+  ]);
+  if (col.error) throw new Error(col.error.message);
+  if (places.error) throw new Error(places.error.message);
+
+  const collectionId = (col.data as { id: string }).id;
+  const idBySlug = new Map((places.data as { id: string; slug: string }[]).map((r) => [r.slug, r.id]));
+  const rows = input.placeSlugs
+    .map((s, i) => {
+      const placeId = idBySlug.get(s);
+      return placeId ? { collection_id: collectionId, place_id: placeId, sort_order: i } : null;
+    })
+    .filter((r): r is { collection_id: string; place_id: string; sort_order: number } => !!r);
+  if (!rows.length) return slug;
+
+  const { error } = await supabase.from('collection_places').insert(rows);
+  if (error) throw new Error(error.message);
+  return slug;
+}
+
 // ── trips ────────────────────────────────────────────────────────────
 //
 // The one thing in this file that reads a table the app cannot derive.
