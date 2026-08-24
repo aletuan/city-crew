@@ -8,7 +8,7 @@
 // where it is needed — bookmarking a place — rather than from a
 // permanent control in a corner.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   Animated, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
@@ -230,6 +230,40 @@ function heroPlace(places: Place[], pinnedSlug?: string | null): Place | undefin
   );
 }
 
+/**
+ * "Has the hero scrolled off the top", as a subscription rather than as
+ * screen state.
+ *
+ * This shipped as `useState` on the screen, and that was a regression
+ * dressed as plumbing: every crossing of the hero boundary re-rendered
+ * the entire screen — FlatList, shelf, chips — in the middle of the very
+ * scroll gesture that caused it. The status bar next to this fact solves
+ * the same problem imperatively (`applyBar` repaints without a render);
+ * the weather cannot be imperative because a paused animation has to be
+ * unmounted-from, so its render is scoped instead: the one component
+ * that needs the boolean subscribes to it, and a crossing re-renders the
+ * Hero and nothing else.
+ */
+type HeroGone = {
+  set: (past: boolean) => void;
+  subscribe: (onChange: () => void) => () => void;
+  get: () => boolean;
+};
+
+function heroGoneStore(): HeroGone {
+  let past = false;
+  const subs = new Set<() => void>();
+  return {
+    set: (next) => {
+      if (past === next) return;
+      past = next;
+      subs.forEach((f) => f());
+    },
+    subscribe: (f) => { subs.add(f); return () => { subs.delete(f); }; },
+    get: () => past,
+  };
+}
+
 function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
   place: Place | undefined;
   /** Decided by the screen, not here: the screen needs the same number
@@ -249,8 +283,9 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
   scrollY: Animated.Value;
   /** Whether the photograph has scrolled off the top. The screen already
    *  computes this for the status bar; the weather stops for it too, so
-   *  nothing animates behind a page nobody is looking at. */
-  gone: boolean;
+   *  nothing animates behind a page nobody is looking at. A store, not a
+   *  boolean — see `heroGoneStore` for why. */
+  gone: HeroGone;
 }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
@@ -260,7 +295,8 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
   const sky = useSky(city?.center_lat, city?.center_lng);
   const uri = place && coverOf(place)?.photo_uri;
   const { width: winW } = useWindowDimensions();
-  const still = useWeatherStill(gone);
+  const heroGone = useSyncExternalStore(gone.subscribe, gone.get);
+  const still = useWeatherStill(heroGone);
 
   /**
    * The dev override for the weather.
@@ -659,11 +695,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const duckScroll = useDuckOnScroll();
   const duckRef = useRef(duckScroll);
   duckRef.current = duckScroll;
-  // Same ref indirection as the duck handler, and for the same reason:
-  // the scroll listener below is built once and holds its first closure.
-  const [heroGone, setHeroGone] = useState(false);
-  const goneRef = useRef(setHeroGone);
-  goneRef.current = setHeroGone;
+  // A subscription, not state, so a crossing re-renders the Hero alone.
+  // See `heroGoneStore`.
+  const heroGone = useRef(heroGoneStore()).current;
   const onScrollJS = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
     const y = e.nativeEvent.contentOffset.y;
     if (y < 320) setFirst(0);
@@ -677,7 +711,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       // Once per crossing, not per frame — the same budget `applyBar`
       // has always spent here. The weather stops when the photograph
       // it is drawn on is no longer on screen.
-      goneRef.current(past);
+      heroGone.set(past);
     }
     duckRef.current?.(e as never);
   }).current;

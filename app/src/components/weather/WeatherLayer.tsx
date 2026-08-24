@@ -34,7 +34,7 @@
 // matters most.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, AppState, StyleSheet, View } from 'react-native';
+import { Animated, AppState, InteractionManager, StyleSheet, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useReducedMotion } from '../ui';
 import { Drift, Fog, Lightning, SunGlow } from './Atmosphere';
@@ -169,29 +169,64 @@ export default function WeatherLayer({ sky, width, height, still, hour, intensit
     return () => all.stop();
   }, [effect, dials, intensity]);
 
-  // Mounted while wanted, and for one transition afterwards.
+  // Mounted while wanted — a beat late on the way in, one transition
+  // late on the way out.
   //
-  // "Never destroy and recreate the system mid-transition" is the right
-  // rule and this keeps it: the unmount happens `EASE_MS` after the dial
-  // has been sent to zero, by which time the last drop has already faded
-  // out. What it avoids is the other cost — Explore is the app's landing
-  // screen, and a hundred and twenty invisible views in the first render
-  // of it is a hundred and twenty views on a clear day, which is most
-  // days in every city this app has.
+  // The delay on the way in is the fix for a launch cost this shipped
+  // with. The sky answer lands about a second after a cold start, which
+  // is exactly when the catalog is painting its first cards — and in a
+  // Hanoi wet season, "the sky says rain" is the common case, so most
+  // launches paid for ninety-odd particle views and several hundred
+  // animated-graph nodes in the same frames as the first meaningful
+  // paint. `runAfterInteractions` keeps the burst out of any touch or
+  // transition in flight, and the grace timer keeps it off the frame the
+  // fetch happened to land on. The dials ease over `EASE_MS` regardless,
+  // so the drops arriving a beat later is not visible as lateness — the
+  // fade-in simply starts from a quieter screen.
+  //
+  // The unmount still waits `EASE_MS` after the dial was sent to zero,
+  // by which time the last drop has already faded out: nothing is ever
+  // torn down mid-transition. And nothing mounts at all on a clear day,
+  // which is what keeps the landing screen's first render at its
+  // pre-weather size.
   const wantRain = !!effect?.rain;
   const wantSnow = !!effect?.snow;
-  const [showRain, setShowRain] = useState(wantRain);
-  const [showSnow, setShowSnow] = useState(wantSnow);
+  const [showRain, setShowRain] = useState(false);
+  const [showSnow, setShowSnow] = useState(false);
   useEffect(() => {
-    if (wantRain) { setShowRain(true); return; }
-    const t = setTimeout(() => setShowRain(false), EASE_MS + 250);
-    return () => clearTimeout(t);
+    if (!wantRain) {
+      const t = setTimeout(() => setShowRain(false), EASE_MS + 250);
+      return () => clearTimeout(t);
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const task = InteractionManager.runAfterInteractions(() => {
+      timer = setTimeout(() => setShowRain(true), 400);
+    });
+    return () => { task.cancel(); if (timer) clearTimeout(timer); };
   }, [wantRain]);
   useEffect(() => {
-    if (wantSnow) { setShowSnow(true); return; }
-    const t = setTimeout(() => setShowSnow(false), EASE_MS + 250);
-    return () => clearTimeout(t);
+    if (!wantSnow) {
+      const t = setTimeout(() => setShowSnow(false), EASE_MS + 250);
+      return () => clearTimeout(t);
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const task = InteractionManager.runAfterInteractions(() => {
+      timer = setTimeout(() => setShowSnow(true), 400);
+    });
+    return () => { task.cancel(); if (timer) clearTimeout(timer); };
   }, [wantSnow]);
+
+  // A layer whose dial is at zero is invisible, and an invisible layer
+  // must not keep clocks running. Fog's three bands and Drift's motes
+  // used to loop whenever the screen was awake — on a clear day that was
+  // five native animations moving views nobody could see, from the
+  // moment the app opened. Reusing `still` for it means the components
+  // stay ignorant of why they are paused; the threshold is where the
+  // deepest band's opacity (0.18 × 0.85 × dial) drops under half a
+  // percent.
+  const k = Math.max(0, intensity);
+  const fogStill = still || (effect ? effect.fog * k : 0) < 0.03;
+  const driftStill = still || (effect ? effect.drift * k : 0) < 0.03;
 
   if (!effect) return null;
 
@@ -221,8 +256,8 @@ export default function WeatherLayer({ sky, width, height, still, hour, intensit
       ) : null}
 
       <SunGlow height={height} strength={dials.glow} />
-      <Fog width={width} height={height} strength={dials.fog} still={still} />
-      <Drift width={width} height={height} strength={dials.drift} wind={dials.wind} still={still} />
+      <Fog width={width} height={height} strength={dials.fog} still={fogStill} />
+      <Drift width={width} height={height} strength={dials.drift} wind={dials.wind} still={driftStill} />
 
       {showRain ? (
         <Rain
