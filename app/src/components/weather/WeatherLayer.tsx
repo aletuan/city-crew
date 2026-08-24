@@ -44,6 +44,25 @@ import { effectFor } from '../../lib/weatherfx';
 import type { Sky } from '../../lib/weather';
 
 /**
+ * The switch, and it is off.
+ *
+ * Temporary, at the owner's call: after a day on a real device they
+ * judged the effect's cost too high for what it gives, so the layer is
+ * parked rather than deleted. Everything stays — these components, the
+ * `weatherfx` arithmetic, its 48 tests, the dev panel — and the pill in
+ * the dateline keeps showing the temperature, which predates all of it.
+ *
+ * The call site in `ExploreScreen` gates *everything* behind this
+ * constant: the layer, the hooks that watch focus/AppState/scroll for
+ * it, and the long-press that opens the tuning panel. Off therefore
+ * costs literally nothing — no views, no listeners, no re-renders.
+ *
+ * To bring the weather back, flip this to `true`. That is the whole
+ * procedure.
+ */
+export const WEATHER_EFFECTS = false;
+
+/**
  * How long a change of weather takes to arrive.
  *
  * The brief asked for 2–5 seconds and for heavier transitions to take

@@ -24,8 +24,9 @@ import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { useSky } from '../lib/sky';
-import WeatherLayer, { useWeatherStill } from '../components/weather/WeatherLayer';
+import WeatherLayer, { useWeatherStill, WEATHER_EFFECTS } from '../components/weather/WeatherLayer';
 import WeatherDebug, { DEBUG_DEFAULT, debugSky, type Debug } from '../components/weather/WeatherDebug';
+import type { Sky } from '../lib/weather';
 import { dateline } from '../lib/format';
 import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
@@ -264,6 +265,37 @@ function heroGoneStore(): HeroGone {
   };
 }
 
+/**
+ * The weather and the two hooks that serve it, behind the switch.
+ *
+ * A component rather than two hook calls in `Hero`, because hooks cannot
+ * sit behind a conditional — and with `WEATHER_EFFECTS` off this never
+ * mounts, so the focus listener, the AppState listener and the
+ * scroll-crossing subscription never exist. Parking the feature has to
+ * mean parking its whole cost, not just its pixels.
+ */
+function HeroWeather({ gone, sky, width, height, hour, intensity }: {
+  gone: HeroGone;
+  sky: Sky | null;
+  width: number;
+  height: number;
+  hour: number;
+  intensity: number;
+}) {
+  const heroGone = useSyncExternalStore(gone.subscribe, gone.get);
+  const still = useWeatherStill(heroGone);
+  return (
+    <WeatherLayer
+      sky={sky}
+      width={width}
+      height={height}
+      still={still}
+      hour={hour}
+      intensity={intensity}
+    />
+  );
+}
+
 function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
   place: Place | undefined;
   /** Decided by the screen, not here: the screen needs the same number
@@ -295,8 +327,6 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
   const sky = useSky(city?.center_lat, city?.center_lng);
   const uri = place && coverOf(place)?.photo_uri;
   const { width: winW } = useWindowDimensions();
-  const heroGone = useSyncExternalStore(gone.subscribe, gone.get);
-  const still = useWeatherStill(heroGone);
 
   /**
    * The dev override for the weather.
@@ -333,15 +363,20 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
           that reaches 0.97 by the foot of the hero, so the rule that
           weather must never fight the headline is enforced by geometry
           rather than by a second gradient that would drift the first time
-          either was tuned. */}
-      <WeatherLayer
-        sky={shown}
-        width={winW}
-        height={heroH}
-        still={still}
-        hour={hour}
-        intensity={__DEV__ && debug ? debug.intensity : 1}
-      />
+          either was tuned.
+
+          Behind the switch, and the switch is off — see `WEATHER_EFFECTS`
+          for why and for how to turn it back on. */}
+      {WEATHER_EFFECTS ? (
+        <HeroWeather
+          gone={gone}
+          sky={shown}
+          width={winW}
+          height={heroH}
+          hour={hour}
+          intensity={__DEV__ && debug ? debug.intensity : 1}
+        />
+      ) : null}
       <LinearGradient
         colors={['rgba(10,11,10,0.45)', 'rgba(10,11,10,0.06)', 'rgba(10,11,10,0.55)', 'rgba(10,11,10,0.97)']}
         locations={[0, 0.22, 0.64, 1]}
@@ -360,7 +395,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
             what they have always got, which is nothing. */}
         <Pressable
           style={s.heroDate}
-          onLongPress={__DEV__ ? () => { setDebug((d) => d ?? DEBUG_DEFAULT); setDebugOpen(true); } : undefined}
+          onLongPress={__DEV__ && WEATHER_EFFECTS ? () => { setDebug((d) => d ?? DEBUG_DEFAULT); setDebugOpen(true); } : undefined}
           delayLongPress={600}
         >
           <Text style={s.heroDateText}>{dateline(lang, new Date())}</Text>
@@ -423,7 +458,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
           </LinearGradient>
         </PressableScale>
       </View>
-      {__DEV__ && debug ? (
+      {__DEV__ && WEATHER_EFFECTS && debug ? (
         <WeatherDebug
           visible={debugOpen}
           state={debug}
