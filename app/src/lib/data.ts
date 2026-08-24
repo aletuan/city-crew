@@ -8,6 +8,7 @@ import { supabase } from './supabase';
 import type { Collection, Place } from './types';
 import { slugify } from './place';
 import { ownPendingFirst } from './live';
+import { normalizeHandle } from './handle';
 import { cleanNote } from './report';
 
 // Shapes and pure helpers live next door, where a Node process can reach
@@ -1077,6 +1078,50 @@ export async function profileByHandle(handle: string): Promise<FriendProfile | n
  * a caller with nothing to ask can still call it unconditionally — which
  * hooks require.
  */
+/**
+ * Avatars for a shelf's worth of curators, by folded handle.
+ *
+ * One query for all of them rather than one screen asking for one face
+ * the moment it opens — which is what made a byline lay itself out and
+ * then shove sideways a round trip later. Fetched with the catalog, so
+ * by the time a list is opened the face is already in memory and the
+ * first paint is the finished one.
+ *
+ * Normalised on both sides: the editorial rows were seeded with the `@`
+ * written into `curator_handle`, and `profiles.handle` never has one.
+ * `lib/handle` states the rule — never trust the stored form.
+ *
+ * Failure is an empty map, never a throw. A missing face is the normal
+ * case here (every editorial handle lives in `reserved_handles` with no
+ * profile behind it), so it cannot be allowed to be an error.
+ */
+async function fetchCuratorAvatars(handles: string[]): Promise<Record<string, string>> {
+  const bare = [...new Set(handles.map(normalizeHandle).filter(Boolean))];
+  if (!bare.length) return {};
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('handle, avatar_url')
+    .in('handle', bare);
+  if (error) return {};
+  const out: Record<string, string> = {};
+  for (const r of (data ?? []) as { handle: string; avatar_url: string }[]) {
+    if (r.avatar_url) out[normalizeHandle(r.handle)] = r.avatar_url;
+  }
+  return out;
+}
+
+export const useCuratorAvatarsQuery = (handles: string[]) => {
+  // Keyed on the handles themselves, not on the array: `useFetch` reruns
+  // when the callback changes, and a fresh array every render would mean
+  // a fresh request every render.
+  const key = [...new Set(handles.map(normalizeHandle).filter(Boolean))].sort().join(',');
+  const fetcher = useCallback(
+    () => (key ? fetchCuratorAvatars(key.split(',')) : Promise.resolve({} as Record<string, string>)),
+    [key],
+  );
+  return useFetch(fetcher, {} as Record<string, string>);
+};
+
 export const useProfileByHandle = (handle: string | null) => {
   const fetcher = useCallback(
     () => (handle ? profileByHandle(handle) : Promise.resolve(null)),
