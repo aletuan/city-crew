@@ -10,6 +10,21 @@
 #
 # Local alternative (needs a computer): cd app && npx expo start,
 # then scan the QR with Expo Go.
+#
+# ── why app.json names its platforms ──
+#
+# `--platform=all` below does not mean "the platforms this app targets". It
+# means "every platform the CLI finds support for", and web counts as
+# supported the moment `react-native-web` is present in node_modules — which
+# it now is, as a devDependency of the test harness. Adding it turned on a
+# web bundle that has never been buildable: `react-native-maps` imports React
+# Native internals, which is an error on web, and MiniMap is reachable from
+# the Ideas screen.
+#
+# So `app.json` states the two platforms this app actually ships to, and the
+# export follows that rather than following whatever happens to be installed.
+# The deploy that broke is the one this note exists to explain: iOS and
+# Android had both bundled to 97% when the web bundle failed the whole run.
 
 name: Publish app preview
 
