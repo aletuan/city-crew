@@ -215,10 +215,14 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
       })
       .catch(() => { if (live) setWhere(''); });
     return () => { live = false; };
+  // `near` is a fresh object each render; its coordinates are what move.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, near?.lat, near?.lng]);
 
   const districts = useMemo(
     () => areasNear(places, near),
+    // `near` is a fresh object each render; its coordinates are what move.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [places, near?.lat, near?.lng],
   );
   // Whether the chips may call themselves *nearby*. The catalog is one
@@ -226,6 +230,8 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   // reader is standing; twenty-five kilometres is well past anything this
   // app calls walkable, and past it the heading names the city instead of
   // claiming a proximity that is not there.
+  // `near` is a fresh object each render; its coordinates are what move.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const nearestKm = useMemo(() => nearestAreaKm(places, near), [places, near?.lat, near?.lng]);
   const areasAreNear = nearestKm == null || nearestKm <= 25;
 

@@ -36,6 +36,9 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
     if (cooldown <= 0) return;
     const id = setInterval(() => setCooldown((n) => (n <= 1 ? 0 : n - 1)), 1000);
     return () => clearInterval(id);
+  // The interval restarts when the countdown starts or ends, not on each tick — depending on
+  // `cooldown` would tear down and rebuild the timer every second.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cooldown > 0]);
 
   const run = async (fn: () => Promise<void>) => {

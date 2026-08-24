@@ -33,7 +33,7 @@ import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { useAuth } from '../lib/auth';
 import { useSave } from '../lib/save';
 import { likesWorthShowing, rankByLikes } from '../lib/likes';
-import { Lang, useI18n } from '../lib/i18n';
+import { useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import { useScheme } from '../lib/theme';

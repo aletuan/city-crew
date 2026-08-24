@@ -31,6 +31,13 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci
       - run: npm run typecheck
+      # The questions the typecheck structurally cannot ask: a hook called
+      # conditionally, a dependency array that has gone stale, an import that
+      # resolves to nothing. `--max-warnings=0`, so there is no third state
+      # between "this may land" and "this may not" — see app/eslint.config.js
+      # for the rules and for the 24 places that carry a documented exception.
+      - if: '!cancelled()'
+        run: npm run lint
       # Runs even when the typecheck failed: two red steps say more about
       # what broke than one red step and one skipped.
       - if: '!cancelled()'
@@ -57,9 +64,15 @@ jobs:
         run: npm run coverage
 
   # The dashboard's pure modules, same doctrine as the app job: plain
-  # functions in a plain Node process, no React, no Supabase, no install.
+  # functions in a plain Node process, no React, no Supabase.
   # Today that is the Contributors screen's arithmetic — the aggregation
   # every corner of that page reads from (see dashboard/src/contributors.js).
+  #
+  # This job ran without an `npm ci` until lint arrived: `node --test` finds
+  # dashboard/tests/ on its own and the modules under test import nothing
+  # outside the repo. ESLint is a dependency, so the install is now real —
+  # and it buys the thing this package most lacked, since it is plain
+  # JavaScript with no typecheck standing behind it.
   dashboard:
     runs-on: ubuntu-latest
     defaults:
@@ -70,9 +83,12 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      # `node --test` discovers dashboard/tests/ on its own; the modules
-      # under test import nothing outside the repo, so there is no npm ci.
-      - run: node --test
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - if: '!cancelled()'
+        run: npm test
 
   # The migrations, run against a real Postgres and then asserted. The app
   # job above cannot reach any of this: triggers, constraints and backfills

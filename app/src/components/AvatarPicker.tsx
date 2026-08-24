@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
-import { colors, display, font, onPhoto, radius, space } from '../theme';
+import { colors, display, font, onPhoto, space } from '../theme';
 import { PressableScale, successHaptic } from './ui';
 
 /** Square, so the crop the person frames is the crop the circle shows. */

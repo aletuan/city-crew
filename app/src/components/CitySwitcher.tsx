@@ -11,13 +11,13 @@ import { fireHaptic, PressableScale } from './ui';
 
 export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useI18n();
-  const { city, cities, mode, setCity, useMyLocation } = useCity();
+  const { city, cities, mode, setCity, followMyLocation } = useCity();
   const [locating, setLocating] = useState(false);
 
   const locate = async () => {
     if (locating) return;
     setLocating(true);
-    try { await useMyLocation(); } catch { /* permission denied — keep current */ }
+    try { await followMyLocation(); } catch { /* permission denied — keep current */ }
     setLocating(false);
     onClose();
   };

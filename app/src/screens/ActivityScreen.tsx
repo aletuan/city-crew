@@ -50,6 +50,8 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const trips = useMyTrips(me);
   const mine = useMyCollections(me);
   const cols = useCollections();
+  // `ships.reload` is stable; `ships` is a new object on every load.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => { ships.reload(); }, [ships.reload]));
 
   const crew = useMemo(() => splitFriendships(ships.data, me ?? ''), [ships.data, me]);

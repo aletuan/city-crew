@@ -12,14 +12,13 @@ import {
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useAuth } from '../lib/auth';
-import { useLikes } from '../lib/catalog';
+import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
   copyCollection, deleteCollection, membersOf, publishBlockers, reorderCollection,
   setCollectionPublic, useProfileByHandle,
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
-import { useCuratorAvatar, useCollections, usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';

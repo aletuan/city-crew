@@ -57,6 +57,8 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const tabClearance = useTabBarClearance();
   const ships = useFriendships(me);
   const blocks = useMyBlocks(me);
+  // The two `.reload`s are stable; their Fetch wrappers are not.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => { ships.reload(); blocks.reload(); }, [ships.reload, blocks.reload]));
 
   const crew = useMemo(() => splitFriendships(ships.data, me ?? ''), [ships.data, me]);
@@ -133,7 +135,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       }).catch(() => {});
     }, 250);
     return () => clearTimeout(timer);
-  }, [handle, me, blocks.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handle, me, blocks.data]);
 
   const send = async () => {
     const bare = normalizeHandle(handle);

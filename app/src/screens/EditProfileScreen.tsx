@@ -35,7 +35,7 @@ import { useCity } from '../lib/city';
 import { clearMyHistory, savePreferences, useMyPreferences } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { HANDLE_MAX, handleProblem, normalizeHandle } from '../lib/handle';
-import { colors, font, space, type as type_ } from '../theme';
+import { colors, font, space } from '../theme';
 import type { Nav } from '../nav';
 
 export default function EditProfileScreen({ navigation }: { navigation: Nav }) {

@@ -57,7 +57,7 @@ function Row({ cat, label, saved, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   // Re-seed when the fetch lands, but never over a half-typed edit.
-  useEffect(() => { setText(toText(saved)); }, [saved]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setText(toText(saved)); }, [saved]);
 
   const terms = useMemo(() => toTerms(text), [text]);
   const short = useMemo(() => terms.filter(tooShort), [terms]);

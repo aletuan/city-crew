@@ -65,7 +65,6 @@ export function windowDays(days, today = new Date()) {
 export function cumulativeByDay(rows, days) {
   const perDay = new Array(days.length).fill(0);
   const first = days[0];
-  const last = days[days.length - 1];
   for (const r of rows) {
     const key = dayKey(new Date(r.created_at));
     let i = days.indexOf(key);

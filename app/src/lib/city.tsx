@@ -51,7 +51,17 @@ type CityContext = {
   cities: City[];
   mode: 'auto' | 'manual';
   setCity: (id: string) => void;
-  useMyLocation: () => Promise<void>;
+  /**
+   * Locate the reader, switch to the nearest city, and go back to auto.
+   *
+   * Named `useMyLocation` until the lint gate landed, which is what
+   * `rules-of-hooks` caught: a `use`-prefixed function is a hook by React's
+   * only convention for saying so, and this one is an async action called
+   * from inside an event handler. The rule read the call site as a hook in a
+   * callback — a real fault, had it been one — and the honest fix is the
+   * name, not a disable comment. The button still reads "Use my location".
+   */
+  followMyLocation: () => Promise<void>;
 };
 
 const KEY = 'citycrew.city';
@@ -71,7 +81,7 @@ const FALLBACK: City = {
 };
 
 const Ctx = createContext<CityContext>({
-  city: null, cities: [FALLBACK], mode: 'auto', setCity: () => {}, useMyLocation: async () => {},
+  city: null, cities: [FALLBACK], mode: 'auto', setCity: () => {}, followMyLocation: async () => {},
 });
 
 export const useCity = () => useContext(Ctx);
@@ -252,7 +262,7 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(KEY, JSON.stringify({ id, mode: 'manual' })).catch(() => {});
   }, []);
 
-  const useMyLocation = useCallback(async () => {
+  const followMyLocation = useCallback(async () => {
     const near = await preciseNearestCity(cities);
     if (!near) return;
     setCityId(near.id);
@@ -265,8 +275,8 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
     cities,
     mode,
     setCity,
-    useMyLocation,
-  }), [cities, cityId, mode, setCity, useMyLocation]);
+    followMyLocation,
+  }), [cities, cityId, mode, setCity, followMyLocation]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -38,7 +38,7 @@
 // field is generated once from a small integer PRNG and memoised on the
 // arguments that genuinely change its shape.
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Animated } from 'react-native';
 
 /**

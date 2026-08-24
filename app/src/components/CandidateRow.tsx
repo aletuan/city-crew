@@ -16,7 +16,7 @@ import { PressableScale, SelectTick } from './ui';
 import { ItemState, locksRow } from '../lib/batch';
 import type { Candidate, Known } from '../lib/suggest';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, radius, space } from '../theme';
 
 export default function CandidateRow({ c, known, busy, away, item, selected, onToggle, onOpen }: {
   c: Candidate;

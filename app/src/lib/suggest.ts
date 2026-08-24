@@ -127,10 +127,7 @@ export async function suggestPlace(placeId: string, cityId: string): Promise<Sug
  * café". RLS decides what comes back, which is the whole point: live
  * places, plus your own submissions, and nothing of anybody else's.
  */
-export async function knownByPlaceId(
-  ids: string[],
-  meId: string | null | undefined,
-): Promise<Record<string, Known>> {
+export async function knownByPlaceId(ids: string[]): Promise<Record<string, Known>> {
   if (!ids.length) return {};
   const { data, error } = await supabase
     .from('places')

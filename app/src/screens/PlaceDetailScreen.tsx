@@ -118,6 +118,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const note = useNoteEvent();
   useEffect(() => {
     if (place) note(place.slug, 'open');
+  // One event per place, not per re-render: `place` is a new object whenever the catalog reloads
+  // and the slug is what identifies the visit.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [place?.slug, note]);
 
   if (loading && !place) {

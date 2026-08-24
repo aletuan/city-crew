@@ -99,12 +99,15 @@ export function useCandidates(): Candidates {
         // A failure still leaves every row looking new, which was the
         // point of not awaiting it before: the catch resolves to nothing
         // known rather than taking the search results down with it.
-        const seen = await knownByPlaceId(found.map((c) => c.place_id), meId).catch(() => ({}));
+        const seen = await knownByPlaceId(found.map((c) => c.place_id)).catch(() => ({}));
         setKnown(seen);
         setResults(found);
       })
       .catch((e: Error) => Alert.alert(t('Search failed', 'Tìm kiếm thất bại', '検索に失敗しました'), e.message))
       .finally(() => setSearching(false));
+  // `city.id` is the stable key; depending on `city` re-runs the search on renders where the city
+  // did not change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city?.id, searching, meId, t]);
 
   /**
@@ -130,6 +133,8 @@ export function useCandidates(): Candidates {
     inThisCity && me && c.lat != null && c.lng != null
       ? fmtDistance(distanceKm(me.lat, me.lng, c.lat, c.lng))
       : ''
+  // `me` is rebuilt each render; the two coordinates are what the distance reads.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [inThisCity, me?.lat, me?.lng]);
 
   const mark = (id: string, st: ItemState) =>
@@ -193,6 +198,8 @@ export function useCandidates(): Candidates {
     }
     Alert.alert(t('Could not add it', 'Không thêm được', '追加できませんでした'), out.message);
     return 'failed';
+  // `city.id` is the stable key — see the note above `search`.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city?.id, t]);
 
   /**
@@ -247,6 +254,8 @@ export function useCandidates(): Candidates {
     // the difference: a run stopped halfway must not be followed by the
     // screen leaving, however few things went wrong before it stopped.
     return { ...tally, cancelled: stop.current === 'cancel' };
+  // `city.id` is the stable key — see the note above `search`.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city?.id, places, suggestOne]);
 
   /** Stop before the next one starts. The one in flight is already with
