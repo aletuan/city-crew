@@ -63,6 +63,42 @@ jobs:
       - if: '!cancelled()'
         run: npm run coverage
 
+  # Does it still bundle?
+  #
+  # The job above runs the app's code without ever building the app, which
+  # is a gap with a name on it now: #325 added `react-native-web` as a
+  # devDependency of the test harness, every check here went green, and the
+  # EAS publish on main then failed — `--platform=all` had quietly grown a
+  # web target, and `react-native-maps` imports React Native internals,
+  # which is an error on web. Typecheck cannot see that. Neither can a test
+  # that imports a module rather than bundling it.
+  #
+  # So this runs Metro over the whole graph, for every platform the app
+  # declares, and fails if any of them cannot be built.
+  #
+  # `--platform all` on purpose, rather than naming ios and android here.
+  # "All" is resolved from `app.json`'s `platforms`, so this job is also
+  # what holds that declaration in place: drop it and the web target comes
+  # back, and this goes red before a deploy does.
+  #
+  # No EXPO_TOKEN and no network account: `expo export` bundles locally and
+  # publishes nothing, so it runs on a fork's pull request like any other
+  # check. Output goes outside the checkout because nothing here keeps it.
+  bundle:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npx expo export --platform all --output-dir "$RUNNER_TEMP/expo-export"
+
   # The dashboard's pure modules, same doctrine as the app job: plain
   # functions in a plain Node process, no React, no Supabase.
   # Today that is the Contributors screen's arithmetic — the aggregation
