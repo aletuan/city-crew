@@ -6,6 +6,7 @@ import AuthGate from './auth.jsx';
 import AddPlace from './components/AddPlace.jsx';
 import CityHero from './components/CityHero.jsx';
 import Contributors from './components/Contributors.jsx';
+import Reports from './components/Reports.jsx';
 import Coverage from './components/Coverage.jsx';
 import PlaceList from './components/PlaceList.jsx';
 import PlaceEditor from './components/PlaceEditor.jsx';
@@ -30,6 +31,7 @@ const router = createHashRouter([
       // Not city-scoped: what somebody calls a cinema does not change
       // between Hanoi and Saigon.
       { path: 'search-words', element: <SearchTerms /> },
+      { path: 'reports', element: <Reports /> },
       { path: 'analytics/contributors', element: <Contributors /> },
       { path: 'analytics/coverage', element: <Coverage /> },
     ],

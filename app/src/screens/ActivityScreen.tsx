@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthHeader, AuthScreen } from '../components/authUi';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
+import { useReport } from '../components/reportFlow';
 import { Avatar, Card, Empty, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCollections } from '../lib/catalog';
@@ -95,6 +96,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const [sheet, setSheet] = useState<{
     name: string; meta?: string; avatar?: string; actions: PersonAction[];
   } | null>(null);
+  const { report, node: reportSheet } = useReport();
 
   const openRequestSheet = (requester: string, p?: FriendProfile) => setSheet({
     name: p ? (p.full_name || atHandle(p.handle)) : t('This request', 'Lời mời này', 'このリクエスト'),
@@ -137,6 +139,22 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
           ],
         ),
       },
+      ...(p ? [{
+        key: 'report',
+        icon: 'flag-outline' as const,
+        title: t(`Report ${atHandle(p.handle)}`, `Báo cáo ${atHandle(p.handle)}`, `${atHandle(p.handle)} を報告`),
+        desc: t(
+          'Tell the desk about their name, photo or bio. They are not told who reported them.',
+          'Báo cho desk về tên, ảnh hoặc tiểu sử của họ. Họ không biết ai đã báo cáo.',
+          '名前・写真・自己紹介についてデスクに報告します。誰が報告したかは相手に伝わりません。',
+        ),
+        onPress: () => report({
+          kind: 'profile' as const,
+          id: p.id,
+          name: p.full_name || atHandle(p.handle),
+          avatarUrl: p.avatar_url || undefined,
+        }),
+      }] : []),
     ],
   });
 
@@ -286,6 +304,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
         actions={sheet?.actions ?? []}
         onClose={() => setSheet(null)}
       />
+      {reportSheet}
     </AuthScreen>
   );
 }

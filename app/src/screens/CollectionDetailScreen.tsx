@@ -22,6 +22,7 @@ import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCollections, usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { moveItem, sameOrder } from '../lib/order';
+import { useReport } from '../components/reportFlow';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
@@ -199,6 +200,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // your own would otherwise open on "Collection not found". The owned half
   // comes from the shared copy, so a place saved from anywhere shows here.
   const { mine, askToSignIn } = useSave();
+  // Reporting, raised from the overflow menu — see components/reportFlow.
+  const { report, canReport, node: reportSheet } = useReport();
   const { data: places, loading: placesLoading } = usePlaces();
   const { city } = useCity();
   // Liking needs three things and refuses without any of them: an account
@@ -918,10 +921,29 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 label={t('Share', 'Chia sẻ', '共有')}
                 onPress={() => act(share)}
               />
+              {/* The third thing you can do about somebody else's list,
+                  and the one the store asks for: say something is wrong
+                  with it. Last, and marked, because it is the row that
+                  is about a person rather than about the list — and
+                  never on your own, which is yours to delete. */}
+              {col && canReport({ kind: 'collection', id: col.id ?? '', ownerId: col.owner_id }) && (
+                <MenuRow
+                  icon="flag-outline"
+                  label={t('Report this list', 'Báo cáo danh sách này', 'このリストを報告')}
+                  danger
+                  onPress={() => act(() => report({
+                    kind: 'collection',
+                    id: col.id ?? '',
+                    ownerId: col.owner_id,
+                    name: title,
+                  }))}
+                />
+              )}
             </>
           )}
         </View>
       </Modal>
+      {reportSheet}
     </Screen>
   );
 }
