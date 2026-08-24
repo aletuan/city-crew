@@ -18,6 +18,11 @@
 import React from 'react';
 import { vi } from 'vitest';
 
+// Metro injects this; a Node process does not, and `expo-modules-core`
+// reads it at import time. Without it any tree that reaches an Expo module
+// dies on `__DEV__ is not defined` before the app's own code runs.
+(globalThis as { __DEV__?: boolean }).__DEV__ = false;
+
 /** A host element that renders its children and forwards its props. */
 const passthrough = (name: string) =>
   function Stub({ children, ...rest }: { children?: React.ReactNode }) {
