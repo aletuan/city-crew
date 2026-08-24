@@ -52,12 +52,23 @@ import { defineConfig } from 'vitest/config';
 // catalog reads had no test of any kind before.
 //
 // Which leaves the honest limit: the gate governs about a fifth of the
-// app's statements. The rest — components and screens — has no test of any
-// kind, and every UI fault found in this repository so far was found by
-// eye. Coverage says a line ran, not that a test would notice it breaking;
+// app's statements, and it is deliberately not extended over the rest.
+//
+// Components and screens are no longer untested — `*.ui.test.tsx` renders
+// them through `react-native-web` into jsdom; see `src/uitest/setup.tsx`
+// for what that substitution is worth. They are kept off the threshold on
+// purpose. A number over a screen would have to be met, and the cheapest
+// way to meet it is to render the thing and assert nothing, which is worse
+// than no number because it reads like one. The four files that exist were
+// written to pin behaviour somebody could otherwise break silently, and
+// the next one should be written for the same reason rather than to move a
+// percentage.
+//
+// So: coverage says a line ran, not that a test would notice it breaking —
 // that is what the mutation passes in the commit log are for. A green gate
-// here means the arithmetic and the queries are held, and means nothing at
-// all about how any of it looks.
+// here means the arithmetic and the queries are held. It still says nothing
+// about how any of it looks, and neither do the UI tests: layout is not
+// simulated and no assertion in this repository has ever seen a pixel.
 const IMPURE = [
   'src/lib/candidates.ts', // a React hook; imports Alert and Keyboard
   'src/lib/reminders.ts', // talks to expo-notifications; the maths it uses is remind.ts, which the gate holds
@@ -70,8 +81,21 @@ const IMPURE = [
 ];
 
 export default defineConfig({
+  // React Native's own source is Flow, which nothing in this toolchain can
+  // parse. `react-native-web` is the same translation Expo's web target
+  // uses, and it is what lets a screen render into jsdom — see
+  // `src/uitest/setup.tsx` for what that substitution is and is not worth.
+  //
+  // Aliased for every test rather than only the UI ones, because a pure
+  // module has no `react-native` import to redirect: the alias is a no-op
+  // where it does not apply.
+  resolve: { alias: { 'react-native': 'react-native-web' } },
   test: {
     env: { TZ: process.env.TEST_TZ ?? 'Asia/Ho_Chi_Minh' },
+    // The native modules a tree needs stubbed before it can mount. Loaded
+    // for every file: it registers lazy `vi.mock` factories and nothing
+    // else, so a test that imports none of them pays nothing.
+    setupFiles: ['src/uitest/setup.tsx'],
     coverage: {
       provider: 'v8',
       // `*.ts` only: every `.tsx` in `src/lib` is a React context.
