@@ -35,9 +35,8 @@ import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { AmbientWarmth, BackButton, PressableScale, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import { finished } from '../lib/batch';
 import CandidateRow from '../components/CandidateRow';
@@ -87,12 +86,11 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
   const cityName = city ? t(city.short_en, city.short_vi, city.short_ja) : '';
 
   return (
-    <SafeAreaView style={s.screen} edges={['top']}>
+    <Screen
+      title={t('Add a place', 'Thêm địa điểm', 'スポットを追加')}
+      onBack={() => navigation.goBack()}
+    >
       <AmbientWarmth />
-      <View style={s.header}>
-        <BackButton onPress={() => navigation.goBack()} />
-        <Text style={s.title}>{t('Add a place', 'Thêm địa điểm', 'スポットを追加')}</Text>
-      </View>
 
       <View style={s.field}>
         <Ionicons name="search" size={19} color={colors.textTertiary} />
@@ -201,17 +199,15 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
           scroll to find is a button you lose track of while choosing. */}
       <AddBatchBar chosen={chosen.length} batch={batch} onAdd={go} onCancel={cancel} done={done} />
 
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
-  },
-  title: { color: colors.text, ...type.titleDetail },
+  // The header was a local copy of `Screen`'s, off by a 12pt gap and
+  // centred where the shared one aligns to the title's first line. Same
+  // 26pt title, so it read almost right — which is how a copy survives
+  // long enough to drift. `Screen` draws it now.
 
   field: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
