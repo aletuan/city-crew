@@ -283,8 +283,15 @@ export function Screen({ title, subtitle, eyebrow, children, right, onBack }: {
   title: string;
   /** One quiet line under the title. Only in the pushed-screen header —
    *  a tab root's large title has an eyebrow above it instead, and a
-   *  screen with both is a screen with three headings. */
-  subtitle?: string;
+   *  screen with both is a screen with three headings.
+   *
+   *  A string gets `s.subtitle` and is clipped to one line, which is what
+   *  a sentence wants. A node is for a line that carries its own marks
+   *  rather than only words — the collection byline's padlock, its
+   *  curator's face and its heart — and such a node brings its own type,
+   *  because the sizes around a control are tuned to the measure it sits
+   *  in. `eyebrow` above takes a node on the same terms. */
+  subtitle?: React.ReactNode;
   /** Small uppercase line above the title — e.g. today's date. */
   eyebrow?: React.ReactNode;
   children: React.ReactNode;
@@ -321,7 +328,16 @@ export function Screen({ title, subtitle, eyebrow, children, right, onBack }: {
           <BackButton onPress={onBack} />
           <View style={s.headerText}>
             <Text style={s.titleInline} numberOfLines={2}>{title}</Text>
-            {subtitle ? <Text style={s.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+            {/* The falsy guard comes first and stays: a caller computing
+                its line can hand over an empty string, and `typeof ''` is
+                still 'string' — which would draw a blank line the height
+                of a subtitle under the title. A node is always truthy, so
+                this costs the node path nothing. */}
+            {subtitle
+              ? (typeof subtitle === 'string'
+                ? <Text style={s.subtitle} numberOfLines={1}>{subtitle}</Text>
+                : subtitle)
+              : null}
           </View>
           {right}
         </View>

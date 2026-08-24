@@ -2,12 +2,12 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import PlaceCard from '../components/PlaceCard';
 import { AddSlot } from '../components/add';
 import {
-  AmbientWarmth, Avatar, BackButton, Empty, GradientCta, PressableScale, RoundIconButton,
+  AmbientWarmth, Avatar, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
   fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
@@ -525,188 +525,197 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     ],
   );
 
-  return (
-    <SafeAreaView style={s.screen} edges={['top']}>
-      <AmbientWarmth />
-      <View style={s.header}>
-        <BackButton onPress={() => navigation.goBack()} />
-        <View style={{ flex: 1 }}>
-          <Text style={s.title} numberOfLines={1}>{title}</Text>
-          {col && (
-            <View style={s.metaRow}>
-              {/* The padlock the list already uses for the same fact, so a
-                  private collection looks the same wherever you meet it —
-                  and a globe once it is not private any more.
+  /* The line under the title. It goes to `Screen` as a node rather than a
+     string because it is not a sentence: a padlock or a globe, the
+     curator's face, the counts, and a heart you can press. `Screen`
+     styles a string and leaves a node to style itself, which is what this
+     one needs — the 18pt face and the 15pt heart are tuned to `meta`'s
+     measure, not to the 13.5pt a written subtitle takes. */
+  const byline = col ? (
+    <View style={s.metaRow}>
+      {/* The padlock the list already uses for the same fact, so a
+          private collection looks the same wherever you meet it —
+          and a globe once it is not private any more.
 
-                  Published reads first and in colour, because it is the
-                  state worth checking before you leave the screen. Private
-                  stays grey: it is the resting state and does not need
-                  announcing. */}
-              {owned && (
-                <Ionicons
-                  name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
-                  size={13}
-                  color={isPublic ? colors.ok : colors.textTertiary}
-                />
-              )}
-              {owned && isPublic && (
-                <Text style={s.metaPublic}>{t('Public', 'Công khai', '公開')}</Text>
-              )}
-              {/* The face leads the line and the handle follows it, which
-                  is a reordering rather than an insertion: a photograph
-                  belongs beside the name it is of, and the only way to
-                  keep the byline a single `Text` — which `numberOfLines`
-                  needs, or the ellipsis arrives twice — is to put the
-                  person first and the counts after.
+          Published reads first and in colour, because it is the
+          state worth checking before you leave the screen. Private
+          stays grey: it is the resting state and does not need
+          announcing. */}
+      {owned && (
+        <Ionicons
+          name={isPublic ? 'globe-outline' : 'lock-closed-outline'}
+          size={13}
+          color={isPublic ? colors.ok : colors.textTertiary}
+        />
+      )}
+      {owned && isPublic && (
+        <Text style={s.metaPublic}>{t('Public', 'Công khai', '公開')}</Text>
+      )}
+      {/* The face leads the line and the handle follows it, which
+          is a reordering rather than an insertion: a photograph
+          belongs beside the name it is of, and the only way to
+          keep the byline a single `Text` — which `numberOfLines`
+          needs, or the ellipsis arrives twice — is to put the
+          person first and the counts after.
 
-                  18pt against a 15pt line, and that is the whole answer
-                  to the two round controls this header already has. A
-                  face at the size of the type it sits in is never
-                  mistaken for the 44pt glass one, and it costs the header
-                  no height. The rule is written where the controls are,
-                  in `ui.tsx`.
+          18pt against a 15pt line, and that is the whole answer
+          to the two round controls this header already has. A
+          face at the size of the type it sits in is never
+          mistaken for the 44pt glass one, and it costs the header
+          no height. The rule is written where the controls are,
+          in `ui.tsx`.
 
-                  No self-credit. `CollectionsScreen` already states it —
-                  your own byline is the padlock's business, not a credit
-                  line — and this screen was the one place contradicting
-                  it. Beside a padlock only an owner sees, above a menu
-                  that offers only an owner Delete, your own name was a
-                  third way of saying the same thing. */}
-              {curatorAvatar ? <Avatar url={curatorAvatar} size={18} /> : null}
-              <Text style={[s.meta, s.byline]} numberOfLines={1}>
-                {owned && isPublic ? '·  ' : ''}
-                {!owned && col.curator_handle ? `${atHandle(col.curator_handle)}  ·  ` : ''}
-                {members.length} {t('places', 'địa điểm', 'スポット')}
-                {owned && !isPublic ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
-              </Text>
+          No self-credit. `CollectionsScreen` already states it —
+          your own byline is the padlock's business, not a credit
+          line — and this screen was the one place contradicting
+          it. Beside a padlock only an owner sees, above a menu
+          that offers only an owner Delete, your own name was a
+          third way of saying the same thing. */}
+      {curatorAvatar ? <Avatar url={curatorAvatar} size={18} /> : null}
+      <Text style={[s.meta, s.byline]} numberOfLines={1}>
+        {owned && isPublic ? '·  ' : ''}
+        {!owned && col.curator_handle ? `${atHandle(col.curator_handle)}  ·  ` : ''}
+        {members.length} {t('places', 'địa điểm', 'スポット')}
+        {owned && !isPublic ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
+      </Text>
 
-              {/* One heart, and it is both the gesture and the tally — the
-                  shape the shelf card settled on and the argument written
-                  there: two marks for one meaning is one too many, and a
-                  number sitting beside a control it does not belong to
-                  reads as that control's label.
+      {/* One heart, and it is both the gesture and the tally — the
+          shape the shelf card settled on and the argument written
+          there: two marks for one meaning is one too many, and a
+          number sitting beside a control it does not belong to
+          reads as that control's label.
 
-                  This screen had exactly that split. A 44pt heart in the
-                  header did the liking; the words "1 likes" down here did
-                  the counting; and the number was nowhere near the thing
-                  it counted. Merged, outline is a list you have not liked,
-                  coral filled is one you have, and the figure beside it is
-                  how many people agree — which is also how Instagram, X
-                  and every app that stopped shipping "N likes" as prose
-                  now says it.
+          This screen had exactly that split. A 44pt heart in the
+          header did the liking; the words "1 likes" down here did
+          the counting; and the number was nowhere near the thing
+          it counted. Merged, outline is a list you have not liked,
+          coral filled is one you have, and the figure beside it is
+          how many people agree — which is also how Instagram, X
+          and every app that stopped shipping "N likes" as prose
+          now says it.
 
-                  Pressable for everyone except the curator, and that is
-                  the only exception. A curator cannot like their own
-                  list — the database enforces it, and `!owned` here is
-                  the app's half of the same rule: the policy is what
-                  makes it true, this is what keeps the reader from
-                  meeting it as a heart that does nothing. Only this
-                  screen needs the check. The public shelf already leaves
-                  your own lists out of the query it draws from, so the
-                  heart there never meets one; here the row arrives
-                  through `mine` as readily as through the public read.
+          Pressable for everyone except the curator, and that is
+          the only exception. A curator cannot like their own
+          list — the database enforces it, and `!owned` here is
+          the app's half of the same rule: the policy is what
+          makes it true, this is what keeps the reader from
+          meeting it as a heart that does nothing. Only this
+          screen needs the check. The public shelf already leaves
+          your own lists out of the query it draws from, so the
+          heart there never meets one; here the row arrives
+          through `mine` as readily as through the public read.
 
-                  So the owner gets the same shape drawn grey and inert —
-                  they still want to know how the list is doing. Signed
-                  out it stays pressable and opens the sign-in sheet; see
-                  `onHeart`.
-                  `hitSlop` is what buys a 15pt glyph a 44pt target
-                  without drawing a disc — the shelf's trick, and the
-                  reason the header can lose a round control without
-                  losing a tap.
+          So the owner gets the same shape drawn grey and inert —
+          they still want to know how the list is doing. Signed
+          out it stays pressable and opens the sign-in sheet; see
+          `onHeart`.
+          `hitSlop` is what buys a 15pt glyph a 44pt target
+          without drawing a disc — the shelf's trick, and the
+          reason the header can lose a round control without
+          losing a tap.
 
-                  It sits immediately after the counts rather than out at
-                  the margin, which is the correction to how this first
-                  shipped — see `s.like`.
+          It sits immediately after the counts rather than out at
+          the margin, which is the correction to how this first
+          shipped — see `s.like`.
 
-                  Same rule as the shelf on the number itself: it prints
-                  from one. A `0` reads as "nobody liked this" rather than
-                  "no votes yet", and below that the heart draws bare —
-                  which is exactly when it is most obviously an
-                  invitation. */}
-              {isPublic && col.id ? (
-                !owned ? (
-                  <>
-                    <Text style={[s.meta, s.sep]}>·</Text>
-                    <PressableScale
-                      style={s.like}
-                      scaleTo={0.82}
-                      haptic="none"
-                      hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
-                      onPress={onHeart}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: liked }}
-                      accessibilityLabel={liked
-                        ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
-                        : t('Like', 'Thích', 'いいね')}
-                    >
-                      <Ionicons
-                        name={liked ? 'heart' : 'heart-outline'}
-                        size={15}
-                        color={liked ? colors.accent : colors.textTertiary}
-                      />
-                      {likesWorthShowing(likes[col.slug])
-                        ? <Text style={s.meta}>{likes[col.slug]}</Text>
-                        : null}
-                    </PressableScale>
-                  </>
-                ) : likesWorthShowing(likes[col.slug]) ? (
-                  <>
-                    <Text style={[s.meta, s.sep]}>·</Text>
-                    <View style={s.like}>
-                      <Ionicons name="heart" size={15} color={colors.textTertiary} />
-                      <Text style={s.meta}>{likes[col.slug]}</Text>
-                    </View>
-                  </>
-                ) : null
-              ) : null}
+          Same rule as the shelf on the number itself: it prints
+          from one. A `0` reads as "nobody liked this" rather than
+          "no votes yet", and below that the heart draws bare —
+          which is exactly when it is most obviously an
+          invitation. */}
+      {isPublic && col.id ? (
+        !owned ? (
+          <>
+            <Text style={[s.meta, s.sep]}>·</Text>
+            <PressableScale
+              style={s.like}
+              scaleTo={0.82}
+              haptic="none"
+              hitSlop={{ top: 14, bottom: 14, left: 12, right: 14 }}
+              onPress={onHeart}
+              accessibilityRole="button"
+              accessibilityState={{ selected: liked }}
+              accessibilityLabel={liked
+                ? t('Unlike', 'Bỏ thích', 'いいねを取り消す')
+                : t('Like', 'Thích', 'いいね')}
+            >
+              <Ionicons
+                name={liked ? 'heart' : 'heart-outline'}
+                size={15}
+                color={liked ? colors.accent : colors.textTertiary}
+              />
+              {likesWorthShowing(likes[col.slug])
+                ? <Text style={s.meta}>{likes[col.slug]}</Text>
+                : null}
+            </PressableScale>
+          </>
+        ) : likesWorthShowing(likes[col.slug]) ? (
+          <>
+            <Text style={[s.meta, s.sep]}>·</Text>
+            <View style={s.like}>
+              <Ionicons name="heart" size={15} color={colors.textTertiary} />
+              <Text style={s.meta}>{likes[col.slug]}</Text>
             </View>
-          )}
-        </View>
-        {/* `collapsable={false}` keeps the wrapper as a real native view,
-            which is what measureInWindow needs to have something to
-            measure. */}
-        {/* While arranging, the one control is the way out of it. Leaving
-            the overflow menu up would offer Delete to a thumb that is
-            currently in the business of tapping small buttons in a row. */}
-        {owned && arranging && (
-          <PressableScale onPress={finishArranging} containerStyle={s.done} disabled={ordering}>
-            <Text style={s.doneText}>
-              {ordering
-                ? t('Saving…', 'Đang lưu…', '保存中…')
-                : dirty
-                  ? t('Done', 'Xong', '完了')
-                  : t('Cancel', 'Huỷ', 'キャンセル')}
-            </Text>
-          </PressableScale>
-        )}
-        {/* The slot the heart used to hold, and now the one control this
-            header keeps. Everybody gets it, not only the owner: what the
-            menu offers branches, but "there is more you can do with this
-            list" is true on both sides of that line, and a header whose
-            right-hand side is empty for half its visitors reads as a
-            screen that forgot something.
+          </>
+        ) : null
+      ) : null}
+    </View>
+  ) : null;
 
-            While a copy is in flight the spinner stands here rather than
-            anywhere else on screen. Three round trips is long enough for
-            a tap to look dead, and the control that started the work is
-            the honest place to say it is still going — reopening the menu
-            mid-copy to press the row again is also the one mistake this
-            makes impossible. */}
-        {copying ? (
-          <View style={s.busy}>
-            <ActivityIndicator color={colors.textSecondary} />
-          </View>
-        ) : !arranging ? (
-          <View ref={btn} collapsable={false}>
-            <RoundIconButton
-              icon="ellipsis-horizontal"
-              onPress={openMenu}
-              label={t('More', 'Thêm', 'その他')}
-            />
-          </View>
-        ) : null}
-      </View>
+  /* The header's right-hand slot, which holds one of three things.
+     Exclusive by construction: `arranging` is only ever set from a menu
+     row the owner alone is offered, and `copying` only ever runs for
+     somebody who does not own the list.
+
+     While a copy is in flight the spinner stands here rather than
+     anywhere else on screen. Three round trips is long enough for a tap
+     to look dead, and the control that started the work is the honest
+     place to say it is still going — reopening the menu mid-copy to
+     press the row again is also the one mistake this makes impossible.
+
+     While arranging, the one control is the way out of it. Leaving the
+     overflow menu up would offer Delete to a thumb that is currently in
+     the business of tapping small buttons in a row.
+
+     Otherwise ⋯, and everybody gets it, not only the owner: what the
+     menu offers branches, but "there is more you can do with this list"
+     is true on both sides of that line, and a header whose right-hand
+     side is empty for half its visitors reads as a screen that forgot
+     something. `collapsable={false}` keeps the wrapper a real native
+     view, which is what `measureInWindow` needs to have something to
+     measure. */
+  const headerRight = copying ? (
+    <View style={s.busy}>
+      <ActivityIndicator color={colors.textSecondary} />
+    </View>
+  ) : arranging ? (owned ? (
+    <PressableScale onPress={finishArranging} containerStyle={s.done} disabled={ordering}>
+      <Text style={s.doneText}>
+        {ordering
+          ? t('Saving…', 'Đang lưu…', '保存中…')
+          : dirty
+            ? t('Done', 'Xong', '完了')
+            : t('Cancel', 'Huỷ', 'キャンセル')}
+      </Text>
+    </PressableScale>
+  ) : null) : (
+    <View ref={btn} collapsable={false}>
+      <RoundIconButton
+        icon="ellipsis-horizontal"
+        onPress={openMenu}
+        label={t('More', 'Thêm', 'その他')}
+      />
+    </View>
+  );
+
+  return (
+    <Screen
+      title={title}
+      subtitle={byline}
+      onBack={() => navigation.goBack()}
+      right={headerRight}
+    >
+      <AmbientWarmth />
       {/* What just happened, and the way back out of it. Above the
           description rather than floating over the list: it is about the
           collection as a whole, and a toast that covers the first place
@@ -913,20 +922,21 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           )}
         </View>
       </Modal>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg },
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: space.page, paddingTop: 10, paddingBottom: 10,
-  },
-  // `headline`, not `titleDetail`: this title shares its line with the back
-  // control and is clipped to one line, so it takes the smaller of the two
-  // display sizes rather than truncating more collection names than before.
-  title: { color: colors.text, ...type.headline },
+  // No `screen`, no `header`, no `title`. This screen drew its own header
+  // and it drifted: a 20pt title where every other pushed screen has 26,
+  // centred against a two-line stack where the shared one aligns to the
+  // first line, and its own paddings. `Screen` draws it now — the same
+  // component Crew, Trips, Ideas and six others already use, and the same
+  // shape `authUi` arrived at independently.
+  //
+  // The 20pt was a workaround for long collection names truncating, which
+  // `Screen` answers better: two lines at 26pt hold far more of a name
+  // than one line at 20 ever did.
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   // The ⋯ button's footprint without its glass. A spinner standing in for
   // a control has to hold that control's space or the title beside it
