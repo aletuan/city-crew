@@ -30,18 +30,40 @@ export type Reply = {
 
 export type Asked = {
   table?: string;
-  /** The Edge Function name, when the call was an invoke rather than a query. */
+  /**
+   * The function's name, for the two calls that are not table queries: an
+   * Edge Function (`op: 'invoke'`) and a Postgres function (`op: 'rpc'`).
+   *
+   * Kept as separate verbs rather than one, because they fail differently
+   * and a test that could not tell them apart would pass for either: an
+   * Edge Function is an HTTP round trip that can be missing or unauthorised,
+   * an rpc is SQL running under the caller's RLS.
+   */
   fn?: string;
-  op: 'select' | 'insert' | 'update' | 'delete' | 'invoke';
+  op: 'select' | 'insert' | 'update' | 'delete' | 'invoke' | 'rpc';
   /** The row for a write, the body for an invoke, the column list for a read. */
   payload?: unknown;
-  /** `eq`, `in` and `gte` in the order they were chained. `gte` records the
-   *  operator alongside the value, because "created_at at least X" and
-   *  "created_at is X" are different questions and a test that could not
-   *  tell them apart would pass for either. */
+  /** `eq`, `in`, `gte` and `ilike` in the order they were chained. Anything
+   *  that is not equality records the operator alongside the column, because
+   *  "created_at at least X" and "created_at is X" are different questions
+   *  and a test that could not tell them apart would pass for either. The
+   *  markers are Postgres's own: `>=`, and `~~*` for a case-insensitive
+   *  match. */
   filters: [string, unknown][];
   or?: string;
+  /**
+   * The *first* `order` call's arguments — the primary sort.
+   *
+   * First rather than last, which is what a builder that simply reassigned
+   * would leave behind: `fetchCollections` chains two, and the whole point
+   * of the code it is asserting is which one leads. A test reading the last
+   * one would have passed with the orderings the wrong way round, which is
+   * the bug the comment above that query exists to prevent.
+   */
   order?: unknown[];
+  /** Every `order` call, in the order they were chained, for the queries
+   *  where the tie-break is part of the answer. */
+  orders?: unknown[][];
   single?: boolean;
   /** `maybeSingle`, which differs from `single` in what it does about no
    *  rows — an error there, a null here. Recorded separately so a test can
@@ -51,6 +73,9 @@ export type Asked = {
    *  whether a second write from the same person is a conflict or a change
    *  of mind, which for a one-row-per-person table is the whole design. */
   upsert?: boolean;
+  /** The row cap, when one was asked for. A suggestion list that quietly
+   *  stopped capping itself is a dropdown that grows without limit. */
+  limit?: number;
 };
 
 export function fakeSupabase() {
@@ -89,8 +114,17 @@ export function fakeSupabase() {
       eq: (k: string, v: unknown) => { asked.filters.push([k, v]); return b; },
       in: (k: string, v: unknown) => { asked.filters.push([k, v]); return b; },
       gte: (k: string, v: unknown) => { asked.filters.push([`${k}>=`, v]); return b; },
+      // Case-insensitive match. Recorded distinctly from `eq` because the
+      // difference is the point wherever it is used: handles are stored
+      // lowercase and typed however the reader felt.
+      ilike: (k: string, v: unknown) => { asked.filters.push([`${k}~~*`, v]); return b; },
+      limit: (n: number) => { asked.limit = n; return b; },
       or: (s: string) => { asked.or = s; return b; },
-      order: (...a: unknown[]) => { asked.order = a; return b; },
+      order: (...a: unknown[]) => {
+        (asked.orders ??= []).push(a);
+        asked.order ??= a;
+        return b;
+      },
       single: () => { asked.single = true; return b; },
       maybeSingle: () => { asked.maybe = true; return b; },
       // The builder is the promise. supabase-js works the same way, which
@@ -108,6 +142,18 @@ export function fakeSupabase() {
     replies(...r: Reply[]) { queue.push(...r); },
     client: {
       from: build,
+      /**
+       * A Postgres function, which is not a query and not an Edge Function.
+       *
+       * It answers the same `{ data, error }` shape, so it shares the queue;
+       * what a test wants to pin is the name and the arguments, since both
+       * are strings the compiler never checks against the migration that
+       * declares them.
+       */
+      rpc: (fn: string, args?: unknown) => {
+        log.push({ fn, op: 'rpc', payload: args, filters: [] });
+        return settle();
+      },
       functions: {
         invoke: (fn: string, opts?: { body?: unknown }) => {
           log.push({ fn, op: 'invoke', payload: opts?.body, filters: [] });
