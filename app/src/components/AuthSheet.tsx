@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
-import { colors, display, font, gradAI, radius, space } from '../theme';
+import { colors, display, font, gradAI, space } from '../theme';
 import { PressableScale } from './ui';
 
 export default function AuthSheet({ visible, onClose, onSignIn }: {

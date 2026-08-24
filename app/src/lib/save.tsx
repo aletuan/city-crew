@@ -103,6 +103,8 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     // up, so a failed fetch at launch is not the sheet's final answer.
     if (!mine.loading && (!mine.loaded || mine.error)) mine.reload();
     setTarget(place);
+  // The four fields this actually branches on, not the Fetch object that carries them.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, mine.loaded, mine.loading, mine.error, mine.data.length, mine.reload]);
 
   const toggle = useCallback(async (c: Collection, place: Place) => {
@@ -125,6 +127,8 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
         e instanceof Error ? e.message : String(e),
       );
     }
+  // `mine.reload` and `city.id` are the stable halves of two objects rebuilt each render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mine.reload, t, session, city?.id, historyOn]);
 
   const askToSignIn = useCallback(() => setAuthSheet(true), []);

@@ -2,7 +2,7 @@
 // Profile's settings card. Same sheet language as the city switcher.
 
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LANGS, useI18n } from '../lib/i18n';
 import { colors, font, radius, space } from '../theme';

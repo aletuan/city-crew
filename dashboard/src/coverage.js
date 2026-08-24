@@ -104,7 +104,7 @@ export function buildCoverage(rows) {
   const bestLabel = (labels) =>
     [...labels.entries()].sort((a, b) =>
       b[1] - a[1]
-      || (/[^\u0000-\u007f]/.test(b[0]) ? 1 : 0) - (/[^\u0000-\u007f]/.test(a[0]) ? 1 : 0)
+      || (/[^\p{ASCII}]/u.test(b[0]) ? 1 : 0) - (/[^\p{ASCII}]/u.test(a[0]) ? 1 : 0)
       || a[0].localeCompare(b[0]))[0][0];
   const groups = [...buckets.entries()]
     .map(([key, b]) => {

@@ -8,7 +8,7 @@
 // should be theirs to make here, once, deliberately.
 
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useI18n } from '../lib/i18n';
 import { Scheme, useScheme } from '../lib/theme';

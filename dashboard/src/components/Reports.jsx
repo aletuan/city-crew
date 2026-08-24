@@ -38,6 +38,9 @@ export default function Reports() {
   const [busy, setBusy] = useState(null);
   // Read once per render pass rather than per row: forty rows asking the
   // clock forty times can straddle a minute and disagree with each other.
+  // `rows` is the cache key rather than an input: the instant is meant to be
+  // re-taken when a fetch lands and held still between them.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const now = useMemo(() => new Date(), [rows]);
 
   const load = useCallback(() => {

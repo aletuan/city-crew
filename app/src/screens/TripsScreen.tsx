@@ -39,7 +39,7 @@
 // true — how many stops, what it costs.
 
 import React, { useCallback, useRef } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -287,6 +287,8 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
   useFocusEffect(useCallback(() => {
     if (firstFocus.current) { firstFocus.current = false; return; }
     trips.reload();
+  // `trips.reload` is stable; `trips` is a new object on every load.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trips.reload]));
 
   // One `Date` for both halves of the question, because `todayISO()` and

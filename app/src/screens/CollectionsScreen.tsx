@@ -213,6 +213,9 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
   // it out of the render prop keeps the copy the card animates from and the
   // one the row moves by the same node.
   const seen = useRef<Drag | null>(null);
+  // No array on purpose: this runs every render precisely to catch the node Swipeable rebuilt
+  // behind it, and the ref comparison above is the guard against the loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (seen.current !== drag) setDrag(seen.current); });
 
   const act = (run: () => void) => { ref.current?.close(); run(); };
@@ -319,6 +322,8 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   useFocusEffect(useCallback(() => {
     if (firstFocus.current) { firstFocus.current = false; return; }
     mine.reload();
+  // `mine.reload` is stable; `mine` is a new object on every load.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mine.reload]));
 
   // A public collection with nothing in this city is somebody else's trip,

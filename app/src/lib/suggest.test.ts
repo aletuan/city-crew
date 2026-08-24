@@ -167,7 +167,7 @@ describe('knownByPlaceId', () => {
 
   it('asks once for every id rather than once per row', async () => {
     fake().replies({ data: [row(), row({ google_place_id: 'g2', slug: 'the-note' })] });
-    const out = await knownByPlaceId(['g1', 'g2'], 'me');
+    const out = await knownByPlaceId(['g1', 'g2']);
 
     expect(fake().log).toHaveLength(1);
     expect(fake().log[0].table).toBe('places');
@@ -179,7 +179,7 @@ describe('knownByPlaceId', () => {
   });
 
   it('does not go to the database for an empty list', async () => {
-    expect(await knownByPlaceId([], 'me')).toEqual({});
+    expect(await knownByPlaceId([])).toEqual({});
     expect(fake().log).toEqual([]);
   });
 
@@ -193,7 +193,7 @@ describe('knownByPlaceId', () => {
     ] });
     // With the slug aboard: RLS only returns live rows and your own, so
     // a non-live row is yours and the row can open it. See `Known`.
-    expect(await knownByPlaceId(['a', 'b'], 'me')).toEqual({
+    expect(await knownByPlaceId(['a', 'b'])).toEqual({
       a: { state: 'mine', slug: 'cong-caphe' },
       b: { state: 'mine', slug: 'cong-caphe' },
     });
@@ -201,18 +201,18 @@ describe('knownByPlaceId', () => {
 
   it('skips a row with no google id to key it by', async () => {
     fake().replies({ data: [row({ google_place_id: '' }), row({ google_place_id: 'g2' })] });
-    expect(await knownByPlaceId(['g1', 'g2'], 'me')).toEqual({ g2: { state: 'live', slug: 'cong-caphe' } });
+    expect(await knownByPlaceId(['g1', 'g2'])).toEqual({ g2: { state: 'live', slug: 'cong-caphe' } });
   });
 
   // A failed lookup must not take the search results down with it. Every
   // row simply looks new, and the function still refuses the duplicate.
   it('answers "nothing known" when the lookup fails', async () => {
     fake().replies({ error: { message: 'timeout' } });
-    expect(await knownByPlaceId(['g1'], 'me')).toEqual({});
+    expect(await knownByPlaceId(['g1'])).toEqual({});
   });
 
   it('answers "nothing known" when the lookup returns nothing', async () => {
     fake().replies({ data: null });
-    expect(await knownByPlaceId(['g1'], null)).toEqual({});
+    expect(await knownByPlaceId(['g1'])).toEqual({});
   });
 });

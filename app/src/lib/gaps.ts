@@ -17,9 +17,9 @@
 
 /** Just enough of a place to count by category. Structural, so a full
  *  `Place` satisfies it. */
-type Countable = { categories?: string[] | null; vibe_tags?: string[] | null; category?: string };
-
 import { categoriesOf } from './categories';
+
+type Countable = { categories?: string[] | null; vibe_tags?: string[] | null; category?: string };
 
 export type Gap = {
   /** Categories the reader asked for that this catalog has nothing in,

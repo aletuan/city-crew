@@ -38,7 +38,7 @@ import { partGone, startMinFor, START_MIN } from '../lib/planner';
 import { useSave } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '../lib/trip';
 import type { Nav } from '../nav';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, space, type } from '../theme';
 
 /** The last instant of a calendar day, for a picker bound. `fromISO` gives
  *  local noon — right for a day, half a day short of a ceiling. */

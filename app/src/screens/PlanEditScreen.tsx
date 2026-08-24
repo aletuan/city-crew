@@ -155,9 +155,18 @@ export default function PlanEditScreen({ navigation, route }: {
 
   // Seeded once from the planner, then owned entirely by the reader. A
   // `useEffect` syncing it back would fight every edit they make.
-  const current = stops ?? (picked
-    ? picked.stops.map((s) => ({ place: s.place, arriveMin: s.arriveMin, dwellMin: s.dwellMin, pinned: false }))
-    : []);
+  //
+  // Memoised because three `useMemo`s below depend on it. Before the lint
+  // gate this was a bare expression, so on every render where the reader had
+  // not edited yet — `stops` still null — it built a new array, and `live`,
+  // `legs` and `wrong` all recomputed off a dependency that had changed
+  // identity without changing value. The memo is what makes theirs work.
+  const current = useMemo(
+    () => stops ?? (picked
+      ? picked.stops.map((s) => ({ place: s.place, arriveMin: s.arriveMin, dwellMin: s.dwellMin, pinned: false }))
+      : []),
+    [stops, picked],
+  );
 
   /**
    * The narration with the stale parts taken out.

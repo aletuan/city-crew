@@ -199,11 +199,16 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
     } finally {
       inFlight.current.delete(c.id);
     }
+  // `.reload` is stable where the Fetch wrapper around it is not; `liked` is the value this reads.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meId, liked, likeCounts.reload, myLikes.reload]);
 
   const value = useMemo<Catalog>(() => ({
     places, collections, terms, likes: counts, myLikes: liked, toggleLike,
     curatorAvatars: curatorAvatars.data,
+  // Each field, not each wrapper: a Fetch object is new every render, so depending on it would
+  // rebuild the context value — and re-render every consumer — on renders where nothing loaded.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [
     places.data, places.loading, places.error, places.loadedAt, places.reload,
     collections.data, collections.loading, collections.error, collections.loadedAt, collections.reload,

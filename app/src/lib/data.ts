@@ -297,6 +297,9 @@ export const usePlacesQuery = (meId?: string | null) => {
   const { city } = useCity();
   const fetcher = useCallback(
     () => (city ? fetchPlaces(city.id, meId) : (pending as Promise<Place[]>)),
+    // `city.id` is the stable key. Depending on `city` changes the fetcher identity on renders
+    // where the city did not change, and useFetch reloads the whole catalog off that.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [city?.id, meId],
   );
   return useFetch(fetcher, [] as Place[]);
@@ -422,6 +425,8 @@ export const useCollectionsQuery = (meId?: string | null) => {
   const { city } = useCity();
   const fetcher = useCallback(
     () => (city ? fetchCollections(city.id, meId) : (pending as Promise<Collection[]>)),
+    // `city.id` is the stable key — see `usePlacesQuery` above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [city?.id, meId],
   );
   return useFetch(fetcher, [] as Collection[]);

@@ -39,7 +39,9 @@ import { colors, font, radius } from '../theme';
  *  rather than a red screen. */
 const MapView: any = (() => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+    // Metro resolves a native module that may not be in the binary at all;
+    // there is no import form that can fail softly like this.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('react-native-maps').default ?? null;
   } catch {
     return null;
@@ -47,7 +49,7 @@ const MapView: any = (() => {
 })();
 const Marker: any = (() => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('react-native-maps').Marker ?? null;
   } catch {
     return null;
