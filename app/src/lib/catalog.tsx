@@ -18,10 +18,12 @@ import React, {
 import { AppState } from 'react-native';
 import {
   Collection, Fetch, Place, likeCollection, unlikeCollection, useCategoryTermsQuery,
-  useCollectionsQuery, useLikeCountsQuery, useMyLikesQuery, usePlacesQuery,
+  useCollectionsQuery, useCuratorAvatarsQuery, useLikeCountsQuery, useMyLikesQuery,
+  usePlacesQuery,
 } from './data';
 import { countsNow, likedNow, NO_PENDING, settled, type Pending } from './likes';
 import { CATEGORIES } from './categories';
+import { normalizeHandle } from './handle';
 import { mergeTerms, type TermMap } from './search';
 import { useAuth } from './auth';
 import { shouldRefresh } from './stale';
@@ -29,6 +31,9 @@ import { shouldRefresh } from './stale';
 type Catalog = {
   places: Fetch<Place[]>;
   collections: Fetch<Collection[]>;
+  /** Curator avatars by folded handle, fetched with the shelf so a
+   *  byline never has to fill itself in a round trip after it drew. */
+  curatorAvatars: Record<string, string>;
   /** Search synonyms: the app's shipped defaults, plus whatever the desk
    *  has added. Already merged and folded — see `mergeTerms`. */
   terms: TermMap;
@@ -73,6 +78,7 @@ const EMPTY: Catalog = {
   places: { loading: true, loaded: false, error: null, data: [], loadedAt: null, reload: () => {} },
   collections: { loading: true, loaded: false, error: null, data: [], loadedAt: null, reload: () => {} },
   terms: mergeTerms(BUILT_IN, null),
+  curatorAvatars: {},
   likes: {},
   myLikes: [],
   toggleLike: async () => {},
@@ -93,6 +99,17 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   const collections = useCollectionsQuery(meId);
   // No city and no reader in the key: what somebody types for "cinema" is
   // the same in every city and for everyone. One fetch, for the app's life.
+  // The faces behind the public shelf's bylines, fetched here rather
+  // than by whichever screen happens to need one. A collection screen
+  // asking for its curator's avatar on open laid out a byline and then
+  // shoved it sideways when the answer came back; asked for with the
+  // shelf, the face is in memory before any list is opened.
+  const curatorAvatars = useCuratorAvatarsQuery(
+    useMemo(
+      () => collections.data.map((c) => c.curator_handle ?? '').filter(Boolean),
+      [collections.data],
+    ),
+  );
   const deskTerms = useCategoryTermsQuery();
   // Counts are public and need no reader; the set of your own likes is
   // empty until there is one, which is the honest answer signed out.
@@ -186,6 +203,7 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Catalog>(() => ({
     places, collections, terms, likes: counts, myLikes: liked, toggleLike,
+    curatorAvatars: curatorAvatars.data,
   }), [
     places.data, places.loading, places.error, places.loadedAt, places.reload,
     collections.data, collections.loading, collections.error, collections.loadedAt, collections.reload,
@@ -208,6 +226,15 @@ export const useSearchTerms = () => useCatalog().terms;
 
 /** The desk's public collections for the city. */
 export const useCollections = () => useCatalog().collections;
+
+/** One curator's face, if the shelf brought it back. Null covers both
+ *  "no such profile" — every editorial handle — and "not fetched yet",
+ *  and the screens draw the same placeholder for both, so the answer
+ *  arriving late cannot move anything. */
+export const useCuratorAvatar = (handle: string | null | undefined) => {
+  const map = useCatalog().curatorAvatars;
+  return handle ? map[normalizeHandle(handle)] ?? null : null;
+};
 
 /** Like counts by slug, your own likes by id, and the one way to change
  *  either. All three already include the tap you just made. */

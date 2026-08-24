@@ -19,7 +19,7 @@ import {
   setCollectionPublic, useProfileByHandle,
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
-import { useCollections, usePlaces } from '../lib/catalog';
+import { useCuratorAvatar, useCollections, usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';
@@ -240,7 +240,25 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const curatorHandle = !owned && col?.curator_handle
     ? normalizeHandle(col.curator_handle) || null
     : null;
-  const curatorAvatar = useProfileByHandle(curatorHandle).data?.avatar_url || null;
+  /*
+   * The shelf already fetched this, so the common path spends no request
+   * at all and the face is there on the first paint. The lookup stays for
+   * the cold one — a deep link into a list whose shelf has not loaded —
+   * and is skipped entirely when the map already answered.
+   */
+  const cachedAvatar = useCuratorAvatar(curatorHandle);
+  const lookup = useProfileByHandle(cachedAvatar ? null : curatorHandle);
+  const curatorAvatar = cachedAvatar ?? (lookup.data?.avatar_url || null);
+  /*
+   * Whether the byline holds a place for a face.
+   *
+   * While the answer is still coming, yes — so the line is laid out once
+   * and the face lands in a slot that was already there, rather than
+   * pushing the handle sideways as it arrives. Once the lookup has come
+   * back empty, no: an editorial handle has no person behind it, and a
+   * permanent grey disc there would be the screen inventing one.
+   */
+  const holdForFace = !!curatorAvatar || (!!curatorHandle && !cachedAvatar && lookup.loading);
   const liked = !!col?.id && myLikes.includes(col.id);
   // The write, the refetch, and the in-flight guard all live on the
   // provider now — a like taken from the shelf has to show here too, and
@@ -574,7 +592,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           it. Beside a padlock only an owner sees, above a menu
           that offers only an owner Delete, your own name was a
           third way of saying the same thing. */}
-      {curatorAvatar ? <Avatar url={curatorAvatar} size={18} /> : null}
+      {holdForFace ? <Avatar url={curatorAvatar} size={18} /> : null}
       <Text style={[s.meta, s.byline]} numberOfLines={1}>
         {owned && isPublic ? '·  ' : ''}
         {!owned && col.curator_handle ? `${atHandle(col.curator_handle)}  ·  ` : ''}
