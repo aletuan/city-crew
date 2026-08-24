@@ -84,6 +84,20 @@ jobs:
   # No EXPO_TOKEN and no network account: `expo export` bundles locally and
   # publishes nothing, so it runs on a fork's pull request like any other
   # check. Output goes outside the checkout because nothing here keeps it.
+  #
+  # ── and does it still hold together? ──
+  #
+  # The step before the export asks a question the export cannot: are the
+  # dependency versions the ones this SDK's native runtime was built
+  # against. That is the second thing to have broken the app silently, and
+  # it broke it worse than the first. `react-native-web`, added for the test
+  # harness, pulls `react-dom`, which requires `react@^19.2.8` — and
+  # `"react": "^19.1.0"` let npm take it. SDK 54 pins 19.1.0, so a
+  # reconciler newer than the renderer shipped: no crash and no red box, the
+  # first frame simply never committed and the app held its holding frame
+  # forever. A white screen on launch, and nothing in CI could see it —
+  # typecheck, lint, 1,274 tests, 100% coverage and a clean bundle all
+  # passed on the version that did it.
   bundle:
     runs-on: ubuntu-latest
     defaults:
@@ -97,7 +111,12 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
-      - run: npx expo export --platform all --output-dir "$RUNNER_TEMP/expo-export"
+      # Reads the SDK's own bundled-native-modules list and fails on any
+      # dependency that has drifted off it. Needs the Expo API, which a
+      # runner has and a sandbox does not.
+      - run: npx expo install --check
+      - if: '!cancelled()'
+        run: npx expo export --platform all --output-dir "$RUNNER_TEMP/expo-export"
 
   # The dashboard's pure modules, same doctrine as the app job: plain
   # functions in a plain Node process, no React, no Supabase.
