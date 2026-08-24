@@ -13,6 +13,7 @@ import { AuthProvider } from './src/lib/auth';
 import { CityProvider } from './src/lib/city';
 import { I18nProvider, useI18n } from './src/lib/i18n';
 import { ThemeProvider, useScheme } from './src/lib/theme';
+import { holdingFirstFrame } from './src/lib/boot';
 import { CatalogProvider } from './src/lib/catalog';
 import { SaveProvider } from './src/lib/save';
 import { colors } from './src/theme';
@@ -194,18 +195,22 @@ const navTheme = {
 /** Everything below the theme, so the scheme is readable from here down. */
 function Root() {
   const { scheme, ready } = useScheme();
-  // Hold the first frame until the stored choice is in. A dark-mode user
-  // seeing a white flash on every launch would be a worse bug than having
-  // no setting at all.
   // Display type only — see theme.ts. Until the faces are ready the app
   // holds on its own ground colour rather than rendering titles in the
   // system font and swapping them a frame later, which reads as a glitch.
-  const [fontsLoaded] = useFonts({
+  // The same hold covers the stored scheme: a dark-mode reader seeing a
+  // white flash on every launch would be a worse bug than having no setting.
+  //
+  // `fontError` is read, not discarded. It was discarded, and a font that
+  // failed to load therefore left the hold in place forever — a white screen
+  // on launch with nothing said about it. `holdingFirstFrame` is where that
+  // decision lives now, and where a test can reach it.
+  const [fontsLoaded, fontError] = useFonts({
     SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold,
   });
-  // The same hold covers the stored scheme: a dark-mode user seeing a white
-  // flash on every launch would be a worse bug than having no setting.
-  if (!fontsLoaded || !ready) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  if (holdingFirstFrame({ fontsLoaded, fontsFailed: !!fontError, themeReady: ready })) {
+    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  }
 
   return (
     // Gesture handler wants to own the root view: swipe-to-reveal on the
