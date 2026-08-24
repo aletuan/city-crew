@@ -21,7 +21,75 @@ export type Sky = {
   icon: keyof typeof Ionicons.glyphMap;
   /** Whether the glyph should be drawn in gold. See `isClear`. */
   gold: boolean;
+  /** What the sky is doing, in words something can switch on. */
+  condition: WeatherCondition;
+  /** Millimetres in the last hour. What separates drizzle from a
+   *  downpour when the code alone says only "rain". */
+  precipitation: number;
+  /** Kilometres per hour, which is what Open-Meteo returns by default. */
+  windKph: number;
+  /** Degrees the wind blows **from**, meteorological convention: 0 is a
+   *  northerly, 90 an easterly. Anything drawing a direction has to
+   *  reverse it to get the way things actually travel. */
+  windDeg: number;
+  /** Sky covered, 0–100. */
+  cloudPct: number;
+  isDay: boolean;
 };
+
+/**
+ * The sky as something to render, rather than as a WMO number.
+ *
+ * Deliberately coarser than the code list and deliberately not the same
+ * partition as `skyIcon`: that table answers "which glyph", this one
+ * answers "what should the photograph feel like", and the two disagree
+ * in one useful place — drizzle and a downpour share a glyph because
+ * Ionicons has one rain icon, and must not share an atmosphere.
+ *
+ * No `wind` member, though the prompt this was built from had one. Wind
+ * is not a state of the sky, it is a modifier on whichever state the sky
+ * is in: it can be windy and clear, windy and raining, windy and foggy.
+ * A condition called "wind" would make those mutually exclusive.
+ */
+export type WeatherCondition =
+  | 'clear'
+  | 'partly-cloudy'
+  | 'cloudy'
+  | 'drizzle'
+  | 'rain'
+  | 'heavy-rain'
+  | 'thunderstorm'
+  | 'fog'
+  | 'snow';
+
+/**
+ * WMO weather code → a condition.
+ *
+ * The freezing variants fold into their wet siblings: 56 and 57 are
+ * freezing drizzle, 66 and 67 freezing rain. Nothing downstream draws
+ * ice, and a category that renders identically to another is a category
+ * that exists only to be read in a switch statement.
+ *
+ * An unrecognised code lands on `partly-cloudy` for the same reason
+ * `skyIcon` lands on its own middle case: the number is the part we are
+ * unsure of, not the weather, and a mild sky is the safest thing to
+ * assume about one we cannot name.
+ */
+export function conditionOf(code: number): WeatherCondition {
+  if (code === 0) return 'clear';
+  if (code === 1 || code === 2) return 'partly-cloudy';
+  if (code === 3) return 'cloudy';
+  if (code === 45 || code === 48) return 'fog';
+  if (code >= 51 && code <= 57) return 'drizzle';
+  if (code === 65 || code === 67) return 'heavy-rain';
+  if (code >= 61 && code <= 67) return 'rain';
+  if (code >= 71 && code <= 77) return 'snow';
+  if (code === 82) return 'heavy-rain';
+  if (code === 80 || code === 81) return 'rain';
+  if (code === 85 || code === 86) return 'snow';
+  if (code >= 95) return 'thunderstorm';
+  return 'partly-cloudy';
+}
 
 /**
  * WMO weather code → a glyph.
@@ -51,7 +119,15 @@ export function skyIcon(code: number, day: boolean): keyof typeof Ionicons.glyph
   return 'partly-sunny-outline';
 }
 
-type Current = { temperature_2m?: unknown; weather_code?: unknown; is_day?: unknown };
+type Current = {
+  temperature_2m?: unknown;
+  weather_code?: unknown;
+  is_day?: unknown;
+  precipitation?: unknown;
+  wind_speed_10m?: unknown;
+  wind_direction_10m?: unknown;
+  cloud_cover?: unknown;
+};
 
 /**
  * The shape Open-Meteo returns, or null if it is not the shape we expect.
@@ -77,13 +153,35 @@ function num(v: unknown): number | null {
   return null;
 }
 
+/** The same guard, for a field whose absence is a value rather than a
+ *  gap. See the note in `parseSky`. */
+function num0(v: unknown): number {
+  return num(v) ?? 0;
+}
+
 export function parseSky(json: unknown): Sky | null {
   const cur = (json as { current?: Current })?.current;
   if (!cur) return null;
   const temp = num(cur.temperature_2m);
   const code = num(cur.weather_code);
   if (temp === null || code === null) return null;
-  return { temp: Math.round(temp), icon: skyIcon(code, cur.is_day !== 0), gold: isClear(code) };
+  const isDay = cur.is_day !== 0;
+  return {
+    temp: Math.round(temp),
+    icon: skyIcon(code, isDay),
+    gold: isClear(code),
+    condition: conditionOf(code),
+    // Zero rather than null for the four that arrived later, and the
+    // asymmetry is the point: a temperature we did not get is a reading
+    // to withhold, but a wind speed we did not get is a still day as far
+    // as anything drawing it is concerned. Making these nullable would
+    // push a branch into every consumer to say the same thing.
+    precipitation: num0(cur.precipitation),
+    windKph: num0(cur.wind_speed_10m),
+    windDeg: num0(cur.wind_direction_10m),
+    cloudPct: num0(cur.cloud_cover),
+    isDay,
+  };
 }
 
 /**
@@ -98,8 +196,19 @@ export function isClear(code: number): boolean {
   return code >= 0 && code <= 2;
 }
 
+/**
+ * Seven fields, and one deliberately absent.
+ *
+ * `visibility` is what a fog effect would like to read, and Open-Meteo
+ * does not offer it under `current` — only hourly. Which turns out not
+ * to matter: codes 45 and 48 *are* fog, stated by the people who
+ * measured it, and a metre count would only be a second opinion on the
+ * same fact. Asking for an hourly block to get one is a bigger response
+ * and a worse answer.
+ */
 export function skyUrl(lat: number, lng: number): string {
   return 'https://api.open-meteo.com/v1/forecast'
     + `?latitude=${lat}&longitude=${lng}`
-    + '&current=temperature_2m,weather_code,is_day';
+    + '&current=temperature_2m,weather_code,is_day'
+    + ',precipitation,wind_speed_10m,wind_direction_10m,cloud_cover';
 }

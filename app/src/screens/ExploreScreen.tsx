@@ -24,6 +24,8 @@ import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { useSky } from '../lib/sky';
+import WeatherLayer, { useWeatherStill } from '../components/weather/WeatherLayer';
+import WeatherDebug, { DEBUG_DEFAULT, debugSky, type Debug } from '../components/weather/WeatherDebug';
 import { dateline } from '../lib/format';
 import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
@@ -228,7 +230,7 @@ function heroPlace(places: Place[], pinnedSlug?: string | null): Place | undefin
   );
 }
 
-function Hero({ place, heroH, onStart, onSearch, scrollY }: {
+function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
   place: Place | undefined;
   /** Decided by the screen, not here: the screen needs the same number
    *  for its status-bar threshold, so there is exactly one of it. */
@@ -245,6 +247,10 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
    *  re-offers search the moment browsing starts to look like hunting. */
   onSearch: () => void;
   scrollY: Animated.Value;
+  /** Whether the photograph has scrolled off the top. The screen already
+   *  computes this for the status bar; the weather stops for it too, so
+   *  nothing animates behind a page nobody is looking at. */
+  gone: boolean;
 }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
@@ -253,6 +259,22 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
   // city set to follow their location still keeps it on their phone.
   const sky = useSky(city?.center_lat, city?.center_lng);
   const uri = place && coverOf(place)?.photo_uri;
+  const { width: winW } = useWindowDimensions();
+  const still = useWeatherStill(gone);
+
+  /**
+   * The dev override for the weather.
+   *
+   * `__DEV__` gates both the state and the panel, so a production bundle
+   * carries a `null` and a constant. It is reached by holding the date
+   * pill — the one control on this screen that is already about the
+   * weather, and one no reader has any reason to press for half a
+   * second.
+   */
+  const [debug, setDebug] = useState<Debug | null>(null);
+  const [debugOpen, setDebugOpen] = useState(false);
+  const shown = __DEV__ && debug ? debugSky(debug, sky) : sky;
+  const hour = __DEV__ && debug ? debug.hour : new Date().getHours();
   // The photo trails the scroll slightly; pre-scaled so no edge shows.
   const parallax = scrollY.interpolate({
     inputRange: [0, heroH], outputRange: [0, Math.round(heroH * 0.08)], extrapolate: 'clamp',
@@ -270,6 +292,20 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
         // keeps its contrast. A city with no photography at all is a
         // catalog problem, not a layout to design around.
         : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
+      {/* Between the photograph and the scrim, which is the whole of the
+          layout decision. Everything it draws is therefore under a wash
+          that reaches 0.97 by the foot of the hero, so the rule that
+          weather must never fight the headline is enforced by geometry
+          rather than by a second gradient that would drift the first time
+          either was tuned. */}
+      <WeatherLayer
+        sky={shown}
+        width={winW}
+        height={heroH}
+        still={still}
+        hour={hour}
+        intensity={__DEV__ && debug ? debug.intensity : 1}
+      />
       <LinearGradient
         colors={['rgba(10,11,10,0.45)', 'rgba(10,11,10,0.06)', 'rgba(10,11,10,0.55)', 'rgba(10,11,10,0.97)']}
         locations={[0, 0.22, 0.64, 1]}
@@ -281,7 +317,16 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
           does not — and the search control. Both carry their own dark
           glass, because the top of this picture can be any sky. */}
       <View style={[s.heroTop, { top: insets.top + 6 }]}>
-        <View style={s.heroDate}>
+        {/* A long press opens the weather tuner, in development only.
+            Nothing about the pill changes: no ripple, no scale, no hint.
+            It is a back door for whoever is tuning `weatherfx.ts`, and a
+            reader who holds it for half a second in a shipped build gets
+            what they have always got, which is nothing. */}
+        <Pressable
+          style={s.heroDate}
+          onLongPress={__DEV__ ? () => { setDebug((d) => d ?? DEBUG_DEFAULT); setDebugOpen(true); } : undefined}
+          delayLongPress={600}
+        >
           <Text style={s.heroDateText}>{dateline(lang, new Date())}</Text>
           {sky ? (
             <>
@@ -289,7 +334,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
               <Text style={s.heroDateText}>{`${sky.temp}°`}</Text>
             </>
           ) : null}
-        </View>
+        </Pressable>
         <PressableScale
           onPress={onSearch}
           scaleTo={0.9}
@@ -342,6 +387,15 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
           </LinearGradient>
         </PressableScale>
       </View>
+      {__DEV__ && debug ? (
+        <WeatherDebug
+          visible={debugOpen}
+          state={debug}
+          onChange={setDebug}
+          onClose={() => setDebugOpen(false)}
+          onUseLive={() => setDebug(null)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -605,6 +659,11 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const duckScroll = useDuckOnScroll();
   const duckRef = useRef(duckScroll);
   duckRef.current = duckScroll;
+  // Same ref indirection as the duck handler, and for the same reason:
+  // the scroll listener below is built once and holds its first closure.
+  const [heroGone, setHeroGone] = useState(false);
+  const goneRef = useRef(setHeroGone);
+  goneRef.current = setHeroGone;
   const onScrollJS = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
     const y = e.nativeEvent.contentOffset.y;
     if (y < 320) setFirst(0);
@@ -615,6 +674,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     if (past !== pastHeroRef.current) {
       pastHeroRef.current = past;
       applyBar();
+      // Once per crossing, not per frame — the same budget `applyBar`
+      // has always spent here. The weather stops when the photograph
+      // it is drawn on is no longer on screen.
+      goneRef.current(past);
     }
     duckRef.current?.(e as never);
   }).current;
@@ -663,6 +726,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         onStart={() => goTo('Ideas', { screen: 'IdeasHome' })}
         onSearch={() => navigation.navigate('Search')}
         scrollY={scrollY}
+        gone={heroGone}
       />
       <CollectionShelf navigation={navigation} />
       {/* Short of the usual gap by exactly the filter row's top padding —
