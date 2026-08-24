@@ -29,6 +29,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { FieldRow, PrimaryButton } from '../components/authUi';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
+import { useReport } from '../components/reportFlow';
 import {
   Avatar, Card, Empty, PressableScale, RoundIconButton, Screen, successHaptic, useTabBarClearance,
 } from '../components/ui';
@@ -204,6 +205,28 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const [sheet, setSheet] = useState<{
     name: string; meta?: string; avatar?: string; actions: PersonAction[];
   } | null>(null);
+  const { report, node: reportSheet } = useReport();
+
+  /** The row every person-shaped sheet ends with. Last, and not red:
+   *  reporting is not a thing done to somebody you know, it is a thing
+   *  said to the desk, and it belongs where a reader looks when the
+   *  other choices were not the point. */
+  const reportAction = (p: FriendProfile): PersonAction => ({
+    key: 'report',
+    icon: 'flag-outline',
+    title: t(`Report ${atHandle(p.handle)}`, `Báo cáo ${atHandle(p.handle)}`, `${atHandle(p.handle)} を報告`),
+    desc: t(
+      'Tell the desk about their name, photo or bio. They are not told who reported them.',
+      'Báo cho desk về tên, ảnh hoặc tiểu sử của họ. Họ không biết ai đã báo cáo.',
+      '名前・写真・自己紹介についてデスクに報告します。誰が報告したかは相手に伝わりません。',
+    ),
+    onPress: () => report({
+      kind: 'profile',
+      id: p.id,
+      name: p.full_name || atHandle(p.handle),
+      avatarUrl: p.avatar_url || undefined,
+    }),
+  });
 
   /** The one place a native dialog is still right: the moment of no
    *  return, after the sheet has gone. */
@@ -266,6 +289,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
           '友達関係を解消し、以後どちらからも申請できません。相手のいいねもアクティビティから消えます。',
         ),
       ),
+      reportAction(p),
     ],
   });
 
@@ -285,15 +309,18 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         ),
         onPress: () => answer(requester, false),
       },
-      ...(p ? [blockAction(
-        p,
-        t('Decline and block', 'Từ chối và chặn', '拒否してブロック'),
-        t(
-          'Refuse it and stop them asking again.',
-          'Từ chối và chặn họ mời lại.',
-          '拒否して、今後の申請も止めます。',
+      ...(p ? [
+        blockAction(
+          p,
+          t('Decline and block', 'Từ chối và chặn', '拒否してブロック'),
+          t(
+            'Refuse it and stop them asking again.',
+            'Từ chối và chặn họ mời lại.',
+            '拒否して、今後の申請も止めます。',
+          ),
         ),
-      )] : []),
+        reportAction(p),
+      ] : []),
     ],
   });
 
@@ -322,6 +349,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
           'リクエストを取り消し、双方向に連絡を止めます。',
         ),
       ),
+      reportAction(p),
     ],
   });
 
@@ -677,6 +705,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         actions={sheet?.actions ?? []}
         onClose={() => setSheet(null)}
       />
+      {reportSheet}
     </Screen>
   );
 }

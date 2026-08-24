@@ -1136,3 +1136,53 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 @media (max-width: 380px) {
   .btnlabel-more { display: none; }
 }
+
+/* ── reports ────────────────────────────────────────────────────────────────
+   The queue that keeps the App Store's day. Colour is doing real work
+   here rather than decorating: a report's age is the only thing on the
+   card that can become a problem, so it is the only thing that changes
+   hue. Everything else — the kind, the reason, the handle — stays in the
+   mono voice the rest of the desk uses for facts. */
+.repsum { display: flex; align-items: center; gap: 12px; margin: 4px 0 16px; }
+.reppill {
+  font-family: var(--font-data); font-size: 13px; letter-spacing: 0.02em;
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--surface-glass); border: 1px solid var(--border-soft);
+  color: var(--text-2);
+}
+.reppill.bad { color: var(--bad); border-color: rgba(194, 86, 74, 0.4); }
+
+.repcard { max-width: 860px; margin-bottom: 12px; }
+/* An answered report stays on the page — the desk should be able to see
+   what it just did — but stands back while it does. */
+.repcard.done { opacity: 0.62; }
+
+.rephead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.repstate {
+  font-family: var(--font-data); font-size: 12px; text-transform: uppercase;
+  letter-spacing: 0.08em; padding: 4px 9px; border-radius: 6px;
+  background: var(--surface-glass); color: var(--text-2);
+}
+.repstate.due { color: var(--warn); background: rgba(246, 164, 92, 0.12); }
+.repstate.overdue { color: var(--bad); background: rgba(194, 86, 74, 0.14); }
+.repkind { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
+.repreason { font-size: 13px; color: var(--text); font-weight: 600; }
+.rephandle { font-family: var(--font-data); font-size: 13px; color: var(--text-3); }
+
+/* The words being judged, quoted at reading size — this is the evidence,
+   not a caption. */
+.reptext { margin: 0 0 6px; font-size: 15px; line-height: 1.5; color: var(--text); }
+.repnote { margin: 0 0 6px; font-size: 14px; line-height: 1.5; color: var(--text-2); font-style: italic; }
+.repacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.syncbtn.danger { color: var(--bad); border-color: rgba(194, 86, 74, 0.35); }
+.syncbtn.danger:hover { background: rgba(194, 86, 74, 0.12); }
+
+/* The waiting count beside a nav item. Mono, because it is a number the
+   desk acts on rather than a label; and pushed to the end of the row so
+   the words still line up with every other item's. */
+.navcount {
+  margin-left: auto;
+  font-family: var(--font-data); font-size: 12px; font-weight: 700;
+  min-width: 20px; padding: 2px 6px; border-radius: 999px; text-align: center;
+  background: rgba(194, 86, 74, 0.16); color: var(--bad);
+}

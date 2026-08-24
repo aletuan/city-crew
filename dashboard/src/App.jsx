@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { api } from './api.js';
 import { signOut } from './auth.jsx';
 import { CategoryIcon } from './icons.jsx';
+import { newCount } from './reports.js';
 
 const ToastCtx = createContext(() => {});
 const ProgressCtx = createContext({ progress: null, refresh: () => {} });
@@ -166,6 +167,23 @@ export default function App() {
   // anywhere — a sheet that outlives the navigation it caused is debris.
   const [sheetOpen, setSheetOpen] = useState(false);
   useEffect(() => setSheetOpen(false), [location.pathname]);
+
+  // How many reports are still unanswered, carried on the nav rather
+  // than on the page they belong to — a queue with a day's deadline is
+  // no use behind a link nobody has a reason to press. Re-read on every
+  // navigation: it is one small call, and a count that only updates on
+  // reload is a count that lies for the length of a session.
+  const [waitingReports, setWaitingReports] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    api.reports()
+      .then((rows) => { if (alive) setWaitingReports(newCount(rows)); })
+      // Silent: an editor who cannot read the queue (or a database that
+      // predates it) should get a desk that works, not an error about a
+      // badge.
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [location.pathname]);
   useEffect(() => {
     if (!sheetOpen) return;
     const onKey = (e) => { if (e.key === 'Escape') setSheetOpen(false); };
@@ -294,6 +312,13 @@ export default function App() {
                 <NavLink to="/city" className={navCls}><CategoryIcon name="photo" />City hero</NavLink>
                 <NavLink to="/scan" className={navCls}><CategoryIcon name="radar" />Scan city</NavLink>
                 <NavLink to="/search-words" className={navCls}><CategoryIcon name="search" />Search words</NavLink>
+                {/* The count is the feature, not the link: a queue with a
+                    day's deadline has to say so from wherever the desk
+                    happens to be standing. */}
+                <NavLink to="/reports" className={navCls}>
+                  <CategoryIcon name="alert" />Reports
+                  {waitingReports > 0 ? <span className="navcount">{waitingReports}</span> : null}
+                </NavLink>
               </nav>
               <div className="side-foot">
                 {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
@@ -418,6 +443,9 @@ export default function App() {
                 <Link className="moremenu-item" to="/city" role="menuitem">City hero</Link>
                 <Link className="moremenu-item" to="/scan" role="menuitem">Scan city</Link>
                 <Link className="moremenu-item" to="/search-words" role="menuitem">Search words</Link>
+                <Link className="moremenu-item" to="/reports" role="menuitem">
+                  Reports{waitingReports > 0 ? ` · ${waitingReports}` : ''}
+                </Link>
                 <div className="moremenu-sep" />
                 <a className="moremenu-item" href="mockup.html" target="_blank" rel="noreferrer" role="menuitem">Mockup ↗</a>
                 <button

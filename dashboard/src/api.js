@@ -68,6 +68,47 @@ async function attachSubmitters(rows) {
 
 export const api = {
   /**
+   * The report queue, newest facts about oldest complaints.
+   *
+   * Through a function rather than the table, because judging a report
+   * needs the words it is about — and a collection hidden by a previous
+   * decision would vanish from an ordinary read of `collections`, taking
+   * the evidence for that decision with it. See `reports_queue`.
+   */
+  reports: async () => db(await supabase.rpc('reports_queue')) ?? [],
+
+  /** Mark one answered. `actioned` means the desk did something about
+   *  the content; `dismissed` means it looked and found nothing wrong.
+   *  Both are answers, and the queue counts neither. */
+  markReport: async (id, status) => {
+    db(await supabase
+      .from('reports')
+      .update({ status, handled_at: new Date().toISOString() })
+      .eq('id', id));
+  },
+
+  /** Hide a public list, or put it back. Not a delete: it returns to its
+   *  owner, intact and unpublished — see the moderation migration. */
+  moderateCollection: async (id, hide) => {
+    db(await supabase.rpc('moderate_collection', { target: id, hide }));
+  },
+
+  /** Blank one field of a profile. Each flag on its own, because a bio
+   *  that breaks the rules is not a reason to take somebody's photo. */
+  moderateProfile: async (id, flags) => {
+    db(await supabase.rpc('moderate_profile', {
+      target: id,
+      clear_bio: !!flags.bio,
+      clear_avatar: !!flags.avatar,
+      clear_name: !!flags.name,
+    }));
+  },
+
+  /** Stop an account signing in, or let it back. The service role's
+   *  work, so it goes through the edge function. */
+  suspendUser: async (userId, suspend = true) => invoke('suspend-user', { user_id: userId, suspend }),
+
+  /**
    * Search synonyms, `category → terms`.
    *
    * The words a reader types that the catalog does not otherwise contain:

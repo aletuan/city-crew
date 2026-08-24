@@ -8,6 +8,7 @@ import { supabase } from './supabase';
 import type { Collection, Place } from './types';
 import { slugify } from './place';
 import { ownPendingFirst } from './live';
+import { cleanNote } from './report';
 
 // Shapes and pure helpers live next door, where a Node process can reach
 // them without pulling in Supabase and React Native. Re-exported here so
@@ -1129,6 +1130,30 @@ export async function fetchMutualSaves(others: string[]): Promise<Record<string,
   const out: Record<string, number> = {};
   for (const row of (data ?? []) as { other: string; mutual: number }[]) out[row.other] = row.mutual;
   return out;
+}
+
+// ── reports ──
+//
+// Filed by anyone signed in, read by nobody but the desk — see the
+// reports migration for why not even the filer can read the queue back.
+// The insert policy holds the rules (as yourself, never about yourself,
+// under the day's cap); this only carries the words.
+
+export async function submitReport(input: {
+  reporter: string;
+  kind: 'collection' | 'profile';
+  targetId: string;
+  reason: import('./report').ReportReason;
+  note?: string | null;
+}): Promise<void> {
+  const { error } = await supabase.from('reports').insert({
+    reporter: input.reporter,
+    kind: input.kind,
+    target_id: input.targetId,
+    reason: input.reason,
+    note: cleanNote(input.note),
+  });
+  if (error) throw new Error(error.message);
 }
 
 // ── blocks ──
