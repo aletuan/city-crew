@@ -530,7 +530,13 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   return (
     <View style={{ marginBottom: space.titleToContent }}>
       <View style={s.shelfHeader}>
-        <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
+        {/* The same word its "See all" lands on — the Community tab. It
+            was "Public collections", which named a visibility status
+            rather than a source, and stopped matching its own
+            destination the day the tab got its real name. Your own
+            public lists belong on it too: a public list is part of the
+            community, yours included. */}
+        <Text style={s.section}>{t('From the community', 'Từ cộng đồng', 'みんなのコレクション')}</Text>
         <Pressable
           // "See all" of a *public* shelf lands on the Community tab, not
           // on your library. `CollectionsHome` is the stack's first
