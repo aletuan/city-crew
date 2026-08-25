@@ -378,30 +378,37 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 
   const nameOf = (p?: FriendProfile) => p?.full_name || (p ? atHandle(p.handle) : '…');
 
-  // The chosen tab wore the gradient, and that was the wrong family: the
-  // gradient is what committed controls wear — Accept, Add, Send — and a
-  // tab is not a commitment, it is where you are standing. Standing
-  // somewhere has a costume already: the soft coral pill the floating tab
-  // bar puts under "you are here", so this control now wears that.
+  // Underlined words, after two filled attempts. The gradient made a tab
+  // as loud as Accept; the soft pill that works over the tab bar's glass
+  // sank into the flat paper behind this screen — pale coral on a pale
+  // track on cream is three warm greys pretending to differ. On paper,
+  // contrast has to come from the type itself: the chosen tab's word and
+  // glyph go accent, with a 2pt rule underneath, and everything else —
+  // the tray, the fills, the fifty-point slab across the screen — goes.
   //
-  // The count rides differently on each half. On the unchosen tab it is a
-  // bubble — a bell, rung from the other room, which is the only place a
-  // bell is news. On the chosen tab the pending cards are already on
-  // screen, so the number folds quietly into the label instead of a
-  // bubble fighting the pill's own coral for contrast.
-  const segment = (k: Tab, label: string, count?: number) => {
+  // The glyphs are not the mock-up's person/people pair, which are the
+  // same silhouette at 16pt. This file's own header calls Requests "the
+  // inbox and the outbox", so it wears the envelope; Friends wears the
+  // two heads the trip wizard already puts on its Friends chip.
+  //
+  // The count still rides differently on each half: a bubble on the
+  // unchosen tab — a bell, rung from the other room, the only place a
+  // bell is news — and folded into the label on the chosen one, where
+  // the pending cards are already on screen.
+  const segment = (k: Tab, icon: keyof typeof Ionicons.glyphMap, label: string, count?: number) => {
     const on = tab === k;
     return (
       <PressableScale
-        containerStyle={s.segHalf}
-        style={[s.seg, on && s.segOn]}
+        style={[s.tabItem, on && s.tabItemOn]}
         scaleTo={0.97}
         haptic="selection"
+        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
         onPress={() => setTab(k)}
         accessibilityRole="tab"
         accessibilityState={{ selected: on }}
       >
-        <Text style={[s.segText, on && s.segTextOn]} numberOfLines={1}>
+        <Ionicons name={icon} size={16} color={on ? colors.accent : colors.textTertiary} />
+        <Text style={[s.tabText, on && s.tabTextOn]} numberOfLines={1}>
           {on && count ? `${label} (${count})` : label}
         </Text>
         {!on && count ? (
@@ -439,9 +446,9 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         />
       )}
     >
-      <View style={s.segments}>
-        {segment('requests', t('Requests', 'Lời mời', 'リクエスト'), crew.incoming.length)}
-        {segment('friends', t('Your friends', 'Bạn bè', '友達'))}
+      <View style={s.tabsRow}>
+        {segment('requests', 'mail-outline', t('Requests', 'Lời mời', 'リクエスト'), crew.incoming.length)}
+        {segment('friends', 'people-outline', t('Your friends', 'Bạn bè', '友達'))}
       </View>
 
       <ScrollView
@@ -708,27 +715,23 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
-  // The switch. A tray with two halves rather than an underline, because
-  // the two sides are peers — neither is "the page" with the other as a
-  // filter of it.
-  segments: {
-    flexDirection: 'row', gap: 4,
-    marginHorizontal: space.page, marginBottom: 12,
-    padding: 4,
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: radius.pill,
+  // The switch — two labelled doors, the open one underlined. Content-
+  // hugging and left-aligned like every chip row in the app, so the
+  // control takes the width its words need rather than the screen's.
+  tabsRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 26,
+    marginHorizontal: space.page, marginBottom: 14,
   },
-  segHalf: { flex: 1 },
-  seg: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 11, borderRadius: radius.pill,
+  tabItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingVertical: 7,
+    // The rule is drawn transparent when unchosen rather than added when
+    // chosen, so switching tabs never moves a pixel of layout.
+    borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
-  // The same pair the floating tab bar's pill wears: `badgeSolid` under
-  // `pillInk`, whose derivation lives on the token.
-  segOn: { backgroundColor: colors.badgeSolid },
-  segText: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.semibold },
-  segTextOn: { color: colors.pillInk },
+  tabItemOn: { borderBottomColor: colors.accent },
+  tabText: { color: colors.textTertiary, fontSize: 15, fontWeight: font.medium },
+  tabTextOn: { color: colors.accent, fontWeight: font.semibold },
   segBadge: {
     minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,
     alignItems: 'center', justifyContent: 'center',
