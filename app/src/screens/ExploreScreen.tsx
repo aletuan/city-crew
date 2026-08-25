@@ -38,6 +38,7 @@ import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import { useScheme } from '../lib/theme';
 import { goTo, type Nav } from '../nav';
+import { startupTrace } from '../lib/trace';
 
 // The one chip that isn't a category: the whole catalog. It carries no
 // glyph — a colourless chip reads as "not a kind of place".
@@ -676,6 +677,17 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     for (const p of places) for (const c of categoriesOf(p)) present.add(c);
     return CATEGORY_ORDER.filter((c) => present.has(c));
   }, [places]);
+
+  // The two ends of what a reader calls "the app opened": the screen
+  // existing at all, and the skeletons giving way to places. Everything
+  // between these lines and `city:*`/`catalog:*` in the same log is where
+  // a slow launch is actually spent.
+  useEffect(() => {
+    startupTrace.mark('explore:mounted');
+  }, []);
+  useEffect(() => {
+    if (!loading) startupTrace.mark('explore:content');
+  }, [loading]);
 
   // Switching city can retire the selected chip — fall back to the full
   // list rather than leave the screen stuck on a filter that no longer

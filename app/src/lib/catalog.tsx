@@ -27,6 +27,7 @@ import { normalizeHandle } from './handle';
 import { mergeTerms, type TermMap } from './search';
 import { useAuth } from './auth';
 import { shouldRefresh } from './stale';
+import { startupTrace } from './trace';
 
 type Catalog = {
   places: Fetch<Place[]>;
@@ -131,6 +132,23 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   // The threshold lives in `lib/stale` and is why this is not a request
   // every time a notification shade closes — iOS reports `active` on the
   // way out of every interruption, not only out of a real absence.
+  // The launch waterfall's back half: when each catalog query settles.
+  // `mark` logs once per name, so the refetches these effects also see —
+  // city corrections, sign-in, AppState — mark nothing.
+  useEffect(() => {
+    if (places.loaded) startupTrace.mark('catalog:places');
+  }, [places.loaded]);
+  useEffect(() => {
+    if (collections.loaded) startupTrace.mark('catalog:collections');
+  }, [collections.loaded]);
+  // Gated on collections too: with no handles yet the avatars query
+  // "settles" instantly and would stamp a time that measured nothing.
+  useEffect(() => {
+    if (collections.loaded && curatorAvatars.loaded && !curatorAvatars.loading) {
+      startupTrace.mark('catalog:avatars');
+    }
+  }, [collections.loaded, curatorAvatars.loaded, curatorAvatars.loading]);
+
   const latest = useRef({ places, collections });
   latest.current = { places, collections };
   useEffect(() => {

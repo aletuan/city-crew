@@ -14,6 +14,7 @@ import { CityProvider } from './src/lib/city';
 import { I18nProvider, useI18n } from './src/lib/i18n';
 import { ThemeProvider, useScheme } from './src/lib/theme';
 import { holdingFirstFrame } from './src/lib/boot';
+import { startupTrace } from './src/lib/trace';
 import { CatalogProvider } from './src/lib/catalog';
 import { SaveProvider } from './src/lib/save';
 import { colors } from './src/theme';
@@ -41,6 +42,11 @@ import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import CrewScreen from './src/screens/CrewScreen';
 import ActivityScreen from './src/screens/ActivityScreen';
+
+// The trace's own zero is when `lib/trace` evaluates, early in the bundle;
+// this line runs once the whole import graph above has been evaluated, so
+// the gap between the two is roughly what requiring the app costs.
+startupTrace.mark('bundle:evaluated');
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -208,9 +214,15 @@ function Root() {
   const [fontsLoaded, fontError] = useFonts({
     SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold,
   });
+  // Trace marks in a render body, deliberately: `mark` logs once per name
+  // and ignores repeats, so a re-render costs an array scan and nothing
+  // else. An effect would mark a frame later than the truth.
+  if (ready) startupTrace.mark('theme:ready');
+  if (fontsLoaded || fontError) startupTrace.mark('fonts:settled');
   if (holdingFirstFrame({ fontsLoaded, fontsFailed: !!fontError, themeReady: ready })) {
     return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   }
+  startupTrace.mark('first-frame:released');
 
   return (
     // Gesture handler wants to own the root view: swipe-to-reveal on the
