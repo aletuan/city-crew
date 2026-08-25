@@ -16,6 +16,7 @@ import { supabase } from './supabase';
 // Pure arithmetic, kept where a test runner can reach it.
 import { nearestTo } from './geo';
 import { openOn, settleOn, shouldCorrect, storedPick } from './citypick';
+import { parseCachedCities } from './citylist';
 import { startupTrace } from './trace';
 
 export type City = {
@@ -67,6 +68,7 @@ type CityContext = {
 };
 
 const KEY = 'citycrew.city';
+const LIST_KEY = 'citycrew.cities';
 const DEFAULT_CITY_ID = 'hcmc';
 /** Bootstrap never waits on location longer than this. */
 const GEO_BUDGET_MS = 1200;
@@ -100,6 +102,29 @@ const GEO_BUDGET_MS = 1200;
  * both ways.
  */
 export const RESUME_STORED_CITY = true;
+
+/**
+ * Commit the remembered city against last launch's city *list*, before
+ * this launch's fetch of it comes back.
+ *
+ * `RESUME_STORED_CITY` above moved the location wait off the critical
+ * path, and the startup traces then showed what was left on it: the
+ * cities fetch itself, 718–1078 ms on a real phone, gating a commit that
+ * needs nothing from the network but a list of ids. So the list each
+ * launch fetches is written down, and the next launch reads it back in a
+ * few milliseconds and commits against that — the catalog starts roughly
+ * a second earlier, which the traces put at about half the launch.
+ *
+ * The fresh fetch still runs, still refreshes the list on screen, and
+ * still decides everything it always did — including re-running the same
+ * open-on decision against the fresh ids, which is what heals the one
+ * lie a cache can tell: a city retired since last launch commits for a
+ * beat and is then corrected, exactly the bounded cost `RESUME_STORED_CITY`
+ * already accepts for a reader who moved. `false` restores the
+ * wait-for-the-fetch behaviour exactly; the cache is still written, so
+ * flipping it back on needs no re-seeding.
+ */
+export const CACHE_CITY_LIST = true;
 
 // Offline fallback so the cities *list* is never empty; deliberately not
 // used as the initial `city` — first paint must not guess a city.
@@ -225,22 +250,54 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let live = true;
     (async () => {
-      // The two arrivals are marked separately on purpose: the store read
-      // is local and should cost single-digit milliseconds, the cities
-      // fetch is the launch's first round trip — if the gap between these
-      // two lines is wide, the network is the story.
+      // The reads are marked separately on purpose: the store reads are
+      // local and should cost single-digit milliseconds, the cities fetch
+      // is the launch's first round trip — if the gap between those lines
+      // is wide, the network is the story.
       startupTrace.mark('city:bootstrap');
-      const [fetched, storedRaw] = await Promise.all([
-        fetchCities().then((r) => { startupTrace.mark('city:cities-fetched'); return r; }),
+      const fetching = fetchCities().then((r) => { startupTrace.mark('city:cities-fetched'); return r; });
+      const [storedRaw, cachedRaw] = await Promise.all([
         AsyncStorage.getItem(KEY).then((r) => { startupTrace.mark('city:store-read'); return r; }),
+        CACHE_CITY_LIST ? AsyncStorage.getItem(LIST_KEY) : Promise.resolve(null),
       ]);
       if (!live) return;
-      const list = fetched.length ? fetched : [FALLBACK];
-      setCities(list);
-      setListFailed(!fetched.length);
 
       let stored: { id?: string; mode?: 'auto' | 'manual' } = {};
       try { stored = storedRaw ? JSON.parse(storedRaw) : {}; } catch { /* corrupt store */ }
+
+      // Phase one, the cache: what last launch knew is enough to put the
+      // remembered city on screen while the network answers. A blob that
+      // fails any of `parseCachedCities`' checks is no cache, and the
+      // launch behaves exactly as it did before caches existed.
+      const cachedList = parseCachedCities(cachedRaw);
+      if (cachedList) {
+        setCities(cachedList);
+        const opened = openOn(stored, cachedList.map((c) => c.id), RESUME_STORED_CITY);
+        if (opened) {
+          setMode(opened.mode);
+          setCityId(opened.id);
+          startupTrace.mark('city:committed(cached)');
+        }
+      }
+
+      // Phase two, the network: the fetch decides everything it always
+      // did, re-running the same decisions against the fresh list. Where
+      // it agrees with the cache — the overwhelmingly common case — every
+      // set below is an identity update React bails on: no re-render, no
+      // refetch. Where it disagrees (a city retired since last launch),
+      // this is what corrects the stale commit.
+      const fetched = await fetching;
+      if (!live) return;
+      const list = fetched.length ? fetched : cachedList ?? [FALLBACK];
+      setCities(list);
+      setListFailed(!fetched.length);
+      // Written even with the switch off, so flipping it on needs no
+      // re-seeding launch — and never written on a failed fetch, which
+      // would trade a stale-but-real list for nothing.
+      if (fetched.length) {
+        AsyncStorage.setItem(LIST_KEY, JSON.stringify(fetched)).catch(() => {});
+      }
+
       const remembered = storedPick(stored, list.map((c) => c.id));
 
       // What can be shown before the platform is asked anything. A manual
