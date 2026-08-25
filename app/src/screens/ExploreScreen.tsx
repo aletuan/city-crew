@@ -514,6 +514,17 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
 
+  // The card's width comes from the screen's, and the reason is what a
+  // fixed 176 did between devices: a 430pt phone showed a 28pt sliver of
+  // the third card, while a 390–402pt one fitted exactly two and cut
+  // nothing — a shelf that scrolls with no visible evidence that it
+  // does. ~2.15 cards per viewport keeps a ~26pt sliver at every width,
+  // and lands on the same 176×220 on the 430pt screens the fixed number
+  // was tuned against.
+  const { width: winW } = useWindowDimensions();
+  const cardW = Math.round((winW - space.page) / 2.15 - space.cardGap);
+  const cardH = Math.round(cardW * 1.25);
+
   if (!holding && visible.length === 0) return null;
 
   return (
@@ -529,13 +540,19 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
       </View>
       {holding ? (
         <View style={{ flexDirection: 'row', gap: space.cardGap, paddingHorizontal: space.page }}>
-          <Skeleton style={{ width: 176, height: 220 }} />
-          <Skeleton style={{ width: 176, height: 220 }} />
+          <Skeleton style={{ width: cardW, height: cardH }} />
+          <Skeleton style={{ width: cardW, height: cardH }} />
         </View>
       ) : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          // Cards settle aligned with the page margin rather than
+          // wherever momentum died; the interval is a card and its gap,
+          // which is also what makes the padding the snap origin.
+          snapToInterval={cardW + space.cardGap}
+          snapToAlignment="start"
+          decelerationRate="fast"
           contentContainerStyle={{ paddingHorizontal: space.page, gap: space.cardGap }}
         >
           {visible.map((c) => {
@@ -546,7 +563,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
             return (
               <PressableScale
                 key={c.slug}
-                style={s.shelfCard}
+                style={[s.shelfCard, { width: cardW, height: cardH }]}
                 onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
               >
                 {uri
@@ -1128,7 +1145,9 @@ const s = StyleSheet.create({
   seeAll: { color: colors.accent, fontSize: 14, fontWeight: font.medium },
   // Same rule as the hero: photo cards end in shadow, not in a hairline.
   shelfCard: {
-    width: 176, height: 220, borderRadius: radius.image, overflow: 'hidden',
+    // Width and height are the screen's business — see `cardW` in the
+    // shelf itself.
+    borderRadius: radius.image, overflow: 'hidden',
     justifyContent: 'flex-end',
   },
   shelfBadge: {
