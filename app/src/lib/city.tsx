@@ -15,6 +15,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { supabase } from './supabase';
 // Pure arithmetic, kept where a test runner can reach it.
 import { nearestTo } from './geo';
+import { openOn, settleOn, shouldCorrect, storedPick } from './citypick';
 
 export type City = {
   id: string;
@@ -68,6 +69,36 @@ const KEY = 'citycrew.city';
 const DEFAULT_CITY_ID = 'hcmc';
 /** Bootstrap never waits on location longer than this. */
 const GEO_BUDGET_MS = 1200;
+
+/**
+ * Open on the city the last launch chose, instead of waiting to be told
+ * where the phone is.
+ *
+ * The bootstrap below asks the platform for a position before it commits to
+ * any city, racing it against `GEO_BUDGET_MS`. Nothing can start until it
+ * answers: `usePlacesQuery` and `useCollectionsQuery` hold on a promise that
+ * never resolves while `city` is null, so the catalog sits behind a skeleton
+ * for up to 1.2 s — every launch, not just the first.
+ *
+ * On, a remembered choice commits immediately and the location work moves
+ * behind it: the catalog starts at once, and the answer only does anything
+ * if it names a *different* city. A first launch still waits, because with
+ * nothing remembered there is nothing to open on but a guess.
+ *
+ * ── what it costs, and why it is a switch ──
+ *
+ * The bootstrap's own rule is that the city never changes on its own after
+ * it commits, and this knowingly breaks it in one case: a reader who has
+ * moved city since their last launch sees the remembered catalog for a beat
+ * and then sees it change. That rule was written when the commit happened
+ * *after* the location answer, so there was nothing left to correct.
+ *
+ * Which of those is worse is a judgement about readers, not about code, so
+ * it is a constant rather than an argument. `false` restores the old
+ * behaviour exactly — the decisions live in `lib/citypick`, which is tested
+ * both ways.
+ */
+export const RESUME_STORED_CITY = true;
 
 // Offline fallback so the cities *list* is never empty; deliberately not
 // used as the initial `city` — first paint must not guess a city.
@@ -204,20 +235,37 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
 
       let stored: { id?: string; mode?: 'auto' | 'manual' } = {};
       try { stored = storedRaw ? JSON.parse(storedRaw) : {}; } catch { /* corrupt store */ }
-      const storedId = list.some((c) => c.id === stored.id) ? stored.id! : null;
+      const remembered = storedPick(stored, list.map((c) => c.id));
 
-      // A manual pick is the user's word — it wins, no geo involved.
-      if (storedId && stored.mode === 'manual') {
-        setMode('manual');
-        setCityId(storedId);
+      // What can be shown before the platform is asked anything. A manual
+      // pick always; a remembered automatic one only behind the switch; a
+      // first launch never. See `RESUME_STORED_CITY`.
+      const opening = openOn(stored, list.map((c) => c.id), RESUME_STORED_CITY);
+      if (opening) {
+        setMode(opening.mode);
+        setCityId(opening.id);
+      }
+
+      // A manual pick is the reader's own word and no position may override
+      // it, so there is nothing left to ask.
+      if (opening?.mode === 'manual') return;
+
+      // One bounded attempt at a cached fix. Behind an opening city this is
+      // no longer on anybody's critical path; without one it still is.
+      const near = await quickNearestCity(list);
+      if (!live) return;
+
+      if (opening) {
+        // The common case is that it agrees, and agreement must cost
+        // nothing: no state change, so no refetch of a catalog already on
+        // screen.
+        if (!shouldCorrect(opening, near?.id ?? null)) return;
+        setCityId(near!.id);
+        AsyncStorage.setItem(KEY, JSON.stringify({ id: near!.id, mode: 'auto' })).catch(() => {});
         return;
       }
 
-      // Auto: one bounded attempt at a cached fix, then commit — the city
-      // never changes again on its own after this point.
-      const near = await quickNearestCity(list);
-      if (!live) return;
-      const chosen = near?.id ?? storedId ?? DEFAULT_CITY_ID;
+      const chosen = settleOn(near?.id ?? null, remembered, DEFAULT_CITY_ID);
       setMode('auto');
       setCityId(chosen);
       AsyncStorage.setItem(KEY, JSON.stringify({ id: chosen, mode: 'auto' })).catch(() => {});
