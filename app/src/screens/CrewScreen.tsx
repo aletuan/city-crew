@@ -378,42 +378,37 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 
   const nameOf = (p?: FriendProfile) => p?.full_name || (p ? atHandle(p.handle) : '…');
 
+  // The chosen tab wore the gradient, and that was the wrong family: the
+  // gradient is what committed controls wear — Accept, Add, Send — and a
+  // tab is not a commitment, it is where you are standing. Standing
+  // somewhere has a costume already: the soft coral pill the floating tab
+  // bar puts under "you are here", so this control now wears that.
+  //
+  // The count rides differently on each half. On the unchosen tab it is a
+  // bubble — a bell, rung from the other room, which is the only place a
+  // bell is news. On the chosen tab the pending cards are already on
+  // screen, so the number folds quietly into the label instead of a
+  // bubble fighting the pill's own coral for contrast.
   const segment = (k: Tab, label: string, count?: number) => {
     const on = tab === k;
-    const inner = (
-      <>
-        <Text style={[s.segText, on && s.segTextOn]} numberOfLines={1}>{label}</Text>
-        {count ? (
-          <View style={[s.segBadge, on && s.segBadgeOn]}>
+    return (
+      <PressableScale
+        containerStyle={s.segHalf}
+        style={[s.seg, on && s.segOn]}
+        scaleTo={0.97}
+        haptic="selection"
+        onPress={() => setTab(k)}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: on }}
+      >
+        <Text style={[s.segText, on && s.segTextOn]} numberOfLines={1}>
+          {on && count ? `${label} (${count})` : label}
+        </Text>
+        {!on && count ? (
+          <View style={s.segBadge}>
             <Text style={s.segBadgeText}>{count}</Text>
           </View>
         ) : null}
-      </>
-    );
-    return on ? (
-      <PressableScale
-        containerStyle={s.segHalf}
-        scaleTo={0.97}
-        haptic="selection"
-        onPress={() => setTab(k)}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: true }}
-      >
-        {/* The gradient every committed control in this app wears, so the
-            chosen tab belongs to the same family as Accept and Add. */}
-        <LinearGradient {...gradAI} style={s.seg}>{inner}</LinearGradient>
-      </PressableScale>
-    ) : (
-      <PressableScale
-        containerStyle={s.segHalf}
-        style={s.seg}
-        scaleTo={0.97}
-        haptic="selection"
-        onPress={() => setTab(k)}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: false }}
-      >
-        {inner}
       </PressableScale>
     );
   };
@@ -729,17 +724,16 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 11, borderRadius: radius.pill,
   },
+  // The same pair the floating tab bar's pill wears: `badgeSolid` under
+  // `pillInk`, whose derivation lives on the token.
+  segOn: { backgroundColor: colors.badgeSolid },
   segText: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.semibold },
-  segTextOn: { color: colors.accentInk },
-  // On the unchosen half the badge is the coral itself; on the chosen
-  // one the ground is already coral, so the badge darkens instead —
-  // same mark, legible on either.
+  segTextOn: { color: colors.pillInk },
   segBadge: {
     minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.badgeSolid,
   },
-  segBadgeOn: { backgroundColor: 'rgba(20,19,16,0.20)' },
   segBadgeText: { color: colors.accentInk, fontSize: 12.5, fontWeight: font.semibold },
 
   addCard: { padding: space.cardPadding, gap: 12 },
