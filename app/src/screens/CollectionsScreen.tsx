@@ -6,7 +6,7 @@
 // surfaces and thin warm hairlines — not from shadows.
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, SectionList, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, SectionList, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
@@ -21,6 +21,7 @@ import { Collection, coverOf, deleteCollection, membersOf, touchesCity } from '.
 import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
+import { findCollections } from '../lib/search';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space, type } from '../theme';
@@ -392,12 +393,30 @@ export default function CollectionsScreen({ navigation, route }: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mine.loaded]);
 
+  // The search over what is already here. Everything it reads — both
+  // lists, every member — is in memory, so this is a filter that runs on
+  // the keystroke, offline, with no query behind it. It answers by a
+  // list's own words, by the places inside it, and by @handle; the
+  // arithmetic lives in `findCollections`, under the gate, beside the
+  // rules it shares with the search box on Explore.
+  //
+  // Closed, it is one glyph in the space the left-aligned tabs leave
+  // free. The field only exists while wanted — the lesson of the Crew
+  // tray, spent here before the fact.
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState('');
+  const q = query.trim();
+  const closeSearch = () => { setSearching(false); setQuery(''); };
+
   // `loaded`, not `!loading`: the focus refresh flips `loading` back on,
   // and hiding the list for that made a visit look like a double load.
   const mineReady = mine.loaded;
+  const sift = (list: Collection[]) => (q
+    ? findCollections(list.map((c) => ({ c, members: membersOf(c, places) })), q)
+    : list);
   const sections = session && tab === 'yours'
-    ? (mineReady ? [{ own: true, data: mine.data }] : [])
-    : [{ own: false, data: visible }];
+    ? (mineReady ? [{ own: true, data: sift(mine.data) }] : [])
+    : [{ own: false, data: sift(visible) }];
 
   return (
     // No control in the header: creating belongs to the Yours tab, which
@@ -419,7 +438,51 @@ export default function CollectionsScreen({ navigation, route }: {
             ]}
             active={tab}
             onChange={setTab}
+            right={(
+              <PressableScale
+                scaleTo={0.85}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                onPress={() => (searching ? closeSearch() : setSearching(true))}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: searching }}
+                accessibilityLabel={t('Search collections', 'Tìm bộ sưu tập', 'コレクションを検索')}
+              >
+                <Ionicons
+                  name={searching ? 'close' : 'search'}
+                  size={18}
+                  color={searching ? colors.accent : colors.textSecondary}
+                />
+              </PressableScale>
+            )}
           />
+        ) : null}
+        {searching ? (
+          <View style={s.searchRow}>
+            <Ionicons name="search" size={15} color={colors.textTertiary} />
+            <TextInput
+              style={s.searchInput}
+              value={query}
+              onChangeText={setQuery}
+              // The three things it answers by, named in the box itself.
+              placeholder={t('Name, place, or @handle', 'Tên, địa điểm, hoặc @handle', '名前・スポット・@ハンドル')}
+              placeholderTextColor={colors.textTertiary}
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+            />
+            {query.length > 0 && (
+              <PressableScale
+                scaleTo={0.85}
+                hitSlop={8}
+                onPress={() => setQuery('')}
+                accessibilityRole="button"
+                accessibilityLabel={t('Clear', 'Xoá', 'クリア')}
+              >
+                <Ionicons name="close-circle" size={17} color={colors.textTertiary} />
+              </PressableScale>
+            )}
+          </View>
         ) : null}
         {holding && (
           <View>
@@ -444,6 +507,7 @@ export default function CollectionsScreen({ navigation, route }: {
             keyExtractor={(c) => c.slug}
             onScroll={duckScroll}
             scrollEventThrottle={16}
+            keyboardShouldPersistTaps="handled"
             ListHeaderComponent={<GuestNotice navigation={navigation} />}
             renderItem={({ item, section }) => {
               const count = membersOf(item, places).length;
@@ -595,6 +659,15 @@ export default function CollectionsScreen({ navigation, route }: {
               );
             }}
             renderSectionFooter={({ section }) => {
+              // Under a query, the only footer is the honest one: nothing
+              // matched. The creation rows stay out of it — "start your
+              // first collection" under a search that found nothing would
+              // be answering a question nobody asked.
+              if (q) {
+                return section.data.length === 0
+                  ? <Empty text={t(`Nothing here matches "${q}".`, `Không có gì khớp với "${q}".`, `「${q}」に一致するものはありません。`)} />
+                  : null;
+              }
               if (section.own) {
                 return section.data.length === 0
                   ? <FirstCollection onPress={() => navigation.navigate('CollectionForm')} />
@@ -646,6 +719,16 @@ const s = StyleSheet.create({
     paddingHorizontal: 18, paddingVertical: 11, borderRadius: 14,
   },
   noticeChipText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
+
+  searchRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: space.page, marginBottom: 14,
+    paddingHorizontal: 14, height: 42,
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: 1, borderColor: colors.borderGlassSoft,
+    borderRadius: radius.pill,
+  },
+  searchInput: { flex: 1, color: colors.text, fontSize: 15, paddingVertical: 0 },
 
   firstWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
   first: {

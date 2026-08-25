@@ -32,7 +32,7 @@ import { parseRecents, RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib
 import { newestPlaces } from '../lib/newest';
 import { openNowPlaces } from '../lib/opennow';
 import { rankPopular } from '../lib/popular';
-import { collectionHaystack, findPlaces, matches, queryTerms } from '../lib/search';
+import { collectionMatches, findPlaces, queryTerms } from '../lib/search';
 import { useI18n } from '../lib/i18n';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
@@ -260,7 +260,10 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     // so without this, searching in Hanoi would turn up lists that are
     // entirely in Saigon, which nothing else on this screen does.
     const foundCols = colMembers
-      .filter(({ c, members }) => touchesCity(members, city?.id) && matches(collectionHaystack(c), terms));
+      // `collectionMatches`, so a list answers by the places inside it
+      // too: "mono coffee" finds the café *and* the lists that hold it —
+      // the second half of the answer this screen used to leave out.
+      .filter(({ c, members }) => touchesCity(members, city?.id) && collectionMatches(c, members, terms));
     if (foundCols.length) {
       out.push({ kind: 'header', key: 'h-col', label: t('Collections', 'Bộ sưu tập', 'コレクション') });
       for (const { c, members } of foundCols) {

@@ -245,6 +245,54 @@ export function collectionHaystack(c: SearchableCollection): string {
   ].join(' '));
 }
 
+/**
+ * The names of what a collection holds — and only the names.
+ *
+ * A member's full haystack would be too loose by exactly the measured
+ * synonym mistake above: every member carries its description and its
+ * category words, so "quiet" would answer with any list holding one
+ * calm café, and a query for a *place* would light up lists for words
+ * no curator chose. The question this answers is "which lists have this
+ * place", and a place is asked for by name.
+ */
+function memberNames(members: readonly Searchable[]): string {
+  return fold(members.map((m) => [m.name_en, m.name_vi, m.name_ja].join(' ')).join(' '));
+}
+
+/**
+ * Does a query land on this collection — its own words, its curator, or
+ * the names of the places in it?
+ *
+ * The leading `@` is stripped from each term because handles are typed
+ * both ways — "@minh" from somebody quoting a byline, "minh" from
+ * somebody remembering it — and the stored handle is bare.
+ *
+ * No haystack cache here, deliberately: the catalog holds a few dozen
+ * collections against a few hundred places, and the pair objects are
+ * rebuilt per render anyway, so a WeakMap would miss every time.
+ */
+export function collectionMatches(
+  c: SearchableCollection, members: readonly Searchable[], terms: readonly string[],
+): boolean {
+  const bare = terms.map((t) => t.replace(/^@/, ''));
+  return matches(`${collectionHaystack(c)} ${memberNames(members)}`, bare);
+}
+
+/**
+ * The collections a query finds, in the order they arrived — the caller
+ * ranked them (by likes, on every shelf) and a filter has no opinion.
+ *
+ * An empty or blank query is no filter at all: the whole list comes
+ * back, which is what a search box with nothing in it means.
+ */
+export function findCollections<C extends SearchableCollection>(
+  pairs: readonly { c: C; members: readonly Searchable[] }[], query: string,
+): C[] {
+  const terms = queryTerms(query);
+  if (!terms.length) return pairs.map(({ c }) => c);
+  return pairs.filter(({ c, members }) => collectionMatches(c, members, terms)).map(({ c }) => c);
+}
+
 /** The query, as the tokens every one of which must land somewhere.
  *
  *  Split on whitespace, which is the right rule for two of the three
