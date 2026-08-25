@@ -118,3 +118,35 @@ test('bubbleRadius grows with count and stays clamped', () => {
   assert.ok(bubbleRadius(1, max) >= 14);
   assert.ok(bubbleRadius(9, max) > bubbleRadius(2, max));
 });
+
+// The three ways the Coverage screen can have no map to draw. They are not
+// the same news, and the screen used to report the same one for all of them:
+// it gated its "Nothing published here yet." on `groups.length`, which counts
+// only the districts that parsed. A city whose addresses all failed to parse
+// therefore claimed to be empty directly above a row counting its places, and
+// under a heading that had already said "N places · 0 districts".
+//
+// These assert the shape the screen branches on, so the three states stay
+// distinguishable from the data alone.
+test('buildCoverage keeps "empty" and "unreadable" apart', () => {
+  const at = (address, lat = 10.77) => ({ slug: address, address, neighborhood_en: null, lat, lng: 106.7 });
+
+  const empty = buildCoverage([]);
+  assert.equal(empty.total, 0);
+  assert.equal(empty.groups.length, 0);
+  assert.equal(empty.unplaced.length, 0);
+
+  // Published, located, and filed nowhere: a street number is not a district.
+  const unreadable = buildCoverage([at('12 Lê Lợi, Vietnam'), at('9 Ngô Đức Kế, Vietnam')]);
+  assert.equal(unreadable.total, 2);
+  assert.equal(unreadable.groups.length, 0);
+  assert.equal(unreadable.unplaced.length, 2, 'every unparsed row must still be counted somewhere');
+  assert.equal(unreadable.noCoords.length, 0, 'these have coordinates — the district is what is missing');
+
+  // Filed, but nothing to put on the map.
+  const nowhere = buildCoverage([at('1 X, Quận 1, Ho Chi Minh City, Vietnam', null)]);
+  assert.equal(nowhere.total, 1);
+  assert.equal(nowhere.groups.length, 1);
+  assert.equal(nowhere.groups[0].lat, null);
+  assert.equal(nowhere.noCoords.length, 1);
+});
