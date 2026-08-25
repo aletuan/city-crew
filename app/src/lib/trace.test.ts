@@ -34,7 +34,7 @@ describe('makeTrace', () => {
     t.mark('first-frame');
     t.mark('first-frame');
     expect(lines).toHaveLength(1);
-    expect(t.marks()).toEqual([{ name: 'first-frame', at: 10 }]);
+    expect(t.marks()).toEqual([{ name: 'first-frame', at: 10, ms: 10 }]);
   });
 
   it('disabled, it neither logs nor records', () => {

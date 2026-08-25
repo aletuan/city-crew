@@ -32,7 +32,10 @@
  */
 export const STARTUP_TRACE = true;
 
-export type TraceMark = { name: string; at: number };
+/** `at` is the clock's raw reading; `ms` is elapsed since the trace
+ *  started — the number a report away from this device can use, since raw
+ *  clock readings mean nothing off the phone that took them. */
+export type TraceMark = { name: string; at: number; ms: number };
 
 export type Trace = {
   /** Log a named checkpoint, once. Repeats of the same name are ignored. */
@@ -59,7 +62,7 @@ export function makeTrace(
       if (seen.some((m) => m.name === name)) return;
       const at = now();
       const prev = seen.length ? seen[seen.length - 1].at : start;
-      seen.push({ name, at });
+      seen.push({ name, at, ms: at - start });
       sink(traceLine(name, at - start, at - prev));
     },
     marks: () => [...seen],
