@@ -395,10 +395,14 @@ export function Chip({ label, active, onPress, icon, iconColor }: {
  * folded into the label on the chosen one, where whatever it counts is
  * already on screen. Zero draws nothing either way.
  */
-export function UnderlineTabs<K extends string>({ tabs, active, onChange }: {
+export function UnderlineTabs<K extends string>({ tabs, active, onChange, right }: {
   tabs: { key: K; icon: keyof typeof Ionicons.glyphMap; label: string; count?: number }[];
   active: K;
   onChange: (k: K) => void;
+  /** The row's far end — the natural home for a control about the list
+   *  the tabs switch (a search toggle), in the space left-aligned tabs
+   *  leave free anyway. */
+  right?: React.ReactNode;
 }) {
   return (
     <View style={s.tabsRow}>
@@ -427,6 +431,7 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange }: {
           </PressableScale>
         );
       })}
+      {right ? <View style={{ marginLeft: 'auto' }}>{right}</View> : null}
     </View>
   );
 }

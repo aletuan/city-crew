@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from './categories';
 import {
-  collectionHaystack, findPlaces, fold, kindAnswersTo, matches, mergeTerms, placeHaystack,
-  queryTerms,
+  collectionHaystack, collectionMatches, findCollections, findPlaces, fold, kindAnswersTo,
+  matches, mergeTerms, placeHaystack, queryTerms, type Searchable, type SearchableCollection,
 } from './search';
 
 const place = (p: Partial<Parameters<typeof placeHaystack>[0]> = {}) => ({
@@ -479,5 +479,61 @@ describe('the built-in synonyms', () => {
     expect(hit('nightlife', 'bia')).toBe(true);
     expect(hit('heritage', 'museum')).toBe(true);
     expect(hit('nature', 'công viên')).toBe(true);
+  });
+});
+
+describe('findCollections', () => {
+  const cafes = {
+    c: { title_en: 'Quiet cafés', title_vi: 'Cà phê yên tĩnh', curator_handle: 'minh' },
+    members: [{ name_vi: 'Bánh Mì Huỳnh Hoa' }, { name_en: 'Mono Coffee Lab' }],
+  };
+  const rooftops = {
+    c: { title_en: 'Rooftops with a view', title_ja: '眺めのいい屋上', curator_handle: 'anh' },
+    members: [{ name_en: 'Lush Sky Bar' }],
+  };
+  const pairs: { c: SearchableCollection; members: Searchable[] }[] = [cafes, rooftops];
+
+  it('finds a list by its own name, typed without diacritics', () => {
+    expect(findCollections(pairs, 'ca phe')).toEqual([cafes.c]);
+  });
+
+  it('finds a list by the name of a place inside it', () => {
+    expect(findCollections(pairs, 'banh mi')).toEqual([cafes.c]);
+  });
+
+  it('finds a list by its curator, with or without the @', () => {
+    expect(findCollections(pairs, '@minh')).toEqual([cafes.c]);
+    expect(findCollections(pairs, 'minh')).toEqual([cafes.c]);
+  });
+
+  it('finds a Japanese title by a fragment, the CJK substring rule', () => {
+    expect(findCollections(pairs, '屋上')).toEqual([rooftops.c]);
+  });
+
+  it('narrows with every extra word — each must land somewhere on the list', () => {
+    // "mono" and "minh" both land on the cafés (a member, the curator);
+    // "mono anh" lands nowhere whole, because the words hit different lists.
+    expect(findCollections(pairs, 'mono minh')).toEqual([cafes.c]);
+    expect(findCollections(pairs, 'mono anh')).toEqual([]);
+  });
+
+  it('returns everything, in arrival order, for a blank box', () => {
+    expect(findCollections(pairs, '')).toEqual([cafes.c, rooftops.c]);
+    expect(findCollections(pairs, '   ')).toEqual([cafes.c, rooftops.c]);
+  });
+
+  it('does not answer for a member description or category — names only', () => {
+    const moody = {
+      c: { title_en: 'Date night' },
+      members: [{ name_en: 'Nest', desc_en: 'a quiet corner', categories: ['cafes'] }],
+    };
+    expect(findCollections([moody], 'quiet')).toEqual([]);
+    expect(findCollections([moody], 'cafes')).toEqual([]);
+    expect(findCollections([moody], 'nest')).toEqual([moody.c]);
+  });
+
+  it('exposes the same verdict per collection through collectionMatches', () => {
+    expect(collectionMatches(cafes.c, cafes.members, queryTerms('huynh hoa'))).toBe(true);
+    expect(collectionMatches(cafes.c, cafes.members, queryTerms('sky'))).toBe(false);
   });
 });
