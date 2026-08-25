@@ -10,7 +10,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  Animated, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View,
+  Animated, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,6 +38,8 @@ import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import { useScheme } from '../lib/theme';
 import { goTo, type Nav } from '../nav';
+import { startupTrace } from '../lib/trace';
+import { reportStartup } from '../lib/tracereport';
 
 // The one chip that isn't a category: the whole catalog. It carries no
 // glyph — a colourless chip reads as "not a kind of place".
@@ -676,6 +678,31 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     for (const p of places) for (const c of categoriesOf(p)) present.add(c);
     return CATEGORY_ORDER.filter((c) => present.has(c));
   }, [places]);
+
+  // The two ends of what a reader calls "the app opened": the screen
+  // existing at all, and the skeletons giving way to places. Everything
+  // between these lines and `city:*`/`catalog:*` in the same log is where
+  // a slow launch is actually spent.
+  useEffect(() => {
+    startupTrace.mark('explore:mounted');
+  }, []);
+  useEffect(() => {
+    if (loading) return;
+    startupTrace.mark('explore:content');
+    // The launch files its report ten seconds after the content arrived:
+    // late enough that the avatars — the last settle in the waterfall —
+    // are in the marks, and that the insert competes with nothing the
+    // reader is waiting on. `reportStartup` sends once per process and
+    // swallows failure, so this effect re-running costs nothing.
+    const t = setTimeout(() => {
+      reportStartup(startupTrace.marks(), {
+        platform: Platform.OS,
+        osVersion: String(Platform.Version),
+        isDev: __DEV__,
+      });
+    }, 10_000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   // Switching city can retire the selected chip — fall back to the full
   // list rather than leave the screen stuck on a filter that no longer

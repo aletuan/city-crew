@@ -16,6 +16,7 @@ import { supabase } from './supabase';
 // Pure arithmetic, kept where a test runner can reach it.
 import { nearestTo } from './geo';
 import { openOn, settleOn, shouldCorrect, storedPick } from './citypick';
+import { startupTrace } from './trace';
 
 export type City = {
   id: string;
@@ -224,9 +225,14 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let live = true;
     (async () => {
+      // The two arrivals are marked separately on purpose: the store read
+      // is local and should cost single-digit milliseconds, the cities
+      // fetch is the launch's first round trip — if the gap between these
+      // two lines is wide, the network is the story.
+      startupTrace.mark('city:bootstrap');
       const [fetched, storedRaw] = await Promise.all([
-        fetchCities(),
-        AsyncStorage.getItem(KEY),
+        fetchCities().then((r) => { startupTrace.mark('city:cities-fetched'); return r; }),
+        AsyncStorage.getItem(KEY).then((r) => { startupTrace.mark('city:store-read'); return r; }),
       ]);
       if (!live) return;
       const list = fetched.length ? fetched : [FALLBACK];
@@ -244,6 +250,8 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
       if (opening) {
         setMode(opening.mode);
         setCityId(opening.id);
+        // The moment the catalog is allowed to start on a remembered city.
+        startupTrace.mark('city:committed(stored)');
       }
 
       // A manual pick is the reader's own word and no position may override
@@ -253,6 +261,10 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
       // One bounded attempt at a cached fix. Behind an opening city this is
       // no longer on anybody's critical path; without one it still is.
       const near = await quickNearestCity(list);
+      // How much of `GEO_BUDGET_MS` this launch actually spent. Behind a
+      // stored commit the gap is off the critical path; on a first launch
+      // it is the critical path.
+      startupTrace.mark('city:geo-answered');
       if (!live) return;
 
       if (opening) {
@@ -268,6 +280,8 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
       const chosen = settleOn(near?.id ?? null, remembered, DEFAULT_CITY_ID);
       setMode('auto');
       setCityId(chosen);
+      // The first-launch commit — everything the screens show waits on this.
+      startupTrace.mark('city:committed');
       AsyncStorage.setItem(KEY, JSON.stringify({ id: chosen, mode: 'auto' })).catch(() => {});
     })();
     return () => { live = false; };
