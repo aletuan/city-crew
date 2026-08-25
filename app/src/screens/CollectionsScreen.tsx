@@ -307,11 +307,17 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
   // inside a swipeable row is a third gesture competing for the same
   // thumb, and the collection's own screen already has the room for it.
   const { likes } = useLikes();
-  const { data: places, loading: placesLoading } = usePlaces();
+  const { data: places, loading: placesLoading, loaded: placesLoaded } = usePlaces();
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
   // Counting and filtering need the places catalog — until it's in, hold
   // the skeleton rather than showing raw DB membership numbers.
+  //
+  // "In" means `loaded`, not `!loading` — the same distinction `mineReady`
+  // below spells out, and it stopped being decorative when the catalog
+  // started hydrating from the launch cache: hydrated data arrives with
+  // its background refresh still in flight.
+  const holding = !cols.loaded || !placesLoaded;
   const loading = cols.loading || placesLoading;
 
   // Reload on return: creating a collection happens on another screen, and
@@ -382,7 +388,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
     <Screen title={t('Collections', 'Bộ sưu tập', 'コレクション')}>
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
-        {loading && (
+        {holding && (
           <View>
             <GuestNotice navigation={navigation} />
             <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
@@ -399,8 +405,8 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             ))}
           </View>
         )}
-        {!loading && cols.error && <Empty text={t(`Couldn't load collections: ${cols.error}`, `Không tải được bộ sưu tập: ${cols.error}`, `読み込みに失敗しました: ${cols.error}`)} />}
-        {!loading && !cols.error && (
+        {!holding && cols.error && <Empty text={t(`Couldn't load collections: ${cols.error}`, `Không tải được bộ sưu tập: ${cols.error}`, `読み込みに失敗しました: ${cols.error}`)} />}
+        {!holding && !cols.error && (
           <SectionList
             sections={sections}
             keyExtractor={(c) => c.slug}
@@ -588,7 +594,10 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
             onRefresh={() => { cols.reload(); mine.reload(); }}
-            refreshing={loading}
+            // Not during the launch cache's background refresh — that one
+            // is nobody's pull, and a spinner over freshly drawn content
+            // would read as the app second-guessing itself.
+            refreshing={loading && !cols.fromCache}
           />
         )}
       </View>

@@ -496,8 +496,10 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
     fireHaptic('light');
     void toggleLike({ id: c.id, slug: c.slug });
   }, [uid, toggleLike, askToSignIn]);
-  const { data: places, loading: placesLoading } = usePlaces();
-  const loading = cols.loading || placesLoading;
+  const { data: places, loaded: placesLoaded } = usePlaces();
+  // `loaded`, not `loading` — hydrated data shows while its background
+  // refresh is still in flight; see the note in the screen body below.
+  const holding = !cols.loaded || !placesLoaded;
   // Only collections with at least one visible member in this city — an
   // empty collection is a dead end for a browsing guest, and one whose
   // places are all somewhere else is a shelf entry for a different trip.
@@ -512,7 +514,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
 
-  if (!loading && visible.length === 0) return null;
+  if (!holding && visible.length === 0) return null;
 
   return (
     <View style={{ marginBottom: space.titleToContent }}>
@@ -525,7 +527,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
           <Text style={s.seeAll}>{t('See all', 'Xem tất cả', 'すべて見る')} →</Text>
         </Pressable>
       </View>
-      {loading ? (
+      {holding ? (
         <View style={{ flexDirection: 'row', gap: space.cardGap, paddingHorizontal: space.page }}>
           <Skeleton style={{ width: 176, height: 220 }} />
           <Skeleton style={{ width: 176, height: 220 }} />
@@ -632,7 +634,14 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
-  const { loading, error, data: places, reload } = usePlaces();
+  const { loading, loaded, fromCache, error, data: places, reload } = usePlaces();
+  // Skeletons hold until there is something to draw — `loaded`, not
+  // `loading`. The distinction was decorative until the catalog started
+  // hydrating from the launch cache: hydrated data arrives with the
+  // background refresh still in flight, so gating on `loading` kept the
+  // skeletons up for the ~700 ms the cache exists to remove. Same lesson
+  // the Collections tab's `mineReady` learned about its focus refresh.
+  const holding = !loaded;
   const [cat, setCat] = useState<string>(ALL);
   const tabClearance = useTabBarClearance();
   const insets = useSafeAreaInsets();
@@ -687,7 +696,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     startupTrace.mark('explore:mounted');
   }, []);
   useEffect(() => {
-    if (loading) return;
+    if (!loaded) return;
     startupTrace.mark('explore:content');
     // The launch files its report ten seconds after the content arrived:
     // late enough that the avatars — the last settle in the waterfall —
@@ -702,7 +711,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       });
     }, 10_000);
     return () => clearTimeout(t);
-  }, [loading]);
+  }, [loaded]);
 
   // Switching city can retire the selected chip — fall back to the full
   // list rather than leave the screen stuck on a filter that no longer
@@ -907,7 +916,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     <View style={s.screen}>
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
-        {loading && (
+        {holding && (
           <View style={{ gap: space.cardGap }}>
             <Skeleton style={{ height: heroH, borderRadius: 0, borderBottomLeftRadius: radius.card, borderBottomRightRadius: radius.card }} />
             <View style={{ paddingHorizontal: space.page, gap: space.cardGap }}>
@@ -924,7 +933,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`, `読み込みに失敗しました: ${error}`)} />
           </View>
         )}
-        {!loading && !error && (
+        {!holding && !error && (
           <Animated.SectionList
             // One section, whose only job is to give the filter row
             // something to be the header of.
@@ -964,7 +973,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
             onRefresh={reload}
-            refreshing={loading}
+            // Not during the launch cache's background refresh — that one
+            // is nobody's pull, and a spinner over freshly drawn content
+            // would read as the app second-guessing itself.
+            refreshing={loading && !fromCache}
             onScrollToIndexFailed={() => {}}
             onScroll={Animated.event(
               [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -979,7 +991,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         )}
         {/* Last, so it draws over the list — in the tab bar's own dock,
             which the bar has vacated whenever this is visible. */}
-        {!loading && !error && (
+        {!holding && !error && (
           <ScrollNudge
             visible={nudge}
             onSearch={() => navigation.navigate('Search')}
