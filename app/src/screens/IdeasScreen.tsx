@@ -19,7 +19,7 @@ import React, { useMemo, useState } from 'react';
 import {
   Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
 import StartSheet, { Start } from '../components/StartSheet';

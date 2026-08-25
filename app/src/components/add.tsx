@@ -37,7 +37,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { HEADER_CONTROL_H, PressableScale } from './ui';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 

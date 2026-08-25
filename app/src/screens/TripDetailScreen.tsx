@@ -29,7 +29,7 @@
 
 import React, { useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import {
   AmbientWarmth, Card, Empty, PressableScale, Screen, useTabBarClearance,

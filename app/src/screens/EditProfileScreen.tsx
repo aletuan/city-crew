@@ -26,7 +26,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
 import { Card, PressableScale, successHaptic } from '../components/ui';

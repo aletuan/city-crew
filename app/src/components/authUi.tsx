@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { BackButton, CONTROL_H, fireHaptic, PressableScale, useTabBarClearance } from './ui';
 import { useI18n } from '../lib/i18n';
 import { PASSWORD_MIN, passwordStrength } from '../lib/password';

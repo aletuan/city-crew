@@ -46,9 +46,15 @@ vi.mock('expo-image', () => ({
 
 // Icons are drawn from a font that is not installed. The glyph name is kept
 // because it is occasionally the only thing distinguishing two controls.
+//
+// Mocked at the *deep* path, because that is what the app imports. The
+// barrel (`@expo/vector-icons`) eagerly requires all sixteen icon families
+// and their .ttf files — 3.7 MB of fonts for the one family this app uses —
+// so every call site names its family directly. A stub on the barrel would
+// intercept nothing.
 const icon = ({ name }: { name?: string }) =>
   React.createElement('span', { 'data-icon': name });
-vi.mock('@expo/vector-icons', () => ({ Ionicons: icon, MaterialCommunityIcons: icon }));
+vi.mock('@expo/vector-icons/Ionicons', () => ({ default: icon }));
 
 // These must return promises, not undefined. `fireHaptic` calls
 // `.catch()` on what it gets back, so a stub that answered `undefined`

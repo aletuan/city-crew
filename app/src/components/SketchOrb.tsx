@@ -34,7 +34,7 @@
 import React from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLoop } from './ui';
 import { arcSweep, sampleSweep, type Stop } from '../lib/ring';
 import { colors, gradAI } from '../theme';

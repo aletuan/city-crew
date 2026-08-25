@@ -12,7 +12,7 @@ import { setStatusBarStyle, type StatusBarStyle } from 'expo-status-bar';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
 import { colors, display, font, gradAI, radius, space, type } from '../theme';

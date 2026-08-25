@@ -29,7 +29,7 @@
 import React, { useEffect } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../lib/auth';
 import { useFriendships } from '../lib/data';
 import { splitFriendships } from '../lib/friends';

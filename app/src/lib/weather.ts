@@ -13,7 +13,7 @@
 // The pure half is here so it can be tested in plain Node; see `place.ts`
 // for why that boundary exists.
 
-import type { Ionicons } from '@expo/vector-icons';
+import type Ionicons from '@expo/vector-icons/Ionicons';
 
 export type Sky = {
   /** Celsius, already rounded — nobody wants 31.7°. */

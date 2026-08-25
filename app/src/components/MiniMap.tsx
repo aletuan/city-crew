@@ -31,7 +31,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { PressableScale } from './ui';
 import { colors, font, radius } from '../theme';
 
