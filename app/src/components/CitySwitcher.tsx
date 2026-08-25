@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCity } from '../lib/city';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space } from '../theme';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
 import { openFragment, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';

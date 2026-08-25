@@ -19,7 +19,7 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { fmtCount, photosOf, usePlaceBySlug } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';

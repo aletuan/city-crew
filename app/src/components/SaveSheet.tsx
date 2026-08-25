@@ -7,7 +7,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Collection, holds, Place } from '../lib/data';
 import { useI18n } from '../lib/i18n';

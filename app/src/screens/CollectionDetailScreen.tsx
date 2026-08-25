@@ -3,7 +3,7 @@ import {
   ActivityIndicator, Alert, Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
 import { AddSlot } from '../components/add';
 import {

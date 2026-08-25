@@ -11,7 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { AmbientWarmth, Card, Empty, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddPill, AddSlot } from '../components/add';

@@ -10,7 +10,7 @@
 // desaturated on purpose — on the near-black ground nothing should compete
 // with the accent used for active state.
 
-import type { Ionicons } from '@expo/vector-icons';
+import type Ionicons from '@expo/vector-icons/Ionicons';
 
 export type VibeStyle = {
   color: string;

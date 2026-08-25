@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { PressableScale, SelectTick } from './ui';
 import { ItemState, locksRow } from '../lib/batch';
 import type { Candidate, Known } from '../lib/suggest';

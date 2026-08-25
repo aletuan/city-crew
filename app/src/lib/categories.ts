@@ -13,7 +13,7 @@
 // since a constraint tightened before the writers know about it fails
 // every import.
 
-import type { Ionicons } from '@expo/vector-icons';
+import type Ionicons from '@expo/vector-icons/Ionicons';
 
 export type CategoryStyle = {
   en: string;
