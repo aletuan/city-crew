@@ -31,7 +31,7 @@ import { FieldRow, PrimaryButton } from '../components/authUi';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import { useReport } from '../components/reportFlow';
 import {
-  Avatar, Card, Empty, PressableScale, RoundIconButton, Screen, successHaptic, useTabBarClearance,
+  Avatar, Card, Empty, PressableScale, RoundIconButton, Screen, successHaptic, UnderlineTabs, useTabBarClearance,
 } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import {
@@ -378,48 +378,6 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 
   const nameOf = (p?: FriendProfile) => p?.full_name || (p ? atHandle(p.handle) : '…');
 
-  // Underlined words, after two filled attempts. The gradient made a tab
-  // as loud as Accept; the soft pill that works over the tab bar's glass
-  // sank into the flat paper behind this screen — pale coral on a pale
-  // track on cream is three warm greys pretending to differ. On paper,
-  // contrast has to come from the type itself: the chosen tab's word and
-  // glyph go accent, with a 2pt rule underneath, and everything else —
-  // the tray, the fills, the fifty-point slab across the screen — goes.
-  //
-  // The glyphs are not the mock-up's person/people pair, which are the
-  // same silhouette at 16pt. This file's own header calls Requests "the
-  // inbox and the outbox", so it wears the envelope; Friends wears the
-  // two heads the trip wizard already puts on its Friends chip.
-  //
-  // The count still rides differently on each half: a bubble on the
-  // unchosen tab — a bell, rung from the other room, the only place a
-  // bell is news — and folded into the label on the chosen one, where
-  // the pending cards are already on screen.
-  const segment = (k: Tab, icon: keyof typeof Ionicons.glyphMap, label: string, count?: number) => {
-    const on = tab === k;
-    return (
-      <PressableScale
-        style={[s.tabItem, on && s.tabItemOn]}
-        scaleTo={0.97}
-        haptic="selection"
-        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-        onPress={() => setTab(k)}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: on }}
-      >
-        <Ionicons name={icon} size={16} color={on ? colors.accent : colors.textTertiary} />
-        <Text style={[s.tabText, on && s.tabTextOn]} numberOfLines={1}>
-          {on && count ? `${label} (${count})` : label}
-        </Text>
-        {!on && count ? (
-          <View style={s.segBadge}>
-            <Text style={s.segBadgeText}>{count}</Text>
-          </View>
-        ) : null}
-      </PressableScale>
-    );
-  };
-
   const nothingWaiting = crew.incoming.length === 0 && crew.outgoing.length === 0 && intros.length === 0;
 
   return (
@@ -446,10 +404,18 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         />
       )}
     >
-      <View style={s.tabsRow}>
-        {segment('requests', 'mail-outline', t('Requests', 'Lời mời', 'リクエスト'), crew.incoming.length)}
-        {segment('friends', 'people-outline', t('Your friends', 'Bạn bè', '友達'))}
-      </View>
+      {/* Why underlines, and why the envelope: see UnderlineTabs. The
+          glyphs are not the person/people pair — the same silhouette at
+          16pt — but this file's own "inbox and outbox" and the two heads
+          the trip wizard already puts on its Friends chip. */}
+      <UnderlineTabs
+        tabs={[
+          { key: 'requests', icon: 'mail-outline', label: t('Requests', 'Lời mời', 'リクエスト'), count: crew.incoming.length },
+          { key: 'friends', icon: 'people-outline', label: t('Your friends', 'Bạn bè', '友達') },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
 
       <ScrollView
         contentContainerStyle={{
@@ -715,30 +681,6 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
-  // The switch — two labelled doors, the open one underlined. Content-
-  // hugging and left-aligned like every chip row in the app, so the
-  // control takes the width its words need rather than the screen's.
-  tabsRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 26,
-    marginHorizontal: space.page, marginBottom: 14,
-  },
-  tabItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingVertical: 7,
-    // The rule is drawn transparent when unchosen rather than added when
-    // chosen, so switching tabs never moves a pixel of layout.
-    borderBottomWidth: 2, borderBottomColor: 'transparent',
-  },
-  tabItemOn: { borderBottomColor: colors.accent },
-  tabText: { color: colors.textTertiary, fontSize: 15, fontWeight: font.medium },
-  tabTextOn: { color: colors.accent, fontWeight: font.semibold },
-  segBadge: {
-    minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.badgeSolid,
-  },
-  segBadgeText: { color: colors.accentInk, fontSize: 12.5, fontWeight: font.semibold },
-
   addCard: { padding: space.cardPadding, gap: 12 },
   typeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
   typeName: { color: colors.text, fontSize: 14.5, fontWeight: font.medium, flexShrink: 1 },

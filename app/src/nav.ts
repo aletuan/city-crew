@@ -62,7 +62,9 @@ export type PlanAsk = {
 export type RootStackParamList = {
   ExploreHome: undefined;
   Search: undefined;
-  CollectionsHome: undefined;
+  /** `tab` lands the screen on a specific half — Explore's "See all"
+   *  points at the community shelf, not at your library. */
+  CollectionsHome: { tab?: 'community' } | undefined;
   /** One screen for both verbs: params absent means "new", params present
    *  means "rename this one". */
   CollectionForm: {

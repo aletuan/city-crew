@@ -532,7 +532,15 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
       <View style={s.shelfHeader}>
         <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
         <Pressable
-          onPress={() => { fireHaptic('selection'); navigation.getParent()?.navigate('Collections'); }}
+          // "See all" of a *public* shelf lands on the Community tab, not
+          // on your library. `CollectionsHome` is the stack's first
+          // screen, so no `initial: false` dance — see `goTo`.
+          onPress={() => {
+            fireHaptic('selection');
+            navigation.getParent()?.navigate('Collections', {
+              screen: 'CollectionsHome', params: { tab: 'community' },
+            });
+          }}
           hitSlop={10}
         >
           <Text style={s.seeAll}>{t('See all', 'Xem tất cả', 'すべて見る')} →</Text>
@@ -585,7 +593,8 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                       should read as one band came out ragged. */}
                   <Text style={s.shelfCardTitle} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
                   <View style={s.shelfCardFoot}>
-                    <Text style={s.shelfCardMeta}>{count} {t('places', 'địa điểm', 'スポット')}</Text>
+                    {/* English is the only of the three that inflects. */}
+                    <Text style={s.shelfCardMeta}>{count} {t(count === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}</Text>
                     {/* One heart, and it is both the gesture and the
                         tally.
 
