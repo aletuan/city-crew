@@ -194,7 +194,12 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
           )}
         </Text>
 
-        <Section title={t("Who's coming?", 'Đi cùng ai?', '誰と行きますか？')}>
+        {/* The three headers below open a sentence and the chips finish
+            it — "Going with… ✓ Friends". They used to be questions
+            ("Who's coming?"), which read as a form to fill in; a copy
+            edit here should keep them as openers the chip labels can
+            complete, ellipsis and all. */}
+        <Section title={t('Going with…', 'Bạn muốn đi cùng…', '一緒に行くのは…')}>
           {COMPANY.map((c) => (
             <Chip
               key={c.key}
@@ -207,7 +212,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
           ))}
         </Section>
 
-        <Section title={t('What sounds good?', 'Thích kiểu gì?', '何が良さそう？')}>
+        <Section title={t('In the mood for…', 'Hôm nay bạn thích…', '今日の気分は…')}>
           {cats.map((c) => (
             <Chip
               key={c}
@@ -221,7 +226,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
         </Section>
 
         <View style={{ marginBottom: space.titleToContent }}>
-          <Text style={s.heading}>{t('Where and when?', 'Ở đâu, khi nào?', 'どこで、いつ？')}</Text>
+          <Text style={s.heading}>{t('Where and when…', 'Chỗ nào, lúc nào…', '場所と時間は…')}</Text>
           <Card style={s.whenCard}>
             <PressableScale onPress={() => setSheet(true)} style={s.whereRow} accessibilityRole="button">
               <Ionicons name="location-outline" size={19} color={colors.accent} />
@@ -373,9 +378,9 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
           {!ready && (
             <Text style={s.ctaHint}>
               {t(
-                'Pick who is coming and at least one thing you fancy.',
-                'Chọn đi cùng ai và ít nhất một thứ bạn thích.',
-                '誰と行くか、そして気になるものを1つ選んでください。',
+                "Just pick who's going and one thing you fancy.",
+                'Chỉ cần đi cùng ai và một thứ bạn thích là được.',
+                '誰と行くかと、気になるもの1つだけで大丈夫です。',
               )}
             </Text>
           )}

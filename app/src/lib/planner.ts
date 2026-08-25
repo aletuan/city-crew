@@ -366,7 +366,7 @@ const TASTE_WEIGHT = 2;
  *
  * ── the dead input this revives ──
  *
- * "Who's coming?" is the wizard's first question, and until this table
+ * "Going with…" is the wizard's first question, and until this table
  * existed nothing in the planner read the answer. It was stored on the
  * trip, worn as a badge, and handed to the model to colour the prose —
  * so a family with children and a couple on a date night were given
