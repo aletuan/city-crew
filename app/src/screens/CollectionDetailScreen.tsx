@@ -595,7 +595,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <Text style={[s.meta, s.byline]} numberOfLines={1}>
         {owned && isPublic ? '·  ' : ''}
         {!owned && col.curator_handle ? `${atHandle(col.curator_handle)}  ·  ` : ''}
-        {members.length} {t('places', 'địa điểm', 'スポット')}
+        {members.length} {t(members.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
         {owned && !isPublic ? `  ·  ${t('Private', 'Riêng tư', '非公開')}` : ''}
       </Text>
 

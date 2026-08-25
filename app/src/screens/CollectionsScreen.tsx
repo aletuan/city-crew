@@ -12,9 +12,9 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Card, Empty, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, Empty, GradientCta, PressableScale, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
-import { AddPill, AddSlot } from '../components/add';
+import { AddSlot } from '../components/add';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { Collection, coverOf, deleteCollection, membersOf, touchesCity } from '../lib/data';
@@ -295,7 +295,10 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
   );
 }
 
-export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
+export default function CollectionsScreen({ navigation, route }: {
+  navigation: Nav;
+  route: { params?: { tab?: 'community' } };
+}) {
   const { t } = useI18n();
   const { session } = useAuth();
   const { city } = useCity();
@@ -361,37 +364,66 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
     );
   };
 
-  // The section stays even with nothing in it — that empty is the one place
-  // to say what collections are for.
+  // The two halves were one scroll, and the second half lost: four owned
+  // lists already pushed "Public collections" to the fold, and a library
+  // that grows pushes it further every month. A tab each — the same
+  // shape as the Crew screen, for the same reason: two questions, asked
+  // at different moments. Guests skip the switch entirely; with no
+  // library there is only the one half to show.
   //
-  // It hides only until the first load has settled. `loaded`, not
-  // `!loading`: the focus refresh flips `loading` back on, and hiding the
-  // section for that is what made a visit to this tab look like a double
-  // load. The previous attempt read `data.length > 0` as "we have been
-  // here before", which is true for everyone except the people this card
-  // exists for — anyone whose answer is legitimately empty saw the blink
-  // every time.
+  // "Community", not "Public": on this screen "Public" is already the
+  // status word each owned row wears, and one word must not mean the tab
+  // and the badge at once. It also pairs with "Yours" as an answer to
+  // the same question — whose lists these are.
+  const [tab, setTab] = useState<'yours' | 'community'>(route.params?.tab ?? 'yours');
+  // Explore's "See all" aims here while the screen may already be
+  // mounted, so a fresh param re-aims the switch.
+  useEffect(() => {
+    if (route.params?.tab) setTab(route.params.tab);
+  }, [route.params?.tab]);
+  // An empty library greets with the community shelf instead of an empty
+  // room — decided once per visit, the first time the answer lands, and
+  // never re-decided under the reader's thumb (the Crew screen's rule).
+  const greeted = useRef(false);
+  useEffect(() => {
+    if (greeted.current || !session || !mine.loaded || route.params?.tab) return;
+    greeted.current = true;
+    if (mine.data.length === 0) setTab('community');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mine.loaded]);
+
+  // `loaded`, not `!loading`: the focus refresh flips `loading` back on,
+  // and hiding the list for that made a visit look like a double load.
   const mineReady = mine.loaded;
-  const sections = [
-    ...(session && mineReady
-      ? [{ title: t('Your collections', 'Bộ sưu tập của bạn', 'あなたのコレクション'), own: true, data: mine.data }]
-      : []),
-    { title: t('Public collections', 'Bộ sưu tập công khai', '公開コレクション'), own: false, data: visible },
-  ];
+  const sections = session && tab === 'yours'
+    ? (mineReady ? [{ own: true, data: mine.data }] : [])
+    : [{ own: false, data: visible }];
 
   return (
-    // No control in the header: creating belongs to the section it creates
-    // into, and every signed-in state now shows one there — the "New" pill
-    // beside the heading, the dashed row under the list, or the empty
-    // card's own button. A fourth one up here would be the same action a
-    // fourth time.
+    // No control in the header: creating belongs to the Yours tab, which
+    // always shows one door — the dashed row under the list, or the empty
+    // card's own button. (The "New" pill that rode the section heading
+    // went with the heading itself when the sections became tabs: it was
+    // the same action a third time.)
     <Screen title={t('Collections', 'Bộ sưu tập', 'コレクション')}>
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
+        {/* The tab bar's own glyph for your shelf; the globe every public
+            row already wears for everyone else's. Guests have no library,
+            so they get the one half with no switch in front of it. */}
+        {session ? (
+          <UnderlineTabs
+            tabs={[
+              { key: 'yours', icon: 'bookmark-outline', label: t('Yours', 'Của bạn', '自分の') },
+              { key: 'community', icon: 'globe-outline', label: t('Community', 'Cộng đồng', 'みんなの') },
+            ]}
+            active={tab}
+            onChange={setTab}
+          />
+        ) : null}
         {holding && (
           <View>
             <GuestNotice navigation={navigation} />
-            <Text style={s.section}>{t('Public collections', 'Bộ sưu tập công khai', '公開コレクション')}</Text>
             {[0, 1, 2].map((i) => (
               <View key={i} style={s.row}>
                 <Card style={s.card}>
@@ -410,28 +442,9 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
           <SectionList
             sections={sections}
             keyExtractor={(c) => c.slug}
-            stickySectionHeadersEnabled={false}
             onScroll={duckScroll}
             scrollEventThrottle={16}
             ListHeaderComponent={<GuestNotice navigation={navigation} />}
-            renderSectionHeader={({ section }) => (
-              // The pill rides the heading only where there is already a
-              // list — an empty section has the full card below it making
-              // the same offer, and two invitations to do one thing read as
-              // two different things.
-              section.own && section.data.length > 0
-                ? (
-                  <View style={s.sectionRow}>
-                    <Text style={[s.section, s.sectionFlush]}>{section.title}</Text>
-                    <AddPill
-                      label={t('New', 'Tạo mới', '新規')}
-                      onPress={() => navigation.navigate('CollectionForm')}
-                      accessibilityLabel={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
-                    />
-                  </View>
-                )
-                : <Text style={s.section}>{section.title}</Text>
-            )}
             renderItem={({ item, section }) => {
               const count = membersOf(item, places).length;
               const uri = coverFor(item);
@@ -477,7 +490,7 @@ export default function CollectionsScreen({ navigation }: { navigation: Nav }) {
                               list you just made deserves a sentence. */}
                           {count === 0
                             ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
-                            : `${count} ${t('places', 'địa điểm', 'スポット')}`}
+                            : `${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`}
                           {section.own
                             ? `  ·  ${item.is_public
                               ? t('Public', 'Công khai', '公開')
@@ -633,19 +646,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 18, paddingVertical: 11, borderRadius: 14,
   },
   noticeChipText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
-
-  section: {
-    color: colors.text, ...type.section,
-    paddingHorizontal: space.page, marginBottom: space.headingToContent,
-  },
-  sectionRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: space.page, marginBottom: space.headingToContent,
-  },
-  // The heading keeps its own padding through `s.section`; inside the row
-  // the row owns it, and applying both would indent the title twice.
-  sectionFlush: { paddingHorizontal: 0, marginBottom: 0 },
-
 
   firstWrap: { marginHorizontal: space.page, marginBottom: space.titleToContent },
   first: {

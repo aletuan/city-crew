@@ -315,7 +315,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
                         </Text>
                         <Text style={s.fromMeta} numberOfLines={1}>
                           {t(
-                            `Your collection · ${members.length} places`,
+                            `Your collection · ${members.length} ${members.length === 1 ? 'place' : 'places'}`,
                             `Bộ sưu tập của bạn · ${members.length} địa điểm`,
                             `あなたのコレクション · ${members.length}件`,
                           )}

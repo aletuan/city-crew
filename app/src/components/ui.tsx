@@ -378,6 +378,60 @@ export function Chip({ label, active, onPress, icon, iconColor }: {
 }
 
 /**
+ * The switch between the halves of a screen — labelled doors, the open
+ * one underlined.
+ *
+ * Underlines, after two filled attempts on the Crew screen: a gradient
+ * made a tab as loud as Accept, and the soft pill that works over the
+ * tab bar's glass sank into flat paper — pale coral on a pale track on
+ * cream is three warm greys pretending to differ. On a flat page,
+ * contrast has to come from the type itself: the chosen tab's word and
+ * glyph go accent over a 2pt rule, and there is no tray, no fill, no
+ * slab across the screen. The row hugs its words, left-aligned, like
+ * every chip row in the app.
+ *
+ * `count` rides differently on each half: a bubble on an unchosen tab —
+ * a bell, rung from the other room, the only place a bell is news — and
+ * folded into the label on the chosen one, where whatever it counts is
+ * already on screen. Zero draws nothing either way.
+ */
+export function UnderlineTabs<K extends string>({ tabs, active, onChange }: {
+  tabs: { key: K; icon: keyof typeof Ionicons.glyphMap; label: string; count?: number }[];
+  active: K;
+  onChange: (k: K) => void;
+}) {
+  return (
+    <View style={s.tabsRow}>
+      {tabs.map(({ key, icon, label, count }) => {
+        const on = active === key;
+        return (
+          <PressableScale
+            key={key}
+            style={[s.tabItem, on && s.tabItemOn]}
+            scaleTo={0.97}
+            haptic="selection"
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            onPress={() => onChange(key)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+          >
+            <Ionicons name={icon} size={16} color={on ? colors.accent : colors.textTertiary} />
+            <Text style={[s.tabText, on && s.tabTextOn]} numberOfLines={1}>
+              {on && count ? `${label} (${count})` : label}
+            </Text>
+            {!on && count ? (
+              <View style={s.tabBadge}>
+                <Text style={s.tabBadgeText}>{count}</Text>
+              </View>
+            ) : null}
+          </PressableScale>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
  * A surface with a hairline. It has **no padding of its own**, on purpose:
  * about half the cards in this app pad their inner rows instead, because a
  * row that has to run to the card's edge — a full-width divider, a pressable
@@ -723,6 +777,26 @@ const s = StyleSheet.create({
   chipOn: { backgroundColor: colors.surfaceGlass, borderColor: colors.borderGlass },
   chipText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
   chipTextOn: { color: colors.accent, fontWeight: font.semibold },
+  tabsRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 26,
+    marginHorizontal: space.page, marginBottom: 14,
+  },
+  tabItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingVertical: 7,
+    // The rule is drawn transparent when unchosen rather than added when
+    // chosen, so switching tabs never moves a pixel of layout.
+    borderBottomWidth: 2, borderBottomColor: 'transparent',
+  },
+  tabItemOn: { borderBottomColor: colors.accent },
+  tabText: { color: colors.textTertiary, fontSize: 15, fontWeight: font.medium },
+  tabTextOn: { color: colors.accent, fontWeight: font.semibold },
+  tabBadge: {
+    minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.badgeSolid,
+  },
+  tabBadgeText: { color: colors.accentInk, fontSize: 12.5, fontWeight: font.semibold },
   card: {
     backgroundColor: colors.surfaceCard, borderRadius: radius.card,
     borderWidth: 1, borderColor: colors.borderGlassSoft, overflow: 'hidden',

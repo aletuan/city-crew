@@ -74,7 +74,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
                   <Text style={s.rowMeta} numberOfLines={1}>
                     {c.collection_places.length === 0
                       ? t('Empty', 'Trống', '空')
-                      : `${c.collection_places.length} ${t('places', 'địa điểm', 'スポット')}`}
+                      : `${c.collection_places.length} ${t(c.collection_places.length === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`}
                   </Text>
                 </View>
               </PressableScale>

@@ -611,7 +611,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                     {t(item.collection.title_en, item.collection.title_vi, item.collection.title_ja)}
                   </Text>
                   <Text style={s.cardMeta}>
-                    {item.count} {t('places', 'địa điểm', 'スポット')}
+                    {item.count} {t(item.count === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
