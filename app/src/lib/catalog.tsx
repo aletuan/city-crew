@@ -76,8 +76,8 @@ const BUILT_IN: TermMap = Object.fromEntries(
 );
 
 const EMPTY: Catalog = {
-  places: { loading: true, loaded: false, error: null, data: [], loadedAt: null, reload: () => {} },
-  collections: { loading: true, loaded: false, error: null, data: [], loadedAt: null, reload: () => {} },
+  places: { loading: true, loaded: false, error: null, data: [], loadedAt: null, fromCache: false, reload: () => {} },
+  collections: { loading: true, loaded: false, error: null, data: [], loadedAt: null, fromCache: false, reload: () => {} },
   terms: mergeTerms(BUILT_IN, null),
   curatorAvatars: {},
   likes: {},
@@ -135,12 +135,17 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   // The launch waterfall's back half: when each catalog query settles.
   // `mark` logs once per name, so the refetches these effects also see —
   // city corrections, sign-in, AppState — mark nothing.
+  // A hydrated answer and the fresh one behind it are separate marks, so
+  // the trace shows both: when the reader first saw content, and when the
+  // network confirmed it.
   useEffect(() => {
-    if (places.loaded) startupTrace.mark('catalog:places');
-  }, [places.loaded]);
+    if (places.loaded) startupTrace.mark(places.fromCache ? 'catalog:places(cached)' : 'catalog:places');
+  }, [places.loaded, places.fromCache]);
   useEffect(() => {
-    if (collections.loaded) startupTrace.mark('catalog:collections');
-  }, [collections.loaded]);
+    if (collections.loaded) {
+      startupTrace.mark(collections.fromCache ? 'catalog:collections(cached)' : 'catalog:collections');
+    }
+  }, [collections.loaded, collections.fromCache]);
   // Gated on collections too: with no handles yet the avatars query
   // "settles" instantly and would stamp a time that measured nothing.
   useEffect(() => {
