@@ -11,7 +11,8 @@ import { useCallback } from 'react';
 import { useCity } from '../city';
 import { normalizeHandle } from '../handle';
 import type { Collection, Place } from '../types';
-import { useFetch } from './fetch';
+import { CACHE_CATALOG, cacheKey } from './cache';
+import { useFetch, usePersistedFetch } from './fetch';
 import { fetchCategoryTerms, fetchPlaceBySlug, fetchPlaces } from './places';
 import {
   fetchCollections, fetchLikeCounts, fetchMyCollections, fetchMyLikes,
@@ -41,7 +42,15 @@ export const usePlacesQuery = (meId?: string | null) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [city?.id, meId],
   );
-  return useFetch(fetcher, [] as Place[]);
+  // The two heavy catalog queries — this and collections below — remember
+  // their last answer between launches; see `lib/data/cache` for what that
+  // buys and costs. No key while the city is unresolved, because a cached
+  // answer is an answer to a question, and there is no question yet.
+  return usePersistedFetch(
+    CACHE_CATALOG && city ? cacheKey('places', city.id, meId) : null,
+    fetcher,
+    [] as Place[],
+  );
 };
 
 export const useCategoryTermsQuery = () => {
@@ -70,7 +79,14 @@ export const useCollectionsQuery = (meId?: string | null) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [city?.id, meId],
   );
-  return useFetch(fetcher, [] as Collection[]);
+  // Cached between launches like places above; like counts and avatars
+  // are deliberately not — one is a social number that must be fresh,
+  // the other arrives late harmlessly.
+  return usePersistedFetch(
+    CACHE_CATALOG && city ? cacheKey('collections', city.id, meId) : null,
+    fetcher,
+    [] as Collection[],
+  );
 };
 
 /**
