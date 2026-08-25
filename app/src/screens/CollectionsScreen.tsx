@@ -12,7 +12,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Card, Empty, GradientCta, PressableScale, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, Empty, GradientCta, PressableScale, RoundIconButton, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddSlot } from '../components/add';
 import { useAuth } from '../lib/auth';
@@ -424,7 +424,25 @@ export default function CollectionsScreen({ navigation, route }: {
     // card's own button. (The "New" pill that rode the section heading
     // went with the heading itself when the sections became tabs: it was
     // the same action a third time.)
-    <Screen title={t('Collections', 'Bộ sưu tập', 'コレクション')}>
+    <Screen
+      title={t('Collections', 'Bộ sưu tập', 'コレクション')}
+      // The search lives where every screen keeps its utility — the
+      // header's right, in the same grey disc the Crew screen gives ⊕
+      // and Explore gives its own magnifier. It sat as a bare 18pt glyph
+      // on the tabs row first, and the owner's review was right: a
+      // feature nobody notices is a feature nobody has. Up here it is
+      // also a door guests get — the tabs row below is signed-in only,
+      // the community list is not.
+      right={(
+        <RoundIconButton
+          icon={searching ? 'close' : 'search'}
+          label={searching
+            ? t('Close search', 'Đóng tìm kiếm', '検索を閉じる')
+            : t('Search collections', 'Tìm bộ sưu tập', 'コレクションを検索')}
+          onPress={() => (searching ? closeSearch() : setSearching(true))}
+        />
+      )}
+    >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {/* The tab bar's own glyph for your shelf; the globe every public
@@ -438,22 +456,6 @@ export default function CollectionsScreen({ navigation, route }: {
             ]}
             active={tab}
             onChange={setTab}
-            right={(
-              <PressableScale
-                scaleTo={0.85}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                onPress={() => (searching ? closeSearch() : setSearching(true))}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: searching }}
-                accessibilityLabel={t('Search collections', 'Tìm bộ sưu tập', 'コレクションを検索')}
-              >
-                <Ionicons
-                  name={searching ? 'close' : 'search'}
-                  size={18}
-                  color={searching ? colors.accent : colors.textSecondary}
-                />
-              </PressableScale>
-            )}
           />
         ) : null}
         {searching ? (
@@ -463,8 +465,12 @@ export default function CollectionsScreen({ navigation, route }: {
               style={s.searchInput}
               value={query}
               onChangeText={setQuery}
-              // The three things it answers by, named in the box itself.
-              placeholder={t('Name, place, or @handle', 'Tên, địa điểm, hoặc @handle', '名前・スポット・@ハンドル')}
+              // The three things it answers by, named in the box itself —
+              // and in the app's own word for the third: "username" is
+              // what the Crew screen's add flow already calls it, where
+              // "handle" is what this codebase calls it. Readers get the
+              // screen's vocabulary, not the repository's.
+              placeholder={t('Name, place, or @username', 'Tên, địa điểm, hoặc @username', '名前・スポット・@ユーザー名')}
               placeholderTextColor={colors.textTertiary}
               autoFocus
               autoCapitalize="none"
