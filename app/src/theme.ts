@@ -111,20 +111,6 @@ export const colors = {
    * oversight to tidy up.
    */
   badgeInk: dyn('#DC4C33', '#141310'),
-  /**
-   * The ink for a *word* sitting on `badgeSolid` — `badgeInk` carried down
-   * to text strength. On the pale coral, #DC4C33 reaches 3.15:1, enough
-   * for the glyph it was chosen for and short of the 4.5 a label is held
-   * to; #A33724 is the same hue at 5.16. Dark's near-black is 6.79 on the
-   * solid coral already.
-   *
-   * Measured first for the floating tab bar's "you are here" pill, which
-   * keeps its own scheme-resolved copies of these two values (see
-   * PILL_INK_LIGHT there — it resolves by live scheme so Android can
-   * follow the system, which `dyn` cannot). Change either place, change
-   * both.
-   */
-  pillInk: dyn('#A33724', '#141310'),
   /** The warm end of the accent. Gradients run accent → accentBright and
    *  stay bright in both themes: they are fills, never type. */
   accentBright: '#FF9A5C',
