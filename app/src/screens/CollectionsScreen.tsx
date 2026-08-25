@@ -674,7 +674,7 @@ export default function CollectionsScreen({ navigation, route }: {
                   : <NewCollectionRow onPress={() => navigation.navigate('CollectionForm')} />;
               }
               return section.data.length === 0
-                ? <Empty text={t('No public collections yet.', 'Chưa có bộ sưu tập công khai.', '公開コレクションはまだありません。')} />
+                ? <Empty text={t('Nothing from the community yet.', 'Cộng đồng chưa có bộ sưu tập nào.', 'みんなのコレクションはまだありません。')} />
                 : null;
             }}
             contentContainerStyle={{ paddingBottom: tabClearance }}
