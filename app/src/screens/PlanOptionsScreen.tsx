@@ -41,7 +41,7 @@ import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
 import { useSave } from '../lib/save';
 import { stopCount, summaryLine } from '../lib/sketch';
-import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
+import { draftFrom, type TripDraft } from '../lib/trip';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
@@ -156,9 +156,9 @@ export default function PlanOptionsScreen({ navigation, route }: {
     [plans, lang],
   );
 
-  const company = COMPANY.find((c) => c.key === p.company);
+  // Date first, place after, company nowhere — the order every trip
+  // subtitle keeps; who is going belongs to the plan, not its dateline.
   const line = summaryLine([
-    company ? t(company.en, company.vi, company.ja) : null,
     dateline(lang, fromISO(day) ?? new Date()),
     p.where,
   ]);

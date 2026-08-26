@@ -48,7 +48,7 @@ import {
   findingFeed, type FindingLine, finished, findingsOf, SKETCH_STEPS, STEP_FLOOR_MS, stepStates,
   summaryLine, type StepState,
 } from '../lib/sketch';
-import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
+import { draftFrom, type TripDraft } from '../lib/trip';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space } from '../theme';
@@ -327,12 +327,12 @@ export default function SketchingScreen({ navigation, route }: {
     navigation.replace('PlanOptions', { ...p, seed });
   }, [done, plans.length, navigation, p, seed]);
 
-  const company = COMPANY.find((c) => c.key === p.company);
   const day = clampDay(p.date || todayISO());
+  // Date first, then the half of it, then where — company nowhere, the
+  // order every trip subtitle keeps.
   const line = summaryLine([
-    company ? t(company.en, company.vi, company.ja) : null,
-    p.when === 'day' ? t('Day', 'Ban ngày', '昼') : t('Evening', 'Buổi tối', '夜'),
     dateline(lang, fromISO(day) ?? new Date()),
+    p.when === 'day' ? t('Day', 'Ban ngày', '昼') : t('Evening', 'Buổi tối', '夜'),
     p.where,
   ]);
   const wants = summaryLine(p.categories.map((c) => (CATEGORIES[c] ? categoryLabel(c, t) : null)));

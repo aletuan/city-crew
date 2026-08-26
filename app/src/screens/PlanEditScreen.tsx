@@ -56,7 +56,7 @@ import { membersOf } from '../lib/place';
 import { useSave } from '../lib/save';
 import { useNoteEvent, usePlanProfile } from '../lib/tasteProfile';
 import { stopCount, summaryLine } from '../lib/sketch';
-import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
+import { draftFrom, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, space, type } from '../theme';
@@ -202,9 +202,9 @@ export default function PlanEditScreen({ navigation, route }: {
   const spend = current.reduce((n, s) => n + (s.place.price_vnd ?? 0), 0)
     + legs.filter((l) => l?.mode === 'ride').length * 15000;
 
-  const company = COMPANY.find((c) => c.key === p.company);
+  // Date first, place after, company nowhere: the crew row below carries
+  // who is going, and every trip subtitle keeps this same order.
   const line = summaryLine([
-    company ? t(company.en, company.vi, company.ja) : null,
     dateline(lang, fromISO(day) ?? new Date()),
     p.where,
   ]);
