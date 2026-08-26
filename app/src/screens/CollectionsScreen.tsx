@@ -432,14 +432,14 @@ export default function CollectionsScreen({ navigation, route }: {
     ? findCollections(list.map((c) => ({ c, members: membersOf(c, places) })), q)
     : list);
 
-  // The community half is a storefront — covers first, in the Explore
-  // shelf's own card language, two to a row, six covers where the rows
-  // showed three. Your own half gets the same tiles by default and a
-  // small switch back to the rows, because your library is browsed on
-  // some days and managed on others: tiles show it off, rows carry the
-  // swipe-to-edit and are scanned by name. The choice is remembered.
-  // What tiles give up — the swipe shortcuts — the collection's own
-  // screen still has, in its ⋯ menu.
+  // Both halves default to tiles — covers first, in the Explore shelf's
+  // own card language, six covers where the rows showed three — and one
+  // small switch turns both back into rows, because a shelf is browsed
+  // on some days and scanned by name on others. One preference, not one
+  // per tab: a reader who chose rows chose how they read lists, not how
+  // they read one tab. The choice is remembered. What your own tiles
+  // give up — the swipe shortcuts — the rows keep, one flick away, and
+  // the collection's own screen has in its ⋯ menu regardless.
   const { width: winW } = useWindowDimensions();
   const gcardW = Math.round((winW - space.page * 2 - space.cardGap) / 2);
   const gcardH = Math.round(gcardW * 1.18);
@@ -456,26 +456,25 @@ export default function CollectionsScreen({ navigation, route }: {
 
   // SectionList knows nothing of columns, so the grid packs itself: two
   // cards per row-item, and the odd last card keeps a spacer where its
-  // neighbour would be. The pair carries whose it is — the card shows a
-  // padlock for your own and a byline for everyone else's.
+  // neighbour would be. Every row-item carries whose it is — a tile
+  // shows a padlock for your own and a byline for everyone else's, and
+  // the two row shapes split the same way: yours swipe, the community's
+  // do not.
   type ListRow =
     | { kind: 'own'; c: Collection }
+    | { kind: 'com'; c: Collection }
     | { kind: 'pair'; pair: Collection[]; own: boolean };
   const pairUp = (list: Collection[], own: boolean): ListRow[] => {
     const out: ListRow[] = [];
     for (let i = 0; i < list.length; i += 2) out.push({ kind: 'pair', pair: list.slice(i, i + 2), own });
     return out;
   };
+  const shape = (list: Collection[], own: boolean): ListRow[] => (view === 'tile'
+    ? pairUp(list, own)
+    : list.map((c): ListRow => ({ kind: own ? 'own' : 'com', c })));
   const sections = session && tab === 'yours'
-    ? (mineReady
-      ? [{
-        own: true,
-        data: view === 'tile'
-          ? pairUp(sift(mine.data), true)
-          : sift(mine.data).map((c): ListRow => ({ kind: 'own', c })),
-      }]
-      : [])
-    : [{ own: false, data: pairUp(sift(visible), false) }];
+    ? (mineReady ? [{ own: true, data: shape(sift(mine.data), true) }] : [])
+    : [{ own: false, data: shape(sift(visible), false) }];
 
   return (
     // No control in the header: creating belongs to the Yours tab, which
@@ -515,10 +514,8 @@ export default function CollectionsScreen({ navigation, route }: {
             ]}
             active={tab}
             onChange={setTab}
-            // The switch only where it has two things to switch between:
-            // Community is tiles by design, so on that tab the row's end
-            // stays empty.
-            right={tab === 'yours' ? (
+            // One preference, both shelves — see `shape`.
+            right={(
               <View style={s.viewToggle}>
                 {(['row', 'tile'] as const).map((v) => (
                   <PressableScale
@@ -542,7 +539,7 @@ export default function CollectionsScreen({ navigation, route }: {
                   </PressableScale>
                 ))}
               </View>
-            ) : null}
+            )}
           />
         ) : null}
         {searching ? (
@@ -597,7 +594,7 @@ export default function CollectionsScreen({ navigation, route }: {
         {!holding && !cols.error && (
           <SectionList
             sections={sections}
-            keyExtractor={(row) => (row.kind === 'own' ? row.c.slug : row.pair[0].slug)}
+            keyExtractor={(row) => (row.kind === 'pair' ? row.pair[0].slug : row.c.slug)}
             onScroll={duckScroll}
             scrollEventThrottle={16}
             keyboardShouldPersistTaps="handled"
@@ -686,6 +683,48 @@ export default function CollectionsScreen({ navigation, route }: {
                       );
                     })}
                     {item.pair.length === 1 ? <View style={{ width: gcardW }} /> : null}
+                  </View>
+                );
+              }
+              // The community row — the tile's facts at reading density:
+              // byline instead of padlock, the quiet likes line instead
+              // of a tappable heart, and nothing behind a swipe, because
+              // none of it is yours to edit.
+              if (item.kind === 'com') {
+                const c = item.c;
+                const n = membersOf(c, places).length;
+                const cover = coverFor(c);
+                return (
+                  <View style={s.row}>
+                    <PressableScale onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}>
+                      <Card style={s.card}>
+                        <View style={s.thumb}>
+                          {cover
+                            ? <Image source={{ uri: cover }} style={s.thumbFill} contentFit="cover" transition={200} />
+                            : <EmptyCover />}
+                        </View>
+                        <View style={s.cardText}>
+                          <Text style={s.title} numberOfLines={2}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
+                          <View style={s.metaRow}>
+                            <Text style={s.meta} numberOfLines={1}>
+                              {n} {t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
+                              {c.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${atHandle(c.curator_handle)}` : ''}
+                            </Text>
+                          </View>
+                          {likesWorthShowing(likes[c.slug]) && (
+                            <View style={s.likesRow}>
+                              <Ionicons name="heart" size={13} color={colors.accentFaint} />
+                              <Text style={s.meta}>
+                                {likes[c.slug]} {t('likes', 'lượt thích', 'いいね')}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={s.chevron}>
+                          <Ionicons name="chevron-forward" size={CHEVRON} color={colors.textTertiary} />
+                        </View>
+                      </Card>
+                    </PressableScale>
                   </View>
                 );
               }
