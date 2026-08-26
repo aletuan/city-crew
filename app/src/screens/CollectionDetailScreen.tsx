@@ -619,11 +619,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           list — the database enforces it, and `!owned` here is
           the app's half of the same rule: the policy is what
           makes it true, this is what keeps the reader from
-          meeting it as a heart that does nothing. Only this
-          screen needs the check. The public shelf already leaves
-          your own lists out of the query it draws from, so the
-          heart there never meets one; here the row arrives
-          through `mine` as readily as through the public read.
+          meeting it as a heart that does nothing. The Explore
+          shelf never needs the check — it leaves your own lists
+          out of the query it draws from, so the heart there
+          never meets one — and the Collections grid carries its
+          own copy of the same rule on your own tiles; here the
+          row arrives through `mine` as readily as through the
+          public read.
 
           So the owner gets the same shape drawn grey and inert —
           they still want to know how the list is doing. Signed
