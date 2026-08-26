@@ -19,9 +19,7 @@ import {
 } from './collections';
 import { fetchMyTrips, type Trip } from './trips';
 import { fetchPreferences, NO_PREFERENCES } from './preferences';
-import {
-  fetchCuratorAvatars, fetchFriendships, fetchMyBlocks, type FriendProfile, profileByHandle,
-} from './people';
+import { fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
 
 // Both catalogs scope to the selected city TOGETHER: membersOf() resolves
 // collection members against the in-memory places list, so a mismatched
@@ -133,13 +131,9 @@ export const useMyPreferences = (ownerId: string | null | undefined) => {
   return useFetch(fetcher, NO_PREFERENCES);
 };
 
-export const useFriendships = (meId: string | null | undefined) => {
-  const fetcher = useCallback(
-    () => (meId ? fetchFriendships() : Promise.resolve([] as import('../friends').FriendshipRow[])),
-    [meId],
-  );
-  return useFetch(fetcher, [] as import('../friends').FriendshipRow[]);
-};
+// Friendships and blocks have no hook here: they are fetched once for
+// the whole app by `lib/crew`, which persists them the way the catalog
+// queries persist themselves.
 
 export const useCuratorAvatarsQuery = (handles: string[]) => {
   // Keyed on the handles themselves, not on the array: `useFetch` reruns
@@ -179,10 +173,3 @@ export const useProfileByHandle = (handle: string | null) => {
   return useFetch(fetcher, null as FriendProfile | null);
 };
 
-export const useMyBlocks = (meId: string | null | undefined) => {
-  const fetcher = useCallback(
-    () => (meId ? fetchMyBlocks() : Promise.resolve([] as string[])),
-    [meId],
-  );
-  return useFetch(fetcher, [] as string[]);
-};

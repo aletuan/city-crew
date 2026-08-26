@@ -19,7 +19,8 @@ import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
 import { useAuth } from '../lib/auth';
-import { membersOf, useFriendships } from '../lib/data';
+import { membersOf } from '../lib/data';
+import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import { useSave } from '../lib/save';
 import { useCity } from '../lib/city';
@@ -276,7 +277,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   // The number on the friends card and the dot beside it. Sorted by the
   // pure half in lib/friends; the fetch itself is scoped by RLS to edges
   // this account is on.
-  const ships = useFriendships(session?.user?.id);
+  const { ships } = useCrew();
   const crew = useMemo(
     () => splitFriendships(ships.data, session?.user?.id ?? ''),
     [ships.data, session?.user?.id],
