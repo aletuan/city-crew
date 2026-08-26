@@ -33,6 +33,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
+import { useInvitations } from '../lib/invitations';
 import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
 import { colors, font, radius } from '../theme';
@@ -117,6 +118,13 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     if (me && shouldRefresh(loadedAtRef.current, Date.now())) reload();
   }, [index, me, reload]);
   const waiting = me ? splitFriendships(ships.data, me).incoming.length > 0 : false;
+
+  // And the same mark on Trips, for an invitation waiting on an answer.
+  // The second signal the bar carries, and it earns its place by the same
+  // test the first one passed: somebody else is waiting on this reader,
+  // and the card that says so is two taps away. Read from the one shared
+  // copy — see `lib/invitations` — so the dot costs no request of its own.
+  const { waiting: invitesWaiting } = useInvitations();
 
   // It used to clear the whole safe-area inset — 34pt on a modern iPhone,
   // plus the gap, put the bar 44pt off the bottom, which reads as an
@@ -205,6 +213,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                   than tinting it: a dot is news, a recoloured icon is a
                   different icon. */}
               {route.name === 'Profile' && waiting ? <View style={s.reqDot} /> : null}
+              {route.name === 'Trips' && invitesWaiting > 0 ? <View style={s.reqDot} /> : null}
               </View>
               <Text
                 numberOfLines={1}

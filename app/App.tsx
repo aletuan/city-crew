@@ -37,6 +37,7 @@ import PlanOptionsScreen from './src/screens/PlanOptionsScreen';
 import PlanEditScreen from './src/screens/PlanEditScreen';
 import TripsScreen from './src/screens/TripsScreen';
 import TripDetailScreen from './src/screens/TripDetailScreen';
+import TripInvitationScreen from './src/screens/TripInvitationScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
@@ -82,6 +83,7 @@ function TripsStack() {
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="TripsHome" component={TripsScreen} />
       <Stack.Screen name="TripDetail" component={TripDetailScreen} />
+      <Stack.Screen name="TripInvitation" component={TripInvitationScreen} />
       {/* And here for the same reason: a saved trip lists places and each
           one opens. */}
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />

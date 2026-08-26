@@ -106,6 +106,15 @@ export type RootStackParamList = {
    *  it through navigation is what keeps one copy of a trip in the app —
    *  the same rule `SaveProvider` follows for collections. */
   TripDetail: { id: string };
+  /** An invitation, whole, before it is answered. Carries only the trip id
+   *  for the same reason `TripDetail` does — the row is already in memory,
+   *  from the same `useMyTrips` list, because an invitee can read the trip
+   *  from the moment they are asked.
+   *
+   *  A separate route rather than a mode on `TripDetail`: that screen is
+   *  for a plan you are on, with a crew row and a delete button, and
+   *  neither means anything for a day nobody has agreed to yet. */
+  TripInvitation: { id: string };
   ProfileHome: undefined;
   /** The crew list, and the screen that answers what happened while you
    *  were away. Both live in the Profile stack: friends are a fact about
