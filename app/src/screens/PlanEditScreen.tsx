@@ -13,13 +13,19 @@
 // does not carry. Two buttons reorder a three-stop evening in one tap each
 // and work under VoiceOver, which dragging does not.
 //
-// ── on Share and Invite ──
+// ── on Share, and on where Invite went ──
 //
-// Both are mocks, and the screen says so rather than leaving a dead button.
-// "Crew" is a word this repo uses in copy and has never modelled: there is
-// no membership table, no invitation, no policy letting anybody read a row
-// they do not own. Wiring a button to nothing would be the same mistake the
-// sketching screen used to make.
+// Share is still a mock, and the screen says so rather than leaving a dead
+// button.
+//
+// Invite is not here any more. It used to be a mock beside it for a reason
+// that has since been fixed — "there is no membership table, no invitation,
+// no policy letting anybody read a row they do not own" — and the
+// trip_invites migration is that table. But an invitation has to point at a
+// trip, and on this screen the plan does not exist yet: it is a draft the
+// reader may still walk away from. So inviting lives on the trip's own
+// screen, after Save, and the crew row here says so instead of offering a
+// button that would have to invent a trip to work.
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -54,7 +60,7 @@ import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
-import { colors, font, gradAI, radius, space, type } from '../theme';
+import { colors, font, gradAI, space, type } from '../theme';
 
 const money = (vnd: number) => (vnd >= 1_000_000
   ? `${Math.round(vnd / 100_000) / 10}M ₫`
@@ -340,9 +346,9 @@ export default function PlanEditScreen({ navigation, route }: {
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Mocked, and labelled. The avatars are the reader's own initial
-            twice over rather than invented names — a fake second person on
-            a trip nobody can share is a lie with a face on it. */}
+        {/* One avatar, and it is the reader's own — which is the whole
+            truth about a plan that has not been saved. Nobody can be on a
+            trip that does not exist yet, so there is nobody to draw. */}
         <View style={s.crew}>
           <View style={s.avatars}>
             <LinearGradient {...gradAI} style={s.avatar}>
@@ -352,10 +358,13 @@ export default function PlanEditScreen({ navigation, route }: {
             </LinearGradient>
           </View>
           <Text style={s.crewText}>{t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ')}</Text>
-          <PressableScale onPress={() => mock(t('Invite', 'Mời thêm', '招待'))} style={s.ghost}>
-            <Ionicons name="person-add-outline" size={14} color={colors.textSecondary} />
-            <Text style={s.ghostText}>{t('Invite', 'Mời', '招待')}</Text>
-          </PressableScale>
+          {/* Where the Invite button used to be, saying what it would have
+              had to lie about. Not a disabled button: a control that
+              cannot be pressed still reads as one the reader is failing to
+              use, and this is a sentence about the order of two steps. */}
+          <Text style={s.crewHint}>
+            {t('Save first, then invite', 'Lưu trước rồi mời', '保存してから招待')}
+          </Text>
         </View>
 
         <Text style={s.eyebrow}>
@@ -586,12 +595,7 @@ const s = StyleSheet.create({
   avatar: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.accentInk, fontWeight: font.bold, fontSize: 13 },
   crewText: { ...CAPTION, color: colors.textSecondary, flex: 1 },
-  ghost: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
-  },
-  ghostText: { ...CAPTION, color: colors.textSecondary, fontWeight: font.semibold },
+  crewHint: { color: colors.textTertiary, fontSize: 12.5 },
 
   eyebrow: {
     ...CAPTION, color: colors.textTertiary, fontWeight: font.semibold,
