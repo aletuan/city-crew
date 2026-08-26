@@ -321,24 +321,23 @@ export function resetNarrationCache(): void {
  * The title goes when the list changes **at all**, including order: "Coffee,
  * then dinner" is a claim about sequence as much as about content.
  *
- * A `why` goes when its stop changes *role*, because role is what these
- * sentences lean on — "an easy first stop", "somewhere to end up". The
- * first cut tracked the absolute index instead, and paid too much for the
- * same safety: deleting the first stop shifted every survivor's index and
- * took every sentence with it, when the middle stops were still middle
- * and the closer was still the closer. So the test is the pair
- * (first?, last?): a line survives while its stop opens the day exactly
- * if it did before, and closes it exactly if it did before. Deleting a
- * middle stop keeps the prose; promoting one to first — the lie the old
- * rule was built against, "a second stop" standing first — still retires
- * its line.
+ * A `why` goes only when its stop goes. This rule has now been narrowed
+ * twice, each time by the same person watching their own plan: absolute
+ * index deleted every survivor's sentence when the opener went, and the
+ * role pair (first?, last?) still deleted the last stop standing's — a
+ * reader who trims a three-stop morning down to the one café they meant
+ * to keep watches its sentence vanish for the trimming, and that reads
+ * as breakage, not caution. The owner's call is that a sentence about a
+ * place stays true enough while the place is still on the plan: "an
+ * easy first stop" standing second is a smaller untruth than a plan
+ * struck dumb by its own editor.
  *
- * The *hour* is deliberately not tracked, though a line may well mention
- * it: every arrival after an edited one shifts, so tracking the clock
- * would delete the whole narration for a fifteen-minute nudge. "At six"
- * when it is now 18:15 is a much smaller untruth than "a second stop" on
- * the first one, and paying for it with all of the prose is the worse
- * trade.
+ * The *hour* and the *position* are therefore both untracked, though a
+ * line may mention either: every arrival after an edited one shifts, so
+ * tracking the clock would delete the whole narration for a
+ * fifteen-minute nudge, and tracking the seat kept deleting it for a
+ * deletion. What still cannot happen is a sentence about a stop that is
+ * not there — membership is the one claim always enforced.
  */
 export function freshen(
   words: Narration,
@@ -350,16 +349,10 @@ export function freshen(
   const sameList = narrated.length === current.length
     && narrated.every((slug, i) => slug === current[i]);
 
-  // The role a position plays, as the pair the sentences lean on. Both
-  // halves must hold: in a one-stop plan the survivor is first *and*
-  // last, so a line written for either role alone is retired.
-  const role = (i: number, n: number) => (i === 0 ? 'F' : '-') + (i === n - 1 ? 'L' : '-');
+  const onScreen = new Set(current);
   const why = new Map<string, string>();
   for (const [slug, line] of words.why) {
-    const was = narrated.indexOf(slug);
-    const now = current.indexOf(slug);
-    if (now === -1) continue;
-    if (role(was, narrated.length) === role(now, current.length)) why.set(slug, line);
+    if (onScreen.has(slug)) why.set(slug, line);
   }
 
   const title = sameList ? words.title : null;

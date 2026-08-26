@@ -346,30 +346,29 @@ export default function PlanEditScreen({ navigation, route }: {
         showsVerticalScrollIndicator={false}
       >
         {/* The reader's own face — the profile has one now, so the initial
-            it used to wear is only the fallback Avatar itself draws.
-            #358 also took the whole row out of a trip planned alone, and
-            that reasoning is the same one that decides the Invite button
-            on a saved trip: "just you, for now" under a plan the reader
-            marked "just me" is the app arguing with them.
+            it used to wear is only the fallback Avatar itself draws. The
+            row itself always stands: hiding it on solo pushed the page
+            around and took the face with it, and the owner sent it back.
 
             What is no longer here is Invite. It was a labelled mock for a
             reason that has since been fixed — trip_invites is that
             membership table — but an invitation points at a trip, and
-            here the plan does not exist yet. So the row says what the
-            button would have had to lie about. A sentence, not a disabled
-            control: one that cannot be pressed still reads as one the
-            reader is failing to use. */}
-        {p.company !== 'solo' && (
-          <View style={s.crew}>
-            <View style={s.avatars}>
-              <Avatar url={profile.avatar_url} size={30} />
-            </View>
-            <Text style={s.crewText}>{t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ')}</Text>
+            here the plan does not exist yet. So on a plan with company
+            the row says what the button would have had to lie about — a
+            sentence, not a disabled control — and a solo plan does not
+            even say that: pointing at inviting under a plan marked
+            "just me" is the app arguing with the reader. */}
+        <View style={s.crew}>
+          <View style={s.avatars}>
+            <Avatar url={profile.avatar_url} size={30} />
+          </View>
+          <Text style={s.crewText}>{t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ')}</Text>
+          {p.company !== 'solo' && (
             <Text style={s.crewHint}>
               {t('Save first, then invite', 'Lưu trước rồi mời', '保存してから招待')}
             </Text>
-          </View>
-        )}
+          )}
+        </View>
 
         <Text style={s.eyebrow}>
           {t('STOPS · NUDGE A TIME OR MOVE ONE', 'CÁC ĐIỂM · CHỈNH GIỜ HOẶC ĐỔI THỨ TỰ', 'スポット · 時間や順番を調整')}
