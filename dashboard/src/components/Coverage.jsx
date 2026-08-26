@@ -148,7 +148,7 @@ export default function Coverage() {
   // The app's own long name for the panel heading; CITY_META's short label
   // stays on the chip, same as the mock.
   const longName = cities.find((c) => c.id === city)?.name_vi
-    ?? { hcmc: 'TP. Hồ Chí Minh', hanoi: 'Hà Nội', danang: 'Đà Nẵng' }[city];
+    ?? { hcmc: 'TP. Hồ Chí Minh', hanoi: 'Hà Nội', danang: 'Đà Nẵng', dalat: 'Đà Lạt', hue: 'Huế' }[city];
   const maxCount = cov?.groups[0]?.count ?? 0;
 
   return (

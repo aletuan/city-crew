@@ -7,13 +7,16 @@
 // cumulative lines, the leaderboard — is a different fold over the same rows,
 // which is what keeps the four corners of the page agreeing with each other.
 
-/** The three cities as the screen abbreviates them. `key` is the two-or-three
+/** The cities as the screen abbreviates them. `key` is the two-or-three
  *  letter mark the leaderboard breakdown uses (`hcm 17 · hn 6 · dn 3`) —
- *  lowercase mono shorthand, not a display name. */
+ *  lowercase mono shorthand, not a display name. Zero-count cities never
+ *  print in a breakdown, so a city can sit here before its catalog does. */
 export const CITY_META = [
   { id: 'hcmc', label: 'TP.HCM', key: 'hcm' },
   { id: 'hanoi', label: 'Hà Nội', key: 'hn' },
   { id: 'danang', label: 'Đà Nẵng', key: 'dn' },
+  { id: 'dalat', label: 'Đà Lạt', key: 'dl' },
+  { id: 'hue', label: 'Huế', key: 'hue' },
 ];
 
 export const TOP_N = 10;
