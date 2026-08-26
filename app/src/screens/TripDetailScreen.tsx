@@ -54,7 +54,6 @@ import { mapsRouteUrl, mapsSearchUrl, routeMode } from '../lib/maps';
 import { coverOf } from '../lib/place';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { legsOf } from '../lib/travel';
-import { COMPANY } from '../lib/trip';
 import { spendVnd, tripCover } from '../lib/trips';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -73,7 +72,7 @@ export default function TripDetailScreen({ navigation, route }: {
   route: RootRoute<'TripDetail'>;
 }) {
   const { t, lang } = useI18n();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const { cities } = useCity();
   const clearance = useTabBarClearance();
   const trips = useMyTrips(session?.user?.id);
@@ -146,7 +145,6 @@ export default function TripDetailScreen({ navigation, route }: {
   const stops = trip.trip_stops;
   const day = fromISO(trip.day);
   const city = cities.find((c) => c.id === trip.city_id);
-  const company = COMPANY.find((c) => c.key === trip.company);
 
   const first = stops[0];
   const last = stops[stops.length - 1];
@@ -279,6 +277,9 @@ export default function TripDetailScreen({ navigation, route }: {
     ],
   );
 
+  // The subtitle is date, hours, place — and no company: who is going is
+  // the crew row's own line below, and a subtitle repeating it was the
+  // same fact twice in two voices. The order every trip subtitle keeps.
   return (
     <Screen
       title={trip.title}
@@ -286,7 +287,6 @@ export default function TripDetailScreen({ navigation, route }: {
         day ? dateline(lang, day) : trip.day,
         window,
         city ? t(city.short_en, city.short_vi, city.short_ja) : null,
-        company ? t(company.en, company.vi, company.ja) : null,
       ])}
       onBack={() => navigation.goBack()}
     >
@@ -307,6 +307,8 @@ export default function TripDetailScreen({ navigation, route }: {
           mine={owned}
           invites={owned ? mineInvites : []}
           people={people}
+          myAvatar={profile.avatar_url}
+          hostAvatar={owned ? null : (people[trip.owner_id]?.avatar_url ?? null)}
           headCount={heads}
           canInvite={owned && trip.company !== 'solo'}
           onInvite={() => setSheetOpen(true)}

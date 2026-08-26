@@ -101,7 +101,7 @@ describe('likesWorthShowing', () => {
   });
 });
 
-// Taps happen at t=100 unless a case says otherwise; a counts snapshot at
+// Taps happen at t=100 unless a case says otherwise. A counts snapshot at
 // t=50 predates them (stale), one at t=150 contains them (fresh).
 const tap = (slug: string, liked: boolean, at = 100): Pending[string] => ({ slug, liked, at });
 const STALE = 50;
