@@ -34,7 +34,7 @@ import { Avatar, PressableScale } from './ui';
 const FACES = 4;
 
 export default function TripCrew({
-  mine, invites, people, myAvatar, headCount, canInvite, onInvite,
+  mine, invites, people, myAvatar, hostAvatar, headCount, canInvite, onInvite,
 }: {
   /** Whether the reader planned this trip. The two sides of this row are
    *  different screens' worth of truth, not one with a button hidden. */
@@ -44,9 +44,12 @@ export default function TripCrew({
   invites: readonly InviteRow[];
   people: Record<string, FriendProfile>;
   /** The reader's own picture. They are on this trip in either role —
-   *  planner or invited — so their face opens the row; a null draws the
-   *  fallback Avatar itself carries. */
+   *  planner or invited — so their face is always in the row; a null
+   *  draws the fallback Avatar itself carries. */
   myAvatar: string | null;
+  /** The planner's picture, when the planner is somebody else. Null on
+   *  the reader's own trip — there the planner is `myAvatar`. */
+  hostAvatar: string | null;
   /** The count an invitee is allowed: accepted, from the function. Null
    *  when it could not be fetched — a missing headcount costs a clause in
    *  a sentence and must not fail the screen. */
@@ -63,16 +66,19 @@ export default function TripCrew({
   // yes — and neither counts a maybe.
   const going = mine ? headcount(crew) : (headCount == null ? null : headCount + 1);
 
-  // The reader first — a lesson the plan editor already paid for: a grey
-  // person-outline beside the words "just you" is the app forgetting who
-  // it is talking to. Accepted faces follow on the owner's side; the cap
-  // counts the reader too.
-  const faces: (string | null)[] = [
-    myAvatar,
-    ...(mine
-      ? crew.accepted.slice(0, FACES - 1).map((i) => people[i.invitee_id]?.avatar_url ?? null)
-      : []),
-  ];
+  // The planner opens the row, and the reader is always in it — a grey
+  // outline where a face belongs is the app forgetting who it is talking
+  // to, a lesson the plan editor paid for once already. On your own trip
+  // that is you, then everyone who said yes, overlapped into one small
+  // crowd; on a trip you were asked onto it is the friend who planned it,
+  // then you — the two ends of the invitation, touching. Who else was
+  // asked stays a number: that is the owner's business.
+  const faces: (string | null)[] = mine
+    ? [
+      myAvatar,
+      ...crew.accepted.slice(0, FACES - 1).map((i) => people[i.invitee_id]?.avatar_url ?? null),
+    ]
+    : [hostAvatar, myAvatar];
   const waiting = crew.pending.length;
   const said_no = crew.declined.length;
 

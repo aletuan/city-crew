@@ -308,6 +308,7 @@ export default function TripDetailScreen({ navigation, route }: {
           invites={owned ? mineInvites : []}
           people={people}
           myAvatar={profile.avatar_url}
+          hostAvatar={owned ? null : (people[trip.owner_id]?.avatar_url ?? null)}
           headCount={heads}
           canInvite={owned && trip.company !== 'solo'}
           onInvite={() => setSheetOpen(true)}
