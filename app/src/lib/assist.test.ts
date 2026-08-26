@@ -260,13 +260,47 @@ describe('freshen', () => {
     expect(out.why.has('b')).toBe(false);
   });
 
-  // A stop removed from above shifts everything below it, which is exactly
-  // the case that produced the bug.
-  it('drops the lines below a stop that was removed', () => {
+  // The reader deletes the opener of three: the promoted stop's line
+  // still calls it a mid-morning second, so it goes — but the closer is
+  // still the closer, and its sentence is still true. The first cut of
+  // this rule tracked absolute index and deleted both, which read as one
+  // tap wiping the whole narration.
+  it('keeps the closer when the opener is deleted', () => {
+    const three = words({
+      why: new Map([['a', 'opener'], ['b', 'second wind'], ['c', 'somewhere to end up']]),
+    });
+    const out = freshen(three, ['a', 'b', 'c'], ['b', 'c']);
+    expect(out.why.has('b')).toBe(false);
+    expect(out.why.get('c')).toBe('somewhere to end up');
+  });
+
+  // The mirror: deleting the closer keeps the opener's line and retires
+  // the middle stop that now closes the day.
+  it('keeps the opener when the closer is deleted', () => {
+    const three = words({
+      why: new Map([['a', 'opener'], ['b', 'second wind'], ['c', 'somewhere to end up']]),
+    });
+    const out = freshen(three, ['a', 'b', 'c'], ['a', 'b']);
+    expect(out.why.get('a')).toBe('opener');
+    expect(out.why.has('b')).toBe(false);
+  });
+
+  // Down to one stop, no line survives: the survivor is now first and
+  // last at once, and a sentence written for either role alone — "an easy
+  // first stop", "somewhere to end up" — is the documented lie.
+  it('retires both roles on the last stop standing', () => {
+    const out = freshen(words(), ['a', 'b'], ['a']);
+    expect(out.why.size).toBe(0);
+  });
+
+  // A middle stop removed keeps everything around it, which is exactly
+  // the case the old absolute-index rule paid too much for.
+  it('keeps opener and closer when a middle stop is removed', () => {
     const three = words({ why: new Map([['a', 'one'], ['b', 'two'], ['c', 'three']]) });
     const out = freshen(three, ['a', 'b', 'c'], ['a', 'c']);
     expect(out.why.get('a')).toBe('one');
-    expect(out.why.has('c')).toBe(false);
+    expect(out.why.get('c')).toBe('three');
+    expect(out.why.has('b')).toBe(false);
   });
 
   // `generated_by` is read off this, and a trip whose name and every line
