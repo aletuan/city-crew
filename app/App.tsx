@@ -17,6 +17,7 @@ import { holdingFirstFrame } from './src/lib/boot';
 import { startupTrace } from './src/lib/trace';
 import { CatalogProvider } from './src/lib/catalog';
 import { CrewProvider } from './src/lib/crew';
+import { InvitationsProvider } from './src/lib/invitations';
 import { SaveProvider } from './src/lib/save';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
@@ -248,6 +249,13 @@ function Root() {
                       Activity and the Crew screen all read one copy
                       instead of fetching four. */}
                   <CrewProvider>
+                    {/* And the invitations, for the third time the same
+                        argument applies: the tab bar counts what is
+                        waiting, the Trips screen splits the list by it,
+                        and a trip's own screen draws its crew from it.
+                        Inside the crew, because every invitation names a
+                        friend and takes its face from that copy. */}
+                    <InvitationsProvider>
                     <SaveProvider>
                       {/* The duck state sits above the navigator: screens
                           report scrolls into it, the bar animates out of it. */}
@@ -255,6 +263,7 @@ function Root() {
                         <Tabs />
                       </TabBarDuckProvider>
                     </SaveProvider>
+                    </InvitationsProvider>
                   </CrewProvider>
                 </CatalogProvider>
               </NavigationContainer>
