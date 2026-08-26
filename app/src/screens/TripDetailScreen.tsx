@@ -27,7 +27,7 @@
 // Here it is at the bottom of the thing it destroys, after the reader has
 // seen what it is.
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
@@ -37,7 +37,15 @@ import {
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO } from '../lib/day';
-import { deleteTrip, useMyTrips, type TripStopRow } from '../lib/data';
+import {
+  deleteTrip, fetchCrewCounts, sendInvites, useMyTrips, withdrawInvites,
+  type TripStopRow,
+} from '../lib/data';
+import { useCrew } from '../lib/crew';
+import { useInvitations } from '../lib/invitations';
+import { splitFriendships } from '../lib/friends';
+import InviteSheet from '../components/InviteSheet';
+import TripCrew from '../components/TripCrew';
 import { cancelTripReminder } from '../lib/reminders';
 import { clockOf, dateline, dotWindow, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
@@ -88,7 +96,38 @@ export default function TripDetailScreen({ navigation, route }: {
   const [shot, setShot] = useState(0);
   const [galleryW, setGalleryW] = useState(0);
 
-  const trip = trips.data.find((x) => x.id === route.params.id) ?? null;
+  // Who is coming. Above the early return with the two above, and for the
+  // same reason: React counts hooks, and one declared under a branch that
+  // only sometimes runs throws on the render where the branch flips.
+  const { ships, people, mutual } = useCrew();
+  const { invites } = useInvitations();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  // The headcount an invitee is allowed — a number without the rows behind
+  // it. Best-effort: a trip whose count never arrives draws the sentence
+  // without it rather than failing.
+  const [heads, setHeads] = useState<number | null>(null);
+
+  const tripId = route.params.id;
+  const me = session?.user?.id ?? null;
+  const mineInvites = useMemo(
+    () => invites.data.filter((i) => i.trip_id === tripId),
+    [invites.data, tripId],
+  );
+
+  const trip = trips.data.find((x) => x.id === tripId) ?? null;
+  const owned = !!trip && !!me && trip.owner_id === me;
+
+  useEffect(() => {
+    // Only an invitee needs the function: an owner can already see every
+    // row and counts them off directly.
+    if (!trip || owned) { setHeads(null); return; }
+    let live = true;
+    fetchCrewCounts([tripId])
+      .then((m) => { if (live) setHeads(m[tripId]?.accepted ?? 0); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [trip, owned, tripId]);
 
   if (!trip) {
     return (
@@ -191,6 +230,27 @@ export default function TripDetailScreen({ navigation, route }: {
   const cover = tripCover(stops);
   const shotAttr = stops[shot]?.places ? coverOf(stops[shot].places!)?.attribution_name : null;
 
+  /** Send what was ticked and take back what was unticked, in that order:
+   *  a press that both invites and withdraws should not leave the trip
+   *  briefly emptier than the reader asked for. */
+  const onSend = async (invite: string[], withdraw: string[]) => {
+    if (!me || sending) return;
+    setSending(true);
+    try {
+      await sendInvites(tripId, me, invite);
+      await withdrawInvites(tripId, withdraw);
+      setSheetOpen(false);
+      invites.reload();
+    } catch (e) {
+      Alert.alert(
+        t('Could not send', 'Không gửi được', '送信できません'),
+        e instanceof Error ? e.message : String(e),
+      );
+    } finally {
+      setSending(false);
+    }
+  };
+
   const confirmDelete = () => Alert.alert(
     t('Delete this trip?', 'Xoá chuyến đi này?', 'この旅程を削除しますか？'),
     t(
@@ -235,6 +295,22 @@ export default function TripDetailScreen({ navigation, route }: {
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Who is coming, before what the day is — the answer to "is this
+            still on" is the one thing a reader opens a saved trip for that
+            the card behind them could not already tell them.
+
+            Invite is absent on a solo evening, which is the wizard's own
+            answer to who the day is for: a button offering to add people
+            to a day whose whole premise is being alone is the app not
+            having listened. */}
+        <TripCrew
+          mine={owned}
+          invites={owned ? mineInvites : []}
+          people={people}
+          headCount={heads}
+          canInvite={owned && trip.company !== 'solo'}
+          onInvite={() => setSheetOpen(true)}
+        />
         {/* The day, one place at a time.
 
             ── one page per stop, not one page per photograph ──
@@ -543,6 +619,18 @@ export default function TripDetailScreen({ navigation, route }: {
           </Text>
         </PressableScale>
       </ScrollView>
+
+      <InviteSheet
+        open={sheetOpen}
+        company={trip.company}
+        friendIds={me ? splitFriendships(ships.data, me).friends : []}
+        people={people}
+        mutual={mutual}
+        invites={mineInvites}
+        sending={sending}
+        onClose={() => setSheetOpen(false)}
+        onSend={onSend}
+      />
     </Screen>
   );
 }

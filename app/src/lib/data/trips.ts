@@ -24,6 +24,10 @@ export type TripStopRow = {
 
 export type Trip = {
   id: string;
+  /** Who planned it. Selected because the list now holds two kinds of
+   *  trip — see `fetchMyTrips` — and this is the column that tells them
+   *  apart. */
+  owner_id: string;
   city_id: string;
   title: string;
   company: string | null;
@@ -37,25 +41,47 @@ export type Trip = {
 };
 
 const TRIP_COLS =
-  `id, city_id, title, company, categories, district, day, when_part, generated_by, created_at, `
+  `id, owner_id, city_id, title, company, categories, district, day, when_part, generated_by, created_at, `
   + `trip_stops(sort_order, arrive_min, dwell_min, why, why_lang, places(${PLACE_COLS(true)}))`;
 
 /**
- * Every trip this user has saved, soonest first within each half.
+ * Every trip this user can open — the ones they planned, and the ones they
+ * were invited to.
  *
  * Not scoped to a city, for the reason a user's own collections are not:
  * a Saturday planned in Hanoi is still theirs while the app is looking at
  * Saigon, and hiding it would read as having lost it.
+ *
+ * ── and no longer scoped to the owner ──
+ *
+ * This used to filter `owner_id = ownerId`, which was the whole story while
+ * a trip was readable by exactly one person. The trip_invites migration
+ * ended that: an invitee reads the trip from the moment they are asked, so
+ * the filter would now hide the very rows the invitation screens exist to
+ * draw.
+ *
+ * The filter is not replaced with a wider one. RLS already returns exactly
+ * the trips this caller may see, and a `where` here that tried to say the
+ * same thing would be the copy that drifts — the trips test asserts the
+ * policies, and nothing would assert a hand-written clause. What comes back
+ * is therefore three kinds of row (planned, joined, still-being-asked), and
+ * `lib/invites.splitByStanding` is where they are told apart, off the
+ * caller's own id and their own invitations.
+ *
+ * `ownerId` stays in the signature because the caller still has to say who
+ * is asking — the hook uses it to decide whether to fetch at all — but it
+ * is no longer a filter, and passing somebody else's id would not widen
+ * anything.
  *
  * Stops come back in `sort_order`, sorted here rather than in the query —
  * PostgREST cannot order an embedded table, and the same hand-sort is what
  * `withMembers` does for collection members.
  */
 export async function fetchMyTrips(ownerId: string): Promise<Trip[]> {
+  void ownerId;
   const { data, error } = await supabase
     .from('trips')
     .select(TRIP_COLS)
-    .eq('owner_id', ownerId)
     .order('day', { ascending: false });
   if (error) throw new Error(error.message);
   return ((data ?? []) as unknown as Trip[]).map((t) => ({

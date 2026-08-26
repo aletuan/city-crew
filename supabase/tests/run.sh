@@ -158,6 +158,24 @@ for f in "$ROOT"/supabase/migrations/*_collection_likes.sql \
 done
 run "$DB" -f "$HERE/collection_likes_test.sql"
 
+# Trip invitations: a membership table, and the first migration in this
+# schema that deliberately widens a read. Needs `trips` from the block
+# above and `friendships` for the accepted-friend check its insert policy
+# makes — friendships has not been run here before, so it comes with it.
+# That is also what pins this block here rather than beside the trips one:
+# `friendships` declares `likes_on_mine` over `collection_likes`, so it
+# cannot run until the likes block below has made that table.
+#
+# Its test does something no other file here does: it forces RLS on and
+# drives the policies as a role that owns nothing, because static policy
+# text cannot show what a client actually gets back.
+echo "→ trip invites"
+for f in "$ROOT"/supabase/migrations/*_friendships.sql \
+         "$ROOT"/supabase/migrations/*_trip_invites.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/trip_invites_test.sql"
+
 # `updated_at` stamping. Late, because it attaches a trigger to four tables
 # and every one of them has to exist by the time it runs — `places` and
 # `category_terms` from the stub, `trips` and `preferences` from their own

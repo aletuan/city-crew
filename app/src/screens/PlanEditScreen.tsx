@@ -13,13 +13,19 @@
 // does not carry. Two buttons reorder a three-stop evening in one tap each
 // and work under VoiceOver, which dragging does not.
 //
-// ── on Share and Invite ──
+// ── on Share, and on where Invite went ──
 //
-// Both are mocks, and the screen says so rather than leaving a dead button.
-// "Crew" is a word this repo uses in copy and has never modelled: there is
-// no membership table, no invitation, no policy letting anybody read a row
-// they do not own. Wiring a button to nothing would be the same mistake the
-// sketching screen used to make.
+// Share is still a mock, and the screen says so rather than leaving a dead
+// button.
+//
+// Invite is not here any more. It used to be a mock beside it for a reason
+// that has since been fixed — "there is no membership table, no invitation,
+// no policy letting anybody read a row they do not own" — and the
+// trip_invites migration is that table. But an invitation has to point at a
+// trip, and on this screen the plan does not exist yet: it is a draft the
+// reader may still walk away from. So inviting lives on the trip's own
+// screen, after Save, and the crew row here says so instead of offering a
+// button that would have to invent a trip to work.
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -53,7 +59,7 @@ import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, space, type } from '../theme';
 
 const money = (vnd: number) => (vnd >= 1_000_000
   ? `${Math.round(vnd / 100_000) / 10}M ₫`
@@ -341,20 +347,27 @@ export default function PlanEditScreen({ navigation, route }: {
       >
         {/* The reader's own face — the profile has one now, so the initial
             it used to wear is only the fallback Avatar itself draws.
-            Invite stays a labelled mock (there is still no membership
-            table), and the whole row stays out of a trip planned alone:
-            "just you, for now" with an invite button under a plan the
-            reader marked "just me" is the app arguing with them. */}
+            #358 also took the whole row out of a trip planned alone, and
+            that reasoning is the same one that decides the Invite button
+            on a saved trip: "just you, for now" under a plan the reader
+            marked "just me" is the app arguing with them.
+
+            What is no longer here is Invite. It was a labelled mock for a
+            reason that has since been fixed — trip_invites is that
+            membership table — but an invitation points at a trip, and
+            here the plan does not exist yet. So the row says what the
+            button would have had to lie about. A sentence, not a disabled
+            control: one that cannot be pressed still reads as one the
+            reader is failing to use. */}
         {p.company !== 'solo' && (
           <View style={s.crew}>
             <View style={s.avatars}>
               <Avatar url={profile.avatar_url} size={30} />
             </View>
             <Text style={s.crewText}>{t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ')}</Text>
-            <PressableScale onPress={() => mock(t('Invite', 'Mời thêm', '招待'))} style={s.ghost}>
-              <Ionicons name="person-add-outline" size={14} color={colors.textSecondary} />
-              <Text style={s.ghostText}>{t('Invite', 'Mời', '招待')}</Text>
-            </PressableScale>
+            <Text style={s.crewHint}>
+              {t('Save first, then invite', 'Lưu trước rồi mời', '保存してから招待')}
+            </Text>
           </View>
         )}
 
@@ -584,12 +597,7 @@ const s = StyleSheet.create({
   crew: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: space.titleToContent },
   avatars: { flexDirection: 'row' },
   crewText: { ...CAPTION, color: colors.textSecondary, flex: 1 },
-  ghost: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
-  },
-  ghostText: { ...CAPTION, color: colors.textSecondary, fontWeight: font.semibold },
+  crewHint: { color: colors.textTertiary, fontSize: 12.5 },
 
   eyebrow: {
     ...CAPTION, color: colors.textTertiary, fontWeight: font.semibold,

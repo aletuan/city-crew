@@ -38,8 +38,8 @@
 // mock to avoid. The footer keeps the shape and fills it with what is
 // true — how many stops, what it costs.
 
-import React, { useCallback, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
@@ -57,6 +57,11 @@ import { useI18n } from '../lib/i18n';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY } from '../lib/trip';
 import { spansCities, spendVnd, splitTrips, tripCover } from '../lib/trips';
+import { useCrew } from '../lib/crew';
+import { useInvitations } from '../lib/invitations';
+import { answerInvite } from '../lib/data';
+import { sortInvites, splitByStanding } from '../lib/invites';
+import InviteCard from '../components/InviteCard';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -300,14 +305,60 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
   // exact screen moves down the next time they come back to it — which is
   // late by minutes, not by the hours the day-granular split was late by,
   // and costs no interval nobody would remember to clear.
+  // What the reader can open is now three things, not one: what they
+  // planned, what they were asked to and accepted, and what is still
+  // waiting on an answer. RLS returns all three in one list — an invitee
+  // reads the trip from the moment they are asked — so the split happens
+  // here, off their own id. See `lib/invites`.
+  const me = session?.user?.id ?? null;
+  const { people } = useCrew();
+  const { invites } = useInvitations();
+  const [answering, setAnswering] = useState<string | null>(null);
+
+  const myInvites = useMemo(
+    () => (me ? invites.data.filter((i) => i.invitee_id === me) : []),
+    [invites.data, me],
+  );
+  const { mine, asked } = useMemo(
+    () => splitByStanding(trips.data, me ?? '', myInvites),
+    [trips.data, me, myInvites],
+  );
+  // Oldest first: an invitation is owed rather than news, so the one that
+  // has waited longest is the one to answer next.
+  const rail = useMemo(() => {
+    const byTrip = new Map(asked.map((tr) => [tr.id, tr]));
+    return sortInvites(myInvites)
+      .filter((i) => i.status === 'pending' && byTrip.has(i.trip_id))
+      .map((i) => ({ invite: i, trip: byTrip.get(i.trip_id)! }));
+  }, [asked, myInvites]);
+
+  const answer = async (tripId: string, said: 'accepted' | 'declined') => {
+    if (answering) return;
+    setAnswering(tripId);
+    try {
+      await answerInvite(tripId, said);
+      invites.reload();
+      trips.reload();
+    } catch (e) {
+      Alert.alert(
+        t('Could not answer', 'Không trả lời được', '回答できません'),
+        e instanceof Error ? e.message : String(e),
+      );
+    } finally {
+      setAnswering(null);
+    }
+  };
+
   const now = new Date();
-  const { upcoming, past } = splitTrips(trips.data, toISO(now), minutesOf(now));
+  // Split what they are actually going on — a trip nobody has agreed to
+  // must not appear among the plans they have.
+  const { upcoming, past } = splitTrips(mine, toISO(now), minutesOf(now));
 
   // Named only when it distinguishes: one reader's trips are usually all
   // in one city, and repeating that city down the list is noise. The
   // moment a second city appears, every card starts saying which one it
   // is — see spansCities.
-  const multiCity = spansCities(trips.data);
+  const multiCity = spansCities(mine);
   const cityName = (id: string) => {
     if (!multiCity) return null;
     const c = cities.find((x) => x.id === id);
@@ -400,11 +451,33 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
           onScroll={duckScroll}
           scrollEventThrottle={16}
         >
-          {!trips.data.length && (
+          {/* "No trips yet" is false while somebody is waiting on an
+              answer, and offering to plan a first one would be the app
+              talking over an invitation it is already showing. */}
+          {!mine.length && !rail.length && (
             <FirstTrip onPress={() => navigation.getParent()?.navigate('Ideas')} />
           )}
 
-          {!!trips.data.length && (
+          {/* The rail, above the plans that are already agreed. A count on
+              the heading for the same reason the sections below carry one:
+              it says how much is owed before the scan starts. */}
+          {!!rail.length && (
+            <Text style={[s.section, s.sectionInvite]}>
+              {t('Invitations', 'Lời mời', '招待')} · {rail.length}
+            </Text>
+          )}
+          {rail.map(({ invite, trip }) => (
+            <InviteCard
+              key={trip.id}
+              trip={trip}
+              from={people[invite.inviter_id] ?? null}
+              busy={answering === trip.id}
+              onOpen={() => navigation.navigate('TripInvitation', { id: trip.id })}
+              onAnswer={(said) => answer(trip.id, said)}
+            />
+          ))}
+
+          {!!mine.length && (
             <Text style={s.lede}>
               {t(
                 'Your next plans, in order.',
@@ -474,6 +547,9 @@ const s = StyleSheet.create({
   },
   // The second heading needs air above it that the first, sitting under the
   // screen title, already has.
+  // The rail's heading is the first thing on the screen, so it does not
+  // take the top margin the sections below it need.
+  sectionInvite: { marginTop: 0 },
   sectionAfter: { marginTop: space.titleToContent },
   row: { marginBottom: space.cardGap },
 
