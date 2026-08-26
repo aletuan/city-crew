@@ -26,13 +26,14 @@
 // holds unchanged now the disc grew into a pill. What did change is
 // *which* badge token, and the ink on it; see PILL_INK_LIGHT.
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../lib/auth';
-import { useFriendships } from '../lib/data';
+import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
+import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
 import { colors, font, radius } from '../theme';
 import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
@@ -100,15 +101,21 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
 
   // The waiting-request dot on the Profile tab — the one signal worth
   // carrying on the bar itself, because a request is a person waiting on
-  // an answer and the card that says so lives three taps deep. Re-read
-  // on every tab change: the query is tiny (RLS scopes it to this
-  // account's own edges) and a badge that only updates on app restart
-  // is a badge that lies for hours.
+  // an answer and the card that says so lives three taps deep. Read from
+  // the shared crew copy, and re-read on a tab change only once the
+  // answer has gone stale: this used to be a private query fired on
+  // every switch, which kept the badge honest at the price of a request
+  // per tap — and now that the whole app hangs off one copy, that same
+  // eagerness would have refetched faces and counts with it.
   const { session } = useAuth();
   const me = session?.user?.id;
-  const ships = useFriendships(me);
+  const { ships } = useCrew();
   const { reload } = ships;
-  useEffect(() => { if (me) reload(); }, [index, me, reload]);
+  const loadedAtRef = useRef(ships.loadedAt);
+  loadedAtRef.current = ships.loadedAt;
+  useEffect(() => {
+    if (me && shouldRefresh(loadedAtRef.current, Date.now())) reload();
+  }, [index, me, reload]);
   const waiting = me ? splitFriendships(ships.data, me).incoming.length > 0 : false;
 
   // It used to clear the whole safe-area inset — 34pt on a modern iPhone,

@@ -22,11 +22,10 @@
 // what stands between two accounts, which suggestions are still open —
 // lives in lib/friends, under the gate.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from '@react-navigation/native';
 import { FieldRow, PrimaryButton } from '../components/authUi';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import { useReport } from '../components/reportFlow';
@@ -35,10 +34,11 @@ import {
 } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import {
-  acceptFriendRequest, blockUser, fetchMutualSaves, fetchProfilesById,
+  acceptFriendRequest, blockUser, fetchProfilesById,
   fetchSuggestedFriends, type FriendProfile, profileByHandle, removeFriendship,
-  searchHandles, sendFriendRequest, unblockUser, useFriendships, useMyBlocks,
+  searchHandles, sendFriendRequest, unblockUser,
 } from '../lib/data';
+import { useCrew } from '../lib/crew';
 import {
   MIN_SUGGEST_CHARS, openSuggestions, splitFriendships, standingWith,
   type Suggestion, suggestable,
@@ -55,21 +55,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const { session } = useAuth();
   const me = session?.user?.id ?? null;
   const tabClearance = useTabBarClearance();
-  const ships = useFriendships(me);
-  const blocks = useMyBlocks(me);
-  // Reload on return: requests are answered on other screens, and without
-  // this you would come back to the crew you left. The first focus is
-  // skipped — the hooks have already loaded on mount, and refetching there
-  // doubled every wave downstream of `loadedAt`: edges, faces, mutual
-  // saves, each arriving twice while the reader watched the rows settle
-  // twice. Same pattern as Collections and Trips.
-  const firstFocus = useRef(true);
-  useFocusEffect(useCallback(() => {
-    if (firstFocus.current) { firstFocus.current = false; return; }
-    ships.reload(); blocks.reload();
-  // The two `.reload`s are stable; their Fetch wrappers are not.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ships.reload, blocks.reload]));
+  // One copy for the whole app — edges, faces and counts arrive from the
+  // provider, usually before this screen has ever been opened, which is
+  // what took the seconds out of Profile → Crew. No focus reload either:
+  // every mutation below tells the provider, and absences are covered by
+  // its AppState refresh.
+  const { ships, blocks, people, mutual, absorb } = useCrew();
 
   const crew = useMemo(() => splitFriendships(ships.data, me ?? ''), [ships.data, me]);
 
@@ -86,23 +77,6 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     if (crew.incoming.length > 0) setTab('requests');
   }, [ships.loadedAt, crew.incoming.length]);
 
-  // The names and faces behind the ids, and the shared-taste number.
-  // Loaded after the edges land; a miss leaves a row with its handle
-  // blank rather than the screen empty.
-  const [people, setPeople] = useState<Record<string, FriendProfile>>({});
-  const [mutual, setMutual] = useState<Record<string, number>>({});
-  useEffect(() => {
-    const ids = [
-      ...crew.friends,
-      ...crew.incoming.map((r) => r.requester),
-      ...crew.outgoing.map((r) => r.addressee),
-      ...blocks.data,
-    ];
-    if (!ids.length) return;
-    fetchProfilesById(ids).then((more) => setPeople((prev) => ({ ...prev, ...more }))).catch(() => {});
-    fetchMutualSaves(crew.friends).then(setMutual).catch(() => {});
-  }, [ships.loadedAt, blocks.loadedAt]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── introductions ──
   //
   // Asked once per visit and then trusted: the list is stable between
@@ -117,8 +91,10 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   useEffect(() => {
     const ids = suggested.map((sg) => sg.other);
     if (!ids.length) return;
-    fetchProfilesById(ids).then((more) => setPeople((prev) => ({ ...prev, ...more }))).catch(() => {});
-  }, [suggested]);
+    // Absorbed into the provider rather than held here, so the face a
+    // suggestion earned survives into the crew when the reader adds them.
+    fetchProfilesById(ids).then(absorb).catch(() => {});
+  }, [suggested, absorb]);
   const intros = useMemo(
     () => openSuggestions(suggested, me ?? '', ships.data, blocks.data),
     [suggested, me, ships.data, blocks.data],
