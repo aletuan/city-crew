@@ -12,20 +12,20 @@
 // gone. See the named_applause migration for why the owner is not
 // "the public" that the likes table's privacy promise protects against.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from '@react-navigation/native';
 import { AuthHeader, AuthScreen } from '../components/authUi';
 import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import { useReport } from '../components/reportFlow';
 import { Avatar, Card, Empty, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCollections } from '../lib/catalog';
+import { useCrew } from '../lib/crew';
 import {
-  acceptFriendRequest, blockUser, fetchApplause, fetchProfilesById,
-  type FriendProfile, removeFriendship, useFriendships, useMyCollections,
+  acceptFriendRequest, blockUser, fetchApplause,
+  type FriendProfile, removeFriendship, useMyCollections,
   useMyTrips,
 } from '../lib/data';
 import { todayISO } from '../lib/day';
@@ -46,21 +46,16 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { session } = useAuth();
   const me = session?.user?.id ?? null;
-  const ships = useFriendships(me);
+  // Edges and faces from the one shared copy — answered on Crew, gone
+  // from here the same moment, and no fetch of this screen's own. The
+  // provider's `people` covers every id the edges mention, askers
+  // included.
+  const { ships, people: askers } = useCrew();
   const trips = useMyTrips(me);
   const mine = useMyCollections(me);
   const cols = useCollections();
-  // `ships.reload` is stable; `ships` is a new object on every load.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useFocusEffect(useCallback(() => { ships.reload(); }, [ships.reload]));
 
   const crew = useMemo(() => splitFriendships(ships.data, me ?? ''), [ships.data, me]);
-
-  const [askers, setAskers] = useState<Record<string, FriendProfile>>({});
-  useEffect(() => {
-    const ids = crew.incoming.map((r) => r.requester);
-    if (ids.length) fetchProfilesById(ids).then(setAskers).catch(() => {});
-  }, [ships.loadedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [applause, setApplause] = useState<Applause[] | null>(null);
   useEffect(() => {

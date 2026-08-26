@@ -39,7 +39,8 @@ const NUMBERED = /^(?:quận|district|q)\.?\s*0*(\d+)$/i;
 const CITY_WORDS = new Set([
   'ho chi minh', 'ho chi minh city', 'thanh pho ho chi minh', 'tp ho chi minh',
   'sai gon', 'saigon',
-  'ha noi', 'hanoi', 'da nang', 'danang', 'viet nam', 'vietnam',
+  'ha noi', 'hanoi', 'da nang', 'danang', 'da lat', 'dalat', 'hue',
+  'thua thien hue', 'viet nam', 'vietnam',
 ]);
 
 /**

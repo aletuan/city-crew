@@ -16,6 +16,7 @@ import { ThemeProvider, useScheme } from './src/lib/theme';
 import { holdingFirstFrame } from './src/lib/boot';
 import { startupTrace } from './src/lib/trace';
 import { CatalogProvider } from './src/lib/catalog';
+import { CrewProvider } from './src/lib/crew';
 import { SaveProvider } from './src/lib/save';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
@@ -242,13 +243,19 @@ function Root() {
                     because they belong to no single screen — a card on
                     Explore, Search or a collection all raise the same one. */}
                 <CatalogProvider>
-                  <SaveProvider>
-                    {/* The duck state sits above the navigator: screens
-                        report scrolls into it, the bar animates out of it. */}
-                    <TabBarDuckProvider>
-                      <Tabs />
-                    </TabBarDuckProvider>
-                  </SaveProvider>
+                  {/* The crew above the navigators too, for the same
+                      reason as the catalog: the tab-bar badge, Profile,
+                      Activity and the Crew screen all read one copy
+                      instead of fetching four. */}
+                  <CrewProvider>
+                    <SaveProvider>
+                      {/* The duck state sits above the navigator: screens
+                          report scrolls into it, the bar animates out of it. */}
+                      <TabBarDuckProvider>
+                        <Tabs />
+                      </TabBarDuckProvider>
+                    </SaveProvider>
+                  </CrewProvider>
                 </CatalogProvider>
               </NavigationContainer>
             </CityProvider>

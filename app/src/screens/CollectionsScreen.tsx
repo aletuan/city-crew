@@ -13,12 +13,12 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Card, Empty, fireHaptic, GradientCta, PressableScale, RoundIconButton, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Avatar, Card, Empty, fireHaptic, GradientCta, PressableScale, RoundIconButton, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddSlot } from '../components/add';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
-import { Collection, coverOf, deleteCollection, membersOf, touchesCity } from '../lib/data';
+import { Collection, coverOf, deleteCollection, fetchProfilesById, type FriendProfile, membersOf, touchesCity } from '../lib/data';
 import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
@@ -329,6 +329,15 @@ export default function CollectionsScreen({ navigation, route }: {
   // its background refresh still in flight.
   const holding = !cols.loaded || !placesLoaded;
   const loading = cols.loading || placesLoading;
+  // The pull spinner belongs to the pull — same rule and same repair as
+  // the Explore list beside this one. `loading` also covers the launch
+  // cache's background pass and the return-to-app revalidate, neither of
+  // which is anybody's pull; the old `!fromCache` guard silenced only
+  // the first. Armed by the gesture, disarmed when the fetch settles.
+  const [pulling, setPulling] = useState(false);
+  useEffect(() => {
+    if (pulling && !loading) setPulling(false);
+  }, [pulling, loading]);
 
   // Reload on return: creating a collection happens on another screen, and
   // without this you would come back to the list you left. The first focus
@@ -350,6 +359,20 @@ export default function CollectionsScreen({ navigation, route }: {
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
+
+  // The faces behind the community tiles, fetched once per catalog load
+  // through the same batched lookup the Crew screen uses. A miss leaves
+  // the Avatar drawing its placeholder circle — the seat is always
+  // there, which is what keeps a bare @handle reading as a signature
+  // rather than a stray tag.
+  const [faces, setFaces] = useState<Record<string, FriendProfile>>({});
+  useEffect(() => {
+    const ids = [...new Set(cols.data.map((c) => c.owner_id).filter(Boolean))] as string[];
+    if (!ids.length) return;
+    fetchProfilesById(ids).then((more) => setFaces((prev) => ({ ...prev, ...more }))).catch(() => {});
+  // `cols.data` is a new array every load; `loadedAt` is the honest tick.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cols.loadedAt]);
 
   // The same wiring as the Explore shelf: signed out, the tap is the
   // sign-in invitation; signed in, the provider owns the write and the
@@ -627,15 +650,21 @@ export default function CollectionsScreen({ navigation, route }: {
                             <Text style={s.gcardTitle} numberOfLines={1}>
                               {t(c.title_en, c.title_vi, c.title_ja)}
                             </Text>
-                            {/* Whose list this is, on the kerb where it is
-                                browsed — yours included: on this shelf your
-                                public list is one of the community's. On
-                                your own tab the byline would only say your
-                                own name, so the padlock speaks instead. */}
+                            {/* Whose list this is, said with a face: the
+                                avatar beside the handle carries the whole
+                                of "by", so the word goes — owner review,
+                                and right. The list rows keep the word,
+                                because down there no face does that work.
+                                On your own tab neither appears: the
+                                byline would only say your own name, so
+                                the padlock speaks instead. */}
                             {!item.own && c.curator_handle ? (
-                              <Text style={s.gcardBy} numberOfLines={1}>
-                                {t('by', 'bởi', 'by')} {atHandle(c.curator_handle)}
-                              </Text>
+                              <View style={s.gcardByRow}>
+                                <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={18} />
+                                <Text style={s.gcardBy} numberOfLines={1}>
+                                  {atHandle(c.curator_handle)}
+                                </Text>
+                              </View>
                             ) : null}
                             <View style={s.gcardFoot}>
                               {item.own && (
@@ -652,30 +681,53 @@ export default function CollectionsScreen({ navigation, route }: {
                               </Text>
                               {/* Only where a like is possible: a private
                                   list is one nobody may like, and a heart
-                                  on it would be an invitation to nothing. */}
+                                  on it would be an invitation to nothing.
+
+                                  And on your own tile, a tally rather than
+                                  a control — the detail screen's rule, for
+                                  the detail screen's reason. The database
+                                  refuses a curator's like on their own
+                                  list, so a pressable heart here could only
+                                  fill for a beat and snap back; this file
+                                  is the one place that draws your own
+                                  published lists as cards, so it inherits
+                                  the same check. Inert, it also earns the
+                                  tally's discipline: at zero it draws
+                                  nothing, because a bare heart is exactly
+                                  an invitation and the one it invites is
+                                  impossible. */}
                               {c.id && c.is_public ? (
-                                <PressableScale
-                                  containerStyle={{ marginLeft: 'auto' }}
-                                  style={s.gcardLikes}
-                                  scaleTo={0.82}
-                                  haptic="none"
-                                  hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
-                                  onPress={() => onHeart(c)}
-                                  accessibilityRole="button"
-                                  accessibilityState={{ selected: my }}
-                                  accessibilityLabel={my
-                                    ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
-                                    : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
-                                >
-                                  <Ionicons
-                                    name={my ? 'heart' : 'heart-outline'}
-                                    size={15}
-                                    color={my ? onPhoto.accent : onPhoto.text}
-                                  />
-                                  {likesWorthShowing(likes[c.slug]) && (
-                                    <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
-                                  )}
-                                </PressableScale>
+                                item.own ? (
+                                  likesWorthShowing(likes[c.slug]) ? (
+                                    <View style={[s.gcardLikes, { marginLeft: 'auto' }]}>
+                                      <Ionicons name="heart" size={13} color={onPhoto.textSecondary} />
+                                      <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
+                                    </View>
+                                  ) : null
+                                ) : (
+                                  <PressableScale
+                                    containerStyle={{ marginLeft: 'auto' }}
+                                    style={s.gcardLikes}
+                                    scaleTo={0.82}
+                                    haptic="none"
+                                    hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
+                                    onPress={() => onHeart(c)}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ selected: my }}
+                                    accessibilityLabel={my
+                                      ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
+                                      : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                                  >
+                                    <Ionicons
+                                      name={my ? 'heart' : 'heart-outline'}
+                                      size={15}
+                                      color={my ? onPhoto.accent : onPhoto.text}
+                                    />
+                                    {likesWorthShowing(likes[c.slug]) && (
+                                      <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
+                                    )}
+                                  </PressableScale>
+                                )
                               ) : null}
                             </View>
                           </View>
@@ -883,11 +935,8 @@ export default function CollectionsScreen({ navigation, route }: {
             }}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
-            onRefresh={() => { cols.reload(); mine.reload(); }}
-            // Not during the launch cache's background refresh — that one
-            // is nobody's pull, and a spinner over freshly drawn content
-            // would read as the app second-guessing itself.
-            refreshing={loading && !cols.fromCache}
+            onRefresh={() => { setPulling(true); cols.reload(); mine.reload(); }}
+            refreshing={pulling}
           />
         )}
       </View>
@@ -934,7 +983,8 @@ const s = StyleSheet.create({
   gcard: { borderRadius: radius.image, overflow: 'hidden', justifyContent: 'flex-end' },
   gcardText: { padding: 12, gap: 2 },
   gcardTitle: { color: onPhoto.text, fontSize: 15.5, fontWeight: font.semibold, lineHeight: 19 },
-  gcardBy: { color: onPhoto.textSecondary, fontSize: 12.5 },
+  gcardByRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 },
+  gcardBy: { color: onPhoto.textSecondary, fontSize: 12.5, fontWeight: font.medium, flexShrink: 1 },
   gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   gcardMeta: { color: onPhoto.textSecondary, fontSize: 12.5 },
   gcardLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
