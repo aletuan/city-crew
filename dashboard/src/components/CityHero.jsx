@@ -1,13 +1,18 @@
-// City hero editor: the Explore screen's cover for the selected city —
+// City hero editor: the Explore screen's cover, one city at a time —
 // headline, CTA label, and which place's photo sits behind them. Reads and
 // writes the hero_* columns on cities (see the city_hero migration); every
 // field cleared falls back to the app's built-in copy or automatic photo
 // pick, so "empty" is always a safe state.
+//
+// The page carries its own city chips (Coverage's pattern) rather than
+// following only the workspace: five heroes are five separate covers, and
+// walking through all of them is exactly what this screen is for. The
+// workspace city only seeds which chip starts selected.
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
-import { useCity, useToast } from '../App.jsx';
+import { chipLabel, useCity, useToast } from '../App.jsx';
 
 const HERO_FIELDS = [
   'hero_title_en', 'hero_title_vi', 'hero_title_ja',
@@ -58,7 +63,11 @@ function LangRow({ label, base, form, set, placeholders }) {
 
 export default function CityHero() {
   const toast = useToast();
-  const { city } = useCity();
+  const { cities, city: workspaceCity } = useCity();
+  const [cityId, setCityId] = useState(null);
+  // The chip picked here, else the workspace city, else the first city the
+  // desk knows — so the page always opens on a real cover.
+  const city = cities.find((c) => c.id === cityId) ?? workspaceCity ?? cities[0] ?? null;
   const [row, setRow] = useState(null);
   const [form, setForm] = useState(null);
   const [places, setPlaces] = useState([]);
@@ -84,6 +93,15 @@ export default function CityHero() {
     () => !!(row && form && JSON.stringify(pickForm(row)) !== JSON.stringify(form)),
     [row, form],
   );
+
+  // Switching covers with unsaved edits is the one way to lose work on
+  // this page, so it asks — the same stakes the beforeunload guard
+  // covers for the tab.
+  const pick = (id) => {
+    if (!city || id === city.id) return;
+    if (dirty && !window.confirm('Unsaved changes will be lost. Switch city?')) return;
+    setCityId(id);
+  };
 
   useEffect(() => {
     const onBeforeUnload = (e) => { if (dirty) e.preventDefault(); };
@@ -148,6 +166,18 @@ export default function CityHero() {
           button label, and the place whose photo sits behind them. Cleared fields fall back to
           the app's default copy and automatic photo pick.
         </p>
+
+        <div className="contribfilter" role="group" aria-label="City" style={{ margin: '10px 0 14px' }}>
+          {cities.map((c) => (
+            <button
+              key={c.id}
+              className={`chip${c.id === city.id ? ' on' : ''}`}
+              onClick={() => pick(c.id)}
+            >
+              {chipLabel(c)}
+            </button>
+          ))}
+        </div>
 
         <div className="heropreview">
           {previewPlace?.cover_url
