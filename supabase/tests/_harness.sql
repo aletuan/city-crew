@@ -22,7 +22,22 @@ create table if not exists auth.users (
   id                 uuid primary key default gen_random_uuid(),
   email              text,
   raw_user_meta_data jsonb not null default '{}'::jsonb,
-  created_at         timestamptz not null default now()
+  created_at         timestamptz not null default now(),
+  -- The columns GoTrue owns and the editorial seed writes. Nullable and
+  -- unchecked here: the stub's job is to let that insert run, not to be
+  -- GoTrue.
+  instance_id                uuid,
+  aud                        text,
+  role                       text,
+  encrypted_password         text,
+  email_confirmed_at         timestamptz,
+  updated_at                 timestamptz,
+  raw_app_meta_data          jsonb,
+  confirmation_token         text,
+  recovery_token             text,
+  email_change_token_new     text,
+  email_change               text,
+  email_change_token_current text
 );
 
 -- Policies reference it; nothing here exercises RLS as a real client
