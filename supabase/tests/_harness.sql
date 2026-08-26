@@ -18,11 +18,34 @@ end $$;
 
 create schema if not exists auth;
 
+-- Extensions live in their own schema on a real project, not in
+-- `public` — which is exactly how the random_handle bug hid: a bare
+-- Postgres installs pgcrypto onto the search path, a Supabase project
+-- does not. Install it here the way production has it, so a function
+-- pinned too tightly to find it fails on this bench too.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+
 create table if not exists auth.users (
   id                 uuid primary key default gen_random_uuid(),
   email              text,
   raw_user_meta_data jsonb not null default '{}'::jsonb,
-  created_at         timestamptz not null default now()
+  created_at         timestamptz not null default now(),
+  -- The columns GoTrue owns and the editorial seed writes. Nullable and
+  -- unchecked here: the stub's job is to let that insert run, not to be
+  -- GoTrue.
+  instance_id                uuid,
+  aud                        text,
+  role                       text,
+  encrypted_password         text,
+  email_confirmed_at         timestamptz,
+  updated_at                 timestamptz,
+  raw_app_meta_data          jsonb,
+  confirmation_token         text,
+  recovery_token             text,
+  email_change_token_new     text,
+  email_change               text,
+  email_change_token_current text
 );
 
 -- Policies reference it; nothing here exercises RLS as a real client
