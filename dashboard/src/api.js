@@ -264,6 +264,26 @@ export const api = {
     return { ok: true, deleted: ids.length, removed_uploads: paths.length };
   },
 
+  // Approval, batched — the other half of the toolbar deletePlaces put on
+  // the list: a good scan run is a dozen keepable rows, and stamping them
+  // one editor screen at a time is the same chore in the other direction.
+  //
+  // `.neq` makes an already-approved selection a no-op rather than a
+  // re-stamp, so the returned count is the honest number of rows that
+  // changed; `reviewed_at` moves the same way updatePlace moves it for
+  // one. Nothing goes live off the back of this — publish is its own
+  // switch (see publishApproved below).
+  approvePlaces: async (slugs) => {
+    if (!slugs?.length) return { ok: true, approved: 0 };
+    const now = new Date().toISOString();
+    const rows = db(await supabase.from('places')
+      .update({ review_status: 'approved', reviewed_at: now, updated_at: now })
+      .in('slug', slugs)
+      .neq('review_status', 'approved')
+      .select('slug'));
+    return { ok: true, approved: rows.length };
+  },
+
   /** Flip every approved-but-unpublished place live, scoped to a city.
    *  Approve and publish are separate switches; this closes the gap in one tap. */
   publishApproved: async (city) => {
