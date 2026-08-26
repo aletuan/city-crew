@@ -34,7 +34,7 @@ import { Avatar, PressableScale } from './ui';
 const FACES = 4;
 
 export default function TripCrew({
-  mine, invites, people, headCount, canInvite, onInvite,
+  mine, invites, people, myAvatar, headCount, canInvite, onInvite,
 }: {
   /** Whether the reader planned this trip. The two sides of this row are
    *  different screens' worth of truth, not one with a button hidden. */
@@ -43,6 +43,10 @@ export default function TripCrew({
    *  invitee, who is not shown other people's rows. */
   invites: readonly InviteRow[];
   people: Record<string, FriendProfile>;
+  /** The reader's own picture. They are on this trip in either role —
+   *  planner or invited — so their face opens the row; a null draws the
+   *  fallback Avatar itself carries. */
+  myAvatar: string | null;
   /** The count an invitee is allowed: accepted, from the function. Null
    *  when it could not be fetched — a missing headcount costs a clause in
    *  a sentence and must not fail the screen. */
@@ -59,9 +63,16 @@ export default function TripCrew({
   // yes — and neither counts a maybe.
   const going = mine ? headcount(crew) : (headCount == null ? null : headCount + 1);
 
-  const faces = mine
-    ? crew.accepted.slice(0, FACES).map((i) => people[i.invitee_id])
-    : [];
+  // The reader first — a lesson the plan editor already paid for: a grey
+  // person-outline beside the words "just you" is the app forgetting who
+  // it is talking to. Accepted faces follow on the owner's side; the cap
+  // counts the reader too.
+  const faces: (string | null)[] = [
+    myAvatar,
+    ...(mine
+      ? crew.accepted.slice(0, FACES - 1).map((i) => people[i.invitee_id]?.avatar_url ?? null)
+      : []),
+  ];
   const waiting = crew.pending.length;
   const said_no = crew.declined.length;
 
@@ -79,17 +90,11 @@ export default function TripCrew({
     <View style={s.wrap}>
       <View style={s.row}>
         <View style={s.faces}>
-          {faces.length ? faces.map((p, i) => (
-            <View key={p?.id ?? i} style={[s.face, i > 0 && { marginLeft: -10 }]}>
-              <Avatar url={p?.avatar_url} size={28} />
+          {faces.map((url, i) => (
+            <View key={i} style={[s.face, i > 0 && { marginLeft: -10 }]}>
+              <Avatar url={url} size={28} />
             </View>
-          )) : (
-            <View style={s.face}>
-              <View style={s.blank}>
-                <Ionicons name="person-outline" size={14} color={colors.textTertiary} />
-              </View>
-            </View>
-          )}
+          ))}
         </View>
 
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -165,11 +170,6 @@ const s = StyleSheet.create({
   faces: { flexDirection: 'row', alignItems: 'center' },
   face: {
     borderRadius: 999, borderWidth: 2, borderColor: colors.bg,
-  },
-  blank: {
-    width: 28, height: 28, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceGlass,
   },
   line: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
   sub: { color: colors.textTertiary, fontSize: 12.5, marginTop: 1 },

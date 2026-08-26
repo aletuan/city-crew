@@ -72,7 +72,7 @@ export default function TripDetailScreen({ navigation, route }: {
   route: RootRoute<'TripDetail'>;
 }) {
   const { t, lang } = useI18n();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const { cities } = useCity();
   const clearance = useTabBarClearance();
   const trips = useMyTrips(session?.user?.id);
@@ -307,6 +307,7 @@ export default function TripDetailScreen({ navigation, route }: {
           mine={owned}
           invites={owned ? mineInvites : []}
           people={people}
+          myAvatar={profile.avatar_url}
           headCount={heads}
           canInvite={owned && trip.company !== 'solo'}
           onInvite={() => setSheetOpen(true)}
