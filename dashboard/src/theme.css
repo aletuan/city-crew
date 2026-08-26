@@ -755,13 +755,25 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   font-size: 14px; padding: 9px 12px; width: 100%;
 }
 .field textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+/* The browser's own caret ignores the theme and hugs the far edge; the
+   sortselect's chevron, at the sortselect's spacing, is the desk's. */
+.field select {
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%23ffffff' stroke-opacity='0.6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; background-size: 10px 6px;
+  padding-right: 36px; cursor: pointer;
+}
 /* The violet edge says "this one", and that is worth keeping — but it used
    to say it *instead of* the focus ring, because it carried `outline: none`.
    That turned every field in the editor into a 1px colour change for anyone
    arriving by keyboard, on the one screen that is nothing but fields. The
    ring at the top of this file is the accessible indicator; this is the
-   flourish on top of it, so it no longer cancels the thing it decorates. */
-.field input:focus, .field textarea:focus { border-color: var(--ai-violet); }
+   flourish on top of it, so it no longer cancels the thing it decorates.
+
+   The select joined this selector in #356, and joins the fix with it: a
+   custom-drawn chevron replaces the platform control, so its focus ring is
+   the only thing left saying where the keyboard is. */
+.field input:focus, .field textarea:focus, .field select:focus { border-color: var(--ai-violet); }
 .field .mono { font-family: var(--font-data); font-size: 13px; }
 
 .inline-fields { display: flex; gap: 12px; flex-wrap: wrap; }

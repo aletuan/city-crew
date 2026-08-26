@@ -25,7 +25,9 @@ const UNFILED_SHOWN = 6;
 // The chip spelling for each city — the desk's own abbreviations, matching
 // the analytics screens.
 const CHIP_LABEL = { hcmc: 'TP.HCM', hanoi: 'Hà Nội', danang: 'Đà Nẵng' };
-const chipLabel = (c) => CHIP_LABEL[c.id] ?? c.short_vi ?? c.id;
+// Exported for screens that draw their own city chips (City hero), so the
+// desk abbreviates a city the same way everywhere.
+export const chipLabel = (c) => CHIP_LABEL[c.id] ?? c.short_vi ?? c.id;
 
 // NavLink hands us isActive; the class name is all we do with it.
 const navCls = ({ isActive }) => `side-item${isActive ? ' active' : ''}`;
