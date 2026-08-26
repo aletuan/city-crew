@@ -79,10 +79,13 @@ export default function PlaceList() {
   // the URL params that drive the query (see toggle/setSort for those).
   const [view, setView] = useState(() => localStorage.getItem(VIEW_KEY) ?? 'row');
   useEffect(() => localStorage.setItem(VIEW_KEY, view), [view]);
-  // A bad scan-city run can bring in a dozen duds at once — select several
-  // and delete them together instead of opening each one to delete alone.
+  // A scan-city run brings in a dozen rows at once, and triaging them is
+  // batch work in both directions: select the duds and delete them
+  // together, or select the keepers and approve them together, instead
+  // of opening each one to press the same button alone.
   const [selected, setSelected] = useState(() => new Set());
   const [deleting, setDeleting] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   const status = params.get('status') ?? '';
   const category = params.get('category') ?? '';
@@ -147,6 +150,32 @@ export default function PlaceList() {
       toast(`Delete failed: ${err.message}`);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // No confirm, unlike the delete beside it: approving is reversible from
+  // the editor screen and ships nothing by itself — publish is its own
+  // switch. And no page reset: approval only empties rows out of a
+  // status-filtered view, so the reader usually stays exactly where they
+  // were. Batch *flagging* is deliberately absent — a flag deserves a
+  // look at the row it stamps, and usually a note, which is the editor
+  // screen's job.
+  const approveSelected = async () => {
+    const slugs = [...selected];
+    if (!slugs.length || approving) return;
+    setApproving(true);
+    try {
+      const { approved } = await api.approvePlaces(slugs);
+      toast(approved
+        ? `Approved ${approved} place${approved === 1 ? '' : 's'}`
+        : 'Nothing to approve — everything selected already was');
+      setSelected(new Set());
+      refreshProgress();
+      setRetryKey((k) => k + 1);
+    } catch (err) {
+      toast(`Approve failed: ${err.message}`);
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -236,7 +265,10 @@ export default function PlaceList() {
               {allOnPageSelected ? 'Deselect all' : `Select all ${rows?.length ?? 0} on page`}
             </button>
             <button className="syncbtn" onClick={() => setSelected(new Set())}>Cancel</button>
-            <button className="dangerbtn" onClick={deleteSelected} disabled={deleting}>
+            <button className="syncbtn primary" onClick={approveSelected} disabled={approving || deleting}>
+              {approving ? 'Approving…' : `Approve ${selected.size}`}
+            </button>
+            <button className="dangerbtn" onClick={deleteSelected} disabled={deleting || approving}>
               {deleting ? 'Deleting…' : `Delete ${selected.size}`}
             </button>
           </div>

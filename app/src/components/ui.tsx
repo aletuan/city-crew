@@ -399,9 +399,9 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
   tabs: { key: K; icon: keyof typeof Ionicons.glyphMap; label: string; count?: number }[];
   active: K;
   onChange: (k: K) => void;
-  /** The row's far end — the natural home for a control about the list
-   *  the tabs switch (a search toggle), in the space left-aligned tabs
-   *  leave free anyway. */
+  /** The row's far end — a small control about the list the tabs switch
+   *  (a view toggle), in the space left-aligned tabs leave free. Removed
+   *  once as unused; back with a tenant. */
   right?: React.ReactNode;
 }) {
   return (

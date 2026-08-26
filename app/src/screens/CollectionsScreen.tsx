@@ -6,13 +6,14 @@
 // surfaces and thin warm hairlines — not from shadows.
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, SectionList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Animated, SectionList, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Card, Empty, GradientCta, PressableScale, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, Empty, fireHaptic, GradientCta, PressableScale, RoundIconButton, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddSlot } from '../components/add';
 import { useAuth } from '../lib/auth';
@@ -24,7 +25,7 @@ import { likesWorthShowing } from '../lib/likes';
 import { findCollections } from '../lib/search';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
-import { colors, font, gradAI, radius, space, type } from '../theme';
+import { colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 /** What `renderRightActions` hands back, and what the card animates from. */
@@ -35,6 +36,8 @@ type Drag = ReturnType<Animated.Value['interpolate']>;
  *  clamps its own travel to whatever they measure, so this figure only sets
  *  how fast the card's insides shrink on the way there. */
 const ACTIONS_W = 62 * 2 + 8 + 8;
+/** Where the Yours tab's tile/list choice sleeps between launches. */
+const VIEW_KEY = 'citycrew.collections.view';
 const THUMB = 92;
 const THUMB_OPEN = 64;
 /** The disclosure chevron's own footprint — it is a glyph, not a control,
@@ -306,11 +309,14 @@ export default function CollectionsScreen({ navigation, route }: {
   const cols = useCollections();
   // Shared with the save sheet — see SaveProvider. Reading it here through
   // its own hook is what let the two disagree.
-  const { mine } = useSave();
-  // Counts only — the heart itself is not on these cards. A tappable heart
-  // inside a swipeable row is a third gesture competing for the same
-  // thumb, and the collection's own screen already has the room for it.
-  const { likes } = useLikes();
+  const { mine, askToSignIn } = useSave();
+  // Counts for both tabs; the heart itself only on the community grid.
+  // Your own rows still refuse it — a tappable heart inside a swipeable
+  // row is a third gesture competing for the same thumb — but a
+  // community card does not swipe, so there it is the same control the
+  // Explore shelf taps, backed by the same provider, one copy of the
+  // truth.
+  const { likes, myLikes, toggleLike } = useLikes();
   const { data: places, loading: placesLoading, loaded: placesLoaded } = usePlaces();
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
@@ -344,6 +350,17 @@ export default function CollectionsScreen({ navigation, route }: {
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
+
+  // The same wiring as the Explore shelf: signed out, the tap is the
+  // sign-in invitation; signed in, the provider owns the write and the
+  // optimistic count, so a like made here shows there.
+  const me = session?.user?.id;
+  const onHeart = useCallback((c: Collection) => {
+    if (!c.id) return;
+    if (!me) { askToSignIn(); return; }
+    fireHaptic('light');
+    void toggleLike({ id: c.id, slug: c.slug });
+  }, [me, toggleLike, askToSignIn]);
 
   const remove = (c: Collection) => {
     const name = t(c.title_en, c.title_vi, c.title_ja);
@@ -414,9 +431,50 @@ export default function CollectionsScreen({ navigation, route }: {
   const sift = (list: Collection[]) => (q
     ? findCollections(list.map((c) => ({ c, members: membersOf(c, places) })), q)
     : list);
+
+  // Both halves default to tiles — covers first, in the Explore shelf's
+  // own card language, six covers where the rows showed three — and one
+  // small switch turns both back into rows, because a shelf is browsed
+  // on some days and scanned by name on others. One preference, not one
+  // per tab: a reader who chose rows chose how they read lists, not how
+  // they read one tab. The choice is remembered. What your own tiles
+  // give up — the swipe shortcuts — the rows keep, one flick away, and
+  // the collection's own screen has in its ⋯ menu regardless.
+  const { width: winW } = useWindowDimensions();
+  const gcardW = Math.round((winW - space.page * 2 - space.cardGap) / 2);
+  const gcardH = Math.round(gcardW * 1.18);
+  const [view, setView] = useState<'tile' | 'row'>('tile');
+  useEffect(() => {
+    AsyncStorage.getItem(VIEW_KEY)
+      .then((v) => { if (v === 'row' || v === 'tile') setView(v); })
+      .catch(() => {});
+  }, []);
+  const pickView = (v: 'tile' | 'row') => {
+    setView(v);
+    AsyncStorage.setItem(VIEW_KEY, v).catch(() => {});
+  };
+
+  // SectionList knows nothing of columns, so the grid packs itself: two
+  // cards per row-item, and the odd last card keeps a spacer where its
+  // neighbour would be. Every row-item carries whose it is — a tile
+  // shows a padlock for your own and a byline for everyone else's, and
+  // the two row shapes split the same way: yours swipe, the community's
+  // do not.
+  type ListRow =
+    | { kind: 'own'; c: Collection }
+    | { kind: 'com'; c: Collection }
+    | { kind: 'pair'; pair: Collection[]; own: boolean };
+  const pairUp = (list: Collection[], own: boolean): ListRow[] => {
+    const out: ListRow[] = [];
+    for (let i = 0; i < list.length; i += 2) out.push({ kind: 'pair', pair: list.slice(i, i + 2), own });
+    return out;
+  };
+  const shape = (list: Collection[], own: boolean): ListRow[] => (view === 'tile'
+    ? pairUp(list, own)
+    : list.map((c): ListRow => ({ kind: own ? 'own' : 'com', c })));
   const sections = session && tab === 'yours'
-    ? (mineReady ? [{ own: true, data: sift(mine.data) }] : [])
-    : [{ own: false, data: sift(visible) }];
+    ? (mineReady ? [{ own: true, data: shape(sift(mine.data), true) }] : [])
+    : [{ own: false, data: shape(sift(visible), false) }];
 
   return (
     // No control in the header: creating belongs to the Yours tab, which
@@ -424,7 +482,25 @@ export default function CollectionsScreen({ navigation, route }: {
     // card's own button. (The "New" pill that rode the section heading
     // went with the heading itself when the sections became tabs: it was
     // the same action a third time.)
-    <Screen title={t('Collections', 'Bộ sưu tập', 'コレクション')}>
+    <Screen
+      title={t('Collections', 'Bộ sưu tập', 'コレクション')}
+      // The search lives where every screen keeps its utility — the
+      // header's right, in the same grey disc the Crew screen gives ⊕
+      // and Explore gives its own magnifier. It sat as a bare 18pt glyph
+      // on the tabs row first, and the owner's review was right: a
+      // feature nobody notices is a feature nobody has. Up here it is
+      // also a door guests get — the tabs row below is signed-in only,
+      // the community list is not.
+      right={(
+        <RoundIconButton
+          icon={searching ? 'close' : 'search'}
+          label={searching
+            ? t('Close search', 'Đóng tìm kiếm', '検索を閉じる')
+            : t('Search collections', 'Tìm bộ sưu tập', 'コレクションを検索')}
+          onPress={() => (searching ? closeSearch() : setSearching(true))}
+        />
+      )}
+    >
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {/* The tab bar's own glyph for your shelf; the globe every public
@@ -438,21 +514,31 @@ export default function CollectionsScreen({ navigation, route }: {
             ]}
             active={tab}
             onChange={setTab}
+            // One preference, both shelves — see `shape`.
             right={(
-              <PressableScale
-                scaleTo={0.85}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                onPress={() => (searching ? closeSearch() : setSearching(true))}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: searching }}
-                accessibilityLabel={t('Search collections', 'Tìm bộ sưu tập', 'コレクションを検索')}
-              >
-                <Ionicons
-                  name={searching ? 'close' : 'search'}
-                  size={18}
-                  color={searching ? colors.accent : colors.textSecondary}
-                />
-              </PressableScale>
+              <View style={s.viewToggle}>
+                {(['row', 'tile'] as const).map((v) => (
+                  <PressableScale
+                    key={v}
+                    style={[s.viewBtn, view === v && s.viewBtnOn]}
+                    scaleTo={0.9}
+                    haptic="selection"
+                    hitSlop={6}
+                    onPress={() => pickView(v)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: view === v }}
+                    accessibilityLabel={v === 'tile'
+                      ? t('Tile view', 'Dạng lưới', 'タイル表示')
+                      : t('List view', 'Dạng danh sách', 'リスト表示')}
+                  >
+                    <Ionicons
+                      name={v === 'tile' ? 'grid-outline' : 'list-outline'}
+                      size={14}
+                      color={view === v ? colors.accent : colors.textTertiary}
+                    />
+                  </PressableScale>
+                ))}
+              </View>
             )}
           />
         ) : null}
@@ -463,8 +549,12 @@ export default function CollectionsScreen({ navigation, route }: {
               style={s.searchInput}
               value={query}
               onChangeText={setQuery}
-              // The three things it answers by, named in the box itself.
-              placeholder={t('Name, place, or @handle', 'Tên, địa điểm, hoặc @handle', '名前・スポット・@ハンドル')}
+              // The three things it answers by, named in the box itself —
+              // and in the app's own word for the third: "username" is
+              // what the Crew screen's add flow already calls it, where
+              // "handle" is what this codebase calls it. Readers get the
+              // screen's vocabulary, not the repository's.
+              placeholder={t('Name, place, or @username', 'Tên, địa điểm, hoặc @username', '名前・スポット・@ユーザー名')}
               placeholderTextColor={colors.textTertiary}
               autoFocus
               autoCapitalize="none"
@@ -504,14 +594,143 @@ export default function CollectionsScreen({ navigation, route }: {
         {!holding && !cols.error && (
           <SectionList
             sections={sections}
-            keyExtractor={(c) => c.slug}
+            keyExtractor={(row) => (row.kind === 'pair' ? row.pair[0].slug : row.c.slug)}
             onScroll={duckScroll}
             scrollEventThrottle={16}
             keyboardShouldPersistTaps="handled"
             ListHeaderComponent={<GuestNotice navigation={navigation} />}
-            renderItem={({ item, section }) => {
-              const count = membersOf(item, places).length;
-              const uri = coverFor(item);
+            renderItem={({ item }) => {
+              if (item.kind === 'pair') {
+                return (
+                  <View style={s.gridRow}>
+                    {item.pair.map((c) => {
+                      const uri = coverFor(c);
+                      const members = membersOf(c, places).length;
+                      const my = !!c.id && myLikes.includes(c.id);
+                      return (
+                        <PressableScale
+                          key={c.slug}
+                          style={[s.gcard, { width: gcardW, height: gcardH }]}
+                          onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
+                        >
+                          {uri
+                            ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+                            : <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgElevated }]} />}
+                          {/* The Explore shelf's scrim, verbatim — same
+                              object, same card language, second surface. */}
+                          <LinearGradient
+                            colors={['rgba(10,11,10,0.22)', 'rgba(10,11,10,0.10)', 'rgba(10,11,10,0.94)']}
+                            locations={[0, 0.42, 1]}
+                            style={StyleSheet.absoluteFill}
+                          />
+                          <View style={s.gcardText}>
+                            <Text style={s.gcardTitle} numberOfLines={1}>
+                              {t(c.title_en, c.title_vi, c.title_ja)}
+                            </Text>
+                            {/* Whose list this is, on the kerb where it is
+                                browsed — yours included: on this shelf your
+                                public list is one of the community's. On
+                                your own tab the byline would only say your
+                                own name, so the padlock speaks instead. */}
+                            {!item.own && c.curator_handle ? (
+                              <Text style={s.gcardBy} numberOfLines={1}>
+                                {t('by', 'bởi', 'by')} {atHandle(c.curator_handle)}
+                              </Text>
+                            ) : null}
+                            <View style={s.gcardFoot}>
+                              {item.own && (
+                                <Ionicons
+                                  name={c.is_public ? 'globe-outline' : 'lock-closed-outline'}
+                                  size={12}
+                                  color={c.is_public ? colors.ok : onPhoto.textSecondary}
+                                />
+                              )}
+                              <Text style={s.gcardMeta}>
+                                {members === 0
+                                  ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
+                                  : `${members} ${t(members === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`}
+                              </Text>
+                              {/* Only where a like is possible: a private
+                                  list is one nobody may like, and a heart
+                                  on it would be an invitation to nothing. */}
+                              {c.id && c.is_public ? (
+                                <PressableScale
+                                  containerStyle={{ marginLeft: 'auto' }}
+                                  style={s.gcardLikes}
+                                  scaleTo={0.82}
+                                  haptic="none"
+                                  hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
+                                  onPress={() => onHeart(c)}
+                                  accessibilityRole="button"
+                                  accessibilityState={{ selected: my }}
+                                  accessibilityLabel={my
+                                    ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
+                                    : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                                >
+                                  <Ionicons
+                                    name={my ? 'heart' : 'heart-outline'}
+                                    size={15}
+                                    color={my ? onPhoto.accent : onPhoto.text}
+                                  />
+                                  {likesWorthShowing(likes[c.slug]) && (
+                                    <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
+                                  )}
+                                </PressableScale>
+                              ) : null}
+                            </View>
+                          </View>
+                        </PressableScale>
+                      );
+                    })}
+                    {item.pair.length === 1 ? <View style={{ width: gcardW }} /> : null}
+                  </View>
+                );
+              }
+              // The community row — the tile's facts at reading density:
+              // byline instead of padlock, the quiet likes line instead
+              // of a tappable heart, and nothing behind a swipe, because
+              // none of it is yours to edit.
+              if (item.kind === 'com') {
+                const c = item.c;
+                const n = membersOf(c, places).length;
+                const cover = coverFor(c);
+                return (
+                  <View style={s.row}>
+                    <PressableScale onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}>
+                      <Card style={s.card}>
+                        <View style={s.thumb}>
+                          {cover
+                            ? <Image source={{ uri: cover }} style={s.thumbFill} contentFit="cover" transition={200} />
+                            : <EmptyCover />}
+                        </View>
+                        <View style={s.cardText}>
+                          <Text style={s.title} numberOfLines={2}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
+                          <View style={s.metaRow}>
+                            <Text style={s.meta} numberOfLines={1}>
+                              {n} {t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
+                              {c.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${atHandle(c.curator_handle)}` : ''}
+                            </Text>
+                          </View>
+                          {likesWorthShowing(likes[c.slug]) && (
+                            <View style={s.likesRow}>
+                              <Ionicons name="heart" size={13} color={colors.accentFaint} />
+                              <Text style={s.meta}>
+                                {likes[c.slug]} {t('likes', 'lượt thích', 'いいね')}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={s.chevron}>
+                          <Ionicons name="chevron-forward" size={CHEVRON} color={colors.textTertiary} />
+                        </View>
+                      </Card>
+                    </PressableScale>
+                  </View>
+                );
+              }
+              const own = item.c;
+              const count = membersOf(own, places).length;
+              const uri = coverFor(own);
               // Narrowed to roughly a third of its width, the card has room
               // for a name and a count and nothing else. So the cover comes
               // down to 64pt, the chevron closes up — the row is already
@@ -521,7 +740,7 @@ export default function CollectionsScreen({ navigation, route }: {
               // the card reflows under your thumb instead of snapping when
               // you let go.
               const card = (open: boolean, drag: Drag | null) => (
-                <PressableScale onPress={() => navigation.navigate('CollectionDetail', { slug: item.slug })}>
+                <PressableScale onPress={() => navigation.navigate('CollectionDetail', { slug: own.slug })}>
                   <Card style={s.card}>
                     <Animated.View
                       style={[s.thumb, drag && {
@@ -534,7 +753,7 @@ export default function CollectionsScreen({ navigation, route }: {
                         : <EmptyCover />}
                     </Animated.View>
                     <View style={s.cardText}>
-                      <Text style={s.title} numberOfLines={open ? 1 : 2}>{t(item.title_en, item.title_vi, item.title_ja)}</Text>
+                      <Text style={s.title} numberOfLines={open ? 1 : 2}>{t(own.title_en, own.title_vi, own.title_ja)}</Text>
                       <View style={s.metaRow}>
                         {/* The padlock says whose it is without spending a
                             word on it. It used to be the only answer,
@@ -542,31 +761,20 @@ export default function CollectionsScreen({ navigation, route }: {
                             glyph carries which of the two it is, and the
                             detail screen uses the same pair for the same
                             fact. */}
-                        {section.own && (
-                          <Ionicons
-                            name={item.is_public ? 'globe-outline' : 'lock-closed-outline'}
-                            size={13}
-                            color={item.is_public ? colors.ok : colors.textTertiary}
-                          />
-                        )}
+                        <Ionicons
+                          name={own.is_public ? 'globe-outline' : 'lock-closed-outline'}
+                          size={13}
+                          color={own.is_public ? colors.ok : colors.textTertiary}
+                        />
                         <Text style={s.meta} numberOfLines={1}>
                           {/* "0 places" reads like a broken count; an empty
                               list you just made deserves a sentence. */}
                           {count === 0
                             ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
                             : `${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`}
-                          {section.own
-                            ? `  ·  ${item.is_public
-                              ? t('Public', 'Công khai', '公開')
-                              : t('Private', 'Riêng tư', '非公開')}`
-                            : ''}
-                          {/* Your own byline is the padlock's business, not
-                              a credit line: on the public section it tells
-                              you whose list you are looking at, and on your
-                              own it would only tell you your own name. */}
-                          {!section.own && item.curator_handle
-                            ? `  ·  ${t('by', 'bởi', 'by')} ${atHandle(item.curator_handle)}`
-                            : ''}
+                          {`  ·  ${own.is_public
+                            ? t('Public', 'Công khai', '公開')
+                            : t('Private', 'Riêng tư', '非公開')}`}
                         </Text>
                       </View>
                       {/* How many people liked it — the answer to "is
@@ -593,7 +801,7 @@ export default function CollectionsScreen({ navigation, route }: {
                           the line never appears under a padlock, and never
                           claims that a list nobody *could* like is a list
                           nobody *did*. */}
-                      {likesWorthShowing(likes[item.slug]) && (
+                      {likesWorthShowing(likes[own.slug]) && (
                         <View style={s.likesRow}>
                           {/* Filled, and quiet. The fill is legibility: an
                               outline heart at 13pt spends most of its ink
@@ -612,7 +820,7 @@ export default function CollectionsScreen({ navigation, route }: {
                               button that does not respond. */}
                           <Ionicons name="heart" size={13} color={colors.accentFaint} />
                           <Text style={s.meta}>
-                            {likes[item.slug]} {t('likes', 'lượt thích', 'いいね')}
+                            {likes[own.slug]} {t('likes', 'lượt thích', 'いいね')}
                           </Text>
                         </View>
                       )}
@@ -639,22 +847,18 @@ export default function CollectionsScreen({ navigation, route }: {
               // past the page margin the rest of the screen keeps.
               return (
                 <View style={s.row}>
-                  {section.own
-                    ? (
-                      <SwipeRow
-                        onEdit={() => navigation.navigate('CollectionForm', {
-                          slug: item.slug,
-                          title: t(item.title_en, item.title_vi, item.title_ja),
-                          desc: t(item.desc_en, item.desc_vi, item.desc_ja),
-                        })}
-                        onDelete={() => remove(item)}
-                        editLabel={t('Edit', 'Sửa', '編集')}
-                        deleteLabel={t('Delete', 'Xoá', '削除')}
-                      >
-                        {card}
-                      </SwipeRow>
-                    )
-                    : card(false, null)}
+                  <SwipeRow
+                    onEdit={() => navigation.navigate('CollectionForm', {
+                      slug: own.slug,
+                      title: t(own.title_en, own.title_vi, own.title_ja),
+                      desc: t(own.desc_en, own.desc_vi, own.desc_ja),
+                    })}
+                    onDelete={() => remove(own)}
+                    editLabel={t('Edit', 'Sửa', '編集')}
+                    deleteLabel={t('Delete', 'Xoá', '削除')}
+                  >
+                    {card}
+                  </SwipeRow>
                 </View>
               );
             }}
@@ -719,6 +923,36 @@ const s = StyleSheet.create({
     paddingHorizontal: 18, paddingVertical: 11, borderRadius: 14,
   },
   noticeChipText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
+
+  // The community grid. Sized in the component — the width is the
+  // screen's business — and dressed in the Explore shelf card's clothes:
+  // photo, three-stop scrim, light ink.
+  gridRow: {
+    flexDirection: 'row', gap: space.cardGap,
+    marginHorizontal: space.page, marginBottom: space.cardGap,
+  },
+  gcard: { borderRadius: radius.image, overflow: 'hidden', justifyContent: 'flex-end' },
+  gcardText: { padding: 12, gap: 2 },
+  gcardTitle: { color: onPhoto.text, fontSize: 15.5, fontWeight: font.semibold, lineHeight: 19 },
+  gcardBy: { color: onPhoto.textSecondary, fontSize: 12.5 },
+  gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
+  gcardMeta: { color: onPhoto.textSecondary, fontSize: 12.5 },
+  gcardLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+
+  // The tile/list switch — two glyphs in a quiet glass capsule, the
+  // chosen one seated on a solid thumb. Small on purpose: it is a
+  // preference, not a destination.
+  viewToggle: {
+    flexDirection: 'row', gap: 2, padding: 3,
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: 1, borderColor: colors.borderGlassSoft,
+    borderRadius: radius.pill,
+  },
+  viewBtn: {
+    width: 26, height: 22, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  viewBtnOn: { backgroundColor: colors.surfaceCard },
 
   searchRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
