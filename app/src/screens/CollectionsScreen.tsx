@@ -681,30 +681,53 @@ export default function CollectionsScreen({ navigation, route }: {
                               </Text>
                               {/* Only where a like is possible: a private
                                   list is one nobody may like, and a heart
-                                  on it would be an invitation to nothing. */}
+                                  on it would be an invitation to nothing.
+
+                                  And on your own tile, a tally rather than
+                                  a control — the detail screen's rule, for
+                                  the detail screen's reason. The database
+                                  refuses a curator's like on their own
+                                  list, so a pressable heart here could only
+                                  fill for a beat and snap back; this file
+                                  is the one place that draws your own
+                                  published lists as cards, so it inherits
+                                  the same check. Inert, it also earns the
+                                  tally's discipline: at zero it draws
+                                  nothing, because a bare heart is exactly
+                                  an invitation and the one it invites is
+                                  impossible. */}
                               {c.id && c.is_public ? (
-                                <PressableScale
-                                  containerStyle={{ marginLeft: 'auto' }}
-                                  style={s.gcardLikes}
-                                  scaleTo={0.82}
-                                  haptic="none"
-                                  hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
-                                  onPress={() => onHeart(c)}
-                                  accessibilityRole="button"
-                                  accessibilityState={{ selected: my }}
-                                  accessibilityLabel={my
-                                    ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
-                                    : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
-                                >
-                                  <Ionicons
-                                    name={my ? 'heart' : 'heart-outline'}
-                                    size={15}
-                                    color={my ? onPhoto.accent : onPhoto.text}
-                                  />
-                                  {likesWorthShowing(likes[c.slug]) && (
-                                    <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
-                                  )}
-                                </PressableScale>
+                                item.own ? (
+                                  likesWorthShowing(likes[c.slug]) ? (
+                                    <View style={[s.gcardLikes, { marginLeft: 'auto' }]}>
+                                      <Ionicons name="heart" size={13} color={onPhoto.textSecondary} />
+                                      <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
+                                    </View>
+                                  ) : null
+                                ) : (
+                                  <PressableScale
+                                    containerStyle={{ marginLeft: 'auto' }}
+                                    style={s.gcardLikes}
+                                    scaleTo={0.82}
+                                    haptic="none"
+                                    hitSlop={{ top: 14, bottom: 14, left: 16, right: 12 }}
+                                    onPress={() => onHeart(c)}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ selected: my }}
+                                    accessibilityLabel={my
+                                      ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
+                                      : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                                  >
+                                    <Ionicons
+                                      name={my ? 'heart' : 'heart-outline'}
+                                      size={15}
+                                      color={my ? onPhoto.accent : onPhoto.text}
+                                    />
+                                    {likesWorthShowing(likes[c.slug]) && (
+                                      <Text style={s.gcardMeta}>{likes[c.slug]}</Text>
+                                    )}
+                                  </PressableScale>
+                                )
                               ) : null}
                             </View>
                           </View>
