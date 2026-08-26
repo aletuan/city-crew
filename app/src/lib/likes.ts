@@ -117,18 +117,30 @@ export function likesWorthShowing(n: number | undefined): boolean {
 // that. And this is the part with a rule in it, which means it is the
 // part worth proving in a Node process rather than by tapping.
 //
-// The rule is: **a pending tap is a claim about the answer, not a delta
-// applied to it.** Every function below compares what the reader asked
-// for against what the server currently says and does nothing when they
-// agree. That is what makes the layer self-cancelling — once the refetch
-// lands, each entry becomes a no-op on its own, with no window in which a
-// stale delta double-counts. Clearing them afterwards, which `settled`
-// does, is hygiene rather than correctness.
+// The rule is: **a pending tap is a claim about the answer, and it holds
+// until the answer that includes it arrives.** The subtlety is that there
+// are two answers, from two queries at two speeds. The heart reads the
+// reader's own likes — a tiny select, back in a blink. The tally reads
+// the public counts — an RPC over every list, back later. The first
+// version cancelled a tap the moment *either* answer confirmed it, and
+// the fast one always confirmed first: your own row existed, so the +1
+// was dropped, while the count that contained it was still on the wire —
+// and the reader watched their own like flick 3 → 2 → 3 on the way back
+// to the shelf (or stick at 2, if that slower response died).
+//
+// So each claim is stamped with when it was made, and each function
+// cancels against its own witness. The heart cancels against your likes,
+// which is the list that decides it. The tally applies a claim only while
+// the counts snapshot predates the tap — a snapshot fetched after the
+// write already contains it, and one fetched before cannot be allowed to
+// shout it down. `settled` clears an entry only once both witnesses have
+// caught up, and stays hygiene rather than correctness.
 
-/** One tap: which list, and what the reader just asked it to be. The slug
- *  rides along because the count is keyed by slug while a like is keyed by
- *  id, and only the caller holds both. */
-export type PendingLike = { slug: string; liked: boolean };
+/** One tap: which list, what the reader just asked it to be, and when.
+ *  The slug rides along because the count is keyed by slug while a like
+ *  is keyed by id, and only the caller holds both. `at` is what the
+ *  tally cancels against — see the note above. */
+export type PendingLike = { slug: string; liked: boolean; at: number };
 
 /** Collection id → the tap not yet confirmed by the server. */
 export type Pending = Readonly<Record<string, PendingLike>>;
@@ -159,24 +171,26 @@ export function likedNow(server: readonly string[], pending: Pending): string[] 
  * The counts with the same taps applied, so a tally never contradicts the
  * heart beside it.
  *
- * The delta is `wanted − current`, per list: +1 for a like the server has
- * not recorded, −1 for an unlike it has not yet dropped, and zero the
- * moment it catches up. A count is never allowed below zero — the counts
- * come from a public function and a reader's own likes from a private
- * one, and nothing promises the two were read in the same instant.
+ * A tap moves the count — +1 for a like, −1 for an unlike — for exactly
+ * as long as the counts snapshot predates it. `countsAt` is when the
+ * snapshot landed (null when none ever has): a snapshot fetched after
+ * the write already contains the tap, so applying it again would count
+ * it twice; one fetched before must not be allowed to shout it down —
+ * that stale snapshot outliving the claim is precisely the 3 → 2 → 3
+ * flicker this replaces. A count is never allowed below zero, because
+ * nothing promises the snapshot and the tap describe the same instant.
  */
 export function countsNow(
   counts: LikeCounts,
-  server: readonly string[],
+  countsAt: number | null,
   pending: Pending,
 ): LikeCounts {
-  const has = new Set(server);
+  const seen = countsAt ?? 0;
   let out: LikeCounts | null = null;
-  for (const [id, p] of Object.entries(pending)) {
-    const delta = (p.liked ? 1 : 0) - (has.has(id) ? 1 : 0);
-    if (!delta) continue;
+  for (const p of Object.values(pending)) {
+    if (p.at <= seen) continue;
     out = out ?? { ...counts };
-    out[p.slug] = Math.max(0, (out[p.slug] ?? 0) + delta);
+    out[p.slug] = Math.max(0, (out[p.slug] ?? 0) + (p.liked ? 1 : -1));
   }
   // Unchanged means unchanged, reference and all: this feeds a sort that
   // runs on every render of the shelf.
@@ -184,15 +198,24 @@ export function countsNow(
 }
 
 /**
- * Forget the taps the server has caught up with.
+ * Forget the taps every witness has caught up with: the reader's own
+ * likes agree with what was asked, and the counts snapshot postdates the
+ * tap. Dropping on the first alone is how the flicker happened — the
+ * entry died while the count that carried it was still on the wire.
  *
  * Returns the map it was given when there is nothing to forget, because
  * the caller runs this on every refetch and a fresh object each time
  * would be a render each time.
  */
-export function settled(pending: Pending, server: readonly string[]): Pending {
+export function settled(
+  pending: Pending,
+  server: readonly string[],
+  countsAt: number | null,
+): Pending {
   const has = new Set(server);
-  const live = Object.entries(pending).filter(([id, p]) => p.liked !== has.has(id));
+  const seen = countsAt ?? 0;
+  const live = Object.entries(pending)
+    .filter(([id, p]) => p.liked !== has.has(id) || p.at > seen);
   if (live.length === Object.keys(pending).length) return pending;
   return Object.fromEntries(live);
 }
