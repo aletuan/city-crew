@@ -18,6 +18,14 @@ end $$;
 
 create schema if not exists auth;
 
+-- Extensions live in their own schema on a real project, not in
+-- `public` — which is exactly how the random_handle bug hid: a bare
+-- Postgres installs pgcrypto onto the search path, a Supabase project
+-- does not. Install it here the way production has it, so a function
+-- pinned too tightly to find it fails on this bench too.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+
 create table if not exists auth.users (
   id                 uuid primary key default gen_random_uuid(),
   email              text,

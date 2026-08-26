@@ -95,9 +95,17 @@ create trigger profiles_check_handle
 -- Deliberately shaped like a placeholder — someone seeing `user7k2m9x` on
 -- their own profile knows to change it, where a name derived from their
 -- own would look chosen and stay forever.
+-- `extensions` as well as `public`: pgcrypto lives in its own schema on
+-- a real project, and a pin that stops at `public` leaves
+-- gen_random_bytes unresolvable — a sign-up that needs the fallback
+-- fails outright. The schema is trusted and postgres-owned, so the
+-- pin's point survives: nothing a caller fronts can shadow either.
+-- Declared here rather than altered below, because a `language sql`
+-- body is resolved at create time and needs the path already attached.
 create or replace function public.random_handle()
 returns text
 language sql
+set search_path = public, extensions
 as $$
   select 'user' || lower(encode(gen_random_bytes(4), 'hex'));
 $$;
@@ -169,10 +177,10 @@ create trigger on_auth_user_created
 -- trigger needs it, and the trigger does not need a grant.
 revoke execute on function public.handle_new_user() from anon, authenticated, public;
 
--- Pinned so the functions cannot be made to resolve `profiles` or
--- `reserved_handles` against some other schema a caller put in front.
+-- Pinned so the function cannot be made to resolve `reserved_handles`
+-- against some other schema a caller put in front. random_handle carries
+-- its pin in its declaration above, where the extra reasoning lives.
 alter function public.check_handle()  set search_path = public;
-alter function public.random_handle() set search_path = public;
 
 -- Everyone who signed up before this table existed.
 do $$
