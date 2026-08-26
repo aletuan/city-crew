@@ -666,7 +666,19 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
-  const { loading, loaded, fromCache, error, data: places, reload } = usePlaces();
+  const { loading, loaded, error, data: places, reload } = usePlaces();
+  // The pull spinner belongs to the pull. `loading` alone also covers
+  // refreshes nobody asked to watch — the launch cache's background
+  // pass, and the revalidate a few minutes of absence triggers on
+  // return — and a spinner over freshly drawn content reads as the app
+  // second-guessing itself. The old guard (`!fromCache`) silenced only
+  // the first of those; the owner caught the second one glowing on a
+  // quiet morning open. Armed by the gesture, disarmed when the fetch
+  // it started settles.
+  const [pulling, setPulling] = useState(false);
+  useEffect(() => {
+    if (pulling && !loading) setPulling(false);
+  }, [pulling, loading]);
   // Skeletons hold until there is something to draw — `loaded`, not
   // `loading`. The distinction was decorative until the catalog started
   // hydrating from the launch cache: hydrated data arrives with the
@@ -1004,11 +1016,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             )}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
-            onRefresh={reload}
-            // Not during the launch cache's background refresh — that one
-            // is nobody's pull, and a spinner over freshly drawn content
-            // would read as the app second-guessing itself.
-            refreshing={loading && !fromCache}
+            onRefresh={() => { setPulling(true); reload(); }}
+            refreshing={pulling}
             onScrollToIndexFailed={() => {}}
             onScroll={Animated.event(
               [{ nativeEvent: { contentOffset: { y: scrollY } } }],

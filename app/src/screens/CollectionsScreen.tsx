@@ -329,6 +329,15 @@ export default function CollectionsScreen({ navigation, route }: {
   // its background refresh still in flight.
   const holding = !cols.loaded || !placesLoaded;
   const loading = cols.loading || placesLoading;
+  // The pull spinner belongs to the pull — same rule and same repair as
+  // the Explore list beside this one. `loading` also covers the launch
+  // cache's background pass and the return-to-app revalidate, neither of
+  // which is anybody's pull; the old `!fromCache` guard silenced only
+  // the first. Armed by the gesture, disarmed when the fetch settles.
+  const [pulling, setPulling] = useState(false);
+  useEffect(() => {
+    if (pulling && !loading) setPulling(false);
+  }, [pulling, loading]);
 
   // Reload on return: creating a collection happens on another screen, and
   // without this you would come back to the list you left. The first focus
@@ -883,11 +892,8 @@ export default function CollectionsScreen({ navigation, route }: {
             }}
             contentContainerStyle={{ paddingBottom: tabClearance }}
             showsVerticalScrollIndicator={false}
-            onRefresh={() => { cols.reload(); mine.reload(); }}
-            // Not during the launch cache's background refresh — that one
-            // is nobody's pull, and a spinner over freshly drawn content
-            // would read as the app second-guessing itself.
-            refreshing={loading && !cols.fromCache}
+            onRefresh={() => { setPulling(true); cols.reload(); mine.reload(); }}
+            refreshing={pulling}
           />
         )}
       </View>
