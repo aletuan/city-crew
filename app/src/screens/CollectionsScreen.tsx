@@ -13,12 +13,12 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Card, Empty, fireHaptic, GradientCta, PressableScale, RoundIconButton, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Avatar, Card, Empty, fireHaptic, GradientCta, PressableScale, RoundIconButton, Screen, Skeleton, UnderlineTabs, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { AddSlot } from '../components/add';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
-import { Collection, coverOf, deleteCollection, membersOf, touchesCity } from '../lib/data';
+import { Collection, coverOf, deleteCollection, fetchProfilesById, type FriendProfile, membersOf, touchesCity } from '../lib/data';
 import { atHandle } from '../lib/handle';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
@@ -360,6 +360,20 @@ export default function CollectionsScreen({ navigation, route }: {
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
 
+  // The faces behind the community tiles, fetched once per catalog load
+  // through the same batched lookup the Crew screen uses. A miss leaves
+  // the Avatar drawing its placeholder circle — the seat is always
+  // there, which is what keeps a bare @handle reading as a signature
+  // rather than a stray tag.
+  const [faces, setFaces] = useState<Record<string, FriendProfile>>({});
+  useEffect(() => {
+    const ids = [...new Set(cols.data.map((c) => c.owner_id).filter(Boolean))] as string[];
+    if (!ids.length) return;
+    fetchProfilesById(ids).then((more) => setFaces((prev) => ({ ...prev, ...more }))).catch(() => {});
+  // `cols.data` is a new array every load; `loadedAt` is the honest tick.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cols.loadedAt]);
+
   // The same wiring as the Explore shelf: signed out, the tap is the
   // sign-in invitation; signed in, the provider owns the write and the
   // optimistic count, so a like made here shows there.
@@ -636,15 +650,21 @@ export default function CollectionsScreen({ navigation, route }: {
                             <Text style={s.gcardTitle} numberOfLines={1}>
                               {t(c.title_en, c.title_vi, c.title_ja)}
                             </Text>
-                            {/* Whose list this is, on the kerb where it is
-                                browsed — yours included: on this shelf your
-                                public list is one of the community's. On
-                                your own tab the byline would only say your
-                                own name, so the padlock speaks instead. */}
+                            {/* Whose list this is, said with a face: the
+                                avatar beside the handle carries the whole
+                                of "by", so the word goes — owner review,
+                                and right. The list rows keep the word,
+                                because down there no face does that work.
+                                On your own tab neither appears: the
+                                byline would only say your own name, so
+                                the padlock speaks instead. */}
                             {!item.own && c.curator_handle ? (
-                              <Text style={s.gcardBy} numberOfLines={1}>
-                                {t('by', 'bởi', 'by')} {atHandle(c.curator_handle)}
-                              </Text>
+                              <View style={s.gcardByRow}>
+                                <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={18} />
+                                <Text style={s.gcardBy} numberOfLines={1}>
+                                  {atHandle(c.curator_handle)}
+                                </Text>
+                              </View>
                             ) : null}
                             <View style={s.gcardFoot}>
                               {item.own && (
@@ -940,7 +960,8 @@ const s = StyleSheet.create({
   gcard: { borderRadius: radius.image, overflow: 'hidden', justifyContent: 'flex-end' },
   gcardText: { padding: 12, gap: 2 },
   gcardTitle: { color: onPhoto.text, fontSize: 15.5, fontWeight: font.semibold, lineHeight: 19 },
-  gcardBy: { color: onPhoto.textSecondary, fontSize: 12.5 },
+  gcardByRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 },
+  gcardBy: { color: onPhoto.textSecondary, fontSize: 12.5, fontWeight: font.medium, flexShrink: 1 },
   gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   gcardMeta: { color: onPhoto.textSecondary, fontSize: 12.5 },
   gcardLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
