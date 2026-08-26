@@ -188,7 +188,22 @@ export default function Coverage() {
           <div className="panel covmappanel">
             {cov.groups.some((g) => g.lat != null)
               ? <CoverageMap groups={cov.groups} hover={hover} setHover={setHover} />
-              : <div className="empty">Nothing published in {longName} has coordinates yet.</div>}
+              // Three ways for the map to be blank, and they are not the same
+              // news. Nothing published is a catalog to fill; addresses that
+              // name no district is a parse to fix (the bubbles are per
+              // district, so no district means nothing to draw, whatever the
+              // coordinates say); districts with no coordinates is a backfill.
+              // The screen used to report the third whatever had happened,
+              // beside a panel that was busy counting places.
+              : (
+                <div className="empty">
+                  {cov.total === 0
+                    ? <>Nothing published in {longName} yet.</>
+                    : cov.groups.length === 0
+                      ? <>No district could be read from these {cov.total} addresses, so there is nothing to place on the map.</>
+                      : <>No published place in {longName} has coordinates yet.</>}
+                </div>
+              )}
           </div>
 
           <div>
@@ -199,7 +214,22 @@ export default function Coverage() {
                   {cov.total} place{cov.total === 1 ? '' : 's'} · {cov.groups.length} district{cov.groups.length === 1 ? '' : 's'}
                 </span>
               </div>
-              {cov.groups.length === 0 && <div className="empty">Nothing published here yet.</div>}
+              {/* Two different nothings, and the screen used to print the
+                  wrong one. `groups` holds only the districts that could be
+                  read off an address; everything else lands in `unplaced`,
+                  which is rendered as its own row further down. So gating on
+                  `groups.length` meant that a city whose addresses all failed
+                  to parse showed "Nothing published here yet." directly above
+                  a row counting twenty of them — under a heading that had
+                  already said "20 places · 0 districts".
+                  An empty catalog and an unreadable one need different
+                  sentences, because they need different work. */}
+              {cov.total === 0 && <div className="empty">Nothing published here yet.</div>}
+              {cov.total > 0 && cov.groups.length === 0 && (
+                <div className="empty">
+                  No district could be read from any of these addresses.
+                </div>
+              )}
               {cov.groups.map((g) => (
                 <div
                   key={g.key}

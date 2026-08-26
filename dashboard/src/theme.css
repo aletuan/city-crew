@@ -15,6 +15,25 @@
   --surface-glass-strong: rgba(255, 255, 255, 0.16);
   --border-glass: rgba(255, 255, 255, 0.16);
   --border-glass-soft: rgba(255, 255, 255, 0.09);
+  /* The edge of anything you can type in or press, kept apart from the two
+     above because it answers to a rule they do not.
+     WCAG 1.4.11 asks 3:1 of whatever identifies a control, and a glass
+     hairline was nowhere near: measured on the four grounds the desk
+     actually puts them on — the page, a panel, an input well, a glass
+     button — 0.09 reads 1.22 / 1.27 / 1.24 / 1.33. An input has no other
+     affordance than its edge, so that is an input nobody can see until
+     they focus it. 0.36 is the first value that clears 3:1 on all four
+     (3.25 / 3.33 / 3.30 / 3.16); the exact floor is 0.3423.
+     The other two stay soft on purpose. They draw card outlines, panel
+     edges and separators — decoration, which 1.4.11 does not govern, and
+     which is where the glass in "dark glass" actually lives. */
+  --border-control: rgba(255, 255, 255, 0.36);
+  /* The same edge, brighter, for hover and for the one button in a row that
+     is being emphasised (Save while dirty). It exists because the tier above
+     moved: these states used to borrow --border-glass at 0.16, which was a
+     step up from a 0.09 rest state and is a step *down* from 0.36. Hovering
+     a chip would have dimmed it. */
+  --border-control-strong: rgba(255, 255, 255, 0.52);
 
   --text-primary: #FFFFFF;
   --text-secondary: rgba(255, 255, 255, 0.72);
@@ -215,7 +234,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   display: inline-flex; align-items: center; gap: 7px;
   padding: 8px 13px;
   background: rgba(246, 164, 92, 0.12);
-  border-color: rgba(246, 164, 92, 0.35);
+  border-color: rgba(246, 164, 92, 0.55);
   color: var(--warn);
 }
 .syncbtn.bell:hover { background: rgba(246, 164, 92, 0.2); }
@@ -259,7 +278,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .fixbtn {
   flex-shrink: 0; text-decoration: none;
   font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--warn); border: 1px solid rgba(246, 164, 92, 0.45);
+  color: var(--warn); border: 1px solid rgba(246, 164, 92, 0.55);
   border-radius: var(--radius-pill); padding: 5px 12px;
   transition: background 140ms;
 }
@@ -304,14 +323,21 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 
 /* progress rail — the desk's one glowing measure */
 .rail { display: flex; flex-direction: column; gap: 5px; min-width: 260px; margin-left: auto; }
-.rail .counts { display: flex; justify-content: space-between; font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary); }
+/* `space-between` with no gap only reads as three facts while the rail is
+   wider than they are. It is not: the rail's floor is 260px and the three
+   labels want ~277px at 11px mono, so at the desk's own minimum they touch
+   — "238/412 approved23 flagged17 not public" — and on a phone the last one
+   sits flush to the shell's padding with nothing between it and the edge.
+   A gap and a wrap instead: they stay three facts at every width, and take
+   a second line when one line cannot hold them. */
+.rail .counts { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary); }
 .rail .counts b { color: var(--text-secondary); font-weight: 600; }
 .rail .track { height: 6px; border-radius: 999px; background: var(--surface-glass); overflow: hidden; display: flex; }
 .rail .fill { background: var(--grad-ai); height: 100%; transition: width 400ms cubic-bezier(0.22, 1, 0.36, 1); }
 .rail .flagged { background: var(--bad); opacity: .75; height: 100%; }
 
 .syncbtn {
-  border: 1px solid var(--border-glass); background: var(--surface-glass);
+  border: 1px solid var(--border-control); background: var(--surface-glass);
   color: var(--text-primary); font-size: 13px; font-weight: 600;
   padding: 8px 16px; border-radius: var(--radius-pill);
   transition: background 160ms;
@@ -370,12 +396,12 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 }
 .chip {
   display: inline-flex; align-items: center; gap: 6px;
-  border: 1px solid var(--border-glass-soft); background: transparent;
+  border: 1px solid var(--border-control); background: transparent;
   color: var(--text-secondary); font-size: 12.5px; font-weight: 600;
   padding: 5px 13px; border-radius: var(--radius-pill);
   transition: background 160ms, border-color 160ms, color 160ms;
 }
-.chip:hover { border-color: var(--border-glass); color: var(--text-primary); }
+.chip:hover { border-color: var(--border-control-strong); color: var(--text-primary); }
 .chip.on { background: var(--surface-glass-strong); border-color: transparent; color: #fff; }
 .chip.on.st-approved { color: var(--ok); }
 .chip.on.st-flagged { color: var(--bad); }
@@ -396,14 +422,14 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .searchbox { position: relative; display: flex; align-items: center; }
 .searchbox svg { position: absolute; left: 13px; color: var(--text-tertiary); pointer-events: none; }
 .search {
-  background: var(--bg-input); border: 1px solid var(--border-glass-soft);
+  background: var(--bg-input); border: 1px solid var(--border-control);
   border-radius: var(--radius-pill); color: var(--text-primary);
   font-size: 13px; padding: 7px 16px 7px 34px; width: 210px;
 }
 .search::placeholder { color: var(--text-tertiary); }
 .sortselect {
   appearance: none; -webkit-appearance: none;
-  border: 1px solid var(--border-glass-soft); background-color: var(--surface-glass);
+  border: 1px solid var(--border-control); background-color: var(--surface-glass);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%23ffffff' stroke-opacity='0.6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 12px center; background-size: 10px 6px;
   color: var(--text-secondary); font: inherit; font-size: 12.5px; font-weight: 600;
@@ -528,10 +554,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .pagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 24px 0 8px; }
 .pagination span { font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary); }
 .pagebtn {
-  background: transparent; border: 1px solid var(--border-glass-soft); color: var(--text-secondary);
+  background: transparent; border: 1px solid var(--border-control); color: var(--text-secondary);
   font-size: 15px; padding: 6px 12px; border-radius: var(--radius-pill); transition: background 160ms, color 160ms;
 }
-.pagebtn:hover:not(:disabled) { background: var(--surface-glass); color: #fff; border-color: var(--border-glass); }
+.pagebtn:hover:not(:disabled) { background: var(--surface-glass); color: #fff; border-color: var(--border-control-strong); }
 .pagebtn:disabled { opacity: .35; cursor: default; }
 
 /* ── place rows ── */
@@ -657,7 +683,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .pcell.dragover { outline: 2px dashed var(--ai-pink); outline-offset: -2px; }
 
 .dropzone {
-  border: 1.5px dashed var(--border-glass); border-radius: 14px;
+  border: 1.5px dashed var(--border-control); border-radius: 14px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   color: var(--text-tertiary); font-size: 12px; aspect-ratio: 1; cursor: pointer;
   transition: all 160ms; background: transparent;
@@ -724,7 +750,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .field label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: .04em; }
 .field label .lang { font-family: var(--font-data); font-size: 9.5px; border: 1px solid var(--border-glass-soft); border-radius: 4px; padding: 0 4px; margin-left: 5px; }
 .field input, .field textarea, .field select {
-  background: var(--bg-input); border: 1px solid var(--border-glass-soft);
+  background: var(--bg-input); border: 1px solid var(--border-control);
   border-radius: var(--radius-input); color: var(--text-primary);
   font-size: 14px; padding: 9px 12px; width: 100%;
 }
@@ -737,7 +763,17 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   background-repeat: no-repeat; background-position: right 14px center; background-size: 10px 6px;
   padding-right: 36px; cursor: pointer;
 }
-.field input:focus, .field textarea:focus, .field select:focus { border-color: var(--ai-violet); outline: none; }
+/* The violet edge says "this one", and that is worth keeping — but it used
+   to say it *instead of* the focus ring, because it carried `outline: none`.
+   That turned every field in the editor into a 1px colour change for anyone
+   arriving by keyboard, on the one screen that is nothing but fields. The
+   ring at the top of this file is the accessible indicator; this is the
+   flourish on top of it, so it no longer cancels the thing it decorates.
+
+   The select joined this selector in #356, and joins the fix with it: a
+   custom-drawn chevron replaces the platform control, so its focus ring is
+   the only thing left saying where the keyboard is. */
+.field input:focus, .field textarea:focus, .field select:focus { border-color: var(--ai-violet); }
 .field .mono { font-family: var(--font-data); font-size: 13px; }
 
 .inline-fields { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -745,7 +781,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 
 .vibes { display: flex; flex-wrap: wrap; gap: 8px; }
 .vibe {
-  border: 1px solid var(--border-glass-soft); background: transparent;
+  border: 1px solid var(--border-control); background: transparent;
   color: var(--text-secondary); font-size: 12.5px; font-weight: 600;
   padding: 6px 14px; border-radius: var(--radius-pill); transition: all 160ms;
 }
@@ -757,9 +793,9 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .factlinks { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
 .factlinks a {
   font-size: 12.5px; font-weight: 600; color: var(--text-secondary); text-decoration: none;
-  border: 1px solid var(--border-glass-soft); border-radius: var(--radius-pill); padding: 5px 13px;
+  border: 1px solid var(--border-control); border-radius: var(--radius-pill); padding: 5px 13px;
 }
-.factlinks a:hover { color: #fff; border-color: var(--border-glass); }
+.factlinks a:hover { color: #fff; border-color: var(--border-control-strong); }
 .mapframe { border: 0; width: 100%; height: 190px; border-radius: 14px; filter: grayscale(.2) contrast(1.05); }
 .coordline { font-family: var(--font-data); font-size: 11.5px; color: var(--text-tertiary); margin-top: 6px; }
 .hoursline { font-family: var(--font-data); font-size: 11.5px; color: var(--text-secondary); line-height: 1.8; white-space: pre-line; }
@@ -779,17 +815,17 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .reviewbar .navbtn:hover { background: var(--surface-glass); color: #fff; }
 .reviewbar .pos { font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary); min-width: 52px; text-align: center; }
 .rbtn {
-  border: 1px solid var(--border-glass-soft); background: transparent; color: var(--text-secondary);
+  border: 1px solid var(--border-control); background: transparent; color: var(--text-secondary);
   font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: var(--radius-pill);
   transition: all 160ms;
 }
-.rbtn.save { border-color: var(--border-glass); color: #fff; }
+.rbtn.save { border-color: var(--border-control-strong); color: #fff; }
 .rbtn.save.dirty { background: var(--grad-ai); border-color: transparent; }
 .rbtn.approve:hover, .rbtn.approve.on { background: rgba(74, 222, 128, 0.16); color: var(--ok); border-color: var(--ok); }
 .rbtn.flag:hover, .rbtn.flag.on { background: rgba(248, 113, 113, 0.14); color: var(--bad); border-color: var(--bad); }
 .rbtn:disabled { opacity: .45; cursor: default; }
 .notefield {
-  background: var(--bg-input); border: 1px solid var(--border-glass-soft);
+  background: var(--bg-input); border: 1px solid var(--border-control);
   border-radius: var(--radius-pill); color: var(--text-primary);
   font-size: 12.5px; padding: 8px 14px; width: 200px;
 }
@@ -836,7 +872,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .login .loginsub { color: var(--text-tertiary); font-size: 14px; margin: 0 0 18px; }
 .login form { display: flex; flex-direction: column; gap: 10px; width: min(320px, 100%); }
 .login input {
-  background: var(--bg-input); border: 1px solid var(--border-glass-soft);
+  background: var(--bg-input); border: 1px solid var(--border-control);
   border-radius: var(--radius-input); color: var(--text-primary);
   font-size: 15px; padding: 12px 14px; text-align: center;
 }
@@ -868,7 +904,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .addplace .addsub { color: var(--text-tertiary); font-size: 13.5px; max-width: 560px; margin: 0 0 18px; }
 .addsearch { display: flex; gap: 10px; margin-bottom: 12px; max-width: 560px; }
 .addsearch input {
-  flex: 1; background: var(--bg-input); border: 1px solid var(--border-glass-soft);
+  flex: 1; background: var(--bg-input); border: 1px solid var(--border-control);
   border-radius: var(--radius-pill); color: var(--text-primary);
   font-size: 14px; padding: 10px 16px;
 }
@@ -1155,10 +1191,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .reppill {
   font-family: var(--font-data); font-size: 13px; letter-spacing: 0.02em;
   padding: 6px 12px; border-radius: 999px;
-  background: var(--surface-glass); border: 1px solid var(--border-soft);
-  color: var(--text-2);
+  background: var(--surface-glass); border: 1px solid var(--border-glass-soft);
+  color: var(--text-secondary);
 }
-.reppill.bad { color: var(--bad); border-color: rgba(194, 86, 74, 0.4); }
+.reppill.bad { color: var(--bad); border-color: rgba(248, 113, 113, 0.4); }
 
 .repcard { max-width: 860px; margin-bottom: 12px; }
 /* An answered report stays on the page — the desk should be able to see
@@ -1169,21 +1205,21 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .repstate {
   font-family: var(--font-data); font-size: 12px; text-transform: uppercase;
   letter-spacing: 0.08em; padding: 4px 9px; border-radius: 6px;
-  background: var(--surface-glass); color: var(--text-2);
+  background: var(--surface-glass); color: var(--text-secondary);
 }
 .repstate.due { color: var(--warn); background: rgba(246, 164, 92, 0.12); }
-.repstate.overdue { color: var(--bad); background: rgba(194, 86, 74, 0.14); }
-.repkind { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
-.repreason { font-size: 13px; color: var(--text); font-weight: 600; }
-.rephandle { font-family: var(--font-data); font-size: 13px; color: var(--text-3); }
+.repstate.overdue { color: var(--bad); background: rgba(248, 113, 113, 0.14); }
+.repkind { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+.repreason { font-size: 13px; color: var(--text-primary); font-weight: 600; }
+.rephandle { font-family: var(--font-data); font-size: 13px; color: var(--text-tertiary); }
 
 /* The words being judged, quoted at reading size — this is the evidence,
    not a caption. */
-.reptext { margin: 0 0 6px; font-size: 15px; line-height: 1.5; color: var(--text); }
-.repnote { margin: 0 0 6px; font-size: 14px; line-height: 1.5; color: var(--text-2); font-style: italic; }
+.reptext { margin: 0 0 6px; font-size: 15px; line-height: 1.5; color: var(--text-primary); }
+.repnote { margin: 0 0 6px; font-size: 14px; line-height: 1.5; color: var(--text-secondary); font-style: italic; }
 .repacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.syncbtn.danger { color: var(--bad); border-color: rgba(194, 86, 74, 0.35); }
-.syncbtn.danger:hover { background: rgba(194, 86, 74, 0.12); }
+.syncbtn.danger { color: var(--bad); border-color: rgba(248, 113, 113, 0.65); }
+.syncbtn.danger:hover { background: rgba(248, 113, 113, 0.12); }
 
 /* The waiting count beside a nav item. Mono, because it is a number the
    desk acts on rather than a label; and pushed to the end of the row so
@@ -1192,5 +1228,5 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   margin-left: auto;
   font-family: var(--font-data); font-size: 12px; font-weight: 700;
   min-width: 20px; padding: 2px 6px; border-radius: 999px; text-align: center;
-  background: rgba(194, 86, 74, 0.16); color: var(--bad);
+  background: rgba(248, 113, 113, 0.16); color: var(--bad);
 }
