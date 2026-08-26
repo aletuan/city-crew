@@ -141,15 +141,39 @@ describe('saveTrip', () => {
 });
 
 describe('fetchMyTrips', () => {
-  it('reads this owner’s trips, newest day first', async () => {
+  it('reads the trips this caller can open, newest day first', async () => {
     fake().replies({ data: [{ id: 't-1', trip_stops: [] }] });
     const out = await fetchMyTrips('u-1');
     expect(out.map((t) => t.id)).toEqual(['t-1']);
 
     const [q] = fake().log;
     expect(q.table).toBe('trips');
-    expect(q.filters).toEqual([['owner_id', 'u-1']]);
     expect(q.order).toEqual(['day', { ascending: false }]);
+  });
+
+  // This asserted `owner_id = u-1` until the trip_invites migration, and
+  // the assertion was right for as long as a trip was readable by exactly
+  // one person. It is now inverted, deliberately: an invitee reads the
+  // trip from the moment they are asked, so a filter on the owner would
+  // hide the rows the invitation screens exist to draw.
+  //
+  // Nothing replaces it. RLS returns exactly the trips this caller may
+  // see, and a hand-written clause here saying the same thing would be the
+  // copy that drifts — the policies are asserted in
+  // supabase/tests/trip_invites_test.sql against a real client, which is
+  // something no fake can do.
+  it('leaves the scoping to the policies rather than keeping a second copy', async () => {
+    fake().replies({ data: [] });
+    await fetchMyTrips('u-1');
+    expect(fake().log[0].filters.map(([k]) => k)).not.toContain('owner_id');
+  });
+
+  // And the column comes back, because the caller now has to tell a trip
+  // they planned from one they were invited to.
+  it('selects who planned it', async () => {
+    fake().replies({ data: [] });
+    await fetchMyTrips('u-1');
+    expect(String(fake().log[0].payload)).toContain('owner_id');
   });
 
   // Not scoped to a city, for the reason a user's own collections are not:

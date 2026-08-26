@@ -37,4 +37,5 @@ export * from './collections';
 export * from './trips';
 export * from './preferences';
 export * from './people';
+export * from './invites';
 export * from './hooks';
