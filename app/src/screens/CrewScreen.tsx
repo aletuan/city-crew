@@ -57,9 +57,19 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const tabClearance = useTabBarClearance();
   const ships = useFriendships(me);
   const blocks = useMyBlocks(me);
+  // Reload on return: requests are answered on other screens, and without
+  // this you would come back to the crew you left. The first focus is
+  // skipped — the hooks have already loaded on mount, and refetching there
+  // doubled every wave downstream of `loadedAt`: edges, faces, mutual
+  // saves, each arriving twice while the reader watched the rows settle
+  // twice. Same pattern as Collections and Trips.
+  const firstFocus = useRef(true);
+  useFocusEffect(useCallback(() => {
+    if (firstFocus.current) { firstFocus.current = false; return; }
+    ships.reload(); blocks.reload();
   // The two `.reload`s are stable; their Fetch wrappers are not.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useFocusEffect(useCallback(() => { ships.reload(); blocks.reload(); }, [ships.reload, blocks.reload]));
+  }, [ships.reload, blocks.reload]));
 
   const crew = useMemo(() => splitFriendships(ships.data, me ?? ''), [ships.data, me]);
 
