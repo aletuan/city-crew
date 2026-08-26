@@ -118,6 +118,6 @@ test('niceMax lands on round ticks: the mock axes and the awkward cases', () => 
 test('palette and city metadata hold the shapes the screen leans on', () => {
   assert.equal(SERIES_COLORS.length, TOP_N);
   assert.equal(new Set(SERIES_COLORS).size, TOP_N);
-  assert.deepEqual(CITY_META.map((c) => c.id), ['hcmc', 'hanoi', 'danang']);
+  assert.deepEqual(CITY_META.map((c) => c.id), ['hcmc', 'hanoi', 'danang', 'dalat', 'hue']);
   assert.equal(dayKey(new Date(2026, 0, 5)), '2026-01-05');
 });
