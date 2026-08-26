@@ -7,6 +7,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Animated, SectionList, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
@@ -35,6 +36,8 @@ type Drag = ReturnType<Animated.Value['interpolate']>;
  *  clamps its own travel to whatever they measure, so this figure only sets
  *  how fast the card's insides shrink on the way there. */
 const ACTIONS_W = 62 * 2 + 8 + 8;
+/** Where the Yours tab's tile/list choice sleeps between launches. */
+const VIEW_KEY = 'citycrew.collections.view';
 const THUMB = 92;
 const THUMB_OPEN = 64;
 /** The disclosure chevron's own footprint — it is a glyph, not a control,
@@ -429,25 +432,50 @@ export default function CollectionsScreen({ navigation, route }: {
     ? findCollections(list.map((c) => ({ c, members: membersOf(c, places) })), q)
     : list);
 
-  // The two tabs stopped sharing a layout the day they stopped sharing a
-  // job. Yours is a library: dense rows that swipe, carry a padlock and
-  // a status, and are scanned by name. Community is a storefront: covers
-  // first, in the Explore shelf's own card language, two to a row — six
-  // covers where the rows showed three. SectionList knows nothing of
-  // columns, so the grid packs itself: two cards per row-item, and the
-  // odd last card keeps a spacer where its neighbour would be.
+  // The community half is a storefront — covers first, in the Explore
+  // shelf's own card language, two to a row, six covers where the rows
+  // showed three. Your own half gets the same tiles by default and a
+  // small switch back to the rows, because your library is browsed on
+  // some days and managed on others: tiles show it off, rows carry the
+  // swipe-to-edit and are scanned by name. The choice is remembered.
+  // What tiles give up — the swipe shortcuts — the collection's own
+  // screen still has, in its ⋯ menu.
   const { width: winW } = useWindowDimensions();
   const gcardW = Math.round((winW - space.page * 2 - space.cardGap) / 2);
   const gcardH = Math.round(gcardW * 1.18);
-  type ListRow = { kind: 'own'; c: Collection } | { kind: 'pair'; pair: Collection[] };
-  const pairUp = (list: Collection[]): ListRow[] => {
+  const [view, setView] = useState<'tile' | 'row'>('tile');
+  useEffect(() => {
+    AsyncStorage.getItem(VIEW_KEY)
+      .then((v) => { if (v === 'row' || v === 'tile') setView(v); })
+      .catch(() => {});
+  }, []);
+  const pickView = (v: 'tile' | 'row') => {
+    setView(v);
+    AsyncStorage.setItem(VIEW_KEY, v).catch(() => {});
+  };
+
+  // SectionList knows nothing of columns, so the grid packs itself: two
+  // cards per row-item, and the odd last card keeps a spacer where its
+  // neighbour would be. The pair carries whose it is — the card shows a
+  // padlock for your own and a byline for everyone else's.
+  type ListRow =
+    | { kind: 'own'; c: Collection }
+    | { kind: 'pair'; pair: Collection[]; own: boolean };
+  const pairUp = (list: Collection[], own: boolean): ListRow[] => {
     const out: ListRow[] = [];
-    for (let i = 0; i < list.length; i += 2) out.push({ kind: 'pair', pair: list.slice(i, i + 2) });
+    for (let i = 0; i < list.length; i += 2) out.push({ kind: 'pair', pair: list.slice(i, i + 2), own });
     return out;
   };
   const sections = session && tab === 'yours'
-    ? (mineReady ? [{ own: true, data: sift(mine.data).map((c): ListRow => ({ kind: 'own', c })) }] : [])
-    : [{ own: false, data: pairUp(sift(visible)) }];
+    ? (mineReady
+      ? [{
+        own: true,
+        data: view === 'tile'
+          ? pairUp(sift(mine.data), true)
+          : sift(mine.data).map((c): ListRow => ({ kind: 'own', c })),
+      }]
+      : [])
+    : [{ own: false, data: pairUp(sift(visible), false) }];
 
   return (
     // No control in the header: creating belongs to the Yours tab, which
@@ -487,6 +515,34 @@ export default function CollectionsScreen({ navigation, route }: {
             ]}
             active={tab}
             onChange={setTab}
+            // The switch only where it has two things to switch between:
+            // Community is tiles by design, so on that tab the row's end
+            // stays empty.
+            right={tab === 'yours' ? (
+              <View style={s.viewToggle}>
+                {(['row', 'tile'] as const).map((v) => (
+                  <PressableScale
+                    key={v}
+                    style={[s.viewBtn, view === v && s.viewBtnOn]}
+                    scaleTo={0.9}
+                    haptic="selection"
+                    hitSlop={6}
+                    onPress={() => pickView(v)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: view === v }}
+                    accessibilityLabel={v === 'tile'
+                      ? t('Tile view', 'Dạng lưới', 'タイル表示')
+                      : t('List view', 'Dạng danh sách', 'リスト表示')}
+                  >
+                    <Ionicons
+                      name={v === 'tile' ? 'grid-outline' : 'list-outline'}
+                      size={14}
+                      color={view === v ? colors.accent : colors.textTertiary}
+                    />
+                  </PressableScale>
+                ))}
+              </View>
+            ) : null}
           />
         ) : null}
         {searching ? (
@@ -576,17 +632,31 @@ export default function CollectionsScreen({ navigation, route }: {
                             </Text>
                             {/* Whose list this is, on the kerb where it is
                                 browsed — yours included: on this shelf your
-                                public list is one of the community's. */}
-                            {c.curator_handle ? (
+                                public list is one of the community's. On
+                                your own tab the byline would only say your
+                                own name, so the padlock speaks instead. */}
+                            {!item.own && c.curator_handle ? (
                               <Text style={s.gcardBy} numberOfLines={1}>
                                 {t('by', 'bởi', 'by')} {atHandle(c.curator_handle)}
                               </Text>
                             ) : null}
                             <View style={s.gcardFoot}>
+                              {item.own && (
+                                <Ionicons
+                                  name={c.is_public ? 'globe-outline' : 'lock-closed-outline'}
+                                  size={12}
+                                  color={c.is_public ? colors.ok : onPhoto.textSecondary}
+                                />
+                              )}
                               <Text style={s.gcardMeta}>
-                                {members} {t(members === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
+                                {members === 0
+                                  ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
+                                  : `${members} ${t(members === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`}
                               </Text>
-                              {c.id ? (
+                              {/* Only where a like is possible: a private
+                                  list is one nobody may like, and a heart
+                                  on it would be an invitation to nothing. */}
+                              {c.id && c.is_public ? (
                                 <PressableScale
                                   containerStyle={{ marginLeft: 'auto' }}
                                   style={s.gcardLikes}
@@ -826,9 +896,24 @@ const s = StyleSheet.create({
   gcardText: { padding: 12, gap: 2 },
   gcardTitle: { color: onPhoto.text, fontSize: 15.5, fontWeight: font.semibold, lineHeight: 19 },
   gcardBy: { color: onPhoto.textSecondary, fontSize: 12.5 },
-  gcardFoot: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
+  gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   gcardMeta: { color: onPhoto.textSecondary, fontSize: 12.5 },
   gcardLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+
+  // The tile/list switch — two glyphs in a quiet glass capsule, the
+  // chosen one seated on a solid thumb. Small on purpose: it is a
+  // preference, not a destination.
+  viewToggle: {
+    flexDirection: 'row', gap: 2, padding: 3,
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: 1, borderColor: colors.borderGlassSoft,
+    borderRadius: radius.pill,
+  },
+  viewBtn: {
+    width: 26, height: 22, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  viewBtnOn: { backgroundColor: colors.surfaceCard },
 
   searchRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
