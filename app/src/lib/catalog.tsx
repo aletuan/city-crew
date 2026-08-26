@@ -191,20 +191,20 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Signed out there is no such thing as your own like, so the layer
     // goes with the session rather than surviving it.
-    setPending((p) => (meId ? settled(p, myLikes.data) : NO_PENDING));
-  }, [meId, myLikes.data]);
+    setPending((p) => (meId ? settled(p, myLikes.data, likeCounts.loadedAt) : NO_PENDING));
+  }, [meId, myLikes.data, likeCounts.loadedAt]);
 
   const liked = useMemo(() => likedNow(myLikes.data, pending), [myLikes.data, pending]);
   const counts = useMemo(
-    () => countsNow(likeCounts.data, myLikes.data, pending),
-    [likeCounts.data, myLikes.data, pending],
+    () => countsNow(likeCounts.data, likeCounts.loadedAt, pending),
+    [likeCounts.data, likeCounts.loadedAt, pending],
   );
 
   const toggleLike = useCallback(async (c: { id: string; slug: string }) => {
     if (!meId || inFlight.current.has(c.id)) return;
     const want = !liked.includes(c.id);
     inFlight.current.add(c.id);
-    setPending((p) => ({ ...p, [c.id]: { slug: c.slug, liked: want } }));
+    setPending((p) => ({ ...p, [c.id]: { slug: c.slug, liked: want, at: Date.now() } }));
     try {
       const ok = want
         ? await likeCollection(c.id, meId)

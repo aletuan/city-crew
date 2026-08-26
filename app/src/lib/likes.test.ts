@@ -101,7 +101,11 @@ describe('likesWorthShowing', () => {
   });
 });
 
-const tap = (slug: string, liked: boolean): Pending[string] => ({ slug, liked });
+// Taps happen at t=100 unless a case says otherwise; a counts snapshot at
+// t=50 predates them (stale), one at t=150 contains them (fresh).
+const tap = (slug: string, liked: boolean, at = 100): Pending[string] => ({ slug, liked, at });
+const STALE = 50;
+const FRESH = 150;
 
 describe('likedNow', () => {
   it('is the server answer when nothing has been tapped', () => {
@@ -131,27 +135,41 @@ describe('likedNow', () => {
 describe('countsNow', () => {
   it('hands back the very same map when no tap changes anything', () => {
     const counts = { alpha: 7 };
-    expect(countsNow(counts, ['a'], { a: tap('alpha', true) })).toBe(counts);
-    expect(countsNow(counts, [], NO_PENDING)).toBe(counts);
+    expect(countsNow(counts, FRESH, { a: tap('alpha', true) })).toBe(counts);
+    expect(countsNow(counts, STALE, NO_PENDING)).toBe(counts);
   });
 
   it('moves the tally with the heart', () => {
-    expect(countsNow({ alpha: 7 }, [], { a: tap('alpha', true) })).toEqual({ alpha: 8 });
-    expect(countsNow({ alpha: 7 }, ['a'], { a: tap('alpha', false) })).toEqual({ alpha: 6 });
+    expect(countsNow({ alpha: 7 }, STALE, { a: tap('alpha', true) })).toEqual({ alpha: 8 });
+    expect(countsNow({ alpha: 7 }, STALE, { a: tap('alpha', false) })).toEqual({ alpha: 6 });
+  });
+
+  // The regression this layer was rebuilt for: the reader's own likes
+  // confirmed the row while the counts still rode the slow lane, and the
+  // tally flicked 3 → 2 → 3. The claim must outlive that confirmation —
+  // only a snapshot fetched after the tap may retire it.
+  it('holds the claim over a snapshot older than the tap', () => {
+    expect(countsNow({ alpha: 2 }, STALE, { a: tap('alpha', true) })).toEqual({ alpha: 3 });
+    expect(countsNow({ alpha: 2 }, null, { a: tap('alpha', true) })).toEqual({ alpha: 3 });
+  });
+
+  it('stands down once the snapshot postdates the tap', () => {
+    const fresh = { alpha: 3 };
+    expect(countsNow(fresh, FRESH, { a: tap('alpha', true) })).toBe(fresh);
   });
 
   it('counts a first like on a list that has never been counted', () => {
-    expect(countsNow({}, [], { a: tap('alpha', true) })).toEqual({ alpha: 1 });
+    expect(countsNow({}, null, { a: tap('alpha', true) })).toEqual({ alpha: 1 });
   });
 
-  // The counts are public and a reader's own likes are private, so they
-  // come from two queries and nothing promises they were read together.
+  // The counts are public and a tap is local, so nothing promises the
+  // snapshot and the claim describe the same instant.
   it('refuses to print a negative tally', () => {
-    expect(countsNow({ alpha: 0 }, ['a'], { a: tap('alpha', false) })).toEqual({ alpha: 0 });
+    expect(countsNow({ alpha: 0 }, STALE, { a: tap('alpha', false) })).toEqual({ alpha: 0 });
   });
 
   it('leaves every other list alone', () => {
-    expect(countsNow({ alpha: 7, beta: 2 }, [], { a: tap('alpha', true) }))
+    expect(countsNow({ alpha: 7, beta: 2 }, STALE, { a: tap('alpha', true) }))
       .toEqual({ alpha: 8, beta: 2 });
   });
 });
@@ -159,17 +177,31 @@ describe('countsNow', () => {
 describe('settled', () => {
   it('hands back the very same map while every tap is still in flight', () => {
     const pending: Pending = { a: tap('alpha', true) };
-    expect(settled(pending, [])).toBe(pending);
-    expect(settled(NO_PENDING, ['a'])).toBe(NO_PENDING);
+    expect(settled(pending, [], STALE)).toBe(pending);
+    expect(settled(NO_PENDING, ['a'], FRESH)).toBe(NO_PENDING);
   });
 
-  it('forgets a tap the server has caught up with', () => {
-    expect(settled({ a: tap('alpha', true) }, ['a'])).toEqual({});
-    expect(settled({ a: tap('alpha', false) }, [])).toEqual({});
+  it('forgets a tap once both witnesses have caught up', () => {
+    expect(settled({ a: tap('alpha', true) }, ['a'], FRESH)).toEqual({});
+    expect(settled({ a: tap('alpha', false) }, [], FRESH)).toEqual({});
+  });
+
+  // One witness is not enough — this is the drop that caused the flicker.
+  it('keeps a tap the likes confirmed while the counts have not', () => {
+    const pending: Pending = { a: tap('alpha', true) };
+    expect(settled(pending, ['a'], STALE)).toBe(pending);
+    expect(settled(pending, ['a'], null)).toBe(pending);
+  });
+
+  it('keeps a tap the counts postdate while the likes disagree', () => {
+    const pending: Pending = { a: tap('alpha', true) };
+    expect(settled(pending, [], FRESH)).toBe(pending);
   });
 
   it('keeps the ones still in flight when only some have landed', () => {
     const pending: Pending = { a: tap('alpha', true), b: tap('beta', true) };
-    expect(settled(pending, ['a'])).toEqual({ b: tap('beta', true) });
+    expect(settled(pending, ['a', 'b'], 120)).toEqual({});
+    expect(settled({ a: tap('alpha', true, 100), b: tap('beta', true, 200) }, ['a', 'b'], 150))
+      .toEqual({ b: tap('beta', true, 200) });
   });
 });
