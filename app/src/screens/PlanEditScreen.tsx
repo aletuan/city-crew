@@ -24,9 +24,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
-  AmbientWarmth, Card, GradientCta, PressableScale, RoundIconButton, Screen, fireHaptic,
+  AmbientWarmth, Avatar, Card, GradientCta, PressableScale, RoundIconButton, Screen, fireHaptic,
   successHaptic, useTabBarClearance,
 } from '../components/ui';
 import {
@@ -54,7 +53,7 @@ import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
-import { colors, font, gradAI, radius, space, type } from '../theme';
+import { colors, font, radius, space, type } from '../theme';
 
 const money = (vnd: number) => (vnd >= 1_000_000
   ? `${Math.round(vnd / 100_000) / 10}M ₫`
@@ -69,7 +68,7 @@ export default function PlanEditScreen({ navigation, route }: {
   const p = route.params;
   const { data: places } = usePlaces();
   const { city } = useCity();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const { mine } = useSave();
   const { taste, budgetVnd } = usePlanProfile();
   const note = useNoteEvent();
@@ -340,23 +339,24 @@ export default function PlanEditScreen({ navigation, route }: {
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Mocked, and labelled. The avatars are the reader's own initial
-            twice over rather than invented names — a fake second person on
-            a trip nobody can share is a lie with a face on it. */}
-        <View style={s.crew}>
-          <View style={s.avatars}>
-            <LinearGradient {...gradAI} style={s.avatar}>
-              <Text style={s.avatarText}>
-                {(session?.user?.email ?? '?').slice(0, 1).toUpperCase()}
-              </Text>
-            </LinearGradient>
+        {/* The reader's own face — the profile has one now, so the initial
+            it used to wear is only the fallback Avatar itself draws.
+            Invite stays a labelled mock (there is still no membership
+            table), and the whole row stays out of a trip planned alone:
+            "just you, for now" with an invite button under a plan the
+            reader marked "just me" is the app arguing with them. */}
+        {p.company !== 'solo' && (
+          <View style={s.crew}>
+            <View style={s.avatars}>
+              <Avatar url={profile.avatar_url} size={30} />
+            </View>
+            <Text style={s.crewText}>{t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ')}</Text>
+            <PressableScale onPress={() => mock(t('Invite', 'Mời thêm', '招待'))} style={s.ghost}>
+              <Ionicons name="person-add-outline" size={14} color={colors.textSecondary} />
+              <Text style={s.ghostText}>{t('Invite', 'Mời', '招待')}</Text>
+            </PressableScale>
           </View>
-          <Text style={s.crewText}>{t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ')}</Text>
-          <PressableScale onPress={() => mock(t('Invite', 'Mời thêm', '招待'))} style={s.ghost}>
-            <Ionicons name="person-add-outline" size={14} color={colors.textSecondary} />
-            <Text style={s.ghostText}>{t('Invite', 'Mời', '招待')}</Text>
-          </PressableScale>
-        </View>
+        )}
 
         <Text style={s.eyebrow}>
           {t('STOPS · NUDGE A TIME OR MOVE ONE', 'CÁC ĐIỂM · CHỈNH GIỜ HOẶC ĐỔI THỨ TỰ', 'スポット · 時間や順番を調整')}
@@ -583,8 +583,6 @@ const s = StyleSheet.create({
 
   crew: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: space.titleToContent },
   avatars: { flexDirection: 'row' },
-  avatar: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: colors.accentInk, fontWeight: font.bold, fontSize: 13 },
   crewText: { ...CAPTION, color: colors.textSecondary, flex: 1 },
   ghost: {
     flexDirection: 'row', alignItems: 'center', gap: 5,

@@ -321,13 +321,24 @@ export function resetNarrationCache(): void {
  * The title goes when the list changes **at all**, including order: "Coffee,
  * then dinner" is a claim about sequence as much as about content.
  *
- * A `why` goes when its stop moves, because position is what these
+ * A `why` goes when its stop changes *role*, because role is what these
  * sentences lean on — "an easy first stop", "somewhere to end up". The
- * *hour* is deliberately not tracked, though a line may well mention it:
- * every arrival after an edited one shifts, so tracking the clock would
- * delete the whole narration for a fifteen-minute nudge. "At six" when it
- * is now 18:15 is a much smaller untruth than "a second stop" on the first
- * one, and paying for it with all of the prose is the worse trade.
+ * first cut tracked the absolute index instead, and paid too much for the
+ * same safety: deleting the first stop shifted every survivor's index and
+ * took every sentence with it, when the middle stops were still middle
+ * and the closer was still the closer. So the test is the pair
+ * (first?, last?): a line survives while its stop opens the day exactly
+ * if it did before, and closes it exactly if it did before. Deleting a
+ * middle stop keeps the prose; promoting one to first — the lie the old
+ * rule was built against, "a second stop" standing first — still retires
+ * its line.
+ *
+ * The *hour* is deliberately not tracked, though a line may well mention
+ * it: every arrival after an edited one shifts, so tracking the clock
+ * would delete the whole narration for a fifteen-minute nudge. "At six"
+ * when it is now 18:15 is a much smaller untruth than "a second stop" on
+ * the first one, and paying for it with all of the prose is the worse
+ * trade.
  */
 export function freshen(
   words: Narration,
@@ -339,9 +350,16 @@ export function freshen(
   const sameList = narrated.length === current.length
     && narrated.every((slug, i) => slug === current[i]);
 
+  // The role a position plays, as the pair the sentences lean on. Both
+  // halves must hold: in a one-stop plan the survivor is first *and*
+  // last, so a line written for either role alone is retired.
+  const role = (i: number, n: number) => (i === 0 ? 'F' : '-') + (i === n - 1 ? 'L' : '-');
   const why = new Map<string, string>();
   for (const [slug, line] of words.why) {
-    if (narrated.indexOf(slug) === current.indexOf(slug)) why.set(slug, line);
+    const was = narrated.indexOf(slug);
+    const now = current.indexOf(slug);
+    if (now === -1) continue;
+    if (role(was, narrated.length) === role(now, current.length)) why.set(slug, line);
   }
 
   const title = sameList ? words.title : null;
