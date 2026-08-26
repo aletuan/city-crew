@@ -12,7 +12,7 @@
 // gone. See the named_applause migration for why the owner is not
 // "the public" that the likes table's privacy promise protects against.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -50,9 +50,17 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const trips = useMyTrips(me);
   const mine = useMyCollections(me);
   const cols = useCollections();
+  // Reload on return: a request answered on the Crew screen should be
+  // gone from here by the time you come back. The first focus is skipped —
+  // the hook has already loaded on mount, and refetching there is a second
+  // identical request for nothing. Same pattern as Collections and Trips.
+  const firstFocus = useRef(true);
+  useFocusEffect(useCallback(() => {
+    if (firstFocus.current) { firstFocus.current = false; return; }
+    ships.reload();
   // `ships.reload` is stable; `ships` is a new object on every load.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useFocusEffect(useCallback(() => { ships.reload(); }, [ships.reload]));
+  }, [ships.reload]));
 
   const crew = useMemo(() => splitFriendships(ships.data, me ?? ''), [ships.data, me]);
 
