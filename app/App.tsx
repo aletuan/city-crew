@@ -18,6 +18,7 @@ import { startupTrace } from './src/lib/trace';
 import { CatalogProvider } from './src/lib/catalog';
 import { CrewProvider } from './src/lib/crew';
 import { InvitationsProvider } from './src/lib/invitations';
+import { MyTripsProvider } from './src/lib/mytrips';
 import { SaveProvider } from './src/lib/save';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
@@ -258,6 +259,11 @@ function Root() {
                         Inside the crew, because every invitation names a
                         friend and takes its face from that copy. */}
                     <InvitationsProvider>
+                    {/* And the trips, the fourth time: the Trips tab, a
+                        trip's own screen, the answer screen and Activity
+                        all read the one list — and a delete on any of
+                        them lands in the copy the others draw. */}
+                    <MyTripsProvider>
                     <SaveProvider>
                       {/* The duck state sits above the navigator: screens
                           report scrolls into it, the bar animates out of it. */}
@@ -265,6 +271,7 @@ function Root() {
                         <Tabs />
                       </TabBarDuckProvider>
                     </SaveProvider>
+                    </MyTripsProvider>
                     </InvitationsProvider>
                   </CrewProvider>
                 </CatalogProvider>

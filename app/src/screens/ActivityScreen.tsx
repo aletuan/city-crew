@@ -26,8 +26,8 @@ import { useCrew } from '../lib/crew';
 import {
   acceptFriendRequest, blockUser, fetchApplause,
   type FriendProfile, removeFriendship, useMyCollections,
-  useMyTrips,
 } from '../lib/data';
+import { useMyTrips } from '../lib/mytrips';
 import { todayISO } from '../lib/day';
 import {
   type ActivityItem, agoOf, type Applause, buildActivity, splitFriendships,
@@ -51,7 +51,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // provider's `people` covers every id the edges mention, askers
   // included.
   const { ships, people: askers } = useCrew();
-  const trips = useMyTrips(me);
+  const trips = useMyTrips();
   const mine = useMyCollections(me);
   const cols = useCollections();
 

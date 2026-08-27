@@ -17,7 +17,6 @@ import { fetchCategoryTerms, fetchPlaceBySlug, fetchPlaces } from './places';
 import {
   fetchCollections, fetchLikeCounts, fetchMyCollections, fetchMyLikes,
 } from './collections';
-import { fetchMyTrips, type Trip } from './trips';
 import { fetchPreferences, NO_PREFERENCES } from './preferences';
 import { fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
 
@@ -115,13 +114,9 @@ export const useMyCollections = (ownerId: string | null | undefined) => {
   return useFetch(fetcher, [] as Collection[]);
 };
 
-export const useMyTrips = (ownerId: string | null | undefined) => {
-  const fetcher = useCallback(
-    () => (ownerId ? fetchMyTrips(ownerId) : Promise.resolve([] as Trip[])),
-    [ownerId],
-  );
-  return useFetch(fetcher, [] as Trip[]);
-};
+// Trips have no hook here either — `lib/mytrips` fetches them once for
+// the whole app and persists them the way the catalog queries persist
+// themselves; four screens read that one copy.
 
 export const useMyPreferences = (ownerId: string | null | undefined) => {
   const fetcher = useCallback(

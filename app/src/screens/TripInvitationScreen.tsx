@@ -30,7 +30,8 @@ import {
 import { useAuth } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { fromISO } from '../lib/day';
-import { answerInvite, useMyTrips } from '../lib/data';
+import { answerInvite } from '../lib/data';
+import { useMyTrips } from '../lib/mytrips';
 import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
@@ -53,7 +54,7 @@ export default function TripInvitationScreen({ navigation, route }: {
   const { people } = useCrew();
   const { invites, crewCounts } = useInvitations();
   const clearance = useTabBarClearance();
-  const trips = useMyTrips(session?.user?.id);
+  const trips = useMyTrips();
 
   const [busy, setBusy] = useState(false);
 
