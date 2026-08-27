@@ -190,12 +190,18 @@ function GuestHub({ navigation }: { navigation: Nav }) {
           <Ionicons name="person-outline" size={40} color={colors.accent} />
         </View>
         <View style={{ flex: 1, gap: 6 }}>
-          <Text style={s.heroTitle}>{t("You're browsing as a guest", 'Bạn đang xem với tư cách khách', 'ゲストとして閲覧中です')}</Text>
+          {/* A promise, not a status. "You're browsing as a guest" was a
+              true sentence about what the reader lacks; the apps that do
+              this well lead with what signing in opens. And the body
+              stops listing features — the three rows below are the list,
+              so the one thing said here is the one thing they don't say:
+              what you keep is kept under your name. */}
+          <Text style={s.heroTitle}>{t('Your next trip starts here', 'Chuyến đi tiếp theo bắt đầu từ đây', '次の旅は、ここから')}</Text>
           <Text style={s.heroBody}>
             {t(
-              'Sign in to save places, build collections and plan trips with your crew.',
-              'Đăng nhập để lưu địa điểm, tạo bộ sưu tập và lên kế hoạch cùng hội của bạn.',
-              'サインインして、お気に入りの場所を保存し、コレクションを作り、仲間と旅を計画しましょう。',
+              'Sign in to keep the places you love and the crew you go with — ready whenever you come back.',
+              'Đăng nhập để giữ những nơi bạn thích và hội cùng đi — luôn sẵn khi bạn quay lại.',
+              'サインインすれば、お気に入りの場所も一緒に行く仲間も、戻ってきたときそのままに。',
             )}
           </Text>
         </View>
@@ -205,7 +211,10 @@ function GuestHub({ navigation }: { navigation: Nav }) {
         style={s.guestLink}
         onPress={() => { fireHaptic('selection'); navigation.getParent()?.navigate('Explore'); }}
       >
-        <Text style={s.guestLinkText}>{t('Explore as guest', 'Khám phá với tư cách khách', 'ゲストのまま探索')}</Text>
+        {/* Shorter, and the word "guest" appears nowhere on the screen
+            now — the hero stopped saying it, and this line saying it
+            twice-removed was the last echo. */}
+        <Text style={s.guestLinkText}>{t('Keep exploring', 'Tiếp tục khám phá', '探索を続ける')}</Text>
         <Ionicons name="chevron-forward" size={15} color={colors.textSecondary} />
       </Pressable>
 
