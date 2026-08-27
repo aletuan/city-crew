@@ -171,7 +171,8 @@ run "$DB" -f "$HERE/collection_likes_test.sql"
 # text cannot show what a client actually gets back.
 echo "→ trip invites"
 for f in "$ROOT"/supabase/migrations/*_friendships.sql \
-         "$ROOT"/supabase/migrations/*_trip_invites.sql; do
+         "$ROOT"/supabase/migrations/*_trip_invites.sql \
+         "$ROOT"/supabase/migrations/*_trip_invites_leave.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/trip_invites_test.sql"

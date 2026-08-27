@@ -38,7 +38,7 @@ import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO } from '../lib/day';
 import {
-  deleteTrip, fetchCrewCounts, sendInvites, useMyTrips, withdrawInvites,
+  answerInvite, deleteTrip, fetchCrewCounts, sendInvites, useMyTrips, withdrawInvites,
   type TripStopRow,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
@@ -271,6 +271,35 @@ export default function TripDetailScreen({ navigation, route }: {
             .then(() => { navigation.goBack(); trips.reload(); })
             .catch((e: Error) => Alert.alert(
               t('Could not delete', 'Không xoá được', '削除できませんでした'), e.message,
+            ));
+        },
+      },
+    ],
+  );
+
+  /** The guest's version of the red button. Deleting is the owner's act —
+   *  a guest who pressed it reached a row RLS would not let them touch,
+   *  got a silent zero, and watched the trip "come back" on the next
+   *  refetch. What a guest actually does is leave: a late decline, which
+   *  ends their view of the plan for good and tells the planner the
+   *  truth — the crew row marks them "can't make it". */
+  const confirmLeave = () => Alert.alert(
+    t('Leave this trip?', 'Rời chuyến đi này?', 'この旅程から抜けますか？'),
+    t(
+      `"${trip.title}" will leave your list, and the planner will see you can't make it.`,
+      `"${trip.title}" sẽ rời khỏi danh sách của bạn; người mời sẽ thấy bạn không đi được.`,
+      `「${trip.title}」はリストから消え、招待した人には不参加と表示されます。`,
+    ),
+    [
+      { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+      {
+        text: t('Leave', 'Rời', '抜ける'),
+        style: 'destructive',
+        onPress: () => {
+          answerInvite(trip.id, 'declined')
+            .then(() => { navigation.goBack(); trips.reload(); invites.reload(); })
+            .catch((e: Error) => Alert.alert(
+              t('Could not leave', 'Không rời được', '退出できませんでした'), e.message,
             ));
         },
       },
@@ -614,10 +643,16 @@ export default function TripDetailScreen({ navigation, route }: {
           </Text>
         </Card>
 
-        <PressableScale onPress={confirmDelete} style={s.delete} accessibilityRole="button">
-          <Ionicons name="trash-outline" size={15} color={colors.bad} />
+        <PressableScale
+          onPress={owned ? confirmDelete : confirmLeave}
+          style={s.delete}
+          accessibilityRole="button"
+        >
+          <Ionicons name={owned ? 'trash-outline' : 'exit-outline'} size={15} color={colors.bad} />
           <Text style={s.deleteText}>
-            {t('Delete this trip', 'Xoá chuyến đi này', 'この旅程を削除')}
+            {owned
+              ? t('Delete this trip', 'Xoá chuyến đi này', 'この旅程を削除')
+              : t('Leave this trip', 'Rời chuyến đi này', 'この旅程から抜ける')}
           </Text>
         </PressableScale>
       </ScrollView>
