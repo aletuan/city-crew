@@ -28,7 +28,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FriendProfile } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { candidates, diffSelection, roomLeft, type InviteRow } from '../lib/invites';
+import {
+  candidates, companySeats, diffSelection, roomLeft, togglePick, type InviteRow,
+} from '../lib/invites';
 import { colors, display, font, space } from '../theme';
 import { Avatar, GradientCta, PressableScale } from './ui';
 
@@ -36,8 +38,9 @@ export default function InviteSheet({
   open, company, friendIds, people, mutual, invites, sending, onClose, onSend,
 }: {
   open: boolean;
-  /** Wording only — a couple's evening and four friends' evening ask the
-   *  same question with a different sentence under it. */
+  /** The sentence under the title, and the seat rule: a couple's evening
+   *  holds one guest, so its sheet swaps the pick instead of collecting
+   *  ticks — see `companySeats`/`togglePick`. */
   company: string | null;
   /** Accepted friends, in the order the crew list holds them. */
   friendIds: readonly string[];
@@ -77,14 +80,15 @@ export default function InviteSheet({
   // reads, and the ticks above already show the second half.
   const moved = invite.length + withdraw.length;
 
+  // The company's own ceiling, enforced by swap: on a couple's evening,
+  // ticking a second name steps the first aside (Send would withdraw it)
+  // rather than quietly collecting a crowd the trip's word rules out.
+  const seats = companySeats(company);
+  const seatsHeld = seats != null && rows.filter((r) => r.locked && r.seated).length >= seats;
+
   const toggle = (id: string, locked: boolean) => {
     if (locked) return;
-    setPicked((s) => {
-      const next = new Set(s);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setPicked((s) => togglePick(rows, s, id, seats));
   };
 
   const label = sending
@@ -193,11 +197,17 @@ export default function InviteSheet({
                 'Chuyến này đã đầy — một buổi tối tối đa hai mươi người.',
                 'この旅程は満員です — 一晩は最大20人までです。',
               )
-              : t(
-                'They see the plan once they accept. Times and stops stay yours to edit.',
-                'Họ thấy kế hoạch sau khi đồng ý. Giờ giấc và các điểm dừng vẫn do bạn sửa.',
-                '承諾すると予定が見えます。時刻とスポットはあなたが編集します。',
-              )}
+              : seatsHeld
+                ? t(
+                  'A couple’s evening is complete — your guest has answered.',
+                  'Buổi tối hai người đã đủ — người đi cùng đã trả lời.',
+                  'ふたりの夜はそろいました — 相手はもう回答しています。',
+                )
+                : t(
+                  'They see the plan once they accept. Times and stops stay yours to edit.',
+                  'Họ thấy kế hoạch sau khi đồng ý. Giờ giấc và các điểm dừng vẫn do bạn sửa.',
+                  '承諾すると予定が見えます。時刻とスポットはあなたが編集します。',
+                )}
           </Text>
         </View>
 

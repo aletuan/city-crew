@@ -169,8 +169,13 @@ export function roomLeft(invites: readonly InviteRow[]): number {
  * Withdrawing is only allowed while it is unanswered (see the delete
  * policy), and a checkbox that springs back is worse than one that does
  * not move.
+ *
+ * `seated` is the row that holds one of the trip's seats — a pending or
+ * accepted invitation. A refusal is locked but seatless: somebody who
+ * said no is not coming, and their row must not keep a couple's one
+ * guest seat occupied.
  */
-export type Candidate = { id: string; invited: boolean; locked: boolean };
+export type Candidate = { id: string; invited: boolean; locked: boolean; seated: boolean };
 
 export function candidates(
   friendIds: readonly string[], invites: readonly InviteRow[],
@@ -182,8 +187,55 @@ export function candidates(
       id,
       invited: !!inv,
       locked: !!inv && inv.status !== 'pending',
+      seated: !!inv && inv.status !== 'declined',
     };
   });
+}
+
+/**
+ * How many guests the company leaves room for beside the planner.
+ *
+ * A couple is two people, so one seat; solo seats nobody — its screens
+ * never open the sheet, and the zero keeps the rule honest if one ever
+ * does. Null for the companies that name no size (friends, family,
+ * other): there the only ceiling is `INVITE_CAP`.
+ */
+export function companySeats(company: string | null): number | null {
+  if (company === 'couple') return 1;
+  if (company === 'solo') return 0;
+  return null;
+}
+
+/**
+ * The next selection after tapping `id`, under the company's seat cap.
+ *
+ * Unticking always works, and so does ticking within the cap. Ticking
+ * past it swaps rather than refusing: the unanswered pick holding a seat
+ * steps aside for the new one — Send already knows how to invite and
+ * withdraw in one press, and a checkbox that silently refuses reads as
+ * broken. What cannot step aside is a seat held by an answered row:
+ * those ticks are not this sheet's to move, so when they fill the cap
+ * the selection comes back unchanged.
+ */
+export function togglePick(
+  rows: readonly Candidate[],
+  picked: ReadonlySet<string>,
+  id: string,
+  seats: number | null,
+): Set<string> {
+  const next = new Set(picked);
+  if (next.has(id)) { next.delete(id); return next; }
+  if (seats != null) {
+    // Answered rows hold their seats whatever the selection says — they
+    // are seeded ticked and cannot be unticked.
+    const held = rows.filter((r) => r.locked && r.seated).length;
+    const room = seats - held;
+    if (room <= 0) return next;
+    const free = rows.filter((r) => !r.locked && next.has(r.id));
+    for (const r of free.slice(0, Math.max(0, free.length + 1 - room))) next.delete(r.id);
+  }
+  next.add(id);
+  return next;
 }
 
 /**

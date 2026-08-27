@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  candidates, crewOf, diffSelection, headcount, INVITE_CAP, roomLeft,
-  sortInvites, splitByStanding, standingOn, waitingCount, type InviteRow,
+  candidates, companySeats, crewOf, diffSelection, headcount, INVITE_CAP, roomLeft,
+  sortInvites, splitByStanding, standingOn, togglePick, waitingCount, type InviteRow,
 } from './invites';
 
 const inv = (over: Partial<InviteRow> = {}): InviteRow => ({
@@ -160,8 +160,8 @@ describe('candidates', () => {
   it('shows an already-invited friend ticked rather than missing', () => {
     const rows = candidates(['a', 'b'], [inv({ invitee_id: 'a' })]);
     expect(rows).toEqual([
-      { id: 'a', invited: true, locked: false },
-      { id: 'b', invited: false, locked: false },
+      { id: 'a', invited: true, locked: false, seated: true },
+      { id: 'b', invited: false, locked: false, seated: false },
     ]);
   });
 
@@ -173,8 +173,63 @@ describe('candidates', () => {
     expect(rows.every((r) => r.locked)).toBe(true);
   });
 
+  it('seats the pending and the accepted, never the refusal', () => {
+    const rows = candidates(['a', 'b', 'c'], [
+      inv({ invitee_id: 'a', status: 'accepted' }),
+      inv({ invitee_id: 'b', status: 'declined' }),
+      inv({ invitee_id: 'c' }),
+    ]);
+    expect(rows.map((r) => r.seated)).toEqual([true, false, true]);
+  });
+
   it('keeps the order the crew list gave it', () => {
     expect(candidates(['c', 'a', 'b'], []).map((r) => r.id)).toEqual(['c', 'a', 'b']);
+  });
+});
+
+describe('companySeats', () => {
+  it('gives a couple one guest seat, solo none, and the rest no ceiling', () => {
+    expect(companySeats('couple')).toBe(1);
+    expect(companySeats('solo')).toBe(0);
+    expect(companySeats('friends')).toBeNull();
+    expect(companySeats('family')).toBeNull();
+    expect(companySeats(null)).toBeNull();
+  });
+});
+
+describe('togglePick', () => {
+  const free = candidates(['a', 'b', 'c'], []);
+
+  it('unticks without asking about seats', () => {
+    expect(togglePick(free, new Set(['a']), 'a', 1)).toEqual(new Set());
+  });
+
+  it('collects ticks freely when the company names no size', () => {
+    expect(togglePick(free, new Set(['a', 'b']), 'c', null))
+      .toEqual(new Set(['a', 'b', 'c']));
+  });
+
+  it('swaps on a couple: the second pick steps the first aside', () => {
+    expect(togglePick(free, new Set(['a']), 'b', 1)).toEqual(new Set(['b']));
+  });
+
+  it('withdraws a pending guest by the same swap', () => {
+    const rows = candidates(['a', 'b'], [inv({ invitee_id: 'a' })]);
+    // 'a' seeded ticked (pending). Picking 'b' unticks 'a' — Send will
+    // withdraw one and invite the other in the same press.
+    expect(togglePick(rows, new Set(['a']), 'b', 1)).toEqual(new Set(['b']));
+  });
+
+  it('refuses the tap when an answered guest fills the couple', () => {
+    const rows = candidates(['a', 'b'], [inv({ invitee_id: 'a', status: 'accepted' })]);
+    expect(togglePick(rows, new Set(['a']), 'b', 1)).toEqual(new Set(['a']));
+  });
+
+  it('lets a refusal give its seat back', () => {
+    // 'a' declined: locked, seeded ticked, but seatless — the couple's
+    // one guest seat is open for 'b'.
+    const rows = candidates(['a', 'b'], [inv({ invitee_id: 'a', status: 'declined' })]);
+    expect(togglePick(rows, new Set(['a']), 'b', 1)).toEqual(new Set(['a', 'b']));
   });
 });
 
