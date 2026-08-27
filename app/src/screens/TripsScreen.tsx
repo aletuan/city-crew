@@ -51,7 +51,8 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO, minutesOf, toISO } from '../lib/day';
-import { useMyTrips, type Trip, type TripStopRow } from '../lib/data';
+import { type Trip, type TripStopRow } from '../lib/data';
+import { useMyTrips } from '../lib/mytrips';
 import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { stopCount, summaryLine } from '../lib/sketch';
@@ -282,7 +283,7 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
   const { cities } = useCity();
   const clearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
-  const trips = useMyTrips(session?.user?.id);
+  const trips = useMyTrips();
 
   // Saving happens in the Ideas stack, in another tab, so this list is
   // always out of date by the time anyone looks at it. The first focus is

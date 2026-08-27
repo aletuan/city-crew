@@ -38,10 +38,11 @@ import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO } from '../lib/day';
 import {
-  answerInvite, deleteTrip, sendInvites, useMyTrips, withdrawInvites,
+  answerInvite, deleteTrip, sendInvites, withdrawInvites,
   type TripStopRow,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
+import { useMyTrips } from '../lib/mytrips';
 import { useInvitations } from '../lib/invitations';
 import { splitFriendships } from '../lib/friends';
 import InviteSheet from '../components/InviteSheet';
@@ -75,7 +76,7 @@ export default function TripDetailScreen({ navigation, route }: {
   const { session, profile } = useAuth();
   const { cities } = useCity();
   const clearance = useTabBarClearance();
-  const trips = useMyTrips(session?.user?.id);
+  const trips = useMyTrips();
 
   /**
    * Which page of the gallery is showing, and how wide a page is.
