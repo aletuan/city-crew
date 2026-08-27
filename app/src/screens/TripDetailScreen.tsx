@@ -699,10 +699,10 @@ const s = StyleSheet.create({
     marginLeft: 46 + 12, marginBottom: 10,
   },
   legText: { ...CAPTION, color: colors.textTertiary },
-  who: { flex: 1, gap: 2 },
+  who: { flex: 1, gap: space.nameToMeta },
   /** The same column, taken apart for the pressable branch. */
   whoOuter: { flex: 1 },
-  whoInner: { gap: 2 },
+  whoInner: { gap: space.nameToMeta },
   name: { ...type.body, color: colors.text, fontWeight: font.semibold },
   // The stop the gallery is on. Weight only — see the note at the call
   // site for why nothing else is dimmed to make this stand out.
