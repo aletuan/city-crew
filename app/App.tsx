@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import {
   SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold, useFonts,
 } from '@expo-google-fonts/space-grotesk';
+import { Lora_500Medium_Italic } from '@expo-google-fonts/lora';
 import { AuthProvider } from './src/lib/auth';
 import { CityProvider } from './src/lib/city';
 import { I18nProvider, useI18n } from './src/lib/i18n';
@@ -206,9 +207,10 @@ const navTheme = {
 /** Everything below the theme, so the scheme is readable from here down. */
 function Root() {
   const { scheme, ready } = useScheme();
-  // Display type only — see theme.ts. Until the faces are ready the app
-  // holds on its own ground colour rather than rendering titles in the
-  // system font and swapping them a frame later, which reads as a glitch.
+  // Display type and the quote face — see theme.ts. Until the faces are
+  // ready the app holds on its own ground colour rather than rendering
+  // titles in the system font and swapping them a frame later, which
+  // reads as a glitch.
   // The same hold covers the stored scheme: a dark-mode reader seeing a
   // white flash on every launch would be a worse bug than having no setting.
   //
@@ -218,6 +220,7 @@ function Root() {
   // decision lives now, and where a test can reach it.
   const [fontsLoaded, fontError] = useFonts({
     SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold,
+    Lora_500Medium_Italic,
   });
   // Trace marks in a render body, deliberately: `mark` logs once per name
   // and ignores repeats, so a re-render costs an array scan and nothing
