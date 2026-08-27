@@ -14,14 +14,19 @@
 // alternative is a second set that drifts from the first.
 
 import React, { useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton } from '../components/authUi';
+import { PressableScale } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { addPlaceToCollection, createCollection, updateCollection } from '../lib/data';
 import { useI18n } from '../lib/i18n';
+import { membersOf, photosOf } from '../lib/place';
 import { useSave } from '../lib/save';
-import { colors, font, space } from '../theme';
+import { colors, font, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 /** Long enough for a real name, short enough to stay on one line in a row. */
@@ -44,6 +49,25 @@ export default function CollectionFormScreen({ navigation, route }: {
 
   const uid = session?.user?.id;
 
+  // The cover, chosen from the photographs the list already holds. A
+  // cover is a claim about the list, and the honest claims are the
+  // pictures its own places carry — so the choices are exactly those, in
+  // the list's own order, and a brand-new list (no places yet) offers no
+  // picker at all. "Auto" is the null pick: the tile keeps falling back
+  // to the first place's own cover, which is what every list did before
+  // this row existed.
+  const { data: places } = usePlaces();
+  const col = editing ? mine.data.find((c) => c.slug === editing) ?? null : null;
+  const choices = (col ? membersOf(col, places) : [])
+    .flatMap((p) => photosOf(p))
+    .filter((ph): ph is typeof ph & { id: string } => !!ph.id);
+  // Held as "chosen or not" beside the id, so the row's current cover
+  // shows as selected until the reader actually picks — seeding state
+  // from a fetch that may land after the first render would either lose
+  // their tap or resurrect the old cover over it.
+  const [pick, setPick] = useState<{ chosen: boolean; id: string | null }>({ chosen: false, id: null });
+  const coverId = pick.chosen ? pick.id : (col?.cover?.id ?? null);
+
   const submit = async () => {
     const name = title.trim();
     if (!name) {
@@ -62,7 +86,7 @@ export default function CollectionFormScreen({ navigation, route }: {
     setError(null);
     try {
       if (editing) {
-        await updateCollection(editing, { title: name, desc });
+        await updateCollection(editing, { title: name, desc, coverPhotoId: coverId });
       } else {
         const slug = await createCollection({ ownerId: uid, cityId: city.id, title: name, desc });
         // Reached from a place's bookmark with nowhere to put it: the list
@@ -129,6 +153,33 @@ export default function CollectionFormScreen({ navigation, route }: {
         multiline
         returnKeyType="done"
       />
+      {editing && choices.length > 0 ? (
+        <View style={s.coverBlock}>
+          <Text style={s.coverLabel}>{t('COVER', 'ẢNH BÌA', 'カバー写真')}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.coverRow}>
+            <PressableScale
+              onPress={() => setPick({ chosen: true, id: null })}
+              accessibilityRole="button"
+              accessibilityState={{ selected: coverId == null }}
+              style={[s.thumb, s.auto, coverId == null && s.thumbOn]}
+            >
+              <Ionicons name="sparkles-outline" size={18} color={colors.textSecondary} />
+              <Text style={s.autoText}>{t('Auto', 'Tự động', '自動')}</Text>
+            </PressableScale>
+            {choices.map((ph) => (
+              <PressableScale
+                key={ph.id}
+                onPress={() => setPick({ chosen: true, id: ph.id })}
+                accessibilityRole="button"
+                accessibilityState={{ selected: coverId === ph.id }}
+                style={[s.thumb, coverId === ph.id && s.thumbOn]}
+              >
+                <Image source={{ uri: ph.photo_uri }} style={s.thumbImg} contentFit="cover" transition={120} />
+              </PressableScale>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
       {error ? <ErrorText>{error}</ErrorText> : null}
       <View style={{ marginTop: space.cardGap }}>
         <PrimaryButton
@@ -139,13 +190,37 @@ export default function CollectionFormScreen({ navigation, route }: {
           busy={busy}
         />
       </View>
+      {/* This line used to promise "sharing comes later", and later came:
+          the publish switch lives in the list's own menu now. */}
       <Text style={{ color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, textAlign: 'center', lineHeight: 19 }}>
         {t(
-          'Private for now — sharing your lists comes later.',
-          'Hiện tại là riêng tư — chia sẻ danh sách sẽ có sau.',
-          '今のところ非公開です — 共有機能は後日。',
+          'Private until you say so — Make public lives in the list’s own menu.',
+          'Riêng tư cho đến khi bạn muốn — nút Công khai nằm trong menu của danh sách.',
+          'あなたが公開するまで非公開です — 公開はリストのメニューから。',
         )}
       </Text>
     </AuthScreen>
   );
 }
+
+const s = StyleSheet.create({
+  coverBlock: { marginTop: space.cardGap },
+  coverLabel: {
+    color: colors.textTertiary, fontSize: 11, fontWeight: font.bold,
+    letterSpacing: 1.1, marginBottom: 8,
+  },
+  coverRow: { gap: 10, paddingRight: space.page },
+  // 2pt of always-there border so the chosen ring changes colour, not
+  // layout — a thumb that grows on selection makes the whole row shuffle.
+  thumb: {
+    width: 64, height: 64, borderRadius: radius.card - 6,
+    borderWidth: 2, borderColor: 'transparent', overflow: 'hidden',
+  },
+  thumbOn: { borderColor: colors.accentFill },
+  thumbImg: { width: '100%', height: '100%' },
+  auto: {
+    alignItems: 'center', justifyContent: 'center', gap: 3,
+    backgroundColor: colors.surfaceGlass,
+  },
+  autoText: { color: colors.textSecondary, fontSize: 10.5, fontWeight: font.medium },
+});

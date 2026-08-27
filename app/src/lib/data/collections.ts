@@ -44,7 +44,7 @@ import { PLACE_COLS } from './places';
 // it until the like button did, and then the control that only appears
 // on a public list never appeared at all.
 const COLLECTION_COLS = (withOwner: boolean) =>
-  `id, slug, is_public, created_at, sort_order, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(${withOwner ? PLACE_COLS(true) : 'slug'})), cover:place_photos!collections_cover_photo_id_fkey(photo_uri)`;
+  `id, slug, is_public, created_at, sort_order, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(${withOwner ? PLACE_COLS(true) : 'slug'})), cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri)`;
 
 export async function fetchCollections(cityId: string, meId?: string | null): Promise<Collection[]> {
   const run = (withOwner: boolean) => {
@@ -136,7 +136,7 @@ function withMembers(data: unknown): Collection[] {
  * whether they are published or not.
  */
 const MY_COLLECTION_COLS =
-  `id, slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, cover:place_photos!collections_cover_photo_id_fkey(photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
+  `id, slug, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle, owner_id, city_id, is_public, cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri), collection_places(sort_order, places(${PLACE_COLS(true)}))`;
 
 export async function fetchMyCollections(ownerId: string): Promise<Collection[]> {
   const { data, error } = await supabase
@@ -276,15 +276,22 @@ export async function createCollection(input: {
 }
 
 /** Rename one of the user's own lists. RLS scopes this to rows they own. */
-export async function updateCollection(slug: string, input: { title: string; desc?: string }): Promise<void> {
+export async function updateCollection(
+  slug: string,
+  input: { title: string; desc?: string; coverPhotoId?: string | null },
+): Promise<void> {
   const title = input.title.trim();
   const desc = input.desc?.trim() || null;
   // All three language columns again, for the same reason as on create.
+  // The cover is written every save like the rest: the form seeds its
+  // pick from the row, so an untouched cover round-trips, and null means
+  // the tile falls back to the first place's own photograph.
   const { error } = await supabase
     .from('collections')
     .update({
       title_en: title, title_vi: title, title_ja: title,
       desc_en: desc, desc_vi: desc, desc_ja: desc,
+      cover_photo_id: input.coverPhotoId ?? null,
     })
     .eq('slug', slug);
   if (error) throw new Error(error.message);
