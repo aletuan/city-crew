@@ -126,6 +126,18 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // copy — see `lib/invitations` — so the dot costs no request of its own.
   const { waiting: invitesWaiting } = useInvitations();
 
+  // The dot, reversed out of the pill. Idle, it is coral news ringed in
+  // the surface colour so it cuts from the glyph. On the selected tab
+  // both of those grounds turn coral at once, and the mark sank into the
+  // pill exactly where the reader was looking — the owner went hunting
+  // for it. So on a focused tab it swaps inks with the glyph: pill-ink
+  // dot, ringed in the pill's own coral — the same reversal the icon
+  // undergoes, so the news survives the selection.
+  const dotOnPill = {
+    backgroundColor: light ? PILL_INK_LIGHT : PILL_INK_DARK,
+    borderColor: colors.badgeSolid as string,
+  };
+
   // It used to clear the whole safe-area inset — 34pt on a modern iPhone,
   // plus the gap, put the bar 44pt off the bottom, which reads as an
   // island adrift rather than a dock. `useTabBarLift` clears the home
@@ -212,8 +224,10 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                   every screen can see it. Drawn beside the glyph rather
                   than tinting it: a dot is news, a recoloured icon is a
                   different icon. */}
-              {route.name === 'Profile' && waiting ? <View style={s.reqDot} /> : null}
-              {route.name === 'Trips' && invitesWaiting > 0 ? <View style={s.reqDot} /> : null}
+              {route.name === 'Profile' && waiting
+                ? <View style={[s.reqDot, focused && dotOnPill]} /> : null}
+              {route.name === 'Trips' && invitesWaiting > 0
+                ? <View style={[s.reqDot, focused && dotOnPill]} /> : null}
               </View>
               <Text
                 numberOfLines={1}
