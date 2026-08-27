@@ -26,7 +26,7 @@ import { useSave } from '../lib/save';
 import { useCity } from '../lib/city';
 import { Lang, useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, quoteFace, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 const MONTHS_EN = [
@@ -168,11 +168,14 @@ function Tagline() {
       <Text style={{ fontSize: 18 }}>✨</Text>
       <Text style={s.taglineText}>
         {t(
-          'Collect moments, not things.\nShare adventures, not plans.',
-          'Góp nhặt khoảnh khắc, không phải đồ vật.\nChia sẻ hành trình, không chỉ kế hoạch.',
-          'モノより思い出を集めよう。\n計画より冒険を分かち合おう。',
+          '“We do not remember days,\nwe remember moments.”',
+          '“Ta không nhớ những ngày,\nta nhớ những khoảnh khắc.”',
+          '「私たちが覚えているのは日々ではなく、\n瞬間なのだ。」',
         )}
       </Text>
+      {/* A borrowed sentence wears its author's name — and a name is
+          quoted, not translated, so it sits outside t(). */}
+      <Text style={s.taglineBy}>— Cesare Pavese</Text>
     </View>
   );
 }
@@ -579,5 +582,11 @@ const s = StyleSheet.create({
   deleteText: { color: colors.bad, fontSize: 14, fontWeight: font.medium },
 
   tagline: { alignItems: 'center', gap: 8, paddingVertical: 18 },
-  taglineText: { color: colors.textTertiary, ...type.meta, textAlign: 'center', lineHeight: 22 },
+  // Lora's italic — see `quoteFace` in theme.ts. A face means no
+  // fontWeight here, and a serif at this size wants a step more body
+  // and air than the system meta type the two mottos used to wear.
+  taglineText: { color: colors.textTertiary, fontFamily: quoteFace, fontSize: 16, textAlign: 'center', lineHeight: 25, letterSpacing: 0.2 },
+  // Half a step under the quote, in the quote's own hand: the words
+  // carry the weight, the name just signs them.
+  taglineBy: { color: colors.textTertiary, fontFamily: quoteFace, fontSize: 12.5, letterSpacing: 0.4, marginTop: -2 },
 });

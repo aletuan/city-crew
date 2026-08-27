@@ -315,6 +315,17 @@ export const display = {
 } as const;
 
 /**
+ * Lora's italic, for words the app borrows rather than writes — the
+ * quotation in the Profile footer. A calligraphic serif set apart from
+ * both the grotesk display face and the system UI type, so a quoted
+ * sentence reads as a voice from outside the app. One weight, because
+ * a quotation has one register. Ships a Vietnamese subset; Japanese
+ * falls back to the system face glyph by glyph, which is the deal with
+ * any Latin serif. Same fontWeight caveat as `display`.
+ */
+export const quoteFace = 'Lora_500Medium_Italic';
+
+/**
  * System font weights — RN resolves the system family to SF Pro on iOS,
  * so type reads as native rather than as a webfont.
  */
