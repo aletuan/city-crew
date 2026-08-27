@@ -319,32 +319,30 @@ describe('COMPANY colours', () => {
   const LIGHT = '#F5F1EA';
   const DARK = '#0A0B0A';
   const cats = Object.values(CATEGORIES).map((c) => c.color);
-  const coloured = COMPANY.filter((c) => c.color);
+  // Every chip carries a colour now that Other retired, so this is the
+  // whole row — kept as a name because the hue tests read better on it.
+  const coloured = COMPANY;
 
-  it('gives every option but Other a glyph and a colour', () => {
-    for (const c of COMPANY.filter((x) => x.key !== 'other')) {
+  // Every option, none excepted: the icon-less "Other" retired — an
+  // answer that changed nothing was not an answer, and unpicking the
+  // chips is the honest "none of these".
+  it('gives every option a glyph and a colour', () => {
+    for (const c of COMPANY) {
       expect(c.icon, c.key).toBeTruthy();
       expect(c.color, c.key).toMatch(/^#[0-9A-F]{6}$/i);
     }
     expect(coloured).toHaveLength(4);
   });
 
-  // An ellipsis is a promise of more to tap, and this chip is an answer
-  // like the rest of them.
-  it('leaves Other without a glyph', () => {
-    const other = COMPANY.find((c) => c.key === 'other');
-    expect(other?.icon).toBeUndefined();
-  });
-
   it('reuses no category colour, which would read as the same thing', () => {
-    for (const c of coloured) expect(cats).not.toContain(c.color!);
+    for (const c of coloured) expect(cats).not.toContain(c.color);
   });
 
   // Close enough to a category hue and the eye pairs the two rows that
   // have nothing to do with each other.
   it('keeps every hue clear of every category hue', () => {
     for (const c of coloured) {
-      const nearest = Math.min(...cats.map((k) => apart(hue(c.color!), hue(k))));
+      const nearest = Math.min(...cats.map((k) => apart(hue(c.color), hue(k))));
       expect(nearest, `${c.key} is ${nearest.toFixed(0)}° from a category hue`)
         .toBeGreaterThanOrEqual(15);
     }
@@ -353,7 +351,7 @@ describe('COMPANY colours', () => {
   it('keeps them apart from each other too', () => {
     for (let i = 0; i < coloured.length; i += 1) {
       for (let j = i + 1; j < coloured.length; j += 1) {
-        expect(apart(hue(coloured[i].color!), hue(coloured[j].color!)))
+        expect(apart(hue(coloured[i].color), hue(coloured[j].color)))
           .toBeGreaterThanOrEqual(15);
       }
     }
@@ -370,7 +368,7 @@ describe('COMPANY colours', () => {
     for (const bg of [LIGHT, DARK]) {
       const [lo, hi] = range(bg);
       for (const c of coloured) {
-        const got = contrast(c.color!, bg);
+        const got = contrast(c.color, bg);
         expect(got, `${c.key} on ${bg}`).toBeGreaterThanOrEqual(lo);
         expect(got, `${c.key} on ${bg}`).toBeLessThanOrEqual(hi);
       }

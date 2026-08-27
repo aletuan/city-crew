@@ -14,8 +14,17 @@ import type { Place } from './types';
 
 /** Who the day is for. The one answer that changes the *shape* of a plan
  *  rather than its contents — a couple's evening and four friends' evening
- *  want different rooms, not different categories. */
-export type Company = 'solo' | 'couple' | 'friends' | 'family' | 'other';
+ *  want different rooms, not different categories.
+ *
+ *  There is no `other`: it leaned nothing, seated nobody, and scored
+ *  every plan exactly as answering nothing does — an answer that changes
+ *  nothing is not an answer, and the chips already untoggle, so "none of
+ *  these" is simply not tapping. Old trips (and the parse model, which
+ *  still may say "other") carry the retired word as a plain string, and
+ *  every reader already degrades: the badge lookup misses to nothing,
+ *  the seat rule's else says uncapped, the parser's validator drops it
+ *  to null. */
+export type Company = 'solo' | 'couple' | 'friends' | 'family';
 
 /**
  * Who the chips are for, and what colour each one's glyph wears.
@@ -36,18 +45,14 @@ export type Company = 'solo' | 'couple' | 'friends' | 'family' | 'other';
  * 1.87–2.51 range — because equal HSL lightness across hues does not mean
  * equal contrast, and a naive amber came out at 1.52:1, visibly fainter
  * than everything beside it.
- *
- * `other` carries no glyph. An ellipsis is a promise of more to tap, and
- * this chip is an answer like the rest.
  */
 export const COMPANY: {
-  key: Company; icon?: string; color?: string; en: string; vi: string; ja: string;
+  key: Company; icon: string; color: string; en: string; vi: string; ja: string;
 }[] = [
   { key: 'solo', icon: 'person-outline', color: '#8CA9D0', en: 'Just me', vi: 'Một mình', ja: 'ひとり' },
   { key: 'couple', icon: 'heart-outline', color: '#D496A5', en: 'Couple', vi: 'Hai người', ja: 'ふたり' },
   { key: 'friends', icon: 'people-outline', color: '#B9A654', en: 'Friends', vi: 'Bạn bè', ja: '友だち' },
   { key: 'family', icon: 'home-outline', color: '#65B690', en: 'Family', vi: 'Gia đình', ja: '家族' },
-  { key: 'other', en: 'Other', vi: 'Khác', ja: 'その他' },
 ];
 
 /** Day or evening. Not a clock time: the wizard's own promise is that

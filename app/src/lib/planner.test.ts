@@ -761,11 +761,16 @@ describe('who is coming', () => {
     }
   });
 
-  // "None of the above" is an answer the reader gave on purpose, and a
-  // draft built outside the wizard carries null. Both must plan exactly
-  // as every draft did before the table existed.
-  it('says nothing for other, and for no answer at all', () => {
-    expect(first('other')).toEqual(first(null));
+  // "No answer" is an answer a reader gives on purpose — every chip
+  // untapped — and a draft built outside the wizard carries null. The
+  // table must stay silent then, and the plan must still come, exactly
+  // as every draft planned before the table existed. (The "Other" chip
+  // used to be the visible way to decline this question; declining is
+  // now simply not tapping.)
+  it('still plans, and deterministically, when nobody is named', () => {
+    const bare = first(null);
+    expect(bare.length).toBeGreaterThan(0);
+    expect(bare).toEqual(first(null));
   });
 
   it('stays deterministic with a company set', () => {
