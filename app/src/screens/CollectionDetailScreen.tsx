@@ -15,7 +15,7 @@ import { useAuth } from '../lib/auth';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
 import { likesWorthShowing } from '../lib/likes';
 import {
-  copyCollection, deleteCollection, membersOf, publishBlockers, reorderCollection,
+  deleteCollection, membersOf, publishBlockers, reorderCollection,
   setCollectionPublic, useProfileByHandle,
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
@@ -26,7 +26,7 @@ import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 import type { Place } from '../lib/types';
-import { goTo, type Nav, type RootRoute } from '../nav';
+import { type Nav, type RootRoute } from '../nav';
 
 /**
  * The empty state of a list you own.
@@ -456,13 +456,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * leave. Liking is a compliment. This is the one that lets you use it —
    * your copy, your order, your additions, and the original untouched.
    *
-   * ── the title, kept ──
+   * ── through the form, not on the spot ──
    *
-   * Verbatim, with no "(copy)" hung off the end. The reader recognises
-   * the list by its name, that name is the reason they took it, and the
-   * suffix would be the app narrating its own plumbing into something a
-   * person now owns. Two lists with one name is the price, and it is a
-   * rename away in the menu they are already holding.
+   * Nothing is created here. The row hands the source's facts to the
+   * collection form — the title (which the form offers back as "Copy of
+   * X", editable before anything exists), the description with a credit
+   * line under it, the members in the curator's order — and the copy is
+   * born only when the reader saves there. Backing out of the form
+   * creates nothing, so a curious tap costs nothing to undo.
    *
    * ── the credit, added ──
    *
@@ -481,9 +482,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * through the public query, which is city-scoped — and the fallback
    * exists for the legacy select that omits the column.
    */
-  const [copying, setCopying] = useState(false);
   const copy = () => {
-    if (!col || copying) return;
+    if (!col) return;
     // Signed out this is the sheet, not an error: wanting somebody's list
     // is a good moment to be offered an account, and a disabled row would
     // have explained nothing.
@@ -498,31 +498,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         `${atHandle(col.curator_handle)} からコピー`,
       )
       : '';
-    setCopying(true);
-    copyCollection({
-      ownerId: uid,
-      cityId,
-      title,
-      desc: [sourceDesc, credit].filter(Boolean).join('\n\n'),
-      // The order on screen, which is `sort_order` already resolved by
-      // `membersOf` — copying the list means copying the sequence the
-      // curator chose, not the order the rows happen to come back in.
-      placeSlugs: members.map((p) => p.slug),
-    })
-      .then((slug) => {
-        successHaptic();
-        mine.reload();
-        // Into the Collections tab rather than pushing onto whichever
-        // stack we are in. The copy is not a thing you were browsing, it
-        // is a thing you now own, and Back should lead to your lists —
-        // which is only true in the tab that holds them.
-        goTo('Collections', { screen: 'CollectionDetail', initial: false, params: { slug } });
-      })
-      .catch((e: Error) => Alert.alert(
-        t('Could not save a copy', 'Không lưu được bản sao', 'コピーを保存できませんでした'),
-        e.message,
-      ))
-      .finally(() => setCopying(false));
+    navigation.navigate('CollectionForm', {
+      copyFrom: {
+        cityId,
+        title,
+        desc: [sourceDesc, credit].filter(Boolean).join('\n\n'),
+        // The order on screen, which is `sort_order` already resolved by
+        // `membersOf` — copying the list means copying the sequence the
+        // curator chose, not the order the rows happen to come back in.
+        placeSlugs: members.map((p) => p.slug),
+      },
+    });
   };
 
   const remove = () => Alert.alert(
@@ -684,16 +670,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     </View>
   ) : null;
 
-  /* The header's right-hand slot, which holds one of three things.
-     Exclusive by construction: `arranging` is only ever set from a menu
-     row the owner alone is offered, and `copying` only ever runs for
-     somebody who does not own the list.
-
-     While a copy is in flight the spinner stands here rather than
-     anywhere else on screen. Three round trips is long enough for a tap
-     to look dead, and the control that started the work is the honest
-     place to say it is still going — reopening the menu mid-copy to
-     press the row again is also the one mistake this makes impossible.
+  /* The header's right-hand slot.
 
      While arranging, the one control is the way out of it. Leaving the
      overflow menu up would offer Delete to a thumb that is currently in
@@ -706,11 +683,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      something. `collapsable={false}` keeps the wrapper a real native
      view, which is what `measureInWindow` needs to have something to
      measure. */
-  const headerRight = copying ? (
-    <View style={s.busy}>
-      <ActivityIndicator color={colors.textSecondary} />
-    </View>
-  ) : arranging ? (owned ? (
+  const headerRight = arranging ? (owned ? (
     <PressableScale onPress={finishArranging} containerStyle={s.done} disabled={ordering}>
       <Text style={s.doneText}>
         {ordering
@@ -979,11 +952,6 @@ const s = StyleSheet.create({
   // `Screen` answers better: two lines at 26pt hold far more of a name
   // than one line at 20 ever did.
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-  // The ⋯ button's footprint without its glass. A spinner standing in for
-  // a control has to hold that control's space or the title beside it
-  // jumps sideways the moment you press — and the circle is what says
-  // "button", which this is not while it is spinning.
-  busy: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   meta: { color: colors.textTertiary, ...type.meta },
   // The words yield, the heart does not. Without this a long handle
   // sizes the byline to its own content and pushes the tally off the

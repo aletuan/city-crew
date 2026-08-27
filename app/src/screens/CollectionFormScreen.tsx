@@ -1,8 +1,13 @@
-// Making one of your own lists, and renaming it later.
+// Making one of your own lists, renaming it later — and saving a copy of
+// somebody else's.
 //
-// One screen for both: the fields are the same, only the verb changes.
-// Two screens would be the same form twice, drifting apart the first time
-// one of them gains a field.
+// One screen for all three: the fields are the same, only the verb
+// changes. Two screens would be the same form twice, drifting apart the
+// first time one of them gains a field. The copy is the odd one out only
+// in when the row exists: rename edits a real row, create makes one on
+// submit, and a copy is a row that does not exist yet being edited —
+// prefilled from the source, born on save, and never born at all if the
+// reader backs out.
 //
 // One required field. A collection is a name and, later, some places in
 // it; asking for more up front is asking someone to fill a form before
@@ -18,16 +23,17 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton } from '../components/authUi';
-import { PressableScale } from '../components/ui';
+import { PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
-import { addPlaceToCollection, createCollection, updateCollection } from '../lib/data';
+import { addPlaceToCollection, copyCollection, createCollection, updateCollection } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { coverOf, membersOf, photosOf } from '../lib/place';
 import { useSave } from '../lib/save';
 import { colors, font, radius, space } from '../theme';
-import type { Nav, RootRoute } from '../nav';
+import type { Place } from '../lib/types';
+import { goTo, type Nav, type RootRoute } from '../nav';
 
 /** Long enough for a real name, short enough to stay on one line in a row. */
 const MAX_TITLE = 60;
@@ -42,8 +48,16 @@ export default function CollectionFormScreen({ navigation, route }: {
   const { mine } = useSave();
   const editing = route.params?.slug;
   const addPlaceSlug = route.params?.addPlaceSlug;
-  const [title, setTitle] = useState(route.params?.title ?? '');
-  const [desc, setDesc] = useState(route.params?.desc ?? '');
+  const copyFrom = route.params?.copyFrom;
+  // A copy opens with its provenance already written in: "Copy of X" as
+  // the title — a suggestion sitting in an editable field, not a suffix
+  // welded on — and the source's description with the credit line the
+  // detail screen composed. Truncated because the prefix can push a
+  // long source title past what one row holds.
+  const [title, setTitle] = useState(() => (copyFrom
+    ? t(`Copy of ${copyFrom.title}`, `Bản sao của ${copyFrom.title}`, `「${copyFrom.title}」のコピー`).slice(0, MAX_TITLE)
+    : route.params?.title ?? ''));
+  const [desc, setDesc] = useState(copyFrom?.desc ?? route.params?.desc ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,7 +72,13 @@ export default function CollectionFormScreen({ navigation, route }: {
   // this row existed.
   const { data: places } = usePlaces();
   const col = editing ? mine.data.find((c) => c.slug === editing) ?? null : null;
-  const members = col ? membersOf(col, places) : [];
+  // A copy's members come from the route's slugs resolved against the
+  // catalog — the source list belongs to somebody else, so no query of
+  // "mine" can know it. Everything downstream (choices, Auto) is the
+  // same either way.
+  const members = copyFrom
+    ? copyFrom.placeSlugs.map((slug) => places.find((p) => p.slug === slug)).filter((p): p is Place => !!p)
+    : col ? membersOf(col, places) : [];
   const choices = members
     .flatMap((p) => photosOf(p))
     .filter((ph): ph is typeof ph & { id: string } => !!ph.id);
@@ -100,6 +120,32 @@ export default function CollectionFormScreen({ navigation, route }: {
     setBusy(true);
     setError(null);
     try {
+      if (copyFrom) {
+        // The copy is born here, not when the menu row was tapped — this
+        // form has been editing a list that did not exist, so backing out
+        // at any point before this line left nothing behind.
+        const slug = await copyCollection({
+          ownerId: uid,
+          cityId: copyFrom.cityId,
+          title: name,
+          desc,
+          placeSlugs: copyFrom.placeSlugs,
+        });
+        // A chosen cover rides a second write: `copyCollection` stays the
+        // create-and-fill it was, and Auto — the common case — needs no
+        // write at all.
+        if (coverId) await updateCollection(slug, { title: name, desc, coverPhotoId: coverId });
+        successHaptic();
+        mine.reload();
+        // Pop the form off the stack it was pushed onto, so the tab it
+        // came from keeps the source list as its history — then land on
+        // the copy in the Collections tab, where Back leads to your own
+        // lists. The copy is a thing you now own, not a thing you were
+        // browsing.
+        navigation.goBack();
+        goTo('Collections', { screen: 'CollectionDetail', initial: false, params: { slug } });
+        return;
+      }
       if (editing) {
         await updateCollection(editing, { title: name, desc, coverPhotoId: coverId });
       } else {
@@ -120,9 +166,11 @@ export default function CollectionFormScreen({ navigation, route }: {
       const message = e instanceof Error ? e.message : String(e);
       setError(message);
       Alert.alert(
-        editing
-          ? t('Could not save the changes', 'Không lưu được thay đổi', '変更を保存できませんでした')
-          : t('Could not create the collection', 'Không tạo được bộ sưu tập', 'コレクションを作成できませんでした'),
+        copyFrom
+          ? t('Could not save a copy', 'Không lưu được bản sao', 'コピーを保存できませんでした')
+          : editing
+            ? t('Could not save the changes', 'Không lưu được thay đổi', '変更を保存できませんでした')
+            : t('Could not create the collection', 'Không tạo được bộ sưu tập', 'コレクションを作成できませんでした'),
         message,
       );
     } finally {
@@ -134,21 +182,29 @@ export default function CollectionFormScreen({ navigation, route }: {
     <AuthScreen>
       <AuthHeader
         onBack={() => navigation.goBack()}
-        title={editing
-          ? t('Rename your list', 'Đổi tên danh sách', 'リストの名前を変更')
-          : t('Name your list', 'Đặt tên danh sách', 'リストに名前を')}
+        title={copyFrom
+          ? t('Save a copy', 'Lưu bản sao', 'コピーを保存')
+          : editing
+            ? t('Rename your list', 'Đổi tên danh sách', 'リストの名前を変更')
+            : t('Name your list', 'Đặt tên danh sách', 'リストに名前を')}
       />
-      <Lede>{addPlaceSlug
+      <Lede>{copyFrom
           ? t(
-            'Name it, and the place you just saved goes in first.',
-            'Đặt tên, và địa điểm bạn vừa lưu sẽ vào đầu tiên.',
-            '名前をつければ、いま保存したスポットが最初に入ります。',
+            'Make it yours before it saves — nothing is copied until you do.',
+            'Sửa thoải mái trước khi lưu — chưa lưu thì chưa có bản sao nào cả.',
+            '保存する前に自由に編集できます — 保存するまでコピーは作られません。',
           )
-          : t(
-            'Only you can see this one. Add places to it as you find them.',
-            'Chỉ mình bạn thấy danh sách này. Thêm địa điểm vào khi bạn tìm được.',
-            'このリストはあなただけに表示されます。見つけたスポットを追加していきましょう。',
-          )}</Lede>
+          : addPlaceSlug
+            ? t(
+              'Name it, and the place you just saved goes in first.',
+              'Đặt tên, và địa điểm bạn vừa lưu sẽ vào đầu tiên.',
+              '名前をつければ、いま保存したスポットが最初に入ります。',
+            )
+            : t(
+              'Only you can see this one. Add places to it as you find them.',
+              'Chỉ mình bạn thấy danh sách này. Thêm địa điểm vào khi bạn tìm được.',
+              'このリストはあなただけに表示されます。見つけたスポットを追加していきましょう。',
+            )}</Lede>
       <FieldRow
         icon="bookmark-outline"
         label={t('Name', 'Tên', '名前')}
@@ -168,7 +224,9 @@ export default function CollectionFormScreen({ navigation, route }: {
         multiline
         returnKeyType="done"
       />
-      {editing && choices.length > 0 ? (
+      {/* `choices` is only ever non-empty when there are members to draw
+          from — a rename or a copy; a brand-new list offers no picker. */}
+      {choices.length > 0 ? (
         <View style={s.coverBlock}>
           <Text style={s.coverLabel}>{t('COVER', 'ẢNH BÌA', 'カバー写真')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.coverRow}>
@@ -213,9 +271,11 @@ export default function CollectionFormScreen({ navigation, route }: {
       {error ? <ErrorText>{error}</ErrorText> : null}
       <View style={{ marginTop: space.cardGap }}>
         <PrimaryButton
-          label={editing
-            ? t('Save changes', 'Lưu thay đổi', '変更を保存')
-            : t('Create collection', 'Tạo bộ sưu tập', 'コレクションを作成')}
+          label={copyFrom
+            ? t('Save the copy', 'Lưu bản sao', 'コピーを保存')
+            : editing
+              ? t('Save changes', 'Lưu thay đổi', '変更を保存')
+              : t('Create collection', 'Tạo bộ sưu tập', 'コレクションを作成')}
           onPress={submit}
           busy={busy}
         />

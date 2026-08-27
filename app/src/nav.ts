@@ -65,8 +65,8 @@ export type RootStackParamList = {
   /** `tab` lands the screen on a specific half — Explore's "See all"
    *  points at the community shelf, not at your library. */
   CollectionsHome: { tab?: 'community' } | undefined;
-  /** One screen for both verbs: params absent means "new", params present
-   *  means "rename this one". */
+  /** One screen for three verbs: params absent means "new", `slug` means
+   *  "rename this one", `copyFrom` means "save a copy of somebody else's". */
   CollectionForm: {
     slug?: string;
     title?: string;
@@ -74,6 +74,11 @@ export type RootStackParamList = {
     /** Set when the form was reached from a place's bookmark: the new
      *  collection takes this place as its first member. */
     addPlaceSlug?: string;
+    /** Set when the form is a copy being edited before it exists: the
+     *  source list's facts, carried whole because the source belongs to
+     *  somebody else and no query of "mine" can resolve it. The copy is
+     *  created on submit; backing out creates nothing. */
+    copyFrom?: { cityId: string; title: string; desc: string; placeSlugs: string[] };
   } | undefined;
   PlaceDetail: { slug: string };
   /** Search Google for a place the catalog is missing, and suggest it.
