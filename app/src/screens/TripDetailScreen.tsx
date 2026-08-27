@@ -27,7 +27,7 @@
 // Here it is at the bottom of the thing it destroys, after the reader has
 // seen what it is.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
@@ -38,7 +38,7 @@ import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
 import { fromISO } from '../lib/day';
 import {
-  answerInvite, deleteTrip, fetchCrewCounts, sendInvites, useMyTrips, withdrawInvites,
+  answerInvite, deleteTrip, sendInvites, useMyTrips, withdrawInvites,
   type TripStopRow,
 } from '../lib/data';
 import { useCrew } from '../lib/crew';
@@ -99,14 +99,9 @@ export default function TripDetailScreen({ navigation, route }: {
   // same reason: React counts hooks, and one declared under a branch that
   // only sometimes runs throws on the render where the branch flips.
   const { ships, people, mutual } = useCrew();
-  const { invites } = useInvitations();
+  const { invites, crewCounts } = useInvitations();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sending, setSending] = useState(false);
-  // The headcount an invitee is allowed — a number without the rows behind
-  // it. Best-effort: a trip whose count never arrives draws the sentence
-  // without it rather than failing.
-  const [heads, setHeads] = useState<number | null>(null);
-
   const tripId = route.params.id;
   const me = session?.user?.id ?? null;
   const mineInvites = useMemo(
@@ -117,16 +112,14 @@ export default function TripDetailScreen({ navigation, route }: {
   const trip = trips.data.find((x) => x.id === tripId) ?? null;
   const owned = !!trip && !!me && trip.owner_id === me;
 
-  useEffect(() => {
-    // Only an invitee needs the function: an owner can already see every
-    // row and counts them off directly.
-    if (!trip || owned) { setHeads(null); return; }
-    let live = true;
-    fetchCrewCounts([tripId])
-      .then((m) => { if (live) setHeads(m[tripId]?.accepted ?? 0); })
-      .catch(() => {});
-    return () => { live = false; };
-  }, [trip, owned, tripId]);
+  // The headcount an invitee is allowed — batched by the invitations
+  // provider back at the Trips list, so this screen opens already holding
+  // its number instead of asking in front of the reader (that ask showed
+  // the failure sentence while it waited, and the owner watched the line
+  // flicker). Missing = still being asked, TripCrew stays quiet; null =
+  // the batch failed, TripCrew draws the numberless sentence. The owner
+  // never reads it — they count their own rows.
+  const heads = crewCounts[tripId];
 
   if (!trip) {
     return (

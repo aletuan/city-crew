@@ -17,10 +17,10 @@
 // ever name a friend.
 
 import React, {
-  createContext, useCallback, useContext, useEffect, useMemo, useRef,
+  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { AppState } from 'react-native';
-import { type Fetch, fetchInvites, useFetch } from './data';
+import { type Fetch, fetchCrewCounts, fetchInvites, useFetch } from './data';
 import { useAuth } from './auth';
 import { shouldRefresh } from './stale';
 import { waitingCount, type InviteRow } from './invites';
@@ -31,13 +31,21 @@ type Invitations = {
   invites: Fetch<InviteRow[]>;
   /** Unanswered invitations addressed to the reader — the badge. */
   waiting: number;
+  /** Accepted heads per trip the reader was asked onto, batched from
+   *  `trip_crew_counts` the moment the invitations answer — the RPC takes
+   *  an array for exactly this. Fetched here, at the list, so the detail
+   *  and answer screens open already holding their number instead of
+   *  asking for it in front of the reader (the flicker the owner caught:
+   *  the failure sentence wearing the loading state's clothes). A missing
+   *  key is still being asked; null means the batch failed for it. */
+  crewCounts: Record<string, number | null>;
 };
 
 const NO_FETCH: Fetch<never[]> = {
   loading: true, loaded: false, error: null, data: [], loadedAt: null, fromCache: false, reload: () => {},
 };
 
-const Ctx = createContext<Invitations>({ invites: NO_FETCH, waiting: 0 });
+const Ctx = createContext<Invitations>({ invites: NO_FETCH, waiting: 0, crewCounts: {} });
 
 export function InvitationsProvider({ children }: { children: React.ReactNode }) {
   const { ready, session } = useAuth();
@@ -73,9 +81,44 @@ export function InvitationsProvider({ children }: { children: React.ReactNode })
     [invites.data, meId],
   );
 
+  // The trips the reader stands on somebody else's side of: pending rows
+  // feed the answer screen's "you'd be N in all", accepted ones the
+  // detail's crew row. A declined trip is unreadable and unasked.
+  const askedOn = useMemo(
+    () => [...new Set(mine.filter((i) => i.status !== 'declined').map((i) => i.trip_id))],
+    [mine],
+  );
+
+  const [crewCounts, setCrewCounts] = useState<Record<string, number | null>>({});
+  useEffect(() => {
+    if (!askedOn.length) return;
+    let live = true;
+    fetchCrewCounts(askedOn)
+      .then((m) => {
+        if (!live) return;
+        setCrewCounts((prev) => {
+          const next = { ...prev };
+          for (const id of askedOn) next[id] = m[id]?.accepted ?? 0;
+          return next;
+        });
+      })
+      .catch(() => {
+        if (!live) return;
+        // Only a trip that was never answered is marked failed: a number
+        // already on screen outlives one failed refresh.
+        setCrewCounts((prev) => {
+          const next = { ...prev };
+          for (const id of askedOn) if (next[id] === undefined) next[id] = null;
+          return next;
+        });
+      });
+    return () => { live = false; };
+  }, [askedOn]);
+
   const value = useMemo<Invitations>(() => ({
     invites,
     waiting: waitingCount(mine),
+    crewCounts,
   // Each field rather than the wrapper: a Fetch object is new every
   // render, so depending on it would re-render every consumer on renders
   // where nothing loaded. Same reasoning as `crew.tsx`.

@@ -21,7 +21,7 @@
 // delete — see the trip_invites migration for why, unlike a declined
 // friend request, it is recorded).
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -30,7 +30,7 @@ import {
 import { useAuth } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { fromISO } from '../lib/day';
-import { answerInvite, fetchCrewCounts, useMyTrips } from '../lib/data';
+import { answerInvite, useMyTrips } from '../lib/data';
 import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
@@ -51,29 +51,21 @@ export default function TripInvitationScreen({ navigation, route }: {
   const { t, lang } = useI18n();
   const { session } = useAuth();
   const { people } = useCrew();
-  const { invites } = useInvitations();
+  const { invites, crewCounts } = useInvitations();
   const clearance = useTabBarClearance();
   const trips = useMyTrips(session?.user?.id);
 
   const [busy, setBusy] = useState(false);
-  const [heads, setHeads] = useState<number | null>(null);
 
   const tripId = route.params.id;
+  // Batched by the invitations provider alongside the rail this screen
+  // was opened from, so the "you'd be N in all" clause is already in hand.
+  const heads = crewCounts[tripId];
   const trip = trips.data.find((x) => x.id === tripId) ?? null;
   const invite = useMemo(
     () => invites.data.find((i) => i.trip_id === tripId && i.invitee_id === session?.user?.id) ?? null,
     [invites.data, tripId, session?.user?.id],
   );
-
-  useEffect(() => {
-    let live = true;
-    fetchCrewCounts([tripId])
-      .then((m) => { if (live) setHeads(m[tripId]?.accepted ?? 0); })
-      // Best-effort: a missing headcount costs a clause in a sentence and
-      // is not worth failing an answer screen over.
-      .catch(() => {});
-    return () => { live = false; };
-  }, [tripId]);
 
   const answer = async (said: 'accepted' | 'declined') => {
     if (busy) return;
