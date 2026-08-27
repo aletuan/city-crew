@@ -207,15 +207,29 @@ export function companySeats(company: string | null): number | null {
 }
 
 /**
+ * Whether every guest seat the company offers is spoken for — by an
+ * answered guest (their locked tick holds a seat whatever the selection
+ * says) or by the reader's current picks. When true, the sheet greys the
+ * remaining rows and says why, instead of collecting ticks the trip's
+ * word rules out. Untick, and the list wakes back up.
+ */
+export function seatsFull(
+  rows: readonly Candidate[],
+  picked: ReadonlySet<string>,
+  seats: number | null,
+): boolean {
+  if (seats == null) return false;
+  const held = rows.filter((r) => r.locked && r.seated).length;
+  const free = rows.filter((r) => !r.locked && picked.has(r.id)).length;
+  return held + free >= seats;
+}
+
+/**
  * The next selection after tapping `id`, under the company's seat cap.
- *
- * Unticking always works, and so does ticking within the cap. Ticking
- * past it swaps rather than refusing: the unanswered pick holding a seat
- * steps aside for the new one — Send already knows how to invite and
- * withdraw in one press, and a checkbox that silently refuses reads as
- * broken. What cannot step aside is a seat held by an answered row:
- * those ticks are not this sheet's to move, so when they fill the cap
- * the selection comes back unchanged.
+ * Unticking always works; ticking works while a seat is open. A tap on a
+ * full sheet returns the selection unchanged — the rows are greyed out
+ * by `seatsFull` before this is ever reached, so this is the rule the
+ * greying draws, not a silent refusal.
  */
 export function togglePick(
   rows: readonly Candidate[],
@@ -225,15 +239,7 @@ export function togglePick(
 ): Set<string> {
   const next = new Set(picked);
   if (next.has(id)) { next.delete(id); return next; }
-  if (seats != null) {
-    // Answered rows hold their seats whatever the selection says — they
-    // are seeded ticked and cannot be unticked.
-    const held = rows.filter((r) => r.locked && r.seated).length;
-    const room = seats - held;
-    if (room <= 0) return next;
-    const free = rows.filter((r) => !r.locked && next.has(r.id));
-    for (const r of free.slice(0, Math.max(0, free.length + 1 - room))) next.delete(r.id);
-  }
+  if (seatsFull(rows, picked, seats)) return next;
   next.add(id);
   return next;
 }

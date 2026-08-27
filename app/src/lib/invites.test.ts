@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  candidates, companySeats, crewOf, diffSelection, headcount, INVITE_CAP, roomLeft,
+  candidates, companySeats, crewOf, diffSelection, headcount, INVITE_CAP, roomLeft, seatsFull,
   sortInvites, splitByStanding, standingOn, togglePick, waitingCount, type InviteRow,
 } from './invites';
 
@@ -197,6 +197,35 @@ describe('companySeats', () => {
   });
 });
 
+describe('seatsFull', () => {
+  const free = candidates(['a', 'b', 'c'], []);
+
+  it('never fills when the company names no size', () => {
+    expect(seatsFull(free, new Set(['a', 'b']), null)).toBe(false);
+  });
+
+  it('fills the couple with one tick, and empties on untick', () => {
+    expect(seatsFull(free, new Set(['a']), 1)).toBe(true);
+    expect(seatsFull(free, new Set(), 1)).toBe(false);
+  });
+
+  it('counts a pending guest as seated from the start', () => {
+    const rows = candidates(['a', 'b'], [inv({ invitee_id: 'a' })]);
+    // 'a' is seeded ticked; their pending invitation holds the seat.
+    expect(seatsFull(rows, new Set(['a']), 1)).toBe(true);
+  });
+
+  it('is filled by an answered guest whatever the selection says', () => {
+    const rows = candidates(['a', 'b'], [inv({ invitee_id: 'a', status: 'accepted' })]);
+    expect(seatsFull(rows, new Set(), 1)).toBe(true);
+  });
+
+  it('is not filled by a refusal', () => {
+    const rows = candidates(['a', 'b'], [inv({ invitee_id: 'a', status: 'declined' })]);
+    expect(seatsFull(rows, new Set(['a']), 1)).toBe(false);
+  });
+});
+
 describe('togglePick', () => {
   const free = candidates(['a', 'b', 'c'], []);
 
@@ -209,15 +238,8 @@ describe('togglePick', () => {
       .toEqual(new Set(['a', 'b', 'c']));
   });
 
-  it('swaps on a couple: the second pick steps the first aside', () => {
-    expect(togglePick(free, new Set(['a']), 'b', 1)).toEqual(new Set(['b']));
-  });
-
-  it('withdraws a pending guest by the same swap', () => {
-    const rows = candidates(['a', 'b'], [inv({ invitee_id: 'a' })]);
-    // 'a' seeded ticked (pending). Picking 'b' unticks 'a' — Send will
-    // withdraw one and invite the other in the same press.
-    expect(togglePick(rows, new Set(['a']), 'b', 1)).toEqual(new Set(['b']));
+  it('returns a full sheet unchanged — the greying already said no', () => {
+    expect(togglePick(free, new Set(['a']), 'b', 1)).toEqual(new Set(['a']));
   });
 
   it('refuses the tap when an answered guest fills the couple', () => {
