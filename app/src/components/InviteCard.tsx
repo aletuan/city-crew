@@ -114,8 +114,18 @@ export default function InviteCard({
 
         <View style={s.body}>
           <Text style={s.title} numberOfLines={2}>{trip.title}</Text>
+          {/* Coral, like the calendar on the trip card this sits directly
+              above in the rail. The two are peers in one scroll — the same
+              glyph answering the same question — and a reader who saw them
+              a card apart in two colours would be right to read the
+              difference as meaning something.
+
+              The pin below stays tertiary, and that is the rule rather
+              than an oversight: the calendar is the fact the answer turns
+              on, and it is the only meta glyph in the app that wears the
+              accent. */}
           <View style={s.metaRow}>
-            <Ionicons name="calendar-outline" size={13} color={colors.textTertiary} />
+            <Ionicons name="calendar-outline" size={13} color={colors.accent} />
             <Text style={s.meta} numberOfLines={1}>{when}</Text>
           </View>
           {where ? (
