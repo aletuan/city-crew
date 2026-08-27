@@ -246,22 +246,6 @@ begin
   assert answered = 1, 'the invitee could not accept';
 end $$;
 
--- Once. An accepted invitation cannot be quietly turned into a refusal a
--- week later — `using` pins the update to the unanswered state.
-do $$
-declare answered int;
-begin
-  set local role rls_client;
-  set local test.uid = '22222222-2222-2222-2222-222222222222';
-  with u as (
-    update public.trip_invites set status = 'declined'
-     where trip_id = 'bbbbbbbb-0000-0000-0000-000000000001'
-       and invitee_id = '22222222-2222-2222-2222-222222222222' returning 1
-  ) select count(*) into answered from u;
-  reset role;
-  assert answered = 0, 'an answered invitation could be answered again';
-end $$;
-
 -- An accepted invitee still reads the plan — this is the row that puts
 -- the evening in their own Trips.
 do $$
@@ -362,6 +346,79 @@ begin
     array['bbbbbbbb-0000-0000-0000-000000000001']::uuid[]);
   reset role;
   assert n = 0, 'a declined invitee still gets a headcount for the trip';
+end $$;
+
+-- ── leaving ──────────────────────────────────────────────────────────
+--
+-- This file used to assert the opposite here: "an answered invitation
+-- could be answered again" was required to count zero. The owner's device
+-- found who that pin forgets — a guest who said yes and wants out had no
+-- move, so the app's delete button reached for the trip row, matched
+-- nothing, and the evening "came back". Leaving is declining late, and
+-- the update policy now says so. A fresh trip, so the crew arithmetic
+-- above keeps its numbers.
+insert into public.trips (id, owner_id, city_id, title, company, categories, day, when_part)
+values ('bbbbbbbb-0000-0000-0000-000000000009',
+        '11111111-1111-1111-1111-111111111111', 'hanoi', 'Tối thử rời đi',
+        'friends', '{cafes}', date '2026-08-29', 'evening');
+
+do $$
+begin
+  set local role rls_client;
+  set local test.uid = '11111111-1111-1111-1111-111111111111';
+  insert into public.trip_invites (trip_id, invitee_id, inviter_id)
+  values ('bbbbbbbb-0000-0000-0000-000000000009',
+          '22222222-2222-2222-2222-222222222222',
+          '11111111-1111-1111-1111-111111111111');
+  reset role;
+end $$;
+
+-- Say yes, then step out. Both moves are the invitee's own, and stepping
+-- out ends the view the yes had opened.
+do $$
+declare answered int; stepped_out int; trips_seen int; row_kept int;
+begin
+  set local role rls_client;
+  set local test.uid = '22222222-2222-2222-2222-222222222222';
+  with u as (
+    update public.trip_invites set status = 'accepted', responded_at = now()
+     where trip_id = 'bbbbbbbb-0000-0000-0000-000000000009'
+       and invitee_id = '22222222-2222-2222-2222-222222222222' returning 1
+  ) select count(*) into answered from u;
+  with u as (
+    update public.trip_invites set status = 'declined', responded_at = now()
+     where trip_id = 'bbbbbbbb-0000-0000-0000-000000000009'
+       and invitee_id = '22222222-2222-2222-2222-222222222222' returning 1
+  ) select count(*) into stepped_out from u;
+  select count(*) into trips_seen from public.trips
+   where id = 'bbbbbbbb-0000-0000-0000-000000000009';
+  reset role;
+  assert answered = 1, 'the invitee could not accept the leaving-test trip';
+  assert stepped_out = 1, 'an accepted invitee could not leave';
+  assert trips_seen = 0, 'leaving left the plan readable';
+
+  -- The owner keeps the answer — re-planning around a refusal needs it.
+  select count(*) into row_kept from public.trip_invites
+   where trip_id = 'bbbbbbbb-0000-0000-0000-000000000009'
+     and invitee_id = '22222222-2222-2222-2222-222222222222'
+     and status = 'declined';
+  assert row_kept = 1, 'leaving erased the row instead of answering it';
+end $$;
+
+-- And the door does not swing back: a refusal is still final, whether it
+-- was the first answer or the late one.
+do $$
+declare again int;
+begin
+  set local role rls_client;
+  set local test.uid = '22222222-2222-2222-2222-222222222222';
+  with u as (
+    update public.trip_invites set status = 'accepted'
+     where trip_id = 'bbbbbbbb-0000-0000-0000-000000000009'
+       and invitee_id = '22222222-2222-2222-2222-222222222222' returning 1
+  ) select count(*) into again from u;
+  reset role;
+  assert again = 0, 'a declined invitation could be re-answered';
 end $$;
 
 -- ── shape ────────────────────────────────────────────────────────────
