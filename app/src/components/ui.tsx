@@ -284,6 +284,20 @@ export function useOwnedStatusBar(want: () => StatusBarStyle | null): () => void
  * matching the metaRow every trip card already draws. Passed as Screen's
  * subtitle node; the text wears the same one-line style a plain string
  * subtitle gets, so the only difference is the mark.
+ *
+ * ── the mark is accent, and that sentence above is why ──
+ *
+ * It said it matched the trip card's metaRow while drawing in
+ * `textSecondary`, which is the one colour that metaRow does not use. So
+ * the same calendar was grey in a trip's header and coral on the card
+ * that opened it — one screen apart, one tap apart, and nothing chose
+ * that difference.
+ *
+ * The mark, not the text: the line stays `s.subtitle` so the header keeps
+ * its quiet, and only the glyph carries the accent. That is the same
+ * division `RoundIconButton`'s `color` note draws — a glyph is allowed
+ * its own ink, and the failure to guard for is one gesture wearing two
+ * colours on two screens.
  */
 export function IconSubtitle({ icon, text }: {
   icon: keyof typeof Ionicons.glyphMap;
@@ -291,7 +305,7 @@ export function IconSubtitle({ icon, text }: {
 }) {
   return (
     <View style={s.iconSubtitle}>
-      <Ionicons name={icon} size={13} color={colors.textSecondary} />
+      <Ionicons name={icon} size={13} color={colors.accent} />
       <Text style={[s.subtitle, { flexShrink: 1 }]} numberOfLines={1}>{text}</Text>
     </View>
   );
