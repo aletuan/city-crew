@@ -297,6 +297,38 @@ export const space = {
   headingToContent: 16,
   cardGap: 14,
   cardPadding: 16,
+  /**
+   * A stop's name, and the quiet line under it that qualifies it —
+   * "Yên Hòa · 60 phút".
+   *
+   * Named because three screens draw that pair and all three had written
+   * `gap: 2` separately, with no reason recorded anywhere. A number
+   * copied three times is a number nobody chose, and the three would have
+   * drifted apart the first time one of them was tuned.
+   *
+   * ── why it is 4 and not the 2 it was ──
+   *
+   * Measured off the device rather than argued from the token, because
+   * the declared gap is not what the eye sees: the fonts' own line boxes
+   * add slack on both sides, and what is left after the ink is the only
+   * figure that matters. Three real stop rows came out at 3.3, 4.3 and
+   * 5.7pt of clear space — the same 2, swinging 70% on nothing but which
+   * letters landed there. For comparison, `PlaceCard` draws the same kind
+   * of pair at 9.7pt, under a comment calling itself deliberately tight.
+   *
+   * The swing is Vietnamese. The gap is eaten from both sides: `ạ` in
+   * "Đạo" hangs a dot below the baseline, and `ế` in "Kiếm" stacks a
+   * circumflex under an acute and rides above cap height — in the
+   * measurement it separates into an ink band of its own. English never
+   * reaches into this gap from either direction, so a layout reviewed in
+   * English never sees it.
+   *
+   * 4 puts the tightest row at about 5.3pt, which is where the loosest
+   * one sits today. It leaves these rows still the closest-set pair in
+   * the app, which is right: an itinerary is denser than a card by
+   * design.
+   */
+  nameToMeta: 4,
 };
 
 /**

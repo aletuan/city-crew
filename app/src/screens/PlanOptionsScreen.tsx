@@ -490,7 +490,7 @@ const s = StyleSheet.create({
   // No height. It fills whatever the stop beside it turned out to be —
   // see the note where the leg is nested.
   rail: { flex: 1, width: 2, backgroundColor: colors.borderGlassSoft },
-  body: { flex: 1, gap: 2 },
+  body: { flex: 1, gap: space.nameToMeta },
   stopName: { ...type.body, color: colors.text, fontWeight: font.semibold },
   stopMeta: { ...CAPTION, color: colors.textTertiary },
 

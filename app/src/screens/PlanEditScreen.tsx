@@ -625,7 +625,7 @@ const s = StyleSheet.create({
     width: 44, height: 44, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass,
   },
-  headCol: { flex: 1, gap: 2 },
+  headCol: { flex: 1, gap: space.nameToMeta },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { ...type.body, color: colors.text, fontWeight: font.semibold, flex: 1 },
   rating: { flexDirection: 'row', alignItems: 'center', gap: 3 },
