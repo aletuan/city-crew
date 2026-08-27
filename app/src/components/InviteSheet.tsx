@@ -29,7 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { FriendProfile } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import {
-  candidates, companySeats, diffSelection, roomLeft, togglePick, type InviteRow,
+  candidates, companySeats, diffSelection, roomLeft, seatsFull, togglePick, type InviteRow,
 } from '../lib/invites';
 import { colors, display, font, space } from '../theme';
 import { Avatar, GradientCta, PressableScale } from './ui';
@@ -39,8 +39,8 @@ export default function InviteSheet({
 }: {
   open: boolean;
   /** The sentence under the title, and the seat rule: a couple's evening
-   *  holds one guest, so its sheet swaps the pick instead of collecting
-   *  ticks — see `companySeats`/`togglePick`. */
+   *  holds one guest, so one tick greys the rest of the list out with the
+   *  note saying why — see `companySeats`/`seatsFull`. */
   company: string | null;
   /** Accepted friends, in the order the crew list holds them. */
   friendIds: readonly string[];
@@ -80,10 +80,13 @@ export default function InviteSheet({
   // reads, and the ticks above already show the second half.
   const moved = invite.length + withdraw.length;
 
-  // The company's own ceiling, enforced by swap: on a couple's evening,
-  // ticking a second name steps the first aside (Send would withdraw it)
-  // rather than quietly collecting a crowd the trip's word rules out.
+  // The company's own ceiling. On a couple's evening one tick fills the
+  // seat, and the rest of the list greys out with the note below saying
+  // why — the owner's call: simpler than any cleverness with the picks.
+  // Unticking wakes the list back up. A seat held by an answered guest
+  // greys it the same way, permanently.
   const seats = companySeats(company);
+  const full = seatsFull(rows, picked, seats);
   const seatsHeld = seats != null && rows.filter((r) => r.locked && r.seated).length >= seats;
 
   const toggle = (id: string, locked: boolean) => {
@@ -145,16 +148,20 @@ export default function InviteSheet({
             {rows.map((r) => {
               const p = people[r.id];
               const on = picked.has(r.id);
+              // Greyed once the seats are spoken for: an unticked row on a
+              // full sheet cannot be picked, and it says so by standing
+              // down rather than by a checkbox that ignores the tap.
+              const benched = full && !on && !r.locked;
               const n = mutual[r.id] ?? 0;
               return (
                 <PressableScale
                   key={r.id}
-                  onPress={() => toggle(r.id, r.locked)}
-                  haptic={r.locked ? 'none' : 'selection'}
+                  onPress={() => toggle(r.id, r.locked || benched)}
+                  haptic={r.locked || benched ? 'none' : 'selection'}
                   accessibilityRole="checkbox"
-                  accessibilityState={{ checked: on, disabled: r.locked }}
+                  accessibilityState={{ checked: on, disabled: r.locked || benched }}
                   containerStyle={{ alignSelf: 'stretch' }}
-                  style={[s.row, r.locked && s.rowLocked]}
+                  style={[s.row, (r.locked || benched) && s.rowLocked]}
                 >
                   <Avatar url={p?.avatar_url} size={44} />
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -203,11 +210,17 @@ export default function InviteSheet({
                   'Buổi tối hai người đã đủ — người đi cùng đã trả lời.',
                   'ふたりの夜はそろいました — 相手はもう回答しています。',
                 )
-                : t(
-                  'They see the plan once they accept. Times and stops stay yours to edit.',
-                  'Họ thấy kế hoạch sau khi đồng ý. Giờ giấc và các điểm dừng vẫn do bạn sửa.',
-                  '承諾すると予定が見えます。時刻とスポットはあなたが編集します。',
-                )}
+                : full
+                  ? t(
+                    'A couple’s evening seats one guest — untick to choose someone else.',
+                    'Buổi tối hai người chỉ mời một người — bỏ chọn để đổi người khác.',
+                    'ふたりの夜は1人だけ — 変えるにはチェックを外してください。',
+                  )
+                  : t(
+                    'They see the plan once they accept. Times and stops stay yours to edit.',
+                    'Họ thấy kế hoạch sau khi đồng ý. Giờ giấc và các điểm dừng vẫn do bạn sửa.',
+                    '承諾すると予定が見えます。時刻とスポットはあなたが編集します。',
+                  )}
           </Text>
         </View>
 
