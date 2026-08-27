@@ -69,6 +69,28 @@ describe('what the card says', () => {
   });
 });
 
+describe('the cover', () => {
+  it('wears the photograph a stop brings, credited', () => {
+    show({
+      trip: trip({
+        trip_stops: [
+          { sort_order: 0, arrive_min: 17 * 60, dwell_min: 60, why: null, why_lang: null,
+            places: place({ place_photos: [
+              { photo_uri: 'https://pic/cafe.jpg', is_cover: true, is_hidden: false,
+                sort_order: 0, attribution_name: 'Bởi Minh' },
+            ] }) as never },
+        ],
+      }),
+    });
+    // The credit only renders on a drawn cover, so it is the proof the
+    // photograph made it through. Every fixture above carries no photos,
+    // which is how the original slipped past this file: the card unwrapped
+    // the stops before handing them to `tripCover`, and every invitation
+    // drew the grey block regardless of what the places carried.
+    expect(screen.getByText('Bởi Minh')).toBeTruthy();
+  });
+});
+
 describe('both answers', () => {
   it('offers each of them, from the card', () => {
     show();

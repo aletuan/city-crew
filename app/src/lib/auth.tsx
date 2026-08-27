@@ -8,9 +8,11 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { decode } from 'base64-arraybuffer';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { cacheKey, packCache, unpackCache } from './data/cache';
 import { supabase } from './supabase';
 import { normalizeHandle } from './handle';
 
@@ -134,6 +136,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // the next one loads.
   const loadProfile = useCallback(async (uid: string | undefined) => {
     if (!uid) { setProfile(EMPTY_PROFILE); return; }
+    // The last launch's answer first. Every open used to start on the
+    // empty profile and wait a network round-trip for the row, and the
+    // reader watched their own face fade in a second late — the launch
+    // cache the catalog and the crew already use, applied to the one row
+    // the header wears. Only onto the empty profile: if the fetch below
+    // (or a profile edit) has already written, a stale stash must not
+    // undo it. Keyed by uid, so another account is a miss, never a wrong
+    // hit; a cache is a convenience, so its failures are swallowed.
+    try {
+      const hit = unpackCache<Profile[]>(
+        await AsyncStorage.getItem(cacheKey('profile', 'all', uid)), Date.now(),
+      );
+      const kept = hit?.data[0];
+      if (kept) setProfile((p) => (p === EMPTY_PROFILE ? kept : p));
+    } catch { /* nothing worth surfacing: the fetch below is the truth */ }
     const { data } = await supabase
       .from('profiles')
       .select('handle, full_name, bio, location, interests, avatar_url')
@@ -146,6 +163,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => { void loadProfile(session?.user?.id); }, [session?.user?.id, loadProfile]);
+
+  // Keep the stash in step with every way the profile changes — the
+  // fetch above, an edit, an avatar set or cleared — by watching the one
+  // state they all write. The empty profile is never stashed: it is the
+  // signed-out state, not an answer.
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid || profile === EMPTY_PROFILE) return;
+    AsyncStorage
+      .setItem(cacheKey('profile', 'all', uid), packCache([profile], Date.now()))
+      .catch(() => {});
+  }, [profile, session?.user?.id]);
 
   // Token refresh runs on a timer; only keep it running while the app is
   // in the foreground (the supabase-js guidance for React Native).

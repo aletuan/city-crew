@@ -152,7 +152,7 @@ export default function TripInvitationScreen({ navigation, route }: {
         </Card>
 
         <Text style={s.section}>{t('THEIR PLAN', 'KẾ HOẠCH CỦA HỌ', 'その予定')}</Text>
-        <Card>
+        <Card style={s.plan}>
           {stops.map((st, i) => {
             const p = st.places;
             const leg = legs[i];
@@ -271,7 +271,15 @@ export default function TripInvitationScreen({ navigation, route }: {
 }
 
 const s = StyleSheet.create({
-  asker: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  // `Card` draws a surface and nothing else — padding is the caller's job,
+  // and this screen shipped without doing it: every card had its content
+  // against the border, and the summary line's first digit was clipped by
+  // the rounded corner's overflow. The values are the family's own —
+  // `space.cardPadding` across, InviteCard's 12–14 down.
+  asker: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: space.cardPadding, paddingVertical: 12,
+  },
   askerName: { color: colors.text, fontSize: 16, fontWeight: font.bold },
   askerVerb: { color: colors.textSecondary, fontWeight: font.regular },
   askerMeta: { color: colors.textTertiary, fontSize: 13, marginTop: 2 },
@@ -281,6 +289,9 @@ const s = StyleSheet.create({
     letterSpacing: 1.1, marginTop: space.cardGap, marginBottom: 8,
   },
 
+  // Rows carry 8 of their own, so the card's vertical half meets them at
+  // a 16 total — the same rhythm `cardPadding` gives the sides.
+  plan: { paddingHorizontal: space.cardPadding, paddingVertical: 8 },
   stop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 8 },
   at: {
     color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium,
@@ -301,7 +312,10 @@ const s = StyleSheet.create({
   },
   sumText: { color: colors.textSecondary, fontSize: 13 },
 
-  who: { flexDirection: 'row', alignItems: 'flex-start', gap: 11, marginTop: space.cardGap },
+  who: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 11, marginTop: space.cardGap,
+    paddingHorizontal: space.cardPadding, paddingVertical: 14,
+  },
   whoText: { flex: 1, color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
   noteText: { flex: 1, color: colors.textTertiary, fontSize: 13.5, lineHeight: 20 },
 

@@ -32,7 +32,7 @@ import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import {
-  AmbientWarmth, Card, Empty, PressableScale, Screen, useTabBarClearance,
+  AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useCity } from '../lib/city';
@@ -312,11 +312,16 @@ export default function TripDetailScreen({ navigation, route }: {
   return (
     <Screen
       title={trip.title}
-      subtitle={summaryLine([
-        day ? dateline(lang, day) : trip.day,
-        window,
-        city ? t(city.short_en, city.short_vi, city.short_ja) : null,
-      ])}
+      subtitle={(
+        <IconSubtitle
+          icon="calendar-outline"
+          text={summaryLine([
+            day ? dateline(lang, day) : trip.day,
+            window,
+            city ? t(city.short_en, city.short_vi, city.short_ja) : null,
+          ])}
+        />
+      )}
       onBack={() => navigation.goBack()}
     >
       <AmbientWarmth />

@@ -126,14 +126,19 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // copy — see `lib/invitations` — so the dot costs no request of its own.
   const { waiting: invitesWaiting } = useInvitations();
 
-  // The dot, reversed out of the pill. Idle, it is coral news ringed in
-  // the surface colour so it cuts from the glyph. On the selected tab
-  // both of those grounds turn coral at once, and the mark sank into the
-  // pill exactly where the reader was looking — the owner went hunting
-  // for it. So on a focused tab it swaps inks with the glyph: pill-ink
-  // dot, ringed in the pill's own coral — the same reversal the icon
-  // undergoes, so the news survives the selection.
-  const dotOnPill = {
+  // The dot wears one pair per theme, selected or not: pill-ink core,
+  // ringed in the pill's own coral.
+  //
+  // It has been through two grounds' worth of lessons. Coral-on-surface
+  // sank into the selected pill (same hue on same hue — the owner went
+  // hunting for it), so the focused tab learned this pair. Then the split
+  // showed its other half: on paper, `badgeSolid` is a pale tint, and the
+  // idle dot faded into the bar — found by the owner again. So the pair
+  // stops being conditional. Every ground the bar offers — glass or pill,
+  // paper or charcoal — contrasts with at least one half: the ink core
+  // carries it on the pill and on paper, the coral ring on charcoal's
+  // idle bar. One mark, wherever it lands.
+  const dotInk = {
     backgroundColor: light ? PILL_INK_LIGHT : PILL_INK_DARK,
     borderColor: colors.badgeSolid as string,
   };
@@ -225,9 +230,9 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                   than tinting it: a dot is news, a recoloured icon is a
                   different icon. */}
               {route.name === 'Profile' && waiting
-                ? <View style={[s.reqDot, focused && dotOnPill]} /> : null}
+                ? <View style={[s.reqDot, dotInk]} /> : null}
               {route.name === 'Trips' && invitesWaiting > 0
-                ? <View style={[s.reqDot, focused && dotOnPill]} /> : null}
+                ? <View style={[s.reqDot, dotInk]} /> : null}
               </View>
               <Text
                 numberOfLines={1}
@@ -277,11 +282,11 @@ const s = StyleSheet.create({
     borderRadius: radius.tabBar - 6,
     alignItems: 'center', justifyContent: 'center',
   },
+  // Geometry only — the colours are `dotInk`, picked per theme in render.
   reqDot: {
     position: 'absolute', top: -1, right: -4,
     width: 9, height: 9, borderRadius: 4.5,
-    backgroundColor: colors.badgeSolid as string,
-    borderWidth: 1.5, borderColor: colors.bgElevated as string,
+    borderWidth: 1.5,
   },
   caption: {
     // 11, not the 11.5 the old full-width bar used: the island is inset
