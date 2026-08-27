@@ -24,7 +24,7 @@ import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { addPlaceToCollection, createCollection, updateCollection } from '../lib/data';
 import { useI18n } from '../lib/i18n';
-import { membersOf, photosOf } from '../lib/place';
+import { coverOf, membersOf, photosOf } from '../lib/place';
 import { useSave } from '../lib/save';
 import { colors, font, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
@@ -58,15 +58,30 @@ export default function CollectionFormScreen({ navigation, route }: {
   // this row existed.
   const { data: places } = usePlaces();
   const col = editing ? mine.data.find((c) => c.slug === editing) ?? null : null;
-  const choices = (col ? membersOf(col, places) : [])
+  const members = col ? membersOf(col, places) : [];
+  const choices = members
     .flatMap((p) => photosOf(p))
     .filter((ph): ph is typeof ph & { id: string } => !!ph.id);
+  // What "Auto" actually resolves to — the first place's own cover, the
+  // exact fallback every renderer draws when nothing is picked. Shown on
+  // the chip itself, so the current cover is always visible as a
+  // picture rather than a word (the owner asked to see it).
+  const autoUri = members[0] ? coverOf(members[0])?.photo_uri : undefined;
   // Held as "chosen or not" beside the id, so the row's current cover
   // shows as selected until the reader actually picks — seeding state
   // from a fetch that may land after the first render would either lose
   // their tap or resurrect the old cover over it.
   const [pick, setPick] = useState<{ chosen: boolean; id: string | null }>({ chosen: false, id: null });
-  const coverId = pick.chosen ? pick.id : (col?.cover?.id ?? null);
+  // A row hydrated from a launch cache written before the cover carried
+  // its id arrives with only the uri — matched by uri then, so the ring
+  // sits on the real current cover instead of drifting to Auto until
+  // the refresh lands.
+  const current = col?.cover ?? null;
+  const coverId = pick.chosen
+    ? pick.id
+    : current
+      ? current.id ?? choices.find((ph) => ph.photo_uri === current.photo_uri)?.id ?? null
+      : null;
 
   const submit = async () => {
     const name = title.trim();
@@ -163,8 +178,23 @@ export default function CollectionFormScreen({ navigation, route }: {
               accessibilityState={{ selected: coverId == null }}
               style={[s.thumb, s.auto, coverId == null && s.thumbOn]}
             >
-              <Ionicons name="sparkles-outline" size={18} color={colors.textSecondary} />
-              <Text style={s.autoText}>{t('Auto', 'Tự động', '自動')}</Text>
+              {/* The chip wears the picture Auto would use, so "what is
+                  the cover right now" has a visible answer even before
+                  anything is picked. A first place with no photograph
+                  leaves the glass chip — nothing to preview. */}
+              {autoUri ? (
+                <>
+                  <Image source={{ uri: autoUri }} style={s.thumbImg} contentFit="cover" transition={120} />
+                  <View style={s.autoScrim}>
+                    <Text style={s.autoOnPhoto}>{t('Auto', 'Tự động', '自動')}</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="sparkles-outline" size={18} color={colors.textSecondary} />
+                  <Text style={s.autoText}>{t('Auto', 'Tự động', '自動')}</Text>
+                </>
+              )}
             </PressableScale>
             {choices.map((ph) => (
               <PressableScale
@@ -223,4 +253,9 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
   },
   autoText: { color: colors.textSecondary, fontSize: 10.5, fontWeight: font.medium },
+  autoScrim: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(8,7,10,0.55)', paddingVertical: 3, alignItems: 'center',
+  },
+  autoOnPhoto: { color: '#F7F7F5', fontSize: 10, fontWeight: font.semibold },
 });
