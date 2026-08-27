@@ -168,11 +168,14 @@ function Tagline() {
       <Text style={{ fontSize: 18 }}>✨</Text>
       <Text style={s.taglineText}>
         {t(
-          'Collect moments, not things.\nShare adventures, not plans.',
-          'Góp nhặt khoảnh khắc, không phải đồ vật.\nChia sẻ hành trình, không chỉ kế hoạch.',
-          'モノより思い出を集めよう。\n計画より冒険を分かち合おう。',
+          '“We do not remember days,\nwe remember moments.”',
+          '“Ta không nhớ những ngày,\nta nhớ những khoảnh khắc.”',
+          '「私たちが覚えているのは日々ではなく、\n瞬間なのだ。」',
         )}
       </Text>
+      {/* A borrowed sentence wears its author's name — and a name is
+          quoted, not translated, so it sits outside t(). */}
+      <Text style={s.taglineBy}>— Cesare Pavese</Text>
     </View>
   );
 }
@@ -580,4 +583,7 @@ const s = StyleSheet.create({
 
   tagline: { alignItems: 'center', gap: 8, paddingVertical: 18 },
   taglineText: { color: colors.textTertiary, ...type.meta, textAlign: 'center', lineHeight: 22 },
+  // Half a step under the quote: the words carry the weight, the name
+  // just signs them.
+  taglineBy: { color: colors.textTertiary, fontSize: 12, fontWeight: font.regular, letterSpacing: 0.3, marginTop: -2 },
 });
