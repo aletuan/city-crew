@@ -95,8 +95,18 @@ describe('updateCollection', () => {
     expect(call.payload).toEqual({
       title_en: 'Mới', title_vi: 'Mới', title_ja: 'Mới',
       desc_en: null, desc_vi: null, desc_ja: null,
+      // No pick sent: the cover clears to the fallback, not to whatever
+      // happened to be there.
+      cover_photo_id: null,
     });
     expect(call.filters).toEqual([['slug', 'quan-ca-phe-cu']]);
+  });
+
+  it('writes the chosen cover photograph when one is picked', async () => {
+    await updateCollection('quan-ca-phe-cu', { title: 'Mới', coverPhotoId: 'ph-9' });
+
+    const [call] = fake().log;
+    expect(call.payload).toMatchObject({ cover_photo_id: 'ph-9' });
   });
 
   it('throws what the database said', async () => {

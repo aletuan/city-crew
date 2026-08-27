@@ -8,6 +8,11 @@
 // `data.ts` re-exports all of this, so no call site needs to know.
 
 export type PlacePhoto = {
+  /** Row id, for pointing at a photo — a collection's chosen cover names
+   *  one. Optional because rows hydrated from a launch cache written
+   *  before the column joined the query arrive without it; a fresh fetch
+   *  always carries it. */
+  id?: string;
   photo_uri: string;
   is_cover: boolean;
   is_hidden: boolean;
@@ -90,7 +95,10 @@ export type Collection = {
   desc_vi: string | null;
   desc_ja: string | null;
   curator_handle: string | null;
-  cover: { photo_uri: string } | null;
+  /** The chosen cover photograph, when the owner (or the desk) picked
+   *  one; null falls back to the first place's own cover. `id` optional
+   *  for the same launch-cache reason as PlacePhoto.id. */
+  cover: { id?: string; photo_uri: string } | null;
   collection_places: { sort_order: number; places: { slug: string } | null }[];
   /** Null on the editorial collections — those belong to the desk. Set to a
    *  user's id on the lists they made for themselves. */

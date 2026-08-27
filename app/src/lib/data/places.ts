@@ -14,7 +14,7 @@ import { ownPendingFirst } from '../live';
 // city — has to be able to say where it is, and a row that only ever
 // matched a `where` clause cannot. See `touchesCity`.
 export const PLACE_COLS = (withCategories: boolean) =>
-  `slug, city_id, google_place_id, name_en, name_vi, name_ja, category${withCategories ? ', categories' : ''}, is_published, review_status, submitted_by, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, neighborhood_ja, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, desc_ja, emoji, opening_hours, website, phone, created_at, place_photos(photo_uri, is_cover, is_hidden, sort_order, attribution_name)`;
+  `slug, city_id, google_place_id, name_en, name_vi, name_ja, category${withCategories ? ', categories' : ''}, is_published, review_status, submitted_by, is_featured, vibe_tags, neighborhood_en, neighborhood_vi, neighborhood_ja, address, lat, lng, rating, rating_count, price_display, price_vnd, duration_min, duration_max, desc_en, desc_vi, desc_ja, emoji, opening_hours, website, phone, created_at, place_photos(id, photo_uri, is_cover, is_hidden, sort_order, attribution_name)`;
 
 /**
  * The catalog for a city, plus whatever the reader suggested themselves.
