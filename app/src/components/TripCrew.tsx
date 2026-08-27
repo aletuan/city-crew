@@ -50,10 +50,13 @@ export default function TripCrew({
   /** The planner's picture, when the planner is somebody else. Null on
    *  the reader's own trip — there the planner is `myAvatar`. */
   hostAvatar: string | null;
-  /** The count an invitee is allowed: accepted, from the function. Null
-   *  when it could not be fetched — a missing headcount costs a clause in
-   *  a sentence and must not fail the screen. */
-  headCount: number | null;
+  /** The count an invitee is allowed: accepted heads, batched by the
+   *  invitations provider before this screen opened. Undefined while that
+   *  answer has not landed — the row stays quiet rather than wearing the
+   *  failure sentence as a loading state (the flicker the owner caught) —
+   *  and null when the batch truly failed, which draws the numberless
+   *  sentence: a missing headcount costs a clause, never the screen. */
+  headCount: number | null | undefined;
   /** False for a solo evening, and for a trip the reader did not plan. */
   canInvite: boolean;
   onInvite: () => void;
@@ -63,8 +66,11 @@ export default function TripCrew({
 
   // The owner counts off the rows they can see; an invitee is given the
   // number. Both mean the same thing — the planner plus everyone who said
-  // yes — and neither counts a maybe.
-  const going = mine ? headcount(crew) : (headCount == null ? null : headCount + 1);
+  // yes — and neither counts a maybe. For the invitee the two silences
+  // stay distinct: undefined is an answer on its way, null one that died.
+  const going = mine
+    ? headcount(crew)
+    : (typeof headCount === 'number' ? headCount + 1 : headCount);
 
   // The planner opens the row, and the reader is always in it — a grey
   // outline where a face belongs is the app forgetting who it is talking
@@ -82,15 +88,21 @@ export default function TripCrew({
   const waiting = crew.pending.length;
   const said_no = crew.declined.length;
 
-  const line = going == null
-    ? t('You’re on this one.', 'Bạn có mặt trong chuyến này.', 'あなたはこの旅程に参加します。')
-    : going === 1
-      ? t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ')
-      : t(
-        `${going} going`,
-        `${going} người đi`,
-        `${going}人が参加`,
-      );
+  // No line at all while the count is still on its way: the faces already
+  // say people are on this, and a sentence that gets replaced by a
+  // different sentence half a second later reads as the app changing its
+  // story. In practice the provider has answered before this screen opens.
+  const line = going === undefined
+    ? null
+    : going === null
+      ? t('You’re on this one.', 'Bạn có mặt trong chuyến này.', 'あなたはこの旅程に参加します。')
+      : going === 1
+        ? t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ')
+        : t(
+          `${going} going`,
+          `${going} người đi`,
+          `${going}人が参加`,
+        );
 
   return (
     <View style={s.wrap}>
@@ -104,7 +116,7 @@ export default function TripCrew({
         </View>
 
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={s.line} numberOfLines={1}>{line}</Text>
+          {line ? <Text style={s.line} numberOfLines={1}>{line}</Text> : null}
           {/* Only the owner is told what is still owed, and only when
               something is. A count of zero waiting is not news. */}
           {mine && (waiting > 0 || said_no > 0) ? (
