@@ -49,7 +49,12 @@ export default function InviteCard({
 }) {
   const { t, lang } = useI18n();
   const stops = trip.trip_stops ?? [];
-  const cover = tripCover(stops.map((st) => st.places).filter(Boolean) as Parameters<typeof tripCover>[0]);
+  // The stop rows go in whole: `tripCover` reads `.places` off each one
+  // itself. This used to unwrap the places first — and the cast that made
+  // it compile also hid what it meant: every lookup inside found no
+  // `.places` on a bare place, so every invitation drew the grey block,
+  // photographs or not.
+  const cover = tripCover(stops);
   const day = fromISO(trip.day);
   const first = stops[0];
 
@@ -73,31 +78,39 @@ export default function InviteCard({
   return (
     <View style={s.card}>
       <PressableScale onPress={onOpen} scaleTo={0.985} accessibilityRole="button">
-        <View style={s.media}>
-          {cover?.photo_uri ? (
-            <>
-              <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" transition={160} />
-              {/* The photographer's credit, required wherever the photo
-                  appears — the same rule TripsScreen's own card follows.
-                  A licence, not a caption. */}
-              {cover.attribution_name
-                ? <Text style={s.attr} numberOfLines={1}>{cover.attribution_name}</Text>
-                : null}
-            </>
-          ) : (
-            <View style={s.photoNone} />
-          )}
-          {/* The asker rides on the photo, the way the invitation arrived:
-              from a person, not from the app. */}
-          <View style={s.asker}>
+        {cover?.photo_uri ? (
+          <View style={s.media}>
+            <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" transition={160} />
+            {/* The photographer's credit, required wherever the photo
+                appears — the same rule TripsScreen's own card follows.
+                A licence, not a caption. */}
+            {cover.attribution_name
+              ? <Text style={s.attr} numberOfLines={1}>{cover.attribution_name}</Text>
+              : null}
+            {/* The asker rides on the photo, the way the invitation
+                arrived: from a person, not from the app. */}
+            <View style={s.asker}>
+              <Avatar url={from?.avatar_url} size={26} />
+              <Text style={s.askerText} numberOfLines={1}>
+                {from?.full_name || (from?.handle ? `@${from.handle}` : t('Someone', 'Ai đó', '誰か'))}
+                {' '}
+                <Text style={s.askerVerb}>{t('invited you', 'đã mời bạn', 'があなたを招待しました')}</Text>
+              </Text>
+            </View>
+          </View>
+        ) : (
+          // No photograph, no photo block: a grey slab wearing photo-white
+          // text was the app pretending — the words disappeared into the
+          // light theme. The asker leads on the card's own surface instead.
+          <View style={s.askerBare}>
             <Avatar url={from?.avatar_url} size={26} />
-            <Text style={s.askerText} numberOfLines={1}>
+            <Text style={s.askerBareText} numberOfLines={1}>
               {from?.full_name || (from?.handle ? `@${from.handle}` : t('Someone', 'Ai đó', '誰か'))}
               {' '}
-              <Text style={s.askerVerb}>{t('invited you', 'đã mời bạn', 'があなたを招待しました')}</Text>
+              <Text style={s.askerBareVerb}>{t('invited you', 'đã mời bạn', 'があなたを招待しました')}</Text>
             </Text>
           </View>
-        </View>
+        )}
 
         <View style={s.body}>
           <Text style={s.title} numberOfLines={2}>{trip.title}</Text>
@@ -153,7 +166,6 @@ const s = StyleSheet.create({
   },
   media: { height: 132, backgroundColor: colors.surfaceGlass },
   photo: { width: '100%', height: '100%' },
-  photoNone: { width: '100%', height: '100%', backgroundColor: colors.surfaceGlassStrong },
   attr: {
     position: 'absolute', right: 10, top: 8,
     color: onPhoto.textSecondary, fontSize: 10,
@@ -165,6 +177,13 @@ const s = StyleSheet.create({
   },
   askerText: { flex: 1, color: onPhoto.text, fontSize: 14, fontWeight: font.medium },
   askerVerb: { color: onPhoto.textSecondary, fontWeight: font.regular },
+
+  askerBare: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: space.cardPadding, paddingTop: 14,
+  },
+  askerBareText: { flex: 1, color: colors.text, fontSize: 14, fontWeight: font.medium },
+  askerBareVerb: { color: colors.textSecondary, fontWeight: font.regular },
 
   body: { paddingHorizontal: space.cardPadding, paddingTop: 12, gap: 5 },
   title: { ...type.cardTitle, color: colors.text },
