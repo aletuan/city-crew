@@ -415,7 +415,6 @@ export const COMPANY_LEAN: Record<Company, Lean> = {
   couple: { favour: ['views', 'nightlife'], avoid: [], favourVibes: ['romantic'] },
   friends: { favour: ['nightlife', 'fun', 'eats'], avoid: [], favourVibes: [] },
   family: { favour: ['nature', 'fun', 'heritage'], avoid: ['nightlife'], favourVibes: ['kid_friendly'] },
-  other: NOBODY,
 };
 const COMPANY_FAVOUR = 1.5;
 const COMPANY_AVOID = 2;
