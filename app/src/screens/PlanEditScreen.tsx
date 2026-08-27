@@ -31,8 +31,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  AmbientWarmth, Avatar, Card, GradientCta, PressableScale, RoundIconButton, Screen, fireHaptic,
-  successHaptic, useTabBarClearance,
+  AmbientWarmth, Avatar, Card, GradientCta, IconSubtitle, PressableScale, RoundIconButton, Screen,
+  fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
 import {
   cachedNarration, derivedTitle, factLine, freshen, narratableOf, prefetchNarration,
@@ -315,7 +315,7 @@ export default function PlanEditScreen({ navigation, route }: {
   return (
     <Screen
       title={title}
-      subtitle={line || undefined}
+      subtitle={line ? <IconSubtitle icon="calendar-outline" text={line} /> : undefined}
       onBack={() => navigation.goBack()}
       /**
        * Share goes here rather than beside Save, and the reference design

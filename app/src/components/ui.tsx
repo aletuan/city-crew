@@ -279,6 +279,24 @@ export function useOwnedStatusBar(want: () => StatusBarStyle | null): () => void
   return apply;
 }
 
+/**
+ * A subtitle that leads with a small glyph — the calendar before a date,
+ * matching the metaRow every trip card already draws. Passed as Screen's
+ * subtitle node; the text wears the same one-line style a plain string
+ * subtitle gets, so the only difference is the mark.
+ */
+export function IconSubtitle({ icon, text }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  text: string;
+}) {
+  return (
+    <View style={s.iconSubtitle}>
+      <Ionicons name={icon} size={13} color={colors.textSecondary} />
+      <Text style={[s.subtitle, { flexShrink: 1 }]} numberOfLines={1}>{text}</Text>
+    </View>
+  );
+}
+
 export function Screen({ title, subtitle, eyebrow, children, right, onBack }: {
   title: string;
   /** One quiet line under the title. Only in the pushed-screen header —
@@ -758,6 +776,7 @@ const s = StyleSheet.create({
   headerText: { flex: 1, gap: 2, paddingTop: 5 },
   titleInline: { color: colors.text, ...type.titleDetail },
   subtitle: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 18 },
+  iconSubtitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { color: colors.text, ...type.title },
   // The dateline is the one place a screen title gets colour: it says
   // "today", which is the app's whole premise, and it is short enough that
