@@ -144,19 +144,32 @@ describe('the recount', () => {
   // lookup, no mutual-saves RPC, no rows settling in front of the reader.
   it('an identical answer looks nothing up again', async () => {
     mount();
-    await waitFor(() => expect(screen.getByTestId('faces').textContent).toBe('f1'));
-    expect(fetchProfilesById).toHaveBeenCalledTimes(1);
-    expect(fetchMutualSaves).toHaveBeenCalledTimes(1);
+    // The baseline is the lookup itself, not the faces row. This is u1,
+    // whose stash an earlier test persisted, so 'f1' can paint from the
+    // snapshot before the network answer has landed — CI once read the
+    // call count at exactly that moment and found 0. Waiting on the call
+    // is also self-diagnosing: a mount that genuinely never looks up
+    // fails here as "never reached 1", not two lines downstream.
+    await waitFor(() => expect(fetchProfilesById).toHaveBeenCalledTimes(1), { timeout: 5000 });
+    await waitFor(() => expect(fetchMutualSaves).toHaveBeenCalledTimes(1), { timeout: 5000 });
 
     recount();
     await waitFor(() => expect(fetchFriendships).toHaveBeenCalledTimes(2));
+    // calledTimes(2) counts the ask, not the answer. Await the answer's
+    // own promise, then let a polled pass flush its commit and effects —
+    // a wrongful lookup fires inside that effect, so it is visible to
+    // the pins below rather than landing just after them.
+    await fetchFriendships.mock.results[1]!.value;
+    await waitFor(() => expect(screen.getByTestId('edges').textContent).toBe('1'));
     expect(fetchProfilesById).toHaveBeenCalledTimes(1);
     expect(fetchMutualSaves).toHaveBeenCalledTimes(1);
   });
 
   it('a changed crew brings fresh faces', async () => {
     mount();
-    await waitFor(() => expect(screen.getByTestId('faces').textContent).toBe('f1'));
+    // The same baseline discipline as above, so the "2" below can only
+    // ever mean "one more than the mount's".
+    await waitFor(() => expect(fetchProfilesById).toHaveBeenCalledTimes(1), { timeout: 5000 });
 
     world.edges = [edge('u1', 'f1'), edge('u1', 'f2')];
     recount();

@@ -18,6 +18,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PlaceCard from '../components/PlaceCard';
 import { AddPill, AddSlot } from '../components/add';
+import { CitySwitcherModal } from '../components/CitySwitcher';
 import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useOwnedStatusBar, useTabBarClearance, useTabBarLift } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
@@ -341,6 +342,8 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
    */
   const [debug, setDebug] = useState<Debug | null>(null);
   const [debugOpen, setDebugOpen] = useState(false);
+  // The city switcher, openable from here — see the chip in heroContent.
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const shown = __DEV__ && debug ? debugSky(debug, sky) : sky;
   const hour = __DEV__ && debug ? debug.hour : new Date().getHours();
   // The photo trails the scroll slightly; pre-scaled so no edge shows.
@@ -419,6 +422,27 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
         </PressableScale>
       </View>
       <View style={s.heroContent}>
+        {/* The city, named at the headline's shoulder, and tappable. The
+            city is the biggest mode this app has, and until now changing
+            it lived three taps away behind Profile → Preferences; the
+            place to change it is where you can see what it currently is —
+            the same grammar Maps and Airbnb use for switching region.
+            Hidden until a city resolves: a chip with no name would open
+            a sheet over nothing worth switching away from. */}
+        {city ? (
+          <PressableScale
+            haptic="selection"
+            onPress={() => setSwitcherOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('Choose a city', 'Chọn thành phố', '都市を選択')}
+            containerStyle={{ alignSelf: 'flex-start' }}
+            style={s.heroCity}
+          >
+            <Ionicons name="location-outline" size={13} color={onPhoto.textSecondary} />
+            <Text style={s.heroDateText}>{t(city.short_en, city.short_vi, city.short_ja)}</Text>
+            <Ionicons name="chevron-down" size={12} color={onPhoto.textSecondary} />
+          </PressableScale>
+        ) : null}
         <Text style={s.heroTitle}>
           {city?.hero_title_en
             ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja)
@@ -469,6 +493,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
           onUseLive={() => setDebug(null)}
         />
       ) : null}
+      <CitySwitcherModal visible={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </View>
   );
 }
@@ -1087,6 +1112,15 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
   heroContent: { paddingHorizontal: space.page, paddingBottom: space.cardPadding + 6, gap: 10 },
+  // The dateline's material at the headline's shoulder, in the same
+  // eyebrow voice (`heroDateText`) — the pills read as one set. The
+  // chevron is what makes it read as a control rather than a caption.
+  heroCity: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 7,
+    backgroundColor: 'rgba(10,11,10,0.55)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
+  },
   // The screen title's scale, because this is the screen's title now —
   // the display face carrying a whole line, per theme.ts.
   heroTitle: { color: onPhoto.text, ...type.title, lineHeight: 40 },
