@@ -234,15 +234,19 @@ function GuestHub({ navigation }: { navigation: Nav }) {
               rather than the destination it leads to — saving a place is
               the first thing anybody does here, and the trip is what that
               becomes. The body says the three in order, which does repeat
-              the rows below: read as a sentence they are a reason, read as
-              rows they are the doors, and the paw is where the sentence
-              stops being a pitch. */}
+              the rows below: read as a sentence they are a reason, read
+              as rows they are the doors.
+
+              It ends on the plain noun. "The trips that come next" and
+              its paw were both reaching for warmth the sentence did not
+              need, and the qualifier was doing nothing besides — every
+              trip you plan comes next. */}
           <Text style={s.heroTitle}>{t('Keep the places you love', 'Lưu lại những nơi bạn yêu thích', 'お気に入りの場所を残しておく')}</Text>
           <Text style={s.heroBody}>
             {t(
-              'Sign in to save places, build collections, and plan the trips that come next 🐾',
-              'Đăng nhập để lưu địa điểm, tạo bộ sưu tập và lên kế hoạch cho những chuyến đi tiếp theo 🐾',
-              'サインインして、場所を保存し、コレクションを作り、次の旅を計画しましょう 🐾',
+              'Sign in to save places, build collections, and plan your trips',
+              'Đăng nhập để lưu địa điểm, tạo bộ sưu tập và lên kế hoạch cho những chuyến đi',
+              'サインインして、場所を保存し、コレクションを作り、旅を計画しましょう',
             )}
           </Text>
         </View>
