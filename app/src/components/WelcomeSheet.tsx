@@ -14,17 +14,27 @@
 // going anyway. It asks for nothing — no account, no permission — because
 // the sheets that ask already exist and arrive when the asking is earned.
 //
-// It wears the house sheet: the room dims in place and only the panel
-// rises, the same entrance AuthSheet and the switchers use.
+// ── why this one is not a Modal ──
+//
+// Every other sheet in the app is, and should be. This one arrives during
+// launch, and `Modal` on iOS is a native presentation — a view controller
+// and a window of its own — raised at the exact moment the JS thread is
+// busiest: fonts, the stored theme, the city bootstrap, Explore's fetches
+// and the decode of a full-bleed photograph. Presented into that, its
+// entrance stuttered. It is a plain absolute overlay now, rendered after
+// the navigators so it covers them, and it waits for
+// `InteractionManager` before it animates: the startup burst finishes,
+// then the sheet rises on an idle thread. Nothing about how it looks
+// changed; it just stopped competing for the frame it needed.
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, BackHandler, InteractionManager, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
-import { colors, display, font, gradAI, radius, space } from '../theme';
+import { colors, display, font, gradAI, space } from '../theme';
 import { PressableScale } from './ui';
 
 /** Written once, on the way out. */
@@ -41,6 +51,10 @@ const WELCOME_KEY = 'citycrew.welcomeSeen';
  *  of the read below, and the row in ProfileScreen's SettingsCard. */
 export const WELCOME_ALWAYS_KEY = 'citycrew.welcomeAlways';
 
+/** How far the panel travels, and how fast it leaves. */
+const RISE = 400;
+const EXIT_MS = 180;
+
 export default function WelcomeSheet() {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -54,7 +68,12 @@ export default function WelcomeSheet() {
     // TEMPORARY: the second read is the always-show switch; drop it and
     // this goes back to `getItem(WELCOME_KEY).then(v => v === null)`.
     Promise.all([AsyncStorage.getItem(WELCOME_KEY), AsyncStorage.getItem(WELCOME_ALWAYS_KEY)])
-      .then(([seen, always]) => { if (live && (always === '1' || seen === null)) setShow(true); })
+      .then(([seen, always]) => {
+        if (!live || !(always === '1' || seen === null)) return;
+        // After the launch burst, not during it. The storage read lands in
+        // milliseconds; the work it would have animated against does not.
+        InteractionManager.runAfterInteractions(() => { if (live) setShow(true); });
+      })
       // A read that failed is not a first launch. If storage is broken
       // the write would fail too, so showing here would mean showing on
       // every launch forever — and missing the welcome once is cheaper
@@ -64,26 +83,55 @@ export default function WelcomeSheet() {
   }, []);
 
   useEffect(() => {
-    if (!show) { rise.setValue(1); return; }
+    if (!show) return;
+    rise.setValue(1);
     Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
   }, [show, rise]);
 
-  const dismiss = () => {
-    setShow(false);
+  const dismiss = useCallback(() => {
+    // Out under its own power: without a Modal there is no platform
+    // dismissal to borrow, and unmounting on the tap would make the sheet
+    // vanish rather than leave.
+    Animated.timing(rise, { toValue: 1, duration: EXIT_MS, useNativeDriver: true })
+      .start(() => setShow(false));
     AsyncStorage.setItem(WELCOME_KEY, '1').catch(() => {});
-  };
+  }, [rise]);
+
+  // The other thing a Modal was doing for free. Android only: it is the
+  // one platform with a back button to answer, and the other two warn
+  // when it is subscribed to at all.
+  useEffect(() => {
+    if (!show || Platform.OS !== 'android') return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { dismiss(); return true; });
+    return () => sub.remove();
+  }, [show, dismiss]);
+
+  if (!show) return null;
 
   return (
-    <Modal visible={show} transparent animationType="fade" onRequestClose={dismiss} statusBarTranslucent>
+    <View style={StyleSheet.absoluteFill}>
       {/* The dimmed area dismisses, and it is the only secondary action
-          this sheet needs — there is nothing here to decline. */}
-      <Pressable style={s.backdrop} onPress={dismiss} accessibilityLabel={t('Close', 'Đóng', '閉じる')} />
+          this sheet needs — there is nothing here to decline. It fades
+          from the same value the panel rides, so the room dims in step
+          with the panel arriving. */}
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { opacity: rise.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) },
+        ]}
+      >
+        <Pressable
+          style={[StyleSheet.absoluteFill, s.backdrop]}
+          onPress={dismiss}
+          accessibilityLabel={t('Close', 'Đóng', '閉じる')}
+        />
+      </Animated.View>
       <Animated.View
         style={[
           s.sheet,
           {
             paddingBottom: insets.bottom + 22,
-            transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 400] }) }],
+            transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, RISE] }) }],
           },
         ]}
       >
@@ -92,11 +140,19 @@ export default function WelcomeSheet() {
           <Ionicons name="compass" size={28} color={colors.accent} />
         </View>
         <Text style={s.title}>
-          {t('Welcome to cityCrew', 'Chào bạn đến với cityCrew', 'cityCrew へようこそ')}
+          {t('Welcome to City Crew', 'Chào bạn đến với City Crew', 'City Crew へようこそ')}
         </Text>
 
-        {/* Each row wears the glyph of the tab it is about, so the sheet
-            also teaches the bar underneath it. */}
+        {/* Three lines standing on the sheet itself. They wore a bordered
+            card until the owner put this beside the screens it was
+            modelled on: a panel inside a panel is a box in a box, and the
+            welcomes worth copying set their rows straight on the ground
+            with the glyphs in one left rail. The icon tiles are the only
+            enclosure left, and they earn it — they are what the eye
+            follows down the list.
+
+            Each glyph is the one its tab wears, so the sheet teaches the
+            bar underneath it. */}
         <View style={s.rows}>
           <Row
             icon="compass-outline"
@@ -124,7 +180,6 @@ export default function WelcomeSheet() {
               'Chia sẻ kế hoạch, mời bạn bè, cùng chốt.',
               'プランを共有して友達を招待、みんなで決められます。',
             )}
-            last
           />
         </View>
 
@@ -143,18 +198,17 @@ export default function WelcomeSheet() {
           </LinearGradient>
         </PressableScale>
       </Animated.View>
-    </Modal>
+    </View>
   );
 }
 
-function Row({ icon, title, body, last }: {
+function Row({ icon, title, body }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   body: string;
-  last?: boolean;
 }) {
   return (
-    <View style={[s.row, !last && s.rowDivider]}>
+    <View style={s.row}>
       <View style={s.mark}>
         <Ionicons name={icon} size={20} color={colors.accent} />
       </View>
@@ -167,10 +221,10 @@ function Row({ icon, title, body, last }: {
 }
 
 const s = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.62)' },
+  backdrop: { backgroundColor: 'rgba(6,5,8,0.62)' },
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    alignItems: 'center', gap: 12,
+    alignItems: 'center',
     paddingHorizontal: space.page, paddingTop: 10,
     backgroundColor: colors.bgElevated,
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
@@ -178,7 +232,7 @@ const s = StyleSheet.create({
   },
   grabber: {
     width: 38, height: 4, borderRadius: 2,
-    backgroundColor: colors.textTertiary, marginBottom: 14,
+    backgroundColor: colors.textTertiary, marginBottom: 16,
   },
   badge: {
     width: 66, height: 66, borderRadius: 33,
@@ -186,19 +240,18 @@ const s = StyleSheet.create({
     backgroundColor: colors.accentSoft,
     borderWidth: 1, borderColor: colors.accentLine,
   },
-  title: { color: colors.text, fontSize: 22, fontFamily: display.bold, marginTop: 4 },
+  // The screen's own title scale: this sheet is the first page of the
+  // app, and it was speaking a card's voice.
+  title: {
+    color: colors.text, fontSize: 26, lineHeight: 32, fontFamily: display.bold,
+    textAlign: 'center', marginTop: 14,
+  },
 
-  rows: {
-    alignSelf: 'stretch', marginTop: 2, marginBottom: 4,
-    backgroundColor: colors.surfaceCard,
-    borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.card,
-    overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: space.cardPadding, paddingVertical: 14,
-  },
-  rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft },
+  // No ground of its own — see the note at the call site. The air between
+  // the rows is what separates them now, so it has to be worth reading as
+  // a separation: hairlines at this spacing would only put the box back.
+  rows: { alignSelf: 'stretch', gap: 22, marginTop: 22, marginBottom: 26 },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
   mark: {
     width: 42, height: 42, borderRadius: 13,
     alignItems: 'center', justifyContent: 'center',

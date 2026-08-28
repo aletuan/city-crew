@@ -31,7 +31,7 @@ beforeEach(async () => {
 describe('the first launch', () => {
   it('introduces the three things the tabs never say out loud', async () => {
     render(<WelcomeSheet />);
-    expect(await screen.findByText('Welcome to cityCrew')).toBeTruthy();
+    expect(await screen.findByText('Welcome to City Crew')).toBeTruthy();
     expect(screen.getByText('Explore and save')).toBeTruthy();
     expect(screen.getByText('Plan with AI')).toBeTruthy();
     expect(screen.getByText('Bring the crew')).toBeTruthy();
@@ -53,7 +53,7 @@ describe('the first launch', () => {
   // welcome comes back on the next launch.
   it('treats a tap on the dimmed room the same way', async () => {
     render(<WelcomeSheet />);
-    await screen.findByText('Welcome to cityCrew');
+    await screen.findByText('Welcome to City Crew');
     fireEvent.click(screen.getByLabelText('Close'));
     await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledWith(KEY, '1'));
   });
@@ -66,7 +66,7 @@ describe('every launch after', () => {
     render(<WelcomeSheet />);
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(KEY));
-    expect(screen.queryByText('Welcome to cityCrew')).toBeNull();
+    expect(screen.queryByText('Welcome to City Crew')).toBeNull();
   });
 
   // A read that failed is not a first launch. If storage cannot be read
@@ -77,7 +77,7 @@ describe('every launch after', () => {
     render(<WelcomeSheet />);
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(KEY));
-    expect(screen.queryByText('Welcome to cityCrew')).toBeNull();
+    expect(screen.queryByText('Welcome to City Crew')).toBeNull();
   });
 });
 
@@ -89,7 +89,7 @@ describe('the always-show switch', () => {
     await AsyncStorage.setItem(KEY, '1');
     await AsyncStorage.setItem(WELCOME_ALWAYS_KEY, '1');
     render(<WelcomeSheet />);
-    expect(await screen.findByText('Welcome to cityCrew')).toBeTruthy();
+    expect(await screen.findByText('Welcome to City Crew')).toBeTruthy();
   });
 
   it('goes back to silence once it is off', async () => {
@@ -97,6 +97,6 @@ describe('the always-show switch', () => {
     render(<WelcomeSheet />);
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(WELCOME_ALWAYS_KEY));
-    expect(screen.queryByText('Welcome to cityCrew')).toBeNull();
+    expect(screen.queryByText('Welcome to City Crew')).toBeNull();
   });
 });

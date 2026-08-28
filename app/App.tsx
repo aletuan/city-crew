@@ -242,12 +242,6 @@ function Root() {
         <AuthProvider>
           <I18nProvider>
             <CityProvider>
-              {/* The one-time welcome, above the navigators because it
-                  belongs to no screen — the same argument the save sheets
-                  make. Nothing else is needed to time it: this whole tree
-                  exists only once `holdingFirstFrame` has let go, so the
-                  sheet cannot arrive over the blank ground frame. */}
-              <WelcomeSheet />
               <NavigationContainer theme={navTheme} ref={navRef}>
                 {/* Dark type on paper, light type on charcoal — the one
                     thing the window's interface style does not carry. */}
@@ -286,6 +280,14 @@ function Root() {
                   </CrewProvider>
                 </CatalogProvider>
               </NavigationContainer>
+              {/* The one-time welcome, belonging to no screen — the same
+                  argument the save sheets make. It is a plain overlay
+                  rather than a Modal (see the note in the file), so it
+                  sits *after* the navigators: paint order is what puts it
+                  on top. Timing needs nothing either: this whole tree
+                  exists only once `holdingFirstFrame` has let go, so the
+                  sheet cannot arrive over the blank ground frame. */}
+              <WelcomeSheet />
             </CityProvider>
           </I18nProvider>
         </AuthProvider>
