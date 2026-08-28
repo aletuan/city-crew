@@ -260,15 +260,17 @@ const s = StyleSheet.create({
     width: 38, height: 4, borderRadius: 2,
     backgroundColor: colors.textTertiary, marginBottom: 16,
   },
-  // Bigger than the badge it replaces, and with no disc behind it: the
-  // mark carries its own colour and a tinted circle would only fight it.
+  // No disc behind it: the mark carries its own colour and a tinted
+  // circle would only fight it.
   //
-  // It shipped at 96 and read as an illustration rather than a mark —
-  // the file is trimmed to its own artwork, so the box is very nearly
-  // all ink, and against a 26pt title that was three times the height of
-  // the sentence it stands over. 72 is where it goes back to being a
-  // signature on the page.
-  logo: { width: 72, height: 72 },
+  // Sized down twice, from 96 to 72 to 60, and the reason it kept
+  // reading big is that the file is trimmed to its own artwork — the
+  // box is very nearly all ink, where the badge it replaced was mostly
+  // padding around a small glyph. So the air it needs has to be put
+  // back deliberately: `marginVertical` here, on top of the grabber's
+  // margin above and the title's below, which is what stops the mark
+  // from sitting wedged between them.
+  logo: { width: 60, height: 60, marginVertical: 8 },
   // The screen's own title scale: this sheet is the first page of the
   // app, and it was speaking a card's voice.
   title: {
