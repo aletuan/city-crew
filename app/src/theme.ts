@@ -31,10 +31,21 @@ import { DynamicColorIOS, Platform, type ColorValue } from 'react-native';
 const dyn = (light: string, dark: string): ColorValue =>
   (Platform.OS === 'ios' ? DynamicColorIOS({ light, dark }) : dark);
 
+/**
+ * The page colour as plain hex, for the rare style that must resolve the
+ * scheme in JS. Border colours are the case: a dynamic pair on a border
+ * flattens against the PHONE's appearance, not the window the app set —
+ * so with a light phone under a dark app, a border painted `colors.bg`
+ * comes out cream on charcoal (measured, on TripCrew's face ring). Views
+ * and text resolve correctly; only a border needs this escape hatch.
+ * One source: `colors.bg` below is built from this same pair.
+ */
+export const bgHex = { light: '#F5F1EA', dark: '#0A0B0A' } as const;
+
 export const colors = {
   /** The page. Near-black charcoal, or warm paper — never pure black or
    *  pure white, and never uniform. */
-  bg: dyn('#F5F1EA', '#0A0B0A'),
+  bg: dyn(bgHex.light, bgHex.dark),
   /** Surfaces that must be opaque: sheets, modals, the cards on paper. */
   bgElevated: dyn('#FFFFFF', '#151614'),
   /** Card fill. Smoky and translucent on charcoal so the ambient light
