@@ -1,0 +1,81 @@
+// @vitest-environment jsdom
+//
+// The welcome, and the promise that it is a welcome rather than a
+// greeting: it appears on the launch where storage holds nothing, and
+// never again — including when storage itself is the thing that failed.
+
+import React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fireEvent, render, screen, waitFor } from '../uitest/render';
+
+vi.mock('../lib/i18n', () => ({
+  useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
+}));
+
+import WelcomeSheet from './WelcomeSheet';
+
+const KEY = 'citycrew.welcomeSeen';
+
+beforeEach(async () => {
+  // The stub's storage is one Map shared by every test in this file, and
+  // this key is fixed — so the flag has to be cleared by hand between
+  // tests. `mockClear`, never `mockReset`: reset takes the stub's
+  // implementation with it and the Map stops working for everything after.
+  await AsyncStorage.removeItem(KEY);
+  vi.mocked(AsyncStorage.getItem).mockClear();
+  vi.mocked(AsyncStorage.setItem).mockClear();
+});
+
+describe('the first launch', () => {
+  it('introduces the three things the tabs never say out loud', async () => {
+    render(<WelcomeSheet />);
+    expect(await screen.findByText('Welcome to cityCrew')).toBeTruthy();
+    expect(screen.getByText('Explore and save')).toBeTruthy();
+    expect(screen.getByText('Plan with AI')).toBeTruthy();
+    expect(screen.getByText('Bring the crew')).toBeTruthy();
+  });
+
+  // What "leaves" means here is the written flag, not a vanished word:
+  // react-native-web's Modal fades a closed sheet with CSS — opacity nil,
+  // pointer-events off — and leaves its children in the document, so a
+  // text query still finds them. The flag is the durable half anyway, and
+  // "it does not come back" is pinned by the launch-after tests below.
+  it('leaves through its one button, and remembers that it did', async () => {
+    render(<WelcomeSheet />);
+    fireEvent.click(await screen.findByText('Start exploring'));
+    await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledWith(KEY, '1'));
+  });
+
+  // The dimmed area is this sheet's only secondary action — there is
+  // nothing here to decline — so it has to write the flag too, or the
+  // welcome comes back on the next launch.
+  it('treats a tap on the dimmed room the same way', async () => {
+    render(<WelcomeSheet />);
+    await screen.findByText('Welcome to cityCrew');
+    fireEvent.click(screen.getByLabelText('Close'));
+    await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledWith(KEY, '1'));
+  });
+});
+
+describe('every launch after', () => {
+  it('says nothing at all', async () => {
+    await AsyncStorage.setItem(KEY, '1');
+    vi.mocked(AsyncStorage.setItem).mockClear();
+    render(<WelcomeSheet />);
+
+    await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(KEY));
+    expect(screen.queryByText('Welcome to cityCrew')).toBeNull();
+  });
+
+  // A read that failed is not a first launch. If storage cannot be read
+  // it cannot be written either, so greeting here would greet on every
+  // launch forever — the one failure mode worse than missing the welcome.
+  it('stays quiet when storage itself is the thing that broke', async () => {
+    vi.mocked(AsyncStorage.getItem).mockRejectedValueOnce(new Error('storage gone'));
+    render(<WelcomeSheet />);
+
+    await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(KEY));
+    expect(screen.queryByText('Welcome to cityCrew')).toBeNull();
+  });
+});

@@ -38,10 +38,16 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         onBack={() => navigation.goBack()}
         title={t('Sign in', 'Đăng nhập', 'サインイン')}
       />
+      {/* Neutral on purpose. "Glad to see you again" greeted a returning
+          reader — and this screen is also the first thing a brand-new one
+          reaches through "Sign in / Sign up", where being welcomed back
+          somewhere you have never been reads as a form letter. The switch
+          row below already carries "no account yet", so the lede says the
+          one thing both readers are here for. */}
       <Lede>{t(
-          'Glad to see you again! Sign in to continue planning amazing trips with your crew.',
-          'Rất vui được gặp lại! Đăng nhập để tiếp tục lên kế hoạch cùng hội của bạn.',
-          'また会えて嬉しいです！サインインして仲間との旅の計画を続けましょう。',
+          'Sign in to keep your saved places, collections and trips together in one account.',
+          'Đăng nhập để giữ địa điểm đã lưu, bộ sưu tập và chuyến đi trong cùng một tài khoản.',
+          'サインインすると、保存した場所・コレクション・旅程がひとつのアカウントにまとまります。',
         )}</Lede>
       <FieldRow
         icon="mail-outline"
