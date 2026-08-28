@@ -22,8 +22,9 @@
 // what stands between two accounts, which suggestions are still open —
 // lives in lib/friends, under the gate.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FieldRow, PrimaryButton } from '../components/authUi';
@@ -57,10 +58,21 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const tabClearance = useTabBarClearance();
   // One copy for the whole app — edges, faces and counts arrive from the
   // provider, usually before this screen has ever been opened, which is
-  // what took the seconds out of Profile → Crew. No focus reload either:
-  // every mutation below tells the provider, and absences are covered by
-  // its AppState refresh.
+  // what took the seconds out of Profile → Crew.
   const { ships, blocks, people, mutual, absorb } = useCrew();
+
+  // ...and recounted on every visit anyway. Mutations made here tell the
+  // provider themselves, and backgrounding is covered by its AppState
+  // refresh — but a request sent by somebody ELSE while the app stayed
+  // open reached this screen as a stale number until the next foreground.
+  // The numbers on the tabs are promises about what is inside, so each
+  // visit asks the server again: the held answer still paints first, and
+  // a number moves in place only when the truth did.
+  const shipsRef = useRef(ships);
+  shipsRef.current = ships;
+  useFocusEffect(useCallback(() => {
+    if (!shipsRef.current.loading) shipsRef.current.reload();
+  }, []));
 
   const crew = useMemo(() => splitFriendships(ships.data, me ?? ''), [ships.data, me]);
 
@@ -369,9 +381,10 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   return (
     <Screen
       title={t('Your crew', 'Crew của bạn', 'あなたのクルー')}
-      subtitle={crew.friends.length === 1
-        ? t('1 friend · plans get better together', '1 người bạn · kế hoạch vui hơn khi có nhau', '友達1人 · 計画は一緒がいい')
-        : t(`${crew.friends.length} friends · plans get better together`, `${crew.friends.length} người bạn · kế hoạch vui hơn khi có nhau`, `友達${crew.friends.length}人 · 計画は一緒がいい`)}
+      /* The motto alone: the count that used to open this line lives on
+         the Friends tab now, beside the list it counts — one fact, one
+         place. */
+      subtitle={t('Plans get better together', 'Kế hoạch vui hơn khi có nhau', '計画は一緒がいい')}
       onBack={() => navigation.goBack()}
       right={(
         <RoundIconButton
@@ -397,7 +410,10 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       <UnderlineTabs
         tabs={[
           { key: 'requests', icon: 'mail-outline', label: t('Requests', 'Lời mời', 'リクエスト'), count: crew.incoming.length },
-          { key: 'friends', icon: 'people-outline', label: t('Your friends', 'Bạn bè', '友達') },
+          // A tally, not a count: how many friends is a fact, not news,
+          // so it sits in the name in both states and never rings the
+          // unchosen-tab bubble the way waiting requests do.
+          { key: 'friends', icon: 'people-outline', label: t('Your friends', 'Bạn bè', '友達'), tally: crew.friends.length },
         ]}
         active={tab}
         onChange={setTab}
