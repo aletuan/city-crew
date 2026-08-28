@@ -139,6 +139,15 @@ export function CrewProvider({ children }: { children: React.ReactNode }) {
   // Fresh edges bring fresh faces. The hydrated pass is skipped — the
   // snapshot painted the faces that go with the cached edges, and the
   // real landing right behind it refreshes both.
+  //
+  // And only edges that actually CHANGED bring them: the Crew screen
+  // recounts on every visit now, and a recount that comes back identical
+  // used to re-run this whole wave anyway — faces, mutual saves, two
+  // more setStates — settling the rows in front of the reader for
+  // nothing (the flicker #353 first cured, resurrected by the recount).
+  // The fingerprint makes the comment below literally true: the stamps
+  // fire the effect, the ids decide whether there is anything to do.
+  const lookedUp = useRef('');
   useEffect(() => {
     if (ships.loadedAt === null || ships.fromCache) return;
     const split = splitFriendships(ships.data, meId ?? '');
@@ -148,6 +157,9 @@ export function CrewProvider({ children }: { children: React.ReactNode }) {
       ...split.outgoing.map((r) => r.addressee),
       ...blocks.data,
     ];
+    const fingerprint = [...ids].sort().join(',');
+    if (fingerprint === lookedUp.current) return;
+    lookedUp.current = fingerprint;
     if (ids.length) fetchProfilesById(ids).then(absorb).catch(() => {});
     if (split.friends.length) {
       fetchMutualSaves(split.friends)
@@ -163,6 +175,7 @@ export function CrewProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (ready && !meId) {
       freshFaces.current = false;
+      lookedUp.current = '';
       peopleRef.current = {};
       mutualRef.current = {};
       setPeople({});
