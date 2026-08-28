@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton } from '../components/authUi';
+import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
@@ -20,6 +20,7 @@ const RESEND_SECONDS = 60;
 export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { requestReset, resetPassword } = useAuth();
+  const failText = useFailText();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
@@ -138,7 +139,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
             )}
           </Text>
         ) : null}
-        {error ? <ErrorText>{error}</ErrorText> : null}
+        {error ? <FormError>{failText(error)}</FormError> : null}
         <PrimaryButton label={t('Reset password', 'Đặt lại mật khẩu', 'パスワードをリセット')} onPress={reset} busy={busy} />
       </AuthScreen>
     );
@@ -168,7 +169,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
         onSubmitEditing={send}
         returnKeyType="send"
       />
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      {error ? <FormError>{failText(error)}</FormError> : null}
       <PrimaryButton label={t('Send recovery code', 'Gửi mã khôi phục', 'コードを送信')} onPress={send} busy={busy} />
     </AuthScreen>
   );

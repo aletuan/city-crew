@@ -9,9 +9,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Session } from '@supabase/supabase-js';
+import type { AuthError, Session } from '@supabase/supabase-js';
 import { decode } from 'base64-arraybuffer';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { authFail } from './authfail';
 import { cacheKey, packCache, unpackCache } from './data/cache';
 import { supabase } from './supabase';
 import { normalizeHandle } from './handle';
@@ -29,6 +30,25 @@ function asFail(e: { code?: string; message: string }): string {
   if (e.code === '23505') return 'handle_taken';
   if (e.message.includes('handle_reserved')) return 'handle_reserved';
   return e.message;
+}
+
+/**
+ * The same trick on the auth side: Supabase's failure, as a name a screen
+ * can translate.
+ *
+ * The name rides in the `Error`'s message, exactly as `handle_taken` does
+ * above, which is what keeps the `Auth` contract below unchanged — a
+ * screen still catches an `Error` and reads `.message`. It has to travel
+ * that way rather than as a finished sentence, because `t()` is a hook
+ * and lives on the screen; see `useFailText` in `components/authUi`.
+ *
+ * A failure `authFail` has no name for keeps the server's own words. That
+ * is the deliberate half: "Invalid login credentials" is a different
+ * problem from "Email not confirmed", and English that says which one
+ * beats Vietnamese that does not.
+ */
+function asAuthFail(e: AuthError): Error {
+  return new Error(authFail(e.code, e.message) ?? e.message);
 }
 
 /**
@@ -192,7 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
+    if (error) throw asAuthFail(error);
   }, []);
 
   // The handle rides in the metadata for the `handle_new_user` trigger to
@@ -205,25 +225,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: { data: { full_name: name, handle: handle.toLowerCase() } },
     });
-    if (error) throw new Error(error.message);
+    if (error) throw asAuthFail(error);
     return { needsConfirm: !data.session };
   }, []);
 
   const confirmSignUp = useCallback(async (email: string, code: string) => {
     const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'signup' });
-    if (error) throw new Error(error.message);
+    if (error) throw asAuthFail(error);
   }, []);
 
   const requestReset = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) throw new Error(error.message);
+    if (error) throw asAuthFail(error);
   }, []);
 
   const resetPassword = useCallback(async (email: string, code: string, newPassword: string) => {
     const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'recovery' });
-    if (error) throw new Error(error.message);
+    if (error) throw asAuthFail(error);
     const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-    if (updateError) throw new Error(updateError.message);
+    if (updateError) throw asAuthFail(updateError);
   }, []);
 
   // Writes the row and keeps the copy in memory in step. There is no auth

@@ -74,33 +74,63 @@ describe('signing in', () => {
     await waitFor(() => expect(navigation.popToTop).toHaveBeenCalled());
   });
 
-  // The message is the server's, shown as it came: "Invalid login
-  // credentials" is a different problem from "Email not confirmed", and a
-  // screen that flattened both into "Something went wrong" would leave the
-  // second person waiting for an email they already have.
-  it('shows the reason it failed, in the server’s own words', async () => {
+  // What `lib/auth` throws is a name, not a sentence — `credentials` rather
+  // than "Invalid login credentials" — and this screen is where it becomes
+  // words. The mocked `t` returns the English variant, which is why the
+  // expectation reads in English on a rule that exists for Vietnamese.
+  it('says a named failure in the reader’s own language', async () => {
     // `…Once`, and the count asserted below, because one press is one
     // attempt: an implementation left rejecting past the call it was written
     // for says nothing about the screen and everything about the mock.
-    signIn.mockImplementationOnce(async () => { throw new Error('Invalid login credentials'); });
+    signIn.mockImplementationOnce(async () => { throw new Error('credentials'); });
     const navigation = nav();
     render(<SignInScreen navigation={navigation} />);
 
     fill('reader@example.com', 'wrong');
     submit();
 
-    expect(await screen.findByText('Invalid login credentials')).toBeTruthy();
+    expect(await screen.findByText('Email or password is incorrect.')).toBeTruthy();
     expect(signIn).toHaveBeenCalledOnce();
     expect(navigation.popToTop).not.toHaveBeenCalled();
   });
 
+  // The rule the old version of this test was written to hold, kept: a
+  // wrong password is a different problem from an unconfirmed address, and
+  // a screen that flattened both into one sentence would leave the second
+  // person waiting for an email they already have. Their password was
+  // right; nothing about the form is what needs fixing.
+  it('does not tell an unconfirmed address it typed the wrong password', async () => {
+    signIn.mockImplementationOnce(async () => { throw new Error('unconfirmed'); });
+    render(<SignInScreen navigation={nav()} />);
+
+    fill('reader@example.com', 'hunter2');
+    submit();
+
+    expect(await screen.findByText(/confirmed/i)).toBeTruthy();
+    expect(screen.queryByText('Email or password is incorrect.')).toBeNull();
+  });
+
+  // The other half of naming failures one at a time: anything unnamed
+  // still reaches the reader, in the server's own words. A screen that
+  // swallowed those into "Something went wrong" would be worse than the
+  // English it replaced.
+  it('shows a failure nothing has named yet exactly as it came', async () => {
+    signIn.mockImplementationOnce(async () => { throw new Error('Signups not allowed for this instance'); });
+    render(<SignInScreen navigation={nav()} />);
+
+    fill('reader@example.com', 'hunter2');
+    submit();
+
+    expect(await screen.findByText('Signups not allowed for this instance')).toBeTruthy();
+  });
+
   it('clears the last failure before trying again', async () => {
-    signIn.mockImplementationOnce(async () => { throw new Error('Invalid login credentials'); });
+    signIn.mockImplementationOnce(async () => { throw new Error('credentials'); });
     render(<SignInScreen navigation={nav()} />);
 
     fill('reader@example.com', 'wrong');
     submit();
-    expect(await screen.findByText('Invalid login credentials')).toBeTruthy();
+    expect(await screen.findByText('Email or password is incorrect.')).toBeTruthy();
 
     signIn.mockResolvedValue(undefined);
     submit();
@@ -113,14 +143,26 @@ describe('signing in', () => {
     // failing line names the culprit.
     await waitFor(() => expect(signIn).toHaveBeenCalledTimes(2), { timeout: 5000 });
     await waitFor(
-      () => expect(screen.queryByText('Invalid login credentials')).toBeNull(),
+      () => expect(screen.queryByText('Email or password is incorrect.')).toBeNull(),
       { timeout: 5000 },
     );
-  });
+    // ── and the clock the two of them run inside ──
+    //
+    // Vitest's own default is 5000, which is what each wait above was
+    // raised to — so the test could never actually spend either one. It
+    // died at its own limit first, and the failure named this `it` rather
+    // than the late line, which is the one thing the note above says must
+    // not happen. Seen once under full-suite load and green on the rerun,
+    // which is exactly how a limit set too low presents.
+    //
+    // 20s is not a budget to spend. Nothing here waits on anything real,
+    // so a passing run finishes in milliseconds; the number only has to be
+    // further out than 1s + 5s + 5s can reach.
+  }, 20_000);
 
   it('says nothing about an error before one has happened', () => {
     render(<SignInScreen navigation={nav()} />);
-    expect(screen.queryByText(/credentials/i)).toBeNull();
+    expect(screen.queryByText(/incorrect/i)).toBeNull();
   });
 });
 
