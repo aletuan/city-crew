@@ -22,6 +22,16 @@ the nearest supported city (Ho Chi Minh City or Hanoi). Denying it is fine —
 the app falls back to a default city and a manual city switcher. Coordinates
 are never transmitted or stored.
 
+AI: Plan titles and the one-line note under each stop are written by a
+language model (Anthropic's Claude), called from our own server rather than
+from the device. The model never chooses a place: it receives the stops our
+own algorithm already selected from our editor-approved catalog, and the
+output schema restricts it to exactly those places, so it cannot invent a
+venue. A free-text request ("somewhere with live jazz on Saturday") is
+parsed the same constrained way, into the same wizard answers the chips
+produce. No personal data is sent with either call — no name, email,
+account id or location. This is disclosed in our privacy policy.
+
 USER-GENERATED CONTENT (guideline 1.2): All catalog places are approved by
 our editorial desk before publication. User-published collections and
 profiles carry in-app Report actions; users can block other users; reports
@@ -45,6 +55,10 @@ follows the device language.
 - **UGC**: guideline 1.2 là lý do từ chối phổ biến với app có nội dung người
   dùng; đoạn này chỉ thẳng vào bốn yêu cầu (lọc, report, block, cách liên hệ)
   và nơi mỗi thứ nằm trong app.
+- **AI**: nêu trước để reviewer không phải tự phát hiện app có gọi model — và
+  để nói rõ ngay hai điều họ sẽ hỏi: model không tự bịa địa điểm, và không có
+  dữ liệu cá nhân nào được gửi đi. Cùng nội dung với mục AI trong privacy
+  policy; hai chỗ phải luôn khớp nhau.
 - **Ngôn ngữ**: để reviewer (thường dùng máy tiếng Anh) không bối rối khi
   screenshots tiếng Việt.
 
