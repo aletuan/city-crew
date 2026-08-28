@@ -716,7 +716,7 @@ function NoMatches({ term }: { term: string }) {
         {t(`No matches for “${term}”`, `Không có kết quả cho “${term}”`, `「${term}」に一致なし`)}
       </Text>
       <Text style={s.noneHint}>
-        {t('Not in cityCrew yet.', 'Chưa có trong cityCrew.', 'cityCrew にはまだありません。')}
+        {t('Not in City Crew yet.', 'Chưa có trong City Crew.', 'City Crew にはまだありません。')}
       </Text>
     </View>
   );

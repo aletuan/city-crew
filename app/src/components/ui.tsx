@@ -1,5 +1,5 @@
 // Shared UI atoms: screen scaffold with header + language pill, chips,
-// translucent charcoal cards — the cityCrew design system in React Native.
+// translucent charcoal cards — the City Crew design system in React Native.
 
 import React, { useEffect, useRef } from 'react';
 import {

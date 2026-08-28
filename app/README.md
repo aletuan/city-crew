@@ -1,4 +1,4 @@
-# cityCrew — app React Native (Expo)
+# City Crew — app React Native (Expo)
 
 Khởi đầu **sản phẩm thật**: app native đọc thẳng danh mục địa điểm đã
 published từ Supabase (publishable key + RLS — đúng đường truy cập mà

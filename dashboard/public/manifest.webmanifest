@@ -1,7 +1,7 @@
 {
-  "name": "cityCrew Data desk",
+  "name": "City Crew Data desk",
   "short_name": "Data desk",
-  "description": "Curate cityCrew places from anywhere",
+  "description": "Curate City Crew places from anywhere",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0B0910",

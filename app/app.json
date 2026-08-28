@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "cityCrew",
+    "name": "City Crew",
     "slug": "citycrew",
     "platforms": [
       "ios",
@@ -14,9 +14,9 @@
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "cityCrew uses your location once to pick the nearest city for you.",
-        "NSPhotoLibraryUsageDescription": "cityCrew needs your photo library so you can pick a profile photo.",
-        "NSCameraUsageDescription": "cityCrew needs the camera so you can take a profile photo.",
+        "NSLocationWhenInUseUsageDescription": "City Crew uses your location once to pick the nearest city for you.",
+        "NSPhotoLibraryUsageDescription": "City Crew needs your photo library so you can pick a profile photo.",
+        "NSCameraUsageDescription": "City Crew needs the camera so you can take a profile photo.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.aletuan.citycrew"
@@ -38,14 +38,14 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "cityCrew uses your location once to pick the nearest city for you."
+          "locationWhenInUsePermission": "City Crew uses your location once to pick the nearest city for you."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "cityCrew needs your photo library so you can pick a profile photo.",
-          "cameraPermission": "cityCrew needs the camera so you can take a profile photo."
+          "photosPermission": "City Crew needs your photo library so you can pick a profile photo.",
+          "cameraPermission": "City Crew needs the camera so you can take a profile photo."
         }
       ]
     ],

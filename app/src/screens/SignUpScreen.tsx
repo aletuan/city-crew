@@ -126,9 +126,9 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         title={t('Sign up', 'Đăng ký', '新規登録')}
       />
       <Lede>{t(
-          'Join cityCrew to save places, build collections and plan unforgettable trips with your crew.',
-          'Tham gia cityCrew để lưu địa điểm, tạo bộ sưu tập và lên kế hoạch cho những chuyến đi đáng nhớ.',
-          'cityCrewに参加して、場所を保存し、コレクションを作り、忘れられない旅を計画しましょう。',
+          'Join City Crew to save places, build collections and plan unforgettable trips with your crew.',
+          'Tham gia City Crew để lưu địa điểm, tạo bộ sưu tập và lên kế hoạch cho những chuyến đi đáng nhớ.',
+          'City Crewに参加して、場所を保存し、コレクションを作り、忘れられない旅を計画しましょう。',
         )}</Lede>
       <FieldRow
         icon="person-outline"

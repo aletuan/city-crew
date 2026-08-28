@@ -371,9 +371,9 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
               <View style={{ flex: 1, gap: 6 }}>
                 <Text style={s.missed}>
                   {t(
-                    "cityCrew is not allowed to know where you are, so plans start from the city rather than from you. iOS only asks once — after that it is a switch in Settings.",
-                    'cityCrew chưa được phép biết bạn ở đâu, nên kế hoạch sẽ bắt đầu từ thành phố thay vì từ chỗ bạn đứng. iOS chỉ hỏi một lần — sau đó phải bật lại trong Cài đặt.',
-                    'cityCrew は現在地を取得できないため、プランはあなたの居場所ではなく街を起点にします。iOS が尋ねるのは一度きりで、あとは設定でのオンオフになります。',
+                    "City Crew is not allowed to know where you are, so plans start from the city rather than from you. iOS only asks once — after that it is a switch in Settings.",
+                    'City Crew chưa được phép biết bạn ở đâu, nên kế hoạch sẽ bắt đầu từ thành phố thay vì từ chỗ bạn đứng. iOS chỉ hỏi một lần — sau đó phải bật lại trong Cài đặt.',
+                    'City Crew は現在地を取得できないため、プランはあなたの居場所ではなく街を起点にします。iOS が尋ねるのは一度きりで、あとは設定でのオンオフになります。',
                   )}
                 </Text>
                 <PressableScale
@@ -458,7 +458,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
                   ? t('Or pick a nearby area', 'Hoặc chọn khu vực gần đó', '近くのエリアから選ぶ')
                   // Not "nearby", because it is not. Naming the city is
                   // the honest version of the same offer: these are the
-                  // areas cityCrew covers, and you are not in them.
+                  // areas City Crew covers, and you are not in them.
                   : city
                     ? t(`Or pick an area in ${city.name_en}`, `Hoặc chọn khu vực ở ${city.name_vi}`, `${city.name_en}のエリアから選ぶ`)
                     : t('Or pick an area', 'Hoặc chọn một khu vực', 'エリアから選ぶ')}

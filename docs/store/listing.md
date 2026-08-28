@@ -5,7 +5,7 @@ Giới hạn ký tự của Apple ghi cạnh từng mục; các bản dịch đ�
 
 ## Tên app (30 ký tự)
 
-- EN/VI/JA chung: `cityCrew`
+- EN/VI/JA chung: `City Crew`
 
 ## Subtitle (30 ký tự)
 
@@ -24,7 +24,7 @@ Giới hạn ký tự của Apple ghi cạnh từng mục; các bản dịch đ�
 ### EN
 
 ```
-cityCrew is a curated guide to your city — not everything, just the places
+City Crew is a curated guide to your city — not everything, just the places
 worth your evening.
 
 EXPLORE
@@ -52,7 +52,7 @@ Currently covering Ho Chi Minh City and Hanoi, with more cities on the way.
 ### VI
 
 ```
-cityCrew là cẩm nang tuyển chọn cho thành phố của bạn — không phải mọi thứ,
+City Crew là cẩm nang tuyển chọn cho thành phố của bạn — không phải mọi thứ,
 chỉ những nơi xứng đáng cho buổi tối của bạn.
 
 KHÁM PHÁ
@@ -79,7 +79,7 @@ Hiện có TP. Hồ Chí Minh và Hà Nội, các thành phố khác sẽ sớm 
 ### JA
 
 ```
-cityCrewは、あなたの街の厳選ガイド。すべてではなく、今夜に値する場所だけを。
+City Crewは、あなたの街の厳選ガイド。すべてではなく、今夜に値する場所だけを。
 
 さがす
 カフェ、レストラン、バー、スポット。編集デスクが確認したものだけが画面に届き

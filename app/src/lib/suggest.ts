@@ -64,7 +64,7 @@ type Fn = { error?: { message?: string } | null; data?: unknown };
  * a 409 arrives as "Edge Function returned a non-2xx status code" with the
  * reason inside a `context` the types do not admit to. Reading it back out
  * is unpleasant and the alternative is worse: every refusal would look
- * identical, and "already on cityCrew" would read as "something went
+ * identical, and "already on City Crew" would read as "something went
  * wrong".
  */
 export async function readOutcome(res: Fn): Promise<SuggestOutcome> {
