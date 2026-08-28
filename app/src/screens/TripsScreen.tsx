@@ -379,11 +379,20 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
           <Text style={s.firstTitle}>
             {t('Sign in to keep your trips', 'Đăng nhập để lưu chuyến đi', 'サインインして旅程を保存')}
           </Text>
+          {/* What signing in buys, not what staying out costs — and the
+              old sentence was worse than merely glum: it promised that a
+              plan "stays on this phone until you do", and nothing here
+              keeps one. A trip lives in the `trips` table from the moment
+              it is saved; storage on the phone is a cache of that, keyed
+              per account. Built signed out, a plan is simply lost — which
+              is why the warning belongs at the moment somebody presses
+              save, and already lives there (see PlanEditScreen's caption),
+              rather than on a tab that is standing empty anyway. */}
           <Text style={s.firstBody}>
             {t(
-              'Plans you build stay on this phone until you do. Only you can see them.',
-              'Kế hoạch bạn dựng chỉ nằm trên máy cho tới lúc đó. Chỉ mình bạn thấy chúng.',
-              'サインインするまでプランはこの端末だけに残ります。閲覧できるのはあなただけです。',
+              'Keep your plans and pick them up any time, on any device.',
+              'Lưu kế hoạch của bạn và xem lại bất cứ lúc nào, trên mọi thiết bị.',
+              'プランを保存して、いつでもどの端末からでも見返せます。',
             )}
           </Text>
           <GradientCta
