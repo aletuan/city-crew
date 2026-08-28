@@ -84,7 +84,21 @@ describe('the list of cities', () => {
     fetchPlaceCountByCity.mockImplementation(async () => ({ hanoi: 179, saigon: 15 }));
     render(<CitySwitcherModal visible onClose={() => {}} />);
     expect(await screen.findByText('179 places')).toBeTruthy();
-    expect(await screen.findByText('15 places · new')).toBeTruthy();
+    expect(await screen.findByText('15 places')).toBeTruthy();
+    // The badge belongs to the name, not the count. Written under it as
+    // "15 places · new" it read as fifteen newly added places; the count
+    // line is now the count alone, and NEW stands beside "Saigon".
+    expect(await screen.findByText('NEW')).toBeTruthy();
+    expect(screen.queryByText(/places · new/)).toBeNull();
+  });
+
+  it('badges only the young city, never the deep one', async () => {
+    fetchPlaceCountByCity.mockImplementation(async () => ({ hanoi: 179, saigon: 15 }));
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    // Two cities on screen, one badge — the threshold is doing work
+    // rather than the badge being unconditional.
+    await screen.findByText('NEW');
+    expect(screen.queryAllByText('NEW')).toHaveLength(1);
   });
 
   it('keeps its quiet when the count never came', async () => {
@@ -92,6 +106,9 @@ describe('the list of cities', () => {
     render(<CitySwitcherModal visible onClose={() => {}} />);
     expect(await screen.findByText('Hanoi')).toBeTruthy();
     expect(screen.queryByText(/places/)).toBeNull();
+    // No count means no judgement about age either — a row that says
+    // nothing must not imply a city is young.
+    expect(screen.queryByText('NEW')).toBeNull();
   });
 });
 

@@ -119,15 +119,24 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
                 onPress={() => { fireHaptic('selection'); setCity(c.id); onClose(); }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.rowTitle, active && { color: colors.accent }]}>
-                    {t(c.short_en, c.short_vi, c.short_ja)}
-                  </Text>
+                  <View style={s.nameRow}>
+                    <Text style={[s.rowTitle, active && { color: colors.accent }]}>
+                      {t(c.short_en, c.short_vi, c.short_ja)}
+                    </Text>
+                    {/* Beside the name, because that is the noun it means.
+                        Under it — as "15 places · new" — it sat next to
+                        the count instead, and read as fifteen *newly
+                        added* places rather than a young catalog. A chip
+                        against the city's own name cannot say that. */}
+                    {n != null && n < YOUNG_CITY_MAX && (
+                      <View style={s.newChip}>
+                        <Text style={s.newChipText}>{t('NEW', 'MỚI', '新着')}</Text>
+                      </View>
+                    )}
+                  </View>
                   {n != null && (
                     <Text style={s.rowSub}>
                       {t(`${n} ${n === 1 ? 'place' : 'places'}`, `${n} địa điểm`, `${n}件`)}
-                      {n < YOUNG_CITY_MAX
-                        ? t(' · new', ' · mới', ' · 新着')
-                        : ''}
                     </Text>
                   )}
                 </View>
@@ -172,6 +181,17 @@ const s = StyleSheet.create({
   rowOn: { backgroundColor: colors.accentSoft, borderRadius: radius.card - 6 },
   rowTitle: { color: colors.text, fontSize: 16, fontWeight: font.medium },
   rowSub: { color: colors.textTertiary, fontSize: 12.5, marginTop: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // Outlined rather than filled: the chosen row already wears accentSoft
+  // as its ground, and a soft-tinted chip would vanish into it on the one
+  // row most likely to carry this — the young city you just switched to.
+  newChip: {
+    paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.accentLine,
+  },
+  newChipText: {
+    color: colors.accent, fontSize: 10, fontWeight: font.semibold, letterSpacing: 0.6,
+  },
   // The empty-handed answer, under the well it answers for.
   note: { color: colors.accent, fontSize: 12.5, lineHeight: 17, paddingHorizontal: 4, marginBottom: 6 },
   sep: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft, marginHorizontal: 4 },
