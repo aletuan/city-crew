@@ -35,7 +35,6 @@ import {
   AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { useCity } from '../lib/city';
 import { fromISO } from '../lib/day';
 import {
   answerInvite, deleteTrip, sendInvites, withdrawInvites,
@@ -74,7 +73,6 @@ export default function TripDetailScreen({ navigation, route }: {
 }) {
   const { t, lang } = useI18n();
   const { session, profile } = useAuth();
-  const { cities } = useCity();
   const clearance = useTabBarClearance();
   const trips = useMyTrips();
 
@@ -138,7 +136,6 @@ export default function TripDetailScreen({ navigation, route }: {
 
   const stops = trip.trip_stops;
   const day = fromISO(trip.day);
-  const city = cities.find((c) => c.id === trip.city_id);
 
   const first = stops[0];
   const last = stops[stops.length - 1];
@@ -300,9 +297,11 @@ export default function TripDetailScreen({ navigation, route }: {
     ],
   );
 
-  // The subtitle is date, hours, place — and no company: who is going is
-  // the crew row's own line below, and a subtitle repeating it was the
-  // same fact twice in two voices. The order every trip subtitle keeps.
+  // The subtitle is date and hours — no company, and no city. Who is
+  // going is the crew row's own line below; which city is what every
+  // stop's district line already says, and the owner called the header
+  // repeating it the same fact twice. A subtitle states only what
+  // nothing below it states.
   return (
     <Screen
       title={trip.title}
@@ -312,7 +311,6 @@ export default function TripDetailScreen({ navigation, route }: {
           text={summaryLine([
             day ? dateline(lang, day) : trip.day,
             window,
-            city ? t(city.short_en, city.short_vi, city.short_ja) : null,
           ])}
         />
       )}
