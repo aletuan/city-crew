@@ -262,7 +262,13 @@ const s = StyleSheet.create({
   },
   // Bigger than the badge it replaces, and with no disc behind it: the
   // mark carries its own colour and a tinted circle would only fight it.
-  logo: { width: 96, height: 96 },
+  //
+  // It shipped at 96 and read as an illustration rather than a mark —
+  // the file is trimmed to its own artwork, so the box is very nearly
+  // all ink, and against a 26pt title that was three times the height of
+  // the sentence it stands over. 72 is where it goes back to being a
+  // signature on the page.
+  logo: { width: 72, height: 72 },
   // The screen's own title scale: this sheet is the first page of the
   // app, and it was speaking a card's voice.
   title: {
