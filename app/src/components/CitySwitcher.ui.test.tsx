@@ -35,6 +35,8 @@ vi.mock('../lib/city', () => ({
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
+const fetchPlaceCountByCity = vi.hoisted(() => vi.fn(async () => ({} as Record<string, number>)));
+vi.mock('../lib/data', () => ({ fetchPlaceCountByCity }));
 
 import { CitySwitcherModal } from './CitySwitcher';
 
@@ -44,6 +46,8 @@ beforeEach(() => {
   setCity.mockClear();
   followMyLocation.mockClear();
   followMyLocation.mockImplementation(async () => true);
+  fetchPlaceCountByCity.mockClear();
+  fetchPlaceCountByCity.mockImplementation(async () => ({}));
 });
 
 describe('the list of cities', () => {
@@ -69,6 +73,25 @@ describe('the list of cities', () => {
   it('renders nothing while it is closed', () => {
     render(<CitySwitcherModal visible={false} onClose={() => {}} />);
     expect(screen.queryByText('Hanoi')).toBeNull();
+    // And asks for nothing either — the counts wait for the first open.
+    expect(fetchPlaceCountByCity).not.toHaveBeenCalled();
+  });
+
+  // The promise each row makes: fifteen places is a different offer from
+  // a hundred and seventy-nine, and the young one says so before anyone
+  // walks in expecting Hanoi.
+  it('wears each city’s place count, and introduces the young one as new', async () => {
+    fetchPlaceCountByCity.mockImplementation(async () => ({ hanoi: 179, saigon: 15 }));
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    expect(await screen.findByText('179 places')).toBeTruthy();
+    expect(await screen.findByText('15 places · new')).toBeTruthy();
+  });
+
+  it('keeps its quiet when the count never came', async () => {
+    fetchPlaceCountByCity.mockImplementationOnce(async () => { throw new Error('offline'); });
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    expect(await screen.findByText('Hanoi')).toBeTruthy();
+    expect(screen.queryByText(/places/)).toBeNull();
   });
 });
 

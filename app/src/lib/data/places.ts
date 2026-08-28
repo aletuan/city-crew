@@ -93,6 +93,33 @@ export async function fetchPlaceBySlug(slug: string): Promise<Place | null> {
 }
 
 /**
+ * How many live places each city holds, as `city_id → count`.
+ *
+ * The city switcher's rows wear this, so a brand-new city sets
+ * expectations before it is entered: fifteen places is a different
+ * promise from a hundred and seventy-nine, and the morning this was
+ * written the owner read an honestly empty community shelf in Huế as
+ * data loss. One column over the live catalog, counted here — no view,
+ * no RPC, nothing for a migration to carry.
+ *
+ * Failure is an empty map, never a throw: the rows simply keep their
+ * quiet, which is the sheet the app always had.
+ */
+export async function fetchPlaceCountByCity(): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from('places')
+    .select('city_id')
+    .eq('is_published', true)
+    .eq('review_status', 'approved');
+  if (error || !data) return {};
+  const out: Record<string, number> = {};
+  for (const r of data as { city_id: string | null }[]) {
+    if (r.city_id) out[r.city_id] = (out[r.city_id] ?? 0) + 1;
+  }
+  return out;
+}
+
+/**
  * The desk's search synonyms, as `category → terms`.
  *
  * Not scoped to a city — what a reader types for "cinema" does not change

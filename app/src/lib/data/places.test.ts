@@ -15,7 +15,9 @@ vi.mock('../supabase', async () => {
   return { supabase: h.fake.client };
 });
 
-import { fetchCategoryTerms, fetchPlaceBySlug, fetchPlaces, PLACE_COLS } from './places';
+import {
+  fetchCategoryTerms, fetchPlaceBySlug, fetchPlaceCountByCity, fetchPlaces, PLACE_COLS,
+} from './places';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -195,5 +197,37 @@ describe('fetchCategoryTerms', () => {
   it('answers an empty map when there is no data at all', async () => {
     fake().replies({ data: null });
     expect(await fetchCategoryTerms()).toEqual({});
+  });
+});
+
+describe('fetchPlaceCountByCity', () => {
+  // The switcher's promise per row. Only the live catalog counts — a
+  // pending suggestion is nobody's promise yet.
+  it('counts the live catalog, per city', async () => {
+    fake().replies({ data: [
+      { city_id: 'hanoi' }, { city_id: 'hanoi' }, { city_id: 'hue' },
+    ] });
+    expect(await fetchPlaceCountByCity()).toEqual({ hanoi: 2, hue: 1 });
+
+    const [q] = fake().log;
+    expect(q.table).toBe('places');
+    expect(q.filters).toEqual([['is_published', true], ['review_status', 'approved']]);
+  });
+
+  it('skips a row that cannot say where it is', async () => {
+    fake().replies({ data: [{ city_id: 'hanoi' }, { city_id: null }] });
+    expect(await fetchPlaceCountByCity()).toEqual({ hanoi: 1 });
+  });
+
+  // Failure is an empty map, never a throw: the sheet's rows simply keep
+  // their quiet, which is the sheet the app always had.
+  it('answers an error with an empty map', async () => {
+    fake().replies({ error: { message: 'offline' } });
+    expect(await fetchPlaceCountByCity()).toEqual({});
+  });
+
+  it('answers missing data the same way', async () => {
+    fake().replies({ data: null });
+    expect(await fetchPlaceCountByCity()).toEqual({});
   });
 });

@@ -15,14 +15,21 @@
 // nothing: refusing the permission at the system prompt is an answer,
 // but silence after the person explicitly asked is a broken button.
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCity } from '../lib/city';
+import { fetchPlaceCountByCity } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space } from '../theme';
 import { fireHaptic, PressableScale } from './ui';
+
+/** Under this many live places a city is introduced as new — a promise
+ *  kept small on purpose, so nobody walks into a young catalog expecting
+ *  Hanoi. The number is a judgement, not a measurement; move it when a
+ *  city stops feeling young before it crosses. */
+const YOUNG_CITY_MAX = 30;
 
 export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useI18n();
@@ -30,6 +37,18 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
   const { city, cities, mode, setCity, followMyLocation } = useCity();
   const [locating, setLocating] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+
+  // How many places each row is promising — asked once, the first time
+  // the sheet opens, because the answer moves at the desk's pace, not the
+  // reader's. A count that never comes leaves the rows exactly as quiet
+  // as they were before this existed.
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const askedCounts = useRef(false);
+  useEffect(() => {
+    if (!visible || askedCounts.current) return;
+    askedCounts.current = true;
+    fetchPlaceCountByCity().then(setCounts).catch(() => {});
+  }, [visible]);
 
   const here = city ? t(city.short_en, city.short_vi, city.short_ja) : null;
 
@@ -74,6 +93,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
 
           {cities.map((c, i) => {
             const active = c.id === city?.id;
+            const n = counts[c.id];
             return (
               <View key={c.id}>
                 {i > 0 && <View style={s.sep} />}
@@ -82,9 +102,19 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
                   style={[s.row, active && s.rowOn]}
                   onPress={() => { fireHaptic('selection'); setCity(c.id); onClose(); }}
                 >
-                  <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.accent }]}>
-                    {t(c.short_en, c.short_vi, c.short_ja)}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.rowTitle, active && { color: colors.accent }]}>
+                      {t(c.short_en, c.short_vi, c.short_ja)}
+                    </Text>
+                    {n != null && (
+                      <Text style={s.rowSub}>
+                        {t(`${n} ${n === 1 ? 'place' : 'places'}`, `${n} địa điểm`, `${n}件`)}
+                        {n < YOUNG_CITY_MAX
+                          ? t(' · new', ' · mới', ' · 新着')
+                          : ''}
+                      </Text>
+                    )}
+                  </View>
                   {active && <Ionicons name="checkmark" size={18} color={colors.accent} />}
                 </PressableScale>
               </View>
