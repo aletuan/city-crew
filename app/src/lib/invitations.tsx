@@ -122,10 +122,18 @@ export function InvitationsProvider({ children }: { children: React.ReactNode })
   // Each field rather than the wrapper: a Fetch object is new every
   // render, so depending on it would re-render every consumer on renders
   // where nothing loaded. Same reasoning as `crew.tsx`.
+  //
+  // `crewCounts` was missing from this list once, and the cost was
+  // invisible by design: the batch landed, the memo kept the old
+  // binding, and every consumer read {} until some unrelated field
+  // changed — so an invitee's "N going" line simply never appeared
+  // until the next foreground refresh happened to rebuild the value.
+  // The provider tests read the counts through the context for exactly
+  // this reason.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [
     invites.data, invites.loading, invites.error, invites.loadedAt,
-    invites.fromCache, invites.reload, mine,
+    invites.fromCache, invites.reload, mine, crewCounts,
   ]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
