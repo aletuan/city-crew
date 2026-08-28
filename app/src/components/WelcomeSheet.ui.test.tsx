@@ -12,6 +12,8 @@ import { fireEvent, render, screen, waitFor } from '../uitest/render';
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
+const goTo = vi.hoisted(() => vi.fn());
+vi.mock('../nav', () => ({ goTo }));
 
 import WelcomeSheet, { WELCOME_ALWAYS_KEY } from './WelcomeSheet';
 
@@ -26,12 +28,13 @@ beforeEach(async () => {
   await AsyncStorage.removeItem(WELCOME_ALWAYS_KEY);
   vi.mocked(AsyncStorage.getItem).mockClear();
   vi.mocked(AsyncStorage.setItem).mockClear();
+  goTo.mockClear();
 });
 
 describe('the first launch', () => {
   it('introduces the three things the tabs never say out loud', async () => {
     render(<WelcomeSheet />);
-    expect(await screen.findByText('Welcome to cityCrew')).toBeTruthy();
+    expect(await screen.findByText('Welcome to City Crew')).toBeTruthy();
     expect(screen.getByText('Explore and save')).toBeTruthy();
     expect(screen.getByText('Plan with AI')).toBeTruthy();
     expect(screen.getByText('Bring the crew')).toBeTruthy();
@@ -53,7 +56,7 @@ describe('the first launch', () => {
   // welcome comes back on the next launch.
   it('treats a tap on the dimmed room the same way', async () => {
     render(<WelcomeSheet />);
-    await screen.findByText('Welcome to cityCrew');
+    await screen.findByText('Welcome to City Crew');
     fireEvent.click(screen.getByLabelText('Close'));
     await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledWith(KEY, '1'));
   });
@@ -66,7 +69,7 @@ describe('every launch after', () => {
     render(<WelcomeSheet />);
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(KEY));
-    expect(screen.queryByText('Welcome to cityCrew')).toBeNull();
+    expect(screen.queryByText('Welcome to City Crew')).toBeNull();
   });
 
   // A read that failed is not a first launch. If storage cannot be read
@@ -77,7 +80,7 @@ describe('every launch after', () => {
     render(<WelcomeSheet />);
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(KEY));
-    expect(screen.queryByText('Welcome to cityCrew')).toBeNull();
+    expect(screen.queryByText('Welcome to City Crew')).toBeNull();
   });
 });
 
@@ -89,7 +92,7 @@ describe('the always-show switch', () => {
     await AsyncStorage.setItem(KEY, '1');
     await AsyncStorage.setItem(WELCOME_ALWAYS_KEY, '1');
     render(<WelcomeSheet />);
-    expect(await screen.findByText('Welcome to cityCrew')).toBeTruthy();
+    expect(await screen.findByText('Welcome to City Crew')).toBeTruthy();
   });
 
   it('goes back to silence once it is off', async () => {
@@ -97,6 +100,21 @@ describe('the always-show switch', () => {
     render(<WelcomeSheet />);
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(WELCOME_ALWAYS_KEY));
-    expect(screen.queryByText('Welcome to cityCrew')).toBeNull();
+    expect(screen.queryByText('Welcome to City Crew')).toBeNull();
+  });
+});
+
+describe('the reader who is not new', () => {
+  // The greeting reaches an existing account at its worst moment — a
+  // reinstall, or the update that first shipped it — and "start
+  // exploring" is the one thing that reader does not need.
+  it('offers the way back to an account, and takes it', async () => {
+    render(<WelcomeSheet />);
+    fireEvent.click(await screen.findByText('Sign in'));
+
+    expect(goTo).toHaveBeenCalledWith('Profile', { screen: 'SignIn', initial: false });
+    // And the flag is written on the way out, so the greeting is not
+    // still waiting on the other side of signing in.
+    await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledWith(KEY, '1'));
   });
 });
