@@ -16,19 +16,23 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "cityCrew uses your location once to pick the nearest city for you.",
         "NSPhotoLibraryUsageDescription": "cityCrew needs your photo library so you can pick a profile photo.",
-        "NSCameraUsageDescription": "cityCrew needs the camera so you can take a profile photo."
-      }
+        "NSCameraUsageDescription": "cityCrew needs the camera so you can take a profile photo.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.aletuan.citycrew"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0B0910",
-        "foregroundImage": "./assets/icon.png"
+        "backgroundImage": "./assets/android-icon-background.png",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.CAMERA"
-      ]
+      ],
+      "package": "com.aletuan.citycrew"
     },
     "plugins": [
       [
@@ -55,6 +59,11 @@
       "eas": {
         "projectId": "b151a921-bb81-4cb2-83b8-6ab3803fbc6f"
       }
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B0910"
     }
   }
 }

@@ -19,6 +19,7 @@
 //     is write-only for the app roles to match: a phone can file its own
 //     row and read nobody's.
 
+import { IS_PRODUCTION_CHANNEL } from './channel';
 import { supabase } from './supabase';
 import type { TraceMark } from './trace';
 
@@ -27,15 +28,15 @@ import type { TraceMark } from './trace';
  * console lines and this governs whether they leave the phone, so the
  * local log survives turning the server half off.
  *
- * On by default while the launch is under investigation. There is no
- * dev/sit/prod split to hang this on — the app has one update stream and
- * one database — so the environment story is the `is_dev` column instead:
- * every row says whether it came from a dev session or a published bundle,
- * and the reader filters. The day the app has real channels, this constant
- * is where reading one belongs; the day the investigation closes, `false`
- * here stops the writes without touching the local log.
+ * No longer a hand-flipped constant: since `eas.json` gave the app real
+ * release channels, the environment decides. Every non-production install
+ * — Expo Go, a dev build, the TestFlight "preview" channel — reports its
+ * launches; the App Store build does not. That is the "on in dev, off in
+ * prod" this flag wanted from the day it was written, back when there was
+ * no environment to hang it on. To silence a non-production install too,
+ * `false` here still works, and the local log stays either way.
  */
-export const STARTUP_TRACE_UPLOAD = true;
+export const STARTUP_TRACE_UPLOAD = !IS_PRODUCTION_CHANNEL;
 
 export type Device = { platform: string; osVersion: string; isDev: boolean };
 
