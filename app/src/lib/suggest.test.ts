@@ -39,7 +39,7 @@ describe('readOutcome', () => {
 
   // The whole reason `bodyOf` exists: without it every refusal below reads
   // as "Edge Function returned a non-2xx status code", and "this place is
-  // already on cityCrew" would look like a crash.
+  // already on City Crew" would look like a crash.
   it('names the daily limit rather than the status code', async () => {
     expect(await readOutcome({ error: nonOk({ error: 'daily_limit', limit: 5 }) }))
       .toEqual({ ok: false, reason: 'daily_limit', limit: 5 });

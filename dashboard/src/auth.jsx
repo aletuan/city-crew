@@ -73,7 +73,7 @@ function Login() {
   if (state === 'sent' || state === 'reset') {
     return (
       <div className="login">
-        <img className="loginlogo" src="logo.png" alt="cityCrew" />
+        <img className="loginlogo" src="logo.png" alt="City Crew" />
         <h1>Data desk</h1>
         <p className="loginsent">
           {state === 'sent'
@@ -89,7 +89,7 @@ function Login() {
 
   return (
     <div className="login">
-      <img className="loginlogo" src="logo.png" alt="cityCrew" />
+      <img className="loginlogo" src="logo.png" alt="City Crew" />
       <h1>Data desk</h1>
       <p className="loginsub">Sign in to curate places from anywhere.</p>
 
@@ -166,7 +166,7 @@ function SetPassword({ onDone }) {
 
   return (
     <div className="login">
-      <img className="loginlogo" src="logo.png" alt="cityCrew" />
+      <img className="loginlogo" src="logo.png" alt="City Crew" />
       <h1>Set a new password</h1>
       <p className="loginsub">You are signed in — choose a password for next time.</p>
       <form onSubmit={save}>
@@ -241,7 +241,7 @@ export default function AuthGate({ children }) {
 function NotAnEditor({ email }) {
   return (
     <div className="login">
-      <img className="loginlogo" src="logo.png" alt="cityCrew" />
+      <img className="loginlogo" src="logo.png" alt="City Crew" />
       <h1>Data desk</h1>
       <p className="loginsub">Editors only</p>
       <p className="loginsent">

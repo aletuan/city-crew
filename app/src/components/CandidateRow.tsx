@@ -95,7 +95,7 @@ export default function CandidateRow({ c, known, busy, away, item, selected, onT
         <Text style={s.name} numberOfLines={1}>{c.name}</Text>
         <Text style={[s.sub, live && s.subLive, !!status && s.subStatus, item === 'failed' && s.subBad]} numberOfLines={1}>
           {status || (live
-            ? t('Already on cityCrew', 'Đã có trên cityCrew', 'すでに cityCrew にあります')
+            ? t('Already on City Crew', 'Đã có trên City Crew', 'すでに City Crew にあります')
             : mine
               ? t('You added this — only you can see it', 'Bạn đã thêm — hiện chỉ mình bạn thấy', '追加済み — まだあなただけに表示')
               // Distance first, then the address as far as it fits.

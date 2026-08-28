@@ -339,7 +339,7 @@ export default function App() {
                   {/* The brand belongs to the sidebar now; phones, which
                       have no sidebar, keep the logo here as the way home. */}
                   <Link className="mobilebrand" to="/" aria-label="All places">
-                    <img className="logo" src="logo.png" alt="cityCrew" />
+                    <img className="logo" src="logo.png" alt="City Crew" />
                   </Link>
                   <div className="spacer" />
                   {/* Actions only — the one every session starts with, and

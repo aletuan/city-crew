@@ -1,4 +1,4 @@
-// cityCrew iOS design system.
+// City Crew iOS design system.
 //
 // Two grounds, one system. Dark is the cinematic original: near-black
 // charcoal, translucent smoky surfaces, thin warm-gray hairlines. Light is

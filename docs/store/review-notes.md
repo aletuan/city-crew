@@ -6,7 +6,7 @@ tiếng Việt bên dưới về vì sao từng đoạn tồn tại.
 ## Notes (dán nguyên văn)
 
 ```
-Thank you for reviewing cityCrew.
+Thank you for reviewing City Crew.
 
 SIGN-IN: The app is fully browsable without an account — every screen of
 content (Explore, Collections, place details, Search) works signed out.
