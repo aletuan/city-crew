@@ -64,7 +64,13 @@ type CityContext = {
    * callback — a real fault, had it been one — and the honest fix is the
    * name, not a disable comment. The button still reads "Use my location".
    */
-  followMyLocation: () => Promise<void>;
+  /** Resolves true when a nearest city was found and followed; false when
+   *  it could not be — permission refused, no fix. The switcher asked for
+   *  this answer: the person just tapped a row requesting their location,
+   *  and silence after an explicit request reads as broken, not as
+   *  respectful. Only the button reports it; the quiet bootstrap read at
+   *  launch stays quiet. */
+  followMyLocation: () => Promise<boolean>;
 };
 
 const KEY = 'citycrew.city';
@@ -138,7 +144,7 @@ const FALLBACK: City = {
 };
 
 const Ctx = createContext<CityContext>({
-  city: null, cities: [FALLBACK], mode: 'auto', setCity: () => {}, followMyLocation: async () => {},
+  city: null, cities: [FALLBACK], mode: 'auto', setCity: () => {}, followMyLocation: async () => false,
 });
 
 export const useCity = () => useContext(Ctx);
@@ -383,10 +389,11 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
 
   const followMyLocation = useCallback(async () => {
     const near = await preciseNearestCity(cities);
-    if (!near) return;
+    if (!near) return false;
     setCityId(near.id);
     setMode('auto');
     await AsyncStorage.setItem(KEY, JSON.stringify({ id: near.id, mode: 'auto' })).catch(() => {});
+    return true;
   }, [cities]);
 
   const value = useMemo<CityContext>(() => ({
