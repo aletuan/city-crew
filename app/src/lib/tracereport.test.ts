@@ -6,6 +6,10 @@ vi.mock('./supabase', async () => {
   h.fake = fakeSupabase();
   return { supabase: h.fake.client };
 });
+// The channel read touches expo-updates, which a Node process has no
+// native half for. Non-production here, so the singleton under test is
+// the reporting one.
+vi.mock('./channel', () => ({ CHANNEL: null, IS_PRODUCTION_CHANNEL: false }));
 
 import type { TraceMark } from './trace';
 import { buildRow, makeReporter, reportStartup, sendRow, type TraceRow } from './tracereport';
