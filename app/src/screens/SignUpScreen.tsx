@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton, SwitchRow } from '../components/authUi';
+import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, SwitchRow, useFailText } from '../components/authUi';
 import { successHaptic } from '../components/ui';
 import { isHandleFree, useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
@@ -18,6 +18,7 @@ import type { Nav } from '../nav';
 export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { signUp, confirmSignUp } = useAuth();
+  const failText = useFailText();
   const [name, setName] = useState('');
   // Suggested from the name until the moment it is edited, then left
   // alone — a suggestion that keeps overwriting what you typed is worse
@@ -113,7 +114,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           onSubmitEditing={verify}
           returnKeyType="done"
         />
-        {error ? <ErrorText>{error}</ErrorText> : null}
+        {error ? <FormError>{failText(error)}</FormError> : null}
         <PrimaryButton label={t('Verify & continue', 'Xác nhận & tiếp tục', '確認して続行')} onPress={verify} busy={busy} />
       </AuthScreen>
     );
@@ -190,7 +191,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         onSubmitEditing={submit}
         returnKeyType="done"
       />
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      {error ? <FormError>{failText(error)}</FormError> : null}
       <PrimaryButton label={t('Sign up', 'Đăng ký', '登録')} onPress={submit} busy={busy} />
       <Text style={s.terms}>
         {t(

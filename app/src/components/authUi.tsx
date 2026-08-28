@@ -1,6 +1,9 @@
 // Shared pieces for the form screens: the list-row field with icon and
-// label, the big accented primary button, and the header — a back control
-// with the title on its line, then a lede each screen places for itself.
+// label, the big accented primary button, the header — a back control
+// with the title on its line, then a lede each screen places for itself —
+// and the two halves of what a failure looks like here: the banner that
+// carries a whole form's problem, and the table that turns the names
+// `lib/auth` throws into sentences.
 
 import React, { useState } from 'react';
 import {
@@ -13,6 +16,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { BackButton, CONTROL_H, fireHaptic, PressableScale, useTabBarClearance } from './ui';
 import { useI18n } from '../lib/i18n';
 import { PASSWORD_MIN, passwordStrength } from '../lib/password';
+import type { AuthFail } from '../lib/authfail';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
 export function AuthScreen({ children }: { children: React.ReactNode }) {
@@ -197,8 +201,118 @@ export function SwitchRow({ prompt, action, onPress }: { prompt: string; action:
   );
 }
 
-export function ErrorText({ children }: { children: string }) {
-  return <Text style={s.error}>{children}</Text>;
+/**
+ * What went wrong with the form as a whole, in its own soft ground.
+ *
+ * This is the red twin of the banner on a collection going public
+ * (`CollectionDetailScreen`), built to the same recipe on purpose: a wash
+ * rather than a filled bar, a neutral hairline, a glyph and a sentence.
+ * `theme.ts` matched `badSoft` and `okSoft` for weight — 1.13:1 and
+ * 1.11:1 against paper — precisely so bad news and good news sit the same
+ * distance off the page, and this is the half of that pair that had never
+ * been used.
+ *
+ * It used to be a bare red line of text, which was the one place in this
+ * file that broke the rule the rest of it states twice: colour alone must
+ * never carry a message. A sentence in `bad` between a coral link and a
+ * coral button is, to a reader who cannot separate the two hues, a
+ * sentence. The icon and the ground are what make it a problem.
+ *
+ * WHY THE TEXT IS NOT RED. `bad` on `badSoft` measures 3.50:1 — past the
+ * 3:1 a glyph owes, and under the 4.5:1 that 15pt type owes. So the icon
+ * takes the red and the sentence takes `text`, at 14.4:1. That is also
+ * what the green banner does, and on a screen whose accent is already
+ * coral it keeps the count of red things from going up by one.
+ */
+export function FormError({ children }: { children: string }) {
+  return (
+    <View style={s.formError} accessibilityLiveRegion="polite">
+      <Ionicons name="alert-circle" size={20} color={colors.bad} />
+      <Text style={s.formErrorText}>{children}</Text>
+    </View>
+  );
+}
+
+/**
+ * The failure `lib/auth` threw, as a sentence in the reader's language.
+ *
+ * The names come across as the `Error`'s message (see `asAuthFail`), and
+ * this is where they become words — here rather than in `lib/auth`,
+ * because `t` is a hook and the provider's methods are not components.
+ *
+ * Anything not in this table is returned unchanged, which is how a
+ * failure nobody has named yet still reaches the reader in the server's
+ * own words. That is worth more than it sounds: "Invalid login
+ * credentials" and "Email not confirmed" are different problems, and
+ * English that distinguishes them beats Vietnamese that does not.
+ *
+ * Typed `Record<AuthFail, string>` so the exhaustiveness is the compiler's
+ * job: name a new failure in `lib/authfail` and this stops building until
+ * somebody writes the sentence for it.
+ */
+export function useFailText(): (raw: string) => string {
+  const { t } = useI18n();
+  const said: Record<AuthFail, string> = {
+    // Not "wrong password". The server will not say which of the two it
+    // was — deliberately, so that a stranger cannot use this form to
+    // discover which addresses have accounts — and a message that picked
+    // one would be guessing in front of the person who knows.
+    credentials: t(
+      'Email or password is incorrect.',
+      'Email hoặc mật khẩu không đúng.',
+      'メールアドレスまたはパスワードが正しくありません。',
+    ),
+    // The one that most needs its own sentence: this person typed the
+    // right password, and the fix is in their inbox rather than in the
+    // form.
+    unconfirmed: t(
+      "This email hasn't been confirmed yet. Check your inbox for the code.",
+      'Email này chưa được xác nhận. Kiểm tra hộp thư để lấy mã.',
+      'このメールアドレスはまだ確認されていません。受信トレイのコードをご確認ください。',
+    ),
+    email_taken: t(
+      'An account already uses this email. Sign in instead.',
+      'Email này đã có tài khoản. Hãy đăng nhập.',
+      'このメールアドレスは登録済みです。サインインしてください。',
+    ),
+    // `PASSWORD_MIN` rather than the number, so this cannot drift from
+    // the check that fires first on the way in.
+    weak_password: t(
+      `Pick a longer password — at least ${PASSWORD_MIN} characters.`,
+      `Chọn mật khẩu dài hơn — ít nhất ${PASSWORD_MIN} ký tự.`,
+      `もっと長いパスワードを選んでください。${PASSWORD_MIN}文字以上必要です。`,
+    ),
+    // Wrong and expired are one sentence because the answer is the same
+    // either way, and because the server does not tell them apart.
+    bad_code: t(
+      'That code is wrong or has expired. Ask for a new one.',
+      'Mã không đúng hoặc đã hết hạn. Hãy yêu cầu mã mới.',
+      'コードが正しくないか、有効期限が切れています。新しいコードを取得してください。',
+    ),
+    rate_limit: t(
+      'Too many attempts. Wait a moment and try again.',
+      'Thử quá nhiều lần. Đợi một lát rồi thử lại.',
+      '試行回数が多すぎます。少し待ってからもう一度お試しください。',
+    ),
+    bad_email: t(
+      "That email address doesn't look right.",
+      'Địa chỉ email không hợp lệ.',
+      'メールアドレスの形式が正しくありません。',
+    ),
+    same_password: t(
+      'The new password is the same as the current one.',
+      'Mật khẩu mới trùng với mật khẩu cũ.',
+      '新しいパスワードが現在のものと同じです。',
+    ),
+    // Named separately from every refusal above because the action is
+    // different: nothing about what was typed is wrong.
+    offline: t(
+      'No connection. Check your network and try again.',
+      'Không có kết nối. Kiểm tra mạng rồi thử lại.',
+      '接続できません。ネットワークを確認してもう一度お試しください。',
+    ),
+  };
+  return (raw) => (said as Record<string, string>)[raw] ?? raw;
 }
 
 const s = StyleSheet.create({
@@ -255,5 +369,19 @@ const s = StyleSheet.create({
   switchPrompt: { color: colors.textSecondary, ...type.meta },
   switchAction: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
 
-  error: { color: colors.bad, ...type.meta, lineHeight: 21 },
+  // The collection banner's recipe, in red. Same radius, same padding,
+  // same hairline — the two are the same object saying opposite things,
+  // and they should not be two shapes.
+  formError: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 11, paddingHorizontal: 14,
+    borderRadius: radius.input,
+    backgroundColor: colors.badSoft,
+    // Neutral, not red. A red-tinted edge is the thing `badSoft`'s own
+    // note warns about: against the dark ground it comes out near black
+    // and outlines the one element that should read soft.
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  // `text`, not `bad` — see the note on FormError for the measurement.
+  formErrorText: { flex: 1, color: colors.text, ...type.meta, fontWeight: font.medium, lineHeight: 21 },
 });

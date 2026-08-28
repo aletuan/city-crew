@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { AuthHeader, AuthScreen, ErrorText, FieldRow, Lede, PrimaryButton, SwitchRow } from '../components/authUi';
+import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, SwitchRow, useFailText } from '../components/authUi';
 import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
@@ -13,6 +13,7 @@ import type { Nav } from '../nav';
 export default function SignInScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { signIn } = useAuth();
+  const failText = useFailText();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -77,7 +78,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
           <Text style={s.forgot}>{t('Forgot password?', 'Quên mật khẩu?', 'パスワードをお忘れですか？')}</Text>
         </Pressable>
       </View>
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      {error ? <FormError>{failText(error)}</FormError> : null}
       <PrimaryButton label={t('Sign in', 'Đăng nhập', 'サインイン')} onPress={submit} busy={busy} />
       <SwitchRow
         prompt={t("Don't have an account?", 'Chưa có tài khoản?', 'アカウントをお持ちでない方は')}
