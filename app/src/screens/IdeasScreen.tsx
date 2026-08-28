@@ -38,7 +38,7 @@ import { partGone, startMinFor, START_MIN } from '../lib/planner';
 import { useSave } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '../lib/trip';
 import type { Nav } from '../nav';
-import { colors, font, space, type } from '../theme';
+import { colors, font, quoteFace, space, type } from '../theme';
 
 /** The last instant of a calendar day, for a picker bound. `fromISO` gives
  *  local noon — right for a day, half a day short of a ceiling. */
@@ -173,26 +173,27 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
         onScroll={duckScroll}
         scrollEventThrottle={16}
       >
-        {/* "the plan", not "the day". Both this and the button below used
-            to name the day, on a screen whose own Day/Evening control sits
-            between them — so picking Evening left the reader being offered
-            a day, twice, while the two screens after this one correctly
-            said evening.
+        {/* Laozi where the instructions used to stand. The old lede
+            explained the screen ("tell us a little, we sketch, change
+            it later") — and the screen explains itself now: the section
+            headers open the sentences, the chips answer them, and the
+            one button says what it does. What was left for this line was
+            a reason to begin, and a borrowed sentence in the quote face
+            says it better than instructions did. Set in `quoteFace`
+            like the Profile footer's Pavese, signed the same way —
+            Japanese falls back to the system face, the known deal.
 
-            Generic rather than switched on `when`, which is the other way
-            to make it true. A call to action that rewrites itself while the
-            reader is still tapping the chips above it is the screen
-            fidgeting under their hand, and this app has just spent a change
-            teaching a row not to do that. The word the reader picked is
-            already on screen, in the control they picked it with; the
-            button does not need to repeat it back. */}
-        <Text style={s.lede}>
+            Still generic on `when`, as before: a lede that rewrites
+            itself while the reader taps the chips below is the screen
+            fidgeting under their hand (the CTA note points here). */}
+        <Text style={s.ledeQuote}>
           {t(
-            'Tell us a little and we will sketch the plan. You can change everything later.',
-            'Cho vài gợi ý, chúng tôi phác ra kế hoạch. Sửa lại lúc nào cũng được.',
-            '少し教えてください — プランを下描きします。あとで全部変えられます。',
+            '“A journey of a thousand miles begins with a single step.”',
+            '“Hành trình vạn dặm bắt đầu từ một bước chân.”',
+            '「千里の道も一歩から」',
           )}
         </Text>
+        <Text style={s.ledeBy}>— {t('Laozi', 'Lão Tử', '老子')}</Text>
 
         {/* The three headers below open a sentence and the chips finish
             it — "Going with… ✓ Friends". They used to be questions
@@ -454,9 +455,15 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
-  lede: {
-    color: colors.textTertiary, fontSize: 15, lineHeight: 22,
-    paddingHorizontal: space.page, marginBottom: space.titleToContent,
+  // The quote and its signature — the same pair the Profile footer
+  // wears, sized for a lede. A face means no fontWeight (theme's rule).
+  ledeQuote: {
+    color: colors.textTertiary, fontFamily: quoteFace, fontSize: 16, lineHeight: 24,
+    paddingHorizontal: space.page,
+  },
+  ledeBy: {
+    color: colors.textTertiary, fontFamily: quoteFace, fontSize: 12.5, letterSpacing: 0.4,
+    paddingHorizontal: space.page, marginTop: 3, marginBottom: space.titleToContent,
   },
   heading: {
     color: colors.text, ...type.headline,
