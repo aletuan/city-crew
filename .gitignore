@@ -18,3 +18,6 @@ dashboard/.env.local
 # including the `functions deploy` this repo has no workflow for. Not
 # project content and not reproducible from it.
 supabase/.temp/
+# Operator's notebook — bundle ids, EAS/ASC identifiers, run commands. Kept
+# out of git on purpose: it lives on each machine that operates the app.
+NOTES.local.md
