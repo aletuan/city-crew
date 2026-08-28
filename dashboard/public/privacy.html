@@ -59,7 +59,21 @@
   <h2>Where your data lives</h2>
   <p>Data is stored with <a href="https://supabase.com">Supabase</a> in Singapore
   (AWS ap-southeast-1). Supabase processes it on our behalf and has no right to use
-  it for anything else. We share data with no one else.</p>
+  it for anything else.</p>
+
+  <h2>Plans are written with an AI assistant</h2>
+  <p>The app picks the stops in a plan itself, from our own catalog. To give the
+  plan a title and a line about each stop, it sends those already-chosen
+  stops — place names, neighbourhoods, times — together with the answers you
+  gave (who you are with, when, what you feel like) to
+  <a href="https://www.anthropic.com">Anthropic</a>'s Claude model, through our
+  own server. If you describe your evening in your own words instead of using
+  the chips, <strong>that text is sent too</strong>.</p>
+  <p>Nothing identifying goes with it: not your name, not your email, not your
+  account id, not your location. The model can never choose a place — it may
+  only write about the ones the app already picked. Anthropic processes this on
+  our behalf as a service provider, and under its API terms does not use it to
+  train models. Apart from Supabase and this, we share data with no one.</p>
 
   <h2>Public content and moderation</h2>
   <p>Collections you publish, and your profile, are visible to other users. Every
@@ -117,7 +131,22 @@
   <h2>Dữ liệu được lưu ở đâu</h2>
   <p>Dữ liệu lưu tại <a href="https://supabase.com">Supabase</a>, đặt ở Singapore
   (AWS ap-southeast-1). Supabase xử lý dữ liệu thay chúng tôi và không có quyền dùng
-  cho mục đích nào khác. Chúng tôi không chia sẻ dữ liệu với bất kỳ ai khác.</p>
+  cho mục đích nào khác.</p>
+
+  <h2>Kế hoạch được viết bằng trợ lý AI</h2>
+  <p>App tự chọn các điểm dừng trong một kế hoạch, từ danh mục của chính chúng
+  tôi. Để đặt tên cho kế hoạch và viết một dòng về mỗi điểm dừng, app gửi những
+  điểm dừng đã chọn đó — tên địa điểm, khu vực, giờ giấc — cùng các câu trả lời
+  của bạn (đi với ai, khi nào, đang muốn gì) tới model Claude của
+  <a href="https://www.anthropic.com">Anthropic</a>, thông qua máy chủ của chúng
+  tôi. Nếu bạn tự gõ mô tả buổi tối của mình thay vì chọn các thẻ có sẵn,
+  <strong>đoạn văn bản đó cũng được gửi đi</strong>.</p>
+  <p>Không có gì nhận dạng bạn đi kèm: không tên, không email, không id tài
+  khoản, không vị trí. Model không bao giờ được chọn địa điểm — nó chỉ được viết
+  về những nơi app đã chọn sẵn. Anthropic xử lý dữ liệu này với vai trò nhà cung
+  cấp dịch vụ cho chúng tôi, và theo điều khoản API của họ, không dùng để huấn
+  luyện model. Ngoài Supabase và trường hợp này, chúng tôi không chia sẻ dữ liệu
+  với bất kỳ ai.</p>
 
   <h2>Nội dung công khai và kiểm duyệt</h2>
   <p>Bộ sưu tập bạn công khai và hồ sơ của bạn hiển thị với người dùng khác. Mọi
