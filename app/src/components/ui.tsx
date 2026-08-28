@@ -426,9 +426,15 @@ export function Chip({ label, active, onPress, icon, iconColor }: {
  * a bell, rung from the other room, the only place a bell is news — and
  * folded into the label on the chosen one, where whatever it counts is
  * already on screen. Zero draws nothing either way.
+ *
+ * `tally` is the other kind of number — a fact rather than news: how
+ * many the tab holds, folded into the label in both states and never a
+ * bubble, because a permanent bubble would ring a bell over nothing
+ * new. Zero draws nothing here too: "Friends (0)" states an absence
+ * twice. A tab carries one kind or the other, not both.
  */
 export function UnderlineTabs<K extends string>({ tabs, active, onChange, right }: {
-  tabs: { key: K; icon: keyof typeof Ionicons.glyphMap; label: string; count?: number }[];
+  tabs: { key: K; icon: keyof typeof Ionicons.glyphMap; label: string; count?: number; tally?: number }[];
   active: K;
   onChange: (k: K) => void;
   /** The row's far end — a small control about the list the tabs switch
@@ -438,8 +444,11 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
 }) {
   return (
     <View style={s.tabsRow}>
-      {tabs.map(({ key, icon, label, count }) => {
+      {tabs.map(({ key, icon, label, count, tally }) => {
         const on = active === key;
+        const worded = tally
+          ? `${label} (${tally})`
+          : on && count ? `${label} (${count})` : label;
         return (
           <PressableScale
             key={key}
@@ -453,7 +462,7 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
           >
             <Ionicons name={icon} size={16} color={on ? colors.accent : colors.textTertiary} />
             <Text style={[s.tabText, on && s.tabTextOn]} numberOfLines={1}>
-              {on && count ? `${label} (${count})` : label}
+              {worded}
             </Text>
             {!on && count ? (
               <View style={s.tabBadge}>
