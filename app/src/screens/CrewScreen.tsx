@@ -61,16 +61,23 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   // what took the seconds out of Profile → Crew.
   const { ships, blocks, people, mutual, absorb } = useCrew();
 
-  // ...and recounted on every visit anyway. Mutations made here tell the
+  // ...and recounted on every RETURN visit. Mutations made here tell the
   // provider themselves, and backgrounding is covered by its AppState
   // refresh — but a request sent by somebody ELSE while the app stayed
   // open reached this screen as a stale number until the next foreground.
   // The numbers on the tabs are promises about what is inside, so each
   // visit asks the server again: the held answer still paints first, and
   // a number moves in place only when the truth did.
+  //
+  // The FIRST focus is the mount, and the mount is already covered by
+  // the provider's launch fetch — reloading there re-ran the whole wave
+  // twice per open, the double #353 spent a change removing. Skipped,
+  // the way Collections and Trips wrote it down.
   const shipsRef = useRef(ships);
   shipsRef.current = ships;
+  const visited = useRef(false);
   useFocusEffect(useCallback(() => {
+    if (!visited.current) { visited.current = true; return; }
     if (!shipsRef.current.loading) shipsRef.current.reload();
   }, []));
 
