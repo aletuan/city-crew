@@ -11,12 +11,14 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
 
+const hanoi = { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' };
 const ctx = vi.hoisted(() => ({
-  city: { id: 'hanoi' } as { id: string } | null,
+  city: { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as
+    { id: string; short_en: string; short_vi: string; short_ja: string } | null,
   mode: 'auto' as 'auto' | 'manual',
 }));
 const setCity = vi.hoisted(() => vi.fn());
-const followMyLocation = vi.hoisted(() => vi.fn(async () => {}));
+const followMyLocation = vi.hoisted(() => vi.fn(async () => true));
 
 vi.mock('../lib/city', () => ({
   useCity: () => ({
@@ -37,11 +39,11 @@ vi.mock('../lib/i18n', () => ({
 import { CitySwitcherModal } from './CitySwitcher';
 
 beforeEach(() => {
-  ctx.city = { id: 'hanoi' };
+  ctx.city = { ...hanoi };
   ctx.mode = 'auto';
   setCity.mockClear();
   followMyLocation.mockClear();
-  followMyLocation.mockImplementation(async () => {});
+  followMyLocation.mockImplementation(async () => true);
 });
 
 describe('the list of cities', () => {
@@ -81,21 +83,21 @@ describe('"Use my location"', () => {
   });
 
   it('says it is working while it is', async () => {
-    let release: () => void = () => {};
-    followMyLocation.mockImplementation(() => new Promise<void>((r) => { release = r; }));
+    let release: (found: boolean) => void = () => {};
+    followMyLocation.mockImplementation(() => new Promise<boolean>((r) => { release = r; }));
     render(<CitySwitcherModal visible onClose={() => {}} />);
 
     fireEvent.click(screen.getByText('Use my location'));
     expect(await screen.findByText('Locating…')).toBeTruthy();
 
-    release();
+    release(true);
     await waitFor(() => expect(screen.queryByText('Locating…')).toBeNull());
   });
 
   // A second tap while the first is still out would ask the platform twice
   // and close the sheet under the answer to the first.
   it('ignores a second tap while the first is still out', async () => {
-    followMyLocation.mockImplementation(() => new Promise<void>(() => {}));
+    followMyLocation.mockImplementation(() => new Promise<boolean>(() => {}));
     render(<CitySwitcherModal visible onClose={() => {}} />);
 
     const row = screen.getByText('Use my location');
@@ -106,19 +108,44 @@ describe('"Use my location"', () => {
     expect(followMyLocation).toHaveBeenCalledOnce();
   });
 
-  // Refusing the permission is not an error to report — it is an answer,
-  // and the city the reader was already looking at stays.
-  it('keeps the current city when the reader refuses the permission', async () => {
+  it('closes once a city was found', async () => {
     const onClose = vi.fn();
-    followMyLocation.mockImplementationOnce(async () => { throw new Error('denied'); });
+    render(<CitySwitcherModal visible onClose={onClose} />);
+    fireEvent.click(screen.getByText('Use my location'));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  // Refusing at the SYSTEM prompt is an answer — but the person just
+  // tapped a row explicitly asking, and a sheet that closes over nothing
+  // is a broken button. Empty-handed now says so in place, and the city
+  // the reader was already looking at stays.
+  it('says so, in place, when it comes back empty-handed', async () => {
+    const onClose = vi.fn();
+    followMyLocation.mockImplementationOnce(async () => false);
     render(<CitySwitcherModal visible onClose={onClose} />);
 
     fireEvent.click(screen.getByText('Use my location'));
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(await screen.findByText(/check location access/i)).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
     expect(setCity).not.toHaveBeenCalled();
   });
 
-  it('says whether the app is choosing for you', () => {
+  it('treats an unexpected failure the same as an empty hand', async () => {
+    followMyLocation.mockImplementationOnce(async () => { throw new Error('bridge died'); });
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    fireEvent.click(screen.getByText('Use my location'));
+    expect(await screen.findByText(/check location access/i)).toBeTruthy();
+  });
+
+  // "On" alone answered half the question — the subtitle names the city
+  // the auto choice resolved to.
+  it('names the city the app chose for you', () => {
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    expect(screen.getByText(/you're in Hanoi/i)).toBeTruthy();
+  });
+
+  it('falls back to the plain sentence while no city has resolved', () => {
+    ctx.city = null;
     render(<CitySwitcherModal visible onClose={() => {}} />);
     expect(screen.getByText(/nearest city is selected for you/i)).toBeTruthy();
   });
