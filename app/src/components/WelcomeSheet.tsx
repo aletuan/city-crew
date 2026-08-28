@@ -37,6 +37,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, BackHandler, InteractionManager, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,6 +46,7 @@ import { colors, display, font, gradAI, space } from '../theme';
 import { PressableScale } from './ui';
 import { SwitchRow } from './authUi';
 import { goTo } from '../nav';
+import welcomeLogo from '../../assets/welcome-logo.png';
 
 /** Written once, on the way out. */
 const WELCOME_KEY = 'citycrew.welcomeSeen';
@@ -145,9 +147,11 @@ export default function WelcomeSheet() {
         ]}
       >
         <View style={s.grabber} />
-        <View style={s.badge}>
-          <Ionicons name="compass" size={28} color={colors.accent} />
-        </View>
+        {/* The app's own mark, not a glyph standing in for one. It comes
+            with a cut-out background so it reads on either ground — the
+            artwork was drawn on white, and a white tile behind a logo is
+            the first thing dark mode shows you. */}
+        <Image source={welcomeLogo} style={s.logo} contentFit="contain" />
         <Text style={s.title}>
           {t('Welcome to City Crew', 'Chào bạn đến với City Crew', 'City Crew へようこそ')}
         </Text>
@@ -256,12 +260,9 @@ const s = StyleSheet.create({
     width: 38, height: 4, borderRadius: 2,
     backgroundColor: colors.textTertiary, marginBottom: 16,
   },
-  badge: {
-    width: 66, height: 66, borderRadius: 33,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
-    borderWidth: 1, borderColor: colors.accentLine,
-  },
+  // Bigger than the badge it replaces, and with no disc behind it: the
+  // mark carries its own colour and a tinted circle would only fight it.
+  logo: { width: 96, height: 96 },
   // The screen's own title scale: this sheet is the first page of the
   // app, and it was speaking a card's voice.
   title: {

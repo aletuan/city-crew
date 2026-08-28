@@ -45,6 +45,13 @@ describe('the first launch', () => {
   // pointer-events off — and leaves its children in the document, so a
   // text query still finds them. The flag is the durable half anyway, and
   // "it does not come back" is pinned by the launch-after tests below.
+  // The mark, not a glyph standing in for one.
+  it('wears the app\u2019s own logo', async () => {
+    render(<WelcomeSheet />);
+    await screen.findByText('Welcome to City Crew');
+    expect(document.querySelector('img')).toBeTruthy();
+  });
+
   it('leaves through its one button, and remembers that it did', async () => {
     render(<WelcomeSheet />);
     fireEvent.click(await screen.findByText('Start exploring'));
