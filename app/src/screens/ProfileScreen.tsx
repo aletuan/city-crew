@@ -192,16 +192,21 @@ function GuestHub({ navigation }: { navigation: Nav }) {
         <View style={{ flex: 1, gap: 6 }}>
           {/* A promise, not a status. "You're browsing as a guest" was a
               true sentence about what the reader lacks; the apps that do
-              this well lead with what signing in opens. And the body
-              stops listing features — the three rows below are the list,
-              so the one thing said here is the one thing they don't say:
-              what you keep is kept under your name. */}
-          <Text style={s.heroTitle}>{t('Your next trip starts here', 'Chuyến đi tiếp theo bắt đầu từ đây', '次の旅は、ここから')}</Text>
+              this well lead with what signing in opens.
+
+              The title now names the one act this screen is asking for
+              rather than the destination it leads to — saving a place is
+              the first thing anybody does here, and the trip is what that
+              becomes. The body says the three in order, which does repeat
+              the rows below: read as a sentence they are a reason, read as
+              rows they are the doors, and the paw is where the sentence
+              stops being a pitch. */}
+          <Text style={s.heroTitle}>{t('Keep the places you love', 'Lưu lại những nơi bạn yêu thích', 'お気に入りの場所を残しておく')}</Text>
           <Text style={s.heroBody}>
             {t(
-              'Sign in to keep the places you love and the crew you go with — ready whenever you come back.',
-              'Đăng nhập để giữ những nơi bạn thích và hội cùng đi — luôn sẵn khi bạn quay lại.',
-              'サインインすれば、お気に入りの場所も一緒に行く仲間も、戻ってきたときそのままに。',
+              'Sign in to save places, build collections, and plan the trips that come next 🐾',
+              'Đăng nhập để lưu địa điểm, tạo bộ sưu tập và lên kế hoạch cho những chuyến đi tiếp theo 🐾',
+              'サインインして、場所を保存し、コレクションを作り、次の旅を計画しましょう 🐾',
             )}
           </Text>
         </View>
