@@ -25,7 +25,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { FriendProfile } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { crewOf, headcount, type InviteRow } from '../lib/invites';
-import { colors, font, radius, space } from '../theme';
+import { useScheme } from '../lib/theme';
+import { bgHex, colors, font, radius, space } from '../theme';
 import { Avatar, PressableScale } from './ui';
 
 /** How many faces before the row starts counting instead. Four fits at
@@ -62,6 +63,14 @@ export default function TripCrew({
   onInvite: () => void;
 }) {
   const { t } = useI18n();
+  // The ring around each face is the page's own colour so an overlapped
+  // stack reads as separate people — and it has to be resolved here, in
+  // JS, from the app's scheme. Painted as the dynamic `colors.bg` it
+  // followed the PHONE's appearance instead of the app's setting (border
+  // colours flatten against system traits), and a reader with a light
+  // phone under a dark app got a cream halo around every face.
+  const { scheme } = useScheme();
+  const ring = { borderColor: bgHex[scheme] };
   const crew = crewOf(invites);
 
   // The owner counts off the rows they can see; an invitee is given the
@@ -109,7 +118,7 @@ export default function TripCrew({
       <View style={s.row}>
         <View style={s.faces}>
           {faces.map((url, i) => (
-            <View key={i} style={[s.face, i > 0 && { marginLeft: -10 }]}>
+            <View key={i} style={[s.face, ring, i > 0 && { marginLeft: -10 }]}>
               <Avatar url={url} size={28} />
             </View>
           ))}
@@ -186,8 +195,9 @@ const s = StyleSheet.create({
   wrap: { marginBottom: space.cardGap },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   faces: { flexDirection: 'row', alignItems: 'center' },
+  // borderColor rides in from the component — see the `ring` note there.
   face: {
-    borderRadius: 999, borderWidth: 2, borderColor: colors.bg,
+    borderRadius: 999, borderWidth: 2,
   },
   line: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
   sub: { color: colors.textTertiary, fontSize: 12.5, marginTop: 1 },

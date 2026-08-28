@@ -104,7 +104,18 @@ describe('signing in', () => {
 
     signIn.mockResolvedValue(undefined);
     submit();
-    await waitFor(() => expect(screen.queryByText('Invalid login credentials')).toBeNull());
+    // Two waits, deliberately, each with a patient clock. The default
+    // 1s wait timed out twice under full-suite parallel load (once on a
+    // loaded laptop, once in CI) while passing every isolated run — and
+    // a single combined wait cannot say which half was late. The first
+    // proves the second press reached the handler at all; the second
+    // that it swept the old failure. If this ever fails again, the
+    // failing line names the culprit.
+    await waitFor(() => expect(signIn).toHaveBeenCalledTimes(2), { timeout: 5000 });
+    await waitFor(
+      () => expect(screen.queryByText('Invalid login credentials')).toBeNull(),
+      { timeout: 5000 },
+    );
   });
 
   it('says nothing about an error before one has happened', () => {
