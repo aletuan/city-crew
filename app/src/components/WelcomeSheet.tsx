@@ -11,8 +11,15 @@
 // plans an evening for them or that a plan can carry friends; the only
 // page that says so is Profile, which is the tab nobody opens first. So:
 // one sheet, once, three lines, and a button that goes where they were
-// going anyway. It asks for nothing — no account, no permission — because
+// going anyway. It demands nothing — no account, no permission — because
 // the sheets that ask already exist and arrive when the asking is earned.
+//
+// The one exception is the line under the button, and it is an offer
+// rather than a gate: somebody who already has an account is the reader
+// least served by "start exploring", and this sheet reaches them at the
+// worst possible moment — a reinstall, or the update that first shipped
+// it, where every existing account sees the greeting once. Three taps
+// through Profile was the only way back to their own trips.
 //
 // ── why this one is not a Modal ──
 //
@@ -36,6 +43,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, gradAI, space } from '../theme';
 import { PressableScale } from './ui';
+import { SwitchRow } from './authUi';
+import { goTo } from '../nav';
 
 /** Written once, on the way out. */
 const WELCOME_KEY = 'citycrew.welcomeSeen';
@@ -197,6 +206,19 @@ export default function WelcomeSheet() {
             </Text>
           </LinearGradient>
         </PressableScale>
+
+        {/* The way back for a reader who is not new. It leaves the same
+            way the button does — the flag is written either way, so the
+            greeting does not wait for them on the other side of signing
+            in — and lands on Profile's sign-in screen, the route the
+            save sheet already takes from outside the navigators. */}
+        <View style={s.switch}>
+          <SwitchRow
+            prompt={t('Already have an account?', 'Đã có tài khoản?', 'すでにアカウントをお持ちですか？')}
+            action={t('Sign in', 'Đăng nhập', 'サインイン')}
+            onPress={() => { dismiss(); goTo('Profile', { screen: 'SignIn', initial: false }); }}
+          />
+        </View>
       </Animated.View>
     </View>
   );
@@ -260,6 +282,10 @@ const s = StyleSheet.create({
   },
   rowTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   rowBody: { color: colors.textTertiary, fontSize: 13.5, lineHeight: 18 },
+
+  // Its own top margin rather than the row's: SwitchRow is shared with
+  // the auth screens, where it sits in a column that spaces itself.
+  switch: { marginTop: 14 },
 
   // A rounded rectangle, not a pill: at full width a pill's end caps grow
   // with its height and it reads as a lozenge rather than a block to press.

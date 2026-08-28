@@ -12,6 +12,8 @@ import { fireEvent, render, screen, waitFor } from '../uitest/render';
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
+const goTo = vi.hoisted(() => vi.fn());
+vi.mock('../nav', () => ({ goTo }));
 
 import WelcomeSheet, { WELCOME_ALWAYS_KEY } from './WelcomeSheet';
 
@@ -26,6 +28,7 @@ beforeEach(async () => {
   await AsyncStorage.removeItem(WELCOME_ALWAYS_KEY);
   vi.mocked(AsyncStorage.getItem).mockClear();
   vi.mocked(AsyncStorage.setItem).mockClear();
+  goTo.mockClear();
 });
 
 describe('the first launch', () => {
@@ -98,5 +101,20 @@ describe('the always-show switch', () => {
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(WELCOME_ALWAYS_KEY));
     expect(screen.queryByText('Welcome to City Crew')).toBeNull();
+  });
+});
+
+describe('the reader who is not new', () => {
+  // The greeting reaches an existing account at its worst moment — a
+  // reinstall, or the update that first shipped it — and "start
+  // exploring" is the one thing that reader does not need.
+  it('offers the way back to an account, and takes it', async () => {
+    render(<WelcomeSheet />);
+    fireEvent.click(await screen.findByText('Sign in'));
+
+    expect(goTo).toHaveBeenCalledWith('Profile', { screen: 'SignIn', initial: false });
+    // And the flag is written on the way out, so the greeting is not
+    // still waiting on the other side of signing in.
+    await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledWith(KEY, '1'));
   });
 });
