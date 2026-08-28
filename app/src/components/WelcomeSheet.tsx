@@ -30,6 +30,17 @@ import { PressableScale } from './ui';
 /** Written once, on the way out. */
 const WELCOME_KEY = 'citycrew.welcomeSeen';
 
+/** TEMPORARY — the "Always show welcome" switch in Profile → Settings.
+ *  While it is set, this sheet ignores the seen-flag and greets on every
+ *  launch, which is the only way to look at it twice without wiping the
+ *  app: an EAS update ships a production bundle, so the `__DEV__` back
+ *  doors this codebase uses elsewhere are dead on a real phone.
+ *
+ *  It is meant to be removed once the welcome stops being worked on.
+ *  Three places, all marked TEMPORARY: this constant, the `always` half
+ *  of the read below, and the row in ProfileScreen's SettingsCard. */
+export const WELCOME_ALWAYS_KEY = 'citycrew.welcomeAlways';
+
 export default function WelcomeSheet() {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -40,8 +51,10 @@ export default function WelcomeSheet() {
 
   useEffect(() => {
     let live = true;
-    AsyncStorage.getItem(WELCOME_KEY)
-      .then((v) => { if (live && v === null) setShow(true); })
+    // TEMPORARY: the second read is the always-show switch; drop it and
+    // this goes back to `getItem(WELCOME_KEY).then(v => v === null)`.
+    Promise.all([AsyncStorage.getItem(WELCOME_KEY), AsyncStorage.getItem(WELCOME_ALWAYS_KEY)])
+      .then(([seen, always]) => { if (live && (always === '1' || seen === null)) setShow(true); })
       // A read that failed is not a first launch. If storage is broken
       // the write would fail too, so showing here would mean showing on
       // every launch forever — and missing the welcome once is cheaper

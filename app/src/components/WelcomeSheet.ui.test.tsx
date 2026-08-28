@@ -13,7 +13,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 
-import WelcomeSheet from './WelcomeSheet';
+import WelcomeSheet, { WELCOME_ALWAYS_KEY } from './WelcomeSheet';
 
 const KEY = 'citycrew.welcomeSeen';
 
@@ -23,6 +23,7 @@ beforeEach(async () => {
   // tests. `mockClear`, never `mockReset`: reset takes the stub's
   // implementation with it and the Map stops working for everything after.
   await AsyncStorage.removeItem(KEY);
+  await AsyncStorage.removeItem(WELCOME_ALWAYS_KEY);
   vi.mocked(AsyncStorage.getItem).mockClear();
   vi.mocked(AsyncStorage.setItem).mockClear();
 });
@@ -76,6 +77,26 @@ describe('every launch after', () => {
     render(<WelcomeSheet />);
 
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(KEY));
+    expect(screen.queryByText('Welcome to cityCrew')).toBeNull();
+  });
+});
+
+// TEMPORARY, and pinned so it cannot rot quietly while it is here: the
+// switch in Profile → Settings that makes the welcome greet on every
+// launch. Delete this block along with the switch.
+describe('the always-show switch', () => {
+  it('greets again on a launch that has already seen it', async () => {
+    await AsyncStorage.setItem(KEY, '1');
+    await AsyncStorage.setItem(WELCOME_ALWAYS_KEY, '1');
+    render(<WelcomeSheet />);
+    expect(await screen.findByText('Welcome to cityCrew')).toBeTruthy();
+  });
+
+  it('goes back to silence once it is off', async () => {
+    await AsyncStorage.setItem(KEY, '1');
+    render(<WelcomeSheet />);
+
+    await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(WELCOME_ALWAYS_KEY));
     expect(screen.queryByText('Welcome to cityCrew')).toBeNull();
   });
 });

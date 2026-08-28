@@ -6,14 +6,18 @@
 // About-me card and account actions. Champagne throughout — the
 // reference's violet gradient is translated, not copied.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+// TEMPORARY — read/written only by the "Always show welcome" row.
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
 import { schemeLabel, ThemeSwitcherModal } from '../components/ThemeSwitcher';
+// TEMPORARY — see the "Always show welcome" row below.
+import { WELCOME_ALWAYS_KEY } from '../components/WelcomeSheet';
 import { PrimaryButton } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
@@ -125,6 +129,29 @@ function SettingsCard() {
   const { scheme } = useScheme();
   const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語' }[lang];
 
+  // TEMPORARY — the always-show switch for the welcome sheet. It exists
+  // because a shipped bundle has no `__DEV__` back door and the only
+  // other way to see that sheet twice is deleting the app, which takes
+  // the session, the city and everything else with it. Delete this
+  // block, the row below, and WELCOME_ALWAYS_KEY when the welcome is
+  // done being worked on.
+  const [always, setAlways] = useState(false);
+  useEffect(() => {
+    let live = true;
+    AsyncStorage.getItem(WELCOME_ALWAYS_KEY)
+      .then((v) => { if (live) setAlways(v === '1'); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, []);
+  const toggleAlways = () => {
+    const next = !always;
+    setAlways(next);
+    const write = next
+      ? AsyncStorage.setItem(WELCOME_ALWAYS_KEY, '1')
+      : AsyncStorage.removeItem(WELCOME_ALWAYS_KEY);
+    write.catch(() => {});
+  };
+
   return (
     <>
       <Card style={s.featureCard}>
@@ -151,6 +178,15 @@ function SettingsCard() {
           label={t('Appearance', 'Giao diện', '外観')}
           value={schemeLabel(scheme, t)}
           onPress={() => setThemeOpen(true)}
+        />
+        {/* TEMPORARY. A tap flips it; the sheet reads the flag when the
+            app next starts, so seeing it again is: switch on, close the
+            app, open it. Delete this row with the block above it. */}
+        <SettingRow
+          icon="sparkles-outline"
+          label={t('Always show welcome', 'Luôn hiện lời chào', 'ようこそ画面を毎回表示')}
+          value={always ? t('On', 'Bật', 'オン') : t('Off', 'Tắt', 'オフ')}
+          onPress={() => { fireHaptic('selection'); toggleAlways(); }}
           last
         />
       </Card>
