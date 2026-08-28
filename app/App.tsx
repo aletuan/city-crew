@@ -24,6 +24,7 @@ import { SaveProvider } from './src/lib/save';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
 import FloatingTabBar from './src/components/FloatingTabBar';
+import WelcomeSheet from './src/components/WelcomeSheet';
 import { TabBarDuckProvider } from './src/components/tabBarDuck';
 import { navRef, type RootStackParamList } from './src/nav';
 import ExploreScreen from './src/screens/ExploreScreen';
@@ -241,6 +242,12 @@ function Root() {
         <AuthProvider>
           <I18nProvider>
             <CityProvider>
+              {/* The one-time welcome, above the navigators because it
+                  belongs to no screen — the same argument the save sheets
+                  make. Nothing else is needed to time it: this whole tree
+                  exists only once `holdingFirstFrame` has let go, so the
+                  sheet cannot arrive over the blank ground frame. */}
+              <WelcomeSheet />
               <NavigationContainer theme={navTheme} ref={navRef}>
                 {/* Dark type on paper, light type on charcoal — the one
                     thing the window's interface style does not carry. */}

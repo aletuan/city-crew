@@ -167,6 +167,61 @@ function FirstCollection({ onPress }: { onPress: () => void }) {
 }
 
 /**
+ * The community shelf, before anybody has stocked it.
+ *
+ * It used to say "Nothing from the community yet." and stop there, which
+ * is a dead end in the one place a dead end costs most: a city the desk
+ * has just opened has no public lists at all, and the morning this was
+ * written the owner read that honest emptiness as data loss. Emptiness
+ * here is the state of *this city*, not a fault, and the sentence that
+ * says so can also hand the reader the way to end it — the same shape
+ * `FirstCollection` uses one section up.
+ */
+function CommunityEmpty({ signedIn, onCreate, onExplore }: {
+  signedIn: boolean;
+  onCreate: () => void;
+  onExplore: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <View style={s.firstWrap}>
+      <View style={s.first}>
+        <View style={s.firstIcon}>
+          <Ionicons name="globe" size={27} color={colors.accent} />
+        </View>
+        <Text style={s.firstTitle}>
+          {t('No public lists here yet', 'Chưa có bộ sưu tập công khai nào', 'まだ公開コレクションはありません')}
+        </Text>
+        <Text style={s.firstBody}>
+          {t(
+            'Yours can be the first — make a list, set it to Public, and it shows up here.',
+            'Bộ sưu tập của bạn có thể là đầu tiên — tạo một danh sách và đặt Công khai là nó xuất hiện ở đây.',
+            '最初の一つはあなたかも — リストを作って「公開」にすると、ここに並びます。',
+          )}
+        </Text>
+        {/* Signed out, "make a list" is not yet an offer this reader can
+            take, so the button points at the shelf that is already full. */}
+        {signedIn
+          ? (
+            <GradientCta
+              icon="add"
+              label={t('Create a collection', 'Tạo bộ sưu tập', 'コレクションを作る')}
+              onPress={onCreate}
+            />
+          )
+          : (
+            <GradientCta
+              icon="compass"
+              label={t('Explore places', 'Khám phá địa điểm', 'スポットを見る')}
+              onPress={onExplore}
+            />
+          )}
+      </View>
+    </View>
+  );
+}
+
+/**
  * The last row of your own section: a slot rather than a thing.
  *
  * It sits at the end of the list because that is where you are looking
@@ -930,7 +985,13 @@ export default function CollectionsScreen({ navigation, route }: {
                   : <NewCollectionRow onPress={() => navigation.navigate('CollectionForm')} />;
               }
               return section.data.length === 0
-                ? <Empty text={t('Nothing from the community yet.', 'Cộng đồng chưa có bộ sưu tập nào.', 'みんなのコレクションはまだありません。')} />
+                ? (
+                  <CommunityEmpty
+                    signedIn={!!session}
+                    onCreate={() => navigation.navigate('CollectionForm')}
+                    onExplore={() => navigation.getParent()?.navigate('Explore')}
+                  />
+                )
                 : null;
             }}
             contentContainerStyle={{ paddingBottom: tabClearance }}
