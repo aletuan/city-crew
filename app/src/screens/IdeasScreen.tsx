@@ -313,11 +313,17 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
                         <Text style={s.fromTitle} numberOfLines={1}>
                           {t(c.title_en, c.title_vi, c.title_ja)}
                         </Text>
+                        {/* The count alone. "Your collection" stood here
+                            once — but every row this section holds is
+                            yours, and a label identical on every row
+                            says nothing. The count stays because it is
+                            the one fact that picks seeds: eight places
+                            feed a plan, one barely seasons it. */}
                         <Text style={s.fromMeta} numberOfLines={1}>
                           {t(
-                            `Your collection · ${members.length} ${members.length === 1 ? 'place' : 'places'}`,
-                            `Bộ sưu tập của bạn · ${members.length} địa điểm`,
-                            `あなたのコレクション · ${members.length}件`,
+                            `${members.length} ${members.length === 1 ? 'place' : 'places'}`,
+                            `${members.length} địa điểm`,
+                            `${members.length}件`,
                           )}
                         </Text>
                       </View>
