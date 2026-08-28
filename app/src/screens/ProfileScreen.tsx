@@ -376,14 +376,13 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         />
       </Card>
 
-      {/* Named the way About me and Friends are, so this screen reads
-          as three sections rather than two and a stray card between
-          them. Only here: the guest view's cards carry no headings at
-          all, and one heading among them would be the odd thing out in
-          the other direction. */}
-      <Text style={s.section}>{t('Preferences', 'Tuỳ chọn', '設定')}</Text>
-      <SettingsCard />
-
+      {/* Friends above Preferences, deliberately: this row is the one
+          thing on the screen that changes without you — the dot is a
+          person waiting on an answer — and an inbox filed under the
+          language switcher is an inbox hidden. City, language and
+          appearance are set once and left, so they keep the quiet end.
+          The order reads as a story: who you are, who you go with, how
+          the app behaves, and then the ways out. */}
       <Text style={s.section}>{t('Friends', 'Bạn bè', '友達')}</Text>
       {/* The pill said "Coming soon" from the day this screen shipped;
           the card opens the crew now. The number is friends, the dot is
@@ -405,6 +404,14 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
         </Card>
       </PressableScale>
+
+      {/* Named the way About me and Friends are, so this screen reads
+          as three sections rather than two and a stray card between
+          them. Only here: the guest view's cards carry no headings at
+          all, and one heading among them would be the odd thing out in
+          the other direction. */}
+      <Text style={s.section}>{t('Preferences', 'Tuỳ chọn', '設定')}</Text>
+      <SettingsCard />
 
       <PressableScale
         style={s.signOutBtn}
