@@ -14,124 +14,141 @@ dùng chung cho mọi ngôn ngữ.
 
 ## Subtitle (30 ký tự)
 
-- EN: `Curated city guide & plans`
-- VI: `Cẩm nang thành phố tuyển chọn`
-- JA: `厳選シティガイドとプラン`
+- EN: `Vietnam city guide & plans`
+- VI: `Cẩm nang thành phố Việt Nam`
+- JA: `ベトナムの街ガイドとプラン`
 
-Subtitle được Apple lập chỉ mục tìm kiếm với trọng số cao. Nếu muốn ưu tiên ASO
-hơn là chữ "curated", có thể đổi EN thành `Vietnam city guide & plans` (26 ký
-tự) — khi đó bỏ `vietnam` khỏi keywords để không lặp.
+Subtitle được Apple lập chỉ mục tìm kiếm với trọng số cao, nên nó mang từ khoá
+người ta thật sự gõ ("Vietnam") thay vì từ tiếp thị ("curated"). Vì `vietnam` đã
+nằm ở đây, keywords EN không lặp lại nó.
 
 ## Promotional text (170 ký tự — đổi được không cần review)
 
-- EN: `Hand-picked places in your city, collections by people who actually go, and quick plans for tonight. Open the app, see the city.`
-- VI: `Địa điểm chọn tay trong thành phố của bạn, bộ sưu tập từ người đi thật, và kế hoạch nhanh cho tối nay. Mở app là thấy thành phố.`
-- JA: `実際に通う人が選んだスポットとコレクション、今夜のプランまで。アプリを開けば、街が見える。`
+- EN: `Hand-picked cafés, restaurants and bars in five Vietnamese cities, lists from people who actually go, and a plan for the day you pick.`
+- VI: `Quán cà phê, nhà hàng và bar được chọn tay ở năm thành phố Việt Nam, danh sách từ người đi thật, và kế hoạch cho đúng ngày bạn chọn.`
+- JA: `ベトナム5都市の厳選スポット、実際に通う人のリスト、そして選んだ日のプラン。`
 
 ## Description
 
-Ba dòng đầu là phần người dùng đọc trước khi bấm "more" — đã cố ý đặt luận điểm
-mạnh nhất và rào cản tâm lý lớn nhất (không cần tài khoản) lên đầu.
+Ba dòng đầu là phần người dùng đọc trước khi bấm "more", nên câu đầu nói ngay
+app là gì và phủ những đâu, câu thứ hai gỡ rào cản lớn nhất (không cần tài
+khoản).
 
-**Không viết giá vào description** — Apple cấm đưa thông tin giá vào metadata;
-giá đã hiển thị sẵn trên store.
+**Giọng văn:** câu ngắn, động từ thường, chi tiết cụ thể. Tránh nhịp ba vế và
+lối "không phải X, chỉ là Y" — nghe như quảng cáo máy viết, và người đọc App
+Store nhận ra ngay.
+
+**Hai thứ tuyệt đối không được viết sai:**
+
+- **Không viết "tonight"/"tối nay".** App cho chọn **ngày bất kỳ** và **ban ngày
+  hoặc buổi tối** (`TimeOfDay = 'day' | 'evening'` trong `lib/trip.ts`). Nói
+  "tối nay" là thu hẹp sai một nửa tính năng.
+- **Không viết "walkable"/"đi bộ được".** Planner *phạt theo khoảng cách*
+  (`KM_PENALTY` trong `lib/planner.ts`) để các điểm gần nhau, và tôn trọng giờ
+  mở cửa — nhưng không hứa đi bộ được. Nói "gần nhau" và "đang mở cửa" là đúng
+  với những gì mã thật sự làm.
+- **Không viết giá** — Apple cấm đưa thông tin giá vào metadata.
 
 ### EN
 
 ```
-City Crew is a curated guide to Vietnam's cities — not everything, just the
-places worth your evening. No account needed to look around.
+City Crew is a hand-picked guide to five Vietnamese cities: Ho Chi Minh
+City, Hanoi, Da Nang, Da Lat and Hue. No account needed to look around.
 
 EXPLORE
-A hand-picked catalog of cafés, restaurants, bars and spots, checked by an
-editorial desk before anything reaches your screen. Open the app and it
-opens on your city, instantly.
+Cafés, restaurants, bars and places worth going out of your way for. Our
+editors check every one before it appears, so the list stays short and
+stays good. The app opens on the city nearest you.
 
 COLLECTIONS
-Lists built by people who actually go: date nights, crew weekends, coffee
-crawls. Follow what you like, or sign in and build your own.
+Lists made by people who actually go: where to take a date, where to bring
+six friends, which cafés are worth the ride. Browse them, or sign in and
+make your own.
 
 PLANS
-Tell it who you're with and what you feel like — get a walkable plan for
-tonight, in a sensible order, with opening hours taken into account. Save
-it, edit it, share it.
+Pick a day, say whether you are going out in the afternoon or the evening,
+and say who is coming. You get a short route: places near each other, in
+an order that gets you to each one while it is open. Edit it, save it,
+send it to the people coming with you.
 
 YOUR CREW
-Find friends, invite them to a trip, and see what they are saving. A
-weekend is easier to plan when everyone is looking at the same list.
+Add friends, invite them to a trip, see what they have been saving. Easier
+than five people pasting links into a group chat.
 
-YOURS, PRIVATELY
-Browsing needs no account. Sign in with just your email — a one-time code,
-no password — to save places and build lists. Your location never leaves
-your phone: it is read once, on-device, to open on the nearest city. No
-ads, no trackers. Delete your account any time, in the app.
+PRIVACY
+Browsing needs no account. Signing in takes an email address and a
+one-time code, no password. Your location is read on the phone to pick the
+nearest city and is never sent to us. No ads, no tracking. You can delete
+your account from inside the app.
 
-Covering Ho Chi Minh City, Hanoi, Da Nang, Da Lat and Hue, with more
-cities on the way.
+More cities are on the way.
 ```
 
 ### VI
 
 ```
-City Crew là cẩm nang tuyển chọn cho các thành phố Việt Nam — không phải
-mọi thứ, chỉ những nơi xứng đáng cho buổi tối của bạn. Không cần tài khoản
-để xem.
+City Crew là cẩm nang chọn tay cho năm thành phố Việt Nam: TP. Hồ Chí Minh,
+Hà Nội, Đà Nẵng, Đà Lạt và Huế. Không cần tài khoản để xem.
 
 KHÁM PHÁ
-Danh mục quán cà phê, nhà hàng, bar và địa điểm được chọn tay, qua ban biên
-tập duyệt trước khi đến màn hình của bạn. Mở app là thấy ngay thành phố mình.
+Quán cà phê, nhà hàng, bar và những nơi đáng đi xa một chút. Ban biên tập
+duyệt từng chỗ trước khi lên app, nên danh sách ngắn mà chỗ nào cũng đáng.
+Mở app là vào đúng thành phố gần bạn nhất.
 
 BỘ SƯU TẬP
-Danh sách từ những người đi thật: buổi hẹn tối, cuối tuần với hội bạn, tour
-cà phê. Xem danh sách bạn thích, hoặc đăng nhập và tự tạo.
+Danh sách do người đi thật lập: chỗ nào hợp buổi hẹn, chỗ nào chứa được sáu
+người, quán cà phê nào đáng chạy xe tới. Xem của người khác, hoặc đăng nhập
+rồi tự lập.
 
 KẾ HOẠCH
-Cho app biết bạn đi với ai và đang muốn gì — nhận ngay kế hoạch đi bộ được
-cho tối nay, theo thứ tự hợp lý và đã tính giờ mở cửa. Lưu lại, chỉnh sửa,
-chia sẻ.
+Chọn ngày, chọn đi ban ngày hay buổi tối, cho biết đi với ai. App trả về một
+lộ trình gọn: các điểm gần nhau, xếp theo thứ tự sao cho tới nơi nào cũng
+đang mở cửa. Sửa lại, lưu, gửi cho những người cùng đi.
 
 HỘI CỦA BẠN
-Tìm bạn bè, mời họ vào chuyến đi, và xem họ đang lưu gì. Lên kế hoạch cuối
-tuần dễ hơn nhiều khi cả nhóm cùng nhìn một danh sách.
+Thêm bạn bè, mời họ vào chuyến đi, xem họ đang lưu gì. Đỡ hơn nhiều so với
+năm người dán link vào nhóm chat.
 
-CỦA BẠN, RIÊNG TƯ
-Xem không cần tài khoản. Đăng nhập chỉ bằng email — mã một lần, không mật
-khẩu — để lưu địa điểm và tạo danh sách. Vị trí của bạn không bao giờ rời
-điện thoại: chỉ đọc một lần, ngay trên máy, để mở đúng thành phố gần nhất.
-Không quảng cáo, không tracker. Xoá tài khoản bất cứ lúc nào, trong app.
+RIÊNG TƯ
+Xem không cần tài khoản. Đăng nhập chỉ cần email và mã một lần, không mật
+khẩu. Vị trí được đọc ngay trên máy để chọn thành phố gần nhất, không gửi về
+chúng tôi. Không quảng cáo, không theo dõi. Bạn có thể tự xoá tài khoản ngay
+trong app.
 
-Hiện có TP. Hồ Chí Minh, Hà Nội, Đà Nẵng, Đà Lạt và Huế, các thành phố khác
-sẽ sớm có mặt.
+Các thành phố khác sẽ sớm có mặt.
 ```
 
 ### JA
 
 ```
-City Crewは、ベトナムの街の厳選ガイド。すべてではなく、今夜に値する場所だけを。
-アカウントなしで閲覧できます。
+City Crewは、ベトナム5都市の厳選ガイドです。ホーチミン市、ハノイ、ダナン、
+ダラット、フエ。アカウントなしで閲覧できます。
 
 さがす
-カフェ、レストラン、バー、スポット。編集デスクが確認したものだけが画面に届き
-ます。アプリを開けば、すぐにあなたの街。
+カフェ、レストラン、バー、少し足を延ばす価値のある場所。編集部が一軒ずつ確認
+してから掲載するので、リストは短く、質は高いまま。アプリを開けば、いちばん近い
+街から。
 
 コレクション
-実際に通う人がつくるリスト:デートの夜、仲間との週末、カフェ巡り。気に入った
-リストをたどるか、サインインして自分のリストを。
+実際に通う人がつくるリスト:デートに使える店、六人で入れる店、わざわざ行く価値
+のあるカフェ。人のリストを見るのも、サインインして自分でつくるのも自由。
 
 プラン
-誰と、どんな気分かを伝えるだけで、今夜の歩けるプランがすぐに。営業時間を踏ま
-えた順番で。保存して、調整して、共有。
+日付を選び、昼か夜かを選び、誰と行くかを伝える。近い場所どうしをまとめ、着いた
+ときに開いている順番に並べた短いルートが返ってきます。編集して、保存して、一緒
+に行く人に送る。
 
 あなたのクルー
-友だちを見つけ、旅に誘い、保存したスポットを見る。同じリストを一緒に見れば、
-週末の計画はぐっと楽になります。
+友だちを追加し、旅に誘い、保存したスポットを見る。五人がグループチャットにリン
+クを貼り合うより、ずっと楽です。
 
-あなたのもの、プライベートに
-閲覧にアカウントは不要。メールだけでサインイン(ワンタイムコード、パスワード
-なし)。位置情報は端末の外に出ません — 最寄りの街を開くために端末上で一度読む
-だけ。広告なし、トラッカーなし。アカウント削除はアプリ内でいつでも。
+プライバシー
+閲覧にアカウントは不要。サインインはメールアドレスとワンタイムコードだけで、
+パスワードはありません。位置情報は最寄りの街を選ぶために端末上で読むだけで、
+こちらには送信されません。広告なし、トラッキングなし。アカウントはアプリ内で
+削除できます。
 
-ホーチミン市、ハノイ、ダナン、ダラット、フエに対応。今後さらに拡大予定。
+対応都市は今後さらに増えます。
 ```
 
 ## Keywords (100 ký tự, phân cách bằng dấu phẩy, KHÔNG có dấu cách sau dấu phẩy)
@@ -140,15 +157,15 @@ Không lặp từ đã có trong tên/subtitle — Apple đã lập chỉ mục 
 lặp lại là phí ký tự. Tên năm thành phố là từ khoá đáng giá nhất: người ta tìm
 "da nang cafe" nhiều hơn tìm "curated guide".
 
-- EN (92/100): `saigon,hanoi,danang,dalat,hue,vietnam,cafe,restaurant,bar,travel,food,date,itinerary,weekend`
+- EN (94/100): `saigon,hanoi,danang,dalat,hue,cafe,restaurant,bar,nightlife,travel,food,date,itinerary,weekend`
 - VI (96/100): `sài gòn,hà nội,đà nẵng,đà lạt,huế,quán cà phê,nhà hàng,ăn uống,đi chơi,hẹn hò,cuối tuần,địa điểm`
 - JA (54/100): `ホーチミン,ハノイ,ダナン,ダラット,フエ,ベトナム,カフェ,レストラン,旅行,グルメ,デート,週末,プラン`
 
 ## Release notes v1.0 (What's New)
 
-- EN: `First release — curated places across five Vietnamese cities, collections, and quick plans for tonight.`
-- VI: `Bản phát hành đầu tiên — địa điểm tuyển chọn tại năm thành phố Việt Nam, bộ sưu tập, và kế hoạch nhanh cho tối nay.`
-- JA: `初回リリース — ベトナム5都市の厳選スポット、コレクション、今夜のクイックプラン。`
+- EN: `First release. Hand-picked places in Ho Chi Minh City, Hanoi, Da Nang, Da Lat and Hue, lists from people who go there, and plans for the day you pick.`
+- VI: `Bản phát hành đầu tiên. Địa điểm chọn tay ở TP.HCM, Hà Nội, Đà Nẵng, Đà Lạt và Huế, danh sách từ người đi thật, và kế hoạch cho ngày bạn chọn.`
+- JA: `初回リリース。ホーチミン市、ハノイ、ダナン、ダラット、フエの厳選スポット、実際に通う人のリスト、選んだ日のプラン。`
 
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
