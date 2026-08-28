@@ -15,8 +15,8 @@
 // would hide the result of the tap. A bottom sheet makes that view
 // better, not worse: everything above it is the screen repainting.
 
-import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
@@ -40,49 +40,63 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
   const { t } = useI18n();
   const { scheme, setScheme } = useScheme();
   const insets = useSafeAreaInsets();
+  // The house entrance (SaveSheet's, via PersonSheet): the modal only
+  // fades — the scrim brightens in place — while the sheet alone rises
+  // on a native-driven spring. See CitySwitcher for the longer note.
+  // It matters most here of the three: the whole screen repaints behind
+  // this sheet, and the calmer the sheet's own motion, the more that
+  // repaint reads as the event.
+  const rise = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!visible) { rise.setValue(1); return; }
+    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
+  }, [visible, rise]);
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={s.scrim} onPress={onClose}>
-        <Pressable style={[s.sheet, { paddingBottom: 14 + insets.bottom }]} onPress={() => {}}>
-          <View style={s.handle} />
-          <Text style={s.title}>{t('Appearance', 'Giao diện', '外観')}</Text>
-          {OPTIONS.map((o, i) => {
-            const active = o.id === scheme;
-            return (
-              <View key={o.id}>
-                {i > 0 && <View style={s.sep} />}
-                <PressableScale
-                  haptic="selection"
-                  style={[s.row, active && s.rowOn]}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                  // The sheet stays open — see the note in the header.
-                  onPress={() => setScheme(o.id)}
-                >
-                  <Ionicons name={o.icon} size={18} color={active ? colors.accent : colors.textTertiary} />
-                  <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.accent }]}>
-                    {schemeLabel(o.id, t)}
-                  </Text>
-                  {active && <Ionicons name="checkmark" size={18} color={colors.accent} />}
-                </PressableScale>
-              </View>
-            );
-          })}
-          <PressableScale onPress={onClose} accessibilityRole="button" style={s.done}>
-            <Text style={s.doneText}>{t('Done', 'Xong', '完了')}</Text>
-          </PressableScale>
-        </Pressable>
-      </Pressable>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} />
+      <Animated.View
+        style={[s.sheet, {
+          paddingBottom: 14 + insets.bottom,
+          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }],
+        }]}
+      >
+        <View style={s.handle} />
+        <Text style={s.title}>{t('Appearance', 'Giao diện', '外観')}</Text>
+        {OPTIONS.map((o, i) => {
+          const active = o.id === scheme;
+          return (
+            <View key={o.id}>
+              {i > 0 && <View style={s.sep} />}
+              <PressableScale
+                haptic="selection"
+                style={[s.row, active && s.rowOn]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                // The sheet stays open — see the note in the header.
+                onPress={() => setScheme(o.id)}
+              >
+                <Ionicons name={o.icon} size={18} color={active ? colors.accent : colors.textTertiary} />
+                <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.accent }]}>
+                  {schemeLabel(o.id, t)}
+                </Text>
+                {active && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+              </PressableScale>
+            </View>
+          );
+        })}
+        <PressableScale onPress={onClose} accessibilityRole="button" style={s.done}>
+          <Text style={s.doneText}>{t('Done', 'Xong', '完了')}</Text>
+        </PressableScale>
+      </Animated.View>
     </Modal>
   );
 }
 
 const s = StyleSheet.create({
-  scrim: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'flex-end',
-  },
+  // SaveSheet's backdrop, so the five sheets dim the room identically.
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.62)' },
   sheet: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: colors.bgElevated,
     borderTopLeftRadius: radius.card + 6, borderTopRightRadius: radius.card + 6,
     paddingHorizontal: space.cardPadding, paddingTop: 8,
