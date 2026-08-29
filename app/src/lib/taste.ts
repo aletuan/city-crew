@@ -28,9 +28,12 @@
 // Averaging them on one scale makes the strong signal the quietest, because
 // it carries the smallest number. So they are kept apart: the category lean
 // fills [0, 1], and a place the reader passed over takes a full point off
-// whatever that lean was. The relative order of the three category signals
-// is the doc's, and the reason it is theirs is sound — a stated preference
-// beats an inferred one.
+// whatever that lean was. The order of the category signals is the doc's
+// for the three it named, with liking added under them; the doc argued only
+// the top of it — a stated preference beats an inferred one. Each rung's own
+// reason now sits on the field it weights, including the pair that reads
+// backwards: suggesting a place costs more than saving one and is worth
+// less. See `suggested`.
 
 import { categoriesOf } from './categories';
 import type { Place } from './types';
@@ -51,7 +54,7 @@ export type Categorised = {
 };
 
 export type TasteSignals = {
-  /** Category keys the reader said out loud. The strongest of the three
+  /** Category keys the reader said out loud. The strongest of the four
    *  category signals, because saying beats inferring.
    *
    *  Nothing passes it today: the profile stopped asking, on the argument
@@ -59,9 +62,49 @@ export type TasteSignals = {
    *  which is the seam. The term stays weighted and tested for whatever
    *  asks next. */
   preferred?: readonly string[];
-  /** Places in the reader's own collections. */
+  /** Places in the reader's own collections — a place they found already in
+   *  the catalog and chose to keep. See `suggested` for why this outranks
+   *  putting a place *into* the catalog, which is the more surprising half
+   *  of the ladder. */
   saved?: readonly Categorised[];
-  /** Places the reader suggested to the catalog themselves. */
+  /**
+   * Places the reader put into the catalog themselves.
+   *
+   * ── why this sits *below* saving, which costs less ──
+   *
+   * Suggesting is plainly the more expensive gesture: you search Google,
+   * confirm the right business, and wait for the desk — against a server
+   * cap of twenty a day. Saving is one tap on something already here. So
+   * the ladder looks upside down at this rung, and the reason it is not
+   * was never written down: the ordering came from the design doc, and the
+   * doc argued only the top of it (stated beats inferred). The argument
+   * below is reconstructed rather than inherited. It holds, but it is
+   * being made here for the first time — worth knowing before anyone
+   * leans on it.
+   *
+   * **A save can be taken back and a suggestion cannot.** `saved` is
+   * derived live from the reader's collections, so unsaving removes the
+   * evidence with it; the signal always describes what they want kept
+   * *now*. Nothing in the app clears `submitted_by` — it is written
+   * server-side by `fetch-place` and there is no verb for undoing it — so
+   * `suggested` only ever grows. Somebody who added twenty places in their
+   * first month still carries all twenty, in the taste they have today.
+   * A signal that cannot shrink should not outweigh one that tracks
+   * current intent.
+   *
+   * **And a suggestion is partly about the catalog, not the reader.** It
+   * says "this should be here" as much as "I like this" — the office lunch
+   * place, the pharmacy on the corner, the obvious landmark nobody had
+   * filed yet. That motive is invisible in the row: a gap being filled and
+   * a favourite being shared arrive identically. Saving carries no such
+   * ambiguity.
+   *
+   * One thing this signal does that no other does: it counts the reader's
+   * *pending* submissions. `fetchPlaces` returns live rows OR your own, so
+   * a place waiting on review is already in your taste while still
+   * invisible to everyone else. Deliberate — you meant it when you sent
+   * it, and the desk's queue is not a statement about you.
+   */
   suggested?: readonly Categorised[];
   /**
    * Places inside collections this reader has liked.
@@ -92,7 +135,14 @@ export type TasteSignals = {
  *  **stated beats saved beats suggested beats liked**. The numbers only
  *  matter relative to each other — the sum is normalised by their total,
  *  so scaling all four changes nothing, and adding the fourth dilutes the
- *  other three (3/9 became 3/10) without reordering any of them. */
+ *  other three (3/9 became 3/10) without reordering any of them.
+ *
+ *  Each rung now carries its own reason on the field it weights: `preferred`
+ *  on top because saying beats inferring, `liked` at the bottom because it
+ *  is one tap on somebody else's curation, and the middle pair — the one
+ *  that reads backwards, since suggesting costs more than saving — argued
+ *  at `suggested`. A test pins the order; the arguments are why it is worth
+ *  pinning. */
 const W_PREFERRED = 4;
 const W_SAVED = 3;
 const W_SUGGESTED = 2;
