@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './auth';
-import { usePlaces } from './catalog';
+import { useCatalog, usePlaces } from './catalog';
 import { useCity } from './city';
 import { fetchPassedOver, logPlaceEvent, useMyPreferences, type EventKind } from './data';
 import { membersOf } from './place';
@@ -71,6 +71,60 @@ export type PlanProfile = {
 };
 
 /**
+ * What this reader has done, as `taste.ts` wants to be told it.
+ *
+ * One hook rather than two copies. Both profiles below need exactly these
+ * three, and they were written out twice before `liked` arrived and would
+ * have been written out three times after — which is how two lists that
+ * are supposed to be identical stop being identical.
+ *
+ * Nothing here costs a request. The reader's own collections are already
+ * in `SaveProvider`, the catalog is `usePlaces`, and both halves of the
+ * likes — which lists exist and which of them you liked — were fetched at
+ * launch for the Explore shelf.
+ */
+function useOwnSignals(uid: string | null) {
+  const { data: places } = usePlaces();
+  const { mine } = useSave();
+  const { collections, myLikes } = useCatalog();
+
+  // Flattened across collections, and `tally` counts each place once — a
+  // café filed under both "Weekend" and "Near work" is one café that was
+  // saved. See the note there.
+  const saved = useMemo(
+    () => mine.data.flatMap((c) => membersOf(c, places)),
+    [mine.data, places],
+  );
+  const suggested = useMemo(
+    () => (uid ? places.filter((p) => p.submitted_by === uid) : []),
+    [places, uid],
+  );
+
+  /**
+   * The places inside the lists this reader liked.
+   *
+   * Matched on `id` because that is what a like points at — see the note
+   * on `Collection.id`, which says so and says it is not an invitation to
+   * key anything else that way.
+   *
+   * `myLikes` here is the optimistic set, pending taps included, so a
+   * heart tapped a second ago counts. And `membersOf` resolves slugs
+   * against the in-memory catalog, which holds one city: a list liked in
+   * another city contributes nothing until the reader is back in it,
+   * exactly as their own collections behave.
+   */
+  const liked = useMemo(() => {
+    if (!uid || !myLikes.length) return [];
+    const wanted = new Set(myLikes);
+    return collections.data
+      .filter((c) => c.id && wanted.has(c.id))
+      .flatMap((c) => membersOf(c, places));
+  }, [uid, myLikes, collections.data, places]);
+
+  return { saved, suggested, liked };
+}
+
+/**
  * Both halves of the profile from one read of the preferences row.
  *
  * One hook rather than two because they share that read: a screen that
@@ -80,8 +134,7 @@ export type PlanProfile = {
 export function usePlanProfile(): PlanProfile {
   const { session } = useAuth();
   const uid = session?.user?.id ?? null;
-  const { data: places } = usePlaces();
-  const { mine } = useSave();
+  const { saved, suggested, liked } = useOwnSignals(uid);
   const prefs = useMyPreferences(uid);
 
   const [passedOver, setPassedOver] = useState<string[]>([]);
@@ -106,15 +159,6 @@ export function usePlanProfile(): PlanProfile {
     return () => { live = false; };
   }, [uid, prefs.data.history_on]);
 
-  const saved = useMemo(
-    () => mine.data.flatMap((c) => membersOf(c, places)),
-    [mine.data, places],
-  );
-  const suggested = useMemo(
-    () => (uid ? places.filter((p) => p.submitted_by === uid) : []),
-    [places, uid],
-  );
-
   /**
    * Taste from what this reader has *done*, and no longer from what they
    * declared.
@@ -129,14 +173,15 @@ export function usePlanProfile(): PlanProfile {
    * older answer the weaker of the two.
    *
    * What is left is the half a form cannot collect: the categories your
-   * saved collections lean towards, the places you added yourself, and
-   * the places you opened and walked away from. `taste.ts` keeps its
-   * `preferred` term and its weight; nothing feeds it today.
+   * saved collections lean towards, the lists you liked, the places you
+   * added yourself, and the places you opened and walked away from.
+   * `taste.ts` keeps its `preferred` term and its weight; the chips feed
+   * it through `useBrowseTaste` and deliberately not through here.
    */
   const taste = useMemo(() => {
     if (!uid) return null;
-    return tasteFrom({ saved, suggested, passedOver });
-  }, [uid, saved, suggested, passedOver]);
+    return tasteFrom({ saved, suggested, liked, passedOver });
+  }, [uid, saved, suggested, liked, passedOver]);
 
   // See `PlanProfile.budgetVnd`: nothing asks for a band any more, so
   // nothing has one to give.
@@ -166,18 +211,9 @@ export function usePlanProfile(): PlanProfile {
 export function useBrowseTaste(): Taste | null {
   const { session } = useAuth();
   const uid = session?.user?.id ?? null;
-  const { data: places } = usePlaces();
-  const { mine } = useSave();
+  const { saved, suggested, liked } = useOwnSignals(uid);
   const prefs = useMyPreferences(uid);
 
-  const saved = useMemo(
-    () => mine.data.flatMap((c) => membersOf(c, places)),
-    [mine.data, places],
-  );
-  const suggested = useMemo(
-    () => (uid ? places.filter((p) => p.submitted_by === uid) : []),
-    [places, uid],
-  );
   // Cleaned on the way in: the column is a bare `text[]` with no foreign
   // key and rows in it were typed by hand before any picker existed, so
   // it holds words the taxonomy has never heard of. See `cleanTaste`.
@@ -191,8 +227,8 @@ export function useBrowseTaste(): Taste | null {
   // scrolling — the planner is where that signal is worth a round trip.
   return useMemo(() => {
     if (!uid) return null;
-    return tasteFrom({ preferred, saved, suggested });
-  }, [uid, preferred, saved, suggested]);
+    return tasteFrom({ preferred, saved, suggested, liked });
+  }, [uid, preferred, saved, suggested, liked]);
 }
 
 /**
