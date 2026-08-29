@@ -67,7 +67,9 @@ follows the device language.
 1. Bản build production đã lên TestFlight và tự chạy thử ít nhất một vòng:
    mở app, browse, đăng nhập, lưu, tạo collection, report thử, xoá tài khoản
    bằng một tài khoản nháp.
-2. Privacy Policy URL và Support URL (GitHub Pages) mở được từ trình duyệt ẩn danh.
+2. Privacy Policy URL, Terms URL và Support URL (GitHub Pages) mở được từ trình
+   duyệt ẩn danh. Hai URL đầu còn được link ngay dưới nút Đăng ký trong app,
+   nên một link chết ở đó là reviewer gặp trước cả khi mở listing.
 3. Bảng App Privacy đã điền đúng theo `app-privacy-labels.md`.
 4. Screenshots đủ cỡ 6.9" cho ít nhất locale en-US.
 5. `STARTUP_TRACE_UPLOAD` không cần đụng — tự tắt trên channel production.

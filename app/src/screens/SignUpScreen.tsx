@@ -4,15 +4,16 @@
 // a project setting, so nothing here assumes one — see `lib/otp.ts`.
 
 import React, { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Linking, StyleSheet, Text } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, SwitchRow, useFailText } from '../components/authUi';
 import { successHaptic } from '../components/ui';
 import { isHandleFree, useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
+import { PRIVACY_URL, TERMS_URL } from '../lib/links';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
 import { HANDLE_MAX, handleProblem, normalizeHandle, suggestHandle } from '../lib/handle';
 import { PASSWORD_MIN } from '../lib/password';
-import { colors, type } from '../theme';
+import { colors, font, type } from '../theme';
 import type { Nav } from '../nav';
 
 export default function SignUpScreen({ navigation }: { navigation: Nav }) {
@@ -33,6 +34,11 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
+
+  // Swallowed on purpose, as in TripDetailScreen: a phone with no
+  // browser it will hand this to is a dead end, and a red box in the
+  // middle of signing up would be a worse one.
+  const open = (url: string) => { Linking.openURL(url).catch(() => {}); };
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -209,12 +215,33 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       />
       {error ? <FormError>{failText(error)}</FormError> : null}
       <PrimaryButton label={t('Sign up', 'Đăng ký', '登録')} onPress={submit} busy={busy} />
+      {/* This line used to be a joke — "you agree to keep your crew's
+          plans awesome" — sitting in exactly the place where the two
+          real documents belong, and nowhere in the app linked to either.
+          Apple's guideline 1.2 wants an app with user content to say what
+          is not allowed and what happens to it; the product already does
+          all four things it asks for, so what was missing was only the
+          writing down and this way in.
+
+          The sentence is assembled from fragments rather than one string
+          with placeholders, because the pieces move: Vietnamese ends on
+          "của City Crew", English ends on a full stop, and Japanese wants
+          no spaces around either link. The spacing lives inside each
+          translation for that reason. */}
       <Text style={s.terms}>
         {t(
-          'By signing up, you agree to keep your crew’s plans awesome.',
-          'Khi đăng ký, bạn đồng ý giữ cho kế hoạch của hội luôn tuyệt vời.',
-          '登録することで、仲間との計画を最高のものにすることに同意したことになります。',
+          'By signing up, you agree to City Crew’s ',
+          'Khi đăng ký, bạn đồng ý với ',
+          '登録すると、City Crew の',
         )}
+        <Text style={s.termsLink} onPress={() => open(TERMS_URL)} accessibilityRole="link">
+          {t('Terms of Service', 'Điều khoản sử dụng', '利用規約')}
+        </Text>
+        {t(' and ', ' và ', 'と')}
+        <Text style={s.termsLink} onPress={() => open(PRIVACY_URL)} accessibilityRole="link">
+          {t('Privacy Policy', 'Chính sách quyền riêng tư', 'プライバシーポリシー')}
+        </Text>
+        {t('.', ' của City Crew.', 'に同意したことになります。')}
       </Text>
       <SwitchRow
         prompt={t('Already have an account?', 'Đã có tài khoản?', 'すでにアカウントをお持ちの方は')}
@@ -227,4 +254,8 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 
 const s = StyleSheet.create({
   terms: { color: colors.textTertiary, ...type.meta, textAlign: 'center', lineHeight: 21, marginTop: 4 },
+  // Only the colour and the weight change: a different size inside a
+  // sentence would break the line's rhythm, and there is no underline
+  // anywhere else in the app.
+  termsLink: { color: colors.accent, fontWeight: font.medium },
 });
