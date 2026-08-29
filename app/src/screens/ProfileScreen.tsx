@@ -7,7 +7,7 @@
 // reference's violet gradient is translated, not copied.
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 // TEMPORARY — read/written only by the "Always show welcome" row.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -28,6 +28,7 @@ import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import { useSave } from '../lib/save';
 import { useCity } from '../lib/city';
+import { PRIVACY_URL, TERMS_URL } from '../lib/links';
 import { Lang, useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
 import { colors, font, quoteFace, radius, space, type } from '../theme';
@@ -94,12 +95,15 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
  * the value on the right makes them plainly two different rows, and the
  * question of which hierarchy is "right" stops being asked.
  */
-function SettingRow({ icon, label, value, onPress, last }: {
+function SettingRow({ icon, label, value, onPress, last, external }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  value: string;
+  /** Absent on rows that are a destination rather than a setting. */
+  value?: string;
   onPress: () => void;
   last?: boolean;
+  /** Leaves the app for a browser: says so with the glyph, not a chevron. */
+  external?: boolean;
 }) {
   return (
     <PressableScale scaleTo={0.98} style={[s.featureRow, !last && s.featureRowDivider]} onPress={onPress}>
@@ -108,9 +112,18 @@ function SettingRow({ icon, label, value, onPress, last }: {
       {/* The value takes what is left and truncates rather than wrapping:
           "Hà Nội · theo vị trí của bạn" is long, and a settings row that
           grows a second line for one city and not another makes the card
-          look uneven for a reason nobody can see. */}
-      <Text style={s.settingValue} numberOfLines={1}>{value}</Text>
-      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+          look uneven for a reason nobody can see.
+
+          With no value it is still what holds the glyph against the right
+          edge, so the empty case is a spacer rather than nothing. */}
+      {value === undefined
+        ? <View style={{ flex: 1 }} />
+        : <Text style={s.settingValue} numberOfLines={1}>{value}</Text>}
+      <Ionicons
+        name={external ? 'open-outline' : 'chevron-forward'}
+        size={17}
+        color={colors.textTertiary}
+      />
     </PressableScale>
   );
 }
@@ -119,7 +132,12 @@ function SettingRow({ icon, label, value, onPress, last }: {
  *  catalog the app shows, which language it speaks, how it looks. The
  *  header carries no switchers — this card is the one place to change
  *  any of them. Its heading is written at each call site, beside the
- *  card, the way About me and Friends are. */
+ *  card, the way About me and Friends are.
+ *
+ *  It ends on the two public documents, which are not settings and are
+ *  drawn to say so. They are here because nowhere else in the app leads
+ *  back to them: the one link is under the Sign up button, on a screen
+ *  an account holder cannot reach again. */
 function SettingsCard() {
   const { t, lang } = useI18n();
   const { city, mode } = useCity();
@@ -152,6 +170,11 @@ function SettingsCard() {
     write.catch(() => {});
   };
 
+  // Swallowed as it is on the sign-up screen: a phone with nothing to
+  // hand this to is a dead end, and a red box on a settings row would be
+  // a worse one.
+  const openDoc = (url: string) => { fireHaptic('selection'); Linking.openURL(url).catch(() => {}); };
+
   return (
     <>
       <Card style={s.featureCard}>
@@ -181,12 +204,35 @@ function SettingsCard() {
         />
         {/* TEMPORARY. A tap flips it; the sheet reads the flag when the
             app next starts, so seeing it again is: switch on, close the
-            app, open it. Delete this row with the block above it. */}
+            app, open it. Delete this row with the block above it — it
+            carries no `last`, so nothing below needs touching. */}
         <SettingRow
           icon="sparkles-outline"
           label={t('Always show welcome', 'Luôn hiện lời chào', 'ようこそ画面を毎回表示')}
           value={always ? t('On', 'Bật', 'オン') : t('Off', 'Tắt', 'オフ')}
           onPress={() => { fireHaptic('selection'); toggleAlways(); }}
+        />
+        {/* The way back to the two documents. They are linked once, under
+            the Sign up button, and that is the last a reader ever sees of
+            them: the screen is behind an account they now have. This card
+            is where anyone would look for them, and it is drawn for
+            guests too, so the reader deciding whether to sign up at all
+            can read the terms without starting the form.
+
+            Not settings, and they do not pretend to be — no value on the
+            right, and the glyph is the one that means "this opens
+            elsewhere". */}
+        <SettingRow
+          icon="document-text-outline"
+          label={t('Terms of Service', 'Điều khoản sử dụng', '利用規約')}
+          onPress={() => openDoc(TERMS_URL)}
+          external
+        />
+        <SettingRow
+          icon="shield-checkmark-outline"
+          label={t('Privacy Policy', 'Chính sách quyền riêng tư', 'プライバシーポリシー')}
+          onPress={() => openDoc(PRIVACY_URL)}
+          external
           last
         />
       </Card>
