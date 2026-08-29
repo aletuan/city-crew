@@ -169,29 +169,29 @@ export default function WelcomeSheet() {
         <View style={s.rows}>
           <Row
             icon="compass-outline"
-            title={t('Explore and save', 'Khám phá và lưu lại', '探して、保存する')}
+            title={t('Discover & save', 'Khám phá & lưu lại', '見つけて、保存する')}
             body={t(
-              'Find the good places in your city and keep the ones you like.',
-              'Tìm chỗ hay trong thành phố và giữ lại nơi bạn thích.',
-              '街のいい場所を見つけて、気に入ったところを残せます。',
+              'Find places worth visiting, and save the ones you love.',
+              'Tìm những nơi đáng ghé và lưu lại địa điểm bạn yêu thích.',
+              '訪れる価値のある場所を見つけて、お気に入りを保存できます。',
             )}
           />
           <Row
             icon="bulb-outline"
-            title={t('Plan with AI', 'Lên kế hoạch cùng AI', 'AIと計画する')}
+            title={t('Plan with ease', 'Lên kế hoạch dễ dàng', 'かんたんに計画する')}
             body={t(
-              'Say what kind of day you want and get a route that works.',
-              'Nói bạn muốn một ngày thế nào, nhận ngay lịch trình hợp lý.',
-              'どんな一日にしたいか伝えるだけで、無理のないルートに。',
+              'Say what kind of day you want, and City Crew suggests an itinerary to match.',
+              'Chỉ cần nói bạn muốn một ngày thế nào, City Crew sẽ gợi ý lịch trình phù hợp.',
+              'どんな一日にしたいか伝えるだけで、City Crew がぴったりの旅程を提案します。',
             )}
           />
           <Row
             icon="people-outline"
-            title={t('Bring the crew', 'Rủ cả hội', '仲間を誘う')}
+            title={t('Share with friends', 'Chia sẻ cùng bạn bè', '友達と共有する')}
             body={t(
-              'Share the plan, invite friends, decide together.',
-              'Chia sẻ kế hoạch, mời bạn bè, cùng chốt.',
-              'プランを共有して友達を招待、みんなで決められます。',
+              'Share your plan, invite friends, and decide together.',
+              'Chia sẻ kế hoạch, mời bạn bè và cùng nhau lựa chọn.',
+              'プランを共有して友達を招待し、みんなで決められます。',
             )}
           />
         </View>
