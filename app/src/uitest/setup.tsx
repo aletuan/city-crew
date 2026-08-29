@@ -89,6 +89,18 @@ vi.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
+// The channel stamp, which `lib/channel` reads at import time and both
+// startup-trace flags then ask. Reaching the real module pulls in
+// `expo-modules-core`, whose EventEmitter wants a native half that is not
+// there — it took four UI test files down the day `lib/trace` started
+// asking, and none of them are about channels at all.
+//
+// `channel: null` is the honest answer for a test run: no build stamped
+// it, which `lib/channel` groups with the non-production installs. A test
+// that cares which channel it is on should mock `./channel` directly, as
+// trace.test.ts and tracereport.test.ts do.
+vi.mock('expo-updates', () => ({ channel: null }));
+
 vi.mock('expo-location', () => ({
   getForegroundPermissionsAsync: vi.fn(async () => ({ status: 'undetermined' })),
   requestForegroundPermissionsAsync: vi.fn(async () => ({ status: 'denied' })),

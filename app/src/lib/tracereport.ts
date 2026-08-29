@@ -25,8 +25,9 @@ import type { TraceMark } from './trace';
 
 /**
  * The switch for the *upload* — `STARTUP_TRACE` in `lib/trace` governs the
- * console lines and this governs whether they leave the phone, so the
- * local log survives turning the server half off.
+ * console lines and this governs whether they leave the phone. Both now
+ * ask the channel the same question, and they stay two constants so
+ * either half can be turned off by hand without the other.
  *
  * No longer a hand-flipped constant: since `eas.json` gave the app real
  * release channels, the environment decides. Every non-production install
@@ -34,7 +35,7 @@ import type { TraceMark } from './trace';
  * launches; the App Store build does not. That is the "on in dev, off in
  * prod" this flag wanted from the day it was written, back when there was
  * no environment to hang it on. To silence a non-production install too,
- * `false` here still works, and the local log stays either way.
+ * `false` here still works.
  */
 export const STARTUP_TRACE_UPLOAD = !IS_PRODUCTION_CHANNEL;
 
