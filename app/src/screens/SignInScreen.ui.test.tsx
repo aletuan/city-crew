@@ -133,6 +133,31 @@ describe('signing in', () => {
     expect(await screen.findByText('Email or password is incorrect.')).toBeTruthy();
 
     signIn.mockResolvedValue(undefined);
+
+    // ── the state the second press depends on, asserted before it ──
+    //
+    // This wait timed out a third time (5124ms, in CI, green on the two
+    // other passes of the same run), and the two earlier repairs both
+    // read it as "not enough time". Five seconds for a mocked promise is
+    // not a time problem, and no reproduction came out of twelve local
+    // runs, so the mechanism is still unknown.
+    //
+    // What can be done meanwhile is stop the next failure being mute.
+    // The screen's handler returns early on an empty field and the button
+    // does nothing at all while `busy`; both are silent, and both look
+    // exactly like "the press produced no call". Asserted here, the next
+    // occurrence names its own cause on the failing line instead of
+    // leaving it to be guessed at a fourth time.
+    expect((screen.getByPlaceholderText('Enter your email') as HTMLInputElement).value)
+      .toBe('reader@example.com');
+    expect((screen.getByPlaceholderText('Enter your password') as HTMLInputElement).value)
+      .toBe('wrong');
+    // Busy swaps the label for a spinner, so finding the label is the
+    // observable proof the button is pressable again — a different fact
+    // from the error sentence above, which is all the test waited on
+    // before.
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeTruthy();
+
     submit();
     // Two waits, deliberately, each with a patient clock. The default
     // 1s wait timed out twice under full-suite parallel load (once on a
