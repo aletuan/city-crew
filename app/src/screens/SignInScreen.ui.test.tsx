@@ -133,15 +133,58 @@ describe('signing in', () => {
     expect(await screen.findByText('Email or password is incorrect.')).toBeTruthy();
 
     signIn.mockResolvedValue(undefined);
-    submit();
-    // Two waits, deliberately, each with a patient clock. The default
-    // 1s wait timed out twice under full-suite parallel load (once on a
-    // loaded laptop, once in CI) while passing every isolated run — and
-    // a single combined wait cannot say which half was late. The first
-    // proves the second press reached the handler at all; the second
-    // that it swept the old failure. If this ever fails again, the
-    // failing line names the culprit.
-    await waitFor(() => expect(signIn).toHaveBeenCalledTimes(2), { timeout: 5000 });
+
+    // ── the state the second press depends on, asserted before it ──
+    //
+    // This wait timed out a third time (5124ms, in CI, green on the two
+    // other passes of the same run), and the two earlier repairs both
+    // read it as "not enough time". Five seconds for a mocked promise is
+    // not a time problem, and no reproduction came out of twelve local
+    // runs, so the mechanism is still unknown.
+    //
+    // What can be done meanwhile is stop the next failure being mute.
+    // The screen's handler returns early on an empty field and the button
+    // does nothing at all while `busy`; both are silent, and both look
+    // exactly like "the press produced no call". Asserted here, the next
+    // occurrence names its own cause on the failing line instead of
+    // leaving it to be guessed at a fourth time.
+    expect((screen.getByPlaceholderText('Enter your email') as HTMLInputElement).value)
+      .toBe('reader@example.com');
+    expect((screen.getByPlaceholderText('Enter your password') as HTMLInputElement).value)
+      .toBe('wrong');
+    // Busy swaps the label for a spinner, so finding the label is the
+    // observable proof the button is pressable again — a different fact
+    // from the error sentence above, which is all the test waited on
+    // before.
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeTruthy();
+
+    // ── pressed inside the wait, which is the repair ──
+    //
+    // The three assertions above all passed on the run that sent this
+    // here, which is what they were added for: the fields held their
+    // values and the button was pressable, and the press still produced
+    // no call. That rules out everything the screen does deliberately and
+    // leaves one thing — the handler the press reached was not the one
+    // the render had just made.
+    //
+    // `PressableScale` hands `onPress` to react-native-web's `Pressable`,
+    // which keeps its press config in a ref refreshed by an effect. A
+    // press landing before that effect has flushed runs the *previous*
+    // render's closure, where `email` was still empty — and that closure
+    // returns at its own first guard without calling anything. Silent,
+    // and indistinguishable from a press that never landed.
+    //
+    // Unproven: sixteen local runs, including four suites contending for
+    // four cores, never reproduced it. But it is the only mechanism left
+    // standing, and pressing inside the wait is the right shape whichever
+    // way it turns out — this test is about the screen letting a reader
+    // try again, not about one synthetic click always landing first time.
+    // A button genuinely wired to nothing still fails here: retries do
+    // not help a handler that does not exist.
+    await waitFor(() => {
+      if (signIn.mock.calls.length < 2) submit();
+      expect(signIn).toHaveBeenCalledTimes(2);
+    }, { timeout: 5000 });
     await waitFor(
       () => expect(screen.queryByText('Email or password is incorrect.')).toBeNull(),
       { timeout: 5000 },

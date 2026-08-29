@@ -38,8 +38,17 @@ import type { Taste } from './planner';
 
 /** Enough of a place to have an opinion about. Structural rather than
  *  `Place` where it can be, so a test does not have to build a whole
- *  catalog row to say "they saved two cafés". */
-export type Categorised = { categories?: string[] | null; vibe_tags?: string[] | null };
+ *  catalog row to say "they saved two cafés".
+ *
+ *  `slug` is optional and is only an identity: `tally` counts a place once
+ *  however many lists it arrives in. Without one it counts every arrival,
+ *  which is the honest answer for a caller that has not said which places
+ *  these are. */
+export type Categorised = {
+  slug?: string;
+  categories?: string[] | null;
+  vibe_tags?: string[] | null;
+};
 
 export type TasteSignals = {
   /** Category keys the reader said out loud. The strongest of the three
@@ -54,6 +63,20 @@ export type TasteSignals = {
   saved?: readonly Categorised[];
   /** Places the reader suggested to the catalog themselves. */
   suggested?: readonly Categorised[];
+  /**
+   * Places inside collections this reader has liked.
+   *
+   * The weakest of the four, and the reason is what a like is: one tap on
+   * somebody *else's* curation. It is real evidence — nobody likes a list
+   * of places they have no time for — but it is indirect, the categories
+   * arrive through another person's judgement about what belongs together,
+   * and it costs a fraction of what saving costs.
+   *
+   * It is also the cheapest thing a new reader can do. Somebody who has
+   * not found the bookmark has very likely found the heart, which is the
+   * half of the picture the other three signals miss entirely.
+   */
+  liked?: readonly Categorised[];
   /** Slugs the reader opened and did not save. The caller limits this to
    *  recent events — a place passed over last March says nothing about this
    *  Saturday, and `place_events` grows forever until somebody trims it.
@@ -65,13 +88,16 @@ export type TasteSignals = {
   passedOver?: readonly string[];
 };
 
-/** The doc's ordering, kept: stated beats saved beats suggested. The
- *  numbers only matter relative to each other — the sum is normalised by
- *  their total, so changing all three by the same factor changes nothing. */
+/** The doc's ordering, kept, with liking added at the bottom of it:
+ *  **stated beats saved beats suggested beats liked**. The numbers only
+ *  matter relative to each other — the sum is normalised by their total,
+ *  so scaling all four changes nothing, and adding the fourth dilutes the
+ *  other three (3/9 became 3/10) without reordering any of them. */
 const W_PREFERRED = 4;
 const W_SAVED = 3;
 const W_SUGGESTED = 2;
-const W_TOTAL = W_PREFERRED + W_SAVED + W_SUGGESTED;
+const W_LIKED = 1;
+const W_TOTAL = W_PREFERRED + W_SAVED + W_SUGGESTED + W_LIKED;
 
 /**
  * How much of a place's own vocabulary a set of counts speaks.
@@ -97,9 +123,29 @@ function lean(counts: Map<string, number>, cats: readonly string[]): number {
   return Math.max(0, ...cats.map((c) => (counts.get(c) ?? 0) / top));
 }
 
+/**
+ * How many of these places carry each category, counting a place once.
+ *
+ * The dedupe is here rather than at the call sites because it is a
+ * property of the arithmetic, not a discipline for whoever calls it: a
+ * reader's saved places arrive as the flattened membership of their
+ * collections, and one café filed under both "Weekend" and "Near work" is
+ * one café that was saved, not two. Counting it twice quietly gave the
+ * readers who organise most the loudest taste.
+ *
+ * Only when there is a slug to identify it by. A caller that hands over
+ * bare shapes — every test in this file, and the design that made
+ * `Categorised` structural in the first place — has not said which places
+ * these are, and counting each arrival is the honest answer to that.
+ */
 function tally(places: readonly Categorised[] | undefined): Map<string, number> {
   const counts = new Map<string, number>();
+  const seen = new Set<string>();
   for (const p of places ?? []) {
+    if (p.slug) {
+      if (seen.has(p.slug)) continue;
+      seen.add(p.slug);
+    }
     for (const c of categoriesOf(p as Place)) counts.set(c, (counts.get(c) ?? 0) + 1);
   }
   return counts;
@@ -119,6 +165,7 @@ export function tasteFrom(signals: TasteSignals): Taste | null {
   const preferred = new Set(signals.preferred ?? []);
   const saved = tally(signals.saved);
   const suggested = tally(signals.suggested);
+  const liked = tally(signals.liked);
 
   /**
    * The one signal built from a silence, and the one that has to earn the
@@ -149,7 +196,7 @@ export function tasteFrom(signals: TasteSignals): Taste | null {
   // `passedOver` is gated above, so a reader whose only signal was a list
   // of places they opened now correctly has no taste at all rather than an
   // all-zero one — which is the distinction the note below turns on.
-  if (!preferred.size && !saved.size && !suggested.size && !passedOver.size) return null;
+  if (!preferred.size && !saved.size && !suggested.size && !liked.size && !passedOver.size) return null;
 
   return {
     affinity: (p: Place) => {
@@ -160,7 +207,8 @@ export function tasteFrom(signals: TasteSignals): Taste | null {
       const positive = cats.length
         ? (W_PREFERRED * (preferred.size ? Math.max(0, ...cats.map((c) => (preferred.has(c) ? 1 : 0))) : 0)
           + W_SAVED * lean(saved, cats)
-          + W_SUGGESTED * lean(suggested, cats)) / W_TOTAL
+          + W_SUGGESTED * lean(suggested, cats)
+          + W_LIKED * lean(liked, cats)) / W_TOTAL
         : 0;
       // A whole point off, which is the largest move any single fact makes
       // here. It is also the only per-place signal: everything above is a

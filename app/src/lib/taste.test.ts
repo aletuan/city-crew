@@ -78,8 +78,9 @@ describe('tasteFrom', () => {
   it('never leaves [-1, 1], whatever it is told', () => {
     const loud = tasteFrom({
       preferred: ['cafes', 'nightlife', 'nature'],
-      saved: Array.from({ length: 50 }, () => cafe),
-      suggested: Array.from({ length: 50 }, () => cafe),
+      saved: Array.from({ length: 50 }, (_, i) => place({ slug: `s-${i}`, categories: ['cafes'] })),
+      suggested: Array.from({ length: 50 }, (_, i) => place({ slug: `g-${i}`, categories: ['cafes'] })),
+      liked: Array.from({ length: 50 }, (_, i) => place({ slug: `l-${i}`, categories: ['cafes'] })),
       passedOver: ['b-bar'],
     })!;
     for (const p of [cafe, bar, park]) {
@@ -120,6 +121,79 @@ describe('tasteFrom', () => {
     const both = place({ slug: 'roof-cafe', categories: ['cafes', 'views'] });
     const taste = tasteFrom({ preferred: ['cafes'] })!;
     expect(taste.affinity(both)).toBe(taste.affinity(cafe));
+  });
+
+  // ── the fourth signal ─────────────────────────────────────────────
+  //
+  // A like is one tap on somebody else's list. It is real evidence, and
+  // it is the weakest of the four: indirect, because the categories come
+  // through another person's judgement about what belongs together, and
+  // cheap, because it costs one tap where saving costs a decision about
+  // where to file something.
+  //
+  // The ladder is what these pin, not the numbers. Change 3 and 1 to 30
+  // and 10 and every test here still passes; swap them and this fails,
+  // which is the whole point.
+  it('hears a liked list, and hears it under a saved place', () => {
+    const likedOnly = tasteFrom({ liked: [cafe] })!;
+    const savedOnly = tasteFrom({ saved: [cafe] })!;
+    expect(likedOnly.affinity(cafe)).toBeGreaterThan(0);
+    expect(likedOnly.affinity(cafe)).toBeLessThan(savedOnly.affinity(cafe));
+  });
+
+  it('keeps liking at the bottom of the ladder', () => {
+    const at = (signals: Parameters<typeof tasteFrom>[0]) => tasteFrom(signals)!.affinity(cafe);
+    expect(at({ preferred: ['cafes'] })).toBeGreaterThan(at({ saved: [cafe] }));
+    expect(at({ saved: [cafe] })).toBeGreaterThan(at({ suggested: [cafe] }));
+    expect(at({ suggested: [cafe] })).toBeGreaterThan(at({ liked: [cafe] }));
+  });
+
+  // Liking a list you also saved from is two different things happening,
+  // not one thing counted twice: you chose to keep the place, and you
+  // approved of somebody's collection of it.
+  it('adds a like to a save rather than absorbing it', () => {
+    const both = tasteFrom({ saved: [cafe], liked: [cafe] })!;
+    const saveOnly = tasteFrom({ saved: [cafe] })!;
+    expect(both.affinity(cafe)).toBeGreaterThan(saveOnly.affinity(cafe));
+  });
+
+  it('is a signal on its own, with nothing else to go on', () => {
+    expect(tasteFrom({ liked: [cafe] })).not.toBeNull();
+  });
+
+  // ── counting a place once ─────────────────────────────────────────
+  //
+  // Saved places arrive as the flattened membership of the reader's
+  // collections, so one café filed under both "Weekend" and "Near work"
+  // arrived twice. Counting it twice gave the readers who organise most
+  // the loudest taste, which nobody chose and nothing recorded.
+  it('counts a place once however many lists it came in', () => {
+    const twice = tasteFrom({ saved: [cafe, cafe, cafe], suggested: [bar] })!;
+    const once = tasteFrom({ saved: [cafe], suggested: [bar] })!;
+    expect(twice.affinity(cafe)).toBe(once.affinity(cafe));
+  });
+
+  it('still weighs two different cafés as two', () => {
+    const other = place({ slug: 'd-cafe', categories: ['cafes'] });
+    const two = tasteFrom({ saved: [cafe, other], suggested: [bar] })!;
+    const one = tasteFrom({ saved: [cafe], suggested: [bar] })!;
+    // `lean` normalises against the reader's own commonest category, so
+    // two cafés and one café both max that term out — what this holds is
+    // that the second café is not silently discarded on its way in, and
+    // that the bar's own share is unchanged by it.
+    expect(two.affinity(cafe)).toBe(one.affinity(cafe));
+    expect(two.affinity(bar)).toBe(one.affinity(bar));
+  });
+
+  // The shapes a test hands over have no identity, and the design that
+  // made `Categorised` structural is the reason. A caller that has not
+  // said which places these are gets every arrival counted, which is the
+  // honest reading of "I do not know".
+  it('counts every arrival when nothing identifies the places', () => {
+    const anon = { categories: ['cafes'] };
+    const other = { categories: ['nightlife'] };
+    const lopsided = tasteFrom({ saved: [anon, anon, anon, other] })!;
+    expect(lopsided.affinity(cafe)).toBeGreaterThan(lopsided.affinity(bar));
   });
 
   // The one per-place signal, and the strongest single fact here. The
@@ -185,8 +259,13 @@ describe('taste inside the planner', () => {
     const kinds = (taste: ReturnType<typeof tasteFrom>) =>
       planTrips(OPEN, CATALOG, 'hanoi', { seed: 1, taste: taste ?? undefined })
         .flatMap((p) => p.stops.flatMap((s) => s.place.categories ?? []));
-    const owl = kinds(tasteFrom({ preferred: ['nightlife'], saved: [bar, bar, bar] }));
-    const brew = kinds(tasteFrom({ preferred: ['cafes'], saved: [cafe, cafe, cafe] }));
+    // Three of the four signals each, which is what describing a reader
+    // takes now that there are four. Two of three was the same fraction
+    // before `liked` arrived, and dropping to two of four made these two
+    // readers tie — correctly: the total the sum normalises by grew, so
+    // every signal says slightly less than it used to.
+    const owl = kinds(tasteFrom({ preferred: ['nightlife'], saved: [bar], liked: [bar] }));
+    const brew = kinds(tasteFrom({ preferred: ['cafes'], saved: [cafe], liked: [cafe] }));
     expect(owl.filter((c) => c === 'nightlife').length)
       .toBeGreaterThan(brew.filter((c) => c === 'nightlife').length);
     expect(brew.filter((c) => c === 'cafes').length)
