@@ -242,19 +242,29 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
 
           Signed out there is no row to write to, so it goes with the
           switch below rather than sitting here taking taps that cannot
-          be saved. */}
+          be saved.
+
+          In a card, like everything else on this screen. It was drawn
+          bare for a while on the argument that a chip grid is not a list
+          row — true, and beside the point: it sat between four white
+          cards and a fifth, and the one block on a page with no surface
+          under it reads as unfinished rather than as different. The
+          card's own padding is what separates it now, which is the same
+          separating the rows above it get. */}
       {uid ? (
-        <View style={s.taste}>
-          <Text style={s.tasteTitle}>{t('Interests', 'Sở thích', '興味')}</Text>
-          <Text style={s.tasteSub}>
-            {t(
-              'Search and Explore lean towards these. Change them whenever you like.',
-              'Tìm kiếm và Khám phá sẽ nghiêng về những mục này. Đổi lúc nào cũng được.',
-              '検索と探索がこの傾向に寄ります。いつでも変更できます。',
-            )}
-          </Text>
-          <TastePicker chosen={taste} onChange={setTaste} />
-        </View>
+        <Card>
+          <View style={s.taste}>
+            <Text style={s.tasteTitle}>{t('Interests', 'Sở thích', '興味')}</Text>
+            <Text style={s.tasteSub}>
+              {t(
+                'Search and Explore lean towards these. Change them whenever you like.',
+                'Tìm kiếm và Khám phá sẽ nghiêng về những mục này. Đổi lúc nào cũng được.',
+                '検索と探索がこの傾向に寄ります。いつでも変更できます。',
+              )}
+            </Text>
+            <TastePicker chosen={taste} onChange={setTaste} />
+          </View>
+        </Card>
       ) : null}
 
       {/* One thing, and it is not a preference about outings — it is
@@ -314,17 +324,17 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
-  // Its own block rather than a Card: the fields above are rows in a
-  // list and a chip grid is not a row. The heading does the separating
-  // that a card border would have done more loudly.
-  taste: { gap: 6, marginTop: space.cardGap - 6 },
-  tasteTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
-  tasteSub: { color: colors.textTertiary, fontSize: 13.5, lineHeight: 19, marginBottom: 6 },
+  // Inside the card, padded the way the toggle row below it is — the
+  // two `preferences` blocks should measure the same from the border in.
+  taste: { gap: 6, paddingHorizontal: space.cardPadding, paddingVertical: 14 },
+  tasteTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
+  tasteSub: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 19, marginBottom: 6 },
   note: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 19 },
 
-  // The privacy block gets a card of its own. The chips above are
-  // preferences; this one is a promise, and a promise sitting in the same
-  // undifferentiated column as a filter row reads as a filter.
+  // The privacy block keeps a card of its own rather than joining the
+  // chips in theirs. They are both `preferences`, but one is a taste and
+  // the other is permission, and a promise sitting inside the same border
+  // as a preference reads as another preference.
   privacy: { paddingVertical: 4, marginTop: 4 },
   toggleRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
