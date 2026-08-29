@@ -14,43 +14,17 @@
 // to disagree with the first.
 
 import { openState } from './format';
+import { bestFirst, type Affinity, type Rated } from './rank';
 
-/** The slice of a place this module reads. Structural, so Node can run it. */
-export type OpenablePlace = {
-  slug: string;
-  rating?: number | null;
-  rating_count?: number | null;
+/** The slice of a place this module reads: what `bestFirst` needs, plus
+ *  the hours only this module asks about. Structural, so Node can run it. */
+export type OpenablePlace = Rated & {
   opening_hours?: string[] | null;
 };
 
 /** How many open doors the zero-state shows — five, like its neighbours. */
 export const OPEN_SHOWN = 5;
 
-/**
- * How far taste may move a place, in stars.
- *
- * Measured rather than chosen. The catalog's 374 rated places run 3.60 to
- * 5.00 with a **standard deviation of 0.23** — three quarters of them sit
- * between 4.50 and 4.90. That is why the open-now list in the reference
- * capture reads 4.9, 4.9, 4.9: ranking this catalog by rating alone is
- * close to ranking it by nothing, and the three cards a reader sees are
- * decided by the fourth decimal place.
- *
- * So one standard deviation is the whole budget. Inside the 4.5–4.9 pack
- * it is decisive — it reorders the band that rating cannot separate — and
- * outside it, it can do nothing that matters: a 3.6 lifted to 3.85 is
- * still below every 4.5 in the city. A guide that let a mediocre place
- * outrank a good one because you like cafés would have stopped being a
- * guide.
- *
- * `affinity` is bounded to [−1, 1] by `taste.ts`, which is what makes
- * this a budget rather than a hope.
- */
-export const TASTE_LIFT = 0.23;
-
-/** Just enough of a taste to rank with — `Taste` from `planner.ts`, minus
- *  its dependency on `Place`, so this module stays importable from Node. */
-export type Affinity<T> = { affinity: (p: T) => number };
 
 /**
  * The places open at `now`, best first, at most `n`.
@@ -70,20 +44,9 @@ export type Affinity<T> = { affinity: (p: T) => number };
 export function openNowPlaces<T extends OpenablePlace>(
   places: readonly T[], now: Date, n: number = OPEN_SHOWN, taste?: Affinity<T> | null,
 ): T[] {
-  // Unrated stays at −1 rather than 0, which is what keeps a rated place
-  // above an unrated one; the lift is added after, so taste can lift an
-  // unrated place among its own kind without ever reaching a rated one.
-  const score = (p: T) => (p.rating ?? -1) + (taste ? TASTE_LIFT * taste.affinity(p) : 0);
-  return places
-    .filter((p) => openState(p.opening_hours, now)?.open === true)
-    .sort((a, b) => {
-      const sa = score(a);
-      const sb = score(b);
-      if (sa !== sb) return sb - sa;
-      const ca = a.rating_count ?? 0;
-      const cb = b.rating_count ?? 0;
-      if (ca !== cb) return cb - ca;
-      return a.slug < b.slug ? -1 : 1;
-    })
+  // Filter, then rank, then cap — and the ranking is `bestFirst`, the same
+  // one Explore uses. The order these two lists arrive in was never meant
+  // to differ; only which places are in them is.
+  return bestFirst(places.filter((p) => openState(p.opening_hours, now)?.open === true), taste)
     .slice(0, n);
 }

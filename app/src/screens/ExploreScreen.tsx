@@ -34,6 +34,8 @@ import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { useAuth } from '../lib/auth';
 import { useSave } from '../lib/save';
 import { likesWorthShowing, rankByLikes } from '../lib/likes';
+import { bestFirst } from '../lib/rank';
+import { useBrowseTaste } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
@@ -789,10 +791,34 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     if (places.length > 0 && cat !== ALL && !cats.includes(cat)) setCat(ALL);
   }, [cats, cat, places.length]);
 
+  /**
+   * What this reader leans towards, or null — the same hook Search uses,
+   * and deliberately not the planner's. See `useBrowseTaste`.
+   */
+  const taste = useBrowseTaste();
+
+  /**
+   * The list, in an order for the first time.
+   *
+   * It had none. The query asks for `sort_order` and every published row
+   * in every city has that column null, so Postgres was free to return
+   * them however the plan happened to — an order nobody chose and nothing
+   * promises to repeat. The desk's sequence this was thought to be does
+   * not exist, which is why replacing it costs nothing.
+   *
+   * `bestFirst` is what Search's open-now list has always used: rating
+   * down the column, taste worth one standard deviation of it, and
+   * `slug` as the final tie so two renders of the same screen agree.
+   * Signed out, `taste` is null and this is the plain rating order — a
+   * deterministic list where there was an arbitrary one.
+   *
+   * The category filter runs first. Ranking either side of it gives the
+   * same order within a chip; filtering first just ranks fewer places.
+   */
   const shown = useMemo(() => {
-    if (cat === ALL) return places;
-    return places.filter((p) => categoriesOf(p).includes(cat));
-  }, [places, cat]);
+    const inCat = cat === ALL ? places : places.filter((p) => categoriesOf(p).includes(cat));
+    return bestFirst(inCat, taste);
+  }, [places, cat, taste]);
 
   const hero = useMemo(() => heroPlace(places, city?.hero_place_slug), [places, city?.hero_place_slug]);
 
