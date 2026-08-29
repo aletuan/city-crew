@@ -82,3 +82,47 @@ describe('openNowPlaces', () => {
     expect(openNowPlaces([p('bar', NIGHT, 4.8)], WED_10AM)).toEqual([]);
   });
 });
+
+// ── the thumb on the scale ──────────────────────────────────────────
+//
+// Ranking this catalog by rating alone is close to ranking it by nothing:
+// 374 rated places, standard deviation 0.23, three quarters between 4.50
+// and 4.90. `TASTE_LIFT` is that one deviation and no more, which is what
+// these two tests are actually about — that it is decisive inside the
+// pack, and powerless outside it.
+describe('taste, when there is one', () => {
+  const likes = (cats: string[]) => ({
+    affinity: (p: { slug: string }) => (cats.includes(p.slug) ? 1 : 0),
+  });
+  const at = (slug: string, rating: number) => p(slug, DAY, rating);
+
+  it('changes nothing at all when there is no taste', () => {
+    const places = [at('a', 4.5), at('b', 4.9)];
+    expect(openNowPlaces(places, WED_10AM).map((p) => p.slug)).toEqual(['b', 'a']);
+    expect(openNowPlaces(places, WED_10AM, 5, null).map((p) => p.slug)).toEqual(['b', 'a']);
+  });
+
+  // Inside the band rating cannot separate, taste decides.
+  it('reorders the pack rating leaves in a heap', () => {
+    const places = [at('rest', 4.9), at('cafe', 4.8)];
+    expect(openNowPlaces(places, WED_10AM).map((p) => p.slug)).toEqual(['rest', 'cafe']);
+    expect(openNowPlaces(places, WED_10AM, 5, likes(['cafe'])).map((p) => p.slug))
+      .toEqual(['cafe', 'rest']);
+  });
+
+  // And outside it, it cannot. This is the promise that keeps the app a
+  // curated guide rather than a mirror: 3.6 + 0.23 is still below 4.5.
+  it('cannot lift a poor place over a good one', () => {
+    const places = [at('good', 4.5), at('poor', 3.6)];
+    expect(openNowPlaces(places, WED_10AM, 5, likes(['poor'])).map((p) => p.slug))
+      .toEqual(['good', 'poor']);
+  });
+
+  // A place passed over costs the same as a liked one gains — the lift is
+  // symmetric because `affinity` is.
+  it('marks down a place the reader walked away from', () => {
+    const places = [at('passed', 4.9), at('other', 4.8)];
+    const cold = { affinity: (p: { slug: string }) => (p.slug === 'passed' ? -1 : 0) };
+    expect(openNowPlaces(places, WED_10AM, 5, cold).map((p) => p.slug)).toEqual(['other', 'passed']);
+  });
+});

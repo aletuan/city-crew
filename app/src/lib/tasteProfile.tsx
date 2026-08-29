@@ -20,6 +20,8 @@ import { usePlaces } from './catalog';
 import { useCity } from './city';
 import { fetchPassedOver, logPlaceEvent, useMyPreferences, type EventKind } from './data';
 import { membersOf } from './place';
+import { CATEGORIES } from './categories';
+import { cleanTaste } from './tastepick';
 import { useSave } from './save';
 import { tasteFrom } from './taste';
 import type { Taste } from './planner';
@@ -135,6 +137,57 @@ export function usePlanProfile(): PlanProfile {
   // nothing has one to give.
   const budgetVnd = null;
   return useMemo(() => ({ taste, budgetVnd }), [taste, budgetVnd]);
+}
+
+/**
+ * The same reader, for the surfaces that browse rather than plan.
+ *
+ * One difference from `usePlanProfile`, and it is the whole reason this
+ * exists separately: **the stated categories are passed here.**
+ *
+ * They are withheld from the planner on purpose — the wizard asks the
+ * same question with more force, `canPlan` refuses to start without an
+ * answer, and a standing set of chips could only re-order what that gate
+ * had already let through. That argument is about the planner and only
+ * the planner. Explore and Search have no wizard, no gate, and nothing
+ * that asks at all, so the chips are not a second answer there; they are
+ * the only one.
+ *
+ * Which is why this is a second hook rather than a flag on the first.
+ * A `usePlanProfile({ stated: true })` would put the decision at every
+ * call site, and the day somebody passes it from a plan screen the thing
+ * that was deliberately removed is quietly back.
+ */
+export function useBrowseTaste(): Taste | null {
+  const { session } = useAuth();
+  const uid = session?.user?.id ?? null;
+  const { data: places } = usePlaces();
+  const { mine } = useSave();
+  const prefs = useMyPreferences(uid);
+
+  const saved = useMemo(
+    () => mine.data.flatMap((c) => membersOf(c, places)),
+    [mine.data, places],
+  );
+  const suggested = useMemo(
+    () => (uid ? places.filter((p) => p.submitted_by === uid) : []),
+    [places, uid],
+  );
+  // Cleaned on the way in: the column is a bare `text[]` with no foreign
+  // key and rows in it were typed by hand before any picker existed, so
+  // it holds words the taxonomy has never heard of. See `cleanTaste`.
+  const preferred = useMemo(
+    () => cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)),
+    [prefs.data.categories],
+  );
+
+  // `passedOver` is not read here. It costs a query and needs the
+  // recording opt-in, and this hook runs on two screens the reader is
+  // scrolling — the planner is where that signal is worth a round trip.
+  return useMemo(() => {
+    if (!uid) return null;
+    return tasteFrom({ preferred, saved, suggested });
+  }, [uid, preferred, saved, suggested]);
 }
 
 /**
