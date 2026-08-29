@@ -6,9 +6,13 @@
     "fetch": "node --env-file=../.env scripts/fetch-places.mjs",
     "upsert": "node --env-file=.env scripts/upsert-supabase.mjs",
     "snapshot": "node --env-file=.env scripts/export-snapshot.mjs",
-    "inject": "node scripts/inject-mockup.mjs"
+    "inject": "node scripts/inject-mockup.mjs",
+    "verify-threads": "node scripts/verify-threads.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
   }
 }

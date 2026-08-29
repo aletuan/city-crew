@@ -1,0 +1,59 @@
+{
+  "$comment": "Social handles per place slug. A Threads profile is the venue's Instagram account — the username is shared 1:1 — so `instagram` doubles as the Threads handle and the page is https://www.threads.com/@<handle>. Handles are NOT derivable from the venue name (see chill_skybar, secretgardenvn, blankloungelandmark), so every one is looked up by hand. `threads_status`: confirmed = the account's own profile page or its own post was seen on threads.com; unverified = the Instagram handle is confirmed but no Threads content has been seen yet, so the account may not have been activated on Threads. Re-check with scripts/verify-threads.mjs.",
+  "places": {
+    "okkio-caffe": {
+      "instagram": "okkiocaffe",
+      "threads_status": "confirmed",
+      "evidence": "https://www.threads.com/@okkiocaffe/post/C8BPLkGvJNc"
+    },
+    "lusine-le-loi": {
+      "instagram": "lusinespace",
+      "threads_status": "confirmed",
+      "evidence": "https://www.threads.com/@lusinespace/post/DR4UN9VkfPG"
+    },
+    "the-new-playground": {
+      "instagram": "thenewplayground",
+      "threads_status": "confirmed",
+      "evidence": "https://www.threads.com/@thenewplayground"
+    },
+    "blank-lounge": {
+      "instagram": "blankloungelandmark",
+      "threads_status": "confirmed",
+      "evidence": "https://www.threads.com/@blankloungelandmark",
+      "note": "Brand name on both accounts is Blank Sky Lounge, not Blank Lounge."
+    },
+    "workshop-coffee": {
+      "instagram": "theworkshopcoffee",
+      "threads_status": "unverified",
+      "note": "Facebook uses the.workshop.coffee — the dots are Facebook-only, Instagram has none."
+    },
+    "the-deck-saigon": { "instagram": "thedecksaigon", "threads_status": "unverified" },
+    "chill-skybar": {
+      "instagram": "chill_skybar",
+      "threads_status": "unverified",
+      "note": "Underscore, and no 'saigon' suffix despite the venue name."
+    },
+    "shin-coffee": {
+      "instagram": "shincaphevn",
+      "threads_status": "unverified",
+      "note": "Handle follows the Vietnamese brand SHIN Cà Phê, not the English 'SHIN Heritage'."
+    },
+    "broma-not-a-bar": {
+      "instagram": "broma.not.a.bar",
+      "threads_status": "unverified",
+      "note": "Dot-separated."
+    },
+    "secret-garden": {
+      "instagram": "secretgardenvn",
+      "threads_status": "unverified",
+      "note": "Generic name — the vn suffix is what disambiguates it."
+    },
+    "social-club-rooftop": { "instagram": "socialclubsaigon", "threads_status": "unverified" },
+    "bang-khuang-cafe": { "instagram": "bangkhuangcafe", "threads_status": "unverified" },
+    "cong-caphe-dong-khoi": {
+      "instagram": null,
+      "threads_status": "unverified",
+      "note": "Chain with per-country handles (congcaphe.ca, congcaphe.tw both live on Threads). The Vietnam account has not been pinned down — do not assume plain 'congcaphe'."
+    }
+  }
+}
