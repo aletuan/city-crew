@@ -133,7 +133,7 @@ export async function logPlaceEvent(
 export async function fetchPassedOver(ownerId: string, since: string): Promise<string[]> {
   const { data, error } = await supabase
     .from('place_events')
-    .select('kind, created_at, places(slug)')
+    .select('kind, created_at, places(slug, submitted_by)')
     .eq('user_id', ownerId)
     .gte('created_at', since)
     .order('created_at', { ascending: false });
@@ -146,12 +146,38 @@ export async function fetchPassedOver(ownerId: string, since: string): Promise<s
   // Through `unknown`, like every other embed in this file: PostgREST
   // returns the joined row as an object where the generated types expect an
   // array, and the shape the query actually produces is the one below.
-  const rows = (data ?? []) as unknown as { kind: EventKind; places: { slug: string } | null }[];
+  const rows = (data ?? []) as unknown as {
+    kind: EventKind; places: { slug: string; submitted_by: string | null } | null;
+  }[];
   for (const row of rows) {
     const slug = row.places?.slug;
     if (!slug || verdict.has(slug)) continue;
+    /**
+     * Whether this reader is the one who put the place in the catalog.
+     *
+     * The suggestion flow ends on the new place's own detail screen, which
+     * notes an `open`. Measured on the live database: a row created at
+     * 13:04:38 had an `open` against it at 13:04:42. Read as a refusal,
+     * that made somebody's own submission the most disliked place in their
+     * city — `suggested` lifting its category by a fifth of a point while
+     * `passedOver` took a whole one off the place itself.
+     *
+     * Nobody walks away from a place they just added; they are checking it
+     * saved. And the same holds later, deliberately: opening a place you
+     * put there and not saving it is not a rejection of it either. You are
+     * its author.
+     *
+     * Only `open` is excused. `plan_drop` on your own place is a real
+     * refusal — you built a plan, it offered your café, and you took it
+     * out — and swallowing that would lose a signal to fix a different bug.
+     */
+    const mine = row.places?.submitted_by === ownerId;
     if (row.kind === 'save' || row.kind === 'plan_keep') verdict.set(slug, false);
-    else if (row.kind === 'open' || row.kind === 'plan_drop') verdict.set(slug, true);
+    else if (row.kind === 'plan_drop') verdict.set(slug, true);
+    // Deliberately leaves no verdict rather than clearing one: an excused
+    // `open` should say nothing, not overrule an older `plan_drop` that
+    // still means what it meant.
+    else if (row.kind === 'open' && !mine) verdict.set(slug, true);
   }
   return [...verdict.entries()].filter(([, passed]) => passed).map(([slug]) => slug);
 }
