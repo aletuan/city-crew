@@ -95,14 +95,33 @@ begin
   assert cols = 'owner_id', format('preferences key is (%s), not the person', cols);
 end $$;
 
--- Recording is off until asked for. A default of true would make the opt-in
--- a lie told once at signup.
+-- Recording starts on, and the sign-up screen says so before anything is
+-- recorded. This assertion used to read `false%` and its comment said a
+-- default of true would make the opt-in "a lie told once at signup" — the
+-- answer to which is not a hidden default the other way but a stated one.
+-- See the migration that flipped it for what the old default actually
+-- produced: zero events, ever, across every account.
 do $$
 declare d text;
 begin
   select column_default into d from information_schema.columns
    where table_schema = 'public' and table_name = 'preferences' and column_name = 'history_on';
-  assert d like 'false%', format('history_on defaults to %s', coalesce(d, 'nothing'));
+  assert d like 'true%', format('history_on defaults to %s', coalesce(d, 'nothing'));
+end $$;
+
+-- A default is worth nothing to an account with no row to hold it: the
+-- insert policy asks `exists`, so no row is indistinguishable from a
+-- refusal. Seven of the first thirteen accounts had none, which is why the
+-- trigger exists and why this checks for it rather than trusting the client
+-- write — that one is a `.catch(() => {})`, deliberately.
+do $$
+begin
+  assert exists (
+    select 1 from pg_trigger
+     where tgname = 'on_auth_user_created_preferences'
+       and tgrelid = 'auth.users'::regclass
+       and not tgisinternal
+  ), 'no trigger creates a preferences row for a new account';
 end $$;
 
 -- Unstated and zero are different facts about a budget.

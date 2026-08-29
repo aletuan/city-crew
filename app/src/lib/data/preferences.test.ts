@@ -155,15 +155,32 @@ describe('fetchPreferences', () => {
     expect(q.maybe).toBe(true);
   });
 
-  // A missing row and a row of defaults are the same thing to every reader:
-  // nobody has an opinion until they say so. Answering null instead would
-  // make "have they opted in" a three-way question everywhere it is asked.
+  // A missing row and a row of defaults are the same thing to every reader.
+  // Answering null instead would make "have they opted in" a three-way
+  // question everywhere it is asked.
   it('answers the empty preferences when there is no row', async () => {
     fake().replies({ data: null });
     expect(await fetchPreferences('u1')).toEqual(NO_PREFERENCES);
   });
 
-  it('fills in the columns a partial row left out', async () => {
+  // Named separately from the assertion above, which would go on passing if
+  // somebody flipped the constant back: this pins the *value*, and it is
+  // the one the whole opt-in turns on. No account should reach it — a
+  // trigger makes the row with the account — and the insert policy refuses
+  // an account that somehow has none, so being optimistic here costs a
+  // request and never a recorded event.
+  it('reads a missing row as recording, matching the column default', async () => {
+    fake().replies({ data: null });
+    expect(await fetchPreferences('u1')).toMatchObject({ history_on: true });
+  });
+
+  // Note this is *not* `NO_PREFERENCES`: a row that came back without the
+  // column reads as off, where no row at all reads as on. Deliberate — a
+  // `not null` column cannot be absent from a real row, so a missing one
+  // means a partial or malformed read, and guessing "on" from a broken
+  // answer is the only direction that could record for somebody who said
+  // not to.
+  it('fills in the columns a partial row left out, failing closed on the opt-in', async () => {
     fake().replies({ data: { budget_vnd: null } });
     expect(await fetchPreferences('u1')).toEqual({
       categories: [], budget_vnd: null, history_on: false,

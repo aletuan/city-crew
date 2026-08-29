@@ -17,17 +17,39 @@ export type Preferences = {
   history_on: boolean;
 };
 
+/**
+ * The settings an account starts with.
+ *
+ * `history_on` is **true**, and it matches the column default rather than
+ * softening it: a row is created with the account by a trigger, so this
+ * value is what a fresh account really holds. Sign-up writes this shape
+ * when the reader picks a taste, and a `false` here would quietly overwrite
+ * the row the trigger had just made correctly.
+ *
+ * It is also `useFetch`'s empty value, which means that for the moment
+ * before the real row lands, a screen reads "recording". That is a change
+ * of direction from the old fail-closed default, and it is safe for the
+ * reason the migration gives: the insert policy checks `history_on` against
+ * a real row, so somebody who has turned it off has Postgres refusing on
+ * their behalf whatever this file believes. `useNoteEvent` waits for the
+ * row anyway — see the note there.
+ */
 export const NO_PREFERENCES: Preferences = {
-  categories: [], budget_vnd: null, history_on: false,
+  categories: [], budget_vnd: null, history_on: true,
 };
 
 /**
  * What this person has told us, or the empty answer.
  *
  * A missing row and a row of defaults are the same thing to every reader of
- * this — nobody has an opinion until they say so — so a 404 comes back as
- * `NO_PREFERENCES` rather than as null. That keeps the "have they opted in"
- * question a plain boolean everywhere instead of a three-way one.
+ * this, so a 404 comes back as `NO_PREFERENCES` rather than as null. That
+ * keeps the "have they opted in" question a plain boolean everywhere
+ * instead of a three-way one.
+ *
+ * Since the defaults now say recording is on, a missing row reads as opted
+ * in — which no account should ever be, because a trigger makes the row
+ * with the account. If one somehow is, the insert policy asks `exists` and
+ * refuses it anyway: this answer is optimistic, and the database is not.
  */
 export async function fetchPreferences(ownerId: string): Promise<Preferences> {
   const { data, error } = await supabase
@@ -41,6 +63,11 @@ export async function fetchPreferences(ownerId: string): Promise<Preferences> {
   return {
     categories: row.categories ?? [],
     budget_vnd: row.budget_vnd ?? null,
+    // Still coerced rather than trusted, and still to `false`, even though
+    // the default is now true: a column that is `not null` cannot arrive
+    // missing from a real row, so an absent value here means a partial or
+    // malformed read. Guessing "on" from a broken answer is the one
+    // direction that could record for somebody who said not to.
     history_on: !!row.history_on,
   };
 }

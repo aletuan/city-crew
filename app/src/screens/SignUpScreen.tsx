@@ -158,6 +158,24 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             'いくつか選ぶと、検索と探索がその傾向に寄ります。プロフィールでいつでも変更できます。',
           )}</Lede>
         <TastePicker chosen={taste} onChange={setTaste} />
+        {/* Said here, before anything is recorded, and that is the whole
+            reason the default is allowed to be on. A default nobody is
+            told about is the "lie told once at signup" the original
+            migration refused; a default stated in the reader's own
+            language, on the screen where the account begins, with the
+            switch named, is a different thing.
+
+            Under the picker rather than in the Lede above it: the Lede
+            answers "what is this screen for", and a reader who skips
+            straight past it to the chips would miss this. It sits with
+            the button they have to reach either way. */}
+        <Text style={s.privacyNote}>
+          {t(
+            'City Crew remembers the places you open, so a place you passed over stops coming back. Turn it off any time in Edit profile.',
+            'City Crew ghi nhớ những nơi bạn mở, để chỗ bạn đã bỏ qua thôi quay lại. Tắt lúc nào cũng được trong Sửa hồ sơ.',
+            'City Crew は開いた場所を記憶し、一度見送った場所が出にくくなります。プロフィール編集でいつでもオフにできます。',
+          )}
+        </Text>
         <PrimaryButton
           label={taste.length
             ? t('Done', 'Xong', '完了')
@@ -331,6 +349,10 @@ const s = StyleSheet.create({
   // The one screen in this flow with no back control, so it carries the
   // title itself rather than through AuthHeader.
   tasteTitle: { color: colors.text, ...type.titleDetail, marginBottom: 2 },
+  // Quieter than the Lede and above the button: a statement of fact the
+  // reader should meet, not a second instruction competing with the one
+  // the screen is actually asking.
+  privacyNote: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 19, marginTop: 14, marginBottom: 4 },
   terms: { color: colors.textTertiary, ...type.meta, textAlign: 'center', lineHeight: 26, marginTop: 4 },
   // Only the colour and the weight change: a different size inside a
   // sentence would break the line's rhythm, and there is no underline

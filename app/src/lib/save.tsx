@@ -65,7 +65,12 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   const { city } = useCity();
   // Only for the opt-in flag. The insert policy checks it too; this saves
   // a round trip to be told no.
-  const historyOn = useMyPreferences(session?.user?.id).data.history_on;
+  //
+  // Gated on `loaded` for the reason `useNoteEvent` is: the empty
+  // preferences now read as recording, so the value is only worth
+  // believing once the row it describes has arrived.
+  const prefs = useMyPreferences(session?.user?.id);
+  const historyOn = prefs.loaded && prefs.data.history_on;
   const [target, setTarget] = useState<Place | null>(null);
   const [authSheet, setAuthSheet] = useState(false);
 
