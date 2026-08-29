@@ -34,7 +34,42 @@ describe('tasteFrom', () => {
     expect(tasteFrom({ preferred: ['cafes'] })).not.toBeNull();
     expect(tasteFrom({ saved: [cafe] })).not.toBeNull();
     expect(tasteFrom({ suggested: [cafe] })).not.toBeNull();
-    expect(tasteFrom({ passedOver: ['a-cafe'] })).not.toBeNull();
+  });
+
+  // ── the silence, and who is allowed to be read by it ────────────────
+  //
+  // Every other signal is something the reader did on purpose. This one is
+  // built from what they did *not* do, and that only means "no" from
+  // somebody who has been heard saying "yes": a person with thirty saves
+  // who did not save this place has chosen, and a person with none has not
+  // refused two hundred places, they have not found the button.
+  //
+  // The data cannot tell those two apart — both are an `open` with nothing
+  // after it — so the tests are where the difference is held.
+  it('reads no refusal from somebody who has never saved anything', () => {
+    expect(tasteFrom({ passedOver: ['a-cafe'] })).toBeNull();
+  });
+
+  it('leaves a stated taste untouched when the reader has never saved', () => {
+    const stated = tasteFrom({ preferred: ['cafes'] })!;
+    const alsoOpened = tasteFrom({ preferred: ['cafes'], passedOver: ['a-cafe'] })!;
+    expect(alsoOpened.affinity(cafe)).toBe(stated.affinity(cafe));
+  });
+
+  it('starts reading it the moment there is one save to go on', () => {
+    const gated = tasteFrom({ saved: [cafe], passedOver: ['b-bar'] })!;
+    const ungated = tasteFrom({ saved: [cafe] })!;
+    expect(gated.affinity(bar)).toBeCloseTo(ungated.affinity(bar) - 1, 10);
+  });
+
+  // The proof is the gesture, not the tagging. `tally` counts the
+  // categories a save carried, so a reader who saved one place the desk
+  // has not tagged yet has an empty tally — and has still used the button,
+  // which is the whole of what this asks.
+  it('counts a save the desk has not tagged as proof of the gesture', () => {
+    const untagged = place({ slug: 'untagged', categories: [], vibe_tags: [] });
+    const taste = tasteFrom({ preferred: ['cafes'], saved: [untagged], passedOver: ['a-cafe'] })!;
+    expect(taste.affinity(cafe)).toBeLessThan(0);
   });
 
   // The bound the planner's weight depends on. Without it, `TASTE_WEIGHT`
@@ -87,10 +122,12 @@ describe('tasteFrom', () => {
     expect(taste.affinity(both)).toBe(taste.affinity(cafe));
   });
 
-  // The one per-place signal, and the strongest single fact here.
+  // The one per-place signal, and the strongest single fact here. The
+  // `saved` is not decoration: without it the signal is not read at all —
+  // see the gate above.
   it('takes a whole point off a place they opened and walked away from', () => {
-    const taste = tasteFrom({ preferred: ['cafes'], passedOver: ['a-cafe'] })!;
-    const kept = tasteFrom({ preferred: ['cafes'] })!;
+    const taste = tasteFrom({ preferred: ['cafes'], saved: [bar], passedOver: ['a-cafe'] })!;
+    const kept = tasteFrom({ preferred: ['cafes'], saved: [bar] })!;
     expect(taste.affinity(cafe)).toBeCloseTo(kept.affinity(cafe) - 1, 10);
     expect(taste.affinity(cafe)).toBeLessThan(0);
   });

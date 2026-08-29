@@ -91,6 +91,11 @@ export function usePlanProfile(): PlanProfile {
     // reset: switching the toggle off must drop what is already in memory,
     // not merely stop adding to it.
     if (!uid || !prefs.data.history_on) { setPassedOver([]); return; }
+    // Fetched whether or not it will be read: `tasteFrom` drops it for a
+    // reader who has never saved anything (see the gate there), and that
+    // decision belongs with the arithmetic rather than here. It costs one
+    // query for a reader who switched recording on and has saved nothing
+    // yet — a small and shrinking population.
     let live = true;
     fetchPassedOver(uid, since(new Date()))
       .then((slugs) => { if (live) setPassedOver(slugs); })
