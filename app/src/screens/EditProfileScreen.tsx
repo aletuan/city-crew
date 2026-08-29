@@ -178,10 +178,12 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
           the avatar is its own self-contained control and needs no
           sentence of its own. */}
       <Lede>{t('Tell your crew a little about yourself.', 'Kể cho hội của bạn nghe đôi chút về bạn.', 'あなたのことを少し教えてください。')}</Lede>
+      {/* Named to match sign-up; see the note there for why the label
+          moved off "Họ tên" and the hint into the imperative. */}
       <FieldRow
         icon="person-outline"
-        label={t('Full name', 'Họ tên', 'お名前')}
-        placeholder={t('What should we call you?', 'Chúng tôi nên gọi bạn là gì?', 'なんとお呼びすれば？')}
+        label={t('Display name', 'Tên hiển thị', '表示名')}
+        placeholder={t('Enter your full name', 'Nhập họ và tên', 'お名前を入力')}
         value={name}
         onChangeText={setName}
         autoComplete="name"
