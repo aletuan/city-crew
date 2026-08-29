@@ -68,8 +68,9 @@ follows the device language.
    mở app, browse, đăng nhập, lưu, tạo collection, report thử, xoá tài khoản
    bằng một tài khoản nháp.
 2. Privacy Policy URL, Terms URL và Support URL (GitHub Pages) mở được từ trình
-   duyệt ẩn danh. Hai URL đầu còn được link ngay dưới nút Đăng ký trong app,
-   nên một link chết ở đó là reviewer gặp trước cả khi mở listing.
+   duyệt ẩn danh — reviewer mở chúng từ listing, không phải từ app: hai văn bản
+   đầu giờ **đọc được ngay trong app** (dưới nút Đăng ký, và Cá nhân → Tuỳ chọn),
+   dựng từ cùng một nguồn với hai trang web nên không thể lệch nhau.
 3. Bảng App Privacy đã điền đúng theo `app-privacy-labels.md`.
 4. Screenshots đủ cỡ 6.9" cho ít nhất locale en-US.
 5. Hai cờ trace không cần đụng — cả `STARTUP_TRACE` (log console) lẫn

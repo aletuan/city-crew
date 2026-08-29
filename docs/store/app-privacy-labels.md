@@ -90,7 +90,13 @@ là mức bình thường cho app dạng này.
   Connect không có ô "Terms of Service" riêng ngoài EULA, nên dán URL này vào
   **License Agreement → Custom EULA** (hoặc ô "Terms of Use (EULA)" trong phần
   App Information). Guideline 1.2 đòi app có nội dung người dùng tạo phải nêu rõ
-  điều gì không được phép; màn Đăng ký đã trỏ tới cả URL này lẫn URL bảo mật.
+  điều gì không được phép; cả hai văn bản đọc được **ngay trong app** (dưới nút
+  Đăng ký, và Cá nhân → Tuỳ chọn), không cần rời app.
+
+Hai trang HTML này **được sinh ra**, không sửa tay: nội dung nằm ở
+`app/src/lib/legal.ts`, `npm run legal:build` ghi lại chúng, và
+`app/scripts/legalhtml.test.ts` đỏ nếu file đã commit không khớp dữ liệu. Sửa chữ
+ở `legal.ts` rồi build lại — app và web đổi cùng lúc, không có bản nào nói khác.
 
 ## Điều kiện phải giữ để tài liệu này còn đúng
 

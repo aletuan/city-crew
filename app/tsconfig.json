@@ -1,6 +1,13 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    // For `scripts/` only, and nothing in `src/` uses it. The legal-page
+    // generator runs under `node --experimental-strip-types`, whose ESM
+    // resolver needs the extension spelled out; the app's own imports stay
+    // extensionless, so Metro never has to agree with Node about this.
+    // Safe because expo/tsconfig.base sets `noEmit`, which is the whole
+    // condition this flag has.
+    "allowImportingTsExtensions": true
   }
 }
