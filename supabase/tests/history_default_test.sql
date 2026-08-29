@@ -20,10 +20,14 @@ end $$;
 -- ── the trigger, which is what makes the default reachable ──
 --
 -- A default is worth nothing to an account with no row to hold it: the insert
--- policy asks `exists`, so no row is indistinguishable from a refusal. Seven
--- of the first thirteen accounts had none — the client write is a
--- `.catch(() => {})` on purpose and "Bỏ qua" skips it entirely — which is why
--- the row is made in the database rather than asked for from the app.
+-- policy asks `exists`, so no row is indistinguishable from a refusal.
+--
+-- Two ways a real account gets there. The sign-up write is conditional and
+-- swallowed, so "Bỏ qua" or a failed request leaves none; and an account made
+-- outside the app never had one to begin with — which is how all seven of the
+-- rowless accounts on the live database arose, every one of them an editorial
+-- identity inserted by a migration. That is why the row is made in the
+-- database rather than asked for from the app.
 do $$
 begin
   assert exists (

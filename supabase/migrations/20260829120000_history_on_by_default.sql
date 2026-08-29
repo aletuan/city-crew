@@ -31,13 +31,22 @@ alter table public.preferences alter column history_on set default true;
 
 -- 2. Every account gets a row, at the moment it is made.
 --
--- Seven of the thirteen had none — the sign-up screen only writes one when
--- the reader picks a taste, and "Bỏ qua" is a real answer. A missing row is
--- indistinguishable from a refusal to the insert policy above, so those
--- seven could never have recorded anything whatever the default said. A
--- trigger is the only place this can be guaranteed: the client write is a
--- `.catch(() => {})` on purpose, because a failed preference must not look
--- like a failed sign-up.
+-- Seven of the thirteen had none, and all seven are the editorial
+-- identities: `20260826000000_editorial_identities.sql` inserts them
+-- straight into `auth.users`, so they never passed through the sign-up
+-- screen that writes the row. Nobody logs in as them and none of them will
+-- ever open a place, so the fix is not for their sake.
+--
+-- It is for the two ways a real account reaches the same state. The
+-- sign-up write is conditional and swallowed — `if (uid && chosen.length)`,
+-- then `.catch(() => {})`, both on purpose, because a failed preference
+-- must not look like a failed sign-up — so a reader who taps "Bỏ qua", or
+-- whose write simply fails, gets no row. And any account made outside the
+-- app gets none either, which is exactly how those seven arose.
+--
+-- A missing row is indistinguishable from a refusal to the insert policy
+-- above, so such an account could never record anything whatever the
+-- default said. The database is the only place that can be guaranteed.
 --
 -- Its own trigger rather than a line inside `handle_new_user`, which would
 -- mean restating that whole function to add one insert.
