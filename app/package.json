@@ -58,6 +58,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
+    "legal:build": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/legal-html.mts",
     "format": "prettier --write",
     "format:check": "prettier --check",
     "test:tz": "TEST_TZ=America/New_York vitest run",

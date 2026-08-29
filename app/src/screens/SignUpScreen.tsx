@@ -4,12 +4,13 @@
 // a project setting, so nothing here assumes one — see `lib/otp.ts`.
 
 import React, { useState } from 'react';
-import { Linking, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, SwitchRow, useFailText } from '../components/authUi';
+import LegalSheet from '../components/LegalSheet';
 import { successHaptic } from '../components/ui';
 import { isHandleFree, useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
-import { PRIVACY_URL, TERMS_URL } from '../lib/links';
+import type { LegalId } from '../lib/legal';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
 import { HANDLE_MAX, handleProblem, normalizeHandle, suggestHandle } from '../lib/handle';
 import { PASSWORD_MIN } from '../lib/password';
@@ -35,10 +36,11 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
 
-  // Swallowed on purpose, as in TripDetailScreen: a phone with no
-  // browser it will hand this to is a dead end, and a red box in the
-  // middle of signing up would be a worse one.
-  const open = (url: string) => { Linking.openURL(url).catch(() => {}); };
+  // Which document is open over the form, if any. State rather than a
+  // navigate: a Modal renders inside this screen, so nothing here
+  // unmounts and every field the reader has already filled in survives
+  // the round trip with no work at all.
+  const [legal, setLegal] = useState<LegalId | null>(null);
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -227,18 +229,28 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           with placeholders, because the pieces move: Vietnamese ends on
           "của City Crew", English ends on a full stop, and Japanese wants
           no spaces around either link. The spacing lives inside each
-          translation for that reason. */}
+          translation for that reason.
+
+          The two links now open a sheet rather than a browser, which is
+          also why `lineHeight` grew: a nested <Text> inside a <Text> is
+          one text run in one native view on iOS, so `hitSlop` does
+          nothing to it and the tappable area is exactly the glyph box.
+          44pt is unreachable without breaking the sentence into separate
+          Pressables — which would take the wrapping with it — and 44pt
+          is a rule about controls, not about links inside running text.
+          The line height is what can honestly be spent, and it buys
+          about a quarter more. */}
       <Text style={s.terms}>
         {t(
           'By signing up, you agree to City Crew’s ',
           'Khi đăng ký, bạn đồng ý với ',
           '登録すると、City Crew の',
         )}
-        <Text style={s.termsLink} onPress={() => open(TERMS_URL)} accessibilityRole="link">
+        <Text style={s.termsLink} onPress={() => setLegal('terms')} accessibilityRole="link">
           {t('Terms of Service', 'Điều khoản sử dụng', '利用規約')}
         </Text>
         {t(' and ', ' và ', 'と')}
-        <Text style={s.termsLink} onPress={() => open(PRIVACY_URL)} accessibilityRole="link">
+        <Text style={s.termsLink} onPress={() => setLegal('privacy')} accessibilityRole="link">
           {t('Privacy Policy', 'Chính sách quyền riêng tư', 'プライバシーポリシー')}
         </Text>
         {t('.', ' của City Crew.', 'に同意したことになります。')}
@@ -248,12 +260,13 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         action={t('Sign in', 'Đăng nhập', 'サインイン')}
         onPress={() => navigation.replace('SignIn')}
       />
+      <LegalSheet id={legal} onClose={() => setLegal(null)} />
     </AuthScreen>
   );
 }
 
 const s = StyleSheet.create({
-  terms: { color: colors.textTertiary, ...type.meta, textAlign: 'center', lineHeight: 21, marginTop: 4 },
+  terms: { color: colors.textTertiary, ...type.meta, textAlign: 'center', lineHeight: 26, marginTop: 4 },
   // Only the colour and the weight change: a different size inside a
   // sentence would break the line's rhythm, and there is no underline
   // anywhere else in the app.

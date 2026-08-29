@@ -7,7 +7,7 @@
 // reference's violet gradient is translated, not copied.
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 // TEMPORARY — read/written only by the "Always show welcome" row.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -19,6 +19,7 @@ import { schemeLabel, ThemeSwitcherModal } from '../components/ThemeSwitcher';
 // TEMPORARY — see the "Always show welcome" row below.
 import { WELCOME_ALWAYS_KEY } from '../components/WelcomeSheet';
 import { PrimaryButton } from '../components/authUi';
+import LegalSheet from '../components/LegalSheet';
 import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
@@ -28,7 +29,7 @@ import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import { useSave } from '../lib/save';
 import { useCity } from '../lib/city';
-import { PRIVACY_URL, TERMS_URL } from '../lib/links';
+import type { LegalId } from '../lib/legal';
 import { Lang, useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
 import { colors, font, quoteFace, radius, space, type } from '../theme';
@@ -95,15 +96,13 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
  * the value on the right makes them plainly two different rows, and the
  * question of which hierarchy is "right" stops being asked.
  */
-function SettingRow({ icon, label, value, onPress, last, external }: {
+function SettingRow({ icon, label, value, onPress, last }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   /** Absent on rows that are a destination rather than a setting. */
   value?: string;
   onPress: () => void;
   last?: boolean;
-  /** Leaves the app for a browser: says so with the glyph, not a chevron. */
-  external?: boolean;
 }) {
   return (
     <PressableScale scaleTo={0.98} style={[s.featureRow, !last && s.featureRowDivider]} onPress={onPress}>
@@ -119,11 +118,7 @@ function SettingRow({ icon, label, value, onPress, last, external }: {
       {value === undefined
         ? <View style={{ flex: 1 }} />
         : <Text style={s.settingValue} numberOfLines={1}>{value}</Text>}
-      <Ionicons
-        name={external ? 'open-outline' : 'chevron-forward'}
-        size={17}
-        color={colors.textTertiary}
-      />
+      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
     </PressableScale>
   );
 }
@@ -170,10 +165,10 @@ function SettingsCard() {
     write.catch(() => {});
   };
 
-  // Swallowed as it is on the sign-up screen: a phone with nothing to
-  // hand this to is a dead end, and a red box on a settings row would be
-  // a worse one.
-  const openDoc = (url: string) => { fireHaptic('selection'); Linking.openURL(url).catch(() => {}); };
+  // Which document is open, if any. The same sheet the sign-up screen
+  // raises, so the two ways into these documents behave identically —
+  // which they did not while one of them left for a browser.
+  const [legal, setLegal] = useState<LegalId | null>(null);
 
   return (
     <>
@@ -219,23 +214,23 @@ function SettingsCard() {
             guests too, so the reader deciding whether to sign up at all
             can read the terms without starting the form.
 
-            Not settings, and they do not pretend to be — no value on the
-            right, and the glyph is the one that means "this opens
-            elsewhere". */}
+            Not settings, and they do not pretend to be: no value on the
+            right. The chevron is back, though — these used to open a
+            browser and wore `open-outline` to say so, and now they raise
+            a sheet like every other row in this card. */}
         <SettingRow
           icon="document-text-outline"
           label={t('Terms of Service', 'Điều khoản sử dụng', '利用規約')}
-          onPress={() => openDoc(TERMS_URL)}
-          external
+          onPress={() => { fireHaptic('selection'); setLegal('terms'); }}
         />
         <SettingRow
           icon="shield-checkmark-outline"
           label={t('Privacy Policy', 'Chính sách quyền riêng tư', 'プライバシーポリシー')}
-          onPress={() => openDoc(PRIVACY_URL)}
-          external
+          onPress={() => { fireHaptic('selection'); setLegal('privacy'); }}
           last
         />
       </Card>
+      <LegalSheet id={legal} onClose={() => setLegal(null)} />
       <CitySwitcherModal visible={open} onClose={() => setOpen(false)} />
       <LanguageSwitcherModal visible={langOpen} onClose={() => setLangOpen(false)} />
       <ThemeSwitcherModal visible={themeOpen} onClose={() => setThemeOpen(false)} />
