@@ -86,6 +86,11 @@ là mức bình thường cho app dạng này.
 
 - Privacy Policy URL: `https://aletuan.github.io/city-crew/privacy.html`
 - Support URL: `https://aletuan.github.io/city-crew/support.html`
+- Điều khoản sử dụng: `https://aletuan.github.io/city-crew/terms.html` — App Store
+  Connect không có ô "Terms of Service" riêng ngoài EULA, nên dán URL này vào
+  **License Agreement → Custom EULA** (hoặc ô "Terms of Use (EULA)" trong phần
+  App Information). Guideline 1.2 đòi app có nội dung người dùng tạo phải nêu rõ
+  điều gì không được phép; màn Đăng ký đã trỏ tới cả URL này lẫn URL bảo mật.
 
 ## Điều kiện phải giữ để tài liệu này còn đúng
 
