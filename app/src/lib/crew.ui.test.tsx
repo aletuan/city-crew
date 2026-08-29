@@ -128,13 +128,21 @@ describe('the launch snapshot', () => {
     mount();
     await waitFor(() => expect(screen.getByTestId('cache').textContent).toBe('true'));
     expect(screen.getByTestId('edges').textContent).toBe('1');
+    // The hydrated pass is skipped, and here is where that claim is
+    // actually checkable: the snapshot has painted and the network has
+    // not answered, so any lookup counted now could only be the
+    // hydrate's. Asserting it at the end instead — as this test used to —
+    // inferred it from a final count of one, which is the same number a
+    // hydrate-then-skip-the-network bug would produce.
+    expect(fetchProfilesById).not.toHaveBeenCalled();
 
     free(world.edges as FriendshipRow[]);
     await waitFor(() => expect(screen.getByTestId('edges').textContent).toBe('2'));
     expect(screen.getByTestId('cache').textContent).toBe('false');
-    // Faces were looked up once, for the fresh answer — the hydrated pass
-    // is skipped, exactly as the effect's comment promises.
-    expect(fetchProfilesById).toHaveBeenCalledTimes(1);
+    // Awaited rather than asserted flat: `edges` commits one pass before
+    // the faces effect runs, and CI read the count inside that gap and
+    // found nothing. Same lesson as the recount tests below.
+    await waitFor(() => expect(fetchProfilesById).toHaveBeenCalledTimes(1));
   });
 });
 
