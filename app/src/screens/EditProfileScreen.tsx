@@ -245,7 +245,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
           be saved. */}
       {uid ? (
         <View style={s.taste}>
-          <Text style={s.tasteTitle}>{t('What you like', 'Bạn thích gì', '好みのジャンル')}</Text>
+          <Text style={s.tasteTitle}>{t('Interests', 'Sở thích', '興味')}</Text>
           <Text style={s.tasteSub}>
             {t(
               'Search and Explore lean towards these. Change them whenever you like.',

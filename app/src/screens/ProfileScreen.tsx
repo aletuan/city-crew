@@ -6,12 +6,13 @@
 // About-me card and account actions. Champagne throughout — the
 // reference's violet gradient is translated, not copied.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 // TEMPORARY — read/written only by the "Always show welcome" row.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
+import { useFocusEffect } from '@react-navigation/native';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
@@ -353,10 +354,16 @@ function GuestHub({ navigation }: { navigation: Nav }) {
   );
 }
 
-function AboutRow({ icon, label, value, last }: {
+function AboutRow({ icon, label, value, children, last }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  value: string;
+  /** The plain answer. Omitted by the one row that draws its own. */
+  value?: string;
+  /** Drawn in the value's place — the taste row's chips, today. Kept as a
+   *  slot rather than a `kind` prop so the row stays a row: it still owns
+   *  the glyph, the label and the divider, and only the answer changes
+   *  shape. */
+  children?: React.ReactNode;
   last?: boolean;
 }) {
   return (
@@ -364,7 +371,7 @@ function AboutRow({ icon, label, value, last }: {
       <RoundIcon name={icon} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.aboutLabel}>{label}</Text>
-        <Text style={s.aboutValue}>{value}</Text>
+        {children ?? <Text style={s.aboutValue}>{value}</Text>}
       </View>
     </View>
   );
@@ -386,6 +393,20 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   // it: the column is a bare text[] and holds words written before any
   // picker existed.
   const prefs = useMyPreferences(session?.user?.id ?? null);
+  // Edit profile is pushed *over* this screen, so coming back reveals it
+  // rather than remounting it — and `useFetch` loads once per mount.
+  // Without this, saving your interests and pressing back left the row
+  // below still reading "Edit profile to add your interests": the one
+  // sentence guaranteed to be wrong at the moment it is most likely to be
+  // read. Same shape as the Collections, Crew and Trips screens, first
+  // focus skipped because the mount has already loaded.
+  const firstFocus = useRef(true);
+  useFocusEffect(useCallback(() => {
+    if (firstFocus.current) { firstFocus.current = false; return; }
+    prefs.reload();
+  // `prefs.reload` is stable; `prefs` is a new object on every load.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs.reload]));
   const taste = useMemo(
     () => cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)),
     [prefs.data.categories],
@@ -467,15 +488,36 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         {/* The categories, not the old free-text box. That box was read
             by nothing and accepted anything — "Sleep", "Nitendo" — so
             editing it moved to chips, and this row follows them rather
-            than going on showing a value with no way back to it. */}
-        <AboutRow
-          icon="heart-outline"
-          label={t('What you like', 'Bạn thích gì', '好みのジャンル')}
-          value={taste.length
-            ? taste.map((k) => t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja)).join(' · ')
-            : t('Pick a few in Edit profile.', 'Chọn vài mục trong phần Sửa hồ sơ.', '「プロフィール編集」でいくつか選べます。')}
-          last
-        />
+            than going on showing a value with no way back to it.
+
+            Chips here too, not a joined sentence: they are the same
+            objects the picker draws, wearing the same glyph and hue, so
+            the row reads as the answer to the question that screen asked
+            rather than as a paraphrase of it. Flat, because nothing on
+            this card is tappable — the way to change them is the Edit
+            profile button at the top. */}
+        <AboutRow icon="heart-outline" label={t('Interests', 'Sở thích', '興味')} last>
+          {taste.length ? (
+            <View style={s.tasteChips}>
+              {taste.map((k) => (
+                <View key={k} style={s.tasteChip}>
+                  <Ionicons name={CATEGORIES[k].icon} size={14} color={CATEGORIES[k].color} />
+                  <Text style={s.tasteChipText}>
+                    {t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={s.aboutValue}>
+              {t(
+                'Edit profile to add your interests.',
+                'Sửa hồ sơ để cập nhật sở thích của bạn.',
+                '「プロフィール編集」で興味を追加できます。',
+              )}
+            </Text>
+          )}
+        </AboutRow>
       </Card>
 
       {/* Friends above Preferences, deliberately: this row is the one
@@ -618,6 +660,15 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
+  // The picker's chip, at rest: same glyph and hue, no press state and no
+  // border — this card is a page of answers, not a set of controls.
+  tasteChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+  tasteChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
+    paddingHorizontal: 10, paddingVertical: 5,
+  },
+  tasteChipText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginBottom: 4 },
   avatarBig: {
     width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
