@@ -1,24 +1,37 @@
-// Edit profile — name, username, location, bio and interests, stored as
-// a row in `profiles`; plus the recording opt-in, stored in
+// Edit profile — name, username, location and bio, stored as a row in
+// `profiles`; plus taste and the recording opt-in, stored in
 // `preferences`, which is a different table for a reason worth repeating
 // here: `profiles` is readable by everyone (`for select using (true)`),
 // and what you have been opening is nobody else's business.
 //
-// This screen used to ask two more things — a set of categories your
-// plans should lean towards, and a budget band. Both are gone, and the
-// argument is that the wizard already asks. `canPlan` will not let a
-// plan start without a company and at least one category, so the stored
-// chips could only ever re-order what the wizard had already let
-// through: the same question, answered twice, with the standing answer
-// the weaker of the two. Budget went with them for the opposite reason —
-// it is the *most* situational of the three, and asking for it here
-// meant leaving the planner to change it. What the plan costs is on
-// every plan card, every editor and every saved trip, which is the
-// honest way to let somebody decide with their own eyes.
+// ── the chips, gone and back, and why that is not a reversal ──
 //
-// Nothing was migrated. The columns stay, the planner keeps its budget
-// arithmetic, and `taste.ts` keeps its `preferred` term — see
-// `usePlanProfile`, which is where the feeding stopped.
+// This screen used to ask for categories and a budget band. Both were
+// removed, on the argument that the wizard asks the same question with
+// more force: `canPlan` will not start a plan without at least one
+// category, so a standing set of chips could only re-order what that gate
+// had already let through.
+//
+// That argument was about the planner, and it still holds — the chips
+// below are **not** passed to it; see `usePlanProfile`, which still
+// withholds them. What changed is that Explore and Search now read a
+// taste too, and there is no wizard on either: no gate, no question, and
+// until now no answer. `useBrowseTaste` is the seam, and it is a separate
+// hook precisely so this distinction cannot be lost by someone passing a
+// flag from the wrong screen.
+//
+// Budget stayed gone, for its own reason: it is the *most* situational of
+// the three, and what a plan costs is printed on every plan card, every
+// editor and every saved trip. That is the honest way to let somebody
+// decide with their own eyes.
+//
+// The free-text "Interests" box went when the chips arrived. It was read
+// by nothing — not the planner, not search, not ranking — and the rows it
+// collected show why a box is the wrong instrument: half were category
+// keys typed by somebody who had read the source, and the rest were
+// "Sleep", "classics" and "Nitendo, Netflix, Robolox". The column stays
+// and nothing migrates; the chips write `preferences.categories`, which
+// is the one the arithmetic has always been pointed at.
 //
 // "Username" on screen, `handle` in the code and the column: the label is
 // the friendlier of the two words, and renaming the data to match would
@@ -29,12 +42,15 @@ import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
+import TastePicker from '../components/TastePicker';
 import { Card, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { CATEGORIES } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { clearMyHistory, savePreferences, useMyPreferences } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { HANDLE_MAX, handleProblem, normalizeHandle } from '../lib/handle';
+import { cleanTaste } from '../lib/tastepick';
 import { colors, font, space } from '../theme';
 import type { Nav } from '../nav';
 
@@ -47,13 +63,13 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   const [handle, setHandle] = useState(profile.handle);
   const [location, setLocation] = useState(profile.location);
   const [bio, setBio] = useState(profile.bio);
-  const [interests, setInterests] = useState(profile.interests);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const uid = session?.user?.id ?? null;
   const prefs = useMyPreferences(uid);
   const [history, setHistory] = useState(false);
+  const [taste, setTaste] = useState<string[]>([]);
   // Seeded once the row lands, not on every render: `useMyPreferences`
   // starts at `NO_PREFERENCES` and fills in a moment later, and copying
   // that into state unconditionally would undo a chip tapped in between.
@@ -62,6 +78,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   useEffect(() => {
     if (prefs.loadedAt === null) return;
     setHistory(prefs.data.history_on);
+    setTaste(cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)));
   }, [prefs.loadedAt, prefs.data]);
   // Kept apart from `error`: this one belongs to a field and is drawn
   // there, where the form-wide one sits by the button that failed.
@@ -114,7 +131,6 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         full_name: name.trim(),
         location: location.trim(),
         bio: bio.trim(),
-        interests: interests.trim(),
       });
       // Two writes behind one button, and no transaction across them —
       // there cannot be one, they are different tables under different
@@ -122,13 +138,13 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       // what the reader can see they changed, so it lands first, and a
       // preferences write that fails leaves the form open saying so
       // rather than closing over a half-saved change.
-      // The two this screen no longer edits are written back as they
-      // were found. Saving `[]` and `null` instead would be this screen
-      // deciding, on somebody's behalf and without asking, to discard an
-      // answer they gave — and the row is theirs, not this form's.
+      // The band this screen no longer edits is written back as it was
+      // found. Saving `null` instead would be this form deciding, on
+      // somebody's behalf and without asking, to discard an answer they
+      // gave — and the row is theirs, not this screen's.
       if (uid) {
         await savePreferences(uid, {
-          categories: prefs.data.categories,
+          categories: taste,
           budget_vnd: prefs.data.budget_vnd,
           history_on: history,
         });
@@ -218,13 +234,28 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         onChangeText={setBio}
         multiline
       />
-      <FieldRow
-        icon="heart-outline"
-        label={t('Interests', 'Sở thích', '興味')}
-        placeholder={t('Cafés, nature, local food, city walks', 'Cà phê, thiên nhiên, món ngon, dạo phố', 'カフェ、自然、ローカルフード、街歩き')}
-        value={interests}
-        onChangeText={setInterests}
-      />
+      {/* Chips rather than a box, and the reason is in the rows the box
+          collected: it accepted "Sleep" and "Nitendo" as readily as
+          "cafes", and nothing downstream could read either. A chip can
+          only produce a key the taxonomy has, which is what makes the
+          answer worth ranking with.
+
+          Signed out there is no row to write to, so it goes with the
+          switch below rather than sitting here taking taps that cannot
+          be saved. */}
+      {uid ? (
+        <View style={s.taste}>
+          <Text style={s.tasteTitle}>{t('What you like', 'Bạn thích gì', '好みのジャンル')}</Text>
+          <Text style={s.tasteSub}>
+            {t(
+              'Search and Explore lean towards these. Change them whenever you like.',
+              'Tìm kiếm và Khám phá sẽ nghiêng về những mục này. Đổi lúc nào cũng được.',
+              '検索と探索がこの傾向に寄ります。いつでも変更できます。',
+            )}
+          </Text>
+          <TastePicker chosen={taste} onChange={setTaste} />
+        </View>
+      ) : null}
 
       {/* One thing, and it is not a preference about outings — it is
           permission. Signed out there is no row to write to, so the block
@@ -283,6 +314,12 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
+  // Its own block rather than a Card: the fields above are rows in a
+  // list and a chip grid is not a row. The heading does the separating
+  // that a card border would have done more loudly.
+  taste: { gap: 6, marginTop: space.cardGap - 6 },
+  tasteTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
+  tasteSub: { color: colors.textTertiary, fontSize: 13.5, lineHeight: 19, marginBottom: 6 },
   note: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 19 },
 
   // The privacy block gets a card of its own. The chips above are

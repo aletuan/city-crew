@@ -12,13 +12,20 @@
 // be empty on the way back.
 
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav } from '../nav';
 
+const signUp = vi.hoisted(() => vi.fn(async () => ({ needsConfirm: false })));
+const savePreferences = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ signUp: vi.fn(), confirmSignUp: vi.fn() }),
+  useAuth: () => ({ signUp, confirmSignUp: vi.fn(), session: { user: { id: 'u1' } } }),
   isHandleFree: vi.fn(async () => true),
+}));
+// Only the write is swapped; everything else in the barrel stays real.
+vi.mock('../lib/data', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  savePreferences,
 }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -67,5 +74,72 @@ describe('the legal sheet over the form', () => {
     fireEvent.click(screen.getAllByLabelText('Close')[0]);
 
     await waitFor(() => expect((name as HTMLInputElement).value).toBe('Nguyễn Văn A'));
+  });
+});
+
+// ── the step after the account exists ────────────────────────────────
+//
+// It is the last thing sign-up asks and the first thing it is willing to
+// be told nothing about. Both halves of that are pinned here, because
+// both are easy to lose: a required-feeling step on the screen an account
+// is lost on, or a "skip" that quietly writes an empty row anyway.
+
+const fillForm = () => {
+  fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Trang' } });
+  fireEvent.change(screen.getByPlaceholderText("We'll never share your email."), { target: { value: 'a@b.co' } });
+  fireEvent.change(screen.getByPlaceholderText('Use at least 8 characters'), { target: { value: 'password1' } });
+  fireEvent.change(screen.getByPlaceholderText('Type your password again'), { target: { value: 'password1' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
+};
+
+describe('the taste step', () => {
+  beforeEach(() => {
+    signUp.mockClear();
+    savePreferences.mockClear();
+  });
+
+  it('comes after the account is made, not before', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    await waitFor(() => expect(signUp).toHaveBeenCalled());
+    expect(await screen.findByText('What are you into?')).toBeTruthy();
+  });
+
+  // The promise that makes it safe to ask at all. Nothing is written, and
+  // the account is untouched — `taste.ts` has three other signals and
+  // will understand this reader from what they do instead.
+  it('writes nothing at all when it is skipped', async () => {
+    const navigation = nav();
+    render(<SignUpScreen navigation={navigation} />);
+    fillForm();
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+
+    await waitFor(() => expect(navigation.popToTop).toHaveBeenCalled());
+    expect(savePreferences).not.toHaveBeenCalled();
+  });
+
+  it('stores exactly the chips that were tapped', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    await screen.findByText('What are you into?');
+    fireEvent.click(screen.getByText('Cafés'));
+    fireEvent.click(screen.getByText('Nature'));
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+
+    await waitFor(() => expect(savePreferences).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ categories: ['cafes', 'nature'] }),
+    ));
+  });
+
+  // The button says which of the two it is, so a reader who has tapped
+  // nothing is never looking at a "Done" that means "no".
+  it('renames itself the moment there is something to save', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    await screen.findByText('What are you into?');
+    expect(screen.getByRole('button', { name: 'Skip for now' })).toBeTruthy();
+    fireEvent.click(screen.getByText('Cafés'));
+    expect(await screen.findByRole('button', { name: 'Done' })).toBeTruthy();
   });
 });

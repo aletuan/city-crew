@@ -24,12 +24,14 @@ import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
 import { useAuth } from '../lib/auth';
-import { membersOf } from '../lib/data';
+import { membersOf, useMyPreferences } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import { useSave } from '../lib/save';
+import { CATEGORIES } from '../lib/categories';
 import { useCity } from '../lib/city';
 import type { LegalId } from '../lib/legal';
+import { cleanTaste } from '../lib/tastepick';
 import { Lang, useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
 import { colors, font, quoteFace, radius, space, type } from '../theme';
@@ -380,6 +382,14 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
     () => splitFriendships(ships.data, session?.user?.id ?? ''),
     [ships.data, session?.user?.id],
   );
+  // Cleaned on the way in for the same reason `useBrowseTaste` cleans
+  // it: the column is a bare text[] and holds words written before any
+  // picker existed.
+  const prefs = useMyPreferences(session?.user?.id ?? null);
+  const taste = useMemo(
+    () => cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)),
+    [prefs.data.categories],
+  );
   const name = profile.full_name || (email ?? '').split('@')[0];
   // Distinct places, not rows: a place saved into two of your lists is
   // one place you have found, and counting it twice would turn the ring
@@ -454,10 +464,16 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
             value={memberSinceLabel(memberSince, lang)}
           />
         ) : null}
+        {/* The categories, not the old free-text box. That box was read
+            by nothing and accepted anything — "Sleep", "Nitendo" — so
+            editing it moved to chips, and this row follows them rather
+            than going on showing a value with no way back to it. */}
         <AboutRow
           icon="heart-outline"
-          label={t('Interests', 'Sở thích', '興味')}
-          value={profile.interests || t('Add your interests in Edit profile.', 'Thêm sở thích trong phần Sửa hồ sơ.', '「プロフィール編集」で興味を追加。')}
+          label={t('What you like', 'Bạn thích gì', '好みのジャンル')}
+          value={taste.length
+            ? taste.map((k) => t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja)).join(' · ')
+            : t('Pick a few in Edit profile.', 'Chọn vài mục trong phần Sửa hồ sơ.', '「プロフィール編集」でいくつか選べます。')}
           last
         />
       </Card>

@@ -31,6 +31,7 @@ import { useCollections, useLikes, usePlaces, useSearchTerms } from '../lib/cata
 import { parseRecents, RECENTS_KEY, RECENTS_SHOWN, rememberSearch } from '../lib/recents';
 import { newestPlaces } from '../lib/newest';
 import { openNowPlaces } from '../lib/opennow';
+import { useBrowseTaste } from '../lib/tasteProfile';
 import { rankPopular } from '../lib/popular';
 import { collectionMatches, findPlaces, queryTerms } from '../lib/search';
 import { useI18n } from '../lib/i18n';
@@ -191,14 +192,30 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // ordering caveats live with the ranking, in lib/newest.
   const latest = useMemo(() => newestPlaces(places.filter(isLive)), [places]);
 
+  // What this reader leans towards, or null. The chips they picked plus
+  // the categories their own collections are made of — see
+  // `useBrowseTaste`, and note that it is deliberately not the hook the
+  // planner uses.
+  //
+  // It moves this list by at most `TASTE_LIFT`, one standard deviation of
+  // the catalog's ratings, which is what makes it a reordering of the
+  // pack rather than a different list: the three 4.9s in the reference
+  // capture were decided by a fourth decimal place, and this is what
+  // decides them instead.
+  const taste = useBrowseTaste();
+
   // The doors open at this minute — see lib/opennow. `now` is taken per
   // render and deliberately left out of the deps: recomputing on every
   // keystroke would walk every place's hours to reach the same answer
   // within the same minute, and a screen left open across a closing time
   // corrects itself on its next real render.
   const openNow = useMemo(
-    () => openNowPlaces(places.filter(isLive), now),
-    [places], // eslint-disable-line react-hooks/exhaustive-deps
+    // `taste` is in the deps and `now` still is not: taste changes when
+    // the reader edits their chips, which must reorder this the next
+    // time they look, and `useBrowseTaste` memoises so it is stable
+    // between those edits.
+    () => openNowPlaces(places.filter(isLive), now, undefined, taste),
+    [places, taste], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // Only categories this city actually has — the same rule the Explore

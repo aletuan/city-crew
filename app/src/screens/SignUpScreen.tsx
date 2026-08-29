@@ -7,10 +7,12 @@ import React, { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, SwitchRow, useFailText } from '../components/authUi';
 import LegalSheet from '../components/LegalSheet';
+import TastePicker from '../components/TastePicker';
 import { successHaptic } from '../components/ui';
 import { isHandleFree, useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import type { LegalId } from '../lib/legal';
+import { NO_PREFERENCES, savePreferences } from '../lib/data';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
 import { HANDLE_MAX, handleProblem, normalizeHandle, suggestHandle } from '../lib/handle';
 import { PASSWORD_MIN } from '../lib/password';
@@ -19,7 +21,7 @@ import type { Nav } from '../nav';
 
 export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
-  const { signUp, confirmSignUp } = useAuth();
+  const { signUp, confirmSignUp, session } = useAuth();
   const failText = useFailText();
   const [name, setName] = useState('');
   // Suggested from the name until the moment it is edited, then left
@@ -31,7 +33,8 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [code, setCode] = useState('');
-  const [step, setStep] = useState<'form' | 'confirm'>('form');
+  const [step, setStep] = useState<'form' | 'confirm' | 'taste'>('form');
+  const [taste, setTaste] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -92,10 +95,14 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         return;
       }
       const { needsConfirm } = await signUp(name.trim(), chosen, email.trim(), password);
+      // The taste step writes to `preferences`, which RLS scopes to the
+      // signed-in account — so it can only come after a session exists.
+      // Without confirmation `signUp` returns one; with it, the session
+      // arrives at `verify` and the step waits there instead.
       if (needsConfirm) setStep('confirm');
       else {
         successHaptic();
-        navigation.popToTop();
+        setStep('taste');
       }
     });
 
@@ -104,8 +111,63 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       if (!cleanOtp(code)) throw new Error('need_code');
       await confirmSignUp(email.trim(), cleanOtp(code));
       successHaptic();
+      setStep('taste');
+    });
+
+  /**
+   * The last step, and the one that may be walked past.
+   *
+   * It is here rather than inside the form because the form is already
+   * five fields and a code, and it is the screen an account is lost on.
+   * By the time this shows, the account exists: whatever happens next,
+   * including closing the app, the reader has one.
+   *
+   * So "Bỏ qua" is a real answer, not a smaller button. A skipped taste
+   * costs nothing the app cannot recover — `taste.ts` scores four signals
+   * and the other three come from what somebody does rather than what
+   * they declare, so a reader who says nothing here is understood a
+   * little later instead of not at all.
+   */
+  const finish = (chosen: readonly string[]) =>
+    run(async () => {
+      const uid = session?.user?.id;
+      // No session is not an error the reader can act on — it means the
+      // confirmation has not landed yet — and holding them on this screen
+      // over an optional question would be the worst possible trade.
+      if (uid && chosen.length) {
+        // Swallowed: the account is made, the answer is a preference, and
+        // a failed write here must not look like a failed sign-up.
+        await savePreferences(uid, { ...NO_PREFERENCES, categories: [...chosen] }).catch(() => {});
+      }
+      successHaptic();
       navigation.popToTop();
     });
+
+  if (step === 'taste') {
+    return (
+      <AuthScreen>
+        {/* No back control: there is nothing behind this now — the form
+            is spent and the account is made. A back arrow here would
+            offer a door that leads nowhere. */}
+        <Text style={s.tasteTitle}>
+          {t('What are you into?', 'Bạn thích gì?', '好みを教えてください')}
+        </Text>
+        <Lede>{t(
+            'Pick a few and Search and Explore will lean towards them. You can change this any time in your profile.',
+            'Chọn vài mục, Tìm kiếm và Khám phá sẽ nghiêng về những thứ đó. Đổi lúc nào cũng được trong hồ sơ.',
+            'いくつか選ぶと、検索と探索がその傾向に寄ります。プロフィールでいつでも変更できます。',
+          )}</Lede>
+        <TastePicker chosen={taste} onChange={setTaste} />
+        <PrimaryButton
+          label={taste.length
+            ? t('Done', 'Xong', '完了')
+            : t('Skip for now', 'Bỏ qua', 'あとで')}
+          onPress={() => finish(taste)}
+          busy={busy}
+        />
+      </AuthScreen>
+    );
+  }
 
   if (step === 'confirm') {
     return (
@@ -266,6 +328,9 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
+  // The one screen in this flow with no back control, so it carries the
+  // title itself rather than through AuthHeader.
+  tasteTitle: { color: colors.text, ...type.titleDetail, marginBottom: 2 },
   terms: { color: colors.textTertiary, ...type.meta, textAlign: 'center', lineHeight: 26, marginTop: 4 },
   // Only the colour and the weight change: a different size inside a
   // sentence would break the line's rhythm, and there is no underline
