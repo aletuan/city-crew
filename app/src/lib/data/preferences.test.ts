@@ -144,6 +144,31 @@ describe('fetchPassedOver', () => {
     expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual(['mine']);
   });
 
+  // The sequence this was written for, measured on the live database:
+  // open at 14:26:40, save at 14:26:43, unsave at 14:27:05. `unsave`
+  // matched no branch, so it set no verdict and the `save` it had just
+  // undone answered in its place — twenty-two seconds of wanting it
+  // outweighing the decision to take it out.
+  it('counts a place saved and then unsaved', async () => {
+    fake().replies({ data: [row('a', 'unsave'), row('a', 'save'), row('a', 'open')] });
+    expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual(['a']);
+  });
+
+  // Newest verb still wins, in this direction too: changed their mind
+  // back, and the save is the newer row.
+  it('lets a later save overrule an earlier unsave', async () => {
+    fake().replies({ data: [row('a', 'save'), row('a', 'unsave')] });
+    expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual([]);
+  });
+
+  // Not excused for your own submission, unlike `open`. That exemption is
+  // there because the suggestion flow opens the screen for you; nothing
+  // unsaves anything for you.
+  it('counts unsaving a place you put in the catalog yourself', async () => {
+    fake().replies({ data: [row('mine', 'unsave', 'u-1')] });
+    expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual(['mine']);
+  });
+
   it('ignores a row whose place has left the catalog', async () => {
     fake().replies({ data: [{ kind: 'open', places: null }] });
     expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual([]);
