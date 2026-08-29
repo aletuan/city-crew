@@ -56,6 +56,13 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 
   const submit = () =>
     run(async () => {
+      // The two fields nothing downstream would name properly. An empty
+      // name reaches the server as valid metadata and makes a nameless
+      // account; an empty address comes back as "missing email or phone".
+      // The handle is not here because `handleProblem` already names its
+      // own empty case.
+      if (!name.trim()) throw new Error('need_name');
+      if (!email.trim()) throw new Error('need_email');
       if (password.length < PASSWORD_MIN) {
         throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
       }
@@ -86,6 +93,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 
   const verify = () =>
     run(async () => {
+      if (!cleanOtp(code)) throw new Error('need_code');
       await confirmSignUp(email.trim(), cleanOtp(code));
       successHaptic();
       navigation.popToTop();

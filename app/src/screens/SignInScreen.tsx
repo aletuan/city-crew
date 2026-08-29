@@ -20,6 +20,11 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
+    // Asked here rather than at the server, which answers an empty form
+    // with "missing email or phone" — English, lower case, and naming a
+    // `phone` this app does not have. Email first: it is the field above.
+    if (!email.trim()) { setError('need_email'); return; }
+    if (!password) { setError('need_password'); return; }
     setBusy(true);
     setError(null);
     try {

@@ -86,12 +86,18 @@ const AVATAR_QUALITY = 0.8;
  * A request that never settles is worse than one that fails: the spinner
  * spins forever and nobody learns anything. Each step names itself, so a
  * stall says which one stalled instead of just "loading".
+ *
+ * `step` is one of `FormFail`'s names rather than a phrase, for the reason
+ * every failure here travels as a name: this module cannot call `t`, and
+ * the sentence it used to build was English on a screen the reader may
+ * have set to Vietnamese. The seconds went with it — a reader does nothing
+ * differently at 20 than at 45, and which step stalled was always the part
+ * that carried information.
  */
 function withTimeout<T>(work: Promise<T>, ms: number, step: string): Promise<T> {
   return Promise.race([
     work,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`${step} took longer than ${Math.round(ms / 1000)}s — check your connection and try again.`)), ms)),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(step)), ms)),
   ]);
 }
 
@@ -250,20 +256,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // event behind a table write, so nothing else will do it.
   const updateProfile = useCallback(async (patch: Partial<Profile>) => {
     const uid = session?.user?.id;
-    if (!uid) throw new Error('Not signed in');
+    if (!uid) throw new Error('not_signed_in');
     const clean = patch.handle === undefined ? patch : { ...patch, handle: patch.handle.toLowerCase().trim() };
     const { error } = await supabase.from('profiles').update(clean).eq('id', uid);
     if (error) throw new Error(asFail(error));
     setProfile((p) => ({ ...p, ...clean }));
   }, [session]);
 
+  // `not_signed_in` and `bad_image` below are names, not sentences, for
+  // `asAuthFail`'s reason: `t` is a hook and this module is not a
+  // component. `useFailText` has the words.
   const setAvatar = useCallback(async (localUri: string) => {
     // The id comes from the session already in memory. getUser() would go
     // to the network for something we hold, and every extra auth call takes
     // the client's auth lock — the surest way to make an upload appear to
     // hang forever is to queue it behind a token refresh that stalled.
     const uid = session?.user?.id;
-    if (!uid) throw new Error('Not signed in');
+    if (!uid) throw new Error('not_signed_in');
 
     const shrunk = await withTimeout(
       manipulateAsync(
@@ -272,9 +281,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         { compress: AVATAR_QUALITY, format: SaveFormat.JPEG, base64: true },
       ),
       20_000,
-      'Preparing the photo',
+      'slow_prepare',
     );
-    if (!shrunk.base64) throw new Error('Could not read the picked image');
+    if (!shrunk.base64) throw new Error('bad_image');
 
     // One object per person, overwritten. Nothing accumulates, so nothing
     // needs sweeping up — at the cost of a stable URL, handled below.
@@ -284,7 +293,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('avatars')
         .upload(path, decode(shrunk.base64), { contentType: 'image/jpeg', upsert: true }),
       45_000,
-      'Uploading the photo',
+      'slow_upload',
     );
     if (error) throw new Error(error.message);
 
@@ -298,7 +307,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error: saveError } = await withTimeout(
       Promise.resolve(supabase.from('profiles').update({ avatar_url: url }).eq('id', uid)),
       20_000,
-      'Saving the photo',
+      'slow_save',
     );
     if (saveError) throw new Error(saveError.message);
     setProfile((p) => ({ ...p, avatar_url: url }));

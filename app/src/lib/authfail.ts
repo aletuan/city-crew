@@ -27,6 +27,7 @@ export type AuthFail =
   | 'rate_limit'
   | 'bad_email'
   | 'same_password'
+  | 'bad_input'
   | 'offline';
 
 /**
@@ -37,11 +38,20 @@ export type AuthFail =
  * regression the first time somebody there fixes a typo. See
  * `@supabase/auth-js/dist/module/lib/error-codes.d.ts` for the full set.
  *
- * `validation_failed` is knowingly absent. It is the code for a request
- * body the server would not accept, which is a bad email address most of
- * the time and a missing password some of the time — and a message that
- * confidently names the wrong field is worse than one in the wrong
- * language. It falls through to the server's own words.
+ * `validation_failed` is the code for a request body the server would not
+ * accept. It was left out at first on the grounds that it covers a bad
+ * address and a missing password alike, so any sentence naming a field
+ * would name the wrong one some of the time — and being wrong in
+ * Vietnamese is worse than being right in English.
+ *
+ * What that argument missed is what the server actually says under it.
+ * Submitting the sign-in form empty put "missing email or phone" in front
+ * of the reader, and the recovery form "Password recovery requires an
+ * email": lower-case, English, and naming a `phone` this app does not
+ * have. So it is mapped, to a sentence that names no field at all. The
+ * fields those two cases are really about are now checked before anything
+ * is sent (see `FormFail` in `components/authUi`), which is both faster
+ * and the only way that message could have been in the reader's language.
  */
 const BY_CODE: Record<string, AuthFail> = {
   invalid_credentials: 'credentials',
@@ -58,6 +68,7 @@ const BY_CODE: Record<string, AuthFail> = {
   over_request_rate_limit: 'rate_limit',
   over_email_send_rate_limit: 'rate_limit',
   email_address_invalid: 'bad_email',
+  validation_failed: 'bad_input',
   same_password: 'same_password',
 };
 
@@ -87,4 +98,21 @@ export function authFail(code: string | undefined, message: string): AuthFail | 
   // one — the two are different things to tell somebody.
   if (code) return BY_CODE[code] ?? null;
   return OFFLINE.test(message) ? 'offline' : null;
+}
+
+/**
+ * A server's sentence, started like a sentence.
+ *
+ * GoTrue is inconsistent about this — "Password recovery requires an
+ * email" beside "missing email or phone" — and a lower-case line inside a
+ * banner reads as something that leaked rather than something written.
+ * Only the first letter is touched: the rest of the string is the
+ * server's, and words like `AuthApiError` or a quoted column name are
+ * meant to be as they are.
+ *
+ * It applies to the pass-through path alone. Every sentence this app
+ * writes for itself is already a sentence.
+ */
+export function sentenceCase(message: string): string {
+  return message.charAt(0).toUpperCase() + message.slice(1);
 }

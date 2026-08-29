@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authFail, type AuthFail } from './authfail';
+import { authFail, sentenceCase, type AuthFail } from './authfail';
 
 // Every code the module claims to know, asserted as a table rather than as
 // eleven `it`s. The point of the table is that adding a row to `BY_CODE`
@@ -15,6 +15,7 @@ const KNOWN: [string, AuthFail][] = [
   ['over_request_rate_limit', 'rate_limit'],
   ['over_email_send_rate_limit', 'rate_limit'],
   ['email_address_invalid', 'bad_email'],
+  ['validation_failed', 'bad_input'],
   ['same_password', 'same_password'],
 ];
 
@@ -38,10 +39,12 @@ describe('authFail', () => {
     expect(authFail('user_banned', 'User is banned')).toBeNull();
   });
 
-  // Knowingly unmapped: the code covers a bad address and a missing
-  // password alike, and guessing which would name the wrong field.
-  it('leaves validation_failed to the server’s own words', () => {
-    expect(authFail('validation_failed', 'Unable to validate email address: invalid format')).toBeNull();
+  // It covers a bad address and a missing password alike, so the sentence
+  // behind this name is the one that points at no field — see the note on
+  // `BY_CODE`. What matters here is only that it stops being English.
+  it('names validation_failed whatever prose it carries', () => {
+    expect(authFail('validation_failed', 'missing email or phone')).toBe('bad_input');
+    expect(authFail('validation_failed', 'Password recovery requires an email')).toBe('bad_input');
   });
 
   describe('with no code, which is how a failed request arrives', () => {
@@ -68,5 +71,29 @@ describe('authFail', () => {
   it('trusts the code over a message that reads like a network failure', () => {
     expect(authFail('user_banned', 'Failed to fetch')).toBeNull();
     expect(authFail('invalid_credentials', 'Failed to fetch')).toBe('credentials');
+  });
+});
+
+describe('sentenceCase', () => {
+  // The message that prompted this: GoTrue's answer to an empty sign-in
+  // form, which arrives lower case and sat in a banner looking leaked.
+  it('starts a server sentence like a sentence', () => {
+    expect(sentenceCase('missing email or phone')).toBe('Missing email or phone');
+  });
+
+  it('leaves one that already was', () => {
+    expect(sentenceCase('Password recovery requires an email'))
+      .toBe('Password recovery requires an email');
+  });
+
+  // Only the first character. The rest is the server's, and an error
+  // naming a type or a column means those exactly as they are.
+  it('touches nothing past the first character', () => {
+    expect(sentenceCase('unexpected AuthApiError on profiles.handle'))
+      .toBe('Unexpected AuthApiError on profiles.handle');
+  });
+
+  it('has nothing to say about nothing', () => {
+    expect(sentenceCase('')).toBe('');
   });
 });
