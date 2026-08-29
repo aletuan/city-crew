@@ -123,9 +123,13 @@ export async function logPlaceEvent(
   }
 }
 
-/** Slugs this person opened and did not save — the strongest single signal
- *  `taste.ts` takes, and the only one that is about a place rather than a
- *  category.
+/** Slugs this person turned down — the strongest single signal `taste.ts`
+ *  takes, and the only one that is about a place rather than a category.
+ *
+ *  Three ways to turn one down: open it and walk away, drop it out of a
+ *  plan, or save it and then unsave it. The first is a silence and needs
+ *  the gate in `tasteFrom` to be worth reading; the other two are things
+ *  somebody did on purpose.
  *
  *  Read over a window rather than over everything: a café passed over last
  *  March says nothing about this Saturday, and nothing trims the table yet.
@@ -173,7 +177,30 @@ export async function fetchPassedOver(ownerId: string, since: string): Promise<s
      */
     const mine = row.places?.submitted_by === ownerId;
     if (row.kind === 'save' || row.kind === 'plan_keep') verdict.set(slug, false);
-    else if (row.kind === 'plan_drop') verdict.set(slug, true);
+    /**
+     * The two refusals somebody makes on purpose.
+     *
+     * `unsave` used to match nothing here, so it set no verdict and let an
+     * older row answer for it — which meant the older row was almost
+     * always the `save` it had just undone. Seen on the live database:
+     * open at 14:26:40, save at 14:26:43, unsave at 14:27:05, and the
+     * engine called it kept. Twenty-two seconds of wanting it counted for
+     * more than the decision to take it out.
+     *
+     * It is a *stronger* signal than `open` and not a weaker one: walking
+     * away can mean the photograph loaded slowly, but nobody unsaves a
+     * place they never chose. Taking it out is the second of two acts, and
+     * the second one is the one they meant.
+     *
+     * Not excused for your own submissions, unlike `open` below. That
+     * exemption exists because the suggestion flow *opens the screen for
+     * you*; nothing unsaves anything for you.
+     *
+     * The other reading — that clearing out a collection is tidying rather
+     * than dislike — is real, and it is answered by the window and by the
+     * newest-verb rule: tidy up and save it again and the save is newer.
+     */
+    else if (row.kind === 'plan_drop' || row.kind === 'unsave') verdict.set(slug, true);
     // Deliberately leaves no verdict rather than clearing one: an excused
     // `open` should say nothing, not overrule an older `plan_drop` that
     // still means what it meant.
