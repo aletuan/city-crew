@@ -56,6 +56,13 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 
   const submit = () =>
     run(async () => {
+      // The two fields nothing downstream would name properly. An empty
+      // name reaches the server as valid metadata and makes a nameless
+      // account; an empty address comes back as "missing email or phone".
+      // The handle is not here because `handleProblem` already names its
+      // own empty case.
+      if (!name.trim()) throw new Error('need_name');
+      if (!email.trim()) throw new Error('need_email');
       if (password.length < PASSWORD_MIN) {
         throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
       }
@@ -86,6 +93,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 
   const verify = () =>
     run(async () => {
+      if (!cleanOtp(code)) throw new Error('need_code');
       await confirmSignUp(email.trim(), cleanOtp(code));
       successHaptic();
       navigation.popToTop();
@@ -131,10 +139,18 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           'Tham gia City Crew để lưu địa điểm, tạo bộ sưu tập và lên kế hoạch cho những chuyến đi đáng nhớ.',
           'City Crewに参加して、場所を保存し、コレクションを作り、忘れられない旅を計画しましょう。',
         )}</Lede>
+      {/* Vietnamese apps ask in the imperative — "Nhập …" — and almost
+          never in the friendly question this used to carry, which is a
+          Western product voice that reads as translated here.
+
+          And the label: "Họ tên" is what a reader meets on an ID
+          verification screen, so it asked for a legal name. This field
+          is the display name — it sits beside the @handle on a crew
+          row and verifies nothing. It now says so. */}
       <FieldRow
         icon="person-outline"
-        label={t('Full name', 'Họ tên', 'お名前')}
-        placeholder={t('What should we call you?', 'Chúng tôi nên gọi bạn là gì?', 'なんとお呼びすれば？')}
+        label={t('Display name', 'Tên hiển thị', '表示名')}
+        placeholder={t('Enter your full name', 'Nhập họ và tên', 'お名前を入力')}
         value={name}
         onChangeText={(v) => {
           setName(v);

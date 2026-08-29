@@ -16,7 +16,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { BackButton, CONTROL_H, fireHaptic, PressableScale, useTabBarClearance } from './ui';
 import { useI18n } from '../lib/i18n';
 import { PASSWORD_MIN, passwordStrength } from '../lib/password';
-import type { AuthFail } from '../lib/authfail';
+import { sentenceCase, type AuthFail } from '../lib/authfail';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
 export function AuthScreen({ children }: { children: React.ReactNode }) {
@@ -234,6 +234,34 @@ export function FormError({ children }: { children: string }) {
 }
 
 /**
+ * The failures this app finds for itself, as opposed to the ones
+ * `authfail` reads off a Supabase code.
+ *
+ * Most are empty required fields, checked before anything is sent. That
+ * ordering is the point rather than an optimisation: the server's answer
+ * to an empty sign-in form is "missing email or phone" — English, lower
+ * case, and naming a `phone` this app has never asked for — and no
+ * mapping after the fact can put that in the reader's language as well as
+ * simply not asking. `handle.ts` states the same doctrine for the rule it
+ * mirrors: what a client-side check buys is a legible message before a
+ * round trip.
+ *
+ * The last two are raised by `lib/auth` rather than by a screen, for the
+ * same reason everything else here travels as a name: that module cannot
+ * call `t`.
+ */
+export type FormFail =
+  | 'need_email'
+  | 'need_password'
+  | 'need_code'
+  | 'need_name'
+  | 'not_signed_in'
+  | 'bad_image'
+  | 'slow_prepare'
+  | 'slow_upload'
+  | 'slow_save';
+
+/**
  * The failure `lib/auth` threw, as a sentence in the reader's language.
  *
  * The names come across as the `Error`'s message (see `asAuthFail`), and
@@ -251,8 +279,23 @@ export function FormError({ children }: { children: string }) {
  * somebody writes the sentence for it.
  */
 export function useFailText(): (raw: string) => string {
+  const said = useFailSentences();
+  return (raw) => (said as Record<string, string>)[raw] ?? sentenceCase(raw);
+}
+
+/**
+ * The table itself, which `useFailText` looks names up in.
+ *
+ * Split out and exported for the test, and worth the extra export: a test
+ * that held its own copy of the names could only check the ones somebody
+ * remembered to copy, and the failure it exists to catch — a name whose
+ * sentence was written in English only — is exactly the kind that arrives
+ * with a name nobody has copied yet. Reading the real table means a new
+ * entry is covered the moment it is added.
+ */
+export function useFailSentences(): Record<AuthFail | FormFail, string> {
   const { t } = useI18n();
-  const said: Record<AuthFail, string> = {
+  return {
     // Not "wrong password". The server will not say which of the two it
     // was — deliberately, so that a stranger cannot use this form to
     // discover which addresses have accounts — and a message that picked
@@ -311,8 +354,66 @@ export function useFailText(): (raw: string) => string {
       'Không có kết nối. Kiểm tra mạng rồi thử lại.',
       '接続できません。ネットワークを確認してもう一度お試しください。',
     ),
+    // Names no field, on purpose. `validation_failed` covers a bad
+    // address and a missing password alike, and the empty cases it used
+    // to arrive for are caught before the request now.
+    bad_input: t(
+      'Check the details you entered.',
+      'Kiểm tra lại thông tin bạn đã nhập.',
+      '入力内容をご確認ください。',
+    ),
+
+    // ── found here, before anything is sent ──
+    need_email: t(
+      'Enter your email address.',
+      'Nhập địa chỉ email của bạn.',
+      'メールアドレスを入力してください。',
+    ),
+    need_password: t(
+      'Enter your password.',
+      'Nhập mật khẩu của bạn.',
+      'パスワードを入力してください。',
+    ),
+    need_code: t(
+      'Enter the code from the email.',
+      'Nhập mã trong email.',
+      'メールに記載のコードを入力してください。',
+    ),
+    need_name: t(
+      'Tell us what to call you.',
+      'Cho chúng tôi biết tên của bạn.',
+      'お名前を教えてください。',
+    ),
+
+    // ── raised by `lib/auth`, which cannot call `t` ──
+    not_signed_in: t(
+      'Sign in to do that.',
+      'Hãy đăng nhập để làm điều đó.',
+      'この操作にはサインインが必要です。',
+    ),
+    bad_image: t(
+      "That picture could not be read. Try another.",
+      'Không đọc được ảnh này. Hãy chọn ảnh khác.',
+      'この画像を読み込めませんでした。別の画像をお試しください。',
+    ),
+    // Three names for one shape, because which step stalled is the whole
+    // information a stall carries — see `withTimeout`.
+    slow_prepare: t(
+      'Preparing the photo is taking too long. Check your connection and try again.',
+      'Chuẩn bị ảnh mất quá lâu. Kiểm tra kết nối rồi thử lại.',
+      '画像の準備に時間がかかっています。接続を確認してもう一度お試しください。',
+    ),
+    slow_upload: t(
+      'Uploading the photo is taking too long. Check your connection and try again.',
+      'Tải ảnh lên mất quá lâu. Kiểm tra kết nối rồi thử lại.',
+      '画像のアップロードに時間がかかっています。接続を確認してもう一度お試しください。',
+    ),
+    slow_save: t(
+      'Saving the photo is taking too long. Check your connection and try again.',
+      'Lưu ảnh mất quá lâu. Kiểm tra kết nối rồi thử lại.',
+      '画像の保存に時間がかかっています。接続を確認してもう一度お試しください。',
+    ),
   };
-  return (raw) => (said as Record<string, string>)[raw] ?? raw;
 }
 
 const s = StyleSheet.create({

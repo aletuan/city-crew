@@ -160,6 +160,41 @@ describe('signing in', () => {
     // further out than 1s + 5s + 5s can reach.
   }, 20_000);
 
+  // The whole reason these are checked here: the server answers an empty
+  // form with "missing email or phone" — English, lower case, and naming
+  // a field this app does not have. No mapping after the fact could put
+  // that in the reader's language, so the request is never made.
+  it('asks for a missing email itself instead of asking the server', async () => {
+    render(<SignInScreen navigation={nav()} />);
+
+    submit();
+
+    expect(await screen.findByText('Enter your email address.')).toBeTruthy();
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
+  it('asks for a missing password the same way', async () => {
+    render(<SignInScreen navigation={nav()} />);
+
+    fill('reader@example.com', '');
+    submit();
+
+    expect(await screen.findByText('Enter your password.')).toBeTruthy();
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
+  // An address of nothing but spaces is an empty one; the password is
+  // never trimmed, so a space in it is a character and a valid attempt.
+  it('does not count a spaces-only address as an address', async () => {
+    render(<SignInScreen navigation={nav()} />);
+
+    fill('   ', 'hunter2');
+    submit();
+
+    expect(await screen.findByText('Enter your email address.')).toBeTruthy();
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
   it('says nothing about an error before one has happened', () => {
     render(<SignInScreen navigation={nav()} />);
     expect(screen.queryByText(/incorrect/i)).toBeNull();

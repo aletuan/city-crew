@@ -27,7 +27,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton } from '../components/authUi';
+import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
 import { Card, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
@@ -42,6 +42,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
   const { profile, session, updateProfile } = useAuth();
+  const failText = useFailText();
   const [name, setName] = useState(profile.full_name);
   const [handle, setHandle] = useState(profile.handle);
   const [location, setLocation] = useState(profile.location);
@@ -177,10 +178,12 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
           the avatar is its own self-contained control and needs no
           sentence of its own. */}
       <Lede>{t('Tell your crew a little about yourself.', 'Kể cho hội của bạn nghe đôi chút về bạn.', 'あなたのことを少し教えてください。')}</Lede>
+      {/* Named to match sign-up; see the note there for why the label
+          moved off "Họ tên" and the hint into the imperative. */}
       <FieldRow
         icon="person-outline"
-        label={t('Full name', 'Họ tên', 'お名前')}
-        placeholder={t('What should we call you?', 'Chúng tôi nên gọi bạn là gì?', 'なんとお呼びすれば？')}
+        label={t('Display name', 'Tên hiển thị', '表示名')}
+        placeholder={t('Enter your full name', 'Nhập họ và tên', 'お名前を入力')}
         value={name}
         onChangeText={setName}
         autoComplete="name"
@@ -273,7 +276,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         </View>
       ) : null}
 
-      {error ? <FormError>{error}</FormError> : null}
+      {error ? <FormError>{failText(error)}</FormError> : null}
       <PrimaryButton label={t('Save changes', 'Lưu thay đổi', '変更を保存')} onPress={save} busy={busy} />
     </AuthScreen>
   );

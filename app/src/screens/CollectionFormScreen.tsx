@@ -22,7 +22,7 @@ import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton } from '../components/authUi';
+import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
 import { PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
@@ -59,6 +59,7 @@ export default function CollectionFormScreen({ navigation, route }: {
     : route.params?.title ?? ''));
   const [desc, setDesc] = useState(copyFrom?.desc ?? route.params?.desc ?? '');
   const [busy, setBusy] = useState(false);
+  const failText = useFailText();
   const [error, setError] = useState<string | null>(null);
 
   const uid = session?.user?.id;
@@ -268,7 +269,7 @@ export default function CollectionFormScreen({ navigation, route }: {
           </ScrollView>
         </View>
       ) : null}
-      {error ? <FormError>{error}</FormError> : null}
+      {error ? <FormError>{failText(error)}</FormError> : null}
       <View style={{ marginTop: space.cardGap }}>
         <PrimaryButton
           label={copyFrom

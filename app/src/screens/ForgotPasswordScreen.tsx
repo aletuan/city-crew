@@ -56,6 +56,9 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
 
   const send = () =>
     run(async () => {
+      // Before the request, not after it: the server's answer to an empty
+      // address here is "Password recovery requires an email", in English.
+      if (!email.trim()) throw new Error('need_email');
       await requestReset(email.trim());
       setCooldown(RESEND_SECONDS);
       setStep('reset');
@@ -73,6 +76,8 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
 
   const reset = () =>
     run(async () => {
+      // In field order: the code sits above the new password.
+      if (!cleanOtp(code)) throw new Error('need_code');
       if (password.length < PASSWORD_MIN) {
         throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
       }
