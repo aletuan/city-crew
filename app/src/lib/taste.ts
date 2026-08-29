@@ -56,7 +56,12 @@ export type TasteSignals = {
   suggested?: readonly Categorised[];
   /** Slugs the reader opened and did not save. The caller limits this to
    *  recent events — a place passed over last March says nothing about this
-   *  Saturday, and `place_events` grows forever until somebody trims it. */
+   *  Saturday, and `place_events` grows forever until somebody trims it.
+   *
+   *  **Ignored entirely unless `saved` has something in it.** See the note
+   *  in `tasteFrom`: this is the one signal that reads a silence, and a
+   *  silence only means "no" from somebody who has been heard saying
+   *  "yes". */
   passedOver?: readonly string[];
 };
 
@@ -114,8 +119,36 @@ export function tasteFrom(signals: TasteSignals): Taste | null {
   const preferred = new Set(signals.preferred ?? []);
   const saved = tally(signals.saved);
   const suggested = tally(signals.suggested);
-  const passedOver = new Set(signals.passedOver ?? []);
 
+  /**
+   * The one signal built from a silence, and the one that has to earn the
+   * right to be read.
+   *
+   * "Opened and did not save" is only a refusal if saving is a thing this
+   * reader does. Somebody who has saved thirty places and not this one has
+   * chosen; somebody who has saved nothing has not refused two hundred
+   * places, they have not found the button. The data cannot tell those two
+   * apart — both are an `open` with nothing after it — so the difference
+   * has to be asserted here, and it is the difference between a taste
+   * profile and a punishment for not knowing the app yet.
+   *
+   * Put plainly: **a silence only means "no" from somebody who has been
+   * heard saying "yes".**
+   *
+   * The test is places saved, not categories saved: `tally` counts the
+   * categories a save carried, and a place the desk has not tagged yet
+   * would come back as an empty tally from a reader who did use the
+   * button. The claim being made is about the button.
+   *
+   * One save is enough. This is not a measure of how much somebody saves —
+   * it is proof they know the gesture exists, and one proves that.
+   */
+  const savesAtAll = (signals.saved?.length ?? 0) > 0;
+  const passedOver = new Set(savesAtAll ? signals.passedOver ?? [] : []);
+
+  // `passedOver` is gated above, so a reader whose only signal was a list
+  // of places they opened now correctly has no taste at all rather than an
+  // all-zero one — which is the distinction the note below turns on.
   if (!preferred.size && !saved.size && !suggested.size && !passedOver.size) return null;
 
   return {
