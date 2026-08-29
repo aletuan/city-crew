@@ -132,10 +132,11 @@ function SettingRow({ icon, label, value, onPress, last }: {
  *  any of them. Its heading is written at each call site, beside the
  *  card, the way About me and Friends are.
  *
- *  It ends on the two public documents, which are not settings and are
- *  drawn to say so. They are here because nowhere else in the app leads
- *  back to them: the one link is under the Sign up button, on a screen
- *  an account holder cannot reach again. */
+ *  The two public documents used to live at the bottom of this card,
+ *  drawn without values to say they were not settings. They are their
+ *  own card now: a reader looking for the terms was looking under a
+ *  heading that said the app's behaviour was in there, and a drawing
+ *  convention is a weaker signal than a heading. See `LegalCard`. */
 function SettingsCard() {
   const { t, lang } = useI18n();
   const { city, mode } = useCity();
@@ -168,11 +169,6 @@ function SettingsCard() {
     write.catch(() => {});
   };
 
-  // Which document is open, if any. The same sheet the sign-up screen
-  // raises, so the two ways into these documents behave identically —
-  // which they did not while one of them left for a browser.
-  const [legal, setLegal] = useState<LegalId | null>(null);
-
   return (
     <>
       <Card style={s.featureCard}>
@@ -202,25 +198,58 @@ function SettingsCard() {
         />
         {/* TEMPORARY. A tap flips it; the sheet reads the flag when the
             app next starts, so seeing it again is: switch on, close the
-            app, open it. Delete this row with the block above it — it
-            carries no `last`, so nothing below needs touching. */}
+            app, open it. Delete this row with the block above it — and
+            move `last` up to Appearance, which is the row it would leave
+            at the bottom of the card. */}
         <SettingRow
           icon="sparkles-outline"
           label={t('Always show welcome', 'Luôn hiện lời chào', 'ようこそ画面を毎回表示')}
           value={always ? t('On', 'Bật', 'オン') : t('Off', 'Tắt', 'オフ')}
           onPress={() => { fireHaptic('selection'); toggleAlways(); }}
+          last
         />
-        {/* The way back to the two documents. They are linked once, under
-            the Sign up button, and that is the last a reader ever sees of
-            them: the screen is behind an account they now have. This card
-            is where anyone would look for them, and it is drawn for
-            guests too, so the reader deciding whether to sign up at all
-            can read the terms without starting the form.
+      </Card>
+      <CitySwitcherModal visible={open} onClose={() => setOpen(false)} />
+      <LanguageSwitcherModal visible={langOpen} onClose={() => setLangOpen(false)} />
+      <ThemeSwitcherModal visible={themeOpen} onClose={() => setThemeOpen(false)} />
+    </>
+  );
+}
 
-            Not settings, and they do not pretend to be: no value on the
-            right. The chevron is back, though — these used to open a
-            browser and wore `open-outline` to say so, and now they raise
-            a sheet like every other row in this card. */}
+/**
+ * The two public documents, on a card of their own.
+ *
+ * They were the last two rows of `SettingsCard`, drawn without a value on
+ * the right so the shape would say they were not settings. That is a real
+ * distinction and it was too quiet: a reader hunting for the terms reads
+ * the heading first, and the heading said the app's behaviour lived there.
+ * A section says it outright.
+ *
+ * Drawn for guests as well as members, and that is the point rather than
+ * a courtesy: the only other link to these is under the Sign up button, on
+ * a screen an account holder can never reach again — and somebody still
+ * deciding whether to sign up should be able to read the terms without
+ * starting the form.
+ *
+ * The heading is written at each call site the way every other section on
+ * this screen is, and the guest view passes none, because none of its
+ * cards carry one.
+ */
+function LegalCard() {
+  const { t } = useI18n();
+  // Which document is open, if any. The same sheet the sign-up screen
+  // raises, so the two ways into these documents behave identically —
+  // which they did not while one of them left for a browser.
+  const [legal, setLegal] = useState<LegalId | null>(null);
+
+  return (
+    <>
+      <Card style={s.featureCard}>
+        {/* No value on the right, still: these are a destination, not a
+            setting, and the card around them does not change that. The
+            chevron is right, though — they used to open a browser and wore
+            `open-outline` to say so, and now they raise a sheet like every
+            other row on this screen. */}
         <SettingRow
           icon="document-text-outline"
           label={t('Terms of Service', 'Điều khoản sử dụng', '利用規約')}
@@ -234,12 +263,10 @@ function SettingsCard() {
         />
       </Card>
       <LegalSheet id={legal} onClose={() => setLegal(null)} />
-      <CitySwitcherModal visible={open} onClose={() => setOpen(false)} />
-      <LanguageSwitcherModal visible={langOpen} onClose={() => setLangOpen(false)} />
-      <ThemeSwitcherModal visible={themeOpen} onClose={() => setThemeOpen(false)} />
     </>
   );
 }
+
 
 function Tagline() {
   const { t } = useI18n();
@@ -330,6 +357,10 @@ function GuestHub({ navigation }: { navigation: Nav }) {
       </Card>
 
       <SettingsCard />
+      {/* No heading, like every card on the guest view. The documents
+          matter most to exactly this reader — the one who has not signed
+          up yet. */}
+      <LegalCard />
 
       {/* Real now, so it behaves like every other locked row here:
           the tap leads to signing in, which is where friends begin.
@@ -556,6 +587,16 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           the other direction. */}
       <Text style={s.section}>{t('Preferences', 'Tuỳ chọn', '設定')}</Text>
       <SettingsCard />
+
+      {/* Last section, and last on purpose. The order this screen reads
+          in — who you are, who you go with, how the app behaves — ends on
+          the things that are true whether you read them or not, and then
+          the way out. Under Preferences these two were filed as settings
+          by position while being drawn as not-settings; a heading of
+          their own costs one line and stops the screen arguing with
+          itself. */}
+      <Text style={s.section}>{t('Legal', 'Pháp lý', '法的事項')}</Text>
+      <LegalCard />
 
       <PressableScale
         style={s.signOutBtn}
