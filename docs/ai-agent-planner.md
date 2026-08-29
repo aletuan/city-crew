@@ -587,49 +587,160 @@ thật; hai điều đầu chỉ là quy mô.
 
 ## Personalization — taste profile
 
-`app/src/lib/taste.ts`, thuần, tính ở client từ dữ liệu đã có trong bộ nhớ
-(`SaveProvider` + `AuthProvider`). Không materialized view — đúng triết lý
-suy-ra-thay-vì-lưu của repo.
+`app/src/lib/taste.ts`, thuần, tính ở client từ dữ liệu **đã có trong bộ nhớ**:
+`SaveProvider` giữ collections, `usePlaces` giữ catalog, `useCatalog().myLikes`
+giữ lượt thích đã nạp cho kệ Explore, và preferences là một lượt đọc. Không
+materialized view, không job đêm — đúng triết lý suy-ra-thay-vì-lưu của repo.
+Tín hiệu duy nhất tốn một truy vấn là `passedOver`, và chỉ khi người dùng đã bật
+ghi lịch sử.
 
-| Tín hiệu | Nguồn | Trọng số | Có từ phase |
+### Năm tín hiệu, và hai loại bằng chứng
+
+| Tín hiệu | Nguồn | Trọng số | Vào bề mặt nào |
 |---|---|---|---|
-| Preferences khai báo | `preferences.categories` | 4 | 4 |
-| Collections đã lưu | `SaveProvider.mine` | 3 | 1 (đã có sẵn) |
-| Places đã tự suggest | `places.submitted_by = uid` | 2 | 1 (đã có sẵn) |
-| Mở detail rồi không lưu | `place_events` | −1 điểm tròn, **trục riêng** | 4 |
-| Vị trí, thành phố | `useMyPosition`, `CityProvider` | pass khoảng cách | 1 (đã có sẵn) |
+| `preferred` — khai ra miệng | `preferences.categories` (chip) | 4 | **chỉ Tìm kiếm** |
+| `saved` — tự lưu | `SaveProvider.mine` → `membersOf` | 3 | cả hai |
+| `suggested` — tự thêm vào catalog | `places.submitted_by = uid` | 2 | cả hai |
+| `liked` — thích list của người khác | `useCatalog().myLikes` → `membersOf` | 1 | cả hai |
+| `passedOver` — mở rồi bỏ đi | `place_events`, cửa sổ 90 ngày | **−1 tròn, trục riêng** | **chỉ Lập kế hoạch** |
 
-**Đi ngược bản thiết kế lần hai: bốn tín hiệu không nằm trên một thang.** Ba
-tín hiệu đầu là bằng chứng về một *category* — yếu, chung, đúng với nhiều chỗ.
-Tín hiệu thứ tư là bằng chứng về *đúng chỗ này*, và nó không yếu chút nào: người
-mở một quán cà phê rồi không lưu đã nói ra một điều rất cụ thể. Đặt chung một
-thang thì tín hiệu mạnh nhất lại mang con số nhỏ nhất. Nên: ba tín hiệu category
-chuẩn hoá về [0, 1] (chia cho tổng trọng số 9), còn một chỗ bị bỏ qua trừ thẳng
-một điểm tròn.
+**Đi ngược bản thiết kế: năm tín hiệu không nằm trên một thang.** Bốn tín hiệu
+đầu là bằng chứng về một *category* — yếu, chung, đúng với nhiều chỗ. Tín hiệu
+cuối là bằng chứng về *đúng chỗ này*, và nó không yếu chút nào: người mở một quán
+cà phê rồi không lưu đã nói ra một điều rất cụ thể. Đặt chung một thang thì tín
+hiệu mạnh nhất lại mang con số nhỏ nhất. Nên: bốn tín hiệu category chuẩn hoá về
+`[0, 1]` (chia cho tổng trọng số **10**), còn một chỗ bị bỏ qua trừ thẳng một
+điểm tròn.
 
-Hệ quả là `affinity` **luôn nằm trong [−1, 1]**, và đó là điều kiện để `W = 2`
-có nghĩa. Trả về một tổng không chặn thì hệ số trong `planner.ts` chỉ là trang
-trí và lời hứa "taste không lấn wizard" không đúng với cái gì cả.
+Thứ tự bốn trọng số là của bản thiết kế và lý lẽ của nó vẫn đúng — **nói ra hơn
+tự lưu hơn tự thêm hơn thích**. Các con số chỉ có nghĩa so với nhau: chuẩn hoá
+theo tổng nên nhân cả bốn lên không đổi gì, và thêm tín hiệu thứ tư làm loãng ba
+số hạng cũ (3/9 thành 3/10) mà không đảo thứ tự nào.
+
+Lượt thích đứng cuối vì nó **là gì**: một cú chạm lên bộ sưu tập của *người khác*.
+Bằng chứng thật — không ai thích một danh sách toàn chỗ mình không có thời gian
+ghé — nhưng gián tiếp, vì thể loại đến qua phán đoán của người tuyển về thứ gì
+thuộc về nhau, và rẻ hơn hẳn một quyết định xếp chỗ vào đâu. Nó cũng là **thứ rẻ
+nhất một người mới có thể làm**, đúng nửa bức tranh mà ba tín hiệu kia bỏ trống:
+người chưa tìm ra nút lưu rất có thể đã biết bấm trái tim.
+
+Hệ quả là `affinity` **luôn nằm trong [−1, 1]**, và đó là điều kiện để mọi hệ số
+bên ngoài có nghĩa. Trả về một tổng không chặn thì hệ số trong `planner.ts` chỉ
+là trang trí và lời hứa "taste không lấn wizard" không đúng với cái gì cả.
 
 `tasteFrom` trả **null** khi không có tín hiệu nào — không phải affinity 0 cho
 mọi chỗ. `planTrips` bỏ hẳn số hạng đó khi taste null, nên người chưa có lịch sử
 nhận **đúng** những plan app làm ra trước khi file này tồn tại; một `Taste` toàn
 số 0 cho ra cùng con số nhưng lại nói rằng hồ sơ đã được tra.
 
-Đưa vào điểm số như một số hạng cộng có hệ số `W`:
+### Ba luật số học, và lý do từng luật
+
+**`lean()` chuẩn hoá theo thể loại đông nhất, không theo tổng.** Câu trả lời là
+"cái này gần thứ họ làm nhiều nhất tới đâu", không phải "cái này chiếm bao nhiêu
+phần trong mọi thứ họ đã làm". Cách thứ hai đọc rất tệ với người có gu rộng: bảy
+thể loại trong collections thì mọi chỗ đều được một phần bảy, và một hồ sơ nhạt
+đi khi học thêm còn tệ hơn không có hồ sơ.
+
+**Lấy `max` trên các thể loại của địa điểm, không lấy trung bình.** Một quán cà
+phê kiêm điểm ngắm cảnh vẫn là quán cà phê với người thích cà phê; lấy trung bình
+là phạt nó vì nó là hai thứ.
+
+**`tally` đếm mỗi địa điểm một lần**, theo `slug` khi có. Chỗ đã lưu đến dưới
+dạng danh sách phẳng của các collection, nên một quán nằm trong cả *"Cuối tuần"*
+lẫn *"Gần chỗ làm"* trước đây được đếm hai lần — lặng lẽ cho người tổ chức nhiều
+bộ sưu tập nhất một tiếng nói to nhất. Luật này nằm trong `tally` chứ không ở chỗ
+gọi vì nó là **thuộc tính của số học**, không phải kỷ luật của từng người gọi.
+Không có slug thì đếm cả hai lần — đó là câu trả lời trung thực cho một người gọi
+chưa nói những chỗ này là chỗ nào.
+
+### Cổng cho `passedOver`
+
+`passedOver` bị **bỏ qua hoàn toàn** khi `saved` rỗng.
+
+"Mở rồi không lưu" chỉ là một lời từ chối nếu lưu là việc người này có làm. Người
+đã lưu ba mươi chỗ mà không lưu chỗ này là người đã chọn; người chưa lưu gì cả
+không hề từ chối hai trăm chỗ — họ chưa tìm ra cái nút. Dữ liệu không phân biệt
+nổi hai trường hợp đó: cả hai đều là một `open` không có gì đi sau. Nên sự khác
+biệt phải được khẳng định trong mã, và nó là khác biệt giữa một hồ sơ gu và một
+hình phạt vì chưa quen app.
+
+Nói gọn: **một sự im lặng chỉ có nghĩa "không" khi phát ra từ người đã từng được
+nghe nói "có".**
+
+Phép thử là *số chỗ đã lưu*, không phải *số thể loại đã lưu*: `tally` đếm thể
+loại mà một lượt lưu mang theo, và một chỗ chưa được desk gắn thẻ sẽ cho ra tally
+rỗng dù người đó có dùng nút. Điều đang được khẳng định là về cái nút. **Một lượt
+lưu là đủ** — đây không phải thước đo lưu nhiều hay ít, mà là bằng chứng người ta
+biết cử chỉ đó tồn tại.
+
+### Hai bề mặt, hai cấu hình
+
+```
+Lập kế hoạch   planner.ts    TASTE_WEIGHT = 2     có passedOver, KHÔNG có preferred
+   SketchingScreen · PlanOptionsScreen · PlanEditScreen
+Tìm kiếm       opennow.ts    TASTE_LIFT = 0.23    có preferred, KHÔNG có passedOver
+   SearchScreen → khối "Đang mở cửa" của zero-state
+Khám phá       —             không dùng taste
+```
+
+**Chip khai báo bị giữ lại khỏi planner, có chủ ý.** Wizard hỏi đúng câu đó gắt
+hơn: `canPlan` không cho bắt đầu khi chưa chọn thể loại nào, và `dropReason` loại
+sạch những gì nằm ngoài lựa chọn. Một bộ chip cũ chỉ có thể xáo lại thứ mà cái
+cổng kia đã cho qua — cùng một câu hỏi, hỏi hai lần, và câu trả lời cũ là câu yếu
+hơn. Lý lẽ đó nói về planner và chỉ planner. Tìm kiếm không có wizard, không có
+cổng, không có gì hỏi cả, nên chip ở đó không phải câu trả lời thứ hai; nó là câu
+duy nhất. Vì vậy `useBrowseTaste` là **hook riêng** chứ không phải một cờ trên
+`usePlanProfile`: một cờ sẽ đẩy quyết định về từng chỗ gọi, và ngày ai đó truyền
+nó từ màn hình plan thì thứ vừa bị gỡ ra đã lặng lẽ quay lại.
+
+**`passedOver` không đọc ở Tìm kiếm** vì nó tốn một truy vấn và cần opt-in, còn
+hook này chạy trên màn hình người ta đang cuộn. Planner mới là chỗ tín hiệu đó
+đáng một vòng mạng.
+
+Đưa vào điểm plan như một số hạng cộng có hệ số `W`:
 
 ```
 score = overlap(categories, draft.categories) * 3     ← câu trả lời vừa xong
       + overlap(vibe_tags, slot.pref) * 2
       + rating + min(3, log10(1 + rating_count))
-      + affinity(place, taste) * W                    ← mới
-      - distancePenalty(place, stopTrước)             ← mới
+      + affinity(place, taste) * W
+      - distancePenalty(place, stopTrước)
 ```
 
-`W = 2`, thấp hơn hệ số 3 của câu trả lời trong wizard — có chủ ý. Người dùng
-vừa nói họ muốn gì; một plan bỏ qua điều đó để chiều hồ sơ là plan sai. Taste
-dùng để phá thế hoà và xếp thứ tự, không để đổi câu trả lời. Nên có test khẳng
-định điều này.
+`W = 2`, thấp hơn hệ số 3 của câu trả lời trong wizard — có chủ ý. Người dùng vừa
+nói họ muốn gì; một plan bỏ qua điều đó để chiều hồ sơ là plan sai. Taste dùng để
+phá thế hoà và xếp thứ tự, không để đổi câu trả lời. Có test khẳng định điều này.
+
+**`TASTE_LIFT = 0.23` là số đo, không phải số chọn.** 374 địa điểm có rating của
+catalog chạy từ 3.60 đến 5.00 với **độ lệch chuẩn 0.23** — ba phần tư nằm giữa
+4.50 và 4.90. Đó là lý do danh sách đang-mở-cửa trong bản tham chiếu đọc lên là
+4.9, 4.9, 4.9: xếp catalog này theo rating gần như xếp theo không gì cả, và ba
+thẻ người ta nhìn thấy được quyết định bởi chữ số thập phân thứ tư. Nên một độ
+lệch chuẩn là toàn bộ ngân sách. Trong cụm 4.5–4.9 nó có tính quyết định — nó xáo
+lại đúng dải mà rating không tách nổi — còn ngoài cụm đó nó không làm được gì
+đáng kể: một chỗ 3.6 được nâng lên 3.85 vẫn dưới mọi chỗ 4.5 trong thành phố.
+Một cuốn cẩm nang để chỗ tầm thường vượt mặt chỗ hay chỉ vì bạn thích cà phê thì
+đã thôi làm cẩm nang.
+
+**Khám phá chưa được cá nhân hoá.** Kệ *From the community* xếp theo `rankByLikes`
+— bình chọn của **cả cộng đồng**, không phải gu của người đang xem — và danh sách
+địa điểm bên dưới là thứ tự catalog, lọc theo chip thể loại nếu có. Đây là khoảng
+trống đã biết, không phải một quyết định.
+
+### Ghi sự kiện
+
+`place_events` có năm động từ, ghi ở ba chỗ: mở `PlaceDetailScreen` → `open`;
+sheet lưu → `save`/`unsave`, và chỉ **sau khi** lượt ghi thành công, vì một sự
+kiện cho lượt lưu không xảy ra còn tệ hơn không có sự kiện; lưu chuyến đi →
+`plan_keep` cho chỗ giữ lại, `plan_drop` cho chỗ bị bỏ ra.
+
+`fetchPassedOver` đọc **mới nhất trước** và động từ mới nhất về một chỗ thắng:
+người mở một quán, bỏ đi, rồi tuần sau lưu nó thì không hề bỏ qua nó.
+
+Cổng `history_on` được kiểm ở client để tiết kiệm một vòng mạng **và kiểm lại ở
+Postgres**, nơi insert policy đòi nó. Lượt kiểm thứ hai mới là bảo đảm; lượt đầu
+chỉ là phép lịch sự với đường truyền. `clearMyHistory` không tra `history_on` —
+tắt ghi mà không xoá được thứ đã ghi đúng là cái bẫy cả bảng này phải tránh.
 
 ## Chi phí và vận hành
 
@@ -775,8 +886,9 @@ thứ `planTrips` đã đọc (`budgetVnd`, `KM_PENALTY`) mà wizard không có 
 
 - `20260817120000_preferences.sql` (`preferences` + `place_events`) +
   `supabase/tests/preferences_test.sql`, nối vào `run.sh`
-- `app/src/lib/taste.ts` + 16 test; `planner.ts` nhận `taste` và `budgetVnd`
-- `app/src/lib/tasteProfile.tsx` — gom bốn tín hiệu, và ghi tín hiệu thứ tư
+- `app/src/lib/taste.ts` + 27 test; `planner.ts` nhận `taste` và `budgetVnd`
+- `app/src/lib/tasteProfile.tsx` — gom năm tín hiệu, và ghi tín hiệu thứ năm.
+  Bốn tín hiệu ở phase này; `liked` đến sau (#420) — xem mục Personalization
 - `data.ts`: `useMyPreferences`, `savePreferences`, `logPlaceEvent`,
   `fetchPassedOver`, `clearMyHistory`
 - `EditProfileScreen`: chip category, ngân sách theo dải, công tắc lịch sử
