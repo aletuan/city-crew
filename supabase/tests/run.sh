@@ -187,6 +187,23 @@ for f in "$ROOT"/supabase/migrations/*_stamp_updated_at.sql; do
 done
 run "$DB" -f "$HERE/updated_at_test.sql"
 
+# Recording on by default, and a row for every account. After the block
+# above rather than inside it, for the same reason the channel block runs
+# after its seed: the backfill acts on rows that already exist, and
+# `preferences_test.sql` inserts its own preference rows by hand — rows this
+# migration would have made first, turning two of that file's checks into
+# primary-key collisions.
+#
+# Its filename says what it does rather than which table it touches, so the
+# `*_preferences.sql` glob above does not reach it. Listed, not globbed for
+# — the same trap the collection-likes block notes, and the one this block
+# was added to fix after CI caught the migration never running at all.
+echo "→ history on by default"
+for f in "$ROOT"/supabase/migrations/*_history_on_by_default.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/history_default_test.sql"
+
 # The editorial identities. Last of all, because it walks the whole path a
 # real sign-up takes — reservations lifted, the trigger building profiles
 # from metadata, reservations restored — and every block above expects the
