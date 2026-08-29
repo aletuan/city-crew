@@ -35,9 +35,9 @@ describe('the first launch', () => {
   it('introduces the three things the tabs never say out loud', async () => {
     render(<WelcomeSheet />);
     expect(await screen.findByText('Welcome to City Crew')).toBeTruthy();
-    expect(screen.getByText('Explore and save')).toBeTruthy();
-    expect(screen.getByText('Plan with AI')).toBeTruthy();
-    expect(screen.getByText('Bring the crew')).toBeTruthy();
+    expect(screen.getByText('Discover & save')).toBeTruthy();
+    expect(screen.getByText('Plan with ease')).toBeTruthy();
+    expect(screen.getByText('Share with friends')).toBeTruthy();
   });
 
   // What "leaves" means here is the written flag, not a vanished word:
