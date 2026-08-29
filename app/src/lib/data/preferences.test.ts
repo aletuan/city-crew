@@ -82,7 +82,10 @@ describe('logPlaceEvent', () => {
 });
 
 describe('fetchPassedOver', () => {
-  const row = (slug: string, kind: string) => ({ kind, places: { slug } });
+  // `submitted_by` null unless a test says otherwise: the ordinary place
+  // came from the desk, and nobody in these rows is its author.
+  const row = (slug: string, kind: string, submittedBy: string | null = null) =>
+    ({ kind, places: { slug, submitted_by: submittedBy } });
 
   // The verdict is over a sequence, newest first, and the newest verb wins:
   // somebody who opened a café, walked away, and saved it a week later has
@@ -108,6 +111,37 @@ describe('fetchPassedOver', () => {
     fake().replies({ data: [] });
     await fetchPassedOver('u-1', '2026-08-01');
     expect(fake().log[0].filters).toEqual([['user_id', 'u-1'], ['created_at>=', '2026-08-01']]);
+  });
+
+  // The bug this was written for, measured on the live database: the
+  // suggestion flow ends on the new place's detail screen, so a row created
+  // at 13:04:38 had an `open` against it at 13:04:42. Read as a refusal, it
+  // made somebody's own submission the most disliked place in their city.
+  it('does not count opening a place you put in the catalog yourself', async () => {
+    fake().replies({ data: [row('mine', 'open', 'u-1'), row('theirs', 'open')] });
+    expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual(['theirs']);
+  });
+
+  // Somebody else's submission is somebody else's: opening it and walking
+  // away means exactly what it means for a desk place.
+  it('still counts a place somebody else suggested', async () => {
+    fake().replies({ data: [row('a', 'open', 'u-2')] });
+    expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual(['a']);
+  });
+
+  // Only `open` is excused. Building a plan, being offered your own café
+  // and taking it out is a real refusal, and the fix for one bug must not
+  // swallow a signal that was never broken.
+  it('still counts your own place dropped out of a plan', async () => {
+    fake().replies({ data: [row('mine', 'plan_drop', 'u-1')] });
+    expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual(['mine']);
+  });
+
+  // An excused `open` says nothing rather than clearing what an older row
+  // said. Newest-first, so the drop is the older of these two.
+  it('lets an older plan_drop stand under an excused open', async () => {
+    fake().replies({ data: [row('mine', 'open', 'u-1'), row('mine', 'plan_drop', 'u-1')] });
+    expect(await fetchPassedOver('u-1', '2026-08-01')).toEqual(['mine']);
   });
 
   it('ignores a row whose place has left the catalog', async () => {
