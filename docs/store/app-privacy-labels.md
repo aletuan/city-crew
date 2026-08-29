@@ -96,7 +96,10 @@ là mức bình thường cho app dạng này.
 
 1. Vị trí tiếp tục chỉ xử lý on-device (không thêm query gửi toạ độ lên server).
 2. `STARTUP_TRACE_UPLOAD` tiếp tục đọc channel — nếu có ngày ép bật cả
-   production, phải khai thêm Diagnostics → Performance Data.
+   production, phải khai thêm Diagnostics → Performance Data. (`STARTUP_TRACE`,
+   cờ log console, cũng đọc cùng channel; nó không rời khỏi máy nên không đụng
+   tới nhãn, nhưng bật nó ở production thì bản App Store ghi log launch vào log
+   hệ điều hành.)
 3. Không thêm SDK quảng cáo/analytics nào mà chưa cập nhật bảng.
 4. Nếu `plan-assist` bắt đầu gửi thêm dữ liệu (vị trí, id tài khoản, lịch sử) hay
    đổi sang chatbot tự do, phải sửa cả privacy policy, nhãn App Privacy và age

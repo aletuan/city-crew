@@ -18,19 +18,35 @@
 // The clock and the sink are arguments so a test can hold both; the app
 // passes `Date.now` and `console.log`.
 
+import { IS_PRODUCTION_CHANNEL } from './channel';
+
 /**
  * The switch. On, every launch writes its waterfall to the console — a
  * dozen short lines, visible wherever the JS log goes (the `expo start`
  * terminal, or the OS log a release build writes to). Off, `mark` returns
  * before touching the clock and the launch logs nothing.
  *
- * On for now on purpose: it exists because launches still feel slow after
- * the stored-city work, and the next fix should be aimed by these numbers
- * rather than by another round of reading the code. When the waterfall is
- * flat enough that nobody is looking at it, turn it off here — one
- * constant, same shape as `RESUME_STORED_CITY` and `WEATHER_EFFECTS`.
+ * It used to be a hand-flipped `true`, on everywhere, and the comment here
+ * said to turn it off "when the waterfall is flat enough that nobody is
+ * looking at it". The 64 launches `startup_traces` had collected by then
+ * said that day had come, at least for the half a reader waits on:
+ *
+ *     first-frame:released      14ms
+ *     explore:content          342ms   ← content on screen
+ *     ────────────────────────────── the refresh lands after this
+ *     catalog:collections     1547ms
+ *
+ * So it now asks the channel, exactly as `STARTUP_TRACE_UPLOAD` does: on
+ * in Expo Go, a dev build and the TestFlight "preview" channel, off in the
+ * App Store build. That is the half worth keeping — the numbers above were
+ * read off a TestFlight install, and nothing was learned from a reader's
+ * phone writing the same dozen lines into an OS log nobody opens.
+ *
+ * The two flags stay separate constants rather than one: the console half
+ * and the server half are different costs, and either can be turned off by
+ * hand here without taking the other with it.
  */
-export const STARTUP_TRACE = true;
+export const STARTUP_TRACE = !IS_PRODUCTION_CHANNEL;
 
 /** `at` is the clock's raw reading; `ms` is elapsed since the trace
  *  started — the number a report away from this device can use, since raw

@@ -72,4 +72,6 @@ follows the device language.
    nên một link chết ở đó là reviewer gặp trước cả khi mở listing.
 3. Bảng App Privacy đã điền đúng theo `app-privacy-labels.md`.
 4. Screenshots đủ cỡ 6.9" cho ít nhất locale en-US.
-5. `STARTUP_TRACE_UPLOAD` không cần đụng — tự tắt trên channel production.
+5. Hai cờ trace không cần đụng — cả `STARTUP_TRACE` (log console) lẫn
+   `STARTUP_TRACE_UPLOAD` (gửi lên `startup_traces`) đều tự tắt trên channel
+   `production`, nên bản App Store không log và không gửi gì.
