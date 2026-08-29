@@ -67,6 +67,32 @@ export function openOn(stored: StoredPick, knownIds: readonly string[], resume: 
  * one change, only for a reader who has genuinely moved city since their
  * last launch, and only ever from a remembered city to their real one.
  */
+/**
+ * The stored pick, with the choosing person's name taken off it — or null
+ * when there is nothing to take off.
+ *
+ * `manual` means "the reader said so", and `city.tsx` honours that
+ * absolutely: it returns before the platform is even asked where the phone
+ * is. That is right for as long as the reader is the same person. It stops
+ * being right the moment the account changes, because the pick is stored
+ * per *device* and nothing about signing out clears it — so a stranger's
+ * choice would go on silencing the location question for every account
+ * after it, and a new reader in Hanoi opens the app on the Da Nang the
+ * last one chose, with no way of knowing why or that there is a way out.
+ *
+ * The id is kept. It is a reasonable guess and it lets the next launch
+ * paint before the network answers; `auto` is the whole of the change, and
+ * it says only that nobody has claimed this choice any more.
+ *
+ * Null for "no write needed" rather than an unchanged copy, so the caller
+ * does not touch storage to say nothing — the common case by far, since
+ * most picks were never manual.
+ */
+export function releaseChoice(stored: StoredPick): StoredPick | null {
+  if (!stored.id || stored.mode !== 'manual') return null;
+  return { ...stored, mode: 'auto' };
+}
+
 export function shouldCorrect(showing: Pick | null, nearId: string | null): boolean {
   if (!showing || !nearId) return false;
   if (showing.mode === 'manual') return false;
