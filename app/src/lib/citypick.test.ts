@@ -3,7 +3,7 @@
 // is invisible from the outside and was costing 1.2 s a launch.
 
 import { describe, expect, it } from 'vitest';
-import { openOn, settleOn, shouldCorrect, storedPick } from './citypick';
+import { openOn, releaseChoice, settleOn, shouldCorrect, storedPick } from './citypick';
 
 const KNOWN = ['hanoi', 'hcmc', 'danang'];
 
@@ -97,5 +97,37 @@ describe('settleOn', () => {
 
   it('falls back to the app default when neither knows', () => {
     expect(settleOn(null, null, 'hcmc')).toBe('hcmc');
+  });
+});
+
+// ── whose word it was ────────────────────────────────────────────────
+//
+// A manual pick silences the location question entirely — `city.tsx`
+// returns before asking the platform anything. That is right while the
+// reader is the same person, and wrong the moment the account changes:
+// the pick lives on the device, signing out does not clear it, and a
+// stranger's choice would go on deciding for everyone after them.
+describe('releaseChoice', () => {
+  it('takes the claim off a manual pick and keeps the city', () => {
+    expect(releaseChoice({ id: 'danang', mode: 'manual' })).toEqual({ id: 'danang', mode: 'auto' });
+  });
+
+  // Null rather than an unchanged copy, so the caller writes nothing in
+  // the common case — most picks were never manual to begin with.
+  it('asks for no write when there is nothing to release', () => {
+    expect(releaseChoice({ id: 'danang', mode: 'auto' })).toBeNull();
+    expect(releaseChoice({})).toBeNull();
+    expect(releaseChoice({ mode: 'manual' })).toBeNull();
+  });
+
+  // The released pick has to survive the door it is going back through:
+  // `openOn` must still open on it, now as an automatic one, so the next
+  // launch paints immediately and the location answer is allowed to
+  // correct it.
+  it('leaves a pick the bootstrap still opens on, but may now move', () => {
+    const released = releaseChoice({ id: 'danang', mode: 'manual' })!;
+    const opened = openOn(released, ['danang', 'hanoi'], true);
+    expect(opened).toEqual({ id: 'danang', mode: 'auto' });
+    expect(shouldCorrect(opened, 'hanoi')).toBe(true);
   });
 });

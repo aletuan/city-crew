@@ -15,7 +15,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { supabase } from './supabase';
 // Pure arithmetic, kept where a test runner can reach it.
 import { nearestTo } from './geo';
-import { openOn, settleOn, shouldCorrect, storedPick } from './citypick';
+import { openOn, releaseChoice, settleOn, shouldCorrect, storedPick } from './citypick';
 import { parseCachedCities } from './citylist';
 import { startupTrace } from './trace';
 
@@ -380,6 +380,49 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
     }, 15_000);
     return () => { live = false; clearInterval(id); };
   }, [listFailed]);
+
+  /**
+   * When the account that made a manual pick leaves, the pick stops being
+   * anybody's word.
+   *
+   * `setCity` writes `mode: 'manual'`, and the bootstrap honours that
+   * absolutely — `if (opening?.mode === 'manual') return;`, before the
+   * platform is asked anything. But the pick is stored per *device*: the
+   * key carries no user id and signing out never touched it. So one manual
+   * choice went on silencing the location question for every account after
+   * it, and a new reader in Hanoi opened on the Da Nang a previous one
+   * chose, with no signal that a choice was being made for them.
+   *
+   * Watched through the client rather than through `useAuth`, and that is
+   * not a shortcut. `auth.tsx` imports `expo-image-manipulator` for
+   * avatars, and the city is reached by almost every screen — importing
+   * the provider here put image manipulation into the dependency graph of
+   * a place card, which a test that had nothing to do with any of this
+   * found within the minute. What this needs is one fact, `supabase` is
+   * already here, and `SIGNED_OUT` names it exactly: it does not fire on a
+   * launch the way an `INITIAL_SESSION` does, so there is no ordinary
+   * start to tell apart from a departure.
+   *
+   * The in-memory `mode` moves with the stored one. Signing out and
+   * signing up again happens without the app restarting, which is exactly
+   * the case this exists for — a storage-only fix would arrive one launch
+   * too late for the reader who just met it.
+   */
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== 'SIGNED_OUT') return;
+      (async () => {
+        const raw = await AsyncStorage.getItem(KEY).catch(() => null);
+        let stored: { id?: string; mode?: 'auto' | 'manual' } = {};
+        try { stored = raw ? JSON.parse(raw) : {}; } catch { /* corrupt store */ }
+        const released = releaseChoice(stored);
+        if (!released) return;
+        setMode('auto');
+        AsyncStorage.setItem(KEY, JSON.stringify(released)).catch(() => {});
+      })();
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   const setCity = useCallback((id: string) => {
     setCityId(id);

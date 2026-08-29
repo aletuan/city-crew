@@ -134,14 +134,39 @@ export function fakeSupabase() {
     return b;
   };
 
+  // Whoever is listening for sign-in and sign-out. Held as a list so a
+  // test can fire an event at the code under test rather than reaching
+  // into a provider to fake one — `lib/city` releases a manual pick on
+  // SIGNED_OUT, and firing the real event is the only honest way to say so.
+  const listeners: ((event: string, session: unknown) => void)[] = [];
+
   return {
     queue,
     log,
-    reset() { queue.length = 0; log.length = 0; },
+    reset() { queue.length = 0; log.length = 0; listeners.length = 0; },
     /** Queue the replies the next awaited calls will get, in order. */
     replies(...r: Reply[]) { queue.push(...r); },
+    /** Tell every listener what just happened to the session. */
+    fireAuth(event: string, session: unknown = null) {
+      for (const fn of [...listeners]) fn(event, session);
+    },
     client: {
       from: build,
+      auth: {
+        onAuthStateChange(fn: (event: string, session: unknown) => void) {
+          listeners.push(fn);
+          return {
+            data: {
+              subscription: {
+                unsubscribe() {
+                  const at = listeners.indexOf(fn);
+                  if (at >= 0) listeners.splice(at, 1);
+                },
+              },
+            },
+          };
+        },
+      },
       /**
        * A Postgres function, which is not a query and not an Edge Function.
        *
