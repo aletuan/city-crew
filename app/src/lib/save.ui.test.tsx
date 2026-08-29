@@ -42,7 +42,11 @@ vi.mock('./data', async (orig) => ({
   useMyCollections: (ownerId?: string | null) => (ownerId
     ? { ...world.mine, reload }
     : { data: [], loading: false, loaded: true, error: null, reload }),
-  useMyPreferences: () => ({ data: { history_on: world.historyOn } }),
+  // `loaded` as well as the value: `SaveProvider` only believes the flag
+  // once the row it describes has arrived, because the empty preferences
+  // now read as recording. A mock without it says "still loading" and
+  // suppresses every event.
+  useMyPreferences: () => ({ loaded: true, data: { history_on: world.historyOn } }),
   addPlaceToCollection,
   removePlaceFromCollection,
   logPlaceEvent,

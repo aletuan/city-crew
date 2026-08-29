@@ -248,7 +248,14 @@ export function useNoteEvent(): (placeSlug: string, kind: EventKind) => void {
   const uid = session?.user?.id ?? null;
   const { city } = useCity();
   const prefs = useMyPreferences(uid);
-  const on = prefs.data.history_on;
+  // `loaded`, not just the value. The empty preferences now say recording
+  // is on (see `NO_PREFERENCES`), so without this the moment before the
+  // row lands would send an event for somebody who has turned it off —
+  // refused by the insert policy, but a request nobody needed to make.
+  // Waiting costs nothing visible: this hook's identity changes when the
+  // row arrives, and the effect that calls it lists it in its deps, so
+  // the event is noted then instead.
+  const on = prefs.loaded && prefs.data.history_on;
   const cityId = city?.id ?? null;
 
   return useCallback(

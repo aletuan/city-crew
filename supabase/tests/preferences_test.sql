@@ -97,6 +97,13 @@ end $$;
 
 -- Recording is off until asked for. A default of true would make the opt-in
 -- a lie told once at signup.
+--
+-- Still `false%`, and deliberately so: this file tests the migration that
+-- created the column, and that migration really does default it off. The
+-- default is flipped later by `*_history_on_by_default.sql`, which runs in
+-- its own block at the end of `run.sh` and is checked by
+-- `history_default_test.sql`. Asserting the end state here would be this
+-- file claiming credit for a file it never runs.
 do $$
 declare d text;
 begin

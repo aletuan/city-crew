@@ -87,10 +87,14 @@ describe('against the real documents', () => {
         }
       }
     }
-    // Not a round number for its own sake: it is the count the pages
-    // carried when this was written, so losing a link to a bad edit of
-    // the data shows up here rather than as a dead phrase in the sheet.
+    // Not round numbers for their own sake: they are the count the pages
+    // carry, so losing a link to a bad edit of the data shows up here
+    // rather than as a dead phrase in the sheet. They move when the
+    // documents do, and the move is the thing to read — 42 became 44 when
+    // the activity-history clause was rewritten for the on-by-default
+    // change, which turned one emphasis per language into two: the default
+    // itself, and the delete button that answers it.
     expect(links).toBe(12);
-    expect(bolds).toBe(42);
+    expect(bolds).toBe(44);
   });
 });

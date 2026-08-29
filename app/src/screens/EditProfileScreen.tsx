@@ -285,9 +285,9 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
                 </Text>
                 <Text style={s.note}>
                   {t(
-                    'Off by default. On, a place you opened and walked away from stops coming back.',
-                    'Mặc định tắt. Bật lên thì chỗ bạn mở rồi bỏ qua sẽ thôi quay lại.',
-                    '初期設定はオフ。オンにすると、開いて保存しなかった場所は出にくくなります。',
+                    'On by default. A place you opened and walked away from stops coming back. Off, nothing is recorded.',
+                    'Mặc định bật. Chỗ bạn mở rồi bỏ qua sẽ thôi quay lại. Tắt thì không ghi gì cả.',
+                    '初期設定はオン。開いて保存しなかった場所は出にくくなります。オフにすると何も記録されません。',
                   )}
                 </Text>
               </View>

@@ -25,9 +25,22 @@ mới được nộp.
 | Purchases / Financial / Health / Contacts / Browsing / Search history ngoài app | **No** | — | — | Không tồn tại trong app |
 
 **Ghi chú Usage Data:** khai `Product Interaction` (linked, App Functionality) vì
-tính năng lịch sử xem địa điểm tồn tại, dù mặc định tắt và người dùng phải tự
-bật. Apple không có khái niệm "opt-in nên khỏi khai"; khai thừa một mục an toàn
-hơn bị reviewer bắt thiếu.
+tính năng lịch sử xem địa điểm tồn tại. Apple hỏi app **có thu thập loại dữ liệu
+đó không**, không hỏi trạng thái mặc định — nên câu trả lời không phụ thuộc vào
+việc công tắc bật hay tắt sẵn.
+
+Đó là lý do **bảng trên không đổi một ô nào** khi mặc định chuyển từ tắt sang
+bật (migration `20260829120000_history_on_by_default.sql`): cùng loại dữ liệu,
+cùng liên kết danh tính, cùng mục đích, vẫn không tracking. Không phải điền lại
+App Privacy trong App Store Connect.
+
+Ghi chú này từng nói "dù mặc định tắt và người dùng phải tự bật" — không còn
+đúng. Mặc định giờ là **bật**, màn hình đăng ký nói rõ điều đó trước khi ghi bất
+cứ gì, và công tắc tắt nằm trong Sửa hồ sơ → *Nhớ những chỗ tôi mở*.
+
+**ATT vẫn là No.** Lịch sử này là dữ liệu bên thứ nhất, không rời khỏi tài khoản,
+không ghép với dữ liệu của app hay website nào khác — không phải "tracking" theo
+định nghĩa của Apple, dù bật sẵn.
 
 ## Bên thứ ba: trợ lý AI trong tính năng Kế hoạch
 
@@ -110,3 +123,8 @@ Hai trang HTML này **được sinh ra**, không sửa tay: nội dung nằm ở
 4. Nếu `plan-assist` bắt đầu gửi thêm dữ liệu (vị trí, id tài khoản, lịch sử) hay
    đổi sang chatbot tự do, phải sửa cả privacy policy, nhãn App Privacy và age
    rating **trước** khi nộp bản build đó.
+5. Lịch sử xem địa điểm tiếp tục ở lại trong tài khoản: chỉ chủ tài khoản đọc
+   được (`owners read their events`), không hiện cho ai khác, không rời khỏi
+   Supabase. Ngày nào nó được dùng để nhắm nội dung xuyên app hay chia sẻ ra
+   ngoài, ATT và nhãn tracking phải được xét lại — trạng thái mặc định không
+   đụng tới hai thứ đó, nhưng việc dùng dữ liệu vào đâu thì có.
