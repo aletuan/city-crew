@@ -194,5 +194,21 @@ const s = StyleSheet.create({
   },
   // The empty-handed answer, under the well it answers for.
   note: { color: colors.accent, fontSize: 12.5, lineHeight: 17, paddingHorizontal: 4, marginBottom: 6 },
-  sep: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft, marginHorizontal: 4 },
+  // `marginVertical`, and it is the whole reason this line is visible.
+  //
+  // Without it the hairline sits flush against the next row, which is fine
+  // between two plain ones and invisible against the selected pill: an 8%
+  // hairline touching the top edge of an `accentSoft` fill reads as the
+  // pill's own border, not as a divider. The language sheet got away with
+  // it because its selected row is usually the first, so its dividers fall
+  // between plain rows; the appearance sheet has two rows and one divider,
+  // and when Light is chosen that divider is the one hugging the pill.
+  //
+  // Three points either side is enough to put sheet colour between the
+  // line and the fill, and small enough that the rhythm between plain rows
+  // does not change.
+  sep: {
+    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
+    marginHorizontal: 4, marginVertical: 3,
+  },
 });
