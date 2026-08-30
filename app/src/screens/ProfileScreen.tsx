@@ -7,7 +7,7 @@
 // reference's violet gradient is translated, not copied.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 // TEMPORARY — read/written only by the "Always show welcome" row.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -126,6 +126,49 @@ function SettingRow({ icon, label, value, onPress, last }: {
   );
 }
 
+/**
+ * The same row, with a switch where the chevron would be.
+ *
+ * Its own component rather than a flag on `SettingRow`, because the two
+ * differ in more than their right-hand glyph. A chevron row is pressable
+ * and promises a screen; this one is not pressable at all — the switch is
+ * the control, the way Edit profile's privacy toggle already works and the
+ * way the platform's own settings behave. One component taking `onPress`
+ * XOR `toggle` would have to be read carefully every time to know which
+ * half applied.
+ *
+ * The switch is what this row should always have been. It kept a chevron
+ * while flipping in place, so it wore the promise of a screen and then
+ * changed a word on the right instead — the same shape as its three
+ * neighbours, doing something else entirely.
+ */
+function SettingToggleRow({ icon, label, on, onChange, last }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  on: boolean;
+  onChange: (next: boolean) => void;
+  last?: boolean;
+}) {
+  return (
+    <View style={[s.featureRow, !last && s.featureRowDivider]}>
+      <RoundIcon name={icon} />
+      <Text style={s.settingLabel} numberOfLines={1}>{label}</Text>
+      {/* The spacer `SettingRow` uses when it has no value, for the same
+          reason: it is what holds the control against the right edge. */}
+      <View style={{ flex: 1 }} />
+      <Switch
+        value={on}
+        // The switch carries the row's name, because on its own it is an
+        // unlabelled control: the text beside it is a separate node.
+        accessibilityLabel={label}
+        onValueChange={(next) => { fireHaptic('selection'); onChange(next); }}
+        trackColor={{ false: colors.borderGlass, true: colors.accentFaint }}
+        thumbColor={colors.text}
+      />
+    </View>
+  );
+}
+
 /** Workspace settings, for guests and members alike: which city's
  *  catalog the app shows, which language it speaks, how it looks. The
  *  header carries no switchers — this card is the one place to change
@@ -160,8 +203,10 @@ function SettingsCard() {
       .catch(() => {});
     return () => { live = false; };
   }, []);
-  const toggleAlways = () => {
-    const next = !always;
+  // Takes the value the switch reports rather than flipping `always`
+  // again: two sources for one boolean is how a control ends up
+  // disagreeing with the thing it controls.
+  const toggleAlways = (next: boolean) => {
     setAlways(next);
     const write = next
       ? AsyncStorage.setItem(WELCOME_ALWAYS_KEY, '1')
@@ -196,16 +241,16 @@ function SettingsCard() {
           value={schemeLabel(scheme, t)}
           onPress={() => setThemeOpen(true)}
         />
-        {/* TEMPORARY. A tap flips it; the sheet reads the flag when the
-            app next starts, so seeing it again is: switch on, close the
-            app, open it. Delete this row with the block above it — and
-            move `last` up to Appearance, which is the row it would leave
-            at the bottom of the card. */}
-        <SettingRow
+        {/* TEMPORARY. The sheet reads the flag when the app next starts,
+            so seeing it again is: switch on, close the app, open it.
+            Delete this row with the block above it — and move `last` up
+            to Appearance, which is the row it would leave at the bottom
+            of the card. */}
+        <SettingToggleRow
           icon="sparkles-outline"
           label={t('Always show welcome', 'Luôn hiện lời chào', 'ようこそ画面を毎回表示')}
-          value={always ? t('On', 'Bật', 'オン') : t('Off', 'Tắt', 'オフ')}
-          onPress={() => { fireHaptic('selection'); toggleAlways(); }}
+          on={always}
+          onChange={toggleAlways}
           last
         />
       </Card>
