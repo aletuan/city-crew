@@ -377,9 +377,8 @@ export default function PlanOptionsScreen({ navigation, route }: {
           <GradientCta
             icon="refresh"
             wide
-            label={pending
-              ? t('Finding three more…', 'Đang tìm ba cách khác…', '別の三案を探しています…')
-              : t('Regenerate', 'Tạo lại', '作り直す')}
+            label={t('Regenerate', 'Tạo lại', '作り直す')}
+            busy={!!pending}
             onPress={regenerate}
           />
         </View>
