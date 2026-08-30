@@ -11,11 +11,18 @@ const week = (hours: string) =>
 const DAY = week('8:00 AM – 10:00 PM');
 const NIGHT = week('7:00 PM – 2:00 AM');
 
+// The count defaults to a well-reviewed place rather than to nothing.
+// `bestFirst` shrinks a score toward the catalog mean by how few reviews
+// stand behind it, so at a count of zero every rating collapses to the
+// same number and a test about rating order would be testing nothing.
+// It is the realistic default too: of 385 published rated places, none
+// has a null review count and none has zero. Tests that are about thin
+// evidence pass their own count.
 const p = (
   slug: string,
   opening_hours: string[] | null,
   rating: number | null = null,
-  rating_count: number | null = null,
+  rating_count: number | null = 5000,
 ) => ({ slug, opening_hours, rating, rating_count });
 
 describe('openNowPlaces', () => {
@@ -38,11 +45,19 @@ describe('openNowPlaces', () => {
     expect(out.map((x) => x.slug)).toEqual(['best', 'good', 'ok']);
   });
 
-  it('puts rated above unrated, and more-reviewed first among equals', () => {
+  it('puts rated above unrated, and the better-known of two unrated first', () => {
     const out = openNowPlaces([
-      p('new', DAY, null), p('quiet', DAY, 4.5, 12), p('busy', DAY, 4.5, 900),
+      p('new', DAY, null, 3), p('known', DAY, null, 900), p('rated', DAY, 4.5, 900),
     ], WED_10AM);
-    expect(out.map((x) => x.slug)).toEqual(['busy', 'quiet', 'new']);
+    expect(out.map((x) => x.slug)).toEqual(['rated', 'known', 'new']);
+  });
+
+  // The same discount `bestFirst` applies on Explore, seen from the other
+  // surface that shares it: an open door with a five from four reviews
+  // does not lead the block.
+  it('discounts a five nobody has reviewed against a well-reviewed 4.9', () => {
+    const out = openNowPlaces([p('thin', DAY, 5.0, 4), p('solid', DAY, 4.9, 900)], WED_10AM);
+    expect(out.map((x) => x.slug)).toEqual(['solid', 'thin']);
   });
 
   it('breaks a dead tie on slug, so the list holds still', () => {
