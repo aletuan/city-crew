@@ -835,6 +835,7 @@ export default function CollectionsScreen({ navigation, route }: {
                 // `pair` branch has asked it all along, and this one never
                 // did.
                 const my = !!c.id && myLikes.includes(c.id);
+                const blurb = t(c.desc_en, c.desc_vi, c.desc_ja)?.trim() || '';
                 return (
                   <View style={s.row}>
                     <PressableScale onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}>
@@ -897,6 +898,43 @@ export default function CollectionsScreen({ navigation, route }: {
                               {n} {t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
                             </Text>
                           </View>
+                          {/* The sentence the curator wrote, which was
+                              the one thing about this list you could
+                              search for and not read.
+                              `collectionHaystack` has always folded
+                              `desc_*` into what a query matches, so the
+                              shelf would hand you a list on the strength
+                              of a line it never showed you.
+
+                              It earns the height here and nowhere else.
+                              The tiles are the looking mode and #430 spent
+                              that argument taking text off them; this is
+                              the reading mode, and a reading mode that
+                              omits the author's own description of the
+                              list is the grid with a smaller photograph.
+                              What made it urgent is that the shelf has
+                              changed under us: the desk's lists described
+                              themselves in their titles — "Rooftops with a
+                              view", "Cafés worth the detour" — and the
+                              lists people make are called "Family",
+                              "Study", "Dating". Those titles separate
+                              nothing. The sentence is the only thing that
+                              does.
+
+                              Two lines, because the column is 176pt wide
+                              on a 393pt phone — cover, chevron, and two
+                              card paddings take the rest — which is about
+                              23 characters a line, and the descriptions
+                              average 53. So two lines hold most of the
+                              typical one and clamp the long ones; one line
+                              would cut the average in half, and three
+                              would spend 20pt more on the tail of a
+                              minority. It costs the row about 45pt either
+                              way, roughly a fifth of a screenful, which is
+                              the trade this view exists to make. */}
+                          {blurb ? (
+                            <Text style={s.blurb} numberOfLines={2}>{blurb}</Text>
+                          ) : null}
                           {/* The heart the tile wears, wearing it for the
                               same reasons. On a public list somebody else
                               made, this glyph is your own answer and the
@@ -973,6 +1011,7 @@ export default function CollectionsScreen({ navigation, route }: {
               const own = item.c;
               const count = membersOf(own, places).length;
               const uri = coverFor(own);
+              const ownBlurb = t(own.desc_en, own.desc_vi, own.desc_ja)?.trim() || '';
               // Narrowed to roughly a third of its width, the card has room
               // for a name and a count and nothing else. So the cover comes
               // down to 64pt, the chevron closes up — the row is already
@@ -1019,6 +1058,26 @@ export default function CollectionsScreen({ navigation, route }: {
                             : t('Private', 'Riêng tư', '非公開')}`}
                         </Text>
                       </View>
+                      {/* The same sentence, for the same reason, because
+                          this is the same view. The argument for showing
+                          it is weakest on your own lists — you wrote them
+                          — but a reading mode that describes other
+                          people's lists and not yours is two designs
+                          wearing one toggle.
+
+                          Gone while the row is open, which is the one
+                          difference. Open, the card is pinned to about a
+                          third of its width and the text column falls
+                          from 176pt to roughly 36: the title already
+                          drops to a single line rather than wrap into the
+                          space the meta needs, and a two-line sentence
+                          there would shred into four characters a line.
+                          The note above the card says what the open row
+                          is for — a name and a count — and a description
+                          is exactly what that excludes. */}
+                      {!open && ownBlurb ? (
+                        <Text style={s.blurb} numberOfLines={2}>{ownBlurb}</Text>
+                      ) : null}
                       {/* How many people liked it — the answer to "is
                           anybody reading this list", which the shelf could
                           not give before and which a curator has no other
@@ -1283,6 +1342,17 @@ const s = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
   meta: { color: colors.textTertiary, ...type.meta },
+  // A third step, between the title and the metadata. The title is what
+  // the list is called and the meta line is bookkeeping; this is the only
+  // thing on the card a person wrote about it, so it takes the middle
+  // weight — `meta`'s size, `textSecondary`'s ink — rather than competing
+  // with the 18pt name above it or disappearing into the tertiary grey
+  // below.
+  //
+  // 20 rather than the 21 this file pairs with 15pt elsewhere: a wrapped
+  // paragraph pays its leading twice, and the row is already spending
+  // 45pt to be here.
+  blurb: { color: colors.textSecondary, ...type.meta, lineHeight: 20 },
   // Same 5pt gap the meta row keeps between the padlock and its sentence,
   // so the two lines start on the same optical edge — the heart and the
   // padlock are both glyphs standing in for a word.
