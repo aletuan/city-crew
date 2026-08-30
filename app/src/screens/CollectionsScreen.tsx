@@ -38,11 +38,16 @@ type Drag = ReturnType<Animated.Value['interpolate']>;
 const ACTIONS_W = 62 * 2 + 8 + 8;
 /** Where the Yours tab's tile/list choice sleeps between launches. */
 const VIEW_KEY = 'citycrew.collections.view';
-const THUMB = 92;
-const THUMB_OPEN = 64;
-/** The disclosure chevron's own footprint — it is a glyph, not a control,
- *  so this is the size of the mark rather than a touch target. */
-const CHEVRON = 17;
+/** The cover's width. Its height is whatever the text beside it comes to,
+ *  which is the point: an image with a fixed height floats in a card the
+ *  text has made taller, and once the description arrived it made it much
+ *  taller. Stretched, there is no gap left for it to float in.
+ *
+ *  126 is a bit over a third of a 349pt card. It buys the picture more
+ *  than twice the area of the 92pt square it replaces *and* leaves the
+ *  text wider than before — the chevron paid for both. */
+const COVER = 126;
+const COVER_OPEN = 88;
 
 // The card sells signing in, so it leads with what you get rather than with
 // what you are: "browsing as a guest" names a limitation and leaves the
@@ -311,8 +316,12 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
         // the finger has gone 12pt down, so the split is by angle —
         // shallower than ~63° opens actions, steeper stays a scroll.
         failOffsetY={[-12, 12]}
-        // No rubber-band past the actions: the row is 92pt tall and an
-        // overshoot on something this small reads as the row coming loose.
+        // No rubber-band past the actions. The reason used to be that the
+        // row was 92pt tall and an overshoot on something that small read
+        // as the row coming loose; with a stretched cover and a
+        // description the row is nearer 140 and that argument is spent.
+        // What holds instead is that there is nothing behind the two
+        // buttons — travel past them reveals the page, not more row.
         overshootRight={false}
         // Width is a layout property, so the pin cannot ride the native
         // driver — a JS-driven value cannot be composed from a native one.
@@ -994,14 +1003,11 @@ export default function CollectionsScreen({ navigation, route }: {
                               />
                               {likesWorthShowing(likes[c.slug]) && (
                                 <Text style={s.meta}>
-                                  {likes[c.slug]} {t('likes', 'lượt thích', 'いいね')}
+                                  {likes[c.slug]} {t(likes[c.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
                                 </Text>
                               )}
                             </PressableScale>
                           ) : null}
-                        </View>
-                        <View style={s.chevron}>
-                          <Ionicons name="chevron-forward" size={CHEVRON} color={colors.textTertiary} />
                         </View>
                       </Card>
                     </PressableScale>
@@ -1014,19 +1020,23 @@ export default function CollectionsScreen({ navigation, route }: {
               const ownBlurb = t(own.desc_en, own.desc_vi, own.desc_ja)?.trim() || '';
               // Narrowed to roughly a third of its width, the card has room
               // for a name and a count and nothing else. So the cover comes
-              // down to 64pt, the chevron closes up — the row is already
-              // open, it has nothing left to announce — and the title drops
-              // to a single line rather than wrapping into the space the
-              // meta needs. All of it rides the same drag as the pin, so
+              // down to 88pt, the title drops to a single line rather than
+              // wrapping into the space the meta needs, and the description
+              // goes entirely. All of it rides the same drag as the pin, so
               // the card reflows under your thumb instead of snapping when
               // you let go.
+              //
+              // Width only, now that the cover's height is the card's. The
+              // old pair animated both and had to, because the cover was a
+              // square with a height of its own; stretched, the height
+              // follows the text and animating it would fight the layout
+              // for the length of every swipe.
               const card = (open: boolean, drag: Drag | null) => (
                 <PressableScale onPress={() => navigation.navigate('CollectionDetail', { slug: own.slug })}>
                   <Card style={s.card}>
                     <Animated.View
                       style={[s.thumb, drag && {
-                        width: Animated.add(THUMB, Animated.multiply(drag, (THUMB - THUMB_OPEN) / ACTIONS_W)),
-                        height: Animated.add(THUMB, Animated.multiply(drag, (THUMB - THUMB_OPEN) / ACTIONS_W)),
+                        width: Animated.add(COVER, Animated.multiply(drag, (COVER - COVER_OPEN) / ACTIONS_W)),
                       }]}
                     >
                       {uri
@@ -1133,25 +1143,11 @@ export default function CollectionsScreen({ navigation, route }: {
                               standing in for its word. */}
                           <Ionicons name="heart" size={13} color={colors.textTertiary} />
                           <Text style={s.meta}>
-                            {likes[own.slug]} {t('likes', 'lượt thích', 'いいね')}
+                            {likes[own.slug]} {t(likes[own.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
                           </Text>
                         </View>
                       )}
                     </View>
-                    <Animated.View
-                      style={[s.chevron, drag && {
-                        // The gap the card lays out before it closes up
-                        // too, or the title keeps paying for a control
-                        // that is no longer there.
-                        width: Animated.add(CHEVRON, Animated.multiply(drag, CHEVRON / ACTIONS_W)),
-                        marginLeft: Animated.multiply(drag, space.cardPadding / ACTIONS_W),
-                        opacity: drag.interpolate({
-                          inputRange: [-40, 0], outputRange: [0, 1], extrapolate: 'clamp',
-                        }),
-                      }]}
-                    >
-                      <Ionicons name="chevron-forward" size={CHEVRON} color={colors.textTertiary} />
-                    </Animated.View>
                   </Card>
                 </PressableScale>
               );
@@ -1300,23 +1296,42 @@ const s = StyleSheet.create({
   firstFoot: { color: colors.textTertiary, fontSize: 13, lineHeight: 18, textAlign: 'center', marginTop: 4 },
 
   row: { marginHorizontal: space.page, marginBottom: space.cardGap },
-  card: {
-    flexDirection: 'row', alignItems: 'center', gap: space.cardPadding,
-    padding: space.cardPadding,
-  },
+  // Built the way `PlaceCard` is built, which is the way every other card
+  // in this app that leads with a photograph is built: the picture runs to
+  // the card's own edges and the padding lives on the text beside it. This
+  // row was the one exception — an inset square with its own `radius.image`
+  // floating in a padded box — and the exception was invisible until the
+  // description made the text taller than the square, at which point the
+  // square began floating in a gap it could not fill.
+  //
+  // No `alignItems` and no radius on the cover: the row stretches its
+  // children by default, and `Card` already clips to `radius.card`, which
+  // is what rounds the cover's outer corners and leaves its inner edge
+  // square against the text. `PlaceCard` has relied on exactly that since
+  // it was written.
+  card: { flexDirection: 'row' },
   // The box, which is what the swipe resizes; the cover inside fills it.
-  thumb: {
-    width: THUMB, height: THUMB, borderRadius: radius.image,
-    backgroundColor: colors.surfaceGlass,
-  },
-  thumbFill: { width: '100%', height: '100%', borderRadius: radius.image },
-  thumbEmpty: {
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.accentLine,
-  },
+  // Height deliberately absent — see COVER.
+  // `alignSelf` says out loud what the row would do anyway, because this
+  // is the line the whole change rests on and a reader should not have to
+  // know Yoga's default to see it.
+  thumb: { width: COVER, alignSelf: 'stretch', backgroundColor: colors.surfaceGlass },
+  // `flex: 1` rather than `height: '100%'`: the cover's height arrives from
+  // the stretch during layout, and filling it along the main axis of its
+  // own column needs no percentage to resolve against.
+  thumbFill: { width: '100%', flex: 1 },
+  // No hairline any more. Flush to three of the card's edges it doubled
+  // the card's own border, and on the fourth it drew a rule between the
+  // cover and the text that no cover with a photograph draws.
+  thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
 
-  // Revealed behind an owned row. Height comes from the row, so the two
-  // buttons stay square-ish whatever the title wraps to.
+  // Revealed behind an owned row. Height comes from the row, which used to
+  // keep the two buttons square-ish and now makes them full-height bars —
+  // the row went from 92pt to nearer 140 when the cover stretched and the
+  // description arrived. That is the shape iOS reveals behind a swiped row
+  // anyway, so it is left to follow the row rather than pinned to a height
+  // of its own, which would only put the buttons afloat the way the cover
+  // used to be.
   actions: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginLeft: 8 },
   // Width on the Pressable, the painted box on its animated child: the
   // child is what scales on press, and `flex: 1` is what makes it as tall
@@ -1338,7 +1353,14 @@ const s = StyleSheet.create({
   // one button that should read as soft. The fill carries the warning;
   // the edge is just what gives both buttons an edge.
   actionDelete: { backgroundColor: colors.badSoft, borderWidth: 1, borderColor: colors.borderGlassSoft },
-  cardText: { flex: 1, gap: 5 },
+  // The padding the card gave up. 13 vertical rather than 16 is
+  // `PlaceCard`'s figure and its reason — ~10% tighter than a standard
+  // card body, because this is a feed and not a form — and here it also
+  // gives back 6pt of the height the description costs.
+  cardText: {
+    flex: 1, gap: 5,
+    paddingHorizontal: space.cardPadding, paddingVertical: 13,
+  },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
   meta: { color: colors.textTertiary, ...type.meta },
@@ -1364,12 +1386,14 @@ const s = StyleSheet.create({
   // opening it. `alignSelf` positions the element in its parent, which is
   // the half that belongs on the container; see `PressableScale`.
   likesWrap: { alignSelf: 'flex-start' },
-  // A disclosure indicator, which is a mark and not a control: a bare
-  // chevron, the way the rest of the app already draws one. In a 44pt
-  // well with a fill and a hairline it looked like a button, and a button
-  // beside a tappable row raises a question the row cannot answer — what
-  // does pressing the circle do that pressing the row does not. Nothing:
-  // the row is the target, and always was. `overflow` is what lets the
-  // mark clip away as the swipe closes the space up.
-  chevron: { width: CHEVRON, alignItems: 'center', overflow: 'hidden' },
+  // The chevron that used to close this row is gone, and its 17pt plus
+  // the 16pt gap beside it are what paid for the wider cover: the text
+  // column still came out wider than it was.
+  //
+  // It was drawn as a disclosure mark rather than a control, which was
+  // the right call for what it was. What it was, though, was filler —
+  // `SearchScreen` says so out loud about its own, kept only so "the
+  // right edge is never simply empty". `PlaceCard` carries none, and it
+  // is the card this app shows most; a whole card of photograph and
+  // title is not a row that needs an arrow to say it opens.
 });
