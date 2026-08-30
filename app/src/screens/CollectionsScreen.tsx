@@ -823,13 +823,17 @@ export default function CollectionsScreen({ navigation, route }: {
                 );
               }
               // The community row — the tile's facts at reading density:
-              // byline instead of padlock, the quiet likes line instead
-              // of a tappable heart, and nothing behind a swipe, because
-              // none of it is yours to edit.
+              // byline instead of padlock, the same heart the tile wears,
+              // and nothing behind a swipe, because none of it is yours to
+              // edit.
               if (item.kind === 'com') {
                 const c = item.c;
                 const n = membersOf(c, places).length;
                 const cover = coverFor(c);
+                // The same test the tile makes, for the same glyph: the
+                // `pair` branch has asked it all along, and this one never
+                // did.
+                const my = !!c.id && myLikes.includes(c.id);
                 return (
                   <View style={s.row}>
                     <PressableScale onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}>
@@ -847,14 +851,70 @@ export default function CollectionsScreen({ navigation, route }: {
                               {c.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${atHandle(c.curator_handle)}` : ''}
                             </Text>
                           </View>
-                          {likesWorthShowing(likes[c.slug]) && (
-                            <View style={s.likesRow}>
-                              <Ionicons name="heart" size={13} color={colors.accentFaint} />
-                              <Text style={s.meta}>
-                                {likes[c.slug]} {t('likes', 'lượt thích', 'いいね')}
-                              </Text>
-                            </View>
-                          )}
+                          {/* The heart the tile wears, wearing it for the
+                              same reasons. On a public list somebody else
+                              made, this glyph is your own answer and the
+                              way you change it — the tile has always known
+                              that, and this row drew a tally instead:
+                              always filled, always coral, on every row at
+                              once. So a reader who had liked two lists saw
+                              six that claimed they had liked all six.
+
+                              `accentFaint` was picked to keep the tally
+                              quiet, and it does keep it quiet — on
+                              charcoal, where it resolves to #904035 under
+                              an accent of #FF6F5B. On paper the same token
+                              resolves to #D27161 under an accent of
+                              #C4402C, and a dimmed coral is just coral.
+                              The lesson is in which axis was used: the
+                              split has to be **hue**, not weight. Grey is
+                              a count; coral is you. Weight does not
+                              survive a change of theme.
+
+                              None of the rest is new either. The glyph
+                              pair, the two colours and the 15pt are what
+                              `CollectionDetailScreen` already draws for
+                              this exact fact, down to the count's gate —
+                              of the three places that show a like, this
+                              row was the only one not drawing it. 15
+                              rather than the tally's 13 because an outline
+                              heart that small spends its ink on a hairline
+                              and reads as a smudge, and because 15 is what
+                              a 15pt `meta` line is tuned for. `hitSlop`
+                              and no haptic of its own come from the tile:
+                              they are what let a button sit inside a row
+                              that is itself the target.
+
+                              The heart draws at any count. It is a control
+                              now, and the list nobody has liked yet is
+                              precisely the one that needs one. Only the
+                              number keeps the old rule. */}
+                          {c.id && c.is_public ? (
+                            <PressableScale
+                              containerStyle={s.likesWrap}
+                              style={s.likesRow}
+                              scaleTo={0.82}
+                              haptic="none"
+                              hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}
+                              onPress={() => onHeart(c)}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected: my }}
+                              accessibilityLabel={my
+                                ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
+                                : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                            >
+                              <Ionicons
+                                name={my ? 'heart' : 'heart-outline'}
+                                size={15}
+                                color={my ? colors.accent : colors.textTertiary}
+                              />
+                              {likesWorthShowing(likes[c.slug]) && (
+                                <Text style={s.meta}>
+                                  {likes[c.slug]} {t('likes', 'lượt thích', 'いいね')}
+                                </Text>
+                              )}
+                            </PressableScale>
+                          ) : null}
                         </View>
                         <View style={s.chevron}>
                           <Ionicons name="chevron-forward" size={CHEVRON} color={colors.textTertiary} />
@@ -939,22 +999,34 @@ export default function CollectionsScreen({ navigation, route }: {
                           nobody *did*. */}
                       {likesWorthShowing(likes[own.slug]) && (
                         <View style={s.likesRow}>
-                          {/* Filled, and quiet. The fill is legibility: an
-                              outline heart at 13pt spends most of its ink
-                              on a hairline and reads as a smudge, while
-                              the solid shape is recognisable at a glance.
+                          {/* A count, and grey because of it. Your own
+                              tile wears the neutral mark and somebody
+                              else's wears coral, and that difference in
+                              hue is the whole of how a tally is told from
+                              a state — here, on the tiles, and on the
+                              community row beside this one.
 
-                              The colour is what keeps the fill honest. A
-                              coral heart already means two things in this
-                              app — "you liked this" on the detail screen,
-                              and "tap me" on the Explore shelf — and this
-                              heart is neither: it is not your state and it
-                              is not a control. `accentFaint` exists for
-                              exactly this, a mark that registers as warmth
-                              rather than as a second thing to read, and at
-                              that weight nobody's thumb mistakes it for a
-                              button that does not respond. */}
-                          <Ionicons name="heart" size={13} color={colors.accentFaint} />
+                              This heart was `accentFaint`: the same coral,
+                              dimmed, on the argument that dimness reads as
+                              warmth rather than as a second thing to read.
+                              It does, on charcoal. On paper the token
+                              resolves to #D27161 under an accent of
+                              #C4402C, and a dimmed coral is just coral —
+                              so the distinction lived only in the dark
+                              theme and said "you liked your own list" in
+                              the light one. Grey says nothing of the kind
+                              in either.
+
+                              Filled and 13pt, both unchanged: an outline
+                              heart that small spends most of its ink on a
+                              hairline and reads as a smudge — and the
+                              outline now belongs to the community row,
+                              where it means "not yet". Your own list
+                              cannot mean that. The database refuses a
+                              curator's like on their own list, so there is
+                              no state here to draw: a number, and a mark
+                              standing in for its word. */}
+                          <Ionicons name="heart" size={13} color={colors.textTertiary} />
                           <Text style={s.meta}>
                             {likes[own.slug]} {t('likes', 'lượt thích', 'いいね')}
                           </Text>
@@ -1169,6 +1241,13 @@ const s = StyleSheet.create({
   // so the two lines start on the same optical edge — the heart and the
   // padlock are both glyphs standing in for a word.
   likesRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  // Shrink-to-fit, on the Pressable rather than the row inside it. A
+  // column parent stretches its children, so without this the community
+  // row's heart would carry a tap target the full width of the text
+  // block — and every tap along that line would like the list instead of
+  // opening it. `alignSelf` positions the element in its parent, which is
+  // the half that belongs on the container; see `PressableScale`.
+  likesWrap: { alignSelf: 'flex-start' },
   // A disclosure indicator, which is a mark and not a control: a bare
   // chevron, the way the rest of the app already draws one. In a 44pt
   // well with a fill and a hairline it looked like a button, and a button
