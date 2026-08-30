@@ -29,7 +29,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
-import { cachedNarration, narratableOf, prefetchNarration } from '../lib/assist';
+import {
+  cachedNarration, narratableOf, NARRATION_HOLD_MS, prefetchNarration,
+} from '../lib/assist';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
@@ -163,9 +165,80 @@ export default function PlanOptionsScreen({ navigation, route }: {
     p.where,
   ]);
 
+  /**
+   * A Regenerate the reader has asked for, whose words are still on the
+   * wire. Held rather than committed, so the new set arrives complete.
+   *
+   * Regenerate used to be two `setState`s: the plans were pure and
+   * synchronous, so a fresh set rendered in the same frame and the
+   * prefetch above chased it. That is the bug `SketchingScreen` was
+   * rebuilt to fix — "the reader's few seconds of comparing cards ran
+   * against a model that takes three to eight, so the editor still opened
+   * on facts and rewrote itself" — fixed there for the *first* set of
+   * plans, and left standing here for every set after it. There were two
+   * ways in and only one of them waited.
+   *
+   * It cost more than the rewrite. `titles` below is keyed on `plans` on
+   * purpose, so a name landing mid-comparison does not pop onto a card;
+   * with the cache cold at commit time that memo held `null` for the whole
+   * life of the set, the cards fell back to their district, and the editor
+   * showed the model's title for a plan the list was calling "Cửa Nam".
+   * The list and the screen it opens disagreed about what the plan was
+   * called.
+   *
+   * So the swap waits. The old set stays on screen — no blank, nothing to
+   * re-find — the button says what it is doing, and when the new plans
+   * land they land with their names on them.
+   */
+  const [pending, setPending] = useState<
+    { seed: number; avoid: string[]; until: number } | null
+  >(null);
+
+  // The asked-for set, built but not shown. Same pure call as `plans`, on
+  // the seed and the avoid-list the reader has not been given yet.
+  const nextPlans = useMemo(
+    () => (pending
+      ? planTrips(draft, places, city?.id ?? null,
+        { seed: pending.seed, startMin: p.startMin, pinned, avoid: pending.avoid, taste, budgetVnd })
+      : null),
+    [pending, draft, places, city?.id, p.startMin, pinned, taste, budgetVnd],
+  );
+
+  useEffect(() => {
+    if (!pending || !nextPlans) return;
+    let live = true;
+    // Commit is idempotent and races itself on purpose: whichever of the
+    // words and the cap arrives first ends the wait, and `live` stops the
+    // loser. An empty `nextPlans` settles instantly, which is right — a
+    // set with nothing in it has nothing to narrate.
+    const commit = () => {
+      if (!live) return;
+      live = false;
+      setSeed(pending.seed);
+      setShown(pending.avoid);
+      setPending(null);
+    };
+    const asks = nextPlans.map((plan) => prefetchNarration(
+      narratableOf(plan.stops),
+      { company: p.company, categories: p.categories, when: p.when, where: p.where },
+      lang,
+    ));
+    void Promise.allSettled(asks).then(commit);
+    // An absolute deadline, not a fresh eight seconds. This effect re-runs
+    // whenever `nextPlans` changes identity — a catalog refetch, a saved
+    // list — and a relative timer would restart the clock each time,
+    // leaving the button spinning past the cap it promises.
+    const cap = setTimeout(commit, Math.max(0, pending.until - Date.now()));
+    return () => { live = false; clearTimeout(cap); };
+  }, [pending, nextPlans, p.company, p.categories, p.when, p.where, lang]);
+
   const regenerate = () => {
-    setShown((was) => [...was, ...plans.flatMap((pl) => pl.stops.map((s) => s.place.slug))]);
-    setSeed((n) => n + 1);
+    if (pending) return;
+    setPending({
+      seed: seed + 1,
+      avoid: [...shown, ...plans.flatMap((pl) => pl.stops.map((s) => s.place.slug))],
+      until: Date.now() + NARRATION_HOLD_MS,
+    });
   };
 
   /**
@@ -304,7 +377,9 @@ export default function PlanOptionsScreen({ navigation, route }: {
           <GradientCta
             icon="refresh"
             wide
-            label={t('Regenerate', 'Tạo lại', '作り直す')}
+            label={pending
+              ? t('Finding three more…', 'Đang tìm ba cách khác…', '別の三案を探しています…')
+              : t('Regenerate', 'Tạo lại', '作り直す')}
             onPress={regenerate}
           />
         </View>

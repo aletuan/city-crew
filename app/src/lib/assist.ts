@@ -249,6 +249,24 @@ const asking = new Map<string, Promise<Narration>>();
  *  regenerates all evening stays bounded. */
 const KEEP = 12;
 
+/**
+ * How long a screen will hold for the model before going on without it.
+ *
+ * Sized against the pipeline it waits on: the Edge Function gives the
+ * model twelve seconds before falling back, and a healthy narration takes
+ * three to eight. Eight here means a normal answer is always waited out,
+ * while the pathological one — a call limping toward the server's own
+ * timeout — is not allowed to hold a screen hostage. Past the cap the flow
+ * continues and the editor's reserved lines absorb the rare late landing.
+ *
+ * It lives here rather than on a screen because two screens now wait on
+ * the same thing, and they have to wait the same amount. `SketchingScreen`
+ * holds its last step for the first set of plans; `PlanOptionsScreen`
+ * holds the swap for every set after it. A Regenerate that gave up sooner
+ * than the sketch did would be the same bug in a second place.
+ */
+export const NARRATION_HOLD_MS = 8000;
+
 /** The words for exactly these stops, if somebody already asked. */
 export function cachedNarration(
   stops: readonly Narratable[], lang: string,
