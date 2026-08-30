@@ -109,6 +109,38 @@ vi.mock('expo-location', () => ({
   Accuracy: { Balanced: 3 },
 }));
 
+// `matchMedia`, which this DOM does not have and `react-native-web` reads
+// at import time.
+//
+// Its `AccessibilityInfo` keeps a `prefers-reduced-motion` media query in
+// module scope; with no `matchMedia` that query is null, and
+// `addEventListener` returns early — `undefined` instead of the `{ remove }`
+// a phone hands back. Every unmount of a tree holding a `useReducedMotion`
+// then threw on `sub.remove()`, which is what happened to fifteen
+// `InviteSheet` tests the moment `GradientCta` learned to spin.
+//
+// So the gap is the environment's, not the app's: iOS and Android return
+// the subscription, and defending against its absence would be a branch in
+// shipped code that no reader can reach. A plain always-false query fills
+// it — animations run, which is the setting almost every reader has, and a
+// test wanting the other answer can override this locally.
+//
+// A statement rather than a `vi.mock`, and it has to stay one: the module
+// reads the query as it loads, so the stub must already be there when the
+// first test file imports anything from `react-native`.
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia;
+}
+
 // `Alert.alert` is how half the screens report a failure, and a test that
 // asserts on it is asserting on what the reader was told. Kept as a spy
 // rather than a no-op for that reason.

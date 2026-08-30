@@ -674,7 +674,7 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color }: {
  * inside a bar and is sized to stay quiet next to them; this one is the
  * only thing on its card and carries a full sentence of a label.
  */
-export function GradientCta({ icon, label, onPress, wide }: {
+export function GradientCta({ icon, label, onPress, wide, busy }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
@@ -683,11 +683,50 @@ export function GradientCta({ icon, label, onPress, wide }: {
    *  only thing here", which is true at the foot of a sheet and false in
    *  the middle of a card. */
   wide?: boolean;
+  /**
+   * Working, and not to be pressed again.
+   *
+   * The glyph turns and the label does not move. The first version of a
+   * busy CTA swapped the words instead — "Regenerate" for "Finding three
+   * more…" — and a `wide` button centres its contents, so the longer
+   * label spread the row and slid the icon about 70pt to the left. A
+   * button whose mark jumps position while it works reads as a different
+   * button, not as the same one running.
+   *
+   * So the mark holds its place and rotates, which is what a circular
+   * arrow is for. `useLoop` and the 1600ms turn are the ones `SketchOrb`
+   * and the sketch screen already spin by; a third rotation in this app
+   * should not be a third speed.
+   */
+  busy?: boolean;
 }) {
+  const still = useReducedMotion();
+  const spin = useLoop(1600, still || !busy);
   return (
-    <PressableScale onPress={onPress} accessibilityRole="button" containerStyle={wide ? { alignSelf: 'stretch' } : undefined}>
-      <LinearGradient {...gradAI} style={s.cta}>
-        <Ionicons name={icon} size={20} color={colors.accentInk} />
+    <PressableScale
+      onPress={onPress}
+      // Straight through to `Pressable`, which is what stops the scale as
+      // well as the press: a button that dips under a thumb and then does
+      // nothing has answered, and answered wrongly.
+      disabled={busy}
+      accessibilityRole="button"
+      accessibilityState={{ busy }}
+      containerStyle={wide ? { alignSelf: 'stretch' } : undefined}
+    >
+      {/* Dimmed for everyone, not only as a second opinion beside the
+          spin. Reduced motion holds the glyph still — `useLoop` parks it
+          at zero — and without this the button would take a tap and show
+          nothing at all to the readers who asked for less movement, which
+          is worse than the label it replaces. Fade is not motion. */}
+      <LinearGradient {...gradAI} style={[s.cta, busy && s.ctaBusy]}>
+        {/* Wrapped unconditionally. At rest `useLoop` holds zero, so the
+            rotation is the identity transform — no branch, no reflow, and
+            the icon cannot shift by a pixel between the two states. */}
+        <Animated.View
+          style={{ transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }}
+        >
+          <Ionicons name={icon} size={20} color={colors.accentInk} />
+        </Animated.View>
         <Text style={s.ctaText}>{label}</Text>
       </LinearGradient>
     </PressableScale>
@@ -854,6 +893,12 @@ const s = StyleSheet.create({
     minHeight: CONTROL_H, paddingHorizontal: 24, paddingVertical: 10,
     borderRadius: radius.pill,
   },
+  // 0.6, where the busy state on a text link takes 0.4. The lighter hand
+  // is the surface: 0.4 on a hairline of type reads as "not yet", and the
+  // same figure on a coral gradient running the width of the screen reads
+  // as broken. Chosen by eye rather than measured — a value to argue with,
+  // not a finding.
+  ctaBusy: { opacity: 0.6 },
   // Nothing left to say about the wide one but that it is wide — the
   // centring and the height it used to carry are now what every button of
   // this class gets. `wide` still stretches it in its parent; see
