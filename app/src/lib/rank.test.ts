@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { bestFirst, shrunk, TASTE_LIFT, type Rated } from './rank';
 
-const p = (slug: string, rating: number | null, count = 0): Rated =>
+// 5000 is about p90 of the real catalog. The default matters now that the
+// score is shrunk toward the catalog mean: at a count of zero every place
+// scores the mean and a test about rating order would be testing nothing.
+// Production has no such place — of 385 published rated places, none has a
+// null review count and none has zero — so the well-reviewed default is
+// also the realistic one. Tests that are about the count pass their own.
+const p = (slug: string, rating: number | null, count = 5000): Rated =>
   ({ slug, rating, rating_count: count });
 
 /** A taste that likes exactly the slugs named, worth a full point each —
@@ -23,9 +29,39 @@ describe('bestFirst', () => {
       .toEqual(['poor', 'none']);
   });
 
-  it('breaks a tied rating on the review count', () => {
-    expect(bestFirst([p('few', 4.5, 3), p('many', 4.5, 900)]).map((x) => x.slug))
-      .toEqual(['many', 'few']);
+  // The shrink does most of what this key used to do — two places sharing
+  // a raw rating rarely share a shrunk one — so what is left for it is a
+  // genuine tie in the score. Two unrated places are the exact case: both
+  // score −1, and the better-known one goes first.
+  it('puts the better-known of two equal scores first', () => {
+    expect(bestFirst([p('obscure', null, 3), p('known', null, 900)]).map((x) => x.slug))
+      .toEqual(['known', 'obscure']);
+  });
+
+  // The shelf bug this was written for: `Mậu Dịch Nguyễn Gia` held 5.0
+  // from four reviews above every 4.9 in Hanoi.
+  it('does not let a five from four reviews outrank a well-reviewed 4.9', () => {
+    expect(bestFirst([p('thin', 5.0, 4), p('solid', 4.9, 900)]).map((x) => x.slug))
+      .toEqual(['solid', 'thin']);
+  });
+
+  // ...and a well-evidenced five still wins, which is the other half of
+  // the claim: this discounts thin evidence, not high scores.
+  it('leaves a well-reviewed five on top', () => {
+    expect(bestFirst([p('solid', 4.9, 900), p('five', 5.0, 218)]).map((x) => x.slug))
+      .toEqual(['five', 'solid']);
+  });
+
+  // Shrinkage is symmetric, and this is the consequence worth stating
+  // rather than discovering: a thin score *below* the catalog mean is
+  // pulled up, so 4.5 from a dozen reviews sits above 4.5 from nine
+  // hundred. It is the same claim in both directions — little evidence
+  // means the catalog's average is the better guess — and it only
+  // reorders the bottom of a catalog whose p25 is 4.50, while fixing the
+  // top, where readers actually look.
+  it('pulls a thinly-reviewed score up toward the mean as readily as down', () => {
+    expect(bestFirst([p('thin', 4.5, 12), p('thick', 4.5, 900)]).map((x) => x.slug))
+      .toEqual(['thin', 'thick']);
   });
 
   // The property the last tie exists for: same rating, same count, and
@@ -33,6 +69,16 @@ describe('bestFirst', () => {
   it('lands on the same order whichever way the input came', () => {
     expect(bestFirst([p('z', 4.5), p('a', 4.5)]).map((x) => x.slug)).toEqual(['a', 'z']);
     expect(bestFirst([p('a', 4.5), p('z', 4.5)]).map((x) => x.slug)).toEqual(['a', 'z']);
+  });
+
+  // The count is optional on the type even though no published place is
+  // missing one. A rating that arrives without one claims nothing, which
+  // is `shrunk` at a count of zero: the catalog's own average. So a bare
+  // five loses to a 4.9 that six hundred people stood behind.
+  it('treats a rating with no count behind it as the catalog average', () => {
+    const bare: Rated = { slug: 'bare', rating: 5.0 };
+    expect(bestFirst([bare, p('solid', 4.9, 900)]).map((x) => x.slug))
+      .toEqual(['solid', 'bare']);
   });
 
   it('does not mutate what it was given', () => {
