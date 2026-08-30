@@ -698,29 +698,32 @@ export default function CollectionsScreen({ navigation, route }: {
                               object, same card language, second surface. */}
                           <LinearGradient
                             colors={['rgba(10,11,10,0.22)', 'rgba(10,11,10,0.10)', 'rgba(10,11,10,0.94)']}
-                            locations={[0, 0.42, 1]}
+                            // Was 0.42, when the text ran to three lines. Two
+                            // lines need less covering, and every point the ramp
+                            // starts later is picture given back.
+                            locations={[0, 0.55, 1]}
                             style={StyleSheet.absoluteFill}
                           />
                           <View style={s.gcardText}>
                             <Text style={s.gcardTitle} numberOfLines={1}>
                               {t(c.title_en, c.title_vi, c.title_ja)}
                             </Text>
-                            {/* Whose list this is, said with a face: the
+                            {/* One meta line, not two.
+                                
+                                The byline had a row and the count-and-heart
+                                had another, and between them they put three
+                                lines of text over 40% of the photograph —
+                                in the view whose whole reason is the
+                                photograph. They are one row now: who made
+                                it on the left, the heart on the right.
+
+                                Whose list this is, said with a face: the
                                 avatar beside the handle carries the whole
-                                of "by", so the word goes — owner review,
-                                and right. The list rows keep the word,
-                                because down there no face does that work.
-                                On your own tab neither appears: the
-                                byline would only say your own name, so
-                                the padlock speaks instead. */}
-                            {!item.own && c.curator_handle ? (
-                              <View style={s.gcardByRow}>
-                                <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={18} />
-                                <Text style={s.gcardBy} numberOfLines={1}>
-                                  {atHandle(c.curator_handle)}
-                                </Text>
-                              </View>
-                            ) : null}
+                                of "by", so the word goes. The list rows
+                                keep the word, because down there no face
+                                does that work. On your own tab neither
+                                appears — the byline would only say your own
+                                name, so the padlock speaks instead. */}
                             <View style={s.gcardFoot}>
                               {item.own && (
                                 <Ionicons
@@ -729,11 +732,37 @@ export default function CollectionsScreen({ navigation, route }: {
                                   color={c.is_public ? colors.ok : onPhoto.textSecondary}
                                 />
                               )}
-                              <Text style={s.gcardMeta}>
-                                {members === 0
-                                  ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
-                                  : `${members} ${t(members === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`}
-                              </Text>
+                              {!item.own && c.curator_handle ? (
+                                <>
+                                  <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={18} />
+                                  <Text style={s.gcardBy} numberOfLines={1}>
+                                    {atHandle(c.curator_handle)}
+                                  </Text>
+                                </>
+                              ) : null}
+                              {/* How many places, on your own tiles — and on
+                                  anybody's when there are none.
+
+                                  Dropped from other people's tiles because
+                                  it is the weakest of the four things this
+                                  card can say: ten places against seven
+                                  rarely decides a tap, where who made it and
+                                  how many liked it do — and the like count
+                                  also explains the order the shelf is in.
+                                  The full number is still one tap away, and
+                                  still on the list view, which is the view
+                                  for reading rather than looking.
+
+                                  Zero is different and always said. A list
+                                  you made and never filled is the one size
+                                  that changes what you do next. */}
+                              {(item.own || members === 0) && (
+                                <Text style={s.gcardMeta} numberOfLines={1}>
+                                  {members === 0
+                                    ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
+                                    : `${members} ${t(members === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`}
+                                </Text>
+                              )}
                               {/* Only where a like is possible: a private
                                   list is one nobody may like, and a heart
                                   on it would be an invitation to nothing.
@@ -1044,9 +1073,8 @@ const s = StyleSheet.create({
   gcard: { borderRadius: radius.image, overflow: 'hidden', justifyContent: 'flex-end' },
   gcardText: { padding: 12, gap: 2 },
   gcardTitle: { color: onPhoto.text, fontSize: 15.5, fontWeight: font.semibold, lineHeight: 19 },
-  gcardByRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 },
   gcardBy: { color: onPhoto.textSecondary, fontSize: 12.5, fontWeight: font.medium, flexShrink: 1 },
-  gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
+  gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
   gcardMeta: { color: onPhoto.textSecondary, fontSize: 12.5 },
   gcardLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
