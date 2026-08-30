@@ -719,9 +719,10 @@ export default function CollectionsScreen({ navigation, route }: {
 
                                 Whose list this is, said with a face: the
                                 avatar beside the handle carries the whole
-                                of "by", so the word goes. The list rows
-                                keep the word, because down there no face
-                                does that work. On your own tab neither
+                                of "by", so the word goes. The list rows do
+                                the same now, and the detail screen did it
+                                before either — three surfaces, one grammar,
+                                no verb in any of them. On your own tab neither
                                 appears — the byline would only say your own
                                 name, so the padlock speaks instead. */}
                             <View style={s.gcardFoot}>
@@ -845,10 +846,55 @@ export default function CollectionsScreen({ navigation, route }: {
                         </View>
                         <View style={s.cardText}>
                           <Text style={s.title} numberOfLines={2}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
+                          {/* A face and a handle, and no word between
+                              them. This row was the last "by" in the app:
+                              the tile dropped it when the avatar arrived,
+                              and the detail screen never had one. A verb
+                              was never what marked @trang as a person —
+                              the `@` does that, and the face does the
+                              rest. Repeated down a column the word carried
+                              nothing at all, which is what made it visible.
+
+                              The handle leads because the layout leaves no
+                              choice. `Avatar` is a sibling `View` in the
+                              row, not a glyph inside the text, so it can
+                              only sit at the head of the line; with the
+                              count still first the face would be reading
+                              as the count's. Moving the handle up puts
+                              this line in the same order the detail screen
+                              uses, which is the order to be in.
+
+                              The seat is drawn whether or not there is a
+                              photograph to fill it — `faces` explains why
+                              where it is fetched, and the fetch is already
+                              paid for by the tiles.
+
+                              Width is a wash, not a saving: the word gave
+                              back about 26pt and the face spends 23. What
+                              changes is that the line is now facts
+                              separated by a dot, the same grammar the
+                              Yours row has always used, rather than half a
+                              sentence.
+
+                              The label is the part that is not decoration.
+                              `Avatar` is `accessible={false}`, so the face
+                              says nothing aloud, and this row has never
+                              carried a label — dropping the word without
+                              one would leave a screen reader saying
+                              "@trang, 5 places" and nothing to mark the
+                              handle as a name. So the sentence survives
+                              where it is still doing work. */}
                           <View style={s.metaRow}>
-                            <Text style={s.meta} numberOfLines={1}>
+                            <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={18} />
+                            <Text
+                              style={s.meta}
+                              numberOfLines={1}
+                              accessibilityLabel={c.curator_handle
+                                ? `${t('by', 'bởi', 'by')} ${atHandle(c.curator_handle)}, ${n} ${t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`
+                                : undefined}
+                            >
+                              {c.curator_handle ? `${atHandle(c.curator_handle)}  ·  ` : ''}
                               {n} {t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
-                              {c.curator_handle ? `  ·  ${t('by', 'bởi', 'by')} ${atHandle(c.curator_handle)}` : ''}
                             </Text>
                           </View>
                           {/* The heart the tile wears, wearing it for the
