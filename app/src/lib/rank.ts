@@ -47,6 +47,46 @@ export type Affinity<T> = { affinity: (p: T) => number };
 export const TASTE_LIFT = 0.23;
 
 /**
+ * A rating pulled toward the catalog's mean by how little evidence it has.
+ *
+ * The problem it answers is visible on the shelf: a place with **5.0 from
+ * four reviews** outranks one with 4.9 from six hundred, because
+ * `bestFirst` sorts on the rating and reaches for `rating_count` only to
+ * break an exact tie. Four people are not stronger evidence than six
+ * hundred; they are barely evidence at all, and the comparator treats
+ * them as decisive.
+ *
+ * So the score every place is ranked by becomes a weighted average of
+ * what its reviewers said and what the catalog says in general, weighted
+ * by how many reviewers there were:
+ *
+ *     (count · rating + m · mean) / (count + m)
+ *
+ * which is the algebraic form of `(v/(v+m))·R + (m/(v+m))·C` — one
+ * division instead of two. It is the estimator IMDb ranks its Top 250
+ * with, and a Bayesian posterior mean with `m` prior observations sitting
+ * at `mean`.
+ *
+ * Three properties are worth stating because they are what make it safe:
+ * at `count = 0` it returns `mean` exactly, so an unreviewed place claims
+ * nothing; as `count` grows it converges on `rating`, so a well-reviewed
+ * place keeps its own score; and the result never leaves the interval
+ * between the two, so this can only ever move a place *toward* the middle
+ * — never past it, and never anywhere the raw numbers did not already
+ * bracket.
+ *
+ * `mean` and `m` are arguments rather than the module constants they will
+ * be read from, for the reason the rest of this file is structural: the
+ * arithmetic is provable in a Node process without a catalog, and the two
+ * catalog figures are a separate question with a separate answer. `m` must
+ * be positive — it is a count of imaginary prior reviews, and the sum in
+ * the denominator is what stops this dividing by zero.
+ */
+export function shrunk(rating: number, count: number, mean: number, m: number): number {
+  return (count * rating + m * mean) / (count + m);
+}
+
+/**
  * The places, best first.
  *
  * Rating down the column, 4.6 above 4.5 above 4.3. Rated above unrated,
