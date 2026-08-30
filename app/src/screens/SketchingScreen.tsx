@@ -38,7 +38,7 @@ import { clockOf, dateline, fmtMinutes, instantOn, openState } from '../lib/form
 import { fmtDistance } from '../lib/geo';
 import { planGap } from '../lib/gaps';
 import { useI18n } from '../lib/i18n';
-import { narratableOf, prefetchNarration } from '../lib/assist';
+import { narratableOf, NARRATION_HOLD_MS, prefetchNarration } from '../lib/assist';
 import { membersOf } from '../lib/place';
 import { planTrips } from '../lib/planner';
 import { legsOf } from '../lib/travel';
@@ -52,19 +52,6 @@ import { draftFrom, type TripDraft } from '../lib/trip';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space } from '../theme';
-
-/**
- * How long the last step will hold for the model before finishing anyway.
- *
- * Sized against the pipeline it waits on: the Edge Function gives the
- * model twelve seconds before falling back, and a healthy narration takes
- * three to eight. Eight here means a normal answer is always waited out,
- * while the pathological one — a call limping toward the server's own
- * timeout — is not allowed to hold a progress screen hostage. Past the
- * cap the flow continues and the editor's reserved lines absorb the rare
- * late landing.
- */
-const HOLD_MS = 8000;
 
 /**
  * The reasoning feed: the fact being worked out, over the one just
@@ -275,8 +262,8 @@ export default function SketchingScreen({ navigation, route }: {
    * the moment the plans exist, and the last step holds until every
    * card's words are settled in the cache.
    *
-   * Held with a cap, not forever. `HOLD_MS` is the point where waiting
-   * longer buys less than moving on costs: past it the screen finishes,
+   * Held with a cap, not forever. `NARRATION_HOLD_MS` is the point where
+   * waiting longer buys less than moving on costs: past it it finishes,
    * and in the rare case the words land later the editor's reserved lines
    * absorb them. A model that is *down* never costs the cap — `narrate`
    * fails fast and settles empty, and empty is an answer.
@@ -292,7 +279,7 @@ export default function SketchingScreen({ navigation, route }: {
       lang,
     ));
     void Promise.allSettled(asks).then(() => { if (live) setWordsReady(true); });
-    const cap = setTimeout(() => { if (live) setWordsReady(true); }, HOLD_MS);
+    const cap = setTimeout(() => { if (live) setWordsReady(true); }, NARRATION_HOLD_MS);
     return () => { live = false; clearTimeout(cap); };
   }, [loading, plans, p.company, p.categories, p.when, p.where, lang]);
 
