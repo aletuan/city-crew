@@ -16,12 +16,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav } from '../nav';
 
-const signUp = vi.hoisted(() => vi.fn(async () => ({ needsConfirm: false })));
+// A session that does not exist until an account is made, which is what
+// the screen now depends on: it holds the taste until one lands and
+// refuses to write onto whatever session happened to be there before.
+// The old mock handed out `u1` from the first render, which made that
+// distinction untestable — and it is the distinction.
+const auth = vi.hoisted(() => {
+  const state: { session: { user: { id: string } } | null } = { session: null };
+  const land = () => { state.session = { user: { id: 'u1' } }; };
+  return {
+    state,
+    signUp: vi.fn(async () => { land(); return { needsConfirm: false }; }),
+    confirmSignUp: vi.fn(async () => { land(); }),
+  };
+});
 const savePreferences = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ signUp, confirmSignUp: vi.fn(), session: { user: { id: 'u1' } } }),
+  useAuth: () => ({
+    signUp: auth.signUp, confirmSignUp: auth.confirmSignUp, session: auth.state.session,
+  }),
   isHandleFree: vi.fn(async () => true),
 }));
+const signUp = auth.signUp;
 // Only the write is swapped; everything else in the barrel stays real.
 vi.mock('../lib/data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
@@ -77,12 +93,19 @@ describe('the legal sheet over the form', () => {
   });
 });
 
-// ── the step after the account exists ────────────────────────────────
+// ── the step that makes the account ──────────────────────────────────
 //
-// It is the last thing sign-up asks and the first thing it is willing to
-// be told nothing about. Both halves of that are pinned here, because
-// both are easy to lose: a required-feeling step on the screen an account
-// is lost on, or a "skip" that quietly writes an empty row anyway.
+// It used to be the step *after* the account was made, and the first
+// assertion below has been turned over with it: the form now only checks
+// itself, and nothing exists until this screen is finished. A form
+// abandoned here leaves no row to collide with the address when the
+// reader comes back.
+//
+// Two things stay pinned because both are easy to lose. Skipping is still
+// a real answer — it makes the account and writes no preference, rather
+// than quietly writing an empty row — and both answers are offered at
+// once, rather than one button wearing two words and hiding whichever it
+// is not currently saying.
 
 const fillForm = () => {
   fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Trang' } });
@@ -94,27 +117,35 @@ const fillForm = () => {
 
 describe('the taste step', () => {
   beforeEach(() => {
+    auth.state.session = null;
     signUp.mockClear();
+    auth.confirmSignUp.mockClear();
     savePreferences.mockClear();
   });
 
-  it('comes after the account is made, not before', async () => {
+  it('is where the account is made, and the form is not', async () => {
     render(<SignUpScreen navigation={nav()} />);
     fillForm();
-    await waitFor(() => expect(signUp).toHaveBeenCalled());
     expect(await screen.findByText('What are you into?')).toBeTruthy();
+    // The whole point of the reorder: the form checked itself and moved
+    // on, and nothing has been created yet.
+    expect(signUp).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(signUp).toHaveBeenCalled());
   });
 
-  // The promise that makes it safe to ask at all. Nothing is written, and
-  // the account is untouched — `taste.ts` has three other signals and
-  // will understand this reader from what they do instead.
-  it('writes nothing at all when it is skipped', async () => {
-    const navigation = nav();
-    render(<SignUpScreen navigation={navigation} />);
+  // The promise that makes it safe to ask at all. Skipping still makes
+  // the account — it is the same step — and writes no preference:
+  // `taste.ts` has three other signals and will understand this reader
+  // from what they do instead.
+  it('still makes the account when it is skipped, and writes nothing', async () => {
+    render(<SignUpScreen navigation={nav()} />);
     fillForm();
     fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
 
-    await waitFor(() => expect(navigation.popToTop).toHaveBeenCalled());
+    await waitFor(() => expect(signUp).toHaveBeenCalled());
+    expect(await screen.findByText('Welcome, Trang')).toBeTruthy();
     expect(savePreferences).not.toHaveBeenCalled();
   });
 
@@ -124,22 +155,30 @@ describe('the taste step', () => {
     await screen.findByText('What are you into?');
     fireEvent.click(screen.getByText('Cafés'));
     fireEvent.click(screen.getByText('Nature'));
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
+    // Written once a session exists rather than at the tap, since the
+    // account is only being created by that same tap.
     await waitFor(() => expect(savePreferences).toHaveBeenCalledWith(
       'u1',
       expect.objectContaining({ categories: ['cafes', 'nature'] }),
     ));
   });
 
-  // The button says which of the two it is, so a reader who has tapped
-  // nothing is never looking at a "Done" that means "no".
-  it('renames itself the moment there is something to save', async () => {
+  // Both answers, at the same time. The button used to carry both — "Bỏ
+  // qua" until something was picked, then "Xong" — which meant the
+  // largest, warmest control on the screen invited the reader to leave at
+  // the moment they arrived, and hid the other answer whichever way it
+  // was facing.
+  it('offers continuing and skipping at once, and keeps doing so', async () => {
     render(<SignUpScreen navigation={nav()} />);
     fillForm();
     await screen.findByText('What are you into?');
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Skip for now' })).toBeTruthy();
+
     fireEvent.click(screen.getByText('Cafés'));
-    expect(await screen.findByRole('button', { name: 'Done' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Skip for now' })).toBeTruthy();
   });
 });
