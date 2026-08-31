@@ -54,6 +54,40 @@ export function AuthScreen({ children }: { children: React.ReactNode }) {
  * for introducing a large title; below an inline one it would be read
  * after the thing it was introducing.
  */
+/**
+ * Where you are in signing up, and how much is left.
+ *
+ * Three marks, and they count the steps a reader **fills in**: the form,
+ * the taste, and finishing. Confirming an email lives inside the third
+ * rather than beside it, because `needsConfirm` is only known once
+ * `signUp` has run — a bar that grew from two marks to three halfway
+ * through would be a bar that had already lied once.
+ *
+ * Drawn rather than numbered. "Step 2 of 3" is what a screen reader
+ * needs and what `accessibilityLabel` says; on screen the shape is
+ * enough, and a sentence there would compete with the question the step
+ * is actually asking.
+ */
+export function StepDots({ step, total }: { step: number; total: number }) {
+  const { t } = useI18n();
+  return (
+    <View
+      style={s.steps}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 1, max: total, now: step }}
+      accessibilityLabel={t(
+        `Step ${step} of ${total}`,
+        `Bước ${step} trên ${total}`,
+        `${total} ステップ中 ${step}`,
+      )}
+    >
+      {Array.from({ length: total }, (_, i) => (
+        <View key={i} style={[s.step, i + 1 === step && s.stepOn]} />
+      ))}
+    </View>
+  );
+}
+
 export function AuthHeader({ onBack, title }: { onBack: () => void; title: string }) {
   return (
     <View style={s.header}>
@@ -429,6 +463,17 @@ const s = StyleSheet.create({
   // without pinning either to the other's height.
   title: { flex: 1, color: colors.text, ...type.titleDetail, paddingTop: 7 },
   lede: { color: colors.textSecondary, ...type.body, lineHeight: 24, marginBottom: 2 },
+
+  // Above everything, including the header: it is about the flow, not
+  // about this screen, and a reader looking for "how much longer" should
+  // not have to find it among the screen's own words.
+  steps: { flexDirection: 'row', gap: 6, marginBottom: 4 },
+  // The one you are on is wider as well as brighter. Colour alone would
+  // leave the mark invisible to a reader who cannot separate the accent
+  // from the hairline, and length is the cheapest second channel there
+  // is — the same reason the like heart changes shape and not only hue.
+  step: { width: 18, height: 4, borderRadius: 2, backgroundColor: colors.borderGlassSoft },
+  stepOn: { width: 26, backgroundColor: colors.accent },
 
   field: {
     flexDirection: 'row', alignItems: 'center', gap: 14,

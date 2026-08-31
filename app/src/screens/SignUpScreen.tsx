@@ -3,9 +3,12 @@
 // emailed code (links in the email can't open Expo Go). Its length is
 // a project setting, so nothing here assumes one — see `lib/otp.ts`.
 
-import React, { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
-import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, SwitchRow, useFailText } from '../components/authUi';
+import React, { useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { Image } from 'expo-image';
+import {
+  AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, StepDots, SwitchRow, useFailText,
+} from '../components/authUi';
 import LegalSheet from '../components/LegalSheet';
 import TastePicker from '../components/TastePicker';
 import { successHaptic } from '../components/ui';
@@ -18,6 +21,7 @@ import { HANDLE_MAX, handleProblem, normalizeHandle, suggestHandle } from '../li
 import { PASSWORD_MIN } from '../lib/password';
 import { colors, font, type } from '../theme';
 import type { Nav } from '../nav';
+import welcomePlane from '../../assets/welcome-plane.png';
 
 export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -33,8 +37,34 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [code, setCode] = useState('');
-  const [step, setStep] = useState<'form' | 'confirm' | 'taste'>('form');
+  const [step, setStep] = useState<'form' | 'taste' | 'confirm' | 'welcome'>('form');
   const [taste, setTaste] = useState<string[]>([]);
+  /**
+   * The taste, waiting for an account to belong to.
+   *
+   * It is collected before one exists now, and `preferences` is scoped by
+   * RLS to the signed-in reader — so the write cannot happen where the
+   * answer is given. This holds it from the moment `signUp` is called
+   * until a session actually lands, which is either that call returning
+   * one or `confirmSignUp` landing it a step later.
+   *
+   * Null once written, and a ref guards the write besides: a session
+   * object changes identity on every token refresh, and rewriting there
+   * would overwrite a preference the reader may have edited since.
+   */
+  const [pendingTaste, setPendingTaste] = useState<string[] | null>(null);
+  const wrote = useRef(false);
+  /**
+   * Whose session was here before we asked for a new one, so the write
+   * can tell "the account we just made" from "an account that was
+   * already signed in".
+   *
+   * Without it the effect fires on the session that happens to be
+   * present, which on a screen reached while already signed in would
+   * mean writing this taste onto somebody else's account — and doing it
+   * before `signUp` had even returned.
+   */
+  const before = useRef<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -44,6 +74,20 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   // unmounts and every field the reader has already filled in survives
   // the round trip with no work at all.
   const [legal, setLegal] = useState<LegalId | null>(null);
+
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid || uid === before.current || !pendingTaste || wrote.current) return;
+    wrote.current = true;
+    const chosen = pendingTaste;
+    setPendingTaste(null);
+    // Swallowed, exactly as before: the account is made, the answer is a
+    // preference, and a failed write here must not look like a failed
+    // sign-up. An empty list writes nothing rather than writing empty.
+    if (chosen.length) {
+      void savePreferences(uid, { ...NO_PREFERENCES, categories: [...chosen] }).catch(() => {});
+    }
+  }, [session, pendingTaste]);
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -94,16 +138,16 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         ));
         return;
       }
-      const { needsConfirm } = await signUp(name.trim(), chosen, email.trim(), password);
-      // The taste step writes to `preferences`, which RLS scopes to the
-      // signed-in account — so it can only come after a session exists.
-      // Without confirmation `signUp` returns one; with it, the session
-      // arrives at `verify` and the step waits there instead.
-      if (needsConfirm) setStep('confirm');
-      else {
-        successHaptic();
-        setStep('taste');
-      }
+      // Nothing is created here any more. The form is checked and the
+      // reader moves on; `signUp` runs at the end of the next step, so
+      // an account exists only for somebody who went the whole way.
+      //
+      // The handle was just checked free and will be claimed a little
+      // later than it used to be, which widens the window somebody else
+      // can take it in. That race already had its answer: the
+      // `handle_new_user` trigger "falls back to a generated one rather
+      // than failing the account into existence".
+      setStep('taste');
     });
 
   const verify = () =>
@@ -111,47 +155,54 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       if (!cleanOtp(code)) throw new Error('need_code');
       await confirmSignUp(email.trim(), cleanOtp(code));
       successHaptic();
-      setStep('taste');
+      setStep('welcome');
     });
 
   /**
-   * The last step, and the one that may be walked past.
+   * The step that makes the account.
    *
-   * It is here rather than inside the form because the form is already
-   * five fields and a code, and it is the screen an account is lost on.
-   * By the time this shows, the account exists: whatever happens next,
-   * including closing the app, the reader has one.
+   * It did not use to. The form created it and this asked an optional
+   * question afterwards, on the reasoning that an account already made is
+   * an account that cannot be lost — "whatever happens next, including
+   * closing the app, the reader has one". The trade has been made the
+   * other way: nobody gets a row until they have finished, so a form
+   * abandoned here leaves nothing behind to collide with the email when
+   * they come back and try again.
    *
-   * So "Bỏ qua" is a real answer, not a smaller button. A skipped taste
-   * costs nothing the app cannot recover — `taste.ts` scores four signals
-   * and the other three come from what somebody does rather than what
-   * they declare, so a reader who says nothing here is understood a
-   * little later instead of not at all.
+   * What that reasoning was really defending is still defended, and by
+   * the same thing it always was: **"Bỏ qua" is a real answer.** A
+   * skipped taste costs nothing the app cannot recover — `taste.ts`
+   * scores four signals and three of them come from what somebody does
+   * rather than what they declare — so skipping still makes the account,
+   * it just makes it without an answer. Both buttons here go forward.
+   * They differ only in what they carry.
    */
   const finish = (chosen: readonly string[]) =>
     run(async () => {
-      const uid = session?.user?.id;
-      // No session is not an error the reader can act on — it means the
-      // confirmation has not landed yet — and holding them on this screen
-      // over an optional question would be the worst possible trade.
-      if (uid && chosen.length) {
-        // Swallowed: the account is made, the answer is a preference, and
-        // a failed write here must not look like a failed sign-up.
-        await savePreferences(uid, { ...NO_PREFERENCES, categories: [...chosen] }).catch(() => {});
-      }
+      // Held for the effect above: with confirmation on there is no
+      // session yet, so the write waits for one rather than being lost.
+      before.current = session?.user?.id ?? null;
+      setPendingTaste([...chosen]);
+      const { needsConfirm } = await signUp(name.trim(), normalizeHandle(handle), email.trim(), password);
+      if (needsConfirm) { setStep('confirm'); return; }
       successHaptic();
-      navigation.popToTop();
+      setStep('welcome');
     });
 
   if (step === 'taste') {
     return (
       <AuthScreen>
-        {/* No back control: there is nothing behind this now — the form
-            is spent and the account is made. A back arrow here would
-            offer a door that leads nowhere. */}
-        <Text style={s.tasteTitle}>
-          {t('What are you into?', 'Bạn thích gì?', '好みを教えてください')}
-        </Text>
+        <StepDots step={2} total={3} />
+        {/* A back control, which this screen used to refuse — "there is
+            nothing behind this now: the form is spent and the account is
+            made". Both halves of that are false since the account moved
+            to the end. The form is still editable and nothing has been
+            created, so a reader who mistyped their address can go and fix
+            it instead of finding out after the code fails to arrive. */}
+        <AuthHeader
+          onBack={() => setStep('form')}
+          title={t('What are you into?', 'Bạn thích gì?', '好みを教えてください')}
+        />
         <Lede>{t(
             'Pick a few and Search and Explore will lean towards them. You can change this any time in your profile.',
             'Chọn vài mục, Tìm kiếm và Khám phá sẽ nghiêng về những thứ đó. Đổi lúc nào cũng được trong hồ sơ.',
@@ -176,13 +227,34 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             'City Crew は開いた場所を記憶し、一度見送った場所が出にくくなります。プロフィール編集でいつでもオフにできます。',
           )}
         </Text>
+        {/* The account is made here now, so this is where its failures
+            land — an address already registered, a password the server
+            refuses. The back control above is what makes that message
+            actionable rather than a dead end. */}
+        {error ? <FormError>{failText(error)}</FormError> : null}
+        {/* Two answers, both visible. The button used to be one control
+            wearing two words — "Xong" once something was picked, "Bỏ
+            qua" until then — which meant the largest, warmest thing on
+            the screen invited the reader to leave at the exact moment
+            they arrived. Skipping is still a real answer and still makes
+            the account; it is now a real answer that does not have to
+            hide the other one to be offered. */}
         <PrimaryButton
-          label={taste.length
-            ? t('Done', 'Xong', '完了')
-            : t('Skip for now', 'Bỏ qua', 'あとで')}
+          label={t('Continue', 'Tiếp tục', '続ける')}
           onPress={() => finish(taste)}
           busy={busy}
         />
+        {/* Not disabled with nothing picked. A grey button is a riddle —
+            the reader has to guess what would unlock it — and there is
+            nothing to unlock: continuing with no answer is exactly what
+            the line below it offers. */}
+        <Pressable
+          onPress={() => { if (!busy) finish([]); }}
+          accessibilityRole="button"
+          hitSlop={10}
+        >
+          <Text style={s.skip}>{t('Skip for now', 'Bỏ qua', 'あとで')}</Text>
+        </Pressable>
       </AuthScreen>
     );
   }
@@ -190,6 +262,11 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   if (step === 'confirm') {
     return (
       <AuthScreen>
+        {/* The third mark, not a fourth. Whether this screen happens at
+            all is a project setting `signUp` only reveals once it has
+            run, so it shares the last step with finishing rather than
+            making the bar grow a mark halfway through the flow. */}
+        <StepDots step={3} total={3} />
         <AuthHeader
           onBack={() => setStep('form')}
           title={t('Check your email', 'Kiểm tra email', 'メールをご確認ください')}
@@ -216,8 +293,56 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
     );
   }
 
+  if (step === 'welcome') {
+    return (
+      <AuthScreen>
+        {/* No marks here. The bar answers "how much longer", and the
+            answer has stopped being interesting. */}
+        {/* The one drawing in this flow, and the only decoration in it.
+            `WelcomeSheet` states the house rule — "deliver the value,
+            don't describe it; there is no tour, no carousel" — and a
+            picture on a screen that is asking for something would be
+            arguing with it. This screen asks for nothing. It is the
+            moment of arrival, and the app already allows itself a mark in
+            exactly that kind of moment: the orb that turns while a plan
+            is being drawn.
+
+            Artwork rather than the `paper-plane` glyph it started as. A
+            glyph is a label; this has a trail behind it, which is the
+            part that means "you have arrived from somewhere" rather than
+            merely "send".
+
+            Shipped at 768×512 from a 1536×1024 original — 1.1MB down to
+            66KB, and still 3.2× the density of the ~240×160 it draws at.
+            Everyone downloads this file, and nobody looks at it twice. */}
+        <Image source={welcomePlane} style={s.plane} contentFit="contain" />
+        {/* The whole display name, not a first name. Which part of a name
+            somebody is addressed by differs by language — Vietnamese
+            reaches for the last word, English the first — and a greeting
+            that gets it wrong is worse than one that is merely formal. */}
+        <Text style={s.welcomeTitle} numberOfLines={2}>
+          {t(
+            `Welcome, ${name.trim()}`,
+            `Chào mừng, ${name.trim()}`,
+            `${name.trim()} さん、ようこそ`,
+          )}
+        </Text>
+        <Lede>{t(
+            'Your account is ready. Save the places you like, gather them into collections, and let City Crew plan the evening.',
+            'Tài khoản của bạn đã sẵn sàng. Lưu những nơi bạn thích, gom thành bộ sưu tập, và để City Crew lo buổi tối.',
+            'アカウントの準備ができました。気に入った場所を保存し、コレクションにまとめ、夜のプランは City Crew に任せてください。',
+          )}</Lede>
+        <PrimaryButton
+          label={t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる')}
+          onPress={() => navigation.popToTop()}
+        />
+      </AuthScreen>
+    );
+  }
+
   return (
     <AuthScreen>
+      <StepDots step={1} total={3} />
       <AuthHeader
         onBack={() => navigation.goBack()}
         title={t('Sign up', 'Đăng ký', '新規登録')}
@@ -353,6 +478,22 @@ const s = StyleSheet.create({
   // reader should meet, not a second instruction competing with the one
   // the screen is actually asking.
   privacyNote: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 19, marginTop: 14, marginBottom: 4 },
+  // The other answer, offered rather than hidden. Centred under the
+  // button it is an alternative to, and underlined because it is the one
+  // piece of running text on these screens that is a control — the app
+  // underlines nothing else, which is exactly what makes it read as
+  // something to press here.
+  skip: {
+    color: colors.textSecondary, ...type.meta, textAlign: 'center',
+    textDecorationLine: 'underline', paddingVertical: 6,
+  },
+  // Width-led, because the drawing is wide and its trail is the half
+  // that would be cropped by a square. `contain` inside a fixed height
+  // keeps the title's position steady whatever the screen's width.
+  plane: { width: '100%', height: 150, marginTop: 4, marginBottom: 2 },
+  // The greeting, one size up from the step titles: this screen has one
+  // thing to say and the room to say it.
+  welcomeTitle: { color: colors.text, ...type.titleDetail, marginBottom: 2 },
   terms: { color: colors.textTertiary, ...type.meta, textAlign: 'center', lineHeight: 26, marginTop: 4 },
   // Only the colour and the weight change: a different size inside a
   // sentence would break the line's rhythm, and there is no underline
