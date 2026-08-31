@@ -23,8 +23,19 @@ import { colors, font, type } from '../theme';
 import type { Nav } from '../nav';
 import welcomePlane from '../../assets/welcome-plane.png';
 
+/**
+ * How long a username has to stop changing before the app asks about it.
+ *
+ * Long enough that typing a name does not fire a query per keystroke —
+ * `suggestHandle` rewrites the field on every letter of the display name,
+ * so "Thai Thi Hoa" would otherwise be twelve — and short enough that the
+ * answer arrives while the reader is still looking at the field rather
+ * than three fields further down.
+ */
+export const HANDLE_CHECK_MS = 500;
+
 export default function SignUpScreen({ navigation }: { navigation: Nav }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { signUp, confirmSignUp, session } = useAuth();
   const failText = useFailText();
   const [name, setName] = useState('');
@@ -109,14 +120,70 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
     chars: t('Letters, numbers and _ only.', 'Chỉ gồm chữ, số và dấu _.', '英数字と _ のみ使えます。'),
   }[bad]);
 
+  const takenMessage = (h: string) => t(
+    `@${h} is taken. Try another.`,
+    `@${h} đã có người dùng. Chọn tên khác.`,
+    `@${h} は使用されています。別の名前をお試しください。`,
+  );
+
+  /**
+   * Whether the username is free, asked while it is being typed.
+   *
+   * It used to be asked at submit, after both password fields — so the
+   * reader filled in everything and *then* learned the name was taken.
+   * Worse, the name is usually not theirs: `suggestHandle` proposes it
+   * from the display name and `handleTouched` stays false, so the app was
+   * making a suggestion, taking the rest of the form, and only then
+   * withdrawing its own suggestion.
+   *
+   * Nothing is asked about a handle the shape rules already reject —
+   * there is no point asking the server about `ab`, and a sentence about
+   * length while somebody is on their second letter is nagging. Those
+   * still surface at submit, where the reader has finished typing.
+   *
+   * `live` is latest-wins. Every change tears this effect down, so a slow
+   * answer about a handle that has since been edited cannot land on the
+   * new one — which is the bug this shape of check usually ships with.
+   */
+  useEffect(() => {
+    // Whatever was showing was about a value that is no longer in the
+    // field. Cleared here rather than in `onChangeText` because the
+    // display name rewrites this field too, and one place is enough.
+    setNameError(null);
+    const chosen = normalizeHandle(handle);
+    if (handleProblem(chosen)) return undefined;
+
+    let live = true;
+    const id = setTimeout(() => {
+      isHandleFree(chosen)
+        .then((free) => { if (live && !free) setNameError(takenMessage(chosen)); })
+        // Swallowed on purpose. This is a courtesy, not the decision: the
+        // unique index decides, submit asks again, and a reader offline
+        // for a moment should not be told their name is taken.
+        .catch(() => {});
+    }, HANDLE_CHECK_MS);
+
+    return () => { live = false; clearTimeout(id); };
+    // `t` is stable for a language and the message is rebuilt per run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handle, lang]);
+
   const submit = () =>
     run(async () => {
-      // The two fields nothing downstream would name properly. An empty
-      // name reaches the server as valid metadata and makes a nameless
-      // account; an empty address comes back as "missing email or phone".
-      // The handle is not here because `handleProblem` already names its
-      // own empty case.
+      // IN THE ORDER THE FIELDS ARE IN. They were not: the username was
+      // checked after both password fields, so a form with a short
+      // password and a taken name took two submits to learn both
+      // problems, and named the lower field first.
+      //
+      // The two that nothing downstream would name properly stay as they
+      // are — an empty name reaches the server as valid metadata and
+      // makes a nameless account, and an empty address comes back as
+      // "missing email or phone". The handle needs neither, because
+      // `handleProblem` already names its own empty case.
       if (!name.trim()) throw new Error('need_name');
+      const chosen = normalizeHandle(handle);
+      const bad = handleProblem(chosen);
+      if (bad) { setNameError(handleMessage(bad)); return; }
       if (!email.trim()) throw new Error('need_email');
       if (password.length < PASSWORD_MIN) {
         throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
@@ -124,18 +191,18 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       if (password !== confirm) {
         throw new Error(t("Passwords don't match.", 'Mật khẩu nhập lại không khớp.', 'パスワードが一致しません。'));
       }
-      const chosen = normalizeHandle(handle);
-      const bad = handleProblem(chosen);
-      if (bad) { setNameError(handleMessage(bad)); return; }
-      // Checked here so the message names the problem; the database is
-      // what actually decides, and losing a race falls back to a
-      // generated handle rather than to a failed sign-up.
+      // Last of the six, and out of screen order on purpose: it is the
+      // only one that costs a round trip, and making every submit wait on
+      // the network before it will name a mistyped password would be a
+      // worse form than the one this is fixing.
+      //
+      // Still here at all because the check above can be outrun — somebody
+      // who types quickly and submits inside `HANDLE_CHECK_MS` never gave
+      // it time to answer. The database is what actually decides, and
+      // losing that race falls back to a generated handle rather than to a
+      // failed sign-up.
       if (!(await isHandleFree(chosen))) {
-        setNameError(t(
-          `@${chosen} is taken. Try another.`,
-          `@${chosen} đã có người dùng. Chọn tên khác.`,
-          `@${chosen} は使用されています。別の名前をお試しください。`,
-        ));
+        setNameError(takenMessage(chosen));
         return;
       }
       // Nothing is created here any more. The form is checked and the
