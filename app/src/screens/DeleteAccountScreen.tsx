@@ -78,11 +78,31 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
   // from a plan, which is four verbs. `History` is what Edit profile
   // already calls this exact data on its own delete button, which makes
   // it the only name a reader could have met before.
+  //
+  // EVERY ROW IS THE APP'S OWN WORD, IN ALL THREE. That rule is why the
+  // English row says "history", and applying it only to English is how
+  // three of these came out wrong the first time. A list of what an
+  // account is made of has to use the names that account's other screens
+  // use, or the reader is being asked to trust a summary written in
+  // vocabulary they have never been shown:
+  //
+  //   crew     `CrewScreen` keeps the English word in Vietnamese — "Crew
+  //            của bạn" — and uses クルー in Japanese. "Bạn bè" and 友達
+  //            were a translation of the English concept rather than of
+  //            this app's word for it.
+  //   blocked  "Đã chặn" / "ブロック中", the heading over the blocked list
+  //            in that same screen.
+  //   taste    "Sở thích" / "興味", the label on the profile's own
+  //            interests row and on the picker in Edit profile.
+  //   catalog  Said to a reader nowhere in this app, in any language: it
+  //            is a word from the code comments. Vietnamese and Japanese
+  //            name the product instead, which is what the sign-up lede
+  //            and the history note already do.
   const gone = [
     t('Profile, photo and username', 'Hồ sơ, ảnh đại diện và tên người dùng', 'プロフィール・写真・ユーザー名'),
     t('Collections, likes and trips', 'Bộ sưu tập, lượt thích và chuyến đi', 'コレクション・いいね・旅程'),
-    t('Crew and blocked accounts', 'Bạn bè và các tài khoản đã chặn', '友達とブロックした相手'),
-    t('Taste preferences and history', 'Gu và lịch sử', '好みと履歴'),
+    t('Crew and blocked accounts', 'Crew và tài khoản đã chặn', 'クルーとブロック中のアカウント'),
+    t('Taste preferences and history', 'Sở thích và lịch sử', '興味と履歴'),
   ];
 
   return (
@@ -93,7 +113,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
       />
       <Lede>{t(
         "Permanently delete your account and personal data. This action can't be undone.",
-        'Xoá vĩnh viễn tài khoản và dữ liệu cá nhân của bạn. Không thể hoàn tác.',
+        'Xoá vĩnh viễn tài khoản và dữ liệu cá nhân của bạn. Hành động này không thể hoàn tác.',
         'アカウントと個人データを完全に削除します。この操作は元に戻せません。',
       )}</Lede>
 
@@ -150,12 +170,19 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
         <View style={s.block}>
           <View style={s.blockHead}>
             <Ionicons name="checkmark-circle" size={16} color={colors.ok} />
-            <Text style={s.label}>{t('Will remain', 'Sẽ ở lại', '残るもの')}</Text>
+            {/* The pair, as a pair in each language. Vietnamese has two
+                passives and picks between them by whether what happened
+                was wanted — `bị` for the bad, `được` for the good — so
+                "Sẽ bị xoá" against "Sẽ được giữ lại" carries the same
+                opposition the English pair does, in the grammar rather
+                than only in the verbs. "Sẽ ở lại" was neither: an
+                active verb, and slightly colloquial for data. */}
+            <Text style={s.label}>{t('Will remain', 'Sẽ được giữ lại', '残るもの')}</Text>
           </View>
           <Text style={s.value}>{t(
             'Places you added will remain in the catalog, but will no longer be linked to your account.',
-            'Địa điểm bạn đã thêm vẫn ở lại catalog, nhưng không còn gắn với tài khoản của bạn.',
-            '追加したスポットはカタログに残りますが、アカウントとの関連は解除されます。',
+            'Địa điểm bạn đã thêm vẫn còn trên City Crew, nhưng không còn gắn với tài khoản của bạn.',
+            '追加したスポットは City Crew に残りますが、アカウントとの紐づけは解除されます。',
           )}</Text>
         </View>
       </Card>
