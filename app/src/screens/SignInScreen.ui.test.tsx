@@ -20,8 +20,12 @@ vi.mock('../lib/i18n', () => ({
 
 import SignInScreen from './SignInScreen';
 
-const nav = () => ({
+// `depth` is the number of screens under this one in its own stack, and
+// it is a parameter because the two cases behave differently and only one
+// of them used to work. See the note on `leaveAuth` in `nav.ts`.
+const nav = (depth = 2) => ({
   navigate: vi.fn(), goBack: vi.fn(), replace: vi.fn(), popToTop: vi.fn(),
+  getState: () => ({ routes: Array.from({ length: depth }, (_, i) => ({ name: `r${i}` })) }),
 }) as unknown as Nav & {
   navigate: ReturnType<typeof vi.fn>; goBack: ReturnType<typeof vi.fn>;
   replace: ReturnType<typeof vi.fn>; popToTop: ReturnType<typeof vi.fn>;
@@ -72,6 +76,27 @@ describe('signing in', () => {
     submit();
 
     await waitFor(() => expect(navigation.popToTop).toHaveBeenCalled());
+  });
+
+  // The bug this screen shipped with, and the reason `leaveAuth` exists.
+  //
+  // Reached from Collections or Trips before the Profile tab had ever been
+  // opened, this screen was that stack's *only* route — and `popToTop` on a
+  // stack whose top you already are is silently nothing at all. GoTrue said
+  // 200, `onAuthStateChange` fired, every query re-ran as the signed-in
+  // account, and the form stayed exactly where it was with no error to
+  // explain it. Twelve successful sign-ins in one evening read, from the
+  // outside, as a password that would not work.
+  it('leaves even when it is the only screen in its stack', async () => {
+    signIn.mockResolvedValue(undefined);
+    const navigation = nav(1);
+    render(<SignInScreen navigation={navigation} />);
+
+    fill('reader@example.com', 'hunter2');
+    submit();
+
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith('ProfileHome'));
+    expect(navigation.popToTop).not.toHaveBeenCalled();
   });
 
   // What `lib/auth` throws is a name, not a sentence — `credentials` rather

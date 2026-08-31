@@ -139,6 +139,29 @@ export type RootStackParamList = {
 };
 
 export type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+/**
+ * Leave an auth screen for the tab it lives in.
+ *
+ * `popToTop()` was not enough, and the reason is the trap `goTo` documents
+ * below. A screen reached in a stack that had never mounted can be that
+ * stack's *only* screen — and popping to the top of a stack whose top you
+ * already are is silently nothing at all. So the reader pressed Sign in,
+ * the server agreed, `onAuthStateChange` fired, every query re-ran as the
+ * signed-in account — and the sign-in form stayed exactly where it was,
+ * with no error to explain it. The obvious reading of that screen is that
+ * the password was wrong.
+ *
+ * Two call sites created that stack (`CollectionsScreen`, `TripsScreen`,
+ * both fixed), but a screen that cannot leave itself is a fault in the
+ * screen. Every one of these lives only in `ProfileStack`, so the root to
+ * fall back to is never in question.
+ */
+export function leaveAuth(navigation: Nav) {
+  const deep = (navigation.getState()?.routes.length ?? 1) > 1;
+  if (deep) navigation.popToTop();
+  else navigation.replace('ProfileHome');
+}
 export type RootRoute<T extends keyof RootStackParamList> = RouteProp<RootStackParamList, T>;
 
 /**

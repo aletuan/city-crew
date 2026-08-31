@@ -398,7 +398,7 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
           <GradientCta
             icon="log-in-outline"
             label={t('Sign in', 'Đăng nhập', 'サインイン')}
-            onPress={() => navigation.getParent()?.navigate('Profile', { screen: 'SignIn' })}
+            onPress={() => navigation.getParent()?.navigate('Profile', { screen: 'SignIn', initial: false })}
           />
         </View>
       </Screen>
