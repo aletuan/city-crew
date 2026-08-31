@@ -223,6 +223,52 @@ export function PrimaryButton({ label, onPress, busy }: { label: string; onPress
   );
 }
 
+/**
+ * `PrimaryButton`'s shape, for a screen whose main action destroys
+ * something.
+ *
+ * NOT A SOLID RED BUTTON, and the measurement is the reason. `bad` on
+ * paper is #C2564A, which carries white at 4.44:1 and `accentInk` at
+ * 4.18:1 — both under the 4.5:1 a 17pt label owes, from either side. A red
+ * ground and a legible label cannot both exist here, and the dark theme is
+ * worse: its softer red takes white at 2.66:1.
+ *
+ * `theme.ts` had already written the answer down, at `badSoft` — "the well
+ * a delete action sits in, with `bad` itself as the glyph on top" — which
+ * is also `FormError`'s recipe and the swipe action's in `CollectionsScreen`.
+ * So the red is spent on the glyph, where 3:1 is the bar and it clears it,
+ * and the label takes `text` at 14.4:1.
+ *
+ * The glyph earns its place twice: it is also what stops the warning being
+ * carried by colour alone, which is the rule this file states twice
+ * already.
+ *
+ * Same pill, same `CONTROL_H`, same 17pt semibold as `primary`. A
+ * destructive button that is a different *shape* from the ordinary one
+ * reads as a different kind of control, and it is not one — it is the
+ * same control, pointed the other way.
+ */
+export function DangerButton({ label, onPress, busy }: { label: string; onPress: () => void; busy?: boolean }) {
+  return (
+    <PressableScale
+      onPress={busy ? undefined : onPress}
+      accessibilityRole="button"
+      accessibilityState={{ busy: !!busy }}
+    >
+      <View style={s.danger}>
+        {busy
+          ? <ActivityIndicator color={colors.bad} />
+          : (
+            <>
+              <Ionicons name="trash-outline" size={19} color={colors.bad} />
+              <Text style={s.dangerText}>{label}</Text>
+            </>
+          )}
+      </View>
+    </PressableScale>
+  );
+}
+
 /** "Don't have an account?  Sign up" — quiet text with an accented link. */
 export function SwitchRow({ prompt, action, onPress }: { prompt: string; action: string; onPress: () => void }) {
   return (
@@ -510,6 +556,21 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginTop: 6,
   },
   primaryText: { color: colors.accentInk, fontSize: 17, fontWeight: font.semibold },
+
+  // `primary`'s figures, kept deliberately identical, plus the row the
+  // glyph needs. The hairline is `badSoft`'s own note: the ordinary
+  // neutral edge, never a red-tinted one, which against the dark ground
+  // comes out near black and outlines the softest thing on the screen.
+  danger: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
+    borderRadius: radius.pill, minHeight: CONTROL_H, paddingVertical: 10,
+    marginTop: 6,
+    backgroundColor: colors.badSoft,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  // `text`, not `bad` — the same measurement, and the same answer, as
+  // `formErrorText` two blocks down.
+  dangerText: { color: colors.text, fontSize: 17, fontWeight: font.semibold },
 
   switchRow: { flexDirection: 'row', justifyContent: 'center', gap: 7, marginTop: 10 },
   switchPrompt: { color: colors.textSecondary, ...type.meta },

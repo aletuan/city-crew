@@ -130,6 +130,12 @@ export type RootStackParamList = {
   SignUp: undefined;
   ForgotPassword: undefined;
   EditProfile: undefined;
+  /** Closing the account. A route rather than the two alerts it replaced:
+   *  what makes a destructive tap deliberate here is having navigated to
+   *  a screen that is about nothing else, and buttons this app lays out
+   *  itself — a native alert decides its own button positions from string
+   *  widths, which is to say from the language. */
+  DeleteAccount: undefined;
 };
 
 export type Nav = NativeStackNavigationProp<RootStackParamList>;
