@@ -31,11 +31,12 @@ const auth = vi.hoisted(() => {
   };
 });
 const savePreferences = vi.hoisted(() => vi.fn(async () => {}));
+const isHandleFree = vi.hoisted(() => vi.fn(async () => true));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({
     signUp: auth.signUp, confirmSignUp: auth.confirmSignUp, session: auth.state.session,
   }),
-  isHandleFree: vi.fn(async () => true),
+  isHandleFree,
 }));
 const signUp = auth.signUp;
 // Only the write is swapped; everything else in the barrel stays real.
@@ -180,5 +181,74 @@ describe('the taste step', () => {
     fireEvent.click(screen.getByText('Cafés'));
     expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Skip for now' })).toBeTruthy();
+  });
+});
+
+// ── the username, answered while it is being typed ──
+//
+// It used to be the sixth of six checks at submit, after both password
+// fields, so the reader filled in everything and only then learned the
+// name was taken. And the name is usually not theirs: `suggestHandle`
+// proposes it from the display name, so the app was making a suggestion,
+// taking the rest of the form, and then withdrawing its own suggestion.
+
+describe('the username check', () => {
+  beforeEach(() => {
+    auth.state.session = null;
+    isHandleFree.mockClear();
+    isHandleFree.mockResolvedValue(true);
+    signUp.mockClear();
+  });
+
+  const typeHandle = (v: string) =>
+    fireEvent.change(screen.getByPlaceholderText('yourname'), { target: { value: v } });
+
+  it('says a name is taken before a password has been typed', async () => {
+    isHandleFree.mockResolvedValue(false);
+    render(<SignUpScreen navigation={nav()} />);
+    typeHandle('hoa');
+
+    expect(await screen.findByText('@hoa is taken. Try another.', {}, { timeout: 2000 })).toBeTruthy();
+    // The whole point: nothing below the username has been touched, and
+    // nothing was submitted to find this out.
+    expect((screen.getByPlaceholderText('Use at least 8 characters') as HTMLInputElement).value).toBe('');
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it('takes the message back when the name changes', async () => {
+    isHandleFree.mockResolvedValue(false);
+    render(<SignUpScreen navigation={nav()} />);
+    typeHandle('hoa');
+    await screen.findByText('@hoa is taken. Try another.', {}, { timeout: 2000 });
+
+    isHandleFree.mockResolvedValue(true);
+    typeHandle('hoa2');
+
+    // Immediately, not after the next answer: the sentence was about a
+    // value that is no longer in the field.
+    expect(screen.queryByText('@hoa is taken. Try another.')).toBeNull();
+  });
+
+  // No point asking the server about a handle the shape rules already
+  // reject, and a sentence about length while somebody is on their second
+  // letter is nagging. Both still surface at submit.
+  it('asks nothing about a name that is too short to be one', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    typeHandle('ab');
+
+    await new Promise((r) => setTimeout(r, 900));
+    expect(isHandleFree).not.toHaveBeenCalled();
+  });
+
+  // The check can be outrun by somebody who types quickly, so submit still
+  // asks. This is the backstop, and it is the behaviour that existed
+  // before — kept, not replaced.
+  it('still catches a name that was taken faster than the reader typed', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    isHandleFree.mockResolvedValue(false);
+    fillForm();
+
+    expect(await screen.findByText('@trang is taken. Try another.')).toBeTruthy();
+    expect(screen.queryByText('What are you into?')).toBeNull();
   });
 });
