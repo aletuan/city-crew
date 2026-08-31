@@ -4,8 +4,8 @@
 // a project setting, so nothing here assumes one — see `lib/otp.ts`.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { Image } from 'expo-image';
 import {
   AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, StepDots, SwitchRow, useFailText,
 } from '../components/authUi';
@@ -21,6 +21,7 @@ import { HANDLE_MAX, handleProblem, normalizeHandle, suggestHandle } from '../li
 import { PASSWORD_MIN } from '../lib/password';
 import { colors, font, type } from '../theme';
 import type { Nav } from '../nav';
+import welcomePlane from '../../assets/welcome-plane.png';
 
 export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -297,21 +298,24 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       <AuthScreen>
         {/* No marks here. The bar answers "how much longer", and the
             answer has stopped being interesting. */}
-        {/* One glyph, and the only decoration in this flow.
+        {/* The one drawing in this flow, and the only decoration in it.
             `WelcomeSheet` states the house rule — "deliver the value,
             don't describe it; there is no tour, no carousel" — and a
-            drawing on a screen that is asking for something would be
+            picture on a screen that is asking for something would be
             arguing with it. This screen asks for nothing. It is the
-            moment of arrival, and the app already allows itself a mark
-            in exactly that kind of moment: the orb that turns while a
-            plan is being drawn.
+            moment of arrival, and the app already allows itself a mark in
+            exactly that kind of moment: the orb that turns while a plan
+            is being drawn.
 
-            The reference sketch trailed it with a dotted arc. Left out:
-            nothing else in this app draws a flourish, and one glyph is
-            the smallest thing that can say "off you go". */}
-        <View style={s.plane}>
-          <Ionicons name="paper-plane" size={54} color={colors.accent} />
-        </View>
+            Artwork rather than the `paper-plane` glyph it started as. A
+            glyph is a label; this has a trail behind it, which is the
+            part that means "you have arrived from somewhere" rather than
+            merely "send".
+
+            Shipped at 768×512 from a 1536×1024 original — 1.1MB down to
+            66KB, and still 3.2× the density of the ~240×160 it draws at.
+            Everyone downloads this file, and nobody looks at it twice. */}
+        <Image source={welcomePlane} style={s.plane} contentFit="contain" />
         {/* The whole display name, not a first name. Which part of a name
             somebody is addressed by differs by language — Vietnamese
             reaches for the last word, English the first — and a greeting
@@ -483,7 +487,10 @@ const s = StyleSheet.create({
     color: colors.textSecondary, ...type.meta, textAlign: 'center',
     textDecorationLine: 'underline', paddingVertical: 6,
   },
-  plane: { alignItems: 'center', marginTop: 8, marginBottom: 2 },
+  // Width-led, because the drawing is wide and its trail is the half
+  // that would be cropped by a square. `contain` inside a fixed height
+  // keeps the title's position steady whatever the screen's width.
+  plane: { width: '100%', height: 150, marginTop: 4, marginBottom: 2 },
   // The greeting, one size up from the step titles: this screen has one
   // thing to say and the room to say it.
   welcomeTitle: { color: colors.text, ...type.titleDetail, marginBottom: 2 },
