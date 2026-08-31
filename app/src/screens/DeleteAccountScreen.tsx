@@ -31,10 +31,11 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AuthHeader, AuthScreen, DangerButton, FormError, Lede, useFailText } from '../components/authUi';
+import { Avatar, Card } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 export default function DeleteAccountScreen({ navigation }: { navigation: Nav }) {
@@ -84,44 +85,68 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
         'この端末だけでなく、アカウントそのものが削除されます。元に戻せません。',
       )}</Lede>
 
-      {/* Which account. Neither alert ever said, and on a phone signed
-          into one thing that is easy to call unnecessary — right up until
-          somebody has two and deletes the wrong one. It costs a line. */}
-      <View style={s.who}>
-        <Ionicons name="person-circle-outline" size={20} color={colors.textSecondary} />
-        <Text style={s.whoText} numberOfLines={1}>
-          {profile.handle ? atHandle(profile.handle) : email ?? ''}
-        </Text>
-      </View>
+      {/* One card, three parts: whose account, what it is made of, and
+          what outlives it. The card is not decoration — it is what every
+          other grouped list in the Profile stack wears (settings, Legal,
+          About me), and this screen was the only one in that stack
+          standing bare on the page.
 
-      <Text style={s.heading}>{t('Gone for good', 'Mất hẳn', '完全に削除されるもの')}</Text>
-      <View style={s.list}>
-        {gone.map((line) => (
-          <View key={line} style={s.item}>
-            {/* The red is on the glyph, where 3:1 is the bar it has to
-                clear, and never on the sentence — the same division
-                `FormError` makes and for the same measurement. */}
-            <Ionicons name="close-circle" size={17} color={colors.bad} />
-            <Text style={s.itemText}>{line}</Text>
+          It also deletes a hack. Two headings floating between `gap:
+          cardGap` siblings needed a negative margin each to sit near the
+          list they named; inside a card they simply sit where they are
+          put. A negative margin fighting a parent's gap is a sign the
+          thing does not belong to the layout it is in, and it did not. */}
+      <Card style={s.card}>
+        {/* Which account. Neither alert ever said, and on a phone signed
+            into one thing that is easy to call unnecessary — right up
+            until somebody has two and deletes the wrong one.
+
+            The real avatar, through the component every other surface
+            uses, rather than the generic silhouette this had at first: a
+            screen whose entire job is "make sure this is the right
+            account" was showing a stranger's outline next to the handle.
+            `Avatar` draws its own blank for an account with no photo, so
+            that case is its business rather than this file's. */}
+        <View style={[s.row, s.divider]}>
+          <Avatar url={profile.avatar_url} size={40} />
+          <View style={s.who}>
+            <Text style={s.whoName} numberOfLines={1}>{profile.full_name.trim() || email || ''}</Text>
+            {profile.handle ? <Text style={s.whoHandle} numberOfLines={1}>{atHandle(profile.handle)}</Text> : null}
           </View>
-        ))}
-      </View>
+        </View>
 
-      {/* Said as loudly as the other half, because it is the part people
-          get wrong. A café somebody added to the catalog is the catalog's
-          now; deleting your account is leaving the room, not burning the
-          library. */}
-      <Text style={s.heading}>{t('Stays', 'Ở lại', '残るもの')}</Text>
-      <View style={s.list}>
-        <View style={s.item}>
-          <Ionicons name="checkmark-circle" size={17} color={colors.ok} />
-          <Text style={s.itemText}>{t(
+        {/* The mark sits on the heading, not on every line.
+
+            Four filled red circles down the left of a card was more red
+            than this app spends anywhere — `FormError`'s own note frets
+            about "the count of red things" going up by one, and this had
+            put it up by five. The heading is what carries the meaning
+            anyway; the lines under it are contents, and contents do not
+            each need to be told again what list they are in. */}
+        <View style={[s.block, s.divider]}>
+          <View style={s.blockHead}>
+            <Ionicons name="close-circle" size={16} color={colors.bad} />
+            <Text style={s.label}>{t('Gone for good', 'Mất hẳn', '完全に削除されるもの')}</Text>
+          </View>
+          {gone.map((line) => <Text key={line} style={s.value}>{line}</Text>)}
+        </View>
+
+        {/* Said as loudly as the other half, because it is the part people
+            get wrong. A café somebody added to the catalog is the
+            catalog's now; deleting your account is leaving the room, not
+            burning the library. */}
+        <View style={s.block}>
+          <View style={s.blockHead}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.ok} />
+            <Text style={s.label}>{t('Stays', 'Ở lại', '残るもの')}</Text>
+          </View>
+          <Text style={s.value}>{t(
             'Places you added stay in the catalog, no longer linked to you.',
             'Địa điểm bạn đã thêm vẫn ở lại catalog, không còn gắn với bạn.',
             '追加したスポットはカタログに残り、あなたとの関連は消えます。',
           )}</Text>
         </View>
-      </View>
+      </Card>
 
       {error ? <FormError>{failText(error)}</FormError> : null}
 
@@ -146,25 +171,34 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
   );
 }
 
+// `featureCard`'s figures throughout, because this is one of `Profile`'s
+// cards and being *almost* one would read as a mistake rather than as a
+// variation.
 const s = StyleSheet.create({
-  who: {
-    flexDirection: 'row', alignItems: 'center', gap: 9,
-    paddingVertical: 11, paddingHorizontal: 14,
-    borderRadius: radius.input,
-    backgroundColor: colors.surfaceGlass,
-  },
-  whoText: { flex: 1, color: colors.text, ...type.meta, fontWeight: font.medium },
+  card: { paddingHorizontal: space.cardPadding },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft },
 
-  heading: { color: colors.textSecondary, ...type.meta, fontWeight: font.semibold, marginBottom: -space.cardGap + 4 },
-  list: { gap: 9 },
-  // `flex-start` rather than centre: these wrap to two lines on a narrow
-  // phone in Vietnamese, and a glyph centred against two lines sits in
-  // the gap between them instead of beside the first word.
-  item: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
-  itemText: { flex: 1, color: colors.text, ...type.meta, lineHeight: 21 },
+  // 2, not 14: a name and the handle under it are one identity read top
+  // to bottom — the same figure and the same reason as the profile hero.
+  who: { flex: 1, gap: 2 },
+  whoName: { color: colors.text, fontSize: 15.5, fontWeight: font.semibold },
+  whoHandle: { color: colors.textTertiary, ...type.meta },
 
+  block: { paddingVertical: 14, gap: 7 },
+  blockHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  // `aboutLabel` and `aboutValue`, to the point: the card above this one
+  // on the profile says what somebody's account holds in exactly this
+  // type, and this one says what would be taken out of it.
+  label: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
+  value: { color: colors.text, fontSize: 15.5, fontWeight: font.regular, lineHeight: 21 },
+
+  // `SignUpScreen`'s skip, verbatim. It sits in the same place under the
+  // same kind of button, and it had been the one quiet action in the app
+  // wearing neither of the two things this app gives them — an accent, or
+  // an underline.
   keep: {
-    color: colors.textSecondary, fontSize: 15, fontWeight: font.medium,
-    textAlign: 'center', paddingVertical: 12,
+    color: colors.textSecondary, ...type.meta, textAlign: 'center',
+    textDecorationLine: 'underline', paddingVertical: 6,
   },
 });
