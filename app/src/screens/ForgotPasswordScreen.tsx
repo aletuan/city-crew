@@ -12,7 +12,7 @@ import { useI18n } from '../lib/i18n';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
 import { PASSWORD_MIN } from '../lib/password';
 import { colors, font } from '../theme';
-import type { Nav } from '../nav';
+import { leaveAuth, type Nav } from '../nav';
 
 /** Supabase's own limit is one recovery email per address per minute. */
 const RESEND_SECONDS = 60;
@@ -82,7 +82,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
         throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
       }
       await resetPassword(email.trim(), cleanOtp(code), password);
-      navigation.popToTop();
+      leaveAuth(navigation);
     });
 
   if (step === 'reset') {

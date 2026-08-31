@@ -20,7 +20,7 @@ import { cleanOtp, OTP_MAX } from '../lib/otp';
 import { HANDLE_MAX, handleProblem, normalizeHandle, suggestHandle } from '../lib/handle';
 import { PASSWORD_MIN } from '../lib/password';
 import { colors, font, type } from '../theme';
-import type { Nav } from '../nav';
+import { leaveAuth, type Nav } from '../nav';
 import welcomePlane from '../../assets/welcome-plane.png';
 
 /**
@@ -401,7 +401,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           )}</Lede>
         <PrimaryButton
           label={t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる')}
-          onPress={() => navigation.popToTop()}
+          onPress={() => leaveAuth(navigation)}
         />
       </AuthScreen>
     );

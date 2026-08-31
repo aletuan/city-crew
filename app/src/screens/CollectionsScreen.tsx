@@ -67,7 +67,7 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
     <PressableScale
       containerStyle={s.noticeWrap}
       style={s.notice}
-      onPress={() => navigation.getParent()?.navigate('Profile', { screen: 'SignIn' })}
+      onPress={() => navigation.getParent()?.navigate('Profile', { screen: 'SignIn', initial: false })}
       accessibilityRole="button"
       accessibilityLabel={t(
         'Sign in to build your own collections',

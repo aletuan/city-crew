@@ -37,7 +37,7 @@ import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
 import { useTakeout } from '../lib/takeout';
 import { colors, font, space, type } from '../theme';
-import type { Nav } from '../nav';
+import { leaveAuth, type Nav } from '../nav';
 
 export default function DeleteAccountScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -55,7 +55,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
       // Nothing sets `busy` back on this path: the account is gone, the
       // session with it, and this screen leaves with them. `ProfileHome`
       // is already rendering `GuestHub` by the time it arrives.
-      navigation.popToTop();
+      leaveAuth(navigation);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);

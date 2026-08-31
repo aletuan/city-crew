@@ -39,8 +39,12 @@ vi.mock('../lib/takeout', () => ({ useTakeout: () => takeout }));
 
 import DeleteAccountScreen from './DeleteAccountScreen';
 
-const nav = () => ({
+// `depth` is how many screens sit under this one in its own stack — see
+// the note on `leaveAuth` in `nav.ts` for why one of them is a special
+// case rather than a smaller version of the other.
+const nav = (depth = 2) => ({
   navigate: vi.fn(), goBack: vi.fn(), replace: vi.fn(), popToTop: vi.fn(),
+  getState: () => ({ routes: Array.from({ length: depth }, (_, i) => ({ name: `r${i}` })) }),
 }) as unknown as Nav;
 
 // By role, and by a loose match on the name.

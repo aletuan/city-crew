@@ -8,7 +8,7 @@ import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { colors, font } from '../theme';
-import type { Nav } from '../nav';
+import { leaveAuth, type Nav } from '../nav';
 
 export default function SignInScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -30,7 +30,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
     try {
       await signIn(email.trim(), password);
       successHaptic();
-      navigation.popToTop();
+      leaveAuth(navigation);
     } catch (err) {
       setError((err as Error).message);
     } finally {
