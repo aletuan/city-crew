@@ -18,12 +18,12 @@ import { fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav } from '../nav';
 
 const deleteAccount = vi.hoisted(() => vi.fn(async () => {}));
+const account = vi.hoisted(() => ({
+  email: 'trang@example.com' as string | null,
+  profile: { handle: 'trang', full_name: 'Trang', location: '', bio: '', interests: '', avatar_url: '' },
+}));
 vi.mock('../lib/auth', () => ({
-  useAuth: () => ({
-    deleteAccount,
-    email: 'trang@example.com',
-    profile: { handle: 'trang', full_name: 'Trang', location: '', bio: '', interests: '', avatar_url: '' },
-  }),
+  useAuth: () => ({ deleteAccount, email: account.email, profile: account.profile }),
 }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -38,6 +38,8 @@ const nav = () => ({
 beforeEach(() => {
   deleteAccount.mockClear();
   deleteAccount.mockImplementation(async () => {});
+  account.email = 'trang@example.com';
+  account.profile = { handle: 'trang', full_name: 'Trang', location: '', bio: '', interests: '', avatar_url: '' };
 });
 
 describe('the delete account screen', () => {
@@ -58,6 +60,16 @@ describe('the delete account screen', () => {
   // this is the only thing on the screen that tells them apart.
   it('names the account it would delete', () => {
     render(<DeleteAccountScreen navigation={nav()} />);
+    expect(screen.getByText('Trang')).toBeTruthy();
+    expect(screen.getByText('@trang')).toBeTruthy();
+  });
+
+  // An account that never filled the name in still has to be identifiable,
+  // and the address is the one thing every account has.
+  it('falls back to the email when there is no name', () => {
+    account.profile = { ...account.profile, full_name: '   ' };
+    render(<DeleteAccountScreen navigation={nav()} />);
+    expect(screen.getByText('trang@example.com')).toBeTruthy();
     expect(screen.getByText('@trang')).toBeTruthy();
   });
 
