@@ -28,6 +28,14 @@ vi.mock('../lib/auth', () => ({
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
+// Mocked for the same reason `useAuth` is, plus one of its own: the hook
+// reaches `expo-file-system`, which is a native module and has no runtime
+// under jsdom. The gathering and the shape it produces are asserted in
+// `lib/export.test.ts` and `lib/data/export.test.ts`, which are the two
+// files the coverage gate holds at 100%. What is left for this test is
+// what the screen does with the hook.
+const takeout = vi.hoisted(() => ({ run: vi.fn(), busy: false, error: null as string | null }));
+vi.mock('../lib/takeout', () => ({ useTakeout: () => takeout }));
 
 import DeleteAccountScreen from './DeleteAccountScreen';
 
@@ -47,6 +55,9 @@ const deleteButton = () => screen.getByRole('button', { name: /Delete account/ }
 beforeEach(() => {
   deleteAccount.mockClear();
   deleteAccount.mockImplementation(async () => {});
+  takeout.run.mockClear();
+  takeout.busy = false;
+  takeout.error = null;
   account.email = 'trang@example.com';
   account.profile = { handle: 'trang', full_name: 'Trang', location: '', bio: '', interests: '', avatar_url: '' };
 });
@@ -129,6 +140,37 @@ describe('the delete account screen', () => {
     // second tap has nothing to hit even before `onPress` is withheld.
     expect(screen.queryByRole('button', { name: /Delete account/ })).toBeNull();
     release();
+  });
+
+  // A copy of your own data is a standing right, and a separate one from
+  // erasure — so the offer has to be here, above the button that makes a
+  // copy impossible, and it has to work without deleting anything.
+  it('offers a copy of the data before offering to destroy it', () => {
+    render(<DeleteAccountScreen navigation={nav()} />);
+
+    fireEvent.click(screen.getByText('Download your data'));
+
+    expect(takeout.run).toHaveBeenCalled();
+    expect(deleteAccount).not.toHaveBeenCalled();
+  });
+
+  it('will not start a second export while one is running', () => {
+    takeout.busy = true;
+    render(<DeleteAccountScreen navigation={nav()} />);
+
+    fireEvent.click(screen.getByText('Download your data'));
+
+    expect(takeout.run).not.toHaveBeenCalled();
+  });
+
+  // Its own banner, in the reader's language, rather than the raw name
+  // the hook throws.
+  it('says when the export could not be handed over', () => {
+    takeout.error = 'sharing_unavailable';
+    render(<DeleteAccountScreen navigation={nav()} />);
+    expect(screen.getByText(
+      'This device cannot share files, so the export could not be handed over.',
+    )).toBeTruthy();
   });
 
   // Leaving is an answer, and it must be reachable from the bottom of the

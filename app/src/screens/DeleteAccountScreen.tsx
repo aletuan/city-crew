@@ -28,13 +28,14 @@
 // the only kind that survives being seen twice.
 
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AuthHeader, AuthScreen, DangerButton, FormError, Lede, useFailText } from '../components/authUi';
-import { Avatar, Card } from '../components/ui';
+import { Avatar, Card, PressableScale } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
+import { useTakeout } from '../lib/takeout';
 import { colors, font, space, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -42,6 +43,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
   const { t } = useI18n();
   const { email, profile, deleteAccount } = useAuth();
   const failText = useFailText();
+  const takeout = useTakeout();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,11 +100,23 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
   //            is a word from the code comments. Vietnamese and Japanese
   //            name the product instead, which is what the sign-up lede
   //            and the history note already do.
-  const gone = [
-    t('Profile, photo and username', 'Hồ sơ, ảnh đại diện và tên người dùng', 'プロフィール・写真・ユーザー名'),
-    t('Collections, likes and trips', 'Bộ sưu tập, lượt thích và chuyến đi', 'コレクション・いいね・旅程'),
-    t('Crew and blocked accounts', 'Crew và tài khoản đã chặn', 'クルーとブロック中のアカウント'),
-    t('Taste preferences and history', 'Sở thích và lịch sử', '興味と履歴'),
+  // A glyph per row, and it is NOT the mark that came off these lines
+  // earlier. That one was `close-circle` in red, four times, saying what
+  // the heading above them already said — a status, repeated. These say
+  // what *kind* of data each row is, which the heading does not say, and
+  // they are `textTertiary`, so the count of red things on the screen is
+  // still two.
+  //
+  // Each is the glyph its own surface already wears: `person-outline`
+  // from the profile field, `bookmark-outline` from the Collections tab,
+  // `people-outline` from Crew, and `heart-outline` from the profile's
+  // Interests row. A reader who has met these four screens has met these
+  // four glyphs.
+  const gone: [keyof typeof Ionicons.glyphMap, string][] = [
+    ['person-outline', t('Profile, photo and username', 'Hồ sơ, ảnh đại diện và tên người dùng', 'プロフィール・写真・ユーザー名')],
+    ['bookmark-outline', t('Collections, likes and trips', 'Bộ sưu tập, lượt thích và chuyến đi', 'コレクション・いいね・旅程')],
+    ['people-outline', t('Crew and blocked accounts', 'Crew và tài khoản đã chặn', 'クルーとブロック中のアカウント')],
+    ['heart-outline', t('Taste preferences and history', 'Sở thích và lịch sử', '興味と履歴')],
   ];
 
   return (
@@ -160,7 +174,16 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
             <Ionicons name="close-circle" size={16} color={colors.bad} />
             <Text style={s.label}>{t('Will be deleted', 'Sẽ bị xoá', '削除されるもの')}</Text>
           </View>
-          {gone.map((line) => <Text key={line} style={s.value}>{line}</Text>)}
+          {gone.map(([icon, line]) => (
+            <View key={line} style={s.item}>
+              {/* `flex-start`, not centre: these wrap to two lines on a
+                  narrow phone in Vietnamese, and a glyph centred against
+                  two lines sits in the gap between them rather than
+                  beside the first word. */}
+              <Ionicons name={icon} size={17} color={colors.textTertiary} />
+              <Text style={s.value}>{line}</Text>
+            </View>
+          ))}
         </View>
 
         {/* Said as loudly as the other half, because it is the part people
@@ -186,6 +209,43 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
           )}</Text>
         </View>
       </Card>
+
+      {/* Leaving with a copy, offered before the thing that makes a copy
+          impossible. It is a card row rather than a second button: two
+          full-width controls stacked would make the screen look like it
+          is asking which one, and only one of them is what this screen is
+          for.
+
+          This is not its only home. A copy of your own data is a standing
+          right — separate from erasure, and the article that grants it is
+          a different article — so it belongs in the profile as well, and
+          reaching it only by starting to delete an account would be a
+          strange way to exercise it. */}
+      <Card style={s.card}>
+        <PressableScale
+          scaleTo={0.98}
+          style={s.row}
+          onPress={takeout.busy ? undefined : takeout.run}
+          accessibilityRole="button"
+          accessibilityState={{ busy: takeout.busy }}
+        >
+          <View style={s.roundIcon}>
+            <Ionicons name="download-outline" size={20} color={colors.accent} />
+          </View>
+          <View style={s.who}>
+            <Text style={s.whoName}>{t('Download your data', 'Tải dữ liệu của bạn', 'データをダウンロード')}</Text>
+            <Text style={s.actionSub}>{t(
+              'A copy of everything above, as one file.',
+              'Một bản sao của mọi thứ ở trên, trong một tệp.',
+              '上記すべての写しを 1 つのファイルで。',
+            )}</Text>
+          </View>
+          {takeout.busy
+            ? <ActivityIndicator color={colors.textTertiary} />
+            : <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />}
+        </PressableScale>
+      </Card>
+      {takeout.error ? <FormError>{failText(takeout.error)}</FormError> : null}
 
       {error ? <FormError>{failText(error)}</FormError> : null}
 
@@ -223,14 +283,23 @@ const s = StyleSheet.create({
   who: { flex: 1, gap: 2 },
   whoName: { color: colors.text, fontSize: 15.5, fontWeight: font.semibold },
   whoHandle: { color: colors.textTertiary, ...type.meta },
+  // `roundIcon` and the sub-line are `ProfileScreen`'s, to the figure: the
+  // download row is an ordinary settings row that happens to be standing
+  // on this screen, and it should read as one.
+  roundIcon: {
+    width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.borderGlassSoft,
+  },
+  actionSub: { color: colors.textSecondary, ...type.meta },
 
-  block: { paddingVertical: 14, gap: 7 },
+  block: { paddingVertical: 14, gap: 9 },
+  item: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   blockHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   // `aboutLabel` and `aboutValue`, to the point: the card above this one
   // on the profile says what somebody's account holds in exactly this
   // type, and this one says what would be taken out of it.
   label: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
-  value: { color: colors.text, fontSize: 15.5, fontWeight: font.regular, lineHeight: 21 },
+  value: { flex: 1, color: colors.text, fontSize: 15.5, fontWeight: font.regular, lineHeight: 21 },
 
   // `SignUpScreen`'s skip, verbatim. It sits in the same place under the
   // same kind of button, and it had been the one quiet action in the app

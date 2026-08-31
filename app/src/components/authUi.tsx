@@ -339,7 +339,11 @@ export type FormFail =
   | 'bad_image'
   | 'slow_prepare'
   | 'slow_upload'
-  | 'slow_save';
+  | 'slow_save'
+  // Raised by `lib/takeout` on a platform whose share sheet this app
+  // cannot raise. Not an `AuthFail`: nothing about it comes from GoTrue,
+  // and the table `authfail.ts` holds is a table of the server's codes.
+  | 'sharing_unavailable';
 
 /**
  * The failure `lib/auth` threw, as a sentence in the reader's language.
@@ -470,6 +474,11 @@ export function useFailSentences(): Record<AuthFail | FormFail, string> {
       'Sign in to do that.',
       'Hãy đăng nhập để làm điều đó.',
       'この操作にはサインインが必要です。',
+    ),
+    sharing_unavailable: t(
+      'This device cannot share files, so the export could not be handed over.',
+      'Máy này không chia sẻ được tệp, nên không giao được bản xuất.',
+      'この端末はファイルを共有できないため、エクスポートを渡せませんでした。',
     ),
     bad_image: t(
       "That picture could not be read. Try another.",

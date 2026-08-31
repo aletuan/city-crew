@@ -36,7 +36,9 @@ USER-GENERATED CONTENT (guideline 1.2): All catalog places are approved by
 our editorial desk before publication. User-published collections and
 profiles carry in-app Report actions; users can block other users; reports
 are reviewed by our moderation desk, which can unpublish content and action
-accounts. Account deletion is available in-app at Profile → Delete account.
+accounts. Account deletion is available in-app at Profile → Delete account. The same
+screen offers Download your data, which writes the account's data to a JSON
+file and passes it to the system share sheet; nothing is uploaded.
 
 The app's content is available in English, Vietnamese, and Japanese and
 follows the device language.
