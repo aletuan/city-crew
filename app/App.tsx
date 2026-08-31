@@ -46,6 +46,7 @@ import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
+import DeleteAccountScreen from './src/screens/DeleteAccountScreen';
 import CrewScreen from './src/screens/CrewScreen';
 import ActivityScreen from './src/screens/ActivityScreen';
 
@@ -132,6 +133,9 @@ function ProfileStack() {
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      {/* The last row on the profile, and its own screen — see the note
+          at the top of it for why it is not the two alerts it replaced. */}
+      <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       {/* Friends live under Profile: they are a fact about the account,
           not about any city, and the card that opens them sits here. */}
       <Stack.Screen name="Crew" component={CrewScreen} />

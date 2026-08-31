@@ -7,7 +7,7 @@
 // reference's violet gradient is translated, not copied.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 // TEMPORARY — read/written only by the "Always show welcome" row.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -455,7 +455,7 @@ function AboutRow({ icon, label, value, children, last }: {
 
 function AccountProfile({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
-  const { email, profile, memberSince, signOut, deleteAccount, session } = useAuth();
+  const { email, profile, memberSince, signOut, session } = useAuth();
   const [busy, setBusy] = useState(false);
   // The number on the friends card and the dot beside it. Sorted by the
   // pure half in lib/friends; the fetch itself is scoped by RLS to edges
@@ -659,58 +659,26 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
 
       {/* The way out, whole. The store requires it (5.1.1(v)) and it was
           owed anyway: an account you can open but not close is a trap
-          with good manners. Two asks, because the second is the only
-          protection a destructive tap has — the server deliberately asks
-          nothing (see delete-account). Quiet type, not a red button: it
-          must be findable by someone looking and invisible to someone
-          scrolling.
+          with good manners. Quiet type, not a red button: it must be
+          findable by someone looking and invisible to someone scrolling.
 
           Last on the page, below the tagline, and not a point nearer:
           it sat directly under Sign out — the button this screen is
           actually visited for — and two taps that close together must
           not have consequences that far apart. The tagline in between
-          is the buffer a thumb needs. */}
+          is the buffer a thumb needs.
+
+          A screen, not the two alerts this used to open. What made a
+          destructive tap deliberate was supposed to be asking twice, and
+          the second ask said nothing the first had not — the theatre
+          `delete-account` refuses to perform on the server, performed
+          here instead. Worse, a native alert positions its own buttons
+          from the width of their titles, so which side the destructive
+          one landed on changed with the language. The reasoning is at
+          the top of `DeleteAccountScreen`. */}
       <PressableScale
         style={s.deleteBtn}
-        onPress={() => Alert.alert(
-          t('Delete your account?', 'Xoá tài khoản của bạn?', 'アカウントを削除しますか？'),
-          t(
-            'Your profile, collections, likes, trips and friends will be gone for good. Places you added stay in the catalog, no longer linked to you.',
-            'Hồ sơ, bộ sưu tập, lượt thích, chuyến đi và bạn bè sẽ mất hẳn. Địa điểm bạn đã thêm vẫn ở lại catalog, không còn gắn với bạn.',
-            'プロフィール・コレクション・いいね・旅程・友達は完全に削除されます。追加したスポットはカタログに残り、あなたとの関連は消えます。',
-          ),
-          [
-            { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
-            {
-              text: t('Delete', 'Xoá', '削除'),
-              style: 'destructive',
-              onPress: () => Alert.alert(
-                t('This cannot be undone', 'Không thể hoàn tác', '元に戻せません'),
-                t('Delete the account now?', 'Xoá tài khoản ngay bây giờ?', '今すぐアカウントを削除しますか？'),
-                [
-                  { text: t('Keep my account', 'Giữ tài khoản', 'アカウントを残す'), style: 'cancel' },
-                  {
-                    text: t('Delete for good', 'Xoá vĩnh viễn', '完全に削除'),
-                    style: 'destructive',
-                    onPress: async () => {
-                      setBusy(true);
-                      try {
-                        await deleteAccount();
-                      } catch (e) {
-                        Alert.alert(
-                          t('Could not delete the account', 'Không xoá được tài khoản', 'アカウントを削除できませんでした'),
-                          (e as Error).message,
-                        );
-                      } finally {
-                        setBusy(false);
-                      }
-                    },
-                  },
-                ],
-              ),
-            },
-          ],
-        )}
+        onPress={() => navigation.navigate('DeleteAccount')}
       >
         <Text style={s.deleteText}>{t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}</Text>
       </PressableScale>

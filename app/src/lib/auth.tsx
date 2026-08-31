@@ -330,7 +330,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const deleteAccount = useCallback(async () => {
     const { data, error } = await supabase.functions.invoke('delete-account', { body: {} });
-    if (error) throw new Error(error.message);
+    // Through `authFail` like every other failure in this file, though
+    // this one is a `FunctionsError` and carries no code. The message is
+    // all there is, and it is the one case `authFail` reads a message
+    // for: a phone that lost signal mid-delete said "Network request
+    // failed", in English, on a screen the reader had set to Vietnamese.
+    if (error) throw new Error(authFail(undefined, error.message) ?? error.message);
     if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
     // The account is gone server-side; the local sign-out only clears
     // this device's stored session, and failing at that must not make a
