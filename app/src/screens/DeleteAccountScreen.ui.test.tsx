@@ -35,6 +35,15 @@ const nav = () => ({
   navigate: vi.fn(), goBack: vi.fn(), replace: vi.fn(), popToTop: vi.fn(),
 }) as unknown as Nav;
 
+// By role, and by a loose match on the name.
+//
+// The button and the header now say the same words — the page's own title,
+// the way an iOS settings screen does it — so `getByText` finds two nodes
+// and throws. And the name is loose because the button carries a glyph:
+// `@expo/vector-icons` renders one as a character in a `Text`, which lands
+// in the accessible name in front of the label.
+const deleteButton = () => screen.getByRole('button', { name: /Delete account/ });
+
 beforeEach(() => {
   deleteAccount.mockClear();
   deleteAccount.mockImplementation(async () => {});
@@ -49,11 +58,15 @@ describe('the delete account screen', () => {
   // decide rather than after.
   it('says what goes and what stays', () => {
     render(<DeleteAccountScreen navigation={nav()} />);
-    expect(screen.getByText('Gone for good')).toBeTruthy();
-    expect(screen.getByText('Your collections, likes and trips')).toBeTruthy();
-    expect(screen.getByText('Your taste, and the places you opened')).toBeTruthy();
-    expect(screen.getByText('Stays')).toBeTruthy();
-    expect(screen.getByText('Places you added stay in the catalog, no longer linked to you.')).toBeTruthy();
+    expect(screen.getByText('Will be deleted')).toBeTruthy();
+    expect(screen.getByText('Collections, likes and trips')).toBeTruthy();
+    // `history`, the word Edit profile already uses for this data —
+    // never `activity`, which is a different screen in this same stack.
+    expect(screen.getByText('Taste preferences and history')).toBeTruthy();
+    expect(screen.getByText('Will remain')).toBeTruthy();
+    expect(screen.getByText(
+      'Places you added will remain in the catalog, but will no longer be linked to your account.',
+    )).toBeTruthy();
   });
 
   // Which account. Neither alert ever said, and the day somebody has two
@@ -77,7 +90,7 @@ describe('the delete account screen', () => {
     const navigation = nav();
     render(<DeleteAccountScreen navigation={navigation} />);
 
-    fireEvent.click(screen.getByText('Delete my account'));
+    fireEvent.click(deleteButton());
 
     await waitFor(() => expect(deleteAccount).toHaveBeenCalled());
     // Not `goBack`: the account is gone and so is the session, and every
@@ -93,7 +106,7 @@ describe('the delete account screen', () => {
     deleteAccount.mockImplementation(async () => { throw new Error('offline'); });
     render(<DeleteAccountScreen navigation={navigation} />);
 
-    fireEvent.click(screen.getByText('Delete my account'));
+    fireEvent.click(deleteButton());
 
     // `offline` is a name `authfail` knows, so what the reader gets is
     // the sentence — never the name, and never the server's own words.
@@ -109,12 +122,12 @@ describe('the delete account screen', () => {
     deleteAccount.mockImplementation(() => new Promise<void>((resolve) => { release = resolve; }));
     render(<DeleteAccountScreen navigation={nav()} />);
 
-    fireEvent.click(screen.getByText('Delete my account'));
+    fireEvent.click(deleteButton());
     await waitFor(() => expect(deleteAccount).toHaveBeenCalledTimes(1));
 
     // The label is gone while it runs — the button is a spinner — so the
     // second tap has nothing to hit even before `onPress` is withheld.
-    expect(screen.queryByText('Delete my account')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Delete account/ })).toBeNull();
     release();
   });
 

@@ -66,11 +66,23 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
   // is the one thing this app collects that it made a promise about, on
   // the sign-up screen, and the person reading this screen is exactly the
   // person that promise was made to.
+  //
+  // No "Your" on any row. The card says whose account this is one row
+  // above; repeating it four times is four words that carry nothing.
+  //
+  // "history", not "activity" and not "places you viewed". `Activity` is
+  // a screen in this same stack and means something else entirely — what
+  // other people did while you were away — and one word cannot mean both
+  // on adjacent screens. "Viewed" is too narrow the other way: the table
+  // records opening, saving, unsaving, and keeping or dropping a place
+  // from a plan, which is four verbs. `History` is what Edit profile
+  // already calls this exact data on its own delete button, which makes
+  // it the only name a reader could have met before.
   const gone = [
-    t('Your profile, photo and username', 'Hồ sơ, ảnh đại diện và tên người dùng', 'プロフィール・写真・ユーザー名'),
-    t('Your collections, likes and trips', 'Bộ sưu tập, lượt thích và chuyến đi', 'コレクション・いいね・旅程'),
-    t('Your crew, and anyone you blocked', 'Bạn bè, và những người bạn đã chặn', '友達と、ブロックした相手'),
-    t('Your taste, and the places you opened', 'Gu của bạn, và những nơi bạn đã mở', '好みと、開いたスポットの記録'),
+    t('Profile, photo and username', 'Hồ sơ, ảnh đại diện và tên người dùng', 'プロフィール・写真・ユーザー名'),
+    t('Collections, likes and trips', 'Bộ sưu tập, lượt thích và chuyến đi', 'コレクション・いいね・旅程'),
+    t('Crew and blocked accounts', 'Bạn bè và các tài khoản đã chặn', '友達とブロックした相手'),
+    t('Taste preferences and history', 'Gu và lịch sử', '好みと履歴'),
   ];
 
   return (
@@ -80,9 +92,9 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
         title={t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}
       />
       <Lede>{t(
-        'This removes the account itself, not just this device. It cannot be undone.',
-        'Việc này xoá chính tài khoản, không chỉ trên máy này. Không thể hoàn tác.',
-        'この端末だけでなく、アカウントそのものが削除されます。元に戻せません。',
+        "Permanently delete your account and personal data. This action can't be undone.",
+        'Xoá vĩnh viễn tài khoản và dữ liệu cá nhân của bạn. Không thể hoàn tác.',
+        'アカウントと個人データを完全に削除します。この操作は元に戻せません。',
       )}</Lede>
 
       {/* One card, three parts: whose account, what it is made of, and
@@ -126,7 +138,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
         <View style={[s.block, s.divider]}>
           <View style={s.blockHead}>
             <Ionicons name="close-circle" size={16} color={colors.bad} />
-            <Text style={s.label}>{t('Gone for good', 'Mất hẳn', '完全に削除されるもの')}</Text>
+            <Text style={s.label}>{t('Will be deleted', 'Sẽ bị xoá', '削除されるもの')}</Text>
           </View>
           {gone.map((line) => <Text key={line} style={s.value}>{line}</Text>)}
         </View>
@@ -138,12 +150,12 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
         <View style={s.block}>
           <View style={s.blockHead}>
             <Ionicons name="checkmark-circle" size={16} color={colors.ok} />
-            <Text style={s.label}>{t('Stays', 'Ở lại', '残るもの')}</Text>
+            <Text style={s.label}>{t('Will remain', 'Sẽ ở lại', '残るもの')}</Text>
           </View>
           <Text style={s.value}>{t(
-            'Places you added stay in the catalog, no longer linked to you.',
-            'Địa điểm bạn đã thêm vẫn ở lại catalog, không còn gắn với bạn.',
-            '追加したスポットはカタログに残り、あなたとの関連は消えます。',
+            'Places you added will remain in the catalog, but will no longer be linked to your account.',
+            'Địa điểm bạn đã thêm vẫn ở lại catalog, nhưng không còn gắn với tài khoản của bạn.',
+            '追加したスポットはカタログに残りますが、アカウントとの関連は解除されます。',
           )}</Text>
         </View>
       </Card>
@@ -151,7 +163,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
       {error ? <FormError>{failText(error)}</FormError> : null}
 
       <DangerButton
-        label={t('Delete my account', 'Xoá tài khoản của tôi', 'アカウントを削除する')}
+        label={t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}
         onPress={remove}
         busy={busy}
       />
