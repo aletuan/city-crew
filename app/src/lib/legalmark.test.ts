@@ -94,7 +94,15 @@ describe('against the real documents', () => {
     // the activity-history clause was rewritten for the on-by-default
     // change, which turned one emphasis per language into two: the default
     // itself, and the delete button that answers it.
+    //
+    // 44 became 48 when the documents learned to say that a copy can be
+    // taken as well as destroyed: two emphases per language, one in each
+    // document, both naming the same path. Erasure and portability are
+    // separate rights, and the privacy policy had only ever described the
+    // first — a section called "Deleting your data" and nothing about
+    // getting it. The link count does not move: neither addition points
+    // anywhere, because both name a screen rather than a page.
     expect(links).toBe(12);
-    expect(bolds).toBe(44);
+    expect(bolds).toBe(48);
   });
 });
