@@ -101,6 +101,49 @@ export function authFail(code: string | undefined, message: string): AuthFail | 
 }
 
 /**
+ * A `signUp` that "succeeded" into an address that already has an account.
+ *
+ * With email confirmation on, GoTrue does not answer `user_already_exists`
+ * for a registered address — it returns a fabricated user with an empty
+ * identities list and sends no mail, so that the sign-up form cannot be
+ * used to enumerate accounts. The reference manual says only that an
+ * error "may" try to hide this; the empty-identities shape is how the
+ * hiding actually looks, and it is read here in one place so the day it
+ * changes there is one place to change.
+ *
+ * Reading it does not undo the protection: `identities` sits in the HTTP
+ * response either way, so anyone probing can read it directly. The only
+ * person the obfuscation fools is the real reader, sent to a code screen
+ * to wait for a mail that was never sent.
+ *
+ * `Array.isArray` rather than `?.length === 0`: `identities` is optional,
+ * and a response without it must read as "unknown", never as "taken" —
+ * wrong towards missing a duplicate, not towards refusing a real
+ * sign-up.
+ */
+export function obfuscatedSignUp(identities: unknown): boolean {
+  return Array.isArray(identities) && identities.length === 0;
+}
+
+/**
+ * Failures the reader fixes by editing a field on the sign-up form.
+ *
+ * A taken address, a malformed one, a password the server refused — each
+ * is about something typed on the form step, and since the account moved
+ * to the end of the taste step the request fires one screen after those
+ * fields. An error shown where nothing can be edited is an instruction
+ * to guess; these are the ones worth walking the reader back for.
+ *
+ * `rate_limit` and `offline` stay off the list on purpose: nothing on
+ * the form fixes either, so bouncing would move the reader away from
+ * the button they need to press again.
+ */
+export function fixedOnForm(fail: string): boolean {
+  return fail === 'email_taken' || fail === 'bad_email'
+    || fail === 'weak_password' || fail === 'bad_input';
+}
+
+/**
  * A server's sentence, started like a sentence.
  *
  * GoTrue is inconsistent about this — "Password recovery requires an

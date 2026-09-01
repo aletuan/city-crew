@@ -14,6 +14,8 @@ import TastePicker from '../components/TastePicker';
 import { successHaptic } from '../components/ui';
 import { FloatingPlane, WelcomeSkyline } from '../components/welcomeArt';
 import { isHandleFree, useAuth } from '../lib/auth';
+import { fixedOnForm } from '../lib/authfail';
+import { cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
 import type { LegalId } from '../lib/legal';
 import { NO_PREFERENCES, savePreferences } from '../lib/data';
@@ -101,14 +103,19 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
     }
   }, [session, pendingTaste]);
 
-  const run = async (fn: () => Promise<void>) => {
+  // `onFail` exists for one caller: `finish` fires the request a step
+  // after the fields it can complain about, and uses this to walk the
+  // reader back to them. See `fixedOnForm`.
+  const run = async (fn: () => Promise<void>, onFail?: (fail: string) => void) => {
     setBusy(true);
     setError(null);
     setNameError(null);
     try {
       await fn();
     } catch (err) {
-      setError((err as Error).message);
+      const fail = (err as Error).message;
+      setError(fail);
+      onFail?.(fail);
     } finally {
       setBusy(false);
     }
@@ -186,6 +193,14 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       const bad = handleProblem(chosen);
       if (bad) { setNameError(handleMessage(bad)); return; }
       if (!email.trim()) throw new Error('need_email');
+      // Shaped like an address at all — the field already strips the
+      // whitespace case as it is typed, so what this catches is the
+      // missing `@` and the dotless domain. Named now, on the screen
+      // with the field, instead of by the server one step later with a
+      // sentence that names no field. `bad_email` is the same name the
+      // server's own refusal arrives under, so the wording cannot drift
+      // apart between the two moments it can be said.
+      if (!emailShapeOk(email.trim())) throw new Error('bad_email');
       if (password.length < PASSWORD_MIN) {
         throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
       }
@@ -255,7 +270,13 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       if (needsConfirm) { setStep('confirm'); return; }
       successHaptic();
       setStep('welcome');
-    });
+    // The request fires here, one screen after the fields it can
+    // complain about. A failure the reader fixes by editing one of them
+    // walks them back to it, banner and field on the same screen; the
+    // chips survive in state, so Continue costs nothing but the walk.
+    // What no field fixes — the rate limiter, a dead network — stays
+    // here, beside the button worth pressing again.
+    }, (fail) => { if (fixedOnForm(fail)) setStep('form'); });
 
   if (step === 'taste') {
     return (
@@ -475,12 +496,17 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         autoCorrect={false}
         maxLength={HANDLE_MAX}
       />
+      {/* Whitespace never belongs in an address, and the iOS keyboard
+          loves inserting a space after an autocomplete — "name@ gmail.com"
+          was a real sign-up, refused a step later by the server with a
+          sentence that named no field. Stripped as it is typed, so the
+          mistake cannot be made rather than being caught. */}
       <FieldRow
         icon="mail-outline"
         label={t('Email address', 'Địa chỉ email', 'メールアドレス')}
         placeholder={t("We'll never share your email.", 'Email của bạn được giữ kín.', 'メールアドレスは公開されません。')}
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(v) => setEmail(cleanEmail(v))}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}

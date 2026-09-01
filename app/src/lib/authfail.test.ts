@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { authFail, sentenceCase, type AuthFail } from './authfail';
+import { authFail, fixedOnForm, obfuscatedSignUp, sentenceCase, type AuthFail } from './authfail';
 
 // Every code the module claims to know, asserted as a table rather than as
 // eleven `it`s. The point of the table is that adding a row to `BY_CODE`
@@ -95,5 +95,39 @@ describe('sentenceCase', () => {
 
   it('has nothing to say about nothing', () => {
     expect(sentenceCase('')).toBe('');
+  });
+});
+
+describe('obfuscatedSignUp', () => {
+  it('reads an empty identities list as a taken address', () => {
+    expect(obfuscatedSignUp([])).toBe(true);
+  });
+
+  it('reads a real identity as a real sign-up', () => {
+    expect(obfuscatedSignUp([{ provider: 'email' }])).toBe(false);
+  });
+
+  // The rule the docstring states: absent must mean "unknown", never
+  // "taken". A response GoTrue reshapes tomorrow costs a duplicate
+  // slipping through, not a real reader being refused.
+  it('reads anything that is not a list as unknown', () => {
+    expect(obfuscatedSignUp(undefined)).toBe(false);
+    expect(obfuscatedSignUp(null)).toBe(false);
+    expect(obfuscatedSignUp('[]')).toBe(false);
+    expect(obfuscatedSignUp(0)).toBe(false);
+  });
+});
+
+describe('fixedOnForm', () => {
+  it('walks back for what a field can fix', () => {
+    for (const fail of ['email_taken', 'bad_email', 'weak_password', 'bad_input']) {
+      expect(fixedOnForm(fail)).toBe(true);
+    }
+  });
+
+  it('stays put for what no field can fix', () => {
+    for (const fail of ['rate_limit', 'offline', 'credentials', 'need_email', '']) {
+      expect(fixedOnForm(fail)).toBe(false);
+    }
   });
 });
