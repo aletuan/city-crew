@@ -48,6 +48,15 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 
+// The settings probe would otherwise fire a real fetch at the project
+// from inside jsdom. Unknown is the default — also the bar's own — and
+// the tests about the other answer flip it.
+const needsCode = vi.hoisted(() => ({ value: null as boolean | null }));
+vi.mock('../lib/signup', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  fetchSignUpNeedsConfirm: async () => needsCode.value,
+}));
+
 import SignUpScreen from './SignUpScreen';
 
 const nav = () => ({
@@ -327,5 +336,40 @@ describe('a failure the form can fix', () => {
     // Beside the button worth pressing again, not a screen away from it.
     expect(await screen.findByText('Too many attempts. Wait a moment and try again.')).toBeTruthy();
     expect(screen.getByText('What are you into?')).toBeTruthy();
+  });
+});
+
+// How many marks the bar promises is the server's to say — `lib/signup`
+// holds that logic; these pin the wiring and the one late-growth case.
+describe('the step bar', () => {
+  beforeEach(() => {
+    auth.state.session = null;
+    signUp.mockClear();
+    isHandleFree.mockResolvedValue(true);
+    needsCode.value = null;
+  });
+
+  it('promises two steps while the server has not said otherwise', () => {
+    render(<SignUpScreen navigation={nav()} />);
+    expect(screen.getByLabelText('Step 1 of 2')).toBeTruthy();
+  });
+
+  it('promises three from the first frame when sign-up will ask for a code', async () => {
+    needsCode.value = true;
+    render(<SignUpScreen navigation={nav()} />);
+    expect(await screen.findByLabelText('Step 1 of 3')).toBeTruthy();
+  });
+
+  // The ask failed (or lied), and `signUp` demanded a code anyway. The
+  // bar grows on the screen that proves it must — and the docstring's
+  // deal is that this is the only direction it can be wrong in.
+  it('grows to three on the code screen even when the ask had said two', async () => {
+    signUp.mockImplementationOnce(async () => ({ needsConfirm: true }));
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+
+    expect(await screen.findByText('Check your email')).toBeTruthy();
+    expect(screen.getByLabelText('Step 3 of 3')).toBeTruthy();
   });
 });

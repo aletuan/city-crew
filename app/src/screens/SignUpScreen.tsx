@@ -21,6 +21,7 @@ import { NO_PREFERENCES, savePreferences } from '../lib/data';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
 import { HANDLE_MAX, handleProblem, normalizeHandle, suggestHandle } from '../lib/handle';
 import { PASSWORD_MIN } from '../lib/password';
+import { fetchSignUpNeedsConfirm, signUpTotal } from '../lib/signup';
 import { colors, font, type } from '../theme';
 import { leaveAuth, type Nav } from '../nav';
 import welcomePlane from '../../assets/welcome-plane.png';
@@ -87,6 +88,24 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   // unmounts and every field the reader has already filled in survives
   // the round trip with no work at all.
   const [legal, setLegal] = useState<LegalId | null>(null);
+
+  /**
+   * Whether this flow ends with an emailed code — the server's answer,
+   * asked for at mount so the step bar promises the right count from
+   * its first frame. See `lib/signup` for the endpoint and the default.
+   *
+   * `null` until it answers, and if it never does: the bar reads that
+   * as two marks, the steps every configuration has. `finish` overwrites
+   * it with the fact the moment `signUp` reveals one — the only case
+   * the bar grows late, and it grows on the screen that proves it must.
+   */
+  const [needsCode, setNeedsCode] = useState<boolean | null>(null);
+  useEffect(() => {
+    let live = true;
+    void fetchSignUpNeedsConfirm().then((v) => { if (live && v !== null) setNeedsCode(v); });
+    return () => { live = false; };
+  }, []);
+  const dotTotal = signUpTotal(needsCode);
 
   useEffect(() => {
     const uid = session?.user?.id;
@@ -266,7 +285,10 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
       before.current = session?.user?.id ?? null;
       setPendingTaste([...chosen]);
       const { needsConfirm } = await signUp(name.trim(), normalizeHandle(handle), email.trim(), password);
-      if (needsConfirm) { setStep('confirm'); return; }
+      // The fact, wherever the up-front ask had landed: kept in state so
+      // a reader who goes back to fix their address sees three marks on
+      // the form too, now that three is known to be the truth.
+      if (needsConfirm) { setNeedsCode(true); setStep('confirm'); return; }
       successHaptic();
       setStep('welcome');
     // The request fires here, one screen after the fields it can
@@ -280,7 +302,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   if (step === 'taste') {
     return (
       <AuthScreen>
-        <StepDots step={2} total={3} />
+        <StepDots step={2} total={dotTotal} />
         {/* A back control, which this screen used to refuse — "there is
             nothing behind this now: the form is spent and the account is
             made". Both halves of that are false since the account moved
@@ -350,10 +372,10 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
   if (step === 'confirm') {
     return (
       <AuthScreen>
-        {/* The third mark, not a fourth. Whether this screen happens at
-            all is a project setting `signUp` only reveals once it has
-            run, so it shares the last step with finishing rather than
-            making the bar grow a mark halfway through the flow. */}
+        {/* A literal three: reaching this screen IS the proof the flow
+            has three steps, whatever the up-front ask believed — and
+            `finish` has already written that fact into `needsCode`, so
+            going back to fix the address shows three on the form too. */}
         <StepDots step={3} total={3} />
         <AuthHeader
           onBack={() => setStep('form')}
@@ -453,7 +475,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 
   return (
     <AuthScreen>
-      <StepDots step={1} total={3} />
+      <StepDots step={1} total={dotTotal} />
       <AuthHeader
         onBack={() => navigation.goBack()}
         title={t('Sign up', 'Đăng ký', '新規登録')}
