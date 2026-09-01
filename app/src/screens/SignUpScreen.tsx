@@ -5,14 +5,13 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, StepDots, SwitchRow, useFailText,
 } from '../components/authUi';
 import LegalSheet from '../components/LegalSheet';
 import TastePicker from '../components/TastePicker';
 import { successHaptic } from '../components/ui';
-import { FloatingPlane, WelcomeSkyline } from '../components/welcomeArt';
+import { FloatingPlane, HeartDoodle } from '../components/welcomeArt';
 import { isHandleFree, useAuth } from '../lib/auth';
 import { fixedOnForm } from '../lib/authfail';
 import { cleanEmail, emailShapeOk } from '../lib/email';
@@ -384,10 +383,10 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 
   if (step === 'welcome') {
     return (
-      <AuthScreen fill>
+      <AuthScreen>
         {/* No marks here. The bar answers "how much longer", and the
             answer has stopped being interesting. */}
-        {/* The main drawing in this flow, and its hero now. `WelcomeSheet`
+        {/* The one drawing in this flow, and its hero. `WelcomeSheet`
             states the house rule — "deliver the value, don't describe it;
             there is no tour, no carousel" — and a picture on a screen
             that is asking for something would be arguing with it. This
@@ -397,10 +396,12 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             drifts now, too — `FloatingPlane` holds the motion and the
             Reduce Motion answer.
 
-            Artwork rather than the `paper-plane` glyph it started as. A
-            glyph is a label; this has a trail behind it, which is the
-            part that means "you have arrived from somewhere" rather than
-            merely "send".
+            The ONE drawing, and that is a decision with a receipt: a
+            line-art skyline sat along the bottom of this screen for one
+            release and was taken back out — against the phone it crowded
+            the arrival it was meant to ground, and the reference's lower
+            half is empty on purpose. Whoever is next tempted to fill
+            that space: it was tried.
 
             Shipped at 768×512 from a 1536×1024 original — 1.1MB down to
             66KB, and still twice the density of the ~374×250 it draws
@@ -412,40 +413,40 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             reaches for the last word, English the first — and a greeting
             that gets it wrong is worse than one that is merely formal.
 
-            The heart is a font glyph inside the Text, not an SVG beside
-            it: inline, it wraps along with the last word of a long name
-            instead of dropping to a line of its own, and the no-break
-            space is what keeps it attached to that word. */}
-        <Text style={s.welcomeTitle} numberOfLines={2}>
-          {t(
-            `Welcome, ${name.trim()}`,
-            `Chào mừng, ${name.trim()}`,
-            `${name.trim()} さん、ようこそ`,
-          )}
-          {'\u00A0'}
-          <Ionicons name="heart" size={22} color={colors.accent} />
-        </Text>
+            Centred, like everything else on the screen: the reference's
+            composition is symmetric around the plane, and the one step
+            of this flow that is not a form does not need a form's left
+            edge. A row rather than an inline glyph, because the heart is
+            a drawing now — `HeartDoodle` says what the glyph got wrong —
+            and SVG cannot ride inside a `Text`. On a name long enough to
+            wrap, the heart holds the title's top right corner, which is
+            where a doodle would land anyway. */}
+        <View style={s.welcomeTitleRow}>
+          <Text style={s.welcomeTitle} numberOfLines={2}>
+            {t(
+              `Welcome, ${name.trim()}`,
+              `Chào mừng, ${name.trim()}`,
+              `${name.trim()} さん、ようこそ`,
+            )}
+          </Text>
+          <HeartDoodle style={s.welcomeHeart} />
+        </View>
         {/* Three short clauses, ending on the button's own word, so "Start
             exploring" reads as the sentence finishing itself. The planner
             goes unmentioned on purpose — the house rule above again: the
             plan button is one tab away, and this screen's job is to open
-            the door, not to read out the brochure. */}
-        <Lede>{t(
+            the door, not to read out the brochure. Its own style rather
+            than `Lede`, for the centring alone. */}
+        <Text style={s.welcomeLede}>{t(
             'You’re all set. Save places you love, build collections, and find your next place to explore.',
             'Xong hết rồi. Lưu những nơi bạn thích, gom thành bộ sưu tập, và tìm nơi tiếp theo để khám phá.',
             '準備完了です。気に入った場所を保存し、コレクションにまとめて、次の探索先を見つけましょう。',
-          )}</Lede>
+          )}</Text>
         <PrimaryButton
           arrow
           label={t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる')}
           onPress={() => leaveAuth(navigation)}
         />
-        {/* The spacer is what `fill` on `AuthScreen` exists for: it holds
-            the skyline against the bottom of the viewport, above the tab
-            bar — the empty lower half was this screen's known weakness —
-            and collapses to nothing on a screen short enough to scroll. */}
-        <View style={{ flex: 1 }} />
-        <WelcomeSkyline />
       </AuthScreen>
     );
   }
@@ -605,11 +606,18 @@ const s = StyleSheet.create({
   // The hero's box: taller than it was, and bled past the page padding —
   // no explicit width, so the column stretches it and the negative
   // margins count. `contain` inside the fixed height keeps the title's
-  // position steady whatever the screen's width.
-  plane: { height: 250, marginHorizontal: -14, marginTop: 4 },
+  // position steady whatever the screen's width. The top margin is the
+  // reference's air: with the lower half deliberately empty, the drawing
+  // sits down into the screen instead of hanging off the status bar.
+  plane: { height: 250, marginHorizontal: -14, marginTop: 40 },
   // The greeting, one size up from the step titles: this screen has one
-  // thing to say and the room to say it.
-  welcomeTitle: { color: colors.text, ...type.titleDetail, marginBottom: 2 },
+  // thing to say and the room to say it. `flexShrink` so the name, not
+  // the heart, is what gives when the row runs out of room.
+  welcomeTitleRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', gap: 6, marginTop: 10 },
+  welcomeTitle: { color: colors.text, ...type.titleDetail, textAlign: 'center', flexShrink: 1 },
+  // Nudged toward the cap height, where a hand would draw it.
+  welcomeHeart: { marginTop: 3 },
+  welcomeLede: { color: colors.textSecondary, ...type.body, lineHeight: 24, textAlign: 'center', marginBottom: 2 },
   terms: { color: colors.textTertiary, ...type.meta, textAlign: 'center', lineHeight: 26, marginTop: 4 },
   // Only the colour and the weight change: a different size inside a
   // sentence would break the line's rhythm, and there is no underline
