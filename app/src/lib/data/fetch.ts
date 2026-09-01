@@ -51,15 +51,23 @@ export function useFetch<T>(fetcher: () => Promise<T>, empty: T): Fetch<T> {
  * switch live there).
  *
  * `key` is the storage key, or null for no persistence at all — which is
- * exactly `useFetch`, and is how the switch turns this off. Three rules
+ * exactly `useFetch`, and is how the switch turns this off. Four rules
  * keep the cache honest:
  *
- *   - A fresh answer always wins. Hydration applies only while nothing
- *     has ever landed (`loadedAt === null`), so however slow the storage
- *     read is, it can never overwrite the network — and a city switch
- *     mid-session, where old data is already on screen, hydrates nothing.
- *   - The cache is written only from a *successful* fetch, under whatever
- *     key is current at that moment.
+ *   - A key is a question, and a new key never keeps showing the old
+ *     question's answer. It resets to skeletons in the same render, and
+ *     whatever the old question still had in flight is dropped whole
+ *     when it lands — neither shown nor written. Before this, switching
+ *     city left the previous city's catalog on screen until the new
+ *     fetch arrived; the hero, picking its photo from that mixed state,
+ *     visibly loaded one cover and then another.
+ *   - A fresh answer beats hydration. The storage read applies only
+ *     while nothing has landed for *this* key (`loadedAt === null`), so
+ *     however slow it is, it can never overwrite the network. The reset
+ *     re-arms it, which is the bonus: a city switch now hydrates from
+ *     that city's last visit exactly the way a launch does.
+ *   - The cache is written only from a *successful* fetch, under the key
+ *     the request was asked under.
  *   - Reading it back goes through `unpackCache`, and a blob that fails
  *     any of its checks means skeletons and a plain wait — the launch the
  *     app always had.
@@ -78,24 +86,47 @@ export function usePersistedFetch<T>(
   }>({
     loading: true, loaded: false, error: null, data: empty, loadedAt: null, fromCache: false,
   });
-  // The key the *write* should use: the one current when the answer
-  // lands, not the one current when the request started.
+  // Which question is on screen. Bumped by every load and by every key
+  // change, and every answer checks it before touching anything — a late
+  // answer to a question no longer being asked is dropped whole.
+  const gen = useRef(0);
+  // The key at request start, read by `load` when it fires.
   const keyRef = useRef(key);
   keyRef.current = key;
 
+  // The first rule in the docstring, mechanically: reset during render —
+  // React's own pattern for state derived from props — so not one frame
+  // of the old key's answer is ever painted under the new one, and bump
+  // the generation so the old key's in-flight fetch dies unheard.
+  // `reload` goes nowhere near this: refreshing the *same* question
+  // keeps showing its old answer, as every pull-to-refresh should.
+  const [lastKey, setLastKey] = useState(key);
+  if (key !== lastKey) {
+    setLastKey(key);
+    setState({ loading: true, loaded: false, error: null, data: empty, loadedAt: null, fromCache: false });
+    gen.current += 1;
+  }
+
   const load = useCallback(() => {
+    gen.current += 1;
+    const mine = gen.current;
+    const asked = keyRef.current;
     setState((s) => ({ ...s, loading: true, error: null }));
     fetcher()
       .then((data) => {
+        if (gen.current !== mine) return;
         setState({ loading: false, loaded: true, error: null, data, loadedAt: Date.now(), fromCache: false });
-        if (keyRef.current) {
-          AsyncStorage.setItem(keyRef.current, packCache(data, Date.now())).catch(() => {});
+        if (asked) {
+          AsyncStorage.setItem(asked, packCache(data, Date.now())).catch(() => {});
         }
       })
       // `loadedAt` is deliberately left where it was: a refresh that failed
       // has not made what we are showing any newer, and pretending
       // otherwise would push the next attempt out by another interval.
-      .catch((err: Error) => setState((s) => ({ ...s, loading: false, loaded: true, error: err.message })));
+      .catch((err: Error) => {
+        if (gen.current !== mine) return;
+        setState((s) => ({ ...s, loading: false, loaded: true, error: err.message }));
+      });
   }, [fetcher]);
   useEffect(load, [load]);
 
