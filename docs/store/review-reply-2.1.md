@@ -191,6 +191,32 @@ tracking, and the app does not request App Tracking Transparency permission.
 
 ## 6. Regional differences
 
+**Câu "The app follows the device language" trong khối dưới đây là SAI, và nó
+đã được gửi đi.** Giữ nguyên văn vì đây là biên bản những gì Apple đã nhận —
+sửa chữ trong khối là xoá dấu vết, không phải sửa lỗi.
+
+App **không** đọc ngôn ngữ của máy. Không có `expo-localization` ở bất kỳ đâu
+trong repo; `app/src/lib/i18n.tsx:33` khởi tạo `useState<Lang>('en')` rồi
+dòng 36-37 chỉ đọc lựa chọn đã lưu trong AsyncStorage. App luôn mở bằng tiếng
+Anh cho tới khi người dùng tự đổi ở Cá nhân → Ngôn ngữ. Câu cuối của chính
+gạch đầu dòng đó ("the user can change it by hand at Profile > Language") mới
+là mô tả đúng hành vi — vế đầu mâu thuẫn với nó.
+
+Cùng một câu sai nằm ở `review-notes.md:46`; PR #450 sửa chỗ đó và giải thích
+vì sao hai câu sai cùng lúc. Chỗ này không sửa theo được, vì hai file không
+cùng vai: một cái để dán lần sau, một cái ghi lại lần đã dán.
+
+Cần làm, theo thứ tự việc nào còn kịp:
+
+1. **Ô Notes trong App Review Information sửa được** — sửa gạch đầu dòng
+   Language trước bản nộp kế tiếp.
+2. **Reply to App Review đã gửi ngày 01/09 thì không rút lại được.** Nếu
+   reviewer đã đọc, đường đính chính duy nhất là một Reply mới nói rõ app mở
+   mặc định tiếng Anh và đổi bằng tay ở Cá nhân → Ngôn ngữ.
+3. Nếu muốn câu đã gửi thành đúng thay vì đính chính, thì phải thêm
+   `expo-localization` và đọc locale lúc khởi tạo `i18n.tsx` — đổi mã cho
+   khớp lời hứa, chứ không phải đổi lời hứa.
+
 ```
 6. REGIONAL DIFFERENCES
 
