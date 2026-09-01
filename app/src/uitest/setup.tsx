@@ -44,6 +44,19 @@ vi.mock('expo-image', () => ({
     }),
 }));
 
+// `react-native-svg` is a native renderer with no half that runs here.
+// Shapes become named divs, so a test can still see that a drawing
+// mounted and with which props; what it looks like is exactly the thing
+// this environment cannot say.
+vi.mock('react-native-svg', () => ({
+  default: passthrough('Svg'),
+  Svg: passthrough('Svg'),
+  G: passthrough('G'),
+  Path: passthrough('Path'),
+  Rect: passthrough('Rect'),
+  Circle: passthrough('Circle'),
+}));
+
 // Icons are drawn from a font that is not installed. The glyph name is kept
 // because it is occasionally the only thing distinguishing two controls.
 //

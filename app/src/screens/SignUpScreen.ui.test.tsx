@@ -147,6 +147,14 @@ describe('the taste step', () => {
 
     await waitFor(() => expect(signUp).toHaveBeenCalled());
     expect(await screen.findByText('Welcome, Trang')).toBeTruthy();
+    // The arrival copy, pinned: three short clauses that end on the
+    // button's own words, so the button reads as the sentence finishing
+    // itself. A rewrite that breaks that echo should have to come here
+    // and say so.
+    expect(screen.getByText(
+      'You’re all set. Save places you love, build collections, and find your next place to explore.',
+    )).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Start exploring/ })).toBeTruthy();
     expect(savePreferences).not.toHaveBeenCalled();
   });
 

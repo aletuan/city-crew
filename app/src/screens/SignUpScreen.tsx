@@ -4,14 +4,15 @@
 // a project setting, so nothing here assumes one — see `lib/otp.ts`.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { Image } from 'expo-image';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, StepDots, SwitchRow, useFailText,
 } from '../components/authUi';
 import LegalSheet from '../components/LegalSheet';
 import TastePicker from '../components/TastePicker';
 import { successHaptic } from '../components/ui';
+import { FloatingPlane, WelcomeSkyline } from '../components/welcomeArt';
 import { isHandleFree, useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import type { LegalId } from '../lib/legal';
@@ -362,17 +363,18 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
 
   if (step === 'welcome') {
     return (
-      <AuthScreen>
+      <AuthScreen fill>
         {/* No marks here. The bar answers "how much longer", and the
             answer has stopped being interesting. */}
-        {/* The one drawing in this flow, and the only decoration in it.
-            `WelcomeSheet` states the house rule — "deliver the value,
-            don't describe it; there is no tour, no carousel" — and a
-            picture on a screen that is asking for something would be
-            arguing with it. This screen asks for nothing. It is the
-            moment of arrival, and the app already allows itself a mark in
-            exactly that kind of moment: the orb that turns while a plan
-            is being drawn.
+        {/* The main drawing in this flow, and its hero now. `WelcomeSheet`
+            states the house rule — "deliver the value, don't describe it;
+            there is no tour, no carousel" — and a picture on a screen
+            that is asking for something would be arguing with it. This
+            screen asks for nothing. It is the moment of arrival, and the
+            app already allows itself a mark in exactly that kind of
+            moment: the orb that turns while a plan is being drawn. It
+            drifts now, too — `FloatingPlane` holds the motion and the
+            Reduce Motion answer.
 
             Artwork rather than the `paper-plane` glyph it started as. A
             glyph is a label; this has a trail behind it, which is the
@@ -380,29 +382,49 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
             merely "send".
 
             Shipped at 768×512 from a 1536×1024 original — 1.1MB down to
-            66KB, and still 3.2× the density of the ~240×160 it draws at.
-            Everyone downloads this file, and nobody looks at it twice. */}
-        <Image source={welcomePlane} style={s.plane} contentFit="contain" />
+            66KB, and still twice the density of the ~374×250 it draws
+            at. Everyone downloads this file, and nobody looks at it
+            twice. */}
+        <FloatingPlane source={welcomePlane} style={s.plane} />
         {/* The whole display name, not a first name. Which part of a name
             somebody is addressed by differs by language — Vietnamese
             reaches for the last word, English the first — and a greeting
-            that gets it wrong is worse than one that is merely formal. */}
+            that gets it wrong is worse than one that is merely formal.
+
+            The heart is a font glyph inside the Text, not an SVG beside
+            it: inline, it wraps along with the last word of a long name
+            instead of dropping to a line of its own, and the no-break
+            space is what keeps it attached to that word. */}
         <Text style={s.welcomeTitle} numberOfLines={2}>
           {t(
             `Welcome, ${name.trim()}`,
             `Chào mừng, ${name.trim()}`,
             `${name.trim()} さん、ようこそ`,
           )}
+          {'\u00A0'}
+          <Ionicons name="heart" size={22} color={colors.accent} />
         </Text>
+        {/* Three short clauses, ending on the button's own word, so "Start
+            exploring" reads as the sentence finishing itself. The planner
+            goes unmentioned on purpose — the house rule above again: the
+            plan button is one tab away, and this screen's job is to open
+            the door, not to read out the brochure. */}
         <Lede>{t(
-            'Your account is ready. Save the places you like, gather them into collections, and let City Crew plan the evening.',
-            'Tài khoản của bạn đã sẵn sàng. Lưu những nơi bạn thích, gom thành bộ sưu tập, và để City Crew lo buổi tối.',
-            'アカウントの準備ができました。気に入った場所を保存し、コレクションにまとめ、夜のプランは City Crew に任せてください。',
+            'You’re all set. Save places you love, build collections, and find your next place to explore.',
+            'Xong hết rồi. Lưu những nơi bạn thích, gom thành bộ sưu tập, và tìm nơi tiếp theo để khám phá.',
+            '準備完了です。気に入った場所を保存し、コレクションにまとめて、次の探索先を見つけましょう。',
           )}</Lede>
         <PrimaryButton
+          arrow
           label={t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる')}
           onPress={() => leaveAuth(navigation)}
         />
+        {/* The spacer is what `fill` on `AuthScreen` exists for: it holds
+            the skyline against the bottom of the viewport, above the tab
+            bar — the empty lower half was this screen's known weakness —
+            and collapses to nothing on a screen short enough to scroll. */}
+        <View style={{ flex: 1 }} />
+        <WelcomeSkyline />
       </AuthScreen>
     );
   }
@@ -554,10 +576,11 @@ const s = StyleSheet.create({
     color: colors.textSecondary, ...type.meta, textAlign: 'center',
     textDecorationLine: 'underline', paddingVertical: 6,
   },
-  // Width-led, because the drawing is wide and its trail is the half
-  // that would be cropped by a square. `contain` inside a fixed height
-  // keeps the title's position steady whatever the screen's width.
-  plane: { width: '100%', height: 150, marginTop: 4, marginBottom: 2 },
+  // The hero's box: taller than it was, and bled past the page padding —
+  // no explicit width, so the column stretches it and the negative
+  // margins count. `contain` inside the fixed height keeps the title's
+  // position steady whatever the screen's width.
+  plane: { height: 250, marginHorizontal: -14, marginTop: 4 },
   // The greeting, one size up from the step titles: this screen has one
   // thing to say and the room to say it.
   welcomeTitle: { color: colors.text, ...type.titleDetail, marginBottom: 2 },
