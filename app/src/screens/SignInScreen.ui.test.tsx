@@ -263,6 +263,31 @@ describe('signing in', () => {
     expect(signIn).not.toHaveBeenCalled();
   });
 
+  // The other half of the incident `lib/email` was written for. The
+  // sign-up form has stripped this since the day it happened; this form
+  // is where the same person comes back a week later, types the same
+  // address the same way, and — until now — was told to "check the
+  // details" about an address that reads correctly.
+  it('strips the space the keyboard slips in after the @', () => {
+    render(<SignInScreen navigation={nav()} />);
+    const email = screen.getByPlaceholderText('Enter your email');
+    fireEvent.change(email, { target: { value: 'ngotiennam@ gmail.com' } });
+    expect((email as HTMLInputElement).value).toBe('ngotiennam@gmail.com');
+  });
+
+  it('names a malformed address here, rather than letting the server be vague about it', async () => {
+    render(<SignInScreen navigation={nav()} />);
+
+    fill('reader@example', 'hunter2');
+    submit();
+
+    // The same sentence the server's own `email_address_invalid` arrives
+    // under, so the wording cannot drift between the two moments it can
+    // be said — and nothing was sent to earn it.
+    expect(await screen.findByText("That email address doesn't look right.")).toBeTruthy();
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
   it('says nothing about an error before one has happened', () => {
     render(<SignInScreen navigation={nav()} />);
     expect(screen.queryByText(/incorrect/i)).toBeNull();

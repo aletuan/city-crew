@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
 import { useAuth } from '../lib/auth';
+import { cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
 import { cleanOtp, OTP_MAX } from '../lib/otp';
 import { PASSWORD_MIN } from '../lib/password';
@@ -58,8 +59,15 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
     run(async () => {
       // Before the request, not after it: the server's answer to an empty
       // address here is "Password recovery requires an email", in English.
-      if (!email.trim()) throw new Error('need_email');
-      await requestReset(email.trim());
+      if (!email) throw new Error('need_email');
+      // Shaped like an address, before the mail is asked for. This form
+      // is the one where a wrong address is quietest: the step below
+      // says a code was sent and starts a countdown, so an address the
+      // server never reached looks exactly like one it did, and the
+      // reader waits out sixty seconds for a mail that was never
+      // written. Named here, on the screen with the field.
+      if (!emailShapeOk(email)) throw new Error('bad_email');
+      await requestReset(email);
       setCooldown(RESEND_SECONDS);
       setStep('reset');
     });
@@ -68,7 +76,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
   // cleared rather than left holding something that will now be refused.
   const resend = () =>
     run(async () => {
-      await requestReset(email.trim());
+      await requestReset(email);
       setCode('');
       setCooldown(RESEND_SECONDS);
       setResent(true);
@@ -81,7 +89,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
       if (password.length < PASSWORD_MIN) {
         throw new Error(t('Password must be at least 8 characters.', 'Mật khẩu cần ít nhất 8 ký tự.', 'パスワードは8文字以上にしてください。'));
       }
-      await resetPassword(email.trim(), cleanOtp(code), password);
+      await resetPassword(email, cleanOtp(code), password);
       leaveAuth(navigation);
     });
 
@@ -93,9 +101,9 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
           title={t('Set a new password', 'Đặt mật khẩu mới', '新しいパスワードを設定')}
         />
         <Lede>{t(
-            `We sent a recovery code to ${email.trim()}. Enter it with your new password.`,
-            `Mã khôi phục đã được gửi tới ${email.trim()}. Nhập mã cùng mật khẩu mới.`,
-            `${email.trim()} にリカバリーコードを送信しました。新しいパスワードと一緒に入力してください。`,
+            `We sent a recovery code to ${email}. Enter it with your new password.`,
+            `Mã khôi phục đã được gửi tới ${email}. Nhập mã cùng mật khẩu mới.`,
+            `${email} にリカバリーコードを送信しました。新しいパスワードと一緒に入力してください。`,
           )}</Lede>
         <FieldRow
           icon="key-outline"
@@ -166,7 +174,9 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
         label={t('Email address', 'Địa chỉ email', 'メールアドレス')}
         placeholder={t('Enter your email', 'Nhập email của bạn', 'メールアドレスを入力')}
         value={email}
-        onChangeText={setEmail}
+        // Stripped as it is typed rather than trimmed at submit — the
+        // keyboard's space lands inside the address. See `lib/email`.
+        onChangeText={(v) => setEmail(cleanEmail(v))}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
