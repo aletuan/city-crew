@@ -239,6 +239,29 @@ Việc cần làm: thêm `google_refreshed_at`, job làm mới định kỳ theo
 rating là hai trường "tươi" nhất — cũng là hai trường sai nhiều nhất khi
 cũ).
 
+#### Cập nhật 01/09/2026 — hoãn có chủ đích, kèm số đo
+
+Đã rà lại và **quyết định hoãn** job làm mới. Ghi lại số đo tại thời điểm
+hoãn để lần sau không phải đo lại:
+
+- 442 địa điểm. Bản ghi cũ nhất tạo **06/08/2026**. Tại 01/09 chưa có bản
+  ghi nào quá 30 ngày — lô đầu tiên vượt mốc vào khoảng **05/09/2026**.
+- 441/442 có `rating`, 432/442 có `opening_hours`.
+- 2.303 ảnh, trong đó **2.159 từ Google**. `photo_ref` (tên resource, bền)
+  được lưu cùng `photo_uri` (URL media từ lh3.googleusercontent.com).
+  `photo_ref` là thứ cho phép resolve lại mà không gọi lại Places Details —
+  nếu `photo_uri` hết hạn, job làm mới không phải mua lại dữ liệu.
+- Chưa có cột `google_refreshed_at`.
+
+Khi làm, hai thứ nên đi cùng nhau vì cùng một job trả cả hai:
+
+1. **Tuân thủ**: làm mới `rating`, `rating_count`, `opening_hours`,
+   `price_level`, `website`, `phone` theo `google_place_id`.
+2. **Tín hiệu xu hướng**: *độ chênh* `rating_count` giữa hai lần làm mới là
+   proxy lưu lượng khách thật — một dòng chảy, không phải một con số tích
+   luỹ, và phủ 441/442 địa điểm. Đây là câu trả lời đúng cho "địa điểm nào
+   đang hot", tốt hơn hẳn follower count trên mạng xã hội (xem C4).
+
 ### C2. Nominatim / Photon ở quy mô pilot
 
 `find-address` gọi **cả hai** dịch vụ công cộng miễn phí cho mỗi lần tìm.
@@ -259,6 +282,32 @@ khi pilot — nó rẻ và mua thêm một bậc quy mô.
 - **Apple Maps** yêu cầu hiển thị logo/legal notice khi dùng MapKit.
 - **OpenStreetMap** đã có nhãn trên StartSheet ✅, nhưng ODbL cũng áp dụng
   cho toạ độ đã lưu lại từ kết quả OSM.
+
+### C4. Chỉ số mạng xã hội — đã cân nhắc và không lưu (01/09/2026)
+
+Đã cân nhắc lưu `followers` / "recent views" của tài khoản Threads chính
+chủ để đo độ hot. Không làm, vì bốn lý do:
+
+- **Đo marketing của quán, không đo độ hot của địa điểm.** Arata Pasta có
+  5.837 follower; SALEM Social House có 17 — trong khi SALEM mới mở, nằm
+  ngay chân metro Thảo Điền và có ba reviewer khác nhau viết về nó trong
+  tháng 6–8. Xếp hạng theo follower sẽ chôn SALEM và đẩy Arata lên.
+- **Là số tích luỹ, không phải dòng chảy.** Follower gần như không giảm.
+  Một quán hot năm 2024 vẫn giữ nguyên follower năm 2026. Muốn có xu hướng
+  thì phải chụp nhiều lần theo thời gian, chứ một con số thì không nói được gì.
+- **Độ phủ 5/442.** Không xếp hạng được catalog bằng một trường mà 99%
+  bản ghi không có.
+- **"Recent views" không có trong API nào.** Nó chỉ hiện trên trang profile
+  khi đã đăng nhập. Thu thập định kỳ là scraping — đúng ranh giới ToS của
+  Meta mà phần Threads đang tránh.
+
+Nếu về sau vẫn muốn: lưu thành **snapshot có ngày** ở bảng riêng
+(`place_social_stats(place_id, source, followers, captured_at)`), không bao
+giờ là một cột trên `places`, và gọi đúng tên là "audience của quán" chứ
+không phải "độ phổ biến".
+
+Đây là lý do `places.threads_handle` (PR #452) chỉ lưu handle: handle là
+định danh bền và tra cứu được, follower count là con số đo sai thứ cần đo.
 
 ---
 
