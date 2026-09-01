@@ -57,11 +57,14 @@ export function AuthScreen({ children }: { children: React.ReactNode }) {
 /**
  * Where you are in signing up, and how much is left.
  *
- * Three marks, and they count the steps a reader **fills in**: the form,
- * the taste, and finishing. Confirming an email lives inside the third
- * rather than beside it, because `needsConfirm` is only known once
- * `signUp` has run — a bar that grew from two marks to three halfway
- * through would be a bar that had already lied once.
+ * The marks count the steps a reader **fills in**, and how many there
+ * are is the server's to say: two everywhere (the form, the taste), a
+ * third when the project demands an emailed code. `SignUpScreen` asks
+ * up front — see `lib/signup` — because this bar promising a step that
+ * never comes was a lie told to every reader, and for as long as email
+ * confirmation was off, it told it. The bar may still grow late in one
+ * case: the ask failed and `signUp` demanded a code anyway, which the
+ * confirm screen itself is the proof of.
  *
  * Drawn rather than numbered. "Step 2 of 3" is what a screen reader
  * needs and what `accessibilityLabel` says; on screen the shape is
