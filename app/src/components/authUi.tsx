@@ -19,13 +19,20 @@ import { PASSWORD_MIN, passwordStrength } from '../lib/password';
 import { sentenceCase, type AuthFail } from '../lib/authfail';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
-export function AuthScreen({ children }: { children: React.ReactNode }) {
+export function AuthScreen({ children, fill }: {
+  children: React.ReactNode;
+  /** Stretch the content column to the viewport, so a screen can push
+   *  something to its bottom edge — the welcome step's skyline. A flex
+   *  spacer does the pushing; on a screen shorter than its content the
+   *  spacer collapses and the scroll behaves exactly as without this. */
+  fill?: boolean;
+}) {
   const tabClearance = useTabBarClearance();
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={{ padding: space.page, paddingBottom: tabClearance, gap: space.cardGap }}
+          contentContainerStyle={{ padding: space.page, paddingBottom: tabClearance, gap: space.cardGap, ...(fill ? { flexGrow: 1 } : null) }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -211,13 +218,27 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
   );
 }
 
-export function PrimaryButton({ label, onPress, busy }: { label: string; onPress: () => void; busy?: boolean }) {
+export function PrimaryButton({ label, onPress, busy, arrow }: {
+  label: string; onPress: () => void; busy?: boolean;
+  /** A forward arrow after the label — for a button that is a departure
+   *  rather than a submit. The welcome step's "Start exploring" is the
+   *  case: every other primary in this flow answers "send what I typed",
+   *  and this one answers "take me in". */
+  arrow?: boolean;
+}) {
   return (
     <PressableScale onPress={busy ? undefined : onPress} accessibilityRole="button">
       <LinearGradient {...gradAI} style={s.primary}>
         {busy
           ? <ActivityIndicator color={colors.accentInk} />
-          : <Text style={s.primaryText}>{label}</Text>}
+          : arrow
+            ? (
+              <View style={s.primaryRow}>
+                <Text style={s.primaryText}>{label}</Text>
+                <Ionicons name="arrow-forward" size={20} color={colors.accentInk} />
+              </View>
+            )
+            : <Text style={s.primaryText}>{label}</Text>}
       </LinearGradient>
     </PressableScale>
   );
@@ -565,6 +586,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginTop: 6,
   },
   primaryText: { color: colors.accentInk, fontSize: 17, fontWeight: font.semibold },
+  primaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 
   // `primary`'s figures, kept deliberately identical, plus the row the
   // glyph needs. The hairline is `badSoft`'s own note: the ordinary
