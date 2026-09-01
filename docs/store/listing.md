@@ -48,6 +48,12 @@ Store nhận ra ngay.
   mở cửa — nhưng không hứa đi bộ được. Nói "gần nhau" và "đang mở cửa" là đúng
   với những gì mã thật sự làm.
 - **Không viết giá** — Apple cấm đưa thông tin giá vào metadata.
+- **Không viết "không mật khẩu"/"passwordless".** App đăng nhập bằng **email
+  + mật khẩu** (`SignInScreen` có ô mật khẩu, `signInWithPassword` trong
+  `lib/auth`). Ba đoạn PRIVACY dưới đây từng nói ngược lại — cùng câu sai đã
+  nằm trong `privacy.html` và `review-notes.md` — vì mô tả được viết từ thời
+  luồng đăng nhập còn là OTP. Mã một lần chỉ còn ở xác nhận email và khôi
+  phục mật khẩu.
 
 ### EN
 
@@ -76,8 +82,8 @@ Add friends, invite them to a trip, see what they have been saving. Easier
 than five people pasting links into a group chat.
 
 PRIVACY
-Browsing needs no account. Signing in takes an email address and a
-one-time code, no password. Your location is read on the phone to pick the
+Browsing needs no account. An account is an email address and a password.
+Your location is read on the phone to pick the
 nearest city and is never sent to us. No ads, no tracking. You can delete
 your account from inside the app.
 
@@ -110,8 +116,8 @@ Thêm bạn bè, mời họ vào chuyến đi, xem họ đang lưu gì. Đỡ h�
 năm người dán link vào nhóm chat.
 
 RIÊNG TƯ
-Xem không cần tài khoản. Đăng nhập chỉ cần email và mã một lần, không mật
-khẩu. Vị trí được đọc ngay trên máy để chọn thành phố gần nhất, không gửi về
+Xem không cần tài khoản. Tài khoản chỉ gồm email và mật khẩu bạn tự đặt.
+Vị trí được đọc ngay trên máy để chọn thành phố gần nhất, không gửi về
 chúng tôi. Không quảng cáo, không theo dõi. Bạn có thể tự xoá tài khoản ngay
 trong app.
 
@@ -143,8 +149,8 @@ City Crewは、ベトナム5都市の厳選ガイドです。ホーチミン市�
 クを貼り合うより、ずっと楽です。
 
 プライバシー
-閲覧にアカウントは不要。サインインはメールアドレスとワンタイムコードだけで、
-パスワードはありません。位置情報は最寄りの街を選ぶために端末上で読むだけで、
+閲覧にアカウントは不要。アカウントはメールアドレスとご自身で決めたパスワード
+だけです。位置情報は最寄りの街を選ぶために端末上で読むだけで、
 こちらには送信されません。広告なし、トラッキングなし。アカウントはアプリ内で
 削除できます。
 

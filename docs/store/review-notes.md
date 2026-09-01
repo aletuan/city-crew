@@ -10,15 +10,17 @@ Thank you for reviewing City Crew.
 
 SIGN-IN: The app is fully browsable without an account — every screen of
 content (Explore, Collections, place details, Search) works signed out.
-Sign-in uses a one-time code emailed to the user (passwordless), so there is
-no demo username/password to provide. To test signed-in features (saving
-places, creating collections, plans), please sign in with any email address
-you control; the code arrives within a few seconds. If you need a
-pre-provisioned account instead, contact us at anhlt1983@gmail.com and we
-will set one up immediately.
+Signing in adds saving, collections and trip plans. Accounts are an email
+address and a password, and demo credentials are provided in the Sign-In
+Information fields above. Signing up asks for a display name, a username,
+an email address and a password, then offers an optional list of interests
+which can be skipped. Password recovery emails a numeric code rather than
+a link. If the demo account does not work for any reason, please contact
+us at anhlt1983@gmail.com and we will replace it immediately.
 
 LOCATION: Requested once at launch, used on-device only to open the app on
-the nearest supported city (Ho Chi Minh City or Hanoi). Denying it is fine —
+the nearest supported city (Ho Chi Minh City, Hanoi, Da Nang, Da Lat or
+Hue). Denying it is fine —
 the app falls back to a default city and a manual city switcher. Coordinates
 are never transmitted or stored.
 
@@ -46,12 +48,18 @@ follows the device language.
 
 ## Vì sao từng đoạn tồn tại (nội bộ, không dán)
 
-- **SIGN-IN**: app đăng nhập bằng OTP qua email nên không thể đưa
-  username/password demo như Apple thường yêu cầu. Cách thoát chuẩn: nói rõ
-  app dùng được đầy đủ khi chưa đăng nhập, reviewer tự dùng email của họ, và
-  chừa đường liên hệ khẩn. Nếu reviewer vẫn yêu cầu tài khoản demo, phương án
-  dự phòng là tạo một tài khoản test với email bạn kiểm soát và cấp mã qua
-  App Review message.
+- **SIGN-IN**: app đăng nhập bằng **email + mật khẩu**. Đoạn này từng viết
+  ngược lại — "passwordless, không có demo username/password để đưa" — từ
+  thời chưa có màn hình mật khẩu, và đã sai suốt từ đó. Vì có mật khẩu thật
+  nên **phải điền tài khoản demo** vào ô Sign-In Information; thiếu nó là
+  một trong những lý do bị từ chối phổ biến nhất. Tạo tài khoản bằng email
+  bạn kiểm soát, đăng nhập thử một lần trên bản TestFlight, rồi điền đúng
+  cặp email/mật khẩu đó.
+
+  Mã một lần vẫn còn, nhưng ở hai chỗ khác: xác nhận email lúc đăng ký (chỉ
+  chạy khi bật "Confirm email" trong Supabase — hiện **đang tắt**, nên đăng
+  ký xong là vào thẳng) và khôi phục mật khẩu. Cả hai gửi **mã số** chứ
+  không phải link, vì link không deep-link ngược vào app được.
 - **LOCATION**: chặn trước câu hỏi "xin quyền để làm gì" — nêu rõ on-device,
   từ chối vẫn dùng được (đúng hành vi thật: fallback + switcher).
 - **UGC**: guideline 1.2 là lý do từ chối phổ biến với app có nội dung người

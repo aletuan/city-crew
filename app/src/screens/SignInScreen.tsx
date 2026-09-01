@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, SwitchRow, useFailText } from '../components/authUi';
 import { successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { cleanEmail, emailShapeOk } from '../lib/email';
 import { useI18n } from '../lib/i18n';
 import { colors, font } from '../theme';
 import { leaveAuth, type Nav } from '../nav';
@@ -23,12 +24,24 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
     // Asked here rather than at the server, which answers an empty form
     // with "missing email or phone" — English, lower case, and naming a
     // `phone` this app does not have. Email first: it is the field above.
-    if (!email.trim()) { setError('need_email'); return; }
+    if (!email) { setError('need_email'); return; }
+    // And shaped like an address at all — the check the sign-up form has
+    // made since the space incident, which this form had not.
+    //
+    // That asymmetry was the worse half of the same bug. The address that
+    // earned `cleanEmail` its file was typed on the way *in*; the reader
+    // who mistypes it here is somebody who already has an account, and
+    // what they got was the server's `validation_failed`, arriving as
+    // "Check the details you entered." — a sentence that names no field,
+    // about an address that looks right to the eye. Locked out, with
+    // nothing to go on. Every keyboard that can slip a space into the
+    // sign-up field serves this one too.
+    if (!emailShapeOk(email)) { setError('bad_email'); return; }
     if (!password) { setError('need_password'); return; }
     setBusy(true);
     setError(null);
     try {
-      await signIn(email.trim(), password);
+      await signIn(email, password);
       successHaptic();
       leaveAuth(navigation);
     } catch (err) {
@@ -60,7 +73,10 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         label={t('Email address', 'Địa chỉ email', 'メールアドレス')}
         placeholder={t('Enter your email', 'Nhập email của bạn', 'メールアドレスを入力')}
         value={email}
-        onChangeText={setEmail}
+        // Whitespace stripped as it is typed, not trimmed at submit: the
+        // space the iOS keyboard adds after an autocomplete lands after
+        // the `@`, where no trim reaches. See `lib/email`.
+        onChangeText={(v) => setEmail(cleanEmail(v))}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
