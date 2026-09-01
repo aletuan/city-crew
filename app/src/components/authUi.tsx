@@ -19,20 +19,13 @@ import { PASSWORD_MIN, passwordStrength } from '../lib/password';
 import { sentenceCase, type AuthFail } from '../lib/authfail';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
-export function AuthScreen({ children, fill }: {
-  children: React.ReactNode;
-  /** Stretch the content column to the viewport, so a screen can push
-   *  something to its bottom edge — the welcome step's skyline. A flex
-   *  spacer does the pushing; on a screen shorter than its content the
-   *  spacer collapses and the scroll behaves exactly as without this. */
-  fill?: boolean;
-}) {
+export function AuthScreen({ children }: { children: React.ReactNode }) {
   const tabClearance = useTabBarClearance();
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={{ padding: space.page, paddingBottom: tabClearance, gap: space.cardGap, ...(fill ? { flexGrow: 1 } : null) }}
+          contentContainerStyle={{ padding: space.page, paddingBottom: tabClearance, gap: space.cardGap }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
