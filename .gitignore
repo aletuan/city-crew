@@ -21,3 +21,9 @@ supabase/.temp/
 # Operator's notebook — bundle ids, EAS/ASC identifiers, run commands. Kept
 # out of git on purpose: it lives on each machine that operates the app.
 NOTES.local.md
+# Store screenshots — 45 MB of simulator captures for App Store Connect, not
+# reproducible *from* the repo but re-shootable *by* it: `docs/store/listing.md`
+# records the device and the keystroke. Nothing here reads them, git stores
+# PNGs whole, and .git is 55 MB — they would nearly double every clone to
+# version files whose only home that matters is App Store Connect.
+store-screenshots/

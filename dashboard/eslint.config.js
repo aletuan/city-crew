@@ -12,7 +12,12 @@ import react from 'eslint-plugin-react';
 import hooks from 'eslint-plugin-react-hooks';
 
 export default [
-  { ignores: ['node_modules/**', 'dist/**'] },
+  // `.vite/` is the dep pre-bundle. It usually sits inside `node_modules` and
+  // is covered by the first rule, but a dev run that predates the install
+  // writes it at the package root — where `dashboard/.gitignore` hides it from
+  // git and nothing hid it from here. Lint then read 500 lines of minified
+  // React and failed the gate on vendor code that no one in this repo wrote.
+  { ignores: ['node_modules/**', 'dist/**', '.vite/**'] },
 
   js.configs.recommended,
 
