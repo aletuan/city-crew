@@ -5,12 +5,13 @@ import { CATEGORY_KEYS } from '../categories.js';
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { useCity, useProgress, useToast } from '../App.jsx';
 import PhotoManager, { emptyPhotoEdits, photoEditsDirty } from './PhotoManager.jsx';
+import { normalizeThreads, threadsProblem, threadsUrl } from '../lib/threads.js';
 
 const FORM_FIELDS = [
   'name_en', 'name_vi', 'desc_en', 'desc_vi', 'neighborhood_en', 'neighborhood_vi',
   'address', 'category', 'categories', 'is_featured', 'vibe_tags', 'emoji',
   'price_display', 'price_vnd', 'duration_min', 'duration_max',
-  'website', 'phone', 'saved_count', 'is_published', 'review_note',
+  'website', 'phone', 'threads_handle', 'is_published', 'review_note',
 ];
 
 const pickForm = (place) => Object.fromEntries(FORM_FIELDS.map((k) => [k, place[k]]));
@@ -41,6 +42,7 @@ export default function PlaceEditor() {
   const [form, setForm] = useState(null);
   const [photoEdits, setPhotoEdits] = useState(emptyPhotoEdits);
   const [siblings, setSiblings] = useState([]);
+  const [saves, setSaves] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -53,9 +55,23 @@ export default function PlaceEditor() {
   useEffect(() => {
     setPlace(null);
     setForm(null);
+    setSaves(null);
     setPhotoEdits(emptyPhotoEdits());
     load().catch((err) => toast(err.message));
   }, [load, toast]);
+
+  // The real save count, fetched beside the row rather than with it: it is a
+  // separate table, it is only ever read, and a slow count must not hold the
+  // editor closed. A failure leaves the line reading "—" and says nothing —
+  // this is a reference number, not something the desk acts on.
+  useEffect(() => {
+    if (!place?.id) return;
+    let live = true;
+    api.saveCount(place.id)
+      .then((n) => { if (live) setSaves(n); })
+      .catch(() => { if (live) setSaves(-1); });
+    return () => { live = false; };
+  }, [place?.id]);
 
   // Ordered slugs under the current filters, for prev/next
   useEffect(() => {
@@ -159,6 +175,11 @@ export default function PlaceEditor() {
 
   const hours = Array.isArray(place.opening_hours) ? place.opening_hours.join('\n') : null;
 
+  // Normalised for the link and the check, not for the box: the field keeps
+  // whatever is being typed until blur, so the cursor does not jump.
+  const threadsHandle = normalizeThreads(form.threads_handle);
+  const threadsMsg = threadsProblem(threadsHandle);
+
   return (
     <>
       <div className="crumbs">
@@ -242,6 +263,53 @@ export default function PlaceEditor() {
             </div>
           </section>
 
+          {/* Contact and links used to be the back half of Facts, next to price
+              and duration. They are a different kind of thing — where to reach
+              the place, not what the place is — and Facts had become the panel
+              anything landed in. Threads would have made that worse. */}
+          <section className="panel">
+            <h3>Contact &amp; links</h3>
+            <div className="inline-fields">
+              <div className="field" style={{ flex: 2 }}>
+                <label htmlFor="website">Website</label>
+                <input id="website" className="mono" value={form.website ?? ''} onChange={(e) => set('website', e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="phone">Phone</label>
+                <input id="phone" className="mono" value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value)} />
+              </div>
+            </div>
+            <div className="inline-fields" style={{ marginTop: 12, alignItems: 'flex-start' }}>
+              <div className="field" style={{ flex: 2 }}>
+                <label htmlFor="threads_handle">Threads</label>
+                {/* The @ belongs to the chrome: the handle is stored bare, so
+                    the field shows the punctuation and never keeps it. Paste a
+                    whole profile URL and `normalizeThreads` takes the handle
+                    out of it on blur, because that is what the clipboard has. */}
+                <div className="prefixed">
+                  <span className="prefix" aria-hidden="true">@</span>
+                  <input
+                    id="threads_handle"
+                    className="mono"
+                    placeholder="handle, or paste the profile URL"
+                    value={form.threads_handle ?? ''}
+                    onChange={(e) => set('threads_handle', e.target.value)}
+                    onBlur={(e) => set('threads_handle', normalizeThreads(e.target.value) || null)}
+                  />
+                </div>
+                {threadsMsg
+                  ? <p className="fieldnote warn">{threadsMsg}</p>
+                  : <p className="fieldnote">Leave empty if the venue has no Threads account.</p>}
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>Verify</label>
+                {threadsHandle
+                  ? <a className="verifylink" href={threadsUrl(threadsHandle)} target="_blank" rel="noreferrer">Open profile ↗</a>
+                  : <span className="fieldnote">Nothing to check yet.</span>}
+              </div>
+            </div>
+          </section>
+
           <section className="panel">
             <h3>Facts</h3>
             <div className="inline-fields">
@@ -254,28 +322,22 @@ export default function PlaceEditor() {
                 <input id="price_vnd" className="mono" type="number" value={form.price_vnd ?? ''} onChange={(e) => setNum('price_vnd', e.target.value)} />
               </div>
               <div className="field">
-                <label htmlFor="duration_min">Min (phút)</label>
+                <label htmlFor="duration_min">Visit min (mins)</label>
                 <input id="duration_min" className="mono" type="number" value={form.duration_min ?? ''} onChange={(e) => setNum('duration_min', e.target.value)} />
               </div>
               <div className="field">
-                <label htmlFor="duration_max">Max (phút)</label>
+                <label htmlFor="duration_max">Visit max (mins)</label>
                 <input id="duration_max" className="mono" type="number" value={form.duration_max ?? ''} onChange={(e) => setNum('duration_max', e.target.value)} />
               </div>
-              <div className="field">
-                <label htmlFor="saved_count">Saved count</label>
-                <input id="saved_count" className="mono" type="number" value={form.saved_count ?? 0} onChange={(e) => setNum('saved_count', e.target.value)} />
-              </div>
             </div>
-            <div className="inline-fields" style={{ marginTop: 12 }}>
-              <div className="field" style={{ flex: 2 }}>
-                <label htmlFor="website">Website</label>
-                <input id="website" className="mono" value={form.website ?? ''} onChange={(e) => set('website', e.target.value)} />
-              </div>
-              <div className="field">
-                <label htmlFor="phone">Phone</label>
-                <input id="phone" className="mono" value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value)} />
-              </div>
-            </div>
+            {/* Both labels read "(phút)" in an otherwise English desk, and
+                neither said what the numbers were for. They are the only
+                editorial input into a generated plan's clock, and the planner
+                does things to them worth knowing before you type. */}
+            <p className="fieldnote">
+              How long a visit takes. The planner averages the two, snaps to 15 minutes
+              and clamps to 45–150; leave both blank and it assumes 75.
+            </p>
             {hours && (
               <details style={{ marginTop: 12 }}>
                 <summary style={{ cursor: 'pointer', fontSize: 12.5, color: 'var(--text-tertiary)' }}>
@@ -294,7 +356,14 @@ export default function PlaceEditor() {
               loading="lazy"
               src={`https://www.openstreetmap.org/export/embed.html?bbox=${place.lng - 0.004}%2C${place.lat - 0.003}%2C${place.lng + 0.004}%2C${place.lat + 0.003}&layer=mapnik&marker=${place.lat}%2C${place.lng}`}
             />
-            <div className="coordline">{place.lat?.toFixed(6)}, {place.lng?.toFixed(6)} · ★ {place.rating ?? '—'} ({place.rating_count ?? 0} reviews)</div>
+            {/* Observed numbers, all of them read-only. `saves` counts rows in
+                collection_places — the thing `places.saved_count` was supposed
+                to mirror and never did. */}
+            <div className="coordline">
+              {place.lat?.toFixed(6)}, {place.lng?.toFixed(6)} · ★ {place.rating ?? '—'} ({place.rating_count ?? 0} reviews)
+              {' · '}
+              {saves == null ? 'counting saves…' : saves < 0 ? 'saves —' : `in ${saves} ${saves === 1 ? 'list' : 'lists'}`}
+            </div>
             <div className="factlinks">
               <a href={`https://www.google.com/maps/place/?q=place_id:${place.google_place_id}`} target="_blank" rel="noreferrer">
                 Open in Google Maps ↗

@@ -13,9 +13,15 @@ const EDITABLE = new Set([
   'name_en', 'name_vi', 'desc_en', 'desc_vi', 'neighborhood_en', 'neighborhood_vi',
   'address', 'category', 'categories', 'is_featured', 'vibe_tags', 'emoji',
   'price_level', 'price_display', 'price_vnd', 'duration_min', 'duration_max',
-  'opening_hours', 'website', 'phone', 'saved_count', 'sort_order', 'is_published',
+  'opening_hours', 'website', 'phone', 'threads_handle', 'sort_order', 'is_published',
   'review_status', 'review_note',
 ]);
+
+// `saved_count` used to sit in that list. It is a number an editor typed, it
+// has never matched the saves people actually make, and nothing in the mobile
+// app reads it — its one ranking use was reverted in 193d90f. The column stays
+// (the pitch snapshot still exports it) but the desk no longer offers to
+// overwrite it; `saveCount` below reads the real thing instead.
 
 const db = ({ data, error }) => {
   if (error) throw new Error(error.message);
@@ -213,6 +219,19 @@ export const api = {
     const place = rows[0];
     place.place_photos.sort((a, b) => a.sort_order - b.sort_order);
     return place;
+  },
+
+  // How many lists a place actually sits in. Counts rows rather than trusting
+  // `places.saved_count`, which is hand-typed and drifts. Editors can read
+  // `collection_places` outright — policy "editors manage collection members"
+  // in 20260815120000_publish_collections.sql — so this needs no view.
+  saveCount: async (placeId) => {
+    const { count, error } = await supabase
+      .from('collection_places')
+      .select('*', { count: 'exact', head: true })
+      .eq('place_id', placeId);
+    if (error) throw new Error(error.message);
+    return count ?? 0;
   },
 
   savePlace: async (slug, fields) => {

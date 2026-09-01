@@ -1230,3 +1230,32 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   min-width: 20px; padding: 2px 6px; border-radius: 999px; text-align: center;
   background: rgba(248, 113, 113, 0.16); color: var(--bad);
 }
+
+/* An @ that belongs to the field, not to the value. The handle is stored
+   bare (see 20260901140000_place_threads_handle.sql), so the punctuation is
+   chrome: it is always visible, never typed, and never saved. */
+.prefixed { display: flex; align-items: stretch; }
+.prefixed .prefix {
+  display: flex; align-items: center; padding: 0 11px;
+  background: var(--bg-input); border: 1px solid var(--border-control); border-right: 0;
+  border-radius: var(--radius-input) 0 0 var(--radius-input);
+  font-family: var(--font-data); font-size: 13px; color: var(--text-tertiary);
+}
+.prefixed input { border-radius: 0 var(--radius-input) var(--radius-input) 0; }
+.prefixed:focus-within .prefix { border-color: var(--ai-violet); }
+
+/* The line under a field that says what the number is for, or what is wrong
+   with it. The editor is nothing but inputs; a label alone was not carrying
+   enough for fields whose effect is two screens away. */
+.fieldnote { font-size: 11.5px; line-height: 1.45; color: var(--text-tertiary); margin: 6px 0 0; }
+.fieldnote.warn { color: var(--ai-pink); }
+
+/* Verifying a handle has to be one click: the desk reviews 150 places in a
+   sitting, and a wrong-but-plausible handle is invisible until someone opens
+   it. Same shape as .factlinks, standing alone next to its field. */
+.verifylink {
+  align-self: flex-start; display: inline-block;
+  font-size: 12.5px; font-weight: 600; color: var(--text-secondary); text-decoration: none;
+  border: 1px solid var(--border-control); border-radius: var(--radius-pill); padding: 9px 14px;
+}
+.verifylink:hover { color: #fff; border-color: var(--border-control-strong); }
