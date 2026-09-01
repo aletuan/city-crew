@@ -12,7 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { AuthError, Session } from '@supabase/supabase-js';
 import { decode } from 'base64-arraybuffer';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
-import { authFail } from './authfail';
+import { authFail, obfuscatedSignUp } from './authfail';
 import { cacheKey, packCache, unpackCache } from './data/cache';
 import { supabase } from './supabase';
 import { normalizeHandle } from './handle';
@@ -232,6 +232,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       options: { data: { full_name: name, handle: handle.toLowerCase() } },
     });
     if (error) throw asAuthFail(error);
+    // With confirmation on, a taken address does not come back as an
+    // error — it comes back as a "success" wearing no identities, and no
+    // mail is sent. Read here, or the reader is handed the code screen
+    // to wait for one that never comes. See `obfuscatedSignUp` for why
+    // reading it costs the enumeration protection nothing.
+    if (obfuscatedSignUp(data.user?.identities)) throw new Error('email_taken');
     return { needsConfirm: !data.session };
   }, []);
 

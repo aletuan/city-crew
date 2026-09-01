@@ -260,3 +260,72 @@ describe('the username check', () => {
     expect(screen.queryByText('What are you into?')).toBeNull();
   });
 });
+
+describe('the email field', () => {
+  beforeEach(() => {
+    auth.state.session = null;
+    signUp.mockClear();
+    isHandleFree.mockResolvedValue(true);
+  });
+
+  // The incident that earned `cleanEmail` its file: the iOS keyboard's
+  // space after an autocomplete, in the middle of the address, past any
+  // trim. The field refuses to hold it at all.
+  it('strips the space the keyboard slips in', () => {
+    render(<SignUpScreen navigation={nav()} />);
+    const email = screen.getByPlaceholderText("We'll never share your email.");
+    fireEvent.change(email, { target: { value: 'ngotiennam@ gmail.com' } });
+    expect((email as HTMLInputElement).value).toBe('ngotiennam@gmail.com');
+  });
+
+  it('names a malformed address on the form, before anything is sent', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    fireEvent.change(screen.getByPlaceholderText('Enter your full name'), { target: { value: 'Trang' } });
+    fireEvent.change(screen.getByPlaceholderText("We'll never share your email."), { target: { value: 'trang@gmail' } });
+    fireEvent.change(screen.getByPlaceholderText('Use at least 8 characters'), { target: { value: 'password1' } });
+    fireEvent.change(screen.getByPlaceholderText('Type your password again'), { target: { value: 'password1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
+
+    // The same sentence the server's own refusal would arrive under —
+    // said now, on the screen with the field, and nothing was sent.
+    expect(await screen.findByText("That email address doesn't look right.")).toBeTruthy();
+    expect(screen.queryByText('What are you into?')).toBeNull();
+    expect(signUp).not.toHaveBeenCalled();
+  });
+});
+
+// The request fires on the taste step, one screen after the fields it can
+// complain about. These pin the walk back — and where it must not go.
+describe('a failure the form can fix', () => {
+  beforeEach(() => {
+    auth.state.session = null;
+    signUp.mockClear();
+    isHandleFree.mockResolvedValue(true);
+  });
+
+  it('walks the reader back to the form when the email is taken', async () => {
+    signUp.mockImplementationOnce(async () => { throw new Error('email_taken'); });
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+
+    // Back on the form — its own button is showing — with the sentence
+    // about the field beside it. Not the code screen: with confirmation
+    // on, a taken address used to mean waiting for a mail GoTrue never
+    // sent.
+    expect(await screen.findByText('An account already uses this email. Sign in instead.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sign up' })).toBeTruthy();
+    expect(screen.queryByText('What are you into?')).toBeNull();
+  });
+
+  it('stays on the taste step for a failure no field fixes', async () => {
+    signUp.mockImplementationOnce(async () => { throw new Error('rate_limit'); });
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+
+    // Beside the button worth pressing again, not a screen away from it.
+    expect(await screen.findByText('Too many attempts. Wait a moment and try again.')).toBeTruthy();
+    expect(screen.getByText('What are you into?')).toBeTruthy();
+  });
+});
