@@ -8,16 +8,22 @@ tiếng Việt bên dưới về vì sao từng đoạn tồn tại.
 Khối Notes **khẳng định** hai thứ. Dán nó trước khi hai thứ đó thành sự thật
 là nói dối reviewer — và cả hai đều đã từng sai trong chính file này.
 
-1. **Tài khoản demo phải tồn tại và phải nằm trong ô Sign-In Information.**
+1. **Ô Sign-In Information phải chứa thông tin đăng nhập dùng được.**
    Câu "demo credentials are in the Sign-In Information fields above" là câu
-   Apple hành động ngay: họ mở app, đăng nhập, và nếu không có gì để đăng
-   nhập thì đó là guideline 2.1 — từ chối, không thương lượng. Khối này từng
-   khẳng định câu đó trong khi **không có tài khoản demo nào tồn tại**:
-   database chỉ có 9 tài khoản người thật và 7 danh tính biên tập không có
-   mật khẩu.
+   Apple hành động ngay: họ mở app, đăng nhập, và nếu không đăng nhập được
+   thì đó là guideline 2.1 — từ chối, không thương lượng. Khối này từng
+   khẳng định câu đó trong khi ô còn trống — cái sai nằm ở đó, không phải ở
+   chuyện tài khoản "demo" hay tài khoản thật. **Không cần một tài khoản
+   demo riêng**: một tài khoản thật được chọn làm demo là đủ, và đó là cách
+   project này làm.
 
-   Kiểm tra trước khi dán — phải trả về đúng 1 dòng, và bạn phải tự đăng
-   nhập được bằng nó trên bản TestFlight:
+   Hai điều nên tránh khi chọn tài khoản ấy: đừng dùng tài khoản cá nhân —
+   reviewer đăng nhập sẽ thấy bạn bè và trips thật; và đừng đặt mật khẩu
+   trùng với mật khẩu đang dùng ở nơi khác — giá trị này nằm dạng chữ
+   thường trong App Store Connect.
+
+   Kiểm tra trước khi dán — query phải trả về đúng 1 dòng với địa chỉ đã
+   chọn, và bạn phải tự đăng nhập được bằng nó trên bản TestFlight:
 
    ```sql
    select email, created_at from auth.users
