@@ -40,7 +40,16 @@ export async function fetchPlaces(cityId: string, meId?: string | null): Promise
     const scoped = withSubmissions && meId
       ? q.or(`and(is_published.eq.true,review_status.eq.approved),submitted_by.eq.${meId}`)
       : q.eq('is_published', true).eq('review_status', 'approved');
-    return scoped.order('sort_order', { ascending: true, nullsFirst: false });
+    // `sort_order` first — but in production every row's is NULL, and a
+    // sort on nothing is no sort: Postgres is free to answer the same
+    // query in a different order per execution. The slug makes the order
+    // total, so the cached answer and the fresh one are the same list in
+    // the same order — the hero, picked by "first match", was flipping
+    // covers between the two on any city with no pinned hero to hold it
+    // still (Đà Lạt, switching cities).
+    return scoped
+      .order('sort_order', { ascending: true, nullsFirst: false })
+      .order('slug', { ascending: true });
   };
 
   let { data, error } = await run(PLACE_COLS(true), true);

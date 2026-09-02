@@ -71,10 +71,18 @@ describe('fetchPlaces', () => {
     expect(q.filters).toEqual([['city_id', 'hanoi']]);
   });
 
-  it('sorts by sort_order with the unranked last', async () => {
+  it('sorts by sort_order with the unranked last, slug as the tiebreak', async () => {
     fake().replies({ data: [] });
     await fetchPlaces('hanoi');
-    expect(fake().log[0].order).toEqual(['sort_order', { ascending: true, nullsFirst: false }]);
+    // Both, in this order. The tiebreak is what makes the order *total*:
+    // with every production sort_order NULL, the primary sort alone let
+    // Postgres answer in a different order per run — and the Explore
+    // hero, picked by "first match", flipped covers between the cached
+    // render and the fresh one on any city with no pinned hero.
+    expect(fake().log[0].orders).toEqual([
+      ['sort_order', { ascending: true, nullsFirst: false }],
+      ['slug', { ascending: true }],
+    ]);
   });
 
   it('puts the reader’s own pending suggestion above the catalog', async () => {
