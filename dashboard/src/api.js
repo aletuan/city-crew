@@ -4,6 +4,7 @@
 // components used against the old localhost Express API.
 
 import { supabase } from './lib/supabase.js';
+import { countThreads } from './lib/threads.js';
 
 const BUCKET = 'place-photos';
 
@@ -195,6 +196,20 @@ export const api = {
     // things is exactly where it does not appear. Generated in Postgres —
     // see the needs_classification migration.
     if (params.needs) query = query.eq('needs_classification', true);
+    // Threads handles are filled in by hand, one at a time — `import-place.ts`
+    // leaves the column null because Google Places does not return it. So the
+    // useful half of this filter is `no`: it is the queue of venues nobody has
+    // looked up yet. The chip rows above cannot express it, for the same
+    // reason `needs_classification` exists — a null is not a tag, so a place
+    // missing the field is absent from every chip that could find it.
+    //
+    // `is null` and not `= ''` because the two are the same state here and
+    // only one of them can reach the table: `stamp_threads_handle` rewrites a
+    // blank to null before the row lands. If that trigger is ever dropped,
+    // this filter starts counting empty strings as filled — `countThreads`
+    // already treats them as missing, and the two would disagree.
+    if (params.threads === 'yes') query = query.not('threads_handle', 'is', null);
+    if (params.threads === 'no') query = query.is('threads_handle', null);
     if (params.channel) query = query.eq('channel', params.channel);
     if (params.q) query = query.or(`name_en.ilike.%${params.q}%,name_vi.ilike.%${params.q}%`);
     if (!params.all) {
@@ -317,7 +332,7 @@ export const api = {
 
   progress: async (city) => {
     let query = supabase.from('places')
-      .select('slug, name_en, review_status, is_published, category, categories, vibe_tags, needs_classification');
+      .select('slug, name_en, review_status, is_published, category, categories, vibe_tags, needs_classification, threads_handle');
     if (city) query = query.eq('city_id', city);
     const rows = db(await query);
     const by = (key) => rows.reduce((acc, r) => ((acc[r[key]] = (acc[r[key]] ?? 0) + 1), acc), {});
@@ -358,6 +373,10 @@ export const api = {
       by_category: by('category'),
       by_category_tag: byTag('categories'),
       by_vibe: byTag('vibe_tags'),
+      // Both sides, not just the filled one: the empty half is the
+      // worklist, and a chip that cannot show its own size is a chip
+      // nobody presses first.
+      by_threads: countThreads(rows),
     };
   },
 
