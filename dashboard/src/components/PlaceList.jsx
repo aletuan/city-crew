@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { CATEGORY_KEYS, CATEGORY_LABEL, CATEGORY_STYLE } from '../categories.js';
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
+import { THREADS_FILTERS } from '../lib/threads.js';
 import { CategoryIcon } from '../icons.jsx';
 import { useCity, useProgress, useToast } from '../App.jsx';
 
@@ -90,6 +91,7 @@ export default function PlaceList() {
   const status = params.get('status') ?? '';
   const category = params.get('category') ?? '';
   const vibe = params.get('vibe') ?? '';
+  const threads = params.get('threads') ?? '';
   const sort = params.get('sort') || 'created_at';
   const dir = params.get('dir') || 'desc';
   const page = Math.max(1, Number(params.get('page')) || 1);
@@ -252,6 +254,21 @@ export default function PlaceList() {
               <CategoryIcon name={VIBE_STYLE[v]?.icon} color={VIBE_STYLE[v]?.color} />
               {VIBE_STYLE[v]?.label}
               <span className="chipcount">({progress?.by_vibe?.[v] ?? 0})</span>
+            </button>
+          ))}
+        </div>
+        {/* Its own row rather than a chip on one of the rows above, because
+            it asks a different kind of question. Category and vibe ask what
+            a place *is*; this asks whether the desk has finished looking it
+            up. Handles arrive by hand — Google Places does not return one —
+            so "No handle" is a worklist that only shrinks when somebody
+            works it, and it starts out holding nearly every place. */}
+        <div className="filtergroup">
+          <span className="filterlabel">Threads</span>
+          {THREADS_FILTERS.map(([value, label]) => (
+            <button key={value} className={`chip ${threads === value ? 'on' : ''}`} onClick={() => toggle('threads', value)}>
+              {label}
+              <span className="chipcount">({progress?.by_threads?.[value] ?? 0})</span>
             </button>
           ))}
         </div>

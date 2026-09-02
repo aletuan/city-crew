@@ -31,6 +31,30 @@ export function normalizeThreads(input) {
 
 export const threadsUrl = (handle) => `${HOST}/@${handle}`;
 
+// The two halves of the catalog, as the filter row offers them. Handles are
+// filled in one at a time by hand — Google Places does not return them — so
+// the half that matters is `no`: it is the worklist.
+export const THREADS_FILTERS = [
+  ['yes', 'Has handle'],
+  ['no', 'No handle'],
+];
+
+/**
+ * How many places sit on each side, keyed by the filter value so a chip can
+ * read its own count without a lookup table.
+ *
+ * A place with no handle is not "untagged" — it is either a venue with no
+ * Threads account or one nobody has looked up yet, and the desk cannot tell
+ * those apart from here. Both are work the filter should be able to reach,
+ * which is why this counts nulls rather than skipping them the way the
+ * category and vibe rows do.
+ */
+export function countThreads(rows) {
+  const list = rows ?? [];
+  const yes = list.filter((r) => r.threads_handle).length;
+  return { yes, no: list.length - yes };
+}
+
 /**
  * Null when the value is fine, otherwise a sentence to put beside the field.
  * Empty is fine: "this venue has no Threads account" is a real answer, and the
