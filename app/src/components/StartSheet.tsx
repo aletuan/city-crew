@@ -320,9 +320,15 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
         <Text style={s.title}>{t('Where should it start?', 'Bắt đầu từ đâu?', 'どこから始めますか？')}</Text>
         <Text style={s.sub}>
           {t(
-            'Roughly is fine — we keep everything walkable.',
-            'Áng chừng là được — chúng tôi giữ mọi thứ trong tầm đi bộ.',
-            'だいたいで大丈夫 — 歩ける範囲でまとめます。',
+            // "Lean toward", not "keep walkable": the planner favours what
+            // is near this answer, it guarantees nothing — a reader outside
+            // the centre gets a first leg that is honestly a ride, and the
+            // plan prints every leg's real distance. The store listing set
+            // this rule first (docs/store/listing.md: never write
+            // "walkable"); this line was the straggler still promising it.
+            "Roughly is fine — plans lean toward what's nearby.",
+            'Áng chừng là được — kế hoạch sẽ ưu tiên những chỗ gần đó.',
+            'だいたいで大丈夫 — 近くの場所を優先します。',
           )}
         </Text>
 
