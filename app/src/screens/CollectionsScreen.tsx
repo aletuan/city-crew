@@ -404,12 +404,13 @@ export default function CollectionsScreen({ navigation, route }: {
   }, [pulling, loading]);
 
   // Reload on return: creating a collection happens on another screen, and
-  // without this you would come back to the list you left. The first focus
-  // is skipped — the hook has already loaded on mount, and refetching there
-  // is a second identical request for nothing.
-  const firstFocus = useRef(true);
+  // without this you would come back to the list you left. Every focus
+  // reloads, including the first — Collections is not the launch tab, so
+  // the first time it is ever focused in a session can just as easily be
+  // right after creating the session's first list elsewhere as it can be
+  // an ordinary visit, and there is no way to tell those apart from here.
+  // See TripsScreen for the full argument; the fix that came from it.
   useFocusEffect(useCallback(() => {
-    if (firstFocus.current) { firstFocus.current = false; return; }
     mine.reload();
   // `mine.reload` is stable; `mine` is a new object on every load.
   // eslint-disable-next-line react-hooks/exhaustive-deps
