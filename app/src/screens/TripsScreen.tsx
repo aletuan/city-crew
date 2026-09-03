@@ -38,7 +38,7 @@
 // mock to avoid. The footer keeps the shape and fills it with what is
 // true — how many stops, what it costs.
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -286,12 +286,16 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
   const trips = useMyTrips();
 
   // Saving happens in the Ideas stack, in another tab, so this list is
-  // always out of date by the time anyone looks at it. The first focus is
-  // skipped — the hook loaded on mount, and refetching there is a second
-  // identical request for nothing. Same pattern as Collections.
-  const firstFocus = useRef(true);
+  // always out of date by the time anyone looks at it. Every focus reloads
+  // — including the first. Skipping the first used to assume "just
+  // mounted" meant "fresh", but the provider's own fetch runs once, on
+  // app launch, on the Explore tab; the first time this tab is ever
+  // focused in a session is exactly the moment after saving the session's
+  // first trip, and skipping that focus left the new trip missing until a
+  // second visit. The redundant request the skip was for costs one round
+  // trip on an ordinary visit and is invisible — `reload` keeps showing
+  // the data already on screen while it runs.
   useFocusEffect(useCallback(() => {
-    if (firstFocus.current) { firstFocus.current = false; return; }
     trips.reload();
   // `trips.reload` is stable; `trips` is a new object on every load.
   // eslint-disable-next-line react-hooks/exhaustive-deps

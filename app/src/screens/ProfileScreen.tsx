@@ -6,7 +6,7 @@
 // About-me card and account actions. Champagne throughout — the
 // reference's violet gradient is translated, not copied.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 // TEMPORARY — read/written only by the "Always show welcome" row.
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -474,11 +474,9 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   // Without this, saving your interests and pressing back left the row
   // below still reading "Edit profile to add your interests": the one
   // sentence guaranteed to be wrong at the moment it is most likely to be
-  // read. Same shape as the Collections, Crew and Trips screens, first
-  // focus skipped because the mount has already loaded.
-  const firstFocus = useRef(true);
+  // read. Every focus reloads, including the first — see TripsScreen for
+  // why a skipped first focus is a bet that can be lost, not a safe one.
   useFocusEffect(useCallback(() => {
-    if (firstFocus.current) { firstFocus.current = false; return; }
     prefs.reload();
   // `prefs.reload` is stable; `prefs` is a new object on every load.
   // eslint-disable-next-line react-hooks/exhaustive-deps
