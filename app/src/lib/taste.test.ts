@@ -4,13 +4,17 @@ import { tasteFrom } from './taste';
 import type { TripDraft } from './trip';
 import type { Place } from './types';
 
-let n = 0;
+// No coordinates, on purpose: every distance term in the planner —
+// per-kilometre, origin, short-hop floor, backtrack — skips a place it
+// cannot locate, and this file is about what a *profile* does to a plan.
+// The line of 111 m-spaced fixtures this used to inherit made these
+// tests hostage to geometry they never meant to assert.
 const place = (p: Partial<Place> & { slug: string }): Place => ({
   name_en: p.slug, name_vi: p.slug, name_ja: null,
   city_id: 'hanoi', category: 'out', categories: ['cafes'],
   is_featured: false, is_published: true, review_status: 'approved',
   vibe_tags: [], neighborhood_en: 'Hoàn Kiếm', neighborhood_vi: null, neighborhood_ja: null,
-  address: null, lat: 21.028 + (n += 1) / 1000, lng: 105.852, rating: 4.5, rating_count: 100,
+  address: null, lat: null, lng: null, rating: 4.5, rating_count: 100,
   price_display: null, price_vnd: 100_000, duration_min: 60, duration_max: 90,
   desc_en: null, desc_vi: null, desc_ja: null, emoji: null,
   opening_hours: null, website: null, phone: null, place_photos: [],

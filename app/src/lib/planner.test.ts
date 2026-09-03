@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { brandKey } from './brand';
-import { partAt, partGone, planTrips, startMinFor, START_MIN } from './planner';
+import { backtracks, partAt, partGone, planTrips, shortHopPenalty, startMinFor, START_MIN } from './planner';
 import type { TripDraft } from './trip';
 import type { Place } from './types';
 
@@ -156,6 +156,79 @@ describe('planTrips', () => {
         expect(brandKey(plans[0].stops[0].place.name_en)).toBe('roastery');
         expect(brandKey(plans[1].stops[0].place.name_en)).toBe('quiet-cafe');
       }
+    });
+  });
+
+  // The two shape charges: a day should have a stride, not a huddle. The
+  // arithmetic is pinned on the exported helpers; the plan-level tests
+  // pin the wiring.
+  describe('the day has a stride', () => {
+    it('slides the short-hop charge toward zero and stops at the floor', () => {
+      expect(shortHopPenalty(0)).toBeCloseTo(1.5, 10);
+      expect(shortHopPenalty(0.15)).toBeCloseTo(0.75, 10);
+      expect(shortHopPenalty(0.3)).toBe(0);
+      expect(shortHopPenalty(2)).toBe(0);
+    });
+
+    it('knows a step back toward covered ground when it sees one', () => {
+      const a = place({ slug: 'st-a', lat: 21.0, lng: 105.852 });
+      const b = place({ slug: 'st-b', lat: 21.0054, lng: 105.852 });
+      const nearA = place({ slug: 'st-near-a', lat: 21.0003, lng: 105.852 });
+      const onward = place({ slug: 'st-onward', lat: 21.0108, lng: 105.852 });
+      expect(backtracks([a, b], nearA)).toBe(true);
+      expect(backtracks([a, b], onward)).toBe(false);
+      // One stop of history has no "back" yet.
+      expect(backtracks([b], nearA)).toBe(false);
+      // A stop nobody could place cannot pull anything toward itself —
+      // in any of the three seats.
+      const lost = place({ slug: 'st-lost', lat: null, lng: null });
+      expect(backtracks([lost, b], nearA)).toBe(false);
+      expect(backtracks([a, lost], nearA)).toBe(false);
+      expect(backtracks([a, b], lost)).toBe(false);
+    });
+
+    it('prefers a real hop over a doorstep neighbour', () => {
+      // Equal places a metre and 600 m from the anchor. Without the
+      // floor the doorstep is strictly cheaper and always in the draw;
+      // with it, it drops out of the band entirely.
+      const catalog = [
+        place({ slug: 'anchor', categories: ['eats'], rating: 5, rating_count: 0, lat: 21.03, lng: 105.852 }),
+        place({ slug: 'doorstep', categories: ['eats'], rating: 3.7, rating_count: 0, lat: 21.030009, lng: 105.852 }),
+        place({ slug: 'down-the-street', categories: ['eats'], rating: 3.7, rating_count: 0, lat: 21.0354, lng: 105.852 }),
+      ];
+      const day: TripDraft = { ...EVENING, when: 'day', categories: ['eats'] };
+      for (let seed = 0; seed < 10; seed++) {
+        const stops = planTrips(day, catalog, 'hanoi', { seed })[0].stops.map((s) => s.place.slug);
+        expect(stops).toEqual(['anchor', 'down-the-street']);
+      }
+    });
+
+    it('steps onward rather than back, most of the time', () => {
+      // café → eats along a straight street, then a view either beside
+      // the café (a step back) or further on. The backtrack charge is a
+      // point and the draw band is 1.2, so the step back stays *possible*
+      // — this asserts the lean, which is what a soft charge buys. The
+      // slight rating edge on the backward view is what the charge has
+      // to overcome; without it the backward view would simply top the
+      // band.
+      const catalog = [
+        place({ slug: 'start-cafe', categories: ['cafes'], rating: 5, rating_count: 0, lat: 21.0, lng: 105.852 }),
+        place({ slug: 'mid-eats', categories: ['eats'], rating: 4.3, rating_count: 0, lat: 21.0054, lng: 105.852 }),
+        place({ slug: 'view-back', categories: ['views'], rating: 1.6, rating_count: 0, lat: 21.00005, lng: 105.852 }),
+        place({ slug: 'view-on', categories: ['views'], rating: 1.3, rating_count: 0, lat: 21.0108, lng: 105.852 }),
+      ];
+      const draft: TripDraft = {
+        ...EVENING, company: 'solo', categories: ['cafes', 'eats', 'views'],
+        at: { lat: 21.0, lng: 105.852 },
+      };
+      let on = 0;
+      let back = 0;
+      for (let seed = 0; seed < 20; seed++) {
+        const last = planTrips(draft, catalog, 'hanoi', { seed })[0].stops.at(-1)!.place.slug;
+        if (last === 'view-on') on++;
+        if (last === 'view-back') back++;
+      }
+      expect(on).toBeGreaterThan(back);
     });
   });
 
