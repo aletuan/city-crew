@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { brandKey } from './brand';
 import { partAt, partGone, planTrips, startMinFor, START_MIN } from './planner';
 import type { TripDraft } from './trip';
 import type { Place } from './types';
@@ -116,6 +117,46 @@ describe('planTrips', () => {
       const slugs = plan.stops.map((s) => s.place.slug);
       expect(new Set(slugs).size).toBe(slugs.length);
     }
+  });
+
+  // The same-brand trap #188 measured: ~a fifth of the Hanoi catalog is
+  // branch rows, and the distance penalty pulls branches of one chain
+  // toward each other because they sit near each other on the map.
+  describe('branches of one brand', () => {
+    it('never puts two branches into one plan', () => {
+      const catalog = [
+        place({ slug: 'sushi-a', name_en: 'Sushi Chain - Old Quarter', categories: ['eats'], rating: 5, rating_count: 1000 }),
+        place({ slug: 'sushi-b', name_en: 'Sushi Chain - Ba Đình', categories: ['eats'], rating: 4.95, rating_count: 1000 }),
+        ...many('eats'),
+      ];
+      // A day asked for in one category gets two slots, both of that kind
+      // — the exact shape where two branches used to slip in together.
+      const day: TripDraft = { ...EVENING, when: 'day', categories: ['eats'] };
+      for (let seed = 0; seed < 10; seed++) {
+        for (const plan of planTrips(day, catalog, 'hanoi', { seed })) {
+          const brands = plan.stops.map((s) => brandKey(s.place.name_en));
+          expect(new Set(brands).size).toBe(brands.length);
+        }
+      }
+    });
+
+    it('spends the repeat penalty on a brand, not just a slug, across cards', () => {
+      // Two branches so far ahead that the first card must take one; a
+      // third café outside the draw band until the brand penalty moves
+      // it in. Three cards each wearing a different branch of the same
+      // roastery is one answer shown three times.
+      const catalog = [
+        place({ slug: 'roast-a', name_en: 'Roastery - One', categories: ['cafes'], rating: 5, rating_count: 0 }),
+        place({ slug: 'roast-b', name_en: 'Roastery - Two', categories: ['cafes'], rating: 4.9, rating_count: 0 }),
+        place({ slug: 'quiet-cafe', categories: ['cafes'], rating: 3.5, rating_count: 0 }),
+      ];
+      for (const seed of [1, 5, 9]) {
+        const plans = planTrips({ ...EVENING, categories: ['cafes'] }, catalog, 'hanoi', { seed });
+        expect(plans.length).toBeGreaterThanOrEqual(2);
+        expect(brandKey(plans[0].stops[0].place.name_en)).toBe('roastery');
+        expect(brandKey(plans[1].stops[0].place.name_en)).toBe('quiet-cafe');
+      }
+    });
   });
 
   it('leaves a closed place out', () => {
