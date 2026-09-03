@@ -31,6 +31,7 @@ import { addPlaceToCollection, copyCollection, createCollection, updateCollectio
 import { useI18n } from '../lib/i18n';
 import { coverOf, membersOf, photosOf } from '../lib/place';
 import { useSave } from '../lib/save';
+import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, font, radius, space } from '../theme';
 import type { Place } from '../lib/types';
 import { goTo, type Nav, type RootRoute } from '../nav';
@@ -61,6 +62,7 @@ export default function CollectionFormScreen({ navigation, route }: {
   const [busy, setBusy] = useState(false);
   const failText = useFailText();
   const [error, setError] = useState<string | null>(null);
+  const note = useNoteEvent();
 
   const uid = session?.user?.id;
 
@@ -154,7 +156,16 @@ export default function CollectionFormScreen({ navigation, route }: {
         // Reached from a place's bookmark with nowhere to put it: the list
         // arrives holding the place that prompted it, rather than empty
         // with the save silently dropped on the way here.
-        if (addPlaceSlug) await addPlaceToCollection(slug, addPlaceSlug, 0);
+        if (addPlaceSlug) {
+          await addPlaceToCollection(slug, addPlaceSlug, 0);
+          // The first save an account ever makes comes through here — the
+          // save sheet routes to this form precisely when there is no
+          // list yet — and it went unrecorded while every later save was
+          // noted by `lib/save`. The clearest statement of taste the
+          // account will ever make, and the profile never heard it (#315).
+          // After the add, so a failed insert records nothing.
+          note(addPlaceSlug, 'save');
+        }
       }
       // Refresh the one shared copy before leaving. Without this the save
       // sheet keeps the list it fetched on launch, and a collection made
