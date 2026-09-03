@@ -454,6 +454,46 @@ const KM_PENALTY = 0.4;
 const KM_PENALTY_MAX = 4;
 
 /**
+ * The floor under that ceiling: a hop too short to be a hop, charged on
+ * a slide that steepens toward zero.
+ *
+ * The per-kilometre term only ever pushes stops together — nearer is
+ * always cheaper, and nothing charges for nearer-still — so the cheapest
+ * day the scoring could see was four venues on one corner. Not
+ * hypothetical: at 203 Hanoi places the tightest valid four-stop chain
+ * runs 187 m end to end (#188, re-measured 2026-09-03), and density
+ * makes it tighter every month. Under about 300 m the reader has not
+ * gone anywhere; the next stop is the same corner wearing a new sign.
+ *
+ * Linear rather than a cliff, so 290 m is not suddenly as bad as 20 m.
+ * Capped at a rating-point-and-a-half, so the genuinely exceptional
+ * doorstep pair — the temple and the café facing it — can still pay its
+ * way in. The opening stop is exempt: it is measured from wherever the
+ * reader is standing, and starting near them is the point, not a fault.
+ */
+const HOP_FLOOR_KM = 0.3;
+const HOP_FLOOR_PENALTY = 1.5;
+
+/**
+ * Charged against a step that walks back toward a stop already left.
+ *
+ * Each slot is scored against the previous stop alone, so nothing here
+ * ever noticed when the fourth stop landed beside the first — the
+ * zigzag #188 predicted of exactly this shape of algorithm. This is the
+ * cheap approximation of the detour ratio it proposed instead of
+ * choosing the chain whole: not a measure of *how far* back, just a
+ * flat charge for stepping toward ground already covered — a judgement
+ * about direction rather than degree.
+ *
+ * Sized with the floor above against `DISTRICT_BONUS`: the two shape
+ * charges together reach at most 2.5, so a place in the district the
+ * reader chose can be cancelled by bad geometry but never net-punished
+ * below an equal neighbour — pushed to 1.25 in simulation, the pair
+ * started overruling that promise, and the district test caught it.
+ */
+const BACKTRACK_PENALTY = 1;
+
+/**
  * The same charge for the first stop, measured from where the day starts —
  * and deliberately more than twice as steep.
  *
@@ -483,6 +523,35 @@ const KM_PENALTY_MAX = 4;
  */
 const ORIGIN_KM_PENALTY = 1.0;
 const ORIGIN_KM_PENALTY_MAX = 5;
+
+/** The short-hop charge for a hop of `km` — zero from `HOP_FLOOR_KM` up,
+ *  climbing linearly to `HOP_FLOOR_PENALTY` at zero. Exported for the
+ *  tests that pin the slide's arithmetic. */
+export function shortHopPenalty(km: number): number {
+  if (km >= HOP_FLOOR_KM) return 0;
+  return HOP_FLOOR_PENALTY * (1 - km / HOP_FLOOR_KM);
+}
+
+/**
+ * Whether stepping from the end of `path` to `p` walks back toward a
+ * stop already left: `p` sits nearer to some earlier stop than to the
+ * one the reader is at now.
+ *
+ * Needs two stops of history to mean anything — with one there is no
+ * "back" yet. A stop with no coordinates cannot pull anything toward
+ * itself, for the reason `legBetween` refuses to invent a journey.
+ */
+export function backtracks(path: readonly Place[], p: Place): boolean {
+  if (path.length < 2 || p.lat == null || p.lng == null) return false;
+  const prev = path[path.length - 1];
+  if (prev.lat == null || prev.lng == null) return false;
+  const fwd = distanceKm(prev.lat, prev.lng, p.lat, p.lng);
+  for (const left of path.slice(0, -1)) {
+    if (left.lat == null || left.lng == null) continue;
+    if (distanceKm(left.lat, left.lng, p.lat, p.lng) < fwd) return true;
+  }
+  return false;
+}
 
 /** Applied to a place another plan in this batch already used, and to
  *  anything the screen asked to avoid. Strong enough to move the answer,
@@ -591,7 +660,10 @@ function dropReason(p: Place, draft: TripDraft, cityId: string | null, when: num
 
 function scoreOf(
   p: Place, slot: Slot, draft: TripDraft, lens: Lens,
-  prev: Place | null,
+  /** The stops chosen so far, in order; the last is the stop this hop
+   *  would leave from, and the ones before it are where the backtrack
+   *  charge looks. Empty on the opening slot. */
+  path: readonly Place[],
   /** Where the day starts, for the opening stop — see `originOf`. Null
    *  when the reader has said nothing that places them, which is the one
    *  case where the first stop genuinely has nothing to be measured
@@ -638,10 +710,14 @@ function scoreOf(
   // Once there is a previous stop, the hop is the distance from it; a
   // place with no coordinates cannot answer that, and answering a
   // different question instead would be worse than not answering.
+  const prev = path.length ? path[path.length - 1] : null;
   if (prev) {
     if (prev.lat != null && prev.lng != null && p.lat != null && p.lng != null) {
-      s -= Math.min(KM_PENALTY_MAX, distanceKm(prev.lat, prev.lng, p.lat, p.lng) * KM_PENALTY);
+      const km = distanceKm(prev.lat, prev.lng, p.lat, p.lng);
+      s -= Math.min(KM_PENALTY_MAX, km * KM_PENALTY);
+      s -= shortHopPenalty(km);
     }
+    if (backtracks(path, p)) s -= BACKTRACK_PENALTY;
   } else if (origin && p.lat != null && p.lng != null) {
     s -= Math.min(
       ORIGIN_KM_PENALTY_MAX,
@@ -732,7 +808,6 @@ function buildPlan(
 
   for (let i = 0; i < slots.length; i++) {
     const slot = slots[i];
-    const prev = out.length ? out[out.length - 1] : null;
     const at = start + i * NOMINAL_STEP;
 
     const fits = (p: Place) => {
@@ -744,13 +819,13 @@ function buildPlan(
     let chosen: Place | null = null;
     if (pinnedUsed < pinnedBudget) {
       const cands = pinnedOk.filter(fits)
-        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, origin, opts, used, usedBrands, share) }));
+        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, out, origin, opts, used, usedBrands, share) }));
       chosen = draw(cands, rnd);
       if (chosen) pinnedUsed++;
     }
     if (!chosen) {
       const cands = pool.filter(fits)
-        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, origin, opts, used, usedBrands, share) }));
+        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, out, origin, opts, used, usedBrands, share) }));
       chosen = draw(cands, rnd);
     }
 
