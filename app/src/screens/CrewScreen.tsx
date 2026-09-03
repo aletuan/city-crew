@@ -69,15 +69,23 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   // visit asks the server again: the held answer still paints first, and
   // a number moves in place only when the truth did.
   //
-  // The FIRST focus is the mount, and the mount is already covered by
-  // the provider's launch fetch — reloading there re-ran the whole wave
-  // twice per open, the double #353 spent a change removing. Skipped,
-  // the way Collections and Trips wrote it down.
+  // Every focus reloads, including the first — the skip #353 added here
+  // assumed the mount was covered by the provider's own launch fetch, on
+  // the theory that reloading again straight after was the whole wave
+  // running twice for nothing. That held only because nothing had had a
+  // chance to write to friendships between launch and that first look; it
+  // does not hold once Crew is reached by way of another tab that could
+  // have just sent or answered a request. See TripsScreen for the full
+  // argument and the shape this bug takes when the skip is wrong instead
+  // of merely redundant.
+  //
+  // What #353 actually needed is kept: `shipsRef.current.loading` guards
+  // against firing a *second, concurrent* request while the provider's
+  // own launch fetch is still in flight — the literal "twice per open" —
+  // without also skipping a reload that is genuinely owed.
   const shipsRef = useRef(ships);
   shipsRef.current = ships;
-  const visited = useRef(false);
   useFocusEffect(useCallback(() => {
-    if (!visited.current) { visited.current = true; return; }
     if (!shipsRef.current.loading) shipsRef.current.reload();
   }, []));
 
