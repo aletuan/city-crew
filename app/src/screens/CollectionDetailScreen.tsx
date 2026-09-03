@@ -23,6 +23,7 @@ import { useCity } from '../lib/city';
 import { moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';
 import { useSave } from '../lib/save';
+import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space, type } from '../theme';
 import type { Place } from '../lib/types';
@@ -213,6 +214,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     [mine.data, cols.data, route.params.slug],
   );
   const members = useMemo(() => (col ? membersOf(col, places) : []), [col, places]);
+  const note = useNoteEvent();
   const loading = cols.loading || mine.loading || placesLoading;
   const owned = !!col?.owner_id && col.owner_id === uid;
   const isPublic = !!col?.is_public;
@@ -524,7 +526,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           deleteCollection(col.slug)
             // Leaving first: the screen is about a row that no longer
             // exists, and the list behind it is where the outcome shows.
-            .then(() => { navigation.goBack(); mine.reload(); })
+            //
+            // The members left the saved set with the list, and the taste
+            // profile has to hear it — without these, their last recorded
+            // verb stays `save` forever and a thrown-away list keeps
+            // counting as liked (#315). After the delete, never before:
+            // a failed delete must not leave false events behind.
+            .then(() => {
+              for (const m of members) note(m.slug, 'unsave');
+              navigation.goBack();
+              mine.reload();
+            })
             .catch((e: Error) => Alert.alert(t('Could not delete', 'Không xoá được', '削除できませんでした'), e.message));
         },
       },
