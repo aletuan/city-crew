@@ -35,6 +35,7 @@
 // is luck rather than arithmetic — while anything outside the band still
 // never appears.
 
+import { brandKey } from './brand';
 import { categoriesOf } from './categories';
 import { minutesOf, toISO } from './day';
 import { instantOn, openState } from './format';
@@ -596,7 +597,7 @@ function scoreOf(
    *  case where the first stop genuinely has nothing to be measured
    *  against. */
   origin: Point | null,
-  opts: PlanOptions, used: ReadonlySet<string>,
+  opts: PlanOptions, used: ReadonlySet<string>, usedBrands: ReadonlySet<string>,
   /** One stop's share of a stated budget, or null when none was stated. */
   share: number | null,
 ): number {
@@ -648,7 +649,13 @@ function scoreOf(
     );
   }
 
-  if (used.has(p.slug) || opts.avoid?.includes(p.slug)) s -= REPEAT_PENALTY;
+  // A brand counts as a repeat the way a slug does: three cards each
+  // offering a different branch of the same roastery are one answer worn
+  // three ways. A penalty rather than a gate, for the same reason as the
+  // slug — a category held entirely by one chain must still answer.
+  const brand = brandKey(p.name_en);
+  if (used.has(p.slug) || opts.avoid?.includes(p.slug)
+    || (brand !== '' && usedBrands.has(brand))) s -= REPEAT_PENALTY;
 
   return s;
 }
@@ -701,10 +708,17 @@ function dwellOf(p: Place): number {
 
 function buildPlan(
   lens: Lens, slots: readonly Slot[], pool: readonly Place[], pinnedOk: readonly Place[],
-  draft: TripDraft, opts: PlanOptions, used: ReadonlySet<string>, rnd: () => number,
+  draft: TripDraft, opts: PlanOptions, used: ReadonlySet<string>,
+  usedBrands: ReadonlySet<string>, rnd: () => number,
   start: number, origin: Point | null,
 ): Place[] {
   const taken = new Set<string>();
+  // Within one day the brand rule is hard where the cross-plan one is
+  // soft: two branches of one chain are the same place twice, not two
+  // stops — and the distance penalty actively pulls the second branch in,
+  // because branches sit near each other. A slot only a repeat brand could
+  // fill goes unfilled, which is already what a slot nothing fits does.
+  const takenBrands = new Set<string>();
   const out: Place[] = [];
   // A collection that could fill every slot would make all three plans the
   // same plan in three orders, so it may claim all but one. The reader
@@ -721,23 +735,29 @@ function buildPlan(
     const prev = out.length ? out[out.length - 1] : null;
     const at = start + i * NOMINAL_STEP;
 
-    const fits = (p: Place) => !taken.has(p.slug) && openAt(p, draft.date, at);
+    const fits = (p: Place) => {
+      if (taken.has(p.slug) || !openAt(p, draft.date, at)) return false;
+      const brand = brandKey(p.name_en);
+      return brand === '' || !takenBrands.has(brand);
+    };
 
     let chosen: Place | null = null;
     if (pinnedUsed < pinnedBudget) {
       const cands = pinnedOk.filter(fits)
-        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, origin, opts, used, share) }));
+        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, origin, opts, used, usedBrands, share) }));
       chosen = draw(cands, rnd);
       if (chosen) pinnedUsed++;
     }
     if (!chosen) {
       const cands = pool.filter(fits)
-        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, origin, opts, used, share) }));
+        .map((p) => ({ p, s: scoreOf(p, slot, draft, lens, prev, origin, opts, used, usedBrands, share) }));
       chosen = draw(cands, rnd);
     }
 
     if (!chosen) continue;
     taken.add(chosen.slug);
+    const chosenBrand = brandKey(chosen.name_en);
+    if (chosenBrand !== '') takenBrands.add(chosenBrand);
     out.push(chosen);
   }
   return out;
@@ -835,9 +855,10 @@ export function planTrips(
 
   const plans: TripPlan[] = [];
   const used = new Set<string>();
+  const usedBrands = new Set<string>();
 
   for (const lens of LENSES) {
-    const picked = buildPlan(lens, slots, pool, pinnedOk, draft, opts, used, rnd, start, origin);
+    const picked = buildPlan(lens, slots, pool, pinnedOk, draft, opts, used, usedBrands, rnd, start, origin);
     if (!picked.length) continue;
 
     // Two plans sharing all but one stop are one plan shown twice. Dropping
@@ -851,6 +872,10 @@ export function planTrips(
     if (tooSimilar) continue;
 
     for (const s of slugs) used.add(s);
+    for (const p of picked) {
+      const b = brandKey(p.name_en);
+      if (b !== '') usedBrands.add(b);
+    }
     plans.push(dress(lens.key, picked, slots, start, pinnedDropped));
   }
 
