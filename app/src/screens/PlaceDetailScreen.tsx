@@ -20,7 +20,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { fmtCount, photosOf, usePlaceBySlug } from '../lib/data';
+import { fmtCount, isFree, photosOf, usePlaceBySlug } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
 import { shortAddress } from '../lib/address';
 import { splitName, subtitleBeside } from '../lib/name';
@@ -321,16 +321,17 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           </View>
 
           {/* ── fact row ── */}
+          {/* ── facts: what kind of place, what it costs, how long ──
+              A row of pills, in the shape the filter row and the cards
+              already use for the same concepts, rather than four bits of
+              grey text with glyphs that read as one run-on sentence. Kind
+              first: it is the answer to "what is this", and the glyph
+              carries the category's hue — the same hue its chip wears on
+              Explore and its dot wears on a card — while the pill stays
+              glass. Never a tinted fill: that is the rule in
+              `lib/categories`, and a row of pastel pills is the one
+              thing this app's colour discipline does not do. */}
           <View style={s.facts}>
-            {place.price_display || place.price_vnd != null ? (
-              <PricePill place={place} />
-            ) : null}
-            {dur ? (
-              <View style={s.fact}>
-                <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
-                <Text style={s.factText}>{dur}</Text>
-              </View>
-            ) : null}
             {/* What this place is, on the functional axis — the same
                 `categories` the filter row, the planner and search read.
                 This row used to say something else entirely: the label was
@@ -348,11 +349,30 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 <Ionicons
                   name={CATEGORIES[c]?.icon ?? 'pricetag-outline'}
                   size={15}
-                  color={colors.textSecondary}
+                  color={CATEGORIES[c]?.color ?? colors.textSecondary}
                 />
                 <Text style={s.factText}>{categoryLabel(c, t)}</Text>
               </View>
             ))}
+            {/* FREE is already a pill of its own, accented because it is
+                the one price that is a state; a paid price is quiet text
+                and takes the glass pill and a tag like its neighbours. */}
+            {place.price_display || place.price_vnd != null ? (
+              isFree(place) ? (
+                <PricePill place={place} />
+              ) : (
+                <View style={s.fact}>
+                  <Ionicons name="pricetag-outline" size={15} color={colors.textSecondary} />
+                  <PricePill place={place} />
+                </View>
+              )
+            ) : null}
+            {dur ? (
+              <View style={s.fact}>
+                <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
+                <Text style={s.factText}>{dur}</Text>
+              </View>
+            ) : null}
           </View>
 
           {(place.desc_en || place.desc_vi) && <Text style={s.desc}>{t(place.desc_en, place.desc_vi, place.desc_ja)}</Text>}
@@ -537,9 +557,18 @@ const s = StyleSheet.create({
   ratingValue: { color: colors.text, fontSize: 18, fontWeight: font.bold },
   ratingCount: { color: colors.textTertiary, fontSize: 12, fontWeight: font.regular },
 
-  facts: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 18, marginTop: 16 },
-  fact: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  factText: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.medium },
+  facts: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 16 },
+  // The filter row's chip, at rest: same hairline, same radius, same
+  // type, so a category looks like the same thing here as there. Glass
+  // fill rather than the filter's bare outline, because these are facts
+  // to read, not controls to press, and the fill is what says so.
+  fact: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  factText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
 
   desc: { color: colors.textSecondary, ...type.body, lineHeight: 24, marginTop: 14 },
 
