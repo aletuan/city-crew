@@ -23,6 +23,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { fmtCount, photosOf, usePlaceBySlug } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
 import { shortAddress } from '../lib/address';
+import { splitName, subtitleBeside } from '../lib/name';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
 import { clockOf, dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
@@ -161,6 +162,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // is still cut from a short, ward-less address. See `shortAddress`.
   const cityNames = city ? [city.name_vi, city.name_en, city.short_vi, city.short_en] : [];
   const address = shortAddress(place.address, cityNames);
+  // The brand as the title and the qualifier Google's listing hung off
+  // it — a branch, a tagline — as a subtitle beneath, rather than three
+  // lines of display type. See `lib/name` for the cut. The subtitle is
+  // dropped when it only repeats the neighbourhood line under it.
+  const neighborhood = t(place.neighborhood_en, place.neighborhood_vi, place.neighborhood_ja);
+  const name = splitName(t(place.name_en, place.name_vi, place.name_ja));
+  const subtitle = subtitleBeside(name, neighborhood);
   // Grouped, not one row per day: see groupHours. A place open the same
   // seven days a week becomes one line instead of seven identical ones.
   const hours = groupHours(place.opening_hours ?? [], lang);
@@ -284,10 +292,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           {/* ── title + rating badge ── */}
           <View style={s.titleRow}>
             <View style={{ flex: 1 }}>
-              <Text style={s.name}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
+              <Text style={s.name}>{name.title}</Text>
+              {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
               <View style={s.locRow}>
                 <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
-                <Text style={s.loc}>{t(place.neighborhood_en, place.neighborhood_vi, place.neighborhood_ja)}</Text>
+                <Text style={s.loc}>{neighborhood}</Text>
               </View>
             </View>
             {place.rating ? (
@@ -520,6 +529,9 @@ const s = StyleSheet.create({
   // 26, not the 28 this was: the display face runs wider than the system
   // one, and place names are long enough to wrap without help.
   name: { color: colors.text, ...type.titleDetail },
+  // Body face, not display: the qualifier is a fact about the title, not
+  // a second title, and the change of face is what says so.
+  subtitle: { color: colors.textSecondary, ...type.body, marginTop: 4 },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
   loc: { color: colors.textTertiary, ...type.meta },
   ratingBadge: {

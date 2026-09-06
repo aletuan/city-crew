@@ -60,7 +60,8 @@ const CITIES = new Set([
   'hoi an', 'quang nam', 'vung tau', 'ba ria - vung tau',
 ]);
 
-const fold = (s: string) => s
+/** Case- and accent-insensitive form for comparing two Vietnamese names. */
+export const fold = (s: string) => s
   .normalize('NFKD')
   .replace(/[̀-ͯ]/g, '')
   .replace(/đ/gi, 'd')
