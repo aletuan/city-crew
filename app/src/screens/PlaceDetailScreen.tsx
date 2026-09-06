@@ -556,15 +556,18 @@ const s = StyleSheet.create({
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
     textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 5,
   },
-  infoValue: { color: colors.textSecondary, ...type.meta, lineHeight: 24 },
-  /** The value of a row that goes somewhere: it is the link. */
-  infoLink: { color: colors.accent, fontWeight: font.medium },
+  infoValue: { color: colors.ink, ...type.meta, lineHeight: 24 },
+  /** The value of a row that goes somewhere. Ink like the rest — the
+   *  accent came off after a day on the phone, where a two-line address
+   *  in red outweighed the title — and a touch of weight is what is
+   *  left to say the row is a link. */
+  infoLink: { fontWeight: font.medium },
   // Semibold and a size up on the table under it: this is the answer, and
   // it is the working it was derived from.
-  openNow: { color: colors.ok, fontSize: 15.5, fontWeight: font.semibold },
+  openNow: { color: colors.open, fontSize: 15.5, fontWeight: font.semibold },
   openNowShut: { color: colors.textTertiary },
   hoursTable: { paddingBottom: 16 },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  hourDay: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.medium },
-  hourTime: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.regular },
+  hourDay: { color: colors.ink, fontSize: 14.5, fontWeight: font.medium },
+  hourTime: { color: colors.ink, fontSize: 14.5, fontWeight: font.regular },
 });
