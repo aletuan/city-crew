@@ -518,7 +518,7 @@ const s = StyleSheet.create({
   dayBox: { flex: 1 },
   dayHit: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 2 },
 
-  pickScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.32)' },
+  pickScrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.32)' },
   // Centred rather than a bottom sheet: the calendar is a square of dense
   // targets, and the middle of the screen is where a thumb reaches all of
   // it. The start sheet is bottom-anchored because it is a form.

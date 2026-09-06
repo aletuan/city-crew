@@ -1050,7 +1050,7 @@ const s = StyleSheet.create({
   // Lighter than the sheet's scrim was. A popover keeps its context —
   // you can still read the row you are acting on — where a sheet takes
   // the screen and has to dim what it covers.
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.22)' },
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.22)' },
   menu: {
     position: 'absolute', minWidth: 232, maxWidth: 300,
     backgroundColor: colors.bgElevated, borderRadius: 16, overflow: 'hidden',

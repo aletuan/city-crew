@@ -29,9 +29,12 @@ npx expo start          # thêm --tunnel nếu điện thoại khác mạng
 
 Cài **Expo Go** (App Store / Play Store) rồi quét QR.
 
-> **Vì sao SDK 54?** Expo Go trên App Store đang kẹt ở SDK 54 (Apple chưa
-> duyệt bản mới — xem changelog "Expo Go and the App Store in May 2026").
-> App pin SDK 54 để mở được trong Expo Go; nâng SDK khi Expo Go cập nhật.
+> **Vì sao SDK 57?** Expo Go trên App Store chỉ chạy đúng một SDK — bản
+> mới nhất — và không cài được bản cũ. App theo SDK mà Expo Go đang có
+> (57 từ tháng 9/2026; trước đó kẹt ở 54 vì Apple duyệt chậm). Khi Expo Go
+> lên SDK mới, màn "Project is incompatible with this version of Expo Go"
+> là dấu hiệu phải nâng: `npx expo install expo@^<sdk>` rồi
+> `npx expo install --fix`.
 
 **Cách 2 — không cần máy tính (qua GitHub Actions):**
 

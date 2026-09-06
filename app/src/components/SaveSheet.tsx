@@ -103,7 +103,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
 }
 
 const s = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.62)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     paddingHorizontal: space.page, paddingTop: 10,

@@ -47,7 +47,12 @@
           "photosPermission": "City Crew needs your photo library so you can pick a profile photo.",
           "cameraPermission": "City Crew needs the camera so you can take a profile photo."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-font",
+      "expo-image",
+      "expo-sharing",
+      "expo-status-bar"
     ],
     "updates": {
       "url": "https://u.expo.dev/b151a921-bb81-4cb2-83b8-6ab3803fbc6f"
