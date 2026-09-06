@@ -26,7 +26,7 @@ import { shortAddress } from '../lib/address';
 import { splitName, subtitleBeside } from '../lib/name';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
-import { clockOf, dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
+import { clockOf, dotWindow, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { mapsSearchUrl } from '../lib/maps';
 import { useSave } from '../lib/save';
@@ -138,7 +138,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
   const photos = photosOf(place);
   const reviews = fmtCount(place.rating_count);
-  const dur = fmtDuration(place.duration_min, place.duration_max, lang);
   const cats = categoriesOf(place);
   // Full width, and tall enough that what shows *below* the status bar is
   // still the 4:3.4 frame the inset card had — the inset's worth of
@@ -173,10 +172,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // address row: the short address ends in the ward, so with one on the
   // card the line said the same word a few lines up, and a bare district
   // under a tagline reads as a second tagline. The subtitle is judged
-  // against the line that is actually there.
+  // against the district either way — a branch named after its ward
+  // ("CTQ Texas BBQ - Hà Đông") would otherwise repeat the word the
+  // address ends in, which is the same repetition the line was hidden
+  // to avoid.
   const showsNeighborhood = !place.address;
   const name = splitName(t(place.name_en, place.name_vi, place.name_ja));
-  const subtitle = subtitleBeside(name, showsNeighborhood ? neighborhood : null);
+  const subtitle = subtitleBeside(name, neighborhood);
   // Grouped, not one row per day: see groupHours. A place open the same
   // seven days a week becomes one line instead of seven identical ones.
   const hours = groupHours(place.opening_hours ?? [], lang);
@@ -367,12 +369,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 </View>
               )
             ) : null}
-            {dur ? (
-              <View style={s.fact}>
-                <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
-                <Text style={s.factText}>{dur}</Text>
-              </View>
-            ) : null}
+            {/* No dwell here. "1–1.5h" is the planner's estimate of how
+                long people stay, and the planner still reads it where a
+                schedule needs it; on this screen it was a guess dressed
+                as a fact, and the pill that pushed a two-category row
+                onto a second line. */}
           </View>
 
           {(place.desc_en || place.desc_vi) && <Text style={s.desc}>{t(place.desc_en, place.desc_vi, place.desc_ja)}</Text>}
