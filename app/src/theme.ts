@@ -158,6 +158,15 @@ export const colors = {
   sun: dyn('#B07C10', '#F2B441'),
 
   ok: dyn('#3F7A4A', '#8FBF8A'),
+  /** "Open now" on the place card's hours row: a shade greener and
+   *  lighter than `ok`, chosen for that one line against white. */
+  open: dyn('#3F7D55', '#8FBF8A'),
+  /** The value on the place card's info rows — address, hours table,
+   *  phone, site. Ink: darker than `textSecondary`, a hair warmer and
+   *  softer than `text`, so the facts read as content rather than as
+   *  captions and the small-caps label above stays the quieter of the
+   *  two. */
+  ink: dyn('#211F1C', '#ECEBE7'),
   /** Destructive. The dark theme's soft red is far too pale on paper. */
   bad: dyn('#C2564A', '#D98A80'),
   /** The well a delete action sits in, with `bad` itself as the glyph on
