@@ -356,12 +356,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   label={t('Address', 'Địa chỉ', '住所')}
                   first={firstRow === 'address'}
                   onPress={mapsUrl ? () => Linking.openURL(mapsUrl) : undefined}
-                  right={mapsUrl ? (
-                    <View style={s.action}>
-                      <Text style={s.actionText}>{t('Route', 'Chỉ đường', '経路')}</Text>
-                      <Ionicons name="navigate" size={14} color={colors.accent} />
-                    </View>
-                  ) : undefined}
+                  // The word alone, like Call beside it. An arrow used to
+                  // ride after it, the one action on the card with a glyph
+                  // of its own; the row's pin already says where, and the
+                  // accent word is the affordance, so the arrow was a
+                  // third mark for one tap.
+                  right={mapsUrl ? <Text style={s.actionText}>{t('Route', 'Chỉ đường', '経路')}</Text> : undefined}
                 >
                   <Text style={s.infoValue}>{address}</Text>
                 </InfoRow>
@@ -446,7 +446,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   label={t('Website', 'Trang web', 'ウェブサイト')}
                   first={firstRow === 'website'}
                   onPress={() => Linking.openURL(place.website!)}
-                  right={<Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />}
+                  // A verb, not a chevron. A chevron promises a screen
+                  // further into this app; this tap leaves for a browser,
+                  // the same kind of exit as Route and Call, and the card
+                  // reads as one thing when all three exits are the same
+                  // accent word. The one chevron left is on Hours, which
+                  // really does unfold in place.
+                  right={<Text style={s.actionText}>{t('Open', 'Mở', '開く')}</Text>}
                 >
                   <Text style={s.infoValue} numberOfLines={1}>
                     {place.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
@@ -553,8 +559,7 @@ const s = StyleSheet.create({
   // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 17 },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
-  action: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingLeft: 12 },
-  actionText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
+  actionText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold, paddingLeft: 12 },
   infoLabel: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
     textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 5,
