@@ -36,5 +36,8 @@ describe('shortAddress', () => {
     expect(shortAddress(undefined)).toBeNull();
     expect(shortAddress('')).toBeNull();
     expect(shortAddress('Somewhere without commas')).toBe('Somewhere without commas');
+    // Nothing but separators: no segment survives the split, and the
+    // card must still print something for a row whose address is truthy.
+    expect(shortAddress(', ,')).toBe(', ,');
   });
 });
