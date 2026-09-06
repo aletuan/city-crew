@@ -36,35 +36,37 @@ import { AmbientWarmth, Card, Empty, PressableScale, useOwnedStatusBar, useTabBa
 import PricePill from '../components/PricePill';
 import type { Nav, RootRoute } from '../nav';
 
-// One row of the grouped info card. These were four stacked cards, each
-// wearing a 44pt accent circle — four accent marks for zero states, on a
-// screen whose colour discipline says the accent marks state and action.
-// The glyph stays monochrome and the accent is spent on the words that do
-// something: Route and Call. Each row keeps a small caps label over its
-// value — it names the row without shouting — and the whole row is the
-// target; the accent word only names what a tap anywhere already does.
-function InfoRow({ icon, label, first, onPress, right, children }: {
-  icon: keyof typeof Ionicons.glyphMap;
+// One row of the grouped info card: a small caps label over a value, the
+// whole row the target.
+//
+// ── what came off it ──
+//
+// These were four stacked cards, each wearing a 44pt accent circle. Then
+// one card, each row with a monochrome glyph on the left and an accent
+// verb on the right — Route, Call, Open. Then this. The glyph and the
+// label said the same thing twice, and the label is the one that
+// translates; the verb named what a tap anywhere on the row already did,
+// and the value is the thing you would tap. So the value carries the
+// accent when the row goes somewhere — the address, the number, the site
+// are the links, the way a phone number is in Contacts — and a row that
+// goes nowhere stays grey. One mark per row, and it is the row's own
+// content.
+function InfoRow({ label, first, onPress, children }: {
   label: string;
   /** The row that opens the card draws no hairline above itself. */
   first?: boolean;
   onPress?: () => void;
-  right?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
-      style={[s.infoRow, !first && s.rowDivider]}
+      style={[s.infoStack, !first && s.rowDivider]}
       accessibilityRole={onPress ? 'button' : undefined}
     >
-      <Ionicons name={icon} size={18} color={colors.textSecondary} />
-      <View style={{ flex: 1 }}>
-        <Text style={s.infoLabel}>{label}</Text>
-        {children}
-      </View>
-      {right}
+      <Text style={s.infoLabel}>{label}</Text>
+      {children}
     </Pressable>
   );
 }
@@ -167,8 +169,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // lines of display type. See `lib/name` for the cut. The subtitle is
   // dropped when it only repeats the neighbourhood line under it.
   const neighborhood = t(place.neighborhood_en, place.neighborhood_vi, place.neighborhood_ja);
+  // The district line under the title is only for a place with no
+  // address row: the short address ends in the ward, so with one on the
+  // card the line said the same word a few lines up, and a bare district
+  // under a tagline reads as a second tagline. The subtitle is judged
+  // against the line that is actually there.
+  const showsNeighborhood = !place.address;
   const name = splitName(t(place.name_en, place.name_vi, place.name_ja));
-  const subtitle = subtitleBeside(name, neighborhood);
+  const subtitle = subtitleBeside(name, showsNeighborhood ? neighborhood : null);
   // Grouped, not one row per day: see groupHours. A place open the same
   // seven days a week becomes one line instead of seven identical ones.
   const hours = groupHours(place.opening_hours ?? [], lang);
@@ -294,10 +302,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             <View style={{ flex: 1 }}>
               <Text style={s.name}>{name.title}</Text>
               {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
-              <View style={s.locRow}>
-                <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
-                <Text style={s.loc}>{neighborhood}</Text>
-              </View>
+              {showsNeighborhood ? (
+                <View style={s.locRow}>
+                  <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
+                  <Text style={s.loc}>{neighborhood}</Text>
+                </View>
+              ) : null}
             </View>
             {place.rating ? (
               <View style={s.ratingBadge}>
@@ -352,18 +362,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             <Card style={s.infoGroup}>
               {place.address && (
                 <InfoRow
-                  icon="location-outline"
                   label={t('Address', 'Địa chỉ', '住所')}
                   first={firstRow === 'address'}
                   onPress={mapsUrl ? () => Linking.openURL(mapsUrl) : undefined}
-                  // The word alone, like Call beside it. An arrow used to
-                  // ride after it, the one action on the card with a glyph
-                  // of its own; the row's pin already says where, and the
-                  // accent word is the affordance, so the arrow was a
-                  // third mark for one tap.
-                  right={mapsUrl ? <Text style={s.actionText}>{t('Route', 'Chỉ đường', '経路')}</Text> : undefined}
                 >
-                  <Text style={s.infoValue}>{address}</Text>
+                  <Text style={[s.infoValue, mapsUrl && s.infoLink]}>{address}</Text>
                 </InfoRow>
               )}
 
@@ -381,7 +384,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     accessibilityRole="button"
                     accessibilityState={{ expanded: hoursOpen }}
                   >
-                    <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
                     <View style={{ flex: 1 }}>
                       <Text style={s.infoLabel}>{t('Hours', 'Giờ mở cửa', '営業時間')}</Text>
                       {openNow ? (
@@ -428,33 +430,21 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
               {place.phone && (
                 <InfoRow
-                  icon="call-outline"
-                  // 電話番号, not 電話: the row's action word is 電話, and a
-                  // label that repeats its own button names nothing.
                   label={t('Phone', 'Điện thoại', '電話番号')}
                   first={firstRow === 'phone'}
                   onPress={() => Linking.openURL(`tel:${place.phone!.replace(/\s/g, '')}`)}
-                  right={<Text style={s.actionText}>{t('Call', 'Gọi', '電話')}</Text>}
                 >
-                  <Text style={s.infoValue}>{place.phone}</Text>
+                  <Text style={[s.infoValue, s.infoLink]}>{place.phone}</Text>
                 </InfoRow>
               )}
 
               {place.website && (
                 <InfoRow
-                  icon="globe-outline"
                   label={t('Website', 'Trang web', 'ウェブサイト')}
                   first={firstRow === 'website'}
                   onPress={() => Linking.openURL(place.website!)}
-                  // A verb, not a chevron. A chevron promises a screen
-                  // further into this app; this tap leaves for a browser,
-                  // the same kind of exit as Route and Call, and the card
-                  // reads as one thing when all three exits are the same
-                  // accent word. The one chevron left is on Hours, which
-                  // really does unfold in place.
-                  right={<Text style={s.actionText}>{t('Open', 'Mở', '開く')}</Text>}
                 >
-                  <Text style={s.infoValue} numberOfLines={1}>
+                  <Text style={[s.infoValue, s.infoLink]} numberOfLines={1}>
                     {place.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
                   </Text>
                 </InfoRow>
@@ -557,21 +547,23 @@ const s = StyleSheet.create({
   // lives here so each row's hairline can run to the card's edge.
   infoGroup: { marginTop: 18, paddingHorizontal: space.cardPadding },
   // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 17 },
+  // A row is a column — label, then value. Only Hours lays itself across,
+  // for the chevron at its end.
+  infoStack: { paddingVertical: 17 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 17 },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
-  actionText: { color: colors.accent, fontSize: 15, fontWeight: font.semibold, paddingLeft: 12 },
   infoLabel: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
     textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 5,
   },
   infoValue: { color: colors.textSecondary, ...type.meta, lineHeight: 24 },
+  /** The value of a row that goes somewhere: it is the link. */
+  infoLink: { color: colors.accent, fontWeight: font.medium },
   // Semibold and a size up on the table under it: this is the answer, and
   // it is the working it was derived from.
   openNow: { color: colors.ok, fontSize: 15.5, fontWeight: font.semibold },
   openNowShut: { color: colors.textTertiary },
-  // Indented to the text column (18pt glyph + 18 gap) so the days hang
-  // under the answer line, not under its icon.
-  hoursTable: { paddingLeft: 36, paddingBottom: 16 },
+  hoursTable: { paddingBottom: 16 },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   hourDay: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.medium },
   hourTime: { color: colors.textSecondary, fontSize: 14.5, fontWeight: font.regular },
