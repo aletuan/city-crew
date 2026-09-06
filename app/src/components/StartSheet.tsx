@@ -514,7 +514,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
 }
 
 const s = StyleSheet.create({
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.32)' },
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.32)' },
   // `bottom` and `maxHeight` are set inline from the keyboard's height —
   // a sheet lifted without lowering its ceiling would simply grow off the
   // top of the screen instead.

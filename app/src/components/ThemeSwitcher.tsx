@@ -94,7 +94,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
 
 const s = StyleSheet.create({
   // SaveSheet's backdrop, so the five sheets dim the room identically.
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(6,5,8,0.62)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(6,5,8,0.62)' },
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: colors.bgElevated,

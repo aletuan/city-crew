@@ -67,6 +67,31 @@ module.exports = [
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
 
+      // ── the React Compiler rules, off ──
+      //
+      // `eslint-plugin-react-hooks` 7 (arriving with SDK 57's
+      // eslint-config-expo) turns on a second family of rules whose job is
+      // not to find bugs but to say whether the React Compiler could
+      // auto-memoize a component. This app does not run the compiler, and
+      // the first run against the tree was 192 findings in code that had
+      // shipped for months: 164 of them `refs` — a `useRef(...).current`
+      // read during render, which is the pattern every sheet and scroll
+      // header here uses on purpose to hold a value across renders without
+      // re-rendering on it — and the rest `set-state-in-effect`, the
+      // "derive it, then set it" idiom the compiler dislikes and React
+      // documents as slower, not wrong.
+      //
+      // Off rather than 192 inline disables, unlike `exhaustive-deps`
+      // above: a per-site disable earns its keep when the rule is right
+      // often enough that the exceptions are worth reading, and a rule
+      // wrong at every site it fires on is not a gate but a tax. The two
+      // rules that catch crashes stay on; the day the compiler is switched
+      // on, these come back with it.
+      'react-hooks/refs': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/purity': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
+
       'import/first': 'error',
       'import/no-duplicates': 'error',
     },

@@ -263,7 +263,7 @@ const s = StyleSheet.create({
     elevation: 8,
   },
   clip: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: radius.tabBar,
     overflow: 'hidden',
   },

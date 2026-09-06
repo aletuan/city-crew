@@ -977,7 +977,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    */
   const filters = (
     <View style={[s.filterBar, { paddingTop: FILTER_PAD + insets.top }]}>
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, s.filterBarBg, { opacity: filterBg }]} />
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, s.filterBarBg, { opacity: filterBg }]} />
       <View style={s.filterHair} />
       <ScrollView
         horizontal
@@ -1193,7 +1193,7 @@ const s = StyleSheet.create({
     overflow: 'visible',
   },
   nudgeClip: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: radius.tabBar,
     overflow: 'hidden',
   },
