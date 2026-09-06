@@ -22,6 +22,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { fmtCount, photosOf, usePlaceBySlug } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
+import { shortAddress } from '../lib/address';
+import { useCity } from '../lib/city';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
 import { clockOf, dotWindow, fmtDuration, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
@@ -68,6 +70,7 @@ function InfoRow({ icon, label, first, onPress, right, children }: {
 
 export default function PlaceDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'PlaceDetail'> }) {
   const { t, lang } = useI18n();
+  const { city } = useCity();
   const { save, isSaved } = useSave();
   const { width } = useWindowDimensions();
   const { loading: catalogLoading, data: places } = usePlaces();
@@ -150,6 +153,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // check was reading "has a position" off a value that means something
   // else, and `mapsSearchUrl` asks the question it means.
   const mapsUrl = mapsSearchUrl(place);
+  // The card shows the address a local would say — street and ward —
+  // not the city, postal code and country Google wrote for a reader
+  // anywhere in the world. The share sheet and the Maps link below keep
+  // `place.address` whole: both leave the phone. The catalog's names for
+  // the current city go along so a city `lib/address` has never heard of
+  // is still cut from a short, ward-less address. See `shortAddress`.
+  const cityNames = city ? [city.name_vi, city.name_en, city.short_vi, city.short_en] : [];
+  const address = shortAddress(place.address, cityNames);
   // Grouped, not one row per day: see groupHours. A place open the same
   // seven days a week becomes one line instead of seven identical ones.
   const hours = groupHours(place.opening_hours ?? [], lang);
@@ -343,7 +354,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     </View>
                   ) : undefined}
                 >
-                  <Text style={s.infoValue}>{place.address}</Text>
+                  <Text style={s.infoValue}>{address}</Text>
                 </InfoRow>
               )}
 
