@@ -51,20 +51,6 @@
 // A launch that never reports — a reader who lands on another tab, a
 // test rendering the sheet alone — still gets its welcome, after a
 // fallback long enough that the burst is over either way.
-//
-// ── how it rises ──
-//
-// The order a system sheet keeps. The room dims first; the panel starts
-// up a beat later, on the spring iOS uses for its own sheets — damped to
-// settle without a bounce — so the eye has moved to where the panel is
-// about to be before it is there. Then the contents arrive in reading
-// order, logo to button, each a few frames behind the last: the sheet
-// is read top to bottom and the motion walks the reader down it.
-//
-// With Reduce Motion on, none of that slides. The room dims and the
-// panel fades in place, contents already in position, and it leaves the
-// same way. What the setting asks for is a screen that does not move
-// under the reader, and a fade is the one entrance that keeps that.
 
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Animated, BackHandler, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -75,7 +61,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, gradAI, space } from '../theme';
-import { PressableScale, useReducedMotion } from './ui';
+import { PressableScale } from './ui';
 import { SwitchRow } from './authUi';
 import { goTo } from '../nav';
 import { launchSettled } from '../lib/launch';
@@ -95,23 +81,14 @@ const WELCOME_KEY = 'citycrew.welcomeSeen';
  *  of the read below, and the row in ProfileScreen's SettingsCard. */
 export const WELCOME_ALWAYS_KEY = 'citycrew.welcomeAlways';
 
-/** How far the panel travels, and how fast it leaves. */
+/** How far the panel travels, how long it takes to arrive, and how
+ *  fast it leaves. The entrance is deliberately slower than a sheet
+ *  raised by a tap: nobody asked for this one, so it should not arrive
+ *  like an answer. An ease-out over half a second — quick off the
+ *  bottom, then settling — with the room dimming in step. */
 const RISE = 400;
+const ENTER_MS = 520;
 const EXIT_MS = 180;
-/** The room dims over this; the panel starts up part-way through it. */
-const DIM_MS = 220;
-const PANEL_DELAY_MS = 120;
-/** iOS's own sheet spring, near enough: heavy damping, no overshoot. */
-const PANEL_SPRING = { damping: 28, stiffness: 220, mass: 1 };
-/** The contents, one after another, once the panel is most of the way. */
-const REVEAL_DELAY_MS = 260;
-const REVEAL_STEP_MS = 60;
-const REVEAL_MS = 280;
-const REVEAL_LIFT = 10;
-/** Reduce Motion: the whole entrance is one fade of this length. */
-const FADE_MS = 240;
-/** Logo, title, three rows, the button block. */
-const PARTS = 6;
 /** After Explore's content commits, the beat it gets to paint first. */
 const SETTLE_GRACE_MS = 350;
 /** The longest the sheet waits for a launch that never reports. */
@@ -126,13 +103,7 @@ export default function WelcomeSheet() {
   // And then until the launch has settled, or the fallback has run out.
   const settled = useSyncExternalStore(launchSettled.subscribe, launchSettled.get);
   const [show, setShow] = useState(false);
-  const reduced = useReducedMotion();
-  // 1 is parked below the screen (or, under Reduce Motion, invisible);
-  // 0 is arrived. `dim` is the room, 0 clear to 1 dimmed. `reveal` is one
-  // value per part of the contents, 0 hidden to 1 in place.
   const rise = useRef(new Animated.Value(1)).current;
-  const dim = useRef(new Animated.Value(0)).current;
-  const reveal = useRef(Array.from({ length: PARTS }, () => new Animated.Value(0))).current;
 
   useEffect(() => {
     let live = true;
@@ -159,35 +130,22 @@ export default function WelcomeSheet() {
     return () => clearTimeout(t);
   }, [wanted, settled, show]);
 
-  // Mount parked, move next frame. Every value is put to its start here,
-  // so the commit that mounts the sheet draws it below the screen with
-  // the room clear; the motion starts once that commit is in.
+  // Mount parked, move next frame. `rise` is already 1 on first mount and
+  // is put back to 1 by every exit, so the commit that mounts the sheet
+  // draws it below the screen; the motion starts once that commit is in.
   useEffect(() => {
     if (!show) return undefined;
     rise.setValue(1);
-    dim.setValue(0);
-    reveal.forEach((v) => v.setValue(reduced ? 1 : 0));
-    const timing = (v: Animated.Value, toValue: number, duration: number) =>
-      Animated.timing(v, { toValue, duration, easing: Easing.out(Easing.cubic), useNativeDriver: true });
     const id = requestAnimationFrame(() => {
-      if (reduced) {
-        Animated.parallel([timing(dim, 1, FADE_MS), timing(rise, 0, FADE_MS)]).start();
-        return;
-      }
-      Animated.parallel([
-        timing(dim, 1, DIM_MS),
-        Animated.sequence([
-          Animated.delay(PANEL_DELAY_MS),
-          Animated.spring(rise, { toValue: 0, ...PANEL_SPRING, useNativeDriver: true }),
-        ]),
-        Animated.sequence([
-          Animated.delay(PANEL_DELAY_MS + REVEAL_DELAY_MS),
-          Animated.stagger(REVEAL_STEP_MS, reveal.map((v) => timing(v, 1, REVEAL_MS))),
-        ]),
-      ]).start();
+      Animated.timing(rise, {
+        toValue: 0,
+        duration: ENTER_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
     });
     return () => cancelAnimationFrame(id);
-  }, [show, reduced, rise, dim, reveal]);
+  }, [show, rise]);
 
   const dismiss = useCallback(() => {
     // Wanted no longer — before anything else. The wait above re-arms
@@ -197,13 +155,11 @@ export default function WelcomeSheet() {
     setWanted(false);
     // Out under its own power: without a Modal there is no platform
     // dismissal to borrow, and unmounting on the tap would make the sheet
-    // vanish rather than leave. Room and panel go together.
-    Animated.parallel([
-      Animated.timing(rise, { toValue: 1, duration: EXIT_MS, useNativeDriver: true }),
-      Animated.timing(dim, { toValue: 0, duration: EXIT_MS, useNativeDriver: true }),
-    ]).start(() => setShow(false));
+    // vanish rather than leave.
+    Animated.timing(rise, { toValue: 1, duration: EXIT_MS, useNativeDriver: true })
+      .start(() => setShow(false));
     AsyncStorage.setItem(WELCOME_KEY, '1').catch(() => {});
-  }, [rise, dim]);
+  }, [rise]);
 
   // The other thing a Modal was doing for free. Android only: it is the
   // one platform with a back button to answer, and the other two warn
@@ -219,8 +175,15 @@ export default function WelcomeSheet() {
   return (
     <View style={StyleSheet.absoluteFill}>
       {/* The dimmed area dismisses, and it is the only secondary action
-          this sheet needs — there is nothing here to decline. */}
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: dim }]}>
+          this sheet needs — there is nothing here to decline. It fades
+          from the same value the panel rides, so the room dims in step
+          with the panel arriving. */}
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { opacity: rise.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) },
+        ]}
+      >
         <Pressable
           style={[StyleSheet.absoluteFill, s.backdrop]}
           onPress={dismiss}
@@ -232,10 +195,7 @@ export default function WelcomeSheet() {
           s.sheet,
           {
             paddingBottom: insets.bottom + 22,
-            // Under Reduce Motion the panel does not travel; `rise` is
-            // its opacity instead, and it fades in where it will stand.
-            transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, reduced ? 0 : RISE] }) }],
-            opacity: reduced ? rise.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) : 1,
+            transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, RISE] }) }],
           },
         ]}
       >
@@ -244,12 +204,10 @@ export default function WelcomeSheet() {
             with a cut-out background so it reads on either ground — the
             artwork was drawn on white, and a white tile behind a logo is
             the first thing dark mode shows you. */}
-        <Animated.View style={part(reveal[0])}>
-          <Image source={welcomeLogo} style={s.logo} contentFit="contain" />
-        </Animated.View>
-        <Animated.Text style={[s.title, part(reveal[1])]}>
+        <Image source={welcomeLogo} style={s.logo} contentFit="contain" />
+        <Text style={s.title}>
           {t('Welcome to City Crew', 'Chào bạn đến với City Crew', 'City Crew へようこそ')}
-        </Animated.Text>
+        </Text>
 
         {/* Three lines standing on the sheet itself. They wore a bordered
             card until the owner put this beside the screens it was
@@ -263,7 +221,6 @@ export default function WelcomeSheet() {
             bar underneath it. */}
         <View style={s.rows}>
           <Row
-            reveal={reveal[2]}
             icon="compass-outline"
             title={t('Discover & save', 'Khám phá & lưu lại', '見つけて、保存する')}
             body={t(
@@ -273,7 +230,6 @@ export default function WelcomeSheet() {
             )}
           />
           <Row
-            reveal={reveal[3]}
             icon="bulb-outline"
             title={t('Plan with ease', 'Lên kế hoạch dễ dàng', 'かんたんに計画する')}
             body={t(
@@ -283,7 +239,6 @@ export default function WelcomeSheet() {
             )}
           />
           <Row
-            reveal={reveal[4]}
             icon="people-outline"
             title={t('Share with friends', 'Chia sẻ cùng bạn bè', '友達と共有する')}
             body={t(
@@ -294,7 +249,6 @@ export default function WelcomeSheet() {
           />
         </View>
 
-        <Animated.View style={[{ alignSelf: 'stretch' }, part(reveal[5])]}>
         {/* The width belongs on the Pressable itself: the sheet centres
             its children, so an un-stretched one shrink-wraps the label
             and the "100%" inside resolves against that. */}
@@ -322,28 +276,18 @@ export default function WelcomeSheet() {
             onPress={() => { dismiss(); goTo('Profile', { screen: 'SignIn', initial: false }); }}
           />
         </View>
-        </Animated.View>
       </Animated.View>
     </View>
   );
 }
 
-/** One part of the contents: hidden a little below its place, then in it. */
-function part(v: Animated.Value) {
-  return {
-    opacity: v,
-    transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [REVEAL_LIFT, 0] }) }],
-  };
-}
-
-function Row({ reveal, icon, title, body }: {
-  reveal: Animated.Value;
+function Row({ icon, title, body }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   body: string;
 }) {
   return (
-    <Animated.View style={[s.row, part(reveal)]}>
+    <View style={s.row}>
       <View style={s.mark}>
         <Ionicons name={icon} size={20} color={colors.accent} />
       </View>
@@ -351,7 +295,7 @@ function Row({ reveal, icon, title, body }: {
         <Text style={s.rowTitle}>{title}</Text>
         <Text style={s.rowBody}>{body}</Text>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
