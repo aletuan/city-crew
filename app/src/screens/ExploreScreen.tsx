@@ -42,6 +42,7 @@ import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../
 import { useScheme } from '../lib/theme';
 import { goTo, type Nav } from '../nav';
 import { startupTrace } from '../lib/trace';
+import { launchSettled } from '../lib/launch';
 import { reportStartup } from '../lib/tracereport';
 
 // The one chip that isn't a category: the whole catalog. It carries no
@@ -769,6 +770,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   useEffect(() => {
     if (!loaded) return;
     startupTrace.mark('explore:content');
+    // The same fact, told to the one thing waiting on it: the welcome
+    // sheet holds until this commit has landed. See `lib/launch`.
+    launchSettled.settle();
     // The launch files its report ten seconds after the content arrived:
     // late enough that the avatars — the last settle in the waterfall —
     // are in the marks, and that the insert competes with nothing the

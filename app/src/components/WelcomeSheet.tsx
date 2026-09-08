@@ -29,13 +29,31 @@
 // busiest: fonts, the stored theme, the city bootstrap, Explore's fetches
 // and the decode of a full-bleed photograph. Presented into that, its
 // entrance stuttered. It is a plain absolute overlay now, rendered after
-// the navigators so it covers them, and it waits for
-// `InteractionManager` before it animates: the startup burst finishes,
-// then the sheet rises on an idle thread. Nothing about how it looks
-// changed; it just stopped competing for the frame it needed.
+// the navigators so it covers them.
+//
+// ── when it rises ──
+//
+// Two waits, and they used to be one that waited for nothing.
+//
+// The first is for the launch to settle: Explore says so the moment its
+// content has committed (`lib/launch`), and the sheet holds until then
+// plus a short grace for that commit to paint. It waited on
+// `InteractionManager.runAfterInteractions` before, which sounds like the
+// same thing and is not — see the note in `lib/launch` for why that call
+// fired a few milliseconds after the storage read, inside the burst.
+//
+// The second is one frame between mounting and moving. The sheet used to
+// mount and start its spring in the same commit, so the logo's decode,
+// the gradient's native view and three glyphs' layout all landed on the
+// spring's first frames. Now it mounts parked below the screen, and the
+// spring starts on the next frame with the views already there.
+//
+// A launch that never reports — a reader who lands on another tab, a
+// test rendering the sheet alone — still gets its welcome, after a
+// fallback long enough that the burst is over either way.
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, BackHandler, InteractionManager, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Animated, BackHandler, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -46,6 +64,7 @@ import { colors, display, font, gradAI, space } from '../theme';
 import { PressableScale } from './ui';
 import { SwitchRow } from './authUi';
 import { goTo } from '../nav';
+import { launchSettled } from '../lib/launch';
 import welcomeLogo from '../../assets/welcome-logo.png';
 
 /** Written once, on the way out. */
@@ -65,12 +84,19 @@ export const WELCOME_ALWAYS_KEY = 'citycrew.welcomeAlways';
 /** How far the panel travels, and how fast it leaves. */
 const RISE = 400;
 const EXIT_MS = 180;
+/** After Explore's content commits, the beat it gets to paint first. */
+const SETTLE_GRACE_MS = 350;
+/** The longest the sheet waits for a launch that never reports. */
+const SETTLE_FALLBACK_MS = 2500;
 
 export default function WelcomeSheet() {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   // Hidden until storage says otherwise, which is the whole no-flash
   // guarantee: a returning reader never sees a frame of this.
+  const [wanted, setWanted] = useState(false);
+  // And then until the launch has settled, or the fallback has run out.
+  const settled = useSyncExternalStore(launchSettled.subscribe, launchSettled.get);
   const [show, setShow] = useState(false);
   const rise = useRef(new Animated.Value(1)).current;
 
@@ -80,10 +106,7 @@ export default function WelcomeSheet() {
     // this goes back to `getItem(WELCOME_KEY).then(v => v === null)`.
     Promise.all([AsyncStorage.getItem(WELCOME_KEY), AsyncStorage.getItem(WELCOME_ALWAYS_KEY)])
       .then(([seen, always]) => {
-        if (!live || !(always === '1' || seen === null)) return;
-        // After the launch burst, not during it. The storage read lands in
-        // milliseconds; the work it would have animated against does not.
-        InteractionManager.runAfterInteractions(() => { if (live) setShow(true); });
+        if (live && (always === '1' || seen === null)) setWanted(true);
       })
       // A read that failed is not a first launch. If storage is broken
       // the write would fail too, so showing here would mean showing on
@@ -93,10 +116,25 @@ export default function WelcomeSheet() {
     return () => { live = false; };
   }, []);
 
+  // The wait proper. Settled: a short grace, so the content commit that
+  // just landed gets its paint before the sheet's mount asks for one.
+  // Not settled: the fallback, counted from the moment storage answered.
   useEffect(() => {
-    if (!show) return;
+    if (!wanted || show) return undefined;
+    const t = setTimeout(() => setShow(true), settled ? SETTLE_GRACE_MS : SETTLE_FALLBACK_MS);
+    return () => clearTimeout(t);
+  }, [wanted, settled, show]);
+
+  // Mount parked, move next frame. `rise` is already 1 on first mount and
+  // is put back to 1 by every exit, so the commit that mounts the sheet
+  // draws it below the screen; the spring starts once that commit is in.
+  useEffect(() => {
+    if (!show) return undefined;
     rise.setValue(1);
-    Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
+    const id = requestAnimationFrame(() => {
+      Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
+    });
+    return () => cancelAnimationFrame(id);
   }, [show, rise]);
 
   const dismiss = useCallback(() => {
