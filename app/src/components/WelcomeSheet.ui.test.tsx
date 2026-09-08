@@ -77,6 +77,17 @@ describe('the first launch', () => {
     await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledWith(KEY, '1'));
   });
 
+  // The regression: dismissed, the sheet came straight back. The wait
+  // that holds it for the launch re-armed when `show` dropped, because
+  // "wanted" was still up. Past the exit and a full grace, it is gone.
+  it('stays gone once it has left', async () => {
+    render(<WelcomeSheet />);
+    fireEvent.click(await screen.findByText('Start exploring'));
+    await waitFor(() => expect(screen.queryByText('Welcome to City Crew')).toBeNull(), { timeout: 2000 });
+    await new Promise((r) => setTimeout(r, 700));
+    expect(screen.queryByText('Welcome to City Crew')).toBeNull();
+  });
+
   // The dimmed area is this sheet's only secondary action — there is
   // nothing here to decline — so it has to write the flag too, or the
   // welcome comes back on the next launch.
