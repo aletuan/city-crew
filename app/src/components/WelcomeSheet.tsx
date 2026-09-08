@@ -46,14 +46,14 @@
 // mount and start its spring in the same commit, so the logo's decode,
 // the gradient's native view and three glyphs' layout all landed on the
 // spring's first frames. Now it mounts parked below the screen, and the
-// spring starts on the next frame with the views already there.
+// motion starts on the next frame with the views already there.
 //
 // A launch that never reports — a reader who lands on another tab, a
 // test rendering the sheet alone — still gets its welcome, after a
 // fallback long enough that the burst is over either way.
 
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { Animated, BackHandler, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, BackHandler, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -81,8 +81,13 @@ const WELCOME_KEY = 'citycrew.welcomeSeen';
  *  of the read below, and the row in ProfileScreen's SettingsCard. */
 export const WELCOME_ALWAYS_KEY = 'citycrew.welcomeAlways';
 
-/** How far the panel travels, and how fast it leaves. */
+/** How far the panel travels, how long it takes to arrive, and how
+ *  fast it leaves. The entrance is deliberately slower than a sheet
+ *  raised by a tap: nobody asked for this one, so it should not arrive
+ *  like an answer. An ease-out over half a second — quick off the
+ *  bottom, then settling — with the room dimming in step. */
 const RISE = 400;
+const ENTER_MS = 520;
 const EXIT_MS = 180;
 /** After Explore's content commits, the beat it gets to paint first. */
 const SETTLE_GRACE_MS = 350;
@@ -127,12 +132,17 @@ export default function WelcomeSheet() {
 
   // Mount parked, move next frame. `rise` is already 1 on first mount and
   // is put back to 1 by every exit, so the commit that mounts the sheet
-  // draws it below the screen; the spring starts once that commit is in.
+  // draws it below the screen; the motion starts once that commit is in.
   useEffect(() => {
     if (!show) return undefined;
     rise.setValue(1);
     const id = requestAnimationFrame(() => {
-      Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
+      Animated.timing(rise, {
+        toValue: 0,
+        duration: ENTER_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
     });
     return () => cancelAnimationFrame(id);
   }, [show, rise]);
