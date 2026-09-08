@@ -16,6 +16,7 @@ const goTo = vi.hoisted(() => vi.fn());
 vi.mock('../nav', () => ({ goTo }));
 
 import WelcomeSheet, { WELCOME_ALWAYS_KEY } from './WelcomeSheet';
+import { launchSettled } from '../lib/launch';
 
 const KEY = 'citycrew.welcomeSeen';
 
@@ -29,6 +30,24 @@ beforeEach(async () => {
   vi.mocked(AsyncStorage.getItem).mockClear();
   vi.mocked(AsyncStorage.setItem).mockClear();
   goTo.mockClear();
+  // The launch has settled, as Explore would have said by now. The one
+  // test about the wait itself puts this back.
+  launchSettled.settle();
+});
+
+describe('the wait', () => {
+  // The whole reason the sheet is not a Modal and does not use
+  // InteractionManager: it must not arrive while Explore is still
+  // committing. Unsettled, it stays off the screen past any interval a
+  // launch actually takes to settle; settled, it comes within a beat.
+  it('holds until the launch has settled', async () => {
+    launchSettled.reset();
+    render(<WelcomeSheet />);
+    await new Promise((r) => setTimeout(r, 600));
+    expect(screen.queryByText('Welcome to City Crew')).toBeNull();
+    launchSettled.settle();
+    expect(await screen.findByText('Welcome to City Crew')).toBeTruthy();
+  });
 });
 
 describe('the first launch', () => {
