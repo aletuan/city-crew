@@ -2,6 +2,7 @@
 // scan-city (batch import): details fetch → unique slug → place row + photos.
 
 import { classify } from "./classify.ts";
+import { rehostPhoto } from "./rehost.ts";
 import { wardFromAddress } from "./ward.ts";
 
 export const PRICE_LEVELS: Record<string, number> = {
@@ -303,8 +304,19 @@ export async function importPlace(
     } catch (_) { /* skip failed photo */ }
   }
   if (rows.length) {
-    const { error: phErr } = await admin.from("place_photos").insert(rows);
+    const { data: inserted, error: phErr } = await admin.from("place_photos")
+      .insert(rows).select("id, photo_ref");
     if (phErr) throw new Error(phErr.message);
+    // Then onto our own Storage, one by one — see `rehost.ts` for why
+    // the Google link the row was just written with is not something to
+    // keep. Best-effort, like the lookups above: a copy that fails leaves
+    // the row on its Google link, which the app can still show for a
+    // while and `rehost-photos` will pick up later.
+    for (const ph of inserted ?? []) {
+      try {
+        await rehostPhoto(admin, apiKey, { id: ph.id, photo_ref: ph.photo_ref, slug });
+      } catch (_) { /* left for rehost-photos */ }
+    }
   }
 
   return { slug, photos: rows.length };
