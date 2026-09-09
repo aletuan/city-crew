@@ -495,7 +495,9 @@ export const api = {
     const photo = rows[0];
     db(await supabase.from('collections').update({ cover_photo_id: null }).eq('cover_photo_id', photo.id).select('id'));
     db(await supabase.from('place_photos').delete().eq('id', photo.id).select('id'));
-    if (photo.source === 'upload' && photo.storage_path) {
+    // Any row with a path owns an object: the desk's uploads, and the
+    // Google photos the import now copies onto the same bucket.
+    if (photo.storage_path) {
       await supabase.storage.from(BUCKET).remove([photo.storage_path]);
     }
     // keep a cover: promote the first visible photo if the cover was deleted

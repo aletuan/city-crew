@@ -106,6 +106,14 @@ run "$DB" -f "$HERE/preferences_test.sql"
 # Independent of everything above — it needs only the places stub — but it
 # runs last because it leaves the table as it found it and the checks
 # before it do not expect extra rows.
+# Nothing to seed and nothing to leave behind: the table is new and the
+# checks read the catalog, not the rows.
+echo "→ ops tokens"
+for f in "$ROOT"/supabase/migrations/*_ops_tokens.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/ops_tokens_test.sql"
+
 echo "→ classification"
 for f in "$ROOT"/supabase/migrations/*_needs_classification.sql; do
   run "$DB" -f "$f" >/dev/null
