@@ -18,8 +18,13 @@
 // last id it looked at and the caller passes it back as `after`; a
 // failed row is left for another day rather than blocking the rest.
 //
-//   POST { limit?: 20, after?: "<uuid>" }
+//   POST { limit?: 20, after?: "<uuid>" }      the next rows in id order
+//   POST { ids: ["<uuid>", …] }               exactly these rows
 //   → { done, failed, cursor, remaining, errors: [{ id, error }] }
+//
+// The second form is for a row put back on the queue by hand — its
+// `storage_path` cleared so the copy is taken again — without walking
+// the whole table to reach it.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { opsOrEditor } from "../_shared/gate.ts";
@@ -56,14 +61,16 @@ Deno.serve(async (req) => {
 
   if (!(await opsOrEditor(admin, req, TOKEN_NAME))) return json({ error: "not allowed" }, 403);
 
-  let body: { limit?: number; after?: string } = {};
+  let body: { limit?: number; after?: string; ids?: string[] } = {};
   try { body = await req.json(); } catch (_) { /* empty body is fine */ }
   const limit = Math.min(MAX_LIMIT, Math.max(1, Number(body.limit) || DEFAULT_LIMIT));
 
   let q = admin.from("place_photos")
     .select("id, photo_ref, places!inner(slug)")
     .eq("source", "google").is("storage_path", null).not("photo_ref", "is", null)
-    .order("id").limit(limit);
+    .order("id");
+  if (Array.isArray(body.ids)) q = q.in("id", body.ids.slice(0, MAX_LIMIT));
+  else q = q.limit(limit);
   if (body.after) q = q.gt("id", body.after);
   const { data: rows, error } = await q;
   if (error) return json({ error: error.message }, 500);

@@ -33,9 +33,19 @@
 //       rows: [{ id, ms, before, after }], errors: [{ id, error }] }
 //
 // The second form is the one the backfill used. The database can see
-// every object's size in `storage.objects`, so a `pg_cron` minute picks
-// the rows whose files are still big and names them, and nothing is
+// every object in `storage.objects`, so a `pg_cron` minute picks the
+// rows whose files are still big and names them, and nothing is
 // downloaded only to be found small.
+//
+// ── once, and only once ──
+//
+// A photo this has re-encoded is written back with `shrunk` in its
+// object metadata, and the database's selection skips objects that
+// carry it. That mark is load-bearing: a JPEG can come out of this
+// still above the size the selection uses, and without the mark it was
+// picked again the next minute and re-encoded again, losing a little
+// each time. Size says whether a file is big; only the mark says it
+// has been here.
 //
 // Who may call it: an editor, or the database with the job's token —
 // see `_shared/gate.ts`.
@@ -154,8 +164,9 @@ Deno.serve(async (req) => {
       // cache is an hour, a phone's is until the picture is evicted,
       // and both were showing the same photograph.
       const newPath = ext === "jpg" ? path : path.slice(0, -ext.length) + "jpg";
-      const { error: upErr } = await store
-        .upload(newPath, out, { contentType: "image/jpeg", upsert: true });
+      const { error: upErr } = await store.upload(newPath, out, {
+        contentType: "image/jpeg", upsert: true, metadata: { shrunk: "1" },
+      });
       if (upErr) throw new Error(`upload: ${upErr.message}`);
       if (newPath !== path) {
         const { data: { publicUrl } } = store.getPublicUrl(newPath);
