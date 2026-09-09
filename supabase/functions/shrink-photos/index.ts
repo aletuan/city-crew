@@ -152,7 +152,14 @@ Deno.serve(async (req) => {
       const out = shrink(original);
       if (ext === "jpg" && out.length >= original.length) {
         // Already tighter than we would make it — a small photo at a
-        // quality below ours. Not worth a write that makes it bigger.
+        // quality below ours. Not worth a write that makes it bigger;
+        // but it is still worth the mark, or the selection would offer
+        // it up every minute for as long as the job ran. The bytes go
+        // back unchanged with the metadata on them.
+        const { error: markErr } = await store.upload(path, original, {
+          contentType: "image/jpeg", upsert: true, metadata: { shrunk: "1" },
+        });
+        if (markErr) throw new Error(`upload: ${markErr.message}`);
         bytesAfter += original.length;
         skipped++;
         continue;
