@@ -43,6 +43,7 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
+import { useFlag } from '../lib/useFlag';
 import { AddPill } from '../components/add';
 import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance,
@@ -140,6 +141,7 @@ function TripCard({ trip, cityName, past, onPress }: {
   const hidden = stops.length - shown.length;
   const start = stops[0]?.arrive_min;
   const cover = tripCover(stops);
+  const credit = useFlag('photo_attribution');
 
   return (
     <PressableScale onPress={onPress} scaleTo={0.985} style={[s.card, past && s.cardPast]}>
@@ -158,14 +160,15 @@ function TripCard({ trip, cityName, past, onPress }: {
           can run edge to edge, `overflow: hidden` on the card clips it to
           the corner radius, and the credit sits bottom-right over it.
 
-          Google requires the photographer's attribution wherever the
-          photo is shown. It is not optional and it is not negotiable by
-          size — so a band big enough to carry a legible credit is part of
-          why this is a band rather than a 52pt thumbnail. */}
+          Google asks for the photographer's attribution wherever the
+          photo is shown, and it is not negotiable by size — so a band big
+          enough to carry a legible credit is part of why this is a band
+          rather than a 52pt thumbnail. Whether it is drawn at all is the
+          `photo_attribution` switch; see `lib/flags.ts`. */}
       {cover && (
         <View>
           <Image source={{ uri: cover.photo_uri }} style={s.cover} contentFit="cover" transition={200} />
-          {cover.attribution_name
+          {credit && cover.attribution_name
             ? <Text style={s.attr} numberOfLines={1}>{cover.attribution_name}</Text>
             : null}
         </View>

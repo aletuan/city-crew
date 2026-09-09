@@ -17,6 +17,7 @@ import {
   Text, useWindowDimensions, View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useFlag } from '../lib/useFlag';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -89,6 +90,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const place = inCatalog ?? elsewhere.data ?? undefined;
   const loading = catalogLoading || elsewhere.loading;
   const [photoIndex, setPhotoIndex] = useState(0);
+  const credit = useFlag('photo_attribution');
   const [hoursOpen, setHoursOpen] = useState(false);
   const saved = isSaved(route.params.slug);
   const tabClearance = useTabBarClearance();
@@ -293,7 +295,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               ))}
             </View>
           )}
-          {photos[photoIndex]?.attribution_name ? (
+          {credit && photos[photoIndex]?.attribution_name ? (
             <Text style={s.attr} numberOfLines={1}>{photos[photoIndex].attribution_name}</Text>
           ) : null}
         </View>

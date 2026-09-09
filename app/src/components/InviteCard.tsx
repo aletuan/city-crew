@@ -27,6 +27,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
+import { useFlag } from '../lib/useFlag';
 import type { FriendProfile, Trip } from '../lib/data';
 import { fromISO } from '../lib/day';
 import { clockOf, dateline } from '../lib/format';
@@ -75,16 +76,18 @@ export default function InviteCard({
     .filter(Boolean)
     .join(' · ');
 
+  const credit = useFlag('photo_attribution');
   return (
     <View style={s.card}>
       <PressableScale onPress={onOpen} scaleTo={0.985} accessibilityRole="button">
         {cover?.photo_uri ? (
           <View style={s.media}>
             <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" transition={160} />
-            {/* The photographer's credit, required wherever the photo
+            {/* The photographer's credit, asked for wherever the photo
                 appears — the same rule TripsScreen's own card follows.
-                A licence, not a caption. */}
-            {cover.attribution_name
+                A licence, not a caption; whether it is drawn is the
+                `photo_attribution` switch, see `lib/flags.ts`. */}
+            {credit && cover.attribution_name
               ? <Text style={s.attr} numberOfLines={1}>{cover.attribution_name}</Text>
               : null}
             {/* The asker rides on the photo, the way the invitation

@@ -31,6 +31,7 @@ import React, { useMemo, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
+import { useFlag } from '../lib/useFlag';
 import {
   AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
@@ -93,6 +94,7 @@ export default function TripDetailScreen({ navigation, route }: {
    */
   const [shot, setShot] = useState(0);
   const [galleryW, setGalleryW] = useState(0);
+  const credit = useFlag('photo_attribution');
 
   // Who is coming. Above the early return with the two above, and for the
   // same reason: React counts hooks, and one declared under a branch that
@@ -217,7 +219,10 @@ export default function TripDetailScreen({ navigation, route }: {
    * the desk hid is excluded there and stays excluded here.
    */
   const cover = tripCover(stops);
-  const shotAttr = stops[shot]?.places ? coverOf(stops[shot].places!)?.attribution_name : null;
+  // The credit is the `photo_attribution` switch's to draw or not — see
+  // `lib/flags.ts`; `credit` is read above the early return with the
+  // other hooks.
+  const shotAttr = credit && stops[shot]?.places ? coverOf(stops[shot].places!)?.attribution_name : null;
 
   /** Send what was ticked and take back what was unticked, in that order:
    *  a press that both invites and withdraws should not leave the trip
