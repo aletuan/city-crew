@@ -469,8 +469,12 @@ export const api = {
     const safeName = String(filename ?? 'photo').replace(/[^\w.-]/g, '_').slice(0, 60);
     const path = `${slug}/${Date.now()}-${safeName}.jpg`;
 
+    // `shrunk` is the mark `shrink-photos` leaves on a file it has
+    // re-encoded, and the hourly pass skips files that carry it. An
+    // upload is already the size that pass would make (see resizeImage),
+    // so it is marked on the way in rather than encoded a second time.
     const { error: upErr } = await supabase.storage.from(BUCKET)
-      .upload(path, blob, { contentType: 'image/jpeg' });
+      .upload(path, blob, { contentType: 'image/jpeg', metadata: { shrunk: '1' } });
     if (upErr) throw new Error(upErr.message);
     const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
 
@@ -511,8 +515,11 @@ export const api = {
   },
 };
 
-// Client-side resize: longest edge ≤ 1600px, JPEG 0.85 — keeps uploads ~<1MB.
-export async function resizeImage(file, maxEdge = 1600) {
+// Client-side resize: longest edge ≤ 1200px, JPEG 0.8 — the size the app
+// draws (the detail hero on a 3x phone) and the size `shrink-photos`
+// brings every Google photo to, so an upload lands at the same weight as
+// the rest of the catalog instead of being the heaviest file on the card.
+export async function resizeImage(file, maxEdge = 1200) {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
   const w = Math.round(bitmap.width * scale);
@@ -521,5 +528,5 @@ export async function resizeImage(file, maxEdge = 1600) {
   canvas.width = w;
   canvas.height = h;
   canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
-  return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.8));
 }
