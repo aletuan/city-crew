@@ -23,8 +23,15 @@
 
 export const BUCKET = "place-photos";
 
-/** The widest the app ever asks for; same as the import's own cap. */
-const MAX_WIDTH_PX = 1600;
+/**
+ * The widest the app ever draws: the detail hero on a 3x phone. The
+ * import used to ask for 1600, and the copies came out at half a
+ * megabyte each — enough to overrun the Storage plan by the time the
+ * catalog was rehosted. `shrink-photos` brought those down to this
+ * width; asking Google for it in the first place keeps new photos from
+ * needing the same treatment.
+ */
+const MAX_WIDTH_PX = 1200;
 
 export type RehostRow = {
   id: string;

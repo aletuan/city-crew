@@ -7,11 +7,8 @@
 //
 // ── who may call it ──
 //
-// An editor, with the same session check every desk function makes. Or
-// the database itself: a `pg_net` loop or a `pg_cron` job carries no
-// session, so it carries the `ops_tokens` row named for this job in an
-// `x-ops-token` header instead — a secret the service role alone can
-// read, made for the run and deleted after it. See the migration.
+// An editor, or the database driving a `pg_net` loop with the job's own
+// token — see `_shared/gate.ts`.
 //
 // ── the cursor ──
 //
@@ -25,6 +22,7 @@
 //   → { done, failed, cursor, remaining, errors: [{ id, error }] }
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { opsOrEditor } from "../_shared/gate.ts";
 import { rehostPhoto } from "../_shared/rehost.ts";
 
 const CORS = {
@@ -56,23 +54,7 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false } },
   );
 
-  // ── gate: an editor's session, or the job's own token ──
-  let allowed = false;
-  const opsToken = req.headers.get("x-ops-token");
-  if (opsToken) {
-    const { data: row } = await admin.from("ops_tokens")
-      .select("token, expires_at").eq("name", TOKEN_NAME).maybeSingle();
-    allowed = !!row && row.token === opsToken && new Date(row.expires_at) > new Date();
-  } else {
-    const jwt = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-    const { data: userData } = await admin.auth.getUser(jwt);
-    const email = userData?.user?.email?.toLowerCase();
-    if (email) {
-      const { data: editor } = await admin.from("editors").select("email").eq("email", email).maybeSingle();
-      allowed = !!editor;
-    }
-  }
-  if (!allowed) return json({ error: "not allowed" }, 403);
+  if (!(await opsOrEditor(admin, req, TOKEN_NAME))) return json({ error: "not allowed" }, 403);
 
   let body: { limit?: number; after?: string } = {};
   try { body = await req.json(); } catch (_) { /* empty body is fine */ }
