@@ -6,7 +6,9 @@
 // them is the database itself: a `pg_net` loop carries no session. It
 // carries the `ops_tokens` row named for the job in an `x-ops-token`
 // header instead — a secret only the service role can read, minted for
-// the run and deleted after it. See the `ops_tokens` migration.
+// a run and deleted after it, or standing for a scheduled job like the
+// hourly shrink (see `shrink-photos/cron.sql`). See the `ops_tokens`
+// migration.
 //
 // One function so the two jobs cannot drift on what "allowed" means.
 
