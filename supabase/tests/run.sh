@@ -114,6 +114,13 @@ for f in "$ROOT"/supabase/migrations/*_ops_tokens.sql; do
 done
 run "$DB" -f "$HERE/ops_tokens_test.sql"
 
+# Same again: a new table, and the checks read the catalog and one seed row.
+echo "→ app flags"
+for f in "$ROOT"/supabase/migrations/*_app_flags.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/app_flags_test.sql"
+
 echo "→ classification"
 for f in "$ROOT"/supabase/migrations/*_needs_classification.sql; do
   run "$DB" -f "$f" >/dev/null

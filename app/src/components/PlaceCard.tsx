@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
+import { useFlag } from '../lib/useFlag';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
 import { openFragment, openState } from '../lib/format';
@@ -24,6 +25,7 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
       place.neighborhood_ja ?? place.neighborhood_en)
     : null;
   const when = openFragment(openState(place.opening_hours, new Date()), t);
+  const credit = useFlag('photo_attribution');
   return (
     <PressableScale onPress={onPress}>
       <Card style={s.card}>
@@ -31,7 +33,7 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
           {cover ? (
             <>
               <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" transition={200} />
-              {cover.attribution_name
+              {credit && cover.attribution_name
                 ? <Text style={s.attr} numberOfLines={1}>{cover.attribution_name}</Text>
                 : null}
             </>
@@ -203,10 +205,13 @@ const s = StyleSheet.create({
   card: { marginHorizontal: space.page, marginBottom: space.cardGap },
   photo: { width: '100%', aspectRatio: 16 / 10, backgroundColor: colors.surfaceGlass },
   photoFallback: { alignItems: 'center', justifyContent: 'center' },
-  // Google requires the photo's author attribution wherever the photo is
-  // shown, so this cannot be dropped — only made to recede. The camera
+  // Google asks for the photo's author attribution wherever the photo is
+  // shown, so this is not dropped — only made to recede. The camera
   // glyph is gone (it read as a control), the type is smaller, and it is
   // capped at half the card so a long name can't cross the frame.
+  // Whether it is drawn at all is the `photo_attribution` switch, and
+  // that is a decision taken in the database, not here — see
+  // `lib/flags.ts` for why it has to be reversible without a release.
   attr: {
     position: 'absolute', right: 10, bottom: 8, maxWidth: '50%',
     fontSize: 8.5, color: onPhoto.text, opacity: 0.5,

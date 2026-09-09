@@ -36,6 +36,7 @@ vi.mock('../lib/save', () => ({
 }));
 
 import PlaceCard from './PlaceCard';
+import { appFlags } from '../lib/flags';
 
 const place = (over: Partial<Place> = {}): Place => ({
   slug: 'cong-caphe',
@@ -55,6 +56,7 @@ beforeEach(() => {
   state.lang = 'en';
   state.saved = new Set();
   save.mockClear();
+  appFlags.reset();
 });
 
 describe('the name', () => {
@@ -203,5 +205,27 @@ describe('a place the desk has not published', () => {
   it('says nothing at all on a live card', () => {
     render(<PlaceCard place={place()} onPress={() => {}} />);
     expect(screen.queryByText(/Only you can see this/i)).toBeNull();
+  });
+});
+
+// The photographer's credit over a Google photo is what Google's terms
+// ask for, and whether it is drawn is a switch in the database rather
+// than a release — see `lib/flags.ts`. What is pinned: it is drawn as
+// shipped, and the switch alone takes it away.
+describe('the credit', () => {
+  const photo = {
+    id: 'ph-1', photo_uri: 'https://x/y.jpg', is_cover: true, is_hidden: false,
+    sort_order: 0, attribution_name: 'Bởi Minh',
+  };
+
+  it('is drawn as shipped', () => {
+    render(<PlaceCard place={place({ place_photos: [photo] } as Partial<Place>)} onPress={() => {}} />);
+    expect(screen.getByText('Bởi Minh')).toBeTruthy();
+  });
+
+  it('is gone when the switch says so', () => {
+    appFlags.set('photo_attribution', false);
+    render(<PlaceCard place={place({ place_photos: [photo] } as Partial<Place>)} onPress={() => {}} />);
+    expect(screen.queryByText('Bởi Minh')).toBeNull();
   });
 });
