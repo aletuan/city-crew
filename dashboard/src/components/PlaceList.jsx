@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { leftBehindNote } from '../storage.js';
 import { api } from '../api.js';
 import { CATEGORY_KEYS, CATEGORY_LABEL, CATEGORY_STYLE } from '../categories.js';
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
@@ -142,8 +143,9 @@ export default function PlaceList() {
     if (!confirm(msg)) return;
     setDeleting(true);
     try {
-      await api.deletePlaces(slugs);
-      toast(`Deleted ${slugs.length} place${slugs.length === 1 ? '' : 's'}`);
+      const res = await api.deletePlaces(slugs);
+      toast([`Deleted ${slugs.length} place${slugs.length === 1 ? '' : 's'}`, leftBehindNote(res.left)]
+        .filter(Boolean).join(' — '));
       setSelected(new Set());
       refreshProgress();
       gotoPage(1);

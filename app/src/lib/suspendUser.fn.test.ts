@@ -4,7 +4,8 @@
 // about it is who gets through the door: a session, whose email is on the
 // editors list — checked here because a service-role client has no RLS
 // standing over it — and then a target that is somebody else. None of it
-// had a test.
+// had a test. Nor did the two rules added since: no editor bans another,
+// and every ban and lift is written to `moderation_log` first.
 //
 // Loaded unchanged, the way `deleteAccount.fn.test.ts` loads its function:
 // `Deno` is stood in for to capture the handler, and the `npm:` client
@@ -47,6 +48,10 @@ const session = (id: string, email: string) => ({ data: { user: { id, email } },
 const editor = { data: { email: 'desk@crew.test' } };
 const notEditor = { data: null };
 const bans = () => h.fake.log.filter((a) => a.fn === 'admin.updateUserById');
+/** The account being acted on, as GoTrue returns it: email as typed. */
+const target = { data: { user: { id: 'target', email: 'Reader@Crew.TEST' } }, error: null };
+const logged = { data: { id: 7 }, error: null };
+const lines = () => h.fake.log.filter((a) => a.table === 'moderation_log');
 
 describe('who gets through the door', () => {
   it('answers the preflight and refuses anything but POST, asking nothing', async () => {
@@ -108,7 +113,7 @@ describe('what an editor may do', () => {
   });
 
   it('suspends by default, for as long as the API allows', async () => {
-    h.fake.replies(session('ed', 'desk@crew.test'), editor, { data: {} });
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, notEditor, logged, { data: {} });
     const res = await call({ token: 'jwt', body: { user_id: 'target' } });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true, suspended: true });
@@ -116,22 +121,88 @@ describe('what an editor may do', () => {
   });
 
   it('lifts a suspension only when told to in so many words', async () => {
-    h.fake.replies(session('ed', 'desk@crew.test'), editor, { data: {} });
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, logged, { data: {} });
     const res = await call({ token: 'jwt', body: { user_id: 'target', suspend: false } });
     expect(await res.json()).toEqual({ ok: true, suspended: false });
     expect(bans()[0].payload).toEqual({ id: 'target', attrs: { ban_duration: 'none' } });
   });
 
   it('treats anything short of `false` as a suspension, not a lift', async () => {
-    h.fake.replies(session('ed', 'desk@crew.test'), editor, { data: {} });
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, notEditor, logged, { data: {} });
     await call({ token: 'jwt', body: { user_id: 'target', suspend: 'false' } });
     expect(bans()[0].payload).toEqual({ id: 'target', attrs: { ban_duration: '876000h' } });
   });
 
-  it('reports a ban the auth server refused', async () => {
-    h.fake.replies(session('ed', 'desk@crew.test'), editor, { error: { message: 'User not found' } });
-    const res = await call({ token: 'jwt', body: { user_id: 'ghost' } });
+  it('reports a ban the auth server refused, and takes its line back out', async () => {
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, notEditor, logged,
+      { error: { message: 'ban failed' } });
+    const res = await call({ token: 'jwt', body: { user_id: 'target' } });
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ error: 'User not found' });
+    expect(await res.json()).toEqual({ error: 'ban failed' });
+    expect(lines().map((a) => a.op)).toEqual(['insert', 'delete']);
+    expect(lines()[1].filters).toEqual([['id', 7]]);
+  });
+});
+
+// Nobody could say who banned whom: the act left only its result. Every
+// ban and lift is now a line in `moderation_log`, written before the act
+// so an act can never go unrecorded.
+describe('the record', () => {
+  it('writes who, what and whom before banning', async () => {
+    h.fake.replies(session('ed', 'Desk@Crew.test'), editor, target, notEditor, logged, { data: {} });
+    await call({ token: 'jwt', body: { user_id: 'target' } });
+    expect(lines()[0]).toMatchObject({
+      op: 'insert',
+      payload: {
+        actor: 'ed', actor_email: 'desk@crew.test', action: 'suspend',
+        target_id: 'target', detail: { target_email: 'reader@crew.test' },
+      },
+    });
+    const order = h.fake.log.map((a) => a.fn ?? a.table);
+    expect(order.indexOf('moderation_log')).toBeLessThan(order.indexOf('admin.updateUserById'));
+  });
+
+  it('records a lift as a lift', async () => {
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, logged, { data: {} });
+    await call({ token: 'jwt', body: { user_id: 'target', suspend: false } });
+    expect(lines()[0].payload).toMatchObject({ action: 'unsuspend' });
+  });
+
+  it('bans nobody when the line cannot be written', async () => {
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, notEditor,
+      { data: null, error: { message: 'permission denied' } });
+    const res = await call({ token: 'jwt', body: { user_id: 'target' } });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'could not record the action; nothing was changed' });
+    expect(bans()).toEqual([]);
+  });
+});
+
+describe('whom the desk may ban', () => {
+  it('answers 404 for an account that does not exist, and records nothing', async () => {
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, { data: { user: null }, error: { message: 'User not found' } });
+    const res = await call({ token: 'jwt', body: { user_id: 'ghost' } });
+    expect(res.status).toBe(404);
+    expect(h.fake.log.find((a) => a.fn === 'admin.getUserById')?.payload).toBe('ghost');
+    expect(lines()).toEqual([]);
+    expect(bans()).toEqual([]);
+  });
+
+  it('will not let one editor lock another out', async () => {
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, editor);
+    const res = await call({ token: 'jwt', body: { user_id: 'target' } });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'cannot suspend an editor' });
+    expect(h.fake.log.filter((a) => a.table === 'editors')[1].filters).toEqual([['email', 'reader@crew.test']]);
+    expect(lines()).toEqual([]);
+    expect(bans()).toEqual([]);
+  });
+
+  it('can still lift a ban on an editor, made before the rule', async () => {
+    h.fake.replies(session('ed', 'desk@crew.test'), editor, target, logged, { data: {} });
+    const res = await call({ token: 'jwt', body: { user_id: 'target', suspend: false } });
+    expect(res.status).toBe(200);
+    expect(h.fake.log.filter((a) => a.table === 'editors')).toHaveLength(1);
+    expect(bans()[0].payload).toEqual({ id: 'target', attrs: { ban_duration: 'none' } });
   });
 });
