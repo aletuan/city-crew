@@ -40,7 +40,7 @@ export type Asked = {
    * an rpc is SQL running under the caller's RLS.
    */
   fn?: string;
-  op: 'select' | 'insert' | 'update' | 'delete' | 'invoke' | 'rpc' | 'auth';
+  op: 'select' | 'insert' | 'update' | 'delete' | 'invoke' | 'rpc' | 'auth' | 'storage';
   /** The row for a write, the body for an invoke, the column list for a read. */
   payload?: unknown;
   /** `eq`, `in`, `gte` and `ilike` in the order they were chained. Anything
@@ -140,6 +140,11 @@ export function fakeSupabase() {
   // SIGNED_OUT, and firing the real event is the only honest way to say so.
   const listeners: ((event: string, session: unknown) => void)[] = [];
 
+  const auth = (fn: string, payload?: unknown): Promise<Reply> => {
+    log.push({ op: 'auth', fn, payload, filters: [] });
+    return settle();
+  };
+
   return {
     queue,
     log,
@@ -163,6 +168,21 @@ export function fakeSupabase() {
           log.push({ op: 'auth', fn: 'getUser', payload: token, filters: [] });
           return settle();
         },
+        // The calls `lib/auth` makes. Each answers `{ data, error }` off the
+        // same queue, and each is written down with what it was handed — a
+        // test of the account flows is mostly a test of which of these ran,
+        // in what order, and which did not run at all.
+        getSession: () => auth('getSession'),
+        signInWithPassword: (creds: unknown) => auth('signInWithPassword', creds),
+        signUp: (req: unknown) => auth('signUp', req),
+        verifyOtp: (req: unknown) => auth('verifyOtp', req),
+        resetPasswordForEmail: (email: string) => auth('resetPasswordForEmail', email),
+        updateUser: (patch: unknown) => auth('updateUser', patch),
+        signOut: () => auth('signOut'),
+        // Timers, not requests: written down, answered with nothing, and
+        // kept off the queue so they cannot eat a reply meant for a query.
+        startAutoRefresh() { log.push({ op: 'auth', fn: 'startAutoRefresh', filters: [] }); },
+        stopAutoRefresh() { log.push({ op: 'auth', fn: 'stopAutoRefresh', filters: [] }); },
         onAuthStateChange(fn: (event: string, session: unknown) => void) {
           listeners.push(fn);
           return {
@@ -195,6 +215,29 @@ export function fakeSupabase() {
           return settle();
         },
       },
+      /**
+       * A bucket. `table` carries the bucket's name so a test can tell
+       * `avatars` from `place-photos`; `upload` and `remove` answer off the
+       * queue like everything else. `getPublicUrl` is a string built on the
+       * phone, not a request, so it answers at once and takes no reply.
+       */
+      storage: {
+        from: (bucket: string) => ({
+          upload(path: string, _body: unknown, opts?: unknown) {
+            log.push({ table: bucket, fn: 'upload', op: 'storage', payload: { path, opts }, filters: [] });
+            return settle();
+          },
+          remove(paths: string[]) {
+            log.push({ table: bucket, fn: 'remove', op: 'storage', payload: paths, filters: [] });
+            return settle();
+          },
+          getPublicUrl(path: string) {
+            return { data: { publicUrl: `https://storage.test/${bucket}/${path}` } };
+          },
+        }),
+      },
     },
+    /** How many auth listeners are subscribed right now. */
+    listening: () => listeners.length,
   };
 }
