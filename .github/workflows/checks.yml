@@ -145,6 +145,28 @@ jobs:
       - if: '!cancelled()'
         run: npm test
 
+  # The data scripts: plain JavaScript with nothing else reading them. Most
+  # are frozen bootstrap pipelines kept for provenance, but the snapshot
+  # export and the mockup injection still run, and `itinerary-runtime.js`
+  # is pasted into the mockup verbatim — so the one test here evaluates it
+  # the way the page does and pins the plan it makes.
+  data:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: data
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: data/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - if: '!cancelled()'
+        run: npm test
+
   # The migrations, run against a real Postgres and then asserted. The app
   # job above cannot reach any of this: triggers, constraints and backfills
   # are SQL, and SQL that has only been read is SQL that has not been run.

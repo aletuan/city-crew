@@ -208,4 +208,4 @@ function generatePlan(inputs) {
   put('iti-org-vi', 'Bạn tổ chức · ' + inputs.people + ' người');
 }
 
-try { generatePlan(readWizardInputs()); } catch (e) { /* keep the static fallback */ }
+try { generatePlan(readWizardInputs()); } catch (_e) { /* keep the static fallback */ }
