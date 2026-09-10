@@ -15,6 +15,7 @@ import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, onPhoto, space } from '../theme';
 import { PressableScale, successHaptic } from './ui';
+import { useFailText } from './authUi';
 
 /** Square, so the crop the person frames is the crop the circle shows. */
 const EDIT = { allowsEditing: true, aspect: [1, 1] as [number, number], quality: 1 };
@@ -29,6 +30,7 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
   showCamera?: boolean;
 }) {
   const { t } = useI18n();
+  const failText = useFailText();
   const { profile, email, setAvatar, clearAvatar } = useAuth();
   const insets = useSafeAreaInsets();
   const [sheet, setSheet] = useState(false);
@@ -63,9 +65,11 @@ export default function AvatarPicker({ size = 88, showCamera = true }: {
       await job();
       successHaptic();
     } catch (e) {
+      // The names `setAvatar` throws — `too_soon`, `bad_image`, the three
+      // stalls — become sentences here; anything else arrives as it was.
       Alert.alert(
         t('Could not update your photo', 'Không cập nhật được ảnh', '写真を更新できませんでした'),
-        e instanceof Error ? e.message : String(e),
+        failText(e instanceof Error ? e.message : String(e)),
       );
     } finally {
       setBusy(false);

@@ -357,6 +357,9 @@ export type FormFail =
   | 'slow_prepare'
   | 'slow_upload'
   | 'slow_save'
+  // Raised by `setAvatar` when the bucket's sixty-second cooldown refused
+  // a second photo — see `lib/quota` and `avatar_cooldown.sql`.
+  | 'too_soon'
   // Raised by `lib/takeout` on a platform whose share sheet this app
   // cannot raise. Not an `AuthFail`: nothing about it comes from GoTrue,
   // and the table `authfail.ts` holds is a table of the server's codes.
@@ -518,6 +521,11 @@ export function useFailSentences(): Record<AuthFail | FormFail, string> {
       'Saving the photo is taking too long. Check your connection and try again.',
       'Lưu ảnh mất quá lâu. Kiểm tra kết nối rồi thử lại.',
       '画像の保存に時間がかかっています。接続を確認してもう一度お試しください。',
+    ),
+    too_soon: t(
+      'Give it a minute before changing your photo again.',
+      'Đợi một phút rồi hãy đổi ảnh lần nữa.',
+      '写真をもう一度変更するには1分お待ちください。',
     ),
   };
 }

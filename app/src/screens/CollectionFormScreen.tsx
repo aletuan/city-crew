@@ -28,6 +28,7 @@ import { useAuth } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { addPlaceToCollection, copyCollection, createCollection, updateCollection } from '../lib/data';
+import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import { useI18n } from '../lib/i18n';
 import { coverOf, membersOf, photosOf } from '../lib/place';
 import { useSave } from '../lib/save';
@@ -175,6 +176,19 @@ export default function CollectionFormScreen({ navigation, route }: {
       // own section. Opening a new one instead would land on an empty screen.
       navigation.goBack();
     } catch (e) {
+      // The daily cap — twenty lists, three hundred saves — is the one
+      // refusal that is nobody's fault and nothing to fix; it gets its
+      // own words, the way the suggest flow's `daily_limit` does.
+      if (isDailyLimit(e)) {
+        const words = t(
+          `You can make ${DAILY_CAPS.collections} lists and save ${DAILY_CAPS.placesIntoLists} places a day. Come back tomorrow.`,
+          `Mỗi ngày bạn có thể tạo ${DAILY_CAPS.collections} bộ sưu tập và lưu ${DAILY_CAPS.placesIntoLists} địa điểm. Mai quay lại nhé.`,
+          `1日に${DAILY_CAPS.collections}件のリストと${DAILY_CAPS.placesIntoLists}件の保存ができます。また明日どうぞ。`,
+        );
+        setError(words);
+        Alert.alert(t('That is enough for today', 'Hôm nay vậy là đủ', '本日はここまで'), words);
+        return;
+      }
       const message = e instanceof Error ? e.message : String(e);
       setError(message);
       Alert.alert(
