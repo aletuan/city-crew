@@ -139,7 +139,9 @@ describe('the header', () => {
   it('calls an evening an evening, and goes back from its back button', () => {
     const navigation = renderScreen();
     expect(screen.getByText('Your evening, three ways')).toBeTruthy();
-    expect(screen.getByText('Distances checked · shortest hops first')).toBeTruthy();
+    // Cards come in lens order, so the subtitle no longer claims a sort.
+    expect(screen.getByText('Distances checked · each card a different angle')).toBeTruthy();
+    expect(screen.queryByText(/shortest hops/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
     expect(navigation.navigate).not.toHaveBeenCalled();
@@ -149,6 +151,25 @@ describe('the header', () => {
     renderScreen({ when: 'day' });
     expect(screen.getByText('Your day, three ways')).toBeTruthy();
     expect(screen.queryByText('Your evening, three ways')).toBeNull();
+  });
+
+  it('counts the ways it actually has, and drops the count when there are none', () => {
+    planTrips.mockImplementation(() => [MATCH]);
+    const { unmount } = render(<PlanOptionsScreen navigation={nav() as unknown as Nav} route={routeWith()} />);
+    expect(screen.getByText('Your evening, one way')).toBeTruthy();
+    expect(screen.queryByText(/three ways/)).toBeNull();
+    unmount();
+
+    planTrips.mockImplementation(() => [MATCH, LOWKEY]);
+    const second = render(<PlanOptionsScreen navigation={nav() as unknown as Nav} route={routeWith({ when: 'day' })} />);
+    expect(screen.getByText('Your day, two ways')).toBeTruthy();
+    expect(screen.queryByText(/three ways/)).toBeNull();
+    second.unmount();
+
+    planTrips.mockImplementation(() => []);
+    renderScreen();
+    expect(screen.getByText('Your evening')).toBeTruthy();
+    expect(screen.queryByText(/ways?$/)).toBeNull();
   });
 
   it('puts the date first and the place after it, and never the company', () => {
@@ -171,6 +192,31 @@ describe('the cards', () => {
     expect(badges()).toEqual(['Best match', 'Iconic views', 'Low-key']);
     // Only the recommended plan wears the star.
     expect(document.querySelectorAll('[data-icon="star"]')).toHaveLength(1);
+  });
+
+  it('puts the highlight and the star on the same card, the match lens, wherever it lands', () => {
+    planTrips.mockImplementation(() => [LOWKEY, MATCH, ICONIC]);
+    renderScreen();
+    const best = screen.getAllByTestId('plan-card-best');
+    expect(best).toHaveLength(1);
+    // The highlighted card is the second one, and it holds the star.
+    expect(best[0].textContent).toContain('Best match');
+    expect(best[0].querySelectorAll('[data-icon="star"]')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-icon="star"]')).toHaveLength(1);
+  });
+
+  it('highlights nothing when the match lens is absent', () => {
+    planTrips.mockImplementation(() => [ICONIC, LOWKEY]);
+    renderScreen();
+    expect(screen.queryAllByTestId('plan-card-best')).toHaveLength(0);
+  });
+
+  it('exposes each card to VoiceOver as a button named for its title and badge', () => {
+    const navigation = renderScreen();
+    expect(screen.getByRole('button', { name: 'Hoàn Kiếm, Best match' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Đống Đa +1 area, Iconic views' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Tây Hồ, Low-key' }));
+    expect(navigation.navigate).toHaveBeenCalledWith('PlanEdit', expect.objectContaining({ lens: 'lowkey' }));
   });
 
   it('keeps the planner order rather than sorting by lens', () => {
@@ -358,13 +404,13 @@ describe('narration prefetch', () => {
 });
 
 describe('picking a card', () => {
-  it('opens PlanEdit on that lens with the same seed, the answers and the areas-derived fallback left to the editor', () => {
+  it('opens PlanEdit on that lens with the same seed, the answers and the areas name the card shows', () => {
     const navigation = renderScreen({ from: ['weekend'] });
     fireEvent.click(screen.getByText('Tây Hồ'));
     expect(navigation.navigate).toHaveBeenCalledTimes(1);
     expect(navigation.navigate).toHaveBeenCalledWith('PlanEdit', {
       ...routeWith({ from: ['weekend'] }).params,
-      seed: 7, lens: 'lowkey', title: undefined, avoid: [],
+      seed: 7, lens: 'lowkey', title: 'Tây Hồ', avoid: [],
     });
   });
 
@@ -375,6 +421,19 @@ describe('picking a card', () => {
     fireEvent.click(screen.getByText('Temples and a rooftop'));
     expect(navigation.navigate).toHaveBeenCalledWith('PlanEdit', expect.objectContaining({
       lens: 'iconic', title: 'Temples and a rooftop',
+    }));
+  });
+
+  it('hands the editor the card\'s fallback name, even the no-district one', () => {
+    planTrips.mockImplementation(() => [MATCH, plan('iconic', [stop(NOWHERE, 18 * 60)])]);
+    const navigation = renderScreen();
+    fireEvent.click(screen.getByText('An outing'));
+    expect(navigation.navigate).toHaveBeenLastCalledWith('PlanEdit', expect.objectContaining({
+      lens: 'iconic', title: 'An outing',
+    }));
+    fireEvent.click(screen.getByText('Hoàn Kiếm'));
+    expect(navigation.navigate).toHaveBeenLastCalledWith('PlanEdit', expect.objectContaining({
+      lens: 'match', title: 'Hoàn Kiếm',
     }));
   });
 

@@ -7,7 +7,7 @@
 // reference's violet gradient is translated, not copied.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 // TEMPORARY — read/written only by the "Always show welcome" row.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -36,7 +36,7 @@ import { cleanTaste } from '../lib/tastepick';
 import { Lang, useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
 import { colors, font, quoteFace, radius, space, type } from '../theme';
-import type { Nav } from '../nav';
+import { goTo, type Nav } from '../nav';
 
 const MONTHS_EN = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -65,7 +65,12 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
   last?: boolean;
 }) {
   return (
-    <PressableScale scaleTo={0.98} style={[s.featureRow, !last && s.featureRowDivider]} onPress={onPress}>
+    <PressableScale
+      scaleTo={0.98}
+      style={[s.featureRow, !last && s.featureRowDivider]}
+      onPress={onPress}
+      accessibilityRole="button"
+    >
       <RoundIcon name={icon} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.featureTitle}>{title}</Text>
@@ -108,7 +113,12 @@ function SettingRow({ icon, label, value, onPress, last }: {
   last?: boolean;
 }) {
   return (
-    <PressableScale scaleTo={0.98} style={[s.featureRow, !last && s.featureRowDivider]} onPress={onPress}>
+    <PressableScale
+      scaleTo={0.98}
+      style={[s.featureRow, !last && s.featureRowDivider]}
+      onPress={onPress}
+      accessibilityRole="button"
+    >
       <RoundIcon name={icon} />
       <Text style={s.settingLabel} numberOfLines={1}>{label}</Text>
       {/* The value takes what is left and truncates rather than wrapping:
@@ -370,7 +380,18 @@ function GuestHub({ navigation }: { navigation: Nav }) {
       <PrimaryButton label={t('Sign in / Sign up', 'Đăng nhập / Đăng ký', 'サインイン / 登録')} onPress={goSignIn} />
       <Pressable
         style={s.guestLink}
-        onPress={() => { fireHaptic('selection'); navigation.getParent()?.navigate('Explore'); }}
+        accessibilityRole="button"
+        onPress={() => {
+          fireHaptic('selection');
+          // Through the tab navigator when there is one. `getParent()?.`
+          // alone was a tap that did nothing, silently, whenever this screen
+          // was mounted without one — so the root ref is the way out then,
+          // naming Explore's first screen rather than trusting a tab that
+          // may never have mounted to pick it.
+          const parent = navigation.getParent();
+          if (parent) parent.navigate('Explore');
+          else goTo('Explore', { screen: 'ExploreHome' });
+        }}
       >
         {/* Shorter, and the word "guest" appears nowhere on the screen
             now — the hero stopped saying it, and this line saying it
@@ -412,7 +433,7 @@ function GuestHub({ navigation }: { navigation: Nav }) {
           The Card stays inside the pressable — `friendsCard` is only
           the row's inner layout, and without the Card around it the
           block lost its surface and sat bare on the page. */}
-      <PressableScale onPress={goSignIn}>
+      <PressableScale onPress={goSignIn} accessibilityRole="button">
         <Card style={s.friendsCard}>
           <RoundIcon name="people-outline" />
           <View style={{ flex: 1, gap: 3 }}>
@@ -536,7 +557,12 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
             ) : null}
           </View>
           {profile.bio ? <Text style={s.heroBody} numberOfLines={2}>{profile.bio}</Text> : null}
-          <PressableScale scaleTo={0.94} style={s.editBtn} onPress={() => navigation.navigate('EditProfile')}>
+          <PressableScale
+            scaleTo={0.94}
+            style={s.editBtn}
+            onPress={() => navigation.navigate('EditProfile')}
+            accessibilityRole="button"
+          >
             <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}</Text>
           </PressableScale>
         </View>
@@ -606,7 +632,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           the card opens the crew now. The number is friends, the dot is
           requests — two different facts, and neither borrows the other's
           mark. */}
-      <PressableScale onPress={() => navigation.navigate('Crew')}>
+      <PressableScale onPress={() => navigation.navigate('Crew')} accessibilityRole="button">
         <Card style={s.friendsCard}>
           <View>
             <RoundIcon name="people-outline" />
@@ -643,9 +669,31 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
 
       <PressableScale
         style={s.signOutBtn}
+        accessibilityRole="button"
+        // The label stays while the spinner stands in for the word, so the
+        // control keeps its name for a screen reader mid-request.
+        accessibilityLabel={t('Sign out', 'Đăng xuất', 'サインアウト')}
+        accessibilityState={{ disabled: busy, busy }}
+        disabled={busy}
         onPress={async () => {
+          // A second tap while the first is in flight would ask the server
+          // to end the same session twice; `disabled` covers the render,
+          // this covers a tap that lands before it.
+          if (busy) return;
           setBusy(true);
-          try { await signOut(); } finally { setBusy(false); }
+          try {
+            await signOut();
+          } catch (e) {
+            // Without this the failure escaped as an unhandled rejection
+            // and the button simply came back — which reads as "signed
+            // out" until the next screen says otherwise.
+            Alert.alert(
+              t('Could not sign out', 'Không đăng xuất được', 'サインアウトできませんでした'),
+              (e as Error).message,
+            );
+          } finally {
+            setBusy(false);
+          }
         }}
       >
         {busy
@@ -676,6 +724,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           the top of `DeleteAccountScreen`. */}
       <PressableScale
         style={s.deleteBtn}
+        accessibilityRole="button"
         onPress={() => navigation.navigate('DeleteAccount')}
       >
         <Text style={s.deleteText}>{t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}</Text>

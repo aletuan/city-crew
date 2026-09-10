@@ -299,6 +299,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const duckScroll = useDuckOnScroll();
 
   const title = col ? t(col.title_en, col.title_vi, col.title_ja) : '';
+  const desc = col ? t(col.desc_en, col.desc_vi, col.desc_ja) : '';
   const insets = useSafeAreaInsets();
   const [menu, setMenu] = useState(false);
   // Where the popover hangs from. Measured off the button rather than
@@ -329,7 +330,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const edit = () => col && navigation.navigate('CollectionForm', {
     slug: col.slug,
     title,
-    desc: t(col.desc_en, col.desc_vi, col.desc_ja),
+    desc,
   });
 
   /**
@@ -430,9 +431,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   // Deliberately inert, and now inert for two different reasons — which
   // is why the sentence branches. A private list has no address to send
-  // anyone to; a published one is visible to everybody but the app still
-  // has no link to hand over, because nothing here registers a URL scheme
-  // or a web address for a collection. Either way the honest placeholder
+  // anyone to — and the sentence is about this list, not all of yours,
+  // since "Make public" sits in the same menu. A published one is visible
+  // to everybody but the app still has no link to hand over, because
+  // nothing here registers a URL scheme or a web address for a
+  // collection. Either way the honest placeholder
   // says which wall you have hit rather than opening a share sheet onto a
   // link that would 404 for whoever received it.
   const share = () => Alert.alert(
@@ -444,9 +447,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         'このコレクションは公開中ですが、送れるリンクはまだありません。共有機能は近日公開予定です。',
       )
       : t(
-        'Your collections are private for now. Sharing one with the crew is on the way.',
-        'Bộ sưu tập của bạn hiện đang riêng tư. Tính năng chia sẻ với hội bạn sẽ sớm có.',
-        'コレクションは現在非公開です。共有機能は近日公開予定です。',
+        'This list is private. You can make it public from this menu — share links are on the way.',
+        'Bộ sưu tập này đang riêng tư. Bạn có thể công khai nó từ menu này — liên kết chia sẻ sẽ sớm có.',
+        'このコレクションは非公開です。このメニューから公開できます。共有リンクは近日公開予定です。',
       ),
   );
 
@@ -484,13 +487,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * through the public query, which is city-scoped — and the fallback
    * exists for the legacy select that omits the column.
    */
+  const copyCityId = col?.city_id || city?.id;
   const copy = () => {
     if (!col) return;
     // Signed out this is the sheet, not an error: wanting somebody's list
     // is a good moment to be offered an account, and a disabled row would
     // have explained nothing.
     if (!uid) { askToSignIn(); return; }
-    const cityId = col.city_id || city?.id;
+    const cityId = copyCityId;
     if (!cityId) return;
     const sourceDesc = t(col.desc_en, col.desc_vi, col.desc_ja)?.trim() || '';
     const credit = col.curator_handle
@@ -535,7 +539,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             .then(() => {
               for (const m of members) note(m.slug, 'unsave');
               navigation.goBack();
+              // Both catalogs, as publish and reorder do: a public list
+              // also lives in the public query, and without this it stays
+              // on the Explore shelf and in search after it is gone.
               mine.reload();
+              cols.reload();
             })
             .catch((e: Error) => Alert.alert(t('Could not delete', 'Không xoá được', '削除できませんでした'), e.message));
         },
@@ -694,7 +702,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      side is empty for half its visitors reads as a screen that forgot
      something. `collapsable={false}` keeps the wrapper a real native
      view, which is what `measureInWindow` needs to have something to
-     measure. */
+     measure.
+
+     But only once there is a list. A missing one has nothing to copy or
+     share, and while your own lists are still loading there is no row to
+     read `owner_id` off yet — `owned` is false by default, so the owner was
+     briefly offered the visitor's "Save a copy" of their own list. Once the
+     row is here its `owner_id` settles whose it is. */
   const headerRight = arranging ? (owned ? (
     <PressableScale onPress={finishArranging} containerStyle={s.done} disabled={ordering}>
       <Text style={s.doneText}>
@@ -705,7 +719,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
             : t('Cancel', 'Huỷ', 'キャンセル')}
       </Text>
     </PressableScale>
-  ) : null) : (
+  ) : null) : col ? (
     <View ref={btn} collapsable={false}>
       <RoundIconButton
         icon="ellipsis-horizontal"
@@ -713,7 +727,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         label={t('More', 'Thêm', 'その他')}
       />
     </View>
-  );
+  ) : null;
 
   return (
     <Screen
@@ -729,46 +743,54 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           card would be reporting on the list by hiding part of it.
 
           Dismissible by its own tick — the row is the acknowledgement, so
-          tapping it is how you say you have read it. */}
+          tapping it is how you say you have read it. The container is a
+          plain View and the message and Undo are sibling controls: a
+          button nested in a button is one element to VoiceOver, and Undo
+          could not be reached on its own. */}
       {banner && (
-        <Pressable
+        <View
           style={[s.banner, banner === 'private' && s.bannerQuiet]}
-          onPress={() => setBanner(null)}
-          accessibilityRole="button"
           accessibilityLiveRegion="polite"
         >
-          <Ionicons
-            name={banner === 'public' ? 'checkmark-circle' : banner === 'blocked' ? 'time-outline' : 'lock-closed'}
-            size={19}
-            color={banner === 'public' ? colors.ok : colors.textSecondary}
-          />
-          <Text style={s.bannerText} numberOfLines={3}>
-            {banner === 'public'
-              ? t(
-                'This collection is now public',
-                'Bộ sưu tập này giờ đã công khai',
-                'このコレクションは公開されました',
-              )
-              : banner === 'blocked'
-                ? blockerSentence(blockers, t)
-                : t(
-                  'This collection is private again',
-                  'Bộ sưu tập này đã riêng tư trở lại',
-                  'このコレクションは非公開に戻りました',
-                )}
-          </Text>
+          <Pressable
+            style={s.bannerBody}
+            onPress={() => setBanner(null)}
+            accessibilityRole="button"
+            accessibilityHint={t('Dismisses this message', 'Ẩn thông báo này', 'このメッセージを閉じます')}
+          >
+            <Ionicons
+              name={banner === 'public' ? 'checkmark-circle' : banner === 'blocked' ? 'time-outline' : 'lock-closed'}
+              size={19}
+              color={banner === 'public' ? colors.ok : colors.textSecondary}
+            />
+            <Text style={s.bannerText} numberOfLines={3}>
+              {banner === 'public'
+                ? t(
+                  'This collection is now public',
+                  'Bộ sưu tập này giờ đã công khai',
+                  'このコレクションは公開されました',
+                )
+                : banner === 'blocked'
+                  ? blockerSentence(blockers, t)
+                  : t(
+                    'This collection is private again',
+                    'Bộ sưu tập này đã riêng tư trở lại',
+                    'このコレクションは非公開に戻りました',
+                  )}
+            </Text>
+          </Pressable>
           {banner !== 'blocked' && (
-            <Pressable onPress={undo} hitSlop={10} disabled={publishing}>
+            <Pressable onPress={undo} hitSlop={10} disabled={publishing} accessibilityRole="button">
               <Text style={[s.bannerUndo, publishing && s.bannerUndoBusy]}>
                 {t('Undo', 'Hoàn tác', '元に戻す')}
               </Text>
             </Pressable>
           )}
-        </Pressable>
+        </View>
       )}
-      {col && (col.desc_en || col.desc_vi) && (
-        <Text style={s.desc}>{t(col.desc_en, col.desc_vi, col.desc_ja)}</Text>
-      )}
+      {/* Checked on the text `t` picks, not on a hand-listed pair of
+          columns: that left a Japanese-only description never drawn. */}
+      {!!desc && <Text style={s.desc}>{desc}</Text>}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
       {/* What the mode is for, said once at the top of it. Without this the
@@ -846,7 +868,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         statusBarTranslucent
         onRequestClose={() => setMenu(false)}
       >
-        <Pressable style={s.scrim} onPress={() => setMenu(false)} />
+        <Pressable
+          style={s.scrim}
+          onPress={() => setMenu(false)}
+          // The way out under VoiceOver, which has no "anywhere off the
+          // card" to tap: the backdrop has to be a control it can name.
+          accessibilityRole="button"
+          accessibilityLabel={t('Close menu', 'Đóng menu', 'メニューを閉じる')}
+        />
         <View style={[s.menu, { top: anchor.top, right: anchor.right }]}>
           {owned ? (
             <>
@@ -914,16 +943,22 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                copies, and the row says so before the tap rather than
                after it. */
             <>
-              <MenuRow
-                icon="duplicate-outline"
-                label={t('Save a copy', 'Lưu bản sao', 'コピーを保存')}
-                onPress={() => act(copy)}
-                first
-              />
+              {/* Only with a city to file the copy under. Without one the
+                  row could only close the menu and do nothing, and a row
+                  that does nothing is worse than a row that is not there. */}
+              {!!copyCityId && (
+                <MenuRow
+                  icon="duplicate-outline"
+                  label={t('Save a copy', 'Lưu bản sao', 'コピーを保存')}
+                  onPress={() => act(copy)}
+                  first
+                />
+              )}
               <MenuRow
                 icon="share-outline"
                 label={t('Share', 'Chia sẻ', '共有')}
                 onPress={() => act(share)}
+                first={!copyCityId}
               />
               {/* The third thing you can do about somebody else's list,
                   and the one the store asks for: say something is wrong
@@ -1002,6 +1037,9 @@ const s = StyleSheet.create({
     backgroundColor: colors.okSoft,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
+  // The tappable half of the banner, laid out as the banner row itself was
+  // so moving the press off the container changes nothing on screen.
+  bannerBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   bannerQuiet: { backgroundColor: colors.surfaceGlass },
   bannerText: { flex: 1, color: colors.text, fontSize: 15, fontWeight: font.medium },
   bannerUndo: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },

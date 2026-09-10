@@ -295,16 +295,22 @@ export default function PlanOptionsScreen({ navigation, route }: {
       // "Your evening, three ways" above three plans starting at 09:00 —
       // and the screen after it, which derives its name properly, called
       // the same plan "A day out". Two screens, one plan, two answers.
-      title={p.when === 'day'
-        ? t('Your day, three ways', 'Ngày của bạn, ba cách', 'あなたの一日、三通り')
-        : t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り')}
+      //
+      // And how many ways, not always three: the heading said "three ways"
+      // above "Only one way…" and above the empty card, contradicting the
+      // line under it. The count comes from the set on screen.
+      title={heading(p.when === 'day', plans.length, t)}
       // Moved out of the body and into the header, which is where the
       // reference design puts it and where it costs no scroll: it is one
       // quiet line about the screen, not a paragraph on it.
+      //
+      // It used to promise "shortest hops first", but the cards come in
+      // lens order and nothing sorts them by distance. What is true is
+      // that each card is a different weighting of the same answers.
       subtitle={t(
-        'Distances checked · shortest hops first',
-        'Đã tính quãng đường · chặng ngắn lên trước',
-        '距離を確認済み · 移動の短い順',
+        'Distances checked · each card a different angle',
+        'Đã tính quãng đường · mỗi thẻ một hướng khác',
+        '距離を確認済み · プランごとに違う切り口',
       )}
       onBack={() => navigation.goBack()}
     >
@@ -333,21 +339,26 @@ export default function PlanOptionsScreen({ navigation, route }: {
           </Text>
         )}
 
-        {plans.map((plan, i) => (
-          <PlanCard
-            key={`${plan.lens}-${i}`}
-            plan={plan}
-            title={titles.get(plan.lens) ?? null}
-            best={i === 0}
-            // The card's own name rides along, so the editor's header
-            // matches the card that was tapped even if the cache has let
-            // this narration go by the time it opens.
-            onPress={() => navigation.navigate('PlanEdit', {
-              ...p, seed, lens: plan.lens,
-              title: plan.title ?? titles.get(plan.lens) ?? undefined, avoid: shown,
-            })}
-          />
-        ))}
+        {plans.map((plan, i) => {
+          // Resolved once, here, and handed to both the card and the
+          // editor. The editor used to get `undefined` whenever the card
+          // was headed by its areas, and invent a name of its own — so the
+          // list said "Tây Hồ" and the screen it opened said something else.
+          const name = plan.title ?? titles.get(plan.lens) ?? areaLine(plan, t);
+          return (
+            <PlanCard
+              key={`${plan.lens}-${i}`}
+              plan={plan}
+              name={name}
+              // The card's own name rides along, so the editor's header
+              // matches the card that was tapped even if the cache has let
+              // this narration go by the time it opens.
+              onPress={() => navigation.navigate('PlanEdit', {
+                ...p, seed, lens: plan.lens, title: name, avoid: shown,
+              })}
+            />
+          );
+        })}
 
         {plans.length === 0 && (
           <Card style={[s.card, s.emptyCard]}>
@@ -418,35 +429,71 @@ function areaLine(plan: TripPlan, t: (en: string, vi: string, ja: string) => str
   return t(`${areas[0]} +${more} area`, `${areas[0]} +${more} khu`, `${areas[0]} 他${more}地区`);
 }
 
+/**
+ * The screen's heading, counting the plans it actually holds.
+ *
+ * Three keeps the phrasing it always had; fewer says so; none drops the
+ * count rather than claim "zero ways" above the empty card.
+ */
+function heading(
+  isDay: boolean, count: number, t: (en: string, vi: string, ja: string) => string,
+): string {
+  if (isDay) {
+    if (count === 0) return t('Your day', 'Ngày của bạn', 'あなたの一日');
+    if (count === 1) return t('Your day, one way', 'Ngày của bạn, một cách', 'あなたの一日、一案');
+    if (count === 2) return t('Your day, two ways', 'Ngày của bạn, hai cách', 'あなたの一日、二通り');
+    return t('Your day, three ways', 'Ngày của bạn, ba cách', 'あなたの一日、三通り');
+  }
+  if (count === 0) return t('Your evening', 'Buổi tối của bạn', 'あなたの夜');
+  if (count === 1) return t('Your evening, one way', 'Buổi tối của bạn, một cách', 'あなたの夜、一案');
+  if (count === 2) return t('Your evening, two ways', 'Buổi tối của bạn, hai cách', 'あなたの夜、二通り');
+  return t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り');
+}
+
 /** One draft. Tapping it opens the editor, where times and order become
  *  the reader's rather than the planner's. */
-function PlanCard({ plan, title, best, onPress }: {
-  plan: TripPlan; title: string | null; best: boolean; onPress: () => void;
+function PlanCard({ plan, name, onPress }: {
+  plan: TripPlan; name: string; onPress: () => void;
 }) {
   const { t, lang } = useI18n();
   const badge = BADGE[plan.lens];
+  const badgeText = t(badge.en, badge.vi, badge.ja);
+  // The border and the star follow one rule — the lens — rather than the
+  // border going to whichever card came first and the star to `match`
+  // wherever it landed. A planner that reorders its lenses split them
+  // across two cards.
+  const best = !!badge.star;
   const total = plan.costVnd.food + plan.costVnd.activity + plan.costVnd.transport;
   const km = plan.legs.reduce((n, l) => n + (l?.km ?? 0), 0);
 
   return (
-    <PressableScale scaleTo={0.985} onPress={onPress} containerStyle={s.cardWrap}>
+    <PressableScale
+      scaleTo={0.985}
+      onPress={onPress}
+      containerStyle={s.cardWrap}
+      // A card is the screen's main control, and without these VoiceOver
+      // read it as loose text with no hint it could be tapped.
+      accessibilityRole="button"
+      accessibilityLabel={`${name}, ${badgeText}`}
+      // The highlight is a border, which nothing but a pixel can see; the
+      // id names the card that wears it so the rule can be pinned.
+      testID={best ? 'plan-card-best' : undefined}
+    >
       <Card style={[s.card, best && s.cardBest]}>
         <View style={s.head}>
           {/* The model's name when the sketch screen managed to fetch
-              one, the areas when it did not. `title` is captured per set
-              of plans and never changes under the reader — see `titles`
-              on the screen. */}
-          <Text style={s.name} numberOfLines={1}>
-            {plan.title ?? title ?? areaLine(plan, t)}
-          </Text>
-          {badge.star ? (
+              one, the areas when it did not. Resolved on the screen, from
+              `titles`, which is captured per set of plans and never
+              changes under the reader. */}
+          <Text style={s.name} numberOfLines={1}>{name}</Text>
+          {best ? (
             <LinearGradient {...gradAI} style={s.badgeOn}>
               <Ionicons name="star" size={11} color={colors.accentInk} />
-              <Text style={s.badgeOnText}>{t(badge.en, badge.vi, badge.ja)}</Text>
+              <Text style={s.badgeOnText}>{badgeText}</Text>
             </LinearGradient>
           ) : (
             <View style={s.badge}>
-              <Text style={s.badgeText}>{t(badge.en, badge.vi, badge.ja)}</Text>
+              <Text style={s.badgeText}>{badgeText}</Text>
             </View>
           )}
         </View>
@@ -520,7 +567,6 @@ function PlanCard({ plan, title, best, onPress }: {
 const CAPTION = { fontSize: 13, fontWeight: font.regular } as const;
 
 const s = StyleSheet.create({
-  lede: { ...type.body, color: colors.textSecondary, marginBottom: 10 },
   byline: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: space.headingToContent },
   bylineText: { ...CAPTION, color: colors.textSecondary },
   thin: { ...CAPTION, color: colors.textTertiary, marginBottom: 10 },

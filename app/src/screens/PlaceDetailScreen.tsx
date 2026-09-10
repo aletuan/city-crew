@@ -13,7 +13,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Linking, Pressable, ScrollView, Share, StyleSheet,
+  ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, StyleSheet,
   Text, useWindowDimensions, View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -179,7 +179,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // address ends in, which is the same repetition the line was hidden
   // to avoid.
   const showsNeighborhood = !place.address;
-  const name = splitName(t(place.name_en, place.name_vi, place.name_ja));
+  const fullName = t(place.name_en, place.name_vi, place.name_ja);
+  const name = splitName(fullName);
   const subtitle = subtitleBeside(name, neighborhood);
   // Grouped, not one row per day: see groupHours. A place open the same
   // seven days a week becomes one line instead of seven identical ones.
@@ -189,6 +190,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // would only matter to someone parked on this screen at closing time,
   // and would cost a re-render a minute on every place in the app.
   const openNow = openState(place.opening_hours, new Date());
+  // Asked of the string the reader will actually get, not of the columns:
+  // a description written only in Japanese is one for a Japanese reader,
+  // and nothing (rather than an empty paragraph) for everyone else.
+  const desc = t(place.desc_en, place.desc_vi, place.desc_ja);
   // Which row opens the grouped card decides where the hairlines fall:
   // every row below the first draws one above itself, whatever subset of
   // the four a place actually has.
@@ -197,11 +202,25 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     : place.phone ? 'phone'
     : place.website ? 'website' : null;
 
+  // The dash only joins two things: a place with no address shares its
+  // name alone, not a name trailing off into punctuation.
   const share = () => {
     Share.share({
-      message: `${t(place.name_en, place.name_vi, place.name_ja)} — ${place.address ?? ''}${mapsUrl ? `\n${mapsUrl}` : ''}`,
+      message: `${fullName}${place.address ? ` — ${place.address}` : ''}${mapsUrl ? `\n${mapsUrl}` : ''}`,
     }).catch(() => {});
   };
+  // A row that goes somewhere can fail to get there — a phone that cannot
+  // dial, a URL no app claims — and `openURL` says so only by rejecting.
+  // Unheard, the tap just did nothing; the reader is told instead.
+  const open = (url: string, failed: string) => {
+    Linking.openURL(url).catch(() => Alert.alert(failed));
+  };
+  // Websites are typed in by hand and often arrive bare (`congcaphe.com`),
+  // which `openURL` cannot route; with no scheme of its own, it is a web
+  // address.
+  const websiteUrl = place.website && !/^[a-z][a-z\d+.-]*:\/\//i.test(place.website)
+    ? `https://${place.website}`
+    : place.website;
 
   return (
     // No top safe area: the photograph is what belongs against the top of
@@ -232,6 +251,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   contentFit="cover"
                   transition={200}
                   testID={i === 0 ? 'detail-photo' : undefined}
+                  accessibilityLabel={t(
+                    `Photo ${i + 1} of ${photos.length} of ${fullName}`,
+                    `Ảnh ${i + 1}/${photos.length} của ${fullName}`,
+                    `${fullName}の写真 ${i + 1}/${photos.length}`,
+                  )}
                 />
               ))}
             </ScrollView>
@@ -264,6 +288,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           <PressableScale
             onPress={() => navigation.goBack()} scaleTo={0.9}
             containerStyle={[s.fabSlot, { left: space.page, top: insets.top + 8 }]} style={s.fab} accessibilityLabel="Back"
+            accessibilityRole="button"
             testID="detail-back"
           >
             <Ionicons name="chevron-back" size={22} color={onPhoto.text} />
@@ -271,6 +296,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           <PressableScale
             onPress={share} scaleTo={0.9}
             containerStyle={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} style={s.fab} accessibilityLabel="Share"
+            accessibilityRole="button"
           >
             <Ionicons name="share-outline" size={20} color={onPhoto.text} />
           </PressableScale>
@@ -386,7 +412,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 onto a second line. */}
           </View>
 
-          {(place.desc_en || place.desc_vi) && <Text style={s.desc}>{t(place.desc_en, place.desc_vi, place.desc_ja)}</Text>}
+          {desc ? <Text style={s.desc}>{desc}</Text> : null}
 
           {/* ── info card ── */}
           {firstRow != null && (
@@ -395,7 +421,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 <InfoRow
                   label={t('Address', 'Địa chỉ', '住所')}
                   first={firstRow === 'address'}
-                  onPress={mapsUrl ? () => Linking.openURL(mapsUrl) : undefined}
+                  onPress={mapsUrl
+                    ? () => open(mapsUrl, t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'))
+                    : undefined}
                 >
                   <Text style={[s.infoValue, mapsUrl && s.infoLink]} testID="detail-address">{address}</Text>
                 </InfoRow>
@@ -463,7 +491,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 <InfoRow
                   label={t('Phone', 'Điện thoại', '電話番号')}
                   first={firstRow === 'phone'}
-                  onPress={() => Linking.openURL(`tel:${place.phone!.replace(/\s/g, '')}`)}
+                  onPress={() => open(
+                    `tel:${place.phone!.replace(/\s/g, '')}`,
+                    t('Could not place the call', 'Không gọi được', '電話をかけられませんでした'),
+                  )}
                 >
                   <Text style={[s.infoValue, s.infoLink]}>{place.phone}</Text>
                 </InfoRow>
@@ -473,7 +504,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 <InfoRow
                   label={t('Website', 'Trang web', 'ウェブサイト')}
                   first={firstRow === 'website'}
-                  onPress={() => Linking.openURL(place.website!)}
+                  onPress={() => open(
+                    websiteUrl!,
+                    t('Could not open the website', 'Không mở được trang web', 'ウェブサイトを開けませんでした'),
+                  )}
                 >
                   <Text style={[s.infoValue, s.infoLink]} numberOfLines={1}>
                     {place.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}

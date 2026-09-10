@@ -153,6 +153,31 @@ const listProps = (): { onRefresh: () => void; refreshing: boolean } => {
   throw new Error('no SectionList in the committed tree');
 };
 
+/** The committed props of every host-side element that offers a screen
+ *  reader actions — VoiceOver's rotor has no jsdom counterpart, and
+ *  react-native-web drops the props from the DOM, so the handler is
+ *  reached the way `listProps` reaches the pull. */
+type A11yProps = {
+  accessibilityLabel?: string;
+  accessibilityActions: { name: string; label: string }[];
+  onAccessibilityAction: (e: { nativeEvent: { actionName: string } }) => void;
+};
+const actionRows = (): A11yProps[] => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  const out = new Set<A11yProps>();
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && 'accessibilityActions' in p && 'onPress' in p) out.add(p as never);
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  return [...out];
+};
+
 const icons = (name: string) => document.querySelectorAll(`[data-icon="${name}"]`).length;
 
 beforeEach(async () => {
@@ -234,10 +259,10 @@ describe('CollectionsScreen — as a guest', () => {
     expect(navigation.parentNavigate).toHaveBeenCalledWith('Explore');
   });
 
-  it('a tile opens its collection by slug', () => {
+  it('a tile is a button named by its title, and opens its collection by slug', () => {
     state.cols.data = [col('here', ['a'])];
     const { navigation } = show();
-    fireEvent.click(screen.getByText('List here'));
+    fireEvent.click(screen.getByRole('button', { name: 'List here' }));
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionDetail', { slug: 'here' });
   });
 
@@ -321,10 +346,13 @@ describe('CollectionsScreen — signed in', () => {
     expect(screen.queryByRole('button', { name: /like this collection/i })).toBeNull();
   });
 
-  it('an own tile with nothing in it says so in words', () => {
+  it('an own tile with nothing in it says so in words, and is named by its title', () => {
     state.mine.data = [col('fresh', [], { owner_id: 'u1' })];
     show();
     expect(screen.getByText('No places yet')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'List fresh' })).toBeTruthy();
+    // Tiles keep no swipe, so they carry no actions either.
+    expect(actionRows()).toEqual([]);
   });
 
   it('the dashed row under your lists starts a new one', () => {
@@ -523,15 +551,57 @@ describe('CollectionsScreen — list view', () => {
     expect(spies.deleteCollection).not.toHaveBeenCalled();
   });
 
-  it('confirming deletes by slug and reloads your library', async () => {
+  it('confirming deletes by slug and reloads your library and the public catalog', async () => {
     await rows();
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
     show();
     fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
     spies.mineReload.mockClear();
+    spies.colsReload.mockClear();
     await act(async () => pressInAlert('Delete'));
     expect(spies.deleteCollection).toHaveBeenCalledWith('mine1');
     expect(spies.mineReload).toHaveBeenCalledTimes(1);
+    // A public list is on the Community shelf too; it must go from there.
+    expect(spies.colsReload).toHaveBeenCalledTimes(1);
+  });
+
+  it('a screen reader gets Edit and Delete on your row, and Delete still asks first', async () => {
+    await rows();
+    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1', desc_en: 'Rooftops' })];
+    const { navigation } = show();
+    await screen.findByText(/1 place\s+·\s+Public/);
+    const [row] = actionRows();
+    expect(row.accessibilityLabel).toBe('List mine1');
+    expect(row.accessibilityActions).toEqual([{ name: 'edit', label: 'Edit' }, { name: 'delete', label: 'Delete' }]);
+    act(() => row.onAccessibilityAction({ nativeEvent: { actionName: 'edit' } }));
+    expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm', {
+      slug: 'mine1', title: 'List mine1', desc: 'Rooftops',
+    });
+    act(() => row.onAccessibilityAction({ nativeEvent: { actionName: 'delete' } }));
+    expect(spies.swipeClose).toHaveBeenCalledTimes(2);
+    expect(alert).toHaveBeenCalledWith(
+      'Delete this collection?', '"List mine1" will be gone for good.', expect.any(Array),
+    );
+    expect(spies.deleteCollection).not.toHaveBeenCalled();
+    await act(async () => pressInAlert('Delete'));
+    expect(spies.deleteCollection).toHaveBeenCalledWith('mine1');
+    // An action it does not know does nothing.
+    alert.mockClear();
+    act(() => row.onAccessibilityAction({ nativeEvent: { actionName: 'magicTap' } }));
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it('every row is a button named by its title; a community byline stays in the name', async () => {
+    await rows();
+    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
+    state.cols.data = [col('theirs', ['a', 'b'], { curator_handle: 'trang' }), col('solo', ['a'])];
+    show();
+    expect(await screen.findByRole('button', { name: 'List mine1' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: /Community/ }));
+    expect(screen.getByRole('button', { name: 'List theirs, by @trang, 2 places' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'List solo' })).toBeTruthy();
+    // Somebody else's list offers nothing to edit.
+    expect(actionRows()).toEqual([]);
   });
 
   it('a failed delete says so with the reason', async () => {

@@ -6,7 +6,7 @@
 // surfaces and thin warm hairlines — not from shadows.
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, SectionList, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { type AccessibilityProps, Alert, Animated, SectionList, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
@@ -30,6 +30,9 @@ import type { Nav } from '../nav';
 
 /** What `renderRightActions` hands back, and what the card animates from. */
 type Drag = ReturnType<Animated.Value['interpolate']>;
+
+/** The swipe's two actions, in the form a screen reader offers them. */
+type RowA11y = Pick<AccessibilityProps, 'accessibilityActions' | 'onAccessibilityAction'>;
 
 /** What the two actions take up behind an open row: two 62pt buttons, the
  *  8pt between them, and the 8pt separating them from the card. The row
@@ -260,9 +263,17 @@ function NewCollectionRow({ onPress }: { onPress: () => void }) {
  * Both actions close the row first. Leaving it open behind a pushed screen
  * or an alert means coming back to a row half off its rails, and the way
  * out of that is another swipe nobody thinks to try.
+ *
+ * A swipe is a gesture VoiceOver does not perform, so on its own it left
+ * Edit and Delete out of reach of anyone reading the screen by ear. The
+ * same two actions ride along as accessibility actions — the rotor's
+ * "Actions" on iOS — and the row hands them to the card, because the card
+ * is the element a screen reader lands on; on the wrapper they would sit
+ * on a view nobody can focus. They run the buttons' own path, so Delete
+ * still asks first.
  */
 function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
-  children: (open: boolean, drag: Drag | null) => React.ReactNode;
+  children: (open: boolean, drag: Drag | null, a11y: RowA11y) => React.ReactNode;
   onEdit: () => void;
   onDelete: () => void;
   editLabel: string;
@@ -283,6 +294,13 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
   useEffect(() => { if (seen.current !== drag) setDrag(seen.current); });
 
   const act = (run: () => void) => { ref.current?.close(); run(); };
+  const a11y: RowA11y = {
+    accessibilityActions: [{ name: 'edit', label: editLabel }, { name: 'delete', label: deleteLabel }],
+    onAccessibilityAction: (e) => {
+      if (e.nativeEvent.actionName === 'edit') act(onEdit);
+      else if (e.nativeEvent.actionName === 'delete') act(onDelete);
+    },
+  };
 
   // Until the row has been measured there is nothing to pin against, and
   // the card sits at its full width the way it always did.
@@ -357,7 +375,7 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
           );
         }}
       >
-        <Animated.View style={pinned}>{children(open, drag)}</Animated.View>
+        <Animated.View style={pinned}>{children(open, drag, a11y)}</Animated.View>
       </Swipeable>
     </View>
   );
@@ -461,8 +479,11 @@ export default function CollectionsScreen({ navigation, route }: {
           text: t('Delete', 'Xoá', '削除'),
           style: 'destructive',
           onPress: () => {
+            // Both catalogs, as the detail screen's publish does: a public
+            // list is on the Community shelf (and Explore's) too, and
+            // reloading only your library left it standing there.
             deleteCollection(c.slug)
-              .then(() => mine.reload())
+              .then(() => { mine.reload(); cols.reload(); })
               .catch((e: Error) => Alert.alert(t('Could not delete', 'Không xoá được', '削除できませんでした'), e.message));
           },
         },
@@ -528,6 +549,9 @@ export default function CollectionsScreen({ navigation, route }: {
   // they read one tab. The choice is remembered. What your own tiles
   // give up — the swipe shortcuts — the rows keep, one flick away, and
   // the collection's own screen has in its ⋯ menu regardless.
+  //
+  // The switch rides the tabs row, though, and only a signed-in reader
+  // has one — so a guest gets tiles and no way out of them.
   const { width: winW } = useWindowDimensions();
   const gcardW = Math.round((winW - space.page * 2 - space.cardGap) / 2);
   const gcardH = Math.round(gcardW * 1.18);
@@ -700,6 +724,8 @@ export default function CollectionsScreen({ navigation, route }: {
                           key={c.slug}
                           style={[s.gcard, { width: gcardW, height: gcardH }]}
                           onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
+                          accessibilityRole="button"
+                          accessibilityLabel={t(c.title_en, c.title_vi, c.title_ja)}
                         >
                           {uri
                             ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
@@ -751,8 +777,7 @@ export default function CollectionsScreen({ navigation, route }: {
                                   </Text>
                                 </>
                               ) : null}
-                              {/* How many places, on your own tiles — and on
-                                  anybody's when there are none.
+                              {/* How many places, on your own tiles only.
 
                                   Dropped from other people's tiles because
                                   it is the weakest of the four things this
@@ -764,10 +789,13 @@ export default function CollectionsScreen({ navigation, route }: {
                                   still on the list view, which is the view
                                   for reading rather than looking.
 
-                                  Zero is different and always said. A list
-                                  you made and never filled is the one size
-                                  that changes what you do next. */}
-                              {(item.own || members === 0) && (
+                                  Zero is said in words rather than as a
+                                  count. A list you made and never filled is
+                                  the one size that changes what you do next
+                                  — and only yours can be empty here: the
+                                  community shelf drops empty lists before
+                                  they reach a tile (see `visible`). */}
+                              {item.own && (
                                 <Text style={s.gcardMeta} numberOfLines={1}>
                                   {members === 0
                                     ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
@@ -846,9 +874,23 @@ export default function CollectionsScreen({ navigation, route }: {
                 // did.
                 const my = !!c.id && myLikes.includes(c.id);
                 const blurb = t(c.desc_en, c.desc_vi, c.desc_ja)?.trim() || '';
+                const byline = c.curator_handle
+                  ? `${t('by', 'bởi', 'by')} ${atHandle(c.curator_handle)}, ${n} ${t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`
+                  : undefined;
                 return (
                   <View style={s.row}>
-                    <PressableScale onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}>
+                    {/* Named by its title — and, where there is a
+                        curator, by the byline sentence below too: a
+                        label on the pressable is what a screen reader
+                        says for the whole row, so the title alone would
+                        silence the one the meta line keeps. */}
+                    <PressableScale
+                      onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
+                      accessibilityRole="button"
+                      accessibilityLabel={byline
+                        ? `${t(c.title_en, c.title_vi, c.title_ja)}, ${byline}`
+                        : t(c.title_en, c.title_vi, c.title_ja)}
+                    >
                       <Card style={s.card}>
                         <View style={s.thumb}>
                           {cover
@@ -900,9 +942,7 @@ export default function CollectionsScreen({ navigation, route }: {
                             <Text
                               style={s.meta}
                               numberOfLines={1}
-                              accessibilityLabel={c.curator_handle
-                                ? `${t('by', 'bởi', 'by')} ${atHandle(c.curator_handle)}, ${n} ${t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`
-                                : undefined}
+                              accessibilityLabel={byline}
                             >
                               {c.curator_handle ? `${atHandle(c.curator_handle)}  ·  ` : ''}
                               {n} {t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
@@ -1032,8 +1072,13 @@ export default function CollectionsScreen({ navigation, route }: {
               // square with a height of its own; stretched, the height
               // follows the text and animating it would fight the layout
               // for the length of every swipe.
-              const card = (open: boolean, drag: Drag | null) => (
-                <PressableScale onPress={() => navigation.navigate('CollectionDetail', { slug: own.slug })}>
+              const card = (open: boolean, drag: Drag | null, a11y: RowA11y) => (
+                <PressableScale
+                  onPress={() => navigation.navigate('CollectionDetail', { slug: own.slug })}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(own.title_en, own.title_vi, own.title_ja)}
+                  {...a11y}
+                >
                   <Card style={s.card}>
                     <Animated.View
                       style={[s.thumb, drag && {

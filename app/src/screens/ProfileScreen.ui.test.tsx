@@ -11,6 +11,10 @@
 // and closing, the temporary welcome switch writing storage, sign out with
 // its spinner, and Delete account going to its own screen.
 //
+// Every door is found by role and name rather than by its words, so what
+// a screen reader is told — that it is a button, and which — is pinned
+// along with where it leads.
+//
 // The pure halves (`splitFriendships`, `cleanTaste`, `levelFromSaves`,
 // `schemeLabel`) run for real; hooks and sheets are stood in for.
 
@@ -21,6 +25,20 @@ import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav } from '../nav';
 
 type Lang = 'en' | 'vi' | 'ja';
+
+// `Alert` from react-native-web is a silent no-op, so a failed sign-out is
+// caught at the import the screen actually uses.
+const alert = vi.hoisted(() => vi.fn<(title: string, body?: string) => void>());
+vi.mock('react-native', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  Alert: { alert },
+}));
+// The root ref only; the route types stay real.
+const goTo = vi.hoisted(() => vi.fn());
+vi.mock('../nav', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  goTo,
+}));
 
 const state = vi.hoisted(() => ({
   lang: 'en' as 'en' | 'vi' | 'ja',
@@ -128,6 +146,12 @@ const draw = () => {
 
 const tap = (text: string) => fireEvent.click(screen.getByText(text));
 
+// A button whose accessible name *starts* with these words: rows carry a
+// sentence or a value after their title, and that is part of the name.
+const button = (start: string) =>
+  screen.getByRole('button', { name: new RegExp(`^${start}`) });
+const press = (start: string) => fireEvent.click(button(start));
+
 beforeEach(async () => {
   vi.clearAllMocks();
   spies.signOut.mockImplementation(async () => {});
@@ -191,7 +215,7 @@ describe('guest hub', () => {
     'the locked "%s" row leads to signing in',
     (title) => {
       const { raw } = draw();
-      tap(title);
+      press(title);
       expect(raw.navigate).toHaveBeenCalledWith('SignIn');
     },
   );
@@ -206,9 +230,18 @@ describe('guest hub', () => {
 
   it('"Keep exploring" goes to the Explore tab through the parent navigator', () => {
     const { raw, parent } = draw();
-    tap('Keep exploring');
+    press('Keep exploring');
     expect(parent.navigate).toHaveBeenCalledWith('Explore');
     expect(raw.navigate).not.toHaveBeenCalled();
+    expect(goTo).not.toHaveBeenCalled();
+  });
+
+  it('"Keep exploring" still reaches Explore through the root when there is no parent', () => {
+    const r = nav();
+    r.raw.getParent.mockReturnValue(undefined as never);
+    render(<ProfileScreen navigation={r.n} />);
+    press('Keep exploring');
+    expect(goTo).toHaveBeenCalledWith('Explore', { screen: 'ExploreHome' });
   });
 
   it('carries the settings and legal cards without section headings', () => {
@@ -281,7 +314,7 @@ describe('account identity', () => {
   it('opens Edit profile, with the avatar drawn without its camera badge', () => {
     const { raw } = draw();
     expect(screen.getByTestId('avatar').getAttribute('data-camera')).toBe('false');
-    tap('Edit profile');
+    press('Edit profile');
     expect(raw.navigate).toHaveBeenCalledWith('EditProfile');
   });
 });
@@ -338,7 +371,7 @@ describe('friends card', () => {
     const { raw } = draw();
     tap('Friends');
     expect(raw.navigate).not.toHaveBeenCalled();
-    tap('Connect with friends');
+    press('Connect with friends');
     expect(raw.navigate).toHaveBeenCalledWith('Crew');
     expect(screen.getByText('Find friends and plan trips together.')).toBeTruthy();
   });
@@ -396,7 +429,7 @@ describe('settings card', () => {
   it('opens and closes the city sheet', () => {
     draw();
     expect(screen.queryByText('close-city')).toBeNull();
-    tap('Current city');
+    press('Current city');
     fireEvent.click(screen.getByText('close-city'));
     expect(screen.queryByText('close-city')).toBeNull();
   });
@@ -405,7 +438,7 @@ describe('settings card', () => {
     state.lang = 'vi';
     draw();
     expect(screen.getByText('Tiếng Việt')).toBeTruthy();
-    tap('Ngôn ngữ');
+    press('Ngôn ngữ');
     fireEvent.click(screen.getByText('close-language'));
     expect(screen.queryByText('close-language')).toBeNull();
   });
@@ -419,7 +452,7 @@ describe('settings card', () => {
     const row = screen.getByText('Appearance').parentElement!;
     expect(row.textContent).toContain(label);
     expect(row.querySelector(`[data-icon="${glyph}"]`)).toBeTruthy();
-    tap('Appearance');
+    press('Appearance');
     fireEvent.click(screen.getByText('close-theme'));
     expect(screen.queryByText('close-theme')).toBeNull();
   });
@@ -464,7 +497,7 @@ describe('legal card', () => {
     state.session = null;
     draw();
     expect(screen.queryByText(/close-legal/)).toBeNull();
-    tap(row);
+    press(row);
     fireEvent.click(screen.getByText(closer));
     expect(screen.queryByText(/close-legal/)).toBeNull();
   });
@@ -475,7 +508,7 @@ describe('ways out', () => {
     let finish!: () => void;
     spies.signOut.mockImplementation(() => new Promise<void>((r) => { finish = r; }));
     draw();
-    tap('Sign out');
+    press('Sign out');
     expect(spies.signOut).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Sign out')).toBeNull();
     expect(document.querySelector('[role="progressbar"]')).toBeTruthy();
@@ -483,26 +516,42 @@ describe('ways out', () => {
     expect(screen.getByText('Sign out')).toBeTruthy();
   });
 
+  it('ignores a second tap while the first sign-out is in flight', async () => {
+    let finish!: () => void;
+    spies.signOut.mockImplementation(() => new Promise<void>((r) => { finish = r; }));
+    draw();
+    press('Sign out');
+    // Still findable by name with the spinner in the word's place.
+    expect(button('Sign out').getAttribute('aria-disabled')).toBe('true');
+    press('Sign out');
+    press('Sign out');
+    expect(spies.signOut).toHaveBeenCalledTimes(1);
+    await act(async () => { finish(); });
+    press('Sign out');
+    expect(spies.signOut).toHaveBeenCalledTimes(2);
+  });
+
   it('gives the word back when signing out fails', async () => {
     let fail!: (e: Error) => void;
     spies.signOut.mockImplementation(() => new Promise<void>((_, rej) => { fail = rej; }));
-    // The handler has `finally` but no `catch`, so the failure escapes as
-    // an unhandled rejection (reported as a bug). It is caught here so the
-    // run stays about what the reader sees: the button coming back.
+    // Listened for rather than tolerated: a failure that escapes the
+    // handler is one the reader never hears about.
     const onUnhandled = vi.fn();
     process.on('unhandledRejection', onUnhandled);
     draw();
-    tap('Sign out');
+    press('Sign out');
     expect(screen.queryByText('Sign out')).toBeNull();
     await act(async () => { fail(new Error('offline')); });
     await waitFor(() => expect(screen.getByText('Sign out')).toBeTruthy());
     await new Promise((r) => setTimeout(r, 0));
     process.off('unhandledRejection', onUnhandled);
+    expect(alert).toHaveBeenCalledWith('Could not sign out', 'offline');
+    expect(onUnhandled).not.toHaveBeenCalled();
   });
 
   it('opens the Delete account screen rather than deleting anything here', () => {
     const { raw } = draw();
-    tap('Delete account');
+    press('Delete account');
     expect(raw.navigate).toHaveBeenCalledWith('DeleteAccount');
     expect(spies.signOut).not.toHaveBeenCalled();
   });
