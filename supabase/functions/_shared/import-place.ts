@@ -2,7 +2,7 @@
 // scan-city (batch import): details fetch → unique slug → place row + photos.
 
 import { classify } from "./classify.ts";
-import { rehostPhoto } from "./rehost.ts";
+import { copyPhoto } from "./rehost.ts";
 import { wardFromAddress } from "./ward.ts";
 
 export const PRICE_LEVELS: Record<string, number> = {
@@ -280,43 +280,54 @@ export async function importPlace(
     .single();
   if (insErr) throw new Error(insErr.message);
 
-  // Photo lookups are best-effort; a failed photo never fails the import.
+  // ── the photos, all at once ──
+  //
+  // Best-effort, as they always were: a photo that cannot be had never
+  // fails the import. What changed is the order of things. The first
+  // version of the copy ran after the rows were inserted, one photo at
+  // a time, each a Google fetch, an upload and a row update — and the
+  // lookup that fetched Google's short-lived link stayed in front of it.
+  // Six photos cost six of everything in a row, and an import that took
+  // two and a half seconds took seven.
+  //
+  // So the ids are chosen here, the six copies run together, and each
+  // row is inserted already pointing at its copy. The short-lived link
+  // is fetched only when the copy fails, so the row still has something
+  // to show and `rehost-photos` has something to finish.
   const photos = (d.photos ?? []).slice(0, maxPhotos);
-  const rows = [];
-  for (const [i, ph] of photos.entries()) {
+  const settled = await Promise.all(photos.map(async (ph: any, i: number) => {
+    const id = crypto.randomUUID();
+    const attr = ph.authorAttributions?.[0];
+    const base = {
+      id,
+      place_id: placeRow.id,
+      photo_ref: ph.name,
+      source: "google",
+      attribution_name: attr?.displayName ?? null,
+      attribution_uri: attr?.uri ?? null,
+      sort_order: i,
+      is_cover: i === 0,
+      is_hidden: false,
+    };
     try {
-      const media = await gapi(
-        `https://places.googleapis.com/v1/${ph.name}/media`
-        + `?maxWidthPx=1600&skipHttpRedirect=true&key=${apiKey}`,
-      );
-      const attr = ph.authorAttributions?.[0];
-      rows.push({
-        place_id: placeRow.id,
-        photo_ref: ph.name,
-        photo_uri: media.photoUri,
-        source: "google",
-        attribution_name: attr?.displayName ?? null,
-        attribution_uri: attr?.uri ?? null,
-        sort_order: i,
-        is_cover: i === 0,
-        is_hidden: false,
-      });
-    } catch (_) { /* skip failed photo */ }
-  }
-  if (rows.length) {
-    const { data: inserted, error: phErr } = await admin.from("place_photos")
-      .insert(rows).select("id, photo_ref");
-    if (phErr) throw new Error(phErr.message);
-    // Then onto our own Storage, one by one — see `rehost.ts` for why
-    // the Google link the row was just written with is not something to
-    // keep. Best-effort, like the lookups above: a copy that fails leaves
-    // the row on its Google link, which the app can still show for a
-    // while and `rehost-photos` will pick up later.
-    for (const ph of inserted ?? []) {
+      const { path, publicUrl } = await copyPhoto(admin, apiKey, { id, photo_ref: ph.name, slug });
+      return { ...base, photo_uri: publicUrl, storage_path: path };
+    } catch (_) {
       try {
-        await rehostPhoto(admin, apiKey, { id: ph.id, photo_ref: ph.photo_ref, slug });
-      } catch (_) { /* left for rehost-photos */ }
+        const media = await gapi(
+          `https://places.googleapis.com/v1/${ph.name}/media`
+          + `?maxWidthPx=1600&skipHttpRedirect=true&key=${apiKey}`,
+        );
+        return { ...base, photo_uri: media.photoUri, storage_path: null };
+      } catch (_) {
+        return null; // skip failed photo
+      }
     }
+  }));
+  const rows = settled.filter((r) => r !== null);
+  if (rows.length) {
+    const { error: phErr } = await admin.from("place_photos").insert(rows);
+    if (phErr) throw new Error(phErr.message);
   }
 
   return { slug, photos: rows.length };
