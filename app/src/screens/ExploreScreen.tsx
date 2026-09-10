@@ -420,6 +420,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
           style={s.heroSearch}
           accessibilityRole="button"
           accessibilityLabel={t('Search', 'Tìm kiếm', '検索')}
+          testID="explore-search"
         >
           <Ionicons name="search-outline" size={22} color={onPhoto.text} />
         </PressableScale>
@@ -438,6 +439,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
             onPress={() => setSwitcherOpen(true)}
             accessibilityRole="button"
             accessibilityLabel={t('Choose a city', 'Chọn thành phố', '都市を選択')}
+            testID="explore-city"
             containerStyle={{ alignSelf: 'flex-start' }}
             style={s.heroCity}
           >
@@ -1037,12 +1039,17 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             // One section, whose only job is to give the filter row
             // something to be the header of.
             sections={[{ data: shown }]}
+            testID="explore-list"
             keyExtractor={(p) => p.slug}
             ListHeaderComponent={header}
             renderSectionHeader={() => filters}
             stickySectionHeadersEnabled
-            renderItem={({ item }) => (
-              <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
+            renderItem={({ item, index }) => (
+              <PlaceCard
+                place={item}
+                testID={`place-card-${index}`}
+                onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })}
+              />
             )}
             // A footer, not `ListEmptyComponent`, and the difference is not
             // a preference. A section list counts two rows per section for

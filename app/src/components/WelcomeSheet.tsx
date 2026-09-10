@@ -255,6 +255,7 @@ export default function WelcomeSheet() {
         <PressableScale
           onPress={dismiss}
           accessibilityRole="button"
+          testID="welcome-dismiss"
           containerStyle={{ alignSelf: 'stretch' }}
         >
           <LinearGradient {...gradAI} style={s.primary}>

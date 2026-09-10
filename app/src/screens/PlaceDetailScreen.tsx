@@ -224,8 +224,15 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               showsHorizontalScrollIndicator={false}
               onMomentumScrollEnd={(e) => setPhotoIndex(Math.round(e.nativeEvent.contentOffset.x / heroW))}
             >
-              {photos.map((ph) => (
-                <Image key={ph.photo_uri} source={{ uri: ph.photo_uri }} style={[s.hero, { width: heroW, height: heroH }]} contentFit="cover" transition={200} />
+              {photos.map((ph, i) => (
+                <Image
+                  key={ph.photo_uri}
+                  source={{ uri: ph.photo_uri }}
+                  style={[s.hero, { width: heroW, height: heroH }]}
+                  contentFit="cover"
+                  transition={200}
+                  testID={i === 0 ? 'detail-photo' : undefined}
+                />
               ))}
             </ScrollView>
           ) : (
@@ -257,6 +264,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           <PressableScale
             onPress={() => navigation.goBack()} scaleTo={0.9}
             containerStyle={[s.fabSlot, { left: space.page, top: insets.top + 8 }]} style={s.fab} accessibilityLabel="Back"
+            testID="detail-back"
           >
             <Ionicons name="chevron-back" size={22} color={onPhoto.text} />
           </PressableScale>
@@ -304,7 +312,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           {/* ── title + rating badge ── */}
           <View style={s.titleRow}>
             <View style={{ flex: 1 }}>
-              <Text style={s.name}>{name.title}</Text>
+              <Text style={s.name} testID="detail-name">{name.title}</Text>
               {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
               {showsNeighborhood ? (
                 <View style={s.locRow}>
@@ -389,7 +397,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   first={firstRow === 'address'}
                   onPress={mapsUrl ? () => Linking.openURL(mapsUrl) : undefined}
                 >
-                  <Text style={[s.infoValue, mapsUrl && s.infoLink]}>{address}</Text>
+                  <Text style={[s.infoValue, mapsUrl && s.infoLink]} testID="detail-address">{address}</Text>
                 </InfoRow>
               )}
 

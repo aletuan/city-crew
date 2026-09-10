@@ -204,6 +204,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={label}
+              testID={`tab-${route.name.toLowerCase()}`}
             >
               <View>
               <Ionicons

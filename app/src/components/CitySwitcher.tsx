@@ -117,6 +117,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
                 haptic="selection"
                 style={[s.row, active && s.rowOn]}
                 onPress={() => { fireHaptic('selection'); setCity(c.id); onClose(); }}
+                testID={`city-row-${i}`}
               >
                 <View style={{ flex: 1 }}>
                   <View style={s.nameRow}>
