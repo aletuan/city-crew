@@ -27,7 +27,7 @@
 // screen, after Save, and the crew row here says so instead of offering a
 // button that would have to invent a trip to work.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -44,6 +44,7 @@ import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import { saveTrip } from '../lib/data';
+import { spendVnd } from '../lib/trips';
 import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
@@ -110,6 +111,8 @@ export default function PlanEditScreen({ navigation, route }: {
 
   const [stops, setStops] = useState<Editable<Place>[] | null>(null);
   const [saving, setSaving] = useState(false);
+  /** Set the moment a save lands, so the way out it takes is not stopped. */
+  const saved = useRef(false);
 
   /** What the model was — or would be — asked about, in exactly the shape
    *  the options screen prefetched with, so the cache key matches. */
@@ -173,6 +176,34 @@ export default function PlanEditScreen({ navigation, route }: {
     [stops, picked],
   );
 
+  // Edits live only here until Save: `stops` stays null until the first
+  // one. Leaving with them used to drop them without a word — the header's
+  // Back and iOS's swipe alike, since both go through `beforeRemove`.
+  const edited = stops !== null;
+  useEffect(() => {
+    if (!edited) return undefined;
+    return navigation.addListener('beforeRemove', (e) => {
+      if (saved.current) return;
+      e.preventDefault();
+      Alert.alert(
+        t('Discard your changes?', 'Bỏ các thay đổi?', '変更を破棄しますか？'),
+        t(
+          'The times and order you changed have not been saved.',
+          'Giờ giấc và thứ tự bạn vừa đổi chưa được lưu.',
+          '変更した時刻と順番はまだ保存されていません。',
+        ),
+        [
+          { text: t('Keep editing', 'Tiếp tục sửa', '編集を続ける'), style: 'cancel' },
+          {
+            text: t('Discard', 'Bỏ', '破棄'),
+            style: 'destructive',
+            onPress: () => navigation.dispatch(e.data.action),
+          },
+        ],
+      );
+    });
+  }, [edited, navigation, t]);
+
   /**
    * The narration with the stale parts taken out.
    *
@@ -199,8 +230,9 @@ export default function PlanEditScreen({ navigation, route }: {
   const legs = useMemo(() => legsOfPlan(current), [current]);
   const wrong = useMemo(() => outOfOrder(current), [current]);
   const [from, to] = windowOf(current);
-  const spend = current.reduce((n, s) => n + (s.place.price_vnd ?? 0), 0)
-    + legs.filter((l) => l?.mode === 'ride').length * 15000;
+  // The same sum a saved trip is priced by, so the figure here is the one
+  // TripDetail will show for it.
+  const spend = spendVnd(current.map((s) => s.place));
 
   // Date first, place after, company nowhere: the crew row below carries
   // who is going, and every trip subtitle keeps this same order.
@@ -290,6 +322,7 @@ export default function PlanEditScreen({ navigation, route }: {
       // the bottom keeps its answers, because it is the same mounted
       // screen — completing the flow discards the flow, not the asks.
       // Same pattern as the auth screens, which popToTop when theirs ends.
+      saved.current = true;
       navigation.popToTop();
       navigation.getParent()?.navigate('Trips');
     } catch (e) {
@@ -488,6 +521,8 @@ export default function PlanEditScreen({ navigation, route }: {
                     haptic="selection"
                     onPress={() => setStops(nudge(current, i, -NUDGE_MIN))}
                     containerStyle={s.step}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(`Arrive ${NUDGE_MIN} min earlier at ${stop.place.name_en}`, `Đến ${stop.place.name_en} sớm ${NUDGE_MIN} phút`, `${stop.place.name_en}に${NUDGE_MIN}分早く着く`)}
                   >
                     <Ionicons name="remove" size={15} color={colors.textSecondary} />
                   </PressableScale>
@@ -496,6 +531,8 @@ export default function PlanEditScreen({ navigation, route }: {
                     haptic="selection"
                     onPress={() => setStops(nudge(current, i, NUDGE_MIN))}
                     containerStyle={s.step}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(`Arrive ${NUDGE_MIN} min later at ${stop.place.name_en}`, `Đến ${stop.place.name_en} muộn ${NUDGE_MIN} phút`, `${stop.place.name_en}に${NUDGE_MIN}分遅く着く`)}
                   >
                     <Ionicons name="add" size={15} color={colors.textSecondary} />
                   </PressableScale>
@@ -506,6 +543,8 @@ export default function PlanEditScreen({ navigation, route }: {
                     haptic="selection"
                     onPress={() => setStops(move(current, i, i - 1))}
                     containerStyle={[s.tool, i === 0 && s.toolOff]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(`Move ${stop.place.name_en} up`, `Đưa ${stop.place.name_en} lên`, `${stop.place.name_en}を上へ`)}
                   >
                     <Ionicons name="chevron-up" size={16} color={colors.textSecondary} />
                   </PressableScale>
@@ -513,12 +552,16 @@ export default function PlanEditScreen({ navigation, route }: {
                     haptic="selection"
                     onPress={() => setStops(move(current, i, i + 1))}
                     containerStyle={[s.tool, i === current.length - 1 && s.toolOff]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(`Move ${stop.place.name_en} down`, `Đưa ${stop.place.name_en} xuống`, `${stop.place.name_en}を下へ`)}
                   >
                     <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
                   </PressableScale>
                   <PressableScale
                     onPress={() => { fireHaptic('light'); setStops(remove(current, i)); }}
                     containerStyle={s.tool}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(`Remove ${stop.place.name_en}`, `Bỏ ${stop.place.name_en}`, `${stop.place.name_en}を外す`)}
                   >
                     <Ionicons name="close" size={16} color={colors.textTertiary} />
                   </PressableScale>
@@ -570,12 +613,13 @@ export default function PlanEditScreen({ navigation, route }: {
         <Text style={s.note}>
           {session?.user?.id
             ? t(
-              // The caption no longer has to apologise for the button
-              // beside it, because there is no longer a button beside it —
-              // Share and Invite say they are mocks when pressed.
-              'Times and order stay editable after saving.',
-              'Giờ giấc và thứ tự vẫn sửa được sau khi lưu.',
-              '保存後も時刻と順番は編集できます。',
+              // What saving does, and only that. This used to promise the
+              // times and order "stay editable after saving", but a saved
+              // trip opens in TripDetail, which is view-only — a promise
+              // nothing in the app keeps.
+              'Saved trips go to Trips, where you can invite your crew.',
+              'Chuyến đã lưu nằm trong Chuyến đi, nơi bạn có thể mời crew.',
+              '保存した旅程は「旅程」に入り、そこからクルーを招待できます。',
             )
             : t(
               'Sign in to save this trip.',

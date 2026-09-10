@@ -515,3 +515,41 @@ describe('adding by handle', () => {
     expect(screen.queryByRole('button', { name: '@anhthu' })).toBeNull();
   });
 });
+
+// Rows whose profile has not arrived, and may never: an account deleted,
+// a profile RLS will not show. Every action here needs only an id, and the
+// buttons used to be guarded with `p && …` — drawn, tappable and silent,
+// which left a block that could not be lifted and a request that could not
+// be taken back.
+describe('somebody whose profile never arrived', () => {
+  it('can still be unblocked, named as "this person"', async () => {
+    crew.blocks.data = ['x'];
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Unblock' }));
+    expect(alert.mock.calls[0][0]).toBe('Unblock this person?');
+    confirmLast();
+    expect(data.unblockUser).toHaveBeenCalledWith(ME, 'x');
+    await waitFor(() => expect(crew.blocks.reload).toHaveBeenCalled());
+  });
+
+  it('can still have a sent request withdrawn, and offers no report about a profile nobody has seen', async () => {
+    crew.ships.data = [edge(ME, 'o', 'pending')];
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Requests/));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await pickSheetAction('Cancel the request');
+    await waitFor(() => expect(data.removeFriendship).toHaveBeenCalledWith(ME, 'o'));
+    expect(screen.queryByRole('button', { name: /Report/ })).toBeNull();
+  });
+
+  it('can still be unfriended from the options sheet', async () => {
+    crew.ships.data = [edge(ME, 'f', 'accepted')];
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Options' }));
+    await pickSheetAction('Unfriend this person');
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    expect(alert.mock.calls[0][0]).toBe('Unfriend this person?');
+    confirmLast();
+    await waitFor(() => expect(data.removeFriendship).toHaveBeenCalledWith(ME, 'f'));
+  });
+});
