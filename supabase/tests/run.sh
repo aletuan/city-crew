@@ -219,6 +219,15 @@ for f in "$ROOT"/supabase/migrations/*_history_on_by_default.sql; do
 done
 run "$DB" -f "$HERE/history_default_test.sql"
 
+# The daily caps. After preferences and the collection blocks, because the
+# policies it rewrites count rows in those tables; it seeds and removes
+# its own account.
+echo "→ daily caps"
+for f in "$ROOT"/supabase/migrations/*_daily_caps.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/daily_caps_test.sql"
+
 # The editorial identities. Last of all, because it walks the whole path a
 # real sign-up takes — reservations lifted, the trigger building profiles
 # from metadata, reservations restored — and every block above expects the
