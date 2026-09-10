@@ -292,3 +292,14 @@ run "$DB" -f "$HERE/blocks_rls_test.sql"
 run "$DB" -f "$HERE/likes_moderation_rls_test.sql"
 run "$DB" -f "$HERE/moderation_log_test.sql"
 run "$DB" -f "$HERE/function_grants_test.sql"
+
+# Search paths. Last, because the check is over every function the bench
+# has made by now, and because the Threads handle trigger is applied here
+# for it: nothing above needed that migration, and it only adds a column
+# and a trigger to the stub's `places`.
+echo "→ search paths"
+for f in "$ROOT"/supabase/migrations/*_place_threads_handle.sql \
+         "$ROOT"/supabase/migrations/*_pin_trigger_search_path.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/search_path_test.sql"
