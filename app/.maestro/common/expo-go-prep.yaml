@@ -1,0 +1,32 @@
+# Expo Go quirk: its floating "Tools button" (a blue gear, id gearshape.fill)
+# docks at the top-right corner — exactly over Explore's search button — so a
+# tap on `explore-search` opens Expo's dev menu instead of Search. Switch it
+# off once; Expo Go remembers the choice, so on later runs every step here is
+# a no-op. The labels are Expo Go's own (English-only), not the app's.
+#
+# The switch only takes effect once the bundle reloads, which is why this
+# taps "Reload" rather than "Close" and then waits for Explore to come back.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "gearshape.fill"
+    optional: true
+# Tapping the row label does not flip a SwiftUI toggle; tap the switch
+# itself — the "1"-valued element to the right of the label.
+- tapOn:
+    text: "1"
+    rightOf:
+      text: "Tools button"
+    optional: true
+- tapOn:
+    text: "Reload"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "tab-explore"
+    timeout: 90000
+- runFlow: dismiss-welcome.yaml
+- extendedWaitUntil:
+    notVisible:
+      id: "gearshape.fill"
+    timeout: 15000

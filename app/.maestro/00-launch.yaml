@@ -1,0 +1,23 @@
+# Open the dev bundle in Expo Go and land on Explore.
+#
+# EXPO_URL is the exp:// URL printed by `npx expo start` — see README.md.
+# Pass it with `-e EXPO_URL=exp://...`; the default matches the port
+# `expo start` uses when nothing else is listening.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+# Kill Expo Go first so every flow starts from a fresh bundle load on
+# Explore, not from wherever the previous flow left the app.
+- launchApp:
+    stopApp: true
+- openLink: ${EXPO_URL}
+# The JS bundle takes a while on the first load of a session.
+- extendedWaitUntil:
+    visible:
+      id: "tab-explore"
+    timeout: 90000
+- runFlow: common/dismiss-welcome.yaml
+- runFlow: common/expo-go-prep.yaml
+- assertVisible:
+    id: "tab-explore"

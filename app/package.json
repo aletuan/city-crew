@@ -64,7 +64,8 @@
     "format": "prettier --write",
     "format:check": "prettier --check",
     "test:tz": "TEST_TZ=America/New_York vitest run",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "smoke:ios": "maestro test .maestro"
   },
   "private": true
 }
