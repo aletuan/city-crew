@@ -40,17 +40,23 @@ export type RehostRow = {
   slug: string;
 };
 
+export type Copied = { path: string; publicUrl: string };
+
 /**
- * Copy one photo. Resolves to the storage path written; throws with
- * Google's or Storage's own message when either side refuses, leaving
- * the row exactly as it was for a later attempt.
+ * The copy itself: Google's bytes into our bucket, at the path the row
+ * with this id will point to. Throws with Google's or Storage's own
+ * message when either side refuses; writes nothing to the database.
+ *
+ * Split from `rehostPhoto` so the import can make its copies before the
+ * rows exist — six of them at once, with the ids chosen up front — and
+ * insert each row already pointing at its copy.
  */
-export async function rehostPhoto(
+export async function copyPhoto(
   admin: any,
   apiKey: string,
   { id, photo_ref, slug }: RehostRow,
   fetchImpl: typeof fetch = fetch,
-): Promise<string> {
+): Promise<Copied> {
   // Without `skipHttpRedirect` the media endpoint 302s to the bytes and
   // fetch follows it — one call, no short-lived link ever kept.
   const res = await fetchImpl(
@@ -68,9 +74,24 @@ export async function rehostPhoto(
   if (upErr) throw new Error(`Storage: ${upErr.message}`);
 
   const { data: { publicUrl } } = admin.storage.from(BUCKET).getPublicUrl(path);
+  return { path, publicUrl };
+}
+
+/**
+ * Copy one photo and point its row at the copy. Resolves to the storage
+ * path written; throws leaving the row exactly as it was for a later
+ * attempt. What the backfill and the refresh call, row by row.
+ */
+export async function rehostPhoto(
+  admin: any,
+  apiKey: string,
+  row: RehostRow,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  const { path, publicUrl } = await copyPhoto(admin, apiKey, row, fetchImpl);
   const { error: dbErr } = await admin.from("place_photos")
     .update({ photo_uri: publicUrl, storage_path: path })
-    .eq("id", id);
+    .eq("id", row.id);
   if (dbErr) throw new Error(`place_photos: ${dbErr.message}`);
   return path;
 }
