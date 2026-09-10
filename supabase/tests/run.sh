@@ -255,3 +255,28 @@ for f in "$ROOT"/supabase/migrations/*_editorial_identities.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/editorial_test.sql"
+
+# The safety layer: blocking, reporting, the desk's moderation actions, and
+# the launch traces. None of these migrations had run on this bench before
+# — a block could have been refusing nothing, a report readable by the
+# person it named, and nothing here would have said so. Last, after the
+# editorial block, because every table they reach (profiles, collections,
+# likes, friendships) is in place by then, and each file below makes and
+# removes its own accounts rather than borrowing the ones above.
+#
+# Applied in the order production applied them: `named_applause` replaces
+# `likes_on_mine`, and `blocks` replaces it again with the block filter,
+# along with the friend-request policy — so the later file has to win.
+echo "→ safety: blocks, reports, moderation"
+for f in "$ROOT"/supabase/migrations/*_named_applause.sql \
+         "$ROOT"/supabase/migrations/*_blocks.sql \
+         "$ROOT"/supabase/migrations/*_suggested_friends.sql \
+         "$ROOT"/supabase/migrations/*_reports.sql \
+         "$ROOT"/supabase/migrations/*_moderation_actions.sql \
+         "$ROOT"/supabase/migrations/*_startup_traces.sql \
+         "$ROOT"/supabase/migrations/*_report_cap_and_photo_reads.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/reports_rls_test.sql"
+run "$DB" -f "$HERE/blocks_rls_test.sql"
+run "$DB" -f "$HERE/likes_moderation_rls_test.sql"
