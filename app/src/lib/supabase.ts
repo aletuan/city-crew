@@ -1,6 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from './database.types';
 
 // Public client credentials (publishable key) — RLS serves only
 // published + approved content to this client, the same view the
@@ -14,7 +15,7 @@ const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? 'sb_publishable_VVol99J
 export const supabaseUrl = url;
 export const supabaseAnonKey = key;
 
-export const supabase = createClient(url, key, {
+export const supabase = createClient<Database>(url, key, {
   auth: {
     storage: AsyncStorage,
     persistSession: true,

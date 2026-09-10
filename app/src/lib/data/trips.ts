@@ -177,7 +177,7 @@ export async function saveTrip(input: SaveTripInput): Promise<string> {
     // the save. The reader is looking at a plan they can see; refusing it
     // over a row that has gone quiet since would be the wrong half to
     // protect.
-    .filter((s) => !!s.place_id);
+    .filter((s): s is typeof s & { place_id: string } => !!s.place_id);
 
   const { error: stopsError } = await supabase.from('trip_stops').insert(stops);
   if (stopsError) {
