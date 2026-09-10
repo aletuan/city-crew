@@ -53,3 +53,55 @@ create table if not exists auth.users (
 create or replace function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('test.uid', true), '')::uuid
 $$;
+
+-- The JWT the editor policies read an email out of. `is_editor()` looks
+-- at `auth.jwt() ->> 'email'`, so a test that wants to be an editor sets
+-- `test.jwt` to a JSON object with one; everything else leaves it unset
+-- and is nobody in particular.
+create or replace function auth.jwt() returns jsonb language sql stable as $$
+  select nullif(current_setting('test.jwt', true), '')::jsonb
+$$;
+
+-- A client that owns nothing. RLS does not apply to a table's owner, so a
+-- policy exercised as the runner would pass by accident; this role is the
+-- position PostgREST puts a signed-in reader in. Made a member of
+-- `authenticated` because the storage policies are written `to
+-- authenticated`, and a role a policy does not name is a role the policy
+-- does not apply to. Each test file grants it what it needs on the tables
+-- it touches, mirroring what `authenticated` holds on a real project.
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'rls_client') then
+    create role rls_client nologin;
+  end if;
+end $$;
+grant authenticated to rls_client;
+
+-- Enough of Storage to attach the bucket policies to. The real schema is
+-- Supabase's; these are the three columns the avatar and place-photo
+-- policies read, the bucket row the avatar migration upserts, and the
+-- one helper they call. Not a simulation of the storage API — an upload
+-- here is an insert, which is what the policy sees either way.
+create schema if not exists storage;
+create table if not exists storage.buckets (
+  id                 text primary key,
+  name               text not null,
+  public             boolean not null default false,
+  file_size_limit    bigint,
+  allowed_mime_types text[]
+);
+create table if not exists storage.objects (
+  id            uuid primary key default gen_random_uuid(),
+  bucket_id     text not null references storage.buckets(id),
+  name          text not null,
+  owner         uuid,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+  metadata      jsonb,
+  user_metadata jsonb,
+  unique (bucket_id, name)
+);
+alter table storage.objects enable row level security;
+create or replace function storage.foldername(name text) returns text[] language sql immutable as $$
+  select (string_to_array(name, '/'))[1 : array_length(string_to_array(name, '/'), 1) - 1]
+$$;
