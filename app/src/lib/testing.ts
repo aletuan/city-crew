@@ -40,7 +40,7 @@ export type Asked = {
    * an rpc is SQL running under the caller's RLS.
    */
   fn?: string;
-  op: 'select' | 'insert' | 'update' | 'delete' | 'invoke' | 'rpc';
+  op: 'select' | 'insert' | 'update' | 'delete' | 'invoke' | 'rpc' | 'auth';
   /** The row for a write, the body for an invoke, the column list for a read. */
   payload?: unknown;
   /** `eq`, `in`, `gte` and `ilike` in the order they were chained. Anything
@@ -153,6 +153,16 @@ export function fakeSupabase() {
     client: {
       from: build,
       auth: {
+        /**
+         * Who a token belongs to, as GoTrue would say. The one auth call
+         * the Edge Function gate makes; it answers `{ data, error }` off
+         * the same queue, and what a test pins is the token it was handed
+         * — which is the bearer with its prefix stripped, or nothing.
+         */
+        getUser(token: string) {
+          log.push({ op: 'auth', fn: 'getUser', payload: token, filters: [] });
+          return settle();
+        },
         onAuthStateChange(fn: (event: string, session: unknown) => void) {
           listeners.push(fn);
           return {
