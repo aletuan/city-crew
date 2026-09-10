@@ -30,7 +30,8 @@ import { defineConfig } from 'vitest/config';
 // the only mechanism in this repository that does not rely on whoever is
 // writing remembering to.
 //
-// The gate covers `src/lib/*.ts` and nothing else, and the exclusions
+// The 100% gate covers `src/lib/*.ts` and nothing else (the screens have
+// a floor of their own, below), and the exclusions
 // below are not a convenience — each of those files needs React at import
 // time or at call time, and a Node process has no renderer. That boundary
 // is the reason `place.ts` exists as a separate file; see the note at the
@@ -56,10 +57,10 @@ import { defineConfig } from 'vitest/config';
 //
 // Components and screens are no longer untested — `*.ui.test.tsx` renders
 // them through `react-native-web` into jsdom; see `src/uitest/setup.tsx`
-// for what that substitution is worth. They are kept off the threshold on
-// purpose. A number over a screen would have to be met, and the cheapest
+// for what that substitution is worth. They are kept off the 100% threshold
+// on purpose. A number over a screen would have to be met, and the cheapest
 // way to meet it is to render the thing and assert nothing, which is worse
-// than no number because it reads like one. The four files that exist were
+// than no number because it reads like one. The files that exist were
 // written to pin behaviour somebody could otherwise break silently, and
 // the next one should be written for the same reason rather than to move a
 // percentage.
@@ -69,6 +70,22 @@ import { defineConfig } from 'vitest/config';
 // here means the arithmetic and the queries are held. It still says nothing
 // about how any of it looks, and neither do the UI tests: layout is not
 // simulated and no assertion in this repository has ever seen a pixel.
+// ── the screens floor ──
+//
+// The argument above against a number over the screens still holds for a
+// *target*: a percentage somebody must reach gets reached by rendering and
+// asserting nothing. This is the other kind — a ratchet. It only says the
+// screens may not lose the tests they have: delete a `*.ui.test.tsx`, or
+// grow a screen by a few hundred untested lines, and the gate goes red.
+// Nothing here asks for more.
+//
+// Raise it by hand, in the same change, whenever screen tests are added —
+// run `npm run coverage`, take the reported `src/screens` figures, round
+// down to the whole number. Never lower it to make a change pass; a screen
+// that got bigger gets a test instead. It was 13% of lines before the five
+// main screens (Explore, Search, TripDetail, PlanEdit, Crew) were tested.
+const SCREENS_FLOOR = { lines: 44, statements: 44, branches: 89, functions: 79 };
+
 const IMPURE = [
   'src/lib/candidates.ts', // a React hook; imports Alert and Keyboard
   'src/lib/database.types.ts', // generated from the schema; one runtime const, no logic
@@ -112,11 +129,16 @@ export default defineConfig({
       // re-rooting the whole gate at the repository took every other file
       // to zero. Naming the exception is better than contorting the gate
       // for one file, or than a silent hole that reads as coverage.
-      include: ['src/lib/*.ts', 'src/lib/data/*.ts'],
-      exclude: ['src/lib/*.test.ts', 'src/lib/data/*.test.ts', ...IMPURE],
-      // All four at 100, because a threshold at 97 is a number nobody can
-      // argue with or about. Either the pure half is covered or it is not.
-      thresholds: { statements: 100, branches: 100, functions: 100, lines: 100 },
+      include: ['src/lib/*.ts', 'src/lib/data/*.ts', 'src/screens/*.tsx'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', ...IMPURE],
+      thresholds: {
+        // All four at 100, because a threshold at 97 is a number nobody can
+        // argue with or about. Either the pure half is covered or it is not.
+        'src/lib/**/*.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },
+        // A floor, not a target: the figures the screens stood at when their
+        // tests last grew, rounded down. See "the screens floor" above.
+        'src/screens/*.tsx': SCREENS_FLOOR,
+      },
     },
   },
 });
