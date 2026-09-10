@@ -342,6 +342,36 @@ export type Database = {
         }
         Relationships: []
       }
+      moderation_log: {
+        Row: {
+          action: string
+          actor: string
+          actor_email: string
+          created_at: string
+          detail: Json
+          id: number
+          target_id: string
+        }
+        Insert: {
+          action: string
+          actor: string
+          actor_email: string
+          created_at?: string
+          detail?: Json
+          id?: never
+          target_id: string
+        }
+        Update: {
+          action?: string
+          actor?: string
+          actor_email?: string
+          created_at?: string
+          detail?: Json
+          id?: never
+          target_id?: string
+        }
+        Relationships: []
+      }
       ops_tokens: {
         Row: {
           created_at: string
