@@ -1,0 +1,60 @@
+# Explore: the list renders real places, scrolls both ways, and the city
+# can be switched and switched back.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- launchApp:
+    stopApp: false
+- openLink: ${EXPO_URL}
+- extendedWaitUntil:
+    visible:
+      id: "tab-explore"
+    timeout: 90000
+- runFlow: common/dismiss-welcome.yaml
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- swipe:
+    direction: UP
+    duration: 600
+- swipe:
+    direction: DOWN
+    duration: 600
+- swipe:
+    direction: DOWN
+    duration: 600
+- assertVisible:
+    id: "explore-city"
+# Rows in the city switcher are indexed in catalog order; the second row
+# is "some other city" whichever one is current, and the first row puts
+# the suite back on the default so later flows see the same data.
+- tapOn:
+    id: "explore-city"
+- extendedWaitUntil:
+    visible:
+      id: "city-row-1"
+    timeout: 10000
+- tapOn:
+    id: "city-row-1"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- tapOn:
+    id: "explore-city"
+- extendedWaitUntil:
+    visible:
+      id: "city-row-0"
+    timeout: 10000
+- tapOn:
+    id: "city-row-0"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- assertVisible:
+    id: "tab-explore"

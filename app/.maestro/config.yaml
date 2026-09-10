@@ -1,0 +1,4 @@
+# `maestro test .maestro` runs these, in name order. Files under common/
+# are subflows and are only ever run through runFlow.
+flows:
+  - "0*.yaml"

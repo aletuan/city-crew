@@ -1,0 +1,10 @@
+# Reusable: close the first-launch WelcomeSheet if it is showing.
+# Every flow runs this right after the app is in front, so a fresh
+# Expo Go install and a warm one behave the same.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "welcome-dismiss"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000

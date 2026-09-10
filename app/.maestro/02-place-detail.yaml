@@ -1,0 +1,36 @@
+# Place detail: open the first card, check the essentials rendered from
+# Supabase (name, address, hero photo), and come back to Explore.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- launchApp:
+    stopApp: false
+- openLink: ${EXPO_URL}
+- extendedWaitUntil:
+    visible:
+      id: "tab-explore"
+    timeout: 90000
+- runFlow: common/dismiss-welcome.yaml
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- tapOn:
+    id: "place-card-0"
+- extendedWaitUntil:
+    visible:
+      id: "detail-name"
+    timeout: 20000
+- assertVisible:
+    id: "detail-photo"
+- assertVisible:
+    id: "detail-address"
+- tapOn:
+    id: "detail-back"
+- extendedWaitUntil:
+    visible:
+      id: "tab-explore"
+    timeout: 10000
