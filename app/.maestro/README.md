@@ -18,9 +18,13 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `02-place-detail.yaml` | Opens the first card, asserts name, address and hero photo, goes back to Explore. |
 | `03-search.yaml` | Opens search, types `cafe`, opens the first hit, comes back, clears the query. |
 
-`common/dismiss-welcome.yaml` is a subflow every flow runs first, so a fresh
-Expo Go and a warm one behave the same. `config.yaml` restricts
-`maestro test .maestro` to the numbered flows.
+`common/dismiss-welcome.yaml` and `common/expo-go-prep.yaml` are subflows
+every flow runs first, so a fresh Expo Go and a warm one behave the same.
+The second one switches off Expo Go's floating "Tools button" — the blue
+gear docks at the top-right corner, exactly over Explore's search button,
+and a tap there opens Expo's dev menu instead of Search. Expo Go remembers
+the setting, so after the first run those steps are no-ops. `config.yaml`
+restricts `maestro test .maestro` to the numbered flows and fixes their order.
 
 ## One-time setup
 
@@ -53,9 +57,14 @@ npm run smoke:ios -- -e EXPO_URL=exp://192.168.1.23:8081
 ```
 
 Open the app in Expo Go once by hand before the first run (press `i` in the
-`expo start` terminal). Maestro's `openLink` reuses the running Expo Go and
-loads the bundle; the first load of a session can take a minute, which is
-why the flows wait up to 90 s for `tab-explore`.
+`expo start` terminal). Each flow then kills Expo Go (`launchApp` with
+`stopApp: true`) and reopens the bundle through `openLink`, so it starts on
+Explore regardless of where the previous flow left the app. The first load
+of a session can take a minute, which is why the flows wait up to 90 s for
+`tab-explore`.
+
+If more than one simulator is booted, Maestro may pick either; pass
+`--device <UDID>` (from `xcrun simctl list devices booted`) to pin one.
 
 To run one flow:
 

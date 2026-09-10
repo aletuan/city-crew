@@ -3,14 +3,17 @@ appId: host.exp.Exponent
 env:
   EXPO_URL: exp://127.0.0.1:8081
 ---
+# Kill Expo Go first so every flow starts from a fresh bundle load on
+# Explore, not from wherever the previous flow left the app.
 - launchApp:
-    stopApp: false
+    stopApp: true
 - openLink: ${EXPO_URL}
 - extendedWaitUntil:
     visible:
       id: "tab-explore"
     timeout: 90000
 - runFlow: common/dismiss-welcome.yaml
+- runFlow: common/expo-go-prep.yaml
 - tapOn:
     id: "tab-explore"
 - extendedWaitUntil:
@@ -30,6 +33,13 @@ env:
     visible:
       id: "search-result-0"
     timeout: 20000
+# The keyboard covers the lower half of the first result card, and Maestro
+# taps an element's centre — which lands on a key. Submitting the query
+# drops the keyboard (the field blurs on submit) before the tap.
+- pressKey: Enter
+- hideKeyboard:
+    optional: true
+- waitForAnimationToEnd
 - tapOn:
     id: "search-result-0"
 - extendedWaitUntil:

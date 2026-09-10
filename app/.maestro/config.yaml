@@ -1,4 +1,11 @@
-# `maestro test .maestro` runs these, in name order. Files under common/
+# `maestro test .maestro` runs these, in this order. Files under common/
 # are subflows and are only ever run through runFlow.
 flows:
   - "0*.yaml"
+executionOrder:
+  continueOnFailure: true
+  flowsOrder:
+    - 00-launch
+    - 01-explore
+    - 02-place-detail
+    - 03-search
