@@ -96,6 +96,21 @@ export function legBetween(a: Located, b: Located): Leg | null {
  * compacted array would silently attach the wrong distance to the wrong
  * stop, which is the kind of off-by-one that looks plausible on screen.
  */
+/**
+ * A ride, in dong. Ported from the mockup's `ITI_TRANSPORT_PER_HOP`.
+ *
+ * The one figure in a trip's cost that is not per person: four people
+ * share one Grab and pay this once. So the per-person total is right for
+ * somebody going alone and high for a group — the safer of the two
+ * directions to be wrong in, and the screens say the estimate is per
+ * person.
+ *
+ * One figure for the planner, a saved trip and the editor between them. It
+ * was three copies, and the screen that built a plan and the one that
+ * saved it would have quoted two prices the day one of them changed.
+ */
+export const RIDE_VND = 15000;
+
 export function legsOf(stops: readonly Located[]): (Leg | null)[] {
   const out: (Leg | null)[] = [];
   for (let i = 0; i + 1 < stops.length; i++) out.push(legBetween(stops[i], stops[i + 1]));

@@ -222,6 +222,16 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   } | null>(null);
   const { report, node: reportSheet } = useReport();
 
+  /** Somebody whose profile may not have arrived. The actions below need
+   *  only an id — withdrawing a request, lifting a block, unfriending — so
+   *  a row whose profile is late, or will never come (an account gone, a
+   *  profile RLS will not show), must still be able to act. The row used
+   *  to guard each button with `p && …`: visible, tappable, and silent. */
+  const known = (id: string): FriendProfile =>
+    people[id] ?? { id, handle: '', full_name: '', avatar_url: '' };
+  /** How a sentence names them: the handle when there is one. */
+  const tag = (p: FriendProfile) => (p.handle ? atHandle(p.handle) : t('this person', 'người này', 'この人'));
+
   /** The row every person-shaped sheet ends with. Last, and not red:
    *  reporting is not a thing done to somebody you know, it is a thing
    *  said to the desk, and it belongs where a reader looks when the
@@ -229,7 +239,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const reportAction = (p: FriendProfile): PersonAction => ({
     key: 'report',
     icon: 'flag-outline',
-    title: t(`Report ${atHandle(p.handle)}`, `Báo cáo ${atHandle(p.handle)}`, `${atHandle(p.handle)} を報告`),
+    title: t(`Report ${tag(p)}`, `Báo cáo ${tag(p)}`, `${tag(p)} を報告`),
     desc: t(
       'Tell the desk about their name, photo or bio. They are not told who reported them.',
       'Báo cho desk về tên, ảnh hoặc tiểu sử của họ. Họ không biết ai đã báo cáo.',
@@ -238,7 +248,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     onPress: () => report({
       kind: 'profile',
       id: p.id,
-      name: p.full_name || atHandle(p.handle),
+      name: p.full_name || tag(p),
       avatarUrl: p.avatar_url || undefined,
     }),
   });
@@ -266,7 +276,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     desc,
     destructive: true,
     onPress: () => askThen(
-      t(`Block ${atHandle(p.handle)}?`, `Chặn ${atHandle(p.handle)}?`, `${atHandle(p.handle)} をブロックしますか？`),
+      t(`Block ${tag(p)}?`, `Chặn ${tag(p)}?`, `${tag(p)} をブロックしますか？`),
       t('They will not be told. You can undo this from Blocked.', 'Họ sẽ không được báo. Bạn có thể bỏ chặn trong mục Đã chặn.', '相手に通知されません。ブロック中から解除できます。'),
       t('Block', 'Chặn', 'ブロック'),
       () => bar(p.id),
@@ -274,14 +284,14 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   });
 
   const openFriendSheet = (p: FriendProfile, saves?: number) => setSheet({
-    name: p.full_name || atHandle(p.handle),
-    meta: [atHandle(p.handle), savesLine(saves)].filter(Boolean).join(' · '),
+    name: p.full_name || tag(p),
+    meta: [p.handle && atHandle(p.handle), savesLine(saves)].filter(Boolean).join(' · '),
     avatar: p.avatar_url || undefined,
     actions: [
       {
         key: 'unfriend',
         icon: 'person-remove-outline',
-        title: t(`Unfriend ${atHandle(p.handle)}`, `Hủy kết bạn với ${atHandle(p.handle)}`, `${atHandle(p.handle)} と友達をやめる`),
+        title: t(`Unfriend ${tag(p)}`, `Hủy kết bạn với ${tag(p)}`, `${tag(p)} と友達をやめる`),
         desc: t(
           'Take them out of your crew. They will not be told, and either of you can ask again later.',
           'Bỏ họ khỏi crew. Họ sẽ không được báo, và sau này ai cũng có thể mời lại.',
@@ -289,7 +299,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         ),
         destructive: true,
         onPress: () => askThen(
-          t(`Unfriend ${atHandle(p.handle)}?`, `Hủy kết bạn với ${atHandle(p.handle)}?`, `${atHandle(p.handle)} と友達をやめますか？`),
+          t(`Unfriend ${tag(p)}?`, `Hủy kết bạn với ${tag(p)}?`, `${tag(p)} と友達をやめますか？`),
           t('They will not be told.', 'Họ sẽ không được báo.', '相手に通知されません。'),
           t('Unfriend', 'Hủy kết bạn', '友達をやめる'),
           () => cutEdge(p.id),
@@ -297,19 +307,19 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       },
       blockAction(
         p,
-        t(`Block ${atHandle(p.handle)}`, `Chặn ${atHandle(p.handle)}`, `${atHandle(p.handle)} をブロック`),
+        t(`Block ${tag(p)}`, `Chặn ${tag(p)}`, `${tag(p)} をブロック`),
         t(
           'Ends the friendship and keeps it ended: no requests either way, and their likes leave your Activity.',
           'Hủy kết bạn và giữ nguyên như vậy: không ai mời được ai, và lượt thích của họ rời khỏi Hoạt động.',
           '友達関係を解消し、以後どちらからも申請できません。相手のいいねもアクティビティから消えます。',
         ),
       ),
-      reportAction(p),
+      ...(p.handle ? [reportAction(p)] : []),
     ],
   });
 
   const openRequestSheet = (requester: string, p?: FriendProfile) => setSheet({
-    name: p ? (p.full_name || atHandle(p.handle)) : t('This request', 'Lời mời này', 'このリクエスト'),
+    name: p ? (p.full_name || tag(p)) : t('This request', 'Lời mời này', 'このリクエスト'),
     meta: p ? atHandle(p.handle) : undefined,
     avatar: p?.avatar_url || undefined,
     actions: [
@@ -340,8 +350,8 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   });
 
   const openSentSheet = (p: FriendProfile) => setSheet({
-    name: p.full_name || atHandle(p.handle),
-    meta: `${atHandle(p.handle)} · ${t('waiting on their answer', 'đang chờ trả lời', '返事待ち')}`,
+    name: p.full_name || tag(p),
+    meta: [p.handle && atHandle(p.handle), t('waiting on their answer', 'đang chờ trả lời', '返事待ち')].filter(Boolean).join(' · '),
     avatar: p.avatar_url || undefined,
     actions: [
       {
@@ -364,12 +374,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
           'リクエストを取り消し、双方向に連絡を止めます。',
         ),
       ),
-      reportAction(p),
+      ...(p.handle ? [reportAction(p)] : []),
     ],
   });
 
   const confirmUnblock = (p: FriendProfile) => askThen(
-    t(`Unblock ${atHandle(p.handle)}?`, `Bỏ chặn ${atHandle(p.handle)}?`, `${atHandle(p.handle)} のブロックを解除しますか？`),
+    t(`Unblock ${tag(p)}?`, `Bỏ chặn ${tag(p)}?`, `${tag(p)} のブロックを解除しますか？`),
     t('They will be able to send you requests again.', 'Họ sẽ có thể gửi lời mời cho bạn lại.', '相手は再びリクエストを送れるようになります。'),
     t('Unblock', 'Bỏ chặn', '解除'),
     () => { unblockUser(me!, p.id).then(() => blocks.reload()).catch(() => {}); },
@@ -552,7 +562,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                             {t('waiting on their answer', 'đang chờ trả lời', '返事待ち')}
                           </Text>
                         </View>
-                        <PressableScale style={s.quietBtn} onPress={() => p && openSentSheet(p)} accessibilityRole="button">
+                        <PressableScale style={s.quietBtn} onPress={() => openSentSheet(known(r.addressee))} accessibilityRole="button">
                           <Text style={s.quietText}>{t('Cancel', 'Huỷ', '取り消す')}</Text>
                         </PressableScale>
                       </View>
@@ -616,7 +626,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                     <PressableScale
                       key={id}
                       style={[s.row, i > 0 && s.rowDivider]}
-                      onLongPress={() => p && openFriendSheet(p, mutual[id])}
+                      onLongPress={() => openFriendSheet(known(id), mutual[id])}
                       accessibilityLabel={p ? atHandle(p.handle) : id}
                     >
                       <Face p={p} />
@@ -632,7 +642,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           the screen is a feature only its author knows
                           about. */}
                       <PressableScale
-                        onPress={() => p && openFriendSheet(p, mutual[id])}
+                        onPress={() => openFriendSheet(known(id), mutual[id])}
                         scaleTo={0.85}
                         hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
                         accessibilityRole="button"
@@ -671,7 +681,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>
                           <Text style={s.meta} numberOfLines={1}>{p ? atHandle(p.handle) : ''}</Text>
                         </View>
-                        <PressableScale style={s.quietBtn} onPress={() => p && confirmUnblock(p)} accessibilityRole="button">
+                        <PressableScale style={s.quietBtn} onPress={() => confirmUnblock(known(id))} accessibilityRole="button">
                           <Text style={s.quietText}>{t('Unblock', 'Bỏ chặn', '解除')}</Text>
                         </PressableScale>
                       </View>

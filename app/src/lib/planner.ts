@@ -41,7 +41,7 @@ import { minutesOf, toISO } from './day';
 import { instantOn, openState } from './format';
 import { distanceKm } from './geo';
 import { isLive } from './live';
-import { legsOf, type Leg } from './travel';
+import { legsOf, RIDE_VND, type Leg } from './travel';
 import { areaCentre, type Company, type TripDraft } from './trip';
 import type { Place } from './types';
 
@@ -586,17 +586,6 @@ const HOP_DEFAULT_MIN = 20;
  *  has been chosen. Opening hours have to be checked against some hour,
  *  and the real arrival is not known until the stop before is picked. */
 const NOMINAL_STEP = DWELL_DEFAULT + HOP_DEFAULT_MIN;
-
-/**
- * A ride, in dong. Ported from the mockup's `ITI_TRANSPORT_PER_HOP`.
- *
- * The one figure in `costVnd` that is not per person: four people share
- * one Grab and pay this once. So the per-person total is right for
- * somebody going alone and high for a group — the safer of the two
- * directions to be wrong in, and the screen says the estimate is per
- * person.
- */
-const RIDE_VND = 15000;
 
 /** Categories whose spend is food rather than activity, for the donut. */
 const FOOD_CATEGORIES = new Set(['eats', 'cafes']);

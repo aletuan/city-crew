@@ -13,7 +13,7 @@
 // single sort gets one of those two backwards.
 
 import { coverOf } from './place';
-import { legsOf, type Located } from './travel';
+import { legsOf, RIDE_VND, type Located } from './travel';
 import type { PlacePhoto } from './types';
 
 /**
@@ -101,11 +101,6 @@ export function splitTrips<T extends Dated>(
   past.sort((a, b) => (a.day > b.day ? -1 : a.day < b.day ? 1 : 0));
   return { upcoming, past };
 }
-
-/** What a ride between two stops costs one person. Same figure the planner
- *  budgets with — a saved trip and a fresh plan of the same evening must
- *  not quote two different numbers. */
-const RIDE_VND = 15000;
 
 export type Priced = Located & { price_vnd?: number | null };
 

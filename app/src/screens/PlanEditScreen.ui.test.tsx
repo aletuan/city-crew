@@ -94,11 +94,32 @@ const words = (over: Partial<Narration> = {}): Narration => ({
   ...over,
 });
 
-const nav = () => {
+type BeforeRemove = (e: { preventDefault: () => void; data: { action: unknown } }) => void;
+type TestNav = Nav & {
+  parent: { navigate: ReturnType<typeof vi.fn> };
+  dispatch: ReturnType<typeof vi.fn>;
+  /** What a real navigator does before the screen goes: ask every
+   *  `beforeRemove` listener. True when one of them held the screen. */
+  leave: () => boolean;
+};
+const nav = (): TestNav => {
   const parent = { navigate: vi.fn() };
+  const listeners = new Set<BeforeRemove>();
+  const action = { type: 'GO_BACK' };
   return {
     navigate: vi.fn(), goBack: vi.fn(), popToTop: vi.fn(), getParent: vi.fn(() => parent), parent,
-  } as unknown as Nav & { parent: { navigate: ReturnType<typeof vi.fn> } };
+    dispatch: vi.fn(),
+    addListener: vi.fn((name: string, fn: BeforeRemove) => {
+      if (name !== 'beforeRemove') return () => {};
+      listeners.add(fn);
+      return () => { listeners.delete(fn); };
+    }),
+    leave: () => {
+      let held = false;
+      for (const fn of [...listeners]) fn({ preventDefault: () => { held = true; }, data: { action } });
+      return held;
+    },
+  } as unknown as TestNav;
 };
 
 const routeWith = (over: object = {}) => ({
@@ -114,15 +135,23 @@ const renderScreen = (over: object = {}, navigation = nav()) => {
   return navigation;
 };
 
-/** The row's controls carry glyphs but no names, so they are found by glyph
- *  in document order — row `i`'s up arrow is the `i`th chevron-up. */
-const press = (glyph: string, i: number) => {
-  const el = document.querySelectorAll(`[data-icon="${glyph}"]`)[i];
-  if (!el) throw new Error(`no ${glyph} #${i}`);
-  fireEvent.click(el);
-};
 const names = () => Array.from(document.querySelectorAll('[aria-label^="Open "]'))
   .map((el) => el.getAttribute('aria-label')!.slice('Open '.length));
+/** Row `i`'s control, by the name VoiceOver reads for it — so the names
+ *  are pinned too. Keyed by glyph to keep the tests reading as the rail
+ *  looks. */
+const control: Record<string, (name: string) => string> = {
+  remove: (n) => `Arrive 15 min earlier at ${n}`,
+  add: (n) => `Arrive 15 min later at ${n}`,
+  'chevron-up': (n) => `Move ${n} up`,
+  'chevron-down': (n) => `Move ${n} down`,
+  close: (n) => `Remove ${n}`,
+};
+const press = (glyph: string, i: number) => {
+  const name = names()[i];
+  if (!name) throw new Error(`no row #${i}`);
+  fireEvent.click(screen.getByRole('button', { name: control[glyph](name) }));
+};
 const save = () => fireEvent.click(screen.getByRole('button', { name: /Save to Trips|Saving…/ }));
 type Payload = { stops: { placeSlug: string; arriveMin: number; why: string | null; whyLang: string | null }[] } & Record<string, unknown>;
 const payload = () => saveTrip.mock.calls[0][0] as Payload;
@@ -439,7 +468,7 @@ describe('saving', () => {
   it('does not write without a city', async () => {
     cityState.current = { city: null };
     renderScreen();
-    expect(screen.getByText('Times and order stay editable after saving.')).toBeTruthy();
+    expect(screen.getByText('Saved trips go to Trips, where you can invite your crew.')).toBeTruthy();
     save();
     await act(async () => {});
     expect(saveTrip).not.toHaveBeenCalled();
@@ -481,5 +510,44 @@ describe('the header and the crew row', () => {
     renderScreen({ company: 'solo' });
     expect(screen.getByText('Just you, for now')).toBeTruthy();
     expect(screen.queryByText('Save first, then invite')).toBeNull();
+  });
+});
+
+// Edits exist only on this screen until Save, and leaving used to drop
+// them without a word. The guard sits on `beforeRemove`, which the header's
+// Back and iOS's swipe both pass through — so the tests drive that.
+describe('leaving with unsaved edits', () => {
+  it('lets an untouched plan go without asking', () => {
+    const navigation = renderScreen();
+    expect(navigation.leave()).toBe(false);
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it('holds an edited plan and asks first; Keep editing stays', () => {
+    const navigation = renderScreen();
+    press('add', 0);
+    expect(navigation.leave()).toBe(true);
+    expect(alert).toHaveBeenCalledWith('Discard your changes?', expect.any(String), expect.any(Array));
+    const buttons = alert.mock.calls.at(-1)![2] as { text: string; onPress?: () => void }[];
+    expect(buttons.map((b) => b.text)).toEqual(['Keep editing', 'Discard']);
+    buttons[0].onPress?.();
+    expect(navigation.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('Discard carries on with the very navigation it held', () => {
+    const navigation = renderScreen();
+    press('close', 0);
+    navigation.leave();
+    const buttons = alert.mock.calls.at(-1)![2] as { text: string; onPress?: () => void }[];
+    buttons.find((b) => b.text === 'Discard')!.onPress!();
+    expect(navigation.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
+  });
+
+  it('does not stand in the way of the exit a save takes', async () => {
+    const navigation = renderScreen();
+    press('add', 0);
+    save();
+    await waitFor(() => expect(navigation.popToTop).toHaveBeenCalled());
+    expect(navigation.leave()).toBe(false);
   });
 });
