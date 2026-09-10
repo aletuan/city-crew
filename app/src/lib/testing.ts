@@ -185,6 +185,7 @@ export function fakeSupabase() {
         // an account by id rather than on the caller's own session.
         admin: {
           deleteUser: (id: string) => auth('admin.deleteUser', id),
+          getUserById: (id: string) => auth('admin.getUserById', id),
           updateUserById: (id: string, attrs: unknown) => auth('admin.updateUserById', { id, attrs }),
         },
         startAutoRefresh() { log.push({ op: 'auth', fn: 'startAutoRefresh', filters: [] }); },

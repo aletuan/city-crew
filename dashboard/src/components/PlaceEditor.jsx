@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
+import { leftBehindNote } from '../storage.js';
 import { CATEGORY_KEYS } from '../categories.js';
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { useCity, useProgress, useToast } from '../App.jsx';
@@ -113,7 +114,8 @@ export default function PlaceEditor() {
         tempToReal[u.tempId] = row.id;
         URL.revokeObjectURL(u.previewUrl);
       }
-      for (const id of e.deleted) await api.deletePhoto(id);
+      const left = [];
+      for (const id of e.deleted) left.push(...(await api.deletePhoto(id)).left);
       for (const [id, hidden] of Object.entries(e.hidden)) {
         if (e.deleted.includes(id)) continue;
         const saved = place.place_photos.find((p) => p.id === id);
@@ -136,7 +138,8 @@ export default function PlaceEditor() {
       setPlace(fresh);
       setForm(pickForm(fresh));
       refreshProgress();
-      toast(extra.review_status ? `Marked ${extra.review_status}` : 'Saved');
+      toast([extra.review_status ? `Marked ${extra.review_status}` : 'Saved', leftBehindNote(left)]
+        .filter(Boolean).join(' — '));
     } catch (err) {
       toast(`Save failed: ${err.message}`);
     } finally {
@@ -379,9 +382,9 @@ export default function PlaceEditor() {
               onClick={async () => {
                 if (!confirm(`Delete “${place.name_en}” permanently?\n\nThis removes the place, all its photos (including your uploads) and its collection entries from the database.`)) return;
                 try {
-                  await api.deletePlace(place.slug);
+                  const res = await api.deletePlace(place.slug);
                   refreshProgress();
-                  toast(`Deleted ${place.name_en}`);
+                  toast([`Deleted ${place.name_en}`, leftBehindNote(res.left)].filter(Boolean).join(' — '));
                   navigate(`/?${params}`);
                 } catch (err) {
                   toast(`Delete failed: ${err.message}`);

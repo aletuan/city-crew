@@ -20,6 +20,9 @@
 // nothing; a ban stops them signing in while their rows stay where the
 // desk can still read them. And it is reversible, which matters: the
 // desk is people, and people misjudge.
+//
+// Every ban and every lift is written to `moderation_log`, and no editor
+// can ban another; see the notes where each is done.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -63,10 +66,46 @@ Deno.serve(async (req) => {
   if (target === uid) return json({ error: "cannot suspend yourself" }, 400);
 
   const suspend = body.suspend !== false;
+
+  const { data: targetData, error: lookupError } = await admin.auth.admin.getUserById(target);
+  if (lookupError || !targetData?.user) return json({ error: "no such account" }, 404);
+  const targetEmail = targetData.user.email?.toLowerCase() ?? "";
+
+  // One editor cannot lock another out. The desk's power is over readers'
+  // accounts; a dispute between editors is not something one of them
+  // should be able to settle by pressing a button. Lifting a ban stays
+  // open, so a ban made before this rule can still be undone.
+  if (suspend && targetEmail) {
+    const { data: targetIsEditor } = await admin
+      .from("editors").select("email").eq("email", targetEmail).maybeSingle();
+    if (targetIsEditor) return json({ error: "cannot suspend an editor" }, 403);
+  }
+
+  // Written down first, then done. A ban nobody can trace is the failure
+  // this record exists to prevent, so the line goes in before the act; if
+  // the act then fails, the line comes out again. Should that removal fail
+  // too, the log shows one attempt too many — the safe direction to be
+  // wrong in. See the moderation_log migration.
+  const { data: line, error: logError } = await admin
+    .from("moderation_log")
+    .insert({
+      actor: uid,
+      actor_email: email,
+      action: suspend ? "suspend" : "unsuspend",
+      target_id: target,
+      detail: { target_email: targetEmail },
+    })
+    .select("id")
+    .single();
+  if (logError || !line) return json({ error: "could not record the action; nothing was changed" }, 500);
+
   const { error } = await admin.auth.admin.updateUserById(target, {
     ban_duration: suspend ? FOREVER : "none",
   });
-  if (error) return json({ error: error.message }, 500);
+  if (error) {
+    await admin.from("moderation_log").delete().eq("id", (line as { id: number }).id);
+    return json({ error: error.message }, 500);
+  }
 
   return json({ ok: true, suspended: suspend });
 });

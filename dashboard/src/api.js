@@ -4,6 +4,7 @@
 // components used against the old localhost Express API.
 
 import { supabase } from './lib/supabase.js';
+import { removeObjects } from './storage.js';
 import { countThreads } from './lib/threads.js';
 
 const BUCKET = 'place-photos';
@@ -268,15 +269,17 @@ export const api = {
     if (!places.length) throw new Error('not found');
     const placeId = places[0].id;
 
-    // Collect uploaded objects before the cascade wipes the photo rows.
-    const uploads = db(await supabase.from('place_photos')
-      .select('storage_path').eq('place_id', placeId).eq('source', 'upload'));
+    // Collect every stored object before the cascade wipes the photo rows:
+    // the desk's uploads and the Google photos copied onto the bucket alike.
+    // Only uploads used to be collected, so each deleted place left its
+    // copied photos behind — see storage.js.
+    const stored = db(await supabase.from('place_photos')
+      .select('storage_path').eq('place_id', placeId).not('storage_path', 'is', null));
 
     db(await supabase.from('places').delete().eq('id', placeId).select('id'));
 
-    const paths = uploads.map((u) => u.storage_path).filter(Boolean);
-    if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
-    return { ok: true, removed_uploads: paths.length };
+    const files = await removeObjects(supabase.storage.from(BUCKET), stored.map((u) => u.storage_path));
+    return { ok: true, removed_uploads: files.removed, left: files.left };
   },
 
   // Same shape as deletePlace, batched — a bad scan-city run can bring in
@@ -288,14 +291,13 @@ export const api = {
     const ids = places.map((p) => p.id);
     if (!ids.length) return { ok: true, deleted: 0, removed_uploads: 0 };
 
-    const uploads = db(await supabase.from('place_photos')
-      .select('storage_path').in('place_id', ids).eq('source', 'upload'));
+    const stored = db(await supabase.from('place_photos')
+      .select('storage_path').in('place_id', ids).not('storage_path', 'is', null));
 
     db(await supabase.from('places').delete().in('id', ids).select('id'));
 
-    const paths = uploads.map((u) => u.storage_path).filter(Boolean);
-    if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
-    return { ok: true, deleted: ids.length, removed_uploads: paths.length };
+    const files = await removeObjects(supabase.storage.from(BUCKET), stored.map((u) => u.storage_path));
+    return { ok: true, deleted: ids.length, removed_uploads: files.removed, left: files.left };
   },
 
   // Approval, batched — the other half of the toolbar deletePlaces put on
@@ -501,9 +503,7 @@ export const api = {
     db(await supabase.from('place_photos').delete().eq('id', photo.id).select('id'));
     // Any row with a path owns an object: the desk's uploads, and the
     // Google photos the import now copies onto the same bucket.
-    if (photo.storage_path) {
-      await supabase.storage.from(BUCKET).remove([photo.storage_path]);
-    }
+    const files = await removeObjects(supabase.storage.from(BUCKET), [photo.storage_path]);
     // keep a cover: promote the first visible photo if the cover was deleted
     if (photo.is_cover) {
       const rest = db(await supabase.from('place_photos')
@@ -511,7 +511,7 @@ export const api = {
         .order('sort_order').limit(1));
       if (rest.length) db(await supabase.from('place_photos').update({ is_cover: true }).eq('id', rest[0].id).select('id'));
     }
-    return { ok: true };
+    return { ok: true, left: files.left };
   },
 };
 
