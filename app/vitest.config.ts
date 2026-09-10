@@ -83,8 +83,10 @@ import { defineConfig } from 'vitest/config';
 // run `npm run coverage`, take the reported `src/screens` figures, round
 // down to the whole number. Never lower it to make a change pass; a screen
 // that got bigger gets a test instead. It was 13% of lines before the five
-// main screens (Explore, Search, TripDetail, PlanEdit, Crew) were tested.
-const SCREENS_FLOOR = { lines: 44, statements: 44, branches: 89, functions: 79 };
+// main screens (Explore, Search, TripDetail, PlanEdit, Crew) were tested,
+// 44% after, and 75% once Collections, CollectionDetail, Profile,
+// PlaceDetail and PlanOptions joined them.
+const SCREENS_FLOOR = { lines: 75, statements: 75, branches: 92, functions: 87 };
 
 const IMPURE = [
   'src/lib/candidates.ts', // a React hook; imports Alert and Keyboard
