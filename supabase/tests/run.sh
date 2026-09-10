@@ -86,6 +86,24 @@ run "$DB" -f "$HERE/publish_test.sql"
 echo "→ submission checks"
 run "$DB" -f "$HERE/submissions_test.sql"
 
+# The policies, exercised rather than read. Everything above asserts a
+# policy's text; these three files sit a client that owns nothing at the
+# tables and check what it can and cannot do. That needs the read side the
+# public gets and the editor's key to everything — `mobile_editor_auth`,
+# which the harness now has enough of auth and storage to run — plus the
+# member writes and the avatar bucket, so the policies under test are the
+# ones production runs and not a subset.
+echo "→ rls, exercised"
+for f in "$ROOT"/supabase/migrations/*_mobile_editor_auth.sql \
+         "$ROOT"/supabase/migrations/*_own_collection_members.sql \
+         "$ROOT"/supabase/migrations/*_avatars_bucket.sql \
+         "$ROOT"/supabase/migrations/*_avatar_cooldown.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/profiles_rls_test.sql"
+run "$DB" -f "$HERE/collections_rls_test.sql"
+run "$DB" -f "$HERE/submissions_rls_test.sql"
+
 # Trips need the accounts, the places stub and the cities stub — all of
 # which the blocks above have already put in place.
 echo "→ trips"
