@@ -333,6 +333,14 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     return out;
   }, [terms, query, places, colMembers, city?.id, fresh, synonyms, t, recents, popular, latest, openNow, cats]);
 
+  // Row key → position among the place hits, so a UI test can address
+  // "the first result" without knowing what it is called today.
+  const placeIndex = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of rows) if (r.kind === 'place') m.set(r.key, m.size);
+    return m;
+  }, [rows]);
+
   const searching = terms.length > 0;
   const showBar = batchBarShown(chosen.length, google.batch);
 
@@ -419,9 +427,10 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             autoCorrect={false}
             returnKeyType="search"
             clearButtonMode="never"
+            testID="search-input"
           />
           {query.length > 0 && (
-            <PressableScale onPress={() => setQuery('')} scaleTo={0.9} accessibilityLabel="Clear">
+            <PressableScale onPress={() => setQuery('')} scaleTo={0.9} accessibilityLabel="Clear" testID="search-clear">
               <Ionicons name="close-circle" size={19} color={colors.textTertiary} />
             </PressableScale>
           )}
@@ -605,6 +614,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             return (
               <PlaceCard
                 place={item.place}
+                testID={`search-result-${placeIndex.get(item.key) ?? 0}`}
                 onPress={() => {
                   // This tap is what makes the query worth remembering:
                   // it found the thing. See lib/recents.

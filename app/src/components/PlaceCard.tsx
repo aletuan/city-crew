@@ -11,7 +11,7 @@ import { vibeColor, vibeLabel } from '../lib/vibes';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import { Card, PressableScale } from './ui';
 
-export default function PlaceCard({ place, onPress }: { place: Place; onPress: () => void }) {
+export default function PlaceCard({ place, onPress, testID }: { place: Place; onPress: () => void; testID?: string }) {
   const { t } = useI18n();
   const { save, isSaved } = useSave();
   const saved = isSaved(place.slug);
@@ -27,7 +27,7 @@ export default function PlaceCard({ place, onPress }: { place: Place; onPress: (
   const when = openFragment(openState(place.opening_hours, new Date()), t);
   const credit = useFlag('photo_attribution');
   return (
-    <PressableScale onPress={onPress}>
+    <PressableScale onPress={onPress} testID={testID}>
       <Card style={s.card}>
         <View>
           {cover ? (
