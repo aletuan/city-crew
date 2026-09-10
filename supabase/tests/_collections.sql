@@ -63,6 +63,11 @@ create table if not exists public.collections (
   slug           text unique not null,
   city_id        text,
   curator_handle text,
+  -- Content, which nothing above reasons about, but `reports_queue()` puts
+  -- beside a report for the desk to judge — a function whose body names
+  -- a column the table lacks does not get created at all.
+  title_en       text,
+  desc_en        text,
   is_public      boolean not null default false,
   sort_order     int
 );
