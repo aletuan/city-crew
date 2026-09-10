@@ -154,10 +154,14 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   })) as typeof window.matchMedia;
 }
 
-// `Alert.alert` is how half the screens report a failure, and a test that
-// asserts on it is asserting on what the reader was told. Kept as a spy
-// rather than a no-op for that reason.
-vi.mock('react-native/Libraries/Alert/Alert', () => ({ default: { alert: vi.fn() } }));
+// `Alert` is not stubbed here, and cannot usefully be. Under the
+// `react-native` → `react-native-web` alias a screen's `Alert` is the web
+// one, whose `alert` is a silent no-op; a mock of React Native's own
+// `Libraries/Alert/Alert` path — which this file used to carry, as a "spy"
+// — is never reached, so any assertion on it could only ever pass
+// vacuously. A test that cares what the reader was told spies where the
+// screen actually looks: `vi.spyOn(Alert, 'alert')` on the `Alert` imported
+// from 'react-native' (see TripDetailScreen.ui.test.tsx).
 
 // React Navigation ships source this toolchain cannot parse, and a smoke
 // test has no navigator anyway: every screen takes `navigation` as a prop,
