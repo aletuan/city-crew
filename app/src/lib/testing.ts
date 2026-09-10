@@ -181,6 +181,12 @@ export function fakeSupabase() {
         signOut: () => auth('signOut'),
         // Timers, not requests: written down, answered with nothing, and
         // kept off the queue so they cannot eat a reply meant for a query.
+        // The service-role half, which only an Edge Function holds: acts on
+        // an account by id rather than on the caller's own session.
+        admin: {
+          deleteUser: (id: string) => auth('admin.deleteUser', id),
+          updateUserById: (id: string, attrs: unknown) => auth('admin.updateUserById', { id, attrs }),
+        },
         startAutoRefresh() { log.push({ op: 'auth', fn: 'startAutoRefresh', filters: [] }); },
         stopAutoRefresh() { log.push({ op: 'auth', fn: 'stopAutoRefresh', filters: [] }); },
         onAuthStateChange(fn: (event: string, session: unknown) => void) {
