@@ -80,8 +80,17 @@ describe('createCollection', () => {
   // Anything that is not a collision will happen again on the retry, so
   // spending a second round trip on it only delays the message.
   it('does not retry any other failure', async () => {
+    fake().replies({ error: { message: 'permission denied', code: '42P01' } });
+    await expect(createCollection(input)).rejects.toThrow('permission denied');
+    expect(fake().log).toHaveLength(1);
+  });
+
+  // A policy's refusal, for a row carrying the caller's own id, is the
+  // daily cap — and it comes back as the name the form has words for,
+  // not as the policy's own sentence.
+  it('names the daily cap when a policy refuses', async () => {
     fake().replies({ error: { message: 'new row violates row-level security policy', code: '42501' } });
-    await expect(createCollection(input)).rejects.toThrow('row-level security');
+    await expect(createCollection(input)).rejects.toThrow('daily_limit');
     expect(fake().log).toHaveLength(1);
   });
 });
@@ -182,10 +191,18 @@ describe('addPlaceToCollection', () => {
     await expect(addPlaceToCollection('quan-ca-phe-cu', 'cong-caphe')).resolves.toBeUndefined();
   });
 
+  // The sheet only ever offers your own lists, so a policy saying no is
+  // the daily cap, and is named as such.
+  it('names the daily cap when a policy refuses', async () => {
+    ids();
+    fake().replies({ error: { message: 'new row violates row-level security policy', code: '42501' } });
+    await expect(addPlaceToCollection('quan-ca-phe-cu', 'cong-caphe')).rejects.toThrow('daily_limit');
+  });
+
   it('throws on any other refusal', async () => {
     ids();
-    fake().replies({ error: { message: 'not your list', code: '42501' } });
-    await expect(addPlaceToCollection('quan-ca-phe-cu', 'cong-caphe')).rejects.toThrow('not your list');
+    fake().replies({ error: { message: 'connection reset', code: '08006' } });
+    await expect(addPlaceToCollection('quan-ca-phe-cu', 'cong-caphe')).rejects.toThrow('connection reset');
   });
 
   // A missing slug fails at the lookup, before anything is written. Each
@@ -534,6 +551,28 @@ describe('copyCollection', () => {
     fake().replies({ error: null });
     expect(await copyCollection({ ...input, placeSlugs: [] })).toMatch(/^borrowed-[a-z0-9]{6}$/);
     expect(fake().log).toHaveLength(1);
+  });
+
+  // The list was just made under the caller's own id, so the one policy
+  // that can refuse filling it is the daily cap on saves.
+  it('names the daily cap when filling the list is refused', async () => {
+    fake().replies(
+      { error: null },
+      { data: { id: 'c-1' } },
+      { data: [{ id: 'p-a', slug: 'a' }, { id: 'p-b', slug: 'b' }] },
+      { error: { message: 'new row violates row-level security policy', code: '42501' } },
+    );
+    await expect(copyCollection(input)).rejects.toThrow('daily_limit');
+  });
+
+  it('throws any other refusal of the members as it came', async () => {
+    fake().replies(
+      { error: null },
+      { data: { id: 'c-1' } },
+      { data: [{ id: 'p-a', slug: 'a' }] },
+      { error: { message: 'connection reset', code: '08006' } },
+    );
+    await expect(copyCollection(input)).rejects.toThrow('connection reset');
   });
 
   // A place the catalog has stopped holding is dropped rather than failing

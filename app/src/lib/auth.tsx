@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { AuthError, Session } from '@supabase/supabase-js';
 import { decode } from 'base64-arraybuffer';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import { refusedByPolicy, TOO_SOON } from './quota';
 import { authFail, obfuscatedSignUp } from './authfail';
 import { cacheKey, packCache, unpackCache } from './data/cache';
 import { supabase } from './supabase';
@@ -301,6 +302,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       45_000,
       'slow_upload',
     );
+    // The bucket's update policy refuses a second face inside sixty
+    // seconds of the last — see `avatar_cooldown.sql`. Storage reports
+    // that the way it reports any policy; `lib/quota` knows the shape.
+    if (error && refusedByPolicy(error)) throw new Error(TOO_SOON);
     if (error) throw new Error(error.message);
 
     const { data } = supabase.storage.from('avatars').getPublicUrl(path);

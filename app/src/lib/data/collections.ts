@@ -7,6 +7,7 @@
 // reaching across for the same three constants.
 
 import { supabase } from '../supabase';
+import { DAILY_LIMIT, refusedByPolicy } from '../quota';
 import type { Collection, Place } from '../types';
 import { slugify } from '../place';
 import { PLACE_COLS } from './places';
@@ -267,6 +268,9 @@ export async function createCollection(input: {
       is_public: false,
     });
     if (!error) return slug;
+    // A policy said no. The only policy that can, for a row carrying the
+    // caller's own id, is the daily cap — see `lib/quota`.
+    if (refusedByPolicy(error)) throw new Error(DAILY_LIMIT);
     // 23505 = unique_violation. Anything else will happen again on the
     // retry, so spending a second round trip on it only delays the message.
     if (error.code !== '23505') throw new Error(error.message);
@@ -349,7 +353,10 @@ export async function addPlaceToCollection(collectionSlug: string, placeSlug: st
     .from('collection_places')
     .insert({ collection_id: collectionId, place_id: placeId, sort_order: sortOrder });
   // 23505 = unique_violation: the place is already in the list, which is
-  // the state the caller wanted. Racing two taps is not an error.
+  // the state the caller wanted. Racing two taps is not an error. A
+  // policy's refusal is the daily cap — the sheet only offers your own
+  // lists — and is named so the sheet can say so.
+  if (error && refusedByPolicy(error)) throw new Error(DAILY_LIMIT);
   if (error && error.code !== '23505') throw new Error(error.message);
 }
 
@@ -433,6 +440,9 @@ export async function copyCollection(input: {
   if (!rows.length) return slug;
 
   const { error } = await supabase.from('collection_places').insert(rows);
+  // The list was made a moment ago under the caller's own id; the one
+  // policy that can refuse filling it is the daily cap.
+  if (error && refusedByPolicy(error)) throw new Error(DAILY_LIMIT);
   if (error) throw new Error(error.message);
   return slug;
 }

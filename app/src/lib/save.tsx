@@ -21,6 +21,7 @@ import {
 } from './data';
 import { useCity } from './city';
 import { useI18n } from './i18n';
+import { DAILY_CAPS, isDailyLimit } from './quota';
 import { goTo } from '../nav';
 
 type Save = {
@@ -127,6 +128,19 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       void logPlaceEvent(session?.user?.id, place.slug, had ? 'unsave' : 'save', city?.id ?? null, historyOn);
       mine.reload();
     } catch (e) {
+      // Three hundred saves in a day is the cap the policy holds; the
+      // sheet says so rather than showing the policy's own sentence.
+      if (isDailyLimit(e)) {
+        Alert.alert(
+          t('That is enough for today', 'Hôm nay vậy là đủ', '本日はここまで'),
+          t(
+            `You can save ${DAILY_CAPS.placesIntoLists} places a day. Come back tomorrow.`,
+            `Mỗi ngày bạn có thể lưu ${DAILY_CAPS.placesIntoLists} địa điểm. Mai quay lại nhé.`,
+            `1日に${DAILY_CAPS.placesIntoLists}件まで保存できます。また明日どうぞ。`,
+          ),
+        );
+        return;
+      }
       Alert.alert(
         t('Could not save', 'Không lưu được', '保存できませんでした'),
         e instanceof Error ? e.message : String(e),
