@@ -326,7 +326,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const clearAvatar = useCallback(async () => {
     const uid = session?.user?.id;
-    if (uid) await supabase.storage.from('avatars').remove([`${uid}/avatar.jpg`]);
+    // Without a session there is no row to clear. This used to go out as
+    // `id = undefined` and fail on the server; it fails here instead.
+    if (!uid) throw new Error('Not signed in');
+    await supabase.storage.from('avatars').remove([`${uid}/avatar.jpg`]);
     // Clearing the pointer is what removes the avatar; a failed delete
     // leaves an orphan object nobody can reach, not a visible avatar.
     const { error } = await supabase.from('profiles').update({ avatar_url: '' }).eq('id', uid);

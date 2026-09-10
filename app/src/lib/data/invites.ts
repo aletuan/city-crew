@@ -111,7 +111,7 @@ export type CrewCount = { trip_id: string; accepted: number; pending: number };
  */
 export async function fetchCrewCounts(tripIds: readonly string[]): Promise<Record<string, CrewCount>> {
   if (!tripIds.length) return {};
-  const { data, error } = await supabase.rpc('trip_crew_counts', { trip_ids: tripIds });
+  const { data, error } = await supabase.rpc('trip_crew_counts', { trip_ids: [...tripIds] });
   if (error) throw new Error(error.message);
   const out: Record<string, CrewCount> = {};
   for (const row of (data ?? []) as CrewCount[]) out[row.trip_id] = row;

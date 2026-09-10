@@ -58,6 +58,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "types:db": "f=src/lib/database.types.ts && { sed -n '1,/^export type Json/p' $f | sed '$d'; npx -y supabase@2 gen types typescript --project-id amdvitzpogaejzzqroco --schema public; } > $f.new && mv $f.new $f",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "legal:build": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/legal-html.mts",
