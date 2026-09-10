@@ -268,13 +268,21 @@ run "$DB" -f "$HERE/editorial_test.sql"
 # `likes_on_mine`, and `blocks` replaces it again with the block filter,
 # along with the friend-request policy — so the later file has to win.
 echo "→ safety: blocks, reports, moderation"
+# Supabase grants execute on every new function to `anon` and
+# `authenticated` through default privileges, and `revoke ... from public`
+# does not take that back — which is how a definer function granted only
+# to `authenticated` in its migration ended up callable signed out. From
+# here on the bench does the same, so a migration that means to close a
+# function to `anon` has to say so, as it would on the real project.
+run "$DB" -c "alter default privileges in schema public grant execute on functions to anon, authenticated;"
 for f in "$ROOT"/supabase/migrations/*_named_applause.sql \
          "$ROOT"/supabase/migrations/*_blocks.sql \
          "$ROOT"/supabase/migrations/*_suggested_friends.sql \
          "$ROOT"/supabase/migrations/*_reports.sql \
          "$ROOT"/supabase/migrations/*_moderation_actions.sql \
          "$ROOT"/supabase/migrations/*_startup_traces.sql \
-         "$ROOT"/supabase/migrations/*_report_cap_and_photo_reads.sql; do
+         "$ROOT"/supabase/migrations/*_report_cap_and_photo_reads.sql \
+         "$ROOT"/supabase/migrations/*_block_pair_not_probeable.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/reports_rls_test.sql"

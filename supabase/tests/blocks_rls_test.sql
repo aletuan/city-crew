@@ -8,6 +8,9 @@
 -- blocked, and a signed-out caller.
 
 grant usage on schema public to rls_client;
+-- As a real project has it, so a refusal below is about the function and
+-- not about the schema.
+grant usage on schema public to anon;
 grant select, insert, update, delete on public.blocks, public.friendships to rls_client;
 grant select, insert, delete on public.collection_likes to rls_client;
 
@@ -129,6 +132,45 @@ begin
   assert by_blocker = 1, format('the blocker sees %s of their 1 block', by_blocker);
   assert by_blocked = 0, 'the blocked person can see the block';
   assert by_nobody = 0, 'a signed-out caller can see a block';
+end $$;
+
+-- ── nobody else can ask ──────────────────────────────────────────────
+-- Whether two people have blocked each other is theirs. A bystander must
+-- not be able to ask it about any pair they name, and neither may anybody
+-- signed out. The function the friend-request policy needs answers only
+-- about the caller.
+do $$
+declare refused int := 0; mine bool; theirs bool;
+begin
+  set local role rls_client;
+  set local test.uid = 'd2000000-0000-0000-0000-00000000000c';
+  begin
+    perform public.is_blocked_pair('d2000000-0000-0000-0000-00000000000a', 'd2000000-0000-0000-0000-00000000000b');
+  exception when insufficient_privilege then refused := refused + 1;
+  end;
+  -- Only one argument: there is no way to name a pair the caller is not in.
+  select public.blocked_with('d2000000-0000-0000-0000-00000000000a') into theirs;
+  reset role;
+
+  set local role anon;
+  begin
+    perform public.is_blocked_pair('d2000000-0000-0000-0000-00000000000a', 'd2000000-0000-0000-0000-00000000000b');
+  exception when insufficient_privilege then refused := refused + 1;
+  end;
+  begin
+    perform public.blocked_with('d2000000-0000-0000-0000-00000000000a');
+  exception when insufficient_privilege then refused := refused + 1;
+  end;
+  reset role;
+
+  set local role rls_client;
+  set local test.uid = 'd2000000-0000-0000-0000-00000000000a';
+  select public.blocked_with('d2000000-0000-0000-0000-00000000000b') into mine;
+  reset role;
+
+  assert refused = 3, format('%s of 3 probes of somebody else''s blocks were refused', refused);
+  assert not theirs, 'a bystander reads a block they are not part of';
+  assert mine, 'the blocker cannot see their own block through blocked_with';
 end $$;
 
 -- ── what the block reaches ───────────────────────────────────────────
