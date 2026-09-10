@@ -359,7 +359,8 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
   // job is to go and look for it — the tap is the instruction, not the
   // start of a second attempt.
   //
-  // Trimmed for the label only — what travels is the whole query.
+  // Shortened for the label only — what travels is the whole query as
+  // typed, trimmed of the spaces at its ends and nothing more.
   //
   // Fourteen, because the title sits at 18pt beside a 52pt circle and a
   // chevron: about 21 characters on a small phone, and `Thêm “…”` spends
@@ -472,18 +473,27 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
           }
           if (item.kind === 'recent') {
             return (
-              <PressableScale
-                style={s.recentRow}
-                scaleTo={0.97}
-                onPress={() => setQuery(item.term)}
-                accessibilityRole="button"
-                accessibilityLabel={item.term}
-              >
-                <Ionicons name="time-outline" size={18} color={colors.textTertiary} />
-                <Text style={s.recentTerm} numberOfLines={1}>{item.term}</Text>
-                {/* Two promises on one row, the standard split: the row
-                    re-runs the search as typed, the ↗ only lifts the term
-                    into the box so it can be edited before it runs. */}
+              // Two promises on one row, the standard split: the words
+              // re-run the search as typed, the ↗ only lifts the term into
+              // the box so it can be edited before it runs.
+              //
+              // Siblings, not one inside the other. The ↗ used to sit
+              // inside the row's own button, and a button with a label is
+              // a single element to VoiceOver — the ↗ inside it could not
+              // be reached at all (and on the web it was a <button> in a
+              // <button>, which is not valid HTML).
+              <View style={s.recentRow}>
+                <PressableScale
+                  containerStyle={s.recentHit}
+                  style={s.recentMain}
+                  scaleTo={0.97}
+                  onPress={() => setQuery(item.term)}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.term}
+                >
+                  <Ionicons name="time-outline" size={18} color={colors.textTertiary} />
+                  <Text style={s.recentTerm} numberOfLines={1}>{item.term}</Text>
+                </PressableScale>
                 <PressableScale
                   onPress={() => { setQuery(item.term); inputRef.current?.focus(); }}
                   scaleTo={0.85}
@@ -498,7 +508,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                     style={{ transform: [{ rotate: '45deg' }] }}
                   />
                 </PressableScale>
-              </PressableScale>
+              </View>
             );
           }
           if (item.kind === 'chips') {
@@ -855,8 +865,12 @@ const s = StyleSheet.create({
   clear: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
   recentRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: space.page, paddingVertical: 11,
+    paddingHorizontal: space.page,
   },
+  // The words' button takes the row's height, so the tap target is the
+  // same band it was when the whole row was one button.
+  recentHit: { flex: 1 },
+  recentMain: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
   recentTerm: { flex: 1, color: colors.text, fontSize: 15.5 },
   // The shared Chip carries its own right margin; the wrap only owes the
   // vertical rhythm between lines.

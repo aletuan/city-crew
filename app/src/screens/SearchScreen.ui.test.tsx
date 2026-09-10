@@ -313,6 +313,17 @@ describe('recent searches', () => {
     expect(screen.getByTestId('search-result-0').textContent).toContain('Phở 10 Lý Quốc Sư');
   });
 
+  // One button inside another is one element to VoiceOver: the ↗ used to
+  // sit inside the row's own button and could not be reached by it.
+  it('keeps the ↗ beside the row\'s button, not inside it', async () => {
+    await AsyncStorage.setItem(RECENTS_KEY, JSON.stringify(['cong']));
+    mount();
+    const row = await screen.findByRole('button', { name: 'cong' });
+    const edit = screen.getByRole('button', { name: 'Edit this search' });
+    expect(row.contains(edit)).toBe(false);
+    expect(edit.contains(row)).toBe(false);
+  });
+
   it('lifts a term into the box for editing, and focuses it', async () => {
     await AsyncStorage.setItem(RECENTS_KEY, JSON.stringify(['cong']));
     mount();
