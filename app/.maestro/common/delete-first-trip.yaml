@@ -1,0 +1,26 @@
+# Reusable: open the first upcoming trip on the Trips tab and delete it.
+# Expects the Trips tab to be showing `trip-upcoming-0`.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "trip-upcoming-0"
+- scrollUntilVisible:
+    element:
+      id: "trip-delete"
+    direction: DOWN
+    timeout: 20000
+# At the foot of the page it cannot be centred, and the first frame it
+# shows in can be under the floating tab bar: one more scroll lifts it.
+- scroll
+- tapOn:
+    id: "trip-delete"
+# A system alert: its buttons carry no ids, so the label is matched in all
+# three of the app's languages.
+- tapOn:
+    text: "Delete|Xoá|削除"
+- extendedWaitUntil:
+    visible:
+      id: "tab-trips"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 5000

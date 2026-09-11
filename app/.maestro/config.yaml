@@ -9,3 +9,6 @@ executionOrder:
     - 01-explore
     - 02-place-detail
     - 03-search
+    - 04-sign-in
+    - 05-plan-trip
+    - 06-save-place

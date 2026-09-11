@@ -55,7 +55,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
         {/* Capped so a long list cannot push the sheet past the screen; it
             scrolls inside instead. */}
         <ScrollView style={s.list} contentContainerStyle={{ paddingVertical: 4 }} showsVerticalScrollIndicator={false}>
-          {collections.map((c) => {
+          {collections.map((c, i) => {
             const on = place ? holds(c, place.slug) : false;
             return (
               <PressableScale
@@ -63,6 +63,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
                 onPress={() => place && onToggle(c, place)}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: on }}
+                testID={`save-row-${i}`}
                 containerStyle={{ alignSelf: 'stretch' }}
                 style={s.row}
               >
@@ -94,7 +95,7 @@ export default function SaveSheet({ place, collections, onClose, onToggle, onNew
           <Text style={s.newText}>{t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}</Text>
         </PressableScale>
 
-        <PressableScale onPress={onClose} accessibilityRole="button" style={s.done}>
+        <PressableScale onPress={onClose} accessibilityRole="button" style={s.done} testID="save-done">
           <Text style={s.doneText}>{t('Done', 'Xong', '完了')}</Text>
         </PressableScale>
       </Animated.View>

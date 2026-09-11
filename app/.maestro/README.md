@@ -1,9 +1,12 @@
 # iOS smoke tests (Maestro)
 
-Four end-to-end flows that drive the dev bundle inside Expo Go on an iOS
-simulator and check that the guest-facing path still works against real
-Supabase data: launch, Explore, place detail, search. They select by
-`testID` only — never by label — because every label is trilingual.
+Seven end-to-end flows that drive the dev bundle inside Expo Go on an iOS
+simulator against real Supabase data. Four walk the guest path (launch,
+Explore, place detail, search); three sign in as a dedicated test account
+and walk the paths a signed-in reader cannot do without (sign in, plan and
+save a trip, save a place). They select by `testID` only — never by label —
+because every label is trilingual. The one exception is iOS's own alert
+buttons, which take no id and are matched in all three languages.
 
 **Not wired into CI.** These run on a developer's Mac by hand. Running them
 on GitHub would need a macOS runner plus a dev build (Expo Go cannot be
@@ -17,6 +20,16 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `01-explore.yaml` | First place card renders, list scrolls down and back up, city switcher opens, another city is chosen, default city restored. |
 | `02-place-detail.yaml` | Opens the first card, asserts name, address and hero photo, goes back to Explore. |
 | `03-search.yaml` | Opens search, types `cafe`, opens the first hit, comes back, clears the query. |
+| `04-sign-in.yaml` | Signs out if needed; a wrong password shows the form error; the right one signs in; a cold start is still signed in; signs out. |
+| `05-plan-trip.yaml` | Deletes the account's leftover upcoming trips; answers the Ideas wizard (Friends + up to three moods); waits out Sketching; opens the recommended plan; saves it; finds it as the only upcoming trip; deletes it. |
+| `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
+
+The signed-in flows share `common/start.yaml` (open fresh, grant
+notifications — saving a trip plants a reminder, and the permission alert
+would stand over Trips), `common/ensure-signed-in.yaml`,
+`common/ensure-signed-out.yaml`, `common/sign-in.yaml` and
+`common/delete-first-trip.yaml`. Every flow cleans up what it made, and
+cleans up what a failed earlier run left, before it starts.
 
 `common/dismiss-welcome.yaml` and `common/expo-go-prep.yaml` are subflows
 every flow runs first, so a fresh Expo Go and a warm one behave the same.
@@ -38,6 +51,18 @@ restricts `maestro test .maestro` to the numbered flows and fixes their order.
 2. Xcode with an iOS simulator runtime, and Expo Go installed on that
    simulator. The first `npx expo start` → press `i` installs Expo Go for you.
 
+3. **A test account, used for nothing else.** Flows 04–06 sign in as it,
+   and 05 deletes every upcoming trip it owns. Once:
+
+   - Sign up in the app with an address you control (a `+maestro` alias
+     of your own works, e.g. `you+maestro@gmail.com`) and confirm the email.
+   - No collection is needed: flow 06 makes one ("Maestro smoke") the
+     first time, through the form the bookmark opens, and reuses it.
+   - Keep it off the editors list.
+
+   The credentials are passed on the command line and never written into
+   a flow or committed.
+
 ## Running
 
 Three terminals, or one with `&`:
@@ -53,8 +78,16 @@ npx expo start
 #   › Metro waiting on exp://192.168.1.23:8081     ← this one
 
 # 3. Run the suite. Pass the URL from step 2; the default is exp://127.0.0.1:8081.
-npm run smoke:ios -- -e EXPO_URL=exp://192.168.1.23:8081
+#    `read -s` keeps the password out of the shell history.
+read -r TEST_EMAIL; read -rs TEST_PASSWORD
+#    Call maestro directly, not through `npm run smoke:ios`: npm echoes
+#    the command it runs, password included.
+maestro test .maestro -e EXPO_URL=exp://192.168.1.23:8081 \
+  -e TEST_EMAIL="$TEST_EMAIL" -e TEST_PASSWORD="$TEST_PASSWORD"
 ```
+
+Flows 00–03 need no account and ignore the two variables; for those alone
+`npm run smoke:ios -- -e EXPO_URL=…` is fine.
 
 Open the app in Expo Go once by hand before the first run (press `i` in the
 `expo start` terminal). Each flow then kills Expo Go (`launchApp` with
@@ -104,8 +137,20 @@ reaches the native view.
 | `CitySwitcher` | `city-row-<index>` |
 | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
 | `SearchScreen` | `search-input`, `search-clear`, `search-result-<index>` |
+| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in) |
+| `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`; `auth-error` (`FormError`) |
+| `IdeasScreen` | `ideas-company-<solo\|couple\|friends\|family>`, `ideas-cat-<index>`, `ideas-sketch` |
+| `PlanOptionsScreen` | `plan-card-best` |
+| `PlanEditScreen` | `plan-save` |
+| `TripsScreen` | `trip-upcoming-<index>` |
+| `TripDetailScreen` | `trip-delete` (owner), `trip-leave` (invitee) |
+| `PlaceDetailScreen` | `detail-save` / `detail-saved` — one id per state |
+| `SaveSheet` | `save-row-<index>`, `save-done` |
+| `CollectionFormScreen` | `collection-name`, `collection-submit` |
 
-Renaming one of these is a breaking change for this suite; grep `.maestro/`
+Renaming one of these is a breaking change for this suite, and
+`scripts/maestroIds.test.ts` fails in CI when a flow names an id the
+source no longer sets. Grep `.maestro/`
 before you do.
 
 ## Why not CI

@@ -81,6 +81,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         autoCapitalize="none"
         autoCorrect={false}
         autoComplete="email"
+        testID="signin-email"
       />
       <FieldRow
         icon="lock-closed-outline"
@@ -93,6 +94,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         autoComplete="password"
         onSubmitEditing={submit}
         returnKeyType="go"
+        testID="signin-password"
       />
       <View style={s.metaRow}>
         <Pressable onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8}>
@@ -100,7 +102,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         </Pressable>
       </View>
       {error ? <FormError>{failText(error)}</FormError> : null}
-      <PrimaryButton label={t('Sign in', 'Đăng nhập', 'サインイン')} onPress={submit} busy={busy} />
+      <PrimaryButton label={t('Sign in', 'Đăng nhập', 'サインイン')} onPress={submit} busy={busy} testID="signin-submit" />
       <SwitchRow
         prompt={t("Don't have an account?", 'Chưa có tài khoản?', 'アカウントをお持ちでない方は')}
         action={t('Sign up', 'Đăng ký', '登録')}

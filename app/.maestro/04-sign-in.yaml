@@ -1,0 +1,70 @@
+# Sign in: a wrong password is refused with a message, the right one gets
+# in, the session survives a relaunch, and signing out returns to the guest
+# Profile. Uses the dedicated test account — see README.md.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "profile-sign-in"
+- extendedWaitUntil:
+    visible:
+      id: "signin-email"
+    timeout: 15000
+
+# Wrong password first: the form must say so and stay put.
+- tapOn:
+    id: "signin-email"
+- inputText: ${TEST_EMAIL}
+- tapOn:
+    id: "signin-password"
+- inputText: "not-the-password-0"
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: "auth-error"
+    timeout: 20000
+- assertVisible:
+    id: "signin-submit"
+
+# Then the right one, typed over the wrong.
+- tapOn:
+    id: "signin-password"
+- eraseText: 40
+- inputText: ${TEST_PASSWORD}
+- pressKey: Enter
+- tapOn:
+    text: "Not Now"
+    optional: true
+- scrollUntilVisible:
+    element:
+      id: "profile-sign-out"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- assertNotVisible:
+    id: "profile-sign-in"
+
+# The session is stored on the device: a cold start is still signed in.
+- runFlow: common/start.yaml
+- tapOn:
+    id: "tab-profile"
+- scrollUntilVisible:
+    element:
+      id: "profile-sign-out"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+
+# And out again.
+- tapOn:
+    id: "profile-sign-out"
+# Signing out swaps the page under a scroll position that was at the
+# bottom; the guest's button is at the top.
+- scrollUntilVisible:
+    element:
+      id: "profile-sign-in"
+    direction: UP
+    timeout: 20000
