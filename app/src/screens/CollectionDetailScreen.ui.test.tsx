@@ -56,13 +56,24 @@ const state = vi.hoisted(() => ({
   myLikes: [] as string[],
   cachedAvatar: null as string | null,
   city: { id: 'hanoi' } as { id: string } | null,
+  lang: 'en' as 'en' | 'vi' | 'ja',
 }));
 
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
 }));
 vi.mock('../lib/i18n', () => ({
-  useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
+  // The real fallback order, so a test can switch language and the screen
+  // chooses its text the way it does in the app.
+  useI18n: () => ({
+    lang: state.lang,
+    setLang: () => {},
+    t: (en: string | null, vi: string | null, ja: string | null) => {
+      if (state.lang === 'vi') return vi ?? en ?? '';
+      if (state.lang === 'ja') return ja ?? en ?? vi ?? '';
+      return en ?? vi ?? '';
+    },
+  }),
 }));
 vi.mock('../lib/catalog', () => ({
   useCollections: () => ({ data: state.cols, loading: state.colsLoading, reload: spies.colsReload }),
@@ -196,6 +207,7 @@ beforeEach(() => {
   state.myLikes = [];
   state.cachedAvatar = null;
   state.city = { id: 'hanoi' };
+  state.lang = 'en';
 });
 
 describe('before the list is there', () => {
@@ -217,6 +229,24 @@ describe('before the list is there', () => {
     expect(screen.queryByText('No places in this collection yet.')).toBeNull();
     fireEvent.click(button('Back'));
     expect(raw.goBack).toHaveBeenCalled();
+  });
+
+  it('offers no menu for a list that is not found', () => {
+    state.mine = [];
+    show();
+    expect(screen.getByText('Collection not found.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
+  });
+
+  it('holds the menu back while your own lists load, so the owner never gets the visitor menu', () => {
+    // Your list is only in `mine` — the public query leaves owned rows out —
+    // so until it answers there is no row saying the list is yours.
+    state.mine = [];
+    state.mineLoading = true;
+    show();
+    expect(screen.getByRole('progressbar')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
+    expect(screen.queryByText('Save a copy')).toBeNull();
   });
 
   it('finds a public list in the public catalog when it is not among your own', () => {
@@ -245,6 +275,13 @@ describe('your own list', () => {
     expect(screen.queryByText('Public')).toBeNull();
     // No self-credit and no heart on your own list.
     expect(screen.queryByRole('button', { name: /like/i })).toBeNull();
+  });
+
+  it('shows a description written only in Japanese to a Japanese reader', () => {
+    state.lang = 'ja';
+    state.mine = [collection({ desc_en: null, desc_vi: null, desc_ja: '旧市街で食べる。' })];
+    show();
+    expect(screen.getByText('旧市街で食べる。')).toBeTruthy();
   });
 
   it('says "place" for one, and "Public" once published', () => {
@@ -334,14 +371,22 @@ describe('your own list', () => {
     });
   });
 
-  it('Share explains that a private list has nothing to send yet', () => {
+  it('Share explains that this private list can be made public, and links are coming', () => {
     show();
     openMenu();
     fireEvent.click(menuRow('Share'));
     expect(alert).toHaveBeenCalledWith(
       'Sharing is coming',
-      'Your collections are private for now. Sharing one with the crew is on the way.',
+      'This list is private. You can make it public from this menu — share links are on the way.',
     );
+  });
+
+  it('closes the menu from a backdrop VoiceOver can name', async () => {
+    show();
+    openMenu();
+    fireEvent.click(button('Close menu'));
+    endModalFade();
+    await waitFor(() => expect(screen.queryByText('Edit collection')).toBeNull());
   });
 });
 
@@ -377,6 +422,18 @@ describe('publishing', () => {
     const banner = await screen.findByText('This collection is now public');
     fireEvent.click(banner);
     expect(screen.queryByText('This collection is now public')).toBeNull();
+  });
+
+  it('makes Undo a button of its own, not nested inside another', async () => {
+    show();
+    openMenu();
+    fireEvent.click(menuRow('Make public'));
+    await screen.findByText('This collection is now public');
+    const undo = button('Undo');
+    // A button inside a button is one element to VoiceOver.
+    expect(undo.parentElement!.closest('[role="button"]')).toBeNull();
+    fireEvent.click(undo);
+    expect(spies.setCollectionPublic).toHaveBeenLastCalledWith('old-quarter', false);
   });
 
   it('refuses while places are pending or rejected, and says which in words', () => {
@@ -534,6 +591,8 @@ describe('deleting', () => {
     await waitFor(() => expect(raw.goBack).toHaveBeenCalled());
     expect(spies.note.mock.calls).toEqual([['pho', 'unsave'], ['cafe', 'unsave'], ['museum', 'unsave']]);
     expect(spies.mineReload).toHaveBeenCalled();
+    // The public catalog too, or a deleted public list stays on the shelf.
+    expect(spies.colsReload).toHaveBeenCalled();
   });
 
   it('records nothing and stays put when the delete fails', async () => {
@@ -628,12 +687,14 @@ describe("somebody else's list", () => {
     });
   });
 
-  it('does nothing to copy when no city is known at all', () => {
+  it('leaves Save a copy out when no city is known at all', () => {
     state.cols = [theirs({ city_id: null })];
     state.city = null;
     const { raw } = show();
     openMenu();
-    fireEvent.click(menuRow('Save a copy'));
+    // A row that could only close the menu is not offered.
+    expect(screen.queryByText('Save a copy')).toBeNull();
+    expect(menuRow('Share')).toBeTruthy();
     expect(raw.navigate).not.toHaveBeenCalled();
   });
 

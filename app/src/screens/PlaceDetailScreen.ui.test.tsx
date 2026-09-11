@@ -17,7 +17,7 @@
 // behaviour under test.
 
 import React from 'react';
-import { Linking, Share } from 'react-native';
+import { Alert, Linking, Share } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import type { Place } from '../lib/data';
@@ -39,6 +39,7 @@ const state = vi.hoisted(() => ({
   saved: [] as string[],
   credit: false,
   city: null as null | Record<string, string>,
+  lang: 'en' as 'en' | 'vi' | 'ja',
 }));
 const spies = vi.hoisted(() => ({
   save: vi.fn(),
@@ -47,8 +48,17 @@ const spies = vi.hoisted(() => ({
   setStatusBarStyle: vi.fn(),
 }));
 
+// The provider's own fallback order, so a Japanese reader can be stood in
+// for: which language a field is shown in is part of what is under test.
+type Str = string | null | undefined;
 vi.mock('../lib/i18n', () => ({
-  useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string | null) => en ?? '' }),
+  useI18n: () => ({
+    lang: state.lang,
+    setLang: () => {},
+    t: (en: Str, vi: Str, ja?: Str) => (state.lang === 'vi' ? vi ?? en ?? ''
+      : state.lang === 'ja' ? ja ?? en ?? vi ?? ''
+        : en ?? vi ?? ''),
+  }),
 }));
 vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city }) }));
 vi.mock('../lib/catalog', () => ({ usePlaces: () => state.catalog }));
@@ -79,6 +89,11 @@ import PlaceDetailScreen from './PlaceDetailScreen';
 
 const openURL = vi.spyOn(Linking, 'openURL').mockImplementation(async () => true);
 const shareSpy = vi.spyOn(Share, 'share').mockImplementation(async () => ({ action: 'sharedAction' }));
+// react-native-web's `Alert` is a silent no-op; what the reader is told is
+// read off the spy (see `uitest/setup`).
+const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
+/** Lets a rejected `openURL` reach its `.catch`. */
+const settle = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
 
 // Wednesday 10:00 in Hanoi (UTC+7).
 const WED_10AM = new Date('2026-09-09T03:00:00Z');
@@ -175,12 +190,15 @@ beforeEach(() => {
   state.saved = [];
   state.credit = false;
   state.city = null;
+  state.lang = 'en';
   spies.save.mockClear();
   spies.note.mockClear();
   spies.bySlug.mockClear();
   spies.setStatusBarStyle.mockClear();
-  openURL.mockClear();
+  openURL.mockReset();
+  openURL.mockImplementation(async () => true);
   shareSpy.mockClear();
+  alert.mockClear();
 });
 afterEach(() => { vi.useRealTimers(); });
 
@@ -296,6 +314,12 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     show(place({ desc_en: null, desc_vi: null }));
     expect(screen.queryByText('Military-green coconut coffee.')).toBeNull();
   });
+
+  it('shows a description written only in Japanese to a Japanese reader', () => {
+    state.lang = 'ja';
+    show(place({ desc_en: null, desc_vi: null, desc_ja: 'ココナッツコーヒー。' }));
+    expect(screen.getByText('ココナッツコーヒー。')).toBeTruthy();
+  });
 });
 
 describe('PlaceDetailScreen — hero', () => {
@@ -322,6 +346,17 @@ describe('PlaceDetailScreen — hero', () => {
     expect(heroPhotos()[0]).toBe('cover.jpg');
     expect(heroPhotos()).toEqual(['cover.jpg', 'b.jpg']);
     expect(screen.getByText('1 / 2')).toBeTruthy();
+  });
+
+  it('names each photo, and where it sits in the set, for VoiceOver', () => {
+    show(place({ place_photos: [photo('a.jpg'), photo('b.jpg', { sort_order: 1 }), photo('c.jpg', { sort_order: 2 })] }));
+    const labels = ['a.jpg', 'b.jpg', 'c.jpg'].map((uri) =>
+      propsWhere((p) => (p.source as { uri?: string } | undefined)?.uri === uri).accessibilityLabel);
+    expect(labels).toEqual([
+      'Photo 1 of 3 of Cộng Cà Phê - Old Quarter',
+      'Photo 2 of 3 of Cộng Cà Phê - Old Quarter',
+      'Photo 3 of 3 of Cộng Cà Phê - Old Quarter',
+    ]);
   });
 
   it('advances the counter as the carousel is swiped', () => {
@@ -353,7 +388,7 @@ describe('PlaceDetailScreen — hero', () => {
 describe('PlaceDetailScreen — floating controls', () => {
   it('goes back', () => {
     const n = show();
-    fireEvent.click(screen.getByTestId('detail-back'));
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(n.goBack).toHaveBeenCalledTimes(1);
   });
 
@@ -384,6 +419,17 @@ describe('PlaceDetailScreen — floating controls', () => {
       message: 'Cộng Cà Phê - Old Quarter — 152 Trieu Viet Vuong, Hai Ba Trung, Hanoi, Vietnam\n'
         + `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Cộng Cà Phê - Old Quarter')}&query_place_id=gp1`,
     });
+  });
+
+  it('announces Share as a button', () => {
+    show();
+    expect(screen.getByRole('button', { name: 'Share' })).toBeTruthy();
+  });
+
+  it('shares the name alone, with no dangling dash, for a place with no address', () => {
+    show(place({ address: null, lat: null, lng: null }));
+    fireEvent.click(screen.getByLabelText('Share'));
+    expect(shareSpy.mock.calls[0][0]).toEqual({ message: 'Cộng Cà Phê - Old Quarter' });
   });
 
   it('shares without a link for a place with no coordinates', () => {
@@ -439,6 +485,25 @@ describe('PlaceDetailScreen — info card', () => {
     expect(screen.getByText('congcaphe.com')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Website/ }));
     expect(openURL).toHaveBeenCalledWith('https://www.congcaphe.com/');
+  });
+
+  it('opens a website stored without a scheme as https', () => {
+    show(place({ website: 'congcaphe.com' }));
+    expect(screen.getByText('congcaphe.com')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Website/ }));
+    expect(openURL).toHaveBeenCalledWith('https://congcaphe.com');
+  });
+
+  it.each([
+    ['Address', 'Could not open Maps'],
+    ['Phone', 'Could not place the call'],
+    ['Website', 'Could not open the website'],
+  ])('says so when the %s row cannot be opened', async (row, words) => {
+    openURL.mockImplementation(async () => { throw new Error('no handler'); });
+    show();
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(row) }));
+    await settle();
+    expect(alert).toHaveBeenCalledWith(words);
   });
 
   it('draws no card at all for a place with nothing to put in it', () => {
