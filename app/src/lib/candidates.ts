@@ -21,11 +21,12 @@
 import { useCallback, useRef, useState } from 'react';
 import { Alert, Keyboard } from 'react-native';
 import { useAuth } from './auth';
+import { useSave } from './save';
 import { useCity, useMyPosition } from './city';
 import { usePlaces } from './catalog';
 import { distanceKm, fmtDistance } from './geo';
 import { useI18n } from './i18n';
-import { Candidate, knownByPlaceId, Known, searchPlaces, suggestPlace } from './suggest';
+import { Candidate, knownByPlaceId, Known, searchPlaces, SignedOutError, suggestPlace } from './suggest';
 import { Batch, IDLE_BATCH, ItemState } from './batch';
 
 // Re-exported so call sites keep one import for the whole idea. The types
@@ -61,6 +62,7 @@ export function useCandidates(): Candidates {
   const { session } = useAuth();
   const meId = session?.user?.id;
   const places = usePlaces();
+  const { askToSignIn } = useSave();
 
   const [results, setResults] = useState<Candidate[] | null>(null);
   const [known, setKnown] = useState<Record<string, Known>>({});
@@ -82,6 +84,10 @@ export function useCandidates(): Candidates {
   const run = useCallback((raw: string) => {
     const q = raw.trim();
     if (!q || !city || searching) return;
+    // Asking Google is a signed-in act — `fetch-place` refuses anybody
+    // else — so a guest gets the sheet every other signed-in button in the
+    // app opens, not a round trip that can only end in a refusal.
+    if (!meId) { askToSignIn(); return; }
     // Both callers reach this from a keyboard that is still up — one from
     // the return key, one from a row tapped under the results — and in
     // both the typing is over.
@@ -103,12 +109,26 @@ export function useCandidates(): Candidates {
         setKnown(seen);
         setResults(found);
       })
-      .catch((e: Error) => Alert.alert(t('Search failed', 'Tìm kiếm thất bại', '検索に失敗しました'), e.message))
+      .catch((e: Error) => {
+        // A session that lapsed between render and tap: same answer.
+        if (e instanceof SignedOutError) { askToSignIn(); return; }
+        // In the reader's words. The raw message was supabase-js's
+        // "Edge Function returned a non-2xx status code", which names the
+        // plumbing and says nothing about what to do.
+        Alert.alert(
+          t('Search failed', 'Tìm kiếm thất bại', '検索に失敗しました'),
+          t(
+            'Could not reach Google Maps just now. Try again in a moment.',
+            'Chưa kết nối được Google Maps. Thử lại sau giây lát nhé.',
+            'Google マップに接続できませんでした。少し待ってからもう一度お試しください。',
+          ),
+        );
+      })
       .finally(() => setSearching(false));
   // `city.id` is the stable key; depending on `city` re-runs the search on renders where the city
   // did not change.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city?.id, searching, meId, t]);
+  }, [city?.id, searching, meId, t, askToSignIn]);
 
   /**
    * How far a result is from the reader, or nothing at all.

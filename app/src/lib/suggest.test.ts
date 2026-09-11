@@ -7,7 +7,7 @@ vi.mock('./supabase', async () => {
   return { supabase: h.fake.client };
 });
 
-import { knownByPlaceId, readOutcome, searchPlaces, suggestPlace } from './suggest';
+import { knownByPlaceId, readOutcome, searchPlaces, SignedOutError, suggestPlace } from './suggest';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
@@ -137,6 +137,25 @@ describe('searchPlaces', () => {
   it('throws when the function refuses', async () => {
     fake().replies({ error: { message: 'over quota' } });
     await expect(searchPlaces('cong caphe', 'hanoi')).rejects.toThrow('over quota');
+  });
+
+  // What a guest used to see as "Edge Function returned a non-2xx status
+  // code". Told apart so the screen can open the sign-in sheet instead.
+  it('names a 401 as signed out, by status', async () => {
+    fake().replies({ error: { message: 'Edge Function returned a non-2xx status code', context: { status: 401 } } as never });
+    await expect(searchPlaces('le velo', 'hanoi')).rejects.toBeInstanceOf(SignedOutError);
+  });
+
+  it('names a 401 as signed out, by the body the function sent', async () => {
+    fake().replies({ error: nonOk({ error: 'not signed in' }) });
+    await expect(searchPlaces('le velo', 'hanoi')).rejects.toBeInstanceOf(SignedOutError);
+  });
+
+  it('keeps any other refusal a plain error', async () => {
+    fake().replies({ error: nonOk({ error: 'quota' }) });
+    const err = await searchPlaces('le velo', 'hanoi').catch((e) => e);
+    expect(err).not.toBeInstanceOf(SignedOutError);
+    expect(err.message).toBe('Edge Function returned a non-2xx status code');
   });
 });
 

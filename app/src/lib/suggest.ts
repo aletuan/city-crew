@@ -101,11 +101,28 @@ async function bodyOf(err: unknown): Promise<Body | null> {
   return null;
 }
 
+/**
+ * The search was refused because nobody is signed in.
+ *
+ * Its own type because the answer to it is not an error message: it is the
+ * sign-in sheet. The flat `error.message` supabase-js hands back for any
+ * non-2xx — "Edge Function returned a non-2xx status code" — is what a
+ * guest used to read, over a screen that had just offered them the button.
+ */
+export class SignedOutError extends Error {
+  constructor() { super('not signed in'); this.name = 'SignedOutError'; }
+}
+
 export async function searchPlaces(query: string, cityId: string): Promise<Candidate[]> {
   const { data, error } = await supabase.functions.invoke('fetch-place', {
     body: { action: 'search', query, city: cityId },
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    const status = (error as { context?: { status?: number } }).context?.status;
+    const body = await bodyOf(error);
+    if (status === 401 || body?.error === 'not signed in') throw new SignedOutError();
+    throw new Error(error.message);
+  }
   return ((data as { candidates?: Candidate[] })?.candidates ?? []);
 }
 
