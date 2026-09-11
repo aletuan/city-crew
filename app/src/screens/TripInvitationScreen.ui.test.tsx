@@ -60,6 +60,10 @@ vi.mock('../lib/invitations', () => ({
   }),
 }));
 vi.mock('../lib/data', () => ({ answerInvite }));
+// The OS half of reminders is stood in for; what this screen owes is the
+// call — the promise above its buttons is a reminder the evening before.
+const scheduleTripReminder = vi.hoisted(() => vi.fn(async (..._a: unknown[]) => {}));
+vi.mock('../lib/reminders', () => ({ scheduleTripReminder }));
 
 import TripInvitationScreen from './TripInvitationScreen';
 
@@ -315,6 +319,33 @@ describe('answering', () => {
     expect(invitesReload).toHaveBeenCalledTimes(1);
     expect(tripsReload).toHaveBeenCalledTimes(1);
     expect(alert).not.toHaveBeenCalled();
+  });
+
+  // The screen promises "you get the reminder the evening before", and
+  // nothing used to plant one: only the planner, saving, ever was.
+  it('accepting plants the evening-before reminder for this trip', async () => {
+    const navigation = show();
+    fireEvent.click(yes());
+    await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+    expect(scheduleTripReminder).toHaveBeenCalledWith(
+      { id: 't1', day: '2026-09-12', title: 'Old Quarter crawl' },
+      { title: 'Tomorrow: Old Quarter crawl', body: 'Your plan starts in the morning. Sleep well.' },
+    );
+  });
+
+  it('declining plants nothing', async () => {
+    const first = show();
+    fireEvent.click(no());
+    await waitFor(() => expect(first.goBack).toHaveBeenCalled());
+    expect(scheduleTripReminder).not.toHaveBeenCalled();
+  });
+
+  it('a failed accept plants nothing', async () => {
+    answerInvite.mockRejectedValueOnce(new Error('offline'));
+    show();
+    fireEvent.click(yes());
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    expect(scheduleTripReminder).not.toHaveBeenCalled();
   });
 
   it('declining answers this trip, reloads both lists and leaves', async () => {

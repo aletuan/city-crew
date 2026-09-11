@@ -513,7 +513,8 @@ describe('leave, for a guest', () => {
     expect(tripsReload).toHaveBeenCalled();
     expect(invitesReload).toHaveBeenCalled();
     expect(deleteTrip).not.toHaveBeenCalled();
-    expect(cancelTripReminder).not.toHaveBeenCalled();
+    // Leaving takes this phone's reminder with it, as a delete does.
+    expect(cancelTripReminder).toHaveBeenCalledWith('t1');
   });
 
   it('says why leaving failed and stays on the trip', async () => {

@@ -52,6 +52,7 @@ import {
   legsOfPlan, move, NUDGE_MIN, nudge, outOfOrder, remove, windowOf, type Editable,
 } from '../lib/itinerary';
 import { planTrips } from '../lib/planner';
+import { reminderText } from '../lib/remind';
 import { scheduleTripReminder } from '../lib/reminders';
 import { membersOf } from '../lib/place';
 import { useSave } from '../lib/save';
@@ -294,17 +295,7 @@ export default function PlanEditScreen({ navigation, route }: {
       // The evening-before nudge, planted while the day is known. After
       // the save and fire-and-forget: a reminder is a courtesy, and the
       // reader is not kept waiting on the permission sheet's animation.
-      scheduleTripReminder(
-        { id: tripId, day },
-        {
-          title: t('Tomorrow: ' + title, 'Ngày mai: ' + title, '明日：' + title),
-          body: t(
-            'Your plan starts in the morning. Sleep well.',
-            'Kế hoạch bắt đầu vào sáng mai. Ngủ ngon nhé.',
-            '予定は明日の朝から。おやすみなさい。',
-          ),
-        },
-      );
+      scheduleTripReminder({ id: tripId, day, title }, reminderText(title, t));
       const kept = new Set(current.map((st) => st.place.slug));
       for (const slug of kept) note(slug, 'plan_keep');
       for (const st of picked?.stops ?? []) {

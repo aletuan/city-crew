@@ -293,7 +293,13 @@ export default function TripDetailScreen({ navigation, route }: {
         style: 'destructive',
         onPress: () => {
           answerInvite(trip.id, 'declined')
-            .then(() => { navigation.goBack(); trips.reload(); invites.reload(); })
+            .then(() => {
+              // Leaving takes the reminder with it, as a delete does for
+              // the planner. The sync would pull it on the next reload
+              // anyway; doing it here means it is gone before that.
+              cancelTripReminder(trip.id);
+              navigation.goBack(); trips.reload(); invites.reload();
+            })
             .catch((e: Error) => Alert.alert(
               t('Could not leave', 'Không rời được', '退出できませんでした'), e.message,
             ));

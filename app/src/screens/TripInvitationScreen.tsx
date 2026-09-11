@@ -31,6 +31,8 @@ import { useAuth } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { fromISO } from '../lib/day';
 import { answerInvite } from '../lib/data';
+import { reminderText } from '../lib/remind';
+import { scheduleTripReminder } from '../lib/reminders';
 import { useMyTrips } from '../lib/mytrips';
 import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
@@ -78,6 +80,17 @@ export default function TripInvitationScreen({ navigation, route }: {
     setBusy(true);
     try {
       await answerInvite(tripId, said);
+      // The promise this screen makes above the buttons: accepting brings
+      // the reminder the evening before. Planted here, on the tap, because
+      // this is the moment a permission sheet makes sense to the reader;
+      // the background sync that also covers it never asks. Declining
+      // needs nothing — an invitee was never reminded before saying yes.
+      if (said === 'accepted' && trip) {
+        void scheduleTripReminder(
+          { id: trip.id, day: trip.day, title: trip.title },
+          reminderText(trip.title, t),
+        );
+      }
       invites.reload();
       trips.reload();
       // Both answers leave this screen: accepting puts the trip in Trips
