@@ -312,7 +312,9 @@ describe('the requests', () => {
     expect(Haptics.notificationAsync).not.toHaveBeenCalled();
   });
 
-  it('does not refresh or celebrate an answer the server refused', async () => {
+  // It used to stop there, silently: a refused answer looked exactly like
+  // a tap that had not registered.
+  it('does not refresh or celebrate an answer the server refused, and says so', async () => {
     data.acceptFriendRequest.mockImplementation(async () => { throw new Error('nope'); });
     crew.ships.data = [ask('a')];
     await renderScreen();
@@ -320,6 +322,32 @@ describe('the requests', () => {
     await flush();
     expect(crew.ships.reload).not.toHaveBeenCalled();
     expect(Haptics.notificationAsync).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith('Could not accept the request', 'nope');
+  });
+
+  it('says so when a decline is refused too', async () => {
+    data.removeFriendship.mockImplementation(async () => { throw new Error('nope'); });
+    crew.ships.data = [ask('a')];
+    await renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: 'Decline' }));
+    await flush();
+    expect(alert).toHaveBeenCalledWith('Could not decline the request', 'nope');
+  });
+
+  it('takes one answer per request while it is in flight, and dims both buttons', async () => {
+    let settle!: () => void;
+    data.acceptFriendRequest.mockImplementation(() => new Promise<void>((ok) => { settle = ok; }));
+    crew.ships.data = [ask('a')];
+    await renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Decline' }));
+    expect(data.acceptFriendRequest).toHaveBeenCalledTimes(1);
+    expect(data.removeFriendship).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Accept' }).getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Decline' }).getAttribute('aria-disabled')).toBe('true');
+    settle();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Accept' }).getAttribute('aria-disabled')).not.toBe('true'));
   });
 });
 
@@ -369,7 +397,7 @@ describe('the ⋯ sheet', () => {
     expect(crew.blocks.reload).toHaveBeenCalledTimes(1);
   });
 
-  it('refreshes nothing when the block fails', async () => {
+  it('refreshes nothing when the block fails, and says so', async () => {
     data.blockUser.mockImplementation(async () => { throw new Error('nope'); });
     crew.ships.data = [ask('a')];
     crew.people = { a: person('a', 'anh') };
@@ -381,6 +409,7 @@ describe('the ⋯ sheet', () => {
     await flush();
     expect(crew.ships.reload).not.toHaveBeenCalled();
     expect(crew.blocks.reload).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith('Could not block', 'nope');
   });
 
   it('hands the report flow the asker as a profile', async () => {

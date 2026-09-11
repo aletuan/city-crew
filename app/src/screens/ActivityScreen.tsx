@@ -34,6 +34,7 @@ import {
 } from '../lib/friends';
 import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
+import { reasonOf, usePending } from '../lib/pending';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -79,12 +80,21 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
     return null;
   };
 
-  const answer = (requester: string, yes: boolean) => {
-    const done = yes
-      ? acceptFriendRequest(requester, me!)
-      : removeFriendship(requester, me!);
-    done.then(() => { if (yes) successHaptic(); ships.reload(); }).catch(() => {});
-  };
+  // One write per person at a time, and a failure said out loud — the same
+  // guard the crew screen uses (see lib/pending). Both writes here used to
+  // end in `.catch(() => {})`, so a dropped connection left the request
+  // sitting there with no word on whether the tap had landed.
+  const { pending, run } = usePending();
+  const failed = (title: string) => (e: unknown) => Alert.alert(title, reasonOf(e));
+
+  const answer = (requester: string, yes: boolean) => run(
+    requester,
+    () => (yes ? acceptFriendRequest(requester, me!) : removeFriendship(requester, me!)),
+    () => { if (yes) successHaptic(); ships.reload(); },
+    failed(yes
+      ? t('Could not accept the request', 'Không chấp nhận được lời mời', 'リクエストを承認できませんでした')
+      : t('Could not decline the request', 'Không từ chối được lời mời', 'リクエストを拒否できませんでした')),
+  );
 
   // The stronger no, one press deeper — and in the same sheet the crew
   // screen uses, so a request answered from here and one answered from
@@ -133,7 +143,12 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
               style: 'destructive',
               // Blocks too, not just edges: the body above promises the undo
               // lives on Your crew, whose blocked list reads this copy.
-              onPress: () => { blockUser(requester).then(() => { ships.reload(); blocks.reload(); }).catch(() => {}); },
+              onPress: () => run(
+                requester,
+                () => blockUser(requester),
+                () => { ships.reload(); blocks.reload(); },
+                failed(t('Could not block', 'Không chặn được', 'ブロックできませんでした')),
+              ),
             },
           ],
         ),
@@ -216,16 +231,24 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                       GradientCta, the hero — and solid accent in the
                       light theme is a darker brick that read as a
                       different app sitting in this one. */}
-                  <PressableScale containerStyle={s.half} onPress={() => answer(r.requester, true)} accessibilityRole="button">
+                  <PressableScale
+                    containerStyle={[s.half, pending.has(r.requester) && s.working]}
+                    onPress={() => answer(r.requester, true)}
+                    disabled={pending.has(r.requester)}
+                    aria-disabled={pending.has(r.requester)}
+                    accessibilityRole="button"
+                  >
                     <LinearGradient {...gradAI} style={s.accept}>
                       <Ionicons name="checkmark" size={17} color={colors.accentInk} />
                       <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認')}</Text>
                     </LinearGradient>
                   </PressableScale>
                   <PressableScale
-                    containerStyle={s.half}
+                    containerStyle={[s.half, pending.has(r.requester) && s.working]}
                     style={s.decline}
                     onPress={() => answer(r.requester, false)}
+                    disabled={pending.has(r.requester)}
+                    aria-disabled={pending.has(r.requester)}
                     onLongPress={() => openRequestSheet(r.requester, p)}
                     accessibilityRole="button"
                     accessibilityHint={t('Hold to block', 'Giữ để chặn', '長押しでブロック')}
@@ -334,6 +357,8 @@ const s = StyleSheet.create({
   meta: { color: colors.textTertiary, ...type.meta },
   answers: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 },
+  // A request whose answer is in flight: dimmed, and refusing the tap.
+  working: { opacity: 0.5 },
   accept: {
     flexDirection: 'row', gap: 7,
     alignItems: 'center', justifyContent: 'center',

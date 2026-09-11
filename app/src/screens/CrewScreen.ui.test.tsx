@@ -197,14 +197,38 @@ describe('answering a request', () => {
     await waitFor(() => expect(crew.ships.reload).toHaveBeenCalled());
   });
 
-  it('a failed answer leaves the list as it was', async () => {
+  // It used to leave the list as it was and say nothing at all, so a
+  // dropped connection read the same as a tap that missed.
+  it('a failed answer leaves the list as it was, and says so', async () => {
     data.acceptFriendRequest.mockImplementation(async () => { throw new Error('offline'); });
     render(<CrewScreen navigation={nav()} />);
     crew.ships.reload.mockClear();
     fireEvent.click(screen.getByRole('button', { name: /Accept/ }));
-    await waitFor(() => expect(data.acceptFriendRequest).toHaveBeenCalled());
-    await new Promise((r) => setTimeout(r, 0));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not accept the request', 'offline'));
     expect(crew.ships.reload).not.toHaveBeenCalled();
+  });
+
+  it('says so when a decline fails too', async () => {
+    data.removeFriendship.mockImplementation(async () => { throw new Error('offline'); });
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Decline' }));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not decline the request', 'offline'));
+  });
+
+  it('takes one answer per request while it is in flight, and dims both buttons', async () => {
+    let settle!: () => void;
+    data.acceptFriendRequest.mockImplementation(() => new Promise<void>((ok) => { settle = ok; }));
+    render(<CrewScreen navigation={nav()} />);
+    const accept = screen.getByRole('button', { name: /Accept/ });
+    fireEvent.click(accept);
+    fireEvent.click(accept);
+    fireEvent.click(screen.getByRole('button', { name: 'Decline' }));
+    expect(data.acceptFriendRequest).toHaveBeenCalledTimes(1);
+    expect(data.removeFriendship).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /Accept/ }).getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Decline' }).getAttribute('aria-disabled')).toBe('true');
+    settle();
+    await waitFor(() => expect(screen.getByRole('button', { name: /Accept/ }).getAttribute('aria-disabled')).not.toBe('true'));
   });
 
   it('the options sheet can decline, and decline-and-block only after confirming', async () => {
@@ -551,5 +575,74 @@ describe('somebody whose profile never arrived', () => {
     expect(alert.mock.calls[0][0]).toBe('Unfriend this person?');
     confirmLast();
     await waitFor(() => expect(data.removeFriendship).toHaveBeenCalledWith(ME, 'f'));
+  });
+});
+
+// Every other write on the screen, failing. Each used to end in
+// `.catch(() => {})`; each now names what did not happen, with the
+// server's reason, and leaves the lists as they were.
+describe('a write that fails says so', () => {
+  const failAll = () => {
+    for (const fn of [data.removeFriendship, data.blockUser, data.unblockUser, data.sendFriendRequest]) {
+      fn.mockImplementation(async () => { throw new Error('offline'); });
+    }
+  };
+
+  it('unfriending', async () => {
+    failAll();
+    crew.ships.data = [edge(ME, 'a', 'accepted')];
+    crew.people = { a: person('a', 'anh') };
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Options' }));
+    await pickSheetAction('Unfriend @anh');
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    confirmLast();
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not unfriend', 'offline'));
+  });
+
+  it('withdrawing a sent request', async () => {
+    failAll();
+    crew.ships.data = [edge(ME, 'o', 'pending')];
+    crew.people = { o: person('o', 'oanh') };
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Requests/));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await pickSheetAction('Cancel the request');
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not cancel the request', 'offline'));
+  });
+
+  it('blocking, without refreshing anything', async () => {
+    failAll();
+    crew.ships.data = [edge(ME, 'a', 'accepted')];
+    crew.people = { a: person('a', 'anh') };
+    render(<CrewScreen navigation={nav()} />);
+    crew.ships.reload.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Options' }));
+    await pickSheetAction(/^Block/);
+    await waitFor(() => expect(alert).toHaveBeenCalled());
+    confirmLast();
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not block', 'offline'));
+    expect(crew.blocks.reload).not.toHaveBeenCalled();
+  });
+
+  it('unblocking', async () => {
+    failAll();
+    crew.blocks.data = ['x'];
+    crew.people = { x: person('x', 'xuan') };
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Unblock' }));
+    confirmLast();
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not unblock', 'offline'));
+    expect(crew.blocks.reload).not.toHaveBeenCalled();
+  });
+
+  it('adding a suggestion', async () => {
+    failAll();
+    data.fetchSuggestedFriends.mockImplementation(async () => [{ other: 's', mutual: 2 }]);
+    crew.people = { s: person('s', 'son') };
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(tab(/Requests/));
+    fireEvent.click(await screen.findByRole('button', { name: /Add$/ }));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not send the request', 'offline'));
   });
 });
