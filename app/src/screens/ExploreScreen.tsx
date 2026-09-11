@@ -574,7 +574,9 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
           onPress={() => {
             fireHaptic('selection');
             navigation.getParent()?.navigate('Collections', {
-              screen: 'CollectionsHome', params: { tab: 'community' },
+              // `at` makes every tap a fresh param, so a second tap
+              // re-aims a tab the reader has since switched away from.
+              screen: 'CollectionsHome', params: { tab: 'community', at: Date.now() },
             });
           }}
           hitSlop={10}

@@ -383,7 +383,7 @@ function SwipeRow({ children, onEdit, onDelete, editLabel, deleteLabel }: {
 
 export default function CollectionsScreen({ navigation, route }: {
   navigation: Nav;
-  route: { params?: { tab?: 'community' } };
+  route: { params?: { tab?: 'community'; at?: number } };
 }) {
   const { t } = useI18n();
   const { session } = useAuth();
@@ -504,10 +504,13 @@ export default function CollectionsScreen({ navigation, route }: {
   // the same question — whose lists these are.
   const [tab, setTab] = useState<'yours' | 'community'>(route.params?.tab ?? 'yours');
   // Explore's "See all" aims here while the screen may already be
-  // mounted, so a fresh param re-aims the switch.
+  // mounted, so a fresh param re-aims the switch. Keyed on `at` as well
+  // as `tab`: the second "See all" carries the same tab as the first, and
+  // a reader who had switched to Yours in between was left there, because
+  // an unchanged value never re-ran this.
   useEffect(() => {
     if (route.params?.tab) setTab(route.params.tab);
-  }, [route.params?.tab]);
+  }, [route.params?.tab, route.params?.at]);
   // An empty library greets with the community shelf instead of an empty
   // room — decided once per visit, the first time the answer lands, and
   // never re-decided under the reader's thumb (the Crew screen's rule).

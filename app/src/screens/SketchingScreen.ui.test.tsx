@@ -10,6 +10,7 @@
 // each step, that it leaves with `replace` and the exact answers plus the
 // seed, and that it never leaves after the reader has — nor twice. Also
 // the dead end: no plans, no prefetch, the suggestion line, the way back.
+// And the catalog that never came: a network fault, not a dead end.
 //
 // The planner and the network-facing narration cache are mocked; the
 // sequence (`lib/sketch`), the formatting and `narratableOf` stay real,
@@ -31,7 +32,9 @@ import type { Nav, RootRoute } from '../nav';
 const planTrips = vi.hoisted(() => vi.fn());
 const prefetchNarration = vi.hoisted(() => vi.fn());
 const legsOf = vi.hoisted(() => vi.fn());
-const catalog = vi.hoisted(() => ({ current: { data: [] as unknown[], loading: false } }));
+const catalog = vi.hoisted(() => ({
+  current: { data: [] as unknown[], loading: false, error: null as Error | null, reload: (() => {}) as () => void },
+}));
 const cityState = vi.hoisted(() => ({ current: { city: { id: 'hanoi' } as { id: string } | null } }));
 const mine = vi.hoisted(() => ({ current: [] as unknown[] }));
 // One object for the run, as the real hook's memo hands back: a fresh one
@@ -130,7 +133,7 @@ beforeEach(() => {
   planTrips.mockImplementation(() => PLANS);
   prefetchNarration.mockImplementation(async () => words());
   legsOf.mockImplementation(() => [{ mode: 'walk', km: 0.35, minutes: 5 }]);
-  catalog.current = { data: PLACES, loading: false };
+  catalog.current = { data: PLACES, loading: false, error: null, reload: vi.fn() };
   cityState.current = { city: { id: 'hanoi' } };
   mine.current = [];
 });
@@ -167,7 +170,7 @@ describe('what it asks', () => {
   });
 
   it('does not plan, ask for words or advance while the catalog is still loading', async () => {
-    catalog.current = { data: [], loading: true };
+    catalog.current = { data: [], loading: true, error: null, reload: vi.fn() };
     const { navigation, rerender, route } = renderScreen();
     expect(planTrips).not.toHaveBeenCalled();
     await tick(NARRATION_HOLD_MS * 2);
@@ -177,7 +180,7 @@ describe('what it asks', () => {
     // The skeleton stands in the box until there is a fact to show.
     expect(document.querySelectorAll('[data-icon$="-outline"]').length).toBe(0);
 
-    catalog.current = { data: PLACES, loading: false };
+    catalog.current = { data: PLACES, loading: false, error: null, reload: vi.fn() };
     rerender(<SketchingScreen navigation={navigation as unknown as Nav} route={route} />);
     expect(planTrips).toHaveBeenCalledTimes(1);
     await tick(STEP_FLOOR_MS);
@@ -361,9 +364,9 @@ describe('leaving', () => {
     await tick(allSteps);
     expect(navigation.replace).toHaveBeenCalledTimes(1);
     // A catalog refresh during the transition: the plans go and come back.
-    catalog.current = { data: PLACES, loading: true };
+    catalog.current = { data: PLACES, loading: true, error: null, reload: vi.fn() };
     rerender(<SketchingScreen navigation={navigation as unknown as Nav} route={route} />);
-    catalog.current = { data: PLACES, loading: false };
+    catalog.current = { data: PLACES, loading: false, error: null, reload: vi.fn() };
     rerender(<SketchingScreen navigation={navigation as unknown as Nav} route={route} />);
     await tick(STEP_FLOOR_MS);
     expect(navigation.replace).toHaveBeenCalledTimes(1);
@@ -427,5 +430,50 @@ describe('the dead end', () => {
     expect(screen.getByText(
       'Nothing in this city matches those choices for that hour. Try another day or another part of it.',
     )).toBeTruthy();
+  });
+});
+
+describe('when the catalog could not load', () => {
+  const allSteps = STEP_FLOOR_MS * SKETCH_STEPS.length;
+
+  it('says the places did not load and offers a retry, not the dead end', async () => {
+    planTrips.mockImplementation(() => []);
+    const reload = vi.fn();
+    catalog.current = { data: [], loading: false, error: new Error('offline'), reload };
+    const { navigation } = renderScreen();
+
+    await tick(allSteps);
+    expect(screen.getByText("Couldn't load places")).toBeTruthy();
+    expect(screen.getByText('Check your connection and try again. Your answers are kept.')).toBeTruthy();
+    expect(screen.queryByText('Nothing to build a day from')).toBeNull();
+    expect(screen.queryByText(/Nothing in this city matches/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Change the answers' })).toBeNull();
+    // The steps stop where the work stopped: nothing past reading the picks is done.
+    expect(doneCount()).toBe(0);
+    expect(navigation.replace).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('carries on to the plans once a retry brings the catalog in', async () => {
+    catalog.current = { data: [], loading: false, error: new Error('offline'), reload: vi.fn() };
+    const { navigation, rerender, route } = renderScreen();
+    await tick(allSteps);
+    expect(screen.getByText("Couldn't load places")).toBeTruthy();
+
+    catalog.current = { data: PLACES, loading: false, error: null, reload: vi.fn() };
+    rerender(<SketchingScreen navigation={navigation as unknown as Nav} route={route} />);
+    expect(screen.queryByText("Couldn't load places")).toBeNull();
+    await tick(allSteps + STEP_FLOOR_MS);
+    expect(navigation.replace).toHaveBeenCalledWith('PlanOptions', expect.objectContaining({ where: 'Old Quarter' }));
+  });
+
+  it('plans from what is cached when a refresh fails', async () => {
+    catalog.current = { data: PLACES, loading: false, error: new Error('offline'), reload: vi.fn() };
+    const { navigation } = renderScreen();
+    expect(screen.queryByText("Couldn't load places")).toBeNull();
+    await tick(allSteps + STEP_FLOOR_MS);
+    expect(navigation.replace).toHaveBeenCalledTimes(1);
   });
 });

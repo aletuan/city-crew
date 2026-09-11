@@ -130,7 +130,7 @@ const nav = (): NavSpy => {
   } as unknown as NavSpy;
 };
 
-const show = (params?: { tab?: 'community' }) => {
+const show = (params?: { tab?: 'community'; at?: number }) => {
   const navigation = nav();
   const utils = render(<CollectionsScreen navigation={navigation} route={{ params }} />);
   return { navigation, ...utils };
@@ -404,6 +404,21 @@ describe('CollectionsScreen — signed in', () => {
     const { rerender } = render(<CollectionsScreen navigation={navigation} route={{ params: {} }} />);
     expect(screen.getByText('List mine1')).toBeTruthy();
     rerender(<CollectionsScreen navigation={navigation} route={{ params: { tab: 'community' } }} />);
+    expect(screen.getByText('List theirs')).toBeTruthy();
+    expect(screen.queryByText('List mine1')).toBeNull();
+  });
+
+  it('a second "See all" re-aims the Community tab after the reader switched away', () => {
+    state.mine.data = [col('mine1', ['a'], { owner_id: 'u1' })];
+    state.cols.data = [col('theirs', ['a'])];
+    const navigation = nav();
+    const { rerender } = render(
+      <CollectionsScreen navigation={navigation} route={{ params: { tab: 'community', at: 1 } }} />,
+    );
+    expect(screen.getByText('List theirs')).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: /Yours/ }));
+    expect(screen.getByText('List mine1')).toBeTruthy();
+    rerender(<CollectionsScreen navigation={navigation} route={{ params: { tab: 'community', at: 2 } }} />);
     expect(screen.getByText('List theirs')).toBeTruthy();
     expect(screen.queryByText('List mine1')).toBeNull();
   });
