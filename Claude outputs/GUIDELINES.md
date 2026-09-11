@@ -106,12 +106,6 @@ first.
   Secrets.
 - **A staging Supabase project** before CI runs nightly, so tests never
   write to production.
-- **A sweep for orphans.** `07-sign-up-delete` (done) deletes the account it
-  makes at the end of the same run, but a run that dies between sign-up and
-  delete leaves one behind. It was sketched as a `+mae-<time>` alias of a
-  real address so a sweep could find them by pattern; it shipped as
-  Maestro's own `inputRandomPersonName` / `inputRandomEmail` instead — no
-  scripting needed to build the string, at the cost of orphans not being
-  greppable by a shared tag. Revisit if orphans turn out to matter enough
-  to write the sweep: either tag the address after all, or query auth.users
-  for accounts with no rows anywhere else and an old `created_at`.
+- **`07-sign-up-delete`**: a throwaway account per run (unique `+mae-<time>`
+  address), created and deleted through the app — covering the App Store's
+  in-app account deletion requirement — plus a sweep for orphans.

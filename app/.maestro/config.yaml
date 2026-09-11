@@ -12,3 +12,4 @@ executionOrder:
     - 04-sign-in
     - 05-plan-trip
     - 06-save-place
+    - 07-sign-up-delete

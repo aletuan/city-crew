@@ -362,6 +362,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           onPress={() => { if (!busy) finish([]); }}
           accessibilityRole="button"
           hitSlop={10}
+          testID="signup-taste-skip"
         >
           <Text style={s.skip}>{t('Skip for now', 'Bỏ qua', 'あとで')}</Text>
         </Pressable>
@@ -468,6 +469,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           arrow
           label={t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる')}
           onPress={() => leaveAuth(navigation)}
+          testID="signup-welcome-continue"
         />
       </AuthScreen>
     );
@@ -503,6 +505,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
           if (!handleTouched) setHandle(suggestHandle(v));
         }}
         autoComplete="name"
+        testID="signup-name"
       />
       {/* Below the name because it is proposed from it. The @ is drawn
           rather than typed — it is not part of the value, and a field
@@ -534,6 +537,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         autoCapitalize="none"
         autoCorrect={false}
         autoComplete="email"
+        testID="signup-email"
       />
       <FieldRow
         icon="lock-closed-outline"
@@ -545,6 +549,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         strength
         autoCapitalize="none"
         autoComplete="new-password"
+        testID="signup-password"
       />
       <FieldRow
         icon="lock-closed-outline"
@@ -557,9 +562,10 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
         autoComplete="new-password"
         onSubmitEditing={submit}
         returnKeyType="done"
+        testID="signup-confirm"
       />
       {error ? <FormError>{failText(error)}</FormError> : null}
-      <PrimaryButton label={t('Sign up', 'Đăng ký', '登録')} onPress={submit} busy={busy} />
+      <PrimaryButton label={t('Sign up', 'Đăng ký', '登録')} onPress={submit} busy={busy} testID="signup-submit" />
       {/* This line used to be a joke — "you agree to keep your crew's
           plans awesome" — sitting in exactly the place where the two
           real documents belong, and nowhere in the app linked to either.

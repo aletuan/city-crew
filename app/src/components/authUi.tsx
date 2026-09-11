@@ -278,12 +278,17 @@ export function PrimaryButton({ label, onPress, busy, arrow, testID }: {
  * reads as a different kind of control, and it is not one — it is the
  * same control, pointed the other way.
  */
-export function DangerButton({ label, onPress, busy }: { label: string; onPress: () => void; busy?: boolean }) {
+export function DangerButton({ label, onPress, busy, testID }: {
+  label: string; onPress: () => void; busy?: boolean;
+  /** For the iOS smoke flows, which select by id because every label is trilingual. */
+  testID?: string;
+}) {
   return (
     <PressableScale
       onPress={busy ? undefined : onPress}
       accessibilityRole="button"
       accessibilityState={{ busy: !!busy }}
+      testID={testID}
     >
       <View style={s.danger}>
         {busy
@@ -300,11 +305,15 @@ export function DangerButton({ label, onPress, busy }: { label: string; onPress:
 }
 
 /** "Don't have an account?  Sign up" — quiet text with an accented link. */
-export function SwitchRow({ prompt, action, onPress }: { prompt: string; action: string; onPress: () => void }) {
+export function SwitchRow({ prompt, action, onPress, testID }: {
+  prompt: string; action: string; onPress: () => void;
+  /** For the iOS smoke flows, which select by id because every label is trilingual. */
+  testID?: string;
+}) {
   return (
     <View style={s.switchRow}>
       <Text style={s.switchPrompt}>{prompt}</Text>
-      <Pressable onPress={() => { fireHaptic('selection'); onPress(); }} hitSlop={8}>
+      <Pressable onPress={() => { fireHaptic('selection'); onPress(); }} hitSlop={8} testID={testID}>
         <Text style={s.switchAction}>{action}</Text>
       </Pressable>
     </View>

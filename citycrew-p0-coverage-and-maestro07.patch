@@ -1,0 +1,962 @@
+diff --git a/.github/workflows/checks.yml b/.github/workflows/checks.yml
+index 9d0c8ad..6cedc85 100644
+--- a/.github/workflows/checks.yml
++++ b/.github/workflows/checks.yml
+@@ -118,10 +118,14 @@ jobs:
+       - if: '!cancelled()'
+         run: npx expo export --platform all --output-dir "$RUNNER_TEMP/expo-export"
+ 
+-  # The dashboard's pure modules, same doctrine as the app job: plain
+-  # functions in a plain Node process, no React, no Supabase.
+-  # Today that is the Contributors screen's arithmetic — the aggregation
+-  # every corner of that page reads from (see dashboard/src/contributors.js).
++  # The dashboard's own modules, same doctrine as the app job: plain
++  # functions (or, for api.js, a faked Supabase client — see
++  # tests/_fakeSupabase.mjs) in a plain Node process, no React, no
++  # network. Started as just the Contributors screen's arithmetic — the
++  # aggregation every corner of that page reads from (see
++  # dashboard/src/contributors.js) — and grew to cover api.js, the desk's
++  # whole write path to Supabase, and auth.jsx's login-gate decision
++  # (dashboard/src/lib/authGate.js).
+   #
+   # This job ran without an `npm ci` until lint arrived: `node --test` finds
+   # dashboard/tests/ on its own and the modules under test import nothing
+@@ -144,6 +148,31 @@ jobs:
+       - run: npm run lint
+       - if: '!cancelled()'
+         run: npm test
++      # A ratchet, not a target — same idea as the app job's coverage step,
++      # just one number instead of two. The app's tool (Vitest/Istanbul)
++      # can hold a 100% gate over `src/lib` and a separate floor over
++      # `src/screens` in the same run; Node's built-in coverage reporter
++      # cannot slice like that — its "all files" total is computed over
++      # every module the process actually loads, so trying to isolate a
++      # subset with --test-coverage-include/exclude only changes which
++      # rows print, not what the threshold is checked against (confirmed
++      # by hand: narrowing the include to one file left the printed row
++      # at its own percentage while the enforced total kept counting
++      # every other loaded file anyway).
++      #
++      # So this is one floor over everything in `src/` that isn't test
++      # scaffolding: `--test-coverage-lines/branches/functions` below are
++      # today's real combined numbers (see `npm run coverage`'s own
++      # output), rounded down. It cannot celebrate the modules already at
++      # 100% (contributors.js, coverage.js, reports.js, storage.js,
++      # lib/threads.js, lib/authGate.js) — a regression in one of those
++      # can hide behind slack elsewhere in api.js — but it does what a
++      # gate has to: a function added anywhere in `src/` with no test at
++      # all pulls the total down and turns this red, which nothing else
++      # here would notice. Raise it by hand, in the same change, whenever
++      # coverage goes up — never lower it to make a change pass.
++      - if: '!cancelled()'
++        run: npm run coverage
+ 
+   # The data scripts: plain JavaScript with nothing else reading them. Most
+   # are frozen bootstrap pipelines kept for provenance, but the snapshot
+diff --git a/app/.maestro/07-sign-up-delete.yaml b/app/.maestro/07-sign-up-delete.yaml
+new file mode 100644
+index 0000000..a250004
+--- /dev/null
++++ b/app/.maestro/07-sign-up-delete.yaml
+@@ -0,0 +1,115 @@
++# Sign up as a brand-new, throwaway account, then delete it from inside
++# the app. The App Store's in-app account-deletion requirement (5.1.1(v))
++# has no flow covering it otherwise, and vitest cannot reach it either —
++# it needs the real SignUpScreen wizard, a real Supabase account, and the
++# `delete-account` edge function actually running.
++#
++# The account is disposable by construction: Maestro's own
++# `inputRandomPersonName` / `inputRandomEmail` give it a name and address
++# nobody chose and nothing else here reuses, created in this run and
++# deleted before it ends. It never touches the dedicated ${TEST_EMAIL}
++# account the other signed-in flows share, and needs no setup by hand.
++#
++# Assumes email confirmation is off (`mailer_autoconfirm` — see
++# lib/signup.ts, "this project's configuration today"), so `signUp` lands
++# straight on the taste picker with a session already made. If that is
++# ever turned on, sign-up stops at "Check your email" instead, and this
++# flow has no inbox to read a code from — it fails there on a timeout
++# rather than doing something wrong quietly.
++#
++# If a run dies after the account exists and before it is deleted, it is
++# an orphan: a Supabase-side sweep for it is still on the list (see
++# GUIDELINES.md).
++appId: host.exp.Exponent
++env:
++  EXPO_URL: exp://127.0.0.1:8081
++---
++- runFlow: common/start.yaml
++- runFlow: common/ensure-signed-out.yaml
++- tapOn:
++    id: "profile-sign-in"
++- extendedWaitUntil:
++    visible:
++      id: "signin-email"
++    timeout: 15000
++- tapOn:
++    id: "signin-switch-signup"
++- extendedWaitUntil:
++    visible:
++      id: "signup-name"
++    timeout: 15000
++
++# The form. The username is left alone: it is suggested from the name,
++# and a collision falls back to a server-generated handle rather than
++# failing the account into existence (see `handle_new_user`).
++- tapOn:
++    id: "signup-name"
++- inputRandomPersonName
++- tapOn:
++    id: "signup-email"
++- inputRandomEmail
++- tapOn:
++    id: "signup-password"
++- inputText: "Maestro-smoke-1"
++- tapOn:
++    id: "signup-confirm"
++- inputText: "Maestro-smoke-1"
++- hideKeyboard
++- tapOn:
++    id: "signup-submit"
++
++# Taste picker: skip it, the same real answer a reader who has not
++# decided yet gets to give. TastePicker's grid can push "Skip for now"
++# below the fold on a shorter simulator, and it sits at the very foot of
++# the page under the Continue button — rule 9, not a plain wait.
++- scrollUntilVisible:
++    element:
++      id: "signup-taste-skip"
++    direction: DOWN
++    timeout: 15000
++- scroll
++- tapOn:
++    id: "signup-taste-skip"
++
++# Welcome — the account exists and is signed in. Continuing leaves the
++# sign-up stack and lands back on Profile, now rendering signed in. Same
++# foot-of-page treatment: the plane art alone is 250pt tall, tight on an
++# iPhone SE-sized simulator once the greeting and lede sit under it too.
++- scrollUntilVisible:
++    element:
++      id: "signup-welcome-continue"
++    direction: DOWN
++    timeout: 20000
++- scroll
++- tapOn:
++    id: "signup-welcome-continue"
++
++# Delete it, from the same screen the persistent account's owner would
++# use — see DeleteAccountScreen.tsx for why this is one screen and one
++# button rather than a second confirmation. Reached via a mid-page tap on
++# Profile, hence `centerElement` on this first hop only; both stops on
++# DeleteAccountScreen itself are the two-card page's own foot and follow
++# rule 9 instead.
++- scrollUntilVisible:
++    element:
++      id: "profile-delete-account"
++    direction: DOWN
++    centerElement: true
++    timeout: 20000
++- tapOn:
++    id: "profile-delete-account"
++- scrollUntilVisible:
++    element:
++      id: "delete-account-confirm"
++    direction: DOWN
++    timeout: 15000
++- scroll
++- tapOn:
++    id: "delete-account-confirm"
++
++# The account and its session are gone; Profile falls back to the guest
++# view on its own, with no separate sign-out to do.
++- extendedWaitUntil:
++    visible:
++      id: "profile-sign-in"
++    timeout: 20000
+diff --git a/app/.maestro/GUIDELINES.md b/app/.maestro/GUIDELINES.md
+index 20b9a8c..8d1614d 100644
+--- a/app/.maestro/GUIDELINES.md
++++ b/app/.maestro/GUIDELINES.md
+@@ -106,6 +106,12 @@ first.
+   Secrets.
+ - **A staging Supabase project** before CI runs nightly, so tests never
+   write to production.
+-- **`07-sign-up-delete`**: a throwaway account per run (unique `+mae-<time>`
+-  address), created and deleted through the app — covering the App Store's
+-  in-app account deletion requirement — plus a sweep for orphans.
++- **A sweep for orphans.** `07-sign-up-delete` (done) deletes the account it
++  makes at the end of the same run, but a run that dies between sign-up and
++  delete leaves one behind. It was sketched as a `+mae-<time>` alias of a
++  real address so a sweep could find them by pattern; it shipped as
++  Maestro's own `inputRandomPersonName` / `inputRandomEmail` instead — no
++  scripting needed to build the string, at the cost of orphans not being
++  greppable by a shared tag. Revisit if orphans turn out to matter enough
++  to write the sweep: either tag the address after all, or query auth.users
++  for accounts with no rows anywhere else and an old `created_at`.
+diff --git a/app/.maestro/README.md b/app/.maestro/README.md
+index 3671ead..7d9177b 100644
+--- a/app/.maestro/README.md
++++ b/app/.maestro/README.md
+@@ -1,12 +1,13 @@
+ # iOS smoke tests (Maestro)
+ 
+-Seven end-to-end flows (how to write more: [GUIDELINES.md](GUIDELINES.md)) that drive the dev bundle inside Expo Go on an iOS
++Eight end-to-end flows (how to write more: [GUIDELINES.md](GUIDELINES.md)) that drive the dev bundle inside Expo Go on an iOS
+ simulator against real Supabase data. Four walk the guest path (launch,
+ Explore, place detail, search); three sign in as a dedicated test account
+ and walk the paths a signed-in reader cannot do without (sign in, plan and
+-save a trip, save a place). They select by `testID` only — never by label —
+-because every label is trilingual. The one exception is iOS's own alert
+-buttons, which take no id and are matched in all three languages.
++save a trip, save a place); one signs up and deletes a throwaway account
++of its own. They select by `testID` only — never by label — because every
++label is trilingual. The one exception is iOS's own alert buttons, which
++take no id and are matched in all three languages.
+ 
+ **Not wired into CI.** These run on a developer's Mac by hand. Running them
+ on GitHub would need a macOS runner plus a dev build (Expo Go cannot be
+@@ -23,6 +24,7 @@ scripted from a Linux job). See "Why not CI" at the end.
+ | `04-sign-in.yaml` | Signs out if needed; a wrong password shows the form error; the right one signs in; a cold start is still signed in; signs out. |
+ | `05-plan-trip.yaml` | Deletes the account's leftover upcoming trips; answers the Ideas wizard (Friends + up to three moods); waits out Sketching; opens the recommended plan; saves it; finds it as the only upcoming trip; deletes it. |
+ | `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
++| `07-sign-up-delete.yaml` | Signs up as a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skips the taste picker, then deletes that same account from Profile → Delete account, ending back on the guest view. |
+ 
+ The signed-in flows share `common/start.yaml` (open fresh, grant
+ notifications — saving a trip plants a reminder, and the permission alert
+@@ -60,6 +62,9 @@ restricts `maestro test .maestro` to the numbered flows and fixes their order.
+      first time, through the form the bookmark opens, and reuses it.
+    - Keep it off the editors list.
+ 
++   `07-sign-up-delete.yaml` needs none of this — it makes and deletes its
++   own throwaway account every run, and never touches this one.
++
+    Then put it in the macOS Keychain — the runner reads it from there, so
+    it is never typed per run, never in the shell history, and never in a
+    flow or a commit:
+@@ -145,8 +150,10 @@ reaches the native view.
+ | `CitySwitcher` | `city-row-<index>` |
+ | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
+ | `SearchScreen` | `search-input`, `search-clear`, `search-result-<index>` |
+-| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in) |
+-| `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`; `auth-error` (`FormError`) |
++| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account` |
++| `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`, `signin-switch-signup` (`SwitchRow`); `auth-error` (`FormError`) |
++| `SignUpScreen` | `signup-name`, `signup-email`, `signup-password`, `signup-confirm`, `signup-submit`, `signup-taste-skip`, `signup-welcome-continue` |
++| `DeleteAccountScreen` | `delete-account-confirm` (`DangerButton`) |
+ | `IdeasScreen` | `ideas-company-<solo\|couple\|friends\|family>`, `ideas-cat-<index>`, `ideas-sketch` |
+ | `PlanOptionsScreen` | `plan-card-best` |
+ | `PlanEditScreen` | `plan-save` |
+diff --git a/app/.maestro/config.yaml b/app/.maestro/config.yaml
+index 6ab44f2..89867ec 100644
+--- a/app/.maestro/config.yaml
++++ b/app/.maestro/config.yaml
+@@ -12,3 +12,4 @@ executionOrder:
+     - 04-sign-in
+     - 05-plan-trip
+     - 06-save-place
++    - 07-sign-up-delete
+diff --git a/app/src/components/authUi.tsx b/app/src/components/authUi.tsx
+index a090688..e11cf74 100644
+--- a/app/src/components/authUi.tsx
++++ b/app/src/components/authUi.tsx
+@@ -278,12 +278,17 @@ export function PrimaryButton({ label, onPress, busy, arrow, testID }: {
+  * reads as a different kind of control, and it is not one — it is the
+  * same control, pointed the other way.
+  */
+-export function DangerButton({ label, onPress, busy }: { label: string; onPress: () => void; busy?: boolean }) {
++export function DangerButton({ label, onPress, busy, testID }: {
++  label: string; onPress: () => void; busy?: boolean;
++  /** For the iOS smoke flows, which select by id because every label is trilingual. */
++  testID?: string;
++}) {
+   return (
+     <PressableScale
+       onPress={busy ? undefined : onPress}
+       accessibilityRole="button"
+       accessibilityState={{ busy: !!busy }}
++      testID={testID}
+     >
+       <View style={s.danger}>
+         {busy
+@@ -300,11 +305,15 @@ export function DangerButton({ label, onPress, busy }: { label: string; onPress:
+ }
+ 
+ /** "Don't have an account?  Sign up" — quiet text with an accented link. */
+-export function SwitchRow({ prompt, action, onPress }: { prompt: string; action: string; onPress: () => void }) {
++export function SwitchRow({ prompt, action, onPress, testID }: {
++  prompt: string; action: string; onPress: () => void;
++  /** For the iOS smoke flows, which select by id because every label is trilingual. */
++  testID?: string;
++}) {
+   return (
+     <View style={s.switchRow}>
+       <Text style={s.switchPrompt}>{prompt}</Text>
+-      <Pressable onPress={() => { fireHaptic('selection'); onPress(); }} hitSlop={8}>
++      <Pressable onPress={() => { fireHaptic('selection'); onPress(); }} hitSlop={8} testID={testID}>
+         <Text style={s.switchAction}>{action}</Text>
+       </Pressable>
+     </View>
+diff --git a/app/src/screens/DeleteAccountScreen.tsx b/app/src/screens/DeleteAccountScreen.tsx
+index 14e37b4..31cf8cb 100644
+--- a/app/src/screens/DeleteAccountScreen.tsx
++++ b/app/src/screens/DeleteAccountScreen.tsx
+@@ -253,6 +253,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
+         label={t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}
+         onPress={remove}
+         busy={busy}
++        testID="delete-account-confirm"
+       />
+       {/* The way out, next to the way through, so the reader who scrolled
+           to the bottom does not have to go back up to the header to
+diff --git a/app/src/screens/ProfileScreen.tsx b/app/src/screens/ProfileScreen.tsx
+index aaf97b4..9e29465 100644
+--- a/app/src/screens/ProfileScreen.tsx
++++ b/app/src/screens/ProfileScreen.tsx
+@@ -727,6 +727,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
+         style={s.deleteBtn}
+         accessibilityRole="button"
+         onPress={() => navigation.navigate('DeleteAccount')}
++        testID="profile-delete-account"
+       >
+         <Text style={s.deleteText}>{t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}</Text>
+       </PressableScale>
+diff --git a/app/src/screens/SignInScreen.tsx b/app/src/screens/SignInScreen.tsx
+index d769d8a..5e599ca 100644
+--- a/app/src/screens/SignInScreen.tsx
++++ b/app/src/screens/SignInScreen.tsx
+@@ -107,6 +107,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
+         prompt={t("Don't have an account?", 'Chưa có tài khoản?', 'アカウントをお持ちでない方は')}
+         action={t('Sign up', 'Đăng ký', '登録')}
+         onPress={() => navigation.replace('SignUp')}
++        testID="signin-switch-signup"
+       />
+     </AuthScreen>
+   );
+diff --git a/app/src/screens/SignUpScreen.tsx b/app/src/screens/SignUpScreen.tsx
+index 4a87e98..39ba88b 100644
+--- a/app/src/screens/SignUpScreen.tsx
++++ b/app/src/screens/SignUpScreen.tsx
+@@ -362,6 +362,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
+           onPress={() => { if (!busy) finish([]); }}
+           accessibilityRole="button"
+           hitSlop={10}
++          testID="signup-taste-skip"
+         >
+           <Text style={s.skip}>{t('Skip for now', 'Bỏ qua', 'あとで')}</Text>
+         </Pressable>
+@@ -468,6 +469,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
+           arrow
+           label={t('Start exploring', 'Bắt đầu khám phá', '探索をはじめる')}
+           onPress={() => leaveAuth(navigation)}
++          testID="signup-welcome-continue"
+         />
+       </AuthScreen>
+     );
+@@ -503,6 +505,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
+           if (!handleTouched) setHandle(suggestHandle(v));
+         }}
+         autoComplete="name"
++        testID="signup-name"
+       />
+       {/* Below the name because it is proposed from it. The @ is drawn
+           rather than typed — it is not part of the value, and a field
+@@ -534,6 +537,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
+         autoCapitalize="none"
+         autoCorrect={false}
+         autoComplete="email"
++        testID="signup-email"
+       />
+       <FieldRow
+         icon="lock-closed-outline"
+@@ -545,6 +549,7 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
+         strength
+         autoCapitalize="none"
+         autoComplete="new-password"
++        testID="signup-password"
+       />
+       <FieldRow
+         icon="lock-closed-outline"
+@@ -557,9 +562,10 @@ export default function SignUpScreen({ navigation }: { navigation: Nav }) {
+         autoComplete="new-password"
+         onSubmitEditing={submit}
+         returnKeyType="done"
++        testID="signup-confirm"
+       />
+       {error ? <FormError>{failText(error)}</FormError> : null}
+-      <PrimaryButton label={t('Sign up', 'Đăng ký', '登録')} onPress={submit} busy={busy} />
++      <PrimaryButton label={t('Sign up', 'Đăng ký', '登録')} onPress={submit} busy={busy} testID="signup-submit" />
+       {/* This line used to be a joke — "you agree to keep your crew's
+           plans awesome" — sitting in exactly the place where the two
+           real documents belong, and nowhere in the app linked to either.
+diff --git a/dashboard/package.json b/dashboard/package.json
+index 46e122c..02bb535 100644
+--- a/dashboard/package.json
++++ b/dashboard/package.json
+@@ -7,7 +7,8 @@
+     "build": "vite build",
+     "lint": "eslint . --max-warnings=0",
+     "lint:fix": "eslint . --fix",
+-    "test": "node --test",
++    "test": "node --experimental-test-module-mocks --test",
++    "coverage": "node --experimental-test-module-mocks --experimental-test-coverage --test-coverage-exclude=\"tests/**\" --test-coverage-lines=46 --test-coverage-branches=69 --test-coverage-functions=12 --test",
+     "preview": "vite preview"
+   },
+   "dependencies": {
+diff --git a/dashboard/src/auth.jsx b/dashboard/src/auth.jsx
+index 0873856..63d88a0 100644
+--- a/dashboard/src/auth.jsx
++++ b/dashboard/src/auth.jsx
+@@ -17,14 +17,11 @@
+ 
+ import React, { useEffect, useState } from 'react';
+ import { supabase } from './lib/supabase.js';
++import { buildRedirectTo, resolveAuthView } from './lib/authGate.js';
+ 
+ export const signOut = () => supabase.auth.signOut();
+ 
+-/** Where an emailed link should land: exactly where this app is served, so
+- *  it works on the Pages subpath and on localhost alike. Must be
+- *  allow-listed under Auth → URL Configuration, or the mail arrives and the
+- *  link returns you to this screen having done nothing. */
+-const redirectTo = () => window.location.origin + window.location.pathname;
++const redirectTo = () => buildRedirectTo(window.location.origin, window.location.pathname);
+ 
+ function Login() {
+   const [mode, setMode] = useState('password'); // password | link
+@@ -226,14 +223,14 @@ export default function AuthGate({ children }) {
+     return () => { live = false; };
+   }, [session]);
+ 
+-  if (session === undefined) return <div className="empty">Loading…</div>;
+-  if (!session) return <Login />;
+-  // Before the editor check, deliberately. Someone resetting a password
+-  // should be able to finish doing so whether or not they curate anything.
+-  if (recovering) return <SetPassword onDone={() => setRecovering(false)} />;
+-  if (editor === undefined) return <div className="empty">Checking access…</div>;
+-  if (!editor) return <NotAnEditor email={session.user?.email} />;
+-  return children;
++  switch (resolveAuthView({ session, editor, recovering })) {
++    case 'loading': return <div className="empty">Loading…</div>;
++    case 'signed-out': return <Login />;
++    case 'recovering': return <SetPassword onDone={() => setRecovering(false)} />;
++    case 'checking-editor': return <div className="empty">Checking access…</div>;
++    case 'not-editor': return <NotAnEditor email={session.user?.email} />;
++    default: return children;
++  }
+ }
+ 
+ /** Signed in, but not on the allow-list. The only way out is a different
+diff --git a/dashboard/src/lib/authGate.js b/dashboard/src/lib/authGate.js
+new file mode 100644
+index 0000000..9ebdae9
+--- /dev/null
++++ b/dashboard/src/lib/authGate.js
+@@ -0,0 +1,34 @@
++// The decisions behind the login gate, kept away from React and JSX so they
++// can be read — and tested with plain `node --test`, no jsdom, no component
++// library — as plain functions over plain state. Same doctrine as
++// contributors.js and reports.js: auth.jsx renders off these, it does not
++// decide anything itself.
++
++/** Where an emailed link should land: exactly where this app is served, so
++ *  it works on the Pages subpath and on localhost alike. Must be
++ *  allow-listed under Auth → URL Configuration, or the mail arrives and the
++ *  link returns you to this screen having done nothing. */
++export const buildRedirectTo = (origin, pathname) => origin + pathname;
++
++/**
++ * The gate decision itself, as a pure function of state — the "two gates,
++ * not one" auth.jsx's header describes: a session gets you past the first,
++ * `public.is_editor()` the second, because the desk is for admins and
++ * everyone else who holds an account holds it for the mobile app.
++ *
++ * Order is the policy, not an accident:
++ * - `recovering` is checked before the editor lookup on purpose. Someone
++ *   resetting a password should be able to finish doing so whether or not
++ *   they curate anything — but only once signed in; a recovery flag with no
++ *   session is not a state the app can be in, and reads as signed-out.
++ * - An editor check that has not answered yet (`undefined`) blocks the same
++ *   as a negative one. A pending check is not a pass.
++ */
++export function resolveAuthView({ session, editor, recovering }) {
++  if (session === undefined) return 'loading';
++  if (!session) return 'signed-out';
++  if (recovering) return 'recovering';
++  if (editor === undefined) return 'checking-editor';
++  if (!editor) return 'not-editor';
++  return 'authorized';
++}
+diff --git a/dashboard/tests/_fakeSupabase.mjs b/dashboard/tests/_fakeSupabase.mjs
+new file mode 100644
+index 0000000..2084c6d
+--- /dev/null
++++ b/dashboard/tests/_fakeSupabase.mjs
+@@ -0,0 +1,60 @@
++// A fake Supabase client for testing dashboard/src/api.js without a network
++// call or a real project — same spirit as the `bucket()` helper in
++// storage.test.mjs, scaled up to the query-builder shape api.js chains.
++//
++// api.js calls `supabase.from(table).select(...).eq(...)....` and awaits the
++// chain directly (postgrest-js builders are themselves thenable), so each
++// `.from()`/`.rpc()` call here hands back an object that records every
++// chained method call for a test to assert on, and resolves to a
++// pre-configured `{ data, error, count }` when awaited.
++//
++// Responses are consumed in call order, not matched by table name: api.js's
++// control flow issues `.from()` calls in a fixed sequence per function, so
++// "the 2nd call this test makes" is a stable, readable way to hand back the
++// 2nd answer. `record()` after the fact shows what each call actually asked
++// (table + method chain), which is what most tests here assert on.
++const CHAIN_METHODS = [
++  'select', 'update', 'insert', 'delete', 'upsert',
++  'eq', 'neq', 'in', 'not', 'is', 'contains', 'or', 'order', 'range', 'limit', 'gte',
++];
++
++function chainable(result, record) {
++  const builder = {};
++  for (const m of CHAIN_METHODS) {
++    builder[m] = (...args) => { record.chain.push([m, args]); return builder; };
++  }
++  builder.then = (resolve, reject) => Promise.resolve(result).then(resolve, reject);
++  builder.catch = (reject) => Promise.resolve(result).catch(reject);
++  return builder;
++}
++
++/**
++ * @param {Array<{data?: any, error?: any, count?: number}>} responses one
++ *   entry per `.from()`/`.rpc()` call, in the order api.js will make them.
++ * @param {object} [extra] override `storage` / `functions.invoke`.
++ */
++export function fakeSupabase(responses = [], extra = {}) {
++  const calls = []; // [{ kind: 'from'|'rpc', table, chain: [[method,args],...] }]
++  let i = 0;
++  const next = () => responses[i++] ?? { data: [], error: null };
++
++  const from = (table) => {
++    const record = { kind: 'from', table, chain: [] };
++    calls.push(record);
++    return chainable(next(), record);
++  };
++
++  const rpc = (fn, args) => {
++    const record = { kind: 'rpc', fn, args, chain: [] };
++    calls.push(record);
++    return chainable(next(), record);
++  };
++
++  return {
++    from,
++    rpc,
++    calls,
++    functions: { invoke: extra.invoke ?? (async () => ({ data: null, error: new Error('not stubbed') })) },
++    storage: { from: extra.storageFrom ?? (() => ({ upload: async () => ({ error: null }), remove: async () => ({ data: [], error: null }), getPublicUrl: () => ({ data: { publicUrl: '' } }) })) },
++  };
++}
+diff --git a/dashboard/tests/api.test.mjs b/dashboard/tests/api.test.mjs
+new file mode 100644
+index 0000000..5e79254
+--- /dev/null
++++ b/dashboard/tests/api.test.mjs
+@@ -0,0 +1,326 @@
++// dashboard/src/api.js is the desk's whole write path to Supabase — CRUD on
++// places, moderation, photo management — and until now it had zero
++// automated coverage: everything in it ran for the first time in
++// production. `mock.module` swaps out `./lib/supabase.js` (which throws on
++// import outside a Vite build — it reads `import.meta.env`) for the fake in
++// `_fakeSupabase.mjs`, so api.js's own logic runs for real while every
++// network call is a scripted, inspectable stand-in.
++//
++// Each test re-imports api.js with a cache-busting query string, because ESM
++// caches a module the first time it loads — without a fresh specifier every
++// test after the first would see the previous test's fake client.
++import { test, mock } from 'node:test';
++import assert from 'node:assert/strict';
++import { fakeSupabase } from './_fakeSupabase.mjs';
++
++let n = 0;
++let activeMock = null;
++async function loadApi(responses, extra) {
++  activeMock?.restore();
++  const client = fakeSupabase(responses, extra);
++  activeMock = mock.module('../src/lib/supabase.js', { namedExports: { supabase: client } });
++  const mod = await import(`../src/api.js?t=${n++}`);
++  return { api: mod.api, client };
++}
++
++// ---- savePlace: the field whitelist is the one thing standing between a
++// typo'd key and a silent no-op (RLS blocks an unknown column at the row
++// level, not the field level, so this is the only place that fails loudly).
++
++test('savePlace rejects a field outside the editable whitelist', async () => {
++  const { api } = await loadApi([]);
++  await assert.rejects(
++    () => api.savePlace('a-slug', { saved_count: 99 }),
++    /field not editable: saved_count/,
++  );
++});
++
++test('savePlace refuses an empty patch rather than sending a no-op update', async () => {
++  const { api } = await loadApi([]);
++  await assert.rejects(() => api.savePlace('a-slug', {}), /no fields/);
++});
++
++test('savePlace stamps reviewed_at only when review_status is part of the patch', async () => {
++  const { api, client } = await loadApi([{ data: [{ slug: 'a-slug' }], error: null }]);
++  await api.savePlace('a-slug', { review_status: 'approved' });
++  const [, updateArgs] = client.calls[0].chain.find(([m]) => m === 'update');
++  assert.ok('reviewed_at' in updateArgs[0]);
++  assert.ok('updated_at' in updateArgs[0]);
++});
++
++test('savePlace leaves reviewed_at alone for an ordinary field edit', async () => {
++  const { api, client } = await loadApi([{ data: [{ slug: 'a-slug' }], error: null }]);
++  await api.savePlace('a-slug', { name_en: 'New name' });
++  const [, updateArgs] = client.calls[0].chain.find(([m]) => m === 'update');
++  assert.equal('reviewed_at' in updateArgs[0], false);
++  assert.equal(updateArgs[0].name_en, 'New name');
++});
++
++test('savePlace surfaces "not an editor" rather than a bare 0-rows result', async () => {
++  const { api } = await loadApi([{ data: [], error: null }]);
++  await assert.rejects(() => api.savePlace('a-slug', { name_en: 'x' }), /not an editor/);
++});
++
++// ---- saveCityHero: same whitelist idea, plus the '' → null convention the
++// app's own fallbacks depend on.
++
++test('saveCityHero rejects a field outside its own (smaller) whitelist', async () => {
++  const { api } = await loadApi([]);
++  await assert.rejects(
++    () => api.saveCityHero('hanoi', { name_en: 'nope' }),
++    /field not editable: name_en/,
++  );
++});
++
++test('saveCityHero turns a cleared form field into null, not an empty string', async () => {
++  const { api, client } = await loadApi([{ data: [{ id: 'hanoi' }], error: null }]);
++  await api.saveCityHero('hanoi', { hero_title_en: '', hero_sub_en: 'Still here' });
++  const [, updateArgs] = client.calls[0].chain.find(([m]) => m === 'update');
++  assert.equal(updateArgs[0].hero_title_en, null);
++  assert.equal(updateArgs[0].hero_sub_en, 'Still here');
++});
++
++test('saveCityHero on an unknown city reports not found, not a silent success', async () => {
++  const { api } = await loadApi([{ data: [], error: null }]);
++  await assert.rejects(() => api.saveCityHero('atlantis', {}), /not found/);
++});
++
++// ---- deletePlace / deletePlaces: the bug this repo already had once —
++// files outliving their rows — so the sequence (collect paths, delete rows,
++// then remove objects) is exactly what these pin down.
++
++test('deletePlace collects storage paths before the row disappears, and skips places with none', async () => {
++  const { api, client } = await loadApi([
++    { data: [{ id: 'p1' }], error: null }, // places lookup by slug
++    { data: [{ storage_path: 'a/1.jpg' }, { storage_path: null }], error: null }, // place_photos
++    { data: [{ id: 'p1' }], error: null }, // delete
++  ], {
++    storageFrom: () => ({ remove: async (paths) => ({ data: paths.map((n) => ({ name: n })), error: null }) }),
++  });
++  const result = await api.deletePlace('a-slug');
++  assert.deepEqual(result, { ok: true, removed_uploads: 1, left: [] });
++  // The delete call must target the id looked up, not the slug itself.
++  const deleteCall = client.calls[2];
++  assert.deepEqual(deleteCall.chain.find(([m]) => m === 'eq'), ['eq', ['id', 'p1']]);
++});
++
++test('deletePlace on a slug that no longer exists fails before touching Storage', async () => {
++  const { api } = await loadApi([{ data: [], error: null }]);
++  await assert.rejects(() => api.deletePlace('gone'), /not found/);
++});
++
++test('deletePlaces is a no-op for an empty list — no round trip at all', async () => {
++  const { api, client } = await loadApi([]);
++  const result = await api.deletePlaces([]);
++  assert.deepEqual(result, { ok: true, deleted: 0, removed_uploads: 0 });
++  assert.equal(client.calls.length, 0);
++});
++
++test('deletePlaces batches every id into one delete, and reports what Storage left behind', async () => {
++  const { api } = await loadApi([
++    { data: [{ id: 'p1' }, { id: 'p2' }], error: null },
++    { data: [{ storage_path: 'a/1.jpg' }], error: null },
++    { data: [{ id: 'p1' }, { id: 'p2' }], error: null },
++  ], {
++    storageFrom: () => ({ remove: async () => ({ data: [], error: null }) }), // nothing removed
++  });
++  const result = await api.deletePlaces(['s1', 's2']);
++  assert.deepEqual(result, { ok: true, deleted: 2, removed_uploads: 0, left: ['a/1.jpg'] });
++});
++
++// ---- patchPhoto: the cover invariant (exactly one photo per place is the
++// cover) and the independent is_hidden toggle.
++
++test('patchPhoto promoting a cover unsets the old one on the same place, then sets the new one visible', async () => {
++  const { api, client } = await loadApi([
++    { data: [{ place_id: 'p1' }], error: null }, // lookup place_id for photo
++    { data: [{ id: 'old' }], error: null },      // unset previous cover
++    { data: [{ id: 'new' }], error: null },      // set new cover
++  ]);
++  await api.patchPhoto('new', { is_cover: true });
++  const unsetCall = client.calls[1];
++  assert.deepEqual(unsetCall.chain.find(([m]) => m === 'update'), ['update', [{ is_cover: false }]]);
++  assert.deepEqual(unsetCall.chain.find(([m]) => m === 'eq'), ['eq', ['place_id', 'p1']]);
++  const setCall = client.calls[2];
++  assert.deepEqual(setCall.chain.find(([m]) => m === 'update'), ['update', [{ is_cover: true, is_hidden: false }]]);
++});
++
++test('patchPhoto hiding a photo does not touch is_cover at all', async () => {
++  const { api, client } = await loadApi([{ data: [{ id: 'p1' }], error: null }]);
++  await api.patchPhoto('p1', { is_hidden: true });
++  assert.equal(client.calls.length, 1);
++  assert.deepEqual(client.calls[0].chain.find(([m]) => m === 'update'), ['update', [{ is_hidden: true }]]);
++});
++
++// ---- reorderPhotos: index *is* the new sort_order, one update per id.
++
++test('reorderPhotos writes each photo\'s array index as its sort_order', async () => {
++  const { api, client } = await loadApi([
++    { data: [{ id: 'a' }], error: null },
++    { data: [{ id: 'b' }], error: null },
++    { data: [{ id: 'c' }], error: null },
++  ]);
++  await api.reorderPhotos('slug', ['a', 'b', 'c']);
++  const orders = client.calls.map((c) => c.chain.find(([m]) => m === 'update')[1][0].sort_order);
++  assert.deepEqual(orders, [0, 1, 2]);
++});
++
++// ---- places(): the filter row's params turning into the right query, and
++// the response reshaping (cover photo, visible-only photo_count).
++
++test('places() maps each filter param to its own query clause', async () => {
++  const { api, client } = await loadApi([{ data: [], error: null, count: 0 }]);
++  await api.places({
++    city: 'hanoi', status: 'approved', category: 'cafe', vibe: 'chill',
++    needs: true, threads: 'no', channel: 'mobile', q: 'phở',
++  });
++  const chain = client.calls[0].chain;
++  const has = (m, args) => chain.some(([mm, aa]) => mm === m && JSON.stringify(aa) === JSON.stringify(args));
++  assert.ok(has('eq', ['city_id', 'hanoi']));
++  assert.ok(has('eq', ['review_status', 'approved']));
++  assert.ok(has('contains', ['categories', ['cafe']]));
++  assert.ok(has('contains', ['vibe_tags', ['chill']]));
++  assert.ok(has('eq', ['needs_classification', true]));
++  assert.ok(has('is', ['threads_handle', null]));
++  assert.ok(has('eq', ['channel', 'mobile']));
++  assert.ok(chain.some(([m, a]) => m === 'or' && a[0].includes('phở')));
++});
++
++test('places() defaults to created_at desc and paginates by 24', async () => {
++  const { api, client } = await loadApi([{ data: [], error: null, count: 0 }]);
++  await api.places({ page: 2 });
++  const chain = client.calls[0].chain;
++  assert.ok(chain.some(([m, a]) => m === 'order' && a[0] === 'created_at' && a[1].ascending === false));
++  assert.ok(chain.some(([m, a]) => m === 'range' && a[0] === 24 && a[1] === 47));
++});
++
++test('places() with all:true skips pagination and returns a plain array', async () => {
++  const { api, client } = await loadApi([{
++    data: [{ slug: 's', place_photos: [], added_by: null }],
++    error: null, count: 1,
++  }]);
++  const result = await api.places({ all: true });
++  assert.ok(Array.isArray(result));
++  assert.equal(client.calls[0].chain.some(([m]) => m === 'range'), false);
++});
++
++test('places() picks the cover photo, falling back to the first visible one, and counts only visible photos', async () => {
++  const { api, client } = await loadApi([{
++    data: [{
++      slug: 'a', added_by: null,
++      place_photos: [
++        { photo_uri: 'hidden.jpg', is_cover: false, is_hidden: true },
++        { photo_uri: 'first.jpg', is_cover: false, is_hidden: false },
++        { photo_uri: 'cover.jpg', is_cover: true, is_hidden: false },
++      ],
++    }],
++    error: null, count: 1,
++  }]);
++  const { rows } = await api.places({});
++  assert.equal(rows[0].cover_url, 'cover.jpg');
++  assert.equal(rows[0].photo_count, 2);
++  assert.equal(client.calls.length, 1); // no submitter lookup: added_by is null
++});
++
++test('places() looks up each contributor once, even when several rows share one', async () => {
++  const row = (slug) => ({ slug, added_by: 'u1', place_photos: [] });
++  const { api, client } = await loadApi([
++    { data: [row('a'), row('b')], error: null, count: 2 },
++    { data: [{ id: 'u1', handle: 'nguyen', full_name: 'Nguyen' }], error: null },
++  ]);
++  const { rows } = await api.places({});
++  assert.equal(rows[0].submitter.handle, 'nguyen');
++  assert.equal(rows[1].submitter.handle, 'nguyen');
++  assert.deepEqual(client.calls[1].chain.find(([m]) => m === 'in'), ['in', ['id', ['u1']]]);
++});
++
++// ---- approvePlaces / publishApproved: the two switches stay independent.
++
++test('approvePlaces excludes already-approved rows so the count reflects real changes', async () => {
++  const { api, client } = await loadApi([{ data: [{ slug: 'a' }], error: null }]);
++  const result = await api.approvePlaces(['a', 'b']);
++  assert.equal(result.approved, 1);
++  assert.ok(client.calls[0].chain.some(([m, a]) => m === 'neq' && a[0] === 'review_status'));
++});
++
++test('approvePlaces on an empty selection makes no request', async () => {
++  const { api, client } = await loadApi([]);
++  assert.deepEqual(await api.approvePlaces([]), { ok: true, approved: 0 });
++  assert.equal(client.calls.length, 0);
++});
++
++test('publishApproved only ever flips approved-and-unpublished rows, optionally scoped to one city', async () => {
++  const { api, client } = await loadApi([{ data: [{ slug: 'a' }, { slug: 'b' }], error: null }]);
++  const result = await api.publishApproved('hanoi');
++  assert.equal(result.published, 2);
++  const chain = client.calls[0].chain;
++  assert.ok(chain.some(([m, a]) => m === 'eq' && a[0] === 'review_status' && a[1] === 'approved'));
++  assert.ok(chain.some(([m, a]) => m === 'eq' && a[0] === 'is_published' && a[1] === false));
++  assert.ok(chain.some(([m, a]) => m === 'eq' && a[0] === 'city_id' && a[1] === 'hanoi'));
++});
++
++// ---- progress(): the aggregation an editor's whole triage screen is built
++// on — in particular the "approved but nobody can see it" gap the comments
++// in api.js call out by name.
++
++test('progress() counts a place as unpublished only when approved and not yet live', async () => {
++  const rows = [
++    { slug: 'a', review_status: 'approved', is_published: false, categories: ['cafe'], vibe_tags: ['chill'] },
++    { slug: 'b', review_status: 'approved', is_published: true, categories: [], vibe_tags: [] },
++    { slug: 'c', review_status: 'pending', is_published: false, categories: [], vibe_tags: [] },
++  ];
++  const { api } = await loadApi([{ data: rows, error: null }]);
++  const result = await api.progress();
++  assert.equal(result.unpublished, 1);
++  assert.equal(result.total, 3);
++  assert.equal(result.by_status.approved, 2);
++});
++
++test('progress() names the unclassified rows and which half is missing, rather than only counting them', async () => {
++  const rows = [
++    { slug: 'a', name_en: 'A', review_status: 'pending', is_published: false, needs_classification: true, categories: [], vibe_tags: ['chill'] },
++    { slug: 'b', name_en: 'B', review_status: 'pending', is_published: false, needs_classification: true, categories: ['cafe'], vibe_tags: [] },
++    { slug: 'c', name_en: 'C', review_status: 'approved', is_published: true, needs_classification: false, categories: ['cafe'], vibe_tags: ['chill'] },
++  ];
++  const { api } = await loadApi([{ data: rows, error: null }]);
++  const result = await api.progress();
++  assert.equal(result.unclassified.length, 2);
++  assert.equal(result.unclassified.find((r) => r.slug === 'a').no_category, true);
++  assert.equal(result.unclassified.find((r) => r.slug === 'a').no_vibe, false);
++  assert.equal(result.unclassified.find((r) => r.slug === 'b').no_vibe, true);
++});
++
++// ---- saveCount / categoryTerms: small but easy to get backwards.
++
++test('saveCount trusts a live row count over the hand-typed saved_count column', async () => {
++  const { api, client } = await loadApi([{ data: null, error: null, count: 7 }]);
++  assert.equal(await api.saveCount('place-1'), 7);
++  assert.ok(client.calls[0].chain.some(([m, a]) => m === 'eq' && a[0] === 'place_id' && a[1] === 'place-1'));
++});
++
++test('saveCategoryTerms trims, drops blanks, and de-duplicates before writing', async () => {
++  const { api, client } = await loadApi([{ data: [{ category: 'food' }], error: null }]);
++  const clean = await api.saveCategoryTerms('food', [' cinema ', '', 'cinema', 'rạp']);
++  assert.deepEqual(clean, ['cinema', 'rạp']);
++  const [, upsertArgs] = client.calls[0].chain.find(([m]) => m === 'upsert');
++  assert.deepEqual(upsertArgs[0].terms, ['cinema', 'rạp']);
++});
++
++// ---- moderation actions: each flag independent, and the RPC target named
++// correctly — the part a typo in a refactor would not catch.
++
++test('moderateProfile clears only the flagged fields', async () => {
++  const { api, client } = await loadApi([{ data: null, error: null }]);
++  await api.moderateProfile('u1', { bio: true });
++  assert.deepEqual(client.calls[0].args, {
++    target: 'u1', clear_bio: true, clear_avatar: false, clear_name: false,
++  });
++});
++
++test('markReport stamps handled_at and the chosen status', async () => {
++  const { api, client } = await loadApi([{ data: null, error: null }]);
++  await api.markReport('r1', 'dismissed');
++  const [, updateArgs] = client.calls[0].chain.find(([m]) => m === 'update');
++  assert.equal(updateArgs[0].status, 'dismissed');
++  assert.ok(updateArgs[0].handled_at);
++});
+diff --git a/dashboard/tests/auth.test.mjs b/dashboard/tests/auth.test.mjs
+new file mode 100644
+index 0000000..586239b
+--- /dev/null
++++ b/dashboard/tests/auth.test.mjs
+@@ -0,0 +1,69 @@
++// dashboard/src/auth.jsx is the gate in front of the whole desk, and had no
++// test at all — auth.jsx itself is untestable under plain `node --test`
++// (it's JSX; there is no loader in this project that can parse it outside
++// a Vite build). Its two most important pieces of logic — where a magic
++// link redirects, and which of the two gates (session, then is_editor) is
++// currently blocking someone — live in `src/lib/authGate.js`, a plain
++// module with no JSX, for exactly this reason.
++//
++// The rest of the file (the actual <Login>/<SetPassword> forms, and
++// AuthGate's effects) still needs a DOM and a component-testing library to
++// exercise directly — see the note left in the test-coverage backlog.
++import { test } from 'node:test';
++import assert from 'node:assert/strict';
++import { buildRedirectTo, resolveAuthView } from '../src/lib/authGate.js';
++
++test('buildRedirectTo keeps the Pages subpath, not just the origin', () => {
++  assert.equal(
++    buildRedirectTo('https://aletuan.github.io', '/city-crew/'),
++    'https://aletuan.github.io/city-crew/',
++  );
++});
++
++test('buildRedirectTo works the same on localhost, with no subpath to lose', () => {
++  assert.equal(buildRedirectTo('http://localhost:5173', '/'), 'http://localhost:5173/');
++});
++
++test('resolveAuthView: no session read yet is loading, not signed-out', () => {
++  assert.equal(resolveAuthView({ session: undefined, editor: undefined, recovering: false }), 'loading');
++});
++
++test('resolveAuthView: a null session is signed-out', () => {
++  assert.equal(resolveAuthView({ session: null, editor: undefined, recovering: false }), 'signed-out');
++});
++
++test('resolveAuthView: recovering wins over an unknown or negative editor check', () => {
++  assert.equal(
++    resolveAuthView({ session: { user: {} }, editor: undefined, recovering: true }),
++    'recovering',
++  );
++  assert.equal(
++    resolveAuthView({ session: { user: {} }, editor: false, recovering: true }),
++    'recovering',
++  );
++});
++
++test('resolveAuthView: recovering with no session is still signed-out — nothing to recover into', () => {
++  assert.equal(resolveAuthView({ session: null, editor: undefined, recovering: true }), 'signed-out');
++});
++
++test('resolveAuthView: the editor lookup being in flight blocks, it does not pass', () => {
++  assert.equal(
++    resolveAuthView({ session: { user: {} }, editor: undefined, recovering: false }),
++    'checking-editor',
++  );
++});
++
++test('resolveAuthView: a failed or negative editor check is not-editor, never a silent pass', () => {
++  assert.equal(
++    resolveAuthView({ session: { user: {} }, editor: false, recovering: false }),
++    'not-editor',
++  );
++});
++
++test('resolveAuthView: authorized only once signed in, past recovery, and confirmed an editor', () => {
++  assert.equal(
++    resolveAuthView({ session: { user: {} }, editor: true, recovering: false }),
++    'authorized',
++  );
++});

@@ -118,10 +118,14 @@ jobs:
       - if: '!cancelled()'
         run: npx expo export --platform all --output-dir "$RUNNER_TEMP/expo-export"
 
-  # The dashboard's pure modules, same doctrine as the app job: plain
-  # functions in a plain Node process, no React, no Supabase.
-  # Today that is the Contributors screen's arithmetic — the aggregation
-  # every corner of that page reads from (see dashboard/src/contributors.js).
+  # The dashboard's own modules, same doctrine as the app job: plain
+  # functions (or, for api.js, a faked Supabase client — see
+  # tests/_fakeSupabase.mjs) in a plain Node process, no React, no
+  # network. Started as just the Contributors screen's arithmetic — the
+  # aggregation every corner of that page reads from (see
+  # dashboard/src/contributors.js) — and grew to cover api.js, the desk's
+  # whole write path to Supabase, and auth.jsx's login-gate decision
+  # (dashboard/src/lib/authGate.js).
   #
   # This job ran without an `npm ci` until lint arrived: `node --test` finds
   # dashboard/tests/ on its own and the modules under test import nothing
@@ -144,6 +148,31 @@ jobs:
       - run: npm run lint
       - if: '!cancelled()'
         run: npm test
+      # A ratchet, not a target — same idea as the app job's coverage step,
+      # just one number instead of two. The app's tool (Vitest/Istanbul)
+      # can hold a 100% gate over `src/lib` and a separate floor over
+      # `src/screens` in the same run; Node's built-in coverage reporter
+      # cannot slice like that — its "all files" total is computed over
+      # every module the process actually loads, so trying to isolate a
+      # subset with --test-coverage-include/exclude only changes which
+      # rows print, not what the threshold is checked against (confirmed
+      # by hand: narrowing the include to one file left the printed row
+      # at its own percentage while the enforced total kept counting
+      # every other loaded file anyway).
+      #
+      # So this is one floor over everything in `src/` that isn't test
+      # scaffolding: `--test-coverage-lines/branches/functions` below are
+      # today's real combined numbers (see `npm run coverage`'s own
+      # output), rounded down. It cannot celebrate the modules already at
+      # 100% (contributors.js, coverage.js, reports.js, storage.js,
+      # lib/threads.js, lib/authGate.js) — a regression in one of those
+      # can hide behind slack elsewhere in api.js — but it does what a
+      # gate has to: a function added anywhere in `src/` with no test at
+      # all pulls the total down and turns this red, which nothing else
+      # here would notice. Raise it by hand, in the same change, whenever
+      # coverage goes up — never lower it to make a change pass.
+      - if: '!cancelled()'
+        run: npm run coverage
 
   # The data scripts: plain JavaScript with nothing else reading them. Most
   # are frozen bootstrap pipelines kept for provenance, but the snapshot

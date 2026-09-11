@@ -1,12 +1,13 @@
 # iOS smoke tests (Maestro)
 
-Seven end-to-end flows (how to write more: [GUIDELINES.md](GUIDELINES.md)) that drive the dev bundle inside Expo Go on an iOS
+Eight end-to-end flows (how to write more: [GUIDELINES.md](GUIDELINES.md)) that drive the dev bundle inside Expo Go on an iOS
 simulator against real Supabase data. Four walk the guest path (launch,
 Explore, place detail, search); three sign in as a dedicated test account
 and walk the paths a signed-in reader cannot do without (sign in, plan and
-save a trip, save a place). They select by `testID` only — never by label —
-because every label is trilingual. The one exception is iOS's own alert
-buttons, which take no id and are matched in all three languages.
+save a trip, save a place); one signs up and deletes a throwaway account
+of its own. They select by `testID` only — never by label — because every
+label is trilingual. The one exception is iOS's own alert buttons, which
+take no id and are matched in all three languages.
 
 **Not wired into CI.** These run on a developer's Mac by hand. Running them
 on GitHub would need a macOS runner plus a dev build (Expo Go cannot be
@@ -23,6 +24,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `04-sign-in.yaml` | Signs out if needed; a wrong password shows the form error; the right one signs in; a cold start is still signed in; signs out. |
 | `05-plan-trip.yaml` | Deletes the account's leftover upcoming trips; answers the Ideas wizard (Friends + up to three moods); waits out Sketching; opens the recommended plan; saves it; finds it as the only upcoming trip; deletes it. |
 | `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
+| `07-sign-up-delete.yaml` | Signs up as a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skips the taste picker, then deletes that same account from Profile → Delete account, ending back on the guest view. |
 
 The signed-in flows share `common/start.yaml` (open fresh, grant
 notifications — saving a trip plants a reminder, and the permission alert
@@ -59,6 +61,9 @@ restricts `maestro test .maestro` to the numbered flows and fixes their order.
    - No collection is needed: flow 06 makes one ("Maestro smoke") the
      first time, through the form the bookmark opens, and reuses it.
    - Keep it off the editors list.
+
+   `07-sign-up-delete.yaml` needs none of this — it makes and deletes its
+   own throwaway account every run, and never touches this one.
 
    Then put it in the macOS Keychain — the runner reads it from there, so
    it is never typed per run, never in the shell history, and never in a
@@ -145,8 +150,10 @@ reaches the native view.
 | `CitySwitcher` | `city-row-<index>` |
 | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
 | `SearchScreen` | `search-input`, `search-clear`, `search-result-<index>` |
-| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in) |
-| `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`; `auth-error` (`FormError`) |
+| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account` |
+| `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`, `signin-switch-signup` (`SwitchRow`); `auth-error` (`FormError`) |
+| `SignUpScreen` | `signup-name`, `signup-email`, `signup-password`, `signup-confirm`, `signup-submit`, `signup-taste-skip`, `signup-welcome-continue` |
+| `DeleteAccountScreen` | `delete-account-confirm` (`DangerButton`) |
 | `IdeasScreen` | `ideas-company-<solo\|couple\|friends\|family>`, `ideas-cat-<index>`, `ideas-sketch` |
 | `PlanOptionsScreen` | `plan-card-best` |
 | `PlanEditScreen` | `plan-save` |

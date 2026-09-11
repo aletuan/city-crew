@@ -7,7 +7,8 @@
     "build": "vite build",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
-    "test": "node --test",
+    "test": "node --experimental-test-module-mocks --test",
+    "coverage": "node --experimental-test-module-mocks --experimental-test-coverage --test-coverage-exclude=\"tests/**\" --test-coverage-lines=46 --test-coverage-branches=69 --test-coverage-functions=12 --test",
     "preview": "vite preview"
   },
   "dependencies": {
