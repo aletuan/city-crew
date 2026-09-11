@@ -4,6 +4,30 @@
 # it needs the real SignUpScreen wizard, a real Supabase account, and the
 # `delete-account` edge function actually running.
 #
+# NOT RUN BY `npm run smoke:ios` — deliberately left out of config.yaml.
+# The password/confirm fields carry autoComplete="new-password", which
+# makes iOS pop its own "Use Strong Password?" panel the moment the
+# password field is focused. That panel is a separate process from the
+# app: a real run's own screen-hierarchy dump at the exact failing step
+# has no trace of it (only app elements show up), and Maestro's own
+# screenshot at that step doesn't render it either — so it cannot be
+# selected by id, matched by text, or asserted on at all. Three fixes
+# were tried for real on a device and all three failed: retyping the
+# password twice, waiting then erasing and retyping, and hideKeyboard
+# then re-tapping the field. A fourth (tapping the panel's own "Fill
+# Strong Password" button by text) failed the same way, for the same
+# reason: `Element not found`, confirmed against the hierarchy dump.
+# This is a Maestro/XCUITest limitation on iOS, not a bug in the app or
+# in this flow. Coverage for 5.1.1(v) is manual QA once per release
+# instead — see the checklist in GUIDELINES.md. Revisit only if Maestro
+# gains a way to interact with system-owned panels, or if there turns
+# out to be a reliable way to turn this suggestion off for the whole
+# simulator (Settings → Passwords → Password Options) without touching
+# the app's own AutoFill behaviour for real users.
+#
+# The steps below are still exactly what a person (or a future flow)
+# should do by hand, kept for reference:
+#
 # The account is disposable by construction: Maestro's own
 # `inputRandomPersonName` / `inputRandomEmail` give it a name and address
 # nobody chose and nothing else here reuses, created in this run and
@@ -48,24 +72,12 @@ env:
 - tapOn:
     id: "signup-email"
 - inputRandomEmail
-# Both fields carry autoComplete="new-password", and iOS answers that by
-# popping its own "Use Strong Password?" panel the moment the password
-# field is focused -- confirmed on a real run's screenshot, panel and
-# all. hideKeyboard-then-retap does not make it go away: it comes right
-# back on the retap, and it swallows keystrokes typed while it is up,
-# which is how two prior attempts both landed on a near-empty password.
-#
-# Fighting it is the wrong move -- it is intended iOS behaviour for any
-# new-password field, not a bug. This flow takes the suggestion instead:
-# "Fill Strong Password" fills the password AND confirm fields together
-# (iOS treats a password/confirm pair as one group) with a strong value
-# neither this flow nor anything else ever needs to know, since the
-# account is deleted a few steps later and this password is never used
-# to sign back in.
 - tapOn:
     id: "signup-password"
+- inputText: "Maestro-smoke-1"
 - tapOn:
-    text: "Fill Strong Password"
+    id: "signup-confirm"
+- inputText: "Maestro-smoke-1"
 - hideKeyboard
 - tapOn:
     id: "signup-submit"

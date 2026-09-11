@@ -24,7 +24,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `04-sign-in.yaml` | Signs out if needed; a wrong password shows the form error; the right one signs in; a cold start is still signed in; signs out. |
 | `05-plan-trip.yaml` | Deletes the account's leftover upcoming trips; answers the Ideas wizard (Friends + up to three moods); waits out Sketching; opens the recommended plan; saves it; finds it as the only upcoming trip; deletes it. |
 | `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
-| `07-sign-up-delete.yaml` | Signs up as a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skips the taste picker, then deletes that same account from Profile → Delete account, ending back on the guest view. |
+| `07-sign-up-delete.yaml` | **Not run by `npm run smoke:ios`** — see GUIDELINES.md ("Manual QA"). Documents signing up a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skipping the taste picker, then deleting that same account from Profile → Delete account, ending back on the guest view; iOS's own "Use Strong Password?" panel on the password field can't be driven by Maestro, so this path is checked by hand once per release instead. |
 
 The signed-in flows share `common/start.yaml` (open fresh, grant
 notifications — saving a trip plants a reminder, and the permission alert
@@ -63,7 +63,8 @@ restricts `maestro test .maestro` to the numbered flows and fixes their order.
    - Keep it off the editors list.
 
    `07-sign-up-delete.yaml` needs none of this — it makes and deletes its
-   own throwaway account every run, and never touches this one.
+   own throwaway account every run, and never touches this one — but it
+   isn't run by `npm run smoke:ios` (see GUIDELINES.md).
 
    Then put it in the macOS Keychain — the runner reads it from there, so
    it is never typed per run, never in the shell history, and never in a
