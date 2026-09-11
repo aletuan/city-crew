@@ -303,3 +303,12 @@ for f in "$ROOT"/supabase/migrations/*_place_threads_handle.sql \
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/search_path_test.sql"
+
+# One home for public identity. Last, because it redefines the sign-up
+# trigger every block above has been creating accounts through, and adds a
+# BEFORE UPDATE trigger on `auth.users` that nothing earlier should meet.
+echo "→ profile metadata"
+for f in "$ROOT"/supabase/migrations/*_profile_metadata_single_source.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/profile_metadata_test.sql"
