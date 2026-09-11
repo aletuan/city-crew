@@ -12,8 +12,8 @@
 // wizard that invents its own vocabulary produces a plan the rest of the
 // app cannot explain.
 //
-// The plan itself is not built here yet. The button hands the draft to a
-// screen that has not been written, which is the honest state of it.
+// The plan itself is not built here. The button hands the draft to
+// Sketching, which builds it, and nothing about the draft is decided twice.
 
 import React, { useMemo, useState } from 'react';
 import {
@@ -94,9 +94,10 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   /** Today at 00:00 — the picker's floor. Not `fromISO(todayISO())`, which
    *  is noon; see the picker below. */
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const day = clampDay(draft.date || (partGone(draft.when, toISO(now), now)
-    ? addDays(toISO(now), 1)
-    : toISO(now)));
+  const dayAt = (at: Date) => clampDay(draft.date || (partGone(draft.when, toISO(at), at)
+    ? addDays(toISO(at), 1)
+    : toISO(at)));
+  const day = dayAt(now);
   /** The hour this plan really starts, which is not the shape's hour when
    *  the reader has insisted on a day already under way. */
   const startMin = startMinFor(draft.when, day, now);
@@ -114,10 +115,14 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const set = <K extends keyof TripDraft>(k: K, v: TripDraft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
+  // Plain "near me" until the city resolves: "Around  · near me" printed
+  // the hole where its name goes.
   const whereLabel = draft.district
     ?? (draft.at
       ? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン')
-      : t(`Around ${city?.short_en ?? ''} · near me`, `Quanh ${city?.short_vi ?? ''} · gần tôi`, `${city?.short_ja ?? ''}周辺 · 現在地`));
+      : city
+        ? t(`Around ${city.short_en} · near me`, `Quanh ${city.short_vi} · gần tôi`, `${city.short_ja ?? city.short_en}周辺 · 現在地`)
+        : t('Near me', 'Gần tôi', '現在地'));
 
   /**
    * Where the reader is, for the default the label has always claimed.
@@ -351,35 +356,45 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
               // knows which of the three the reader ended up with — a
               // district, a pin, or the position behind "near me" — and
               // the next one has no business re-deciding that.
-              onPress={() => navigation.navigate('Sketching', {
-                company: draft.company,
-                categories: draft.categories,
-                // `origin`, so the near-me case gets its words too. It
-                // used to fall to null here, and a plan that really did
-                // start where the reader was standing arrived with no
-                // answer to "starting from where".
-                where: draft.district ?? (origin ? whereLabel : null),
-                district: draft.district,
-                // The coordinate behind that label. `where` is words and
-                // has always been words; sending it without these is how
-                // a pin came out as a plan across town, with the header
-                // still claiming the pin had been read.
-                //
-                // `origin`, not `draft.at`: the default is the reader's
-                // own position, and it travels the same wire the pin
-                // does. See the note on `origin` for why a district
-                // suppresses it rather than losing to it.
-                atLat: origin?.lat,
-                atLng: origin?.lng,
-                date: day,
-                when: draft.when,
-                // Resolved once, here, and carried. See `PlanAsk.startMin`:
-                // the three screens after this one each rebuild the plan,
-                // and each reading the clock for itself is how one card
-                // opens as a different evening.
-                startMin,
-                from: draft.from,
-              })}
+              onPress={() => {
+                // `pointerEvents` above stops a finger and nothing else —
+                // VoiceOver's activate still lands here.
+                if (!ready) return;
+                // The clock of the tap, not of the last render. This is a
+                // tab root and stays mounted: opened at ten and tapped at
+                // half past eight, it sent an evening starting at 18:00.
+                const tapped = new Date();
+                const date = dayAt(tapped);
+                navigation.navigate('Sketching', {
+                  company: draft.company,
+                  categories: draft.categories,
+                  // `origin`, so the near-me case gets its words too. It
+                  // used to fall to null here, and a plan that really did
+                  // start where the reader was standing arrived with no
+                  // answer to "starting from where".
+                  where: draft.district ?? (origin ? whereLabel : null),
+                  district: draft.district,
+                  // The coordinate behind that label. `where` is words and
+                  // has always been words; sending it without these is how
+                  // a pin came out as a plan across town, with the header
+                  // still claiming the pin had been read.
+                  //
+                  // `origin`, not `draft.at`: the default is the reader's
+                  // own position, and it travels the same wire the pin
+                  // does. See the note on `origin` for why a district
+                  // suppresses it rather than losing to it.
+                  atLat: origin?.lat,
+                  atLng: origin?.lng,
+                  date,
+                  when: draft.when,
+                  // Resolved once, here, and carried. See `PlanAsk.startMin`:
+                  // the three screens after this one each rebuild the plan,
+                  // and each reading the clock for itself is how one card
+                  // opens as a different evening.
+                  startMin: startMinFor(draft.when, date, tapped),
+                  from: draft.from,
+                });
+              }}
             />
           </View>
           {!ready && (

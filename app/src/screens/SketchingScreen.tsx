@@ -272,6 +272,11 @@ export default function SketchingScreen({ navigation, route }: {
   useEffect(() => {
     if (loading) return;
     if (!plans.length) { setWordsReady(true); return; }
+    // New plans are new words. The saved lists and the taste profile can
+    // land after the catalog and redraw the plans mid-hold, and a hold
+    // already released by the first set's words would hand over a set
+    // whose words nobody has waited for.
+    setWordsReady(false);
     let live = true;
     const asks = plans.map((plan) => prefetchNarration(
       narratableOf(plan.stops),
@@ -307,10 +312,15 @@ export default function SketchingScreen({ navigation, route }: {
   const done = finished(step);
   const empty = done && plans.length === 0;
 
-  // Leaving is an effect rather than something the render does, so a
-  // re-render mid-transition cannot fire it twice.
+  // Leaving is an effect rather than something the render does, and it
+  // happens once: the screen is still mounted for the length of the
+  // transition, and a catalog refresh in that window takes the plans away
+  // and brings them back — which re-runs this effect and, without the
+  // ref, stacked a second PlanOptions.
+  const left = useRef(false);
   useEffect(() => {
-    if (!done || !plans.length) return;
+    if (!done || !plans.length || left.current) return;
+    left.current = true;
     navigation.replace('PlanOptions', { ...p, seed });
   }, [done, plans.length, navigation, p, seed]);
 

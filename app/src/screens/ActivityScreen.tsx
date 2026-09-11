@@ -50,7 +50,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // from here the same moment, and no fetch of this screen's own. The
   // provider's `people` covers every id the edges mention, askers
   // included.
-  const { ships, people: askers } = useCrew();
+  const { ships, blocks, people: askers } = useCrew();
   const trips = useMyTrips();
   const mine = useMyCollections(me);
   const cols = useCollections();
@@ -131,7 +131,9 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
             {
               text: t('Block', 'Chặn', 'ブロック'),
               style: 'destructive',
-              onPress: () => { blockUser(requester).then(() => ships.reload()).catch(() => {}); },
+              // Blocks too, not just edges: the body above promises the undo
+              // lives on Your crew, whose blocked list reads this copy.
+              onPress: () => { blockUser(requester).then(() => { ships.reload(); blocks.reload(); }).catch(() => {}); },
             },
           ],
         ),
@@ -165,7 +167,10 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
       : t(`${ago.n} days ago`, `${ago.n} ngày trước`, `${ago.n}日前`);
   };
 
-  const loading = ships.loading || applause === null;
+  // Only what EARLIER is built from. The crew edges feed REQUESTS, and
+  // waiting on them blanked the feed behind a spinner on every answer's
+  // reload.
+  const loading = applause === null;
 
   return (
     <AuthScreen>
@@ -276,6 +281,9 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                 key={`a-${item.collection_id}-${item.at}`}
                 style={[s.row, i > 0 && s.rowDivider]}
                 onPress={title ? () => navigation.navigate('CollectionDetail', { slug: slugFor(item.collection_id, [...mine.data, ...cols.data]) ?? '' }) : undefined}
+                // A button only when it goes somewhere — VoiceOver has to
+                // hear that this row opens the list.
+                accessibilityRole={title ? 'button' : undefined}
               >
                 <View style={s.mark}>
                   <Ionicons name="heart-outline" size={20} color={colors.accent} />
