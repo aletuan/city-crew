@@ -1,6 +1,6 @@
 # iOS smoke tests (Maestro)
 
-Seven end-to-end flows that drive the dev bundle inside Expo Go on an iOS
+Seven end-to-end flows (how to write more: [GUIDELINES.md](GUIDELINES.md)) that drive the dev bundle inside Expo Go on an iOS
 simulator against real Supabase data. Four walk the guest path (launch,
 Explore, place detail, search); three sign in as a dedicated test account
 and walk the paths a signed-in reader cannot do without (sign in, plan and
@@ -60,34 +60,45 @@ restricts `maestro test .maestro` to the numbered flows and fixes their order.
      first time, through the form the bookmark opens, and reuses it.
    - Keep it off the editors list.
 
-   The credentials are passed on the command line and never written into
-   a flow or committed.
+   Then put it in the macOS Keychain — the runner reads it from there, so
+   it is never typed per run, never in the shell history, and never in a
+   flow or a commit:
+
+   ```sh
+   security add-generic-password -s citycrew-maestro -a you+maestro@gmail.com -w
+   # prompts for the password; to change it later add -U to the same command
+   ```
 
 ## Running
 
-Three terminals, or one with `&`:
+Two terminals:
 
 ```sh
-# 1. Boot a simulator (any iPhone works; pick the name from `xcrun simctl list devices available`).
-xcrun simctl boot "iPhone 16"
-open -a Simulator
+# 1. Boot a simulator and start Metro from app/ (leave it running).
+xcrun simctl boot "iPhone 16"; open -a Simulator
+cd app && npx expo start          # press i once to open the app in Expo Go
 
-# 2. Start the dev server from app/ and note the exp:// URL it prints.
-cd app
-npx expo start
-#   › Metro waiting on exp://192.168.1.23:8081     ← this one
-
-# 3. Run the suite. Pass the URL from step 2; the default is exp://127.0.0.1:8081.
-#    `read -s` keeps the password out of the shell history.
-read -r TEST_EMAIL; read -rs TEST_PASSWORD
-#    Call maestro directly, not through `npm run smoke:ios`: npm echoes
-#    the command it runs, password included.
-maestro test .maestro -e EXPO_URL=exp://192.168.1.23:8081 \
-  -e TEST_EMAIL="$TEST_EMAIL" -e TEST_PASSWORD="$TEST_PASSWORD"
+# 2. Run the suite from app/.
+npm run smoke:ios                                   # all seven flows
+npm run smoke:ios -- .maestro/05-plan-trip.yaml     # one flow
 ```
 
-Flows 00–03 need no account and ignore the two variables; for those alone
-`npm run smoke:ios -- -e EXPO_URL=…` is fine.
+`npm run smoke:ios` is `.maestro/smoke.sh`. It checks that Maestro, Java and
+Metro are there, reads the account from the Keychain, and runs Maestro with
+a JUnit report and full debug output. Every run lands in its own folder,
+with `latest` pointing at the newest:
+
+```
+.smoke-local/maestro/20260911-193000/   (latest →)
+  report.xml     pass/fail per flow, with the failing step's message
+  console.log    what the terminal showed
+  <flow>/...     commands log, screenshots and view hierarchy per flow
+```
+
+`.smoke-local/` is git-ignored. `EXPO_URL`, `TEST_EMAIL` and
+`TEST_PASSWORD` in the environment override the defaults
+(`exp://127.0.0.1:8081` — the simulator is on this Mac, so loopback always
+reaches Metro — and the Keychain entry).
 
 Open the app in Expo Go once by hand before the first run (press `i` in the
 `expo start` terminal). Each flow then kills Expo Go (`launchApp` with
@@ -98,12 +109,6 @@ of a session can take a minute, which is why the flows wait up to 90 s for
 
 If more than one simulator is booted, Maestro may pick either; pass
 `--device <UDID>` (from `xcrun simctl list devices booted`) to pin one.
-
-To run one flow:
-
-```sh
-maestro test .maestro/02-place-detail.yaml -e EXPO_URL=exp://...
-```
 
 ## Reading a failure
 
@@ -116,12 +121,15 @@ failure. The reason is in the line right after the ❌, usually one of:
 - `Assertion is false` — the element exists but is not on screen; scroll
   or wait before the assert.
 
-On failure Maestro writes a screenshot and the view hierarchy to
-`~/.maestro/tests/<timestamp>/`. Open the newest folder:
+On failure the runner's folder holds a screenshot and the view hierarchy
+at the failing step. Open the newest:
 
 ```sh
-open "$(ls -td ~/.maestro/tests/*/ | head -1)"
+open ../.smoke-local/maestro/latest      # from app/
 ```
+
+The hierarchy is the quickest answer to "was it there?": it lists every
+`id` on screen at that moment.
 
 `maestro studio` opens an inspector on the running simulator and shows every
 element's `id`, which is the fastest way to check a `testID` actually

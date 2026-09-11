@@ -27,3 +27,7 @@ NOTES.local.md
 # PNGs whole, and .git is 55 MB — they would nearly double every clone to
 # version files whose only home that matters is App Store Connect.
 store-screenshots/
+# Local hand-off and Maestro results — bundles, PR drafts, and each smoke
+# run's report, logs and screenshots (see app/.maestro/smoke.sh). Machine-
+# local by nature, and a failure screenshot can show a signed-in account.
+.smoke-local/
