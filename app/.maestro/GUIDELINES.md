@@ -99,6 +99,20 @@ The hierarchy answers "was the id on screen?"; the screenshot answers
 hidden tab bar, a button under it, or missing account data — check those
 first.
 
+## Manual QA
+
+One path has no automated coverage: signing up a new account and deleting
+it (App Store 5.1.1(v)). `07-sign-up-delete.yaml` documents the steps, but
+iOS's own "Use Strong Password?" panel on the password field is a
+separate process from the app and Maestro/XCUITest cannot see or interact
+with it — see the flow's own header for what was tried. Before each
+release, do this by hand once:
+
+- [ ] Sign up with a throwaway email and a real typed password.
+- [ ] Confirm the account lands on the taste picker, then Profile, signed in.
+- [ ] Profile → Delete account → confirm. Confirm it falls back to the
+      guest view with no separate sign-out step.
+
 ## Later
 
 - **Nightly CI.** The repo is public, so macOS runners are free. Needs a
@@ -106,6 +120,19 @@ first.
   Secrets.
 - **A staging Supabase project** before CI runs nightly, so tests never
   write to production.
-- **`07-sign-up-delete`**: a throwaway account per run (unique `+mae-<time>`
-  address), created and deleted through the app — covering the App Store's
-  in-app account deletion requirement — plus a sweep for orphans.
+- **A sweep for orphans.** `07-sign-up-delete` (done) deletes the account it
+  makes at the end of the same run, but a run that dies between sign-up and
+  delete leaves one behind. It was sketched as a `+mae-<time>` alias of a
+  real address so a sweep could find them by pattern; it shipped as
+  Maestro's own `inputRandomPersonName` / `inputRandomEmail` instead — no
+  scripting needed to build the string, at the cost of orphans not being
+  greppable by a shared tag. Revisit if orphans turn out to matter enough
+  to write the sweep: either tag the address after all, or query auth.users
+  for accounts with no rows anywhere else and an old `created_at`.
+- **`07-sign-up-delete` running unattended again.** It is correct today,
+  just not runnable — the app never sees the "Use Strong Password?" panel,
+  so there is nothing in the app to fix. Two ways back in, neither tried
+  yet: turn AutoFill password suggestions off for the smoke simulator only
+  (Settings → Passwords → Password Options), so real users on their own
+  devices are unaffected; or wait for Maestro to add a way to interact
+  with system-owned panels on iOS.

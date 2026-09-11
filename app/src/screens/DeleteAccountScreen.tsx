@@ -253,6 +253,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
         label={t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}
         onPress={remove}
         busy={busy}
+        testID="delete-account-confirm"
       />
       {/* The way out, next to the way through, so the reader who scrolled
           to the bottom does not have to go back up to the header to

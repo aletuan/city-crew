@@ -107,6 +107,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         prompt={t("Don't have an account?", 'Chưa có tài khoản?', 'アカウントをお持ちでない方は')}
         action={t('Sign up', 'Đăng ký', '登録')}
         onPress={() => navigation.replace('SignUp')}
+        testID="signin-switch-signup"
       />
     </AuthScreen>
   );

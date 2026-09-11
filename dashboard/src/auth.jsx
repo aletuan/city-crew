@@ -17,14 +17,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase.js';
+import { buildRedirectTo, resolveAuthView } from './lib/authGate.js';
 
 export const signOut = () => supabase.auth.signOut();
 
-/** Where an emailed link should land: exactly where this app is served, so
- *  it works on the Pages subpath and on localhost alike. Must be
- *  allow-listed under Auth → URL Configuration, or the mail arrives and the
- *  link returns you to this screen having done nothing. */
-const redirectTo = () => window.location.origin + window.location.pathname;
+const redirectTo = () => buildRedirectTo(window.location.origin, window.location.pathname);
 
 function Login() {
   const [mode, setMode] = useState('password'); // password | link
@@ -226,14 +223,14 @@ export default function AuthGate({ children }) {
     return () => { live = false; };
   }, [session]);
 
-  if (session === undefined) return <div className="empty">Loading…</div>;
-  if (!session) return <Login />;
-  // Before the editor check, deliberately. Someone resetting a password
-  // should be able to finish doing so whether or not they curate anything.
-  if (recovering) return <SetPassword onDone={() => setRecovering(false)} />;
-  if (editor === undefined) return <div className="empty">Checking access…</div>;
-  if (!editor) return <NotAnEditor email={session.user?.email} />;
-  return children;
+  switch (resolveAuthView({ session, editor, recovering })) {
+    case 'loading': return <div className="empty">Loading…</div>;
+    case 'signed-out': return <Login />;
+    case 'recovering': return <SetPassword onDone={() => setRecovering(false)} />;
+    case 'checking-editor': return <div className="empty">Checking access…</div>;
+    case 'not-editor': return <NotAnEditor email={session.user?.email} />;
+    default: return children;
+  }
 }
 
 /** Signed in, but not on the allow-list. The only way out is a different

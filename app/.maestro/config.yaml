@@ -1,7 +1,17 @@
 # `maestro test .maestro` runs these, in this order. Files under common/
 # are subflows and are only ever run through runFlow.
+#
+# 07-sign-up-delete.yaml is deliberately not in this list. See its own
+# header and GUIDELINES.md ("iOS's own AutoFill panel") for why: it needs
+# manual QA per release instead of a Maestro run.
 flows:
-  - "0*.yaml"
+  - "00-launch.yaml"
+  - "01-explore.yaml"
+  - "02-place-detail.yaml"
+  - "03-search.yaml"
+  - "04-sign-in.yaml"
+  - "05-plan-trip.yaml"
+  - "06-save-place.yaml"
 executionOrder:
   continueOnFailure: true
   flowsOrder:

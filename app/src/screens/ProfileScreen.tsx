@@ -727,6 +727,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         style={s.deleteBtn}
         accessibilityRole="button"
         onPress={() => navigation.navigate('DeleteAccount')}
+        testID="profile-delete-account"
       >
         <Text style={s.deleteText}>{t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}</Text>
       </PressableScale>
