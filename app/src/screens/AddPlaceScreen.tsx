@@ -55,6 +55,10 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
   const input = useRef<TextInput>(null);
+  // Held from the tap rather than read from `batch.running`, which only
+  // turns true a render later — two taps inside that frame both saw the
+  // button and submitted the same selection twice.
+  const sending = useRef(false);
 
   // Only what can actually be added. A result already in the catalog is
   // shown — that is the point of showing it — but it is not a thing you
@@ -73,15 +77,21 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
   const showFoot = batchBarShown(chosen.length, batch, done);
 
   const go = () => {
-    if (!chosen.length) return;
+    if (!chosen.length || sending.current) return;
+    sending.current = true;
     addMany(chosen).then((r) => {
       // Back to Explore when the run was clean, because that is where the
       // places now are. Not when something failed, and not when the cap
       // held anything back: navigating away from either is the app
       // deciding the reader does not need to know.
       if (r.failed === 0 && r.held === 0 && !r.cancelled) navigation.goBack();
-    });
+    }).finally(() => { sending.current = false; });
   };
+
+  // Only the ones that went in. `batch.done` counts every place *tried*,
+  // skipped and failed included, so "ADDED 3 OF 3" was the head over a run
+  // in which one had been refused.
+  const added = Object.values(batch.state).filter((st) => st === 'done').length;
 
   const cityName = city ? t(city.short_en, city.short_vi, city.short_ja) : '';
 
@@ -98,7 +108,9 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
           ref={input}
           value={query}
           onChangeText={setQuery}
-          onSubmitEditing={() => { setPicked([]); run(query); }}
+          // A blank return is not a new search — `run` ignores it — so it
+          // must not throw away what the reader has ticked either.
+          onSubmitEditing={() => { if (!query.trim()) return; setPicked([]); run(query); }}
           returnKeyType="search"
           autoFocus
           placeholder={t(
@@ -110,7 +122,13 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
           style={s.input}
         />
         {query.length > 0 && (
-          <PressableScale onPress={() => { setQuery(''); clear(); setPicked([]); input.current?.focus(); }} scaleTo={0.9} hitSlop={8}>
+          <PressableScale
+            onPress={() => { setQuery(''); clear(); setPicked([]); input.current?.focus(); }}
+            scaleTo={0.9}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('Clear search', 'Xoá tìm kiếm', '検索をクリア')}
+          >
             <Ionicons name="close-circle" size={19} color={colors.textTertiary} />
           </PressableScale>
         )}
@@ -135,9 +153,9 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
             )
             : finished(batch)
               ? t(
-                `ADDED ${batch.done} OF ${batch.total}`,
-                `ĐÃ THÊM ${batch.done}/${batch.total}`,
-                `${batch.total}件中 ${batch.done}件を追加`,
+                `ADDED ${added} OF ${batch.total}`,
+                `ĐÃ THÊM ${added}/${batch.total}`,
+                `${batch.total}件中 ${added}件を追加`,
               )
               : t(
                 `${results.length} RESULTS · ${cityName.toUpperCase()}`,

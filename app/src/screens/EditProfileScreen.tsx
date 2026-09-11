@@ -37,7 +37,7 @@
 // the friendlier of the two words, and renaming the data to match would
 // be churn through a migration for a caption.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
@@ -87,6 +87,46 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   // — a destructive action that leaves the screen exactly as it found it
   // is one the reader will press again to make sure.
   const [cleared, setCleared] = useState(false);
+
+  // Everything but the avatar lives only here until Save, and leaving
+  // used to drop it without a word — the header's Back and iOS's swipe
+  // alike, since both go through `beforeRemove`. The avatar is not in the
+  // sum: it was saved the moment it was picked. The preferences only count
+  // once their row has landed, because until then there is nothing yet to
+  // have changed from.
+  const saved = useRef(false);
+  const seeded = prefs.loadedAt === null ? null : prefs.data;
+  const edited = name !== profile.full_name
+    || handle !== profile.handle
+    || location !== profile.location
+    || bio !== profile.bio
+    || (seeded !== null && (
+      history !== seeded.history_on
+      || taste.join() !== cleanTaste(seeded.categories, Object.keys(CATEGORIES)).join()
+    ));
+  useEffect(() => {
+    if (!edited) return undefined;
+    return navigation.addListener('beforeRemove', (e) => {
+      if (saved.current) return;
+      e.preventDefault();
+      Alert.alert(
+        t('Discard your changes?', 'Bỏ các thay đổi?', '変更を破棄しますか？'),
+        t(
+          'What you changed on your profile has not been saved.',
+          'Những gì bạn vừa đổi trên hồ sơ chưa được lưu.',
+          'プロフィールの変更はまだ保存されていません。',
+        ),
+        [
+          { text: t('Keep editing', 'Tiếp tục sửa', '編集を続ける'), style: 'cancel' },
+          {
+            text: t('Discard', 'Bỏ', '破棄'),
+            style: 'destructive',
+            onPress: () => navigation.dispatch(e.data.action),
+          },
+        ],
+      );
+    });
+  }, [edited, navigation, t]);
 
   const confirmClear = () => Alert.alert(
     t('Delete your history?', 'Xoá lịch sử của bạn?', '履歴を削除しますか？'),
@@ -142,7 +182,13 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       // found. Saving `null` instead would be this form deciding, on
       // somebody's behalf and without asking, to discard an answer they
       // gave — and the row is theirs, not this screen's.
-      if (uid) {
+      //
+      // Only once the row has landed. Before that the switch and the chips
+      // hold this screen's placeholders — recording off, no interests —
+      // and writing them would wipe a real answer the reader never saw,
+      // which is worse than keeping a tap that the landing row was about to
+      // overwrite anyway (see the seeding above).
+      if (uid && prefs.loadedAt !== null) {
         await savePreferences(uid, {
           categories: taste,
           budget_vnd: prefs.data.budget_vnd,
@@ -150,6 +196,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         });
       }
       successHaptic();
+      saved.current = true;
       navigation.goBack();
     } catch (err) {
       const m = (err as Error).message;

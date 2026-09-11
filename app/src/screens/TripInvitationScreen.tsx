@@ -21,7 +21,7 @@
 // delete — see the trip_invites migration for why, unlike a declined
 // friend request, it is recorded).
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -57,6 +57,10 @@ export default function TripInvitationScreen({ navigation, route }: {
   const trips = useMyTrips();
 
   const [busy, setBusy] = useState(false);
+  // The guard, as opposed to the dimming: `busy` is only seen by the
+  // render after the one that set it, so two taps landing in the same
+  // frame both read false and sent the answer twice.
+  const inFlight = useRef(false);
 
   const tripId = route.params.id;
   // Batched by the invitations provider alongside the rail this screen
@@ -69,7 +73,8 @@ export default function TripInvitationScreen({ navigation, route }: {
   );
 
   const answer = async (said: 'accepted' | 'declined') => {
-    if (busy) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     try {
       await answerInvite(tripId, said);
@@ -86,6 +91,7 @@ export default function TripInvitationScreen({ navigation, route }: {
         e instanceof Error ? e.message : String(e),
       );
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -93,9 +99,16 @@ export default function TripInvitationScreen({ navigation, route }: {
   if (!trip) {
     return (
       <Screen title={t('Invitation', 'Lời mời', '招待')} onBack={() => navigation.goBack()}>
-        <Empty text={trips.loaded
-          ? t('That invitation is no longer here.', 'Lời mời đó không còn nữa.', 'その招待はもうありません。')
-          : t('Loading…', 'Đang tải…', '読み込み中…')}
+        {/* `loaded` stays true after a failed fetch, so a failure has to
+            be asked about first — or a dropped connection tells the
+            invitee they were uninvited. */}
+        <Empty text={trips.error
+          ? t('Could not load this invitation. Go back and try again.',
+            'Không tải được lời mời. Quay lại và thử lại.',
+            '招待を読み込めませんでした。戻ってもう一度お試しください。')
+          : trips.loaded
+            ? t('That invitation is no longer here.', 'Lời mời đó không còn nữa.', 'その招待はもうありません。')
+            : t('Loading…', 'Đang tải…', '読み込み中…')}
         />
       </Screen>
     );
@@ -215,7 +228,7 @@ export default function TripInvitationScreen({ navigation, route }: {
           <Ionicons name="lock-closed-outline" size={17} color={colors.textTertiary} />
           <Text style={s.noteText}>
             {t(
-              `${from?.full_name || 'They'} keep the plan. Accepting puts it in your Trips and you get the reminder the evening before.`,
+              `${from?.full_name ? `${from.full_name} keeps` : 'They keep'} the plan. Accepting puts it in your Trips and you get the reminder the evening before.`,
               `${from?.full_name || 'Họ'} giữ kế hoạch. Đồng ý thì chuyến vào mục Chuyến đi của bạn, và bạn được nhắc vào tối hôm trước.`,
               `予定は${from?.full_name || 'この人'}のものです。承諾すると旅程に入り、前の晩にリマインダーが届きます。`,
             )}
