@@ -655,6 +655,7 @@ export default function TripDetailScreen({ navigation, route }: {
           onPress={owned ? confirmDelete : confirmLeave}
           style={s.delete}
           accessibilityRole="button"
+          testID={owned ? 'trip-delete' : 'trip-leave'}
         >
           <Ionicons name={owned ? 'trash-outline' : 'exit-outline'} size={15} color={colors.bad} />
           <Text style={s.deleteText}>

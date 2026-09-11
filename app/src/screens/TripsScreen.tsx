@@ -127,8 +127,9 @@ function CompanyChip({ company }: { company: string | null }) {
  * legible — greying it into the background would be the app deciding your
  * last weekend mattered less than your next one.
  */
-function TripCard({ trip, cityName, past, onPress }: {
+function TripCard({ trip, cityName, past, onPress, testID }: {
   trip: Trip;
+  testID?: string;
   cityName: string | null;
   past: boolean;
   onPress: () => void;
@@ -144,7 +145,7 @@ function TripCard({ trip, cityName, past, onPress }: {
   const credit = useFlag('photo_attribution');
 
   return (
-    <PressableScale onPress={onPress} scaleTo={0.985} style={[s.card, past && s.cardPast]}>
+    <PressableScale onPress={onPress} scaleTo={0.985} style={[s.card, past && s.cardPast]} testID={testID}>
       {/* The one picture that says which trip this is.
           ── why the card has a band and PlaceCard has a hero ──
 
@@ -512,10 +513,11 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
               {t('Upcoming', 'Sắp tới', 'これから')} · {upcoming.length}
             </Text>
           )}
-          {upcoming.map((trip) => (
+          {upcoming.map((trip, i) => (
             <View key={trip.id} style={s.row}>
               <TripCard
                 trip={trip}
+                testID={`trip-upcoming-${i}`}
                 cityName={cityName(trip.city_id)}
                 past={false}
                 onPress={() => navigation.navigate('TripDetail', { id: trip.id })}

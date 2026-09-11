@@ -377,7 +377,7 @@ function GuestHub({ navigation }: { navigation: Nav }) {
           </Text>
         </View>
       </View>
-      <PrimaryButton label={t('Sign in / Sign up', 'Đăng nhập / Đăng ký', 'サインイン / 登録')} onPress={goSignIn} />
+      <PrimaryButton label={t('Sign in / Sign up', 'Đăng nhập / Đăng ký', 'サインイン / 登録')} onPress={goSignIn} testID="profile-sign-in" />
       <Pressable
         style={s.guestLink}
         accessibilityRole="button"
@@ -675,6 +675,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         accessibilityLabel={t('Sign out', 'Đăng xuất', 'サインアウト')}
         accessibilityState={{ disabled: busy, busy }}
         disabled={busy}
+        testID="profile-sign-out"
         onPress={async () => {
           // A second tap while the first is in flight would ask the server
           // to end the same session twice; `disabled` covers the render,

@@ -1,0 +1,82 @@
+# Save a place: bookmark the first place on Explore into the test account's
+# first collection, see the bookmark fill, then take it out again.
+#
+# Needs the test account to own at least one collection — with none, the
+# bookmark opens "New collection" instead of the sheet. See README.md.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-in.yaml
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- tapOn:
+    id: "place-card-0"
+- extendedWaitUntil:
+    visible:
+      id: "detail-name"
+    timeout: 20000
+
+# A run that failed after saving left the place in the list; take it out
+# first so the save below is a save and not an unsave.
+- runFlow:
+    when:
+      visible:
+        id: "detail-saved"
+    commands:
+      - tapOn:
+          id: "detail-saved"
+      - extendedWaitUntil:
+          visible:
+            id: "save-row-0"
+          timeout: 15000
+      - tapOn:
+          id: "save-row-0"
+      - tapOn:
+          id: "save-done"
+      - extendedWaitUntil:
+          visible:
+            id: "detail-save"
+          timeout: 15000
+
+# Save.
+- tapOn:
+    id: "detail-save"
+- extendedWaitUntil:
+    visible:
+      id: "save-row-0"
+    timeout: 15000
+- tapOn:
+    id: "save-row-0"
+- tapOn:
+    id: "save-done"
+- extendedWaitUntil:
+    visible:
+      id: "detail-saved"
+    timeout: 15000
+
+# And unsave, so the list is as it was.
+- tapOn:
+    id: "detail-saved"
+- extendedWaitUntil:
+    visible:
+      id: "save-row-0"
+    timeout: 15000
+- tapOn:
+    id: "save-row-0"
+- tapOn:
+    id: "save-done"
+- extendedWaitUntil:
+    visible:
+      id: "detail-save"
+    timeout: 15000
+- tapOn:
+    id: "detail-back"
+
+# Leave the app a guest, so the next run of the guest flows starts as one.
+- runFlow: common/ensure-signed-out.yaml

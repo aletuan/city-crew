@@ -1,0 +1,19 @@
+# Reusable: open the dev bundle fresh and land on Explore.
+#
+# The same steps the four guest flows spell out inline, gathered for the
+# signed-in flows. Notifications are granted up front: saving a trip plants
+# its evening-before reminder, and iOS's permission alert would otherwise
+# stand over the Trips tab the flow is waiting for.
+appId: host.exp.Exponent
+---
+- launchApp:
+    stopApp: true
+    permissions:
+      notifications: allow
+- openLink: ${EXPO_URL}
+- extendedWaitUntil:
+    visible:
+      id: "tab-explore"
+    timeout: 90000
+- runFlow: dismiss-welcome.yaml
+- runFlow: expo-go-prep.yaml

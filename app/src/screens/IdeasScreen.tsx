@@ -213,15 +213,17 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
               icon={c.icon as keyof typeof Ionicons.glyphMap | undefined}
               iconColor={c.color}
               active={draft.company === c.key}
+              testID={`ideas-company-${c.key}`}
               onPress={() => set('company', draft.company === c.key ? null : c.key)}
             />
           ))}
         </Section>
 
         <Section title={t('In the mood for…', 'Hôm nay bạn thích…', '今日の気分は…')}>
-          {cats.map((c) => (
+          {cats.map((c, i) => (
             <Chip
               key={c}
+              testID={`ideas-cat-${i}`}
               label={categoryLabel(c, t)}
               icon={CATEGORIES[c]?.icon}
               iconColor={CATEGORIES[c]?.color}
@@ -351,6 +353,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
               icon="sparkles"
               wide
               disabled={!ready}
+              testID="ideas-sketch"
               // Generic, and it stays generic — see the lede's note.
               label={t('Sketch the plan', 'Phác kế hoạch', 'プランを下描き')}
               // `whereLabel` rather than the raw draft: only this screen

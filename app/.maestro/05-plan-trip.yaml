@@ -1,0 +1,77 @@
+# Plan a trip end to end: answer the Ideas wizard, wait out Sketching,
+# pick the recommended plan, save it, find it on Trips, delete it.
+#
+# Every upcoming trip on the test account is deleted before the run and the
+# new one after it, so the account never accumulates rows and a failed run
+# cannot leave the next one looking at the wrong card.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-in.yaml
+
+# Leftovers from a run that failed half way.
+- tapOn:
+    id: "tab-trips"
+- waitForAnimationToEnd:
+    timeout: 5000
+- repeat:
+    while:
+      visible:
+        id: "trip-upcoming-0"
+    commands:
+      - runFlow: common/delete-first-trip.yaml
+
+# The wizard. Company and at least one mood are what `canPlan` asks for;
+# three moods rather than one so the planner has room at any hour.
+- tapOn:
+    id: "tab-ideas"
+- extendedWaitUntil:
+    visible:
+      id: "ideas-company-friends"
+    timeout: 30000
+- tapOn:
+    id: "ideas-company-friends"
+- tapOn:
+    id: "ideas-cat-0"
+- tapOn:
+    id: "ideas-cat-1"
+    optional: true
+- tapOn:
+    id: "ideas-cat-2"
+    optional: true
+- scrollUntilVisible:
+    element:
+      id: "ideas-sketch"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "ideas-sketch"
+
+# Sketching holds its last step for the model's words, up to its cap.
+- extendedWaitUntil:
+    visible:
+      id: "plan-card-best"
+    timeout: 90000
+- tapOn:
+    id: "plan-card-best"
+- scrollUntilVisible:
+    element:
+      id: "plan-save"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "plan-save"
+
+# Saving pops the wizard and lands on Trips, where the new trip is the
+# only upcoming one.
+- extendedWaitUntil:
+    visible:
+      id: "trip-upcoming-0"
+    timeout: 30000
+- assertNotVisible:
+    id: "trip-upcoming-1"
+- runFlow: common/delete-first-trip.yaml
+- assertNotVisible:
+    id: "trip-upcoming-0"

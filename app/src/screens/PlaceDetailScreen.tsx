@@ -309,6 +309,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             containerStyle={[s.fabSlot, { right: space.page, top: insets.top + 8 }]} style={s.fab}
             accessibilityRole="button"
             accessibilityState={{ selected: saved }}
+            // Two ids for the two states, so a smoke flow can wait on the
+            // save having landed without reading a trilingual label.
+            testID={saved ? 'detail-saved' : 'detail-save'}
             accessibilityLabel={saved
               ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
               : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}

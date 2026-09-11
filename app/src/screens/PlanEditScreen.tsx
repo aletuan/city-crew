@@ -599,6 +599,7 @@ export default function PlanEditScreen({ navigation, route }: {
             ? t('Saving…', 'Đang lưu…', '保存中…')
             : t('Save to Trips', 'Lưu vào Chuyến đi', '旅程に保存')}
           onPress={() => { if (!saving) void onSave(); }}
+          testID="plan-save"
         />
 
         <Text style={s.note}>

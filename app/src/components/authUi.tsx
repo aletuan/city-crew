@@ -214,8 +214,10 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
   );
 }
 
-export function PrimaryButton({ label, onPress, busy, arrow }: {
+export function PrimaryButton({ label, onPress, busy, arrow, testID }: {
   label: string; onPress: () => void; busy?: boolean;
+  /** For the iOS smoke flows, which select by id because every label is trilingual. */
+  testID?: string;
   /** A forward arrow after the label — for a button that is a departure
    *  rather than a submit. The welcome step's "Start exploring" is the
    *  case: every other primary in this flow answers "send what I typed",
@@ -233,6 +235,7 @@ export function PrimaryButton({ label, onPress, busy, arrow }: {
       accessibilityRole="button"
       accessibilityLabel={label}
       aria-busy={!!busy}
+      testID={testID}
     >
       <LinearGradient {...gradAI} style={s.primary}>
         {busy
@@ -333,7 +336,7 @@ export function SwitchRow({ prompt, action, onPress }: { prompt: string; action:
  */
 export function FormError({ children }: { children: string }) {
   return (
-    <View style={s.formError} accessibilityLiveRegion="polite">
+    <View style={s.formError} accessibilityLiveRegion="polite" testID="auth-error">
       <Ionicons name="alert-circle" size={20} color={colors.bad} />
       <Text style={s.formErrorText}>{children}</Text>
     </View>

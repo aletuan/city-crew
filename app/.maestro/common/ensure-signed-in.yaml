@@ -1,0 +1,16 @@
+# Reusable: be signed in as the test account, whatever the last run left.
+# Expo Go keeps the session across launches, so this is often a no-op.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "tab-profile"
+- waitForAnimationToEnd:
+    timeout: 5000
+- runFlow:
+    when:
+      visible:
+        id: "profile-sign-in"
+    commands:
+      - tapOn:
+          id: "profile-sign-in"
+      - runFlow: sign-in.yaml

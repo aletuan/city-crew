@@ -391,8 +391,10 @@ export function Screen({ title, subtitle, eyebrow, children, right, onBack }: {
   );
 }
 
-export function Chip({ label, active, onPress, icon, iconColor }: {
+export function Chip({ label, active, onPress, icon, iconColor, testID }: {
   label: string;
+  /** For the iOS smoke flows; see `.maestro/README.md`. */
+  testID?: string;
   active?: boolean;
   onPress?: () => void;
   /** Optional leading glyph. It keeps its own colour in both states — the
@@ -416,6 +418,7 @@ export function Chip({ label, active, onPress, icon, iconColor }: {
       style={[s.chip, active && s.chipOn]}
       accessibilityRole={onPress ? 'button' : undefined}
       aria-selected={onPress ? !!active : undefined}
+      testID={testID}
     >
       {icon ? <Ionicons name={icon} size={15} color={iconColor ?? colors.textSecondary} /> : null}
       <Text style={[s.chipText, active && s.chipTextOn]}>{label}</Text>
@@ -688,8 +691,10 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color }: {
  * inside a bar and is sized to stay quiet next to them; this one is the
  * only thing on its card and carries a full sentence of a label.
  */
-export function GradientCta({ icon, label, onPress, wide, busy, disabled }: {
+export function GradientCta({ icon, label, onPress, wide, busy, disabled, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
+  /** For the iOS smoke flows; see `.maestro/README.md`. */
+  testID?: string;
   label: string;
   onPress: () => void;
   /** Full width, for the one action that commits a sheet. Sized to its
@@ -734,6 +739,7 @@ export function GradientCta({ icon, label, onPress, wide, busy, disabled }: {
       accessibilityRole="button"
       aria-busy={!!busy}
       aria-disabled={!!(busy || disabled)}
+      testID={testID}
       containerStyle={wide ? { alignSelf: 'stretch' } : undefined}
     >
       {/* Dimmed for everyone, not only as a second opinion beside the
