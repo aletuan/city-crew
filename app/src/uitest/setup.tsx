@@ -118,8 +118,9 @@ vi.mock('expo-location', () => ({
   getForegroundPermissionsAsync: vi.fn(async () => ({ status: 'undetermined' })),
   requestForegroundPermissionsAsync: vi.fn(async () => ({ status: 'denied' })),
   getCurrentPositionAsync: vi.fn(async () => ({ coords: { latitude: 0, longitude: 0 } })),
+  getLastKnownPositionAsync: vi.fn(async () => null),
   reverseGeocodeAsync: vi.fn(async () => []),
-  Accuracy: { Balanced: 3 },
+  Accuracy: { Low: 2, Balanced: 3 },
 }));
 
 // `matchMedia`, which this DOM does not have and `react-native-web` reads

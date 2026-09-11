@@ -22,7 +22,8 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { render, screen, waitFor } from '../uitest/render';
+import * as Location from 'expo-location';
+import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 
 const h = vi.hoisted(() => ({ fake: null as ReturnType<typeof import('./testing').fakeSupabase> | null }));
 vi.mock('./supabase', async () => {
@@ -54,8 +55,24 @@ const mount = () => render(<CityProvider><Probe /></CityProvider>);
 /** What the device remembers, as the bootstrap will read it back. */
 const remembered = async () => JSON.parse((await AsyncStorage.getItem(KEY)) ?? '{}');
 
+/** Where the phone is, for the platform's fresh-fix read. */
+const HANOI = { coords: { latitude: 21.02, longitude: 105.84 } };
+const loc = vi.mocked(Location);
+
+/** Location allowed, no cached fix, and a fresh one in Hanoi. */
+const coldGpsInHanoi = () => {
+  loc.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' } as never);
+  loc.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' } as never);
+  loc.getLastKnownPositionAsync.mockResolvedValue(null);
+  loc.getCurrentPositionAsync.mockResolvedValue(HANOI as never);
+};
+
 beforeEach(async () => {
   h.fake!.reset();
+  loc.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'denied' } as never);
+  loc.getForegroundPermissionsAsync.mockResolvedValue({ status: 'undetermined' } as never);
+  loc.getLastKnownPositionAsync.mockResolvedValue(null);
+  loc.getCurrentPositionAsync.mockReset();
   // Two replies: the bootstrap's fetch, and the healer's retry if the
   // first were ever empty. Queueing both keeps the test off that path.
   h.fake!.replies({ data: CITIES, error: null }, { data: CITIES, error: null });
@@ -126,5 +143,116 @@ describe('the account leaving', () => {
     vi.mocked(AsyncStorage.setItem).mockClear();
     h.fake!.fireAuth('SIGNED_OUT');
     expect(vi.mocked(AsyncStorage.setItem).mock.calls.filter(([k]) => k === KEY)).toHaveLength(0);
+  });
+});
+
+describe('the account leaving, when the phone knows where it is', () => {
+  // The case that was reported: an account signed out on a Da Nang the
+  // last reader was looking at, a new one signed up in Hanoi, and the app
+  // went on showing Da Nang because nothing asked again until a restart.
+  it('moves to where the phone is once the pick is released', async () => {
+    mount();
+    await waitFor(() => expect(screen.getByTestId('mode').textContent).toBe('manual'));
+    coldGpsInHanoi();
+
+    h.fake!.fireAuth('SIGNED_OUT');
+
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('hanoi'));
+    expect(screen.getByTestId('mode').textContent).toBe('auto');
+    await waitFor(async () => expect(await remembered()).toEqual({ id: 'hanoi', mode: 'auto' }));
+  });
+
+  it('follows the phone when the pick was automatic too', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ id: 'danang', mode: 'auto' }));
+    mount();
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('danang'));
+    coldGpsInHanoi();
+
+    h.fake!.fireAuth('SIGNED_OUT');
+
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('hanoi'));
+  });
+
+  // A sign-out is not a moment for the permission dialog: the fix is
+  // taken only if location was already allowed.
+  it('never asks for permission on the way out', async () => {
+    mount();
+    await waitFor(() => expect(screen.getByTestId('mode').textContent).toBe('manual'));
+    loc.requestForegroundPermissionsAsync.mockClear();
+
+    h.fake!.fireAuth('SIGNED_OUT');
+
+    await waitFor(() => expect(screen.getByTestId('mode').textContent).toBe('auto'));
+    expect(loc.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+    expect(loc.getCurrentPositionAsync).not.toHaveBeenCalled();
+    expect(screen.getByTestId('city').textContent).toBe('danang');
+  });
+});
+
+describe('a launch with no cached fix', () => {
+  // Before: the stored automatic city stood, and since nothing asked for
+  // a fresh fix the cache never warmed — the same city every launch.
+  it('opens on the stored city, then moves to where a fresh fix says', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ id: 'danang', mode: 'auto' }));
+    coldGpsInHanoi();
+    mount();
+
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('hanoi'));
+    expect(loc.getCurrentPositionAsync).toHaveBeenCalledTimes(1);
+    await waitFor(async () => expect(await remembered()).toEqual({ id: 'hanoi', mode: 'auto' }));
+  });
+
+  // Nothing remembered: the bootstrap falls back to its default, which is
+  // the Saigon the report was about. The fresh fix corrects it.
+  it('corrects a first launch that fell back to the default', async () => {
+    await AsyncStorage.removeItem(KEY);
+    coldGpsInHanoi();
+    mount();
+
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('hanoi'));
+    await waitFor(async () => expect(await remembered()).toEqual({ id: 'hanoi', mode: 'auto' }));
+  });
+
+  it('stays put when the fresh fix agrees, writing nothing', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ id: 'hanoi', mode: 'auto' }));
+    coldGpsInHanoi();
+    mount();
+    await waitFor(() => expect(loc.getCurrentPositionAsync).toHaveBeenCalled());
+    vi.mocked(AsyncStorage.setItem).mockClear();
+    await act(async () => { await Promise.resolve(); });
+
+    expect(screen.getByTestId('city').textContent).toBe('hanoi');
+    expect(vi.mocked(AsyncStorage.setItem).mock.calls.filter(([k]) => k === KEY)).toHaveLength(0);
+  });
+
+  it('stays put when location is not allowed', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ id: 'danang', mode: 'auto' }));
+    mount();
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('danang'));
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+
+    expect(screen.getByTestId('city').textContent).toBe('danang');
+    expect(loc.getCurrentPositionAsync).not.toHaveBeenCalled();
+  });
+
+  // The reader's word outranks a fix that was already on its way.
+  it('drops a late fix when the reader picked a city meanwhile', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ id: 'danang', mode: 'auto' }));
+    coldGpsInHanoi();
+    let land!: (v: unknown) => void;
+    loc.getCurrentPositionAsync.mockReturnValue(new Promise((r) => { land = r; }) as never);
+
+    function Picker() {
+      const { setCity } = useCity();
+      return <button type="button" onClick={() => setCity('danang')}>pick</button>;
+    }
+    render(<CityProvider><Probe /><Picker /></CityProvider>);
+    await waitFor(() => expect(loc.getCurrentPositionAsync).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText('pick'));
+    await act(async () => { land(HANOI); await Promise.resolve(); });
+
+    expect(screen.getByTestId('city').textContent).toBe('danang');
+    expect(screen.getByTestId('mode').textContent).toBe('manual');
   });
 });
