@@ -22,6 +22,7 @@ import { CatalogProvider } from './src/lib/catalog';
 import { CrewProvider } from './src/lib/crew';
 import { InvitationsProvider } from './src/lib/invitations';
 import { MyTripsProvider } from './src/lib/mytrips';
+import { ReminderSync } from './src/lib/reminderSync';
 import { SaveProvider } from './src/lib/save';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
@@ -279,6 +280,9 @@ function Root() {
                         all read the one list — and a delete on any of
                         them lands in the copy the others draw. */}
                     <MyTripsProvider>
+                    {/* The phone's trip reminders, kept to the trips the
+                        reader is going on — planned, or accepted. */}
+                    <ReminderSync />
                     <SaveProvider>
                       {/* The duck state sits above the navigator: screens
                           report scrolls into it, the bar animates out of it. */}

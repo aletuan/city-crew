@@ -391,7 +391,7 @@ describe('saving', () => {
     expect((navigation.popToTop as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0])
       .toBeLessThan(navigation.parent.navigate.mock.invocationCallOrder[0]);
     expect(scheduleTripReminder).toHaveBeenCalledWith(
-      { id: 'trip-1', day: todayISO() },
+      { id: 'trip-1', day: todayISO(), title: 'Coffee, noodles, skyline' },
       { title: 'Tomorrow: Coffee, noodles, skyline', body: 'Your plan starts in the morning. Sleep well.' },
     );
   });
