@@ -48,25 +48,24 @@ env:
 - tapOn:
     id: "signup-email"
 - inputRandomEmail
-# The strength meter on this field (see FieldRow's `strength` prop,
-# absent on sign-in's own password field) re-renders on every keystroke,
-# and typing right as the keyboard/field is still settling from `tapOn`
-# drops characters — confirmed on a real run: password and confirm each
-# came out a different, partial string, so they silently failed to match
-# and the screen never advanced. `waitForAnimationToEnd` lets that settle
-# first; `eraseText` clears any partial text a previous attempt left
-# behind, since `inputText` appends at the cursor rather than replacing.
+# Neither field's own rendering was ever the problem. Both carry
+# autoComplete="new-password", and iOS answers that with its own "Use
+# Strong Password?" panel the moment the field is focused -- confirmed on
+# a real run's screenshot, panel and all. It swallows every keystroke
+# sent while it is up, which is how a run lands on a 1-character
+# password. hideKeyboard forces it back down along with the field's
+# keyboard; re-tapping the field then opens a clean one to type into.
 - tapOn:
     id: "signup-password"
-- waitForAnimationToEnd:
-    timeout: 2000
-- eraseText: 50
+- hideKeyboard
+- tapOn:
+    id: "signup-password"
 - inputText: "Maestro-smoke-1"
 - tapOn:
     id: "signup-confirm"
-- waitForAnimationToEnd:
-    timeout: 2000
-- eraseText: 50
+- hideKeyboard
+- tapOn:
+    id: "signup-confirm"
 - inputText: "Maestro-smoke-1"
 - hideKeyboard
 - tapOn:
