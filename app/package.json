@@ -66,7 +66,7 @@
     "format:check": "prettier --check",
     "test:tz": "TEST_TZ=America/New_York vitest run",
     "coverage": "vitest run --coverage",
-    "smoke:ios": "maestro test .maestro"
+    "smoke:ios": "bash .maestro/smoke.sh"
   },
   "private": true
 }
