@@ -46,6 +46,7 @@ import {
 } from '../lib/friends';
 import { atHandle, handleProblem, normalizeHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
+import { reasonOf, usePending } from '../lib/pending';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -196,20 +197,33 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     }
   };
 
+  // Every write below goes through `run`: one at a time per person, and a
+  // failure said out loud. They all used to end in `.catch(() => {})` — a
+  // dropped connection left the row as it was, with no word on whether the
+  // tap had missed or the write had failed; for a block, the one a reader
+  // is relying on, that is the worst possible silence. See lib/pending.
+  const { pending, run } = usePending();
+  const failed = (title: string) => (e: unknown) => Alert.alert(title, reasonOf(e));
+
   /** One tap from an introduction. No confirmation: the row says who and
    *  the ask is silent and withdrawable — a sheet here would be asking
    *  permission to be friendly. It lands in Sent, which is directly
    *  above, so the tap has somewhere visible to go. */
-  const askSuggested = (id: string) => {
-    sendFriendRequest(me!, id)
-      .then(() => { successHaptic(); ships.reload(); })
-      .catch(() => {});
-  };
+  const askSuggested = (id: string) => run(
+    id,
+    () => sendFriendRequest(me!, id),
+    () => { successHaptic(); ships.reload(); },
+    failed(t('Could not send the request', 'Không gửi được lời mời', 'リクエストを送れませんでした')),
+  );
 
-  const answer = (requester: string, yes: boolean) => {
-    const done = yes ? acceptFriendRequest(requester, me!) : removeFriendship(requester, me!);
-    done.then(() => { if (yes) successHaptic(); ships.reload(); }).catch(() => {});
-  };
+  const answer = (requester: string, yes: boolean) => run(
+    requester,
+    () => (yes ? acceptFriendRequest(requester, me!) : removeFriendship(requester, me!)),
+    () => { if (yes) successHaptic(); ships.reload(); },
+    failed(yes
+      ? t('Could not accept the request', 'Không chấp nhận được lời mời', 'リクエストを承認できませんでした')
+      : t('Could not decline the request', 'Không từ chối được lời mời', 'リクエストを拒否できませんでした')),
+  );
 
   // ── the ⋯ sheet ──
   //
@@ -264,10 +278,18 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     ],
   );
 
-  const cutEdge = (id: string) => { removeFriendship(me!, id).then(() => ships.reload()).catch(() => {}); };
-  const bar = (id: string) => {
-    blockUser(id).then(() => { ships.reload(); blocks.reload(); }).catch(() => {});
-  };
+  const cutEdge = (id: string, failTitle: string) => run(
+    id,
+    () => removeFriendship(me!, id),
+    () => ships.reload(),
+    failed(failTitle),
+  );
+  const bar = (id: string) => run(
+    id,
+    () => blockUser(id),
+    () => { ships.reload(); blocks.reload(); },
+    failed(t('Could not block', 'Không chặn được', 'ブロックできませんでした')),
+  );
 
   const blockAction = (p: FriendProfile, title: string, desc: string): PersonAction => ({
     key: 'block',
@@ -302,7 +324,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
           t(`Unfriend ${tag(p)}?`, `Hủy kết bạn với ${tag(p)}?`, `${tag(p)} と友達をやめますか？`),
           t('They will not be told.', 'Họ sẽ không được báo.', '相手に通知されません。'),
           t('Unfriend', 'Hủy kết bạn', '友達をやめる'),
-          () => cutEdge(p.id),
+          () => cutEdge(p.id, t('Could not unfriend', 'Không huỷ kết bạn được', '友達を解除できませんでした')),
         ),
       },
       blockAction(
@@ -363,7 +385,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
           'Rút lại trước khi họ trả lời. Họ sẽ không được báo, và bạn vẫn có thể mời lại.',
           '返事の前に取り消します。相手に通知されず、また申請できます。',
         ),
-        onPress: () => cutEdge(p.id),
+        onPress: () => cutEdge(p.id, t('Could not cancel the request', 'Không huỷ được lời mời', 'リクエストを取り消せませんでした')),
       },
       blockAction(
         p,
@@ -382,7 +404,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
     t(`Unblock ${tag(p)}?`, `Bỏ chặn ${tag(p)}?`, `${tag(p)} のブロックを解除しますか？`),
     t('They will be able to send you requests again.', 'Họ sẽ có thể gửi lời mời cho bạn lại.', '相手は再びリクエストを送れるようになります。'),
     t('Unblock', 'Bỏ chặn', '解除'),
-    () => { unblockUser(me!, p.id).then(() => blocks.reload()).catch(() => {}); },
+    () => run(
+      p.id,
+      () => unblockUser(me!, p.id),
+      () => blocks.reload(),
+      failed(t('Could not unblock', 'Không bỏ chặn được', 'ブロックを解除できませんでした')),
+    ),
   );
 
   /** The face, or the space one would take — every row here draws it, so
@@ -521,16 +548,24 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                         </PressableScale>
                       </View>
                       <View style={s.answers}>
-                        <PressableScale containerStyle={s.half} onPress={() => answer(r.requester, true)} accessibilityRole="button">
+                        <PressableScale
+                          containerStyle={[s.half, pending.has(r.requester) && s.working]}
+                          onPress={() => answer(r.requester, true)}
+                          disabled={pending.has(r.requester)}
+                          aria-disabled={pending.has(r.requester)}
+                          accessibilityRole="button"
+                        >
                           <LinearGradient {...gradAI} style={s.accept}>
                             <Ionicons name="checkmark" size={17} color={colors.accentInk} />
                             <Text style={s.acceptText}>{t('Accept', 'Đồng ý', '承認')}</Text>
                           </LinearGradient>
                         </PressableScale>
                         <PressableScale
-                          containerStyle={s.half}
+                          containerStyle={[s.half, pending.has(r.requester) && s.working]}
                           style={s.decline}
                           onPress={() => answer(r.requester, false)}
+                          disabled={pending.has(r.requester)}
+                          aria-disabled={pending.has(r.requester)}
                           onLongPress={() => openRequestSheet(r.requester, p)}
                           accessibilityRole="button"
                         >
@@ -593,7 +628,14 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                             {p ? `${atHandle(p.handle)} · ` : ''}{savesLine(sg.mutual)}
                           </Text>
                         </View>
-                        <PressableScale onPress={() => askSuggested(sg.other)} scaleTo={0.94} accessibilityRole="button">
+                        <PressableScale
+                          onPress={() => askSuggested(sg.other)}
+                          scaleTo={0.94}
+                          containerStyle={pending.has(sg.other) ? s.working : undefined}
+                          disabled={pending.has(sg.other)}
+                          aria-disabled={pending.has(sg.other)}
+                          accessibilityRole="button"
+                        >
                           <LinearGradient {...gradAI} style={s.addBtn}>
                             <Ionicons name="person-add-outline" size={15} color={colors.accentInk} />
                             <Text style={s.addText}>{t('Add', 'Thêm', '追加')}</Text>
@@ -681,7 +723,14 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           <Text style={s.name} numberOfLines={1}>{nameOf(p)}</Text>
                           <Text style={s.meta} numberOfLines={1}>{p ? atHandle(p.handle) : ''}</Text>
                         </View>
-                        <PressableScale style={s.quietBtn} onPress={() => confirmUnblock(known(id))} accessibilityRole="button">
+                        <PressableScale
+                          style={s.quietBtn}
+                          containerStyle={pending.has(id) ? s.working : undefined}
+                          onPress={() => confirmUnblock(known(id))}
+                          disabled={pending.has(id)}
+                          aria-disabled={pending.has(id)}
+                          accessibilityRole="button"
+                        >
                           <Text style={s.quietText}>{t('Unblock', 'Bỏ chặn', '解除')}</Text>
                         </PressableScale>
                       </View>
@@ -723,6 +772,9 @@ const s = StyleSheet.create({
   reqTitle: { color: colors.text, fontSize: 15.5, lineHeight: 21 },
   answers: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 },
+  // A row whose write is in flight: dimmed, and refusing the tap, so a
+  // second press has an answer ("it's working") rather than none.
+  working: { opacity: 0.5 },
   accept: {
     flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center',
     borderRadius: radius.pill, paddingVertical: 11,
