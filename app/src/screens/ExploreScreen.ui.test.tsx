@@ -552,8 +552,14 @@ describe('the community shelf', () => {
     render(<ExploreScreen navigation={navigation} />);
     fireEvent.click(screen.getByText('See all →'));
     expect(navigation.parentNavigate).toHaveBeenCalledWith('Collections', {
-      screen: 'CollectionsHome', params: { tab: 'community' },
+      screen: 'CollectionsHome', params: { tab: 'community', at: expect.any(Number) },
     });
+    // A second tap is a fresh param, so the tab re-aims even if the
+    // reader switched away from it in between.
+    const first = navigation.parentNavigate.mock.calls[0][1].params.at;
+    vi.spyOn(Date, 'now').mockReturnValue(first + 1000);
+    fireEvent.click(screen.getByText('See all →'));
+    expect(navigation.parentNavigate.mock.calls[1][1].params.at).not.toBe(first);
   });
 
   it('asks a signed-out guest to sign in instead of liking', () => {

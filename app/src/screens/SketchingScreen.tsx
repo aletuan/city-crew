@@ -172,7 +172,13 @@ export default function SketchingScreen({ navigation, route }: {
   const clearance = useTabBarClearance(10);
   const calm = useReducedMotion();
   const p = route.params;
-  const { data: places, loading } = usePlaces();
+  const { data: places, loading, error, reload } = usePlaces();
+  // The catalog did not arrive and there is nothing cached to plan from.
+  // Planning over an empty array would end on "nothing matches those
+  // choices", which blames the reader's answers for a network fault and
+  // sends them off to change answers that were fine. Named for what it
+  // is, with the one remedy that can work: asking again.
+  const failed = !loading && !!error && places.length === 0;
   const { city } = useCity();
   const { mine } = useSave();
   const { taste, budgetVnd } = usePlanProfile();
@@ -294,14 +300,14 @@ export default function SketchingScreen({ navigation, route }: {
   // the reader nothing.
   const [step, setStep] = useState(0);
   useEffect(() => {
-    if (loading || step >= SKETCH_STEPS.length) return;
+    if (loading || failed || step >= SKETCH_STEPS.length) return;
     // Hold on the final step — drawn active, honestly — until the words
     // settle. The floor still applies after they do, so even an instant
     // answer leaves the line on screen long enough to read.
     if (step === SKETCH_STEPS.length - 1 && !wordsReady) return;
     const id = setTimeout(() => setStep((n) => n + 1), STEP_FLOOR_MS);
     return () => clearTimeout(id);
-  }, [loading, step, wordsReady]);
+  }, [loading, failed, step, wordsReady]);
 
   /** The feed's two slots: this step's finding over the one before it.
    *  Both null until the second step, when the first fact exists — until
@@ -310,7 +316,7 @@ export default function SketchingScreen({ navigation, route }: {
 
   const states = stepStates(step);
   const done = finished(step);
-  const empty = done && plans.length === 0;
+  const empty = !failed && done && plans.length === 0;
 
   // Leaving is an effect rather than something the render does, and it
   // happens once: the screen is still mounted for the length of the
@@ -343,10 +349,12 @@ export default function SketchingScreen({ navigation, route }: {
         {/* Still only when there is nothing coming. While the steps run the
             screen is about to hand over a plan, and an orb that settles
             first reads as the work having stopped short. */}
-        <SketchOrb still={empty || calm} />
+        <SketchOrb still={empty || failed || calm} />
 
         <Text style={s.title}>
-          {empty
+          {failed
+            ? t("Couldn't load places", 'Không tải được địa điểm', '場所を読み込めませんでした')
+            : empty
             ? t('Nothing to build a day from', 'Chưa đủ chỗ để dựng một ngày', '一日を組む材料が足りません')
             : p.when === 'day'
               ? t('Sketching your day…', 'Đang phác ngày của bạn…', '一日を下描き中…')
@@ -370,7 +378,7 @@ export default function SketchingScreen({ navigation, route }: {
             once there is nothing coming: a skeleton is a promise that
             something is on its way, and leaving it pulsing above "nothing
             matches those choices" makes the screen argue with itself. */}
-        {!empty && (
+        {!empty && !failed && (
           <View style={s.preview}>
             {feed.current
               ? <FindingFeed previous={feed.previous} current={feed.current} still={calm} />
@@ -384,7 +392,23 @@ export default function SketchingScreen({ navigation, route }: {
           </View>
         )}
 
-        {empty ? (
+        {failed ? (
+          <>
+            <Text style={s.note}>
+              {t(
+                'Check your connection and try again. Your answers are kept.',
+                'Kiểm tra kết nối mạng rồi thử lại. Lựa chọn của bạn vẫn được giữ.',
+                '接続を確認してもう一度お試しください。回答はそのまま残ります。',
+              )}
+            </Text>
+            <GradientCta
+              icon="refresh"
+              label={t('Try again', 'Thử lại', '再試行')}
+              onPress={reload}
+              wide
+            />
+          </>
+        ) : empty ? (
           <>
             {/* A dead end deserves more than a report that it is one — the
                 same rule the empty search screen follows. The category

@@ -63,8 +63,9 @@ export type RootStackParamList = {
   ExploreHome: undefined;
   Search: undefined;
   /** `tab` lands the screen on a specific half — Explore's "See all"
-   *  points at the community shelf, not at your library. */
-  CollectionsHome: { tab?: 'community' } | undefined;
+   *  points at the community shelf, not at your library. `at` is the
+   *  moment of the tap, so a repeat tap is a new param and re-aims. */
+  CollectionsHome: { tab?: 'community'; at?: number } | undefined;
   /** One screen for three verbs: params absent means "new", `slug` means
    *  "rename this one", `copyFrom` means "save a copy of somebody else's". */
   CollectionForm: {
