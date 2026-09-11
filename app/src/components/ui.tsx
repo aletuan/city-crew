@@ -402,7 +402,21 @@ export function Chip({ label, active, onPress, icon, iconColor }: {
   iconColor?: string;
 }) {
   return (
-    <PressableScale onPress={onPress} haptic="selection" scaleTo={0.94} style={[s.chip, active && s.chipOn]}>
+    // A chip is read as a button, and says whether it is chosen, only when
+    // it does something — a display-only chip is just its words. Without
+    // this VoiceOver read "Cà phê" and nothing else: no hint it could be
+    // tapped, and no way to tell the picked ones from the rest, which the
+    // fill says to everyone who can see it. `aria-*` rather than
+    // `accessibilityState`, which react-native-web drops, so the tests can
+    // see what VoiceOver hears.
+    <PressableScale
+      onPress={onPress}
+      haptic="selection"
+      scaleTo={0.94}
+      style={[s.chip, active && s.chipOn]}
+      accessibilityRole={onPress ? 'button' : undefined}
+      aria-selected={onPress ? !!active : undefined}
+    >
       {icon ? <Ionicons name={icon} size={15} color={iconColor ?? colors.textSecondary} /> : null}
       <Text style={[s.chipText, active && s.chipTextOn]}>{label}</Text>
     </PressableScale>
@@ -674,7 +688,7 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color }: {
  * inside a bar and is sized to stay quiet next to them; this one is the
  * only thing on its card and carries a full sentence of a label.
  */
-export function GradientCta({ icon, label, onPress, wide, busy }: {
+export function GradientCta({ icon, label, onPress, wide, busy, disabled }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
@@ -699,6 +713,14 @@ export function GradientCta({ icon, label, onPress, wide, busy }: {
    * should not be a third speed.
    */
   busy?: boolean;
+  /**
+   * Not ready to be pressed — the draft is incomplete, nothing has changed.
+   * Said to VoiceOver as "dimmed" and refused for every kind of press,
+   * including the activate a screen reader sends, which a caller's
+   * `pointerEvents="none"` never stopped. How it looks stays the caller's:
+   * the screens that dim one already say why beside it.
+   */
+  disabled?: boolean;
 }) {
   const still = useReducedMotion();
   const spin = useLoop(1600, still || !busy);
@@ -708,9 +730,10 @@ export function GradientCta({ icon, label, onPress, wide, busy }: {
       // Straight through to `Pressable`, which is what stops the scale as
       // well as the press: a button that dips under a thumb and then does
       // nothing has answered, and answered wrongly.
-      disabled={busy}
+      disabled={busy || disabled}
       accessibilityRole="button"
-      accessibilityState={{ busy }}
+      aria-busy={!!busy}
+      aria-disabled={!!(busy || disabled)}
       containerStyle={wide ? { alignSelf: 'stretch' } : undefined}
     >
       {/* Dimmed for everyone, not only as a second opinion beside the

@@ -115,17 +115,19 @@ describe('what the button promises', () => {
     expect(onSend).toHaveBeenCalledWith(['ha'], ['lan']);
   });
 
-  it('does nothing when nothing moved', () => {
+  it('does nothing when nothing moved, and says it is not ready', () => {
     show();
     fireEvent.click(screen.getByText('Send invites'));
     expect(onSend).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Send invites' }).getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('will not fire twice while a send is in flight', () => {
+  it('will not fire twice while a send is in flight, and says so', () => {
     show({ sending: true });
     expect(screen.getByText('Sending…')).toBeTruthy();
     fireEvent.click(screen.getByText('Sending…'));
     expect(onSend).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Sending…' }).getAttribute('aria-disabled')).toBe('true');
   });
 });
 

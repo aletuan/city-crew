@@ -350,6 +350,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
             <GradientCta
               icon="sparkles"
               wide
+              disabled={!ready}
               // Generic, and it stays generic — see the lede's note.
               label={t('Sketch the plan', 'Phác kế hoạch', 'プランを下描き')}
               // `whereLabel` rather than the raw draft: only this screen

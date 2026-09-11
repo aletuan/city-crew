@@ -223,7 +223,17 @@ export function PrimaryButton({ label, onPress, busy, arrow }: {
   arrow?: boolean;
 }) {
   return (
-    <PressableScale onPress={busy ? undefined : onPress} accessibilityRole="button">
+    // Named by its label even while the spinner stands in for it — the
+    // words go, and without this the button went with them: VoiceOver said
+    // "button" and nothing else, mid-sign-in. And said to be busy, so a
+    // second tap that does nothing is explained rather than ignored.
+    <PressableScale
+      onPress={busy ? undefined : onPress}
+      disabled={busy}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      aria-busy={!!busy}
+    >
       <LinearGradient {...gradAI} style={s.primary}>
         {busy
           ? <ActivityIndicator color={colors.accentInk} />

@@ -228,6 +228,7 @@ export default function InviteSheet({
           icon="paper-plane-outline"
           wide
           label={label}
+          disabled={sending || !moved}
           onPress={() => { if (!sending && moved) onSend(invite, withdraw); }}
         />
 
