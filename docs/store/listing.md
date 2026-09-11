@@ -173,6 +173,55 @@ lặp lại là phí ký tự. Tên năm thành phố là từ khoá đáng giá
 - VI: `Bản phát hành đầu tiên. Địa điểm chọn tay ở TP.HCM, Hà Nội, Đà Nẵng, Đà Lạt và Huế, danh sách từ người đi thật, và kế hoạch cho ngày bạn chọn.`
 - JA: `初回リリース。ホーチミン市、ハノイ、ダナン、ダラット、フエの厳選スポット、実際に通う人のリスト、選んだ日のプラン。`
 
+## Release notes v1.0.1 (What's New)
+
+Build 9. Viết từ các PR đã merge sau commit "The next build is 1.0.1", chỉ giữ
+những gì người dùng nhận thấy. Mẫu cho các lần sau: dòng đầu là lợi ích lớn
+nhất (người đọc thường chỉ thấy 2–3 dòng trước "more"), rồi vài gạch đầu dòng
+bằng chữ thường ngày; không từ nội bộ (Sketching, OTA, Edge Function), không
+chỉ "Bug fixes and improvements", không hứa tính năng tương lai. Giới hạn 4000
+ký tự; ba bản cùng nội dung. What's New chỉ sửa được khi nộp version mới —
+Promotional text thì sửa lúc nào cũng được.
+
+### EN
+
+```
+Plans and reminders you can count on.
+
+• Everyone going on a trip now gets the evening-before reminder — not just the person who planned it. Leave a trip and its reminder goes too.
+• City Crew now follows you to the right city when you open the app or sign out, instead of staying on the last one.
+• Place photos load faster and stay put.
+• Clearer messages when something goes wrong: if places can't load, you can try again right there, and adding a new place asks you to sign in first.
+• Smoother Crew and Activity: no more double taps, and you're told when something doesn't save.
+• Better VoiceOver support across buttons and filters.
+```
+
+### VI
+
+```
+Kế hoạch và nhắc nhở đáng tin cậy hơn.
+
+• Mọi người trong chuyến đi đều nhận nhắc nhở tối hôm trước — không chỉ người lên kế hoạch. Rời chuyến đi thì nhắc nhở cũng tự huỷ.
+• City Crew tự chuyển đúng thành phố bạn đang ở khi mở app hoặc đăng xuất, thay vì giữ thành phố cũ.
+• Ảnh địa điểm tải nhanh hơn và không còn bị mất.
+• Thông báo rõ ràng hơn khi có lỗi: không tải được địa điểm thì có nút thử lại ngay tại chỗ, và thêm địa điểm mới sẽ mời bạn đăng nhập trước.
+• Crew và Hoạt động mượt hơn: không còn bấm hai lần, và app báo khi thao tác chưa lưu được.
+• Hỗ trợ VoiceOver tốt hơn cho các nút và bộ lọc.
+```
+
+### JA
+
+```
+プランとリマインダーがより確実に。
+
+• 旅程の前夜のリマインダーが、プランを立てた人だけでなく参加する全員に届くようになりました。旅程から抜けるとリマインダーも消えます。
+• アプリを開いたときやサインアウトしたときに、今いる街へ自動で切り替わるようになりました。
+• スポットの写真がより速く表示され、消えなくなりました。
+• エラー時の表示をわかりやすく：スポットを読み込めないときはその場で再試行でき、新しいスポットを追加するときはまずサインインを案内します。
+• クルーとアクティビティの操作がスムーズに：二重タップを防ぎ、保存できなかったときはお知らせします。
+• ボタンやフィルターの VoiceOver 対応を改善しました。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
