@@ -48,11 +48,19 @@ env:
 - tapOn:
     id: "signup-email"
 - inputRandomEmail
+# Typed twice each: the strength meter on this field (see FieldRow's
+# `strength` prop, absent on sign-in's own password field) re-renders on
+# every keystroke, and Maestro's synthetic typing outruns it — the first
+# pass can land short. `inputText` replaces the field's value rather than
+# appending, so a second pass is safe and settles on the full string once
+# the UI has caught up.
 - tapOn:
     id: "signup-password"
 - inputText: "Maestro-smoke-1"
+- inputText: "Maestro-smoke-1"
 - tapOn:
     id: "signup-confirm"
+- inputText: "Maestro-smoke-1"
 - inputText: "Maestro-smoke-1"
 - hideKeyboard
 - tapOn:
