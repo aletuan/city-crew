@@ -27,3 +27,10 @@ appId: host.exp.Exponent
       id: "profile-sign-out"
     direction: DOWN
     timeout: 30000
+# Scrolling down ducked the tab bar (see lib/duck.ts), and every flow
+# after this one moves between tabs. Scrolling back up brings it home.
+- scrollUntilVisible:
+    element:
+      id: "tab-profile"
+    direction: UP
+    timeout: 20000

@@ -59,7 +59,10 @@ env:
 # And out again.
 - tapOn:
     id: "profile-sign-out"
-- extendedWaitUntil:
-    visible:
+# Signing out swaps the page under a scroll position that was at the
+# bottom; the guest's button is at the top.
+- scrollUntilVisible:
+    element:
       id: "profile-sign-in"
-    timeout: 15000
+    direction: UP
+    timeout: 20000

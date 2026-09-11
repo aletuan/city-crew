@@ -81,11 +81,14 @@ npx expo start
 # 3. Run the suite. Pass the URL from step 2; the default is exp://127.0.0.1:8081.
 #    `read -s` keeps the password out of the shell history.
 read -r TEST_EMAIL; read -rs TEST_PASSWORD
-npm run smoke:ios -- -e EXPO_URL=exp://192.168.1.23:8081 \
+#    Call maestro directly, not through `npm run smoke:ios`: npm echoes
+#    the command it runs, password included.
+maestro test .maestro -e EXPO_URL=exp://192.168.1.23:8081 \
   -e TEST_EMAIL="$TEST_EMAIL" -e TEST_PASSWORD="$TEST_PASSWORD"
 ```
 
-Flows 00–03 need no account and ignore the two variables.
+Flows 00–03 need no account and ignore the two variables; for those alone
+`npm run smoke:ios -- -e EXPO_URL=…` is fine.
 
 Open the app in Expo Go once by hand before the first run (press `i` in the
 `expo start` terminal). Each flow then kills Expo Go (`launchApp` with
