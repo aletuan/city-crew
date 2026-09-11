@@ -45,8 +45,10 @@ env:
     element:
       id: "ideas-sketch"
     direction: DOWN
-    centerElement: true
     timeout: 10000
+# At the foot of the page it cannot be centred, and the first frame it
+# shows in can be under the floating tab bar: one more scroll lifts it.
+- scroll
 - tapOn:
     id: "ideas-sketch"
 
@@ -61,8 +63,10 @@ env:
     element:
       id: "plan-save"
     direction: DOWN
-    centerElement: true
     timeout: 20000
+# At the foot of the page it cannot be centred, and the first frame it
+# shows in can be under the floating tab bar: one more scroll lifts it.
+- scroll
 - tapOn:
     id: "plan-save"
 
