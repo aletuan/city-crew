@@ -6,12 +6,14 @@
 // fetches while city == null). Resolution is fast and happens once:
 // a stored manual pick wins outright; otherwise a *cached* location fix
 // under a hard time cap picks the nearest city; otherwise the stored
-// auto city, else HCMC. After that, only the user can change city —
-// via the switcher or "Use my location".
+// auto city, else HCMC. After that, the city moves only on the reader's
+// word — the switcher or "Use my location" — or, while the choice is
+// automatic, when a fresh fix names a different city: behind a launch that
+// had no cached one, and after a sign-out (see `freshNearestCity`).
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from './supabase';
 // Pure arithmetic, kept where a test runner can reach it.
 import { nearestTo } from './geo';
@@ -78,6 +80,13 @@ const LIST_KEY = 'citycrew.cities';
 const DEFAULT_CITY_ID = 'hcmc';
 /** Bootstrap never waits on location longer than this. */
 const GEO_BUDGET_MS = 1200;
+/**
+ * How long the background fix behind a committed city may take. Off the
+ * critical path — the catalog is already loading — so it can afford what
+ * a cold GPS needs, and no longer: a fix that arrives after the reader
+ * has settled into a screen would move the city under them.
+ */
+const FRESH_FIX_MS = 8000;
 
 /**
  * Open on the city the last launch chose, instead of waiting to be told
@@ -167,6 +176,37 @@ async function quickNearestCity(list: City[]): Promise<City | null> {
   return Promise.race([attempt, timeout]).catch(() => null);
 }
 
+/**
+ * A fresh, low-accuracy fix, for when the platform had no cached one.
+ *
+ * `quickNearestCity` reads only the *last known* position, and on iOS that
+ * is nil whenever nothing on the phone has asked for a location lately —
+ * after a restart, say, or on a simulator. A null there meant the stored
+ * city stood, and since nothing here ever asked for a fresh fix, the cache
+ * never warmed and the next launch was the same: a reader in Hanoi kept
+ * the Saigon an earlier launch fell back to, launch after launch.
+ *
+ * **Reads** the permission rather than requesting it. Launch has already
+ * asked once; this runs behind a committed city and after a sign-out, and
+ * neither is a moment to raise a dialog.
+ */
+async function freshNearestCity(list: City[]): Promise<City | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const attempt = (async () => {
+    const { status } = await Location.getForegroundPermissionsAsync();
+    if (status !== 'granted') return null;
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+    if (!pos) return null;
+    return nearestTo(list, pos.coords.latitude, pos.coords.longitude);
+  })();
+  const timeout = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), FRESH_FIX_MS); });
+  try {
+    return await Promise.race([attempt, timeout]).catch(() => null);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Full-accuracy variant for the explicit "Use my location" action. */
 async function preciseNearestCity(list: City[]): Promise<City | null> {
   const { status } = await Location.requestForegroundPermissionsAsync();
@@ -253,6 +293,32 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
   // below and nothing else.
   const [listFailed, setListFailed] = useState(false);
 
+  // What a fix that lands late has to be checked against: the city and the
+  // mode *now*, not when it was asked for. A reader who picks a city while
+  // the fix is out has spoken, and the fix is dropped.
+  const now = useRef({ cityId, mode, cities, live: true });
+  now.current = { ...now.current, cityId, mode, cities };
+  useEffect(() => {
+    now.current.live = true;
+    return () => { now.current.live = false; };
+  }, []);
+
+  /**
+   * Ask for a fresh fix and move to its city if the choice is still
+   * automatic and the city differs. Never prompts, never overrides a
+   * manual pick — `shouldCorrect` holds both rules, as it does for the
+   * launch correction.
+   */
+  const followFreshFix = useCallback(async (list: City[]) => {
+    const near = await freshNearestCity(list);
+    const { cityId: showing, mode: showingMode, live } = now.current;
+    if (!live || !showing) return;
+    if (!shouldCorrect({ id: showing, mode: showingMode }, near?.id ?? null)) return;
+    setCityId(near!.id);
+    now.current.cityId = near!.id;
+    AsyncStorage.setItem(KEY, JSON.stringify({ id: near!.id, mode: 'auto' })).catch(() => {});
+  }, []);
+
   useEffect(() => {
     let live = true;
     (async () => {
@@ -331,10 +397,18 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
       if (!live) return;
 
       if (opening) {
+        // No cached fix is no answer, not agreement: ask for a fresh one
+        // behind the city already on screen. Without this the stored city
+        // stood for good — see `freshNearestCity`.
+        if (!near) {
+          now.current = { ...now.current, cityId: opening.id, mode: opening.mode };
+          void followFreshFix(list);
+          return;
+        }
         // The common case is that it agrees, and agreement must cost
         // nothing: no state change, so no refetch of a catalog already on
         // screen.
-        if (!shouldCorrect(opening, near?.id ?? null)) return;
+        if (!shouldCorrect(opening, near.id)) return;
         setCityId(near!.id);
         AsyncStorage.setItem(KEY, JSON.stringify({ id: near!.id, mode: 'auto' })).catch(() => {});
         return;
@@ -346,9 +420,15 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
       // The first-launch commit — everything the screens show waits on this.
       startupTrace.mark('city:committed');
       AsyncStorage.setItem(KEY, JSON.stringify({ id: chosen, mode: 'auto' })).catch(() => {});
+      // A first launch with no cached fix committed a guess — the stored
+      // city or the default. Correct it from a fresh fix once there is one.
+      if (!near) {
+        now.current = { ...now.current, cityId: chosen, mode: 'auto' };
+        void followFreshFix(list);
+      }
     })();
     return () => { live = false; };
-  }, []);
+  }, [followFreshFix]);
 
   /**
    * The list, healed.
@@ -416,17 +496,26 @@ export function CityProvider({ children }: { children: React.ReactNode }) {
         let stored: { id?: string; mode?: 'auto' | 'manual' } = {};
         try { stored = raw ? JSON.parse(raw) : {}; } catch { /* corrupt store */ }
         const released = releaseChoice(stored);
-        if (!released) return;
-        setMode('auto');
-        AsyncStorage.setItem(KEY, JSON.stringify(released)).catch(() => {});
+        if (released) {
+          setMode('auto');
+          now.current.mode = 'auto';
+          AsyncStorage.setItem(KEY, JSON.stringify(released)).catch(() => {});
+        }
+        // Releasing the pick only changed whose word the city is; the city
+        // itself stayed the one the last account was looking at, and the
+        // next account opened on it. Whoever signs in next — often in the
+        // same minute, without a restart — gets the city they are in.
+        if (now.current.mode === 'auto') void followFreshFix(now.current.cities);
       })();
     });
     return () => sub.subscription.unsubscribe();
-  }, []);
+  }, [followFreshFix]);
 
   const setCity = useCallback((id: string) => {
     setCityId(id);
     setMode('manual');
+    // At once, not on the next render: a fix already out must see this.
+    now.current = { ...now.current, cityId: id, mode: 'manual' };
     AsyncStorage.setItem(KEY, JSON.stringify({ id, mode: 'manual' })).catch(() => {});
   }, []);
 
