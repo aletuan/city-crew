@@ -48,19 +48,25 @@ env:
 - tapOn:
     id: "signup-email"
 - inputRandomEmail
-# Typed twice each: the strength meter on this field (see FieldRow's
-# `strength` prop, absent on sign-in's own password field) re-renders on
-# every keystroke, and Maestro's synthetic typing outruns it — the first
-# pass can land short. `inputText` replaces the field's value rather than
-# appending, so a second pass is safe and settles on the full string once
-# the UI has caught up.
+# The strength meter on this field (see FieldRow's `strength` prop,
+# absent on sign-in's own password field) re-renders on every keystroke,
+# and typing right as the keyboard/field is still settling from `tapOn`
+# drops characters — confirmed on a real run: password and confirm each
+# came out a different, partial string, so they silently failed to match
+# and the screen never advanced. `waitForAnimationToEnd` lets that settle
+# first; `eraseText` clears any partial text a previous attempt left
+# behind, since `inputText` appends at the cursor rather than replacing.
 - tapOn:
     id: "signup-password"
-- inputText: "Maestro-smoke-1"
+- waitForAnimationToEnd:
+    timeout: 2000
+- eraseText: 50
 - inputText: "Maestro-smoke-1"
 - tapOn:
     id: "signup-confirm"
-- inputText: "Maestro-smoke-1"
+- waitForAnimationToEnd:
+    timeout: 2000
+- eraseText: 50
 - inputText: "Maestro-smoke-1"
 - hideKeyboard
 - tapOn:
