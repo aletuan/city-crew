@@ -141,14 +141,19 @@ describe('the questions', () => {
 describe('the button', () => {
   it('is dimmed with its reason until both company and a category are chosen', () => {
     renderScreen();
+    // Said to VoiceOver as well as shown: dimmed until the draft is whole.
     expect(screen.getByText(HINT)).toBeTruthy();
+    expect(cta().getAttribute('aria-disabled')).toBe('true');
     tap('Friends');
     expect(screen.getByText(HINT)).toBeTruthy();
+    expect(cta().getAttribute('aria-disabled')).toBe('true');
     tap('Cafés');
     expect(screen.queryByText(HINT)).toBeNull();
+    expect(cta().getAttribute('aria-disabled')).not.toBe('true');
     // Untoggling the only category takes the reason back.
     tap('Cafés');
     expect(screen.getByText(HINT)).toBeTruthy();
+    expect(cta().getAttribute('aria-disabled')).toBe('true');
   });
 
   // `pointerEvents="none"` stops a finger and nothing else: VoiceOver's
