@@ -239,6 +239,7 @@ export default function CollectionFormScreen({ navigation, route }: {
         onChangeText={setTitle}
         maxLength={MAX_TITLE}
         autoFocus
+        testID="collection-name"
         returnKeyType="next"
       />
       <FieldRow
@@ -304,6 +305,7 @@ export default function CollectionFormScreen({ navigation, route }: {
               : t('Create collection', 'Tạo bộ sưu tập', 'コレクションを作成')}
           onPress={submit}
           busy={busy}
+          testID="collection-submit"
         />
       </View>
       {/* This line used to promise "sharing comes later", and later came:

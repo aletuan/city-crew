@@ -42,6 +42,7 @@ env:
     element:
       id: "profile-sign-out"
     direction: DOWN
+    centerElement: true
     timeout: 30000
 - assertNotVisible:
     id: "profile-sign-in"
@@ -54,6 +55,7 @@ env:
     element:
       id: "profile-sign-out"
     direction: DOWN
+    centerElement: true
     timeout: 30000
 
 # And out again.

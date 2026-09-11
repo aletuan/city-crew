@@ -22,7 +22,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `03-search.yaml` | Opens search, types `cafe`, opens the first hit, comes back, clears the query. |
 | `04-sign-in.yaml` | Signs out if needed; a wrong password shows the form error; the right one signs in; a cold start is still signed in; signs out. |
 | `05-plan-trip.yaml` | Deletes the account's leftover upcoming trips; answers the Ideas wizard (Friends + up to three moods); waits out Sketching; opens the recommended plan; saves it; finds it as the only upcoming trip; deletes it. |
-| `06-save-place.yaml` | Opens the first place on Explore; saves it into the account's first collection and waits for the bookmark to fill; takes it out again; signs out. |
+| `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
 
 The signed-in flows share `common/start.yaml` (open fresh, grant
 notifications — saving a trip plants a reminder, and the permission alert
@@ -56,9 +56,8 @@ restricts `maestro test .maestro` to the numbered flows and fixes their order.
 
    - Sign up in the app with an address you control (a `+maestro` alias
      of your own works, e.g. `you+maestro@gmail.com`) and confirm the email.
-   - Create **one collection** on it (any name, can stay empty). Flow 06
-     saves into the first collection; with none, the bookmark opens "New
-     collection" instead of the sheet and the flow fails.
+   - No collection is needed: flow 06 makes one ("Maestro smoke") the
+     first time, through the form the bookmark opens, and reuses it.
    - Keep it off the editors list.
 
    The credentials are passed on the command line and never written into
@@ -147,6 +146,7 @@ reaches the native view.
 | `TripDetailScreen` | `trip-delete` (owner), `trip-leave` (invitee) |
 | `PlaceDetailScreen` | `detail-save` / `detail-saved` — one id per state |
 | `SaveSheet` | `save-row-<index>`, `save-done` |
+| `CollectionFormScreen` | `collection-name`, `collection-submit` |
 
 Renaming one of these is a breaking change for this suite, and
 `scripts/maestroIds.test.ts` fails in CI when a flow names an id the

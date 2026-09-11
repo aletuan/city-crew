@@ -1,8 +1,8 @@
 # Save a place: bookmark the first place on Explore into the test account's
 # first collection, see the bookmark fill, then take it out again.
 #
-# Needs the test account to own at least one collection — with none, the
-# bookmark opens "New collection" instead of the sheet. See README.md.
+# With no collection on the account, the first run makes one ("Maestro
+# smoke") through the form the bookmark opens; later runs use the sheet.
 appId: host.exp.Exponent
 env:
   EXPO_URL: exp://127.0.0.1:8081
@@ -44,17 +44,42 @@ env:
             id: "detail-save"
           timeout: 15000
 
-# Save.
+# Save. An account with no list yet is sent to "New collection" with the
+# place riding along, rather than to the sheet; the flow answers either,
+# so the test account needs no setup by hand. The list made here is kept
+# and becomes the sheet's first row on every later run.
 - tapOn:
     id: "detail-save"
-- extendedWaitUntil:
-    visible:
-      id: "save-row-0"
-    timeout: 15000
-- tapOn:
-    id: "save-row-0"
-- tapOn:
-    id: "save-done"
+- waitForAnimationToEnd:
+    timeout: 5000
+- runFlow:
+    when:
+      visible:
+        id: "collection-name"
+    commands:
+      - tapOn:
+          id: "collection-name"
+      - inputText: "Maestro smoke"
+      - hideKeyboard
+      - tapOn:
+          id: "collection-submit"
+      # The form lands on the Collections tab; the place is still open
+      # on top of Explore's stack.
+      - extendedWaitUntil:
+          visible:
+            id: "tab-explore"
+          timeout: 15000
+      - tapOn:
+          id: "tab-explore"
+- runFlow:
+    when:
+      visible:
+        id: "save-row-0"
+    commands:
+      - tapOn:
+          id: "save-row-0"
+      - tapOn:
+          id: "save-done"
 - extendedWaitUntil:
     visible:
       id: "detail-saved"

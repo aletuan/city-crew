@@ -26,6 +26,7 @@ appId: host.exp.Exponent
     element:
       id: "profile-sign-out"
     direction: DOWN
+    centerElement: true
     timeout: 30000
 # Scrolling down ducked the tab bar (see lib/duck.ts), and every flow
 # after this one moves between tabs. Scrolling back up brings it home.

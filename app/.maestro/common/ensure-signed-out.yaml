@@ -14,6 +14,7 @@ appId: host.exp.Exponent
           element:
             id: "profile-sign-out"
           direction: DOWN
+          centerElement: true
           timeout: 20000
       - tapOn:
           id: "profile-sign-out"

@@ -45,6 +45,7 @@ env:
     element:
       id: "ideas-sketch"
     direction: DOWN
+    centerElement: true
     timeout: 10000
 - tapOn:
     id: "ideas-sketch"
@@ -60,6 +61,7 @@ env:
     element:
       id: "plan-save"
     direction: DOWN
+    centerElement: true
     timeout: 20000
 - tapOn:
     id: "plan-save"

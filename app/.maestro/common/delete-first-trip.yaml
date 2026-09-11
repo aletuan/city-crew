@@ -8,6 +8,7 @@ appId: host.exp.Exponent
     element:
       id: "trip-delete"
     direction: DOWN
+    centerElement: true
     timeout: 20000
 - tapOn:
     id: "trip-delete"
