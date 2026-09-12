@@ -340,7 +340,7 @@ describe('where the day starts', () => {
     expect(sheet.props!.visible).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: /Around Hanoi · near me/ }));
     expect(screen.getByText('start-sheet-open')).toBeTruthy();
-    expect(sheet.props!.value).toEqual({ district: null, at: null });
+    expect(sheet.props!.value).toEqual({ district: null, at: null, atName: null });
     expect(sheet.props!.places).toBe(state.places);
     act(() => { (sheet.props!.onClose as () => void)(); });
     expect(screen.queryByText('start-sheet-open')).toBeNull();
@@ -372,7 +372,7 @@ describe('where the day starts', () => {
     act(() => { (sheet.props!.onDone as (s: object) => void)({ district: 'Tây Hồ', at: null }); });
     expect(screen.queryByText('start-sheet-open')).toBeNull();
     expect(screen.getByText('Tây Hồ')).toBeTruthy();
-    expect(sheet.props!.value).toEqual({ district: 'Tây Hồ', at: null });
+    expect(sheet.props!.value).toEqual({ district: 'Tây Hồ', at: null, atName: null });
     tap('Friends');
     tap('Cafés');
     fireEvent.click(cta());
@@ -389,6 +389,25 @@ describe('where the day starts', () => {
     tap('Cafés');
     fireEvent.click(cta());
     expect(sent(navigation)).toMatchObject({ where: 'A pin you dropped', district: null, atLat: 21.04, atLng: 105.81 });
+  });
+
+  it('prints the name a pin was given, and sends those words on', () => {
+    const navigation = renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: /near me/ }));
+    act(() => {
+      (sheet.props!.onDone as (s: object) => void)({
+        district: null, at: { lat: 21.04, lng: 105.81 }, atName: "Pizza 4P's Hoàng Thành Tower",
+      });
+    });
+    expect(screen.getByText("Pizza 4P's Hoàng Thành Tower")).toBeTruthy();
+    expect(screen.queryByText('A pin you dropped')).toBeNull();
+    expect(sheet.props!.value).toMatchObject({ atName: "Pizza 4P's Hoàng Thành Tower" });
+    tap('Friends');
+    tap('Cafés');
+    fireEvent.click(cta());
+    expect(sent(navigation)).toMatchObject({
+      where: "Pizza 4P's Hoàng Thành Tower", district: null, atLat: 21.04, atLng: 105.81,
+    });
   });
 });
 

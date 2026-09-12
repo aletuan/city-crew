@@ -147,7 +147,7 @@ describe('what it asks', () => {
     const [draft, places, cityId, opts] = planTrips.mock.calls[0];
     expect(draft).toEqual({
       company: null, categories: ['cafes', 'eats'], district: 'hoan-kiem',
-      at: { lat: 21.03, lng: 105.85 }, date: todayISO(), when: 'evening', from: [],
+      at: { lat: 21.03, lng: 105.85 }, atName: null, date: todayISO(), when: 'evening', from: [],
     });
     expect(places).toBe(PLACES);
     expect(cityId).toBe('hanoi');

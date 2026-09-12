@@ -71,6 +71,12 @@ export type TripDraft = {
   /** Where the day starts, when the reader dropped a pin instead of
    *  picking a district. */
   at: { lat: number; lng: number } | null;
+  /** The words for that pin, when it has any: the name of the place the
+   *  reader searched for and took, else what the geocoder called the
+   *  point they tapped. Null for a nameless pin and for no pin. The Ideas
+   *  row prints it in place of "A pin you dropped"; past the wizard it
+   *  travels as `PlanAsk.where`, so nothing downstream reads it here. */
+  atName: string | null;
   /** The calendar day, `YYYY-MM-DD`, in the reader's own timezone — or ''
    *  before one has been resolved.
    *
@@ -85,7 +91,7 @@ export type TripDraft = {
 };
 
 export const EMPTY_DRAFT: TripDraft = {
-  company: null, categories: [], district: null, at: null,
+  company: null, categories: [], district: null, at: null, atName: null,
   // Empty, not today. This is a module-level constant, so `todayISO()`
   // here would be evaluated once at import and an app left open past
   // midnight would default to yesterday. The screen resolves it, and
@@ -152,6 +158,9 @@ export function draftFrom(a: PlanAnswers, day: string): TripDraft {
     categories: a.categories,
     district: a.district,
     at: a.atLat != null && a.atLng != null ? { lat: a.atLat, lng: a.atLng } : null,
+    // The words for the pin arrived as `where`, already printed by the
+    // screens that read these params; the draft itself has no use for them.
+    atName: null,
     date: day,
     when: a.when,
     from: a.from ?? [],

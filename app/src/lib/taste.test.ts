@@ -230,7 +230,7 @@ const CATALOG = [
 ];
 
 const EVENING: TripDraft = {
-  company: 'couple', categories: ['eats'], district: null, at: null,
+  company: 'couple', categories: ['eats'], district: null, at: null, atName: null,
   date: '2026-08-22', when: 'evening', from: [],
 };
 

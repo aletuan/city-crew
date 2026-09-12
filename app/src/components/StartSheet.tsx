@@ -49,7 +49,14 @@ import { areaCentre, areasNear, nearestAreaKm } from '../lib/trip';
 import type { Place } from '../lib/types';
 import { colors, font, radius, space, type } from '../theme';
 
-export type Start = { district: string | null; at: { lat: number; lng: number } | null };
+export type Start = {
+  district: string | null;
+  at: { lat: number; lng: number } | null;
+  /** The words for the pin, when it has any: the name of the result the
+   *  reader took, else what the geocoder called the point they tapped.
+   *  Null for a nameless pin and for no pin at all. */
+  atName: string | null;
+};
 
 export default function StartSheet({ visible, places, value, onClose, onDone }: {
   visible: boolean;
@@ -231,6 +238,21 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   const areasAreNear = nearestKm == null || nearestKm <= 25;
 
   const onMe = !draft.district && !draft.at;
+
+  /**
+   * What leaves the sheet.
+   *
+   * A pin taken from a search result already carries the result's name.
+   * A pin tapped onto the map has none of its own, so it takes the name
+   * the geocoder has given the point by now — the caption under the map,
+   * which is what the reader was looking at when they pressed the button.
+   * The row on the Ideas screen prints these words; before this it said
+   * "A pin you dropped" over a place the reader had just picked by name.
+   */
+  const settle = (): Start => ({
+    ...draft,
+    atName: draft.at ? (draft.atName ?? (where || null)) : null,
+  });
   const caption = useMemo(() => {
     if (!where) return undefined;
     return onMe
@@ -273,7 +295,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
    *  comes back into view so the move is something the reader watches
    *  rather than something they have to scroll up to find. */
   const take = (spot: Spot) => {
-    setDraft({ district: null, at: { lat: spot.lat, lng: spot.lng } });
+    setDraft({ district: null, at: { lat: spot.lat, lng: spot.lng }, atName: spot.name });
     setHits(null);
     setQuery(spot.name);
     setSettled(spot.name);
@@ -291,7 +313,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
    * answer to a question rather than an interruption of one.
    */
   const locate = async () => {
-    setDraft({ district: null, at: null });
+    setDraft({ district: null, at: null, atName: null });
     setMissed(false);
     const held = await Location.getForegroundPermissionsAsync();
     if (held.status === 'granted') { setBlocked(false); return; }
@@ -347,7 +369,13 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
               height={196}
               caption={caption}
               onLocate={locate}
-              onPick={(at) => { setDraft({ district: null, at }); setMissed(false); }}
+              onPick={(at) => {
+                setDraft({ district: null, at, atName: null });
+                // The old point's name must not be read as this one's
+                // while the geocoder is still out; the effect refills it.
+                setWhere('');
+                setMissed(false);
+              }}
             />
           )}
 
@@ -470,7 +498,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
                     label={d}
                     active={draft.district === d}
                     onPress={() => {
-                      setDraft({ district: draft.district === d ? null : d, at: null });
+                      setDraft({ district: draft.district === d ? null : d, at: null, atName: null });
                       // The heading above says *or*. Taking this answer
                       // drops the other one rather than leaving half a
                       // search in the field for the button to insist on.
@@ -498,7 +526,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
             label={cta === 'search'
               ? t('Search', 'Tìm', '検索')
               : t('Use this location', 'Dùng chỗ này', 'ここにする')}
-            onPress={cta === 'search' ? find : () => onDone(draft)}
+            onPress={cta === 'search' ? find : () => onDone(settle())}
             wide
           />
         </View>
