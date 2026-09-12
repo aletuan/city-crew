@@ -13,8 +13,9 @@ import { createNavigationContainerRef, type RouteProp } from '@react-navigation/
 export type PlanAsk = {
   company: string | null;
   categories: string[];
-  /** What to *print* for where the day starts — a district name, "a pin
-   *  you dropped", or "near me". A label and nothing else: only the wizard
+  /** What to *print* for where the day starts — a district name, the
+   *  name of the place the pin was set on, "a pin you dropped", or "near
+   *  me". A label and nothing else: only the wizard
    *  knows which of the three the reader chose, and the screens after it
    *  have no business re-deciding that. It is not a location. */
   where: string | null;

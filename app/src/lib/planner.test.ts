@@ -25,7 +25,7 @@ const many = (cat: string, count = 8) =>
     place({ slug: `${cat}-${i}`, categories: [cat], rating: 4.6 - i * 0.05, rating_count: 1000 - i * 10 }));
 
 const EVENING: TripDraft = {
-  company: 'couple', categories: ['eats', 'nightlife', 'views'], district: null, at: null,
+  company: 'couple', categories: ['eats', 'nightlife', 'views'], district: null, at: null, atName: null,
   date: '2026-08-16', when: 'evening', from: [],
 };
 
@@ -843,7 +843,7 @@ describe('who is coming', () => {
   const parks = many('nature');
   const HERE = { lat: 21.028, lng: 105.852 };
   const openAsk: TripDraft = {
-    company: 'family', categories: [], district: null, at: HERE,
+    company: 'family', categories: [], district: null, at: HERE, atName: null,
     date: '2026-08-16', when: 'evening', from: [],
   };
   const first = (company: TripDraft['company']) =>

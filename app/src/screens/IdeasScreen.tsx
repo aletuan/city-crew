@@ -119,7 +119,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   // the hole where its name goes.
   const whereLabel = draft.district
     ?? (draft.at
-      ? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン')
+      ? (draft.atName ?? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン'))
       : city
         ? t(`Around ${city.short_en} · near me`, `Quanh ${city.short_vi} · gần tôi`, `${city.short_ja ?? city.short_en}周辺 · 現在地`)
         : t('Near me', 'Gần tôi', '現在地'));
@@ -462,10 +462,10 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
       <StartSheet
         visible={sheet}
         places={places}
-        value={{ district: draft.district, at: draft.at }}
+        value={{ district: draft.district, at: draft.at, atName: draft.atName }}
         onClose={() => setSheet(false)}
         onDone={(next: Start) => {
-          setDraft((d) => ({ ...d, district: next.district, at: next.at }));
+          setDraft((d) => ({ ...d, district: next.district, at: next.at, atName: next.atName ?? null }));
           setSheet(false);
         }}
       />
