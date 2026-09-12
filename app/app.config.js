@@ -35,9 +35,17 @@
 // in favour of the `Google` subspec — and `pod install` fails on EAS.
 // Listing the package plugin is what makes Expo skip that fallback.
 //
-// `ios.config.googleMapsApiKey` is still set, for one reader only:
-// `MiniMap` looks there at runtime to learn whether this binary was
-// built with a key, and so whether it can ask for the Google provider.
+// `ios.config.googleMapsApiKey` is still set here too, but only because
+// some other Expo/native tooling expects it next to `ios.config` — it is
+// NOT how the running app learns whether a key was baked in. Expo's own
+// `getConfig` unconditionally deletes `ios.config` and `android.config`
+// when producing the *public* manifest — the one `expo-constants` embeds
+// in the binary and hands back at runtime as `Constants.expoConfig`. So
+// `Constants.expoConfig?.ios?.config?.googleMapsApiKey` is `undefined` in
+// every build, keyed or not; a runtime check must not use it (see the
+// `extra.hasGoogleMapsIosKey` flag below, and MiniMap.tsx, which learned
+// this the hard way — TestFlight builds since #525 silently drew no map
+// because of exactly this).
 //
 // ── when a key is missing ──
 //
@@ -55,6 +63,13 @@ module.exports = ({ config }) => {
     ios: {
       ...config.ios,
       ...(ios ? { config: { ...config.ios?.config, googleMapsApiKey: ios } } : {}),
+    },
+    extra: {
+      ...config.extra,
+      // The one reader that matters at runtime: MiniMap checks this to
+      // decide whether it can ask for the Google map provider on iOS.
+      // Unlike `ios.config`, `extra` survives into the public manifest.
+      hasGoogleMapsIosKey: !!ios,
     },
     plugins: [
       ...(config.plugins ?? []),

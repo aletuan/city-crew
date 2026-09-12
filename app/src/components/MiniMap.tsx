@@ -77,8 +77,10 @@ const PROVIDER_GOOGLE: string | null = (() => {
  *
  * Android: always, on any build — Expo Go included. iOS: only a build of
  * our own that was given `GOOGLE_MAPS_IOS_KEY`. Expo Go is ruled out by
- * its execution environment; a keyless build is ruled out by reading the
- * config the key would have landed in. Neither case is an error — the
+ * its execution environment; a keyless build is ruled out by the
+ * `extra.hasGoogleMapsIosKey` flag app.config.js sets — not
+ * `ios.config.googleMapsApiKey`, which Expo strips from the public
+ * manifest this reads from, always, in every build. Neither case is an error — the
  * sheet simply has no map — and `MiniMap` says nothing about why, because
  * the person who can do something about it is reading this file, not the
  * screen.
@@ -87,7 +89,7 @@ export const canDrawMap: boolean = (() => {
   if (!MapView || !PROVIDER_GOOGLE) return false;
   if (Platform.OS !== 'ios') return true;
   if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) return false;
-  return !!Constants.expoConfig?.ios?.config?.googleMapsApiKey;
+  return !!Constants.expoConfig?.extra?.hasGoogleMapsIosKey;
 })();
 
 type Props = {
