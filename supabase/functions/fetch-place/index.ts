@@ -2,14 +2,21 @@
 // result straight into the database as a pending, unpublished place —
 // the mobile replacement for data/scripts/fetch-places.mjs.
 //
-// POST { action: "search",  query, city? }              → { candidates: [...] }
+// POST { action: "search",  query, city?, at?, lang? }  → { candidates: [...] }
+// POST { action: "reverse", at, lang? }                  → { name }
 // POST { action: "import",  place_id, category, city? } → { slug }   (desk)
 // POST { action: "suggest", place_id, category, city? } → { slug }   (anyone)
 //
 // `city` is a cities.id ('hcmc' | 'hanoi' | 'danang' …); defaults to 'hcmc'
-// so pre-multi-city clients keep working.
+// so pre-multi-city clients keep working. `at` is { lat, lng }: for
+// `search` it replaces the city as the point results are biased towards,
+// for `reverse` it is the point to name. `lang` is 'en' | 'vi' | 'ja' and
+// picks the language Google answers in; anything else means Google's own
+// default.
 //
-// Secrets (Edge Function settings): GOOGLE_MAPS_API_KEY.
+// Secrets (Edge Function settings): GOOGLE_MAPS_API_KEY. The same key
+// serves Places (search, import, suggest) and Geocoding (reverse), so both
+// APIs have to be enabled on it.
 // SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
 //
 // Every caller must be signed in. `import` additionally requires a place
@@ -25,6 +32,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { cityBias, importPlace, resolveCity } from "../_shared/import-place.ts";
+import { REVERSE_TYPES, reverseName } from "./geocode.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -38,6 +46,40 @@ const json = (body: unknown, status = 200) =>
   });
 
 const MAX_API_CALLS = 20; // per request: 1 search or 1 details + ≤6 photo lookups
+
+/** The languages the app speaks. Anything else is not sent, so Google
+ *  falls back to its own default rather than to a 400. */
+const LANGS = new Set(["en", "vi", "ja"]);
+const langOf = (v: unknown): string | null =>
+  typeof v === "string" && LANGS.has(v) ? v : null;
+
+/**
+ * A point the client sent, or null when it did not send a usable one.
+ *
+ * Checked field by field rather than cast: `Number(null)` is 0, and a
+ * malformed `at` would not fail — it would quietly bias every search
+ * towards the Gulf of Guinea.
+ */
+const pointOf = (v: unknown): { lat: number; lng: number } | null => {
+  const o = v as { lat?: unknown; lng?: unknown } | null | undefined;
+  const lat = typeof o?.lat === "number" && Number.isFinite(o.lat) ? o.lat : null;
+  const lng = typeof o?.lng === "number" && Number.isFinite(o.lng) ? o.lng : null;
+  return lat != null && lng != null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+    ? { lat, lng } : null;
+};
+
+/**
+ * How far a search leans towards the point the reader gave.
+ *
+ * A bias, not a restriction — Google ranks nearer hits higher and still
+ * returns distant ones, which is what a search box should do: the reader
+ * who types a place in the next province means that place. Twenty
+ * kilometres is about a city: wide enough that a pin in Hà Đông still
+ * ranks Hoàn Kiếm over Hải Phòng, narrow enough that the neighbourhood
+ * wins over a same-named place across town.
+ */
+const AT_BIAS_M = 20_000;
+
 
 // Suggestions per account per day, counted over a rolling 24 hours.
 //
@@ -98,6 +140,8 @@ Deno.serve(async (req) => {
     if (body.action === "search") {
       const query = String(body.query ?? "").trim();
       if (!query) return json({ error: "query required" }, 400);
+      const at = pointOf(body.at);
+      const lang = langOf(body.lang);
       const data = await gapi("https://places.googleapis.com/v1/places:searchText", {
         method: "POST",
         headers: {
@@ -115,7 +159,13 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           textQuery: query,
           maxResultCount: 5,
-          locationBias: cityBias(city),
+          // The pin when the client has one, the city when it has not.
+          // The start sheet sends the pin; Add a place sends nothing and
+          // gets the city it is open on, as it always did.
+          locationBias: at
+            ? { circle: { center: { latitude: at.lat, longitude: at.lng }, radius: AT_BIAS_M } }
+            : cityBias(city),
+          ...(lang ? { languageCode: lang } : {}),
         }),
       });
       return json({
@@ -129,6 +179,26 @@ Deno.serve(async (req) => {
           rating_count: p.userRatingCount ?? null,
         })),
       });
+    }
+
+    // What to call a point, for the caption under the start sheet's map.
+    //
+    // Google's geocoder rather than the phone's, for the reason given in
+    // `lib/findplace`: the map is Google's, and the phone's geocoder on
+    // iOS is Apple's, whose terms keep its answers off non-Apple maps.
+    // One call, one short string back; an empty string is an answer too,
+    // and the client prints nothing rather than guessing.
+    if (body.action === "reverse") {
+      const at = pointOf(body.at);
+      if (!at) return json({ error: "at required" }, 400);
+      const lang = langOf(body.lang);
+      const u = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+      u.searchParams.set("latlng", `${at.lat},${at.lng}`);
+      u.searchParams.set("result_type", REVERSE_TYPES.join("|"));
+      if (lang) u.searchParams.set("language", lang);
+      u.searchParams.set("key", apiKey);
+      const data = await gapi(u.toString());
+      return json({ name: reverseName(data) });
     }
 
     if (body.action === "import" || body.action === "suggest") {

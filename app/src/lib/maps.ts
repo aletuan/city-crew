@@ -3,22 +3,21 @@
 // ── why a link and not a map ──
 //
 // The obvious version of this feature is a route drawn on a map inside
-// the app, and it is the one thing this codebase may not do. Every place
-// in the catalog came out of the Google Places API — `importPlace` writes
-// the name, the address, the coordinates, the rating, the hours and the
-// photographs from it — and the Places API terms are explicit: §5.3, *"No
-// use with a non-Google map"*. On iOS in Expo Go the only map that
-// renders is Apple's. `MiniMap` carries the long version of this and is
-// built so that no place can be passed into it at all.
+// the app. For a long time this codebase could not do that: every place
+// in the catalog came out of the Google Places API, the Places terms
+// forbid showing that content on a non-Google map (§5.3), and in Expo Go
+// the only map that renders on iOS is Apple's. The map is Google's now —
+// `MiniMap` has the story — so the licence no longer forbids it.
 //
-// A link is the way round that is not a workaround: it opens Google's own
-// map, on Google's own app, so there is no non-Google map involved. It
-// also happens to be the thing a reader standing on the pavement actually
-// wants, which a 120pt thumbnail never was — turn-by-turn, live traffic,
-// and the transit options this app has no data for.
+// The link stays anyway, because it is the better answer rather than the
+// permitted one. It opens Google's own map, in Google's own app, which is
+// what a reader standing on the pavement actually wants and what a 120pt
+// thumbnail never was: turn-by-turn, live traffic, and the transit
+// options this app has no data for.
 //
-// No key, no Edge Function, no billing. `Static Maps` would satisfy the
-// same clause and cost all three.
+// No key, no Edge Function, no billing. A route drawn in-app would cost
+// a Directions API call per view for a picture the reader would then tap
+// to open this link anyway.
 
 import type { Leg } from './travel';
 

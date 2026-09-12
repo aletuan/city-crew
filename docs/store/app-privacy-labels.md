@@ -128,3 +128,26 @@ Hai trang HTML này **được sinh ra**, không sửa tay: nội dung nằm ở
    Supabase. Ngày nào nó được dùng để nhắm nội dung xuyên app hay chia sẻ ra
    ngoài, ATT và nhãn tracking phải được xét lại — trạng thái mặc định không
    đụng tới hai thứ đó, nhưng việc dùng dữ liệu vào đâu thì có.
+
+## Google Maps SDK (từ 09/2026)
+
+Bản đồ trong màn "Bắt đầu từ đâu?" là **Google Maps SDK** (iOS và Android),
+không còn là Apple MapKit. SDK là mã của bên thứ ba chạy trong app và tự gọi
+về Google, nên theo hướng dẫn của Apple nó tính vào bảng App Privacy của
+*mình*. Trước mỗi lần nộp:
+
+1. Đọc trang Google công bố cho Apple privacy labels của **Maps SDK for iOS**
+   (mục "Data collection" trong tài liệu SDK) ở đúng phiên bản
+   `react-native-maps` đang pin, vì nội dung đó đổi theo bản SDK.
+2. Khai đúng những mục Google liệt kê — thường là dữ liệu chẩn đoán/hiệu năng
+   và định danh thiết bị ở mức không liên kết danh tính — vào bảng ở trên.
+3. Vị trí: dòng *Location* ở trên vẫn đúng về phía app (không gửi toạ độ người
+   dùng lên server của mình), nhưng SDK nhận toạ độ để vẽ chấm xanh và
+   `fetch-place` nhận toạ độ **ghim** (không phải vị trí người dùng) để tìm và
+   đặt chú thích. Cân nhắc đổi câu mô tả cho khớp.
+
+Thư trả lời reviewer `review-reply-2.1.md` ghi "No Google Maps SDK is
+bundled" và liệt kê Photon/Nominatim — đúng ở thời điểm gửi, **sai từ bản này**.
+Lần nộp tới viết lại mục Geocoding và Maps trong Notes: Google Maps SDK vẽ bản
+đồ; Google Places (Text Search) và Google Geocoding API qua Edge Function
+`fetch-place` cho tìm điểm bắt đầu và chú thích.

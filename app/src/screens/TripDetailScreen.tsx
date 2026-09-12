@@ -179,13 +179,12 @@ export default function TripDetailScreen({ navigation, route }: {
   /**
    * The whole day as one Google Maps route.
    *
-   * A link rather than a map drawn here, and that is a licence rather
-   * than a preference: every place in this catalog is Google Places
-   * Content, the Places terms forbid showing it on a non-Google map
-   * (§5.3), and the only map that renders on iOS in Expo Go is Apple's.
-   * `MiniMap` carries the long version. Opening Google's own app is the
-   * one route that is not a workaround — and it hands the reader
-   * turn-by-turn and live traffic, which a thumbnail never could.
+   * A link rather than a map drawn here. It used to be a licence
+   * constraint — Google Places content on what was then an Apple map —
+   * and the map is Google's now, so it is a preference: opening Google's
+   * own app hands the reader turn-by-turn and live traffic, which a
+   * thumbnail never could, and costs no Directions call. `lib/maps`
+   * carries the long version.
    */
   const mapRoute = mapsRouteUrl(
     stops.map((st) => st.places ?? {}),
