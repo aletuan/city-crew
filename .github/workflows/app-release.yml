@@ -42,6 +42,13 @@
 # The cost is that a red build is not a red check here. This job going
 # green means "EAS accepted the job", not "there is a build in TestFlight".
 #
+# ── submitting a build that already exists ──
+#
+# `build_id` skips the build and submits one EAS already has. It is for
+# the case this workflow first met: the build started, the submission did
+# not, and rebuilding to fix the submission would pay twice for the same
+# binary. The id is on the build's page, and in the line this job prints.
+#
 # ── what it needs ──
 #
 #   EXPO_TOKEN         repo secret, the same one `app-preview.yml` uses.
@@ -66,6 +73,10 @@ on:
         default: ios
         options: [ios, android, all]
         required: true
+      build_id:
+        description: 'Submit this existing build instead of making a new one'
+        type: string
+        required: false
 
 jobs:
   release:
@@ -90,11 +101,14 @@ jobs:
         if: env.EXPO_TOKEN != ''
         working-directory: app
       # `--auto-submit` uses the submit profile named after the build
-      # profile, which is `production` in `eas.json`. The Maps keys are
-      # not passed here: `eas build` reads them from the EAS environment
-      # the production profile resolves to, which is where they live.
+      # profile, which is `production` in `eas.json`. That profile carries
+      # `ascAppId`, because without it a non-interactive submission stops
+      # to ask which App Store Connect app it is for and there is nobody
+      # to answer. The Maps keys are not passed here: `eas build` reads
+      # them from the EAS environment the production profile resolves to,
+      # which is where they live.
       - name: Build and submit
-        if: env.EXPO_TOKEN != ''
+        if: env.EXPO_TOKEN != '' && inputs.build_id == ''
         working-directory: app
         run: |
           npx eas-cli@latest build \
@@ -102,4 +116,15 @@ jobs:
             --platform "$PLATFORM" \
             --auto-submit \
             --no-wait \
+            --non-interactive
+      - name: Submit an existing build
+        if: env.EXPO_TOKEN != '' && inputs.build_id != ''
+        working-directory: app
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          npx eas-cli@latest submit \
+            --profile production \
+            --platform "$PLATFORM" \
+            --id "$BUILD_ID" \
             --non-interactive
