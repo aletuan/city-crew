@@ -1,0 +1,105 @@
+# Builds the iOS app on EAS and sends it to TestFlight, without a laptop.
+#
+# The other app workflow, `app-preview.yml`, publishes an EAS Update on
+# every merge that touches `app/`. That covers most changes, because most
+# changes are JavaScript and an update reaches an installed build in
+# seconds. It cannot cover the rest: a new native module, a config plugin,
+# an SDK bump, a new permission string. Those live in the binary, and a
+# binary comes from `eas build`. Until this file existed that step was a
+# person at a terminal, and the two builds it took to get Google Maps
+# linked were both run by hand.
+#
+# ── why this does not run on every merge ──
+#
+# Because a build is not free and a submission is not private. Each run
+# spends EAS build time, adds a build to App Store Connect, and can notify
+# every tester on the internal group. Merging JavaScript twenty times a
+# day must not do any of that — the update workflow already carries those
+# changes, correctly and for nothing.
+#
+# So the trigger is deliberate: push a tag, or press the button. Nothing
+# here fires on its own.
+#
+#   git tag v1.0.2 && git push origin v1.0.2
+#
+# or Actions → Release app to TestFlight → Run workflow.
+#
+# The tag is a name for the release, not a version: the version comes from
+# `app.json`, and the build number from EAS, which holds it remotely and
+# increments it per build (`appVersionSource: remote`, `autoIncrement` on
+# the production profile in `eas.json`). Tag and version agreeing is a
+# courtesy to whoever reads the tag list later, and nothing checks it.
+#
+# ── why it does not wait ──
+#
+# `--no-wait` returns as soon as EAS has the job. A queued build on the
+# free plan can sit for a long time before it starts, and a runner held
+# open through that queue bills for waiting rather than for working. The
+# submission is scheduled on EAS at the same time and runs there when the
+# build finishes, so nothing is lost by leaving: watch it on the build page
+# this job prints, or in the mail EAS sends when it is done.
+#
+# The cost is that a red build is not a red check here. This job going
+# green means "EAS accepted the job", not "there is a build in TestFlight".
+#
+# ── what it needs ──
+#
+#   EXPO_TOKEN         repo secret, the same one `app-preview.yml` uses.
+#   Apple credentials  already on EAS servers (distribution certificate,
+#                      provisioning profile, and the App Store Connect API
+#                      key that `eas submit` authenticates with).
+#
+# Without the token this workflow skips, the way the preview one does,
+# rather than failing a fork or a clone that has no Expo project behind it.
+
+name: Release app to TestFlight
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        type: choice
+        default: ios
+        options: [ios, android, all]
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # A tag push has no inputs, so it picks the platform this app
+      # actually ships through TestFlight.
+      PLATFORM: ${{ inputs.platform || 'ios' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Skip when EXPO_TOKEN is not configured
+        if: env.EXPO_TOKEN == ''
+        run: echo "No EXPO_TOKEN secret — skipping EAS build. See the header of this workflow file for setup."
+      - uses: actions/setup-node@v5
+        if: env.EXPO_TOKEN != ''
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+        if: env.EXPO_TOKEN != ''
+        working-directory: app
+      # `--auto-submit` uses the submit profile named after the build
+      # profile, which is `production` in `eas.json`. The Maps keys are
+      # not passed here: `eas build` reads them from the EAS environment
+      # the production profile resolves to, which is where they live.
+      - name: Build and submit
+        if: env.EXPO_TOKEN != ''
+        working-directory: app
+        run: |
+          npx eas-cli@latest build \
+            --profile production \
+            --platform "$PLATFORM" \
+            --auto-submit \
+            --no-wait \
+            --non-interactive

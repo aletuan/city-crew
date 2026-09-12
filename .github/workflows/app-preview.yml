@@ -11,6 +11,24 @@
 # Local alternative (needs a computer): cd app && npx expo start,
 # then scan the QR with Expo Go.
 #
+# ── why --environment is on the update command ──
+#
+# `eas update` builds a fresh public manifest from `app.config.js`, and
+# that manifest is what `Constants.expoConfig` returns on a phone once the
+# update lands — it replaces the one baked into the binary. So anything
+# the config reads from the environment has to be present *here*, at
+# publish time, not only at build time.
+#
+# `extra.hasGoogleMapsIosKey` is exactly that: false without
+# GOOGLE_MAPS_IOS_KEY, and `MiniMap` hides the map when it is false. A
+# publish without the variable therefore switched the map off on installs
+# whose binary had the SDK linked and the key in its Info.plist.
+#
+# The variable lives in EAS, not in GitHub's secrets, and eas-cli only
+# fetches it when told which environment to read: "Required for projects
+# using Expo SDK 55 or greater," says `eas update --help`. Without the
+# flag it loads nothing and says nothing about it.
+
 # ── why app.json names its platforms ──
 #
 # `--platform=all` below does not mean "the platforms this app targets". It
@@ -66,4 +84,4 @@ jobs:
           npx eas-cli@latest init --non-interactive --force
           npx eas-cli@latest update:configure --non-interactive
           MSG="$(printf '%s' "$COMMIT_MSG" | head -n1)"
-          npx eas-cli@latest update --branch main --message "$MSG" --non-interactive
+          npx eas-cli@latest update --branch main --environment production --message "$MSG" --non-interactive
