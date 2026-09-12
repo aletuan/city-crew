@@ -5,13 +5,16 @@
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const DAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+// Short, and uniformly short — including the three that are already
+// three letters. A column of day labels where some months are spelled
+// and some are clipped reads as an accident rather than a convention.
 const MONTHS_EN = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
 /**
- * A date as an editorial dateline: "Thursday, August 7" / "Thứ Năm, 7
+ * A date as an editorial dateline: "Thursday, Aug 7" / "Thứ Năm, 7
  * tháng 8" / "8月7日（木）".
  *
  * Here rather than in a screen because a second screen wanted it, and a
@@ -19,6 +22,24 @@ const MONTHS_EN = [
  * one place and "T7" in another. `now` is a parameter for the same reason
  * everything else in this file takes one: a function that reads the clock
  * itself cannot be tested.
+ *
+ * ── why the weekday is spelled and the month is not ──
+ *
+ * Both were spelled once, and on Explore's cover the pill that carries
+ * this line — uppercase, letterspaced, with the weather hanging off its
+ * end — ran to roughly the width left beside the search disc on a small
+ * phone. Something had to give, and the two halves are not worth the
+ * same.
+ *
+ * The weekday is the only token here the reader does not already have.
+ * The clock at the top of their own screen says the date; nothing says
+ * it is a Saturday, and that is the half that changes which places are
+ * open and what kind of day it is to plan. The month is the half nobody
+ * needs telling. So the weekday keeps its whole name and the month goes
+ * to three letters.
+ *
+ * Vietnamese and Japanese are left alone: both already write the month
+ * as a numeral, so there was never anything to clip.
  */
 export function dateline(lang: string, now: Date): string {
   if (lang === 'vi') return `${DAYS_VI[now.getDay()]}, ${now.getDate()} tháng ${now.getMonth() + 1}`;
