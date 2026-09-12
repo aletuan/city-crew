@@ -256,6 +256,16 @@ for f in "$ROOT"/supabase/migrations/*_editorial_identities.sql; do
 done
 run "$DB" -f "$HERE/editorial_test.sql"
 
+# The desk adopting those same identities' lists. Right after them: the
+# function it adds only has anything to move once the editorial rows
+# exist, and the test seeds a desk account of its own because a bench has
+# none of the real one.
+echo "→ editorial collections adopted"
+for f in "$ROOT"/supabase/migrations/*_editorial_collections_to_owner.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/editorial_adopt_test.sql"
+
 # The safety layer: blocking, reporting, the desk's moderation actions, and
 # the launch traces. None of these migrations had run on this bench before
 # — a block could have been refusing nothing, a report readable by the
