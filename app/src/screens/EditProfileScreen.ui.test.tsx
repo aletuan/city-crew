@@ -280,8 +280,22 @@ describe('failures', () => {
     const { navigation } = renderScreen();
     save();
     await screen.findByText('Network down');
-    save();
-    await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+    // Two things this waits for, and the tap needs both.
+    //
+    // The button keeps its accessible name while it is busy — the words
+    // go, `accessibilityLabel` stays, on purpose, so VoiceOver has
+    // something to say mid-save. `getByRole` therefore finds it in either
+    // state, and a tap that lands while it is still busy is dropped
+    // without a sound: `onPress` is undefined then. The words coming back
+    // are the signal that it will answer.
+    //
+    // And `act` rather than a `waitFor` around `goBack`: the second save
+    // is a chain of settled promises and one commit, which `act` drains
+    // to completion. Waiting on the clock for it instead is a race that a
+    // loaded runner loses — this test failed twice on CI and never here.
+    await waitFor(() => expect(saveButton().textContent).toBe('Save changes'));
+    await act(async () => { save(); });
+    expect(navigation.goBack).toHaveBeenCalled();
     expect(screen.queryByText('Network down')).toBeNull();
   });
 });
