@@ -22,12 +22,30 @@
 // Edge Functions hold: that one calls Places and Geocoding and never ships;
 // these two only draw the map and ship with every install.
 //
+// ── how the keys reach the binary ──
+//
+// Through react-native-maps' own config plugin, listed below with the two
+// keys as its props. That plugin writes `pod 'react-native-maps/Google'`
+// into the Podfile, `GMSServices.provideAPIKey` into the AppDelegate and
+// the `geo.API_KEY` meta-data into the Android manifest. Setting the keys
+// only in `ios.config.googleMapsApiKey` / `android.config.googleMaps`
+// looks equivalent and is not: with nothing in `plugins`, Expo falls back
+// to its own legacy maps plugin, which still writes
+// `pod 'react-native-google-maps'` — a podspec react-native-maps dropped
+// in favour of the `Google` subspec — and `pod install` fails on EAS.
+// Listing the package plugin is what makes Expo skip that fallback.
+//
+// `ios.config.googleMapsApiKey` is still set, for one reader only:
+// `MiniMap` looks there at runtime to learn whether this binary was
+// built with a key, and so whether it can ask for the Google provider.
+//
 // ── when a key is missing ──
 //
 // Nothing fails here. `expo start` for Expo Go, `npm test`, and the EAS
 // Update publish all evaluate this file without the keys and must keep
-// working. An iOS build without its key renders no map in the start sheet
-// — `MiniMap` explains why — and the rest of the app is unaffected.
+// working: the plugin gets undefined props and configures Apple maps only.
+// An iOS build without its key renders no map in the start sheet —
+// `MiniMap` explains why — and the rest of the app is unaffected.
 
 module.exports = ({ config }) => {
   const ios = process.env.GOOGLE_MAPS_IOS_KEY;
@@ -38,11 +56,9 @@ module.exports = ({ config }) => {
       ...config.ios,
       ...(ios ? { config: { ...config.ios?.config, googleMapsApiKey: ios } } : {}),
     },
-    android: {
-      ...config.android,
-      ...(android
-        ? { config: { ...config.android?.config, googleMaps: { apiKey: android } } }
-        : {}),
-    },
+    plugins: [
+      ...(config.plugins ?? []),
+      ['react-native-maps', { iosGoogleMapsApiKey: ios, androidGoogleMapsApiKey: android }],
+    ],
   };
 };
