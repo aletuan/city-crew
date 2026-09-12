@@ -12,22 +12,21 @@
 // me* rather than as the coordinates you happened to be standing on, so
 // a plan made now and walked to later starts from where you are then.
 //
-// It shows no places, and cannot: see the note at the top of MiniMap.
+// It shows no places, by choice rather than by licence: see the note at
+// the top of MiniMap.
 //
 // ── on the search field ──
 //
-// It used to call `Location.geocodeAsync`, which on iOS is CLGeocoder, and
-// CLGeocoder resolves addresses: a street and a district in, a point out.
-// It has no opinion about "Ủy ban nhân dân xã Quý Lộc" — that is a name —
-// so the field promised "an address or place" while being able to do only
-// the first half. Apple's own search box is MKLocalSearch, a different
-// API that expo-location does not expose.
-//
-// It asks `find-address` now, which searches OpenStreetMap. Not Google,
-// and that is a licence decision rather than a taste one: Places results
-// may not be displayed on a map that is not Google's (§5.3), and in Expo
-// Go on iOS the only map that renders is Apple's — the same clause is why
-// MiniMap shows no places at all. OSM's ODbL has no such clause.
+// It asks Google Places, through `fetch-place`, the Edge Function that
+// already holds the key for Add a place. It has been two other things.
+// First `Location.geocodeAsync`, which on iOS is CLGeocoder and resolves
+// addresses only: a street and a district in, a point out, and no opinion
+// about "Ủy ban nhân dân xã Quý Lộc", which is a name. Then OpenStreetMap,
+// which knew names but not well — asked for that same commune office it
+// returned four confident answers from two other provinces — and was
+// there only because the map was Apple's and Google Places content may
+// not be shown on a non-Apple map (Places ToS §5.3). The map is Google's
+// now, so the search can be too.
 //
 // So there is a list of candidates to choose from, which is what people
 // expect from a search box and what the geocoder could never give. The
@@ -43,7 +42,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MiniMap from './MiniMap';
 import { Chip, GradientCta, PressableScale } from './ui';
 import { useCity, useMyPosition } from '../lib/city';
-import { findSpots, type Spot } from '../lib/findplace';
+import { findSpots, nameOf, type Spot } from '../lib/findplace';
 import { ctaMode } from '../lib/spots';
 import { useI18n } from '../lib/i18n';
 import { areaCentre, areasNear, nearestAreaKm } from '../lib/trip';
@@ -63,7 +62,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   onClose: () => void;
   onDone: (next: Start) => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { city } = useCity();
   const [draft, setDraft] = useState<Start>(value);
   const [where, setWhere] = useState<string>('');
@@ -202,22 +201,18 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   const near = pinned ?? me;
   const cta = ctaMode(query, settled);
 
-  // The platform's geocoder, in the other direction: what to call the
-  // point the map is showing.
+  // Google's geocoder, in the other direction: what to call the point the
+  // map is showing. Google's rather than the phone's because the map is
+  // Google's — `nameOf` has the licence reasoning.
   useEffect(() => {
     if (!visible || !near) { setWhere(''); return; }
     let live = true;
-    Location.reverseGeocodeAsync({ latitude: near.lat, longitude: near.lng })
-      .then((rows) => {
-        const r = rows[0];
-        const name = r?.district || r?.subregion || r?.street || r?.city || '';
-        if (live) setWhere(name);
-      })
-      .catch(() => { if (live) setWhere(''); });
+    nameOf({ lat: near.lat, lng: near.lng }, lang)
+      .then((name) => { if (live) setWhere(name); });
     return () => { live = false; };
   // `near` is a fresh object each render; its coordinates are what move.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, near?.lat, near?.lng]);
+  }, [visible, near?.lat, near?.lng, lang]);
 
   const districts = useMemo(
     () => areasNear(places, near),
@@ -246,11 +241,9 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   /**
    * Search, once, when the reader says so.
    *
-   * On submit rather than per keystroke. Both providers behind
-   * `find-address` are free and shared, and Nominatim's usage policy makes
-   * one-request-per-character the thing it blocks people for; a search box
-   * that asks once when asked is also the one that stops the list
-   * reshuffling under a moving thumb.
+   * On submit rather than per keystroke. Every search is one billed call
+   * to Google Places, and a search box that asks once when asked is also
+   * the one that stops the list reshuffling under a moving thumb.
    *
    * Biased by coordinates rather than by pasting the city's name onto the
    * query, which is what this did before and was wrong twice over: it
@@ -264,7 +257,7 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
     Keyboard.dismiss();
     setFinding(true);
     setMissed(false);
-    const found = await findSpots(q, near ?? centre);
+    const found = await findSpots(q, near ?? centre, city?.id ?? null, lang);
     setFinding(false);
     setHits(found);
     // Asked, so the button stops offering to ask again. A search that came
@@ -449,11 +442,12 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
                   </View>
                 </PressableScale>
               ))}
-              {/* ODbL's side of the bargain, and the reason this search can
-                  sit above an Apple map at all. */}
-              <Text style={s.credit}>
-                {t('Results from OpenStreetMap', 'Kết quả từ OpenStreetMap', '検索結果：OpenStreetMap')}
-              </Text>
+              {/* No credit line. Google's terms ask for a "Powered by
+                  Google" mark only where Places data is shown *without* a
+                  Google map, and the map above this list is Google's and
+                  carries its own logo. (In Expo Go on an iPhone there is no
+                  map — see `canDrawMap` — which is a development build's
+                  problem and not a shipped one.) */}
             </View>
           )}
 
@@ -565,10 +559,6 @@ const s = StyleSheet.create({
   hitTop: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
   hitName: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
   hitSub: { color: colors.textTertiary, fontSize: 12.5, marginTop: 2 },
-  credit: {
-    color: colors.textTertiary, fontSize: 11, textAlign: 'right',
-    paddingHorizontal: 13, paddingBottom: 9, paddingTop: 2,
-  },
 
   label: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,

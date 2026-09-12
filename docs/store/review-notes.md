@@ -128,7 +128,9 @@ screenshots in Vietnamese are one setting away rather than the default.
    duyệt ẩn danh — reviewer mở chúng từ listing, không phải từ app: hai văn bản
    đầu giờ **đọc được ngay trong app** (dưới nút Đăng ký, và Cá nhân → Tuỳ chọn),
    dựng từ cùng một nguồn với hai trang web nên không thể lệch nhau.
-4. Bảng App Privacy đã điền đúng theo `app-privacy-labels.md`.
+4. Bảng App Privacy đã điền đúng theo `app-privacy-labels.md` — kể cả mục
+   **Google Maps SDK** ở cuối file đó, và mục dịch vụ bên thứ ba trong Notes
+   không còn nói "No Google Maps SDK is bundled" hay nhắc Photon/Nominatim.
 5. Screenshots đủ cỡ 6.9" cho ít nhất locale en-US.
 6. Hai cờ trace không cần đụng — cả `STARTUP_TRACE` (log console) lẫn
    `STARTUP_TRACE_UPLOAD` (gửi lên `startup_traces`) đều tự tắt trên channel

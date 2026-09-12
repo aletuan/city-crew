@@ -76,26 +76,27 @@ Khi làm, hai thứ nên đi cùng nhau vì cùng một job trả cả hai:
    luỹ, và phủ 441/442 địa điểm. Đây là câu trả lời đúng cho "địa điểm nào
    đang hot", tốt hơn hẳn follower count trên mạng xã hội (xem C4).
 
-### C2. Nominatim / Photon ở quy mô pilot
+### C2. Nominatim / Photon ở quy mô pilot — đã đóng (09/2026)
 
-`find-address` gọi **cả hai** dịch vụ công cộng miễn phí cho mỗi lần tìm.
-Nominatim public instance giới hạn ~1 request/giây tuyệt đối cho toàn bộ
-ứng dụng và cấm dùng nặng.
+`find-address` (Photon + Nominatim) đã bỏ. StartSheet tìm bằng Google Places
+qua `fetch-place`, cùng key và cùng hạn mức với Add a place; chú thích dưới
+bản đồ dùng Geocoding API của Google. Không còn giới hạn 1 request/giây hay
+câu hỏi self-host; cái phải theo dõi thay vào đó là hoá đơn Google: một lần
+tìm là một Text Search, một lần dời ghim là một Geocoding call, cả hai tính
+theo nghìn request sau hạn mức miễn phí hàng tháng.
 
-Giảm nhẹ đã có: yêu cầu đăng nhập, tìm khi submit (không phải gõ tới đâu gọi
-tới đó), `User-Agent` hợp lệ. Đủ cho vài chục người.
-
-Ceiling: khoảng vài trăm người dùng hoạt động. Vượt qua đó cần **cache kết
-quả tìm kiếm** trong Postgres và/hoặc self-host Nominatim, hoặc chuyển sang
-nhà cung cấp trả phí (Mapbox/Geoapify). Nên thêm cache trước khi pilot — nó
-rẻ và mua thêm một bậc quy mô.
+Lý do có thể làm được: app đã ship thành binary riêng (EAS Build →
+TestFlight), bundle được Google Maps SDK, nên bản đồ là của Google và điều
+khoản Places §5.3 không còn chặn. Xem đầu `app/src/components/MiniMap.tsx`.
 
 ### C3. Attribution còn thiếu
 
 - **Open-Meteo** yêu cầu ghi nguồn (CC-BY-4.0) — chưa thấy ở đâu.
-- **Apple Maps** yêu cầu hiển thị logo/legal notice khi dùng MapKit.
-- **OpenStreetMap** đã có nhãn trên StartSheet, nhưng ODbL cũng áp dụng cho
-  toạ độ đã lưu lại từ kết quả OSM.
+- ~~**Apple Maps** yêu cầu hiển thị logo/legal notice khi dùng MapKit.~~
+  Không còn dùng MapKit; bản đồ là Google Maps SDK, logo Google do SDK vẽ.
+- ~~**OpenStreetMap** đã có nhãn trên StartSheet~~ — không còn dùng OSM.
+  Toạ độ điểm bắt đầu đã lưu trong `trips` từ trước 09/2026 có thể đến từ
+  kết quả OSM; ODbL áp dụng cho chúng nếu có ngày xuất ra ngoài.
 
 ### C4. Chỉ số mạng xã hội — đã cân nhắc và không lưu (01/09/2026)
 
@@ -160,9 +161,9 @@ Xếp theo "hỏng thì mất gì", không theo công sức:
 4. **D8 + D7 — budget alarm rồi quota.** Chặn thiệt hại tài chính trước, chặn
    phiền nhiễu sau.
 5. D3 analytics — tối thiểu: mở app, xem place, lưu place, tạo collection, publish.
-6. C3 attribution Open-Meteo + Apple Maps.
+6. C3 attribution Open-Meteo (Apple Maps không còn dùng).
 7. D7b `pg_cron` trim `place_events` cũ hơn 90 ngày.
-8. C2 cache `find-address` trong Postgres.
+8. ~~C2 cache `find-address` trong Postgres.~~ — không còn cần; C2 đã đóng.
 9. D4/D5 staging + tự động `supabase db push` và deploy function trong CI.
 10. D9 offline, D10 E2E, D11 accessibility.
 

@@ -21,12 +21,11 @@
 // the reader knew. Zooming would fix that, and a static image cannot
 // zoom.
 //
-// The interactive one cannot be drawn at all. On iOS, Expo Go can only
-// render Apple Maps, and the Places API terms are explicit — §5.3, "No
-// use with a non-Google map": Google Places content must not be shown in
-// conjunction with a non-Google map. So the free path renders a map we
-// are not allowed to put these results on, and the allowed path is a
-// development build, which costs this project Expo Go.
+// The interactive one could be drawn now — the map is Google's since
+// the app shipped as its own binary, so the licence that once kept
+// Places results off it (§5.3, "No use with a non-Google map") no longer
+// applies — and still is not, for the reason above: at city scale five
+// pins say "all of these are in Hanoi", which the reader knew.
 //
 // What the map was for, a distance does — see `awayFrom` in
 // `lib/candidates`. See issue #146.

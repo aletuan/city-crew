@@ -1,36 +1,44 @@
 // A small map you drop a pin on, and nothing else.
 //
-// ── why this may show no places, ever ──
+// ── whose map ──
 //
-// Everything in `places` came out of the Google Places API — `importPlace`
-// writes the name, the address, the coordinates, the rating, the hours and
-// the photographs from it. Storing that in Postgres does not stop it being
-// Google Maps Content, and the Places API terms are explicit: §5.3, "No
-// use with a non-Google map" — *Customer must not use Google Maps Content
-// from the Places API in conjunction with a non-Google map.*
+// Google's, on both platforms. It used to be Apple's on iOS, and that
+// was a constraint rather than a choice: in Expo Go the only map that
+// renders on iOS is Apple's, and the Places API terms (§5.3, "No use with
+// a non-Google map") forbid showing Google Places content — which every
+// place in `places` is, and every search result now is — on any map that
+// is not Google's. So the start sheet searched OpenStreetMap instead, and
+// this map carried no places at all.
 //
-// On iOS in Expo Go the only map that renders is Apple's. So this map is
-// allowed to exist exactly as long as it carries none of the catalog:
-// where the reader is, and where they have pointed. The moment somebody
-// adds "show nearby places here", it is a licence breach rather than a
-// feature — which is why this component takes no places and offers no way
-// to pass any.
+// The app ships as its own binary now (EAS Build → TestFlight), which can
+// bundle the Google Maps SDK and carry a key for it — see `app.config.js`
+// for where the key comes from. With the map Google's, the clause is
+// satisfied: the start sheet searches Google Places, the caption under
+// the map comes from Google's geocoder, and both may sit on this view.
 //
-// The reverse geocode is the platform's (Apple on iOS, Android's on
-// Android) through `expo-location`, not Google's, for the same reason.
+// It still takes no places. That is scope, not licence: the sheet's one
+// question is "where does the day start?", and pins for forty cafés
+// answer a different one. The day somebody wants them here, the licence
+// no longer stands in the way.
 //
 // ── why it is loaded so carefully ──
 //
-// `react-native-maps` is native code living in the Expo Go binary rather
-// than in our bundle. Expo's own docs say Apple Maps needs no setup in
-// Expo Go, and SDK 54 pins the version this project installs — but there
-// are open reports of it crashing on this exact SDK, and a screen is not
-// the right thing to bet on that. So the module is required behind a
-// guard and rendered behind a boundary: if it is missing, or if it throws
+// `react-native-maps` is native code living in the binary rather than in
+// our bundle, and on iOS the Google provider needs the Maps SDK linked
+// and keyed. Two builds lack it: Expo Go, which bundles Apple Maps only,
+// and a build made without `GOOGLE_MAPS_IOS_KEY` set. Asking for Google
+// in either throws from the native side. So the module is required
+// behind a guard, the provider is refused where it cannot work, and the
+// view is rendered behind a boundary: if anything is missing, or throws
 // on mount, the picker loses its map and keeps everything else.
+//
+// Expo Go on Android does carry Google Maps (with Expo's own key), so
+// the map keeps working there; a development build is only needed to
+// see it on an iPhone.
 
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { PressableScale } from './ui';
 import { colors, font, radius } from '../theme';
@@ -54,6 +62,32 @@ const Marker: any = (() => {
   } catch {
     return null;
   }
+})();
+const PROVIDER_GOOGLE: string | null = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('react-native-maps').PROVIDER_GOOGLE ?? null;
+  } catch {
+    return null;
+  }
+})();
+
+/**
+ * Whether this binary can draw a Google map.
+ *
+ * Android: always, on any build — Expo Go included. iOS: only a build of
+ * our own that was given `GOOGLE_MAPS_IOS_KEY`. Expo Go is ruled out by
+ * its execution environment; a keyless build is ruled out by reading the
+ * config the key would have landed in. Neither case is an error — the
+ * sheet simply has no map — and `MiniMap` says nothing about why, because
+ * the person who can do something about it is reading this file, not the
+ * screen.
+ */
+export const canDrawMap: boolean = (() => {
+  if (!MapView || !PROVIDER_GOOGLE) return false;
+  if (Platform.OS !== 'ios') return true;
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) return false;
+  return !!Constants.expoConfig?.ios?.config?.googleMapsApiKey;
 })();
 
 type Props = {
@@ -105,17 +139,17 @@ export default function MiniMap({ lat, lng, onPick, caption, height, onLocate }:
     );
   }, [lat, lng]);
 
-  if (!MapView) return null;
+  if (!canDrawMap) return null;
   return (
     <Boundary>
       <View style={[s.wrap, height ? { height } : null]}>
         <MapView
           ref={map}
           style={StyleSheet.absoluteFill}
-          // No provider named, which on iOS means Apple's and on Android
-          // the platform default. Naming Google here would need a key this
-          // app does not ship — and would not fix the licence question,
-          // because Expo Go cannot apply our key anyway.
+          // Google on both platforms, for the licence reason at the top:
+          // what sits on this map is Google Places content, and that may
+          // only be shown on Google's map.
+          provider={PROVIDER_GOOGLE}
           initialRegion={{ latitude: lat, longitude: lng, latitudeDelta: 0.02, longitudeDelta: 0.02 }}
           showsUserLocation
           showsMyLocationButton={false}
