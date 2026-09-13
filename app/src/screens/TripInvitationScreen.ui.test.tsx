@@ -164,7 +164,7 @@ describe('what the invitee sees', () => {
     show();
     expect(screen.getByText('Old Quarter crawl')).toBeTruthy();
     expect(text()).toContain('Linh wants you along');
-    expect(text()).toContain('@linh · Saturday, September 12 · 09:00–12:30');
+    expect(text()).toContain('@linh · Saturday, Sep 12 · 09:00–12:30');
     const img = document.querySelector('img');
     expect(img?.getAttribute('src')).toBe('host.jpg');
   });

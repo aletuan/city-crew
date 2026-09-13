@@ -388,8 +388,19 @@ describe('dateline', () => {
   // cannot be tested — which is why `now` is a parameter.
   const sat = new Date(2026, 7, 15); // Saturday, 15 August 2026
 
-  it('spells the day and month out in English', () => {
-    expect(dateline('en', sat)).toBe('Saturday, August 15');
+  // The weekday whole, the month clipped — the asymmetry is the point,
+  // so it is asserted rather than left to look like a typo.
+  it('spells the weekday out in English and clips the month', () => {
+    expect(dateline('en', sat)).toBe('Saturday, Aug 15');
+  });
+
+  // May, June and July are already short enough to spell. They are
+  // clipped anyway: a list of days where one month is whole and the next
+  // is abbreviated reads as a bug, not a style.
+  it('clips even the months that would have fit', () => {
+    expect(dateline('en', new Date(2026, 4, 1))).toBe('Friday, May 1');
+    expect(dateline('en', new Date(2026, 5, 1))).toBe('Monday, Jun 1');
+    expect(dateline('en', new Date(2026, 6, 1))).toBe('Wednesday, Jul 1');
   });
 
   it('uses the Vietnamese day names and "tháng"', () => {
@@ -404,13 +415,13 @@ describe('dateline', () => {
   // day of the week by one — a bug that looks like a translation problem.
   it('lines Sunday up with index zero', () => {
     const sun = new Date(2026, 7, 16);
-    expect(dateline('en', sun)).toBe('Sunday, August 16');
+    expect(dateline('en', sun)).toBe('Sunday, Aug 16');
     expect(dateline('vi', sun)).toBe('Chủ Nhật, 16 tháng 8');
     expect(dateline('ja', sun)).toBe('8月16日（日）');
   });
 
   it('falls back to English for a language it does not know', () => {
-    expect(dateline('fr', sat)).toBe('Saturday, August 15');
+    expect(dateline('fr', sat)).toBe('Saturday, Aug 15');
   });
 });
 
