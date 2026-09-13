@@ -182,6 +182,78 @@ describe('the line under the name', () => {
   });
 });
 
+// The vibe pill shares the district's line: the first tag spelled out, the
+// rest as a count. What is asserted is what a reader sees — the word, and
+// whether a number appears beside it — not the layout, which
+// `react-native-web` does not simulate.
+describe('the vibe pill', () => {
+  it('spells out the only tag, with no count beside it', () => {
+    render(<PlaceCard onPress={() => {}} place={place({ vibe_tags: ['cafes'] })} />);
+    expect(screen.getByText('Cafés')).toBeTruthy();
+    expect(screen.queryByText(/^\+\d+$/)).toBeNull();
+  });
+
+  it('counts the tags it did not spell out', () => {
+    render(<PlaceCard onPress={() => {}} place={place({
+      vibe_tags: ['food_tour', 'kid_friendly'],
+    })} />);
+    expect(screen.getByText('Food')).toBeTruthy();
+    expect(screen.getByText('+1')).toBeTruthy();
+    // The second tag is counted, not named.
+    expect(screen.queryByText('Kid-friendly')).toBeNull();
+  });
+
+  it('counts every tag past the first, however many', () => {
+    render(<PlaceCard onPress={() => {}} place={place({
+      vibe_tags: ['culture', 'views', 'chill', 'quiet'],
+    })} />);
+    expect(screen.getByText('Culture')).toBeTruthy();
+    expect(screen.getByText('+3')).toBeTruthy();
+  });
+
+  it('speaks the reader’s language', () => {
+    state.lang = 'vi';
+    render(<PlaceCard onPress={() => {}} place={place({ vibe_tags: ['cafes', 'quiet'] })} />);
+    expect(screen.getByText('Cà phê')).toBeTruthy();
+    expect(screen.getByText('+1')).toBeTruthy();
+  });
+
+  // A tag the catalog grew before `VIBES` knew about it still gets a word
+  // rather than a blank pill — `vibeLabel` falls back to the key itself.
+  it('names a tag the table has never heard of', () => {
+    render(<PlaceCard onPress={() => {}} place={place({ vibe_tags: ['late_night'] })} />);
+    expect(screen.getByText('Late night')).toBeTruthy();
+  });
+
+  it('is absent when the place carries no tags', () => {
+    render(<PlaceCard onPress={() => {}} place={place({
+      neighborhood_en: 'Ngoc Ha', vibe_tags: [],
+    })} />);
+    expect(screen.getByText(/Ngoc Ha/)).toBeTruthy();
+    expect(screen.queryByText(/^\+\d+$/)).toBeNull();
+  });
+
+  // The line is drawn for the tags alone: a place with no district and no
+  // hour still shows its vibe rather than dropping the row.
+  it('is drawn even with neither a district nor an hour', () => {
+    render(<PlaceCard onPress={() => {}} place={place({ vibe_tags: ['outdoors'] })} />);
+    expect(screen.getByText('Nature')).toBeTruthy();
+  });
+
+  // The long name this catalog actually holds, beside a two-tag pill: the
+  // name is its own line, so nothing here competes with it.
+  it('stands beside the longest names in the catalog', () => {
+    render(<PlaceCard onPress={() => {}} place={place({
+      name_en: 'Vietnam Military History Museum',
+      neighborhood_en: 'Xuan Phuong',
+      vibe_tags: ['culture', 'kid_friendly'],
+    })} />);
+    expect(screen.getByText('Vietnam Military History Museum')).toBeTruthy();
+    expect(screen.getByText('Culture')).toBeTruthy();
+    expect(screen.getByText('+1')).toBeTruthy();
+  });
+});
+
 // Only its submitter can see such a card at all, so the marker answers
 // "why can nobody else see the place I added" rather than warning anyone.
 describe('a place the desk has not published', () => {
