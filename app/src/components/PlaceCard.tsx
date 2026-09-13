@@ -145,14 +145,58 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
               district the row can still carry an hour, and an icon
               pointing at a closing time would label the wrong half of
               the sentence. */}
-          {(where || when) && (
-            <View style={s.whereRow}>
-              {where
-                ? <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
-                : null}
-              <Text style={s.where} numberOfLines={1}>
-                {[where, when].filter(Boolean).join(' · ')}
-              </Text>
+          {/* Vibe rides the district's line rather than a line of its own.
+              ── why it moved ──
+
+              It used to be a third row of up to three chips, and that row
+              cost every card in the feed about 32pt of height for a fact
+              that, on two thirds of the catalog, is a single word: 343 of
+              531 published places carry exactly one vibe tag, 122 carry
+              two. A whole row, on most cards, to say "Cà phê".
+
+              Folded onto the district's line it costs nothing: the row
+              was already there and its right half was empty. The feed
+              gets a shorter card, and the vibe keeps its word.
+
+              ── why one pill and not three chips ──
+
+              The line has room for one label beside a district and an
+              hour, not three. So the first tag is spelled out and the
+              rest become a count — the shape the catalog's own
+              distribution wants, since the tail that needs counting is
+              66 places out of 531.
+
+              The district text takes the slack (`flex: 1`, one line) and
+              the pill never shrinks: when a long name's card runs out of
+              room it is the hour that gives way, not the tag. Losing
+              "đến 22:00" leaves a fact you can still read; a pill squeezed
+              to "Cà…" leaves one you cannot. */}
+          {(where || when || place.vibe_tags.length > 0) && (
+            <View style={s.metaRow}>
+              {(where || when) ? (
+                <View style={s.whereRow}>
+                  {where
+                    ? <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+                    : null}
+                  <Text style={s.where} numberOfLines={1}>
+                    {[where, when].filter(Boolean).join(' · ')}
+                  </Text>
+                </View>
+              ) : null}
+              {place.vibe_tags.length > 0 ? (
+                <View style={s.vibePill}>
+                  <View style={[s.vibeDot, { backgroundColor: vibeColor(place.vibe_tags[0]) }]} />
+                  <Text style={s.vibeLabel} numberOfLines={1}>
+                    {vibeLabel(place.vibe_tags[0], t)}
+                  </Text>
+                  {place.vibe_tags.length > 1 ? (
+                    <>
+                      <View style={s.vibeSep} />
+                      <Text style={s.vibeMore}>{`+${place.vibe_tags.length - 1}`}</Text>
+                    </>
+                  ) : null}
+                </View>
+              ) : null}
             </View>
           )}
           {/* Only its submitter can see this card at all, so the marker is
@@ -183,16 +227,6 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
                   ? t('Not accepted', 'Không được duyệt', '不採用')
                   : t('Only you can see this', 'Chỉ mình bạn thấy', 'あなただけに表示中')}
               </Text>
-            </View>
-          )}
-          {place.vibe_tags.length > 0 && (
-            <View style={s.vibeRow}>
-              {place.vibe_tags.slice(0, 3).map((v) => (
-                <View key={v} style={s.vibeChip}>
-                  <View style={[s.vibeDot, { backgroundColor: vibeColor(v) }]} />
-                  <Text style={s.vibeText} numberOfLines={1}>{vibeLabel(v, t)}</Text>
-                </View>
-              ))}
             </View>
           )}
         </View>
@@ -236,7 +270,11 @@ const s = StyleSheet.create({
   // Tight under the name it qualifies — 3pt, not the 8 the status row and
   // the chips take, because those are separate statements and this is the
   // second half of the first one.
-  whereRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  // District and hour on the left, the vibe pill on the right, on one line.
+  // The text cluster takes the slack and the pill keeps its size — see the
+  // note beside the markup for which half is allowed to give way.
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 3 },
+  whereRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
   // The same tertiary weight the plan and trip screens give a district, so
   // the fact wears one face across the app.
   where: { flex: 1, color: colors.textTertiary, ...type.meta },
@@ -253,9 +291,6 @@ const s = StyleSheet.create({
   star: { color: onPhoto.star, fontSize: 13 },
   ratingValue: { color: onPhoto.text, fontSize: 14.5, fontWeight: font.semibold },
   ratingCount: { color: onPhoto.textSecondary, fontSize: 12.5, fontWeight: font.regular },
-  // Vibes read as small glass pills, each carrying its own colour in a dot
-  // only — the type stays neutral so the row scans without shouting.
-  // One line, never wrapping, so every card keeps the same height.
   statusRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     alignSelf: 'flex-start', marginTop: 8,
@@ -266,13 +301,27 @@ const s = StyleSheet.create({
   statusText: { color: colors.textSecondary, fontSize: 12, fontWeight: font.medium },
   statusTextBad: { color: colors.bad },
 
-  vibeRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: 6, marginTop: 8 },
-  vibeChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1,
-    backgroundColor: colors.surfaceGlass, borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
-    paddingHorizontal: 9, paddingVertical: 4,
+  // One pill, not a row of chips: a colour dot, the first tag spelled out,
+  // then — only when there is a second tag — a hairline and how many more.
+  //
+  // No border, unlike the chips it replaces. A bordered pill beside an
+  // unbordered line of grey text read as a control you could press; the
+  // fill alone is enough to say "this is one object" at 12.5pt.
+  //
+  // `flexShrink: 0` is the whole contract with the line: the pill is
+  // either drawn whole or not at all.
+  vibePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 0,
+    backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
+    paddingHorizontal: 11, paddingVertical: 4,
   },
-  vibeDot: { width: 6, height: 6, borderRadius: 3 },
-  vibeText: { color: colors.textSecondary, fontSize: 12, fontWeight: font.medium },
+  vibeDot: { width: 7, height: 7, borderRadius: 3.5 },
+  // Full-strength text, where the old chip used secondary: one word on a
+  // card is the label, not an aside, and there is no second chip beside it
+  // to make a run of dark type look heavy.
+  vibeLabel: { color: colors.text, fontSize: 12.5, fontWeight: font.semibold },
+  // A rule, not a hairline: at 0.5pt it disappeared against the fill on a
+  // light ground, and the count then read as part of the label.
+  vibeSep: { width: 1, height: 13, backgroundColor: colors.borderGlassSoft },
+  vibeMore: { color: colors.textSecondary, fontSize: 12.5, fontWeight: font.medium },
 });
