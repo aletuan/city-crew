@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useFlag } from '../lib/useFlag';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
-import { openFragment, openState, shutLabel } from '../lib/format';
+import { dayBand, MINUTES_IN_DAY, openFragment, openState, shutLabel } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
@@ -24,8 +24,10 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
     ? t(place.neighborhood_en, place.neighborhood_vi ?? place.neighborhood_en,
       place.neighborhood_ja ?? place.neighborhood_en)
     : null;
-  const hours = openState(place.opening_hours, new Date());
+  const at = new Date();
+  const hours = openState(place.opening_hours, at);
   const shut = shutLabel(hours, t);
+  const band = dayBand(place.opening_hours, at);
   // Only the closing hour reaches the meta line. `openFragment` would
   // also hand back "opens 08:00" for a shut place, and this card says
   // that on the photograph instead — printing both would be the same
@@ -106,46 +108,52 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
               {reviews ? <Text style={s.ratingCount}>({reviews})</Text> : null}
             </View>
           ) : null}
-          {/* Shut, and the hour it changes — a label, not a veil.
-
-              ── why the photograph is not dimmed ──
-
-              It was, at 42%, on the argument that a scroll should sort
-              the shut places out of itself before a word is read. The
-              catalog says that argument only holds if shut is the
-              minority, and in the evening it is not: of the 524
-              published places with readable hours, 54% are shut at ten
-              at night, 75% at eleven, 86% at midnight, 72% at seven in
-              the morning. A veil over three quarters of the feed does
-              not read as "these are closed". It reads as a broken app,
-              and it stops meaning anything, which is the same objection
-              that took the always-on closing hour off this card.
-
-              So the picture is left alone. Someone browsing at eleven at
-              night is usually planning tomorrow, and a place worth
-              saving is worth seeing.
-
-              ── why a pill and not the sash a reference drew ──
-
-              A sash is the grammar of SOLD OUT: a stamp, for something
-              permanent and wrong, and a café shut at six in the morning
-              is neither — the hours code already warns that the bare
-              word "closed" reads as a fact about the business. It would
-              be a third material on a photograph that has settled on
-              one. And a 45° band has a fixed diagonal to fit, while
-              "Đóng cửa · mở 8:00" and "閉店・8:00開店" do not agree on
-              length.
-
-              Amber on the dot, not red. Red in this app is `colors.bad`,
-              what a flagged place wears; a shop that opens at eight has
-              done nothing wrong. */}
-          {shut ? (
-            <View style={s.shutSlot} pointerEvents="none">
-              <View style={s.shutDot} />
-              <Text style={s.shutText} numberOfLines={1}>{shut}</Text>
-            </View>
-          ) : null}
         </View>
+        {/* ── the day, drawn ──
+
+            A three-point track under the photograph, twenty-four hours
+            wide, with the open stretches filled and a mark at the hour it
+            is now. It replaced a pill reading "Closed · opens 08:00",
+            and the trade is deliberate: the pill said three states and
+            this says the shape. A tenth of the catalog has a shape a
+            sentence cannot hold — 55 of the 524 places with readable
+            hours shut for lunch and open again, 51 run past midnight —
+            and those are exactly the places a word gets wrong.
+
+            It also buys the photograph its corner back. The pill made
+            every corner of the picture spoken for; this sits in the seam
+            between the picture and the body, which was nobody's.
+
+            The band is decorative to a screen reader while a place is
+            open — the meta line already carries anything urgent — but a
+            shut place carries `shutLabel` here, because a reader who
+            cannot see a three-point bar must still be told the door is
+            closed and when it opens. That sentence is the reason
+            `shutLabel` survived the pill that introduced it. */}
+        {band ? (
+          <View
+            style={s.band}
+            accessible={!!shut}
+            accessibilityLabel={shut ?? undefined}
+          >
+            {band.segments.map((seg) => (
+              <View
+                key={`${seg.fromMin}-${seg.toMin}`}
+                style={[
+                  s.bandOpen,
+                  {
+                    left: `${(seg.fromMin / MINUTES_IN_DAY) * 100}%`,
+                    width: `${((seg.toMin - seg.fromMin) / MINUTES_IN_DAY) * 100}%`,
+                  },
+                  // A window clipped at midnight keeps a square edge: a
+                  // rounded one would claim the place shuts at twelve.
+                  seg.runsOn && s.bandRunsOn,
+                ]}
+              />
+            ))}
+            <View style={[s.bandNow, { left: `${(band.nowMin / MINUTES_IN_DAY) * 100}%` }]} />
+          </View>
+        ) : null}
         <View style={s.body}>
           {/* The whole line is the name's now that the bookmark rides the
               photograph — a 40pt disc used to sit beside it, and the
@@ -309,18 +317,23 @@ const s = StyleSheet.create({
   body: { paddingHorizontal: space.cardPadding, paddingVertical: 13 },
   // Top-right of the image, mirroring the attribution bottom-right.
   saveSlot: { position: 'absolute', top: 10, right: 10 },
+  // The day's track, in the seam between the picture and the body.
+  band: { height: 3, backgroundColor: colors.bandTrack },
+  bandOpen: {
+    position: 'absolute', top: 0, bottom: 0,
+    backgroundColor: colors.bandFill, borderRadius: 1.5,
+  },
+  bandRunsOn: { borderTopRightRadius: 0, borderBottomRightRadius: 0 },
+  // The only colour on the band, and the only thing on it that moves.
+  // Taller than the track it crosses, because a 3pt mark inside a 3pt
+  // track is a change of shade rather than a position.
+  bandNow: {
+    position: 'absolute', top: -2, bottom: -2, width: 2, marginLeft: -1,
+    backgroundColor: colors.accent, borderRadius: 1,
+  },
   // Top-left, the photograph's one free corner, in the rating pill's
   // exact material — the card's rule is that marks on one picture are
   // made of one thing.
-  shutSlot: {
-    position: 'absolute', left: 10, top: 10, maxWidth: '78%',
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 5,
-    backgroundColor: 'rgba(10,11,10,0.58)',
-    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
-  },
-  shutDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: onPhoto.sun },
-  shutText: { color: onPhoto.text, fontSize: 12.5, fontWeight: font.semibold },
   // The rating pill's exact ground, one hairline and all: two marks on
   // one photograph should be made of one material. The circle is not
   // decoration — it separates this tap from the card's own (press the

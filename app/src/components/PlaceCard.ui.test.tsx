@@ -217,13 +217,25 @@ describe('the hour', () => {
     expect(shown()).toContain('until 22:00');
   });
 
-  // On the photograph, not the meta line — and said once, not twice.
-  it('marks a shut place on its picture, and does not repeat it below', () => {
+  // A shut place says nothing in the body — the band under the photograph
+  // draws it. What is asserted is the sentence a reader who cannot see a
+  // three-point bar is given instead, which is the whole reason
+  // `shutLabel` outlived the pill it was written for.
+  it('leaves the body quiet when shut, and tells a screen reader why', () => {
     vi.useFakeTimers();
     atICT('2026-09-09T23:00:00Z'); // 06:00 — two hours before opening
     card(week('8:00 AM – 10:00 PM'));
-    expect(shown()).toContain('Closed · opens 08:00');
-    expect(shown()).not.toContain('opens 08:00 ·');
+    expect(shown()).not.toContain('opens 08:00');
+    expect(screen.getByLabelText('Closed · opens 08:00')).toBeTruthy();
+  });
+
+  // And nothing to announce while the place is open: the band is context
+  // there, and the meta line already carries anything urgent.
+  it('does not announce the band while the place is open', () => {
+    vi.useFakeTimers();
+    atICT('2026-09-10T03:00:00Z'); // 10:00
+    card(week('8:00 AM – 10:00 PM'));
+    expect(screen.queryByLabelText(/Closed/)).toBeNull();
   });
 
   // A place that never closes is the one place where nothing is ever
