@@ -10,7 +10,7 @@
 // about; see `src/uitest/setup.tsx`.
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '../uitest/render';
 import type { Lang } from '../lib/i18n';
 import type { Place } from '../lib/data';
@@ -179,6 +179,61 @@ describe('the line under the name', () => {
   it('is absent when there is neither a district nor an hour', () => {
     render(<PlaceCard place={place()} onPress={() => {}} />);
     expect(screen.queryByText('·')).toBeNull();
+  });
+});
+
+// What the clock is allowed to put on the card, and where.
+//
+// Three states, three appearances, and the point of the set is that no
+// two of them look alike: a shut place is marked on the photograph, a
+// place about to shut names its hour, and a place with hours yet says
+// nothing at all. Before this, all three said something in the same grey.
+describe('the hour', () => {
+  const week = (hours: string) =>
+    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+      .map((d) => `${d}: ${hours}`);
+  // Vietnam is UTC+7. 2026-09-10 is a Thursday.
+  const atICT = (iso: string) => vi.setSystemTime(new Date(iso));
+  const shown = () => screen.getByTestId('card').textContent ?? '';
+  const card = (hours: string[]) =>
+    render(<PlaceCard testID="card" onPress={() => {}} place={place({
+      neighborhood_en: 'Hoan Kiem', opening_hours: hours,
+    })} />);
+
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('says nothing while the place has hours left', () => {
+    vi.useFakeTimers();
+    atICT('2026-09-10T03:00:00Z'); // 10:00 — twelve hours to go
+    card(week('8:00 AM – 10:00 PM'));
+    expect(shown()).toContain('Hoan Kiem');
+    expect(shown()).not.toContain('until');
+  });
+
+  it('names the closing hour once it is close', () => {
+    vi.useFakeTimers();
+    atICT('2026-09-10T14:30:00Z'); // 21:30 — half an hour to go
+    card(week('8:00 AM – 10:00 PM'));
+    expect(shown()).toContain('until 22:00');
+  });
+
+  // On the photograph, not the meta line — and said once, not twice.
+  it('marks a shut place on its picture, and does not repeat it below', () => {
+    vi.useFakeTimers();
+    atICT('2026-09-09T23:00:00Z'); // 06:00 — two hours before opening
+    card(week('8:00 AM – 10:00 PM'));
+    expect(shown()).toContain('Closed · opens 08:00');
+    expect(shown()).not.toContain('opens 08:00 ·');
+  });
+
+  // A place that never closes is the one place where nothing is ever
+  // about to happen.
+  it('says nothing for a place that is always open', () => {
+    vi.useFakeTimers();
+    atICT('2026-09-10T03:00:00Z');
+    card(week('Open 24 hours'));
+    expect(shown()).toContain('Hoan Kiem');
+    expect(shown()).not.toContain('24');
   });
 });
 

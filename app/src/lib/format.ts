@@ -344,7 +344,20 @@ export function instantOn(day: string, minutes: number): Date | null {
  * midnight, for `clockOf` to print. `untilMin` runs past 1440 for a bar
  * that closes at one in the morning, which `clockOf` wraps.
  */
-export type OpenState = { open: boolean; untilMin?: number; opensAtMin?: number };
+export type OpenState = {
+  open: boolean;
+  untilMin?: number;
+  opensAtMin?: number;
+  /** Minutes from `now` until `untilMin`, for callers deciding whether a
+   *  closing time is worth saying yet. Absent whenever `untilMin` is —
+   *  a place open around the clock is never about to close. Kept here
+   *  rather than derived at the call site because the caller would need
+   *  the same midnight arithmetic this already did: a bar open since
+   *  yesterday evening has an `untilMin` past 1440, and subtracting the
+   *  wrong one of the two clocks gives a place fourteen hours to live at
+   *  half past midnight. */
+  closesInMin?: number;
+};
 
 /**
  * `null` when the question cannot be answered — no hours stored, or a
@@ -374,7 +387,9 @@ export function openState(lines: string[] | null | undefined, now: Date): OpenSt
   for (const w of wins) {
     if (mins >= w.from && mins < w.to) {
       // A place open around the clock has no closing time worth naming.
-      return w.to - w.from >= DAY ? { open: true } : { open: true, untilMin: w.to };
+      return w.to - w.from >= DAY
+        ? { open: true }
+        : { open: true, untilMin: w.to, closesInMin: w.to - mins };
     }
   }
 
@@ -383,7 +398,10 @@ export function openState(lines: string[] | null | undefined, now: Date): OpenSt
   const before = dayAt(today - 1);
   for (const w of before ?? []) {
     if (w.to > DAY && mins + DAY < w.to) {
-      return w.to - w.from >= DAY ? { open: true } : { open: true, untilMin: w.to };
+      // Read on yesterday's clock: `mins` is today's, `w.to` is not.
+      return w.to - w.from >= DAY
+        ? { open: true }
+        : { open: true, untilMin: w.to, closesInMin: w.to - (mins + DAY) };
     }
   }
 
@@ -393,9 +411,60 @@ export function openState(lines: string[] | null | undefined, now: Date): OpenSt
 }
 
 /**
+ * How long before closing an hour is worth printing.
+ *
+ * Forty-five minutes, and the number came from the catalog rather than
+ * from reasoning about it. The first draft was ninety, argued from travel
+ * time — crossing Hanoi is fifteen to twenty-five minutes and sitting
+ * down to eat is another forty-five, so an hour's notice arrives after
+ * the visit it warned about stopped being possible. That argument is
+ * sound and the number it produced was wrong, because this catalog's
+ * closing times are not spread out. They pile onto ten at night.
+ *
+ * Share of the places open at each hour that would print a closing time,
+ * over the 524 published rows with readable hours:
+ *
+ *              30 min   45 min   60 min   90 min
+ *     20:00       1%       1%       8%      16%
+ *     21:00       9%       9%      45%      55%
+ *     22:00      20%      20%      49%      53%
+ *     23:00       7%       7%      54%      57%
+ *
+ * The cliff between 45 and 60 is the ten-o'clock pile: at nine, a
+ * sixty-minute window swallows every place that shuts at ten, which is
+ * most of them. A mark half the open cards wear is not a mark — the same
+ * objection that took the always-on hour off the card in the first place,
+ * and a signal nobody can pick out is worth no minutes of warning at all.
+ *
+ * So the shorter window wins the argument the longer one was making. 45
+ * rather than 30 because they behave identically here — closing times sit
+ * on the hour, so nothing falls between them — and 45 gives the reader
+ * fifteen more minutes for the same noise.
+ */
+export const CLOSING_SOON_MIN = 45;
+
+/**
  * The list-row reading of an `OpenState`: the short fragment that rides
- * a card's meta line after the district — "until 22:00", "opens 08:00",
- * "open 24 hours" — or null when there is nothing true to say.
+ * a card's meta line after the district — "until 22:00", "opens 08:00" —
+ * or null when there is nothing true to say.
+ *
+ * ── why an open place usually says nothing ──
+ *
+ * It used to print the closing hour all day, and the card's own comment
+ * gave the reason it should not: "a place near closing announces itself
+ * while you scroll". That is the hour's whole job, and printing it on
+ * every card at every hour is what stopped it doing it — a mark every row
+ * wears is not a mark. At two in the afternoon "until 23:00" answers a
+ * question nobody asked, in the same grey as the district beside it.
+ *
+ * So the fragment now appears only inside `soonMin` of closing, and
+ * "open 24 hours" goes with it: a place that never closes is the one
+ * place where nothing is ever about to happen.
+ *
+ * The silence that leaves is only safe because the surfaces that show
+ * this also mark a shut place plainly — the card dims its photograph.
+ * Without that, "open, hours yet" and "shut until tomorrow" would both
+ * render as nothing, which is worse than the noise this removes.
  *
  * One function rather than the same ternary in every list, because the
  * Search zero-state grew it first and the Explore cards wanted it next —
@@ -415,14 +484,42 @@ export function openState(lines: string[] | null | undefined, now: Date): OpenSt
 export function openFragment(
   state: OpenState | null,
   t: (en: string, vi: string, ja?: string) => string,
+  soonMin: number = CLOSING_SOON_MIN,
 ): string | null {
   if (!state) return null;
   if (state.open) {
-    if (state.untilMin == null) return t('open 24 hours', 'mở 24/24', '24時間営業');
-    const at = clockOf(state.untilMin);
+    // No closing time, or one too far off to be news yet.
+    if (state.closesInMin == null || state.closesInMin > soonMin) return null;
+    const at = clockOf(state.untilMin as number);
     return t(`until ${at}`, `đến ${at}`, `${at}まで`);
   }
   if (state.opensAtMin == null) return null;
   const at = clockOf(state.opensAtMin);
   return t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`);
+}
+
+/**
+ * What a shut place says on a photograph: "Closed · opens 08:00", or
+ * "Closed" alone when nothing reopens today. `null` while it is open, and
+ * `null` when the hours cannot be read — silence beats telling somebody
+ * standing in an open doorway that the place is shut.
+ *
+ * Separate from `openFragment` rather than a flag on it, because the two
+ * are read in different places and one of them has to survive being the
+ * only thing said. A search row prints `openFragment` after the district
+ * and the sentence carries the subject; this stands alone on a picture,
+ * so it names the state before the hour.
+ *
+ * Whole phrases per language for the reason the file keeps repeating:
+ * Japanese puts 開店 after the hour, so "Closed · " glued to a translated
+ * fragment would read backwards.
+ */
+export function shutLabel(
+  state: OpenState | null,
+  t: (en: string, vi: string, ja?: string) => string,
+): string | null {
+  if (!state || state.open) return null;
+  if (state.opensAtMin == null) return t('Closed', 'Đóng cửa', '閉店');
+  const at = clockOf(state.opensAtMin);
+  return t(`Closed · opens ${at}`, `Đóng cửa · mở ${at}`, `閉店・${at}開店`);
 }

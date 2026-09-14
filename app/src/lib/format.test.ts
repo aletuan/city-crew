@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clockOf, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, instantOn, openFragment, openState, splitHours } from './format';
+import { CLOSING_SOON_MIN, clockOf, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, instantOn, openFragment, openState, shutLabel, splitHours } from './format';
 import { fmtDistance } from './geo';
 
 describe('fmtMinutes', () => {
@@ -285,7 +285,8 @@ describe('openState', () => {
   });
 
   it('is open inside the window, and names the closing time', () => {
-    expect(openState(week('8:00 AM – 11:00 PM'), WED_10AM)).toEqual({ open: true, untilMin: 23 * 60 });
+    expect(openState(week('8:00 AM – 11:00 PM'), WED_10AM))
+      .toEqual({ open: true, untilMin: 23 * 60, closesInMin: 780 });
   });
 
   it('is closed before opening, and names the opening time', () => {
@@ -302,7 +303,7 @@ describe('openState', () => {
     // 10:00 ICT exactly: inside a window that starts then, outside one
     // that ends then.
     expect(openState(week('10:00 AM – 11:00 PM'), at('2026-08-12T03:00:00Z')))
-      .toEqual({ open: true, untilMin: 23 * 60 });
+      .toEqual({ open: true, untilMin: 23 * 60, closesInMin: 780 });
     expect(openState(week('6:00 AM – 10:00 AM'), at('2026-08-12T03:00:00Z')))
       .toEqual({ open: false });
   });
@@ -313,12 +314,14 @@ describe('openState', () => {
       'Wednesday: 9:00 AM – 6:00 PM', 'Thursday: Closed',
       'Friday: Closed', 'Saturday: Closed', 'Sunday: Closed',
     ];
-    expect(openState(lines, WED_10AM)).toEqual({ open: true, untilMin: 18 * 60 });
+    expect(openState(lines, WED_10AM)).toEqual({ open: true, untilMin: 18 * 60, closesInMin: 480 });
   });
 
   it('stays open past midnight on the window that started yesterday', () => {
+    // Half an hour left, not fourteen and a half: `closesInMin` is read on
+    // yesterday's clock, which is the arithmetic that field exists to own.
     expect(openState(week('7:00 PM – 1:00 AM'), WED_MIDNIGHT_30))
-      .toEqual({ open: true, untilMin: 25 * 60 });
+      .toEqual({ open: true, untilMin: 25 * 60, closesInMin: 30 });
   });
 
   // Same clock, but nothing ran into today — the small hours are shut.
@@ -329,7 +332,7 @@ describe('openState', () => {
 
   it('treats a midnight close as the end of the day, not the start', () => {
     expect(openState(week('8:00 AM – 12:00 AM'), at('2026-08-12T15:00:00Z')))
-      .toEqual({ open: true, untilMin: 24 * 60 });
+      .toEqual({ open: true, untilMin: 24 * 60, closesInMin: 120 });
   });
 
   it('is open around the clock without inventing a closing time', () => {
@@ -346,23 +349,25 @@ describe('openState', () => {
   it('borrows the missing meridiem from the closing time', () => {
     expect(openState(week('5:00 – 10:00 PM'), WED_10AM)).toEqual({ open: false, opensAtMin: 17 * 60 });
     expect(openState(week('5:00 – 10:00 PM'), at('2026-08-12T11:00:00Z')))
-      .toEqual({ open: true, untilMin: 22 * 60 });
+      .toEqual({ open: true, untilMin: 22 * 60, closesInMin: 240 });
   });
 
   it('handles a lunch break as two windows', () => {
     const hours = week('10:00 AM – 1:50 PM, 4:00 – 8:50 PM');
-    expect(openState(hours, WED_10AM)).toEqual({ open: true, untilMin: 13 * 60 + 50 });
+    expect(openState(hours, WED_10AM))
+      .toEqual({ open: true, untilMin: 13 * 60 + 50, closesInMin: 230 });
     // 15:00 ICT — after the first window, before the second.
     expect(openState(hours, at('2026-08-12T08:00:00Z'))).toEqual({ open: false, opensAtMin: 16 * 60 });
     // 17:00 ICT — inside the second.
-    expect(openState(hours, at('2026-08-12T10:00:00Z'))).toEqual({ open: true, untilMin: 20 * 60 + 50 });
+    expect(openState(hours, at('2026-08-12T10:00:00Z')))
+      .toEqual({ open: true, untilMin: 20 * 60 + 50, closesInMin: 230 });
   });
 
   it('noon and midnight do not collapse into each other', () => {
     // Both read "12:00"; only the meridiem separates midday from the top
     // of the morning. At 13:00 ICT one is open and the other shut hours ago.
     expect(openState(week('12:00 PM – 5:00 PM'), at('2026-08-12T06:00:00Z')))
-      .toEqual({ open: true, untilMin: 17 * 60 });
+      .toEqual({ open: true, untilMin: 17 * 60, closesInMin: 240 });
     expect(openState(week('12:00 AM – 6:00 AM'), at('2026-08-12T06:00:00Z')))
       .toEqual({ open: false });
   });
@@ -510,17 +515,40 @@ describe('openFragment', () => {
   const vi = (_e: string, v: string) => v;
   const ja = (_e: string, _v: string, j?: string) => j ?? '';
 
-  it('reads an open place as the hour it stops being one', () => {
-    expect(openFragment({ open: true, untilMin: 1320 }, en)).toBe('until 22:00');
-    expect(openFragment({ open: true, untilMin: 1320 }, vi)).toBe('đến 22:00');
+  it('reads a place about to close as the hour it stops being open', () => {
+    const soon = { open: true, untilMin: 1320, closesInMin: 45 };
+    expect(openFragment(soon, en)).toBe('until 22:00');
+    expect(openFragment(soon, vi)).toBe('đến 22:00');
     // Japanese puts まで after the hour — the whole-phrase rule, visible.
-    expect(openFragment({ open: true, untilMin: 1320 }, ja)).toBe('22:00まで');
+    expect(openFragment(soon, ja)).toBe('22:00まで');
   });
 
-  it('says a place that never closes never closes', () => {
-    expect(openFragment({ open: true }, en)).toBe('open 24 hours');
-    expect(openFragment({ open: true }, vi)).toBe('mở 24/24');
-    expect(openFragment({ open: true }, ja)).toBe('24時間営業');
+  // The change this function exists to make. A closing time nine hours
+  // out is not news, and printing it on every card all day is what kept
+  // the ones that *were* news from standing out.
+  it('stays quiet while closing is still far off', () => {
+    expect(openFragment({ open: true, untilMin: 1320, closesInMin: 540 }, en)).toBeNull();
+  });
+
+  // The boundary belongs to the fragment: at exactly the threshold it
+  // speaks, one minute later it does not.
+  it('speaks at the threshold and not a minute past it', () => {
+    expect(openFragment({ open: true, untilMin: 1320, closesInMin: CLOSING_SOON_MIN }, en))
+      .toBe('until 22:00');
+    expect(openFragment({ open: true, untilMin: 1320, closesInMin: CLOSING_SOON_MIN + 1 }, en))
+      .toBeNull();
+  });
+
+  it('takes a threshold of its own when a caller has a reason', () => {
+    const state = { open: true, untilMin: 1320, closesInMin: 100 };
+    expect(openFragment(state, en, 120)).toBe('until 22:00');
+    expect(openFragment(state, en, 60)).toBeNull();
+  });
+
+  // A place open around the clock is the one place where nothing is ever
+  // about to happen, so it has nothing to say on a row.
+  it('says nothing for a place that never closes', () => {
+    expect(openFragment({ open: true }, en)).toBeNull();
   });
 
   it('reads a closed place as the hour it stops being one', () => {
@@ -541,6 +569,39 @@ describe('openFragment', () => {
   });
 
   it('wraps a past-midnight closing time like the clock it is', () => {
-    expect(openFragment({ open: true, untilMin: 1560 }, en)).toBe('until 02:00');
+    expect(openFragment({ open: true, untilMin: 1560, closesInMin: 30 }, en)).toBe('until 02:00');
+  });
+});
+
+describe('shutLabel', () => {
+  const en = (e: string) => e;
+  const vi = (_e: string, v: string) => v;
+  const ja = (_e: string, _v: string, j?: string) => j ?? '';
+
+  // Unlike `openFragment`, this stands alone on a photograph with no
+  // district in front of it, so it names the state before the hour.
+  it('names the state and the hour it changes', () => {
+    const shut = { open: false, opensAtMin: 480 };
+    expect(shutLabel(shut, en)).toBe('Closed · opens 08:00');
+    expect(shutLabel(shut, vi)).toBe('Đóng cửa · mở 08:00');
+    expect(shutLabel(shut, ja)).toBe('閉店・08:00開店');
+  });
+
+  // Here the bare word is safe in a way it is not on a row: a dimmed
+  // photograph behind it has already said this is about today.
+  it('says the state alone when nothing reopens today', () => {
+    expect(shutLabel({ open: false }, en)).toBe('Closed');
+    expect(shutLabel({ open: false }, vi)).toBe('Đóng cửa');
+    expect(shutLabel({ open: false }, ja)).toBe('閉店');
+  });
+
+  it('says nothing about a place that is open', () => {
+    expect(shutLabel({ open: true, untilMin: 1320, closesInMin: 45 }, en)).toBeNull();
+  });
+
+  // Telling somebody standing in an open doorway that the place is shut
+  // is the failure `openState`'s own null is there to prevent.
+  it('says nothing when the hours could not be read', () => {
+    expect(shutLabel(null, en)).toBeNull();
   });
 });

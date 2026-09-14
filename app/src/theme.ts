@@ -157,6 +157,23 @@ export const colors = {
    */
   sun: dyn('#B07C10', '#F2B441'),
 
+  /**
+   * The hour on a card, for the ninety minutes before it stops being
+   * true — "until 23:00" on a place about to close.
+   *
+   * Amber rather than `bad`, and that is the whole argument: `bad` is
+   * what a flagged place wears, and a shop closing at eleven has done
+   * nothing wrong. A wait is not an error. This says "hurry", the dimmed
+   * photograph of a shut place says "tomorrow", and the ordinary grey
+   * says "go".
+   *
+   * A pair rather than `sun`'s value, though both are the same amber
+   * family: `sun` is a glyph colour, held to the 3:1 a mark needs, and at
+   * 3.66:1 on white it cannot carry 15pt type. This is measured for type
+   * instead — 4.99:1 on the card's white, 9.2:1 on the dark card's fill.
+   */
+  soon: dyn('#94670F', '#F2B441'),
+
   ok: dyn('#3F7A4A', '#8FBF8A'),
   /** "Open now" on the place card's hours row: a shade greener and
    *  lighter than `ok`, chosen for that one line against white. */

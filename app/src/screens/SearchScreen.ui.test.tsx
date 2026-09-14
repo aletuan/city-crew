@@ -224,13 +224,32 @@ describe('the zero-state', () => {
     expect(screen.queryByText('Nightlife')).toBeNull();
   });
 
-  it('lists only the places open at this minute, with how long they stay open', () => {
+  it('lists only the places open at this minute', () => {
     mount();
     const open = textAfter('Open right now');
     const section = open.slice(0, open.indexOf('Most popular'));
     expect(section).toContain('Cong Caphe');
-    expect(section).toContain('Hoan Kiem · until 22:00');
     expect(section).not.toContain('Phở 10');
+  });
+
+  // Ten in the morning, and the café has twelve hours left. It used to
+  // print "until 22:00" here, on every row, all day — see
+  // CLOSING_SOON_MIN for why an hour that is always on says nothing.
+  it('leaves the hour off a place that is nowhere near closing', () => {
+    mount();
+    const open = textAfter('Open right now');
+    const section = open.slice(0, open.indexOf('Most popular'));
+    expect(section).toContain('Hoan Kiem');
+    expect(section).not.toContain('until 22:00');
+  });
+
+  // Half an hour out is exactly when the hour is worth the space it takes.
+  it('names the closing hour once the place is about to close', () => {
+    vi.setSystemTime(new Date('2026-09-10T14:30:00Z')); // 21:30 in Hanoi
+    mount();
+    const open = textAfter('Open right now');
+    const section = open.slice(0, open.indexOf('Most popular'));
+    expect(section).toContain('Hoan Kiem · until 22:00');
   });
 
   it('says when a closed place opens, and shows the rating on the right', () => {

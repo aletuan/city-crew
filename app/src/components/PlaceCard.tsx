@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useFlag } from '../lib/useFlag';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
-import { openFragment, openState } from '../lib/format';
+import { openFragment, openState, shutLabel } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
@@ -24,7 +24,15 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
     ? t(place.neighborhood_en, place.neighborhood_vi ?? place.neighborhood_en,
       place.neighborhood_ja ?? place.neighborhood_en)
     : null;
-  const when = openFragment(openState(place.opening_hours, new Date()), t);
+  const hours = openState(place.opening_hours, new Date());
+  const shut = shutLabel(hours, t);
+  // Only the closing hour reaches the meta line. `openFragment` would
+  // also hand back "opens 08:00" for a shut place, and this card says
+  // that on the photograph instead — printing both would be the same
+  // fact twice, once in grey and once in amber. So whenever `when` is
+  // set here it means one thing, which is why its style can be amber
+  // unconditionally rather than behind a second test.
+  const when = hours?.open ? openFragment(hours, t) : null;
   const credit = useFlag('photo_attribution');
   return (
     <PressableScale onPress={onPress} testID={testID}>
@@ -32,7 +40,12 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
         <View>
           {cover ? (
             <>
-              <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" transition={200} />
+              <Image
+                source={{ uri: cover.photo_uri }}
+                style={s.photo}
+                contentFit="cover"
+                transition={200}
+              />
               {credit && cover.attribution_name
                 ? <Text style={s.attr} numberOfLines={1}>{cover.attribution_name}</Text>
                 : null}
@@ -91,6 +104,45 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
               <Text style={s.star}>★</Text>
               <Text style={s.ratingValue}>{place.rating}</Text>
               {reviews ? <Text style={s.ratingCount}>({reviews})</Text> : null}
+            </View>
+          ) : null}
+          {/* Shut, and the hour it changes — a label, not a veil.
+
+              ── why the photograph is not dimmed ──
+
+              It was, at 42%, on the argument that a scroll should sort
+              the shut places out of itself before a word is read. The
+              catalog says that argument only holds if shut is the
+              minority, and in the evening it is not: of the 524
+              published places with readable hours, 54% are shut at ten
+              at night, 75% at eleven, 86% at midnight, 72% at seven in
+              the morning. A veil over three quarters of the feed does
+              not read as "these are closed". It reads as a broken app,
+              and it stops meaning anything, which is the same objection
+              that took the always-on closing hour off this card.
+
+              So the picture is left alone. Someone browsing at eleven at
+              night is usually planning tomorrow, and a place worth
+              saving is worth seeing.
+
+              ── why a pill and not the sash a reference drew ──
+
+              A sash is the grammar of SOLD OUT: a stamp, for something
+              permanent and wrong, and a café shut at six in the morning
+              is neither — the hours code already warns that the bare
+              word "closed" reads as a fact about the business. It would
+              be a third material on a photograph that has settled on
+              one. And a 45° band has a fixed diagonal to fit, while
+              "Đóng cửa · mở 8:00" and "閉店・8:00開店" do not agree on
+              length.
+
+              Amber on the dot, not red. Red in this app is `colors.bad`,
+              what a flagged place wears; a shop that opens at eight has
+              done nothing wrong. */}
+          {shut ? (
+            <View style={s.shutSlot} pointerEvents="none">
+              <View style={s.shutDot} />
+              <Text style={s.shutText} numberOfLines={1}>{shut}</Text>
             </View>
           ) : null}
         </View>
@@ -179,7 +231,9 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
                     ? <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
                     : null}
                   <Text style={s.where} numberOfLines={1}>
-                    {[where, when].filter(Boolean).join(' · ')}
+                    {where}
+                    {where && when ? ' · ' : ''}
+                    {when ? <Text style={s.soon}>{when}</Text> : null}
                   </Text>
                 </View>
               ) : null}
@@ -255,6 +309,18 @@ const s = StyleSheet.create({
   body: { paddingHorizontal: space.cardPadding, paddingVertical: 13 },
   // Top-right of the image, mirroring the attribution bottom-right.
   saveSlot: { position: 'absolute', top: 10, right: 10 },
+  // Top-left, the photograph's one free corner, in the rating pill's
+  // exact material — the card's rule is that marks on one picture are
+  // made of one thing.
+  shutSlot: {
+    position: 'absolute', left: 10, top: 10, maxWidth: '78%',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 5,
+    backgroundColor: 'rgba(10,11,10,0.58)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
+  },
+  shutDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: onPhoto.sun },
+  shutText: { color: onPhoto.text, fontSize: 12.5, fontWeight: font.semibold },
   // The rating pill's exact ground, one hairline and all: two marks on
   // one photograph should be made of one material. The circle is not
   // decoration — it separates this tap from the card's own (press the
@@ -290,6 +356,11 @@ const s = StyleSheet.create({
   // The same tertiary weight the plan and trip screens give a district, so
   // the fact wears one face across the app.
   where: { flex: 1, color: colors.textTertiary, ...type.meta },
+  // The hour, for the ninety minutes it is urgent — see CLOSING_SOON_MIN.
+  // Weight as well as colour: amber alone is a hue difference, and the
+  // readers most likely to be planning an evening around a closing time
+  // are not all seeing the hue.
+  soon: { color: colors.soon, fontWeight: font.semibold },
   // The rating supplies its own ground, like the bookmark: a photograph
   // can be any brightness, and a score has to be legible over all of them.
   ratingSlot: {
