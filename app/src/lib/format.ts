@@ -367,7 +367,15 @@ export type OpenState = {
  * `now` is injected so this is a pure function of its inputs; the screen
  * passes the real clock.
  */
-export function openState(lines: string[] | null | undefined, now: Date): OpenState | null {
+/**
+ * The place's own clock, and a way to read any day of its week.
+ *
+ * Extracted because two functions need it and none of it is arithmetic
+ * worth having two copies of: the timezone shift that must not be applied
+ * twice, the Monday/Sunday disagreement between Google's week and
+ * JavaScript's, and the wrap that lets a caller ask for `today - 1`.
+ */
+function readWeek(lines: string[] | null | undefined, now: Date) {
   if (!lines?.length) return null;
   // Shift onto the place's clock, then read the shifted instant in UTC —
   // the local accessors would apply the device's offset a second time.
@@ -375,11 +383,17 @@ export function openState(lines: string[] | null | undefined, now: Date): OpenSt
   const mins = local.getUTCHours() * 60 + local.getUTCMinutes();
   // Google's week starts on Monday; JavaScript's on Sunday.
   const today = (local.getUTCDay() + 6) % 7;
-
   const dayAt = (i: number) => {
     const line = lines[((i % lines.length) + lines.length) % lines.length];
     return line === undefined ? null : parseDay(splitHours(line)[1]);
   };
+  return { mins, today, dayAt };
+}
+
+export function openState(lines: string[] | null | undefined, now: Date): OpenState | null {
+  const week = readWeek(lines, now);
+  if (!week) return null;
+  const { mins, today, dayAt } = week;
 
   const wins = dayAt(today);
   if (!wins) return null;
@@ -496,6 +510,63 @@ export function openFragment(
   if (state.opensAtMin == null) return null;
   const at = clockOf(state.opensAtMin);
   return t(`opens ${at}`, `mở lúc ${at}`, `${at}開店`);
+}
+
+/**
+ * One stretch of a day a place is open, in minutes past this midnight.
+ *
+ * `runsOn` means the window does not end today — the bar that shuts at two
+ * in the morning. The segment is clipped at midnight and the flag says the
+ * clipping happened, so a renderer can square that edge off rather than
+ * drawing a rounded end that claims the place shuts at twelve.
+ */
+export type BandSegment = { fromMin: number; toMin: number; runsOn: boolean };
+
+/** The width of the axis a `DayBand` is drawn on. Exported so a renderer
+ *  scales by the same day this file clips to, rather than its own 1440. */
+export const MINUTES_IN_DAY = DAY;
+
+/** A day's opening, drawn rather than summarised: every window of today
+ *  plus wherever the clock has reached. */
+export type DayBand = { nowMin: number; segments: BandSegment[] };
+
+/**
+ * A day laid out end to end, for a card to draw as a band.
+ *
+ * `openState` answers a question — open, shut, closing when — and three
+ * answers is all a word can carry. This hands back the shape instead: the
+ * lunch break that splits a day in two, the bar that runs past midnight,
+ * the place that is shut today and open tomorrow. A tenth of this catalog
+ * has a shape a sentence cannot hold.
+ *
+ * Segments are clipped to today, and yesterday's overrun is drawn at the
+ * left edge where it actually falls: the bar that opened at seven last
+ * night and shuts at one is part of *this* morning, and a reader looking
+ * at half past midnight should see the bar they are standing in.
+ *
+ * `null` on hours that cannot be read, for the reason everything else in
+ * this file returns null there — a band drawn from nothing would be a
+ * confident drawing of a guess. An empty `segments` is different and is
+ * not null: it means the hours were read and say the place is shut all
+ * day, which is worth drawing as an empty track.
+ */
+export function dayBand(lines: string[] | null | undefined, now: Date): DayBand | null {
+  const week = readWeek(lines, now);
+  if (!week) return null;
+  const { mins, today, dayAt } = week;
+  const wins = dayAt(today);
+  if (!wins) return null;
+
+  const segments: BandSegment[] = [];
+  // Yesterday first, so the early hours are drawn before the morning that
+  // follows them and the band reads left to right in the order of the day.
+  for (const w of dayAt(today - 1) ?? []) {
+    if (w.to > DAY) segments.push({ fromMin: 0, toMin: Math.min(w.to - DAY, DAY), runsOn: false });
+  }
+  for (const w of wins) {
+    segments.push({ fromMin: w.from, toMin: Math.min(w.to, DAY), runsOn: w.to > DAY });
+  }
+  return { nowMin: mins, segments };
 }
 
 /**
