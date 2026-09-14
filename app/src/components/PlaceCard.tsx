@@ -267,13 +267,25 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
   name: { color: colors.text, ...type.cardTitle },
-  // Tight under the name it qualifies — 3pt, not the 8 the status row and
-  // the chips take, because those are separate statements and this is the
-  // second half of the first one.
   // District and hour on the left, the vibe pill on the right, on one line.
   // The text cluster takes the slack and the pill keeps its size — see the
   // note beside the markup for which half is allowed to give way.
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 3 },
+  //
+  // 8pt above it, the same the status row takes, and it used to be 3. The
+  // 3 was argued for: this line was the second half of the name's
+  // sentence, so it sat tight under it while separate statements got 8.
+  // That stopped being true when the vibe pill moved onto this line. A row
+  // with a pill anchored to its right edge is not the tail of the sentence
+  // above it — it is a row, and it reads as one whether or not the spacing
+  // admits it.
+  //
+  // The number is not free-drawn. Neither text here sets `lineHeight`, so
+  // each carries its own half-leading and 3pt of margin renders as about
+  // 10.6pt of white between the letters; the reference card has about
+  // 16.9. Two ways of measuring the difference — ink to ink, and baseline
+  // to baseline — both land between 7 and 8, and 8 is the one this file
+  // already owns.
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
   whereRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
   // The same tertiary weight the plan and trip screens give a district, so
   // the fact wears one face across the app.
