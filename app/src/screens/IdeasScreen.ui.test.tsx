@@ -289,6 +289,23 @@ describe('the date picker', () => {
     expect([toISO(max), max.getHours(), max.getMinutes()]).toEqual([addDays(TODAY, 365), 23, 59]);
   });
 
+  // The glyph at the row's end is a control, not a picture of one. It
+  // ends this row because it ends the row above it, and a reader who
+  // aims at it has to land somewhere.
+  it('opens from the chevron at the row’s end as well as from the date', () => {
+    renderScreen();
+    fireEvent.click(screen.getByTestId('ideas-day-chevron'));
+    expect(picker.props).not.toBeNull();
+  });
+
+  // And says nothing while doing it: the date beside it is already the
+  // button, and a second nameless one on the same row is noise.
+  it('keeps the chevron out of the accessibility tree', () => {
+    renderScreen();
+    const named = screen.getAllByRole('button', { name: line(TODAY) });
+    expect(named).toHaveLength(1);
+  });
+
   it('takes a picked day into the draft and the button, and closes (not iOS)', () => {
     const navigation = renderScreen();
     open();
@@ -331,6 +348,28 @@ describe('the date picker', () => {
     tap('Cafés');
     fireEvent.click(cta());
     expect(sent(navigation)).toMatchObject({ date: TODAY, startMin: 22 * 60 + 15 });
+  });
+});
+
+// Two halves of one answer, and the control has to say so: exactly one
+// is checked at a time, and choosing the other unchecks the first.
+describe('day or evening', () => {
+  const half = (name: string) => screen.getByRole('radio', { name });
+
+  // Evening, from `EMPTY_DRAFT` — the control opens already answered
+  // rather than blank, so the reader is changing a plan rather than
+  // filling a field.
+  it('reads as a radio group with one half chosen', () => {
+    renderScreen();
+    expect(half('Evening').getAttribute('aria-checked')).toBe('true');
+    expect(half('Day').getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('swaps rather than adds', () => {
+    renderScreen();
+    fireEvent.click(half('Day'));
+    expect(half('Day').getAttribute('aria-checked')).toBe('true');
+    expect(half('Evening').getAttribute('aria-checked')).toBe('false');
   });
 });
 
