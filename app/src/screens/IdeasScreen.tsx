@@ -51,29 +51,24 @@ const endOfDay = (iso: string): Date | undefined => {
 };
 
 /**
- * A question, how many answers it takes, and the grid of them.
+ * A question and the grid of answers under it.
  *
- * The hint sits on the heading's line rather than under it, because it is
- * about the question and not about any one answer — and because a line of
- * its own would put a second sentence between the question and the cells
- * that answer it. It says what the control will actually do: "pick one"
- * beside a group that swaps, a running count beside one that adds up.
- * Before this the two groups looked identical and behaved differently,
- * which the reader could only learn by tapping twice and watching the
- * first choice disappear.
+ * No count and no "pick one" beside the heading. They were there to say
+ * which group swaps and which adds up, and they said it at the cost of a
+ * second voice on every heading — four questions, each with an aside.
+ * The screen is short on words on purpose, and the thing the asides
+ * explained is cheap to discover: a second tap on `Going with…` swaps the
+ * answer rather than refusing it, which is a forgiving way to learn a
+ * rule and leaves nothing to undo.
  */
-function Section({ title, hint, cols, children }: {
+function Section({ title, cols, children }: {
   title: string;
-  hint?: string;
   cols: number;
   children: React.ReactNode;
 }) {
   return (
     <View style={{ marginBottom: space.titleToContent }}>
-      <View style={s.headRow}>
-        <Text style={s.heading}>{title}</Text>
-        {hint ? <Text style={s.headHint}>{hint}</Text> : null}
-      </View>
+      <Text style={s.heading}>{title}</Text>
       <View style={s.grid}><TileGrid cols={cols}>{children}</TileGrid></View>
     </View>
   );
@@ -225,11 +220,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
             ("Who's coming?"), which read as a form to fill in; a copy
             edit here should keep them as openers the chip labels can
             complete, ellipsis and all. */}
-        <Section
-          title={t('Going with…', 'Bạn muốn đi cùng…', '一緒に行くのは…')}
-          hint={t('pick one', 'chọn một', '1つ')}
-          cols={4}
-        >
+        <Section title={t('Going with…', 'Bạn muốn đi cùng…', '一緒に行くのは…')} cols={4}>
           {COMPANY.map((c) => (
             <Tile
               key={c.key}
@@ -243,23 +234,12 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
           ))}
         </Section>
 
-        {/* A running count, not "n of 3". There is no cap on this group
-            and there must not be one: `planner.ts` sizes the outing from
-            how many were named, so a limit here would quietly shorten
-            somebody's day. The hint therefore reports rather than
-            rations — and it stays silent at zero, where a "0" beside a
-            question reads as a score. */}
-        <Section
-          title={t('In the mood for…', 'Hôm nay bạn thích…', '今日の気分は…')}
-          hint={draft.categories.length
-            ? t(
-              `${draft.categories.length} picked`,
-              `đã chọn ${draft.categories.length}`,
-              `${draft.categories.length}件`,
-            )
-            : t('pick any', 'chọn tuỳ thích', '自由に')}
-          cols={3}
-        >
+        {/* No cap on this group and there must not be one: `planner.ts`
+            sizes the outing from how many were named, so a limit here
+            would quietly shorten somebody's day. Nothing says so on
+            screen, because nothing needs to — an unlimited choice is the
+            one that needs no rule explained. */}
+        <Section title={t('In the mood for…', 'Hôm nay bạn thích…', '今日の気分は…')} cols={3}>
           {cats.map((c, i) => (
             <Tile
               key={c}
@@ -274,9 +254,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
         </Section>
 
         <View style={{ marginBottom: space.titleToContent }}>
-          <View style={s.headRow}>
-            <Text style={s.heading}>{t('Where and when…', 'Chỗ nào, lúc nào…', '場所と時間は…')}</Text>
-          </View>
+          <Text style={s.heading}>{t('Where and when…', 'Chỗ nào, lúc nào…', '場所と時間は…')}</Text>
           <Card style={s.whenCard}>
             <PressableScale onPress={() => setSheet(true)} style={s.whereRow} accessibilityRole="button">
               <Ionicons name="location-outline" size={19} color={colors.accent} />
@@ -379,11 +357,9 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
 
         {mine.data.length > 0 && (
           <View style={{ marginBottom: space.titleToContent }}>
-            <View style={s.headRow}>
-              <Text style={s.heading}>
-                {t('Start from what you love', 'Bắt đầu từ thứ bạn thích', 'お気に入りから始める')}
-              </Text>
-            </View>
+            <Text style={s.heading}>
+              {t('Start from what you love', 'Bắt đầu từ thứ bạn thích', 'お気に入りから始める')}
+            </Text>
             <Card style={{ paddingVertical: 4 }}>
               {mine.data.map((c, i) => {
                 const members = membersOf(c, places);
@@ -570,21 +546,16 @@ const s = StyleSheet.create({
     color: colors.textTertiary, fontFamily: quoteFace, fontSize: 12.5, letterSpacing: 0.4,
     paddingHorizontal: space.page, marginTop: 3, marginBottom: space.titleToContent,
   },
-  heading: { color: colors.text, ...type.headline, flexShrink: 1 },
+  heading: {
+    color: colors.text, ...type.headline,
+    paddingHorizontal: space.page, marginBottom: space.headingToContent,
+  },
 
   // No heading above it, unlike every question below. A heading would make
   // it a fifth question; without one it reads as an alternative to the four,
   // which is what it is.
 
   grid: { paddingHorizontal: space.page },
-  // The heading and its hint share a baseline: the hint is an aside to
-  // the question, and a hint that sat on the cap line would read as a
-  // second, quieter heading.
-  headRow: {
-    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
-    gap: 12, paddingHorizontal: space.page, marginBottom: space.headingToContent,
-  },
-  headHint: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold },
 
   whenCard: { marginHorizontal: space.page, paddingVertical: 4 },
   whereRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 14, paddingVertical: 14 },
