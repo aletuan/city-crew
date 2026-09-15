@@ -107,6 +107,16 @@ const bioField = () => field('Coffee lover · Weekend explorer');
 const type = (el: HTMLElement, value: string) => fireEvent.change(el, { target: { value } });
 const saveButton = () => screen.getByRole('button', { name: 'Save changes' });
 const save = () => fireEvent.click(saveButton());
+/**
+ * Make the form dirty, the way a reader would before pressing Save.
+ *
+ * Save is lit only when there is something to save (or a stored handle
+ * that will not pass), so a test that means to exercise the write has to
+ * have changed something first. The bio is the field these tests care
+ * least about — none of them assert it — so nudging it moves the form
+ * into the state under test without disturbing what is being measured.
+ */
+const touch = () => type(bioField(), 'Pho at dawn');
 const lastAlertButtons = () =>
   alert.mock.calls.at(-1)![2] as { text: string; style?: string; onPress?: () => void }[];
 
@@ -144,6 +154,7 @@ describe('the form as it opens', () => {
   it('seeds the interests and switch from the stored row, dropping keys the taxonomy lacks', async () => {
     state.prefs = { data: { categories: ['cafes', 'bogus', 'cafes', 'views'], budget_vnd: 500000, history_on: false }, loadedAt: 1 };
     renderScreen();
+    touch();
     save();
     await waitFor(() => expect(spies.savePreferences).toHaveBeenCalled());
     expect(spies.savePreferences).toHaveBeenCalledWith('me', {
@@ -158,6 +169,7 @@ describe('the form as it opens', () => {
     expect(screen.queryByText('Interests')).toBeNull();
     expect(screen.queryByText('Remember what I open')).toBeNull();
     expect(screen.queryByRole('button', { name: /Delete my history/ })).toBeNull();
+    touch();
     save();
     await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
     expect(spies.updateProfile).toHaveBeenCalled();
@@ -191,6 +203,7 @@ describe('what Save sends', () => {
     spies.updateProfile.mockImplementation(async () => { order.push('profile'); });
     spies.savePreferences.mockImplementation(async () => { order.push('prefs'); });
     const { navigation } = renderScreen();
+    touch();
     save();
     await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
     expect(order).toEqual(['profile', 'prefs']);
@@ -222,6 +235,7 @@ describe('the handle', () => {
     // `maxLength` stops typing, not a value set from outside it.
     state.profile = { ...state.profile, handle: 'a'.repeat(21) };
     renderScreen();
+    touch();
     save();
     expect(await screen.findByText('20 characters at most.')).toBeTruthy();
     expect(spies.updateProfile).not.toHaveBeenCalled();
@@ -260,6 +274,7 @@ describe('failures', () => {
   it('puts any other profile failure by the button, in words', async () => {
     spies.updateProfile.mockRejectedValue(new Error('network down'));
     const { navigation } = renderScreen();
+    touch();
     save();
     expect(await screen.findByText('Network down')).toBeTruthy();
     expect(navigation.goBack).not.toHaveBeenCalled();
@@ -269,6 +284,7 @@ describe('failures', () => {
   it('keeps the form open when the preferences write fails after the profile landed', async () => {
     spies.savePreferences.mockRejectedValue(new Error('prefs down'));
     const { navigation } = renderScreen();
+    touch();
     save();
     expect(await screen.findByText('Prefs down')).toBeTruthy();
     expect(spies.updateProfile).toHaveBeenCalled();
@@ -278,6 +294,7 @@ describe('failures', () => {
   it('clears the old message when trying again', async () => {
     spies.updateProfile.mockRejectedValueOnce(new Error('network down'));
     const { navigation } = renderScreen();
+    touch();
     save();
     await screen.findByText('Network down');
     // Two things this waits for, and the tap needs both.
@@ -305,6 +322,7 @@ describe('saving', () => {
     let finish!: () => void;
     spies.updateProfile.mockImplementation(() => new Promise<void>((r) => { finish = r; }));
     const { navigation } = renderScreen();
+    touch();
     // Held across the tap: busy, the button loses its words and so its name.
     const button = saveButton();
     fireEvent.click(button);
@@ -314,6 +332,35 @@ describe('saving', () => {
     await act(async () => { finish(); });
     await waitFor(() => expect(navigation.goBack).toHaveBeenCalledTimes(1));
     expect(spies.savePreferences).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Save is lit by what there is to do, which is two questions and not one.
+describe('the Save button', () => {
+  it('is dead on a form nobody has touched', () => {
+    renderScreen();
+    expect(saveButton().getAttribute('aria-disabled')).toBe('true');
+    save();
+    expect(spies.updateProfile).not.toHaveBeenCalled();
+  });
+
+  // react-native-web omits the attribute rather than writing "false", so
+  // absent is what "live" looks like in the DOM.
+  it('lights as soon as anything changes', () => {
+    renderScreen();
+    touch();
+    expect(saveButton().getAttribute('aria-disabled')).toBeNull();
+  });
+
+  // The case a dead button would strand. Nothing has changed, and yet the
+  // one thing this form exists to do is still undone — pressing Save is
+  // how the reader is told "Choose a username."
+  it('stays live on an untouched form whose stored handle will not pass', () => {
+    state.profile = { ...state.profile, handle: '' };
+    renderScreen();
+    expect(saveButton().getAttribute('aria-disabled')).toBeNull();
+    save();
+    expect(screen.getByText('Choose a username.')).toBeTruthy();
   });
 });
 
@@ -375,6 +422,7 @@ describe('before the preferences row lands', () => {
   it('saves the profile and leaves the preferences row alone', async () => {
     state.prefs = { data: { categories: [], budget_vnd: null, history_on: true }, loadedAt: null };
     const { navigation } = renderScreen();
+    touch();
     save();
     await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
     expect(spies.updateProfile).toHaveBeenCalled();

@@ -427,6 +427,92 @@ export function Chip({ label, active, onPress, icon, iconColor, testID }: {
 }
 
 /**
+ * One cell of a chooser laid out as a grid: the glyph above its word.
+ *
+ * ── why this exists beside `Chip` ──
+ *
+ * A chip is sized by its label, which is right for a row of filters you
+ * skim — the widths are the shape of the answers. It is wrong for a set
+ * you *choose from*, where the labels have nothing to do with one another
+ * and their widths are noise: "Cà phê" beside "Thiên nhiên" beside "Về
+ * đêm" wraps into a ragged three-and-a-half lines, and the reader has to
+ * find the options before they can compare them. Nine equal cells in
+ * three rows can be read as a set, and a set is what a question with nine
+ * answers is.
+ *
+ * The glyph goes above the word rather than before it for the same
+ * reason: stacked, every cell's icon lands on one line and the eye can
+ * run down the column; inline, each one sits wherever its label's width
+ * put it.
+ *
+ * ── the two colours ──
+ *
+ * The icon keeps its category's hue in both states, exactly as `Chip`
+ * does and for the same reason: the hue is what ties this cell to the dot
+ * the same concept wears on a place card, so selection must not repaint
+ * it. What selection changes is the ground and the word — `accentSoft`
+ * under `accent`, the pair the app already uses for a chosen control.
+ */
+export function Tile({ label, icon, iconColor, active, onPress, testID }: {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  /** The concept's own hue, kept through selection. */
+  iconColor?: string;
+  active?: boolean;
+  onPress?: () => void;
+  testID?: string;
+}) {
+  return (
+    <PressableScale
+      onPress={onPress}
+      haptic="selection"
+      scaleTo={0.97}
+      containerStyle={{ flex: 1 }}
+      style={[s.tile, active && s.tileOn]}
+      accessibilityRole="button"
+      // `aria-selected` rather than `accessibilityState`, which
+      // react-native-web drops — see `Chip`.
+      aria-selected={!!active}
+      testID={testID}
+    >
+      <Ionicons name={icon} size={24} color={iconColor ?? colors.textSecondary} />
+      {/* Two lines allowed, and needed: "Nightlife" is "Về đêm" in one
+          language and "ナイトライフ" in another, and a cell a third of
+          the screen wide cannot hold the third on one line. Centred, so
+          a wrapped label stays under its own glyph. */}
+      <Text style={[s.tileText, active && s.tileTextOn]} numberOfLines={2}>{label}</Text>
+    </PressableScale>
+  );
+}
+
+/**
+ * `Tile`s in even columns.
+ *
+ * Rows are built here rather than left to `flexWrap`, and the last one is
+ * padded with spacers, because a wrapped row of `flex: 1` children
+ * stretches whatever landed in it: seven categories in threes would draw
+ * two normal rows and then one cell twice the width of the others,
+ * reading as emphasis on whichever concept happened to be seventh.
+ */
+export function TileGrid({ cols, children }: { cols: number; children: React.ReactNode }) {
+  const items = React.Children.toArray(children);
+  const rows: React.ReactNode[][] = [];
+  for (let i = 0; i < items.length; i += cols) rows.push(items.slice(i, i + cols));
+  return (
+    <View style={{ gap: 8 }}>
+      {rows.map((row, i) => (
+        <View key={i} style={s.tileRow}>
+          {row}
+          {Array.from({ length: cols - row.length }, (_, k) => (
+            <View key={`pad${k}`} style={{ flex: 1 }} />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/**
  * The switch between the halves of a screen — labelled doors, the open
  * one underlined.
  *
@@ -891,6 +977,20 @@ const s = StyleSheet.create({
   // Selected control carries the accent — same rule as the language pill.
   chipOn: { backgroundColor: colors.surfaceGlass, borderColor: colors.borderGlass },
   chipText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
+  // 82pt minimum so a two-line label does not make its cell taller than
+  // the rest of its row — the whole point of a grid is that the cells
+  // measure the same.
+  tile: {
+    minHeight: 82, borderRadius: 14, paddingHorizontal: 6, paddingTop: 12, paddingBottom: 10,
+    alignItems: 'center', justifyContent: 'center', gap: 7,
+  },
+  tileOn: { backgroundColor: colors.accentSoft },
+  tileText: {
+    color: colors.textSecondary, fontSize: 14, fontWeight: font.medium,
+    textAlign: 'center', lineHeight: 18,
+  },
+  tileTextOn: { color: colors.accent, fontWeight: font.semibold },
+  tileRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8 },
   chipTextOn: { color: colors.accent, fontWeight: font.semibold },
   tabsRow: {
     flexDirection: 'row', alignItems: 'center', gap: 26,

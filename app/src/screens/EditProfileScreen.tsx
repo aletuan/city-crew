@@ -243,7 +243,14 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       <Lede>{t('Tell your crew a little about yourself.', 'Kể cho hội của bạn nghe đôi chút về bạn.', 'あなたのことを少し教えてください。')}</Lede>
       {/* Named to match sign-up; see the note there for why the label
           moved off "Họ tên" and the hint into the imperative. */}
+      {/* One card, four rows, hairlines between — and no glyphs.
+          They were four separate boxes, each with a 22pt accent icon, and
+          that was four objects where the reader has one: their profile.
+          It also spent the accent four times on a screen whose only
+          accent-coloured thing should be the button that commits it. */}
+      <Card style={s.fields}>
       <FieldRow
+        grouped
         icon="person-outline"
         label={t('Display name', 'Tên hiển thị', '表示名')}
         placeholder={t('Enter your full name', 'Nhập họ và tên', 'お名前を入力')}
@@ -252,7 +259,9 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         autoComplete="name"
       />
       {/* Right under the name, the way it sits on the profile itself. */}
+      <View style={s.fieldLine} />
       <FieldRow
+        grouped
         icon="at-outline"
         label={t('Username', 'Tên người dùng', 'ユーザー名')}
         placeholder="yourname"
@@ -263,7 +272,9 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         autoCorrect={false}
         maxLength={HANDLE_MAX}
       />
+      <View style={s.fieldLine} />
       <FieldRow
+        grouped
         icon="location-outline"
         // Same word the profile shows it under. The field and the row that
         // displays it drifting apart is how a reader ends up unsure whether
@@ -273,7 +284,9 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         value={location}
         onChangeText={setLocation}
       />
+      <View style={s.fieldLine} />
       <FieldRow
+        grouped
         icon="chatbubble-ellipses-outline"
         label={t('Bio', 'Giới thiệu', '自己紹介')}
         placeholder={t('Coffee lover · Weekend explorer', 'Mê cà phê · Thích khám phá cuối tuần', 'コーヒー好き · 週末の探検家')}
@@ -281,6 +294,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         onChangeText={setBio}
         multiline
       />
+      </Card>
       {/* Chips rather than a box, and the reason is in the rows the box
           collected: it accepted "Sleep" and "Nitendo" as readily as
           "cafes", and nothing downstream could read either. A chip can
@@ -346,26 +360,48 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
                 accessibilityLabel={t('Remember what I open', 'Nhớ những chỗ tôi mở', '開いた場所を記憶する')}
               />
             </View>
-            {/* Not conditional on the toggle. Switching recording off and
-                being unable to remove what was already recorded is the trap
-                the whole table has to avoid — which is why the delete
-                policy in the migration does not consult `history_on`
-                either. */}
-            <View style={s.divider} />
-            <PressableScale onPress={confirmClear} style={s.clearRow} accessibilityRole="button">
-              <Ionicons name="trash-outline" size={18} color={colors.bad} />
-              <Text style={s.clearText}>
-                {cleared
-                  ? t('History deleted', 'Đã xoá lịch sử', '履歴を削除しました')
-                  : t('Delete my history', 'Xoá lịch sử của tôi', '履歴を削除')}
-              </Text>
-            </PressableScale>
           </Card>
+          {/* Outside the card, not the last row of it.
+              Not conditional on the toggle either: switching recording off
+              and being unable to remove what was already recorded is the
+              trap the whole table has to avoid — which is why the delete
+              policy in the migration does not consult `history_on`.
+              But a row that deletes does not belong under a row that
+              merely switches, sharing its border and its hairline
+              spacing. A thumb travelling to the switch passes over it,
+              and the two do not undo equally: the switch can be flipped
+              back and the history cannot be brought back. */}
+          <PressableScale onPress={confirmClear} style={s.clearRow} accessibilityRole="button">
+            <Ionicons name="trash-outline" size={18} color={colors.bad} />
+            <Text style={s.clearText}>
+              {cleared
+                ? t('History deleted', 'Đã xoá lịch sử', '履歴を削除しました')
+                : t('Delete my history', 'Xoá lịch sử của tôi', '履歴を削除')}
+            </Text>
+          </PressableScale>
         </View>
       ) : null}
 
       {error ? <FormError>{failText(error)}</FormError> : null}
-      <PrimaryButton label={t('Save changes', 'Lưu thay đổi', '変更を保存')} onPress={save} busy={busy} />
+      {/* Lit when there is something to save, off the same `edited` the
+          discard guard reads — so the button and the "discard your
+          changes?" alert can never disagree about whether this form has
+          been touched.
+
+          And lit when there is something to *fix*, which is not the same
+          question. An account whose handle was never set opens this
+          screen clean and invalid: nothing has changed, and yet the one
+          thing this form exists to do is still undone. A Save that is
+          dead there explains nothing — the reader cannot press the
+          button that would have told them "Choose a username." So the
+          stored value is put through the same validator the save path
+          uses, and a form that cannot pass it keeps its button. */}
+      <PrimaryButton
+        label={t('Save changes', 'Lưu thay đổi', '変更を保存')}
+        onPress={save}
+        busy={busy}
+        disabled={!edited && handleProblem(normalizeHandle(handle)) === null}
+      />
     </AuthScreen>
   );
 }
@@ -382,6 +418,13 @@ const s = StyleSheet.create({
   // chips in theirs. They are both `preferences`, but one is a taste and
   // the other is permission, and a promise sitting inside the same border
   // as a preference reads as another preference.
+  // The four profile rows share one card; these are the hairlines between
+  // them, inset to the text column the way every other divider here is.
+  fields: { paddingVertical: 4 },
+  fieldLine: {
+    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
+    marginHorizontal: space.cardPadding,
+  },
   privacy: { paddingVertical: 4, marginTop: 4 },
   toggleRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
@@ -389,9 +432,12 @@ const s = StyleSheet.create({
   },
   toggleTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft, marginHorizontal: space.cardPadding },
+  // Standing on the page rather than in a card: it is not a setting, and
+  // a bare row is the quietest way to say a thing is available without
+  // offering it alongside the things that merely change.
   clearRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: space.cardPadding, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    paddingHorizontal: space.cardPadding, paddingVertical: 12,
   },
   clearText: { color: colors.bad, fontSize: 15, fontWeight: font.semibold },
 });
