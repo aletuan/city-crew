@@ -297,12 +297,6 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
                   so it stretches. This one is inside a row, so without a
                   flex on the *outer* element the pressable shrank to its
                   icon and the date inside it collapsed to nothing. */}
-              {/* The chevron sits with the date, not at the row's end.
-                  At the end it would trail the Day/Evening control and
-                  promise that *that* opens something too; here it marks
-                  the one half of the row that navigates. The row above
-                  earns its chevron at the edge because the whole row is
-                  the control. */}
               <PressableScale
                 onPress={() => setPicking(true)}
                 containerStyle={s.dayBox}
@@ -311,13 +305,17 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
               >
                 <Ionicons name="calendar-outline" size={19} color={colors.accent} />
                 <Text style={s.whereText} numberOfLines={1}>{dayLabel}</Text>
-                <Ionicons name="chevron-forward" size={15} color={colors.textTertiary} />
               </PressableScale>
               {/* One control, not two chips side by side. Day and Evening
                   are the two halves of one answer and swapping between
                   them is a single decision; drawn as separate chips they
                   read as two independent switches, and nothing said that
-                  turning one on turns the other off. */}
+                  turning one on turns the other off.
+
+                  A bordered track on the page's own ground, recessed
+                  inside the card the way a switch is recessed into a
+                  panel — so the pair reads as one object with a moving
+                  part rather than as two buttons that happen to touch. */}
               <View style={s.segment} accessibilityRole="radiogroup">
                 {([
                   ['day', t('Day', 'Ban ngày', '昼')],
@@ -330,7 +328,6 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
                       onPress={() => set('when', key)}
                       haptic="selection"
                       scaleTo={0.96}
-                      containerStyle={{ flex: 1 }}
                       style={[s.segItem, on && s.segItemOn]}
                       accessibilityRole="radio"
                       aria-checked={on}
@@ -340,6 +337,29 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
                   );
                 })}
               </View>
+              {/* The chevron ends this row because it ends the one above
+                  it. Both rows of this card are "tap to change", and a
+                  card whose two rows disagree about where that is said
+                  makes the reader check each one. It was tucked beside
+                  the date for a while on the argument that at the edge it
+                  would seem to belong to the Day/Evening control — but
+                  that control is plainly its own bordered object, and a
+                  ragged right edge costs more than the ambiguity it
+                  avoided.
+
+                  Its own tap target, opening the same picker, so the
+                  glyph is not a picture of an affordance. Hidden from
+                  VoiceOver: the date beside it is already the button, and
+                  a second nameless one on the same row is noise. */}
+              <PressableScale
+                onPress={() => setPicking(true)}
+                hitSlop={10}
+                testID="ideas-day-chevron"
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+              >
+                <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+              </PressableScale>
             </View>
           </Card>
           {/* Only when the clock has moved the start, which is only ever
@@ -574,15 +594,16 @@ const s = StyleSheet.create({
   // recessed ground so the pair reads as a single switch rather than as
   // two buttons that happen to be adjacent.
   segment: {
-    flexDirection: 'row', gap: 3, padding: 3,
-    borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
+    flexDirection: 'row', padding: 3,
+    borderRadius: radius.pill, backgroundColor: colors.bg,
+    borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
   segItem: {
-    paddingHorizontal: 13, paddingVertical: 6,
+    paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center',
   },
   segItemOn: { backgroundColor: colors.accentSoft },
-  segText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
+  segText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
   segTextOn: { color: colors.accent, fontWeight: font.semibold },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft, marginHorizontal: 14 },
 
