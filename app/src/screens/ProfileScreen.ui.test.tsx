@@ -477,6 +477,18 @@ describe('always-show-welcome switch', () => {
     await waitFor(() => expect(sw().checked).toBe(true));
   });
 
+  // React Native's iOS Switch composes `alignSelf: 'flex-start'` into its
+  // own style, so a row that centres every other child leaves this one at
+  // the top — 8pt high on this card, where a 44pt round icon makes the
+  // row 72. `Toggle` overrides it, and this is the assertion that says so:
+  // the markup reads `alignItems: 'center'` and gives a reviewer no reason
+  // to doubt it, which is exactly why the bug survived being looked at.
+  it('sits centred in its row rather than at the top of it', async () => {
+    draw();
+    await act(async () => {});
+    expect(getComputedStyle(sw().parentElement!).alignSelf).toBe('center');
+  });
+
   it('writes the flag on and removes it off', async () => {
     draw();
     await act(async () => {});
