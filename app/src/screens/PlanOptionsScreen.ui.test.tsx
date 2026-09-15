@@ -113,6 +113,31 @@ const renderScreen = (over: object = {}) => {
 /** Every badge on screen, top to bottom — which is the order of the lenses. */
 const badges = () => screen.queryAllByText(/^(Best match|Iconic views|Low-key)$/).map((el) => el.textContent);
 const regen = () => screen.getByRole('button', { name: 'Regenerate' });
+/**
+ * Wait for Regenerate's swap, on the screen's own budget rather than the
+ * library's.
+ *
+ * The screen is entitled to hold the old set until the new set's words
+ * are in, up to `NARRATION_HOLD_MS` — eight seconds, and it says so. The
+ * waits below were on `waitFor`'s default of one, which passes whenever
+ * the mocked narration resolves promptly and fails whenever a loaded
+ * runner does not get back to the event loop in time. That is the flake
+ * this file has been producing on CI, off and on, under `test:tz`:
+ *
+ *     Regenerate > grows the avoid-list across taps rather than
+ *     replacing it
+ *     expected [ 'Best match', 'Low-key' ] to deeply equal
+ *     [ 'Iconic views' ]
+ *
+ * — the second set still up, because the third had not arrived inside
+ * the second the assertion allowed it. The budget was shorter than the
+ * behaviour being asserted, which makes the test a measure of how busy
+ * the machine is rather than of what the screen does.
+ *
+ * The cap test keeps the plain `waitFor`: it drives the clock itself, and
+ * a longer budget there would hide the thing it is checking.
+ */
+const forSwap = (fn: () => void) => waitFor(fn, { timeout: NARRATION_HOLD_MS + 2000 });
 const optsOf = (call: number) => planTrips.mock.calls[call][3] as Record<string, unknown>;
 const seedsAsked = () => planTrips.mock.calls.map((c) => (c[3] as { seed: number }).seed);
 
@@ -452,7 +477,7 @@ describe('Regenerate', () => {
   it('asks for the next seed, avoiding every slug on screen, and swaps once the words are in', async () => {
     const navigation = renderScreen();
     fireEvent.click(regen());
-    await waitFor(() => expect(badges()).toEqual(['Best match', 'Low-key']));
+    await forSwap(() => expect(badges()).toEqual(['Best match', 'Low-key']));
     expect(screen.getByText('Pop-up Stall')).toBeTruthy();
     expect(screen.queryByText('Cộng Café')).toBeNull();
     const last = planTrips.mock.calls.at(-1)![3] as Record<string, unknown>;
@@ -469,9 +494,9 @@ describe('Regenerate', () => {
       (o.seed === 7 ? FIRST : o.seed === 8 ? SECOND : [plan('iconic', [stop(CAFE, 18 * 60)])]));
     renderScreen();
     fireEvent.click(regen());
-    await waitFor(() => expect(screen.getByText('Pop-up Stall')).toBeTruthy());
+    await forSwap(() => expect(screen.getByText('Pop-up Stall')).toBeTruthy());
     fireEvent.click(regen());
-    await waitFor(() => expect(badges()).toEqual(['Iconic views']));
+    await forSwap(() => expect(badges()).toEqual(['Iconic views']));
     const last = planTrips.mock.calls.at(-1)![3] as Record<string, unknown>;
     expect(last).toMatchObject({
       seed: 9, avoid: ['cafe', 'dinner', 'temple', 'roof', 'lake', 'nowhere', 'pinned'],
@@ -500,7 +525,7 @@ describe('Regenerate', () => {
     await act(async () => { answers[0].resolve(words(null)); });
     expect(badges()).toEqual(['Best match', 'Iconic views', 'Low-key']);
     await act(async () => { answers[1].resolve(words(null)); });
-    await waitFor(() => expect(badges()).toEqual(['Best match', 'Low-key']));
+    await forSwap(() => expect(badges()).toEqual(['Best match', 'Low-key']));
     expect(regen().getAttribute('aria-disabled')).not.toBe('true');
   });
 
@@ -514,7 +539,7 @@ describe('Regenerate', () => {
     });
     renderScreen();
     fireEvent.click(regen());
-    await waitFor(() => expect(screen.getByText('Named nowhere')).toBeTruthy());
+    await forSwap(() => expect(screen.getByText('Named nowhere')).toBeTruthy());
     expect(screen.getByText('Named pinned')).toBeTruthy();
   });
 
@@ -534,7 +559,7 @@ describe('Regenerate', () => {
       (o.seed === 7 ? FIRST : []));
     renderScreen();
     fireEvent.click(regen());
-    await waitFor(() => expect(screen.getByText(/^Nothing here matches/)).toBeTruthy());
+    await forSwap(() => expect(screen.getByText(/^Nothing here matches/)).toBeTruthy());
     expect(badges()).toEqual([]);
   });
 });
