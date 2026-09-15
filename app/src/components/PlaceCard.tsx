@@ -386,6 +386,33 @@ const s = StyleSheet.create({
    *   so the angle is atan(52/130) ≈ 22°, and the visible chord 140pt
    *   the line of text                 345 px  →  95pt for 20 characters
    *
+   * ── why the angle is not the reference's 22° ──
+   *
+   * Shipped at 22° and looked at on a phone, the sash reads as a banner
+   * laid along the top rather than a corner cut off, and the numbers say
+   * why: it spends 130pt of a 349pt top edge and only 52 of a 218pt side,
+   * which is 37% of the width against 24% of the height. Two and a half
+   * times as much horizontal as vertical.
+   *
+   * The chord cannot shrink — it is holding a sentence — so the only
+   * freedom is the angle, and the question is which angle is *balanced*
+   * on a frame that is not square. 45° balances the two crossings in
+   * points and therefore unbalances them against the edges: on a 16:10
+   * photograph it spends 28% of the width and 45% of the height, tipped
+   * as far the other way as 22° was this way, and it slants the type
+   * enough to slow reading a twenty-character line.
+   *
+   * Equal *shares of each edge* is the balance a rectangle actually has,
+   * and for 16:10 that is atan(10/16) ≈ 32°:
+   *
+   *              across   down    of the width / of the height
+   *     22°       130pt    52pt        37%  /  24%
+   *     32°       119pt    74pt        34%  /  34%      ← here
+   *     45°        99pt    99pt        28%  /  45%
+   *
+   * So 74 down and 119 across, and the sash sits on the diagonal of its
+   * own corner rather than along one edge of it.
+   *
    * That last figure is the one that settles the type size. 95pt across
    * twenty characters is 4.75 per character, which is Lora italic at
    * **10pt**, not the 12 a first pass guessed from the band's depth — and
@@ -395,11 +422,11 @@ const s = StyleSheet.create({
    * what the reference drew.
    *
    * The rest is arithmetic. The centre line must pass through the chord's
-   * midpoint (130/2, 52/2); a strip 240 wide leaves 50pt hanging past
+   * midpoint (119/2, 74/2); a strip 240 wide leaves 42pt hanging past
    * each crossing for the card's radius to cut; rotation is about the
    * centre, so `left` and `top` place that centre and nothing else:
    *
-   *   left = 130/2 − 240/2 = −55        top = 52/2 − 20/2 = 16
+   *   left = 119/2 − 240/2 = −60.5      top = 74/2 − 20/2 = 27
    *
    * `height` is fixed rather than grown from the text because `top` is
    * derived from it, and a font metric that moved would slide the sash
@@ -410,10 +437,10 @@ const s = StyleSheet.create({
    * photograph under it gets wider.
    */
   shutSash: {
-    position: 'absolute', left: -55, top: 16, width: 240, height: 20,
+    position: 'absolute', left: -60.5, top: 27, width: 240, height: 20,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: onPhoto.shut,
-    transform: [{ rotate: '-22deg' }],
+    transform: [{ rotate: '-32deg' }],
   },
   // Lora italic, which the app already loads for the Ideas lede and the
   // Profile footer. Borrowed rather than added: a serif at a slant reads

@@ -266,13 +266,30 @@ export const onPhoto = {
    * learns that colour on a report queue should not meet it again on a
    * café that simply shuts at ten.
    *
-   * So a deeper brick, measured off the reference: white on this is
-   * 7.62:1, which clears AA for body text at the 12pt the sash sets, with
-   * room to spare for the JPEG noise of whatever photograph is under it.
+   * So a deeper brick, measured off the reference — and laid on at 82%
+   * rather than solid, so the picture keeps showing through the one mark
+   * that crosses it.
+   *
+   * That alpha is the lowest the sentence can afford, and the arithmetic
+   * is worth keeping because the temptation is always to go thinner. A
+   * translucent ground is only as dark as what it lies on, so the case to
+   * solve is the sash falling across a blown-out sky or a white wall.
+   * Composited over pure white, white type reads:
+   *
+   *     1.00  7.62:1      0.85  5.48:1
+   *     0.90  6.15:1      0.82  5.13:1
+   *     0.88  5.89:1      0.80  4.87:1
+   *                       0.75  4.35:1   ← under AA
+   *
+   * 0.82 keeps a margin over the 4.5:1 small type needs even in that
+   * worst case, and over a dark photograph it climbs to about 9.7:1.
+   * Below 0.80 the mark stops being safe on the photographs this catalog
+   * actually holds.
+   *
    * Fixed rather than a `dyn` pair, like every value in this block — it
    * rides a photograph, and a photograph has no theme.
    */
-  shut: '#972F2B',
+  shut: 'rgba(151,47,43,0.82)',
 } as const;
 
 /** The accent as a gradient, for the rare loud surface. Left to right
