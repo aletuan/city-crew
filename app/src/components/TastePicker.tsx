@@ -18,7 +18,7 @@ import { CATEGORIES } from '../lib/categories';
 import { useI18n } from '../lib/i18n';
 import { tasteFull, TASTE_MAX, toggleTaste } from '../lib/tastepick';
 import { colors, font, space } from '../theme';
-import { Chip } from './ui';
+import { Tile, TileGrid } from './ui';
 
 export default function TastePicker({ chosen, onChange }: {
   chosen: readonly string[];
@@ -29,11 +29,14 @@ export default function TastePicker({ chosen, onChange }: {
 
   return (
     <View>
-      <View style={s.chips}>
+      {/* Nine in threes rather than a wrapped row of pills. The labels
+          have nothing to do with each other and their widths were the
+          only thing setting the layout — see `Tile` for the argument. */}
+      <TileGrid cols={3}>
         {Object.entries(CATEGORIES).map(([key, c]) => {
           const on = chosen.includes(key);
           return (
-            <Chip
+            <Tile
               key={key}
               label={t(c.en, c.vi, c.ja)}
               icon={c.icon}
@@ -43,7 +46,7 @@ export default function TastePicker({ chosen, onChange }: {
             />
           );
         })}
-      </View>
+      </TileGrid>
       {/* The counter earns its place only once the ceiling is in sight:
           "0/5" on an untouched screen reads as a quota to fill, which is
           the opposite of what an optional question should say. It appears
@@ -68,6 +71,5 @@ export default function TastePicker({ chosen, onChange }: {
 }
 
 const s = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   note: { color: colors.textTertiary, fontSize: 13, fontWeight: font.regular, marginTop: space.cardGap - 4 },
 });

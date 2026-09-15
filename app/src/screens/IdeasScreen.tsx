@@ -24,7 +24,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
 import StartSheet, { Start } from '../components/StartSheet';
 import {
-  AmbientWarmth, Card, Chip, GradientCta, PressableScale, Screen, SelectTick, useTabBarClearance,
+  AmbientWarmth, Card, GradientCta, PressableScale, Screen, SelectTick, Tile, TileGrid,
+  useTabBarClearance,
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
@@ -38,7 +39,7 @@ import { partGone, startMinFor, START_MIN } from '../lib/planner';
 import { useSave } from '../lib/save';
 import { canPlan, COMPANY, EMPTY_DRAFT, startPoint, toggle, TripDraft } from '../lib/trip';
 import type { Nav } from '../nav';
-import { colors, font, quoteFace, space, type } from '../theme';
+import { colors, font, quoteFace, radius, space, type } from '../theme';
 
 /** The last instant of a calendar day, for a picker bound. `fromISO` gives
  *  local noon — right for a day, half a day short of a ceiling. */
@@ -49,12 +50,31 @@ const endOfDay = (iso: string): Date | undefined => {
   return d;
 };
 
-/** A question and the row of answers under it. */
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * A question, how many answers it takes, and the grid of them.
+ *
+ * The hint sits on the heading's line rather than under it, because it is
+ * about the question and not about any one answer — and because a line of
+ * its own would put a second sentence between the question and the cells
+ * that answer it. It says what the control will actually do: "pick one"
+ * beside a group that swaps, a running count beside one that adds up.
+ * Before this the two groups looked identical and behaved differently,
+ * which the reader could only learn by tapping twice and watching the
+ * first choice disappear.
+ */
+function Section({ title, hint, cols, children }: {
+  title: string;
+  hint?: string;
+  cols: number;
+  children: React.ReactNode;
+}) {
   return (
     <View style={{ marginBottom: space.titleToContent }}>
-      <Text style={s.heading}>{title}</Text>
-      <View style={s.wrap}>{children}</View>
+      <View style={s.headRow}>
+        <Text style={s.heading}>{title}</Text>
+        {hint ? <Text style={s.headHint}>{hint}</Text> : null}
+      </View>
+      <View style={s.grid}><TileGrid cols={cols}>{children}</TileGrid></View>
     </View>
   );
 }
@@ -205,12 +225,16 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
             ("Who's coming?"), which read as a form to fill in; a copy
             edit here should keep them as openers the chip labels can
             complete, ellipsis and all. */}
-        <Section title={t('Going with…', 'Bạn muốn đi cùng…', '一緒に行くのは…')}>
+        <Section
+          title={t('Going with…', 'Bạn muốn đi cùng…', '一緒に行くのは…')}
+          hint={t('pick one', 'chọn một', '1つ')}
+          cols={4}
+        >
           {COMPANY.map((c) => (
-            <Chip
+            <Tile
               key={c.key}
               label={t(c.en, c.vi, c.ja)}
-              icon={c.icon as keyof typeof Ionicons.glyphMap | undefined}
+              icon={c.icon as keyof typeof Ionicons.glyphMap}
               iconColor={c.color}
               active={draft.company === c.key}
               testID={`ideas-company-${c.key}`}
@@ -219,13 +243,29 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
           ))}
         </Section>
 
-        <Section title={t('In the mood for…', 'Hôm nay bạn thích…', '今日の気分は…')}>
+        {/* A running count, not "n of 3". There is no cap on this group
+            and there must not be one: `planner.ts` sizes the outing from
+            how many were named, so a limit here would quietly shorten
+            somebody's day. The hint therefore reports rather than
+            rations — and it stays silent at zero, where a "0" beside a
+            question reads as a score. */}
+        <Section
+          title={t('In the mood for…', 'Hôm nay bạn thích…', '今日の気分は…')}
+          hint={draft.categories.length
+            ? t(
+              `${draft.categories.length} picked`,
+              `đã chọn ${draft.categories.length}`,
+              `${draft.categories.length}件`,
+            )
+            : t('pick any', 'chọn tuỳ thích', '自由に')}
+          cols={3}
+        >
           {cats.map((c, i) => (
-            <Chip
+            <Tile
               key={c}
               testID={`ideas-cat-${i}`}
               label={categoryLabel(c, t)}
-              icon={CATEGORIES[c]?.icon}
+              icon={CATEGORIES[c]?.icon ?? 'ellipse-outline'}
               iconColor={CATEGORIES[c]?.color}
               active={draft.categories.includes(c)}
               onPress={() => set('categories', toggle(draft.categories, c))}
@@ -234,7 +274,9 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
         </Section>
 
         <View style={{ marginBottom: space.titleToContent }}>
-          <Text style={s.heading}>{t('Where and when…', 'Chỗ nào, lúc nào…', '場所と時間は…')}</Text>
+          <View style={s.headRow}>
+            <Text style={s.heading}>{t('Where and when…', 'Chỗ nào, lúc nào…', '場所と時間は…')}</Text>
+          </View>
           <Card style={s.whenCard}>
             <PressableScale onPress={() => setSheet(true)} style={s.whereRow} accessibilityRole="button">
               <Ionicons name="location-outline" size={19} color={colors.accent} />
@@ -255,6 +297,12 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
                   so it stretches. This one is inside a row, so without a
                   flex on the *outer* element the pressable shrank to its
                   icon and the date inside it collapsed to nothing. */}
+              {/* The chevron sits with the date, not at the row's end.
+                  At the end it would trail the Day/Evening control and
+                  promise that *that* opens something too; here it marks
+                  the one half of the row that navigates. The row above
+                  earns its chevron at the edge because the whole row is
+                  the control. */}
               <PressableScale
                 onPress={() => setPicking(true)}
                 containerStyle={s.dayBox}
@@ -263,18 +311,34 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
               >
                 <Ionicons name="calendar-outline" size={19} color={colors.accent} />
                 <Text style={s.whereText} numberOfLines={1}>{dayLabel}</Text>
+                <Ionicons name="chevron-forward" size={15} color={colors.textTertiary} />
               </PressableScale>
-              <View style={s.segment}>
-                <Chip
-                  label={t('Day', 'Ban ngày', '昼')}
-                  active={draft.when === 'day'}
-                  onPress={() => set('when', 'day')}
-                />
-                <Chip
-                  label={t('Evening', 'Buổi tối', '夜')}
-                  active={draft.when === 'evening'}
-                  onPress={() => set('when', 'evening')}
-                />
+              {/* One control, not two chips side by side. Day and Evening
+                  are the two halves of one answer and swapping between
+                  them is a single decision; drawn as separate chips they
+                  read as two independent switches, and nothing said that
+                  turning one on turns the other off. */}
+              <View style={s.segment} accessibilityRole="radiogroup">
+                {([
+                  ['day', t('Day', 'Ban ngày', '昼')],
+                  ['evening', t('Evening', 'Buổi tối', '夜')],
+                ] as const).map(([key, label]) => {
+                  const on = draft.when === key;
+                  return (
+                    <PressableScale
+                      key={key}
+                      onPress={() => set('when', key)}
+                      haptic="selection"
+                      scaleTo={0.96}
+                      containerStyle={{ flex: 1 }}
+                      style={[s.segItem, on && s.segItemOn]}
+                      accessibilityRole="radio"
+                      aria-checked={on}
+                    >
+                      <Text style={[s.segText, on && s.segTextOn]} numberOfLines={1}>{label}</Text>
+                    </PressableScale>
+                  );
+                })}
               </View>
             </View>
           </Card>
@@ -295,9 +359,11 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
 
         {mine.data.length > 0 && (
           <View style={{ marginBottom: space.titleToContent }}>
-            <Text style={s.heading}>
-              {t('Start from what you love', 'Bắt đầu từ thứ bạn thích', 'お気に入りから始める')}
-            </Text>
+            <View style={s.headRow}>
+              <Text style={s.heading}>
+                {t('Start from what you love', 'Bắt đầu từ thứ bạn thích', 'お気に入りから始める')}
+              </Text>
+            </View>
             <Card style={{ paddingVertical: 4 }}>
               {mine.data.map((c, i) => {
                 const members = membersOf(c, places);
@@ -484,25 +550,40 @@ const s = StyleSheet.create({
     color: colors.textTertiary, fontFamily: quoteFace, fontSize: 12.5, letterSpacing: 0.4,
     paddingHorizontal: space.page, marginTop: 3, marginBottom: space.titleToContent,
   },
-  heading: {
-    color: colors.text, ...type.headline,
-    paddingHorizontal: space.page, marginBottom: space.headingToContent,
-  },
+  heading: { color: colors.text, ...type.headline, flexShrink: 1 },
 
   // No heading above it, unlike every question below. A heading would make
   // it a fifth question; without one it reads as an alternative to the four,
   // which is what it is.
 
-  wrap: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
-    paddingHorizontal: space.page,
+  grid: { paddingHorizontal: space.page },
+  // The heading and its hint share a baseline: the hint is an aside to
+  // the question, and a hint that sat on the cap line would read as a
+  // second, quieter heading.
+  headRow: {
+    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
+    gap: 12, paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
+  headHint: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold },
 
   whenCard: { marginHorizontal: space.page, paddingVertical: 4 },
   whereRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 14, paddingVertical: 14 },
   whenRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 14, paddingVertical: 10 },
   whereText: { color: colors.text, fontSize: 15.5, fontWeight: font.medium, flex: 1 },
-  segment: { flexDirection: 'row', gap: 6 },
+  // One track, two halves — the pill the app gives a chosen control, on a
+  // recessed ground so the pair reads as a single switch rather than as
+  // two buttons that happen to be adjacent.
+  segment: {
+    flexDirection: 'row', gap: 3, padding: 3,
+    borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
+  },
+  segItem: {
+    paddingHorizontal: 13, paddingVertical: 6,
+    borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center',
+  },
+  segItemOn: { backgroundColor: colors.accentSoft },
+  segText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
+  segTextOn: { color: colors.accent, fontWeight: font.semibold },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft, marginHorizontal: 14 },
 
   fromRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11 },

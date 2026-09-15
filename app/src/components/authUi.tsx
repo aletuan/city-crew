@@ -118,7 +118,7 @@ export function Lede({ children }: { children: string }) {
  * the reader to work out which of five fields it is about — and the one
  * this was written for named a value three fields further up.
  */
-export function FieldRow({ icon, label, secure, strength, error, ...input }: {
+export function FieldRow({ icon, label, secure, strength, error, grouped, ...input }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   secure?: boolean;
@@ -126,18 +126,40 @@ export function FieldRow({ icon, label, secure, strength, error, ...input }: {
    *  only — grading a password that already exists helps nobody. */
   strength?: boolean;
   error?: string | null;
+  /**
+   * Drawn as one row of a card rather than as a field of its own: no
+   * border, no fill, no glyph. For a stack of fields that belong to one
+   * subject — a profile — where four separate boxes each with an accent
+   * icon make four objects out of what the reader thinks of as one, and
+   * spend the accent four times over on the way. The caller supplies the
+   * card and the hairlines between.
+   *
+   * An auth screen asks for one thing at a time and keeps the boxes: each
+   * field there really is its own question, and the glyph is how it is
+   * found mid-scroll.
+   */
+  grouped?: boolean;
 } & TextInputProps) {
   const [hidden, setHidden] = useState(true);
   return (
     <View>
-      <View style={[s.field, !!error && s.fieldBad]}>
+      <View style={[grouped ? s.fieldFlat : s.field, !grouped && !!error && s.fieldBad]}>
         {/* The glyph turns with the border. Colour alone should never
             carry a message, which is why the sentence below exists — but
             two signals agreeing is what makes the field findable in a
             scroll. */}
-        <Ionicons name={icon} size={22} color={error ? colors.bad : colors.accent} />
+        {grouped ? null : <Ionicons name={icon} size={22} color={error ? colors.bad : colors.accent} />}
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={s.fieldLabel}>{label}</Text>
+          {/* Grouped, the label is the smaller half: there is no glyph to
+              find the row by, so the label is what names it and the value
+              is what the reader came to read. Boxed, the two are peers.
+              It carries the error colour in grouped mode for the reason
+              the glyph carries it in boxed mode — one signal is never
+              enough, but two agreeing is what makes a bad field findable. */}
+          <Text style={[
+            grouped ? s.fieldLabelSmall : s.fieldLabel,
+            grouped && !!error && s.fieldLabelBad,
+          ]}>{label}</Text>
           <TextInput
             style={s.fieldInput}
             placeholderTextColor={colors.textTertiary}
@@ -214,8 +236,12 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
   );
 }
 
-export function PrimaryButton({ label, onPress, busy, arrow, testID }: {
+export function PrimaryButton({ label, onPress, busy, arrow, disabled, testID }: {
   label: string; onPress: () => void; busy?: boolean;
+  /** Dimmed and inert — for a form whose Save has nothing to save yet.
+   *  Dimmed rather than hidden: a button that vanishes leaves the reader
+   *  hunting for what they missed. */
+  disabled?: boolean;
   /** For the iOS smoke flows, which select by id because every label is trilingual. */
   testID?: string;
   /** A forward arrow after the label — for a button that is a departure
@@ -230,14 +256,15 @@ export function PrimaryButton({ label, onPress, busy, arrow, testID }: {
     // "button" and nothing else, mid-sign-in. And said to be busy, so a
     // second tap that does nothing is explained rather than ignored.
     <PressableScale
-      onPress={busy ? undefined : onPress}
-      disabled={busy}
+      onPress={busy || disabled ? undefined : onPress}
+      disabled={busy || disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
       aria-busy={!!busy}
+      aria-disabled={!!disabled}
       testID={testID}
     >
-      <LinearGradient {...gradAI} style={s.primary}>
+      <LinearGradient {...gradAI} style={[s.primary, disabled && s.primaryOff]}>
         {busy
           ? <ActivityIndicator color={colors.accentInk} />
           : arrow
@@ -587,6 +614,15 @@ const s = StyleSheet.create({
   // with something wrong.
   fieldBad: { borderColor: colors.bad },
   fieldLabel: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
+  // The same row, stripped to sit inside somebody else's card.
+  fieldFlat: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingHorizontal: space.cardPadding, paddingVertical: 11,
+  },
+  fieldLabelSmall: {
+    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold, letterSpacing: 0.3,
+  },
+  fieldLabelBad: { color: colors.bad },
   // Tucked under the field it belongs to, indented to its text column.
   fieldError: {
     color: colors.bad, fontSize: 13.5, lineHeight: 18,
@@ -611,6 +647,8 @@ const s = StyleSheet.create({
     borderRadius: radius.pill, minHeight: CONTROL_H, paddingVertical: 10,
     alignItems: 'center', justifyContent: 'center', marginTop: 6,
   },
+  // Enough to read as not-yet, not so little it reads as broken.
+  primaryOff: { opacity: 0.42 },
   primaryText: { color: colors.accentInk, fontSize: 17, fontWeight: font.semibold },
   primaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 
