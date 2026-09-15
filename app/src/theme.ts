@@ -255,6 +255,24 @@ export const onPhoto = {
    * rating glyph, and this mark is not a rating.
    */
   sun: '#F2B441',
+  /**
+   * The ground of the closed-sash, and the app's one red that is not the
+   * coral.
+   *
+   * The accent (#C4402C) and `bad` (#C2564A) were both tried here and both
+   * are wrong for the job. The accent is the app's voice — it means *this
+   * is the thing*, and a shut door is the opposite of that. `bad` is
+   * spoken for: it marks a flagged place at the desk, and a reader who
+   * learns that colour on a report queue should not meet it again on a
+   * café that simply shuts at ten.
+   *
+   * So a deeper brick, measured off the reference: white on this is
+   * 7.62:1, which clears AA for body text at the 12pt the sash sets, with
+   * room to spare for the JPEG noise of whatever photograph is under it.
+   * Fixed rather than a `dyn` pair, like every value in this block — it
+   * rides a photograph, and a photograph has no theme.
+   */
+  shut: '#972F2B',
 } as const;
 
 /** The accent as a gradient, for the rare loud surface. Left to right

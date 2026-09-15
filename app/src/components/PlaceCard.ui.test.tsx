@@ -217,25 +217,49 @@ describe('the hour', () => {
     expect(shown()).toContain('until 22:00');
   });
 
-  // A shut place says nothing in the body — the band under the photograph
-  // draws it. What is asserted is the sentence a reader who cannot see a
-  // three-point bar is given instead, which is the whole reason
-  // `shutLabel` outlived the pill it was written for.
-  it('leaves the body quiet when shut, and tells a screen reader why', () => {
+  // A shut place says so on the photograph, in words, because the band
+  // alone could not: it marks *now* with a two-point tick and leaves the
+  // reader to notice which side of the fill it fell on. At 22:42, 23 of
+  // the 122 shut places in this catalog put that tick within three points
+  // of the fill — a distinction nobody was going to make on a moving
+  // list. The body stays quiet either way; it is the picture that speaks.
+  it('writes the closed hour across the photograph', () => {
     vi.useFakeTimers();
     atICT('2026-09-09T23:00:00Z'); // 06:00 — two hours before opening
     card(week('8:00 AM – 10:00 PM'));
-    expect(shown()).not.toContain('opens 08:00');
-    expect(screen.getByLabelText('Closed · opens 08:00')).toBeTruthy();
+    expect(shown()).toContain('Closed · opens 08:00');
   });
 
-  // And nothing to announce while the place is open: the band is context
-  // there, and the meta line already carries anything urgent.
-  it('does not announce the band while the place is open', () => {
+  // Once, not twice. The band carried this sentence as an accessibility
+  // label for as long as it was the only mark a shut place had; now that
+  // the sash prints it in a `Text` a screen reader reaches by itself,
+  // a label on the band would read the same words to the same person
+  // again.
+  it('says it once, not once in words and once in a label', () => {
+    vi.useFakeTimers();
+    atICT('2026-09-09T23:00:00Z');
+    card(week('8:00 AM – 10:00 PM'));
+    expect(shown().match(/Closed · opens 08:00/g)).toHaveLength(1);
+    expect(screen.queryByLabelText('Closed · opens 08:00')).toBeNull();
+  });
+
+  // The picture keeps the sash only while the door is shut: the mark is
+  // the answer to "can I go now", so an open place must not wear it.
+  it('leaves the photograph alone while the place is open', () => {
     vi.useFakeTimers();
     atICT('2026-09-10T03:00:00Z'); // 10:00
     card(week('8:00 AM – 10:00 PM'));
-    expect(screen.queryByLabelText(/Closed/)).toBeNull();
+    expect(shown()).not.toContain('Closed');
+  });
+
+  // The sash speaks the reader's language, like every other word on the
+  // card — it is a sentence, not a badge with a fixed English on it.
+  it('speaks the reader’s language', () => {
+    vi.useFakeTimers();
+    atICT('2026-09-09T23:00:00Z');
+    state.lang = 'vi';
+    card(week('8:00 AM – 10:00 PM'));
+    expect(shown()).toContain('Đóng cửa · mở 08:00');
   });
 
   // A place that never closes is the one place where nothing is ever

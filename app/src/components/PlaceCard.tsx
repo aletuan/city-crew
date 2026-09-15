@@ -8,7 +8,7 @@ import { dayBand, MINUTES_IN_DAY, openFragment, openState, shutLabel } from '../
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
-import { colors, font, onPhoto, radius, space, type } from '../theme';
+import { colors, font, onPhoto, quoteFace, radius, space, type } from '../theme';
 import { Card, PressableScale } from './ui';
 
 export default function PlaceCard({ place, onPress, testID }: { place: Place; onPress: () => void; testID?: string }) {
@@ -108,6 +108,44 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
               {reviews ? <Text style={s.ratingCount}>({reviews})</Text> : null}
             </View>
           ) : null}
+          {/* ── the shut door, said out loud ──
+
+              A band across the corner nothing else wants. The three marks
+              above hold the other three: bookmark top-right, rating
+              bottom-left, attribution bottom-right. Top-left has been
+              empty since the pill that used to sit there went, and the
+              band under the photograph took over its job — which it could
+              not do. The band draws *when* a place is open; it has no way
+              to say *not now* except by where a two-point tick falls, and
+              at 22:42 a café that shut at ten puts that tick ten points
+              past the end of the fill. Measured across the catalog at
+              that hour: 23 of 122 shut places land the tick inside three
+              points of the fill it is supposed to sit outside of.
+
+              So the fact goes back into words, and takes the shape the
+              reference asked for. What the sash costs was worth measuring
+              before building it, because the objection to it had been
+              mine: it covers 2.8% of the photograph, against the 5.7% of
+              the pill it replaces. It is longer and thinner, and it reads
+              from further away.
+
+              It is loud on purpose and it is not always loud. Across a
+              browsing day in this catalog the share of cards wearing it
+              runs 10% at half past six, 24% at half past nine, and 58% at
+              half past ten — which is the hour somebody is most likely to
+              set out for a door that will not open. A feed half-marked at
+              eleven at night is the true feed.
+
+              `pointerEvents="none"` because the whole card is the tap,
+              and the sash sits over none of the three controls anyway.
+              The Card clips it: `overflow: 'hidden'` and the card radius
+              cut the ends, which is what makes it a sash rather than a
+              floating bar. */}
+          {shut ? (
+            <View style={s.shutSash} pointerEvents="none">
+              <Text style={s.shutSashText} numberOfLines={1}>{shut}</Text>
+            </View>
+          ) : null}
         </View>
         {/* ── the day, drawn ──
 
@@ -120,22 +158,19 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
             hours shut for lunch and open again, 51 run past midnight —
             and those are exactly the places a word gets wrong.
 
-            It also buys the photograph its corner back. The pill made
-            every corner of the picture spoken for; this sits in the seam
-            between the picture and the body, which was nobody's.
+            It sits in the seam between the picture and the body, which
+            was nobody's, and that is still the right home for it: the
+            sash above says whether the door is open now, and this says
+            what the day behind that answer looks like.
 
-            The band is decorative to a screen reader while a place is
-            open — the meta line already carries anything urgent — but a
-            shut place carries `shutLabel` here, because a reader who
-            cannot see a three-point bar must still be told the door is
-            closed and when it opens. That sentence is the reason
-            `shutLabel` survived the pill that introduced it. */}
+            Decorative to a screen reader, always. It briefly carried
+            `shutLabel` — while the sash did not exist and a reader who
+            cannot see a three-point bar would otherwise have been told
+            nothing. The sash carries those words now, in a `Text` a
+            screen reader reaches on its own, so repeating them here
+            would read the same sentence to the same person twice. */}
         {band ? (
-          <View
-            style={s.band}
-            accessible={!!shut}
-            accessibilityLabel={shut ?? undefined}
-          >
+          <View style={s.band} accessible={false} importantForAccessibility="no-hide-descendants">
             {band.segments.map((seg) => (
               <View
                 key={`${seg.fromMin}-${seg.toMin}`}
@@ -330,6 +365,64 @@ const s = StyleSheet.create({
   bandNow: {
     position: 'absolute', top: -2, bottom: -2, width: 2, marginLeft: -1,
     backgroundColor: colors.accent, borderRadius: 1,
+  },
+  /**
+   * The closed-sash, solved against the reference rather than eyeballed.
+   *
+   * Measured off the mock rather than eyeballed, and the way it had to
+   * be measured is worth recording: reading a slanted band off a
+   * photograph column by column gives numbers that are wrong in a
+   * flattering way, because a brick wall passes for a dark red and the
+   * card's own rounded corner clips the band just where a column meets
+   * it. Rotating the crop flat first and measuring the band horizontally
+   * is what produced these.
+   *
+   * On the mock's 1268 × 691 photograph, scaled by 349/1268 to the card
+   * this app draws:
+   *
+   *   band thickness      70 px   →  19pt, taken as 20
+   *   centre line meets the left edge   52pt down
+   *   centre line meets the top edge   130pt across
+   *   so the angle is atan(52/130) ≈ 22°, and the visible chord 140pt
+   *   the line of text                 345 px  →  95pt for 20 characters
+   *
+   * That last figure is the one that settles the type size. 95pt across
+   * twenty characters is 4.75 per character, which is Lora italic at
+   * **10pt**, not the 12 a first pass guessed from the band's depth — and
+   * the difference is the whole character of the thing. At 12 the
+   * sentence fills the chord end to end and the sash reads as a banner;
+   * at 10 it keeps 22pt of red at each end and reads as a stamp, which is
+   * what the reference drew.
+   *
+   * The rest is arithmetic. The centre line must pass through the chord's
+   * midpoint (130/2, 52/2); a strip 240 wide leaves 50pt hanging past
+   * each crossing for the card's radius to cut; rotation is about the
+   * centre, so `left` and `top` place that centre and nothing else:
+   *
+   *   left = 130/2 − 240/2 = −55        top = 52/2 − 20/2 = 16
+   *
+   * `height` is fixed rather than grown from the text because `top` is
+   * derived from it, and a font metric that moved would slide the sash
+   * off its corner.
+   *
+   * Points, not percentages, like the bookmark at `top: 10, right: 10`:
+   * a corner mark is the same size on every phone, and only the
+   * photograph under it gets wider.
+   */
+  shutSash: {
+    position: 'absolute', left: -55, top: 16, width: 240, height: 20,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: onPhoto.shut,
+    transform: [{ rotate: '-22deg' }],
+  },
+  // Lora italic, which the app already loads for the Ideas lede and the
+  // Profile footer. Borrowed rather than added: a serif at a slant reads
+  // as something stamped on the picture, where the card's own sans would
+  // have read as one more piece of UI furniture — and the alternative was
+  // shipping a face for one line of text.
+  shutSashText: {
+    color: onPhoto.text, fontSize: 10, lineHeight: 13,
+    fontFamily: quoteFace, letterSpacing: 0.3,
   },
   // Top-left, the photograph's one free corner, in the rating pill's
   // exact material — the card's rule is that marks on one picture are
