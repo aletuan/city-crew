@@ -3,7 +3,8 @@
 
 import React, { useEffect, useRef } from 'react';
 import {
-  AccessibilityInfo, Animated, ColorValue, Easing, Pressable, PressableProps, StyleProp, StyleSheet, Text, View, ViewStyle,
+  AccessibilityInfo, Animated, ColorValue, Easing, Pressable, PressableProps, StyleProp, StyleSheet,
+  Switch, Text, View, ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -424,6 +425,31 @@ export function Chip({ label, active, onPress, icon, iconColor, testID }: {
       <Text style={[s.chipText, active && s.chipTextOn]}>{label}</Text>
     </PressableScale>
   );
+}
+
+/**
+ * The platform switch, centred in its row.
+ *
+ * ── the bug this exists to stop repeating ──
+ *
+ * React Native's iOS `Switch` composes `{ alignSelf: 'flex-start' }` into
+ * its own style before the caller's (`Switch.js`, the non-Android
+ * branch). A row that sets `alignItems: 'center'` therefore centres every
+ * child except this one, and the taller the row the further off it looks:
+ * on the Profile settings card, where a 44pt round icon makes the row
+ * 72pt tall and the switch is 31, it sat 8pt high — parked exactly on the
+ * row's 14pt top padding, which is what `flex-start` means there.
+ *
+ * `StyleSheet.compose` gives the caller's style the last word, so the fix
+ * is one line. It is here rather than at the two call sites because the
+ * quirk is invisible in the markup: a reviewer reads `alignItems:
+ * 'center'` on the row and has no reason to doubt it, and the third
+ * switch somebody adds would be misaligned again.
+ *
+ * Everything else is the platform's, props and all.
+ */
+export function Toggle(props: React.ComponentProps<typeof Switch>) {
+  return <Switch {...props} style={[{ alignSelf: 'center' }, props.style]} />;
 }
 
 /**

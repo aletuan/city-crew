@@ -38,12 +38,12 @@
 // be churn through a migration for a caption.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
 import TastePicker from '../components/TastePicker';
-import { Card, PressableScale, successHaptic } from '../components/ui';
+import { Card, PressableScale, successHaptic, Toggle } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { CATEGORIES } from '../lib/categories';
 import { useCity } from '../lib/city';
@@ -352,7 +352,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
                   )}
                 </Text>
               </View>
-              <Switch
+              <Toggle
                 value={history}
                 onValueChange={setHistory}
                 trackColor={{ false: colors.borderGlass, true: colors.accentFaint }}

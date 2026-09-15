@@ -7,11 +7,11 @@
 // reference's violet gradient is translated, not copied.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 // TEMPORARY — read/written only by the "Always show welcome" row.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, Toggle, useTabBarClearance } from '../components/ui';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CitySwitcherModal } from '../components/CitySwitcher';
@@ -166,7 +166,7 @@ function SettingToggleRow({ icon, label, on, onChange, last }: {
       {/* The spacer `SettingRow` uses when it has no value, for the same
           reason: it is what holds the control against the right edge. */}
       <View style={{ flex: 1 }} />
-      <Switch
+      <Toggle
         value={on}
         // The switch carries the row's name, because on its own it is an
         // unlabelled control: the text beside it is a separate node.

@@ -336,6 +336,17 @@ describe('saving', () => {
 });
 
 // Save is lit by what there is to do, which is two questions and not one.
+describe('the recording switch', () => {
+  // The same platform quirk as the Profile settings card — see the note
+  // on `Toggle`. This row is tall too (a title over two lines of note),
+  // so a top-aligned switch drifts here as well.
+  it('sits centred beside the words it belongs to', () => {
+    renderScreen();
+    const sw = screen.getByRole('switch', { name: 'Remember what I open' });
+    expect(getComputedStyle(sw.parentElement!).alignSelf).toBe('center');
+  });
+});
+
 describe('the Save button', () => {
   it('is dead on a form nobody has touched', () => {
     renderScreen();
