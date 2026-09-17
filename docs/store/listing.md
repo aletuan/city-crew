@@ -222,6 +222,45 @@ Kế hoạch và nhắc nhở đáng tin cậy hơn.
 • ボタンやフィルターの VoiceOver 対応を改善しました。
 ```
 
+## Release notes v1.0.2 (What's New)
+
+Viết từ các PR merge sau build 9 (#523 → #542), cùng quy tắc như v1.0.1.
+Bản này là build native mới vì #525 thêm config plugin của react-native-maps
+(Google Maps SDK) — OTA không mang được.
+
+### EN
+
+```
+Pick where your day starts on a real map.
+
+• Planning a trip now opens a Google map: search any place or drop a pin, and the plan starts from there. Your pin keeps the name you gave it.
+• Place cards show the day at a glance: a bar under the photo shows when a place is open, the closing hour appears only when it's near, and a closed place says when it opens.
+• Cleaner cards and screens: the vibe sits next to the district, trip and profile options are laid out as a grid, and every switch lines up with its row.
+• Shorter dates that fit on small phones: "Saturday, Sep 12".
+```
+
+### VI
+
+```
+Chọn điểm bắt đầu ngày của bạn trên bản đồ thật.
+
+• Lên kế hoạch chuyến đi giờ mở bản đồ Google: tìm địa điểm hoặc thả ghim, kế hoạch bắt đầu từ đó. Ghim giữ đúng tên bạn đặt.
+• Thẻ địa điểm cho thấy cả ngày: thanh dưới ảnh hiện giờ mở cửa, giờ đóng chỉ hiện khi sắp đóng, và quán đang đóng ghi rõ mấy giờ mở lại.
+• Thẻ và màn hình gọn hơn: vibe nằm cạnh quận, tuỳ chọn chuyến đi và hồ sơ xếp thành lưới, công tắc thẳng hàng với dòng của nó.
+• Ngày tháng ngắn hơn để vừa màn hình nhỏ.
+```
+
+### JA
+
+```
+一日の出発地点を、本物の地図で選べます。
+
+• 旅程の作成で Google マップが開きます。場所を検索するかピンを置けば、そこからプランが始まります。ピンには付けた名前がそのまま残ります。
+• スポットのカードで一日がひと目でわかります。写真の下のバーが営業時間を示し、閉店時刻は間近になったときだけ表示、閉まっている店は開く時刻を表示します。
+• カードと画面をすっきりと。雰囲気タグは地区の横に、旅程とプロフィールの選択肢はグリッドに、スイッチは行の中央に揃えました。
+• 小さな画面に収まる短い日付表記。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
