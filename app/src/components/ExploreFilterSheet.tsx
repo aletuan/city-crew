@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ExploreFilters, ExploreSort, ExploreStatus } from '../lib/exploreFilters';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space } from '../theme';
-import { fireHaptic, PressableScale } from './ui';
+import { fireHaptic, GradientCta, PressableScale } from './ui';
 
 const SORTS: ExploreSort[] = ['recommended', 'distance', 'rating'];
 const STATUSES: ExploreStatus[] = ['any', 'open', 'closed'];
@@ -157,18 +157,27 @@ export default function ExploreFilterSheet({
           >
             <Text style={s.resetText}>{t('Reset', 'Đặt lại', 'リセット')}</Text>
           </PressableScale>
-          <PressableScale
-            onPress={() => { void apply(); }}
-            accessibilityRole="button"
-            accessibilityState={{ busy }}
-            style={[s.apply, busy && { opacity: 0.6 }]}
-          >
-            <Text style={s.applyText}>
-              {busy
-                ? t('Locating…', 'Đang định vị…', '位置情報を取得中…')
-                : `${t('Show', 'Hiện', '表示')} ${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', '件')}`}
-            </Text>
-          </PressableScale>
+          {/* The app's own primary button, not a coral pill drawn again
+              here. This one had been hand-rolled — flat fill, 14pt type,
+              48 high — beside a `GradientCta` that every other screen
+              commits with, so the one button that finishes this sheet was
+              the one button in the app that did not look like the rest.
+              `wide` is documented for exactly this: the action that
+              commits a sheet. The stretch comes from the row, since Reset
+              sits beside it.
+
+              The label no longer swaps to "Locating…" while the fix is
+              being fetched — the primitive spins its glyph instead, and
+              holding the words still is the reason it does. */}
+          <View style={s.applyWrap}>
+            <GradientCta
+              icon="checkmark"
+              wide
+              busy={busy}
+              onPress={() => { void apply(); }}
+              label={`${t('Show', 'Hiện', '表示')} ${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', '件')}`}
+            />
+          </View>
         </View>
       </Animated.View>
     </Modal>
@@ -210,6 +219,5 @@ const s = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 9, marginTop: 20 },
   reset: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 17, borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill },
   resetText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
-  apply: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, borderRadius: radius.pill, backgroundColor: colors.accentFill },
-  applyText: { color: colors.accentInk, fontSize: 14, fontWeight: font.semibold },
+  applyWrap: { flex: 1 },
 });

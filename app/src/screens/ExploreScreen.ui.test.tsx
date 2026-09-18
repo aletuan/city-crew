@@ -536,6 +536,36 @@ describe('sort and filter', () => {
   });
 });
 
+// The pinned chips row is drawn over the Places heading: its top padding
+// is FILTER_PAD plus the safe-area inset, the heading is pulled up into
+// that padding, and a sticky section header stacks above the list's own
+// header. So the row must not take touches itself — underneath it is the
+// sort button, and a plain View takes a touch anywhere inside it,
+// padding included. This is that rule, and it is the bug it was written
+// for: every tap on the sort control was eaten here.
+describe('the pinned chips row', () => {
+  it('does not swallow the taps meant for the heading beneath it', () => {
+    state.places.data = [place('p1')];
+    render(<ExploreScreen navigation={nav()} />);
+    // The row is the ancestor carrying FILTER_PAD — 10, with no
+    // safe-area inset in jsdom.
+    let row: HTMLElement | null = screen.getByText('All');
+    while (row && window.getComputedStyle(row).paddingTop !== '10px') row = row.parentElement;
+    expect(row).toBeTruthy();
+    // `box-none`: none on the row, and its chips still take their own.
+    expect(window.getComputedStyle(row!).pointerEvents).toBe('none');
+    expect(window.getComputedStyle(screen.getByText('All')).pointerEvents).toBe('auto');
+  });
+
+  it('opens the sort sheet from the control beside the heading', () => {
+    state.places.data = [place('p1')];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.queryByText('Sort & filter')).toBeNull();
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    expect(screen.getByText('Sort & filter')).toBeTruthy();
+  });
+});
+
 describe('the community shelf', () => {
   it('shows only lists with a member in this city, most liked first', () => {
     state.places.data = [place('p1'), place('p2'), place('far', { city_id: 'saigon' })];

@@ -1080,7 +1080,24 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * a control you touch once at the start.
    */
   const filters = (
-    <View style={[s.filterBar, { paddingTop: FILTER_PAD + insets.top }]}>
+    // `box-none`, and it is what makes the heading above this row
+    // tappable at all.
+    //
+    // Pinned, this row is the top edge of the screen and its padding has
+    // to clear the clock — FILTER_PAD plus the safe-area inset, some 69pt
+    // of it. At rest that padding is empty and the Places heading is
+    // pulled up into it by the negative margin over there, which is the
+    // arithmetic that keeps the visible gap at 16. A sticky section
+    // header draws above the list's own header, so those 69 transparent
+    // points sat on top of the heading — and a plain View takes a touch
+    // anywhere inside it, padding included.
+    //
+    // That was harmless while the heading was a word. It stopped being
+    // harmless the moment a button moved in beside it: the sort control
+    // was underneath this row's padding, and every tap on it was eaten
+    // here. `box-none` hands the touch back — the row itself takes none,
+    // its chips still take their own.
+    <View pointerEvents="box-none" style={[s.filterBar, { paddingTop: FILTER_PAD + insets.top }]}>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, s.filterBarBg, { opacity: filterBg }]} />
       <View style={s.filterHair} />
       <ScrollView
@@ -1284,8 +1301,17 @@ const s = StyleSheet.create({
     color: colors.text, ...type.section,
     paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
+  // The control sits beside the heading, not out at the margin.
+  //
+  // `space-between` put it there, and the width of the gap then had
+  // nothing to do with the two things it separated — it was whatever the
+  // phone was wide. A disc alone on the right edge reads as a second
+  // section's worth of distance from the word it belongs to, and on a
+  // 430pt screen the thumb has to cross the whole row to reach the sort
+  // for the list directly beneath it. Left-aligned, the pair reads as one
+  // phrase: the heading, and what you do to it.
   placesHead: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: space.page,
   },
   placesTitle: { color: colors.text, ...type.section },
