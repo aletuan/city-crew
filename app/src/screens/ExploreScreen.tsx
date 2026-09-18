@@ -1303,11 +1303,20 @@ const s = StyleSheet.create({
   // 430pt screen the thumb has to cross the whole row to reach the sort
   // for the list directly beneath it. Left-aligned, the pair reads as one
   // phrase: the heading, and what you do to it.
-  // No margin of its own: the row's height is what spaces it, because
-  // that height is also what stands in for it when the block pins.
+  // The gap to the chips is the app's own: `headingToContent`, the same
+  // 16 that sits under every other heading in it.
+  //
+  // It briefly had none, and that was a leftover rather than a choice.
+  // While the block still pinned itself, this row was given a fixed
+  // height that doubled as the clearance the chips needed under the
+  // clock, and the spacing came out of that height. The block stopped
+  // pinning itself when the floating copy took the job, the fixed height
+  // went with it, and the margin it had been standing in for was never
+  // put back — so the heading sat straight on the chips.
   placesHead: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: space.page,
+    marginBottom: space.headingToContent,
   },
   placesTitle: { color: colors.text, ...type.section },
   filterButton: {
