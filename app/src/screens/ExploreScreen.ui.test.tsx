@@ -528,7 +528,7 @@ describe('sort and filter', () => {
     render(<ExploreScreen navigation={nav()} />);
     fireEvent.click(screen.getByTestId('explore-filter'));
     expect(screen.getByText('Sort & filter')).toBeTruthy();
-    fireEvent.click(screen.getByText('Rating'));
+    fireEvent.click(screen.getByText('Highest rated'));
     await act(async () => { fireEvent.click(screen.getByText('Show 3 places')); });
     expect(cardNames().map((n) => n.match(/Place (\w+)/)?.[1])).toEqual(['high', 'low', 'none']);
   });
@@ -547,11 +547,11 @@ describe('sort and filter', () => {
     expect(cardNames()[0]).toContain('Place open');
   });
 
-  it('asks a guest to sign in when Bookmarked only is tapped', async () => {
+  it('asks a guest to sign in when Saved places only is tapped', async () => {
     state.places.data = [place('a')];
     render(<ExploreScreen navigation={nav()} />);
     fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Bookmarked only'));
+    fireEvent.click(screen.getByText('Saved places only'));
     await waitFor(() => expect(spies.askToSignIn).toHaveBeenCalledOnce());
   });
 
@@ -565,7 +565,7 @@ describe('sort and filter', () => {
     state.places.data = [place('a'), place('b')];
     render(<ExploreScreen navigation={nav()} />);
     fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Distance'));
+    fireEvent.click(screen.getByText('Nearest first'));
     await act(async () => { fireEvent.click(screen.getByText('Show 2 places')); });
     expect(screen.getByText('Allow location access to sort places by distance.')).toBeTruthy();
     expect(screen.getByText('Sort & filter')).toBeTruthy();
@@ -577,7 +577,7 @@ describe('sort and filter', () => {
     state.places.data = [place('a')];
     render(<ExploreScreen navigation={nav()} />);
     fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Distance'));
+    fireEvent.click(screen.getByText('Nearest first'));
     await act(async () => { fireEvent.click(screen.getByText('Show 1 place')); });
     expect(screen.getByText("Couldn't read your location. Try again in a moment.")).toBeTruthy();
   });
@@ -590,7 +590,7 @@ describe('sort and filter', () => {
     render(<ExploreScreen navigation={nav()} />);
     expect(spies.getForegroundPermissionsAsync).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Distance'));
+    fireEvent.click(screen.getByText('Nearest first'));
     await act(async () => { fireEvent.click(screen.getByText('Show 2 places')); });
     expect(spies.getForegroundPermissionsAsync).toHaveBeenCalledOnce();
     expect(cardNames()[0]).toContain('Place near');
@@ -672,7 +672,7 @@ describe('the pinned chips row', () => {
     expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
 
     fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Rating'));
+    fireEvent.click(screen.getByText('Highest rated'));
     fireEvent.click(screen.getByText('Open now'));
     await act(async () => { fireEvent.click(screen.getByText(/Show \d+ place/)); });
 
