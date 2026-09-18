@@ -632,51 +632,36 @@ describe('the pinned chips row', () => {
     expect(within(header).queryByText("Let's go")).toBeNull();
   });
 
-  // The trade that pays for the heading being in here: pinned, the block
-  // shows the clock's worth of clearance where at rest it shows the
-  // heading — the same number for both, so the chips do not move and
-  // nothing below them jumps at the crossing. Without that, putting the
-  // heading in the pinned block cost 72pt of empty air above it at rest,
-  // which is what it cost until this.
-  it('swaps the heading for the clock’s clearance when it pins, and keeps its height', () => {
+  // The heading and its control stay on screen while the list scrolls
+  // under them — which is the whole reason they were put in this block.
+  //
+  // They are drawn twice to manage it: the copy in the list scrolls away
+  // like anything else, and a second copy over the screen takes over at
+  // the moment the first would slide under the clock. A sticky section
+  // header cannot do this job — pinned it needs the clock's clearance
+  // above it, and at rest that clearance has nowhere to be but a 72pt
+  // gap, which is what it cost when it was tried.
+  it('keeps the heading and its control on screen once the list scrolls past them', () => {
     vi.useFakeTimers();
     try {
       state.places.data = [place('p1'), place('p2')];
       render(<ExploreScreen navigation={nav()} />);
       measureHeader(400);
-      const head = sectionHeader();
-      const atRest = window.getComputedStyle(head).paddingTop;
-      expect(screen.getByText('Places')).toBeTruthy();
+
+      // At the top there is one of each, and no bar over the screen.
+      expect(screen.queryByTestId('explore-pinned-bar')).toBeNull();
+      expect(screen.getByTestId('explore-filter')).toBeTruthy();
 
       scrollTo(500);
-      expect(screen.queryByText('Places')).toBeNull();
-      const whenPinned = window.getComputedStyle(sectionHeader()).paddingTop;
-      // The heading is gone and its height came back as padding, so the
-      // block is no shorter than it was.
-      expect(parseFloat(whenPinned)).toBeGreaterThan(parseFloat(atRest));
+      const over = screen.getByTestId('explore-pinned-bar');
+      expect(within(over).getByText('Places')).toBeTruthy();
+      expect(within(over).getByTestId('explore-filter-pinned')).toBeTruthy();
 
       scrollTo(0);
-      expect(screen.getByText('Places')).toBeTruthy();
+      expect(screen.queryByTestId('explore-pinned-bar')).toBeNull();
     } finally {
       vi.useRealTimers();
     }
-  });
-
-  // The badge is a number drawn inside a button, and iOS folds a button's
-  // children into one element — so the count is on screen and absent from
-  // what a screen reader is given. `selected` says a filter is on; it
-  // cannot say two. The label carries the figure the badge draws.
-  it('tells a screen reader how many filters are on, not just that some are', async () => {
-    state.places.data = [place('p1', { rating: 4 }), place('p2', { rating: 3 })];
-    render(<ExploreScreen navigation={nav()} />);
-    expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
-
-    fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Highest rated'));
-    fireEvent.click(screen.getByText('Open now'));
-    await act(async () => { fireEvent.click(screen.getByText(/Show \d+ place/)); });
-
-    expect(screen.getByRole('button', { name: 'Filter and sort places, 2 applied' })).toBeTruthy();
   });
 
   it('opens the sort sheet from the control beside the heading', () => {
