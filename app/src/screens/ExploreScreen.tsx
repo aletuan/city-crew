@@ -1035,7 +1035,17 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           style={[s.filterButton, filterCount > 0 && s.filterButtonOn]}
           testID="explore-filter"
         >
-          <Ionicons name="options-outline" size={19} color={filterCount > 0 ? colors.accent : colors.text} />
+          {/* Coral at rest, not ink. This is the one control on the
+              screen a reader has to notice before they know they want
+              it — a grey glyph in a grey disc beside a heading reads as
+              decoration, and nobody presses decoration. The accent is
+              what the app's buttons are already made of, so it says
+              "pressable" without inventing a signal.
+              What separates the two states is the disc, not the glyph:
+              glass at rest, accent-tinted and carrying a count once a
+              filter is on. Same control, so the same colour; the fill
+              is what changed. */}
+          <Ionicons name="options-outline" size={19} color={colors.accent} />
           {filterCount > 0 ? (
             <View style={s.filterBadge}>
               <Text style={s.filterBadgeText}>{filterCount}</Text>
@@ -1080,24 +1090,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * a control you touch once at the start.
    */
   const filters = (
-    // `box-none`, and it is what makes the heading above this row
-    // tappable at all.
-    //
-    // Pinned, this row is the top edge of the screen and its padding has
-    // to clear the clock — FILTER_PAD plus the safe-area inset, some 69pt
-    // of it. At rest that padding is empty and the Places heading is
-    // pulled up into it by the negative margin over there, which is the
-    // arithmetic that keeps the visible gap at 16. A sticky section
-    // header draws above the list's own header, so those 69 transparent
-    // points sat on top of the heading — and a plain View takes a touch
-    // anywhere inside it, padding included.
-    //
-    // That was harmless while the heading was a word. It stopped being
-    // harmless the moment a button moved in beside it: the sort control
-    // was underneath this row's padding, and every tap on it was eaten
-    // here. `box-none` hands the touch back — the row itself takes none,
-    // its chips still take their own.
-    <View pointerEvents="box-none" style={[s.filterBar, { paddingTop: FILTER_PAD + insets.top }]}>
+    // The `box-none` that makes the heading above this row tappable is in
+    // `s.filterBar`, as a style rather than a prop, and that is the whole
+    // repair — see the note there.
+    <View style={[s.filterBar, { paddingTop: FILTER_PAD + insets.top }]}>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, s.filterBarBg, { opacity: filterBg }]} />
       <View style={s.filterHair} />
       <ScrollView
@@ -1380,8 +1376,33 @@ const s = StyleSheet.create({
   // bar's glass — glass says content is passing beneath me, which is true
   // of the floating bar, but this row pinned is the page's own top edge,
   // the place the list begins under, and it should read as the page.
+  //
+  // ── why `pointerEvents` is in here, and not on the element ──
+  //
+  // Pinned, this row is the top edge of the screen and its padding has to
+  // clear the clock: FILTER_PAD plus the safe-area inset, some 69pt. At
+  // rest that padding is empty and the Places heading is pulled up into
+  // it by the negative margin over on the heading, which is the
+  // arithmetic that keeps the visible gap at 16. A sticky section header
+  // draws above the list's own header — `zIndex: 10`, in
+  // `ScrollViewStickyHeader` — so those 69 transparent points lie on top
+  // of the heading, and a View takes a touch anywhere inside it, padding
+  // included. Every tap on the sort control was eaten there.
+  //
+  // `box-none` is the answer, but it has to arrive as style. RN wraps a
+  // sticky section header in an `Animated.View` of its own and *moves
+  // this style onto that wrapper*, handing the child `{flex: 1}`
+  // instead — read the end of `ScrollViewStickyHeader.js`. So the
+  // wrapper is the element that owns the padding lying over the heading,
+  // and a `pointerEvents` prop written on our own View lands on the
+  // child, which is no longer the box that covers anything. It looked
+  // correct and changed nothing on a device.
+  //
+  // A style travels with the style. The prop form is deprecated in this
+  // version of React Native anyway; here it is also simply wrong.
   filterBar: {
     paddingBottom: FILTER_PAD,
+    pointerEvents: 'box-none',
   },
   filterBarBg: { backgroundColor: colors.bg },
   // Drawn only at the bottom, and only a hairline: it is where the header

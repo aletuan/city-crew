@@ -204,6 +204,20 @@ const listProps = (): ListProps => {
   }
   throw new Error('no explore-list SectionList in the committed tree');
 };
+/**
+ * The flattened style the screen hands React Native for its sticky
+ * section header — the chips row.
+ *
+ * Reached through the committed tree for the same reason `listProps`
+ * is: the style that matters here is the one given to RN, not the CSS
+ * react-native-web chose to make of it. See the test that reads it.
+ */
+const sectionHeaderStyle = (): { paddingBottom?: number; pointerEvents?: string } => {
+  const section = listProps() as unknown as { renderSectionHeader: () => React.ReactElement };
+  const el = section.renderSectionHeader() as React.ReactElement<{ style: unknown }>;
+  return Object.assign({}, ...[el.props.style].flat(Infinity).filter(Boolean));
+};
+
 // The web ScrollView throttles its events to `scrollEventThrottle`, so each
 // scroll is spaced past it — the tests using this run on fake timers.
 const scrollTo = (y: number) => {
@@ -571,17 +585,25 @@ describe('sort and filter', () => {
 // padding included. This is that rule, and it is the bug it was written
 // for: every tap on the sort control was eaten here.
 describe('the pinned chips row', () => {
+  // Read as a style, not as a rendered element, and that is the point.
+  //
+  // React Native moves a sticky section header's style onto a wrapper of
+  // its own and hands the child `{flex: 1}`, so only a `box-none` written
+  // *in the style* reaches the box that lies over the heading. Written as
+  // a prop it lands on the child, covers nothing, and changes nothing on
+  // a device — which is exactly what happened, while react-native-web
+  // applied the same prop to the padded element and reported it fixed.
+  // So this asks what was handed to React Native rather than what the web
+  // did with it; the DOM cannot tell the two apart, and a click test
+  // cannot either — `fireEvent` dispatches straight at the element,
+  // whatever is lying on top of it.
   it('does not swallow the taps meant for the heading beneath it', () => {
     state.places.data = [place('p1')];
     render(<ExploreScreen navigation={nav()} />);
-    // The row is the ancestor carrying FILTER_PAD — 10, with no
-    // safe-area inset in jsdom.
-    let row: HTMLElement | null = screen.getByText('All');
-    while (row && window.getComputedStyle(row).paddingTop !== '10px') row = row.parentElement;
-    expect(row).toBeTruthy();
-    // `box-none`: none on the row, and its chips still take their own.
-    expect(window.getComputedStyle(row!).pointerEvents).toBe('none');
-    expect(window.getComputedStyle(screen.getByText('All')).pointerEvents).toBe('auto');
+    const row = sectionHeaderStyle();
+    // The row is the one carrying FILTER_PAD as its bottom padding.
+    expect(row.paddingBottom).toBe(10);
+    expect(row.pointerEvents).toBe('box-none');
   });
 
   it('opens the sort sheet from the control beside the heading', () => {
