@@ -69,8 +69,6 @@ const ALL = 'all';
  * heading's own comment.
  */
 const FILTER_PAD = 10;
-/** The sort control's own diameter — the floor for the heading row. */
-const FILTER_DISC = 36;
 
 /**
  * The last row of the list, at the moment you have finished reading and
@@ -965,13 +963,14 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    */
   const [pinned, setPinned] = useState(false);
   const pinnedRef = useRef(false);
-  const headerHRef = useRef(0);
+  const pinAtRef = useRef(0);
   const onScrollJS = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
     const y = e.nativeEvent.contentOffset.y;
     if (y < 320) setFirst(0);
-    // 8pt early, where the backing finishes fading in: the swap and the
-    // opaque page colour belong to the same moment.
-    const stuck = headerHRef.current > 0 && y >= headerHRef.current - 8;
+    // The moment the heading in the list would slide under the clock.
+    // The floating copy draws its heading at exactly the safe-area
+    // inset, so handing over here puts it where the other one was.
+    const stuck = pinAtRef.current > 0 && y >= pinAtRef.current;
     if (stuck !== pinnedRef.current) {
       pinnedRef.current = stuck;
       setPinned(stuck);
@@ -1023,7 +1022,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * collections at all.
    */
   const [headerH, setHeaderH] = useState(0);
-  headerHRef.current = headerH;
+  // Where the list header ends is where the block begins, so the crossing
+  // is that offset plus the block's own padding, less the inset the
+  // floating copy will put above the heading instead.
+  pinAtRef.current = headerH > 0 ? headerH + FILTER_PAD - insets.top : 0;
   const header = (
     <View onLayout={(e) => setHeaderH(Math.round(e.nativeEvent.layout.height))}>
       {/* Across to the Ideas tab, not down this screen.
@@ -1042,85 +1044,19 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     </View>
   );
 
-  /**
-   * The row's backing, faded in just before it pins. At rest the row must
-   * be transparent — its safe-area padding overlaps the Places heading —
-   * and pinned it must be opaque, or the list would read through the
-   * chips and the status bar. The crossover is the pin offset, which is
-   * `headerH`: fully opaque 8pt early, so the backing is already solid
-   * when the first card slides under. Until the header has reported a
-   * height nothing has scrolled, so the plain 0 stands in.
-   */
-  const filterBg = headerH > 0
-    ? scrollY.interpolate({
-        inputRange: [Math.max(0, headerH - 28), Math.max(1, headerH - 8)],
-        outputRange: [0, 1],
-        extrapolate: 'clamp',
-      })
-    : 0;
-
-  /**
-   * The filter row, pinned for as long as the places are on screen.
-   *
-   * It is a section header rather than part of the list header, and that
-   * is the whole mechanism: a FlatList can only pin its header entire,
-   * which here would mean pinning the hero photograph too. As a section
-   * header it pins exactly while its own section is showing — not before
-   * the places begin, not after they end.
-   *
-   * Pinning it costs about 56pt of a 611pt reading area, and buys back
-   * something the scroll had been taking away: which chip is lit. A
-   * filtered list of three cards with the filter scrolled out of sight
-   * looks like an app that has run out of places, not like a choice you
-   * made. The state of a filter is context for reading its results, not
-   * a control you touch once at the start.
-   */
-  /**
-   * The heading row's height, and the clearance that replaces it.
-   *
-   * One number for both, which is the whole trick: pinned, the block
-   * swaps its heading for exactly this much padding, so its height is
-   * the same in both states and nothing below it moves at the crossing.
-   * A measured heading would have done it too, and would have been a
-   * measurement to keep right; this is a number we choose, and the
-   * safe-area inset is the only thing it has to clear.
-   */
-  const headRowH = Math.max(FILTER_DISC, insets.top);
-
-  const filters = (
-    // The `box-none` that makes the heading above this row tappable is in
-    // `s.filterBar`, as a style rather than a prop, and that is the whole
-    // repair — see the note there.
-    <View style={[s.filterBar, { paddingTop: FILTER_PAD + (pinned ? headRowH : 0) }]}>
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, s.filterBarBg, { opacity: filterBg }]} />
+  const bar = (floating: boolean) => (
+    <View
+      style={floating
+        ? [s.filterBar, s.filterBarFloating, { paddingTop: insets.top }]
+        : [s.filterBar, { paddingTop: FILTER_PAD }]}
+      testID={floating ? 'explore-pinned-bar' : undefined}
+    >
       <View style={s.filterHair} />
-      {/* The heading rides inside the pinned block, above the chips.
-          It used to sit in the list's own header, with this row pulled
-          up over it by a negative margin so the 72pt of padding the row
-          carries for its pinned life would not show as a gap. That
-          worked while the heading was a word. A sticky section header
-          takes the touches landing anywhere in its box — padding
-          included, and no `pointerEvents` we can write changes that,
-          because React Native hoists this row's style onto a wrapper of
-          its own — so the moment a button moved in beside the heading,
-          the button was under the row and dead to every tap. Measured,
-          not guessed: a real tap never reached its `onPressIn`, and the
-          same tap worked the instant the overlap went.
-          Inside the block there is nothing over it, and it pins with
-          the chips — which is the trade this bought: the section keeps
-          its name at the top of the screen while its list scrolls. */}
-      {pinned ? null : (
-      <View style={[s.placesHead, { height: headRowH }]}>
+      <View style={s.placesHead}>
         <Text style={s.placesTitle}>{t('Places', 'Địa điểm', 'スポット')}</Text>
         <PressableScale
           onPress={() => setFilterOpen(true)}
           accessibilityRole="button"
-          // The badge says "2" and a screen reader is never told, because
-          // iOS folds a button's children into one element and reads its
-          // label. `selected` below carries "a filter is on"; it has no
-          // way to carry how many, and the difference between one filter
-          // and three is exactly what a reader checking this control
-          // wants. So the label says what the badge draws.
           accessibilityLabel={filterCount > 0
             ? t(
               `Filter and sort places, ${filterCount} applied`,
@@ -1131,7 +1067,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           accessibilityState={{ selected: filterCount > 0 }}
           hitSlop={4}
           style={[s.filterButton, filterCount > 0 && s.filterButtonOn]}
-          testID="explore-filter"
+          testID={floating ? 'explore-filter-pinned' : 'explore-filter'}
         >
           {/* Coral at rest, not ink. This is the one control on the
               screen a reader has to notice before they know they want
@@ -1151,7 +1087,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           ) : null}
         </PressableScale>
       </View>
-      )}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -1182,6 +1117,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     // the hero itself, and the screen's title went entirely: the hero's
     // headline names the city, and two headings were saying one thing.
     <View style={s.screen}>
+      {/* Over everything, and only once the copy in the list has gone
+          under the clock. Rendered rather than hidden, so it takes no
+          touches and costs no layout while the reader is at the top. */}
+      {pinned ? bar(true) : null}
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {holding && (
@@ -1209,8 +1148,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             testID="explore-list"
             keyExtractor={(p) => p.slug}
             ListHeaderComponent={header}
-            renderSectionHeader={() => filters}
-            stickySectionHeadersEnabled
+            renderSectionHeader={() => bar(false)}
+            // Nothing sticks any more: what used to pin is drawn over the
+            // screen instead. See `bar`.
+            stickySectionHeadersEnabled={false}
             renderItem={({ item, index }) => (
               <PlaceCard
                 place={item}
@@ -1434,33 +1375,20 @@ const s = StyleSheet.create({
   // bar's glass — glass says content is passing beneath me, which is true
   // of the floating bar, but this row pinned is the page's own top edge,
   // the place the list begins under, and it should read as the page.
-  //
-  // ── what this row is allowed to cover ──
-  //
-  // Nothing anybody can touch. Pinned, the row is the top edge of the
-  // screen and its padding has to clear the clock; at rest it carries no
-  // such padding at all, because the heading is standing in that space
-  // instead — see `headRowH`. That is what took the gap above the
-  // heading from 72pt back to the 24 it should have been: the clearance
-  // is not empty air waiting for the row to pin, it is the heading.
-  //
-  // `marginTop` then spends the shelf's own bottom margin, which is
-  // empty space and the only thing above this row that is.
-  //
-  // It cannot be spent on anything a thumb wants. A sticky section
-  // header takes every touch that lands in its box, padding included,
-  // and no `pointerEvents` we can write changes that: React Native
-  // hoists this style onto a wrapper of its own — the end of
-  // `ScrollViewStickyHeader.js`, where it also carries `zIndex: 10` —
-  // so the prop lands on a child that covers nothing, and the style,
-  // hoisted or not, did not stop the wrapper either. Both were tried on
-  // a device and neither worked, which is why the heading moved in here
-  // instead of the row moving off it.
+  // The block in the list: no clearance of its own, because it does not
+  // pin. It scrolls off like anything else, and the copy that takes over
+  // is the one that has to clear the clock.
   filterBar: {
-    marginTop: -space.titleToContent,
     paddingBottom: FILTER_PAD,
   },
-  filterBarBg: { backgroundColor: colors.bg },
+  // And that copy: over the screen rather than in the list, so nothing
+  // it does can move a row or eat a tap meant for one. Opaque, because
+  // the list runs underneath it.
+  filterBarFloating: {
+    position: 'absolute', left: 0, right: 0, top: 0,
+    zIndex: 20,
+    backgroundColor: colors.bg,
+  },
   // Drawn only at the bottom, and only a hairline: it is where the header
   // block ends and the list begins, which is the one edge that has
   // anything to say. A full border would box the row in like a control.
