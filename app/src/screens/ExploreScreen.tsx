@@ -1115,7 +1115,19 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         <PressableScale
           onPress={() => setFilterOpen(true)}
           accessibilityRole="button"
-          accessibilityLabel={t('Filter and sort places', 'Lọc và sắp xếp địa điểm', 'スポットを絞り込み・並べ替え')}
+          // The badge says "2" and a screen reader is never told, because
+          // iOS folds a button's children into one element and reads its
+          // label. `selected` below carries "a filter is on"; it has no
+          // way to carry how many, and the difference between one filter
+          // and three is exactly what a reader checking this control
+          // wants. So the label says what the badge draws.
+          accessibilityLabel={filterCount > 0
+            ? t(
+              `Filter and sort places, ${filterCount} applied`,
+              `Lọc và sắp xếp địa điểm, đang áp dụng ${filterCount}`,
+              `スポットを絞り込み・並べ替え、${filterCount}件適用中`,
+            )
+            : t('Filter and sort places', 'Lọc và sắp xếp địa điểm', 'スポットを絞り込み・並べ替え')}
           accessibilityState={{ selected: filterCount > 0 }}
           hitSlop={4}
           style={[s.filterButton, filterCount > 0 && s.filterButtonOn]}

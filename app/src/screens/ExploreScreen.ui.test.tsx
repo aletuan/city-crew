@@ -662,6 +662,23 @@ describe('the pinned chips row', () => {
     }
   });
 
+  // The badge is a number drawn inside a button, and iOS folds a button's
+  // children into one element — so the count is on screen and absent from
+  // what a screen reader is given. `selected` says a filter is on; it
+  // cannot say two. The label carries the figure the badge draws.
+  it('tells a screen reader how many filters are on, not just that some are', async () => {
+    state.places.data = [place('p1', { rating: 4 }), place('p2', { rating: 3 })];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    fireEvent.click(screen.getByText('Rating'));
+    fireEvent.click(screen.getByText('Open now'));
+    await act(async () => { fireEvent.click(screen.getByText(/Show \d+ place/)); });
+
+    expect(screen.getByRole('button', { name: 'Filter and sort places, 2 applied' })).toBeTruthy();
+  });
+
   it('opens the sort sheet from the control beside the heading', () => {
     state.places.data = [place('p1')];
     render(<ExploreScreen navigation={nav()} />);
