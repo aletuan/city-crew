@@ -141,7 +141,7 @@ export default function ExploreFilterSheet({
             *order*, a mark to recognise it by, and a radio that says out
             loud that these three are one choice. It costs height, and
             that is the trade: the pills were cheaper and said less. */}
-        <Text style={s.legend}>{t('Sort by', 'Sắp xếp theo', '並べ替え')}</Text>
+        <Text style={[s.legend, s.legendFirst]}>{t('Sort by', 'Sắp xếp theo', '並べ替え')}</Text>
         <View accessibilityRole="radiogroup">
           {SORTS.map((value) => {
             const active = draft.sort === value;
@@ -291,7 +291,12 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
   handle: { alignSelf: 'center', width: 38, height: 4, borderRadius: 2, backgroundColor: colors.textTertiary, marginBottom: 10 },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  head: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    // The title's own gap to the first heading, which is the same 24 the
+    // headings below take from each other.
+    marginBottom: space.titleToContent,
+  },
   title: { color: colors.text, fontSize: 21, fontFamily: display.bold },
   close: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass },
   // Sentence case, in ink rather than in the tertiary grey, because
@@ -299,7 +304,21 @@ const s = StyleSheet.create({
   // pills. Note this is the sheet departing from the app's `eyebrow`
   // (uppercase, letter-spaced) — deliberately, and worth settling
   // app-wide rather than leaving as two voices.
-  legend: { color: colors.text, fontSize: 15, fontWeight: font.semibold, marginTop: 18, marginBottom: 6 },
+  // The gaps are the app's, by name rather than by eye. A heading is 16
+  // above its content (`headingToContent`, which is what TripsScreen,
+  // IdeasScreen and SearchScreen all put under theirs) and the next
+  // heading takes 24 above it (`titleToContent`, TripsScreen's
+  // `sectionAfter`). This sheet had 18 and 6 — two numbers nobody chose,
+  // and the 6 was less than half what every other heading in the app
+  // gets, which is exactly how it looked.
+  legend: {
+    color: colors.text, fontSize: 15, fontWeight: font.semibold,
+    marginTop: space.titleToContent, marginBottom: space.headingToContent,
+  },
+  // The first one is already under the sheet's title, which brings its
+  // own air — same exception TripsScreen makes for the heading at the
+  // top of the screen.
+  legendFirst: { marginTop: 0 },
 
   // One row shape for every choice in this sheet — the three sorts and
   // the saved toggle — so the eye learns it once. The border is drawn
@@ -347,7 +366,10 @@ const s = StyleSheet.create({
   segmentText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium },
   segmentTextOn: { color: colors.accent, fontWeight: font.semibold },
 
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft, marginTop: 16 },
+  divider: {
+    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
+    marginTop: space.headingToContent,
+  },
 
   error: { color: colors.bad, fontSize: 12.5, lineHeight: 18, marginTop: 10 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
