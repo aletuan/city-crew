@@ -216,6 +216,30 @@ const sectionHeader = (): HTMLElement => {
 
 // The web ScrollView throttles its events to `scrollEventThrottle`, so each
 // scroll is spaced past it — the tests using this run on fake timers.
+/**
+ * Report a height for the list header, the way a phone's layout pass
+ * would. jsdom lays nothing out, so `onLayout` never fires on its own,
+ * and without a header height the screen cannot know when its chips row
+ * has reached the top.
+ */
+const measureHeader = (height: number) => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && typeof p.onLayout === 'function' && !('style' in p)) {
+      act(() => { (p.onLayout as (e: unknown) => void)({ nativeEvent: { layout: { height } } }); });
+      return;
+    }
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  throw new Error('no measurable list header in the committed tree');
+};
+
 const scrollTo = (y: number) => {
   act(() => { vi.advanceTimersByTime(50); });
   const el = screen.getByTestId('explore-list');
@@ -606,6 +630,36 @@ describe('the pinned chips row', () => {
     expect(within(header).getByText('Places')).toBeTruthy();
     // And the scope is real: the hero is on the same screen and not in here.
     expect(within(header).queryByText("Let's go")).toBeNull();
+  });
+
+  // The trade that pays for the heading being in here: pinned, the block
+  // shows the clock's worth of clearance where at rest it shows the
+  // heading — the same number for both, so the chips do not move and
+  // nothing below them jumps at the crossing. Without that, putting the
+  // heading in the pinned block cost 72pt of empty air above it at rest,
+  // which is what it cost until this.
+  it('swaps the heading for the clock’s clearance when it pins, and keeps its height', () => {
+    vi.useFakeTimers();
+    try {
+      state.places.data = [place('p1'), place('p2')];
+      render(<ExploreScreen navigation={nav()} />);
+      measureHeader(400);
+      const head = sectionHeader();
+      const atRest = window.getComputedStyle(head).paddingTop;
+      expect(screen.getByText('Places')).toBeTruthy();
+
+      scrollTo(500);
+      expect(screen.queryByText('Places')).toBeNull();
+      const whenPinned = window.getComputedStyle(sectionHeader()).paddingTop;
+      // The heading is gone and its height came back as padding, so the
+      // block is no shorter than it was.
+      expect(parseFloat(whenPinned)).toBeGreaterThan(parseFloat(atRest));
+
+      scrollTo(0);
+      expect(screen.getByText('Places')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('opens the sort sheet from the control beside the heading', () => {

@@ -69,6 +69,8 @@ const ALL = 'all';
  * heading's own comment.
  */
 const FILTER_PAD = 10;
+/** The sort control's own diameter — the floor for the heading row. */
+const FILTER_DISC = 36;
 
 /**
  * The last row of the list, at the moment you have finished reading and
@@ -952,9 +954,28 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // A subscription, not state, so a crossing re-renders the Hero alone.
   // See `heroGoneStore`.
   const heroGone = useRef(heroGoneStore()).current;
+  /**
+   * Whether the chips row has reached the top of the screen.
+   *
+   * A boolean where the backing beside it is an interpolation, because
+   * what it decides is not an opacity: pinned, the block shows the
+   * clock's worth of clearance where at rest it shows the heading. One
+   * render per crossing, not one per frame — the same guard `setFirst`
+   * above uses, on a ref the once-built listener can actually see.
+   */
+  const [pinned, setPinned] = useState(false);
+  const pinnedRef = useRef(false);
+  const headerHRef = useRef(0);
   const onScrollJS = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
     const y = e.nativeEvent.contentOffset.y;
     if (y < 320) setFirst(0);
+    // 8pt early, where the backing finishes fading in: the swap and the
+    // opaque page colour belong to the same moment.
+    const stuck = headerHRef.current > 0 && y >= headerHRef.current - 8;
+    if (stuck !== pinnedRef.current) {
+      pinnedRef.current = stuck;
+      setPinned(stuck);
+    }
     // The status-bar crossing — everything through refs, because this
     // closure is built once. Only while focused: a background screen
     // repainting the bar would fight whoever owns it now.
@@ -1002,6 +1023,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * collections at all.
    */
   const [headerH, setHeaderH] = useState(0);
+  headerHRef.current = headerH;
   const header = (
     <View onLayout={(e) => setHeaderH(Math.round(e.nativeEvent.layout.height))}>
       {/* Across to the Ideas tab, not down this screen.
@@ -1053,11 +1075,23 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * made. The state of a filter is context for reading its results, not
    * a control you touch once at the start.
    */
+  /**
+   * The heading row's height, and the clearance that replaces it.
+   *
+   * One number for both, which is the whole trick: pinned, the block
+   * swaps its heading for exactly this much padding, so its height is
+   * the same in both states and nothing below it moves at the crossing.
+   * A measured heading would have done it too, and would have been a
+   * measurement to keep right; this is a number we choose, and the
+   * safe-area inset is the only thing it has to clear.
+   */
+  const headRowH = Math.max(FILTER_DISC, insets.top);
+
   const filters = (
     // The `box-none` that makes the heading above this row tappable is in
     // `s.filterBar`, as a style rather than a prop, and that is the whole
     // repair — see the note there.
-    <View style={[s.filterBar, { paddingTop: FILTER_PAD + insets.top }]}>
+    <View style={[s.filterBar, { paddingTop: FILTER_PAD + (pinned ? headRowH : 0) }]}>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, s.filterBarBg, { opacity: filterBg }]} />
       <View style={s.filterHair} />
       {/* The heading rides inside the pinned block, above the chips.
@@ -1075,7 +1109,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           Inside the block there is nothing over it, and it pins with
           the chips — which is the trade this bought: the section keeps
           its name at the top of the screen while its list scrolls. */}
-      <View style={s.placesHead}>
+      {pinned ? null : (
+      <View style={[s.placesHead, { height: headRowH }]}>
         <Text style={s.placesTitle}>{t('Places', 'Địa điểm', 'スポット')}</Text>
         <PressableScale
           onPress={() => setFilterOpen(true)}
@@ -1104,6 +1139,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           ) : null}
         </PressableScale>
       </View>
+      )}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -1314,10 +1350,11 @@ const s = StyleSheet.create({
   // 430pt screen the thumb has to cross the whole row to reach the sort
   // for the list directly beneath it. Left-aligned, the pair reads as one
   // phrase: the heading, and what you do to it.
+  // No margin of its own: the row's height is what spaces it, because
+  // that height is also what stands in for it when the block pins.
   placesHead: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: space.page,
-    marginBottom: space.headingToContent,
   },
   placesTitle: { color: colors.text, ...type.section },
   filterButton: {
@@ -1389,11 +1426,14 @@ const s = StyleSheet.create({
   // ── what this row is allowed to cover ──
   //
   // Nothing anybody can touch. Pinned, the row is the top edge of the
-  // screen and its padding has to clear the clock — FILTER_PAD plus the
-  // safe-area inset, 72pt on this phone — and at rest that padding has
-  // to go somewhere. `marginTop` spends it on the shelf's own bottom
-  // margin above, which is empty space, and stops there: 24 of the 72,
-  // leaving the rest as the gap before the heading.
+  // screen and its padding has to clear the clock; at rest it carries no
+  // such padding at all, because the heading is standing in that space
+  // instead — see `headRowH`. That is what took the gap above the
+  // heading from 72pt back to the 24 it should have been: the clearance
+  // is not empty air waiting for the row to pin, it is the heading.
+  //
+  // `marginTop` then spends the shelf's own bottom margin, which is
+  // empty space and the only thing above this row that is.
   //
   // It cannot be spent on anything a thumb wants. A sticky section
   // header takes every touch that lands in its box, padding included,
