@@ -517,7 +517,7 @@ describe('sort and filter', () => {
     ];
     render(<ExploreScreen navigation={nav()} />);
     fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Opened'));
+    fireEvent.click(screen.getByText('Open now'));
     await act(async () => { fireEvent.click(screen.getByText('Show 1 place')); });
     expect(cardNames()).toHaveLength(1);
     expect(cardNames()[0]).toContain('Place open');
