@@ -521,6 +521,33 @@ describe('sort and filter', () => {
     await waitFor(() => expect(spies.askToSignIn).toHaveBeenCalledOnce());
   });
 
+  // Distance is the one control that can fail, and it fails in two
+  // different places: the permission, and the fix itself. Both are
+  // answered inside the sheet rather than by closing it — the reader
+  // asked for an order and has not got one, so the sheet stays open with
+  // the reason and the choice still in it.
+  it('says why distance is unavailable when location is refused, and keeps the sheet open', async () => {
+    state.locationGranted = false;
+    state.places.data = [place('a'), place('b')];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    fireEvent.click(screen.getByText('Distance'));
+    await act(async () => { fireEvent.click(screen.getByText('Show 2 places')); });
+    expect(screen.getByText('Allow location access to sort places by distance.')).toBeTruthy();
+    expect(screen.getByText('Sort & filter')).toBeTruthy();
+  });
+
+  it('says so when the location is allowed but cannot be read', async () => {
+    spies.getLastKnownPositionAsync.mockResolvedValueOnce(null);
+    spies.getCurrentPositionAsync.mockRejectedValueOnce(new Error('no fix'));
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    fireEvent.click(screen.getByText('Distance'));
+    await act(async () => { fireEvent.click(screen.getByText('Show 1 place')); });
+    expect(screen.getByText("Couldn't read your location. Try again in a moment.")).toBeTruthy();
+  });
+
   it('requests location only when Distance is applied and sorts nearest first', async () => {
     state.places.data = [
       place('far', { lat: 21.1, lng: 105.9 }),

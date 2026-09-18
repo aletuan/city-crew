@@ -81,6 +81,34 @@ describe('Explore filters', () => {
       .toEqual(['near', 'far', 'unknown']);
   });
 
+  // The tie-break is the reason the recommended rank is carried through
+  // this function at all: two places the desk rates the same are still in
+  // an order somebody chose, and a sort that shuffles them is a sort that
+  // answers differently each call.
+  it('leaves places of equal rating in the order recommendation put them', () => {
+    const places = [place('first', { rating: 4.5 }), place('second', { rating: 4.5 })];
+    expect(run(places, { sort: 'rating' }).map((p) => p.slug)).toEqual(['first', 'second']);
+  });
+
+  it('leaves places the same distance away in the order recommendation put them', () => {
+    const here = { lat: 21.0285, lng: 105.8542 };
+    const places = [place('first', { ...here }), place('second', { ...here })];
+    expect(run(places, { sort: 'distance', origin: here }).map((p) => p.slug))
+      .toEqual(['first', 'second']);
+  });
+
+  // Half a coordinate is no coordinate. A latitude with no longitude
+  // beside it cannot be measured from anywhere, and the row that carries
+  // one goes last with the rest of the unplaceable.
+  it('treats a place with half its coordinates as having none', () => {
+    const places = [
+      place('half', { lat: 21.029, lng: null }),
+      place('near', { lat: 21.029, lng: 105.854 }),
+    ];
+    expect(run(places, { sort: 'distance', origin: { lat: 21.0285, lng: 105.8542 } }).map((p) => p.slug))
+      .toEqual(['near', 'half']);
+  });
+
   it('keeps only saved places when requested', () => {
     const places = [place('saved'), place('other')];
     expect(run(places, { savedOnly: true, isSaved: (slug) => slug === 'saved' }).map((p) => p.slug))
