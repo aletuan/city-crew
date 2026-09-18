@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ExploreFilters, ExploreSort, ExploreStatus } from '../lib/exploreFilters';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space } from '../theme';
-import { fireHaptic, GradientCta, PressableScale } from './ui';
+import { Card, fireHaptic, GradientCta, PressableScale } from './ui';
 
 /** What the sheet looks like with nothing chosen — the state Reset
  *  returns to, and the one it compares against to know it has anything
@@ -142,8 +142,22 @@ export default function ExploreFilterSheet({
             loud that these three are one choice. It costs height, and
             that is the trade: the pills were cheaper and said less. */}
         <Text style={[s.legend, s.legendFirst]}>{t('Sort by', 'Sắp xếp theo', '並べ替え')}</Text>
+        {/* One card of divided rows, which is the shape this app already
+            keeps for a list of choices — `Card` with `featureRow` and a
+            hairline on all but the last, four times over in
+            ProfileScreen. Three rows standing apart each looked like
+            their own switch; the frame is what says they are one answer.
+
+            The horizontal padding is on the rows rather than on the
+            card, so the rule between them runs the card's full width and
+            the chosen row's tint reaches both edges. ProfileScreen insets
+            its rules instead; here the tint is the reason not to. */}
+        {/* The role goes on a wrapper rather than on `Card`, which takes
+            children and a style and nothing else — a shared primitive
+            should not grow a prop for one caller. */}
         <View accessibilityRole="radiogroup">
-          {SORTS.map((value) => {
+        <Card>
+          {SORTS.map((value, i) => {
             const active = draft.sort === value;
             return (
               <PressableScale
@@ -151,7 +165,11 @@ export default function ExploreFilterSheet({
                 onPress={() => choose('sort', value)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
-                style={[s.row, active && s.rowOn]}
+                // Said in words, not assembled from children: without
+                // this the row's label is the icon's glyph, a comma and
+                // then the words — `'\uf599, Highest rated'` in the tree.
+                accessibilityLabel={sortLabel(value, t)}
+                style={[s.row, i < SORTS.length - 1 && s.rowDivided, active && s.rowOn]}
               >
                 <Ionicons
                   name={sortIcon(value)}
@@ -170,6 +188,7 @@ export default function ExploreFilterSheet({
               </PressableScale>
             );
           })}
+        </Card>
         </View>
 
         {/* One track holding three segments, rather than three pills
@@ -200,10 +219,17 @@ export default function ExploreFilterSheet({
           })}
         </View>
 
-        {/* Its own heading is gone: the row says what it is, and a rule
-            above it is enough to mark that the question has changed from
-            "in what order" to "which ones". */}
-        <View style={s.divider} />
+        {/* Its own card, for the same reason the sorts got one: a single
+            row with no frame beside two framed blocks reads as the one
+            thing nobody finished. And its own heading, for the same
+            reason again — two headed blocks and one bare card is the
+            same asymmetry one level up. Three questions, three headings.
+
+            "Bookmarked only" rather than naming the section twice: the
+            heading says what the block is about, so the row is free to
+            say what the switch does. */}
+        <Text style={s.legend}>{t('Saved places', 'Địa điểm đã lưu', '保存済み')}</Text>
+        <Card>
         <PressableScale
           onPress={() => {
             if (!signedIn) { onNeedSignIn(); return; }
@@ -211,6 +237,13 @@ export default function ExploreFilterSheet({
           }}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: draft.savedOnly, disabled: !signedIn }}
+          // Same reason as the sort rows: the tree otherwise reads the
+          // bookmark glyph, the words, "Sign in" and the chevron glyph
+          // as one comma-spliced label.
+          accessibilityLabel={t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')}
+          accessibilityHint={signedIn
+            ? undefined
+            : t('Sign in to use this', 'Đăng nhập để dùng', 'サインインして使う')}
           style={[s.row, draft.savedOnly && s.rowOn]}
         >
           <Ionicons
@@ -219,7 +252,7 @@ export default function ExploreFilterSheet({
             color={draft.savedOnly ? colors.accent : colors.textSecondary}
           />
           <Text style={[s.rowText, draft.savedOnly && s.rowTextOn]}>
-            {t('Saved places only', 'Chỉ địa điểm đã lưu', '保存済みのみ')}
+            {t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')}
           </Text>
           {/* Signed out this said "Sign in required" in grey, which is a
               refusal written as a label. It is a door, so it looks like
@@ -236,6 +269,7 @@ export default function ExploreFilterSheet({
             </View>
           )}
         </PressableScale>
+        </Card>
 
         {error ? <Text style={s.error} accessibilityRole="alert">{error}</Text> : null}
         <View style={s.divider} />
@@ -321,21 +355,30 @@ const s = StyleSheet.create({
   legendFirst: { marginTop: 0 },
 
   // One row shape for every choice in this sheet — the three sorts and
-  // the saved toggle — so the eye learns it once. The border is drawn
-  // always and only changes colour, so selecting cannot shift the layout.
+  // the saved toggle — so the eye learns it once.
+  //
+  // It carries no frame of its own any more: the card around it is the
+  // frame, and a rounded rect inside a rounded rect was two of them
+  // saying the same thing. Which also lets the chosen row's tint run to
+  // both edges, where before it had to stop short of a border.
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    minHeight: 52, paddingHorizontal: 13,
-    borderWidth: 1, borderColor: 'transparent',
-    borderRadius: radius.card - 5,
+    minHeight: 52, paddingHorizontal: 14,
   },
-  rowOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
+  // The rule between rows, on every one but the last — `featureRowDivider`
+  // in ProfileScreen, which is where this pattern already lives.
+  rowDivided: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft },
+  rowOn: { backgroundColor: colors.accentSoft },
   rowText: { flex: 1, color: colors.text, fontSize: 15, fontWeight: font.medium },
   rowTextOn: { color: colors.accent, fontWeight: font.semibold },
 
+  // The empty ring is drawn in the tertiary ink the drag handle uses, not
+  // in a border token: `borderGlass` on the dark card was a ring you had
+  // to know was there. An unchosen radio the eye cannot find is not
+  // offering a choice.
   radio: {
     width: 22, height: 22, borderRadius: 11,
-    borderWidth: 1.5, borderColor: colors.borderGlass,
+    borderWidth: 1.5, borderColor: colors.textTertiary,
     alignItems: 'center', justifyContent: 'center',
   },
   radioOn: { borderColor: colors.accent },
