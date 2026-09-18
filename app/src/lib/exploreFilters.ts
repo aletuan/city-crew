@@ -40,7 +40,21 @@ export function filterExplorePlaces(
     ));
 
   if (options.sort === 'rating') {
-    indexed.sort((a, b) => (b.place.rating ?? -Infinity) - (a.place.rating ?? -Infinity) || a.rank - b.rank);
+    // Score first, then how many people said so.
+    //
+    // A rating is two numbers pretending to be one: 4.8 from nine people
+    // and 4.8 from nine hundred are not the same claim, and the catalog
+    // is full of exact ties because a five-star place with a handful of
+    // votes scores like a five-star place with a thousand. Sorting on the
+    // score alone left those ties to whatever order the rows arrived in.
+    //
+    // No reviews counts as none of them rather than as unrated — the row
+    // is already below anything with a score, and among equal scores the
+    // one nobody has voted on is the weaker claim.
+    const votes = (p: Place) => p.rating_count ?? 0;
+    indexed.sort((a, b) => (b.place.rating ?? -Infinity) - (a.place.rating ?? -Infinity)
+      || votes(b.place) - votes(a.place)
+      || a.rank - b.rank);
   } else if (options.sort === 'distance' && options.origin) {
     const away = (place: Place) => place.lat == null || place.lng == null
       ? Infinity

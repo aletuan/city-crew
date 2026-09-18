@@ -90,6 +90,26 @@ describe('Explore filters', () => {
     expect(run(places, { sort: 'rating' }).map((p) => p.slug)).toEqual(['first', 'second']);
   });
 
+  // A rating is two numbers pretending to be one. 4.8 from nine people and
+  // 4.8 from nine hundred are not the same claim, and sorting by the score
+  // alone puts them in whatever order the catalog happened to arrive in.
+  // The count is the second half of the same fact, so it decides the tie.
+  it('breaks a tie in rating by how many people voted', () => {
+    const places = [
+      place('few', { rating: 4.8, rating_count: 9 }),
+      place('many', { rating: 4.8, rating_count: 900 }),
+    ];
+    expect(run(places, { sort: 'rating' }).map((p) => p.slug)).toEqual(['many', 'few']);
+  });
+
+  it('counts a place with no reviews as none of them, not as unrated', () => {
+    const places = [
+      place('silent', { rating: 4.8 }),
+      place('voted', { rating: 4.8, rating_count: 1 }),
+    ];
+    expect(run(places, { sort: 'rating' }).map((p) => p.slug)).toEqual(['voted', 'silent']);
+  });
+
   it('leaves places the same distance away in the order recommendation put them', () => {
     const here = { lat: 21.0285, lng: 105.8542 };
     const places = [place('first', { ...here }), place('second', { ...here })];
