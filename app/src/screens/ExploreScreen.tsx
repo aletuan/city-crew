@@ -1069,17 +1069,29 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           style={[s.filterButton, filterCount > 0 && s.filterButtonOn]}
           testID={floating ? 'explore-filter-pinned' : 'explore-filter'}
         >
-          {/* Coral at rest, not ink. This is the one control on the
-              screen a reader has to notice before they know they want
-              it — a grey glyph in a grey disc beside a heading reads as
-              decoration, and nobody presses decoration. The accent is
-              what the app's buttons are already made of, so it says
-              "pressable" without inventing a signal.
-              What separates the two states is the disc, not the glyph:
-              glass at rest, accent-tinted and carrying a count once a
-              filter is on. Same control, so the same colour; the fill
-              is what changed. */}
-          <Ionicons name="options-outline" size={19} color={colors.accent} />
+          {/* Ink at rest, coral once something is applied — and that is
+              the correction to a coral-always glyph, which this was.
+              The argument for coral-always was that a grey mark beside a
+              heading reads as decoration. The argument against it is
+              stronger: in this app coral means active, selected, acted
+              upon. A control that wears it while nothing is filtered
+              says the list has been narrowed when it has not, and it
+              spends the one signal that would have said so.
+              So the two states differ in every part at once — glyph,
+              border, fill, and a badge counting the conditions. A badge
+              alone is 16pt of evidence; colour is what carries across
+              the screen, and the pair is the feedback for having
+              pressed Apply.
+              `accent` rather than `accentFill`: the paper theme's accent
+              ink is deliberately the darker coral, because the button's
+              bright one on a pale ground is a 3:1 glyph. Same accent,
+              adjusted for ink — the app's own rule, not a second
+              colour. */}
+          <Ionicons
+            name="options-outline"
+            size={19}
+            color={filterCount > 0 ? colors.accent : colors.textSecondary}
+          />
           {filterCount > 0 ? (
             <View style={s.filterBadge}>
               <Text style={s.filterBadgeText}>{filterCount}</Text>

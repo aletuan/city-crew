@@ -165,6 +165,10 @@ export default function ExploreFilterSheet({
                 onPress={() => choose('sort', value)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
+                // Said in words, not assembled from children: without
+                // this the row's label is the icon's glyph, a comma and
+                // then the words — `'\uf599, Highest rated'` in the tree.
+                accessibilityLabel={sortLabel(value, t)}
                 style={[s.row, i < SORTS.length - 1 && s.rowDivided, active && s.rowOn]}
               >
                 <Ionicons
@@ -233,6 +237,13 @@ export default function ExploreFilterSheet({
           }}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: draft.savedOnly, disabled: !signedIn }}
+          // Same reason as the sort rows: the tree otherwise reads the
+          // bookmark glyph, the words, "Sign in" and the chevron glyph
+          // as one comma-spliced label.
+          accessibilityLabel={t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')}
+          accessibilityHint={signedIn
+            ? undefined
+            : t('Sign in to use this', 'Đăng nhập để dùng', 'サインインして使う')}
           style={[s.row, draft.savedOnly && s.rowOn]}
         >
           <Ionicons
@@ -361,9 +372,13 @@ const s = StyleSheet.create({
   rowText: { flex: 1, color: colors.text, fontSize: 15, fontWeight: font.medium },
   rowTextOn: { color: colors.accent, fontWeight: font.semibold },
 
+  // The empty ring is drawn in the tertiary ink the drag handle uses, not
+  // in a border token: `borderGlass` on the dark card was a ring you had
+  // to know was there. An unchosen radio the eye cannot find is not
+  // offering a choice.
   radio: {
     width: 22, height: 22, borderRadius: 11,
-    borderWidth: 1.5, borderColor: colors.borderGlass,
+    borderWidth: 1.5, borderColor: colors.textTertiary,
     alignItems: 'center', justifyContent: 'center',
   },
   radioOn: { borderColor: colors.accent },
