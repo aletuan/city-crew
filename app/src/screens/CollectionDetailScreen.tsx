@@ -196,9 +196,12 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const { session } = useAuth();
   const uid = session?.user?.id;
   const cols = useCollections();
-  // Both catalogs, because the public query excludes owned rows: a list of
-  // your own would otherwise open on "Collection not found". The owned half
-  // comes from the shared copy, so a place saved from anywhere shows here.
+  // Both catalogs, because a list of your own that is still private is in
+  // neither the public query nor anywhere else: without `mine` it would
+  // open on "Collection not found". The owned half comes from the shared
+  // copy, so a place saved from anywhere shows here. A published list of
+  // your own is now in both, and `find` takes the first — `mine`, which
+  // is the fuller row.
   const { mine, askToSignIn } = useSave();
   // Reporting, raised from the overflow menu — see components/reportFlow.
   const { report, canReport, node: reportSheet } = useReport();
@@ -626,12 +629,11 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           the app's half of the same rule: the policy is what
           makes it true, this is what keeps the reader from
           meeting it as a heart that does nothing. The Explore
-          shelf never needs the check — it leaves your own lists
-          out of the query it draws from, so the heart there
-          never meets one — and the Collections grid carries its
-          own copy of the same rule on your own tiles; here the
-          row arrives through `mine` as readily as through the
-          public read.
+          shelf and the Collections grid each carry their own
+          copy of the rule, drawn the same way. The shelf used
+          not to need one, because the query it draws from left
+          your own lists out — which is also why a list you had
+          just published was nowhere on the front door.
 
           So the owner gets the same shape drawn grey and inert —
           they still want to know how the list is doing. Signed

@@ -362,6 +362,19 @@ describe('CollectionsScreen — signed in', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('CollectionForm');
   });
 
+  // The public query hands over every public list now, the reader's own
+  // included — Explore's shelf and Search have nowhere else to get them
+  // from. This is the one screen that also shows your library, so this is
+  // where the dedupe lives: a list on both tabs reads as two lists.
+  it('keeps your own published list off Community — it is already on Yours', () => {
+    const own = col('mine1', ['a'], { owner_id: 'u1' });
+    state.mine.data = [own];
+    state.cols.data = [own, col('theirs', ['a'])];
+    show({ tab: 'community' });
+    expect(screen.getByText('List theirs')).toBeTruthy();
+    expect(screen.queryByText('List mine1')).toBeNull();
+  });
+
   it('an empty library greets with the community shelf', () => {
     state.cols.data = [col('theirs', ['a'])];
     show();

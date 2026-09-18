@@ -606,6 +606,10 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
             const members = membersOf(c, places);
             const count = members.length;
             const badge = collectionIcon(members);
+            // Your own published lists are on this shelf now — see
+            // `fetchCollections` — and the heart is the one thing that
+            // has to know it.
+            const owned = !!c.owner_id && c.owner_id === uid;
             return (
               <PressableScale
                 key={c.slug}
@@ -659,8 +663,28 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                         phrase and the thumb has a corner rather than the
                         middle of a line. `hitSlop` takes the target past
                         44pt without a disc: the glyph can stay small
-                        because the touchable does not have to. */}
-                    {c.id && (
+                        because the touchable does not have to.
+
+                        Pressable for everyone except the curator. A
+                        curator cannot like their own list — the database
+                        enforces it — so on your own the same shape is
+                        drawn dimmed and inert: you still want to know
+                        how the list is doing, and a heart that can only
+                        fail is worse than no heart at all. This shelf
+                        used not to need the check, because the query
+                        left your own lists out; it left them out of the
+                        shelf entirely, which is the bug that brought
+                        them back. The collection's own screen carries
+                        the same rule, drawn the same way, and the
+                        Collections grid a third copy. */}
+                    {c.id && owned ? (
+                      likesWorthShowing(likes[c.slug]) ? (
+                        <View style={[s.shelfLikes, s.shelfLikeHit]}>
+                          <Ionicons name="heart" size={15} color={onPhoto.textSecondary} />
+                          <Text style={s.shelfCardMeta}>{likes[c.slug]}</Text>
+                        </View>
+                      ) : null
+                    ) : c.id ? (
                       <PressableScale
                         containerStyle={s.shelfLikeHit}
                         style={s.shelfLikes}
@@ -683,7 +707,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                           <Text style={s.shelfCardMeta}>{likes[c.slug]}</Text>
                         )}
                       </PressableScale>
-                    )}
+                    ) : null}
                   </View>
                 </View>
               </PressableScale>

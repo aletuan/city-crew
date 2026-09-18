@@ -68,19 +68,24 @@ export const useMyLikesQuery = (meId?: string | null) => {
   return useFetch(fetcher, [] as string[]);
 };
 
-export const useCollectionsQuery = (meId?: string | null) => {
+// No reader, in the query or in the key. The public shelf is the same
+// shelf for everyone now — see `fetchCollections`, which used to leave
+// the reader's own published lists out of it — so one cached copy per
+// city serves the whole device, signed in or out, and signing in no
+// longer has to re-fetch a list that has not changed.
+export const useCollectionsQuery = () => {
   const { city } = useCity();
   const fetcher = useCallback(
-    () => (city ? fetchCollections(city.id, meId) : (pending as Promise<Collection[]>)),
+    () => (city ? fetchCollections(city.id) : (pending as Promise<Collection[]>)),
     // `city.id` is the stable key — see `usePlacesQuery` above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [city?.id, meId],
+    [city?.id],
   );
   // Cached between launches like places above; like counts and avatars
   // are deliberately not — one is a social number that must be fresh,
   // the other arrives late harmlessly.
   return usePersistedFetch(
-    CACHE_CATALOG && city ? cacheKey('collections', city.id, meId) : null,
+    CACHE_CATALOG && city ? cacheKey('collections', city.id) : null,
     fetcher,
     [] as Collection[],
   );

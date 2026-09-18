@@ -47,29 +47,35 @@ import { PLACE_COLS } from './places';
 const COLLECTION_COLS = (withOwner: boolean) =>
   `id, slug, is_public, created_at, sort_order, title_en, title_vi, title_ja, desc_en, desc_vi, desc_ja, curator_handle${withOwner ? ', owner_id, city_id' : ''}, collection_places(sort_order, places(${withOwner ? PLACE_COLS(true) : 'slug'})), cover:place_photos!collections_cover_photo_id_fkey(id, photo_uri)`;
 
-export async function fetchCollections(cityId: string, meId?: string | null): Promise<Collection[]> {
+export async function fetchCollections(cityId: string): Promise<Collection[]> {
   const run = (withOwner: boolean) => {
     const q = supabase
       .from('collections')
       .select(COLLECTION_COLS(withOwner))
       .eq('is_public', true);
-    // Editorial rows and other people's published ones. Your own are
-    // excluded whether they are published or not, because they come back
-    // through fetchMyCollections and a list in both sections reads as two
-    // lists — publishing should change who else can see it, not make a
-    // second copy appear under your own.
+    // Every public list, and it takes no reader — which it used to.
     //
-    // Signed out there is nobody to exclude, and `owner_id.neq.null` is
-    // not the same question as `is not null` in PostgREST's grammar, so
-    // that branch drops the clause rather than writing one that quietly
-    // matches nothing.
+    // This query once excluded the reader's own rows, so that the
+    // Collections tab, which shows your library and the community's side
+    // by side, would not print one list twice. The dedupe was right; the
+    // place was not. Explore's shelf and Search draw from this query and
+    // have no library beside them, so the exclusion did not dedupe there,
+    // it deleted: a list you published yourself was missing from the
+    // front door and unfindable by name, on your own device, for you
+    // alone. Every other reader saw it. Publishing that the publisher
+    // cannot see reads as publishing that failed — which is how it was
+    // reported.
+    //
+    // So the question this asks is the one its name makes: every list
+    // that is public. The screen with two shelves does its own dedupe,
+    // where it can see both. See `CollectionsScreen`.
+    //
     // `owner_id` and `created_at` arrived in the same migration, so the
     // fallback below cannot mention either — it exists precisely for a
     // database that has neither. It keeps the city filter too: a database
     // that old has no owned lists, so every row in it is editorial and
     // stamped with the city it belongs to.
     if (!withOwner) return q.eq('city_id', cityId).order('sort_order');
-    const scoped = meId ? q.or(`owner_id.is.null,owner_id.neq.${meId}`) : q;
     // Newest first, with the desk's sequence as the tie-break.
     //
     // Time leads because a list published this morning is the reason to
@@ -83,7 +89,7 @@ export async function fetchCollections(cityId: string, meId?: string | null): Pr
     // nothing, and Postgres is free to return that nothing differently
     // each call. The tie-break decides exactly the rows where the clock
     // has no answer, and the desk's order is the answer it has.
-    return scoped.order('created_at', { ascending: false }).order('sort_order', { nullsFirst: false });
+    return q.order('created_at', { ascending: false }).order('sort_order', { nullsFirst: false });
   };
 
   const { data, error } = await run(true);

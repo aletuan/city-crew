@@ -239,7 +239,7 @@ describe('before the list is there', () => {
   });
 
   it('holds the menu back while your own lists load, so the owner never gets the visitor menu', () => {
-    // Your list is only in `mine` — the public query leaves owned rows out —
+    // Your list is only in `mine` here — a private one is in nothing else —
     // so until it answers there is no row saying the list is yours.
     state.mine = [];
     state.mineLoading = true;
