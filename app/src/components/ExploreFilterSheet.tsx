@@ -16,9 +16,22 @@ function sortLabel(value: ExploreSort, t: ReturnType<typeof useI18n>['t']) {
   return t('Recommended', 'Đề xuất', 'おすすめ');
 }
 
+/**
+ * "Open now", not "Opened".
+ *
+ * The filter asks about this minute, and the past participle answered a
+ * different question — "opened" is something a place did, at some point,
+ * and reads in a list of two as though its partner meant "shut down".
+ * The pair that carries the tense is "Open now" / "Closed now".
+ *
+ * Vietnamese already said it: "Đang mở" is present-continuous and "Đã
+ * đóng" is its opposite, so those stand. Japanese too — 営業中 is "in the
+ * middle of trading" and 営業時間外 is "outside business hours", both
+ * about now, and neither needs a 今 in front of it to say so.
+ */
 function statusLabel(value: ExploreStatus, t: ReturnType<typeof useI18n>['t']) {
-  if (value === 'open') return t('Opened', 'Đang mở', '営業中');
-  if (value === 'closed') return t('Closed', 'Đã đóng', '営業時間外');
+  if (value === 'open') return t('Open now', 'Đang mở', '営業中');
+  if (value === 'closed') return t('Closed now', 'Đã đóng', '営業時間外');
   return t('Any', 'Tất cả', 'すべて');
 }
 
@@ -101,6 +114,7 @@ export default function ExploreFilterSheet({
                 onPress={() => choose('sort', value)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
+                containerStyle={s.optionCell}
                 style={[s.option, active && s.optionOn]}
               >
                 <Text style={[s.optionText, active && s.optionTextOn]} numberOfLines={1}>
@@ -121,6 +135,7 @@ export default function ExploreFilterSheet({
                 onPress={() => choose('status', value)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
+                containerStyle={s.optionCell}
                 style={[s.option, active && s.optionOn]}
               >
                 <Text style={[s.optionText, active && s.optionTextOn]} numberOfLines={1}>
@@ -198,14 +213,25 @@ const s = StyleSheet.create({
   title: { color: colors.text, fontSize: 21, fontFamily: display.bold },
   close: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass },
   legend: { color: colors.textTertiary, fontSize: 11, fontWeight: font.semibold, textTransform: 'uppercase', marginTop: 13, marginBottom: 8 },
-  options: { flexDirection: 'row', gap: 7 },
+  options: { flexDirection: 'row', gap: 8 },
+  // Three equal thirds of the row, and the `flex` is out here rather than
+  // on the cell below for the reason `PressableScale` spells out: put it
+  // in `style` and it lands on the animated view inside a Pressable that
+  // has already shrunk to fit its own text. Which is what happened — the
+  // three pills came out the widths of the words "Recommended",
+  // "Distance" and "Rating", with a third of the row left empty after
+  // them. A row of choices should be a row of equals; the width of a
+  // label is not a ranking.
+  optionCell: { flex: 1 },
   option: {
-    flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center',
+    minHeight: 46, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 8, borderWidth: 1, borderColor: colors.borderGlassSoft,
     borderRadius: radius.card - 7,
   },
   optionOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
-  optionText: { color: colors.textSecondary, fontSize: 12, fontWeight: font.medium },
+  // 13, up from 12: the cells are the full width of the row now and the
+  // type was sized for the cramped version of them.
+  optionText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium },
   optionTextOn: { color: colors.accent, fontWeight: font.semibold },
   saved: {
     minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 9,
