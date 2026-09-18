@@ -14,9 +14,11 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PlaceCard from '../components/PlaceCard';
+import ExploreFilterSheet from '../components/ExploreFilterSheet';
 import { AddPill, AddSlot } from '../components/add';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useOwnedStatusBar, useTabBarClearance, useTabBarLift } from '../components/ui';
@@ -35,6 +37,7 @@ import { useAuth } from '../lib/auth';
 import { useSave } from '../lib/save';
 import { likesWorthShowing, rankByLikes } from '../lib/likes';
 import { bestFirst } from '../lib/rank';
+import { filterExplorePlaces, type ExploreFilters, type ExploreOrigin } from '../lib/exploreFilters';
 import { useBrowseTaste } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
@@ -722,6 +725,8 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
+  const { session } = useAuth();
+  const { isSaved, askToSignIn } = useSave();
   const { loading, loaded, error, data: places, reload } = usePlaces();
   // The pull spinner belongs to the pull. `loading` alone also covers
   // refreshes nobody asked to watch — the launch cache's background
@@ -743,6 +748,11 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // the Collections tab's `mineReady` learned about its focus refresh.
   const holding = !loaded;
   const [cat, setCat] = useState<string>(ALL);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<ExploreFilters>({
+    sort: 'recommended', status: 'any', savedOnly: false,
+  });
+  const [sortOrigin, setSortOrigin] = useState<ExploreOrigin | null>(null);
   const tabClearance = useTabBarClearance();
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -847,10 +857,56 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * The category filter runs first. Ranking either side of it gives the
    * same order within a chip; filtering first just ranks fewer places.
    */
-  const shown = useMemo(() => {
+  const recommended = useMemo(() => {
     const inCat = cat === ALL ? places : places.filter((p) => categoriesOf(p).includes(cat));
     return bestFirst(inCat, taste);
   }, [places, cat, taste]);
+
+  const filteredFor = useCallback((next: ExploreFilters) => filterExplorePlaces(recommended, {
+    ...next,
+    // Category already ran before recommendation ranking, preserving the
+    // feed's existing order exactly when the new controls are untouched.
+    category: ALL,
+    allCategory: ALL,
+    origin: sortOrigin,
+    isSaved,
+    now: new Date(),
+  }), [recommended, sortOrigin, isSaved]);
+
+  const shown = useMemo(() => filteredFor(appliedFilters), [filteredFor, appliedFilters]);
+
+  const applyFilters = useCallback(async (next: ExploreFilters): Promise<string | null> => {
+    if (next.sort === 'distance' && !sortOrigin) {
+      const held = await Location.getForegroundPermissionsAsync();
+      const permission = held.status === 'granted'
+        ? held
+        : await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== 'granted') {
+        return t(
+          'Allow location access to sort places by distance.',
+          'Hãy cho phép truy cập vị trí để sắp xếp địa điểm theo khoảng cách.',
+          '距離順に並べるには位置情報を許可してください。',
+        );
+      }
+      const position = await Location.getLastKnownPositionAsync()
+        ?? await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }).catch(() => null);
+      if (!position) {
+        return t(
+          "Couldn't read your location. Try again in a moment.",
+          'Không thể xác định vị trí của bạn. Hãy thử lại sau giây lát.',
+          '位置情報を取得できませんでした。しばらくしてからもう一度お試しください。',
+        );
+      }
+      setSortOrigin({ lat: position.coords.latitude, lng: position.coords.longitude });
+    }
+    setAppliedFilters(next);
+    setFilterOpen(false);
+    return null;
+  }, [sortOrigin, t]);
+
+  const filterCount = (appliedFilters.sort === 'recommended' ? 0 : 1)
+    + (appliedFilters.status === 'any' ? 0 : 1)
+    + (appliedFilters.savedOnly ? 1 : 0);
 
   const hero = useMemo(() => heroPlace(places, city?.hero_place_slug), [places, city?.hero_place_slug]);
 
@@ -968,9 +1024,25 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           inset's worth of the row overlaps this heading at rest, and
           harmlessly: the row's backing is transparent until it pins, and
           neither the heading nor the row's padding is a touch target. */}
-      <Text style={[s.section, { marginBottom: space.headingToContent - FILTER_PAD - insets.top }]}>
-        {t('Places', 'Địa điểm', 'スポット')}
-      </Text>
+      <View style={[s.placesHead, { marginBottom: space.headingToContent - FILTER_PAD - insets.top }]}>
+        <Text style={s.placesTitle}>{t('Places', 'Địa điểm', 'スポット')}</Text>
+        <PressableScale
+          onPress={() => setFilterOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('Filter and sort places', 'Lọc và sắp xếp địa điểm', 'スポットを絞り込み・並べ替え')}
+          accessibilityState={{ selected: filterCount > 0 }}
+          hitSlop={4}
+          style={[s.filterButton, filterCount > 0 && s.filterButtonOn]}
+          testID="explore-filter"
+        >
+          <Ionicons name="options-outline" size={19} color={filterCount > 0 ? colors.accent : colors.text} />
+          {filterCount > 0 ? (
+            <View style={s.filterBadge}>
+              <Text style={s.filterBadgeText}>{filterCount}</Text>
+            </View>
+          ) : null}
+        </PressableScale>
+      </View>
     </View>
   );
 
@@ -1127,6 +1199,18 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             onAdd={() => navigation.navigate('AddPlace')}
           />
         )}
+        <ExploreFilterSheet
+          visible={filterOpen}
+          applied={appliedFilters}
+          signedIn={!!session}
+          countFor={(next) => filteredFor(next).length}
+          onClose={() => setFilterOpen(false)}
+          onApply={applyFilters}
+          onNeedSignIn={() => {
+            setFilterOpen(false);
+            requestAnimationFrame(askToSignIn);
+          }}
+        />
       </View>
     </View>
   );
@@ -1200,6 +1284,24 @@ const s = StyleSheet.create({
     color: colors.text, ...type.section,
     paddingHorizontal: space.page, marginBottom: space.headingToContent,
   },
+  placesHead: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: space.page,
+  },
+  placesTitle: { color: colors.text, ...type.section },
+  filterButton: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceGlass,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  filterButtonOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
+  filterBadge: {
+    position: 'absolute', top: -3, right: -3,
+    minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentFill,
+  },
+  filterBadgeText: { color: colors.accentInk, fontSize: 9, fontWeight: font.bold },
 
   shelfHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingRight: space.page },
 

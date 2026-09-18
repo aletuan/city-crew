@@ -12,7 +12,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '../uitest/render';
+import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
 
@@ -28,6 +28,9 @@ const state = vi.hoisted(() => ({
   likes: {} as Record<string, number>,
   myLikes: [] as string[],
   uid: null as string | null,
+  saved: new Set<string>(),
+  locationGranted: true,
+  position: { latitude: 21.0285, longitude: 105.8542 },
   taste: null as null | { affinity: (p: { slug: string }) => number },
   sky: null as null | { icon: string; temp: number; gold?: boolean },
   ducked: false,
@@ -44,6 +47,12 @@ const spies = vi.hoisted(() => ({
   settle: vi.fn(),
   reportStartup: vi.fn(),
   setStatusBarStyle: vi.fn(),
+  getForegroundPermissionsAsync: vi.fn(async () => ({ status: state.locationGranted ? 'granted' : 'denied' })),
+  requestForegroundPermissionsAsync: vi.fn(async () => ({ status: state.locationGranted ? 'granted' : 'denied' })),
+  getLastKnownPositionAsync: vi.fn(async () => (state.locationGranted
+    ? { coords: { ...state.position } }
+    : null)),
+  getCurrentPositionAsync: vi.fn(async () => ({ coords: { ...state.position } })),
 }));
 
 vi.mock('../lib/i18n', () => ({
@@ -61,7 +70,14 @@ vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
 }));
 vi.mock('../lib/save', () => ({
-  useSave: () => ({ save: vi.fn(), askToSignIn: spies.askToSignIn, isSaved: () => false }),
+  useSave: () => ({ save: vi.fn(), askToSignIn: spies.askToSignIn, isSaved: (slug: string) => state.saved.has(slug) }),
+}));
+vi.mock('expo-location', () => ({
+  Accuracy: { Low: 1 },
+  getForegroundPermissionsAsync: spies.getForegroundPermissionsAsync,
+  requestForegroundPermissionsAsync: spies.requestForegroundPermissionsAsync,
+  getLastKnownPositionAsync: spies.getLastKnownPositionAsync,
+  getCurrentPositionAsync: spies.getCurrentPositionAsync,
 }));
 vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: state.scheme, setScheme: () => {}, ready: true }),
@@ -208,6 +224,9 @@ beforeEach(() => {
   state.likes = {};
   state.myLikes = [];
   state.uid = null;
+  state.saved = new Set();
+  state.locationGranted = true;
+  state.position = { latitude: 21.0285, longitude: 105.8542 };
   state.taste = null;
   state.sky = null;
   state.ducked = false;
@@ -458,6 +477,62 @@ describe('the category filter', () => {
     expect(screen.queryByText('Eats')).toBeNull();
     expect(cardNames()).toHaveLength(2);
     expect(screen.queryByText('Nothing here yet.')).toBeNull();
+  });
+});
+
+describe('sort and filter', () => {
+  const week = (value: string) =>
+    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+      .map((day) => `${day}: ${value}`);
+
+  it('opens beside the Places heading and applies rating order', async () => {
+    state.places.data = [
+      place('low', { rating: 3.8 }),
+      place('high', { rating: 4.9 }),
+      place('none'),
+    ];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    expect(screen.getByText('Sort & filter')).toBeTruthy();
+    fireEvent.click(screen.getByText('Rating'));
+    await act(async () => { fireEvent.click(screen.getByText('Show 3 places')); });
+    expect(cardNames().map((n) => n.match(/Place (\w+)/)?.[1])).toEqual(['high', 'low', 'none']);
+  });
+
+  it('filters known opening status and excludes places with unknown hours', async () => {
+    state.places.data = [
+      place('open', { opening_hours: week('Open 24 hours') }),
+      place('closed', { opening_hours: week('Closed') }),
+      place('unknown'),
+    ];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    fireEvent.click(screen.getByText('Opened'));
+    await act(async () => { fireEvent.click(screen.getByText('Show 1 place')); });
+    expect(cardNames()).toHaveLength(1);
+    expect(cardNames()[0]).toContain('Place open');
+  });
+
+  it('asks a guest to sign in when Bookmarked only is tapped', async () => {
+    state.places.data = [place('a')];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    fireEvent.click(screen.getByText('Bookmarked only'));
+    await waitFor(() => expect(spies.askToSignIn).toHaveBeenCalledOnce());
+  });
+
+  it('requests location only when Distance is applied and sorts nearest first', async () => {
+    state.places.data = [
+      place('far', { lat: 21.1, lng: 105.9 }),
+      place('near', { lat: 21.029, lng: 105.854 }),
+    ];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(spies.getForegroundPermissionsAsync).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    fireEvent.click(screen.getByText('Distance'));
+    await act(async () => { fireEvent.click(screen.getByText('Show 2 places')); });
+    expect(spies.getForegroundPermissionsAsync).toHaveBeenCalledOnce();
+    expect(cardNames()[0]).toContain('Place near');
   });
 });
 
