@@ -547,11 +547,11 @@ describe('sort and filter', () => {
     expect(cardNames()[0]).toContain('Place open');
   });
 
-  it('asks a guest to sign in when Saved places only is tapped', async () => {
+  it('asks a guest to sign in when Bookmarked only is tapped', async () => {
     state.places.data = [place('a')];
     render(<ExploreScreen navigation={nav()} />);
     fireEvent.click(screen.getByTestId('explore-filter'));
-    fireEvent.click(screen.getByText('Saved places only'));
+    fireEvent.click(screen.getByText('Bookmarked only'));
     await waitFor(() => expect(spies.askToSignIn).toHaveBeenCalledOnce());
   });
 

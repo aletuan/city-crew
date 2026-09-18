@@ -217,10 +217,15 @@ export default function ExploreFilterSheet({
 
         {/* Its own card, for the same reason the sorts got one: a single
             row with no frame beside two framed blocks reads as the one
-            thing nobody finished. It keeps no heading — the row says
-            what it is — and the card's own top margin marks that the
-            question has changed from "in what order" to "which ones". */}
-        <Card style={s.savedCard}>
+            thing nobody finished. And its own heading, for the same
+            reason again — two headed blocks and one bare card is the
+            same asymmetry one level up. Three questions, three headings.
+
+            "Bookmarked only" rather than naming the section twice: the
+            heading says what the block is about, so the row is free to
+            say what the switch does. */}
+        <Text style={s.legend}>{t('Saved places', 'Địa điểm đã lưu', '保存済み')}</Text>
+        <Card>
         <PressableScale
           onPress={() => {
             if (!signedIn) { onNeedSignIn(); return; }
@@ -236,7 +241,7 @@ export default function ExploreFilterSheet({
             color={draft.savedOnly ? colors.accent : colors.textSecondary}
           />
           <Text style={[s.rowText, draft.savedOnly && s.rowTextOn]}>
-            {t('Saved places only', 'Chỉ địa điểm đã lưu', '保存済みのみ')}
+            {t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')}
           </Text>
           {/* Signed out this said "Sign in required" in grey, which is a
               refusal written as a label. It is a door, so it looks like
@@ -389,9 +394,6 @@ const s = StyleSheet.create({
   segmentText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium },
   segmentTextOn: { color: colors.accent, fontWeight: font.semibold },
 
-  // The saved card stands off the block above it by the same 24 that
-  // separates one heading from the section before it.
-  savedCard: { marginTop: space.titleToContent },
   divider: {
     height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
     marginTop: space.headingToContent,
