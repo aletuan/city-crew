@@ -256,7 +256,7 @@ const embedded = (slug: string, cps: { sort_order: number; places: unknown }[]) 
 describe('fetchCollections', () => {
   it('asks for public lists only, newest first with the desk’s order as tie-break', async () => {
     fake().replies({ data: [embedded('coffee', [])] });
-    await fetchCollections('hanoi', null);
+    await fetchCollections('hanoi');
 
     const [q] = fake().log;
     expect(q.table).toBe('collections');
@@ -270,27 +270,29 @@ describe('fetchCollections', () => {
     ]);
   });
 
-  // Your own lists come back through fetchMyCollections. A list in both
-  // sections reads as two lists: publishing should change who else can see
-  // it, not make a second copy appear under your own name.
-  it('excludes the reader’s own lists when there is a reader', async () => {
+  // Nobody is excluded, the reader included.
+  //
+  // This query used to leave out the reader's own published lists, so that
+  // the Collections tab — which shows your library and the community's
+  // side by side — would not print one list twice. The cost was paid on
+  // every other screen: Explore's shelf and Search have one shelf each and
+  // no library beside it, so a list you published yourself was simply
+  // missing from both, on your own device, for you alone. Publishing that
+  // the publisher cannot see reads as publishing that did not work.
+  //
+  // So the query answers the question it is named for — every public list
+  // — and the one screen with two shelves does its own dedupe. See
+  // `CollectionsScreen`.
+  it('leaves nobody out: a public list is public to its owner too', async () => {
     fake().replies({ data: [] });
-    await fetchCollections('hanoi', 'u1');
-    expect(fake().log[0].or).toBe('owner_id.is.null,owner_id.neq.u1');
-  });
-
-  // Signed out there is nobody to exclude, and `owner_id.neq.null` is not
-  // the same question as `is not null` in PostgREST's grammar — it would
-  // quietly match nothing.
-  it('writes no exclusion clause at all when signed out', async () => {
-    fake().replies({ data: [] });
-    await fetchCollections('hanoi', null);
+    await fetchCollections('hanoi');
     expect(fake().log[0].or).toBeUndefined();
+    expect(fake().log[0].filters).toEqual([['is_public', true]]);
   });
 
   it('is not filtered by city — a list appears in every city it reaches', async () => {
     fake().replies({ data: [] });
-    await fetchCollections('hanoi', 'u1');
+    await fetchCollections('hanoi');
     expect(fake().log[0].filters.map(([k]) => k)).not.toContain('city_id');
   });
 
@@ -299,7 +301,7 @@ describe('fetchCollections', () => {
       { error: { message: 'column collections.owner_id does not exist' } },
       { data: [{ slug: 'coffee' }] },
     );
-    const out = await fetchCollections('hanoi', 'u1');
+    const out = await fetchCollections('hanoi');
     expect(out.map((c) => c.slug)).toEqual(['coffee']);
 
     const [, legacy] = fake().log;
@@ -316,7 +318,7 @@ describe('fetchCollections', () => {
       { error: { message: 'column collections.owner_id does not exist' } },
       { error: { message: 'relation does not exist' } },
     );
-    await expect(fetchCollections('hanoi', 'u1')).rejects.toThrow('relation does not exist');
+    await expect(fetchCollections('hanoi')).rejects.toThrow('relation does not exist');
   });
 
   it('answers empty rather than null on the fallback path', async () => {
@@ -324,12 +326,12 @@ describe('fetchCollections', () => {
       { error: { message: 'column collections.owner_id does not exist' } },
       { data: null },
     );
-    expect(await fetchCollections('hanoi', 'u1')).toEqual([]);
+    expect(await fetchCollections('hanoi')).toEqual([]);
   });
 
   it('throws on a failure it has no fallback for', async () => {
     fake().replies({ error: { message: 'permission denied' } });
-    await expect(fetchCollections('hanoi', 'u1')).rejects.toThrow('permission denied');
+    await expect(fetchCollections('hanoi')).rejects.toThrow('permission denied');
     expect(fake().log).toHaveLength(1);
   });
 });
@@ -345,7 +347,7 @@ describe('the members a read builds', () => {
         { sort_order: 1, places: { slug: 'b' } },
       ])],
     });
-    const [c] = await fetchCollections('hanoi', null);
+    const [c] = await fetchCollections('hanoi');
     expect(c.members?.map((p) => p.slug)).toEqual(['a', 'b', 'c']);
   });
 
@@ -359,7 +361,7 @@ describe('the members a read builds', () => {
         { sort_order: 1, places: null },
       ])],
     });
-    const [c] = await fetchCollections('hanoi', null);
+    const [c] = await fetchCollections('hanoi');
     expect(c.members?.map((p) => p.slug)).toEqual(['a']);
     // But it stays in `collection_places`, as a null, so `holds()` and the
     // counts see the same list whichever query produced the row.
@@ -375,7 +377,7 @@ describe('the members a read builds', () => {
         { sort_order: 0, places: { slug: 'a', name_en: 'A', lat: 1 } },
       ])],
     });
-    const [c] = await fetchCollections('hanoi', null);
+    const [c] = await fetchCollections('hanoi');
     expect(c.collection_places).toEqual([{ sort_order: 0, places: { slug: 'a' } }]);
   });
 
@@ -384,12 +386,12 @@ describe('the members a read builds', () => {
     // with nothing has to leave the shelf empty rather than throwing on the
     // way to drawing it.
     fake().replies({ data: null });
-    expect(await fetchCollections('hanoi', null)).toEqual([]);
+    expect(await fetchCollections('hanoi')).toEqual([]);
   });
 
   it('reads a list with no members at all as an empty one', async () => {
     fake().replies({ data: [{ id: 'c-1', slug: 'empty', collection_places: null }] });
-    const [c] = await fetchCollections('hanoi', null);
+    const [c] = await fetchCollections('hanoi');
     expect(c.members).toEqual([]);
   });
 });

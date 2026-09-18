@@ -88,16 +88,15 @@ const EMPTY: Catalog = {
 const Ctx = createContext<Catalog>(EMPTY);
 
 export function CatalogProvider({ children }: { children: React.ReactNode }) {
-  // Both queries need to know who is reading: one to include the reader's
-  // own suggestions, the other to leave out their own published lists.
+  // The places query needs to know who is reading, so it can include the
+  // reader's own suggestions.
   const meId = useAuth().session?.user?.id;
   const places = usePlacesQuery(meId);
-  // Who is looking, so the public query can leave out their own published
-  // lists — those arrive through `useSave().mine` and would otherwise show
-  // up twice on the Collections tab. Signing in or out changes the id and
-  // reloads the query, which is what makes a list you just published leave
-  // the public section on this device and stay in it on every other.
-  const collections = useCollectionsQuery(meId);
+  // The collections query needs nobody. It answers "every public list",
+  // the reader's own included — the Collections tab keeps its own two
+  // shelves apart by itself, and the screens that have one shelf need
+  // their reader's published lists in it. See `fetchCollections`.
+  const collections = useCollectionsQuery();
   // No city and no reader in the key: what somebody types for "cinema" is
   // the same in every city and for everyone. One fetch, for the app's life.
   // The faces behind the public shelf's bylines, fetched here rather

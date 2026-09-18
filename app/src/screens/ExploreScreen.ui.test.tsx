@@ -593,6 +593,33 @@ describe('the community shelf', () => {
     expect(heart.querySelector('[data-icon="heart"]')).toBeTruthy();
   });
 
+  // The shelf draws every public list, the reader's own included — a
+  // list you published and cannot find on the front door reads as a list
+  // that did not publish. What it must not draw on your own is a heart
+  // you can press: the database refuses a like on your own list, so a
+  // pressable one there is a control that can only fail. Same shape as
+  // the collection's own screen: grey, inert, and still counting.
+  it('counts the likes on the reader’s own list without offering the heart', () => {
+    state.uid = 'u1';
+    state.places.data = [place('p1')];
+    state.cols.data = [collection('mine', ['p1'], { owner_id: 'u1' } as Partial<Collection>)];
+    state.likes = { mine: 4 };
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.getByText('List mine')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /like this collection/i })).toBeNull();
+    expect(screen.getByText('4')).toBeTruthy();
+    expect(shelfCard('List mine').querySelector('[data-icon="heart"]')).toBeTruthy();
+  });
+
+  it('still offers the heart on somebody else’s list', () => {
+    state.uid = 'u1';
+    state.places.data = [place('p1')];
+    state.cols.data = [collection('theirs', ['p1'], { owner_id: 'u2' } as Partial<Collection>)];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Like this collection' }));
+    expect(spies.toggleLike).toHaveBeenCalledWith({ id: 'id-theirs', slug: 'theirs' });
+  });
+
   it('draws no heart on a list without an id, and prints no zero tally', () => {
     state.places.data = [place('p1')];
     state.cols.data = [collection('bars', ['p1'], { id: undefined } as Partial<Collection>)];

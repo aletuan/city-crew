@@ -434,11 +434,23 @@ export default function CollectionsScreen({ navigation, route }: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mine.reload]));
 
+  const me = session?.user?.id;
+
   // A public collection with nothing in this city is somebody else's trip,
   // and one with nothing at all is a dead end, so both stay hidden. Your
   // own are neither: an empty one is new, and one made in another city is
   // still yours — `mine` is filtered by neither test.
-  const visible = cols.data.filter((c) => touchesCity(membersOf(c, places), city?.id));
+  //
+  // And your own published lists come out here rather than at the query,
+  // which is where this used to happen. They are on the Yours tab a
+  // centimetre away, and one list under both tabs reads as two lists —
+  // but that is a fact about *this* screen, the only one that shows both
+  // shelves at once. Asking the database to hide them hid them from
+  // Explore and Search too, which have no Yours tab to find them on. See
+  // `fetchCollections`.
+  const visible = cols.data.filter(
+    (c) => (!me || c.owner_id !== me) && touchesCity(membersOf(c, places), city?.id),
+  );
 
   const coverFor = (c: Collection) =>
     c.cover?.photo_uri ?? (membersOf(c, places)[0] && coverOf(membersOf(c, places)[0])?.photo_uri);
@@ -460,7 +472,6 @@ export default function CollectionsScreen({ navigation, route }: {
   // The same wiring as the Explore shelf: signed out, the tap is the
   // sign-in invitation; signed in, the provider owns the write and the
   // optimistic count, so a like made here shows there.
-  const me = session?.user?.id;
   const onHeart = useCallback((c: Collection) => {
     if (!c.id) return;
     if (!me) { askToSignIn(); return; }
