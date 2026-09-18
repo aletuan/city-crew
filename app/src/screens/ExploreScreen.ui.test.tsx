@@ -204,18 +204,14 @@ const listProps = (): ListProps => {
   }
   throw new Error('no explore-list SectionList in the committed tree');
 };
-/**
- * The flattened style the screen hands React Native for its sticky
- * section header — the chips row.
- *
- * Reached through the committed tree for the same reason `listProps`
- * is: the style that matters here is the one given to RN, not the CSS
- * react-native-web chose to make of it. See the test that reads it.
- */
-const sectionHeaderStyle = (): { paddingBottom?: number; pointerEvents?: string } => {
-  const section = listProps() as unknown as { renderSectionHeader: () => React.ReactElement };
-  const el = section.renderSectionHeader() as React.ReactElement<{ style: unknown }>;
-  return Object.assign({}, ...[el.props.style].flat(Infinity).filter(Boolean));
+/** The pinned block — the heading, its control and the chips. */
+const sectionHeader = (): HTMLElement => {
+  // Up from a chip, which only the section header draws, to the element
+  // carrying the row's own bottom padding.
+  let el: HTMLElement | null = screen.getByText('All');
+  while (el && window.getComputedStyle(el).paddingBottom !== '10px') el = el.parentElement;
+  if (!el) throw new Error('no pinned chips row in the tree');
+  return el;
 };
 
 // The web ScrollView throttles its events to `scrollEventThrottle`, so each
@@ -585,25 +581,31 @@ describe('sort and filter', () => {
 // padding included. This is that rule, and it is the bug it was written
 // for: every tap on the sort control was eaten here.
 describe('the pinned chips row', () => {
-  // Read as a style, not as a rendered element, and that is the point.
+  // The control lives inside the pinned block, and that is the fix rather
+  // than a detail of it.
   //
-  // React Native moves a sticky section header's style onto a wrapper of
-  // its own and hands the child `{flex: 1}`, so only a `box-none` written
-  // *in the style* reaches the box that lies over the heading. Written as
-  // a prop it lands on the child, covers nothing, and changes nothing on
-  // a device — which is exactly what happened, while react-native-web
-  // applied the same prop to the padded element and reported it fixed.
-  // So this asks what was handed to React Native rather than what the web
-  // did with it; the DOM cannot tell the two apart, and a click test
-  // cannot either — `fireEvent` dispatches straight at the element,
-  // whatever is lying on top of it.
-  it('does not swallow the taps meant for the heading beneath it', () => {
+  // It used to sit in the list's own header, with this row pulled up over
+  // it so the 72pt of padding the row carries for its pinned life would
+  // not read as a gap. A sticky section header takes every touch landing
+  // in its box, padding included — measured on a device: a real tap never
+  // reached the control's `onPressIn`, and the same tap worked the moment
+  // the overlap went. No `pointerEvents` fixes it, as a prop or as a
+  // style, because React Native hoists this row's style onto a wrapper of
+  // its own; both were tried on a device and neither worked.
+  //
+  // So what has to stay true is structural: the control renders inside
+  // the section header, where nothing covers it. jsdom lays nothing out,
+  // so it cannot be asked whether one box is over another — but it can be
+  // asked which block the control belongs to, and that is the invariant
+  // the device proved.
+  it('keeps the control inside the pinned block, where nothing covers it', () => {
     state.places.data = [place('p1')];
     render(<ExploreScreen navigation={nav()} />);
-    const row = sectionHeaderStyle();
-    // The row is the one carrying FILTER_PAD as its bottom padding.
-    expect(row.paddingBottom).toBe(10);
-    expect(row.pointerEvents).toBe('box-none');
+    const header = sectionHeader();
+    expect(within(header).getByTestId('explore-filter')).toBeTruthy();
+    expect(within(header).getByText('Places')).toBeTruthy();
+    // And the scope is real: the hero is on the same screen and not in here.
+    expect(within(header).queryByText("Let's go")).toBeNull();
   });
 
   it('opens the sort sheet from the control beside the heading', () => {

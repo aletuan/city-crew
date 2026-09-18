@@ -1017,42 +1017,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         gone={heroGone}
       />
       <CollectionShelf navigation={navigation} />
-      {/* Short of the usual gap by exactly the filter row's top padding —
-          FILTER_PAD and the safe-area inset the row carries for its
-          pinned life — so the space you see between this heading and its
-          chips is the same 16 that sits under every other heading. The
-          inset's worth of the row overlaps this heading at rest, and
-          harmlessly: the row's backing is transparent until it pins, and
-          neither the heading nor the row's padding is a touch target. */}
-      <View style={[s.placesHead, { marginBottom: space.headingToContent - FILTER_PAD - insets.top }]}>
-        <Text style={s.placesTitle}>{t('Places', 'Địa điểm', 'スポット')}</Text>
-        <PressableScale
-          onPress={() => setFilterOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={t('Filter and sort places', 'Lọc và sắp xếp địa điểm', 'スポットを絞り込み・並べ替え')}
-          accessibilityState={{ selected: filterCount > 0 }}
-          hitSlop={4}
-          style={[s.filterButton, filterCount > 0 && s.filterButtonOn]}
-          testID="explore-filter"
-        >
-          {/* Coral at rest, not ink. This is the one control on the
-              screen a reader has to notice before they know they want
-              it — a grey glyph in a grey disc beside a heading reads as
-              decoration, and nobody presses decoration. The accent is
-              what the app's buttons are already made of, so it says
-              "pressable" without inventing a signal.
-              What separates the two states is the disc, not the glyph:
-              glass at rest, accent-tinted and carrying a count once a
-              filter is on. Same control, so the same colour; the fill
-              is what changed. */}
-          <Ionicons name="options-outline" size={19} color={colors.accent} />
-          {filterCount > 0 ? (
-            <View style={s.filterBadge}>
-              <Text style={s.filterBadgeText}>{filterCount}</Text>
-            </View>
-          ) : null}
-        </PressableScale>
-      </View>
     </View>
   );
 
@@ -1096,6 +1060,50 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     <View style={[s.filterBar, { paddingTop: FILTER_PAD + insets.top }]}>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, s.filterBarBg, { opacity: filterBg }]} />
       <View style={s.filterHair} />
+      {/* The heading rides inside the pinned block, above the chips.
+          It used to sit in the list's own header, with this row pulled
+          up over it by a negative margin so the 72pt of padding the row
+          carries for its pinned life would not show as a gap. That
+          worked while the heading was a word. A sticky section header
+          takes the touches landing anywhere in its box — padding
+          included, and no `pointerEvents` we can write changes that,
+          because React Native hoists this row's style onto a wrapper of
+          its own — so the moment a button moved in beside the heading,
+          the button was under the row and dead to every tap. Measured,
+          not guessed: a real tap never reached its `onPressIn`, and the
+          same tap worked the instant the overlap went.
+          Inside the block there is nothing over it, and it pins with
+          the chips — which is the trade this bought: the section keeps
+          its name at the top of the screen while its list scrolls. */}
+      <View style={s.placesHead}>
+        <Text style={s.placesTitle}>{t('Places', 'Địa điểm', 'スポット')}</Text>
+        <PressableScale
+          onPress={() => setFilterOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('Filter and sort places', 'Lọc và sắp xếp địa điểm', 'スポットを絞り込み・並べ替え')}
+          accessibilityState={{ selected: filterCount > 0 }}
+          hitSlop={4}
+          style={[s.filterButton, filterCount > 0 && s.filterButtonOn]}
+          testID="explore-filter"
+        >
+          {/* Coral at rest, not ink. This is the one control on the
+              screen a reader has to notice before they know they want
+              it — a grey glyph in a grey disc beside a heading reads as
+              decoration, and nobody presses decoration. The accent is
+              what the app's buttons are already made of, so it says
+              "pressable" without inventing a signal.
+              What separates the two states is the disc, not the glyph:
+              glass at rest, accent-tinted and carrying a count once a
+              filter is on. Same control, so the same colour; the fill
+              is what changed. */}
+          <Ionicons name="options-outline" size={19} color={colors.accent} />
+          {filterCount > 0 ? (
+            <View style={s.filterBadge}>
+              <Text style={s.filterBadgeText}>{filterCount}</Text>
+            </View>
+          ) : null}
+        </PressableScale>
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -1309,6 +1317,7 @@ const s = StyleSheet.create({
   placesHead: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: space.page,
+    marginBottom: space.headingToContent,
   },
   placesTitle: { color: colors.text, ...type.section },
   filterButton: {
@@ -1377,32 +1386,27 @@ const s = StyleSheet.create({
   // of the floating bar, but this row pinned is the page's own top edge,
   // the place the list begins under, and it should read as the page.
   //
-  // ── why `pointerEvents` is in here, and not on the element ──
+  // ── what this row is allowed to cover ──
   //
-  // Pinned, this row is the top edge of the screen and its padding has to
-  // clear the clock: FILTER_PAD plus the safe-area inset, some 69pt. At
-  // rest that padding is empty and the Places heading is pulled up into
-  // it by the negative margin over on the heading, which is the
-  // arithmetic that keeps the visible gap at 16. A sticky section header
-  // draws above the list's own header — `zIndex: 10`, in
-  // `ScrollViewStickyHeader` — so those 69 transparent points lie on top
-  // of the heading, and a View takes a touch anywhere inside it, padding
-  // included. Every tap on the sort control was eaten there.
+  // Nothing anybody can touch. Pinned, the row is the top edge of the
+  // screen and its padding has to clear the clock — FILTER_PAD plus the
+  // safe-area inset, 72pt on this phone — and at rest that padding has
+  // to go somewhere. `marginTop` spends it on the shelf's own bottom
+  // margin above, which is empty space, and stops there: 24 of the 72,
+  // leaving the rest as the gap before the heading.
   //
-  // `box-none` is the answer, but it has to arrive as style. RN wraps a
-  // sticky section header in an `Animated.View` of its own and *moves
-  // this style onto that wrapper*, handing the child `{flex: 1}`
-  // instead — read the end of `ScrollViewStickyHeader.js`. So the
-  // wrapper is the element that owns the padding lying over the heading,
-  // and a `pointerEvents` prop written on our own View lands on the
-  // child, which is no longer the box that covers anything. It looked
-  // correct and changed nothing on a device.
-  //
-  // A style travels with the style. The prop form is deprecated in this
-  // version of React Native anyway; here it is also simply wrong.
+  // It cannot be spent on anything a thumb wants. A sticky section
+  // header takes every touch that lands in its box, padding included,
+  // and no `pointerEvents` we can write changes that: React Native
+  // hoists this style onto a wrapper of its own — the end of
+  // `ScrollViewStickyHeader.js`, where it also carries `zIndex: 10` —
+  // so the prop lands on a child that covers nothing, and the style,
+  // hoisted or not, did not stop the wrapper either. Both were tried on
+  // a device and neither worked, which is why the heading moved in here
+  // instead of the row moving off it.
   filterBar: {
+    marginTop: -space.titleToContent,
     paddingBottom: FILTER_PAD,
-    pointerEvents: 'box-none',
   },
   filterBarBg: { backgroundColor: colors.bg },
   // Drawn only at the bottom, and only a hairline: it is where the header
