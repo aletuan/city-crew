@@ -342,6 +342,27 @@ export type Database = {
         }
         Relationships: []
       }
+      local_guides: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       moderation_log: {
         Row: {
           action: string
@@ -432,6 +453,7 @@ export type Database = {
         Row: {
           attribution_name: string | null
           attribution_uri: string | null
+          created_at: string
           height_px: number | null
           id: string
           is_cover: boolean
@@ -442,11 +464,13 @@ export type Database = {
           sort_order: number
           source: string
           storage_path: string | null
+          uploaded_by: string | null
           width_px: number | null
         }
         Insert: {
           attribution_name?: string | null
           attribution_uri?: string | null
+          created_at?: string
           height_px?: number | null
           id?: string
           is_cover?: boolean
@@ -457,11 +481,13 @@ export type Database = {
           sort_order?: number
           source?: string
           storage_path?: string | null
+          uploaded_by?: string | null
           width_px?: number | null
         }
         Update: {
           attribution_name?: string | null
           attribution_uri?: string | null
+          created_at?: string
           height_px?: number | null
           id?: string
           is_cover?: boolean
@@ -472,6 +498,7 @@ export type Database = {
           sort_order?: number
           source?: string
           storage_path?: string | null
+          uploaded_by?: string | null
           width_px?: number | null
         }
         Relationships: [

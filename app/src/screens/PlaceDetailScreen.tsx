@@ -35,6 +35,7 @@ import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import { AmbientWarmth, Card, Empty, PressableScale, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
+import LocalGuidePanel from '../components/LocalGuidePanel';
 import type { Nav, RootRoute } from '../nav';
 
 // One row of the grouped info card: a small caps label over a value, the
@@ -77,7 +78,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const { city } = useCity();
   const { save, isSaved } = useSave();
   const { width } = useWindowDimensions();
-  const { loading: catalogLoading, data: places } = usePlaces();
+  const { loading: catalogLoading, data: places, reload: reloadCatalog } = usePlaces();
   const inCatalog = useMemo(
     () => places.find((p) => p.slug === route.params.slug),
     [places, route.params.slug],
@@ -360,6 +361,15 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               </View>
             ) : null}
           </View>
+
+          {/* The one offer this screen makes to the person who put the
+              place here. Draws nothing for everybody else — see
+              `LocalGuidePanel`, which asks `canAddPhoto` before it asks
+              for anything else. Between the name and the facts because
+              that is where it reads as being about *this* place rather
+              than about the app: under the title it answers, above the
+              pills it does not interrupt. */}
+          <LocalGuidePanel place={place} onAdded={reloadCatalog} testID="guide-panel" />
 
           {/* ── fact row ── */}
           {/* ── facts: what kind of place, what it costs, how long ──
