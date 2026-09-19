@@ -49,6 +49,13 @@ export type City = {
   hero_cta_vi: string | null;
   hero_cta_ja: string | null;
   hero_place_slug: string | null;
+  /** A photograph of the city itself. Beats `hero_place_slug` when set —
+   *  see `heroPhoto` in ExploreScreen. */
+  hero_photo_uri: string | null;
+  /** Who took it. The hero shows this whenever there is a photo; a photo
+   *  without a credit is a photo we are passing off as ours. */
+  hero_photo_credit: string | null;
+  hero_photo_credit_uri: string | null;
 };
 
 type CityContext = {
@@ -150,6 +157,7 @@ const FALLBACK: City = {
   hero_title_en: null, hero_title_vi: null, hero_title_ja: null,
   hero_sub_en: null, hero_sub_vi: null, hero_sub_ja: null,
   hero_cta_en: null, hero_cta_vi: null, hero_cta_ja: null, hero_place_slug: null,
+  hero_photo_uri: null, hero_photo_credit: null, hero_photo_credit_uri: null,
 };
 
 const Ctx = createContext<CityContext>({
@@ -255,8 +263,10 @@ export function useMyPosition(nonce = 0): { lat: number; lng: number } | null {
   return pos;
 }
 
-const CITY_COLS = (withSub: boolean) =>
-  `id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng, radius_km, hero_title_en, hero_title_vi, hero_title_ja${withSub ? ', hero_sub_en, hero_sub_vi, hero_sub_ja' : ''}, hero_cta_en, hero_cta_vi, hero_cta_ja, hero_place_slug`;
+/** `withSub` and `withPhoto` each drop the newest group of columns, so a
+ *  client shipped ahead of its migration still gets a city list. */
+const CITY_COLS = (withSub: boolean, withPhoto: boolean) =>
+  `id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng, radius_km, hero_title_en, hero_title_vi, hero_title_ja${withSub ? ', hero_sub_en, hero_sub_vi, hero_sub_ja' : ''}, hero_cta_en, hero_cta_vi, hero_cta_ja, hero_place_slug${withPhoto ? ', hero_photo_uri, hero_photo_credit, hero_photo_credit_uri' : ''}`;
 
 /**
  * The city list, and a way back when the database is older than the app.
@@ -268,19 +278,24 @@ const CITY_COLS = (withSub: boolean) =>
  * switcher with nothing to switch to. The whole app would look like it
  * had one city.
  *
- * `hero_sub_*` is the newest of these columns, so it is the one a client
- * shipping ahead of a migration would trip on.
+ * Two groups can be missing, and they are dropped newest first:
+ * `hero_photo_*` (the city's own cover) then `hero_sub_*`. Postgres names
+ * only the first column it does not recognise, so the retries have to be
+ * ordered rather than combined — a database missing both answers about
+ * `hero_photo_uri`, and only once that group is gone does it mention
+ * `hero_sub`.
  */
 async function fetchCities(): Promise<City[]> {
-  const run = (withSub: boolean) =>
+  const run = (withSub: boolean, withPhoto: boolean) =>
     supabase
       .from('cities')
-      .select(CITY_COLS(withSub))
+      .select(CITY_COLS(withSub, withPhoto))
       .eq('is_active', true)
       .order('sort_order');
 
-  let { data, error } = await run(true);
-  if (error && error.message.includes('hero_sub')) ({ data, error } = await run(false));
+  let { data, error } = await run(true, true);
+  if (error && error.message.includes('hero_photo')) ({ data, error } = await run(true, false));
+  if (error && error.message.includes('hero_sub')) ({ data, error } = await run(false, false));
   return (data as City[] | null) ?? [];
 }
 

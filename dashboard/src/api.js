@@ -161,6 +161,10 @@ export const api = {
       'hero_title_en', 'hero_title_vi', 'hero_title_ja',
       'hero_sub_en', 'hero_sub_vi', 'hero_sub_ja',
       'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_place_slug',
+      // The photo's URL and path are not here on purpose: they are written
+      // by setCityHeroPhoto, which owns the file beside them. Only the
+      // credit is typed by hand.
+      'hero_photo_credit', 'hero_photo_credit_uri',
     ]);
     const patch = {};
     for (const [k, v] of Object.entries(fields)) {
@@ -461,6 +465,73 @@ export const api = {
       db(await supabase.from('place_photos').update({ sort_order: i }).eq('id', id).select('id'));
     }
     return { ok: true };
+  },
+
+  /**
+   * The city's own cover — one photo, replaced rather than collected.
+   *
+   * Order: upload the new object, point the row at it, then delete the
+   * object it replaced. Deliberately the reverse of `deletePlace`, and
+   * for the same reason that rule exists: whichever step fails, the row
+   * must never name a file that is not there. Here that means the old
+   * file is the thing at risk, and an orphaned object costs storage
+   * while a broken row costs the hero.
+   *
+   * A credit is required. Every photo in this catalog can say who took
+   * it — Google's come with `attribution_name` filled in — and a picture
+   * somebody handed us is the last one that should arrive anonymous.
+   */
+  setCityHeroPhoto: async (cityId, blob, filename, { credit, creditUri } = {}) => {
+    const name = String(credit ?? '').trim();
+    if (!name) throw new Error('a credit is required — who took this photo?');
+
+    const rows = db(await supabase.from('cities').select('hero_photo_path').eq('id', cityId).limit(1));
+    if (!rows.length) throw new Error('city not found');
+    const oldPath = rows[0].hero_photo_path ?? null;
+
+    const safeName = String(filename ?? 'cover').replace(/[^\w.-]/g, '_').slice(0, 60);
+    const path = `cities/${cityId}/${Date.now()}-${safeName}.jpg`;
+
+    // `shrunk` for the same reason uploadPhoto sets it: resizeImage has
+    // already brought this to the size the hourly pass would.
+    const { error: upErr } = await supabase.storage.from(BUCKET)
+      .upload(path, blob, { contentType: 'image/jpeg', metadata: { shrunk: '1' } });
+    if (upErr) throw new Error(upErr.message);
+    const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
+
+    const saved = db(await supabase.from('cities').update({
+      hero_photo_uri: publicUrl,
+      hero_photo_path: path,
+      hero_photo_credit: name,
+      hero_photo_credit_uri: (creditUri ?? '').trim() || null,
+    }).eq('id', cityId).select('id'));
+    if (!saved.length) {
+      // The row refused the write, so nothing points at the file we just
+      // uploaded. Take it back out rather than leaving it to be found by
+      // nobody.
+      await removeObjects(supabase.storage.from(BUCKET), [path]);
+      throw new Error('not saved (or not an editor — check the editors table)');
+    }
+
+    const files = oldPath && oldPath !== path
+      ? await removeObjects(supabase.storage.from(BUCKET), [oldPath])
+      : { removed: 0, left: [] };
+    return { ok: true, uri: publicUrl, path, left: files.left };
+  },
+
+  /** Back to the place-based hero: clear the columns, then the file. */
+  clearCityHeroPhoto: async (cityId) => {
+    const rows = db(await supabase.from('cities').select('hero_photo_path').eq('id', cityId).limit(1));
+    if (!rows.length) throw new Error('city not found');
+    const path = rows[0].hero_photo_path ?? null;
+
+    db(await supabase.from('cities').update({
+      hero_photo_uri: null, hero_photo_path: null,
+      hero_photo_credit: null, hero_photo_credit_uri: null,
+    }).eq('id', cityId).select('id'));
+
+    const files = path ? await removeObjects(supabase.storage.from(BUCKET), [path]) : { removed: 0, left: [] };
+    return { ok: true, left: files.left };
   },
 
   uploadPhoto: async (slug, blob, filename) => {

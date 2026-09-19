@@ -256,3 +256,48 @@ describe('a launch with no cached fix', () => {
     expect(screen.getByTestId('mode').textContent).toBe('manual');
   });
 });
+
+// ── a client shipped ahead of its migration ──
+//
+// `fetchCities` drops column groups and retries, newest group first, and
+// the order is load-bearing: Postgres names only the FIRST column it does
+// not recognise, so a database missing both groups answers about
+// `hero_photo_uri` and mentions `hero_sub` only once the photo columns
+// are gone. Combining the two retries into one would work on a database
+// missing the newer group and fail on a database missing both — the
+// oldest one, which is exactly the case this exists for.
+describe('a database older than the app', () => {
+  const asked = () => h.fake!.log.filter((a) => a.table === 'cities').map((a) => String(a.payload ?? ''));
+  /** The suite's own two replies are already queued; these tests need the
+   *  queue to start with the refusal instead. */
+  const only = (...r: Parameters<NonNullable<typeof h.fake>['replies']>) => { h.fake!.reset(); h.fake!.replies(...r); };
+
+  it('drops the photo columns when the database has not got them', async () => {
+    only(
+      { data: null, error: { message: 'column cities.hero_photo_uri does not exist' } },
+      { data: CITIES, error: null },
+    );
+    mount();
+    await waitFor(() => expect(asked()).toHaveLength(2));
+    const cols = asked();
+    expect(cols[0]).toContain('hero_photo_uri');
+    expect(cols[1]).not.toContain('hero_photo_uri');
+    expect(cols[1]).toContain('hero_sub_en');
+  });
+
+  it('drops the subtitle columns too when it is older still', async () => {
+    only(
+      { data: null, error: { message: 'column cities.hero_photo_uri does not exist' } },
+      { data: null, error: { message: 'column cities.hero_sub_en does not exist' } },
+      { data: CITIES, error: null },
+    );
+    mount();
+    await waitFor(() => expect(asked()).toHaveLength(3));
+    const cols = asked();
+    expect(cols[2]).not.toContain('hero_photo_uri');
+    expect(cols[2]).not.toContain('hero_sub_en');
+    // What the retries are protecting: the third answer is the real city
+    // list, not the single hardcoded Saigon row.
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('danang'));
+  });
+});
