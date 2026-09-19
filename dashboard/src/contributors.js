@@ -146,3 +146,25 @@ export function niceMax(value, segments = 3) {
   const step = mults.map((m) => m * mag).find((s) => s >= raw);
   return Math.ceil(segments * step);
 }
+
+/**
+ * The guide set with one id added or taken out — a new Set, never the one
+ * handed in.
+ *
+ * Extracted here rather than written inline in the screen for the reason
+ * everything else in this file is here: it is a fold over plain values,
+ * and the screen calls it twice with opposite answers — once to tick the
+ * box before the write and once to put it back if the write is refused.
+ * Those two calls are the whole of the optimistic update, and getting the
+ * second one backwards leaves a box that lies about what the database
+ * says.
+ *
+ * `null` for the set covers the moment before the grants have loaded,
+ * when nothing is known and a click should still be able to describe what
+ * it wants.
+ */
+export function withGuide(guides, id, on) {
+  const next = new Set(guides ?? []);
+  if (on) next.add(id); else next.delete(id);
+  return next;
+}

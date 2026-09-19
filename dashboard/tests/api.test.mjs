@@ -341,3 +341,62 @@ test('markReport stamps handled_at and the chosen status', async () => {
   assert.equal(updateArgs[0].status, 'dismissed');
   assert.ok(updateArgs[0].handled_at);
 });
+
+// ---- local guides: the desk's one-bit grant, read in bulk and written one
+// row at a time. The rules are all RLS; what these pin is the shape of the
+// two calls, because a wrong verb here is a grant that silently does
+// nothing (delete matching no rows) or one that throws on the second click.
+
+test('localGuides answers a Set of ids, not rows', async () => {
+  const { api } = await loadApi([
+    { data: [{ user_id: 'a' }, { user_id: 'b' }], error: null },
+  ]);
+  const guides = await api.localGuides();
+  assert.ok(guides instanceof Set);
+  assert.deepEqual([...guides].sort(), ['a', 'b']);
+});
+
+// Read whole rather than per row: the board draws ten at a time, and ten
+// round trips to answer ten yes/no questions is ten times the wrong shape.
+test('localGuides asks once, with no filter — RLS is what scopes it', async () => {
+  const { api, client } = await loadApi([{ data: [], error: null }]);
+  await api.localGuides();
+  assert.equal(client.calls.length, 1);
+  assert.equal(client.calls[0].table, 'local_guides');
+  assert.equal(client.calls[0].chain.some(([m]) => m === 'eq'), false);
+});
+
+// `upsert`, not `insert`: a second click on an already-granted account has
+// to be harmless rather than a duplicate-key error. The desk should not be
+// able to break anything by being fast.
+test('setLocalGuide upserts on the primary key when granting', async () => {
+  const { api, client } = await loadApi([{ data: null, error: null }]);
+  await api.setLocalGuide('u1', true);
+  const [, args] = client.calls[0].chain.find(([m]) => m === 'upsert');
+  assert.deepEqual(args[0], { user_id: 'u1' });
+  assert.equal(args[1].onConflict, 'user_id');
+});
+
+// Nothing is sent for `added_by`. The column defaults to `auth.uid()`, so
+// the database records which editor did this from the request's own
+// credentials — see 20260919180000_local_guide_granted_by.sql.
+test('setLocalGuide leaves added_by to the database', async () => {
+  const { api, client } = await loadApi([{ data: null, error: null }]);
+  await api.setLocalGuide('u1', true);
+  const [, args] = client.calls[0].chain.find(([m]) => m === 'upsert');
+  assert.equal('added_by' in args[0], false);
+});
+
+test('setLocalGuide deletes the one row when taking the grant back', async () => {
+  const { api, client } = await loadApi([{ data: null, error: null }]);
+  await api.setLocalGuide('u1', false);
+  assert.ok(client.calls[0].chain.some(([m]) => m === 'delete'));
+  const [, eqArgs] = client.calls[0].chain.find(([m]) => m === 'eq');
+  assert.deepEqual(eqArgs, ['user_id', 'u1']);
+});
+
+// Loud, so the screen can put its optimistic tick back.
+test('setLocalGuide surfaces a refusal rather than reporting success', async () => {
+  const { api } = await loadApi([{ data: null, error: { message: 'not an editor' } }]);
+  await assert.rejects(() => api.setLocalGuide('u1', true), /not an editor/);
+});
