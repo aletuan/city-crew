@@ -16,7 +16,7 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  fetchCategoryTerms, fetchPlaceBySlug, fetchPlaceCountByCity, fetchPlaces, PLACE_COLS,
+  fetchCategoryTerms, fetchPlaceBySlug, fetchPlaceCountByCity, fetchPlaceIndex, fetchPlaces, PLACE_COLS,
 } from './places';
 
 const fake = () => h.fake!;
@@ -205,6 +205,47 @@ describe('fetchCategoryTerms', () => {
   it('answers an empty map when there is no data at all', async () => {
     fake().replies({ data: null });
     expect(await fetchCategoryTerms()).toEqual({});
+  });
+});
+
+describe('fetchPlaceIndex', () => {
+  // The map counts every city under the filters in force, which needs the
+  // columns those filters read — and only those. See `cityCounts`.
+  it('asks for the columns the filters read, from the live catalog', async () => {
+    fake().replies({ data: [{ slug: 'a', city_id: 'hanoi', categories: ['cafes'], vibe_tags: [], category: null, opening_hours: null }] });
+    await fetchPlaceIndex();
+
+    const [q] = fake().log;
+    expect(q.table).toBe('places');
+    expect(q.filters).toEqual([['is_published', true], ['review_status', 'approved']]);
+    for (const col of ['slug', 'city_id', 'categories', 'vibe_tags', 'category', 'opening_hours']) {
+      expect(q.payload).toContain(col);
+    }
+    // And nothing else: this is a whole-country read, so every column it
+    // does not need is paid for 635 times.
+    expect(String(q.payload).split(',')).toHaveLength(6);
+  });
+
+  // `categoriesOf` reads `category` as an optional string, the shape the
+  // catalog's own rows have. A null would be a different question asked
+  // of the same function, so the nulls are dropped rather than carried.
+  it('drops a null legacy category rather than carrying it', async () => {
+    fake().replies({ data: [
+      { slug: 'a', city_id: 'hanoi', categories: [], vibe_tags: [], category: null, opening_hours: null },
+      { slug: 'b', city_id: 'hanoi', categories: [], vibe_tags: [], category: 'food', opening_hours: null },
+    ] });
+    const rows = await fetchPlaceIndex();
+    expect('category' in rows[0]).toBe(false);
+    expect(rows[1].category).toBe('food');
+  });
+
+  // Failure is an empty list, never a throw: the markers keep their names
+  // and lose their numbers, which is the map this replaced.
+  it('answers an error, and missing data, with an empty list', async () => {
+    fake().replies({ error: { message: 'offline' } });
+    expect(await fetchPlaceIndex()).toEqual([]);
+    fake().replies({ data: null });
+    expect(await fetchPlaceIndex()).toEqual([]);
   });
 });
 

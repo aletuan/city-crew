@@ -72,7 +72,7 @@ const HANOI = { lat: 21.0285, lng: 105.8542 };
 
 describe('PlacesMap', () => {
   it('pins every place that has coordinates, and skips the ones that do not', () => {
-    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1), place('c', null, null)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1), place('c', null, null)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     expect(markers().map((m) => m.getAttribute('data-slug'))).toEqual(['a', 'b']);
   });
 
@@ -81,7 +81,7 @@ describe('PlacesMap', () => {
   // whatever it is, so the one the reader tapped is never lost among its
   // kind.
   it('draws the chosen pin in the accent and the rest in their category’s colour', () => {
-    render(<PlacesMap places={[place('a', 21, 105, ['cafes']), place('b', 21.1, 105.1, ['cafes']), place('c', 21.2, 105.2, ['views'])]} selectedSlug="b" onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105, ['cafes']), place('b', 21.1, 105.1, ['cafes']), place('c', 21.2, 105.2, ['views'])]} selectedSlug="b" onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     const [a, b, c] = markers();
     expect(b.getAttribute('data-color')).toBe('#FF6F5B');
     expect(a.getAttribute('data-color')).toBe('#D2A679');
@@ -93,7 +93,7 @@ describe('PlacesMap', () => {
   // colour back. A café that is also a place to work stops reading as the
   // odd one out under Focus.
   it('paints every pin in the chip’s colour while a chip is selected', () => {
-    render(<PlacesMap places={[place('a', 21, 105, ['cafes', 'focus']), place('b', 21.1, 105.1, ['focus']), place('c', 21.2, 105.2, ['focus'])]} selectedSlug="c" onSelect={() => {}} category="focus" origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105, ['cafes', 'focus']), place('b', 21.1, 105.1, ['focus']), place('c', 21.2, 105.2, ['focus'])]} selectedSlug="c" onSelect={() => {}} category="focus" origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     const [a, b, c] = markers();
     expect(a.getAttribute('data-color')).toBe('#989AD7');
     expect(b.getAttribute('data-color')).toBe('#989AD7');
@@ -103,14 +103,14 @@ describe('PlacesMap', () => {
   });
 
   it('lets each pin speak for itself under a chip the table has never heard of', () => {
-    render(<PlacesMap places={[place('a', 21, 105, ['cafes']), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} category="street_food" origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105, ['cafes']), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} category="street_food" origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     const [a, b] = markers();
     expect(a.getAttribute('data-color')).toBe('#D2A679');
     expect(b.getAttribute('data-color')).toBe('#17150F');
   });
 
   it('draws a pin nothing classifies in ink, and every pin when the chosen slug matches none of them', () => {
-    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug="zzz" onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug="zzz" onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     const [a, b] = markers();
     expect(a.getAttribute('data-color')).toBe('#17150F');
     expect(b.getAttribute('data-color')).toBe('#17150F');
@@ -118,7 +118,7 @@ describe('PlacesMap', () => {
 
   it('reports which pin was tapped', () => {
     const onSelect = vi.fn();
-    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={onSelect} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={onSelect} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     fireEvent.click(markers()[0]);
     expect(onSelect).toHaveBeenCalledWith('a');
   });
@@ -126,12 +126,12 @@ describe('PlacesMap', () => {
   // Our places are Google's places, so its own badge for each one sat
   // beside our pin. The badge goes; the name stays.
   it('asks the map not to draw its own badge on a place of interest', () => {
-    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     expect(mapView().getAttribute('data-poi-icons')).toBe('false');
   });
 
   it('shows the reader’s own position', () => {
-    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     expect(mapView().getAttribute('data-user')).toBe('true');
   });
 
@@ -140,7 +140,7 @@ describe('PlacesMap', () => {
   // filter that narrows the list to three places should not leave the
   // reader looking at an empty quarter of the city.
   it('fits the view to the pins once ready, and refits when they change', () => {
-    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     expect(spies.fitToCoordinates).not.toHaveBeenCalled();
 
     markMapReady();
@@ -150,7 +150,7 @@ describe('PlacesMap', () => {
       expect.objectContaining({ animated: false }),
     );
 
-    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(2);
     expect(spies.fitToCoordinates).toHaveBeenLastCalledWith(
       [{ latitude: 21, longitude: 105 }],
@@ -159,16 +159,16 @@ describe('PlacesMap', () => {
   });
 
   it('does not refit when the same pins reappear in a different order', () => {
-    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     markMapReady();
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(1);
 
-    rerender(<PlacesMap places={[place('b', 21.1, 105.1), place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    rerender(<PlacesMap places={[place('b', 21.1, 105.1), place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(1);
   });
 
   it('does not fit when there is nothing to pin', () => {
-    render(<PlacesMap places={[]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    render(<PlacesMap places={[]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     markMapReady();
     expect(spies.fitToCoordinates).not.toHaveBeenCalled();
   });
@@ -176,7 +176,7 @@ describe('PlacesMap', () => {
   // No Google map means no map — never Apple's, never a broken one.
   it('shows no map at all when the binary cannot draw a Google map', () => {
     verdict.canDrawMap = false;
-    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
     expect(document.querySelector('[data-testid="places-map-missing"]')).toBeTruthy();
     expect(document.querySelector('[data-stub="MapView"]')).toBeNull();
   });
@@ -185,23 +185,27 @@ describe('PlacesMap', () => {
   // or tap through. A bubble says how many, and a tap goes in far enough
   // for it to come apart.
   describe('clustering', () => {
-    const CLOSE = [place('a', 21.0001, 105.0001), place('b', 21.0002, 105.0002), place('c', 21.0003, 105.0003)];
+    // A pin well away from the other three, so what is under test is a
+    // cluster among clusters. One cluster holding *every* pin is the city
+    // itself and wears its name — see the describe below.
+    const FAR = place('far', 21.9, 105.9);
+    const CLOSE = [place('a', 21.0001, 105.0001), place('b', 21.0002, 105.0002), place('c', 21.0003, 105.0003), FAR];
 
     it('gathers pins that stand too close into one bubble with a count', () => {
-      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
-      expect(markers()).toHaveLength(1);
+      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
+      expect(markers()).toHaveLength(2);
       expect(markers()[0].textContent).toBe('3');
     });
 
     it('comes apart when the reader goes in, and needs no threshold to do it', () => {
-      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
-      expect(markers()).toHaveLength(1);
+      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
+      expect(markers()).toHaveLength(2);
       zoomIn();
-      expect(markers().map((m) => m.getAttribute('data-slug'))).toEqual(['a', 'b', 'c']);
+      expect(markers().map((m) => m.getAttribute('data-slug'))).toEqual(['a', 'b', 'c', 'far']);
     });
 
     it('takes the reader into a bubble that is tapped', () => {
-      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
       spies.fitToCoordinates.mockClear();
       fireEvent.click(markers()[0]);
       expect(spies.fitToCoordinates).toHaveBeenCalledWith(
@@ -213,10 +217,10 @@ describe('PlacesMap', () => {
     // The strip along the bottom is already talking about the chosen
     // place; its pin disappearing into a bubble would read as a bug.
     it('leaves the chosen place its own pin', () => {
-      render(<PlacesMap places={CLOSE} selectedSlug="b" onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+      render(<PlacesMap places={CLOSE} selectedSlug="b" onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
       const slugs = markers().map((m) => m.getAttribute('data-slug'));
       expect(slugs).toContain('b');
-      expect(markers()).toHaveLength(2);
+      expect(markers()).toHaveLength(3);
     });
 
     // A bubble is a custom view, and a custom view frozen from its first
@@ -226,7 +230,7 @@ describe('PlacesMap', () => {
     it('draws a bubble live until the map is up and a moment has passed', async () => {
       vi.useFakeTimers();
       try {
-        render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+        render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
         expect(markers()[0].getAttribute('data-tracks')).toBe('true');
 
         // No map yet: the clock has not started, so waiting changes nothing.
@@ -243,7 +247,7 @@ describe('PlacesMap', () => {
 
     it('says the count out loud, and does not report a bubble as a place', () => {
       const onSelect = vi.fn();
-      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={onSelect} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={onSelect} category={null} origin={null} cities={[]} onPickCity={() => {}} here="Hà Nội" fallback={HANOI} />);
       expect(markers()[0].getAttribute('data-label')).toBe('3 places, zoom in');
       fireEvent.click(markers()[0]);
       expect(onSelect).not.toHaveBeenCalled();
@@ -256,7 +260,7 @@ describe('PlacesMap', () => {
     const SAIGON = [{ id: 'hcmc', name: 'Sài Gòn', count: 280, lat: 10.7769, lng: 106.7009 }];
 
     it('names each one where it stands', () => {
-      render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} cities={SAIGON} onPickCity={() => {}} origin={null} fallback={HANOI} />);
+      render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} cities={SAIGON} onPickCity={() => {}} here="Hà Nội" origin={null} fallback={HANOI} />);
       const pill = document.querySelector('[data-slug="city-hcmc"]')!;
       expect(pill).toBeTruthy();
       expect(pill.textContent).toBe('Sài Gòn280');
@@ -266,7 +270,7 @@ describe('PlacesMap', () => {
     // A count that never comes leaves the marker exactly as quiet as it
     // was — the same promise the city sheet makes.
     it('says only the name until the count arrives', () => {
-      render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} cities={[{ ...SAIGON[0], count: null }]} onPickCity={() => {}} origin={null} fallback={HANOI} />);
+      render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} cities={[{ ...SAIGON[0], count: null }]} onPickCity={() => {}} here="Hà Nội" origin={null} fallback={HANOI} />);
       const pill = document.querySelector('[data-slug="city-hcmc"]')!;
       expect(pill.textContent).toBe('Sài Gòn');
       expect(pill.getAttribute('data-label')).toBe('Sài Gòn, switch to this city');
@@ -275,7 +279,7 @@ describe('PlacesMap', () => {
     it('goes there when one is tapped, and does not report it as a place', () => {
       const onPickCity = vi.fn();
       const onSelect = vi.fn();
-      render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={onSelect} category={null} cities={SAIGON} onPickCity={onPickCity} origin={null} fallback={HANOI} />);
+      render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={onSelect} category={null} cities={SAIGON} onPickCity={onPickCity} here="Hà Nội" origin={null} fallback={HANOI} />);
       fireEvent.click(document.querySelector('[data-slug="city-hcmc"]')!);
       expect(onPickCity).toHaveBeenCalledWith('hcmc');
       expect(onSelect).not.toHaveBeenCalled();
@@ -284,14 +288,55 @@ describe('PlacesMap', () => {
     // A city is not a place: it must not be gathered into a count, and it
     // must not drag the opening view across the country.
     it('keeps them out of the clusters and out of the fit', () => {
-      render(<PlacesMap places={[place('a', 21.0001, 105.0001), place('b', 21.0002, 105.0002)]} selectedSlug={null} onSelect={() => {}} category={null} cities={SAIGON} onPickCity={() => {}} origin={null} fallback={HANOI} />);
-      const bubble = document.querySelector('[data-slug="21:12600"], [data-stub="Marker"]:not([data-slug^="city-"])')!;
-      expect(bubble.textContent).toBe('2');
+      render(<PlacesMap places={[place('a', 21.0001, 105.0001), place('b', 21.0002, 105.0002)]} selectedSlug={null} onSelect={() => {}} category={null} cities={SAIGON} onPickCity={() => {}} here="Hà Nội" origin={null} fallback={HANOI} />);
+      // Two pins, one cluster holding both: that cluster is the city, so
+      // it wears the city's name. What is under test here is that Saigon
+      // is not in it, and did not drag the fit south.
+      const bubble = document.querySelector('[data-stub="Marker"]:not([data-slug^="city-"])')!;
+      expect(bubble.textContent).toBe('Hà Nội2');
       markMapReady();
       expect(spies.fitToCoordinates).toHaveBeenLastCalledWith(
         [{ latitude: 21.0001, longitude: 105.0001 }, { latitude: 21.0002, longitude: 105.0002 }],
         expect.objectContaining({ animated: false }),
       );
+    });
+  });
+
+  // At the zoom where every pin has gathered into one, that one *is* the
+  // city. A bare number there, beside four named cities, said the same
+  // kind of thing in two languages.
+  describe('the city being read', () => {
+    const CLOSE = [place('a', 21.0001, 105.0001), place('b', 21.0002, 105.0002), place('c', 21.0003, 105.0003)];
+
+    it('wears its name once every pin has gathered into one', () => {
+      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} cities={[]} onPickCity={() => {}} here="Hà Nội" origin={null} fallback={HANOI} />);
+      const one = markers()[0];
+      expect(one.textContent).toBe('Hà Nội3');
+      expect(one.getAttribute('data-label')).toBe('Hà Nội, 3 places, zoom in');
+    });
+
+    it('goes back to being a count once it has come apart', () => {
+      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} cities={[]} onPickCity={() => {}} here="Hà Nội" origin={null} fallback={HANOI} />);
+      zoomIn();
+      expect(markers().map((m) => m.textContent)).toEqual(['', '', '']);
+    });
+
+    // Still a cluster underneath: the tap takes the reader in, it does
+    // not change which city they are reading.
+    it('takes the reader in when tapped, like the cluster it is', () => {
+      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} cities={[]} onPickCity={() => {}} here="Hà Nội" origin={null} fallback={HANOI} />);
+      spies.fitToCoordinates.mockClear();
+      fireEvent.click(markers()[0]);
+      expect(spies.fitToCoordinates).toHaveBeenCalledWith(
+        CLOSE.map((p) => ({ latitude: p.lat, longitude: p.lng })),
+        expect.objectContaining({ animated: true }),
+      );
+    });
+
+    it('stays a plain pin where there is only one place to draw', () => {
+      render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} cities={[]} onPickCity={() => {}} here="Hà Nội" origin={null} fallback={HANOI} />);
+      expect(markers()[0].textContent).toBe('');
+      expect(markers()[0].getAttribute('data-slug')).toBe('a');
     });
   });
 });

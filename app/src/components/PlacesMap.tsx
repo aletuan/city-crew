@@ -38,6 +38,24 @@ const INK = Platform.select({ android: '#4A90D9', default: '#17150F' });
  *  iOS, and one that is never frozen redraws on every pan. */
 const SETTLE_MS = 600;
 
+/** The one shape a city takes on this map, wherever the city is. */
+function CityPill({ name, count }: { name: string; count: number | null }) {
+  return (
+    <View style={s.city}>
+      <Text style={s.cityName}>{name}</Text>
+      {/* A name says a city exists; the number is what makes going there
+          a decision. Absent until the index arrives, and absent for good
+          if it never does. */}
+      {count == null ? null : <Text style={s.cityCount}>{count}</Text>}
+    </View>
+  );
+}
+
+/** The same figure, in words, for a listener. */
+function spokenCount(n: number, t: (en: string, vi: string, ja?: string) => string): string {
+  return t(`${n} ${n === 1 ? 'place' : 'places'}`, `${n} địa điểm`, `${n}件`);
+}
+
 class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
@@ -55,7 +73,7 @@ const OPENING_SPAN = 0.05;
 /** `edgePadding`'s default — see the note on that prop. */
 const DEFAULT_PADDING = { top: 80, right: 40, bottom: 160, left: 40 };
 
-export default function PlacesMap({ places, selectedSlug, onSelect, category, origin, fallback, cities, onPickCity, edgePadding = DEFAULT_PADDING }: {
+export default function PlacesMap({ places, selectedSlug, onSelect, category, origin, fallback, cities, onPickCity, here, edgePadding = DEFAULT_PADDING }: {
   places: readonly Place[];
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
@@ -89,6 +107,15 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   /** A tap on one of those. The screen makes it the city being read, and
    *  everything else on the screen follows. */
   onPickCity: (id: string) => void;
+  /**
+   * The name of the city being read.
+   *
+   * Used at one moment only: where every pin has gathered into a single
+   * cluster, that cluster *is* this city, and drawing it as a bare number
+   * beside four named cities said the same kind of thing in two
+   * languages. Named, it reads as one of five.
+   */
+  here: string;
   /** The screen that measures its header passes what it measured;
    *  `DEFAULT_PADDING` otherwise. */
   edgePadding?: { top: number; right: number; bottom: number; left: number };
@@ -128,6 +155,10 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
     [key, span.latitudeDelta, span.longitudeDelta, selectedSlug],
   );
   const at = useMemo(() => new Map(pins.map((p) => [p.slug, p])), [pins]);
+  // No constant decides this. Either one cluster holds every pin — in
+  // which case the reader is looking at the city, not at a part of it —
+  // or it does not.
+  const collapsed = clusters.length === 1 && pins.length > 1 && clusters[0].slugs.length === pins.length;
 
   // A custom marker view frozen from its first frame comes out blank on
   // iOS; one that is never frozen redraws on every pan. So each new set of
@@ -139,6 +170,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   const shape = [
     clusters.map((c) => `${c.key}x${c.slugs.length}`).join('|'),
     cities.map((c) => `${c.name}:${c.count ?? ''}`).join('|'),
+    collapsed ? here : '',
   ].join('/');
   // `ready` is in here, not only `shape`: the countdown must start when
   // the native map exists, or on a slow first launch it can run out
@@ -193,6 +225,23 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
         testID="places-map"
       >
         {clusters.map((c) => {
+          if (collapsed) {
+            return (
+              <Marker
+                key={c.key}
+                identifier={c.key}
+                coordinate={{ latitude: c.lat, longitude: c.lng }}
+                zIndex={3}
+                tracksViewChanges={!settled}
+                onPress={() => openCluster(c.slugs)}
+                accessibilityRole="button"
+                accessibilityLabel={[here, spokenCount(c.slugs.length, t), t('zoom in', 'phóng to', '拡大')].join(', ')}
+                testID={`here-${c.key}`}
+              >
+                <CityPill name={here} count={c.slugs.length} />
+              </Marker>
+            );
+          }
           if (c.slugs.length > 1) {
             const size = clusterSize(c.slugs.length);
             const skin = clusterSkin(c.slugs.length);
@@ -261,22 +310,12 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
             accessibilityRole="button"
             accessibilityLabel={[
               c.name,
-              c.count == null ? null : t(
-                `${c.count} ${c.count === 1 ? 'place' : 'places'}`,
-                `${c.count} địa điểm`,
-                `${c.count}件`,
-              ),
+              c.count == null ? null : spokenCount(c.count, t),
               t('switch to this city', 'chuyển sang thành phố này', 'この都市に切り替える'),
             ].filter(Boolean).join(', ')}
             testID={`city-${c.id}`}
           >
-            <View style={s.city}>
-              <Text style={s.cityName}>{c.name}</Text>
-              {/* A name says a city exists; the number is what makes
-                  going there a decision. Absent until the count arrives,
-                  and absent for good if it never does. */}
-              {c.count == null ? null : <Text style={s.cityCount}>{c.count}</Text>}
-            </View>
+            <CityPill name={c.name} count={c.count} />
           </Marker>
         ))}
       </MapView>

@@ -23,6 +23,7 @@ type City = Record<string, unknown> & { id: string; short_en: string };
 const state = vi.hoisted(() => ({
   city: null as City | null,
   cities: null as City[] | null,
+  index: [] as unknown[],
   places: {
     loading: false, loaded: true, error: null as string | null,
     data: [] as unknown[], reload: (() => {}) as () => void,
@@ -136,7 +137,7 @@ vi.mock('../components/MiniMap', () => ({ get canDrawMap() { return mapState.can
 // real thing: these are the pure helpers the screen renders with.
 vi.mock('../lib/data', async (actual) => ({
   ...(await actual() as object),
-  fetchPlaceCountByCity: vi.fn(async () => ({ hcmc: 280 })),
+  fetchPlaceIndex: vi.fn(async () => state.index),
 }));
 
 import ExploreScreen from './ExploreScreen';
@@ -283,6 +284,7 @@ const cardNames = () => screen.getAllByTestId(/^place-card-\d+$/).map((el) => el
 beforeEach(async () => {
   state.city = { ...hanoi };
   state.cities = null;
+  state.index = [];
   state.places = { loading: false, loaded: true, error: null, data: [], reload: () => {} };
   state.cols = { loaded: true, data: [] };
   state.likes = {};
@@ -840,6 +842,26 @@ describe('the map', () => {
 
     await act(async () => { fireEvent.click(pill); });
     expect(spies.setCity).toHaveBeenCalledWith('hcmc');
+  });
+
+  // One rule for every number on the map. A chip that narrows this city
+  // has to narrow the others too, or the figures beside each other are
+  // in different units and invite the wrong comparison.
+  it('counts the other cities under the same filters as this one', async () => {
+    state.cities = [{ ...hanoi }, { id: 'hcmc', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン', center_lat: 10.7769, center_lng: 106.7009 } as City];
+    state.index = [
+      { slug: 's1', city_id: 'hcmc', categories: ['cafes'], vibe_tags: [] },
+      { slug: 's2', city_id: 'hcmc', categories: ['cafes'], vibe_tags: [] },
+      { slug: 's3', city_id: 'hcmc', categories: ['eats'], vibe_tags: [] },
+    ];
+    state.places.data = [place('a', { lat: 21, lng: 105, categories: ['cafes'] })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    const pill = () => document.querySelector('[data-slug="city-hcmc"]')!;
+    await waitFor(() => expect(pill().textContent).toBe('Saigon3'));
+
+    fireEvent.click(screen.getByText('Cafés'));
+    expect(pill().textContent).toBe('Saigon2');
   });
 
   // The tab bar's only way onto this screen is a scroll-up — the map
