@@ -28,6 +28,7 @@ vi.mock('./mapsModule', async () => {
     R.useImperativeHandle(ref, () => ({ fitToCoordinates: spies.fitToCoordinates }));
     return R.createElement('div', {
       'data-stub': 'MapView', 'data-user': String(!!p.showsUserLocation),
+      'data-poi-icons': String(!(p.customMapStyle ?? []).some((r: any) => r.featureType === 'poi' && r.elementType === 'labels.icon' && r.stylers?.[0]?.visibility === 'off')),
     },
     R.createElement('button', { type: 'button', 'data-stub': 'ready', onClick: p.onMapReady }),
     // The map telling the component how wide a stretch of the world is on
@@ -120,6 +121,13 @@ describe('PlacesMap', () => {
     render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={onSelect} category={null} origin={null} fallback={HANOI} />);
     fireEvent.click(markers()[0]);
     expect(onSelect).toHaveBeenCalledWith('a');
+  });
+
+  // Our places are Google's places, so its own badge for each one sat
+  // beside our pin. The badge goes; the name stays.
+  it('asks the map not to draw its own badge on a place of interest', () => {
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
+    expect(mapView().getAttribute('data-poi-icons')).toBe('false');
   });
 
   it('shows the reader’s own position', () => {

@@ -21,6 +21,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { pinTint } from '../lib/categories';
 import { clusterPins, clusterSize, clusterSkin } from '../lib/cluster';
+import { MAP_STYLE } from '../lib/mapStyle';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
 import { useI18n } from '../lib/i18n';
@@ -157,6 +158,9 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
         ref={ref}
         style={s.fill}
         provider={PROVIDER_GOOGLE}
+        // Google draws its own badge for every place we pin, because our
+        // places are its places — see `lib/mapStyle`.
+        customMapStyle={MAP_STYLE}
         initialRegion={{ latitude: first.lat, longitude: first.lng, latitudeDelta: OPENING_SPAN, longitudeDelta: OPENING_SPAN }}
         showsUserLocation
         showsMyLocationButton={false}
