@@ -57,9 +57,70 @@ describe('the list of cities', () => {
     expect(screen.getByText('Saigon')).toBeTruthy();
   });
 
-  it('ticks the one currently showing', () => {
+  // The tick is gone with the redesign; the chosen row is its tint, its
+  // accent text and `aria-selected`. That last one is the part a test has
+  // to hold, because it is the only half that is not colour.
+  it('marks the one currently showing, in something other than colour', () => {
     render(<CitySwitcherModal visible onClose={() => {}} />);
-    expect(document.querySelector('[data-icon="checkmark"]')).toBeTruthy();
+    const chosen = document.querySelectorAll('[aria-selected="true"]');
+    expect(chosen).toHaveLength(1);
+    expect(chosen[0].textContent).toContain('Hanoi');
+  });
+
+  // Every row goes somewhere, so every row wears the mark that says so —
+  // the cities, and the location row above them.
+  it('gives each row a chevron, the location row included', () => {
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    expect(document.querySelectorAll('[data-icon="chevron-forward"]').length)
+      .toBe(screen.getAllByTestId(/^city-row-/).length + 1);
+  });
+
+  // Eight cities is where a list stops being scannable, which is the
+  // only reason this field exists.
+  describe('the search field', () => {
+    const type = (text: string) => fireEvent.change(screen.getByTestId('city-search'), { target: { value: text } });
+
+    it('narrows the list to what was typed', () => {
+      render(<CitySwitcherModal visible onClose={() => {}} />);
+      type('han');
+      expect(screen.getByText('Hanoi')).toBeTruthy();
+      expect(screen.queryByText('Saigon')).toBeNull();
+    });
+
+    // The ordinary case on a phone keyboard, not the exception: nobody
+    // reaches for the circumflex to find Hà Nội.
+    it('finds a city typed without its diacritics', () => {
+      render(<CitySwitcherModal visible onClose={() => {}} />);
+      type('ha noi');
+      expect(screen.getByText('Hanoi')).toBeTruthy();
+    });
+
+    // A reader with the app in Vietnamese still types "saigon" as often
+    // as "sài gòn", so every name a city answers to is searched — not
+    // only the one on screen.
+    it('matches a name in a language the row is not showing', () => {
+      render(<CitySwitcherModal visible onClose={() => {}} />);
+      type('sài gòn');
+      expect(screen.getByText('Saigon')).toBeTruthy();
+      expect(screen.queryByText('Hanoi')).toBeNull();
+    });
+
+    it('says so rather than showing an empty sheet', () => {
+      render(<CitySwitcherModal visible onClose={() => {}} />);
+      type('zzz');
+      expect(screen.getByText('No city by that name')).toBeTruthy();
+    });
+
+    // A row still chooses while the keyboard is up — see
+    // keyboardShouldPersistTaps.
+    it('still switches to a city it has just found', () => {
+      const onClose = vi.fn();
+      render(<CitySwitcherModal visible onClose={onClose} />);
+      type('sai');
+      fireEvent.click(screen.getByText('Saigon'));
+      expect(setCity).toHaveBeenCalledWith('saigon');
+      expect(onClose).toHaveBeenCalled();
+    });
   });
 
   it('switches, then gets out of the way', () => {
@@ -83,13 +144,16 @@ describe('the list of cities', () => {
   it('wears each city’s place count, and introduces the young one as new', async () => {
     fetchPlaceCountByCity.mockImplementation(async () => ({ hanoi: 179, saigon: 15 }));
     render(<CitySwitcherModal visible onClose={() => {}} />);
-    expect(await screen.findByText('179 places')).toBeTruthy();
-    expect(await screen.findByText('15 places')).toBeTruthy();
+    // The number alone now, at the row's right edge — the word "places"
+    // repeated down a column said nothing the heading had not.
+    expect(await screen.findByText('179')).toBeTruthy();
+    expect(await screen.findByText('15')).toBeTruthy();
     // The badge belongs to the name, not the count. Written under it as
     // "15 places · new" it read as fifteen newly added places; the count
     // line is now the count alone, and NEW stands beside "Saigon".
     expect(await screen.findByText('NEW')).toBeTruthy();
     expect(screen.queryByText(/places · new/)).toBeNull();
+    expect(screen.queryByText('179 places')).toBeNull();
   });
 
   it('badges only the young city, never the deep one', async () => {
@@ -105,7 +169,7 @@ describe('the list of cities', () => {
     fetchPlaceCountByCity.mockImplementationOnce(async () => { throw new Error('offline'); });
     render(<CitySwitcherModal visible onClose={() => {}} />);
     expect(await screen.findByText('Hanoi')).toBeTruthy();
-    expect(screen.queryByText(/places/)).toBeNull();
+    expect(screen.queryByText(/^\d+$/)).toBeNull();
     // No count means no judgement about age either — a row that says
     // nothing must not imply a city is young.
     expect(screen.queryByText('NEW')).toBeNull();
