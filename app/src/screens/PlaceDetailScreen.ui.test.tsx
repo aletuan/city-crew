@@ -695,3 +695,41 @@ describe('the local guide’s panel', () => {
     expect(screen.queryByTestId('guide-panel')).toBeNull();
   });
 });
+
+// The info card's left column, which two bugs had quietly pulled apart.
+//
+// Neither was visible in the markup. The gutter constant said "Glyph 19,
+// air 14" and the style that read it was `GUTTER - 14` — the glyph alone,
+// so the air never existed and each label sat against its icon at whatever
+// that glyph's own side bearing happened to be (4.0pt after the pin, 2.7
+// after the clock, 2.4 after the handset, measured on the phone). And the
+// hairline between rows carried `marginLeft` on the box that *held* the
+// row, so every row after the first was pushed 33pt right — icon, label
+// and value together — while the first row sat at the card's padding.
+//
+// Both are geometry, which `react-native-web` does put on the host element,
+// so both can be asserted rather than looked at.
+describe('the info card’s gutter', () => {
+  const styleOf = (el: Element | null) => getComputedStyle(el as Element);
+
+  it('gives the glyph the whole gutter, so the words start where the lines do', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng' }));
+    const value = screen.getByTestId('detail-address');
+    // value → infoWords → the Pressable, whose first child is the icon.
+    const row = value.parentElement!.parentElement!;
+    expect(styleOf(row.firstElementChild).width).toBe('33px');
+  });
+
+  // A line has nothing inside it to drag along. Written as a border on the
+  // wrapper, this inset moved the row; written as its own element, it
+  // moves only itself.
+  it('draws each hairline as its own element, not as a border on a row', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng', phone: '+84 799 986 201' }));
+    const inset = [...document.querySelectorAll('div')]
+      .filter((el) => styleOf(el).marginLeft === '33px');
+    expect(inset.length).toBeGreaterThan(0);
+    for (const el of inset) {
+      expect(el.children.length, 'a hairline that holds a row indents it').toBe(0);
+    }
+  });
+});

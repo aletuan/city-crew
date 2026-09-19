@@ -72,7 +72,8 @@ function InfoRow({ icon, label, first, onPress, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <View style={!first && s.rowDivider}>
+    <>
+      {!first && <View style={s.rowDivider} />}
       <Pressable
         onPress={onPress}
         disabled={!onPress}
@@ -85,7 +86,7 @@ function InfoRow({ icon, label, first, onPress, children }: {
           {children}
         </View>
       </Pressable>
-    </View>
+    </>
   );
 }
 
@@ -460,7 +461,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               )}
 
               {hours.length > 0 && (
-                <View style={firstRow !== 'hours' && s.rowDivider}>
+                <View>
+                  {firstRow !== 'hours' && <View style={s.rowDivider} />}
                   {/* The one line most people came for is the whole row;
                       the table it was derived from waits behind the
                       chevron instead of pushing Call and Website off the
@@ -719,14 +721,30 @@ const s = StyleSheet.create({
   // for the chevron at its end.
   // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
   infoStack: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 17 },
-  // Nudged down to sit on the label's cap height rather than above it:
-  // a 19pt glyph top-aligned with 12pt type floats.
-  infoIcon: { width: GUTTER - 14, marginTop: 1 },
+  // The whole gutter, not the glyph: 19 of it is the glyph and the
+  // remaining 14 is the air before the words. Written `GUTTER - 14` it was
+  // 19 — exactly the glyph — so there was no air at all and every label
+  // sat against its icon at whatever the glyph's own side bearing happened
+  // to be. Measured on the phone: 4.0pt after the pin, 2.7 after the
+  // clock, 2.4 after the handset. Three different gaps because three
+  // different glyphs, which is what made the column look ragged.
+  //
+  // At `GUTTER` the words begin exactly where the hairline and the hours
+  // table already began, and the three are one column.
+  infoIcon: { width: GUTTER, marginTop: 1 },
   infoWords: { flex: 1 },
   // Starts where the labels start. Run to the card's edge it cut the
   // gutter into four pieces; inset, the glyphs read as one column.
+  //
+  // Its own element rather than a border on the box that holds the row,
+  // and that is the whole of a bug this card carried: `marginLeft` on a
+  // wrapper moves everything inside it, so every row after the first was
+  // pushed 33pt right — icon, label and value together — while the first
+  // row sat at the card's padding. Measured on the phone: the address pin
+  // at 18pt from the card edge, the clock and the handset at 46. A line
+  // has nothing inside it to drag along.
   rowDivider: {
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
+    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
     marginLeft: GUTTER,
   },
   infoLabel: {

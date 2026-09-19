@@ -65,8 +65,15 @@ vi.mock('react-native-svg', () => ({
 // and their .ttf files — 3.7 MB of fonts for the one family this app uses —
 // so every call site names its family directly. A stub on the barrel would
 // intercept nothing.
-const icon = ({ name }: { name?: string }) =>
-  React.createElement('span', { 'data-icon': name });
+//
+// `style` is forwarded because a glyph's box is sometimes the thing under
+// test rather than the glyph: the info card's gutter is a 19pt icon in a
+// 33pt column, and the 14pt of air between them is a fact only the style
+// carries. Passed straight to the DOM node — `StyleSheet.create` gives
+// react-native-web a plain object here, and React turns a bare number into
+// pixels, which is what the assertion reads back.
+const icon = ({ name, style }: { name?: string; style?: object }) =>
+  React.createElement('span', { 'data-icon': name, style });
 vi.mock('@expo/vector-icons/Ionicons', () => ({ default: icon }));
 
 // These must return promises, not undefined. `fireHaptic` calls

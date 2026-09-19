@@ -186,20 +186,6 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
             )}
         </PressableScale>
       </View>
-      {/* What the person is saying by choosing one. Full width under the
-          row rather than squeezed beside the button: it is a sentence, and
-          a 120pt column would break it over three ragged lines.
-
-          Read before the picker opens rather than behind a confirm — a
-          dialog between the button and the camera roll is a tap that
-          teaches nobody anything. */}
-      <Text style={s.note}>
-        {t(
-          'A photo chosen from my own Photos',
-          'Ảnh lựa chọn từ Photos của tôi',
-          '自分の写真から選んだ画像',
-        )}
-      </Text>
     </View>
   );
 }
@@ -248,5 +234,4 @@ const s = StyleSheet.create({
     borderRadius: radius.pill, backgroundColor: colors.accentFill,
   },
   buttonText: { color: colors.accentInk, fontSize: 14.5, fontWeight: font.semibold },
-  note: { color: colors.textTertiary, fontSize: 12, marginTop: 10 },
 });
