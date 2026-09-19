@@ -106,6 +106,22 @@ type Props = {
   /** Adds the locate button. Absent, there is none — a control that does
    *  nothing is worse than no control. */
   onLocate?: () => void;
+  /**
+   * Whether the reader may pan, pinch and rotate this map.
+   *
+   * On the start sheet, yes: choosing where the day begins is the job,
+   * and the map is the instrument. On a place's page it is a picture of
+   * one point inside a vertical scroll, and a live map there is a hole
+   * the page cannot be scrolled through — the native view swallows the
+   * drag and the reader's thumb stops working over a third of the
+   * screen. Frozen, the gesture falls through to the ScrollView and the
+   * tap still reaches `onPick`.
+   *
+   * It also governs the blue dot: `showsUserLocation` asks iOS for the
+   * reader's position, and a page that only wants to draw a café has no
+   * business raising that prompt.
+   */
+  interactive?: boolean;
 };
 
 /**
@@ -126,7 +142,7 @@ class Boundary extends React.Component<{ children: React.ReactNode }, { failed: 
   }
 }
 
-export default function MiniMap({ lat, lng, onPick, caption, height, onLocate }: Props) {
+export default function MiniMap({ lat, lng, onPick, caption, height, onLocate, interactive = true }: Props) {
   const map = useRef<any>(null);
 
   // `initialRegion` is what its name says: read once, on mount. The sheet
@@ -153,9 +169,13 @@ export default function MiniMap({ lat, lng, onPick, caption, height, onLocate }:
           // only be shown on Google's map.
           provider={PROVIDER_GOOGLE}
           initialRegion={{ latitude: lat, longitude: lng, latitudeDelta: 0.02, longitudeDelta: 0.02 }}
-          showsUserLocation
+          showsUserLocation={interactive}
           showsMyLocationButton={false}
           toolbarEnabled={false}
+          scrollEnabled={interactive}
+          zoomEnabled={interactive}
+          rotateEnabled={interactive}
+          pitchEnabled={interactive}
           onPress={(e: any) => {
             const c = e?.nativeEvent?.coordinate;
             if (c) onPick({ lat: c.latitude, lng: c.longitude });

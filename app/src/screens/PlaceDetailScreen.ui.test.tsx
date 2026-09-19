@@ -97,6 +97,20 @@ vi.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
 }));
 vi.mock('expo-status-bar', () => ({ StatusBar: () => null, setStatusBarStyle: spies.setStatusBarStyle }));
+// A stub, which is also what keeps `expo-constants` — and through it the
+// whole native module layer — out of jsdom. The real one answers to the
+// binary's capabilities, which no test can stand in for.
+vi.mock('../components/MiniMap', async () => {
+  const R = await import('react');
+  return {
+    default: (p: any) => R.createElement('button', {
+      type: 'button',
+      'data-stub': 'MiniMap',
+      'data-interactive': String(p.interactive),
+      onClick: () => p.onPick({ lat: p.lat, lng: p.lng }),
+    }),
+  };
+});
 
 import PlaceDetailScreen from './PlaceDetailScreen';
 
@@ -456,7 +470,50 @@ describe('PlaceDetailScreen — floating controls', () => {
   });
 });
 
+describe('PlaceDetailScreen — the map', () => {
+  const map = () => document.querySelector('[data-stub="MiniMap"]') as HTMLElement | null;
+
+  it('draws the place on a map under the facts', () => {
+    show();
+    expect(map()).toBeTruthy();
+  });
+
+  // A live map inside a vertical scroll is a hole the page cannot be
+  // scrolled through: the native view takes the drag and the thumb stops
+  // working over a third of the screen.
+  it('freezes it, so the page can still be scrolled over it', () => {
+    show();
+    expect(map()?.dataset.interactive).toBe('false');
+  });
+
+  // The only thing this view can usefully do. Routing, street view and
+  // the rest are Maps' job, and the tap is the whole handoff.
+  it('hands off to Maps when tapped', () => {
+    show();
+    fireEvent.click(map()!);
+    expect(openURL).toHaveBeenCalledWith(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Cộng Cà Phê - Old Quarter')}&query_place_id=gp1`,
+    );
+  });
+
+  it('draws none at all for a place with no coordinates', () => {
+    show(place({ lat: null, lng: null }));
+    expect(map()).toBeNull();
+  });
+});
+
 describe('PlaceDetailScreen — info card', () => {
+  // The glyph in the gutter is what lets the eye find the phone number
+  // without reading the labels. Said in the tree as well as drawn, since
+  // an icon nobody can name is decoration.
+  it('names each fact with a glyph of its own', () => {
+    show();
+    const icons = [...document.querySelectorAll('[data-icon]')].map((n) => (n as HTMLElement).dataset.icon);
+    expect(icons).toEqual(expect.arrayContaining([
+      'location-outline', 'time-outline', 'call-outline', 'globe-outline',
+    ]));
+  });
+
   it('shortens the address and opens Google Maps on the exact place', () => {
     show();
     const addr = screen.getByTestId('detail-address');
