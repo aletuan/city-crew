@@ -58,7 +58,7 @@ const HANOI = { lat: 21.0285, lng: 105.8542 };
 
 describe('PlacesMap', () => {
   it('pins every place that has coordinates, and skips the ones that do not', () => {
-    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1), place('c', null, null)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1), place('c', null, null)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
     expect(markers().map((m) => m.getAttribute('data-slug'))).toEqual(['a', 'b']);
   });
 
@@ -67,15 +67,36 @@ describe('PlacesMap', () => {
   // whatever it is, so the one the reader tapped is never lost among its
   // kind.
   it('draws the chosen pin in the accent and the rest in their category’s colour', () => {
-    render(<PlacesMap places={[place('a', 21, 105, ['cafes']), place('b', 21.1, 105.1, ['cafes']), place('c', 21.2, 105.2, ['views'])]} selectedSlug="b" onSelect={() => {}} origin={null} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105, ['cafes']), place('b', 21.1, 105.1, ['cafes']), place('c', 21.2, 105.2, ['views'])]} selectedSlug="b" onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
     const [a, b, c] = markers();
     expect(b.getAttribute('data-color')).toBe('#FF6F5B');
     expect(a.getAttribute('data-color')).toBe('#D2A679');
     expect(c.getAttribute('data-color')).toBe('#6FB3C0');
   });
 
+  // Inside a chip every pin is that kind of place already, so the chip's
+  // colour is the only one that says anything: one kind asked for, one
+  // colour back. A café that is also a place to work stops reading as the
+  // odd one out under Focus.
+  it('paints every pin in the chip’s colour while a chip is selected', () => {
+    render(<PlacesMap places={[place('a', 21, 105, ['cafes', 'focus']), place('b', 21.1, 105.1, ['focus']), place('c', 21.2, 105.2, ['focus'])]} selectedSlug="c" onSelect={() => {}} category="focus" origin={null} fallback={HANOI} />);
+    const [a, b, c] = markers();
+    expect(a.getAttribute('data-color')).toBe('#989AD7');
+    expect(b.getAttribute('data-color')).toBe('#989AD7');
+    // The chosen pin is coral under a chip too — it is the one thing the
+    // chip does not already say.
+    expect(c.getAttribute('data-color')).toBe('#FF6F5B');
+  });
+
+  it('lets each pin speak for itself under a chip the table has never heard of', () => {
+    render(<PlacesMap places={[place('a', 21, 105, ['cafes']), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} category="street_food" origin={null} fallback={HANOI} />);
+    const [a, b] = markers();
+    expect(a.getAttribute('data-color')).toBe('#D2A679');
+    expect(b.getAttribute('data-color')).toBe('#17150F');
+  });
+
   it('draws a pin nothing classifies in ink, and every pin when the chosen slug matches none of them', () => {
-    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug="zzz" onSelect={() => {}} origin={null} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug="zzz" onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
     const [a, b] = markers();
     expect(a.getAttribute('data-color')).toBe('#17150F');
     expect(b.getAttribute('data-color')).toBe('#17150F');
@@ -83,13 +104,13 @@ describe('PlacesMap', () => {
 
   it('reports which pin was tapped', () => {
     const onSelect = vi.fn();
-    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={onSelect} origin={null} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={onSelect} category={null} origin={null} fallback={HANOI} />);
     fireEvent.click(markers()[0]);
     expect(onSelect).toHaveBeenCalledWith('a');
   });
 
   it('shows the reader’s own position', () => {
-    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
     expect(mapView().getAttribute('data-user')).toBe('true');
   });
 
@@ -98,7 +119,7 @@ describe('PlacesMap', () => {
   // filter that narrows the list to three places should not leave the
   // reader looking at an empty quarter of the city.
   it('fits the view to the pins once ready, and refits when they change', () => {
-    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
     expect(spies.fitToCoordinates).not.toHaveBeenCalled();
 
     markMapReady();
@@ -108,7 +129,7 @@ describe('PlacesMap', () => {
       expect.objectContaining({ animated: false }),
     );
 
-    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(2);
     expect(spies.fitToCoordinates).toHaveBeenLastCalledWith(
       [{ latitude: 21, longitude: 105 }],
@@ -117,16 +138,16 @@ describe('PlacesMap', () => {
   });
 
   it('does not refit when the same pins reappear in a different order', () => {
-    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
     markMapReady();
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(1);
 
-    rerender(<PlacesMap places={[place('b', 21.1, 105.1), place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    rerender(<PlacesMap places={[place('b', 21.1, 105.1), place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(1);
   });
 
   it('does not fit when there is nothing to pin', () => {
-    render(<PlacesMap places={[]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    render(<PlacesMap places={[]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
     markMapReady();
     expect(spies.fitToCoordinates).not.toHaveBeenCalled();
   });
@@ -134,7 +155,7 @@ describe('PlacesMap', () => {
   // No Google map means no map — never Apple's, never a broken one.
   it('shows no map at all when the binary cannot draw a Google map', () => {
     verdict.canDrawMap = false;
-    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
     expect(document.querySelector('[data-testid="places-map-missing"]')).toBeTruthy();
     expect(document.querySelector('[data-stub="MapView"]')).toBeNull();
   });

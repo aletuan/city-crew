@@ -1403,6 +1403,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 places={shown}
                 selectedSlug={selectedSlug}
                 onSelect={setSelectedSlug}
+                // Under a chip the pins take the chip's colour; at "All"
+                // each speaks for itself. See the prop's own note.
+                category={cat === ALL ? null : cat}
                 origin={sortOrigin}
                 // Where the map opens with neither a fix nor a pin: the
                 // city's own centre. `city` is in the render condition
