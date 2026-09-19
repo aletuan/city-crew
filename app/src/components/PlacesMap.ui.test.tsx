@@ -9,7 +9,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 // No `screen`: every query here goes through `document` and an unused
 // import is an eslint *error* in this repo.
-import { fireEvent, render } from '../uitest/render';
+import { act, fireEvent, render } from '../uitest/render';
 import type { Place } from '../lib/data';
 
 const spies = vi.hoisted(() => ({ fitToCoordinates: vi.fn() }));
@@ -28,12 +28,24 @@ vi.mock('./mapsModule', async () => {
     R.useImperativeHandle(ref, () => ({ fitToCoordinates: spies.fitToCoordinates }));
     return R.createElement('div', {
       'data-stub': 'MapView', 'data-user': String(!!p.showsUserLocation),
-    }, R.createElement('button', { type: 'button', 'data-stub': 'ready', onClick: p.onMapReady }), p.children);
+    },
+    R.createElement('button', { type: 'button', 'data-stub': 'ready', onClick: p.onMapReady }),
+    // The map telling the component how wide a stretch of the world is on
+    // screen — which is what the clustering is cut from. A street's width.
+    R.createElement('button', {
+      type: 'button',
+      'data-stub': 'zoom-in',
+      onClick: () => p.onRegionChangeComplete?.({ latitudeDelta: 0.0005, longitudeDelta: 0.0005 }),
+    }),
+    p.children);
   });
+  // Children matter now: a cluster's marker carries the bubble that shows
+  // the count, where a place's marker carries nothing.
   const Marker = (p: any) => R.createElement('button', {
     type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier,
-    'data-color': p.pinColor ?? '', onClick: p.onPress,
-  });
+    'data-color': p.pinColor ?? '', 'data-label': p.accessibilityLabel ?? '',
+    'data-tracks': String(!!p.tracksViewChanges), onClick: p.onPress,
+  }, p.children);
   return { MapView, Marker, PROVIDER_GOOGLE: 'google' };
 });
 
@@ -52,6 +64,7 @@ const place = (slug: string, lat: number | null, lng: number | null, categories:
   ({ slug, name_en: slug, name_vi: slug, name_ja: null, lat, lng, place_photos: [], categories, vibe_tags: [] } as unknown as Place);
 
 const markers = () => [...document.querySelectorAll('[data-stub="Marker"]')];
+const zoomIn = () => fireEvent.click(document.querySelector('[data-stub="zoom-in"]')!);
 const mapView = () => document.querySelector('[data-stub="MapView"]')!;
 const markMapReady = () => fireEvent.click(document.querySelector('[data-stub="ready"]')!);
 const HANOI = { lat: 21.0285, lng: 105.8542 };
@@ -158,5 +171,74 @@ describe('PlacesMap', () => {
     render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
     expect(document.querySelector('[data-testid="places-map-missing"]')).toBeTruthy();
     expect(document.querySelector('[data-stub="MapView"]')).toBeNull();
+  });
+
+  // 227 places inside one river bend is a mound of pins nobody can count
+  // or tap through. A bubble says how many, and a tap goes in far enough
+  // for it to come apart.
+  describe('clustering', () => {
+    const CLOSE = [place('a', 21.0001, 105.0001), place('b', 21.0002, 105.0002), place('c', 21.0003, 105.0003)];
+
+    it('gathers pins that stand too close into one bubble with a count', () => {
+      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
+      expect(markers()).toHaveLength(1);
+      expect(markers()[0].textContent).toBe('3');
+    });
+
+    it('comes apart when the reader goes in, and needs no threshold to do it', () => {
+      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
+      expect(markers()).toHaveLength(1);
+      zoomIn();
+      expect(markers().map((m) => m.getAttribute('data-slug'))).toEqual(['a', 'b', 'c']);
+    });
+
+    it('takes the reader into a bubble that is tapped', () => {
+      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
+      spies.fitToCoordinates.mockClear();
+      fireEvent.click(markers()[0]);
+      expect(spies.fitToCoordinates).toHaveBeenCalledWith(
+        [{ latitude: 21.0001, longitude: 105.0001 }, { latitude: 21.0002, longitude: 105.0002 }, { latitude: 21.0003, longitude: 105.0003 }],
+        expect.objectContaining({ animated: true }),
+      );
+    });
+
+    // The strip along the bottom is already talking about the chosen
+    // place; its pin disappearing into a bubble would read as a bug.
+    it('leaves the chosen place its own pin', () => {
+      render(<PlacesMap places={CLOSE} selectedSlug="b" onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
+      const slugs = markers().map((m) => m.getAttribute('data-slug'));
+      expect(slugs).toContain('b');
+      expect(markers()).toHaveLength(2);
+    });
+
+    // A bubble is a custom view, and a custom view frozen from its first
+    // frame comes out blank on iOS. So it is drawn live until the map is
+    // up and a moment has passed, and only then put to rest — which is
+    // also why the countdown cannot start before the map is ready.
+    it('draws a bubble live until the map is up and a moment has passed', async () => {
+      vi.useFakeTimers();
+      try {
+        render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={() => {}} category={null} origin={null} fallback={HANOI} />);
+        expect(markers()[0].getAttribute('data-tracks')).toBe('true');
+
+        // No map yet: the clock has not started, so waiting changes nothing.
+        await act(async () => { vi.advanceTimersByTime(5000); });
+        expect(markers()[0].getAttribute('data-tracks')).toBe('true');
+
+        markMapReady();
+        await act(async () => { vi.advanceTimersByTime(1000); });
+        expect(markers()[0].getAttribute('data-tracks')).toBe('false');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('says the count out loud, and does not report a bubble as a place', () => {
+      const onSelect = vi.fn();
+      render(<PlacesMap places={CLOSE} selectedSlug={null} onSelect={onSelect} category={null} origin={null} fallback={HANOI} />);
+      expect(markers()[0].getAttribute('data-label')).toBe('3 places, zoom in');
+      fireEvent.click(markers()[0]);
+      expect(onSelect).not.toHaveBeenCalled();
+    });
   });
 });

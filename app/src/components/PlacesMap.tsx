@@ -7,25 +7,39 @@
 // mode where it is false, so by the time this mounts the answer is yes.
 // The `Boundary` is for the one case that answer was wrong.
 //
-// Plain pins. A pin that is a View with a number in it is a View per
-// place, and Saigon has 251 of them; `tracksViewChanges={false}` and the
-// stock marker keep the map a map. The chosen one is coral; the rest wear
+// Plain pins for single places, and a bubble with a count where several
+// stand too close to tell apart — see `lib/cluster`. Stock markers for
+// the places themselves, so 288 of them stay a map rather than 288
+// Views; only the bubbles are drawn, and there are never many of those.
+// The chosen one is coral; the rest wear
 // the colour of their category — the same one the filter row's chip and
 // the detail page's glyph wear, so the map reads in the code the reader
 // already knows. A place with no category is ink on iOS and azure on
 // Android — see `pinColor`.
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { CATEGORIES, categoryColor } from '../lib/categories';
+import { clusterPins, clusterSize } from '../lib/cluster';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
+import { useI18n } from '../lib/i18n';
 import { colors } from '../theme';
 import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
 
 /** The unchosen, uncategorised pin's colour — see the note on `pinColor`. */
 const INK = Platform.select({ android: '#4A90D9', default: '#17150F' });
+
+/** The bubble's ring and its figure where no chip has lent a colour. A
+ *  fixed hex, like the pins: the map's tiles are light whichever scheme
+ *  the app is in, so the token that follows the scheme would go white. */
+const BUBBLE_INK = '#17150F';
+
+/** How long a bubble is redrawn as it moves before it is frozen. A custom
+ *  marker view that is frozen from its first frame comes out blank on
+ *  iOS, and one that is never frozen redraws on every pan. */
+const SETTLE_MS = 600;
 
 class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -36,6 +50,10 @@ class Boundary extends React.Component<{ children: React.ReactNode }, { failed: 
 type Pinned = Place & { lat: number; lng: number };
 const pinned = (places: readonly Place[]): Pinned[] =>
   places.filter((p): p is Pinned => p.lat != null && p.lng != null);
+
+/** How wide the map opens, in degrees, before it has been fitted to
+ *  anything — about five kilometres, a district. */
+const OPENING_SPAN = 0.05;
 
 /** `edgePadding`'s default — see the note on that prop. */
 const DEFAULT_PADDING = { top: 80, right: 40, bottom: 160, left: 40 };
@@ -65,9 +83,13 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
    *  `DEFAULT_PADDING` otherwise. */
   edgePadding?: { top: number; right: number; bottom: number; left: number };
 }) {
+  const { t } = useI18n();
   const ref = useRef<any>(null);
   const [ready, setReady] = useState(false);
-  const pins = pinned(places);
+  // Memoised so the lookup that hangs off it can hold: `pinned` filters a
+  // new array every render, and a Map rebuilt 288 entries deep each time
+  // `settled` flips is a memo in name only.
+  const pins = useMemo(() => pinned(places), [places]);
   // Null at "All", and null too for a chip this table has not heard of —
   // then each pin falls back to speaking for itself.
   const chipColor = category ? CATEGORIES[category]?.color ?? null : null;
@@ -87,6 +109,49 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, ready, edgePadding.top, edgePadding.right, edgePadding.bottom, edgePadding.left]);
 
+  // How wide a stretch of the world is on screen — which is the zoom, and
+  // so the size of the cells the pins are gathered into. Until the map
+  // says, the opening span is the honest guess.
+  const [span, setSpan] = useState({ latitudeDelta: OPENING_SPAN, longitudeDelta: OPENING_SPAN });
+  const clusters = useMemo(
+    () => clusterPins(pins.map((p) => ({ slug: p.slug, lat: p.lat, lng: p.lng })), span, selectedSlug),
+    // `pins` is rebuilt every render; its content is what matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [key, span.latitudeDelta, span.longitudeDelta, selectedSlug],
+  );
+  const at = useMemo(() => new Map(pins.map((p) => [p.slug, p])), [pins]);
+
+  // A custom marker view frozen from its first frame comes out blank on
+  // iOS; one that is never frozen redraws on every pan. So each new set of
+  // bubbles is drawn live for a moment and then put to rest.
+  const [settled, setSettled] = useState(false);
+  // The ring's colour is part of what is drawn, so a chip change has to
+  // thaw the bubbles even in the rare case it leaves the same places
+  // pinned — a frozen marker keeps the colour it was frozen with.
+  const shape = `${chipColor ?? ''}/${clusters.map((c) => `${c.key}x${c.slugs.length}`).join('|')}`;
+  // `ready` is in here, not only `shape`: the countdown must start when
+  // the native map exists, or on a slow first launch it can run out
+  // before a bubble has ever been drawn, which is the blank marker this
+  // mechanism is here to prevent.
+  useEffect(() => {
+    setSettled(false);
+    if (!ready) return;
+    const timer = setTimeout(() => setSettled(true), SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [shape, ready]);
+
+  /** A tap on a bubble goes in far enough for it to come apart. */
+  const openCluster = (slugs: string[]) => {
+    const members = slugs.map((slug) => at.get(slug)).filter((p): p is Pinned => !!p);
+    if (!members.length) return;
+    ref.current?.fitToCoordinates(
+      members.map((p) => ({ latitude: p.lat, longitude: p.lng })),
+      // The screen's own insets, the same ones the full fit uses — the
+      // header and the strip are still there after a bubble is tapped.
+      { edgePadding, animated: true },
+    );
+  };
+
   // Every pin here is Google Places content, which the API's terms allow
   // showing only on Google's own map — see the licence note atop
   // `MiniMap.tsx`. No Google map is not a reason to fall back to Apple's;
@@ -100,14 +165,52 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
         ref={ref}
         style={s.fill}
         provider={PROVIDER_GOOGLE}
-        initialRegion={{ latitude: first.lat, longitude: first.lng, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
+        initialRegion={{ latitude: first.lat, longitude: first.lng, latitudeDelta: OPENING_SPAN, longitudeDelta: OPENING_SPAN }}
         showsUserLocation
         showsMyLocationButton={false}
         toolbarEnabled={false}
         onMapReady={() => setReady(true)}
+        // The zoom is the grid: every pan and pinch re-cuts the cells, so
+        // the mound comes apart as the reader goes in and gathers again
+        // as they come out.
+        onRegionChangeComplete={(r: { latitudeDelta: number; longitudeDelta: number }) =>
+          setSpan({ latitudeDelta: r.latitudeDelta, longitudeDelta: r.longitudeDelta })}
         testID="places-map"
       >
-        {pins.map((p) => (
+        {clusters.map((c) => {
+          if (c.slugs.length > 1) {
+            const size = clusterSize(c.slugs.length);
+            return (
+              <Marker
+                key={c.key}
+                identifier={c.key}
+                coordinate={{ latitude: c.lat, longitude: c.lng }}
+                // Above every pin: a bubble hidden behind the pins it
+                // stands for would be a count nobody can read or tap.
+                zIndex={2}
+                tracksViewChanges={!settled}
+                onPress={() => openCluster(c.slugs)}
+                accessibilityRole="button"
+                accessibilityLabel={t(
+                  `${c.slugs.length} places, zoom in`,
+                  `${c.slugs.length} địa điểm, phóng to`,
+                  `${c.slugs.length}件、拡大`,
+                )}
+                testID={`cluster-${c.key}`}
+              >
+                <View
+                  style={[
+                    s.bubble,
+                    { width: size, height: size, borderRadius: size / 2, borderColor: chipColor ?? BUBBLE_INK },
+                  ]}
+                >
+                  <Text style={s.bubbleText}>{c.slugs.length}</Text>
+                </View>
+              </Marker>
+            );
+          }
+          const p = at.get(c.slugs[0])!;
+          return (
           <Marker
             key={p.slug}
             identifier={p.slug}
@@ -127,7 +230,8 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
             tracksViewChanges={false}
             onPress={() => onSelect(p.slug)}
           />
-        ))}
+          );
+        })}
       </MapView>
     </Boundary>
   );
@@ -135,4 +239,17 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
 
 // `absoluteFill` spread into an object: RN 0.86's types have no
 // `absoluteFillObject`, and the repo already spreads it this way.
-const s = StyleSheet.create({ fill: { ...StyleSheet.absoluteFill } });
+const s = StyleSheet.create({
+  fill: { ...StyleSheet.absoluteFill },
+  // White ground, coloured ring, dark figure: the tiles underneath are
+  // light and busy, and a bubble filled with a chip's own pastel would
+  // put white type on a pale wash. The ring carries the colour code
+  // instead, which is all it has to do — the number is the message.
+  bubble: {
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#FFFFFF', borderWidth: 2,
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
+    elevation: 3,
+  },
+  bubbleText: { color: BUBBLE_INK, fontSize: 14, fontWeight: '700' },
+});
