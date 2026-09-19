@@ -137,7 +137,25 @@ const regen = () => screen.getByRole('button', { name: 'Regenerate' });
  * The cap test keeps the plain `waitFor`: it drives the clock itself, and
  * a longer budget there would hide the thing it is checking.
  */
-const forSwap = (fn: () => void) => waitFor(fn, { timeout: NARRATION_HOLD_MS + 2000 });
+const SWAP_BUDGET_MS = NARRATION_HOLD_MS + 2000;
+const forSwap = (fn: () => void) => waitFor(fn, { timeout: SWAP_BUDGET_MS });
+
+/**
+ * The `it` budget the waits above have to fit inside.
+ *
+ * Vitest's own default is 5000 — half of one `forSwap`. So the wait could
+ * never actually be spent: the test died at its own limit first, and the
+ * failure read `Test timed out in 5000ms` against this `it` rather than
+ * naming the assertion that was still waiting. Seen on CI on a PR that
+ * touches none of this, green on the rerun, which is how a limit set too
+ * low always presents. `SignInScreen.ui.test.tsx` carries the same note
+ * for the same reason, and the same fix.
+ *
+ * 25s is not a budget to spend. Nothing here waits on anything real, so a
+ * passing run finishes in milliseconds; the number only has to be further
+ * out than the two `forSwap` waits the longest test makes can reach.
+ */
+const SWAP_TEST_MS = 25_000;
 const optsOf = (call: number) => planTrips.mock.calls[call][3] as Record<string, unknown>;
 const seedsAsked = () => planTrips.mock.calls.map((c) => (c[3] as { seed: number }).seed);
 
@@ -487,7 +505,7 @@ describe('Regenerate', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('PlanEdit', expect.objectContaining({
       seed: 8, lens: 'lowkey', avoid: ['cafe', 'dinner', 'temple', 'roof', 'lake'],
     }));
-  });
+  }, SWAP_TEST_MS);
 
   it('grows the avoid-list across taps rather than replacing it', async () => {
     planTrips.mockImplementation((_d: unknown, _p: unknown, _c: unknown, o: { seed: number }) =>
@@ -501,7 +519,7 @@ describe('Regenerate', () => {
     expect(last).toMatchObject({
       seed: 9, avoid: ['cafe', 'dinner', 'temple', 'roof', 'lake', 'nowhere', 'pinned'],
     });
-  });
+  }, SWAP_TEST_MS);
 
   it('holds the old set and shows busy until the new set is narrated, and ignores a second tap', async () => {
     const answers: ReturnType<typeof deferred>[] = [];
@@ -527,7 +545,7 @@ describe('Regenerate', () => {
     await act(async () => { answers[1].resolve(words(null)); });
     await forSwap(() => expect(badges()).toEqual(['Best match', 'Low-key']));
     expect(regen().getAttribute('aria-disabled')).not.toBe('true');
-  });
+  }, SWAP_TEST_MS);
 
   it('lands the new cards with the names their narration brought', async () => {
     const named = new Set<string>();
@@ -541,7 +559,7 @@ describe('Regenerate', () => {
     fireEvent.click(regen());
     await forSwap(() => expect(screen.getByText('Named nowhere')).toBeTruthy());
     expect(screen.getByText('Named pinned')).toBeTruthy();
-  });
+  }, SWAP_TEST_MS);
 
   it('gives up waiting at the narration cap and swaps anyway', async () => {
     vi.useFakeTimers();
@@ -561,5 +579,5 @@ describe('Regenerate', () => {
     fireEvent.click(regen());
     await forSwap(() => expect(screen.getByText(/^Nothing here matches/)).toBeTruthy());
     expect(badges()).toEqual([]);
-  });
+  }, SWAP_TEST_MS);
 });
