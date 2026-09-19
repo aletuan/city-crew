@@ -120,3 +120,41 @@ Quy tắc 1, 2, 3 và 6 đều máy làm được: bỏ ký hiệu, cắt hậu 
 tách chữ không phải Latin, Title Case. Chỗ đúng để làm là `fetch-place`,
 ngay lúc nhập — rà soát tay chỉ nên còn lại quy tắc 4 và 5, vốn cần biết
 trong catalog đã có gì.
+
+## Truy vấn rà soát
+
+Quét nhanh toàn bộ catalog. Lần chạy 19/9/2026 trên 643 địa điểm cho 5 dòng
+phải sửa, và hai bộ lọc dưới đây là hai bộ lọc tìm ra chúng.
+
+```sql
+-- luật 3, 6, và khoảng trắng
+select slug, name_en from public.places
+ where name_en ~ '[®™©℠]'
+    or name_en ~ '[가-힣ぁ-んァ-ヶ一-龥]'
+    or name_en <> btrim(name_en) or name_en ~ '\s{2,}';
+
+-- luật 4: trùng tên trong cùng một thành phố
+select name_en, city_id, count(*)
+  from public.places group by 1,2 having count(*) > 1;
+
+-- luật 4 và 5: hậu tố chi nhánh và mô tả loại hình sau dấu phân cách
+select slug, name_en from public.places
+ where name_en ilike '% - CN %'
+    or name_en ~* 'c[ơở]\s*s[ơở]'
+    or name_en ~* '\sCS\s?[0-9]'
+    or name_en ~* '(chi nhánh|branch)'
+    or name_en ~* '\s[-–—]\s.*(restaurant|coffee shop)\s*$';
+```
+
+Hai cái bẫy khi tự viết thêm bộ lọc:
+
+**Đừng bắt mọi tên kết thúc bằng "Restaurant".** Lần quét 19/9 có 12 dòng như
+vậy nhưng 11 trong số đó là tên thương hiệu thật — `The Refinery Restaurant`,
+`Jalsa Indian Restaurant`. Luật 5 chỉ nhắm vào phần mô tả **đứng sau dấu phân
+cách**, nên bộ lọc phải có `\s[-–—]\s` ở giữa.
+
+**Đừng bắt mọi tên bắt đầu bằng chữ thường.** Cũng lần quét đó có 9 dòng, và
+cả 9 đều cố ý: `béo. cafe`, `indigo coffee`, `tan.lab`, `trons.studio`,
+`nonê pasta`. Đây cũng là lý do `liftFirst` trong `_shared/place-name.ts` là
+một rủi ro đã biết chứ không phải một tiện ích: nhập lại bất kỳ dòng nào
+trong chín dòng đó, nó sẽ trả về `Indigo coffee` hoặc `Tan.lab`.
