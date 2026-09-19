@@ -1466,10 +1466,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 // zoomed out past this city — see the prop's own note.
                 cities={elsewhere}
                 onPickCity={setCity}
-                // Where every pin has gathered into one, that one *is*
-                // this city, and it says so in the same words as the
-                // others rather than standing there as a bare number.
-                here={t(city.short_en, city.short_vi, city.short_ja)}
                 // The map's box already starts under the bar (`marginTop`
                 // above), so the top inset is only breathing room; the
                 // bottom clears the strip and the tab bar beneath it.
