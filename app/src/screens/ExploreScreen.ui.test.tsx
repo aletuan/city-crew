@@ -114,7 +114,7 @@ vi.mock('../components/mapsModule', async () => {
   const R = await import('react');
   const MapView = R.forwardRef((p: any, ref: any) => {
     R.useImperativeHandle(ref, () => ({ fitToCoordinates: () => {} }));
-    return R.createElement('div', { 'data-stub': 'MapView' }, p.children);
+    return R.createElement('div', { 'data-stub': 'MapView', 'data-testid': p.testID }, p.children);
   });
   const Marker = (p: any) => R.createElement('button', { type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier, onClick: p.onPress });
   return { MapView, Marker, PROVIDER_GOOGLE: 'google' };
@@ -721,6 +721,62 @@ describe('the view switch', () => {
     state.places.data = [place('p1')];
     render(<ExploreScreen navigation={nav()} />);
     expect(screen.queryByRole('button', { name: 'Map view' })).toBeNull();
+  });
+});
+
+describe('the map', () => {
+  beforeEach(async () => { await AsyncStorage.setItem('citycrew.explore.view', 'map'); });
+
+  it('opens on the map when that is what was remembered', async () => {
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(screen.queryByTestId('explore-list')).toBeNull();
+  });
+
+  it('switches from the list to the map on the spot, and keeps the way back', async () => {
+    await AsyncStorage.setItem('citycrew.explore.view', 'list');
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await act(async () => {}); // the stored 'list' lands here, not after the tap
+    expect(screen.getByTestId('explore-list')).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Map view' })); });
+    expect(screen.getByTestId('places-map')).toBeTruthy();
+    // The bar — and with it the switch — must survive the tap, or map mode
+    // is a room with no door. In map mode there is exactly one copy.
+    expect(screen.getByTestId('explore-view-pinned')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'List view' })).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'List view' })); });
+    expect(screen.getByTestId('explore-list')).toBeTruthy();
+    expect(screen.queryByTestId('places-map')).toBeNull();
+  });
+
+  it('pins exactly the places the list would show, after the same filters', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105, categories: ['cafes'] }), place('b', { lat: 21.1, lng: 105.1, categories: ['heritage'] })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(2);
+    fireEvent.click(screen.getByText('Cafés'));
+    expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(1);
+  });
+
+  it('asks for the reader’s position on entering, and does not fail without it', async () => {
+    state.locationGranted = false;
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(spies.getForegroundPermissionsAsync).toHaveBeenCalled();
+  });
+
+  it('shows the strip for a tapped pin, and opens the place from it', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105, rating: 4.6 })];
+    const navigation = nav();
+    render(<ExploreScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(screen.queryByText('Place a')).toBeNull();
+    await act(async () => { fireEvent.click(document.querySelector('[data-slug="a"]')!); });
+    fireEvent.click(screen.getByRole('button', { name: /Place a/ }));
+    expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'a' });
   });
 });
 

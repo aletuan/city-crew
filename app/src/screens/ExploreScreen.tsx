@@ -41,6 +41,9 @@ import { bestFirst } from '../lib/rank';
 import { filterExplorePlaces, type ExploreFilters, type ExploreOrigin } from '../lib/exploreFilters';
 import { parseView, VIEW_KEY, type ExploreView } from '../lib/exploreView';
 import { canDrawMap } from '../components/MiniMap';
+import PlacesMap from '../components/PlacesMap';
+import MapPlaceCard from '../components/MapPlaceCard';
+import { distanceKm } from '../lib/geo';
 import { useBrowseTaste } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
@@ -897,34 +900,58 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
 
   const shown = useMemo(() => filteredFor(appliedFilters), [filteredFor, appliedFilters]);
 
+  // The map's own selection — the pin the reader has tapped, and the
+  // strip that stands for it. Cleared implicitly rather than watched: if
+  // a chip or a sort takes the selected place out of `shown`, `find`
+  // below simply returns null and the strip goes with it.
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const selected = useMemo(() => shown.find((p) => p.slug === selectedSlug) ?? null, [shown, selectedSlug]);
+  const selectedKm = selected && sortOrigin && selected.lat != null && selected.lng != null
+    ? distanceKm(sortOrigin.lat, sortOrigin.lng, selected.lat, selected.lng)
+    : null;
+
+  /**
+   * The reader's position, or the reason there is none.
+   *
+   * One function for the two callers that want a fix — the distance sort
+   * and the map — so the permission dance is asked once, in one place,
+   * and a refusal is one string rather than two.
+   */
+  const locate = useCallback(async (): Promise<{ origin: ExploreOrigin } | { refused: string }> => {
+    const held = await Location.getForegroundPermissionsAsync();
+    const permission = held.status === 'granted'
+      ? held
+      : await Location.requestForegroundPermissionsAsync();
+    if (permission.status !== 'granted') {
+      return { refused: t(
+        'Allow location access to sort places by distance.',
+        'Hãy cho phép truy cập vị trí để sắp xếp địa điểm theo khoảng cách.',
+        '距離順に並べるには位置情報を許可してください。',
+      ) };
+    }
+    const position = await Location.getLastKnownPositionAsync()
+      ?? await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }).catch(() => null);
+    if (!position) {
+      return { refused: t(
+        "Couldn't read your location. Try again in a moment.",
+        'Không thể xác định vị trí của bạn. Hãy thử lại sau giây lát.',
+        '位置情報を取得できませんでした。しばらくしてからもう一度お試しください。',
+      ) };
+    }
+    const origin = { lat: position.coords.latitude, lng: position.coords.longitude };
+    setSortOrigin(origin);
+    return { origin };
+  }, [t]);
+
   const applyFilters = useCallback(async (next: ExploreFilters): Promise<string | null> => {
     if (next.sort === 'distance' && !sortOrigin) {
-      const held = await Location.getForegroundPermissionsAsync();
-      const permission = held.status === 'granted'
-        ? held
-        : await Location.requestForegroundPermissionsAsync();
-      if (permission.status !== 'granted') {
-        return t(
-          'Allow location access to sort places by distance.',
-          'Hãy cho phép truy cập vị trí để sắp xếp địa điểm theo khoảng cách.',
-          '距離順に並べるには位置情報を許可してください。',
-        );
-      }
-      const position = await Location.getLastKnownPositionAsync()
-        ?? await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }).catch(() => null);
-      if (!position) {
-        return t(
-          "Couldn't read your location. Try again in a moment.",
-          'Không thể xác định vị trí của bạn. Hãy thử lại sau giây lát.',
-          '位置情報を取得できませんでした。しばらくしてからもう一度お試しください。',
-        );
-      }
-      setSortOrigin({ lat: position.coords.latitude, lng: position.coords.longitude });
+      const fix = await locate();
+      if ('refused' in fix) return fix.refused;
     }
     setAppliedFilters(next);
     setFilterOpen(false);
     return null;
-  }, [sortOrigin, t]);
+  }, [sortOrigin, locate]);
 
   const filterCount = (appliedFilters.sort === 'recommended' ? 0 : 1)
     + (appliedFilters.status === 'any' ? 0 : 1)
@@ -986,6 +1013,38 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const [pinned, setPinned] = useState(false);
   const pinnedRef = useRef(false);
   const pinAtRef = useRef(0);
+
+  // On entering the map, ask once. A refusal is not an error here — the
+  // map is still a map — so nothing is said; the strip simply carries no
+  // distance and there is no blue dot.
+  const askedRef = useRef(false);
+  // `locate` is in the dependencies and is remade whenever `t` is; the
+  // ref is what keeps that from asking twice. Leave the array as it is.
+  useEffect(() => {
+    if (!mapMode || askedRef.current) return;
+    askedRef.current = true;
+    void locate();
+  }, [mapMode, locate]);
+
+  // The list is unmounted in map mode, and everything the screen derives
+  // from its scroll — the hero's parallax, whether the bar has pinned,
+  // the clock's ink past the hero, the weather's pause, which card is
+  // first — is updated only by the list's own events. Left alone it
+  // would still say "scrolled" when the list comes back at offset 0. So
+  // entering the map puts all of it back to rest; the list returns to a
+  // screen that agrees with it.
+  useEffect(() => {
+    if (!mapMode) return;
+    scrollY.setValue(0);
+    pinnedRef.current = false;
+    setPinned(false);
+    pastHeroRef.current = false;
+    applyBar();
+    heroGone.set(false);
+    setFirst(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refs and once-built setters; only the mode matters
+  }, [mapMode]);
+
   const onScrollJS = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
     const y = e.nativeEvent.contentOffset.y;
     if (y < 320) setFirst(0);
@@ -1044,6 +1103,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * collections at all.
    */
   const [headerH, setHeaderH] = useState(0);
+  // The floating bar's own measured height, in map mode: there the bar
+  // stands in permanently for the list's scrolled-away copy, and the map
+  // beneath it has to start clear of it rather than guess its height.
+  const [barH, setBarH] = useState(0);
   // Where the list header ends is where the block begins, so the crossing
   // is that offset plus the block's own padding, less the inset the
   // floating copy will put above the heading instead.
@@ -1072,6 +1135,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         ? [s.filterBar, s.filterBarFloating, { paddingTop: insets.top }]
         : [s.filterBar, { paddingTop: FILTER_PAD }]}
       testID={floating ? 'explore-pinned-bar' : undefined}
+      onLayout={floating ? (e) => setBarH(Math.round(e.nativeEvent.layout.height)) : undefined}
     >
       <View style={s.filterHair} />
       <View style={s.placesHead}>
@@ -1121,7 +1185,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           ) : null}
         </PressableScale>
         {canDrawMap ? (
-          <View style={s.viewToggle}>
+          <View style={s.viewToggle} testID={floating ? 'explore-view-pinned' : 'explore-view'}>
             {(['list', 'map'] as const).map((v) => (
               <PressableScale
                 key={v}
@@ -1179,7 +1243,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       {/* Over everything, and only once the copy in the list has gone
           under the clock. Rendered rather than hidden, so it takes no
           touches and costs no layout while the reader is at the top. */}
-      {pinned ? bar(true) : null}
+      {pinned && !mapMode ? bar(true) : null}
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {holding && (
@@ -1258,6 +1322,45 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             onViewableItemsChanged={onViewable}
             viewabilityConfig={viewabilityConfig}
           />
+        )}
+        {!holding && !error && mapMode && city && (
+          <View style={{ flex: 1 }}>
+            {/* The bar's in-list copy has nothing to scroll away with
+                here, so the floating copy stands in for it permanently:
+                heading, switch, chips, all clear of the clock. */}
+            {bar(true)}
+            {/* `marginTop`, not padding: the map fills its parent with
+                `absoluteFill`, and an absolutely placed child ignores the
+                parent's padding — it would sit under the opaque bar. The
+                bar measures itself (it already carries `insets.top`), so
+                nothing is added to the figure it reports. */}
+            <View style={[s.mapBody, { marginTop: barH }]}>
+              <PlacesMap
+                places={shown}
+                selectedSlug={selectedSlug}
+                onSelect={setSelectedSlug}
+                origin={sortOrigin}
+                // Where the map opens with neither a fix nor a pin: the
+                // city's own centre. `city` is in the render condition
+                // above precisely so this never has to invent one.
+                fallback={{ lat: city.center_lat, lng: city.center_lng }}
+                // The map's box already starts under the bar (`marginTop`
+                // above), so the top inset is only breathing room; the
+                // bottom clears the strip and the tab bar beneath it.
+                edgePadding={{ top: 24, right: 40, bottom: tabClearance + 100, left: 40 }}
+              />
+              {selected ? (
+                <View style={[s.mapStrip, { bottom: tabClearance + 12 }]}>
+                  <MapPlaceCard
+                    place={selected}
+                    distanceKm={selectedKm}
+                    now={new Date()}
+                    onPress={() => navigation.navigate('PlaceDetail', { slug: selected.slug })}
+                  />
+                </View>
+              ) : null}
+            </View>
+          </View>
         )}
         {/* Last, so it draws over the list — in the tab bar's own dock,
             which the bar has vacated whenever this is visible. */}
@@ -1495,4 +1598,6 @@ const s = StyleSheet.create({
   shelfLikeHit: { marginLeft: 'auto' },
   shelfLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
+  mapBody: { flex: 1 },
+  mapStrip: { position: 'absolute', left: 0, right: 0 },
 });
