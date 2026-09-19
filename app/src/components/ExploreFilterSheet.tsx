@@ -54,7 +54,7 @@ function sortIcon(value: ExploreSort): keyof typeof Ionicons.glyphMap {
  * middle of trading" and 営業時間外 is "outside business hours", both
  * about now, and neither needs a 今 in front of it to say so.
  */
-function statusLabel(value: ExploreStatus, t: ReturnType<typeof useI18n>['t']) {
+export function statusLabel(value: ExploreStatus, t: ReturnType<typeof useI18n>['t']) {
   if (value === 'open') return t('Open now', 'Đang mở', '営業中');
   if (value === 'closed') return t('Closed now', 'Đã đóng', '営業時間外');
   // "Any time", not "Any": it sits under a heading that asks about
@@ -208,6 +208,9 @@ export default function ExploreFilterSheet({
                 onPress={() => choose('status', value)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
+                // react-native-web drops `accessibilityState` from the DOM
+                // entirely; `aria-checked` is what a test can actually read.
+                aria-checked={active}
                 containerStyle={s.segmentCell}
                 style={[s.segment, active && s.segmentOn]}
               >
