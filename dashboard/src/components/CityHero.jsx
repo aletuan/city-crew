@@ -11,13 +11,16 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api.js';
+import { api, resizeImage } from '../api.js';
 import { chipLabel, useCity, useToast } from '../App.jsx';
 
 const HERO_FIELDS = [
   'hero_title_en', 'hero_title_vi', 'hero_title_ja',
   'hero_sub_en', 'hero_sub_vi', 'hero_sub_ja',
   'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_place_slug',
+  // The credit travels with the rest of the form; the file and its URL do
+  // not, because uploading is its own action with its own failure.
+  'hero_photo_credit', 'hero_photo_credit_uri',
 ];
 const pickForm = (row) => Object.fromEntries(HERO_FIELDS.map((k) => [k, row[k] ?? '']));
 
@@ -72,6 +75,8 @@ export default function CityHero() {
   const [form, setForm] = useState(null);
   const [places, setPlaces] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [dropHot, setDropHot] = useState(false);
   const [previewLang, setPreviewLang] = useState('en');
 
   useEffect(() => {
@@ -122,6 +127,57 @@ export default function CityHero() {
       toast(`Save failed: ${err.message}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  /**
+   * Replace the city's cover. One photo per city: the previous file is
+   * deleted by `setCityHeroPhoto` once the row points at the new one.
+   *
+   * The credit is read from the form rather than asked for separately,
+   * and the upload refuses without it — the same rule the API enforces,
+   * said here so the desk does not have to fail a 1MB upload to learn it.
+   */
+  const upload = async (file) => {
+    if (!file || uploading) return;
+    const credit = (form.hero_photo_credit ?? '').trim();
+    if (!credit) {
+      toast('Fill in "Photo by" first — a cover cannot go up without a credit.');
+      return;
+    }
+    setUploading(true);
+    try {
+      const blob = await resizeImage(file);
+      const res = await api.setCityHeroPhoto(city.id, blob, file.name, {
+        credit, creditUri: form.hero_photo_credit_uri,
+      });
+      const fresh = await api.city(city.id);
+      setRow(fresh);
+      setForm(pickForm(fresh));
+      toast(res.left?.length
+        ? `Cover replaced — ${res.left.length} old file could not be deleted`
+        : `Cover replaced for ${city.name_en}`);
+    } catch (err) {
+      toast(`Upload failed: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const clearPhoto = async () => {
+    if (uploading) return;
+    if (!window.confirm('Remove this cover? The app goes back to the pinned place\u2019s photo.')) return;
+    setUploading(true);
+    try {
+      await api.clearCityHeroPhoto(city.id);
+      const fresh = await api.city(city.id);
+      setRow(fresh);
+      setForm(pickForm(fresh));
+      toast('Cover removed');
+    } catch (err) {
+      toast(`Couldn't remove: ${err.message}`);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -180,9 +236,11 @@ export default function CityHero() {
         </div>
 
         <div className="heropreview">
-          {previewPlace?.cover_url
-            ? <img src={previewPlace.cover_url} alt="" />
-            : <div className="heropreview-none">No published place with a photo yet</div>}
+          {row?.hero_photo_uri
+            ? <img src={row.hero_photo_uri} alt="" />
+            : previewPlace?.cover_url
+              ? <img src={previewPlace.cover_url} alt="" />
+              : <div className="heropreview-none">No published place with a photo yet</div>}
           <div className="heropreview-shade" />
           <div className="heropreview-content">
             <div className="heropreview-title">{title}</div>
@@ -201,7 +259,11 @@ export default function CityHero() {
               {lang.toUpperCase()}
             </button>
           ))}
-          {previewPlace && (
+          {row?.hero_photo_uri ? (
+            <span className="heropicked">
+              photo: this city&rsquo;s own cover{form.hero_photo_credit ? ` — ${form.hero_photo_credit}` : ''}
+            </span>
+          ) : previewPlace && (
             <span className="heropicked">
               photo: {previewPlace.name_en}{form.hero_place_slug === previewPlace.slug ? ' (pinned)' : ' (automatic)'}
             </span>
@@ -219,7 +281,62 @@ export default function CityHero() {
           <LangRow label="Button" base="hero_cta" form={form} set={set} placeholders={DEFAULT_CTA} />
 
           <h4 style={{ margin: '18px 0 8px' }}>Cover photo</h4>
-          <div className="field">
+          <p className="hint" style={{ marginTop: 0 }}>
+            A photograph of the city itself, which the app shows in front of the pinned place.
+            One per city — uploading replaces the one before it, and the old file is deleted.
+          </p>
+          <div className="triple">
+            <div className="field">
+              <label htmlFor="hero_photo_credit">Photo by<span className="lang">required</span></label>
+              <input
+                id="hero_photo_credit"
+                value={form.hero_photo_credit}
+                placeholder="@studio, or the photographer's name"
+                onChange={(e) => set('hero_photo_credit', e.target.value)}
+              />
+            </div>
+            <div className="field" style={{ gridColumn: 'span 2' }}>
+              <label htmlFor="hero_photo_credit_uri">Credit links to<span className="lang">optional</span></label>
+              <input
+                id="hero_photo_credit_uri"
+                value={form.hero_photo_credit_uri}
+                placeholder="https://…"
+                onChange={(e) => set('hero_photo_credit_uri', e.target.value)}
+              />
+            </div>
+          </div>
+          <div
+            className={`dropzone ${dropHot ? 'dragover' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); setDropHot(true); }}
+            onDragLeave={() => setDropHot(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDropHot(false);
+              upload(e.dataTransfer.files?.[0]);
+            }}
+          >
+            {uploading ? 'Working…' : 'Drop a photo here, or'}
+            <label className="syncbtn" style={{ marginLeft: 8, cursor: 'pointer' }}>
+              choose a file
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                disabled={uploading}
+                onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ''; }}
+              />
+            </label>
+          </div>
+          {row?.hero_photo_uri && (
+            <div style={{ marginTop: 8, display: 'flex', gap: 10, alignItems: 'center' }}>
+              <span className="hint" style={{ margin: 0 }}>
+                A cover is set — the pinned place below is the fallback if you remove it.
+              </span>
+              <button className="syncbtn" onClick={clearPhoto} disabled={uploading}>Remove cover</button>
+            </div>
+          )}
+
+          <div className="field" style={{ marginTop: 14 }}>
             <label htmlFor="hero_place_slug">Pinned place</label>
             <select
               id="hero_place_slug"

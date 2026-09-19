@@ -11,6 +11,7 @@
 // state — loading, failed, empty, filtered — can be set up directly.
 
 import React from 'react';
+import { Linking } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
@@ -381,6 +382,61 @@ describe('the hero photograph', () => {
       place('views', { is_featured: true, vibe_tags: ['views'], place_photos: [photo('views.jpg')] }),
       place('pinned', { place_photos: [photo('pinned.jpg')] }),
     ];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(heroSrc()).toBe('pinned.jpg');
+  });
+
+  // The city's own cover, and the whole reason it exists: `hero_place_slug`
+  // can only ever offer a photograph of a shop, which is no way to
+  // illustrate a line about a whole town.
+  it('puts the city’s own cover in front of the pinned place', () => {
+    state.city = {
+      ...hanoi,
+      hero_place_slug: 'pinned',
+      hero_photo_uri: 'city.jpg',
+      hero_photo_credit: '@studio',
+    };
+    state.places.data = [place('pinned', { place_photos: [photo('pinned.jpg')] })];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(heroSrc()).toBe('city.jpg');
+  });
+
+  it('names the photographer whenever it draws that cover', () => {
+    state.city = { ...hanoi, hero_photo_uri: 'city.jpg', hero_photo_credit: '@studio' };
+    state.places.data = [place('a', { place_photos: [photo('a.jpg')] })];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.getByText('@studio')).toBeTruthy();
+  });
+
+  // The credit belongs to the city's photograph, not to the hero. A place
+  // photo comes from Google with its attribution shown on the place's own
+  // screen, so repeating a name here would credit the wrong picture.
+  it('shows no credit when the photograph came from a place', () => {
+    state.city = { ...hanoi, hero_photo_credit: '@studio' };
+    state.places.data = [place('a', { place_photos: [photo('a.jpg')] })];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(heroSrc()).toBe('a.jpg');
+    expect(screen.queryByText('@studio')).toBeNull();
+  });
+
+  it('opens the photographer’s link when the credit carries one', () => {
+    const openURL = vi.spyOn(Linking, 'openURL').mockImplementation(async () => true);
+    state.city = {
+      ...hanoi,
+      hero_photo_uri: 'city.jpg',
+      hero_photo_credit: '@studio',
+      hero_photo_credit_uri: 'https://example.test/studio',
+    };
+    state.places.data = [place('a', { place_photos: [photo('a.jpg')] })];
+    render(<ExploreScreen navigation={nav()} />);
+    fireEvent.click(screen.getByText('@studio'));
+    expect(openURL).toHaveBeenCalledWith('https://example.test/studio');
+    openURL.mockRestore();
+  });
+
+  it('falls back to the pinned place once the cover is removed', () => {
+    state.city = { ...hanoi, hero_place_slug: 'pinned', hero_photo_uri: null, hero_photo_credit: null };
+    state.places.data = [place('pinned', { place_photos: [photo('pinned.jpg')] })];
     render(<ExploreScreen navigation={nav()} />);
     expect(heroSrc()).toBe('pinned.jpg');
   });

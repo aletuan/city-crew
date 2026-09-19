@@ -5,6 +5,7 @@
 
 import { supabase } from './lib/supabase.js';
 import { removeObjects } from './storage.js';
+import { cityHeroApi } from './cityHero.js';
 import { countThreads } from './lib/threads.js';
 
 const BUCKET = 'place-photos';
@@ -161,6 +162,10 @@ export const api = {
       'hero_title_en', 'hero_title_vi', 'hero_title_ja',
       'hero_sub_en', 'hero_sub_vi', 'hero_sub_ja',
       'hero_cta_en', 'hero_cta_vi', 'hero_cta_ja', 'hero_place_slug',
+      // The photo's URL and path are not here on purpose: they are written
+      // by setCityHeroPhoto, which owns the file beside them. Only the
+      // credit is typed by hand.
+      'hero_photo_credit', 'hero_photo_credit_uri',
     ]);
     const patch = {};
     for (const [k, v] of Object.entries(fields)) {
@@ -462,6 +467,11 @@ export const api = {
     }
     return { ok: true };
   },
+
+  // The city cover lives in its own module: api.js is the desk's one
+  // untested surface, and a new mechanism should not be added to it.
+  // Spread rather than wrapped, so nothing with a branch in it lands here.
+  ...cityHeroApi({ supabase, bucket: BUCKET }),
 
   uploadPhoto: async (slug, blob, filename) => {
     const places = db(await supabase.from('places').select('id').eq('slug', slug).limit(1));
