@@ -67,12 +67,11 @@ describe('the list of cities', () => {
     expect(chosen[0].textContent).toContain('Hanoi');
   });
 
-  // Every row goes somewhere, so every row wears the mark that says so —
-  // the cities, and the location row above them.
-  it('gives each row a chevron, the location row included', () => {
+  // A chevron promises a screen on the other side, and no row here has
+  // one: a tap sets the city and the sheet closes.
+  it('draws no chevrons', () => {
     render(<CitySwitcherModal visible onClose={() => {}} />);
-    expect(document.querySelectorAll('[data-icon="chevron-forward"]').length)
-      .toBe(screen.getAllByTestId(/^city-row-/).length + 1);
+    expect(document.querySelectorAll('[data-icon="chevron-forward"]')).toHaveLength(0);
   });
 
   // Eight cities is where a list stops being scannable, which is the
