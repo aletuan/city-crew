@@ -12,6 +12,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
@@ -109,6 +110,20 @@ vi.mock('../nav', () => ({ goTo: spies.goTo }));
 vi.mock('../lib/trace', () => ({ startupTrace: { mark: spies.mark, marks: () => [] } }));
 vi.mock('../lib/launch', () => ({ launchSettled: { settle: spies.settle } }));
 vi.mock('../lib/tracereport', () => ({ reportStartup: spies.reportStartup }));
+vi.mock('../components/mapsModule', async () => {
+  const R = await import('react');
+  const MapView = R.forwardRef((p: any, ref: any) => {
+    R.useImperativeHandle(ref, () => ({ fitToCoordinates: () => {} }));
+    return R.createElement('div', { 'data-stub': 'MapView' }, p.children);
+  });
+  const Marker = (p: any) => R.createElement('button', { type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier, onClick: p.onPress });
+  return { MapView, Marker, PROVIDER_GOOGLE: 'google' };
+});
+// The verdict on whether a map can be drawn is the binary's, not the
+// test's; here it is a switch the test flips. Mocking `MiniMap` is also
+// what keeps `expo-constants` out of jsdom.
+const mapState = vi.hoisted(() => ({ canDrawMap: true }));
+vi.mock('../components/MiniMap', () => ({ get canDrawMap() { return mapState.canDrawMap; } }));
 
 import ExploreScreen from './ExploreScreen';
 
@@ -251,7 +266,7 @@ const seeCards = (...idx: (number | null)[]) =>
 
 const cardNames = () => screen.getAllByTestId(/^place-card-\d+$/).map((el) => el.textContent ?? '');
 
-beforeEach(() => {
+beforeEach(async () => {
   state.city = { ...hanoi };
   state.places = { loading: false, loaded: true, error: null, data: [], reload: () => {} };
   state.cols = { loaded: true, data: [] };
@@ -265,6 +280,8 @@ beforeEach(() => {
   state.sky = null;
   state.ducked = false;
   state.scheme = 'dark';
+  mapState.canDrawMap = true;
+  await AsyncStorage.removeItem('citycrew.explore.view');
   Object.values(spies).forEach((s) => s.mockClear());
 });
 
@@ -670,6 +687,40 @@ describe('the pinned chips row', () => {
     expect(screen.queryByText('Sort & filter')).toBeNull();
     fireEvent.click(screen.getByTestId('explore-filter'));
     expect(screen.getByText('Sort & filter')).toBeTruthy();
+  });
+});
+
+describe('the view switch', () => {
+  it('starts on the list, and offers the map beside the heading', () => {
+    state.places.data = [place('p1')];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.getByTestId('explore-list')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Map view' })).toBeTruthy();
+    expect(screen.queryByTestId('places-map')).toBeNull();
+  });
+
+  // The map itself arrives in the next task; what this one owns is the
+  // choice and its memory — so this test asks only what the switch wrote.
+  it('remembers the choice', async () => {
+    state.places.data = [place('p1')];
+    render(<ExploreScreen navigation={nav()} />);
+    // Let the mount-time storage read settle before tapping: its `.then`
+    // is a microtask, and inside the click's `act` it would land *after*
+    // the tap and put the list back.
+    await act(async () => {});
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Map view' })); });
+    expect(screen.queryByTestId('explore-list')).toBeNull();
+    expect(await AsyncStorage.getItem('citycrew.explore.view')).toBe('map');
+  });
+
+  // No map in this binary — Expo Go on an iPhone, a build without the
+  // key — means no switch: a control that leads to a blank is worse than
+  // no control.
+  it('offers no switch where the binary cannot draw a map', () => {
+    mapState.canDrawMap = false;
+    state.places.data = [place('p1')];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.queryByRole('button', { name: 'Map view' })).toBeNull();
   });
 });
 

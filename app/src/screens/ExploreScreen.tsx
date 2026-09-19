@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import PlaceCard from '../components/PlaceCard';
 import ExploreFilterSheet from '../components/ExploreFilterSheet';
 import { AddPill, AddSlot } from '../components/add';
@@ -38,6 +39,8 @@ import { useSave } from '../lib/save';
 import { likesWorthShowing, rankByLikes } from '../lib/likes';
 import { bestFirst } from '../lib/rank';
 import { filterExplorePlaces, type ExploreFilters, type ExploreOrigin } from '../lib/exploreFilters';
+import { parseView, VIEW_KEY, type ExploreView } from '../lib/exploreView';
+import { canDrawMap } from '../components/MiniMap';
 import { useBrowseTaste } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
@@ -753,6 +756,25 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     sort: 'recommended', status: 'any', savedOnly: false,
   });
   const [sortOrigin, setSortOrigin] = useState<ExploreOrigin | null>(null);
+  // How the places are looked at, remembered the way Collections
+  // remembers its tiles-or-rows: one word in storage, read once on
+  // mount. Until it has been read the list shows, which is also the
+  // default, so a reader who never chose sees no flicker.
+  const [view, setView] = useState<ExploreView>('list');
+  useEffect(() => {
+    // Only a value that was actually stored may set the view — the same
+    // guard Collections keeps. A null read on a fresh install must not
+    // land after a tap and undo it.
+    AsyncStorage.getItem(VIEW_KEY).then((v) => { if (v != null) setView(parseView(v)); }).catch(() => {});
+  }, []);
+  const pickView = (v: ExploreView) => {
+    setView(v);
+    AsyncStorage.setItem(VIEW_KEY, v).catch(() => {});
+  };
+  // Where the binary cannot draw a map there is no map mode, and no
+  // switch to reach it by. `view` may still say 'map' from a device that
+  // could; the list is what shows.
+  const mapMode = canDrawMap && view === 'map';
   const tabClearance = useTabBarClearance();
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -1098,6 +1120,31 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             </View>
           ) : null}
         </PressableScale>
+        {canDrawMap ? (
+          <View style={s.viewToggle}>
+            {(['list', 'map'] as const).map((v) => (
+              <PressableScale
+                key={v}
+                style={[s.viewBtn, view === v && s.viewBtnOn]}
+                scaleTo={0.9}
+                haptic="selection"
+                hitSlop={6}
+                onPress={() => pickView(v)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: view === v }}
+                accessibilityLabel={v === 'map'
+                  ? t('Map view', 'Dạng bản đồ', '地図表示')
+                  : t('List view', 'Dạng danh sách', 'リスト表示')}
+              >
+                <Ionicons
+                  name={v === 'map' ? 'map-outline' : 'list-outline'}
+                  size={15}
+                  color={view === v ? colors.accent : colors.textTertiary}
+                />
+              </PressableScale>
+            ))}
+          </View>
+        ) : null}
       </View>
       <ScrollView
         horizontal
@@ -1152,7 +1199,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`, `読み込みに失敗しました: ${error}`)} />
           </View>
         )}
-        {!holding && !error && (
+        {!holding && !error && !mapMode && (
           <Animated.SectionList
             // One section, whose only job is to give the filter row
             // something to be the header of.
@@ -1338,6 +1385,13 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
   filterButtonOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
+  viewToggle: {
+    marginLeft: 'auto', flexDirection: 'row', gap: 2, padding: 3,
+    borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  viewBtn: { width: 30, height: 26, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  viewBtnOn: { backgroundColor: colors.bgElevated },
   filterBadge: {
     position: 'absolute', top: -3, right: -3,
     minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4,
