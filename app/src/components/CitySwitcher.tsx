@@ -9,17 +9,20 @@
 // chosen row wears the tint and a tick instead (the tick stays: colour
 // alone must never be the whole signal).
 //
-// The count moved to the right edge and the rows grew a chevron, which
-// is the grammar every other list of destinations uses: the number is
-// what you compare rows by, so it belongs in a column you can read down,
-// and the chevron says the row goes somewhere. The chosen row keeps the
-// sheet's tint and turns its text — and its chevron — accent.
+// The count moved to the right edge: the number is what you compare rows
+// by, so it belongs in a column you can read down. The chosen row keeps
+// the sheet's tint and turns its text accent.
 //
-// The tick went with that change, and it was carrying something: colour
-// alone should never be the whole signal. `aria-selected` now carries it
-// instead, so VoiceOver still announces the chosen row; what is lost is
-// the sighted non-colour cue, which the tint and the weight have to do
-// on their own.
+// No chevrons. A chevron promises a screen on the other side, and these
+// rows have none — a tap sets the city and the sheet closes. It was also
+// a second thing in the right-hand column, standing between the eye and
+// the numbers the column exists for.
+//
+// The tick went when the chevron came, and it was carrying something:
+// colour alone should never be the whole signal. `aria-selected` now
+// carries it instead, so VoiceOver still announces the chosen row; what
+// is lost is the sighted non-colour cue, which the tint and the weight
+// have to do on their own.
 //
 // The search field earns its place at eight cities and not before. It
 // folds diacritics through `lib/search`'s own `fold`, so "hue" finds
@@ -152,9 +155,6 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
                 : t('Currently picking manually', 'Đang chọn thủ công', '現在は手動で選択中')}
             </Text>
           </View>
-          {/* The same mark the city rows wear: this row goes somewhere
-              too — it asks the phone and then picks for you. */}
-          <Ionicons name="chevron-forward" size={17} color={colors.accent} />
         </PressableScale>
         {note ? <Text style={s.note}>{note}</Text> : null}
 
@@ -207,11 +207,6 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
                   {n != null && (
                     <Text style={[s.count, active && { color: colors.accent }]}>{n}</Text>
                   )}
-                  <Ionicons
-                    name="chevron-forward"
-                    size={17}
-                    color={active ? colors.accent : colors.textTertiary}
-                  />
                 </PressableScale>
               </View>
             );
