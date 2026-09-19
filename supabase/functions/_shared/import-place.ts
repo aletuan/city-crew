@@ -2,6 +2,7 @@
 // scan-city (batch import): details fetch → unique slug → place row + photos.
 
 import { classify } from "./classify.ts";
+import { MAX_CITY_KM, nearestCity } from "./nearest-city.ts";
 import { cleanName } from "./place-name.ts";
 import { copyPhoto } from "./rehost.ts";
 import { wardFromAddress } from "./ward.ts";
@@ -168,6 +169,13 @@ function neighborhoodOf(components: { longText?: string; types?: string[] }[] | 
   return null;
 }
 
+/** Google's `location`, when it gave one that can be measured against. */
+const pointOf = (v: { latitude?: unknown; longitude?: unknown } | undefined) => {
+  const lat = typeof v?.latitude === "number" && Number.isFinite(v.latitude) ? v.latitude : null;
+  const lng = typeof v?.longitude === "number" && Number.isFinite(v.longitude) ? v.longitude : null;
+  return lat != null && lng != null ? { lat, lng } : null;
+};
+
 /**
  * Import one Google place as a pending, unpublished row with photos.
  * Slug collisions: base → `${base}-${cityId}` → numeric suffix.
@@ -201,6 +209,30 @@ export async function importPlace(
   // `place-name.ts` for what that costs and what is safe to take off it.
   // Cleaned before the slug is cut, so the key matches the name the reader
   // sees rather than the one Google sent.
+  // ── which city this is actually in ──
+  //
+  // `cityId` is what the caller was showing, not where the place is; see
+  // `nearest-city.ts` for the week that made this necessary. Google's
+  // coordinates decide instead, and the caller's answer stands only when
+  // there are none to decide with.
+  //
+  // A place past `MAX_CITY_KM` from every city is not a mis-tag to
+  // correct — it is outside the app — so it is refused here rather than
+  // imported into whichever city happens to be least far.
+  const at = pointOf(d.location);
+  let city = cityId;
+  if (at) {
+    const { data: cities } = await admin
+      .from("cities").select("id, center_lat, center_lng").eq("is_active", true).order("id");
+    const near = nearestCity(cities ?? [], at);
+    if (near && near.km > MAX_CITY_KM) {
+      throw new Error(
+        `outside every city City Crew covers — ${Math.round(near.km)} km from the nearest (${near.id})`,
+      );
+    }
+    if (near) city = near.id;
+  }
+
   const { name: cleaned, ja } = cleanName(d.displayName?.text ?? "");
   const name = cleaned || "Unnamed place";
   let slug = slugify(name);
@@ -246,7 +278,7 @@ export async function importPlace(
       // original so a future change of taxonomy can re-distil without
       // re-buying the details call. Nothing reads it yet, on purpose.
       primary_type: d.primaryType ?? null,
-      city_id: cityId,
+      city_id: city,
       is_featured: false,
       // Same rule, and the empty array has to be read as "said nothing"
       // rather than "said none" — it is the parameter's default, so a
