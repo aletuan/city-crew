@@ -46,6 +46,7 @@ import PlacesMap from '../components/PlacesMap';
 import MapPlaceCard from '../components/MapPlaceCard';
 import { distanceKm } from '../lib/geo';
 import { useBrowseTaste } from '../lib/tasteProfile';
+import { useFlag } from '../lib/useFlag';
 import { useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
@@ -358,7 +359,20 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
    */
   const cityPhoto = city?.hero_photo_uri ?? null;
   const uri = cityPhoto ?? (place && coverOf(place)?.photo_uri);
-  const credit = cityPhoto ? city?.hero_photo_credit ?? null : null;
+  /**
+   * The same switch the place photos answer to — `photo_attribution` in
+   * `app_flags`, flipped in the SQL editor and read at the next launch.
+   *
+   * Sharing it is what was asked for, and worth being clear about: the
+   * flag was written for Google's terms, which ask for a credit wherever
+   * a Google photo appears. A city cover is not a Google photo — it is
+   * one somebody handed us, and the desk refuses to accept it without a
+   * name. So one flip now governs two different obligations. It is the
+   * right control for "hide the handle for now"; it is not a licence to
+   * leave it off, and the desk keeps storing the credit either way.
+   */
+  const showCredit = useFlag('photo_attribution');
+  const credit = cityPhoto && showCredit ? city?.hero_photo_credit ?? null : null;
   const creditUri = credit ? city?.hero_photo_credit_uri ?? null : null;
   const { width: winW } = useWindowDimensions();
 
