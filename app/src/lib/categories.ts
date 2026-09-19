@@ -154,6 +154,19 @@ export function categoryColor(p: Categorisable): string | null {
 }
 
 /**
+ * The colour a pin wears on the map, and the mark the strip's card wears
+ * so the eye can walk from the card back to the pin it is talking about.
+ *
+ * Under a chip it is the chip's colour, because every pin in it is that
+ * kind of place; otherwise the place's own. Null where nothing
+ * classifies it and no chip is asking, and the caller draws its own ink.
+ */
+export function pinTint(p: Categorisable, chip?: string | null): string | null {
+  if (chip && CATEGORIES[chip]) return CATEGORIES[chip].color;
+  return categoryColor(p);
+}
+
+/**
  * Label for a category key.
  *
  * A key this table has not heard of is shown tidied rather than raw —

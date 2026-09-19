@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clusterPins, clusterSize, type ClusterPoint } from './cluster';
+import { clusterPins, clusterSize, clusterSkin, type ClusterPoint } from './cluster';
 
 const p = (slug: string, lat: number, lng: number): ClusterPoint => ({ slug, lat, lng });
 
@@ -82,11 +82,32 @@ describe('clusterPins', () => {
 
 describe('clusterSize', () => {
   it('answers in three steps, not on a curve', () => {
-    expect(clusterSize(2)).toBe(36);
-    expect(clusterSize(9)).toBe(36);
-    expect(clusterSize(10)).toBe(44);
-    expect(clusterSize(99)).toBe(44);
-    expect(clusterSize(100)).toBe(52);
-    expect(clusterSize(288)).toBe(52);
+    expect(clusterSize(2)).toBe(32);
+    expect(clusterSize(9)).toBe(32);
+    expect(clusterSize(10)).toBe(40);
+    expect(clusterSize(99)).toBe(40);
+    expect(clusterSize(100)).toBe(48);
+    expect(clusterSize(288)).toBe(48);
+  });
+});
+
+describe('clusterSkin', () => {
+  // Colour and size must not tell two stories, so they step together.
+  it('deepens at the same two counts the size steps at', () => {
+    expect(clusterSkin(9).fill).toBe(clusterSkin(2).fill);
+    expect(clusterSkin(10).fill).not.toBe(clusterSkin(9).fill);
+    expect(clusterSkin(99).fill).toBe(clusterSkin(10).fill);
+    expect(clusterSkin(100).fill).not.toBe(clusterSkin(99).fill);
+  });
+
+  it('turns its figure white only where the ground has gone dark', () => {
+    expect(clusterSkin(9).ink).toBe('#17150F');
+    expect(clusterSkin(99).ink).toBe('#17150F');
+    expect(clusterSkin(100).ink).toBe('#FFFFFF');
+  });
+
+  // The one coral thing on the map is the place the reader chose.
+  it('never reaches for the accent', () => {
+    for (const n of [1, 10, 100, 288]) expect(clusterSkin(n).fill).not.toBe('#FF6F5B');
   });
 });

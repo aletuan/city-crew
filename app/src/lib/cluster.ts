@@ -87,9 +87,36 @@ export function clusterPins(
  * Three steps, not a curve: the reader is comparing bubbles at a glance,
  * and three sizes are three answers where a continuous scale is none. The
  * numbers are diameters in points.
+ *
+ * Small enough to sit below the pins in the eye's order: a cluster is a
+ * place to go and look, a pin is a place. The two must not read as peers,
+ * and the round bubble against the pin's teardrop does the rest.
  */
 export function clusterSize(count: number): number {
-  if (count >= 100) return 52;
-  if (count >= 10) return 44;
-  return 36;
+  if (count >= 100) return 48;
+  if (count >= 10) return 40;
+  return 32;
+}
+
+/** A bubble's ground, and the ink of the figure standing on it. */
+export type ClusterSkin = { fill: string; ink: string };
+
+/**
+ * How dense the bubble looks, by how much it holds.
+ *
+ * The same two steps as `clusterSize`, so colour and size tell one story
+ * and not two. Warm earth, the app's own family, filled rather than
+ * outlined: a white disc inside a hard dark ring is Google's own
+ * annotation style, and a reader should be able to tell our groups from
+ * the map's furniture without reading either.
+ *
+ * The ramp stops short of the accent's coral on purpose. The one coral
+ * thing on this map is the place the reader chose, and a bubble of a
+ * hundred must not compete with it. Each step clears 4.5:1 against its
+ * own ink, which is why the figure turns white at the top.
+ */
+export function clusterSkin(count: number): ClusterSkin {
+  if (count >= 100) return { fill: '#9C6647', ink: '#FFFFFF' };
+  if (count >= 10) return { fill: '#DBA97F', ink: '#17150F' };
+  return { fill: '#F0DCC8', ink: '#17150F' };
 }
