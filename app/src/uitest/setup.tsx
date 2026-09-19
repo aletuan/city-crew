@@ -123,6 +123,28 @@ vi.mock('expo-location', () => ({
   Accuracy: { Low: 2, Balanced: 3 },
 }));
 
+// The camera roll and the resizer, for any tree holding `LocalGuidePanel`.
+//
+// Both have to be stubbed here rather than in the one test that drives
+// them: importing `expo-image-picker` for real pulls in `expo`'s winter
+// runtime, which fails to resolve under vitest — so a screen that merely
+// *renders* the panel, and never touches a photograph, cannot be loaded
+// at all without these. `PlaceDetailScreen.ui.test.tsx` is that screen.
+//
+// Defaults that do nothing: a cancelled picker and an unreachable
+// resizer. A test that wants a photograph chosen says so itself, the way
+// `LocalGuidePanel.ui.test.tsx` does.
+vi.mock('expo-image-picker', () => ({
+  launchImageLibraryAsync: vi.fn(async () => ({ canceled: true, assets: [] })),
+  launchCameraAsync: vi.fn(async () => ({ canceled: true, assets: [] })),
+  requestCameraPermissionsAsync: vi.fn(async () => ({ granted: false })),
+}));
+
+vi.mock('expo-image-manipulator', () => ({
+  manipulateAsync: vi.fn(async () => ({ uri: 'file://shrunk.jpg', base64: 'AAAA' })),
+  SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' },
+}));
+
 // `matchMedia`, which this DOM does not have and `react-native-web` reads
 // at import time.
 //

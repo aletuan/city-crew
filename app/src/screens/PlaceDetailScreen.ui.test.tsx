@@ -40,6 +40,8 @@ const state = vi.hoisted(() => ({
   credit: false,
   city: null as null | Record<string, string>,
   lang: 'en' as 'en' | 'vi' | 'ja',
+  guide: false,
+  uid: null as string | null,
 }));
 const spies = vi.hoisted(() => ({
   save: vi.fn(),
@@ -67,6 +69,17 @@ vi.mock('../lib/catalog', () => ({ usePlaces: () => state.catalog }));
 vi.mock('../lib/data', async () => ({
   ...(await vi.importActual<typeof import('../lib/place')>('../lib/place')),
   usePlaceBySlug: (slug: string | null) => { spies.bySlug(slug); return state.elsewhere; },
+  // What `LocalGuidePanel` reaches for. Answering "not a guide" is what
+  // keeps every test below about the screen it is testing: the panel draws
+  // nothing, exactly as it does for almost everybody. `state.guide` is
+  // what the two tests that *are* about it turn on.
+  useIsLocalGuide: () => ({ data: state.guide, loading: false }),
+  fetchPlaceId: async () => 'place-uuid',
+  fetchMyPhotoCounts: async () => ({ mineHere: 0, mineToday: 0 }),
+  addPlacePhoto: async () => 'photo-id',
+}));
+vi.mock('../lib/auth', () => ({
+  useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
 }));
 vi.mock('../lib/save', () => ({
   useSave: () => ({ save: spies.save, isSaved: (slug: string) => state.saved.includes(slug) }),
@@ -191,6 +204,8 @@ beforeEach(() => {
   state.credit = false;
   state.city = null;
   state.lang = 'en';
+  state.guide = false;
+  state.uid = null;
   spies.save.mockClear();
   spies.note.mockClear();
   spies.bySlug.mockClear();
@@ -595,5 +610,31 @@ describe('PlaceDetailScreen — status bar over the photo', () => {
   it('does not claim the bar for a place that is not there', () => {
     show(null, nav(), 'ghost');
     expect(spies.setStatusBarStyle).not.toHaveBeenCalledWith('light', true);
+  });
+});
+
+// The one control this screen offers the person who put the place here.
+// Its rules live in `LocalGuidePanel` and are tested there; what this
+// pins is that the screen mounts it at all — the JSX could be deleted and
+// every component test would still pass.
+describe('the local guide’s panel', () => {
+  it('is not on the screen for an ordinary reader', () => {
+    show(place({ submitted_by: 'u1' }));
+    expect(screen.queryByTestId('guide-panel')).toBeNull();
+  });
+
+  it('is there for a granted guide looking at a place they imported', () => {
+    state.uid = 'u1';
+    state.guide = true;
+    show(place({ submitted_by: 'u1' }));
+    expect(screen.getByTestId('guide-panel')).toBeTruthy();
+  });
+
+  // The grant is not a key to the catalog.
+  it('is absent on somebody else’s place, grant or no grant', () => {
+    state.uid = 'u1';
+    state.guide = true;
+    show(place({ submitted_by: 'u2' }));
+    expect(screen.queryByTestId('guide-panel')).toBeNull();
   });
 });

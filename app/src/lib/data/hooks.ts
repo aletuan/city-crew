@@ -19,6 +19,7 @@ import {
 } from './collections';
 import { fetchPreferences, NO_PREFERENCES } from './preferences';
 import { fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
+import { fetchIsLocalGuide } from './guide';
 
 // Both catalogs scope to the selected city TOGETHER: membersOf() resolves
 // collection members against the in-memory places list, so a mismatched
@@ -129,6 +130,23 @@ export const useMyPreferences = (ownerId: string | null | undefined) => {
     [ownerId],
   );
   return useFetch(fetcher, NO_PREFERENCES);
+};
+
+/**
+ * Whether the desk has made this account a local guide.
+ *
+ * Signed out is `false` without asking: the table would answer empty
+ * anyway, and a query per guest for a row that cannot exist is a request
+ * nobody needs. Not persisted, unlike the catalog — a grant is rare,
+ * small and given by hand, and a stale `true` held across launches would
+ * draw a control the database then refuses.
+ */
+export const useIsLocalGuide = (uid: string | null | undefined) => {
+  const fetcher = useCallback(
+    () => (uid ? fetchIsLocalGuide() : Promise.resolve(false)),
+    [uid],
+  );
+  return useFetch(fetcher, false);
 };
 
 // Friendships and blocks have no hook here: they are fetched once for
