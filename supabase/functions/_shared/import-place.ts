@@ -2,6 +2,7 @@
 // scan-city (batch import): details fetch → unique slug → place row + photos.
 
 import { classify } from "./classify.ts";
+import { cleanName } from "./place-name.ts";
 import { copyPhoto } from "./rehost.ts";
 import { wardFromAddress } from "./ward.ts";
 
@@ -196,7 +197,12 @@ export async function importPlace(
   // recognise, which leaves the row for the desk exactly as before.
   const auto = classify(d.primaryType, d.types);
 
-  const name = d.displayName?.text ?? "Unnamed place";
+  // Google's display name is written for a map pin, not for a list — see
+  // `place-name.ts` for what that costs and what is safe to take off it.
+  // Cleaned before the slug is cut, so the key matches the name the reader
+  // sees rather than the one Google sent.
+  const { name: cleaned, ja } = cleanName(d.displayName?.text ?? "");
+  const name = cleaned || "Unnamed place";
   let slug = slugify(name);
   const { data: taken } = await admin
     .from("places").select("slug").like("slug", `${slug}%`);
@@ -217,6 +223,9 @@ export async function importPlace(
       added_by: addedBy,
       name_en: name,
       name_vi: name,
+      // Only when the sign actually carried Japanese. A name with no kana
+      // in it leaves this null, exactly as every import did before.
+      name_ja: ja,
       category,
       // What the caller said, and only if it said nothing, what Google's
       // types say — see `classify`.
