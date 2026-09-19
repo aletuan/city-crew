@@ -104,6 +104,15 @@ describe('who the panel appears for', () => {
     expect(screen.getByTestId('panel')).toBeTruthy();
   });
 
+  // The mark at its head is the app's own, not a camera glyph: the button
+  // below already says "Add photo", and a card that says the same thing
+  // twice says it about the tool rather than about who is being asked.
+  it('wears the app’s own logo at its head', () => {
+    draw();
+    expect(screen.getByTestId('panel').querySelector('img')).toBeTruthy();
+    expect(document.querySelector('[data-icon="camera-outline"]')).toBeNull();
+  });
+
   // The whole reason the role is handed out by hand: being signed in is
   // not being a guide, and the control must not appear and then refuse.
   it('is absent for a signed-in person the desk has not granted', () => {

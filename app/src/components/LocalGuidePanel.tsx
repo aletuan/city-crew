@@ -31,6 +31,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { decode } from 'base64-arraybuffer';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
+import welcomeLogo from '../../assets/welcome-logo.png';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
@@ -149,8 +151,15 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
 
   return (
     <View style={s.panel} testID={testID}>
+      {/* The app's own mark rather than a camera glyph.
+          A camera said what the button below it already says, twice on one
+          card — and said it about the tool instead of about who is being
+          asked. This panel only ever shows to the person who put the place
+          here, so the mark that belongs at its head is the one they
+          recognise. The artwork carries its own cut-out background, so it
+          reads on either ground. */}
       <View style={s.mark}>
-        <Ionicons name="camera-outline" size={22} color={colors.accent} />
+        <Image source={welcomeLogo} style={s.markLogo} contentFit="contain" />
       </View>
       <View style={s.words}>
         <Text style={s.title}>{t('Your place', 'Địa điểm của bạn', 'あなたの場所')}</Text>
@@ -209,6 +218,9 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.bgElevated,
   },
+  // Inside the 40pt disc with a little air: the logo is drawn to its own
+  // edges, where a 22pt glyph came with padding built in.
+  markLogo: { width: 26, height: 26 },
   words: { flex: 1, gap: 3 },
   title: { color: colors.accent, ...type.cardTitle },
   sub: { color: colors.textSecondary, fontSize: 14 },
