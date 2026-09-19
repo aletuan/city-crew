@@ -135,53 +135,58 @@ const SAM = withPhotos('sam', 'SÂM Saigon', ['s1', 's2', 's3']);
 describe('the cover picker', () => {
   const sel = (name: string) => screen.getByRole('button', { name }).getAttribute('aria-selected');
 
-  it('offers one tile per place, not one per photograph', () => {
-    // Seven photographs between two places. The old rule drew seven
-    // tiles and asked the reader to choose between four angles on the
-    // same bar before they could choose between bars.
+  it('offers every photograph of every place', () => {
+    // Seven photographs between two places, and all seven on offer: the
+    // best picture of a bar is often not the one the catalog marked as
+    // that bar's cover, and one tile apiece hid it with no way through.
     openRename([HEIM, SAM]);
 
-    expect(screen.getAllByRole('button', { name: 'Heim' })).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: 'SÂM Saigon' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Heim/ })).toHaveLength(4);
+    expect(screen.getAllByRole('button', { name: /^SÂM Saigon/ })).toHaveLength(3);
   });
 
-  it('names each tile after its place, which a flat list of photos could not', () => {
+  it('numbers the tiles within a place, which a flat list of photos could not', () => {
     // Before this, every tile reached VoiceOver as an unnamed button —
     // a photograph out of a flat list of photographs has nothing to be
-    // called.
+    // called. "Heim" four times over would be no better.
     openRename([HEIM, SAM]);
-    expect(screen.getByRole('button', { name: 'SÂM Saigon' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'SÂM Saigon, photo 1 of 3' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Heim, photo 4 of 4' })).toBeTruthy();
+  });
+
+  it('names a lone photograph after its place, with no number to give', () => {
+    openRename([withPhotos('solo', 'Solo', ['x1'])]);
+    expect(screen.getByRole('button', { name: 'Solo' })).toBeTruthy();
   });
 
   it('starts on Auto when no cover has been picked', () => {
     openRename([HEIM, SAM]);
     expect(sel('Auto')).toBe('true');
-    expect(sel('Heim')).toBe('false');
+    expect(sel('Heim, photo 1 of 4')).toBe('false');
   });
 
-  it('rings the place whose photograph is the cover', () => {
-    openRename([HEIM, SAM], photo('s1'));
-    expect(sel('SÂM Saigon')).toBe('true');
+  it('rings the photograph that is the cover, not merely its place', () => {
+    openRename([HEIM, SAM], photo('s2'));
+    expect(sel('SÂM Saigon, photo 2 of 3')).toBe('true');
+    expect(sel('SÂM Saigon, photo 1 of 3')).toBe('false');
     expect(sel('Auto')).toBe('false');
   });
 
   it("keeps a cover that is not the place's first photograph", () => {
-    // The whole risk of narrowing the choices: somebody picked the third
-    // photograph of Heim under the old rule. Drop its tile and the ring
-    // sits on nothing, and a list that has a cover reads as having none.
+    // What narrowing the choices put at risk, and what showing all of
+    // them settles: a cover picked deep in one place's photographs is
+    // simply on offer like any other, and the ring sits on it.
     openRename([HEIM, SAM], photo('h3'));
 
-    const tiles = screen.getAllByRole('button', { name: 'Heim' });
-    expect(tiles).toHaveLength(2);
-    expect(tiles.map((el) => el.getAttribute('aria-selected'))).toContain('true');
+    expect(sel('Heim, photo 3 of 4')).toBe('true');
     expect(sel('Auto')).toBe('false');
   });
 
   it('moves the ring when a tile is tapped', () => {
     openRename([HEIM, SAM]);
-    fireEvent.click(screen.getByRole('button', { name: 'SÂM Saigon' }));
+    fireEvent.click(screen.getByRole('button', { name: 'SÂM Saigon, photo 3 of 3' }));
 
-    expect(sel('SÂM Saigon')).toBe('true');
+    expect(sel('SÂM Saigon, photo 3 of 3')).toBe('true');
     expect(sel('Auto')).toBe('false');
   });
 

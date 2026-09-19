@@ -110,34 +110,30 @@ export default function CollectionFormScreen({ navigation, route }: {
   const members = copyFrom
     ? copyFrom.placeSlugs.map((slug) => places.find((p) => p.slug === slug)).filter((p): p is Place => !!p)
     : col ? membersOf(col, places) : [];
-  // One photograph per place, not every photograph of every place.
+  // Every photograph of every place, not one apiece.
   //
-  // `flatMap(photosOf)` was the first rule and it asked the wrong
-  // question. Nine places carrying six photographs each is 54 chips, and
-  // six of those are the same bar from six angles — so the reader is made
-  // to choose between near-identical pictures before they can choose
-  // between places. What a cover claims is *which place stands for this
-  // list*, and that is a choice between nine things.
+  // One apiece was the rule for a day, and the reasoning was sound on
+  // paper: what a cover claims is *which place stands for this list*,
+  // nine places is a choice between nine things, and fifty-four chips is
+  // fourteen rows on a form the keyboard already takes half of.
   //
-  // It is also what makes the grid below fit: ten chips are three rows,
-  // where fifty-four would be fourteen and would push the form's own
-  // Save button a thousand points down a screen the keyboard already
-  // takes half of.
+  // It was wrong about what the reader is doing. They are not naming a
+  // representative; they are looking for the one picture that makes the
+  // list worth opening, and the best picture of a bar is often not the
+  // one the catalog happened to mark as that bar's cover. Narrowing to
+  // one apiece hid the picture they were after and offered no way to
+  // reach it — the owner asked for all of them back.
   //
-  // The exception keeps a promise the first rule made. Somebody who
-  // picked the fourth photograph of the second place still has it as
-  // their cover, and dropping its chip would leave the ring sitting on
-  // nothing — the row would read as "no cover chosen" over a list that
-  // has one. So a current cover outside the per-place set is kept, at
-  // the front, where the eye lands first.
+  // The rows are the price, and they are affordable for the same reason
+  // the wider tiles were: the screen scrolls.
   //
-  // Each entry carries the place it came from, which is what finally
-  // lets a tile say its own name: every one of these was a bare button
-  // to VoiceOver before, because a photograph out of a flat list of
-  // photographs has nothing to be called.
-  const perPlace = members.flatMap((p) => {
-    const ph = coverOf(p);
-    return ph?.id ? [{ ph: ph as typeof ph & { id: string }, place: p }] : [];
+  // Each entry carries the place it came from and its number within that
+  // place, which is what lets a tile say its own name — every one of
+  // these was a bare button to VoiceOver when they were a flat list of
+  // photographs, and "Heim" four times over would be no better.
+  const choices = members.flatMap((p) => {
+    const shots = photosOf(p).filter((ph): ph is typeof ph & { id: string } => !!ph.id);
+    return shots.map((ph, i) => ({ ph, place: p, n: i + 1, of: shots.length }));
   });
   // What "Auto" actually resolves to — the first place's own cover, the
   // exact fallback every renderer draws when nothing is picked. Shown on
@@ -149,18 +145,12 @@ export default function CollectionFormScreen({ navigation, route }: {
   // from a fetch that may land after the first render would either lose
   // their tap or resurrect the old cover over it.
   const [pick, setPick] = useState<{ chosen: boolean; id: string | null }>({ chosen: false, id: null });
+  // The cover is matched by id or by uri further down: a row hydrated
+  // from a launch cache written before the cover carried its id arrives
+  // with only the uri, and the ring has to sit on the real current cover
+  // rather than drift to Auto until the refresh lands. No exception list
+  // any more — every photograph a member holds is already on offer.
   const current = col?.cover ?? null;
-  // Found by id or by uri: a row hydrated from a launch cache written
-  // before the cover carried its id arrives with only the uri, and the
-  // ring has to sit on the real current cover rather than drift to Auto
-  // until the refresh lands.
-  const held = current
-    ? members.flatMap((p) => photosOf(p).map((ph) => ({ ph, place: p })))
-      .find(({ ph }) => !!ph.id && (ph.id === current.id || ph.photo_uri === current.photo_uri))
-    : undefined;
-  const choices = held && !perPlace.some((c) => c.ph.id === held.ph.id)
-    ? [held as { ph: typeof held.ph & { id: string }; place: Place }, ...perPlace]
-    : perPlace;
   // Sized off the window rather than guessed: the page gives up
   // `space.page` at each edge and `COVER_GAP` between each pair of
   // tiles, and what is left divides by `COVER_COLS`. On a 402pt phone
@@ -363,12 +353,21 @@ export default function CollectionFormScreen({ navigation, route }: {
                 </>
               )}
             </PressableScale>
-            {choices.map(({ ph, place }) => (
+            {choices.map(({ ph, place, n, of }) => (
               <PressableScale
                 key={ph.id}
                 onPress={() => setPick({ chosen: true, id: ph.id })}
                 accessibilityRole="button"
-                accessibilityLabel={t(place.name_en, place.name_vi, place.name_ja)}
+                // Named, and numbered where a place has more than one:
+                // four tiles all called "Heim" is a list a listener
+                // cannot move through.
+                accessibilityLabel={of > 1
+                  ? t(
+                    `${t(place.name_en, place.name_vi, place.name_ja)}, photo ${n} of ${of}`,
+                    `${t(place.name_en, place.name_vi, place.name_ja)}, ảnh ${n} trên ${of}`,
+                    `${t(place.name_en, place.name_vi, place.name_ja)}、写真${n}/${of}`,
+                  )
+                  : t(place.name_en, place.name_vi, place.name_ja)}
                 accessibilityState={{ selected: coverId === ph.id }}
                 aria-selected={coverId === ph.id}
                 style={[s.thumb, { width: tile, height: tile }, coverId === ph.id && s.thumbOn]}
@@ -417,8 +416,14 @@ const s = StyleSheet.create({
   coverGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: COVER_GAP },
   // 2pt of always-there border so the chosen ring changes colour, not
   // layout — a tile that grows on selection makes the whole grid shuffle.
+  // The glass under the picture, not merely behind it: a tile whose
+  // photograph has not arrived used to be nothing at all — the page
+  // showing through a box with no ground of its own. Ten tiles loaded
+  // before anyone noticed; a whole list's photographs do not, and the
+  // grid read as holes punched in itself while they came in.
   thumb: {
     borderRadius: radius.image, borderWidth: 2, borderColor: 'transparent', overflow: 'hidden',
+    backgroundColor: colors.surfaceGlass,
   },
   thumbOn: { borderColor: colors.accentFill },
   thumbImg: { width: '100%', height: '100%' },
