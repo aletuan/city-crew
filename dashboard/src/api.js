@@ -420,6 +420,45 @@ export const api = {
     return { rows, profiles };
   },
 
+  /**
+   * Which accounts the desk has made local guides.
+   *
+   * A set of ids, not rows: the contributors board already holds everything
+   * else about these people — handle, name, what they have added — and the
+   * only fact missing from it is this one bit. Read whole rather than per
+   * row, because the board draws ten at a time and ten round trips to
+   * answer ten yes/no questions is ten times the wrong shape.
+   *
+   * `editors manage local guides` is what lets the desk see all of them;
+   * an app account reading this same table sees only its own row.
+   */
+  localGuides: async () => {
+    const rows = db(await supabase.from('local_guides').select('user_id'));
+    return new Set(rows.map((r) => r.user_id));
+  },
+
+  /**
+   * Grant or take back the role.
+   *
+   * Two verbs behind one boolean, because the caller has a checkbox and a
+   * checkbox has one state. `upsert` rather than `insert` so a second click
+   * on an already-granted account is harmless rather than a duplicate-key
+   * error — the desk should not be able to break anything by being fast.
+   *
+   * Nothing is passed for `added_by`: the column defaults to `auth.uid()`,
+   * so the database records which editor did this from the request's own
+   * credentials. See `20260919180000_local_guide_granted_by.sql`.
+   */
+  setLocalGuide: async (userId, on) => {
+    if (on) {
+      db(await supabase.from('local_guides')
+        .upsert({ user_id: userId }, { onConflict: 'user_id' }));
+    } else {
+      db(await supabase.from('local_guides').delete().eq('user_id', userId));
+    }
+    return on;
+  },
+
   /** The rows behind the Coverage screen: every published place, all cities
    *  in one round trip — the screen re-cuts per city without refetching.
    *  Published only, because coverage measures what a user can actually

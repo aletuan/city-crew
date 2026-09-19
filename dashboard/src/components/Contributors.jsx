@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import {
   CITY_META, SERIES_COLORS, TOP_N,
-  windowDays, buildBoard, countStats, scopeRows, niceMax,
+  windowDays, buildBoard, countStats, scopeRows, niceMax, withGuide,
 } from '../contributors.js';
 
 const DAYS = 30;
@@ -242,6 +242,41 @@ export default function Contributors() {
     return () => { live = false; };
   }, [retryKey]);
 
+  // Who is already a guide. Fetched apart from the board rather than folded
+  // into `api.contributors`, because the two answer to different clocks: the
+  // board is a thirty-day window recomputed on a city switch, this is a
+  // handful of ids that only ever changes when somebody here changes it.
+  // A failure leaves every box unticked and the screen otherwise intact —
+  // the leaderboard is what this page is for, and it does not need this to
+  // be readable.
+  const [guides, setGuides] = useState(null);
+  useEffect(() => {
+    let live = true;
+    api.localGuides()
+      .then((g) => { if (live) setGuides(g); })
+      .catch(() => { if (live) setGuides(new Set()); });
+    return () => { live = false; };
+  }, [retryKey]);
+
+  // Which row is mid-write, so its box can say so and refuse a second click.
+  const [saving, setSaving] = useState(null);
+
+  const toggleGuide = async (id, on) => {
+    setSaving(id);
+    // Moved before the request, and put back if it fails. A checkbox that
+    // waits for a round trip before it ticks reads as a checkbox that did
+    // not register the click, and the second click undoes the first.
+    setGuides((prev) => withGuide(prev, id, on));
+    try {
+      await api.setLocalGuide(id, on);
+    } catch (err) {
+      setGuides((prev) => withGuide(prev, id, !on));
+      setError(err.message);
+    } finally {
+      setSaving(null);
+    }
+  };
+
   const setCity = (id) => {
     const next = new URLSearchParams(params);
     if (id) next.set('city', id); else next.delete('city');
@@ -352,6 +387,29 @@ export default function Contributors() {
                     ))}
                   </span>
                   <b className="boardtotal">{s.total}</b>
+                  {/* The one thing on this row that is a control rather than
+                      a number. Last, after the count, because the board is
+                      read as a ranking first and administered second — and
+                      because a checkbox at the start of every row would make
+                      ten rankings look like a selection list.
+
+                      The label is the target: a 13px box is a poor thing to
+                      aim at, and wrapping it gives the whole word-and-box
+                      pair one hit area without a second element to style. */}
+                  <label
+                    className={`guidebox${guides?.has(s.id) ? ' on' : ''}`}
+                    title={guides?.has(s.id)
+                      ? `@${s.handle} may add photos to places they imported`
+                      : `Let @${s.handle} add photos to places they imported`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={guides?.has(s.id) ?? false}
+                      disabled={guides === null || saving === s.id}
+                      onChange={(e) => toggleGuide(s.id, e.target.checked)}
+                    />
+                    guide
+                  </label>
                 </div>
               ))}
             </div>

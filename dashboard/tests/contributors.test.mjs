@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CITY_META, SERIES_COLORS, TOP_N,
-  dayKey, windowDays, cumulativeByDay, countStats, scopeRows, buildBoard, niceMax,
+  dayKey, windowDays, cumulativeByDay, countStats, scopeRows, buildBoard, niceMax, withGuide,
 } from '../src/contributors.js';
 
 const TODAY = new Date(2026, 7, 16); // Aug 16 2026, local
@@ -120,4 +120,46 @@ test('palette and city metadata hold the shapes the screen leans on', () => {
   assert.equal(new Set(SERIES_COLORS).size, TOP_N);
   assert.deepEqual(CITY_META.map((c) => c.id), ['hcmc', 'hanoi', 'danang', 'dalat', 'hue']);
   assert.equal(dayKey(new Date(2026, 0, 5)), '2026-01-05');
+});
+
+// ---- withGuide: the optimistic tick, and the rollback that has to be its
+// exact opposite. Both halves live in the screen, which has no test of its
+// own; the fold does, because getting the rollback backwards leaves a box
+// that lies about what the database says.
+
+test('withGuide adds and removes without touching the set it was given', () => {
+  const before = new Set(['a']);
+  const added = withGuide(before, 'b', true);
+  assert.deepEqual([...added].sort(), ['a', 'b']);
+  assert.deepEqual([...before], ['a'], 'the original set was mutated');
+
+  const removed = withGuide(added, 'a', false);
+  assert.deepEqual([...removed], ['b']);
+});
+
+// The rollback path calls this with `!on`, so the two have to undo each
+// other exactly — for an id that was there and one that was not.
+test('withGuide undoes itself when called with the opposite answer', () => {
+  for (const [start, id, on] of [
+    [['a'], 'b', true], [['a', 'b'], 'b', false],
+    [[], 'a', true], [['a'], 'a', false],
+  ]) {
+    const from = new Set(start);
+    const there = withGuide(from, id, on);
+    const back = withGuide(there, id, !on);
+    assert.deepEqual([...back].sort(), [...from].sort());
+  }
+});
+
+// A click before the grants have loaded still describes what it wants.
+test('withGuide treats a set that has not loaded as an empty one', () => {
+  assert.deepEqual([...withGuide(null, 'a', true)], ['a']);
+  assert.deepEqual([...withGuide(null, 'a', false)], []);
+});
+
+// Ticking a box that is already on is not an error — the board can be
+// clicked faster than the round trip it starts.
+test('withGuide is idempotent in both directions', () => {
+  assert.deepEqual([...withGuide(new Set(['a']), 'a', true)], ['a']);
+  assert.deepEqual([...withGuide(new Set(), 'a', false)], []);
 });
