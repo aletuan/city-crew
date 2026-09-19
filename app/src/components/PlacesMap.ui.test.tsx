@@ -48,8 +48,8 @@ beforeEach(() => {
   verdict.canDrawMap = true;
 });
 
-const place = (slug: string, lat: number | null, lng: number | null): Place =>
-  ({ slug, name_en: slug, name_vi: slug, name_ja: null, lat, lng, place_photos: [], categories: [], vibe_tags: [] } as unknown as Place);
+const place = (slug: string, lat: number | null, lng: number | null, categories: string[] = []): Place =>
+  ({ slug, name_en: slug, name_vi: slug, name_ja: null, lat, lng, place_photos: [], categories, vibe_tags: [] } as unknown as Place);
 
 const markers = () => [...document.querySelectorAll('[data-stub="Marker"]')];
 const mapView = () => document.querySelector('[data-stub="MapView"]')!;
@@ -62,14 +62,19 @@ describe('PlacesMap', () => {
     expect(markers().map((m) => m.getAttribute('data-slug'))).toEqual(['a', 'b']);
   });
 
-  it('draws the chosen pin in the accent and the rest in ink', () => {
-    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug="b" onSelect={() => {}} origin={null} fallback={HANOI} />);
-    const [a, b] = markers();
+  // The colour code is the filter row's: a café's pin is the café chip's
+  // brown, a rooftop's the Views chip's blue. The chosen pin is coral
+  // whatever it is, so the one the reader tapped is never lost among its
+  // kind.
+  it('draws the chosen pin in the accent and the rest in their category’s colour', () => {
+    render(<PlacesMap places={[place('a', 21, 105, ['cafes']), place('b', 21.1, 105.1, ['cafes']), place('c', 21.2, 105.2, ['views'])]} selectedSlug="b" onSelect={() => {}} origin={null} fallback={HANOI} />);
+    const [a, b, c] = markers();
     expect(b.getAttribute('data-color')).toBe('#FF6F5B');
-    expect(a.getAttribute('data-color')).toBe('#17150F');
+    expect(a.getAttribute('data-color')).toBe('#D2A679');
+    expect(c.getAttribute('data-color')).toBe('#6FB3C0');
   });
 
-  it('falls back to ink for every pin when the chosen slug matches none of them', () => {
+  it('draws a pin nothing classifies in ink, and every pin when the chosen slug matches none of them', () => {
     render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug="zzz" onSelect={() => {}} origin={null} fallback={HANOI} />);
     const [a, b] = markers();
     expect(a.getAttribute('data-color')).toBe('#17150F');

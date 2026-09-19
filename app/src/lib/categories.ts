@@ -139,6 +139,21 @@ export function categoriesOf(p: Categorisable): string[] {
 }
 
 /**
+ * The one colour a place wears where there is room for only one — the
+ * map's pin. A place can be several things; the first of them in the
+ * filter row's order is what it is most (a café with a view is a café,
+ * as the row reads eat-and-drink before sights), so the pin and the chip
+ * a reader would tap to find it agree. Nothing classified: null, and the
+ * caller picks its own ink — a guess here would colour a place the data
+ * never described.
+ */
+export function categoryColor(p: Categorisable): string | null {
+  const cats = categoriesOf(p);
+  const key = CATEGORY_ORDER.find((c) => cats.includes(c));
+  return key ? CATEGORIES[key].color : null;
+}
+
+/**
  * Label for a category key.
  *
  * A key this table has not heard of is shown tidied rather than raw —
