@@ -31,15 +31,21 @@ export default function MapPlaceCard({ place, distanceKm, now, onPress }: {
   // the same split `PlaceCard` makes.
   const state = openState(place.opening_hours, now);
   const hours = state?.open ? openFragment(state, t) : shutLabel(state, t);
-  const name = t(place.name_en, place.name_vi, place.name_ja ?? undefined);
+  const name = t(place.name_en, place.name_vi, place.name_ja);
+  const ratingFact = place.rating ? `${place.rating.toFixed(1)}${place.rating_count ? ` (${fmtCount(place.rating_count)})` : ''}` : null;
+  const distanceFact = distanceKm != null ? `${distanceKm < 10 ? distanceKm.toFixed(1) : Math.round(distanceKm)} km` : null;
   const facts = [
-    place.rating != null ? `★ ${place.rating.toFixed(1)}${place.rating_count ? ` (${fmtCount(place.rating_count)})` : ''}` : null,
-    distanceKm != null ? `${distanceKm < 10 ? distanceKm.toFixed(1) : Math.round(distanceKm)} km` : null,
+    ratingFact ? `★ ${ratingFact}` : null,
+    distanceFact,
     hours,
   ].filter((f): f is string => !!f);
+  // The visual line carries a "★" glyph that screen readers should not
+  // announce; speak the same facts as words so the listener hears name,
+  // rating, distance, and hours without that confusing symbol.
+  const spoken = [name, ratingFact ? t(`rated ${ratingFact}`, `đánh giá ${ratingFact}`, `評価 ${ratingFact}`) : null, distanceFact, hours].filter((f): f is string => !!f).join(', ');
 
   return (
-    <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={name} style={s.card}>
+    <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={spoken} containerStyle={s.gutter} style={s.card}>
       {cover
         ? <Image source={{ uri: cover.photo_uri }} style={s.thumb} contentFit="cover" />
         : <View style={[s.thumb, { backgroundColor: colors.surfaceGlass }]} />}
@@ -53,12 +59,12 @@ export default function MapPlaceCard({ place, distanceKm, now, onPress }: {
 }
 
 const s = StyleSheet.create({
+  gutter: { marginHorizontal: space.page }, // Positioning within the parent (e.g. map) goes in containerStyle, not style, so the outer Pressable stretches to the edge
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     padding: 10, paddingRight: 14,
     backgroundColor: colors.bgElevated, borderRadius: radius.card,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
-    marginHorizontal: space.page,
   },
   thumb: { width: 64, height: 64, borderRadius: radius.card - 6 },
   body: { flex: 1, gap: 3 },

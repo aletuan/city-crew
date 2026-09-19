@@ -61,7 +61,22 @@ describe('MapPlaceCard', () => {
   it('opens the place when pressed', () => {
     const onPress = vi.fn();
     render(<MapPlaceCard place={place()} distanceKm={null} now={NOON} onPress={onPress} />);
-    fireEvent.click(screen.getByRole('button'));
+    fireEvent.click(screen.getByRole('button', { name: /Cộng Cà Phê/ }));
     expect(onPress).toHaveBeenCalledOnce();
+  });
+
+  it('hides the star when rating is null', () => {
+    render(<MapPlaceCard place={place({ rating: null })} distanceKm={null} now={NOON} onPress={() => {}} />);
+    expect(screen.queryByText(/★/)).toBeNull();
+  });
+
+  it('hides the image when there are no photos', () => {
+    render(<MapPlaceCard place={place({ place_photos: [] })} distanceKm={null} now={NOON} onPress={() => {}} />);
+    expect(document.querySelector('img')).toBeNull();
+  });
+
+  it('rounds distance to the nearest km when >= 10', () => {
+    render(<MapPlaceCard place={place()} distanceKm={12.4} now={NOON} onPress={() => {}} />);
+    expect(screen.getByText(/12 km/)).toBeTruthy();
   });
 });
