@@ -48,6 +48,7 @@ const spies = vi.hoisted(() => ({
   settle: vi.fn(),
   reportStartup: vi.fn(),
   setStatusBarStyle: vi.fn(),
+  show: vi.fn(),
   getForegroundPermissionsAsync: vi.fn(async () => ({ status: state.locationGranted ? 'granted' : 'denied' })),
   requestForegroundPermissionsAsync: vi.fn(async () => ({ status: state.locationGranted ? 'granted' : 'denied' })),
   getLastKnownPositionAsync: vi.fn(async () => (state.locationGranted
@@ -86,7 +87,7 @@ vi.mock('../lib/theme', () => ({
 vi.mock('../lib/tasteProfile', () => ({ useBrowseTaste: () => state.taste }));
 vi.mock('../lib/sky', () => ({ useSky: () => state.sky }));
 vi.mock('../components/tabBarDuck', () => ({
-  useTabBarDuck: () => ({ ducked: state.ducked }),
+  useTabBarDuck: () => ({ ducked: state.ducked, show: spies.show }),
   useDuckOnScroll: () => undefined,
 }));
 // The sheet has its own suite (CitySwitcher.ui.test.tsx); what Explore owes
@@ -777,6 +778,31 @@ describe('the map', () => {
     await act(async () => { fireEvent.click(document.querySelector('[data-slug="a"]')!); });
     fireEvent.click(screen.getByRole('button', { name: /Place a/ }));
     expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'a' });
+  });
+
+  // The tab bar's only way onto this screen is a scroll-up — the map
+  // never scrolls — so a reader who ducked it on the list and then
+  // switched to the map must not be left with a strip floating above no
+  // bar at all.
+  it('surfaces the tab bar on entering the map', async () => {
+    state.ducked = true;
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(spies.show).toHaveBeenCalled();
+  });
+
+  // The floating bar's ground is the page's own, not the hero's dark
+  // scrim, so map mode wants the scheme's own ink rather than the
+  // light type the hero always asks for.
+  it('wears the scheme’s own ink over the bar, not the hero’s light', async () => {
+    state.scheme = 'light';
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('dark', true);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'List view' })); });
+    expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('light', true);
   });
 });
 

@@ -809,11 +809,23 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // Past once the photo's last 44pt are leaving — the moment the dark
   // ground stops being what is under the clock.
   heroEndRef.current = heroH - insets.top - 44;
+  // Map mode has no hero under the clock — the floating bar's own ground
+  // is `colors.bg`, the page's, not the hero's dark scrim — so it wants
+  // the scheme's own ink exactly the way past-the-hero already does.
+  const mapModeRef = useRef(false);
   // Null past the hero: there the page is its own ground again and the
   // right ink is exactly the scheme's own, which is what the hook's null
   // means. Taking, handing back, and the mid-transition cost all live in
   // `useOwnedStatusBar` — a place's screen wants the same thing.
-  const applyBar = useOwnedStatusBar(() => (pastHeroRef.current ? null : 'light'));
+  const applyBar = useOwnedStatusBar(() => ((pastHeroRef.current || mapModeRef.current) ? null : 'light'));
+  // `mapModeRef` mirrors `mapMode` for the closure above; this effect is
+  // what keeps the mirror honest and repaints on every crossing, both
+  // into map mode and back out of it — unlike the reset effect below,
+  // which only ever runs on the way in.
+  useEffect(() => {
+    mapModeRef.current = mapMode;
+    applyBar();
+  }, [mapMode, applyBar]);
 
   // Only categories this city actually has, so a chip never leads to an
   // empty list. Order comes from the taxonomy, not from the data.
@@ -1014,6 +1026,13 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const pinnedRef = useRef(false);
   const pinAtRef = useRef(0);
 
+  // `show` surfaces the tab bar regardless of scroll — moved up here
+  // (its sibling `ducked` is still read below, by the nudge) because the
+  // reset effect just below needs it: the tab bar's only way onto this
+  // screen is a scroll-up (see `report` in `tabBarDuck.tsx`), and the map
+  // emits no scroll at all.
+  const { ducked, show } = useTabBarDuck();
+
   // On entering the map, ask once. A refusal is not an error here — the
   // map is still a map — so nothing is said; the strip simply carries no
   // distance and there is no blue dot.
@@ -1032,7 +1051,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // first — is updated only by the list's own events. Left alone it
   // would still say "scrolled" when the list comes back at offset 0. So
   // entering the map puts all of it back to rest; the list returns to a
-  // screen that agrees with it.
+  // screen that agrees with it. The tab bar is shown by scrolling up,
+  // which the map never does, so it is surfaced here too rather than
+  // left ducked with nothing above it to bring it back.
   useEffect(() => {
     if (!mapMode) return;
     scrollY.setValue(0);
@@ -1042,6 +1063,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     applyBar();
     heroGone.set(false);
     setFirst(0);
+    show();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- refs and once-built setters; only the mode matters
   }, [mapMode]);
 
@@ -1080,7 +1102,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // The offer may borrow the tab bar's dock only while the bar is away —
   // the sharing rules live in lib/nudge.ts. The gate keeps no timer, so
   // eligibility re-polls it once the settle time has passed.
-  const { ducked } = useTabBarDuck();
   const nudgeGate = useRef(createNudgeGate()).current;
   const [nudge, setNudge] = useState(false);
   useEffect(() => navigation.addListener('focus', () => {
