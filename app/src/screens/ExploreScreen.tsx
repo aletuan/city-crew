@@ -1693,12 +1693,16 @@ const s = StyleSheet.create({
   // it does can move a row or eat a tap meant for one. Glass rather than
   // an opaque ground — the list runs underneath it and is worth seeing
   // run, and the bar at the other edge of the screen is made of the same
-  // thing. `overflow: hidden` because the material fills the box and the
-  // box has no radius to clip it to otherwise.
+  // thing.
+  //
+  // No `overflow: hidden`: the material is an `absoluteFill` and already
+  // stops at these bounds, and clipping here would be clipping on the
+  // same layer as the content — which is what the nudge's `nudgeClip`
+  // and the tab bar's own clip layer exist to avoid. A badge or a shadow
+  // added to this row later would be eaten by it.
   filterBarFloating: {
     position: 'absolute', left: 0, right: 0, top: 0,
     zIndex: 20,
-    overflow: 'hidden',
   },
   // Drawn only at the bottom, and only a hairline: it is where the header
   // block ends and the list begins, which is the one edge that has
