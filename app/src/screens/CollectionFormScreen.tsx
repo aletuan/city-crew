@@ -19,7 +19,7 @@
 // alternative is a second set that drifts from the first.
 
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
@@ -40,11 +40,31 @@ import { goTo, type Nav, type RootRoute } from '../nav';
 /** Long enough for a real name, short enough to stay on one line in a row. */
 const MAX_TITLE = 60;
 
+/**
+ * The cover picker's shape: four tiles to a line.
+ *
+ * It was one horizontal row of 64pt thumbs, and two things were wrong
+ * with that. The thumbs were too small to tell one dim bar interior from
+ * another, and a row that scrolls sideways hides most of what it holds —
+ * four and a half chips visible out of ten, with nothing saying there are
+ * more.
+ *
+ * Four rather than three, which was the first proposal. Three gives
+ * bigger tiles (109 against 80 on a 393pt phone) but costs a whole extra
+ * row, and height is the one thing this screen cannot spend: it is a
+ * form, its first field takes focus on open, and the keyboard is over
+ * the lower 336pt of it while the reader is typing. Four lands the usual
+ * ten chips in three rows instead of four.
+ */
+const COVER_COLS = 4;
+const COVER_GAP = 10;
+
 export default function CollectionFormScreen({ navigation, route }: {
   navigation: Nav;
   route: RootRoute<'CollectionForm'>;
 }) {
   const { t } = useI18n();
+  const { width } = useWindowDimensions();
   const { session } = useAuth();
   const { city } = useCity();
   const { mine } = useSave();
@@ -83,9 +103,35 @@ export default function CollectionFormScreen({ navigation, route }: {
   const members = copyFrom
     ? copyFrom.placeSlugs.map((slug) => places.find((p) => p.slug === slug)).filter((p): p is Place => !!p)
     : col ? membersOf(col, places) : [];
-  const choices = members
-    .flatMap((p) => photosOf(p))
-    .filter((ph): ph is typeof ph & { id: string } => !!ph.id);
+  // One photograph per place, not every photograph of every place.
+  //
+  // `flatMap(photosOf)` was the first rule and it asked the wrong
+  // question. Nine places carrying six photographs each is 54 chips, and
+  // six of those are the same bar from six angles — so the reader is made
+  // to choose between near-identical pictures before they can choose
+  // between places. What a cover claims is *which place stands for this
+  // list*, and that is a choice between nine things.
+  //
+  // It is also what makes the grid below fit: ten chips are three rows,
+  // where fifty-four would be fourteen and would push the form's own
+  // Save button a thousand points down a screen the keyboard already
+  // takes half of.
+  //
+  // The exception keeps a promise the first rule made. Somebody who
+  // picked the fourth photograph of the second place still has it as
+  // their cover, and dropping its chip would leave the ring sitting on
+  // nothing — the row would read as "no cover chosen" over a list that
+  // has one. So a current cover outside the per-place set is kept, at
+  // the front, where the eye lands first.
+  //
+  // Each entry carries the place it came from, which is what finally
+  // lets a tile say its own name: every one of these was a bare button
+  // to VoiceOver before, because a photograph out of a flat list of
+  // photographs has nothing to be called.
+  const perPlace = members.flatMap((p) => {
+    const ph = coverOf(p);
+    return ph?.id ? [{ ph: ph as typeof ph & { id: string }, place: p }] : [];
+  });
   // What "Auto" actually resolves to — the first place's own cover, the
   // exact fallback every renderer draws when nothing is picked. Shown on
   // the chip itself, so the current cover is always visible as a
@@ -96,15 +142,40 @@ export default function CollectionFormScreen({ navigation, route }: {
   // from a fetch that may land after the first render would either lose
   // their tap or resurrect the old cover over it.
   const [pick, setPick] = useState<{ chosen: boolean; id: string | null }>({ chosen: false, id: null });
-  // A row hydrated from a launch cache written before the cover carried
-  // its id arrives with only the uri — matched by uri then, so the ring
-  // sits on the real current cover instead of drifting to Auto until
-  // the refresh lands.
   const current = col?.cover ?? null;
+  // Found by id or by uri: a row hydrated from a launch cache written
+  // before the cover carried its id arrives with only the uri, and the
+  // ring has to sit on the real current cover rather than drift to Auto
+  // until the refresh lands.
+  const held = current
+    ? members.flatMap((p) => photosOf(p).map((ph) => ({ ph, place: p })))
+      .find(({ ph }) => !!ph.id && (ph.id === current.id || ph.photo_uri === current.photo_uri))
+    : undefined;
+  const choices = held && !perPlace.some((c) => c.ph.id === held.ph.id)
+    ? [held as { ph: typeof held.ph & { id: string }; place: Place }, ...perPlace]
+    : perPlace;
+  // Four to a line, sized off the window rather than guessed: the page
+  // gives up `space.page` at each edge and `COVER_GAP` three times
+  // between the tiles, and what is left divides by four. Measured on a
+  // 393pt phone that is 79.75 a side — a quarter more than the 64 the
+  // scrolling row used, and on the small phones it shrinks with the
+  // page instead of pushing a fifth tile half off the screen.
+  // Floored, not rounded: four tiles plus three gaps have to come in
+  // under the line, and a fraction over sends the fourth to the next row.
+  // The leftover — under a point — sits at the end of each row.
+  //
+  // Width and height stay on `style` rather than `containerStyle`, where
+  // `PressableScale`'s note sends a width. The note is about a width that
+  // has to survive its parent's layout; here the Pressable shrink-wraps
+  // the sized view inside it, which is what the 64pt thumbs did before.
+  const tile = Math.floor(
+    (width - space.page * 2 - COVER_GAP * (COVER_COLS - 1)) / COVER_COLS,
+  );
+
   const coverId = pick.chosen
     ? pick.id
     : current
-      ? current.id ?? choices.find((ph) => ph.photo_uri === current.photo_uri)?.id ?? null
+      ? current.id ?? choices.find((c) => c.ph.photo_uri === current.photo_uri)?.ph.id ?? null
       : null;
 
   const submit = async () => {
@@ -256,12 +327,17 @@ export default function CollectionFormScreen({ navigation, route }: {
       {choices.length > 0 ? (
         <View style={s.coverBlock}>
           <Text style={s.coverLabel}>{t('COVER', 'ẢNH BÌA', 'カバー写真')}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.coverRow}>
+          <View style={s.coverGrid}>
             <PressableScale
               onPress={() => setPick({ chosen: true, id: null })}
               accessibilityRole="button"
+              accessibilityLabel={t('Auto', 'Tự động', '自動')}
               accessibilityState={{ selected: coverId == null }}
-              style={[s.thumb, s.auto, coverId == null && s.thumbOn]}
+              // `aria-selected` beside it, because react-native-web drops
+              // `accessibilityState` — the same pairing `Chip` and `Tile`
+              // carry, and the note there is the one to read.
+              aria-selected={coverId == null}
+              style={[s.thumb, { width: tile, height: tile }, s.auto, coverId == null && s.thumbOn]}
             >
               {/* The chip wears the picture Auto would use, so "what is
                   the cover right now" has a visible answer even before
@@ -276,23 +352,25 @@ export default function CollectionFormScreen({ navigation, route }: {
                 </>
               ) : (
                 <>
-                  <Ionicons name="sparkles-outline" size={18} color={colors.textSecondary} />
+                  <Ionicons name="sparkles-outline" size={22} color={colors.textSecondary} />
                   <Text style={s.autoText}>{t('Auto', 'Tự động', '自動')}</Text>
                 </>
               )}
             </PressableScale>
-            {choices.map((ph) => (
+            {choices.map(({ ph, place }) => (
               <PressableScale
                 key={ph.id}
                 onPress={() => setPick({ chosen: true, id: ph.id })}
                 accessibilityRole="button"
+                accessibilityLabel={t(place.name_en, place.name_vi, place.name_ja)}
                 accessibilityState={{ selected: coverId === ph.id }}
-                style={[s.thumb, coverId === ph.id && s.thumbOn]}
+                aria-selected={coverId === ph.id}
+                style={[s.thumb, { width: tile, height: tile }, coverId === ph.id && s.thumbOn]}
               >
                 <Image source={{ uri: ph.photo_uri }} style={s.thumbImg} contentFit="cover" transition={120} />
               </PressableScale>
             ))}
-          </ScrollView>
+          </View>
         </View>
       ) : null}
       {error ? <FormError>{failText(error)}</FormError> : null}
@@ -327,12 +405,14 @@ const s = StyleSheet.create({
     color: colors.textTertiary, fontSize: 11, fontWeight: font.bold,
     letterSpacing: 1.1, marginBottom: 8,
   },
-  coverRow: { gap: 10, paddingRight: space.page },
+  // The tiles size themselves off the window — see `tile` — so the grid
+  // only has to wrap them and space them. `gap` does both axes, which is
+  // what keeps the rows as far apart as the columns.
+  coverGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: COVER_GAP },
   // 2pt of always-there border so the chosen ring changes colour, not
-  // layout — a thumb that grows on selection makes the whole row shuffle.
+  // layout — a tile that grows on selection makes the whole grid shuffle.
   thumb: {
-    width: 64, height: 64, borderRadius: radius.card - 6,
-    borderWidth: 2, borderColor: 'transparent', overflow: 'hidden',
+    borderRadius: radius.image, borderWidth: 2, borderColor: 'transparent', overflow: 'hidden',
   },
   thumbOn: { borderColor: colors.accentFill },
   thumbImg: { width: '100%', height: '100%' },
@@ -340,10 +420,10 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 3,
     backgroundColor: colors.surfaceGlass,
   },
-  autoText: { color: colors.textSecondary, fontSize: 10.5, fontWeight: font.medium },
+  autoText: { color: colors.textSecondary, fontSize: 12, fontWeight: font.medium },
   autoScrim: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(8,7,10,0.55)', paddingVertical: 3, alignItems: 'center',
   },
-  autoOnPhoto: { color: '#F7F7F5', fontSize: 10, fontWeight: font.semibold },
+  autoOnPhoto: { color: '#F7F7F5', fontSize: 11, fontWeight: font.semibold },
 });
