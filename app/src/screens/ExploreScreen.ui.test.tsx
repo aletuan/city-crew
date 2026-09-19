@@ -712,7 +712,7 @@ describe('the view switch', () => {
     state.places.data = [place('p1')];
     render(<ExploreScreen navigation={nav()} />);
     expect(screen.getByTestId('explore-list')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Map view' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open Map' })).toBeTruthy();
     expect(screen.queryByTestId('places-map')).toBeNull();
   });
 
@@ -725,7 +725,7 @@ describe('the view switch', () => {
     // is a microtask, and inside the click's `act` it would land *after*
     // the tap and put the list back.
     await act(async () => {});
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Map view' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Open Map' })); });
     expect(screen.queryByTestId('explore-list')).toBeNull();
     expect(await AsyncStorage.getItem('citycrew.explore.view')).toBe('map');
   });
@@ -737,7 +737,7 @@ describe('the view switch', () => {
     mapState.canDrawMap = false;
     state.places.data = [place('p1')];
     render(<ExploreScreen navigation={nav()} />);
-    expect(screen.queryByRole('button', { name: 'Map view' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Open Map' })).toBeNull();
   });
 });
 
@@ -757,13 +757,13 @@ describe('the map', () => {
     render(<ExploreScreen navigation={nav()} />);
     await act(async () => {}); // the stored 'list' lands here, not after the tap
     expect(screen.getByTestId('explore-list')).toBeTruthy();
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Map view' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Open Map' })); });
     expect(screen.getByTestId('places-map')).toBeTruthy();
     // The bar — and with it the switch — must survive the tap, or map mode
     // is a room with no door. In map mode there is exactly one copy.
     expect(screen.getByTestId('explore-view-pinned')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'List view' })).toBeTruthy();
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'List view' })); });
+    expect(screen.getByRole('button', { name: 'Close Map' })).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Close Map' })); });
     expect(screen.getByTestId('explore-list')).toBeTruthy();
     expect(screen.queryByTestId('places-map')).toBeNull();
   });
@@ -831,12 +831,14 @@ describe('the map', () => {
   it('draws the app’s other cities, and goes to the one that is tapped', async () => {
     state.cities = [{ ...hanoi }, { id: 'hcmc', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン', center_lat: 10.7769, center_lng: 106.7009 } as City];
     state.places.data = [place('a', { lat: 21, lng: 105 })];
+    // The bubble carries its count and nothing else — Google's own map
+    // writes the name — so it is drawn once the index has arrived.
+    state.index = [{ slug: 's1', city_id: 'hcmc', categories: [], vibe_tags: [] }];
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
-
+    await waitFor(() => expect(document.querySelector('[data-slug="city-hcmc"]')).toBeTruthy());
     const pill = document.querySelector('[data-slug="city-hcmc"]')!;
-    expect(pill).toBeTruthy();
-    expect(pill.textContent).toContain('Saigon');
+    expect(pill.textContent).toBe('1');
     // The city being read is not offered as somewhere to go.
     expect(document.querySelector('[data-slug="city-hanoi"]')).toBeNull();
 
@@ -858,10 +860,10 @@ describe('the map', () => {
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     const pill = () => document.querySelector('[data-slug="city-hcmc"]')!;
-    await waitFor(() => expect(pill().textContent).toBe('Saigon3'));
+    await waitFor(() => expect(pill().textContent).toBe('3'));
 
     fireEvent.click(screen.getByText('Cafés'));
-    expect(pill().textContent).toBe('Saigon2');
+    expect(pill().textContent).toBe('2');
   });
 
   // The tab bar's only way onto this screen is a scroll-up — the map
@@ -885,7 +887,7 @@ describe('the map', () => {
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     await waitFor(() => expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('dark', true));
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'List view' })); });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Close Map' })); });
     await waitFor(() => expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('light', true));
   });
 });
