@@ -10,7 +10,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  Animated, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View,
+  Animated, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -341,7 +341,25 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
   // The city's centre, never the device's position — someone with the
   // city set to follow their location still keeps it on their phone.
   const sky = useSky(city?.center_lat, city?.center_lng);
-  const uri = place && coverOf(place)?.photo_uri;
+  /**
+   * Two sources, in order: the city's own photograph, then the cover of
+   * whichever place `heroPlace` picked.
+   *
+   * The city's wins because it was chosen for this frame — somebody at
+   * the desk looked at the hero line and picked a picture to sit under
+   * it. `hero_place_slug` is the older mechanism and still the fallback,
+   * but it can only ever offer a photograph OF A SHOP, which is why Đà
+   * Lạt had nothing worth showing under a line about a whole town.
+   *
+   * A city photo carries a credit and a place photo does not, because a
+   * place photo comes from Google with its attribution already shown on
+   * the place's own screen. This one was taken by a person who handed it
+   * to us; the desk refuses to save it without a name.
+   */
+  const cityPhoto = city?.hero_photo_uri ?? null;
+  const uri = cityPhoto ?? (place && coverOf(place)?.photo_uri);
+  const credit = cityPhoto ? city?.hero_photo_credit ?? null : null;
+  const creditUri = credit ? city?.hero_photo_credit_uri ?? null : null;
   const { width: winW } = useWindowDimensions();
 
   /**
@@ -400,6 +418,31 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
         locations={[0, 0.22, 0.64, 1]}
         style={StyleSheet.absoluteFill}
       />
+      {/* The photographer, in the corner the layout leaves empty — the
+          CTA and everything above it are `flex-start`, so the bottom
+          right is the one place a line can sit without pushing anything.
+
+          Quiet on purpose, and quiet is not the same as hidden: it reads
+          at the weight of a map's attribution because that is what it is.
+          Tappable only when a link was given; without one it is plain
+          text rather than a control that goes nowhere. */}
+      {credit ? (
+        creditUri ? (
+          <Pressable
+            style={[s.heroCredit, { bottom: space.cardPadding + 6 }]}
+            onPress={() => Linking.openURL(creditUri).catch(() => {})}
+            accessibilityRole="link"
+            accessibilityLabel={t(`Photo by ${credit}`, `Ảnh: ${credit}`, `写真: ${credit}`)}
+            hitSlop={8}
+          >
+            <Text style={s.heroCreditText}>{credit}</Text>
+          </Pressable>
+        ) : (
+          <View style={[s.heroCredit, { bottom: space.cardPadding + 6 }]} pointerEvents="none">
+            <Text style={s.heroCreditText}>{credit}</Text>
+          </View>
+        )
+      ) : null}
       {/* What the fixed header used to hold, embedded in the photograph:
           the dateline with the weather hanging off its end — nothing
           moves when the temperature arrives, nothing is missing when it
@@ -1569,6 +1612,10 @@ const s = StyleSheet.create({
   // the display face carrying a whole line, per theme.ts.
   heroTitle: { color: onPhoto.text, ...type.title, lineHeight: 40 },
   heroSub: { color: onPhoto.textSecondary, ...type.meta, lineHeight: 21 },
+  // Right edge, on the page margin, so it lines up with nothing and
+  // competes with nothing.
+  heroCredit: { position: 'absolute', right: space.page },
+  heroCreditText: { color: onPhoto.textSecondary, fontSize: 10.5, opacity: 0.72 },
   // The screen's one loud control: the accent at full strength — the same
   // primary-button material the auth screens use.
   heroCta: {

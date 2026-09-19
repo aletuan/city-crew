@@ -85,6 +85,23 @@ test('saveCityHero on an unknown city reports not found, not a silent success', 
   await assert.rejects(() => api.saveCityHero('atlantis', {}), /not found/);
 });
 
+// ---- the city cover's own columns are not hand-editable here; the
+// mechanism itself lives in cityHero.js and is tested there.
+
+test('the city hero photo columns are not hand-editable through saveCityHero', async () => {
+  const { api } = await loadApi([]);
+  // The URL and the path belong to setCityHeroPhoto, which owns the file
+  // beside them; only the credit is typed.
+  await assert.rejects(
+    () => api.saveCityHero('dalat', { hero_photo_uri: 'https://evil.test/x.jpg' }),
+    /field not editable: hero_photo_uri/,
+  );
+  await assert.rejects(
+    () => api.saveCityHero('dalat', { hero_photo_path: 'cities/dalat/x.jpg' }),
+    /field not editable: hero_photo_path/,
+  );
+});
+
 // ---- deletePlace / deletePlaces: the bug this repo already had once —
 // files outliving their rows — so the sequence (collect paths, delete rows,
 // then remove objects) is exactly what these pin down.
