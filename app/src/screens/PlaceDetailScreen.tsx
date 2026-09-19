@@ -579,8 +579,16 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(10,11,10,0.45)', borderRadius: radius.pill,
     paddingHorizontal: 11, paddingVertical: 8,
   },
+  // The one in hand is a bar, not a bigger dot. Six photographs is six
+  // marks 7pt across, and telling which of them was a point wider meant
+  // looking rather than glancing — the thing a page indicator exists to
+  // spare you. Length reads at a distance where diameter does not.
+  //
+  // Same height as the others, so the row keeps one baseline; and since
+  // exactly one is ever in hand, the strip's total width never changes
+  // as the reader pages, which is what would have made it twitch.
   dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.38)' },
-  dotOn: { width: 8, height: 8, borderRadius: 4, backgroundColor: onPhoto.text },
+  dotOn: { width: 17, height: 7, borderRadius: 3.5, backgroundColor: onPhoto.text },
   // Required attribution, kept quiet — see the note in PlaceCard.
   attr: {
     position: 'absolute', right: space.page, bottom: 16, maxWidth: '55%',
