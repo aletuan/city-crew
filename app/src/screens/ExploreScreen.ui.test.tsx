@@ -44,6 +44,7 @@ const spies = vi.hoisted(() => ({
   reload: vi.fn(() => { state.places.loading = true; }),
   toggleLike: vi.fn(async () => {}),
   askToSignIn: vi.fn(),
+  setCity: vi.fn(),
   goTo: vi.fn(),
   mark: vi.fn(),
   settle: vi.fn(),
@@ -62,7 +63,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: state.city, cities: state.city ? [state.city] : [] }),
+  useCity: () => ({ city: state.city, cities: state.city ? [state.city] : [], setCity: spies.setCity }),
 }));
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ ...state.places, reload: spies.reload }),

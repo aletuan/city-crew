@@ -26,7 +26,7 @@ import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
 import { useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
-import { colors } from '../theme';
+import { colors, radius } from '../theme';
 import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
 
@@ -55,7 +55,7 @@ const OPENING_SPAN = 0.05;
 /** `edgePadding`'s default — see the note on that prop. */
 const DEFAULT_PADDING = { top: 80, right: 40, bottom: 160, left: 40 };
 
-export default function PlacesMap({ places, selectedSlug, onSelect, category, origin, fallback, edgePadding = DEFAULT_PADDING }: {
+export default function PlacesMap({ places, selectedSlug, onSelect, category, origin, fallback, cities, onPickCity, edgePadding = DEFAULT_PADDING }: {
   places: readonly Place[];
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
@@ -76,6 +76,19 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   /** Where to open when there is neither a fix nor a pin — the city's
    *  centre, which the screen always knows. */
   fallback: ExploreOrigin;
+  /**
+   * The app's other cities, without the one being read.
+   *
+   * Explore works one city at a time, so at a zoom where the whole
+   * country fits, this city is a single bubble and the rest of the app is
+   * nowhere — a reader zooming out to see where else there is something
+   * found an empty map. These are not places and never join a cluster or
+   * the fit: they are somewhere to go, and a tap goes there.
+   */
+  cities: readonly { id: string; name: string; lat: number; lng: number }[];
+  /** A tap on one of those. The screen makes it the city being read, and
+   *  everything else on the screen follows. */
+  onPickCity: (id: string) => void;
   /** The screen that measures its header passes what it measured;
    *  `DEFAULT_PADDING` otherwise. */
   edgePadding?: { top: number; right: number; bottom: number; left: number };
@@ -123,7 +136,10 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   // What is drawn on a bubble: which cell, and how many in it. The
   // ground and the figure follow from the count, so nothing else has to
   // be listed here — a frozen marker keeps what it was frozen with.
-  const shape = clusters.map((c) => `${c.key}x${c.slugs.length}`).join('|');
+  const shape = [
+    clusters.map((c) => `${c.key}x${c.slugs.length}`).join('|'),
+    cities.map((c) => c.name).join('|'),
+  ].join('/');
   // `ready` is in here, not only `shape`: the countdown must start when
   // the native map exists, or on a slow first launch it can run out
   // before a bubble has ever been drawn, which is the blank marker this
@@ -232,6 +248,29 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
           />
           );
         })}
+        {cities.map((c) => (
+          <Marker
+            key={`city-${c.id}`}
+            identifier={`city-${c.id}`}
+            coordinate={{ latitude: c.lat, longitude: c.lng }}
+            // Above the places: at the zoom where a city label shows at
+            // all, everything else on screen is one bubble anyway.
+            zIndex={3}
+            tracksViewChanges={!settled}
+            onPress={() => onPickCity(c.id)}
+            accessibilityRole="button"
+            accessibilityLabel={t(
+              `${c.name}, switch to this city`,
+              `${c.name}, chuyển sang thành phố này`,
+              `${c.name}、この都市に切り替える`,
+            )}
+            testID={`city-${c.id}`}
+          >
+            <View style={s.city}>
+              <Text style={s.cityName}>{c.name}</Text>
+            </View>
+          </Marker>
+        ))}
       </MapView>
     </Boundary>
   );
@@ -252,4 +291,15 @@ const s = StyleSheet.create({
     elevation: 4,
   },
   bubbleText: { fontSize: 14, fontWeight: '700' },
+  // A name, not a count, so it is a pill rather than a disc — and pale
+  // where a cluster is filled, because it is somewhere else rather than
+  // something more of what is already here. The deepest of the cluster
+  // grounds rings it, which is what keeps it in the same family.
+  city: {
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill,
+    backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#9C6647',
+    shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
+    elevation: 4,
+  },
+  cityName: { color: '#17150F', fontSize: 13, fontWeight: '700' },
 });
