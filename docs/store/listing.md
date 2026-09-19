@@ -261,20 +261,71 @@ Chọn điểm bắt đầu ngày của bạn trên bản đồ thật.
 • 小さな画面に収まる短い日付表記。
 ```
 
+## Release notes v1.0.3 (What's New)
+
+Viết từ các PR merge sau build 1.0.2 (#544 → #558), cùng quy tắc như v1.0.1.
+Build native mới chứ không phải OTA: #545 nâng patch của Expo và các native
+module đi kèm, nên bundle JS mới không khớp với binary đang ở ngoài store.
+
+Hai PR về dữ liệu (#556 sửa thành phố sai, #557 chuẩn hoá tên khi import) cố ý
+không có mặt ở đây — chúng đã tới người dùng ngay lúc chạy, không đợi bản này,
+nên viết vào What's New của build này là nói sai thời điểm.
+
+### EN
+
+```
+See every place on a map, and put the list in the order you want.
+
+• Explore has a map: switch from the list and every place becomes a pin on Google's map. Tap one and its card slides up along the edge.
+• Sort and filter what you see: nearest first, highest rated, open now — and your saved places on their own.
+• The heading and its sort button stay with you as you scroll, so the control is there when you want it.
+• Places with the same rating now order by how many people voted, so a score a thousand people agree on comes first.
+• A list you publish yourself now shows up in Explore and in search, where it was invisible to you alone.
+```
+
+### VI
+
+```
+Xem mọi địa điểm trên bản đồ, và sắp danh sách theo ý bạn.
+
+• Explore có bản đồ: chuyển từ danh sách sang và mỗi địa điểm thành một ghim trên bản đồ Google. Chạm một ghim, thẻ của nó trượt lên dọc mép màn hình.
+• Sắp xếp và lọc thứ bạn đang xem: gần nhất, điểm cao nhất, đang mở cửa — và riêng những nơi bạn đã lưu.
+• Tiêu đề cùng nút sắp xếp đi theo bạn khi cuộn, nên cần là có ngay.
+• Các địa điểm cùng điểm đánh giá giờ xếp theo số lượt bình chọn, nên nơi được cả nghìn người đồng ý sẽ đứng trước.
+• Danh sách bạn tự publish giờ hiện trong Explore và trong tìm kiếm — trước đây chỉ mình bạn là không thấy nó.
+```
+
+### JA
+
+```
+すべてのスポットを地図で。リストの並び順も思いのままに。
+
+• Explore に地図が加わりました。リストから切り替えると、すべてのスポットが Google マップ上のピンになります。ピンをタップすると、そのカードが画面の端に沿って現れます。
+• 表示中のスポットを並べ替え・絞り込みできます。近い順、評価の高い順、営業中 — 保存したスポットだけの表示も。
+• 見出しと並べ替えボタンはスクロールしても画面に残るので、使いたいときにすぐ押せます。
+• 評価が同点のスポットは投票数の多い順になりました。千人が支持する評価が先に出ます。
+• 自分で公開したリストが Explore と検索に表示されるようになりました。これまで見えていなかったのは公開した本人だけでした。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
 sai theo thời gian (Apple guideline 2.3 — Accurate Metadata). Tính đến
-2026-08-28, database production có **5 thành phố active / 373 địa điểm đã
+2026-09-19, database production có **5 thành phố active / 626 địa điểm đã
 duyệt**:
 
 | Thành phố | Địa điểm đã publish |
 |---|---|
-| Hà Nội | 179 |
-| TP. Hồ Chí Minh | 114 |
-| Đà Nẵng | 45 |
-| Đà Lạt | 20 |
-| Huế | 15 |
+| TP. Hồ Chí Minh | 271 |
+| Hà Nội | 227 |
+| Đà Nẵng | 62 |
+| Đà Lạt | 35 |
+| Huế | 31 |
+
+Năm thành phố vẫn đúng như description nói, và không thành phố nào mỏng đi —
+nên không câu nào trong description hay release notes cần sửa lần này. Sài Gòn
+đã vượt Hà Nội kể từ lần kiểm trước; thứ tự trong bảng đi theo số liệu, còn
+description không xếp hạng thành phố nên không bị ảnh hưởng.
 
 Câu kiểm tra lại:
 `select c.id, count(p.*) from cities c left join places p on p.city_id = c.id and p.is_published and p.review_status='approved' where c.is_active group by 1;`
