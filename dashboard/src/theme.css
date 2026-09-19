@@ -1049,6 +1049,22 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .boardcities .dotsep { opacity: .6; }
 .boardtotal { font-size: 15px; font-weight: 700; width: 26px; text-align: right; flex-shrink: 0; }
 
+/* The guide grant, as a box at the end of the row.
+   Quiet until it is on: an unticked box is administration the reader is
+   not doing, and ten of them shouting down a leaderboard would make the
+   ranking harder to read for the sake of a setting touched once a month.
+   Ticked, it takes the accent — that row is now different from its
+   neighbours and the difference is the point.
+   The label is the hit area; `gap` keeps the word off the box. */
+.guidebox {
+  display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+  font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary);
+  cursor: pointer; user-select: none; padding: 4px 2px;
+}
+.guidebox.on { color: var(--ai-pink); }
+.guidebox input { accent-color: var(--ai-pink); cursor: pointer; margin: 0; }
+.guidebox input:disabled { cursor: default; opacity: .5; }
+
 @media (max-width: 1080px) {
   /* minmax(0,…), not bare 1fr: a grid item's min-width:auto would let the
      chart's phone min-width widen the whole page instead of scrolling
@@ -1176,6 +1192,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .contribchart { min-width: 480px; }
   .boardcities { display: none; } /* same rule as .prow .facts — phones keep the verdict, drop the breakdown */
   .boardtotal { margin-left: auto; } /* the breakdown was what pushed it right */
+  /* The word goes, the box stays: on a phone the row has no room for a
+     caption, and a lone accent-coloured checkbox at the row's end is still
+     legible as the one control there. */
+  .guidebox { font-size: 0; gap: 0; }
 }
 
 /* ── the narrowest phones (≈2016 hardware) ──
