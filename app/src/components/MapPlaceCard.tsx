@@ -15,11 +15,16 @@ import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space } from '../theme';
 import { PressableScale } from './ui';
 
-export default function MapPlaceCard({ place, distanceKm, now, onPress }: {
+export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: {
   place: Place;
   /** Null when there is no fix to measure from — the figure is then left
    *  out rather than written as zero. */
   distanceKm: number | null;
+  /** The colour this place's pin is wearing on the map, or null where it
+   *  is wearing the map's ink. The card repeats it so the eye can walk
+   *  from the card back to the pin it is talking about — the coral pin
+   *  says "this one", and the mark says which of them it was. */
+  tint: string | null;
   now: Date;
   onPress: () => void;
 }) {
@@ -55,7 +60,10 @@ export default function MapPlaceCard({ place, distanceKm, now, onPress }: {
         ? <Image source={{ uri: cover.photo_uri }} style={s.thumb} contentFit="cover" />
         : <View style={[s.thumb, { backgroundColor: colors.surfaceGlass }]} />}
       <View style={s.body}>
-        <Text style={s.name} numberOfLines={1}>{name}</Text>
+        <View style={s.line}>
+          {tint ? <View testID="place-tint" style={[s.dot, { backgroundColor: tint }]} /> : null}
+          <Text style={s.name} numberOfLines={1}>{name}</Text>
+        </View>
         <Text style={s.facts} numberOfLines={1}>{facts.join(' · ')}</Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
@@ -76,6 +84,13 @@ const s = StyleSheet.create({
   },
   thumb: { width: 64, height: 64, borderRadius: radius.card - 6 },
   body: { flex: 1, gap: 3 },
-  name: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
+  line: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  // Small: it is a echo of the pin, not a second heading. No border, so
+  // it reads as the same ink the pin is drawn in.
+  dot: { width: 9, height: 9, borderRadius: 4.5 },
+  // `flexShrink: 1`, because the name now shares a row with the dot and
+  // Yoga defaults shrink to 0 unlike CSS: without it a long name sizes to
+  // its own content and runs under the chevron instead of truncating.
+  name: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
   facts: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
 });

@@ -25,7 +25,7 @@ import { CitySwitcherModal } from '../components/CitySwitcher';
 import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useOwnedStatusBar, useTabBarClearance, useTabBarLift } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
-import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
+import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, pinTint } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { useSky } from '../lib/sky';
 import WeatherLayer, { useWeatherStill, WEATHER_EFFECTS } from '../components/weather/WeatherLayer';
@@ -1421,6 +1421,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                   <MapPlaceCard
                     place={selected}
                     distanceKm={selectedKm}
+                    // The same rule the map draws the pin with, so the
+                    // mark on the card and the pin cannot drift apart.
+                    tint={pinTint(selected, cat === ALL ? null : cat)}
                     now={new Date()}
                     onPress={() => navigation.navigate('PlaceDetail', { slug: selected.slug })}
                   />

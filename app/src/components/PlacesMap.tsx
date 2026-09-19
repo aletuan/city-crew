@@ -19,8 +19,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
-import { CATEGORIES, categoryColor } from '../lib/categories';
-import { clusterPins, clusterSize } from '../lib/cluster';
+import { pinTint } from '../lib/categories';
+import { clusterPins, clusterSize, clusterSkin } from '../lib/cluster';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
 import { useI18n } from '../lib/i18n';
@@ -30,11 +30,6 @@ import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
 
 /** The unchosen, uncategorised pin's colour — see the note on `pinColor`. */
 const INK = Platform.select({ android: '#4A90D9', default: '#17150F' });
-
-/** The bubble's ring and its figure where no chip has lent a colour. A
- *  fixed hex, like the pins: the map's tiles are light whichever scheme
- *  the app is in, so the token that follows the scheme would go white. */
-const BUBBLE_INK = '#17150F';
 
 /** How long a bubble is redrawn as it moves before it is frozen. A custom
  *  marker view that is frozen from its first frame comes out blank on
@@ -90,9 +85,6 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   // new array every render, and a Map rebuilt 288 entries deep each time
   // `settled` flips is a memo in name only.
   const pins = useMemo(() => pinned(places), [places]);
-  // Null at "All", and null too for a chip this table has not heard of —
-  // then each pin falls back to speaking for itself.
-  const chipColor = category ? CATEGORIES[category]?.color ?? null : null;
 
   // Show all the pins, and show them again whenever the set changes.
   const key = pins.map((p) => p.slug).sort().join('|');
@@ -125,10 +117,10 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   // iOS; one that is never frozen redraws on every pan. So each new set of
   // bubbles is drawn live for a moment and then put to rest.
   const [settled, setSettled] = useState(false);
-  // The ring's colour is part of what is drawn, so a chip change has to
-  // thaw the bubbles even in the rare case it leaves the same places
-  // pinned — a frozen marker keeps the colour it was frozen with.
-  const shape = `${chipColor ?? ''}/${clusters.map((c) => `${c.key}x${c.slugs.length}`).join('|')}`;
+  // What is drawn on a bubble: which cell, and how many in it. The
+  // ground and the figure follow from the count, so nothing else has to
+  // be listed here — a frozen marker keeps what it was frozen with.
+  const shape = clusters.map((c) => `${c.key}x${c.slugs.length}`).join('|');
   // `ready` is in here, not only `shape`: the countdown must start when
   // the native map exists, or on a slow first launch it can run out
   // before a bubble has ever been drawn, which is the blank marker this
@@ -180,6 +172,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
         {clusters.map((c) => {
           if (c.slugs.length > 1) {
             const size = clusterSize(c.slugs.length);
+            const skin = clusterSkin(c.slugs.length);
             return (
               <Marker
                 key={c.key}
@@ -201,10 +194,10 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
                 <View
                   style={[
                     s.bubble,
-                    { width: size, height: size, borderRadius: size / 2, borderColor: chipColor ?? BUBBLE_INK },
+                    { width: size, height: size, borderRadius: size / 2, backgroundColor: skin.fill },
                   ]}
                 >
-                  <Text style={s.bubbleText}>{c.slugs.length}</Text>
+                  <Text style={[s.bubbleText, { color: skin.ink }]}>{c.slugs.length}</Text>
                 </View>
               </Marker>
             );
@@ -223,7 +216,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
             // iOS and near-white on the dark scheme, and a white pin on a
             // map is not a pin. It comes out azure on Android (hue 210°)
             // rather than ink — still far from the chosen pin's coral.
-            pinColor={p.slug === selectedSlug ? colors.accentFill : (chipColor ?? categoryColor(p) ?? INK)}
+            pinColor={p.slug === selectedSlug ? colors.accentFill : (pinTint(p, category) ?? INK)}
             // 251 pins overlap; a coral one buried behind three ink ones is
             // invisible. Put the chosen pin on top.
             zIndex={p.slug === selectedSlug ? 1 : 0}
@@ -241,15 +234,15 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
 // `absoluteFillObject`, and the repo already spreads it this way.
 const s = StyleSheet.create({
   fill: { ...StyleSheet.absoluteFill },
-  // White ground, coloured ring, dark figure: the tiles underneath are
-  // light and busy, and a bubble filled with a chip's own pastel would
-  // put white type on a pale wash. The ring carries the colour code
-  // instead, which is all it has to do — the number is the message.
+  // A thin white halo and a soft shadow, not a hard dark ring: the halo
+  // lifts the bubble off tiles of any colour without drawing a line the
+  // reader has to look past, and the ground it lifts is ours — see
+  // `clusterSkin` on why the disc is filled and why it is earth.
   bubble: {
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#FFFFFF', borderWidth: 2,
-    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
-    elevation: 3,
+    borderWidth: 2, borderColor: '#FFFFFF',
+    shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
+    elevation: 4,
   },
-  bubbleText: { color: BUBBLE_INK, fontSize: 14, fontWeight: '700' },
+  bubbleText: { fontSize: 14, fontWeight: '700' },
 });

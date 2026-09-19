@@ -4,7 +4,7 @@
 // place quietly missing from a filter.
 
 import { describe, expect, it } from 'vitest';
-import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryColor, categoryLabel } from './categories';
+import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryColor, categoryLabel, pinTint } from './categories';
 import { VIBE_FALLBACK_COLOR, VIBES, vibeColor, vibeLabel } from './vibes';
 
 /** The app's `t`, in English. */
@@ -101,5 +101,24 @@ describe('categoryColor', () => {
   it('is null for a place nothing classifies, or one classified only by a key the row does not know', () => {
     expect(categoryColor({})).toBeNull();
     expect(categoryColor({ categories: ['street_food'] })).toBeNull();
+  });
+});
+
+describe('pinTint', () => {
+  // Inside a chip every place is that kind of place, so the chip's colour
+  // is the only one that adds anything — the rule the map and the card
+  // both draw with, in one place so they cannot drift apart.
+  it('is the chip’s colour while a chip is asking', () => {
+    expect(pinTint({ categories: ['cafes'] }, 'focus')).toBe(CATEGORIES.focus.color);
+  });
+
+  it('is the place’s own colour at All, or under a chip nobody knows', () => {
+    expect(pinTint({ categories: ['cafes'] }, null)).toBe(CATEGORIES.cafes.color);
+    expect(pinTint({ categories: ['cafes'] })).toBe(CATEGORIES.cafes.color);
+    expect(pinTint({ categories: ['cafes'] }, 'street_food')).toBe(CATEGORIES.cafes.color);
+  });
+
+  it('is nothing at all for a place nothing classifies', () => {
+    expect(pinTint({}, null)).toBeNull();
   });
 });
