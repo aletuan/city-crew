@@ -17,7 +17,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { categoryColor } from '../lib/categories';
+import { CATEGORIES, categoryColor } from '../lib/categories';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
 import { colors } from '../theme';
@@ -40,10 +40,21 @@ const pinned = (places: readonly Place[]): Pinned[] =>
 /** `edgePadding`'s default — see the note on that prop. */
 const DEFAULT_PADDING = { top: 80, right: 40, bottom: 160, left: 40 };
 
-export default function PlacesMap({ places, selectedSlug, onSelect, origin, fallback, edgePadding = DEFAULT_PADDING }: {
+export default function PlacesMap({ places, selectedSlug, onSelect, category, origin, fallback, edgePadding = DEFAULT_PADDING }: {
   places: readonly Place[];
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
+  /**
+   * The category chip the reader is standing in, or null for the whole
+   * catalog.
+   *
+   * Inside a chip every pin is already that kind of place, so painting
+   * each one what it is "most" says nothing and reads as noise: the
+   * filter row says Focus while a dozen pins say café, because a place
+   * that is both takes the earlier of the two. Under a chip the chip's
+   * own colour is the honest one — one kind asked for, one colour back.
+   */
+  category: string | null;
   /** The reader's fix, if they gave one — the first place the view
    *  centres on when there is nothing chosen yet. */
   origin: ExploreOrigin | null;
@@ -57,6 +68,9 @@ export default function PlacesMap({ places, selectedSlug, onSelect, origin, fall
   const ref = useRef<any>(null);
   const [ready, setReady] = useState(false);
   const pins = pinned(places);
+  // Null at "All", and null too for a chip this table has not heard of —
+  // then each pin falls back to speaking for itself.
+  const chipColor = category ? CATEGORIES[category]?.color ?? null : null;
 
   // Show all the pins, and show them again whenever the set changes.
   const key = pins.map((p) => p.slug).sort().join('|');
@@ -106,7 +120,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, origin, fall
             // iOS and near-white on the dark scheme, and a white pin on a
             // map is not a pin. It comes out azure on Android (hue 210°)
             // rather than ink — still far from the chosen pin's coral.
-            pinColor={p.slug === selectedSlug ? colors.accentFill : (categoryColor(p) ?? INK)}
+            pinColor={p.slug === selectedSlug ? colors.accentFill : (chipColor ?? categoryColor(p) ?? INK)}
             // 251 pins overlap; a coral one buried behind three ink ones is
             // invisible. Put the chosen pin on top.
             zIndex={p.slug === selectedSlug ? 1 : 0}
