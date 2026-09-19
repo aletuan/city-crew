@@ -22,6 +22,7 @@ type City = Record<string, unknown> & { id: string; short_en: string };
 
 const state = vi.hoisted(() => ({
   city: null as City | null,
+  cities: null as City[] | null,
   places: {
     loading: false, loaded: true, error: null as string | null,
     data: [] as unknown[], reload: (() => {}) as () => void,
@@ -63,7 +64,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: state.city, cities: state.city ? [state.city] : [], setCity: spies.setCity }),
+  useCity: () => ({ city: state.city, cities: state.cities ?? (state.city ? [state.city] : []), setCity: spies.setCity }),
 }));
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ ...state.places, reload: spies.reload }),
@@ -119,7 +120,7 @@ vi.mock('../components/mapsModule', async () => {
     R.useImperativeHandle(ref, () => ({ fitToCoordinates: () => {} }));
     return R.createElement('div', { 'data-stub': 'MapView', 'data-testid': p.testID }, p.children);
   });
-  const Marker = (p: any) => R.createElement('button', { type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier, 'data-color': p.pinColor ?? '', onClick: p.onPress });
+  const Marker = (p: any) => R.createElement('button', { type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier, 'data-color': p.pinColor ?? '', onClick: p.onPress }, p.children);
   return { MapView, Marker, PROVIDER_GOOGLE: 'google' };
 });
 // The verdict on whether a map can be drawn is the binary's, not the
@@ -281,6 +282,7 @@ const cardNames = () => screen.getAllByTestId(/^place-card-\d+$/).map((el) => el
 
 beforeEach(async () => {
   state.city = { ...hanoi };
+  state.cities = null;
   state.places = { loading: false, loaded: true, error: null, data: [], reload: () => {} };
   state.cols = { loaded: true, data: [] };
   state.likes = {};
@@ -818,6 +820,26 @@ describe('the map', () => {
     await act(async () => { fireEvent.click(document.querySelector('[data-slug="a"]')!); });
     fireEvent.click(screen.getByRole('button', { name: /Place a/ }));
     expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'a' });
+  });
+
+  // Explore reads one city at a time, and the map is where that stops
+  // being invisible: the others stand at their own centres, and a tap on
+  // one is what makes it the city being read. The wiring is the thing
+  // under test here — `PlacesMap` is covered on its own.
+  it('draws the app’s other cities, and goes to the one that is tapped', async () => {
+    state.cities = [{ ...hanoi }, { id: 'hcmc', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン', center_lat: 10.7769, center_lng: 106.7009 } as City];
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+
+    const pill = document.querySelector('[data-slug="city-hcmc"]')!;
+    expect(pill).toBeTruthy();
+    expect(pill.textContent).toContain('Saigon');
+    // The city being read is not offered as somewhere to go.
+    expect(document.querySelector('[data-slug="city-hanoi"]')).toBeNull();
+
+    await act(async () => { fireEvent.click(pill); });
+    expect(spies.setCity).toHaveBeenCalledWith('hcmc');
   });
 
   // The tab bar's only way onto this screen is a scroll-up — the map
