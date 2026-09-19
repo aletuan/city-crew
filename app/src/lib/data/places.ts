@@ -129,6 +129,49 @@ export async function fetchPlaceCountByCity(): Promise<Record<string, number>> {
 }
 
 /**
+ * The one row-per-place index the map counts cities with.
+ *
+ * Explore fetches one city at a time, which is right for a screen that
+ * reads one city. But the map, zoomed out, draws every city the app has,
+ * and a marker that says only a name asks the reader to guess. Worse, a
+ * *total* beside a filtered count is two units in one picture: "Cafés"
+ * narrowing Hanoi to 89 while Saigon still claims 280 invites exactly
+ * the wrong comparison.
+ *
+ * So: the columns the three Explore filters read, for every published
+ * place in every city, and the counting runs the same rule the list runs
+ * — see `matchesExplore`. Measured 2026-09-19: 635 rows, 219 kB before
+ * transfer encoding, asked once when the map opens.
+ *
+ * Failure is an empty list, never a throw: the markers keep their names
+ * and lose their numbers, which is the map this replaced.
+ */
+export type PlaceIndexRow = {
+  slug: string;
+  city_id: string | null;
+  categories: string[] | null;
+  vibe_tags: string[] | null;
+  // `undefined` rather than `null` where a row has none: `categoriesOf`
+  // reads this as an optional string, the shape the catalog's own rows
+  // have, and the counting must see exactly what the list sees.
+  category?: string;
+  opening_hours: Place['opening_hours'];
+};
+
+export async function fetchPlaceIndex(): Promise<PlaceIndexRow[]> {
+  const { data, error } = await supabase
+    .from('places')
+    .select('slug, city_id, categories, vibe_tags, category, opening_hours')
+    .eq('is_published', true)
+    .eq('review_status', 'approved');
+  if (error || !data) return [];
+  // `category` is nullable in the column and optional in the type the
+  // filters read; one is the other with the nulls dropped.
+  return (data as (Omit<PlaceIndexRow, 'category'> & { category: string | null })[])
+    .map(({ category, ...rest }) => (category ? { ...rest, category } : rest));
+}
+
+/**
  * The desk's search synonyms, as `category → terms`.
  *
  * Not scoped to a city — what a reader types for "cinema" does not change

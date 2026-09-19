@@ -14,6 +14,35 @@ export type ExploreFilters = {
 
 export type ExploreOrigin = { lat: number; lng: number };
 
+/** What the three filters need of a row. Looser than `Place` on purpose:
+ *  the per-city counts run this same rule over an index that carries only
+ *  these columns, and one rule is the whole point — a number under a
+ *  different rule is a number in a different unit. */
+export type Filterable = Parameters<typeof categoriesOf>[0] & {
+  slug: string;
+  opening_hours?: unknown;
+};
+
+/**
+ * Whether a row survives Explore's three filters.
+ *
+ * Sort is not here: sorting an unfiltered list and counting a filtered
+ * one are different jobs, and only this half is shared.
+ */
+export function matchesExplore(row: Filterable, options: {
+  category: string;
+  allCategory: string;
+  status: ExploreStatus;
+  savedOnly: boolean;
+  isSaved: (slug: string) => boolean;
+  now: Date;
+}): boolean {
+  return (options.category === options.allCategory || categoriesOf(row).includes(options.category))
+    && (options.status === 'any'
+      || openState(row.opening_hours as Parameters<typeof openState>[0], options.now)?.open === (options.status === 'open'))
+    && (!options.savedOnly || options.isSaved(row.slug));
+}
+
 /**
  * Apply Explore's explicit controls to an already recommendation-ranked
  * catalog. Keeping the recommended order as the input means the default is
@@ -32,12 +61,7 @@ export function filterExplorePlaces(
 ): Place[] {
   const indexed = recommended
     .map((place, rank) => ({ place, rank }))
-    .filter(({ place }) => (
-      (options.category === options.allCategory || categoriesOf(place).includes(options.category))
-      && (options.status === 'any'
-        || openState(place.opening_hours, options.now)?.open === (options.status === 'open'))
-      && (!options.savedOnly || options.isSaved(place.slug))
-    ));
+    .filter(({ place }) => matchesExplore(place, options));
 
   if (options.sort === 'rating') {
     // Score first, then how many people said so.
