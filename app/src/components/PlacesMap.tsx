@@ -10,7 +10,7 @@
 // Plain pins. A pin that is a View with a number in it is a View per
 // place, and Saigon has 251 of them; `tracksViewChanges={false}` and the
 // stock marker keep the map a map. The chosen one is coral, the rest are
-// ink — same two states as everything else that can be chosen here.
+// ink on iOS and azure on Android — see `pinColor`.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -21,7 +21,7 @@ import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
 
 /** The unchosen pin's colour — see the note on `pinColor`. */
-const INK = Platform.select({ android: '#4A90D9', default: '#17150F' }) as string;
+const INK = Platform.select({ android: '#4A90D9', default: '#17150F' });
 
 class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -33,7 +33,10 @@ type Pinned = Place & { lat: number; lng: number };
 const pinned = (places: readonly Place[]): Pinned[] =>
   places.filter((p): p is Pinned => p.lat != null && p.lng != null);
 
-export default function PlacesMap({ places, selectedSlug, onSelect, origin, fallback, edgePadding = { top: 80, right: 40, bottom: 160, left: 40 } }: {
+/** `edgePadding`'s default — see the note on that prop. */
+const DEFAULT_PADDING = { top: 80, right: 40, bottom: 160, left: 40 };
+
+export default function PlacesMap({ places, selectedSlug, onSelect, origin, fallback, edgePadding = DEFAULT_PADDING }: {
   places: readonly Place[];
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
@@ -43,7 +46,8 @@ export default function PlacesMap({ places, selectedSlug, onSelect, origin, fall
   /** Where to open when there is neither a fix nor a pin — the city's
    *  centre, which the screen always knows. */
   fallback: ExploreOrigin;
-  /** The screen that measures its header passes what it measured. */
+  /** The screen that measures its header passes what it measured;
+   *  `DEFAULT_PADDING` otherwise. */
   edgePadding?: { top: number; right: number; bottom: number; left: number };
 }) {
   const ref = useRef<any>(null);
@@ -59,8 +63,11 @@ export default function PlacesMap({ places, selectedSlug, onSelect, origin, fall
       { edgePadding, animated: false },
     );
   // The set is the honest dependency; a re-sort must not snap the map back.
+  // The four padding numbers are primitives, so listing them costs nothing,
+  // and a measured inset that arrives after the map is already ready — the
+  // header's `onLayout` firing late — must still trigger one refit.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, ready]);
+  }, [key, ready, edgePadding.top, edgePadding.right, edgePadding.bottom, edgePadding.left]);
 
   // Every pin here is Google Places content, which the API's terms allow
   // showing only on Google's own map — see the licence note atop

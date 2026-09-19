@@ -17,17 +17,18 @@ const spies = vi.hoisted(() => ({ fitToCoordinates: vi.fn() }));
 // `MiniMap` pulls in `expo-constants`, which cannot be imported in jsdom
 // (see `uitest/setup.tsx` on `expo-updates` for the same failure). The
 // verdict is all this component reads from it.
-vi.mock('./MiniMap', () => ({ canDrawMap: true }));
+const verdict = vi.hoisted(() => ({ canDrawMap: true }));
+vi.mock('./MiniMap', () => verdict);
 vi.mock('./mapsModule', async () => {
   const R = await import('react');
-  // A click on the stub stands in for the native map's own `onMapReady` —
-  // there is no frame to wait for in jsdom, so a tap is the only way a
-  // test can say "the map is ready now".
+  // The ready signal is its own element, not a click on the map itself —
+  // a click on a marker (which sits inside the map) must not bubble up
+  // and be mistaken for `onMapReady`.
   const MapView = R.forwardRef((p: any, ref: any) => {
     R.useImperativeHandle(ref, () => ({ fitToCoordinates: spies.fitToCoordinates }));
     return R.createElement('div', {
-      'data-stub': 'MapView', 'data-user': String(!!p.showsUserLocation), onClick: p.onMapReady,
-    }, p.children);
+      'data-stub': 'MapView', 'data-user': String(!!p.showsUserLocation),
+    }, R.createElement('button', { type: 'button', 'data-stub': 'ready', onClick: p.onMapReady }), p.children);
   });
   const Marker = (p: any) => R.createElement('button', {
     type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier,
@@ -40,14 +41,19 @@ import PlacesMap from './PlacesMap';
 
 // The spy is module-scoped and vitest clears nothing between tests here
 // (no `clearMocks` in the config), so a count from an earlier render would
-// leak into the one test that counts.
-beforeEach(() => { spies.fitToCoordinates.mockClear(); });
+// leak into the one test that counts. The verdict is likewise reset, since
+// one test below flips it.
+beforeEach(() => {
+  spies.fitToCoordinates.mockClear();
+  verdict.canDrawMap = true;
+});
 
 const place = (slug: string, lat: number | null, lng: number | null): Place =>
   ({ slug, name_en: slug, name_vi: slug, name_ja: null, lat, lng, place_photos: [], categories: [], vibe_tags: [] } as unknown as Place);
 
 const markers = () => [...document.querySelectorAll('[data-stub="Marker"]')];
 const mapView = () => document.querySelector('[data-stub="MapView"]')!;
+const markMapReady = () => fireEvent.click(document.querySelector('[data-stub="ready"]')!);
 const HANOI = { lat: 21.0285, lng: 105.8542 };
 
 describe('PlacesMap', () => {
@@ -90,7 +96,7 @@ describe('PlacesMap', () => {
     const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
     expect(spies.fitToCoordinates).not.toHaveBeenCalled();
 
-    fireEvent.click(mapView());
+    markMapReady();
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(1);
     expect(spies.fitToCoordinates).toHaveBeenLastCalledWith(
       [{ latitude: 21, longitude: 105 }, { latitude: 21.1, longitude: 105.1 }],
@@ -107,7 +113,7 @@ describe('PlacesMap', () => {
 
   it('does not refit when the same pins reappear in a different order', () => {
     const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
-    fireEvent.click(mapView());
+    markMapReady();
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(1);
 
     rerender(<PlacesMap places={[place('b', 21.1, 105.1), place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
@@ -116,7 +122,15 @@ describe('PlacesMap', () => {
 
   it('does not fit when there is nothing to pin', () => {
     render(<PlacesMap places={[]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
-    fireEvent.click(mapView());
+    markMapReady();
     expect(spies.fitToCoordinates).not.toHaveBeenCalled();
+  });
+
+  // No Google map means no map — never Apple's, never a broken one.
+  it('shows no map at all when the binary cannot draw a Google map', () => {
+    verdict.canDrawMap = false;
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    expect(document.querySelector('[data-testid="places-map-missing"]')).toBeTruthy();
+    expect(document.querySelector('[data-stub="MapView"]')).toBeNull();
   });
 });
