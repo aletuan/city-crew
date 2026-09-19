@@ -831,12 +831,14 @@ describe('the map', () => {
   it('draws the app’s other cities, and goes to the one that is tapped', async () => {
     state.cities = [{ ...hanoi }, { id: 'hcmc', short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン', center_lat: 10.7769, center_lng: 106.7009 } as City];
     state.places.data = [place('a', { lat: 21, lng: 105 })];
+    // The bubble carries its count and nothing else — Google's own map
+    // writes the name — so it is drawn once the index has arrived.
+    state.index = [{ slug: 's1', city_id: 'hcmc', categories: [], vibe_tags: [] }];
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
-
+    await waitFor(() => expect(document.querySelector('[data-slug="city-hcmc"]')).toBeTruthy());
     const pill = document.querySelector('[data-slug="city-hcmc"]')!;
-    expect(pill).toBeTruthy();
-    expect(pill.textContent).toContain('Saigon');
+    expect(pill.textContent).toBe('1');
     // The city being read is not offered as somewhere to go.
     expect(document.querySelector('[data-slug="city-hanoi"]')).toBeNull();
 
@@ -858,10 +860,10 @@ describe('the map', () => {
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     const pill = () => document.querySelector('[data-slug="city-hcmc"]')!;
-    await waitFor(() => expect(pill().textContent).toBe('Saigon3'));
+    await waitFor(() => expect(pill().textContent).toBe('3'));
 
     fireEvent.click(screen.getByText('Cafés'));
-    expect(pill().textContent).toBe('Saigon2');
+    expect(pill().textContent).toBe('2');
   });
 
   // The tab bar's only way onto this screen is a scroll-up — the map
