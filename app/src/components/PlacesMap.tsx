@@ -21,10 +21,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { pinTint } from '../lib/categories';
 import { clusterPins, clusterSize, clusterSkin } from '../lib/cluster';
-import { MAP_STYLE } from '../lib/mapStyle';
+import { mapStyle } from '../lib/mapStyle';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
 import { useI18n } from '../lib/i18n';
+import { useScheme } from '../lib/theme';
 import { colors } from '../theme';
 import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
@@ -80,6 +81,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   edgePadding?: { top: number; right: number; bottom: number; left: number };
 }) {
   const { t } = useI18n();
+  const { scheme } = useScheme();
   const ref = useRef<any>(null);
   const [ready, setReady] = useState(false);
   // Memoised so the lookup that hangs off it can hold: `pinned` filters a
@@ -159,8 +161,9 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
         style={s.fill}
         provider={PROVIDER_GOOGLE}
         // Google draws its own badge for every place we pin, because our
-        // places are its places — see `lib/mapStyle`.
-        customMapStyle={MAP_STYLE}
+        // places are its places; and it has no dark mode to switch on, so
+        // the night reading is a style too — see `lib/mapStyle`.
+        customMapStyle={mapStyle(scheme)}
         initialRegion={{ latitude: first.lat, longitude: first.lng, latitudeDelta: OPENING_SPAN, longitudeDelta: OPENING_SPAN }}
         showsUserLocation
         showsMyLocationButton={false}
