@@ -9,7 +9,7 @@
 // walking through all of them is exactly what this screen is for. The
 // workspace city only seeds which chip starts selected.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, resizeImage } from '../api.js';
 import { chipLabel, useCity, useToast } from '../App.jsx';
@@ -77,6 +77,7 @@ export default function CityHero() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dropHot, setDropHot] = useState(false);
+  const fileInput = useRef(null);
   const [previewLang, setPreviewLang] = useState('en');
 
   useEffect(() => {
@@ -138,6 +139,9 @@ export default function CityHero() {
    * and the upload refuses without it — the same rule the API enforces,
    * said here so the desk does not have to fail a 1MB upload to learn it.
    */
+  /** The one thing that must be filled before a picker is worth opening. */
+  const creditReady = !!(form?.hero_photo_credit ?? '').trim();
+
   const upload = async (file) => {
     if (!file || uploading) return;
     const credit = (form.hero_photo_credit ?? '').trim();
@@ -305,9 +309,25 @@ export default function CityHero() {
               />
             </div>
           </div>
-          <div
-            className={`dropzone ${dropHot ? 'dragover' : ''}`}
-            onDragOver={(e) => { e.preventDefault(); setDropHot(true); }}
+          {/* The whole zone is the control, the way PhotoManager's is.
+              It was a plain div with one small clickable label floating in
+              the middle of it, so a click anywhere else — which is most of
+              it — did nothing and said nothing.
+
+              `wide` undoes `aspect-ratio: 1`, which belongs to the square
+              tile this class was written for: in a full-width block it
+              made a 644pt square with the only live target at its centre.
+
+              And the credit is asked for here rather than after the
+              picker: refusing a file once it has been chosen is a worse
+              way to say "this needs a name" than not opening the picker
+              at all. */}
+          <button
+            type="button"
+            className={`dropzone wide ${dropHot ? 'dragover' : ''}`}
+            disabled={uploading || !creditReady}
+            onClick={() => fileInput.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); if (creditReady) setDropHot(true); }}
             onDragLeave={() => setDropHot(false)}
             onDrop={(e) => {
               e.preventDefault();
@@ -315,18 +335,20 @@ export default function CityHero() {
               upload(e.dataTransfer.files?.[0]);
             }}
           >
-            {uploading ? 'Working…' : 'Drop a photo here, or'}
-            <label className="syncbtn" style={{ marginLeft: 8, cursor: 'pointer' }}>
-              choose a file
-              <input
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                disabled={uploading}
-                onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ''; }}
-              />
-            </label>
-          </div>
+            <span className="plus">+</span>
+            {uploading
+              ? 'Working…'
+              : creditReady
+                ? 'Drop a photo here, or click to choose one'
+                : 'Fill in “Photo by” above — a cover cannot go up without a credit'}
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => { upload(e.target.files?.[0]); e.target.value = ''; }}
+          />
           {row?.hero_photo_uri && (
             <div style={{ marginTop: 8, display: 'flex', gap: 10, alignItems: 'center' }}>
               <span className="hint" style={{ margin: 0 }}>

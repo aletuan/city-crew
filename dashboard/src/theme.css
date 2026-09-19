@@ -688,7 +688,12 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   color: var(--text-tertiary); font-size: 12px; aspect-ratio: 1; cursor: pointer;
   transition: all 160ms; background: transparent;
 }
-.dropzone:hover, .dropzone.dragover { border-color: var(--ai-pink); color: var(--text-secondary); }
+.dropzone:hover:not(:disabled), .dropzone.dragover { border-color: var(--ai-pink); color: var(--text-secondary); }
+.dropzone:disabled { cursor: not-allowed; opacity: 0.55; }
+/* `aspect-ratio: 1` belongs to the square tile this class was written for.
+   A full-width zone that keeps it becomes a 644pt square whose only live
+   target sits at its centre — see the City hero cover block. */
+.dropzone.wide { aspect-ratio: auto; width: 100%; min-height: 104px; padding: 18px; }
 .dropzone .plus { font-size: 22px; line-height: 1; color: var(--text-secondary); }
 
 /* facts column */
