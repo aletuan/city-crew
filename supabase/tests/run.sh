@@ -301,6 +301,21 @@ run "$DB" -f "$HERE/reports_rls_test.sql"
 run "$DB" -f "$HERE/blocks_rls_test.sql"
 run "$DB" -f "$HERE/likes_moderation_rls_test.sql"
 run "$DB" -f "$HERE/moderation_log_test.sql"
+
+# The second writer `place_photos` has ever had. Inside this block rather
+# than after it, and the reason is the `alter default privileges` line
+# above: that is what makes a newly created function callable by `anon`
+# on the bench the way Supabase makes it on the project. Run before it
+# and this migration's three revokes would be taking back a grant that
+# was never made — passing `function_grants_test.sql` by accident and
+# proving nothing. Run here and both that file and `search_path_test.sql`
+# sweep these functions along with every other.
+echo "→ local guides"
+for f in "$ROOT"/supabase/migrations/*_local_guide_photos.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/local_guide_test.sql"
+
 run "$DB" -f "$HERE/function_grants_test.sql"
 
 # Search paths. Last, because the check is over every function the bench

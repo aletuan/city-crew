@@ -35,6 +35,7 @@ import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import { AmbientWarmth, Card, Empty, PressableScale, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
+import LocalGuidePanel from '../components/LocalGuidePanel';
 import type { Nav, RootRoute } from '../nav';
 
 // One row of the grouped info card: a small caps label over a value, the
@@ -77,7 +78,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const { city } = useCity();
   const { save, isSaved } = useSave();
   const { width } = useWindowDimensions();
-  const { loading: catalogLoading, data: places } = usePlaces();
+  const { loading: catalogLoading, data: places, reload: reloadCatalog } = usePlaces();
   const inCatalog = useMemo(
     () => places.find((p) => p.slug === route.params.slug),
     [places, route.params.slug],
@@ -361,6 +362,15 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             ) : null}
           </View>
 
+          {/* The one offer this screen makes to the person who put the
+              place here. Draws nothing for everybody else — see
+              `LocalGuidePanel`, which asks `canAddPhoto` before it asks
+              for anything else. Between the name and the facts because
+              that is where it reads as being about *this* place rather
+              than about the app: under the title it answers, above the
+              pills it does not interrupt. */}
+          <LocalGuidePanel place={place} onAdded={reloadCatalog} testID="guide-panel" />
+
           {/* ── fact row ── */}
           {/* ── facts: what kind of place, what it costs, how long ──
               A row of pills, in the shape the filter row and the cards
@@ -573,17 +583,40 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
   counterText: { color: onPhoto.text, fontSize: 12.5, fontWeight: font.semibold },
+  // Right, not centre. The bottom edge of a photograph then carries two
+  // objects instead of three-with-a-hole, and the middle — where a
+  // photographer puts the subject — is given back to the picture.
   dots: {
-    position: 'absolute', bottom: 15, alignSelf: 'center',
+    position: 'absolute', bottom: 15, right: space.page,
     flexDirection: 'row', alignItems: 'center', gap: 7,
     backgroundColor: 'rgba(10,11,10,0.45)', borderRadius: radius.pill,
     paddingHorizontal: 11, paddingVertical: 8,
   },
+  // The one in hand is a bar, not a bigger dot. Six photographs is six
+  // marks 7pt across, and telling which of them was a point wider meant
+  // looking rather than glancing — the thing a page indicator exists to
+  // spare you. Length reads at a distance where diameter does not.
+  //
+  // Same height as the others, so the row keeps one baseline; and since
+  // exactly one is ever in hand, the strip's total width never changes
+  // as the reader pages, which is what would have made it twitch.
   dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.38)' },
-  dotOn: { width: 8, height: 8, borderRadius: 4, backgroundColor: onPhoto.text },
+  dotOn: { width: 17, height: 7, borderRadius: 3.5, backgroundColor: onPhoto.text },
   // Required attribution, kept quiet — see the note in PlaceCard.
+  //
+  // Centre, which is the seat the dots left. It is the only one free:
+  // this line and the dots cannot share the right-hand corner, and 94.5%
+  // of the catalog's photographs carry a name to print. The flag that
+  // draws it is off today and that is a decision of the owner's, not an
+  // accident — this seat is kept so the day it is switched on nothing
+  // has to be moved.
+  //
+  // Narrower than it was, because a middle between two objects is
+  // narrower than a corner: about 134pt of gap on a 402pt phone once the
+  // counter and a full seven-mark strip have taken theirs. If names
+  // start truncating, the line above this one is free and twice as wide.
   attr: {
-    position: 'absolute', right: space.page, bottom: 16, maxWidth: '55%',
+    position: 'absolute', alignSelf: 'center', bottom: 16, maxWidth: '30%', textAlign: 'center',
     fontSize: 9, color: '#fff', opacity: 0.55,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },

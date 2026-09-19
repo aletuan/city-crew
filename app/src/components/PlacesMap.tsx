@@ -26,7 +26,7 @@ import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
 import { useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
-import { colors, radius } from '../theme';
+import { colors } from '../theme';
 import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
 
@@ -38,15 +38,22 @@ const INK = Platform.select({ android: '#4A90D9', default: '#17150F' });
  *  iOS, and one that is never frozen redraws on every pan. */
 const SETTLE_MS = 600;
 
-/** The one shape a city takes on this map, wherever the city is. */
-function CityPill({ name, count }: { name: string; count: number | null }) {
+/**
+ * The one shape a gathering of places takes on this map, whether the
+ * places are under the reader's thumb or a country away.
+ *
+ * A city used to be a named pill, which made two languages out of one
+ * idea: at the zoom where the other cities appear, this city is a bubble
+ * of its own and the pair read as different kinds of thing. The name was
+ * never ours to draw either — Google's map already writes "Hanoi" where
+ * Hanoi is.
+ */
+function Bubble({ count }: { count: number }) {
+  const size = clusterSize(count);
+  const skin = clusterSkin(count);
   return (
-    <View style={s.city}>
-      <Text style={s.cityName}>{name}</Text>
-      {/* A name says a city exists; the number is what makes going there
-          a decision. Absent until the index arrives, and absent for good
-          if it never does. */}
-      {count == null ? null : <Text style={s.cityCount}>{count}</Text>}
+    <View style={[s.bubble, { width: size, height: size, borderRadius: size / 2, backgroundColor: skin.fill }]}>
+      <Text style={[s.bubbleText, { color: skin.ink }]}>{count}</Text>
     </View>
   );
 }
@@ -73,7 +80,7 @@ const OPENING_SPAN = 0.05;
 /** `edgePadding`'s default — see the note on that prop. */
 const DEFAULT_PADDING = { top: 80, right: 40, bottom: 160, left: 40 };
 
-export default function PlacesMap({ places, selectedSlug, onSelect, category, origin, fallback, cities, onPickCity, here, edgePadding = DEFAULT_PADDING }: {
+export default function PlacesMap({ places, selectedSlug, onSelect, category, origin, fallback, cities, onPickCity, edgePadding = DEFAULT_PADDING }: {
   places: readonly Place[];
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
@@ -107,15 +114,6 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   /** A tap on one of those. The screen makes it the city being read, and
    *  everything else on the screen follows. */
   onPickCity: (id: string) => void;
-  /**
-   * The name of the city being read.
-   *
-   * Used at one moment only: where every pin has gathered into a single
-   * cluster, that cluster *is* this city, and drawing it as a bare number
-   * beside four named cities said the same kind of thing in two
-   * languages. Named, it reads as one of five.
-   */
-  here: string;
   /** The screen that measures its header passes what it measured;
    *  `DEFAULT_PADDING` otherwise. */
   edgePadding?: { top: number; right: number; bottom: number; left: number };
@@ -155,10 +153,6 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
     [key, span.latitudeDelta, span.longitudeDelta, selectedSlug],
   );
   const at = useMemo(() => new Map(pins.map((p) => [p.slug, p])), [pins]);
-  // No constant decides this. Either one cluster holds every pin — in
-  // which case the reader is looking at the city, not at a part of it —
-  // or it does not.
-  const collapsed = clusters.length === 1 && pins.length > 1 && clusters[0].slugs.length === pins.length;
 
   // A custom marker view frozen from its first frame comes out blank on
   // iOS; one that is never frozen redraws on every pan. So each new set of
@@ -169,8 +163,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   // be listed here — a frozen marker keeps what it was frozen with.
   const shape = [
     clusters.map((c) => `${c.key}x${c.slugs.length}`).join('|'),
-    cities.map((c) => `${c.name}:${c.count ?? ''}`).join('|'),
-    collapsed ? here : '',
+    cities.map((c) => `${c.id}:${c.count ?? ''}`).join('|'),
   ].join('/');
   // `ready` is in here, not only `shape`: the countdown must start when
   // the native map exists, or on a slow first launch it can run out
@@ -225,26 +218,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
         testID="places-map"
       >
         {clusters.map((c) => {
-          if (collapsed) {
-            return (
-              <Marker
-                key={c.key}
-                identifier={c.key}
-                coordinate={{ latitude: c.lat, longitude: c.lng }}
-                zIndex={3}
-                tracksViewChanges={!settled}
-                onPress={() => openCluster(c.slugs)}
-                accessibilityRole="button"
-                accessibilityLabel={[here, spokenCount(c.slugs.length, t), t('zoom in', 'phóng to', '拡大')].join(', ')}
-                testID={`here-${c.key}`}
-              >
-                <CityPill name={here} count={c.slugs.length} />
-              </Marker>
-            );
-          }
           if (c.slugs.length > 1) {
-            const size = clusterSize(c.slugs.length);
-            const skin = clusterSkin(c.slugs.length);
             return (
               <Marker
                 key={c.key}
@@ -263,14 +237,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
                 )}
                 testID={`cluster-${c.key}`}
               >
-                <View
-                  style={[
-                    s.bubble,
-                    { width: size, height: size, borderRadius: size / 2, backgroundColor: skin.fill },
-                  ]}
-                >
-                  <Text style={[s.bubbleText, { color: skin.ink }]}>{c.slugs.length}</Text>
-                </View>
+                <Bubble count={c.slugs.length} />
               </Marker>
             );
           }
@@ -297,7 +264,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
           />
           );
         })}
-        {cities.map((c) => (
+        {cities.filter((c) => c.count != null).map((c) => (
           <Marker
             key={`city-${c.id}`}
             identifier={`city-${c.id}`}
@@ -310,12 +277,12 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
             accessibilityRole="button"
             accessibilityLabel={[
               c.name,
-              c.count == null ? null : spokenCount(c.count, t),
+              spokenCount(c.count!, t),
               t('switch to this city', 'chuyển sang thành phố này', 'この都市に切り替える'),
             ].filter(Boolean).join(', ')}
             testID={`city-${c.id}`}
           >
-            <CityPill name={c.name} count={c.count} />
+            <Bubble count={c.count!} />
           </Marker>
         ))}
       </MapView>
@@ -338,17 +305,4 @@ const s = StyleSheet.create({
     elevation: 4,
   },
   bubbleText: { fontSize: 14, fontWeight: '700' },
-  // A name, not a count, so it is a pill rather than a disc — and pale
-  // where a cluster is filled, because it is somewhere else rather than
-  // something more of what is already here. The deepest of the cluster
-  // grounds rings it, which is what keeps it in the same family.
-  city: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill,
-    backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#9C6647',
-    shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
-    elevation: 4,
-  },
-  cityName: { color: '#17150F', fontSize: 13, fontWeight: '700' },
-  cityCount: { color: '#9C6647', fontSize: 13, fontWeight: '700' },
 });

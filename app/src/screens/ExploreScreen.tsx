@@ -1294,29 +1294,35 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           ) : null}
         </PressableScale>
         {canDrawMap ? (
-          <View style={s.viewToggle} testID={floating ? 'explore-view-pinned' : 'explore-view'}>
-            {(['list', 'map'] as const).map((v) => (
-              <PressableScale
-                key={v}
-                style={[s.viewBtn, view === v && s.viewBtnOn]}
-                scaleTo={0.9}
-                haptic="selection"
-                hitSlop={6}
-                onPress={() => pickView(v)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: view === v }}
-                accessibilityLabel={v === 'map'
-                  ? t('Map view', 'Dạng bản đồ', '地図表示')
-                  : t('List view', 'Dạng danh sách', 'リスト表示')}
-              >
-                <Ionicons
-                  name={v === 'map' ? 'map-outline' : 'list-outline'}
-                  size={15}
-                  color={view === v ? colors.accent : colors.textTertiary}
-                />
-              </PressableScale>
-            ))}
-          </View>
+          // One button that names what it does, not two marks that leave
+          // the reader to work out which is lit. The list is where this
+          // screen lives; the map is somewhere it goes and comes back
+          // from, and the way back has to say so — a reader who could
+          // find the map and not the way out is the failure this fixes.
+          <PressableScale
+            style={s.viewBtn}
+            containerStyle={s.viewBtnSlot}
+            scaleTo={0.94}
+            haptic="selection"
+            hitSlop={6}
+            onPress={() => pickView(mapMode ? 'list' : 'map')}
+            accessibilityRole="button"
+            accessibilityLabel={mapMode
+              ? t('Close Map', 'Đóng bản đồ', '地図を閉じる')
+              : t('Open Map', 'Mở bản đồ', '地図を開く')}
+            testID={floating ? 'explore-view-pinned' : 'explore-view'}
+          >
+            <Ionicons
+              name={mapMode ? 'close' : 'map-outline'}
+              size={15}
+              color={colors.textSecondary}
+            />
+            <Text style={s.viewBtnText}>
+              {mapMode
+                ? t('Close Map', 'Đóng bản đồ', '地図を閉じる')
+                : t('Open Map', 'Mở bản đồ', '地図を開く')}
+            </Text>
+          </PressableScale>
         ) : null}
       </View>
       <ScrollView
@@ -1503,10 +1509,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 // zoomed out past this city — see the prop's own note.
                 cities={elsewhere}
                 onPickCity={setCity}
-                // Where every pin has gathered into one, that one *is*
-                // this city, and it says so in the same words as the
-                // others rather than standing there as a bare number.
-                here={t(city.short_en, city.short_vi, city.short_ja)}
                 // The map's box already starts under the bar (`marginTop`
                 // above), so the top inset is only breathing room; the
                 // bottom clears the strip and the tab bar beneath it.
@@ -1663,13 +1665,20 @@ const s = StyleSheet.create({
   // ground of its own rather than the glass surface the rest of the row wears.
   mapDisc: { backgroundColor: colors.bgElevated, borderColor: colors.borderGlassSoft },
   mapDiscOn: { borderColor: colors.accentLine, borderWidth: 1 },
-  viewToggle: {
-    marginLeft: 'auto', flexDirection: 'row', gap: 2, padding: 3,
+  // The slot pushes it to the end of the heading row; the pill itself is
+  // the thing that gets pressed, which is why the two are separate — see
+  // `PressableScale` on where a width has to live.
+  viewBtnSlot: { marginLeft: 'auto' },
+  viewBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 7,
     borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  viewBtn: { width: 30, height: 26, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
-  viewBtnOn: { backgroundColor: colors.bgElevated },
+  // Neutral in both states. Coral in this app means a filter is on, and
+  // spending it here would say the list has been narrowed when all that
+  // happened is the reader opened a map.
+  viewBtnText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.semibold },
   filterBadge: {
     position: 'absolute', top: -3, right: -3,
     minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4,
