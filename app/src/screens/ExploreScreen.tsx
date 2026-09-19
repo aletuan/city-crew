@@ -1365,13 +1365,14 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
               <View style={s.mapQuick}>
                 <PressableScale
                   onPress={() => {
-                    fireHaptic('selection');
                     setAppliedFilters((f) => ({ ...f, status: cycleStatus(f.status) }));
                   }}
+                  haptic="selection"
                   accessibilityRole="button"
                   accessibilityLabel={`${t('Opening hours', 'Giờ mở cửa', '営業時間')}: ${statusLabel(appliedFilters.status, t)}`}
                   accessibilityState={{ selected: appliedFilters.status !== 'any' }}
-                  style={[s.filterButton, appliedFilters.status !== 'any' && s.filterButtonOn]}
+                  hitSlop={4}
+                  style={[s.filterButton, s.mapDisc, appliedFilters.status !== 'any' && s.mapDiscOn]}
                 >
                   <Ionicons
                     name={appliedFilters.status === 'closed' ? 'time' : 'time-outline'}
@@ -1382,13 +1383,14 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 <PressableScale
                   onPress={() => {
                     if (!session) { askToSignIn(); return; }
-                    fireHaptic('selection');
                     setAppliedFilters((f) => ({ ...f, savedOnly: !f.savedOnly }));
                   }}
+                  haptic="selection"
                   accessibilityRole="button"
                   accessibilityLabel={t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')}
                   accessibilityState={{ selected: appliedFilters.savedOnly }}
-                  style={[s.filterButton, appliedFilters.savedOnly && s.filterButtonOn]}
+                  hitSlop={4}
+                  style={[s.filterButton, s.mapDisc, appliedFilters.savedOnly && s.mapDiscOn]}
                 >
                   <Ionicons
                     name={appliedFilters.savedOnly ? 'bookmark' : 'bookmark-outline'}
@@ -1550,6 +1552,11 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
   filterButtonOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
+  // Map tiles are light in both schemes, so a disc that reads fine over
+  // the hero's dark scrim goes nearly invisible over them — it needs a
+  // ground of its own rather than the glass surface the rest of the row wears.
+  mapDisc: { backgroundColor: colors.bgElevated, borderColor: colors.borderGlassSoft },
+  mapDiscOn: { borderColor: colors.accentLine, borderWidth: 1 },
   viewToggle: {
     marginLeft: 'auto', flexDirection: 'row', gap: 2, padding: 3,
     borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,

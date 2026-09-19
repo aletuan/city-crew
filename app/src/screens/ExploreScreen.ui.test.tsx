@@ -862,6 +862,51 @@ describe('the map’s quick filters', () => {
     await act(async () => { fireEvent.click(saved); });
     expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
   });
+
+  // The disc's own label is the only place its three answers are spelled
+  // out in full — the badge just counts, it never says which.
+  it('cycles the status disc through its three answers, in words', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(screen.getByRole('button', { name: 'Opening hours: Any time' })).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    expect(screen.getByRole('button', { name: 'Opening hours: Open now' })).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    expect(screen.getByRole('button', { name: 'Opening hours: Closed now' })).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    expect(screen.getByRole('button', { name: 'Opening hours: Any time' })).toBeTruthy();
+  });
+
+  it('narrows the pinned places when the status disc picks Open now', async () => {
+    const week = (value: string) =>
+      ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        .map((day) => `${day}: ${value}`);
+    state.places.data = [
+      place('open', { lat: 21, lng: 105, opening_hours: week('Open 24 hours') }),
+      place('closed', { lat: 21.1, lng: 105.1, opening_hours: week('Closed') }),
+    ];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(2);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(1);
+  });
+
+  // The sheet's saved-only row has no `aria-checked` of its own (that was
+  // only added to the Opening-hours segments), so what a test can read
+  // back is the same glyph swap the reader sees — the filled bookmark
+  // rather than the outline — on the row the disc's press chose.
+  it('leaves the sheet’s Bookmarked only row showing checked after the disc set it', async () => {
+    state.uid = 'u1';
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /bookmarked only/i })); });
+    fireEvent.click(screen.getByTestId('explore-filter-pinned'));
+    const row = screen.getByRole('checkbox', { name: 'Bookmarked only' });
+    expect(row.querySelector('[data-icon="bookmark"]')).toBeTruthy();
+  });
 });
 
 describe('the community shelf', () => {
