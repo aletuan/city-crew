@@ -253,13 +253,23 @@ describe('PlacesMap', () => {
   // Explore reads one city at a time, so a reader who zoomed out past it
   // found an empty country. The other cities are somewhere to go.
   describe('the other cities', () => {
-    const SAIGON = [{ id: 'hcmc', name: 'Sài Gòn', lat: 10.7769, lng: 106.7009 }];
+    const SAIGON = [{ id: 'hcmc', name: 'Sài Gòn', count: 280, lat: 10.7769, lng: 106.7009 }];
 
     it('names each one where it stands', () => {
       render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} cities={SAIGON} onPickCity={() => {}} origin={null} fallback={HANOI} />);
       const pill = document.querySelector('[data-slug="city-hcmc"]')!;
       expect(pill).toBeTruthy();
+      expect(pill.textContent).toBe('Sài Gòn280');
+      expect(pill.getAttribute('data-label')).toBe('Sài Gòn, 280 places, switch to this city');
+    });
+
+    // A count that never comes leaves the marker exactly as quiet as it
+    // was — the same promise the city sheet makes.
+    it('says only the name until the count arrives', () => {
+      render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} category={null} cities={[{ ...SAIGON[0], count: null }]} onPickCity={() => {}} origin={null} fallback={HANOI} />);
+      const pill = document.querySelector('[data-slug="city-hcmc"]')!;
       expect(pill.textContent).toBe('Sài Gòn');
+      expect(pill.getAttribute('data-label')).toBe('Sài Gòn, switch to this city');
     });
 
     it('goes there when one is tapped, and does not report it as a place', () => {

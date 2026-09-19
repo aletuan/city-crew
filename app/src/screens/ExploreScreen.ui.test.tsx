@@ -128,6 +128,16 @@ vi.mock('../components/mapsModule', async () => {
 const mapState = vi.hoisted(() => ({ canDrawMap: true }));
 vi.mock('../components/MiniMap', () => ({ get canDrawMap() { return mapState.canDrawMap; } }));
 
+// The screen asks for the per-city counts when the map opens. Unmocked
+// that is a real request to the live project — `lib/supabase` falls back
+// to the production URL and anon key when the environment is empty, and
+// a test suite must not talk to it. Everything else in the module is the
+// real thing: these are the pure helpers the screen renders with.
+vi.mock('../lib/data', async (actual) => ({
+  ...(await actual() as object),
+  fetchPlaceCountByCity: vi.fn(async () => ({ hcmc: 280 })),
+}));
+
 import ExploreScreen from './ExploreScreen';
 
 const photo = (uri: string) => ({ photo_uri: uri, is_cover: true, is_hidden: false, sort_order: 0, attribution_name: null });

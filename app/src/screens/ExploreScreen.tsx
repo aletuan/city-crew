@@ -32,7 +32,7 @@ import WeatherLayer, { useWeatherStill, WEATHER_EFFECTS } from '../components/we
 import WeatherDebug, { DEBUG_DEFAULT, debugSky, type Debug } from '../components/weather/WeatherDebug';
 import type { Sky } from '../lib/weather';
 import { dateline } from '../lib/format';
-import { Collection, coverOf, membersOf, Place, touchesCity } from '../lib/data';
+import { Collection, coverOf, fetchPlaceCountByCity, membersOf, Place, touchesCity } from '../lib/data';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { useAuth } from '../lib/auth';
 import { useSave } from '../lib/save';
@@ -760,13 +760,26 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   });
   const [sortOrigin, setSortOrigin] = useState<ExploreOrigin | null>(null);
 
+  // How many places each other city is promising — the same figure the
+  // city sheet shows, from the same call. A name alone says a city
+  // exists; the number is what makes going there a decision. Asked once,
+  // on entering the map, and a call that never answers leaves the
+  // markers exactly as quiet as they were.
+  const [cityCounts, setCityCounts] = useState<Record<string, number>>({});
+
   // The cities this reader is not in. Named in their language and placed
   // at their centre; the map draws them only where the view is wide
   // enough to reach them, which is exactly when they are worth drawing.
   const elsewhere = useMemo(() => cities
     .filter((c) => c.id !== city?.id)
-    .map((c) => ({ id: c.id, name: t(c.short_en, c.short_vi, c.short_ja), lat: c.center_lat, lng: c.center_lng })),
-  [cities, city?.id, t]);
+    .map((c) => ({
+      id: c.id,
+      name: t(c.short_en, c.short_vi, c.short_ja),
+      count: cityCounts[c.id] ?? null,
+      lat: c.center_lat,
+      lng: c.center_lng,
+    })),
+  [cities, city?.id, cityCounts, t]);
   // How the places are looked at, remembered the way Collections
   // remembers its tiles-or-rows: one word in storage, read once on
   // mount. Until it has been read the list shows, which is also the
@@ -1051,6 +1064,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     if (!mapMode || askedRef.current) return;
     askedRef.current = true;
     void locate();
+    // Same trip, same reason: nothing off this city is drawn until the
+    // map is open, so nothing is asked for until then either.
+    fetchPlaceCountByCity().then(setCityCounts).catch(() => {});
   }, [mapMode, locate]);
 
   // The list is unmounted in map mode, and everything the screen derives

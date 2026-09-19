@@ -85,7 +85,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
    * found an empty map. These are not places and never join a cluster or
    * the fit: they are somewhere to go, and a tap goes there.
    */
-  cities: readonly { id: string; name: string; lat: number; lng: number }[];
+  cities: readonly { id: string; name: string; count: number | null; lat: number; lng: number }[];
   /** A tap on one of those. The screen makes it the city being read, and
    *  everything else on the screen follows. */
   onPickCity: (id: string) => void;
@@ -138,7 +138,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   // be listed here — a frozen marker keeps what it was frozen with.
   const shape = [
     clusters.map((c) => `${c.key}x${c.slugs.length}`).join('|'),
-    cities.map((c) => c.name).join('|'),
+    cities.map((c) => `${c.name}:${c.count ?? ''}`).join('|'),
   ].join('/');
   // `ready` is in here, not only `shape`: the countdown must start when
   // the native map exists, or on a slow first launch it can run out
@@ -259,15 +259,23 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
             tracksViewChanges={!settled}
             onPress={() => onPickCity(c.id)}
             accessibilityRole="button"
-            accessibilityLabel={t(
-              `${c.name}, switch to this city`,
-              `${c.name}, chuyển sang thành phố này`,
-              `${c.name}、この都市に切り替える`,
-            )}
+            accessibilityLabel={[
+              c.name,
+              c.count == null ? null : t(
+                `${c.count} ${c.count === 1 ? 'place' : 'places'}`,
+                `${c.count} địa điểm`,
+                `${c.count}件`,
+              ),
+              t('switch to this city', 'chuyển sang thành phố này', 'この都市に切り替える'),
+            ].filter(Boolean).join(', ')}
             testID={`city-${c.id}`}
           >
             <View style={s.city}>
               <Text style={s.cityName}>{c.name}</Text>
+              {/* A name says a city exists; the number is what makes
+                  going there a decision. Absent until the count arrives,
+                  and absent for good if it never does. */}
+              {c.count == null ? null : <Text style={s.cityCount}>{c.count}</Text>}
             </View>
           </Marker>
         ))}
@@ -296,10 +304,12 @@ const s = StyleSheet.create({
   // something more of what is already here. The deepest of the cluster
   // grounds rings it, which is what keeps it in the same family.
   city: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill,
     backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#9C6647',
     shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
     elevation: 4,
   },
   cityName: { color: '#17150F', fontSize: 13, fontWeight: '700' },
+  cityCount: { color: '#9C6647', fontSize: 13, fontWeight: '700' },
 });
