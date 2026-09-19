@@ -196,7 +196,7 @@ function SettingsCard() {
   const [open, setOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
-  const { scheme } = useScheme();
+  const { scheme, pref } = useScheme();
   const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語' }[lang];
 
   // TEMPORARY — the always-show switch for the welcome sheet. It exists
@@ -245,10 +245,14 @@ function SettingsCard() {
           value={langLabel ?? 'English'}
           onPress={() => setLangOpen(true)}
         />
+        {/* The glyph follows the ground showing, the words follow the
+            setting: on Auto the row reads "Automatic" beside whichever of
+            the moon or the sun the phone has chosen. Saying "Dark" there
+            would hide that the choice is the phone's. */}
         <SettingRow
           icon={scheme === 'light' ? 'sunny-outline' : 'moon-outline'}
           label={t('Appearance', 'Giao diện', '外観')}
-          value={schemeLabel(scheme, t)}
+          value={schemeLabel(pref, t)}
           onPress={() => setThemeOpen(true)}
         />
         {/* TEMPORARY. The sheet reads the flag when the app next starts,

@@ -43,6 +43,7 @@ vi.mock('../nav', async (orig) => ({
 const state = vi.hoisted(() => ({
   lang: 'en' as 'en' | 'vi' | 'ja',
   scheme: 'dark' as 'dark' | 'light',
+  pref: 'dark' as 'dark' | 'light' | 'system',
   ready: true,
   session: { user: { id: 'me' } } as { user: { id: string } } | null,
   email: 'minh.le@example.com' as string | null,
@@ -94,7 +95,9 @@ vi.mock('../lib/data', () => ({
 vi.mock('../lib/crew', () => ({ useCrew: () => ({ ships: { data: state.ships } }) }));
 vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine } }) }));
 vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city, mode: state.mode }) }));
-vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: state.scheme, setScheme: () => {}, ready: true }) }));
+vi.mock('../lib/theme', () => ({
+  useScheme: () => ({ scheme: state.scheme, pref: state.pref, setPref: () => {}, ready: true }),
+}));
 vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined }));
 // The key only; the real sheet drags in the whole onboarding tree.
 vi.mock('../components/WelcomeSheet', () => ({ WELCOME_ALWAYS_KEY: 'citycrew.welcomeAlways' }));
@@ -158,6 +161,7 @@ beforeEach(async () => {
   Object.assign(state, {
     lang: 'en' as Lang,
     scheme: 'dark',
+    pref: 'dark',
     ready: true,
     session: { user: { id: 'me' } },
     email: 'minh.le@example.com',
@@ -443,10 +447,15 @@ describe('settings card', () => {
     expect(screen.queryByText('close-language')).toBeNull();
   });
 
+  // Three cases, and the third is the one that carries the rule: on Auto
+  // the words follow the setting while the glyph follows the ground the
+  // phone picked, so the row reads "Automatic" beside a moon.
   it.each([
-    ['dark' as const, 'Dark', 'moon-outline'],
-    ['light' as const, 'Light', 'sunny-outline'],
-  ])('shows the %s scheme with its glyph and opens the theme sheet', (scheme, label, glyph) => {
+    ['dark' as const, 'dark' as const, 'Dark', 'moon-outline'],
+    ['light' as const, 'light' as const, 'Light', 'sunny-outline'],
+    ['system' as const, 'dark' as const, 'Automatic', 'moon-outline'],
+  ])('shows the %s setting with its glyph and opens the theme sheet', (pref, scheme, label, glyph) => {
+    state.pref = pref;
     state.scheme = scheme;
     draw();
     const row = screen.getByText('Appearance').parentElement!;
