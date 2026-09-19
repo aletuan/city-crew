@@ -732,6 +732,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
 export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city, cities, setCity } = useCity();
+  const light = useScheme().scheme === 'light';
   const { session } = useAuth();
   const { isSaved, askToSignIn } = useSave();
   const { loading, loaded, error, data: places, reload } = usePlaces();
@@ -1203,9 +1204,14 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       testID={floating ? 'explore-pinned-bar' : undefined}
       onLayout={floating ? (e) => setBarH(Math.round(e.nativeEvent.layout.height)) : undefined}
     >
+      {/* The same material the tab bar is made of, so the two edges of
+          the screen are one thing. Only the floating copy takes it: the
+          copy in the list is *in* the list, standing on the page rather
+          than over it, and glass on a flat ground is a flat ground. */}
+      {floating ? <GlassMaterial /> : null}
       <View style={s.filterHair} />
       <View style={s.placesHead}>
-        <Text style={s.placesTitle}>{t('Places', 'Địa điểm', 'スポット')}</Text>
+        <Text style={[s.placesTitle, floating && glassHalo(light)]}>{t('Places', 'Địa điểm', 'スポット')}</Text>
         <PressableScale
           onPress={() => setFilterOpen(true)}
           accessibilityRole="button"
@@ -1688,12 +1694,15 @@ const s = StyleSheet.create({
     paddingBottom: FILTER_PAD,
   },
   // And that copy: over the screen rather than in the list, so nothing
-  // it does can move a row or eat a tap meant for one. Opaque, because
-  // the list runs underneath it.
+  // it does can move a row or eat a tap meant for one. Glass rather than
+  // an opaque ground — the list runs underneath it and is worth seeing
+  // run, and the bar at the other edge of the screen is made of the same
+  // thing. `overflow: hidden` because the material fills the box and the
+  // box has no radius to clip it to otherwise.
   filterBarFloating: {
     position: 'absolute', left: 0, right: 0, top: 0,
     zIndex: 20,
-    backgroundColor: colors.bg,
+    overflow: 'hidden',
   },
   // Drawn only at the bottom, and only a hairline: it is where the header
   // block ends and the list begins, which is the one edge that has
