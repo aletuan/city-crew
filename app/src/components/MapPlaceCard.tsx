@@ -88,6 +88,9 @@ const s = StyleSheet.create({
   // Small: it is a echo of the pin, not a second heading. No border, so
   // it reads as the same ink the pin is drawn in.
   dot: { width: 9, height: 9, borderRadius: 4.5 },
-  name: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
+  // `flexShrink: 1`, because the name now shares a row with the dot and
+  // Yoga defaults shrink to 0 unlike CSS: without it a long name sizes to
+  // its own content and runs under the chevron instead of truncating.
+  name: { color: colors.text, fontSize: 15, fontWeight: font.semibold, flexShrink: 1 },
   facts: { color: colors.textSecondary, fontSize: 13, fontWeight: font.regular },
 });
