@@ -31,6 +31,9 @@ describe('MapPlaceCard', () => {
     expect(screen.getByText(/4\.6/)).toBeTruthy();
     expect(screen.getByText(/0\.8 km/)).toBeTruthy();
     expect(document.querySelector('img')?.getAttribute('src')).toBe('https://img/cong.jpg');
+    // The spoken name carries the facts as words, and never the star glyph.
+    const btn = screen.getByRole('button', { name: /rated 4\.6 \(1\.2k\), 0\.8 km/ });
+    expect(btn.getAttribute('aria-label')).not.toMatch(/★/);
   });
 
   // The hours are news only when they are about to matter: a place that

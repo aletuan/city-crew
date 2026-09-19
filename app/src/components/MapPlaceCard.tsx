@@ -42,7 +42,12 @@ export default function MapPlaceCard({ place, distanceKm, now, onPress }: {
   // The visual line carries a "★" glyph that screen readers should not
   // announce; speak the same facts as words so the listener hears name,
   // rating, distance, and hours without that confusing symbol.
-  const spoken = [name, ratingFact ? t(`rated ${ratingFact}`, `đánh giá ${ratingFact}`, `評価 ${ratingFact}`) : null, distanceFact, hours].filter((f): f is string => !!f).join(', ');
+  const spoken = [
+    name,
+    ratingFact ? t(`rated ${ratingFact}`, `đánh giá ${ratingFact}`, `評價 ${ratingFact}`) : null,
+    distanceFact,
+    hours,
+  ].filter((f): f is string => !!f).join(', ');
 
   return (
     <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={spoken} containerStyle={s.gutter} style={s.card}>
@@ -59,7 +64,10 @@ export default function MapPlaceCard({ place, distanceKm, now, onPress }: {
 }
 
 const s = StyleSheet.create({
-  gutter: { marginHorizontal: space.page }, // Positioning within the parent (e.g. map) goes in containerStyle, not style, so the outer Pressable stretches to the edge
+  // The inset lives on the outer Pressable (`containerStyle`), not the
+  // animated inner view: that keeps the page gutters outside the tap
+  // target, so a press beside the strip does not open the place.
+  gutter: { marginHorizontal: space.page },
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     padding: 10, paddingRight: 14,
