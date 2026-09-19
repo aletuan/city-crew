@@ -9,18 +9,22 @@
 //
 // Plain pins. A pin that is a View with a number in it is a View per
 // place, and Saigon has 251 of them; `tracksViewChanges={false}` and the
-// stock marker keep the map a map. The chosen one is coral, the rest are
-// ink on iOS and azure on Android — see `pinColor`.
+// stock marker keep the map a map. The chosen one is coral; the rest wear
+// the colour of their category — the same one the filter row's chip and
+// the detail page's glyph wear, so the map reads in the code the reader
+// already knows. A place with no category is ink on iOS and azure on
+// Android — see `pinColor`.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import { categoryColor } from '../lib/categories';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
 import { colors } from '../theme';
 import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
 
-/** The unchosen pin's colour — see the note on `pinColor`. */
+/** The unchosen, uncategorised pin's colour — see the note on `pinColor`. */
 const INK = Platform.select({ android: '#4A90D9', default: '#17150F' });
 
 class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
@@ -94,13 +98,15 @@ export default function PlacesMap({ places, selectedSlug, onSelect, origin, fall
             key={p.slug}
             identifier={p.slug}
             coordinate={{ latitude: p.lat, longitude: p.lng }}
-            // A fixed hex for the unchosen pin, not `colors.text`: that token
-            // is a `DynamicColorIOS` object on iOS and near-white on the dark
-            // scheme, and a white pin on a map is not a pin. iOS draws the
-            // hex as given; Android's stock marker keeps only its HSV hue,
-            // so the unchosen pin comes out azure there (hue 210°) rather
-            // than ink — still far from the chosen pin's coral (hue 7°).
-            pinColor={p.slug === selectedSlug ? colors.accentFill : INK}
+            // Category colours are fixed hexes, so they draw the same on
+            // both platforms' pins — iOS takes the hex as given, Android's
+            // stock marker keeps its HSV hue, which is the part that tells
+            // them apart. The uncategorised pin is a fixed hex too, not
+            // `colors.text`: that token is a `DynamicColorIOS` object on
+            // iOS and near-white on the dark scheme, and a white pin on a
+            // map is not a pin. It comes out azure on Android (hue 210°)
+            // rather than ink — still far from the chosen pin's coral.
+            pinColor={p.slug === selectedSlug ? colors.accentFill : (categoryColor(p) ?? INK)}
             // 251 pins overlap; a coral one buried behind three ink ones is
             // invisible. Put the chosen pin on top.
             zIndex={p.slug === selectedSlug ? 1 : 0}

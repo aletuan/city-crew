@@ -4,7 +4,7 @@
 // place quietly missing from a filter.
 
 import { describe, expect, it } from 'vitest';
-import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from './categories';
+import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryColor, categoryLabel } from './categories';
 import { VIBE_FALLBACK_COLOR, VIBES, vibeColor, vibeLabel } from './vibes';
 
 /** The app's `t`, in English. */
@@ -82,5 +82,24 @@ describe('vibes', () => {
   it('gives every vibe its own colour', () => {
     const colours = Object.values(VIBES).map((v) => v.color);
     expect(new Set(colours).size).toBe(colours.length);
+  });
+});
+
+describe('categoryColor', () => {
+  it('is the colour of the place’s one category', () => {
+    expect(categoryColor({ categories: ['views'] })).toBe(CATEGORIES.views.color);
+  });
+
+  it('picks the first category in the filter row’s order, not the stored order', () => {
+    expect(categoryColor({ categories: ['views', 'cafes'] })).toBe(CATEGORIES.cafes.color);
+  });
+
+  it('reaches the legacy fallback the same way categoriesOf does', () => {
+    expect(categoryColor({ vibe_tags: ['food_tour'] })).toBe(CATEGORIES.eats.color);
+  });
+
+  it('is null for a place nothing classifies, or one classified only by a key the row does not know', () => {
+    expect(categoryColor({})).toBeNull();
+    expect(categoryColor({ categories: ['street_food'] })).toBeNull();
   });
 });
