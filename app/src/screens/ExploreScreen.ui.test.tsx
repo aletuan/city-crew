@@ -761,12 +761,18 @@ describe('the map', () => {
     expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(1);
   });
 
+  // The spy below is set by a passive effect, not by the render the DOM
+  // assertion above it settles for — React flushes passive effects on its
+  // own schedule after commit, so a plain `expect` right after the map
+  // appears can win the race and fire before the effect has. Waiting for
+  // the spy itself, not for the frame it happens to follow, is what keeps
+  // this from flaking.
   it('asks for the reader’s position on entering, and does not fail without it', async () => {
     state.locationGranted = false;
     state.places.data = [place('a', { lat: 21, lng: 105 })];
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
-    expect(spies.getForegroundPermissionsAsync).toHaveBeenCalled();
+    await waitFor(() => expect(spies.getForegroundPermissionsAsync).toHaveBeenCalled());
   });
 
   it('shows the strip for a tapped pin, and opens the place from it', async () => {
@@ -789,7 +795,7 @@ describe('the map', () => {
     state.places.data = [place('p1', { lat: 21, lng: 105 })];
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
-    expect(spies.show).toHaveBeenCalled();
+    await waitFor(() => expect(spies.show).toHaveBeenCalled());
   });
 
   // The floating bar's ground is the page's own, not the hero's dark
@@ -800,9 +806,9 @@ describe('the map', () => {
     state.places.data = [place('a', { lat: 21, lng: 105 })];
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
-    expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('dark', true);
+    await waitFor(() => expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('dark', true));
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'List view' })); });
-    expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('light', true);
+    await waitFor(() => expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('light', true));
   });
 });
 
