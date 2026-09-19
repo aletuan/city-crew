@@ -17,8 +17,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import PlaceCard from '../components/PlaceCard';
-import ExploreFilterSheet from '../components/ExploreFilterSheet';
+import ExploreFilterSheet, { statusLabel } from '../components/ExploreFilterSheet';
 import { AddPill, AddSlot } from '../components/add';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useOwnedStatusBar, useTabBarClearance, useTabBarLift } from '../components/ui';
@@ -38,6 +39,11 @@ import { useSave } from '../lib/save';
 import { likesWorthShowing, rankByLikes } from '../lib/likes';
 import { bestFirst } from '../lib/rank';
 import { filterExplorePlaces, type ExploreFilters, type ExploreOrigin } from '../lib/exploreFilters';
+import { cycleStatus, parseView, VIEW_KEY, type ExploreView } from '../lib/exploreView';
+import { canDrawMap } from '../components/MiniMap';
+import PlacesMap from '../components/PlacesMap';
+import MapPlaceCard from '../components/MapPlaceCard';
+import { distanceKm } from '../lib/geo';
 import { useBrowseTaste } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
 import { VIBES } from '../lib/vibes';
@@ -753,6 +759,25 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     sort: 'recommended', status: 'any', savedOnly: false,
   });
   const [sortOrigin, setSortOrigin] = useState<ExploreOrigin | null>(null);
+  // How the places are looked at, remembered the way Collections
+  // remembers its tiles-or-rows: one word in storage, read once on
+  // mount. Until it has been read the list shows, which is also the
+  // default, so a reader who never chose sees no flicker.
+  const [view, setView] = useState<ExploreView>('list');
+  useEffect(() => {
+    // Only a value that was actually stored may set the view — the same
+    // guard Collections keeps. A null read on a fresh install must not
+    // land after a tap and undo it.
+    AsyncStorage.getItem(VIEW_KEY).then((v) => { if (v != null) setView(parseView(v)); }).catch(() => {});
+  }, []);
+  const pickView = (v: ExploreView) => {
+    setView(v);
+    AsyncStorage.setItem(VIEW_KEY, v).catch(() => {});
+  };
+  // Where the binary cannot draw a map there is no map mode, and no
+  // switch to reach it by. `view` may still say 'map' from a device that
+  // could; the list is what shows.
+  const mapMode = canDrawMap && view === 'map';
   const tabClearance = useTabBarClearance();
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -784,11 +809,23 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // Past once the photo's last 44pt are leaving — the moment the dark
   // ground stops being what is under the clock.
   heroEndRef.current = heroH - insets.top - 44;
+  // Map mode has no hero under the clock — the floating bar's own ground
+  // is `colors.bg`, the page's, not the hero's dark scrim — so it wants
+  // the scheme's own ink exactly the way past-the-hero already does.
+  const mapModeRef = useRef(false);
   // Null past the hero: there the page is its own ground again and the
   // right ink is exactly the scheme's own, which is what the hook's null
   // means. Taking, handing back, and the mid-transition cost all live in
   // `useOwnedStatusBar` — a place's screen wants the same thing.
-  const applyBar = useOwnedStatusBar(() => (pastHeroRef.current ? null : 'light'));
+  const applyBar = useOwnedStatusBar(() => ((pastHeroRef.current || mapModeRef.current) ? null : 'light'));
+  // `mapModeRef` mirrors `mapMode` for the closure above; this effect is
+  // what keeps the mirror honest and repaints on every crossing, both
+  // into map mode and back out of it — unlike the reset effect below,
+  // which only ever runs on the way in.
+  useEffect(() => {
+    mapModeRef.current = mapMode;
+    applyBar();
+  }, [mapMode, applyBar]);
 
   // Only categories this city actually has, so a chip never leads to an
   // empty list. Order comes from the taxonomy, not from the data.
@@ -875,34 +912,58 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
 
   const shown = useMemo(() => filteredFor(appliedFilters), [filteredFor, appliedFilters]);
 
+  // The map's own selection — the pin the reader has tapped, and the
+  // strip that stands for it. Cleared implicitly rather than watched: if
+  // a chip or a sort takes the selected place out of `shown`, `find`
+  // below simply returns null and the strip goes with it.
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const selected = useMemo(() => shown.find((p) => p.slug === selectedSlug) ?? null, [shown, selectedSlug]);
+  const selectedKm = selected && sortOrigin && selected.lat != null && selected.lng != null
+    ? distanceKm(sortOrigin.lat, sortOrigin.lng, selected.lat, selected.lng)
+    : null;
+
+  /**
+   * The reader's position, or the reason there is none.
+   *
+   * One function for the two callers that want a fix — the distance sort
+   * and the map — so the permission dance is asked once, in one place,
+   * and a refusal is one string rather than two.
+   */
+  const locate = useCallback(async (): Promise<{ origin: ExploreOrigin } | { refused: string }> => {
+    const held = await Location.getForegroundPermissionsAsync();
+    const permission = held.status === 'granted'
+      ? held
+      : await Location.requestForegroundPermissionsAsync();
+    if (permission.status !== 'granted') {
+      return { refused: t(
+        'Allow location access to sort places by distance.',
+        'Hãy cho phép truy cập vị trí để sắp xếp địa điểm theo khoảng cách.',
+        '距離順に並べるには位置情報を許可してください。',
+      ) };
+    }
+    const position = await Location.getLastKnownPositionAsync()
+      ?? await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }).catch(() => null);
+    if (!position) {
+      return { refused: t(
+        "Couldn't read your location. Try again in a moment.",
+        'Không thể xác định vị trí của bạn. Hãy thử lại sau giây lát.',
+        '位置情報を取得できませんでした。しばらくしてからもう一度お試しください。',
+      ) };
+    }
+    const origin = { lat: position.coords.latitude, lng: position.coords.longitude };
+    setSortOrigin(origin);
+    return { origin };
+  }, [t]);
+
   const applyFilters = useCallback(async (next: ExploreFilters): Promise<string | null> => {
     if (next.sort === 'distance' && !sortOrigin) {
-      const held = await Location.getForegroundPermissionsAsync();
-      const permission = held.status === 'granted'
-        ? held
-        : await Location.requestForegroundPermissionsAsync();
-      if (permission.status !== 'granted') {
-        return t(
-          'Allow location access to sort places by distance.',
-          'Hãy cho phép truy cập vị trí để sắp xếp địa điểm theo khoảng cách.',
-          '距離順に並べるには位置情報を許可してください。',
-        );
-      }
-      const position = await Location.getLastKnownPositionAsync()
-        ?? await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }).catch(() => null);
-      if (!position) {
-        return t(
-          "Couldn't read your location. Try again in a moment.",
-          'Không thể xác định vị trí của bạn. Hãy thử lại sau giây lát.',
-          '位置情報を取得できませんでした。しばらくしてからもう一度お試しください。',
-        );
-      }
-      setSortOrigin({ lat: position.coords.latitude, lng: position.coords.longitude });
+      const fix = await locate();
+      if ('refused' in fix) return fix.refused;
     }
     setAppliedFilters(next);
     setFilterOpen(false);
     return null;
-  }, [sortOrigin, t]);
+  }, [sortOrigin, locate]);
 
   const filterCount = (appliedFilters.sort === 'recommended' ? 0 : 1)
     + (appliedFilters.status === 'any' ? 0 : 1)
@@ -964,6 +1025,48 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const [pinned, setPinned] = useState(false);
   const pinnedRef = useRef(false);
   const pinAtRef = useRef(0);
+
+  // `show` surfaces the tab bar regardless of scroll — moved up here
+  // (its sibling `ducked` is still read below, by the nudge) because the
+  // reset effect just below needs it: the tab bar's only way onto this
+  // screen is a scroll-up (see `report` in `tabBarDuck.tsx`), and the map
+  // emits no scroll at all.
+  const { ducked, show } = useTabBarDuck();
+
+  // On entering the map, ask once. A refusal is not an error here — the
+  // map is still a map — so nothing is said; the strip simply carries no
+  // distance and there is no blue dot.
+  const askedRef = useRef(false);
+  // `locate` is in the dependencies and is remade whenever `t` is; the
+  // ref is what keeps that from asking twice. Leave the array as it is.
+  useEffect(() => {
+    if (!mapMode || askedRef.current) return;
+    askedRef.current = true;
+    void locate();
+  }, [mapMode, locate]);
+
+  // The list is unmounted in map mode, and everything the screen derives
+  // from its scroll — the hero's parallax, whether the bar has pinned,
+  // the clock's ink past the hero, the weather's pause, which card is
+  // first — is updated only by the list's own events. Left alone it
+  // would still say "scrolled" when the list comes back at offset 0. So
+  // entering the map puts all of it back to rest; the list returns to a
+  // screen that agrees with it. The tab bar is shown by scrolling up,
+  // which the map never does, so it is surfaced here too rather than
+  // left ducked with nothing above it to bring it back.
+  useEffect(() => {
+    if (!mapMode) return;
+    scrollY.setValue(0);
+    pinnedRef.current = false;
+    setPinned(false);
+    pastHeroRef.current = false;
+    applyBar();
+    heroGone.set(false);
+    setFirst(0);
+    show();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refs and once-built setters; only the mode matters
+  }, [mapMode]);
+
   const onScrollJS = useRef((e: { nativeEvent: { contentOffset: { y: number } } }) => {
     const y = e.nativeEvent.contentOffset.y;
     if (y < 320) setFirst(0);
@@ -999,7 +1102,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // The offer may borrow the tab bar's dock only while the bar is away —
   // the sharing rules live in lib/nudge.ts. The gate keeps no timer, so
   // eligibility re-polls it once the settle time has passed.
-  const { ducked } = useTabBarDuck();
   const nudgeGate = useRef(createNudgeGate()).current;
   const [nudge, setNudge] = useState(false);
   useEffect(() => navigation.addListener('focus', () => {
@@ -1022,6 +1124,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * collections at all.
    */
   const [headerH, setHeaderH] = useState(0);
+  // The floating bar's own measured height, in map mode: there the bar
+  // stands in permanently for the list's scrolled-away copy, and the map
+  // beneath it has to start clear of it rather than guess its height.
+  const [barH, setBarH] = useState(0);
   // Where the list header ends is where the block begins, so the crossing
   // is that offset plus the block's own padding, less the inset the
   // floating copy will put above the heading instead.
@@ -1050,6 +1156,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         ? [s.filterBar, s.filterBarFloating, { paddingTop: insets.top }]
         : [s.filterBar, { paddingTop: FILTER_PAD }]}
       testID={floating ? 'explore-pinned-bar' : undefined}
+      onLayout={floating ? (e) => setBarH(Math.round(e.nativeEvent.layout.height)) : undefined}
     >
       <View style={s.filterHair} />
       <View style={s.placesHead}>
@@ -1098,6 +1205,31 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             </View>
           ) : null}
         </PressableScale>
+        {canDrawMap ? (
+          <View style={s.viewToggle} testID={floating ? 'explore-view-pinned' : 'explore-view'}>
+            {(['list', 'map'] as const).map((v) => (
+              <PressableScale
+                key={v}
+                style={[s.viewBtn, view === v && s.viewBtnOn]}
+                scaleTo={0.9}
+                haptic="selection"
+                hitSlop={6}
+                onPress={() => pickView(v)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: view === v }}
+                accessibilityLabel={v === 'map'
+                  ? t('Map view', 'Dạng bản đồ', '地図表示')
+                  : t('List view', 'Dạng danh sách', 'リスト表示')}
+              >
+                <Ionicons
+                  name={v === 'map' ? 'map-outline' : 'list-outline'}
+                  size={15}
+                  color={view === v ? colors.accent : colors.textTertiary}
+                />
+              </PressableScale>
+            ))}
+          </View>
+        ) : null}
       </View>
       <ScrollView
         horizontal
@@ -1132,7 +1264,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
       {/* Over everything, and only once the copy in the list has gone
           under the clock. Rendered rather than hidden, so it takes no
           touches and costs no layout while the reader is at the top. */}
-      {pinned ? bar(true) : null}
+      {pinned && !mapMode ? bar(true) : null}
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         {holding && (
@@ -1152,7 +1284,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`, `読み込みに失敗しました: ${error}`)} />
           </View>
         )}
-        {!holding && !error && (
+        {!holding && !error && !mapMode && (
           <Animated.SectionList
             // One section, whose only job is to give the filter row
             // something to be the header of.
@@ -1211,6 +1343,88 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             onViewableItemsChanged={onViewable}
             viewabilityConfig={viewabilityConfig}
           />
+        )}
+        {!holding && !error && mapMode && city && (
+          <View style={{ flex: 1 }}>
+            {/* The bar's in-list copy has nothing to scroll away with
+                here, so the floating copy stands in for it permanently:
+                heading, switch, chips, all clear of the clock. */}
+            {bar(true)}
+            {/* `marginTop`, not padding: the map fills its parent with
+                `absoluteFill`, and an absolutely placed child ignores the
+                parent's padding — it would sit under the opaque bar. The
+                bar measures itself (it already carries `insets.top`), so
+                nothing is added to the figure it reports. */}
+            <View style={[s.mapBody, { marginTop: barH }]}>
+              {/* Two of the sheet's questions, answerable without opening
+                  it — the two a person standing on a street asks. They
+                  write to what is applied, which is why nothing has to be
+                  synchronised: the badge, the sheet and this row read the
+                  same state. Sort stays in the sheet; a cycling button for
+                  three sorts is a slot machine. */}
+              <View style={s.mapQuick}>
+                <PressableScale
+                  onPress={() => {
+                    setAppliedFilters((f) => ({ ...f, status: cycleStatus(f.status) }));
+                  }}
+                  haptic="selection"
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('Opening hours', 'Giờ mở cửa', '営業時間')}: ${statusLabel(appliedFilters.status, t)}`}
+                  accessibilityState={{ selected: appliedFilters.status !== 'any' }}
+                  hitSlop={4}
+                  style={[s.filterButton, s.mapDisc, appliedFilters.status !== 'any' && s.mapDiscOn]}
+                >
+                  <Ionicons
+                    name={appliedFilters.status === 'closed' ? 'time' : 'time-outline'}
+                    size={19}
+                    color={appliedFilters.status !== 'any' ? colors.accent : colors.textSecondary}
+                  />
+                </PressableScale>
+                <PressableScale
+                  onPress={() => {
+                    if (!session) { askToSignIn(); return; }
+                    setAppliedFilters((f) => ({ ...f, savedOnly: !f.savedOnly }));
+                  }}
+                  haptic="selection"
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')}
+                  accessibilityState={{ selected: appliedFilters.savedOnly }}
+                  hitSlop={4}
+                  style={[s.filterButton, s.mapDisc, appliedFilters.savedOnly && s.mapDiscOn]}
+                >
+                  <Ionicons
+                    name={appliedFilters.savedOnly ? 'bookmark' : 'bookmark-outline'}
+                    size={19}
+                    color={appliedFilters.savedOnly ? colors.accent : colors.textSecondary}
+                  />
+                </PressableScale>
+              </View>
+              <PlacesMap
+                places={shown}
+                selectedSlug={selectedSlug}
+                onSelect={setSelectedSlug}
+                origin={sortOrigin}
+                // Where the map opens with neither a fix nor a pin: the
+                // city's own centre. `city` is in the render condition
+                // above precisely so this never has to invent one.
+                fallback={{ lat: city.center_lat, lng: city.center_lng }}
+                // The map's box already starts under the bar (`marginTop`
+                // above), so the top inset is only breathing room; the
+                // bottom clears the strip and the tab bar beneath it.
+                edgePadding={{ top: 24, right: 40, bottom: tabClearance + 100, left: 40 }}
+              />
+              {selected ? (
+                <View style={[s.mapStrip, { bottom: tabClearance + 12 }]}>
+                  <MapPlaceCard
+                    place={selected}
+                    distanceKm={selectedKm}
+                    now={new Date()}
+                    onPress={() => navigation.navigate('PlaceDetail', { slug: selected.slug })}
+                  />
+                </View>
+              ) : null}
+            </View>
+          </View>
         )}
         {/* Last, so it draws over the list — in the tab bar's own dock,
             which the bar has vacated whenever this is visible. */}
@@ -1338,6 +1552,18 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
   filterButtonOn: { backgroundColor: colors.accentSoft, borderColor: colors.accentLine },
+  // Map tiles are light in both schemes, so a disc that reads fine over
+  // the hero's dark scrim goes nearly invisible over them — it needs a
+  // ground of its own rather than the glass surface the rest of the row wears.
+  mapDisc: { backgroundColor: colors.bgElevated, borderColor: colors.borderGlassSoft },
+  mapDiscOn: { borderColor: colors.accentLine, borderWidth: 1 },
+  viewToggle: {
+    marginLeft: 'auto', flexDirection: 'row', gap: 2, padding: 3,
+    borderRadius: radius.pill, backgroundColor: colors.surfaceGlass,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  viewBtn: { width: 30, height: 26, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  viewBtnOn: { backgroundColor: colors.bgElevated },
   filterBadge: {
     position: 'absolute', top: -3, right: -3,
     minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4,
@@ -1441,4 +1667,14 @@ const s = StyleSheet.create({
   shelfLikeHit: { marginLeft: 'auto' },
   shelfLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
+  mapBody: { flex: 1 },
+  mapStrip: { position: 'absolute', left: 0, right: 0 },
+  // Top-left of the map, in the same discs as the sort control: the
+  // reader has already learned what that disc means.
+  // `pointerEvents` as a style, not a prop: the prop form is deprecated in
+  // this React Native, and a style travels with the element it is on.
+  mapQuick: {
+    position: 'absolute', left: space.page, top: 12, zIndex: 5,
+    flexDirection: 'row', gap: 10, pointerEvents: 'box-none',
+  },
 });

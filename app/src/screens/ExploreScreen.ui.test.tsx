@@ -12,6 +12,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
@@ -47,6 +48,7 @@ const spies = vi.hoisted(() => ({
   settle: vi.fn(),
   reportStartup: vi.fn(),
   setStatusBarStyle: vi.fn(),
+  show: vi.fn(),
   getForegroundPermissionsAsync: vi.fn(async () => ({ status: state.locationGranted ? 'granted' : 'denied' })),
   requestForegroundPermissionsAsync: vi.fn(async () => ({ status: state.locationGranted ? 'granted' : 'denied' })),
   getLastKnownPositionAsync: vi.fn(async () => (state.locationGranted
@@ -85,7 +87,7 @@ vi.mock('../lib/theme', () => ({
 vi.mock('../lib/tasteProfile', () => ({ useBrowseTaste: () => state.taste }));
 vi.mock('../lib/sky', () => ({ useSky: () => state.sky }));
 vi.mock('../components/tabBarDuck', () => ({
-  useTabBarDuck: () => ({ ducked: state.ducked }),
+  useTabBarDuck: () => ({ ducked: state.ducked, show: spies.show }),
   useDuckOnScroll: () => undefined,
 }));
 // The sheet has its own suite (CitySwitcher.ui.test.tsx); what Explore owes
@@ -109,6 +111,20 @@ vi.mock('../nav', () => ({ goTo: spies.goTo }));
 vi.mock('../lib/trace', () => ({ startupTrace: { mark: spies.mark, marks: () => [] } }));
 vi.mock('../lib/launch', () => ({ launchSettled: { settle: spies.settle } }));
 vi.mock('../lib/tracereport', () => ({ reportStartup: spies.reportStartup }));
+vi.mock('../components/mapsModule', async () => {
+  const R = await import('react');
+  const MapView = R.forwardRef((p: any, ref: any) => {
+    R.useImperativeHandle(ref, () => ({ fitToCoordinates: () => {} }));
+    return R.createElement('div', { 'data-stub': 'MapView', 'data-testid': p.testID }, p.children);
+  });
+  const Marker = (p: any) => R.createElement('button', { type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier, onClick: p.onPress });
+  return { MapView, Marker, PROVIDER_GOOGLE: 'google' };
+});
+// The verdict on whether a map can be drawn is the binary's, not the
+// test's; here it is a switch the test flips. Mocking `MiniMap` is also
+// what keeps `expo-constants` out of jsdom.
+const mapState = vi.hoisted(() => ({ canDrawMap: true }));
+vi.mock('../components/MiniMap', () => ({ get canDrawMap() { return mapState.canDrawMap; } }));
 
 import ExploreScreen from './ExploreScreen';
 
@@ -251,7 +267,7 @@ const seeCards = (...idx: (number | null)[]) =>
 
 const cardNames = () => screen.getAllByTestId(/^place-card-\d+$/).map((el) => el.textContent ?? '');
 
-beforeEach(() => {
+beforeEach(async () => {
   state.city = { ...hanoi };
   state.places = { loading: false, loaded: true, error: null, data: [], reload: () => {} };
   state.cols = { loaded: true, data: [] };
@@ -265,6 +281,8 @@ beforeEach(() => {
   state.sky = null;
   state.ducked = false;
   state.scheme = 'dark';
+  mapState.canDrawMap = true;
+  await AsyncStorage.removeItem('citycrew.explore.view');
   Object.values(spies).forEach((s) => s.mockClear());
 });
 
@@ -670,6 +688,224 @@ describe('the pinned chips row', () => {
     expect(screen.queryByText('Sort & filter')).toBeNull();
     fireEvent.click(screen.getByTestId('explore-filter'));
     expect(screen.getByText('Sort & filter')).toBeTruthy();
+  });
+});
+
+describe('the view switch', () => {
+  it('starts on the list, and offers the map beside the heading', () => {
+    state.places.data = [place('p1')];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.getByTestId('explore-list')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Map view' })).toBeTruthy();
+    expect(screen.queryByTestId('places-map')).toBeNull();
+  });
+
+  // The map itself arrives in the next task; what this one owns is the
+  // choice and its memory — so this test asks only what the switch wrote.
+  it('remembers the choice', async () => {
+    state.places.data = [place('p1')];
+    render(<ExploreScreen navigation={nav()} />);
+    // Let the mount-time storage read settle before tapping: its `.then`
+    // is a microtask, and inside the click's `act` it would land *after*
+    // the tap and put the list back.
+    await act(async () => {});
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Map view' })); });
+    expect(screen.queryByTestId('explore-list')).toBeNull();
+    expect(await AsyncStorage.getItem('citycrew.explore.view')).toBe('map');
+  });
+
+  // No map in this binary — Expo Go on an iPhone, a build without the
+  // key — means no switch: a control that leads to a blank is worse than
+  // no control.
+  it('offers no switch where the binary cannot draw a map', () => {
+    mapState.canDrawMap = false;
+    state.places.data = [place('p1')];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.queryByRole('button', { name: 'Map view' })).toBeNull();
+  });
+});
+
+describe('the map', () => {
+  beforeEach(async () => { await AsyncStorage.setItem('citycrew.explore.view', 'map'); });
+
+  it('opens on the map when that is what was remembered', async () => {
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(screen.queryByTestId('explore-list')).toBeNull();
+  });
+
+  it('switches from the list to the map on the spot, and keeps the way back', async () => {
+    await AsyncStorage.setItem('citycrew.explore.view', 'list');
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await act(async () => {}); // the stored 'list' lands here, not after the tap
+    expect(screen.getByTestId('explore-list')).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Map view' })); });
+    expect(screen.getByTestId('places-map')).toBeTruthy();
+    // The bar — and with it the switch — must survive the tap, or map mode
+    // is a room with no door. In map mode there is exactly one copy.
+    expect(screen.getByTestId('explore-view-pinned')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'List view' })).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'List view' })); });
+    expect(screen.getByTestId('explore-list')).toBeTruthy();
+    expect(screen.queryByTestId('places-map')).toBeNull();
+  });
+
+  it('pins exactly the places the list would show, after the same filters', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105, categories: ['cafes'] }), place('b', { lat: 21.1, lng: 105.1, categories: ['heritage'] })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(2);
+    fireEvent.click(screen.getByText('Cafés'));
+    expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(1);
+  });
+
+  // The spy below is set by a passive effect, not by the render the DOM
+  // assertion above it settles for — React flushes passive effects on its
+  // own schedule after commit, so a plain `expect` right after the map
+  // appears can win the race and fire before the effect has. Waiting for
+  // the spy itself, not for the frame it happens to follow, is what keeps
+  // this from flaking.
+  it('asks for the reader’s position on entering, and does not fail without it', async () => {
+    state.locationGranted = false;
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await waitFor(() => expect(spies.getForegroundPermissionsAsync).toHaveBeenCalled());
+  });
+
+  it('shows the strip for a tapped pin, and opens the place from it', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105, rating: 4.6 })];
+    const navigation = nav();
+    render(<ExploreScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(screen.queryByText('Place a')).toBeNull();
+    await act(async () => { fireEvent.click(document.querySelector('[data-slug="a"]')!); });
+    fireEvent.click(screen.getByRole('button', { name: /Place a/ }));
+    expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'a' });
+  });
+
+  // The tab bar's only way onto this screen is a scroll-up — the map
+  // never scrolls — so a reader who ducked it on the list and then
+  // switched to the map must not be left with a strip floating above no
+  // bar at all.
+  it('surfaces the tab bar on entering the map', async () => {
+    state.ducked = true;
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await waitFor(() => expect(spies.show).toHaveBeenCalled());
+  });
+
+  // The floating bar's ground is the page's own, not the hero's dark
+  // scrim, so map mode wants the scheme's own ink rather than the
+  // light type the hero always asks for.
+  it('wears the scheme’s own ink over the bar, not the hero’s light', async () => {
+    state.scheme = 'light';
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await waitFor(() => expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('dark', true));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'List view' })); });
+    await waitFor(() => expect(spies.setStatusBarStyle).toHaveBeenLastCalledWith('light', true));
+  });
+});
+
+describe('the map’s quick filters', () => {
+  beforeEach(async () => { await AsyncStorage.setItem('citycrew.explore.view', 'map'); });
+
+  // The buttons write to what is *applied*, not to a draft: the badge on
+  // the sort control counts them at once, and opening the sheet shows
+  // them already chosen. One state, three views of it.
+  it('cycles the status and the sort control counts it', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    const status = screen.getByRole('button', { name: /opening hours/i });
+    await act(async () => { fireEvent.click(status); });
+    expect(screen.getByRole('button', { name: 'Filter and sort places, 1 applied' })).toBeTruthy();
+    await act(async () => { fireEvent.click(status); });
+    await act(async () => { fireEvent.click(status); });
+    expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
+  });
+
+  it('shows the sheet already on Open now after the button chose it', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    fireEvent.click(screen.getByTestId('explore-filter-pinned'));
+    // `checked`, not `selected`: Testing Library refuses `selected` on a
+    // radio, and react-native-web drops `accessibilityState` entirely —
+    // the sheet gains an `aria-checked` in this task so the DOM carries it.
+    expect(screen.getByRole('radio', { name: 'Open now', checked: true })).toBeTruthy();
+  });
+
+  it('asks a guest to sign in instead of switching on Bookmarked only', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /bookmarked only/i })); });
+    expect(spies.askToSignIn).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
+  });
+
+  it('switches Bookmarked only on and off for a signed-in reader', async () => {
+    state.uid = 'u1';
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    const saved = screen.getByRole('button', { name: /bookmarked only/i });
+    await act(async () => { fireEvent.click(saved); });
+    expect(screen.getByRole('button', { name: 'Filter and sort places, 1 applied' })).toBeTruthy();
+    await act(async () => { fireEvent.click(saved); });
+    expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
+  });
+
+  // The disc's own label is the only place its three answers are spelled
+  // out in full — the badge just counts, it never says which.
+  it('cycles the status disc through its three answers, in words', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(screen.getByRole('button', { name: 'Opening hours: Any time' })).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    expect(screen.getByRole('button', { name: 'Opening hours: Open now' })).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    expect(screen.getByRole('button', { name: 'Opening hours: Closed now' })).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    expect(screen.getByRole('button', { name: 'Opening hours: Any time' })).toBeTruthy();
+  });
+
+  it('narrows the pinned places when the status disc picks Open now', async () => {
+    const week = (value: string) =>
+      ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        .map((day) => `${day}: ${value}`);
+    state.places.data = [
+      place('open', { lat: 21, lng: 105, opening_hours: week('Open 24 hours') }),
+      place('closed', { lat: 21.1, lng: 105.1, opening_hours: week('Closed') }),
+    ];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(2);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    expect(document.querySelectorAll('[data-stub="Marker"]')).toHaveLength(1);
+  });
+
+  // The sheet's saved-only row has no `aria-checked` of its own (that was
+  // only added to the Opening-hours segments), so what a test can read
+  // back is the same glyph swap the reader sees — the filled bookmark
+  // rather than the outline — on the row the disc's press chose.
+  it('leaves the sheet’s Bookmarked only row showing checked after the disc set it', async () => {
+    state.uid = 'u1';
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /bookmarked only/i })); });
+    fireEvent.click(screen.getByTestId('explore-filter-pinned'));
+    const row = screen.getByRole('checkbox', { name: 'Bookmarked only' });
+    expect(row.querySelector('[data-icon="bookmark"]')).toBeTruthy();
   });
 });
 
