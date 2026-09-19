@@ -27,6 +27,7 @@ import { shortAddress } from '../lib/address';
 import { splitName, subtitleBeside } from '../lib/name';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
+import MiniMap from '../components/MiniMap';
 import { clockOf, dotWindow, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { mapsSearchUrl } from '../lib/maps';
@@ -53,7 +54,17 @@ import type { Nav, RootRoute } from '../nav';
 // are the links, the way a phone number is in Contacts — and a row that
 // goes nowhere stays grey. One mark per row, and it is the row's own
 // content.
-function InfoRow({ label, first, onPress, children }: {
+/**
+ * A fact, with the glyph that names its kind in a gutter down the left.
+ *
+ * The glyph is not decoration and it is not a second copy of the label:
+ * it is the thing that lets the eye find the phone number without
+ * reading, and it gives the card a left edge the values line up against.
+ * The hairline starts where the labels do rather than at the card's edge,
+ * so the gutter reads as one column rather than as four interruptions.
+ */
+function InfoRow({ icon, label, first, onPress, children }: {
+  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   /** The row that opens the card draws no hairline above itself. */
   first?: boolean;
@@ -61,15 +72,20 @@ function InfoRow({ label, first, onPress, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      style={[s.infoStack, !first && s.rowDivider]}
-      accessibilityRole={onPress ? 'button' : undefined}
-    >
-      <Text style={s.infoLabel}>{label}</Text>
-      {children}
-    </Pressable>
+    <View style={!first && s.rowDivider}>
+      <Pressable
+        onPress={onPress}
+        disabled={!onPress}
+        style={s.infoStack}
+        accessibilityRole={onPress ? 'button' : undefined}
+      >
+        <Ionicons name={icon} size={19} color={colors.textTertiary} style={s.infoIcon} />
+        <View style={s.infoWords}>
+          <Text style={s.infoLabel}>{label}</Text>
+          {children}
+        </View>
+      </Pressable>
+    </View>
   );
 }
 
@@ -432,6 +448,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             <Card style={s.infoGroup}>
               {place.address && (
                 <InfoRow
+                  icon="location-outline"
                   label={t('Address', 'Địa chỉ', '住所')}
                   first={firstRow === 'address'}
                   onPress={mapsUrl
@@ -452,11 +469,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                       rather than going red. */}
                   <Pressable
                     onPress={() => setHoursOpen((v) => !v)}
-                    style={s.infoRow}
+                    style={s.infoStack}
                     accessibilityRole="button"
                     accessibilityState={{ expanded: hoursOpen }}
                   >
-                    <View style={{ flex: 1 }}>
+                    <Ionicons name="time-outline" size={19} color={colors.textTertiary} style={s.infoIcon} />
+                    <View style={s.infoWords}>
                       <Text style={s.infoLabel}>{t('Hours', 'Giờ mở cửa', '営業時間')}</Text>
                       {openNow ? (
                         <Text style={[s.openNow, !openNow.open && s.openNowShut]}>
@@ -488,6 +506,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     <Ionicons name={hoursOpen ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textTertiary} />
                   </Pressable>
                   {hoursOpen && (
+                    // Indented to the gutter the values keep, so the table
+                    // reads as this row's working rather than as a fifth fact.
                     <View style={s.hoursTable}>
                       {hours.map((row) => (
                         <View key={row.label} style={s.hourRow}>
@@ -502,6 +522,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
               {place.phone && (
                 <InfoRow
+                  icon="call-outline"
                   label={t('Phone', 'Điện thoại', '電話番号')}
                   first={firstRow === 'phone'}
                   onPress={() => open(
@@ -515,6 +536,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
               {place.website && (
                 <InfoRow
+                  icon="globe-outline"
                   label={t('Website', 'Trang web', 'ウェブサイト')}
                   first={firstRow === 'website'}
                   onPress={() => open(
@@ -529,11 +551,44 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               )}
             </Card>
           )}
+
+          {/* ── where it is ──
+
+              Under the facts, not above them: the address answers "where"
+              for anyone who already knows the city, and the map is for
+              everyone else. A tap anywhere on it hands off to Maps, which
+              is the only thing this view can usefully do — routing,
+              street view and the rest live there.
+
+              Frozen (`interactive={false}`), because a live map inside a
+              vertical scroll is a hole the page cannot be scrolled
+              through. It draws nothing at all where the binary has no
+              Google Maps SDK — Expo Go on iOS, or a build made without
+              the key — and `MiniMap` returns null rather than explaining
+              itself to a reader who cannot act on it. */}
+          {place.lat != null && place.lng != null && mapsUrl && (
+            <View style={s.mapCard}>
+              <MiniMap
+                lat={place.lat}
+                lng={place.lng}
+                height={168}
+                interactive={false}
+                onPick={() => open(
+                  mapsUrl,
+                  t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'),
+                )}
+              />
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
   );
 }
+
+/** The left column the glyphs sit in, and the inset every hairline and
+ *  every continuation under a row lines up against. Glyph 19, air 14. */
+const GUTTER = 33;
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
@@ -656,12 +711,24 @@ const s = StyleSheet.create({
   // The Card supplies ground, border and radius; the horizontal inset
   // lives here so each row's hairline can run to the card's edge.
   infoGroup: { marginTop: 18, paddingHorizontal: space.cardPadding },
+  // The same 18 the info card keeps above itself, so the page has one
+  // rhythm rather than a card that happens to sit near another.
+  mapCard: { marginTop: 18 },
   // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
   // A row is a column — label, then value. Only Hours lays itself across,
   // for the chevron at its end.
-  infoStack: { paddingVertical: 17 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 17 },
-  rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
+  infoStack: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 17 },
+  // Nudged down to sit on the label's cap height rather than above it:
+  // a 19pt glyph top-aligned with 12pt type floats.
+  infoIcon: { width: GUTTER - 14, marginTop: 1 },
+  infoWords: { flex: 1 },
+  // Starts where the labels start. Run to the card's edge it cut the
+  // gutter into four pieces; inset, the glyphs read as one column.
+  rowDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
+    marginLeft: GUTTER,
+  },
   infoLabel: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
     textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 5,
@@ -676,7 +743,7 @@ const s = StyleSheet.create({
   // it is the working it was derived from.
   openNow: { color: colors.open, fontSize: 15.5, fontWeight: font.semibold },
   openNowShut: { color: colors.textTertiary },
-  hoursTable: { paddingBottom: 16 },
+  hoursTable: { paddingBottom: 16, paddingLeft: GUTTER },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   hourDay: { color: colors.ink, fontSize: 14.5, fontWeight: font.medium },
   hourTime: { color: colors.ink, fontSize: 14.5, fontWeight: font.regular },

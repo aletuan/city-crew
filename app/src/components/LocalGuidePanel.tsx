@@ -42,7 +42,7 @@ import {
   type PhotoRefusal,
 } from '../lib/guide';
 import type { Place } from '../lib/types';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, radius, space } from '../theme';
 import { PressableScale, successHaptic } from './ui';
 
 const BUCKET = 'place-photos';
@@ -151,25 +151,23 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
 
   return (
     <View style={s.panel} testID={testID}>
-      {/* The app's own mark rather than a camera glyph.
-          A camera said what the button below it already says, twice on one
-          card — and said it about the tool instead of about who is being
-          asked. This panel only ever shows to the person who put the place
-          here, so the mark that belongs at its head is the one they
-          recognise. The artwork carries its own cut-out background, so it
-          reads on either ground. */}
-      <View style={s.mark}>
-        <Image source={welcomeLogo} style={s.markLogo} contentFit="contain" />
-      </View>
-      <View style={s.words}>
-        <Text style={s.title}>{t('Your place', 'Địa điểm của bạn', 'あなたの場所')}</Text>
-        <Text style={s.sub}>
-          {t(
-            'Help keep this place up to date',
-            'Giúp giữ địa điểm này luôn đúng',
-            'この場所を最新に保ちましょう',
-          )}
-        </Text>
+      <View style={s.head}>
+        {/* The app's own mark rather than a camera glyph.
+            A camera said what the button beside it already says, twice on
+            one card — and said it about the tool instead of about who is
+            being asked. This panel only ever shows to the person who put
+            the place here, so the mark that belongs at its head is the one
+            they recognise. The artwork carries its own cut-out background,
+            so it reads on either ground. */}
+        <View style={s.mark}>
+          <Image source={welcomeLogo} style={s.markLogo} contentFit="contain" />
+        </View>
+        <View style={s.words}>
+          <Text style={s.title}>{t('Your place', 'Địa điểm của bạn', 'あなたの場所')}</Text>
+          <Text style={s.sub}>
+            {t('Keep it up to date', 'Giữ địa điểm luôn đúng', '最新に保ちましょう')}
+          </Text>
+        </View>
         <PressableScale
           onPress={busy ? undefined : add}
           accessibilityRole="button"
@@ -182,23 +180,26 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
             ? <ActivityIndicator color={colors.accentInk} />
             : (
               <>
-                <Ionicons name="camera" size={17} color={colors.accentInk} />
+                <Ionicons name="camera" size={16} color={colors.accentInk} />
                 <Text style={s.buttonText}>{t('Add photo', 'Thêm ảnh', '写真を追加')}</Text>
               </>
             )}
         </PressableScale>
-        {/* What the person is saying by choosing one. Kept where it can be
-            read before the picker opens rather than behind a confirm — a
-            dialog between the button and the camera roll is a tap that
-            teaches nobody anything. */}
-        <Text style={s.note}>
-          {t(
-            'A photo chosen from my own Photos',
-            'Ảnh lựa chọn từ Photos của tôi',
-            '自分の写真から選んだ画像',
-          )}
-        </Text>
       </View>
+      {/* What the person is saying by choosing one. Full width under the
+          row rather than squeezed beside the button: it is a sentence, and
+          a 120pt column would break it over three ragged lines.
+
+          Read before the picker opens rather than behind a confirm — a
+          dialog between the button and the camera roll is a tap that
+          teaches nobody anything. */}
+      <Text style={s.note}>
+        {t(
+          'A photo chosen from my own Photos',
+          'Ảnh lựa chọn từ Photos của tôi',
+          '自分の写真から選んだ画像',
+        )}
+      </Text>
     </View>
   );
 }
@@ -208,11 +209,15 @@ const s = StyleSheet.create({
   // fill: it is an offer rather than a fact, and everything around it —
   // the facts row, the info card — is glass or paper.
   panel: {
-    flexDirection: 'row', gap: 14, alignItems: 'flex-start',
     backgroundColor: colors.accentSoft,
     borderRadius: radius.card, padding: space.cardPadding,
     marginTop: space.headingToContent,
   },
+  // The mark, the words and the button on one line, where they used to
+  // stack. Stacked, this card ran 183pt — a third of the first screen,
+  // spent on an affordance only the person who added the place can even
+  // see, and paid for by pushing the opening hours below the fold.
+  head: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   mark: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
@@ -221,18 +226,27 @@ const s = StyleSheet.create({
   // Inside the 40pt disc with a little air: the logo is drawn to its own
   // edges, where a 22pt glyph came with padding built in.
   markLogo: { width: 26, height: 26 },
-  words: { flex: 1, gap: 3 },
-  title: { color: colors.accent, ...type.cardTitle },
-  sub: { color: colors.textSecondary, fontSize: 14 },
+  words: { flex: 1, gap: 2 },
+  // A size down from `type.cardTitle`: the words share their line with a
+  // button now, and the heading of a two-line aside is not a card title.
+  title: { color: colors.accent, fontSize: 15.5, fontWeight: font.semibold },
+  // "Keep it up to date", not "Help keep this place up to date". The
+  // longer sentence wrapped to three lines in the ~140pt the button
+  // leaves, and every word it lost was already said by the title above
+  // it and the button beside it.
+  sub: { color: colors.textSecondary, fontSize: 13 },
   // `containerStyle`, not `style`: PressableScale puts `style` on its inner
   // animated view and only `containerStyle` on the Pressable, so a width
   // set on the wrong one leaves the button its content's size.
-  buttonSlot: { alignSelf: 'flex-start', marginTop: 9 },
+  buttonSlot: { flexShrink: 0 },
+  // Narrower than it was — 14pt of padding and a 16pt glyph rather than
+  // 18 and 17 — because it shares the line now. Still 44 high: a target
+  // may lose width to its neighbours and never height.
   button: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    minHeight: 44, paddingHorizontal: 18,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    minHeight: 44, paddingHorizontal: 14,
     borderRadius: radius.pill, backgroundColor: colors.accentFill,
   },
-  buttonText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
-  note: { color: colors.textTertiary, fontSize: 12, marginTop: 8 },
+  buttonText: { color: colors.accentInk, fontSize: 14.5, fontWeight: font.semibold },
+  note: { color: colors.textTertiary, fontSize: 12, marginTop: 10 },
 });
