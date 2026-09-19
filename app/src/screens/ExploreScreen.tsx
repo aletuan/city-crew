@@ -19,7 +19,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PlaceCard from '../components/PlaceCard';
-import ExploreFilterSheet from '../components/ExploreFilterSheet';
+import ExploreFilterSheet, { statusLabel } from '../components/ExploreFilterSheet';
 import { AddPill, AddSlot } from '../components/add';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useOwnedStatusBar, useTabBarClearance, useTabBarLift } from '../components/ui';
@@ -39,7 +39,7 @@ import { useSave } from '../lib/save';
 import { likesWorthShowing, rankByLikes } from '../lib/likes';
 import { bestFirst } from '../lib/rank';
 import { filterExplorePlaces, type ExploreFilters, type ExploreOrigin } from '../lib/exploreFilters';
-import { parseView, VIEW_KEY, type ExploreView } from '../lib/exploreView';
+import { cycleStatus, parseView, VIEW_KEY, type ExploreView } from '../lib/exploreView';
 import { canDrawMap } from '../components/MiniMap';
 import PlacesMap from '../components/PlacesMap';
 import MapPlaceCard from '../components/MapPlaceCard';
@@ -1356,6 +1356,47 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                 bar measures itself (it already carries `insets.top`), so
                 nothing is added to the figure it reports. */}
             <View style={[s.mapBody, { marginTop: barH }]}>
+              {/* Two of the sheet's questions, answerable without opening
+                  it — the two a person standing on a street asks. They
+                  write to what is applied, which is why nothing has to be
+                  synchronised: the badge, the sheet and this row read the
+                  same state. Sort stays in the sheet; a cycling button for
+                  three sorts is a slot machine. */}
+              <View style={s.mapQuick}>
+                <PressableScale
+                  onPress={() => {
+                    fireHaptic('selection');
+                    setAppliedFilters((f) => ({ ...f, status: cycleStatus(f.status) }));
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('Opening hours', 'Giờ mở cửa', '営業時間')}: ${statusLabel(appliedFilters.status, t)}`}
+                  accessibilityState={{ selected: appliedFilters.status !== 'any' }}
+                  style={[s.filterButton, appliedFilters.status !== 'any' && s.filterButtonOn]}
+                >
+                  <Ionicons
+                    name={appliedFilters.status === 'closed' ? 'time' : 'time-outline'}
+                    size={19}
+                    color={appliedFilters.status !== 'any' ? colors.accent : colors.textSecondary}
+                  />
+                </PressableScale>
+                <PressableScale
+                  onPress={() => {
+                    if (!session) { askToSignIn(); return; }
+                    fireHaptic('selection');
+                    setAppliedFilters((f) => ({ ...f, savedOnly: !f.savedOnly }));
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')}
+                  accessibilityState={{ selected: appliedFilters.savedOnly }}
+                  style={[s.filterButton, appliedFilters.savedOnly && s.filterButtonOn]}
+                >
+                  <Ionicons
+                    name={appliedFilters.savedOnly ? 'bookmark' : 'bookmark-outline'}
+                    size={19}
+                    color={appliedFilters.savedOnly ? colors.accent : colors.textSecondary}
+                  />
+                </PressableScale>
+              </View>
               <PlacesMap
                 places={shown}
                 selectedSlug={selectedSlug}
@@ -1621,4 +1662,12 @@ const s = StyleSheet.create({
 
   mapBody: { flex: 1 },
   mapStrip: { position: 'absolute', left: 0, right: 0 },
+  // Top-left of the map, in the same discs as the sort control: the
+  // reader has already learned what that disc means.
+  // `pointerEvents` as a style, not a prop: the prop form is deprecated in
+  // this React Native, and a style travels with the element it is on.
+  mapQuick: {
+    position: 'absolute', left: space.page, top: 12, zIndex: 5,
+    flexDirection: 'row', gap: 10, pointerEvents: 'box-none',
+  },
 });

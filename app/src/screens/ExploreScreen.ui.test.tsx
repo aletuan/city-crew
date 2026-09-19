@@ -812,6 +812,58 @@ describe('the map', () => {
   });
 });
 
+describe('the map’s quick filters', () => {
+  beforeEach(async () => { await AsyncStorage.setItem('citycrew.explore.view', 'map'); });
+
+  // The buttons write to what is *applied*, not to a draft: the badge on
+  // the sort control counts them at once, and opening the sheet shows
+  // them already chosen. One state, three views of it.
+  it('cycles the status and the sort control counts it', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    const status = screen.getByRole('button', { name: /opening hours/i });
+    await act(async () => { fireEvent.click(status); });
+    expect(screen.getByRole('button', { name: 'Filter and sort places, 1 applied' })).toBeTruthy();
+    await act(async () => { fireEvent.click(status); });
+    await act(async () => { fireEvent.click(status); });
+    expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
+  });
+
+  it('shows the sheet already on Open now after the button chose it', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    fireEvent.click(screen.getByTestId('explore-filter-pinned'));
+    // `checked`, not `selected`: Testing Library refuses `selected` on a
+    // radio, and react-native-web drops `accessibilityState` entirely —
+    // the sheet gains an `aria-checked` in this task so the DOM carries it.
+    expect(screen.getByRole('radio', { name: 'Open now', checked: true })).toBeTruthy();
+  });
+
+  it('asks a guest to sign in instead of switching on Bookmarked only', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /bookmarked only/i })); });
+    expect(spies.askToSignIn).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
+  });
+
+  it('switches Bookmarked only on and off for a signed-in reader', async () => {
+    state.uid = 'u1';
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    const saved = screen.getByRole('button', { name: /bookmarked only/i });
+    await act(async () => { fireEvent.click(saved); });
+    expect(screen.getByRole('button', { name: 'Filter and sort places, 1 applied' })).toBeTruthy();
+    await act(async () => { fireEvent.click(saved); });
+    expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
+  });
+});
+
 describe('the community shelf', () => {
   it('shows only lists with a member in this city, most liked first', () => {
     state.places.data = [place('p1'), place('p2'), place('far', { city_id: 'saigon' })];
