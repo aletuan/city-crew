@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import { CATEGORIES } from '../lib/categories';
+import { appFlags } from '../lib/flags';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
 
@@ -283,6 +284,9 @@ const seeCards = (...idx: (number | null)[]) =>
 const cardNames = () => screen.getAllByTestId(/^place-card-\d+$/).map((el) => el.textContent ?? '');
 
 beforeEach(async () => {
+  // The switches back to their shipped positions, so one test turning
+  // the credit off cannot leave it off for the rest of the file.
+  appFlags.reset();
   state.city = { ...hanoi };
   state.cities = null;
   state.index = [];
@@ -416,6 +420,20 @@ describe('the hero photograph', () => {
     state.places.data = [place('a', { place_photos: [photo('a.jpg')] })];
     render(<ExploreScreen navigation={nav()} />);
     expect(heroSrc()).toBe('a.jpg');
+    expect(screen.queryByText('@studio')).toBeNull();
+  });
+
+  // One switch for both credits — `photo_attribution` in `app_flags`,
+  // the same row the place photos answer to. It was written for Google's
+  // terms and now governs a photograph somebody handed us as well, which
+  // is a deliberate sharing rather than an accident.
+  it('hides the credit when the shared attribution switch is off', () => {
+    appFlags.set('photo_attribution', false);
+    state.city = { ...hanoi, hero_photo_uri: 'city.jpg', hero_photo_credit: '@studio' };
+    state.places.data = [place('a', { place_photos: [photo('a.jpg')] })];
+    render(<ExploreScreen navigation={nav()} />);
+    // The photograph stays; only the name over it goes.
+    expect(heroSrc()).toBe('city.jpg');
     expect(screen.queryByText('@studio')).toBeNull();
   });
 
