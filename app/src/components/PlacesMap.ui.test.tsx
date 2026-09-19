@@ -20,9 +20,14 @@ const spies = vi.hoisted(() => ({ fitToCoordinates: vi.fn() }));
 vi.mock('./MiniMap', () => ({ canDrawMap: true }));
 vi.mock('./mapsModule', async () => {
   const R = await import('react');
+  // A click on the stub stands in for the native map's own `onMapReady` —
+  // there is no frame to wait for in jsdom, so a tap is the only way a
+  // test can say "the map is ready now".
   const MapView = R.forwardRef((p: any, ref: any) => {
     R.useImperativeHandle(ref, () => ({ fitToCoordinates: spies.fitToCoordinates }));
-    return R.createElement('div', { 'data-stub': 'MapView', 'data-user': String(!!p.showsUserLocation) }, p.children);
+    return R.createElement('div', {
+      'data-stub': 'MapView', 'data-user': String(!!p.showsUserLocation), onClick: p.onMapReady,
+    }, p.children);
   });
   const Marker = (p: any) => R.createElement('button', {
     type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier,
@@ -30,9 +35,6 @@ vi.mock('./mapsModule', async () => {
   });
   return { MapView, Marker, PROVIDER_GOOGLE: 'google' };
 });
-vi.mock('../lib/i18n', () => ({
-  useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
-}));
 
 import PlacesMap from './PlacesMap';
 
@@ -45,39 +47,76 @@ const place = (slug: string, lat: number | null, lng: number | null): Place =>
   ({ slug, name_en: slug, name_vi: slug, name_ja: null, lat, lng, place_photos: [], categories: [], vibe_tags: [] } as unknown as Place);
 
 const markers = () => [...document.querySelectorAll('[data-stub="Marker"]')];
+const mapView = () => document.querySelector('[data-stub="MapView"]')!;
+const HANOI = { lat: 21.0285, lng: 105.8542 };
 
 describe('PlacesMap', () => {
   it('pins every place that has coordinates, and skips the ones that do not', () => {
-    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1), place('c', null, null)]} selectedSlug={null} onSelect={() => {}} origin={null} />);
+    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1), place('c', null, null)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
     expect(markers().map((m) => m.getAttribute('data-slug'))).toEqual(['a', 'b']);
   });
 
   it('draws the chosen pin in the accent and the rest in ink', () => {
-    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug="b" onSelect={() => {}} origin={null} />);
+    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug="b" onSelect={() => {}} origin={null} fallback={HANOI} />);
     const [a, b] = markers();
-    expect(b.getAttribute('data-color')).not.toBe(a.getAttribute('data-color'));
+    expect(b.getAttribute('data-color')).toBe('#FF6F5B');
+    expect(a.getAttribute('data-color')).toBe('#17150F');
+  });
+
+  it('falls back to ink for every pin when the chosen slug matches none of them', () => {
+    render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug="zzz" onSelect={() => {}} origin={null} fallback={HANOI} />);
+    const [a, b] = markers();
+    expect(a.getAttribute('data-color')).toBe('#17150F');
+    expect(b.getAttribute('data-color')).toBe('#17150F');
   });
 
   it('reports which pin was tapped', () => {
     const onSelect = vi.fn();
-    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={onSelect} origin={null} />);
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={onSelect} origin={null} fallback={HANOI} />);
     fireEvent.click(markers()[0]);
     expect(onSelect).toHaveBeenCalledWith('a');
   });
 
   it('shows the reader’s own position', () => {
-    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} origin={null} />);
-    expect(document.querySelector('[data-stub="MapView"]')?.getAttribute('data-user')).toBe('true');
+    render(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    expect(mapView().getAttribute('data-user')).toBe('true');
   });
 
-  // The pins are the reason to look; the first thing the map does is show
-  // all of them. And again whenever the set changes — a filter that
-  // narrows the list to three places should not leave the reader looking
-  // at an empty quarter of the city.
-  it('fits the view to the pins, and refits when they change', () => {
-    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} origin={null} />);
+  // The pins are the reason to look; the first thing the map does, once it
+  // is ready, is show all of them. And again whenever the set changes — a
+  // filter that narrows the list to three places should not leave the
+  // reader looking at an empty quarter of the city.
+  it('fits the view to the pins once ready, and refits when they change', () => {
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    expect(spies.fitToCoordinates).not.toHaveBeenCalled();
+
+    fireEvent.click(mapView());
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(1);
-    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} origin={null} />);
+    expect(spies.fitToCoordinates).toHaveBeenLastCalledWith(
+      [{ latitude: 21, longitude: 105 }, { latitude: 21.1, longitude: 105.1 }],
+      expect.objectContaining({ animated: false }),
+    );
+
+    rerender(<PlacesMap places={[place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
     expect(spies.fitToCoordinates).toHaveBeenCalledTimes(2);
+    expect(spies.fitToCoordinates).toHaveBeenLastCalledWith(
+      [{ latitude: 21, longitude: 105 }],
+      expect.objectContaining({ animated: false }),
+    );
+  });
+
+  it('does not refit when the same pins reappear in a different order', () => {
+    const { rerender } = render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    fireEvent.click(mapView());
+    expect(spies.fitToCoordinates).toHaveBeenCalledTimes(1);
+
+    rerender(<PlacesMap places={[place('b', 21.1, 105.1), place('a', 21, 105)]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    expect(spies.fitToCoordinates).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fit when there is nothing to pin', () => {
+    render(<PlacesMap places={[]} selectedSlug={null} onSelect={() => {}} origin={null} fallback={HANOI} />);
+    fireEvent.click(mapView());
+    expect(spies.fitToCoordinates).not.toHaveBeenCalled();
   });
 });

@@ -12,8 +12,8 @@
 // stock marker keep the map a map. The chosen one is coral, the rest are
 // ink — same two states as everything else that can be chosen here.
 
-import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
 import { colors } from '../theme';
@@ -21,7 +21,7 @@ import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
 
 /** The unchosen pin's colour — see the note on `pinColor`. */
-const INK = '#17150F';
+const INK = Platform.select({ android: '#4A90D9', default: '#17150F' }) as string;
 
 class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -33,42 +33,53 @@ type Pinned = Place & { lat: number; lng: number };
 const pinned = (places: readonly Place[]): Pinned[] =>
   places.filter((p): p is Pinned => p.lat != null && p.lng != null);
 
-export default function PlacesMap({ places, selectedSlug, onSelect, origin }: {
+export default function PlacesMap({ places, selectedSlug, onSelect, origin, fallback, edgePadding = { top: 80, right: 40, bottom: 160, left: 40 } }: {
   places: readonly Place[];
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
   /** The reader's fix, if they gave one — the first place the view
    *  centres on when there is nothing chosen yet. */
   origin: ExploreOrigin | null;
+  /** Where to open when there is neither a fix nor a pin — the city's
+   *  centre, which the screen always knows. */
+  fallback: ExploreOrigin;
+  /** The screen that measures its header passes what it measured. */
+  edgePadding?: { top: number; right: number; bottom: number; left: number };
 }) {
   const ref = useRef<any>(null);
+  const [ready, setReady] = useState(false);
   const pins = pinned(places);
 
   // Show all the pins, and show them again whenever the set changes.
-  const key = pins.map((p) => p.slug).join('|');
+  const key = pins.map((p) => p.slug).sort().join('|');
   useEffect(() => {
-    if (!pins.length) return;
+    if (!ready || !pins.length) return;
     ref.current?.fitToCoordinates(
       pins.map((p) => ({ latitude: p.lat, longitude: p.lng })),
-      { edgePadding: { top: 80, right: 40, bottom: 160, left: 40 }, animated: false },
+      { edgePadding, animated: false },
     );
-  // The joined slugs are the honest dependency; `pins` is a new array each render.
+  // The set is the honest dependency; a re-sort must not snap the map back.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [key, ready]);
 
-  if (!MapView || !Marker) return <View style={s.fill} testID="places-map-missing" />;
+  // Every pin here is Google Places content, which the API's terms allow
+  // showing only on Google's own map — see the licence note atop
+  // `MiniMap.tsx`. No Google map is not a reason to fall back to Apple's;
+  // it is a reason to show no map at all.
+  if (!canDrawMap || !Marker) return <View style={s.fill} testID="places-map-missing" />;
 
-  const first = origin ?? (pins[0] ? { lat: pins[0].lat, lng: pins[0].lng } : { lat: 0, lng: 0 });
+  const first = origin ?? (pins[0] ? { lat: pins[0].lat, lng: pins[0].lng } : fallback);
   return (
     <Boundary>
       <MapView
         ref={ref}
         style={s.fill}
-        provider={canDrawMap ? PROVIDER_GOOGLE : undefined}
+        provider={PROVIDER_GOOGLE}
         initialRegion={{ latitude: first.lat, longitude: first.lng, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
         showsUserLocation
         showsMyLocationButton={false}
         toolbarEnabled={false}
+        onMapReady={() => setReady(true)}
         testID="places-map"
       >
         {pins.map((p) => (
@@ -78,9 +89,14 @@ export default function PlacesMap({ places, selectedSlug, onSelect, origin }: {
             coordinate={{ latitude: p.lat, longitude: p.lng }}
             // A fixed hex for the unchosen pin, not `colors.text`: that token
             // is a `DynamicColorIOS` object on iOS and near-white on the dark
-            // scheme, and a white pin on a map is not a pin. Ink stays ink on
-            // Google's map whatever the app's scheme.
+            // scheme, and a white pin on a map is not a pin. iOS draws the
+            // hex as given; Android's stock marker keeps only its HSV hue,
+            // so the unchosen pin comes out azure there (hue 210°) rather
+            // than ink — still far from the chosen pin's coral (hue 7°).
             pinColor={p.slug === selectedSlug ? colors.accentFill : INK}
+            // 251 pins overlap; a coral one buried behind three ink ones is
+            // invisible. Put the chosen pin on top.
+            zIndex={p.slug === selectedSlug ? 1 : 0}
             tracksViewChanges={false}
             onPress={() => onSelect(p.slug)}
           />
