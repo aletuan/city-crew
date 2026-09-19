@@ -41,22 +41,29 @@ import { goTo, type Nav, type RootRoute } from '../nav';
 const MAX_TITLE = 60;
 
 /**
- * The cover picker's shape: four tiles to a line.
+ * The cover picker's shape: three tiles to a line.
  *
  * It was one horizontal row of 64pt thumbs, and two things were wrong
  * with that. The thumbs were too small to tell one dim bar interior from
  * another, and a row that scrolls sideways hides most of what it holds —
  * four and a half chips visible out of ten, with nothing saying there are
- * more.
+ * more. A grid fixed the second problem straight away.
  *
- * Four rather than three, which was the first proposal. Three gives
- * bigger tiles (109 against 80 on a 393pt phone) but costs a whole extra
- * row, and height is the one thing this screen cannot spend: it is a
- * form, its first field takes focus on open, and the keyboard is over
- * the lower 336pt of it while the reader is typing. Four lands the usual
- * ten chips in three rows instead of four.
+ * The first took two goes. Four to a line was chosen over three to save
+ * a row, on the argument that height is what a form cannot spend: its
+ * first field takes focus on open and the keyboard covers the lower
+ * third while the reader types. The argument was sound and the result
+ * was still too small — the owner looked at four on the phone and asked
+ * for bigger, which is the only test this particular question has. This
+ * catalog is mostly night photography, and 80pt of a dim bar interior is
+ * not enough to tell it from the next dim bar interior.
+ *
+ * Three gives 112 a side against 82 on a 402pt phone: a third wider, and
+ * near twice the area to judge a photograph by. The price is the extra
+ * row it was meant to save, and the price is affordable because the
+ * screen scrolls — the keyboard hides rows, it does not forbid them.
  */
-const COVER_COLS = 4;
+const COVER_COLS = 3;
 const COVER_GAP = 10;
 
 export default function CollectionFormScreen({ navigation, route }: {
@@ -154,14 +161,13 @@ export default function CollectionFormScreen({ navigation, route }: {
   const choices = held && !perPlace.some((c) => c.ph.id === held.ph.id)
     ? [held as { ph: typeof held.ph & { id: string }; place: Place }, ...perPlace]
     : perPlace;
-  // Four to a line, sized off the window rather than guessed: the page
-  // gives up `space.page` at each edge and `COVER_GAP` three times
-  // between the tiles, and what is left divides by four. Measured on a
-  // 393pt phone that is 79.75 a side — a quarter more than the 64 the
-  // scrolling row used, and on the small phones it shrinks with the
-  // page instead of pushing a fifth tile half off the screen.
-  // Floored, not rounded: four tiles plus three gaps have to come in
-  // under the line, and a fraction over sends the fourth to the next row.
+  // Sized off the window rather than guessed: the page gives up
+  // `space.page` at each edge and `COVER_GAP` between each pair of
+  // tiles, and what is left divides by `COVER_COLS`. On a 402pt phone
+  // that is 112 a side; on the small phones it shrinks with the page
+  // instead of pushing a tile half off the screen.
+  // Floored, not rounded: the tiles plus their gaps have to come in
+  // under the line, and a fraction over sends the last to the next row.
   // The leftover — under a point — sits at the end of each row.
   //
   // Width and height stay on `style` rather than `containerStyle`, where
