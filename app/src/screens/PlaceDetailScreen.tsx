@@ -760,25 +760,29 @@ const VALUE_LINE = 24;
 /** Everything above the first line of the value. */
 const ABOVE_VALUE = LABEL_LINE + LABEL_GAP;
 /**
- * The box a glyph is centred in: the label's own line.
+ * Where a glyph sits, and how much room it is given to sit in.
  *
- * Which makes the row a two-column grid and says so — glyph beside the
- * name of the thing, the thing itself beneath:
+ * Two numbers, because the last version conflated them and clipped every
+ * icon on the card. It gave the glyph a box of `LABEL_LINE` — fifteen
+ * points — and a comment claiming that a 19pt glyph would simply overflow
+ * it, top and bottom, because "the box is a position, not a frame".
  *
- *     [icon] ADDRESS
- *            27/16 Ng. 18 Huỳnh Thúc Kháng
- *            [map]
+ * It is a frame. A `Text` constrained to a height shorter than its own
+ * line lays out inside that height and the glyph is cut at the bottom
+ * edge, which is exactly what shipped: the pin and the handset with their
+ * feet sliced off. The claim was one I could not check from here and
+ * should not have written as a fact.
  *
- * Half-way between the label and the value was measured off the reference
- * and shipped, and on the phone it read as a glyph belonging to neither
- * line. Level with the label it belongs to the label, which is the row's
- * name, and the grid is legible instead of merely balanced.
+ * So the box is bigger than any 19pt line can be, and the *position* is
+ * carried by a negative margin instead: centred, the box's middle lands
+ * on `LABEL_LINE / 2`, which is the middle of the label's line. The glyph
+ * is level with the word it names, and it has room to be drawn whole.
  *
- * The glyph is 19pt in a 15pt box and overflows it evenly, top and
- * bottom: the box is a position, not a frame. Nothing is clipped — the
- * row's 17pt of padding is more than the 7 it spills.
+ * Its footprint is 20.5pt against the words column's 44 or more, so
+ * nothing here sets a row's height either way.
  */
-const GLYPH_BOX = LABEL_LINE;
+const GLYPH_BOX = 26;
+const GLYPH_LIFT = (LABEL_LINE - GLYPH_BOX) / 2;
 
 /** How much of a long address the card shows before it asks. Two, because
  *  two is where the map still fits above the fold on the shortest phone
@@ -971,10 +975,16 @@ const s = StyleSheet.create({
   // and had no answer for a second line of address. Then the first line
   // of the value. Then the label's line.
   //
-  infoIconSlot: { width: GUTTER, height: GLYPH_BOX, justifyContent: 'center' },
+  infoIconSlot: {
+    width: GUTTER, height: GLYPH_BOX, marginTop: GLYPH_LIFT,
+    justifyContent: 'center', overflow: 'visible',
+  },
   infoWords: { flex: 1, minWidth: 0 },
   // The same box at the other end of the row, so both ends stay level.
-  infoChevronSlot: { height: GLYPH_BOX, justifyContent: 'center' },
+  infoChevronSlot: {
+    height: GLYPH_BOX, marginTop: GLYPH_LIFT,
+    justifyContent: 'center', overflow: 'visible',
+  },
   // Starts where the labels start. Run to the card's edge it cut the
   // gutter into four pieces; inset, the glyphs read as one column.
   //
