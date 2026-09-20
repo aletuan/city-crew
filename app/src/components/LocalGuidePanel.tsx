@@ -34,6 +34,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import welcomeLogo from '../../assets/welcome-logo.png';
 import { useAuth } from '../lib/auth';
+import { greetingName } from '../lib/greet';
 import { useI18n } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 import { addPlacePhoto, fetchMyPhotoCounts, fetchPlaceId, useIsLocalGuide } from '../lib/data';
@@ -54,8 +55,9 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
   testID?: string;
 }) {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const uid = session?.user?.id ?? null;
+  const who = greetingName(profile?.full_name);
   const { data: granted } = useIsLocalGuide(uid);
   const [busy, setBusy] = useState(false);
   const [counts, setCounts] = useState({ mineHere: 0, mineToday: 0 });
@@ -163,9 +165,34 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
           <Image source={welcomeLogo} style={s.markLogo} contentFit="contain" />
         </View>
         <View style={s.words}>
-          <Text style={s.title}>{t('Your place', 'Địa điểm của bạn', 'あなたの場所')}</Text>
+          {/* Their name, then a question.
+              Not "Your place / Keep it up to date", which was a claim of
+              ownership followed by a chore — and this panel is neither.
+              It appears to exactly one person, the one who went and put
+              this café in front of everybody else, so it says their name
+              and asks.
+
+              A question is also the form that survives being read for
+              the tenth time, which matters here: the panel shows every
+              time its author opens their own place.
+
+              `greetingName` picks the word — the last one, which is the
+              given name in a Vietnamese name and the name English greets
+              with too; see that module for why the family name would
+              have been wrong in both. It answers null for a profile with
+              no usable name, and then this greets a stranger rather than
+              guessing, because "Chào 2024," is worse than "Chào bạn,". */}
+          <Text style={s.title} numberOfLines={1}>
+            {who
+              ? t(`Hi ${who},`, `Chào ${who},`, `${who}さん、`)
+              : t('Hi there,', 'Chào bạn,', 'こんにちは、')}
+          </Text>
           <Text style={s.sub}>
-            {t('Keep it up to date', 'Giữ địa điểm luôn đúng', '最新に保ちましょう')}
+            {t(
+              'Would you like to add more photos?',
+              'Bạn muốn bổ sung thêm ảnh chứ?',
+              'もっと写真を追加しませんか？',
+            )}
           </Text>
         </View>
         <PressableScale
@@ -216,10 +243,10 @@ const s = StyleSheet.create({
   // A size down from `type.cardTitle`: the words share their line with a
   // button now, and the heading of a two-line aside is not a card title.
   title: { color: colors.accent, fontSize: 15.5, fontWeight: font.semibold },
-  // "Keep it up to date", not "Help keep this place up to date". The
-  // longer sentence wrapped to three lines in the ~140pt the button
-  // leaves, and every word it lost was already said by the title above
-  // it and the button beside it.
+  // The sub has ~140pt beside the button, which is about twenty
+  // characters at this size — the reason both these lines are curt. An
+  // earlier draft read "Help keep this place up to date" and wrapped to
+  // three ragged lines in that space.
   sub: { color: colors.textSecondary, fontSize: 13 },
   // `containerStyle`, not `style`: PressableScale puts `style` on its inner
   // animated view and only `containerStyle` on the Pressable, so a width
