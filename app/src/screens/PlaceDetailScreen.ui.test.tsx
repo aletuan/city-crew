@@ -319,10 +319,46 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.queryByText(/reviews/)).toBeNull();
   });
 
-  it('has no rating badge for an unrated place', () => {
+  it('has no rating line at all for an unrated place', () => {
     show(place({ rating: null }));
     expect(screen.queryByText(/reviews/)).toBeNull();
+    expect(screen.queryByTestId('detail-rating')).toBeNull();
     expect(document.querySelector('[data-icon="star"]')).toBeNull();
+  });
+
+  // ── the rating is a line under the name, not a badge beside it ──
+  //
+  // Both halves of this matter and neither is enough alone. Under the old
+  // markup the rating was also "present" and also "after the name" in
+  // document order — it was a sibling of the column the name lived in, one
+  // level up. Asserting the shared parent is what distinguishes a line
+  // below the title from a box next to it, and the shared parent is the
+  // whole point: it is what gives the name the full width of the card.
+  it('puts the rating in the title column, below the name, not beside it', () => {
+    show();
+    const name = screen.getByTestId('detail-name');
+    const rating = screen.getByTestId('detail-rating');
+    expect(rating.parentElement).toBe(name.parentElement);
+    expect(name.compareDocumentPosition(rating) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('reads the score and the count on one line, separated by a dot', () => {
+    show();
+    const rating = screen.getByTestId('detail-rating');
+    expect(rating.textContent).toBe('4.6\u00b71.2k reviews');
+  });
+
+  // Four stops for one fact is what this avoids: the star glyph, the
+  // number, a lone middle dot, then the count.
+  it('speaks the rating as a single phrase', () => {
+    show();
+    expect(screen.getByTestId('detail-rating').getAttribute('aria-label'))
+      .toBe('4.6 \u2014 1.2k reviews');
+  });
+
+  it('says only the score when nobody is counted', () => {
+    show(place({ rating_count: null }));
+    expect(screen.getByTestId('detail-rating').getAttribute('aria-label')).toBe('4.6');
   });
 
   it('names the category with its own glyph', () => {
