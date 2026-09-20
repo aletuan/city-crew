@@ -43,6 +43,7 @@ const state = vi.hoisted(() => ({
   lang: 'en' as 'en' | 'vi' | 'ja',
   guide: false,
   uid: null as string | null,
+  price: false,
 }));
 const spies = vi.hoisted(() => ({
   save: vi.fn(),
@@ -86,7 +87,13 @@ vi.mock('../lib/save', () => ({
   useSave: () => ({ save: spies.save, isSaved: (slug: string) => state.saved.includes(slug) }),
 }));
 vi.mock('../lib/tasteProfile', () => ({ useNoteEvent: () => spies.note }));
-vi.mock('../lib/useFlag', () => ({ useFlag: () => state.credit }));
+// Two switches now, and they are not the same answer. `place_price` ships
+// off, which is what the screen draws for everybody until a row in
+// `app_flags` says otherwise — so that is what these tests see unless one
+// of them turns it on.
+vi.mock('../lib/useFlag', () => ({
+  useFlag: (key: string) => (key === 'place_price' ? state.price : state.credit),
+}));
 vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: 'light', setScheme: () => {}, ready: true }),
 }));
@@ -222,6 +229,7 @@ beforeEach(() => {
   state.elsewhere = { loading: false, data: null };
   state.saved = [];
   state.credit = false;
+  state.price = false;
   state.city = null;
   state.lang = 'en';
   state.guide = false;
@@ -316,21 +324,42 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(document.querySelector('[data-icon="star"]')).toBeNull();
   });
 
-  it('names the category with its own glyph, and a paid price per person', () => {
+  it('names the category with its own glyph', () => {
     show();
     expect(screen.getByText('Cafés')).toBeTruthy();
     expect(document.querySelector('[data-icon="cafe-outline"]')).toBeTruthy();
+  });
+
+  // ── the price, which ships hidden ──
+  //
+  // It is the chip that pushes a three-category place onto a second line,
+  // and this screen is the only surface in the app that has ever drawn a
+  // price — so it is a switch rather than a deletion, and the switch is
+  // off. The tests that used to read the price now turn it on, because
+  // what they pin is the rendering, which has to keep working for the
+  // release that brings it back.
+  it('draws no price at all as it ships', () => {
+    show();
+    expect(screen.queryByText(/person|Free/)).toBeNull();
+    expect(document.querySelector('[data-icon="pricetag-outline"]')).toBeNull();
+  });
+
+  it('draws a paid price per person once the switch is on', () => {
+    state.price = true;
+    show();
     expect(screen.getByText('~45k ₫ / person')).toBeTruthy();
     expect(document.querySelector('[data-icon="pricetag-outline"]')).toBeTruthy();
   });
 
   it('shows FREE as its own pill, without a price tag glyph', () => {
+    state.price = true;
     show(place({ price_vnd: 0 }));
     expect(screen.getByText('Free')).toBeTruthy();
     expect(document.querySelector('[data-icon="pricetag-outline"]')).toBeNull();
   });
 
-  it('shows no price at all when none is known', () => {
+  it('shows no price at all when none is known, switch or no switch', () => {
+    state.price = true;
     show(place({ price_vnd: null, price_display: null }));
     expect(screen.queryByText(/person|Free/)).toBeNull();
   });

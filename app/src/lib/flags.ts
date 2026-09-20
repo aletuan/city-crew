@@ -32,6 +32,31 @@
 export const FLAG_DEFAULTS = {
   /** Draw the photographer's credit over Google place photos. */
   photo_attribution: true,
+  /**
+   * Draw the price on a place's detail screen. **Off**, and that is a
+   * decision rather than an oversight.
+   *
+   * The fact row is category chips and then the price, and it wraps to a
+   * second line whenever a place carries three categories — twelve of the
+   * eighteen that do are café + eats + nightlife, which needs 427pt of a
+   * 386pt row. Without the price every three-category place fits, the
+   * worst of them by a single point.
+   *
+   * The cost is not small and is worth stating plainly: the detail screen
+   * is the *only* surface in this app that has ever shown a price. Hiding
+   * it here hides it everywhere, on the 557 published places of 648 that
+   * carry one. The data is untouched and the planner still budgets with
+   * it; what is gone is the reader's sight of it.
+   *
+   * So it is a switch rather than a deletion, and this is the key to flip
+   * when the price gets a home of its own:
+   *
+   *     update app_flags set enabled = true where key = 'place_price';
+   *
+   * Every phone, on the next launch, with no build to publish — which is
+   * what a table is for and a constant is not.
+   */
+  place_price: false,
 } as const;
 
 export type FlagKey = keyof typeof FLAG_DEFAULTS;
