@@ -80,7 +80,9 @@ function InfoRow({ icon, label, first, onPress, children }: {
         style={s.infoStack}
         accessibilityRole={onPress ? 'button' : undefined}
       >
-        <Ionicons name={icon} size={19} color={colors.textTertiary} style={s.infoIcon} />
+        <View style={s.infoIconSlot}>
+          <Ionicons name={icon} size={19} color={colors.textTertiary} />
+        </View>
         <View style={s.infoWords}>
           <Text style={s.infoLabel}>{label}</Text>
           {children}
@@ -475,7 +477,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     accessibilityRole="button"
                     accessibilityState={{ expanded: hoursOpen }}
                   >
-                    <Ionicons name="time-outline" size={19} color={colors.textTertiary} style={s.infoIcon} />
+                    <View style={s.infoIconSlot}>
+                      <Ionicons name="time-outline" size={19} color={colors.textTertiary} />
+                    </View>
                     <View style={s.infoWords}>
                       <Text style={s.infoLabel}>{t('Hours', 'Giờ mở cửa', '営業時間')}</Text>
                       {openNow ? (
@@ -505,7 +509,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                           their table behind the chevron; the label alone
                           heads the row until it is opened. */}
                     </View>
-                    <Ionicons name={hoursOpen ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textTertiary} />
+                    {/* The same box as the clock opposite it. Left
+                        top-aligned it would have stayed where the clock
+                        used to be and the row would read as two glyphs at
+                        two heights — the raggedness this change is about,
+                        moved to the other end of the row. */}
+                    <View style={s.infoChevronSlot}>
+                      <Ionicons name={hoursOpen ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textTertiary} />
+                    </View>
                   </Pressable>
                   {hoursOpen && (
                     // Indented to the gutter the values keep, so the table
@@ -591,6 +602,36 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 /** The left column the glyphs sit in, and the inset every hairline and
  *  every continuation under a row lines up against. Glyph 19, air 14. */
 const GUTTER = 33;
+
+/** Where a glyph sits down its row: level with the first line of the
+ *  value, not with the label above it and not in the gap between them.
+ *
+ *  This is a decision about the address row, because that is the only row
+ *  whose value wraps — Hours and the open-now line are short, and Website
+ *  is held to one line. And it wraps almost always: of the 648 places
+ *  carrying an address, 13 fit on one line. Thirteen. The rest run to two
+ *  lines and thirty-five run to three, so the address row is a label over
+ *  two lines of street, and the shape to design for is that one rather
+ *  than the short address that happens to be on the screenshot.
+ *
+ *  Centred on the pair — label plus first line — the glyph lands on the
+ *  top edge of the street and reads as pushed up. Centred on the whole
+ *  row it drifts with the length of the address. Centred on the first
+ *  line of the value it is level with the words it is a marker for, and
+ *  it stays there whether the address runs to one line or four.
+ *
+ *  All three line heights are stated rather than left to the platform: a
+ *  glyph's position derived from "what iOS thinks a 12pt line is" is a
+ *  position nobody can check, and it moves the day that changes. 15 is a
+ *  rounding of the 14.3 the system face gives at 12pt, so the rows keep
+ *  the height they have. */
+const LABEL_LINE = 15;
+const LABEL_GAP = 5;
+const VALUE_LINE = 24;
+/** Everything above the first line of the value — what a glyph clears
+ *  before it starts. 20 and 24 together are 44, which is the whole of a
+ *  row whose value is one line, so nothing here makes a row taller. */
+const ABOVE_VALUE = LABEL_LINE + LABEL_GAP;
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
@@ -719,7 +760,13 @@ const s = StyleSheet.create({
   // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
   // A row is a column — label, then value. Only Hours lays itself across,
   // for the chevron at its end.
-  // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
+  //
+  // Still `flex-start`, and the glyphs are placed by their own boxes
+  // rather than by this. `center` here would centre them on the whole
+  // row, and the address row's height is the length of the address: the
+  // pin would sit level with the street on a short one and slide down
+  // between the lines on a long one, which is a glyph whose position is
+  // a property of the data.
   infoStack: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 17 },
   // The whole gutter, not the glyph: 19 of it is the glyph and the
   // remaining 14 is the air before the words. Written `GUTTER - 14` it was
@@ -731,8 +778,24 @@ const s = StyleSheet.create({
   //
   // At `GUTTER` the words begin exactly where the hairline and the hours
   // table already began, and the three are one column.
-  infoIcon: { width: GUTTER, marginTop: 1 },
+  //
+  // A box of a stated height rather than a glyph with a nudge on it. It
+  // used to be `marginTop: 1` under `alignItems: 'flex-start'`, which
+  // pinned the glyph to the top of the row and let it land wherever the
+  // icon font's own line box happened to put it — 6pt above the centre of
+  // the label-and-first-line pair, measured on the phone, and further up
+  // again on the ninety-eight places in a hundred whose address wraps,
+  // because a taller row moves the bottom line and not the top.
+  //
+  // The box clears the label, is exactly one value line tall, and centres
+  // the glyph in it. So the glyph is level with the first line of the
+  // street however long the street runs.
+  infoIconSlot: {
+    width: GUTTER, height: VALUE_LINE, marginTop: ABOVE_VALUE,
+    justifyContent: 'center',
+  },
   infoWords: { flex: 1 },
+  infoChevronSlot: { height: VALUE_LINE, marginTop: ABOVE_VALUE, justifyContent: 'center' },
   // Starts where the labels start. Run to the card's edge it cut the
   // gutter into four pieces; inset, the glyphs read as one column.
   //
@@ -749,9 +812,10 @@ const s = StyleSheet.create({
   },
   infoLabel: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
-    textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 5,
+    textTransform: 'uppercase', letterSpacing: 1.2,
+    lineHeight: LABEL_LINE, marginBottom: LABEL_GAP,
   },
-  infoValue: { color: colors.ink, ...type.meta, lineHeight: 24 },
+  infoValue: { color: colors.ink, ...type.meta, lineHeight: VALUE_LINE },
   /** The value of a row that goes somewhere. Ink like the rest — the
    *  accent came off after a day on the phone, where a two-line address
    *  in red outweighed the title — and a touch of weight is what is
@@ -759,7 +823,12 @@ const s = StyleSheet.create({
   infoLink: { fontWeight: font.medium },
   // Semibold and a size up on the table under it: this is the answer, and
   // it is the working it was derived from.
-  openNow: { color: colors.open, fontSize: 15.5, fontWeight: font.semibold },
+  // The same 24 the other values keep: it is the second line of its pair,
+  // and the glyph beside it is centred on a box that assumes so.
+  openNow: {
+    color: colors.open, fontSize: 15.5, fontWeight: font.semibold,
+    lineHeight: VALUE_LINE,
+  },
   openNowShut: { color: colors.textTertiary },
   hoursTable: { paddingBottom: 16, paddingLeft: GUTTER },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },

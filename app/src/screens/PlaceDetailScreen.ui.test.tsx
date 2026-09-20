@@ -720,6 +720,86 @@ describe('the info card’s gutter', () => {
     expect(styleOf(row.firstElementChild).width).toBe('33px');
   });
 
+  // ── where the glyph sits down the row ──
+  //
+  // Level with the first line of the value. The glyph used to be
+  // top-aligned with a 1pt nudge, which left its height to the icon
+  // font's own line box — and which had no answer at all for a second
+  // line, since a longer address moves the bottom of the row and leaves
+  // the top alone. Of the places carrying an address, thirteen fit on one
+  // line; the rest are a label over two lines of street.
+  //
+  // jsdom lays nothing out, so these are the box's terms rather than the
+  // pixel it ends on: clear the label, stand exactly one value line tall,
+  // centre the glyph inside. That is the first line of the value wherever
+  // the row is drawn and however far the address runs.
+  it('stands the glyph level with the first line of the value', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng' }));
+    const row = screen.getByTestId('detail-address').parentElement!.parentElement!;
+    const slot = styleOf(row.firstElementChild);
+    expect(slot.marginTop).toBe('20px');   // 15 label + 5 air
+    expect(slot.height).toBe('24px');      // one value line
+    expect(slot.justifyContent).toBe('center');
+  });
+
+  // The address the app actually holds, rather than the short one above:
+  // the glyph must not move when the street takes a second line.
+  it('leaves the glyph where it is when the address wraps', () => {
+    show(place({ address: '27/16 Ngõ 18 Huỳnh Thúc Kháng, Giảng Võ, Ba Đình, Hà Nội' }));
+    const slot = styleOf(
+      screen.getByTestId('detail-address').parentElement!.parentElement!.firstElementChild,
+    );
+    expect(slot.marginTop).toBe('20px');
+    expect(slot.height).toBe('24px');
+  });
+
+  // The box above is only honest while the lines it names are the lines
+  // the text actually draws. Left to the platform, a 12pt label is 14.3pt
+  // on iOS and something else on the next OS, and the glyph drifts off
+  // centre with nothing in the diff to show why.
+  //
+  // Read off the injected rule rather than `getComputedStyle`, which
+  // answers `normal` for `line-height` in this jsdom however plainly
+  // react-native-web declares it. The class is on the element and the
+  // rule is in the document; the cascade between them is the part that
+  // is missing, so the test steps over it.
+  const lineHeightOf = (el: Element | null) => {
+    const classes = new Set((el as Element).className.split(/\s+/));
+    const rules = [...document.styleSheets].flatMap((sheet) => {
+      try { return [...sheet.cssRules]; } catch { return []; }
+    });
+    for (const rule of rules) {
+      const css = (rule as CSSStyleRule).selectorText ?? '';
+      const px = classes.has(css.slice(1)) && /line-height:\s*([^;}]+)/.exec(rule.cssText);
+      if (px) return px[1].trim();
+    }
+    return null;
+  };
+
+  it('states the line heights the glyph’s box is measured from', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng' }));
+    const value = screen.getByTestId('detail-address');
+    const label = value.parentElement!.firstElementChild;
+    expect(lineHeightOf(label)).toBe('15px');
+    expect(styleOf(label).marginBottom).toBe('5px');
+    expect(lineHeightOf(value)).toBe('24px');
+    // 15 + 5 is what the glyph's box clears; 24 is how tall it stands.
+    const row = value.parentElement!.parentElement!;
+    expect(styleOf(row.firstElementChild).marginTop).toBe('20px');
+    expect(styleOf(row.firstElementChild).height).toBe('24px');
+  });
+
+  // Both ends of the Hours row, or the raggedness simply moves across it.
+  it('gives the hours chevron the same box as the clock beside it', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng' }));
+    const row = screen.getByRole('button', { name: /^Hours/ });
+    for (const end of [row.firstElementChild, row.lastElementChild]) {
+      expect(styleOf(end).marginTop).toBe('20px');
+      expect(styleOf(end).height).toBe('24px');
+      expect(styleOf(end).justifyContent).toBe('center');
+    }
+  });
+
   // A line has nothing inside it to drag along. Written as a border on the
   // wrapper, this inset moved the row; written as its own element, it
   // moves only itself.
