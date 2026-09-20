@@ -720,6 +720,71 @@ describe('the info card’s gutter', () => {
     expect(styleOf(row.firstElementChild).width).toBe('33px');
   });
 
+  // ── where the glyph sits down the row ──
+  //
+  // Between the label and the first line of the value, not level with the
+  // label. The glyph used to be top-aligned with a 1pt nudge, which left
+  // its height to the icon font's own line box — on the phone that put it
+  // 6pt above the centre of the pair, and further up again on any place
+  // whose address wraps, because a longer address moves the bottom line
+  // and leaves the top one alone.
+  //
+  // jsdom lays nothing out, so these are the box's terms rather than the
+  // pixel it ends on: a stated height and a centred content box mean the
+  // glyph is centred on exactly those two lines wherever the row is drawn.
+  it('centres the glyph on the label and the first line of the value', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng' }));
+    const row = screen.getByTestId('detail-address').parentElement!.parentElement!;
+    const slot = styleOf(row.firstElementChild);
+    // 15 label + 5 air + 24 value.
+    expect(slot.height).toBe('44px');
+    expect(slot.justifyContent).toBe('center');
+  });
+
+  // The box above is only honest while the lines it names are the lines
+  // the text actually draws. Left to the platform, a 12pt label is 14.3pt
+  // on iOS and something else on the next OS, and the glyph drifts off
+  // centre with nothing in the diff to show why.
+  //
+  // Read off the injected rule rather than `getComputedStyle`, which
+  // answers `normal` for `line-height` in this jsdom however plainly
+  // react-native-web declares it. The class is on the element and the
+  // rule is in the document; the cascade between them is the part that
+  // is missing, so the test steps over it.
+  const lineHeightOf = (el: Element | null) => {
+    const classes = new Set((el as Element).className.split(/\s+/));
+    const rules = [...document.styleSheets].flatMap((sheet) => {
+      try { return [...sheet.cssRules]; } catch { return []; }
+    });
+    for (const rule of rules) {
+      const css = (rule as CSSStyleRule).selectorText ?? '';
+      const px = classes.has(css.slice(1)) && /line-height:\s*([^;}]+)/.exec(rule.cssText);
+      if (px) return px[1].trim();
+    }
+    return null;
+  };
+
+  it('states the line heights the glyph’s box is measured from', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng' }));
+    const value = screen.getByTestId('detail-address');
+    const label = value.parentElement!.firstElementChild;
+    expect(lineHeightOf(label)).toBe('15px');
+    expect(styleOf(label).marginBottom).toBe('5px');
+    expect(lineHeightOf(value)).toBe('24px');
+    // 15 + 5 + 24, which is the box the glyph is centred in above.
+    const row = value.parentElement!.parentElement!;
+    expect(styleOf(row.firstElementChild).height).toBe('44px');
+  });
+
+  // Both ends of the Hours row, or the raggedness simply moves across it.
+  it('gives the hours chevron the same box as the clock beside it', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng' }));
+    const row = screen.getByRole('button', { name: /^Hours/ });
+    expect(styleOf(row.firstElementChild).height).toBe('44px');
+    expect(styleOf(row.lastElementChild).height).toBe('44px');
+    expect(styleOf(row.lastElementChild).justifyContent).toBe('center');
+  });
+
   // A line has nothing inside it to drag along. Written as a border on the
   // wrapper, this inset moved the row; written as its own element, it
   // moves only itself.
