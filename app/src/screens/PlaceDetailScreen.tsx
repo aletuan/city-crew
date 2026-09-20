@@ -712,13 +712,28 @@ const GUTTER = 33;
 const LABEL_LINE = 15;
 const LABEL_GAP = 5;
 const VALUE_LINE = 24;
-/** Everything above the first line of the value — what the chevron
- *  clears before it starts. */
+/** Everything above the first line of the value. */
 const ABOVE_VALUE = LABEL_LINE + LABEL_GAP;
-/** The label, the air under it and the first line of the value: the pair
- *  the leading glyph is centred across. 44, which is also the whole of a
- *  row whose value is one line, so nothing here makes a row taller. */
-const FIRST_PAIR = ABOVE_VALUE + VALUE_LINE;
+/**
+ * Where a glyph's middle goes: half-way between the middle of the label's
+ * line and the middle of the first line of the value.
+ *
+ * Measured off the reference rather than reasoned out. On its three clean
+ * rows the glyph sits at 0.500, 0.521 and 0.545 of the way from one ink
+ * centre to the other — half-way, to the pixel the screenshot can carry.
+ *
+ * Which is *not* the centre of the two-line box, and the difference is
+ * the reason this is its own number. That box is 44 tall and its middle
+ * is 22, but the two lines in it are not the same height — a 15pt label
+ * over a 24pt value — so its middle sits 2.25pt below the middle of the
+ * pair. Near enough to miss by eye and far enough to be the thing that
+ * still looks wrong.
+ */
+const GLYPH_MID = (LABEL_LINE / 2 + ABOVE_VALUE + VALUE_LINE / 2) / 2;
+/** A box twice as tall as that, so centring a glyph in it lands the glyph
+ *  exactly there. 39.5, which is shorter than the 44 of a one-line row,
+ *  so nothing here makes a row taller. */
+const GLYPH_BOX = GLYPH_MID * 2;
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
@@ -898,17 +913,23 @@ const s = StyleSheet.create({
   // and had no answer for a second line of address. Then the first line
   // of the value. Then the label's line.
   //
-  // `FIRST_PAIR` — 15 + 5 + 24 — and centred. The *first* line of the
-  // value, deliberately: ninety-eight places in a hundred take two lines
-  // of street, and measuring the box from the whole row would make the
-  // glyph's position a property of how long an address happens to be.
-  infoIconSlot: { width: GUTTER, height: FIRST_PAIR, justifyContent: 'center' },
+  // `GLYPH_BOX` centred, which puts the glyph's middle on `GLYPH_MID`.
+  // The *first* line of the value, deliberately: ninety-eight places in a
+  // hundred take two lines of street, and measuring from the whole row
+  // would make the glyph's position a property of how long an address
+  // happens to be.
+  infoIconSlot: { width: GUTTER, height: GLYPH_BOX, justifyContent: 'center' },
   infoWords: { flex: 1 },
-  // And the chevron stays where it was, which is the one place these two
-  // glyphs should part company. The pin marks the row; the chevron opens
-  // the value, and the table it opens unfolds under the value. A control
-  // lives with the thing it acts on.
-  infoChevronSlot: { height: VALUE_LINE, marginTop: ABOVE_VALUE, justifyContent: 'center' },
+  // The same box at the other end of the row.
+  //
+  // This overturns the note that stood here an hour ago, which argued the
+  // chevron belonged on the value's line because a control lives with the
+  // thing it acts on. It reads well and the reference disagrees: measured
+  // across its three clean rows, the trailing glyph sits within 2pt of the
+  // leading one every time — 1280 against 1275, 1385 against 1384, 1490
+  // against 1490. Both ends of a row are level, and a rule that sounded
+  // right is worth less than a measurement.
+  infoChevronSlot: { height: GLYPH_BOX, justifyContent: 'center' },
   // Starts where the labels start. Run to the card's edge it cut the
   // gutter into four pieces; inset, the glyphs read as one column.
   //
