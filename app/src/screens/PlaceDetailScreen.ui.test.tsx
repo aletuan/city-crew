@@ -75,11 +75,12 @@ vi.mock('../lib/data', async () => ({
   // keeps every test below about the screen it is testing: the panel draws
   // nothing, exactly as it does for almost everybody. `state.guide` is
   // what the two tests that *are* about it turn on.
-  useIsLocalGuide: () => ({ data: state.guide, loading: false }),
   fetchPlaceId: async () => 'place-uuid',
   fetchMyPhotoCounts: async () => ({ mineHere: 0, mineToday: 0 }),
   addPlacePhoto: async () => 'photo-id',
 }));
+// The grant is read from a store now, not fetched — see `lib/guideGrant`.
+vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
 }));

@@ -37,7 +37,8 @@ import { useAuth } from '../lib/auth';
 import { greetingName } from '../lib/greet';
 import { useI18n } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
-import { addPlacePhoto, fetchMyPhotoCounts, fetchPlaceId, useIsLocalGuide } from '../lib/data';
+import { addPlacePhoto, fetchMyPhotoCounts, fetchPlaceId } from '../lib/data';
+import { useIsGuide } from '../lib/useGuideGrant';
 import {
   canAddPhoto, photoPath, refusePhoto, PHOTO_PX, PHOTO_QUALITY,
   type PhotoRefusal,
@@ -58,7 +59,11 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
   const { session, profile } = useAuth();
   const uid = session?.user?.id ?? null;
   const who = greetingName(profile?.full_name);
-  const { data: granted } = useIsLocalGuide(uid);
+  // Read, not fetched. `useIsGuide` answers from a store the launch
+  // filled, so this component is right on its first frame — a fetch here
+  // drew the card without the panel and then shoved it down a round trip
+  // later, once for every place its owner opened. See `lib/guideGrant`.
+  const granted = useIsGuide();
   const [busy, setBusy] = useState(false);
   const [counts, setCounts] = useState({ mineHere: 0, mineToday: 0 });
 

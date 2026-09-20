@@ -33,6 +33,8 @@ vi.mock('../lib/i18n', () => ({
   }),
 }));
 
+// The grant is read from a store now, not fetched — see `lib/guideGrant`.
+vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.granted }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({
     session: state.uid ? { user: { id: state.uid } } : null,
@@ -41,7 +43,6 @@ vi.mock('../lib/auth', () => ({
 }));
 
 vi.mock('../lib/data', () => ({
-  useIsLocalGuide: () => ({ data: state.granted, loading: false }),
   fetchPlaceId: vi.fn(async () => 'place-uuid'),
   fetchMyPhotoCounts: vi.fn(async () => ({ mineHere: 0, mineToday: 0 })),
   addPlacePhoto: (row: unknown) => { added(row); return Promise.resolve('photo-id'); },
