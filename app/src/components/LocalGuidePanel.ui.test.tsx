@@ -154,17 +154,19 @@ describe('what it offers', () => {
     expect(screen.queryByText(/Edit Place/i)).toBeNull();
   });
 
-  // The line the person is agreeing to by choosing a picture. In front of
-  // the picker rather than behind a confirm dialog.
-  it('says where the photo is expected to come from', () => {
+  // The provenance line that used to sit under the button is gone. It said
+  // where a photograph was expected to come from, which the picker it opens
+  // says better by only ever opening on this phone's own library — and it
+  // was a third line of prose on a card whose whole job is one button.
+  it('does not explain where the photo should come from', () => {
     draw();
-    expect(screen.getByText('A photo chosen from my own Photos')).toBeTruthy();
+    expect(screen.queryByText(/from my own Photos/i)).toBeNull();
+    expect(screen.queryByText(/Photos của tôi/)).toBeNull();
   });
 
   it('speaks the reader’s language', () => {
     state.lang = 'vi';
     draw();
-    expect(screen.getByText('Ảnh lựa chọn từ Photos của tôi')).toBeTruthy();
     expect(screen.getByText('Thêm ảnh')).toBeTruthy();
   });
 });
