@@ -978,16 +978,24 @@ describe('the info card’s gutter', () => {
   // Level with the label, which makes the row a two-column grid and says
   // so: glyph beside the name of the thing, the thing itself beneath.
   //
-  // Half-way between the two lines was measured off the reference and
-  // shipped, and on the phone it read as a glyph belonging to neither.
+  // Position and room are two numbers, and the version that shipped
+  // conflated them: it gave the glyph a box of 15 — the label's line — and
+  // a 19pt glyph laid out inside a 15pt height is cut off at the bottom,
+  // which is what reached the phone. The box is 26 now, big enough for any
+  // 19pt line, and the position is carried by the margin.
   //
-  // jsdom lays nothing out, so these are the box's terms rather than the
-  // pixel it ends on.
-  it('stands the glyph on the label\u2019s line', () => {
+  // Both halves are asserted together on purpose. Either one alone is
+  // satisfied by the bug: a 15pt box is in the right place and clips, a
+  // 26pt box with no lift is whole and sits too low.
+  it('gives the glyph room, and puts its middle on the label\u2019s', () => {
     show(place({ address: '27 Huỳnh Thúc Kháng' }));
     const slot = styleOf(rowOf(screen.getByTestId('detail-address')).firstElementChild);
-    expect(slot.marginTop).toBe('0px');
-    expect(slot.height).toBe('15px');
+    const h = parseFloat(slot.height);
+    const top = parseFloat(slot.marginTop);
+    // Room: taller than the 19pt glyph it holds, by enough for its line.
+    expect(h).toBeGreaterThan(19);
+    // Place: the box's middle is the label's middle, 15 / 2.
+    expect(top + h / 2).toBeCloseTo(7.5, 5);
     expect(slot.justifyContent).toBe('center');
   });
 
@@ -998,8 +1006,7 @@ describe('the info card’s gutter', () => {
   it('leaves the glyph where it is when the address wraps', () => {
     show(place({ address: '27/16 Ngõ 18 Huỳnh Thúc Kháng, Giảng Võ, Ba Đình, Hà Nội' }));
     const slot = styleOf(rowOf(screen.getByTestId('detail-address')).firstElementChild);
-    expect(slot.marginTop).toBe('0px');
-    expect(slot.height).toBe('15px');
+    expect(parseFloat(slot.marginTop) + parseFloat(slot.height) / 2).toBeCloseTo(7.5, 5);
   });
 
   // The box above is only honest while the lines it names are the lines
@@ -1034,9 +1041,10 @@ describe('the info card’s gutter', () => {
     expect(lineHeightOf(label)).toBe('15px');
     expect(styleOf(label).marginBottom).toBe('5px');
     expect(lineHeightOf(value)).toBe('24px');
-    // The glyph's box is the label's line, so that 15 is the number its
-    // position is measured from.
-    expect(styleOf(rowOf(value).firstElementChild).height).toBe('15px');
+    // The label's 15 is the number the glyph's position is measured from:
+    // its box is centred on half of it.
+    const slot = styleOf(rowOf(value).firstElementChild);
+    expect(parseFloat(slot.marginTop) + parseFloat(slot.height) / 2).toBeCloseTo(7.5, 5);
   });
 
   // Both ends of the row are level. This replaces a test that asserted the
@@ -1047,9 +1055,10 @@ describe('the info card’s gutter', () => {
     show(place({ address: '27 Huỳnh Thúc Kháng' }));
     const row = screen.getByRole('button', { name: /^Hours/ });
     for (const end of [row.firstElementChild, row.lastElementChild]) {
-      expect(styleOf(end).marginTop).toBe('0px');
-      expect(styleOf(end).height).toBe('15px');
-      expect(styleOf(end).justifyContent).toBe('center');
+      const css = styleOf(end);
+      expect(parseFloat(css.height)).toBeGreaterThan(19);
+      expect(parseFloat(css.marginTop) + parseFloat(css.height) / 2).toBeCloseTo(7.5, 5);
+      expect(css.justifyContent).toBe('center');
     }
   });
 
