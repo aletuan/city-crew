@@ -191,6 +191,34 @@ export const colors = {
   /** "Open now" on the place card's hours row: a shade greener and
    *  lighter than `ok`, chosen for that one line against white. */
   open: dyn('#3F7D55', '#8FBF8A'),
+  /**
+   * And the other half of that line — "closed, opens at eight".
+   *
+   * It was `textTertiary`, which is the colour of the label above it. So
+   * the one fact a reader opens this screen at ten at night to find read
+   * as furniture, in the same grey as the word HOURS. Worse than quiet: on
+   * the dark card that grey measures **3.41:1**, under the 4.5 small text
+   * needs. The state was failing contrast while `open` beside it passed.
+   *
+   * Not the accent, which is what the reference drew. The accent is this
+   * app's voice for *this is the thing* — the Explore button, the selected
+   * tab, every link on this very card — and a shut door is the opposite of
+   * that. The same argument `shut` makes at greater length, for the same
+   * reason, about the same colour.
+   *
+   * So it takes `shut`'s own brick. The light value IS the sash's ground,
+   * to the rounding: a reader meets that red on the diagonal across a
+   * closed card and meets it again here, on the line that says why. The
+   * dark value is that hue lifted to carry on a dark card, because the
+   * brick itself is 2.25:1 there and unreadable.
+   *
+   *     light  7.57:1 on white       ΔE 19.4 from the accent
+   *     dark   6.38:1 on the card    ΔE 25.6 from the accent
+   *
+   * Both clear of AA, and far enough from the coral to be a different
+   * colour rather than a near-miss of one.
+   */
+  shutInk: dyn('#972F2B', '#E2857A'),
   /** The value on the place card's info rows — address, hours table,
    *  phone, site. Ink: darker than `textSecondary`, a hair warmer and
    *  softer than `text`, so the facts read as content rather than as

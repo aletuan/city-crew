@@ -30,6 +30,10 @@ create table if not exists public.places (
   -- that allowed nulls would test a column production cannot have.
   categories     text[] not null default '{}',
   vibe_tags      text[] not null default '{}',
+  -- Nullable, as production has it. Here for the Instagram backfill, which
+  -- reads a venue's website to find the profile URL filed under it; without
+  -- the column the migration cannot be applied on this bench at all.
+  website        text,
   created_at     timestamptz not null default now(),
   -- `not null default now()` exactly as production has it. The stamping
   -- migration reasons about this column, and a stub that let it be null

@@ -27,7 +27,10 @@ import { shortAddress } from '../lib/address';
 import { splitName, subtitleBeside } from '../lib/name';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
-import MiniMap from '../components/MiniMap';
+import MiniMap, { canDrawMap } from '../components/MiniMap';
+import {
+  atHandle, hostOf, instagramUrl, threadsUrl, websiteRepeatsHandle,
+} from '../lib/links';
 import { clockOf, dotWindow, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { mapsSearchUrl } from '../lib/maps';
@@ -63,22 +66,27 @@ import type { Nav, RootRoute } from '../nav';
  * The hairline starts where the labels do rather than at the card's edge,
  * so the gutter reads as one column rather than as four interruptions.
  */
-function InfoRow({ icon, label, first, onPress, children }: {
+function InfoRow({ icon, label, first, onPress, trailing, children }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   /** The row that opens the card draws no hairline above itself. */
   first?: boolean;
   onPress?: () => void;
+  /** A control at the row's end. A row carrying one is not itself
+   *  pressable: two targets in one row, the outer one swallowing taps
+   *  meant for the inner, is a worse row than one honest button. */
+  trailing?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const tappable = !!onPress && !trailing;
   return (
     <>
       {!first && <View style={s.rowDivider} />}
       <Pressable
-        onPress={onPress}
-        disabled={!onPress}
+        onPress={tappable ? onPress : undefined}
+        disabled={!tappable}
         style={s.infoStack}
-        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityRole={tappable ? 'button' : undefined}
       >
         <View style={s.infoIconSlot}>
           <Ionicons name={icon} size={19} color={colors.textTertiary} />
@@ -87,6 +95,7 @@ function InfoRow({ icon, label, first, onPress, children }: {
           <Text style={s.infoLabel}>{label}</Text>
           {children}
         </View>
+        {trailing}
       </Pressable>
     </>
   );
@@ -217,10 +226,22 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // Which row opens the grouped card decides where the hairlines fall:
   // every row below the first draws one above itself, whatever subset of
   // the four a place actually has.
+  // The venue's own accounts, bare and lowercase in the column; the @ and
+  // the host are put back at the edges. A website that is only one of these
+  // accounts said as a URL is dropped — the row above it already says the
+  // same name, better.
+  const ig = place.instagram_handle || null;
+  const th = place.threads_handle || null;
+  const site = place.website && !websiteRepeatsHandle(place.website, { instagram: ig, threads: th })
+    ? place.website
+    : null;
+
   const firstRow = place.address ? 'address'
     : hours.length ? 'hours'
     : place.phone ? 'phone'
-    : place.website ? 'website' : null;
+    : ig ? 'instagram'
+    : th ? 'threads'
+    : site ? 'website' : null;
 
   // The dash only joins two things: a place with no address shares its
   // name alone, not a name trailing off into punctuation.
@@ -235,12 +256,17 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const open = (url: string, failed: string) => {
     Linking.openURL(url).catch(() => Alert.alert(failed));
   };
+  /** Named once: the address row, its button and the map all do this. */
+  const toMaps = () => open(
+    mapsUrl!,
+    t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'),
+  );
   // Websites are typed in by hand and often arrive bare (`congcaphe.com`),
   // which `openURL` cannot route; with no scheme of its own, it is a web
   // address.
-  const websiteUrl = place.website && !/^[a-z][a-z\d+.-]*:\/\//i.test(place.website)
-    ? `https://${place.website}`
-    : place.website;
+  const websiteUrl = site && !/^[a-z][a-z\d+.-]*:\/\//i.test(site)
+    ? `https://${site}`
+    : site;
 
   return (
     // No top safe area: the photograph is what belongs against the top of
@@ -454,12 +480,54 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   icon="location-outline"
                   label={t('Address', 'Địa chỉ', '住所')}
                   first={firstRow === 'address'}
-                  onPress={mapsUrl
-                    ? () => open(mapsUrl, t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'))
-                    : undefined}
+                  onPress={mapsUrl ? toMaps : undefined}
+                  /* The affordance that was invisible. Tapping the address
+                     has always opened Maps and nothing on the row said so —
+                     an address looks like a fact, not a button. Said out
+                     loud it is also the thing most readers of this card
+                     actually want, which is why it gets the row's end
+                     rather than a line of its own. */
+                  trailing={mapsUrl ? (
+                    <PressableScale
+                      onPress={toMaps}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Directions', 'Chỉ đường', '経路')}
+                      containerStyle={s.goSlot}
+                      style={s.go}
+                      testID="detail-directions"
+                    >
+                      <Ionicons name="navigate" size={15} color={colors.accent} />
+                      <Text style={s.goText}>{t('Directions', 'Chỉ đường', '経路')}</Text>
+                    </PressableScale>
+                  ) : undefined}
                 >
-                  <Text style={[s.infoValue, mapsUrl && s.infoLink]} testID="detail-address">{address}</Text>
+                  <Text style={s.infoValue} testID="detail-address">{address}</Text>
                 </InfoRow>
+              )}
+
+              {/* The map, under the address it answers.
+                  It used to be a card of its own below this one, which asked
+                  the reader to bind "where" to two separate objects — the
+                  words in one box, the picture in another. Here it is the
+                  address's own illustration.
+
+                  Frozen (`interactive={false}`), because a live map inside a
+                  vertical scroll is a hole the page cannot be scrolled
+                  through. And drawn only where the binary has a Google Maps
+                  SDK — Expo Go on iOS, or a build made without the key, get
+                  no map. Being inside the card now, that absence has to be
+                  quiet: the rows close over the gap and the card is simply a
+                  card without a picture. */}
+              {place.lat != null && place.lng != null && mapsUrl && canDrawMap && (
+                <View style={s.mapSlot}>
+                  <MiniMap
+                    lat={place.lat}
+                    lng={place.lng}
+                    height={150}
+                    interactive={false}
+                    onPick={toMaps}
+                  />
+                </View>
               )}
 
               {hours.length > 0 && (
@@ -547,7 +615,46 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 </InfoRow>
               )}
 
-              {place.website && (
+              {/* The venue's own accounts, above the website, because a
+                  handle is a name and a domain is an address — and because
+                  for a café in this catalog the account is usually where
+                  the news is. Ionicons' own `logo-` glyphs rather than the
+                  brands' full-colour marks: two saturated logos in a grey
+                  gutter pull the eye off the words, and the column those
+                  glyphs belong to is the point of the card. */}
+              {ig && (
+                <InfoRow
+                  icon="logo-instagram"
+                  label="Instagram"
+                  first={firstRow === 'instagram'}
+                  onPress={() => open(
+                    instagramUrl(ig),
+                    t('Could not open Instagram', 'Không mở được Instagram', 'Instagramを開けませんでした'),
+                  )}
+                >
+                  <Text style={[s.infoValue, s.infoLink]} numberOfLines={1} testID="detail-instagram">
+                    {atHandle(ig)}
+                  </Text>
+                </InfoRow>
+              )}
+
+              {th && (
+                <InfoRow
+                  icon="logo-threads"
+                  label="Threads"
+                  first={firstRow === 'threads'}
+                  onPress={() => open(
+                    threadsUrl(th),
+                    t('Could not open Threads', 'Không mở được Threads', 'Threadsを開けませんでした'),
+                  )}
+                >
+                  <Text style={[s.infoValue, s.infoLink]} numberOfLines={1} testID="detail-threads">
+                    {atHandle(th)}
+                  </Text>
+                </InfoRow>
+              )}
+
+              {site && (
                 <InfoRow
                   icon="globe-outline"
                   label={t('Website', 'Trang web', 'ウェブサイト')}
@@ -557,42 +664,19 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     t('Could not open the website', 'Không mở được trang web', 'ウェブサイトを開けませんでした'),
                   )}
                 >
-                  <Text style={[s.infoValue, s.infoLink]} numberOfLines={1}>
-                    {place.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+                  {/* The domain, not the URL. What was here trimmed the
+                      scheme and the `www.` and left everything else, so 70
+                      of the catalog's 413 websites ran off the end of the
+                      row mid-tracking-parameter. The tap still carries the
+                      whole address; only the label is short. */}
+                  <Text style={[s.infoValue, s.infoLink]} numberOfLines={1} testID="detail-website">
+                    {hostOf(site)}
                   </Text>
                 </InfoRow>
               )}
             </Card>
           )}
 
-          {/* ── where it is ──
-
-              Under the facts, not above them: the address answers "where"
-              for anyone who already knows the city, and the map is for
-              everyone else. A tap anywhere on it hands off to Maps, which
-              is the only thing this view can usefully do — routing,
-              street view and the rest live there.
-
-              Frozen (`interactive={false}`), because a live map inside a
-              vertical scroll is a hole the page cannot be scrolled
-              through. It draws nothing at all where the binary has no
-              Google Maps SDK — Expo Go on iOS, or a build made without
-              the key — and `MiniMap` returns null rather than explaining
-              itself to a reader who cannot act on it. */}
-          {place.lat != null && place.lng != null && mapsUrl && (
-            <View style={s.mapCard}>
-              <MiniMap
-                lat={place.lat}
-                lng={place.lng}
-                height={168}
-                interactive={false}
-                onPick={() => open(
-                  mapsUrl,
-                  t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'),
-                )}
-              />
-            </View>
-          )}
         </View>
       </ScrollView>
     </View>
@@ -754,9 +838,26 @@ const s = StyleSheet.create({
   // The Card supplies ground, border and radius; the horizontal inset
   // lives here so each row's hairline can run to the card's edge.
   infoGroup: { marginTop: 18, paddingHorizontal: space.cardPadding },
-  // The same 18 the info card keeps above itself, so the page has one
-  // rhythm rather than a card that happens to sit near another.
-  mapCard: { marginTop: 18 },
+  // The map sits inside the info card now, between the address row and
+  // whatever follows it. Inset to the gutter, so its left edge is the one
+  // the hairlines and the hours table already keep, and the card reads as
+  // one column with a picture in it rather than a picture with a card
+  // around it. `overflow: hidden` because MiniMap draws to its own corners.
+  mapSlot: {
+    marginLeft: GUTTER, marginBottom: 16,
+    borderRadius: radius.card - 8, overflow: 'hidden',
+  },
+  // `containerStyle`, not `style`: PressableScale puts `style` on its inner
+  // animated view and only `containerStyle` on the Pressable.
+  goSlot: { flexShrink: 0, marginTop: ABOVE_VALUE - 6 },
+  go: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    minHeight: 36, paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    borderWidth: 1, borderColor: colors.borderGlassSoft,
+    backgroundColor: colors.surfaceGlass,
+  },
+  goText: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
   // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
   // A row is a column — label, then value. Only Hours lays itself across,
   // for the chevron at its end.
@@ -829,7 +930,11 @@ const s = StyleSheet.create({
     color: colors.open, fontSize: 15.5, fontWeight: font.semibold,
     lineHeight: VALUE_LINE,
   },
-  openNowShut: { color: colors.textTertiary },
+  // The sash's own brick, not the grey it was. See `colors.shutInk`: the
+  // grey was the label's colour and 3.41:1 on the dark card, so the one
+  // fact a reader opens this screen at night to find was both quiet and
+  // under AA.
+  openNowShut: { color: colors.shutInk },
   hoursTable: { paddingBottom: 16, paddingLeft: GUTTER },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   hourDay: { color: colors.ink, fontSize: 14.5, fontWeight: font.medium },

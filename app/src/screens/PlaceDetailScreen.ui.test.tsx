@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
+import { colors } from '../theme';
 
 // jsdom lays nothing out, so the document is zero pixels wide — and the hero
 // is sized off the window: a zero-wide carousel pages by dividing by zero,
@@ -109,6 +110,11 @@ vi.mock('../components/MiniMap', async () => {
       'data-interactive': String(p.interactive),
       onClick: () => p.onPick({ lat: p.lat, lng: p.lng }),
     }),
+    // True here, because the screen asks before it draws and a test that
+    // said no would be testing the empty card every time. Whether a given
+    // binary can actually draw a Google map is the real module's business,
+    // and it answers by asking `expo-constants`.
+    canDrawMap: true,
   };
 });
 
@@ -470,12 +476,116 @@ describe('PlaceDetailScreen — floating controls', () => {
   });
 });
 
+// ── the outside links ──
+//
+// Three rows that all had the same fault: they showed a machine's version
+// of an address. The website row trimmed the scheme and the `www.` and left
+// everything else, so 70 of the catalog's 413 websites ran off the end of
+// the row mid-tracking-parameter; and the two accounts a venue actually
+// posts from were not drawn at all, though 166 of them have been sitting in
+// `threads_handle` since September.
+
+describe('PlaceDetailScreen — website, Instagram and Threads', () => {
+  it('shows a website as its domain, not as its URL', () => {
+    show(place({
+      website: 'https://anticofornaio.com/?utm_source=google&utm_medium=organic&utm_campaign=mapera',
+    }));
+    expect(screen.getByTestId('detail-website').textContent).toBe('anticofornaio.com');
+  });
+
+  // The label is short; the destination is not. A stripped URL may 404,
+  // and what the venue handed out is what the tap has to carry.
+  it('still opens the whole URL it was given', () => {
+    show(place({ website: 'https://anticofornaio.com/menu?utm_source=google' }));
+    fireEvent.click(screen.getByRole('button', { name: /Website/ }));
+    expect(openURL).toHaveBeenCalledWith('https://anticofornaio.com/menu?utm_source=google');
+  });
+
+  it('draws a handle with its @ back on, and opens the account', () => {
+    show(place({ instagram_handle: 'cab.cafesg', threads_handle: 'sweet.as.hanoi' }));
+    expect(screen.getByTestId('detail-instagram').textContent).toBe('@cab.cafesg');
+    expect(screen.getByTestId('detail-threads').textContent).toBe('@sweet.as.hanoi');
+
+    fireEvent.click(screen.getByRole('button', { name: /Instagram/ }));
+    expect(openURL).toHaveBeenCalledWith('https://www.instagram.com/cab.cafesg');
+    fireEvent.click(screen.getByRole('button', { name: /Threads/ }));
+    expect(openURL).toHaveBeenCalledWith('https://www.threads.com/@sweet.as.hanoi');
+  });
+
+  // Ionicons' own monochrome marks, not the brands' full-colour ones. Two
+  // saturated logos in a grey gutter pull the eye off the words, and that
+  // column is the point of the card.
+  it('uses the icon font\'s own logos rather than the brands\' artwork', () => {
+    show(place({ instagram_handle: 'cab.cafesg', threads_handle: 'cab.cafesg' }));
+    expect(document.querySelector('[data-icon="logo-instagram"]')).toBeTruthy();
+    expect(document.querySelector('[data-icon="logo-threads"]')).toBeTruthy();
+  });
+
+  it('draws no handle row for a place that has none', () => {
+    show();
+    expect(screen.queryByTestId('detail-instagram')).toBeNull();
+    expect(screen.queryByTestId('detail-threads')).toBeNull();
+  });
+
+  // Forty-seven of the catalog's websites are Instagram profile URLs. With
+  // the handle drawn above, the website row would be the same account said
+  // twice — once as a name and once as a URL.
+  it('drops a website that only repeats the handle above it', () => {
+    show(place({
+      website: 'https://www.instagram.com/cab.cafesg?igsh=MXJod3k3',
+      instagram_handle: 'cab.cafesg',
+    }));
+    expect(screen.getByTestId('detail-instagram')).toBeTruthy();
+    expect(screen.queryByTestId('detail-website')).toBeNull();
+  });
+
+  // But only when there is a handle to repeat: on a place nobody has looked
+  // up, that URL is the one way to reach the venue.
+  it('keeps a profile URL when no handle has been recorded', () => {
+    show(place({ website: 'https://www.instagram.com/someone' }));
+    expect(screen.getByTestId('detail-website').textContent).toBe('instagram.com');
+  });
+
+  // A Facebook page has no column and no row, so the website row carries it.
+  it('keeps a Facebook page in the website row', () => {
+    show(place({
+      website: 'https://www.facebook.com/people/magichastand/61567169829674/?mibextid=wwXIfr',
+      instagram_handle: 'magicha.zenbar',
+    }));
+    expect(screen.getByTestId('detail-website').textContent).toBe('facebook.com');
+  });
+
+  // The card opens on whichever row a place actually has, and the hairline
+  // rule follows it: the first row draws none above itself.
+  it('lets a handle open the card when there is nothing above it', () => {
+    show(place({
+      address: null, opening_hours: [], phone: null, website: null,
+      instagram_handle: 'cab.cafesg',
+    }));
+    expect(screen.getByTestId('detail-instagram')).toBeTruthy();
+  });
+});
+
 describe('PlaceDetailScreen — the map', () => {
   const map = () => document.querySelector('[data-stub="MiniMap"]') as HTMLElement | null;
 
-  it('draws the place on a map under the facts', () => {
+  it('draws the place on a map', () => {
     show();
     expect(map()).toBeTruthy();
+  });
+
+  // It used to be a card of its own below the facts, which asked the
+  // reader to bind "where" to two separate objects — the words in one box,
+  // the picture in another. Inside the card it is the address's own
+  // illustration, and the proof of that is what it sits between.
+  it('sits inside the info card, under the address and above the hours', () => {
+    show();
+    const card = screen.getByTestId('detail-address').closest('div')!
+      .parentElement!.parentElement!.parentElement!;
+    const order = (el: Element | null) =>
+      [...card.querySelectorAll('*')].indexOf(el as Element);
+    expect(order(screen.getByTestId('detail-address'))).toBeLessThan(order(map()));
+    expect(order(map())).toBeLessThan(order(screen.getByText('Hours')));
   });
 
   // A live map inside a vertical scroll is a hole the page cannot be
@@ -514,20 +624,29 @@ describe('PlaceDetailScreen — info card', () => {
     ]));
   });
 
+  // The row is no longer the button; the button is. Tapping an address has
+  // always opened Maps and nothing on the row said so — an address looks
+  // like a fact, not a control — so the handoff has a named target now and
+  // the row itself is text again.
   it('shortens the address and opens Google Maps on the exact place', () => {
     show();
     const addr = screen.getByTestId('detail-address');
     // Country and the city this app is already about are dropped.
     expect(addr.textContent).toBe('152 Trieu Viet Vuong, Hai Ba Trung');
-    fireEvent.click(screen.getByRole('button', { name: /Address/ }));
+    fireEvent.click(screen.getByTestId('detail-directions'));
     expect(openURL).toHaveBeenCalledWith(
       `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Cộng Cà Phê - Old Quarter')}&query_place_id=gp1`,
     );
   });
 
+  it('names that button for VoiceOver', () => {
+    show();
+    expect(screen.getByRole('button', { name: 'Directions' })).toBeTruthy();
+  });
+
   it('opens Maps on the coordinate when the place has no Google id', () => {
     show(place({ google_place_id: null }));
-    fireEvent.click(screen.getByRole('button', { name: /Address/ }));
+    fireEvent.click(screen.getByTestId('detail-directions'));
     expect(openURL).toHaveBeenCalledWith(
       `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('21.01,105.85')}`,
     );
@@ -536,7 +655,7 @@ describe('PlaceDetailScreen — info card', () => {
   it('leaves the address as plain text when the place cannot be put on a map', () => {
     show(place({ lat: null, lng: null }));
     expect(screen.getByTestId('detail-address')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Address/ })).toBeNull();
+    expect(screen.queryByTestId('detail-directions')).toBeNull();
   });
 
   it('also drops the current city\'s own name from the address', () => {
@@ -566,8 +685,11 @@ describe('PlaceDetailScreen — info card', () => {
     expect(openURL).toHaveBeenCalledWith('https://congcaphe.com');
   });
 
+  // Named by their accessible name now rather than by their label, because
+  // Address is the one row whose control is a button beside the words
+  // rather than the words themselves.
   it.each([
-    ['Address', 'Could not open Maps'],
+    ['Directions', 'Could not open Maps'],
     ['Phone', 'Could not place the call'],
     ['Website', 'Could not open the website'],
   ])('says so when the %s row cannot be opened', async (row, words) => {
@@ -614,6 +736,34 @@ describe('PlaceDetailScreen — opening hours (Wednesday 10:00, Hanoi)', () => {
   it('says when a closed place opens later today', () => {
     show(place({ opening_hours: week('5:00 PM – 11:00 PM') }));
     expect(screen.getByText('Closed · opens 17:00')).toBeTruthy();
+  });
+
+  // The closed line used to be `textTertiary` — the colour of the label
+  // above it — so the one fact a reader opens this screen at ten at night
+  // to find read as furniture, and measured 3.41:1 on the dark card, under
+  // the 4.5 small text needs. It takes the sash's own brick now: the red a
+  // reader already met on the diagonal across the closed card they tapped.
+  //
+  // Not the accent, which is this app's voice for "this is the thing" and
+  // is on every link in this very card. The assertion is that the two are
+  // different, because a near-miss of the accent would be worse than the
+  // grey was.
+  it('gives the closed line its own red, and not the accent', () => {
+    show(place({ opening_hours: week('5:00 PM – 11:00 PM') }));
+    const shut = getComputedStyle(screen.getByText('Closed · opens 17:00'));
+    const rgb = (hex: string) => {
+      const n = parseInt(String(hex).slice(1), 16);
+      return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+    };
+    expect(shut.color).toBe(rgb(colors.shutInk as string));
+    expect(shut.color).not.toBe(rgb(colors.accent as string));
+    expect(shut.color).not.toBe(rgb(colors.textTertiary as string));
+  });
+
+  it('leaves an open place its green', () => {
+    show();
+    const open = getComputedStyle(screen.getByText(/^Open now/));
+    expect(open.color).not.toBe(getComputedStyle(screen.getByText('Hours')).color);
   });
 
   it('says closed today when it does not open again today', () => {
@@ -803,12 +953,18 @@ describe('the info card’s gutter', () => {
   // A line has nothing inside it to drag along. Written as a border on the
   // wrapper, this inset moved the row; written as its own element, it
   // moves only itself.
+  //
+  // Found by height as well as inset, because the gutter's inset is not
+  // the hairline's alone any more: the map is indented to the same column
+  // and it very much does have something inside it.
   it('draws each hairline as its own element, not as a border on a row', () => {
     show(place({ address: '27 Huỳnh Thúc Kháng', phone: '+84 799 986 201' }));
-    const inset = [...document.querySelectorAll('div')]
-      .filter((el) => styleOf(el).marginLeft === '33px');
-    expect(inset.length).toBeGreaterThan(0);
-    for (const el of inset) {
+    const hairlines = [...document.querySelectorAll('div')].filter((el) => {
+      const css = styleOf(el);
+      return css.marginLeft === '33px' && parseFloat(css.height) <= 1;
+    });
+    expect(hairlines.length).toBeGreaterThan(0);
+    for (const el of hairlines) {
       expect(el.children.length, 'a hairline that holds a row indents it').toBe(0);
     }
   });
