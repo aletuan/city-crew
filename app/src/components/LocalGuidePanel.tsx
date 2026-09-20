@@ -163,19 +163,32 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
           <Image source={welcomeLogo} style={s.markLogo} contentFit="contain" />
         </View>
         <View style={s.words}>
-          {/* Not "Your place / Keep it up to date".
-              That was a claim of ownership followed by a chore, and this
-              panel is neither: it appears only to the person who went and
-              put this café in front of everybody else, and the only thing
-              it can do is take a photograph. So it says what they did and
-              then asks — the difference between a reminder and a nudge
-              from a friend. A question also survives being read for the
-              tenth time, which a compliment does not. */}
+          {/* A greeting, then a question. Not "Your place / Keep it up to
+              date", which was a claim of ownership followed by a chore —
+              and this panel is neither. It appears to exactly one person,
+              the one who went and put this café in front of everybody
+              else, and asking is how you speak to them.
+
+              A question is also the form that survives being read for the
+              tenth time, which matters here: the panel shows every time
+              its author opens their own place. A compliment in that slot
+              would wear through in a week.
+
+              "Hi there" rather than a literal "Hi friend": in English the
+              second reads translated, while "Chào bạn" is precisely that
+              register in Vietnamese. Each language gets the greeting it
+              actually uses rather than a transliteration of one.
+
+              And "Muốn cập nhật không?", not "Bạn muốn cập nhật không?" —
+              the line above has just said "bạn", and saying it twice in
+              two short lines is how a note starts to sound like a form.
+              It is also four characters shorter, which this column has
+              strong opinions about. */}
           <Text style={s.title}>
-            {t('You put this here', 'Bạn đưa nơi này lên', 'あなたが載せた場所')}
+            {t('Hi there,', 'Chào bạn,', 'こんにちは、')}
           </Text>
           <Text style={s.sub}>
-            {t('Got a photo?', 'Có ảnh nào không?', '写真はありますか？')}
+            {t('Would you like to update?', 'Muốn cập nhật không?', '更新しませんか？')}
           </Text>
         </View>
         <PressableScale

@@ -170,15 +170,25 @@ describe('what it offers', () => {
     expect(screen.getByText('Thêm ảnh')).toBeTruthy();
   });
 
-  // Says what they did, then asks — rather than claiming the place is
+  // A greeting, then a question — rather than claiming the place is
   // theirs and handing them a chore. This panel only ever shows to the
-  // person who put the café in front of everybody else, and the only
-  // thing it can do is take a photograph.
-  it('credits the reader and then asks, instead of instructing', () => {
+  // person who put the café in front of everybody else, and asking is
+  // how you speak to them.
+  it('greets the reader and asks, instead of instructing', () => {
     draw();
-    expect(screen.getByText('You put this here')).toBeTruthy();
-    expect(screen.getByText('Got a photo?')).toBeTruthy();
+    expect(screen.getByText('Hi there,')).toBeTruthy();
+    expect(screen.getByText('Would you like to update?')).toBeTruthy();
     expect(screen.queryByText(/Keep it up to date/)).toBeNull();
+  });
+
+  // The greeting names them once. "Bạn muốn cập nhật không?" under
+  // "Chào bạn," says it twice in two short lines, which is how a note
+  // starts to sound like a form.
+  it('does not say “bạn” twice in two lines', () => {
+    state.lang = 'vi';
+    draw();
+    expect(screen.getByText('Chào bạn,')).toBeTruthy();
+    expect(screen.getByText('Muốn cập nhật không?')).toBeTruthy();
   });
 });
 
