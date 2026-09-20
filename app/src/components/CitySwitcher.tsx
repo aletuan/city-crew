@@ -37,7 +37,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  Animated, Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text,
+  TextInput, useWindowDimensions, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -91,6 +92,30 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
   // the sheet alone rises on a native-driven spring. Modal's own
   // animationType="slide" moved the whole window, scrim included, and
   // read as a wall climbing the screen.
+  // ── the keyboard ──
+  //
+  // The sheet is pinned to the bottom of the screen, so a keyboard raised
+  // by the search field covered the field itself, the location well and
+  // every city row — the whole sheet, on a phone whose keyboard is 336pt
+  // of a 852pt screen. Typing was aiming at something you could not see.
+  //
+  // Measured rather than handed to `KeyboardAvoidingView`, for the reason
+  // `StartSheet` gives at length: that component works by adding bottom
+  // padding to itself, and an absolutely positioned child is laid out
+  // against its parent's *padding box*, so padding moves it not at all.
+  //
+  // iOS only. Android resizes its own window through `windowSoftInputMode`,
+  // and lifting the sheet as well would raise it twice.
+  const { height: winH } = useWindowDimensions();
+  const [kb, setKb] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    // `will`, not `did`: the frame is known before the animation starts.
+    const up = Keyboard.addListener('keyboardWillShow', (e) => setKb(e.endCoordinates.height));
+    const down = Keyboard.addListener('keyboardWillHide', () => setKb(0));
+    return () => { up.remove(); down.remove(); };
+  }, []);
+
   const rise = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     if (!visible) { rise.setValue(1); return; }
@@ -117,8 +142,16 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} />
       <Animated.View
+        testID="city-sheet"
         style={[s.sheet, {
-          paddingBottom: 14 + insets.bottom,
+          // Stands on the keyboard when there is one. The home-indicator
+          // inset goes with it: that strip is under the keyboard now, and
+          // paying for it twice leaves a band of empty sheet above the keys.
+          bottom: kb,
+          paddingBottom: 14 + (kb ? 0 : insets.bottom),
+          // Lifted, the sheet has less room, and a sheet taller than what
+          // is left would push its own rows off the top of the screen.
+          maxHeight: (winH - kb) * 0.92,
           transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 360] }) }],
         }]}
       >
@@ -250,10 +283,18 @@ const s = StyleSheet.create({
   searchInput: {
     flex: 1, color: colors.text, fontSize: 15.5, padding: 0,
   },
-  // Capped, so eight cities and a keyboard cannot push the rows off the
-  // bottom of the screen. Below the cap the sheet is still its content's
-  // height — nothing grows a scroll bar it does not need.
-  list: { maxHeight: 380 },
+  // Capped, so eight cities cannot push the rows off the bottom of the
+  // screen. Below the cap the sheet is still its content's height —
+  // nothing grows a scroll bar it does not need.
+  //
+  // `flexShrink`, because the cap above is a ceiling and not a promise.
+  // When the keyboard takes half the screen the sheet's own `maxHeight`
+  // leaves less than 380 for this, and a child that cannot shrink simply
+  // overflows: the rows would run off the bottom rather than scroll.
+  // Everything above this — the title, the field, the location well — is
+  // one line of its own and has nothing to give, so the list is the one
+  // that yields.
+  list: { maxHeight: 380, flexShrink: 1 },
   empty: {
     color: colors.textTertiary, fontSize: 14,
     paddingVertical: 22, textAlign: 'center',

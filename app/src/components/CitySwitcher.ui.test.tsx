@@ -9,7 +9,8 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { Keyboard, Platform } from 'react-native';
 
 const hanoi = { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' };
 const ctx = vi.hoisted(() => ({
@@ -257,5 +258,93 @@ describe('"Use my location"', () => {
     ctx.mode = 'manual';
     render(<CitySwitcherModal visible onClose={() => {}} />);
     expect(screen.getByText(/picking manually/i)).toBeTruthy();
+  });
+});
+
+// ── the keyboard ──
+//
+// The sheet is pinned to the bottom of the screen. Raising a keyboard over
+// it hid the field being typed into along with everything below — which is
+// the whole sheet, the field included, on a phone whose keyboard is 336 of
+// 852 points.
+//
+// `Platform.OS` is 'web' in this environment and the listener is iOS-only,
+// so the test says which platform it is and then plays the notification the
+// sheet is listening for. What it pins is the arithmetic the sheet does
+// with that number, which is the part that was missing.
+describe('the city sheet and the keyboard', () => {
+  const asIos = () => {
+    const was = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true });
+    return () => Object.defineProperty(Platform, 'OS', { value: was, configurable: true });
+  };
+
+  const raise = (height: number) => {
+    const calls = (Keyboard.addListener as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    const show = calls.find((c) => c[0] === 'keyboardWillShow')?.[1] as
+      (e: { endCoordinates: { height: number } }) => void;
+    act(() => show({ endCoordinates: { height } }));
+  };
+
+  const hide = () => {
+    const calls = (Keyboard.addListener as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    const off = calls.find((c) => c[0] === 'keyboardWillHide')?.[1] as () => void;
+    act(() => off());
+  };
+
+  it('stands on top of the keyboard rather than under it', () => {
+    const restore = asIos();
+    const spy = vi.spyOn(Keyboard, 'addListener').mockReturnValue({ remove: () => {} } as never);
+    try {
+      render(<CitySwitcherModal visible onClose={() => {}} />);
+      const sheet = screen.getByTestId('city-sheet');
+      expect(sheet.style.bottom).toBe('0px');
+
+      raise(336);
+      expect(sheet.style.bottom).toBe('336px');
+
+      hide();
+      expect(sheet.style.bottom).toBe('0px');
+    } finally {
+      spy.mockRestore();
+      restore();
+    }
+  });
+
+  // A sheet lifted onto the keyboard has less room, not the same room
+  // higher up. Without this it keeps its full height and pushes its own
+  // rows off the top of the screen.
+  it('gives up the height the keyboard took', () => {
+    const restore = asIos();
+    const spy = vi.spyOn(Keyboard, 'addListener').mockReturnValue({ remove: () => {} } as never);
+    try {
+      render(<CitySwitcherModal visible onClose={() => {}} />);
+      const sheet = screen.getByTestId('city-sheet');
+      const full = parseFloat(sheet.style.maxHeight);
+
+      raise(336);
+      expect(parseFloat(sheet.style.maxHeight)).toBeCloseTo(full - 336 * 0.92, 1);
+    } finally {
+      spy.mockRestore();
+      restore();
+    }
+  });
+
+  // The cap above is a ceiling, not a promise: when the sheet is lifted
+  // there is less than the list's own 380 left, and a child that cannot
+  // shrink overflows instead of scrolling.
+  //
+  // Weaker than it looks, and worth saying so: react-native-web's
+  // ScrollView already shrinks on its own, so deleting the declaration
+  // leaves this green while breaking the phone, where React Native's
+  // default is 0. What it does catch is the value being set the other
+  // way, which is the change somebody would make on purpose.
+  it('lets the list yield, since nothing above it can', () => {
+    render(<CitySwitcherModal visible onClose={() => {}} />);
+    // The scroller is the box the city rows live in.
+    const list = screen.getByText('Hanoi').closest('[class*="r-overflowY"]') as HTMLElement;
+    expect(list, 'the city rows should sit in a scroller').toBeTruthy();
+    expect(getComputedStyle(list).maxHeight).toBe('380px');
+    expect(getComputedStyle(list).flexShrink).toBe('1');
   });
 });
