@@ -712,10 +712,13 @@ const GUTTER = 33;
 const LABEL_LINE = 15;
 const LABEL_GAP = 5;
 const VALUE_LINE = 24;
-/** Everything above the first line of the value — what a glyph clears
- *  before it starts. 20 and 24 together are 44, which is the whole of a
- *  row whose value is one line, so nothing here makes a row taller. */
+/** Everything above the first line of the value — what the chevron
+ *  clears before it starts. */
 const ABOVE_VALUE = LABEL_LINE + LABEL_GAP;
+/** The label, the air under it and the first line of the value: the pair
+ *  the leading glyph is centred across. 44, which is also the whole of a
+ *  row whose value is one line, so nothing here makes a row taller. */
+const FIRST_PAIR = ABOVE_VALUE + VALUE_LINE;
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
@@ -880,22 +883,31 @@ const s = StyleSheet.create({
   // At `GUTTER` the words begin exactly where the hairline and the hours
   // table already began, and the three are one column.
   //
-  // A box of a stated height rather than a glyph with a nudge on it. It
-  // used to be `marginTop: 1` under `alignItems: 'flex-start'`, which
-  // pinned the glyph to the top of the row and let it land wherever the
-  // icon font's own line box happened to put it — 6pt above the centre of
-  // the label-and-first-line pair, measured on the phone, and further up
-  // again on the ninety-eight places in a hundred whose address wraps,
-  // because a taller row moves the bottom line and not the top.
+  // A box of a stated height rather than a glyph with a nudge on it, and
+  // the box is the label and the first line of the value together.
   //
-  // The box clears the label, is exactly one value line tall, and centres
-  // the glyph in it. So the glyph is level with the first line of the
-  // street however long the street runs.
-  infoIconSlot: {
-    width: GUTTER, height: VALUE_LINE, marginTop: ABOVE_VALUE,
-    justifyContent: 'center',
-  },
+  // The glyph belongs to the pair, not to either line of it. Level with
+  // the label it marks a word and leaves the street unmarked; level with
+  // the street it leaves ADDRESS alone above an empty gutter. Centred
+  // across both it holds the two as one row, which is what a row is.
+  //
+  // It took four tries to land here, and the first three are worth
+  // keeping because each was wrong in its own way. `marginTop: 1` under
+  // `alignItems: 'flex-start'` was no position at all — it pinned the
+  // glyph to the top and let the icon font's line box decide the rest,
+  // and had no answer for a second line of address. Then the first line
+  // of the value. Then the label's line.
+  //
+  // `FIRST_PAIR` — 15 + 5 + 24 — and centred. The *first* line of the
+  // value, deliberately: ninety-eight places in a hundred take two lines
+  // of street, and measuring the box from the whole row would make the
+  // glyph's position a property of how long an address happens to be.
+  infoIconSlot: { width: GUTTER, height: FIRST_PAIR, justifyContent: 'center' },
   infoWords: { flex: 1 },
+  // And the chevron stays where it was, which is the one place these two
+  // glyphs should part company. The pin marks the row; the chevron opens
+  // the value, and the table it opens unfolds under the value. A control
+  // lives with the thing it acts on.
   infoChevronSlot: { height: VALUE_LINE, marginTop: ABOVE_VALUE, justifyContent: 'center' },
   // Starts where the labels start. Run to the card's edge it cut the
   // gutter into four pieces; inset, the glyphs read as one column.

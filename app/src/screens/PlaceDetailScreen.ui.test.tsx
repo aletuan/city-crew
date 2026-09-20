@@ -872,35 +872,38 @@ describe('the info card’s gutter', () => {
 
   // ── where the glyph sits down the row ──
   //
-  // Level with the first line of the value. The glyph used to be
-  // top-aligned with a 1pt nudge, which left its height to the icon
-  // font's own line box — and which had no answer at all for a second
-  // line, since a longer address moves the bottom of the row and leaves
-  // the top alone. Of the places carrying an address, thirteen fit on one
-  // line; the rest are a label over two lines of street.
+  // Centred across the label and the first line of the value, because the
+  // glyph belongs to the pair rather than to either line of it.
+  //
+  // Its fourth position, and the three before it were each wrong in their
+  // own way: a 1pt nudge under `alignItems: 'flex-start'` (no position at
+  // all — the icon font's line box decided it, and nothing answered for a
+  // second line of address); the first line of the value (ADDRESS left
+  // alone above an empty gutter); the label's line (the street unmarked).
   //
   // jsdom lays nothing out, so these are the box's terms rather than the
-  // pixel it ends on: clear the label, stand exactly one value line tall,
-  // centre the glyph inside. That is the first line of the value wherever
-  // the row is drawn and however far the address runs.
-  it('stands the glyph level with the first line of the value', () => {
+  // pixel it ends on: 15 + 5 + 24 tall, at the top of the words, glyph
+  // centred inside.
+  it('centres the glyph across the label and the first line of the value', () => {
     show(place({ address: '27 Huỳnh Thúc Kháng' }));
     const row = screen.getByTestId('detail-address').parentElement!.parentElement!;
     const slot = styleOf(row.firstElementChild);
-    expect(slot.marginTop).toBe('20px');   // 15 label + 5 air
-    expect(slot.height).toBe('24px');      // one value line
+    expect(slot.marginTop).toBe('0px');
+    expect(slot.height).toBe('44px');
     expect(slot.justifyContent).toBe('center');
   });
 
-  // The address the app actually holds, rather than the short one above:
-  // the glyph must not move when the street takes a second line.
+  // The address the app actually holds, rather than the short one above.
+  // Ninety-eight places in a hundred take a second line, and measuring the
+  // box from the whole row would make the glyph's position a property of
+  // how long an address happens to be.
   it('leaves the glyph where it is when the address wraps', () => {
     show(place({ address: '27/16 Ngõ 18 Huỳnh Thúc Kháng, Giảng Võ, Ba Đình, Hà Nội' }));
     const slot = styleOf(
       screen.getByTestId('detail-address').parentElement!.parentElement!.firstElementChild,
     );
-    expect(slot.marginTop).toBe('20px');
-    expect(slot.height).toBe('24px');
+    expect(slot.marginTop).toBe('0px');
+    expect(slot.height).toBe('44px');
   });
 
   // The box above is only honest while the lines it names are the lines
@@ -933,21 +936,26 @@ describe('the info card’s gutter', () => {
     expect(lineHeightOf(label)).toBe('15px');
     expect(styleOf(label).marginBottom).toBe('5px');
     expect(lineHeightOf(value)).toBe('24px');
-    // 15 + 5 is what the glyph's box clears; 24 is how tall it stands.
+    // 15 + 5 + 24 is the glyph's box, so the three numbers above are the
+    // ones its position is measured from.
     const row = value.parentElement!.parentElement!;
-    expect(styleOf(row.firstElementChild).marginTop).toBe('20px');
-    expect(styleOf(row.firstElementChild).height).toBe('24px');
+    expect(styleOf(row.firstElementChild).height).toBe('44px');
   });
 
-  // Both ends of the Hours row, or the raggedness simply moves across it.
-  it('gives the hours chevron the same box as the clock beside it', () => {
+  // The one place the two glyphs on a row part company, and it is on
+  // purpose: the clock names the row, the chevron opens the value, and the
+  // table it opens unfolds under the value. A control lives with the thing
+  // it acts on.
+  it('leaves the hours chevron on the value line, not up with the clock', () => {
     show(place({ address: '27 Huỳnh Thúc Kháng' }));
     const row = screen.getByRole('button', { name: /^Hours/ });
-    for (const end of [row.firstElementChild, row.lastElementChild]) {
-      expect(styleOf(end).marginTop).toBe('20px');
-      expect(styleOf(end).height).toBe('24px');
-      expect(styleOf(end).justifyContent).toBe('center');
-    }
+    const clock = styleOf(row.firstElementChild);
+    const chevron = styleOf(row.lastElementChild);
+    expect(clock.marginTop).toBe('0px');
+    expect(clock.height).toBe('44px');
+    expect(chevron.marginTop).toBe('20px');
+    expect(chevron.height).toBe('24px');
+    expect(chevron.justifyContent).toBe('center');
   });
 
   // A line has nothing inside it to drag along. Written as a border on the
