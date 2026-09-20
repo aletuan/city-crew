@@ -163,9 +163,19 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
           <Image source={welcomeLogo} style={s.markLogo} contentFit="contain" />
         </View>
         <View style={s.words}>
-          <Text style={s.title}>{t('Your place', 'Địa điểm của bạn', 'あなたの場所')}</Text>
+          {/* Not "Your place / Keep it up to date".
+              That was a claim of ownership followed by a chore, and this
+              panel is neither: it appears only to the person who went and
+              put this café in front of everybody else, and the only thing
+              it can do is take a photograph. So it says what they did and
+              then asks — the difference between a reminder and a nudge
+              from a friend. A question also survives being read for the
+              tenth time, which a compliment does not. */}
+          <Text style={s.title}>
+            {t('You put this here', 'Bạn đưa nơi này lên', 'あなたが載せた場所')}
+          </Text>
           <Text style={s.sub}>
-            {t('Keep it up to date', 'Giữ địa điểm luôn đúng', '最新に保ちましょう')}
+            {t('Got a photo?', 'Có ảnh nào không?', '写真はありますか？')}
           </Text>
         </View>
         <PressableScale
@@ -216,10 +226,10 @@ const s = StyleSheet.create({
   // A size down from `type.cardTitle`: the words share their line with a
   // button now, and the heading of a two-line aside is not a card title.
   title: { color: colors.accent, fontSize: 15.5, fontWeight: font.semibold },
-  // "Keep it up to date", not "Help keep this place up to date". The
-  // longer sentence wrapped to three lines in the ~140pt the button
-  // leaves, and every word it lost was already said by the title above
-  // it and the button beside it.
+  // The sub has ~140pt beside the button, which is about twenty
+  // characters at this size — the reason both these lines are curt. An
+  // earlier draft read "Help keep this place up to date" and wrapped to
+  // three ragged lines in that space.
   sub: { color: colors.textSecondary, fontSize: 13 },
   // `containerStyle`, not `style`: PressableScale puts `style` on its inner
   // animated view and only `containerStyle` on the Pressable, so a width

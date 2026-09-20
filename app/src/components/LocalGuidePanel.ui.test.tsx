@@ -169,6 +169,17 @@ describe('what it offers', () => {
     draw();
     expect(screen.getByText('Thêm ảnh')).toBeTruthy();
   });
+
+  // Says what they did, then asks — rather than claiming the place is
+  // theirs and handing them a chore. This panel only ever shows to the
+  // person who put the café in front of everybody else, and the only
+  // thing it can do is take a photograph.
+  it('credits the reader and then asks, instead of instructing', () => {
+    draw();
+    expect(screen.getByText('You put this here')).toBeTruthy();
+    expect(screen.getByText('Got a photo?')).toBeTruthy();
+    expect(screen.queryByText(/Keep it up to date/)).toBeNull();
+  });
 });
 
 describe('the upload', () => {
