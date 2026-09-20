@@ -121,6 +121,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const [photoIndex, setPhotoIndex] = useState(0);
   const credit = useFlag('photo_attribution');
   const [hoursOpen, setHoursOpen] = useState(false);
+  const showPrice = useFlag('place_price');
   // How many lines the address wanted before anything clamped it, and
   // whether the reader has asked for the rest. `null` is "not measured
   // yet", which is also the one paint that runs unclamped. Up here with
@@ -462,8 +463,20 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             ))}
             {/* FREE is already a pill of its own, accented because it is
                 the one price that is a state; a paid price is quiet text
-                and takes the glass pill and a tag like its neighbours. */}
-            {place.price_display || place.price_vnd != null ? (
+                and takes the glass pill and a tag like its neighbours.
+
+                Behind a switch, and off: the price is what pushes a
+                three-category place onto a second line — twelve of the
+                eighteen that have three are café + eats + nightlife, and
+                that row wants 427pt of a 386pt card. Without it every one
+                of them fits, the heaviest by a single point.
+
+                This screen is the only place in the app that has ever
+                drawn a price, so the switch hides it everywhere, on 557
+                published places of 648. That is why it is a row in
+                `app_flags` rather than a deletion — see `lib/flags` for
+                the one line that brings it back on every phone at once. */}
+            {showPrice && (place.price_display || place.price_vnd != null) ? (
               isFree(place) ? (
                 <PricePill place={place} />
               ) : (
