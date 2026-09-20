@@ -541,6 +541,7 @@ export type Database = {
           google_place_id: string | null
           id: string
           is_featured: boolean
+          instagram_handle: string | null
           is_published: boolean
           lat: number | null
           lng: number | null
@@ -588,6 +589,7 @@ export type Database = {
           google_place_id?: string | null
           id?: string
           is_featured?: boolean
+          instagram_handle?: string | null
           is_published?: boolean
           lat?: number | null
           lng?: number | null
@@ -635,6 +637,7 @@ export type Database = {
           google_place_id?: string | null
           id?: string
           is_featured?: boolean
+          instagram_handle?: string | null
           is_published?: boolean
           lat?: number | null
           lng?: number | null

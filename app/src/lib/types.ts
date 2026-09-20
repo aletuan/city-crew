@@ -74,6 +74,21 @@ export type Place = {
   opening_hours: string[] | null;
   website: string | null;
   phone: string | null;
+  /**
+   * The venue's own accounts, stored bare and lowercase — no "@", which is
+   * punctuation the renderer puts back. See
+   * `20260901140000_place_threads_handle.sql` and its Instagram twin.
+   *
+   * Instagram was not a column until the pair of them earned a row on the
+   * detail screen; forty-seven of them were sitting in `website` as
+   * profile URLs, which is neither a website nor a handle.
+   *
+   * Optional for the reason `created_at` is: one screen reads them, and a
+   * fixture building a place to test distance sorting should not have to
+   * declare that the café has no Instagram.
+   */
+  instagram_handle?: string | null;
+  threads_handle?: string | null;
   place_photos: PlacePhoto[];
   /**
    * When the row was written. Optional, because most of the app never
