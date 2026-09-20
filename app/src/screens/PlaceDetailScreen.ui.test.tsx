@@ -485,6 +485,90 @@ describe('PlaceDetailScreen — floating controls', () => {
 // posts from were not drawn at all, though 166 of them have been sitting in
 // `threads_handle` since September.
 
+// ── a long address ──
+//
+// Of the 648 published places, 254 fit on one line beside the Directions
+// button and 606 fit in two. Forty-two do not, and those forty-two are the
+// whole of this: a card that grows to five lines for one address in
+// fifteen costs the other fourteen the opening hours.
+//
+// `onTextLayout` never fires in jsdom, which lays nothing out, so the
+// screen's own handler is called with the line count a phone would have
+// reported. What that pins is the arithmetic around the measurement, not
+// the measurement.
+
+describe('PlaceDetailScreen — an address too long for the card', () => {
+  const addressProps = () => propsWhere((p) => p.testID === 'detail-address') as
+    unknown as { numberOfLines?: number; onTextLayout: (e: unknown) => void };
+  const measure = (lines: number) => act(() => {
+    addressProps().onTextLayout({ nativeEvent: { lines: Array.from({ length: lines }) } });
+  });
+
+  // The first paint runs unclamped on purpose. `onTextLayout` reports the
+  // lines it actually drew, so a Text already limited to two could only
+  // ever report two and could never say whether there was a third.
+  it('measures before it clamps', () => {
+    show();
+    expect(addressProps().numberOfLines).toBeUndefined();
+  });
+
+  it('holds a long address to two lines once it knows', () => {
+    show();
+    measure(4);
+    expect(addressProps().numberOfLines).toBe(2);
+  });
+
+  it('leaves a short one alone', () => {
+    show();
+    measure(1);
+    expect(addressProps().numberOfLines).toBe(2);
+    expect(screen.queryByTestId('detail-address-toggle')!.getAttribute('role')).toBeNull();
+  });
+
+  // Read off the props, like `hoursState` does: react-native-web drops
+  // `accessibilityState` on a plain View rather than turning it into
+  // `aria-expanded`, so an assertion on the DOM would pass vacuously.
+  const expanded = () => (propsWhere((p) => p.testID === 'detail-address-toggle')
+    .accessibilityState as unknown as { expanded?: boolean } | undefined)?.expanded;
+
+  it('opens on a tap and closes on the next', () => {
+    show();
+    measure(4);
+    expect(expanded()).toBe(false);
+
+    fireEvent.click(screen.getByTestId('detail-address-toggle'));
+    expect(addressProps().numberOfLines).toBeUndefined();
+    expect(expanded()).toBe(true);
+
+    fireEvent.click(screen.getByTestId('detail-address-toggle'));
+    expect(addressProps().numberOfLines).toBe(2);
+    expect(expanded()).toBe(false);
+  });
+
+  // A control that does nothing is worse than no control: VoiceOver would
+  // announce a button on three cards in five and open nothing.
+  it('is not a control at all when there is nothing to open', () => {
+    show();
+    measure(2);
+    expect(screen.getByTestId('detail-address-toggle').getAttribute('role')).toBeNull();
+    expect(expanded()).toBeUndefined();
+  });
+
+  // The button is the row's other half, and a row that grows must not take
+  // it along: a target that moves under the thumb between the look and the
+  // tap is the oldest bug in a list.
+  it('leaves the Directions button exactly where it was', () => {
+    show();
+    measure(4);
+    const before = getComputedStyle(screen.getByTestId('detail-directions').parentElement!);
+    const box = { top: before.marginTop, shrink: before.flexShrink };
+
+    fireEvent.click(screen.getByTestId('detail-address-toggle'));
+    const after = getComputedStyle(screen.getByTestId('detail-directions').parentElement!);
+    expect({ top: after.marginTop, shrink: after.flexShrink }).toEqual(box);
+  });
+});
+
 describe('PlaceDetailScreen — website, Instagram and Threads', () => {
   it('shows a website as its domain, not as its URL', () => {
     show(place({
@@ -578,23 +662,21 @@ describe('PlaceDetailScreen — the map', () => {
   // reader to bind "where" to two separate objects — the words in one box,
   // the picture in another. Inside the card it is the address's own
   // illustration, and the proof of that is what it sits between.
-  // It was indented to the text column, which left a 33pt strip of empty
-  // card down its left side, under the pin — a picture that looks like it
-  // failed to load rather than one that is aligned. A map is a picture,
-  // not a row of text, so it takes the card's whole width.
-  it('runs the full width of the card rather than the text column', () => {
+  // The third thing in the address's column, under the label and the
+  // street. Full-bleed was tried — it is what the reference does — and it
+  // broke that column: the picture reached left past every other thing in
+  // the card and the grid stopped being a grid.
+  it('starts where the words start, not at the card\u2019s edge', () => {
     show();
-    expect(getComputedStyle(map()!.parentElement!).marginLeft).toBe('0px');
+    expect(getComputedStyle(map()!.parentElement!).marginLeft).toBe('33px');
   });
 
   it('sits inside the info card, under the address and above the hours', () => {
     show();
-    const card = screen.getByTestId('detail-address').closest('div')!
-      .parentElement!.parentElement!.parentElement!;
-    const order = (el: Element | null) =>
-      [...card.querySelectorAll('*')].indexOf(el as Element);
-    expect(order(screen.getByTestId('detail-address'))).toBeLessThan(order(map()));
-    expect(order(map())).toBeLessThan(order(screen.getByText('Hours')));
+    const all = [...document.querySelectorAll('*')];
+    const at = (el: Element | null) => all.indexOf(el as Element);
+    expect(at(screen.getByTestId('detail-address'))).toBeLessThan(at(map()));
+    expect(at(map())).toBeLessThan(at(screen.getByText('Hours')));
   });
 
   // A live map inside a vertical scroll is a hole the page cannot be
@@ -870,36 +952,42 @@ describe('the local guide’s panel', () => {
 // so both can be asserted rather than looked at.
 describe('the info card’s gutter', () => {
   const styleOf = (el: Element | null) => getComputedStyle(el as Element);
+  /**
+   * The `infoStack` a value sits in — the element whose own first child
+   * holds the glyph.
+   *
+   * Climbed rather than counted, because the address's value is one level
+   * deeper than the others: it is wrapped in the control that expands it,
+   * and the next row to gain one would have broken a fixed count
+   * silently.
+   */
+  const rowOf = (el: Element): HTMLElement => {
+    let n = el.parentElement;
+    while (n && !n.querySelector(':scope > div > [data-icon]')) n = n.parentElement;
+    return n as HTMLElement;
+  };
 
   it('gives the glyph the whole gutter, so the words start where the lines do', () => {
     show(place({ address: '27 Huỳnh Thúc Kháng' }));
     const value = screen.getByTestId('detail-address');
-    // value → infoWords → the Pressable, whose first child is the icon.
-    const row = value.parentElement!.parentElement!;
-    expect(styleOf(row.firstElementChild).width).toBe('33px');
+    expect(styleOf(rowOf(value).firstElementChild).width).toBe('33px');
   });
 
   // ── where the glyph sits down the row ──
   //
-  // Half-way between the middle of the label's line and the middle of the
-  // first line of the value — measured off the reference, where the glyph
-  // sits at 0.500, 0.521 and 0.545 of the way across on its three clean
-  // rows.
+  // Level with the label, which makes the row a two-column grid and says
+  // so: glyph beside the name of the thing, the thing itself beneath.
   //
-  // 39.5 rather than the 44 of the two-line box, and the four and a half
-  // points are the point. The two lines are not the same height — a 15pt
-  // label over a 24pt value — so the box's middle sits 2.25pt below the
-  // middle of the pair: near enough to miss by eye, far enough to be the
-  // thing that still looks wrong.
+  // Half-way between the two lines was measured off the reference and
+  // shipped, and on the phone it read as a glyph belonging to neither.
   //
   // jsdom lays nothing out, so these are the box's terms rather than the
   // pixel it ends on.
-  it('centres the glyph half-way between the label and the first value line', () => {
+  it('stands the glyph on the label\u2019s line', () => {
     show(place({ address: '27 Huỳnh Thúc Kháng' }));
-    const row = screen.getByTestId('detail-address').parentElement!.parentElement!;
-    const slot = styleOf(row.firstElementChild);
+    const slot = styleOf(rowOf(screen.getByTestId('detail-address')).firstElementChild);
     expect(slot.marginTop).toBe('0px');
-    expect(slot.height).toBe('39.5px');
+    expect(slot.height).toBe('15px');
     expect(slot.justifyContent).toBe('center');
   });
 
@@ -909,11 +997,9 @@ describe('the info card’s gutter', () => {
   // how long an address happens to be.
   it('leaves the glyph where it is when the address wraps', () => {
     show(place({ address: '27/16 Ngõ 18 Huỳnh Thúc Kháng, Giảng Võ, Ba Đình, Hà Nội' }));
-    const slot = styleOf(
-      screen.getByTestId('detail-address').parentElement!.parentElement!.firstElementChild,
-    );
+    const slot = styleOf(rowOf(screen.getByTestId('detail-address')).firstElementChild);
     expect(slot.marginTop).toBe('0px');
-    expect(slot.height).toBe('39.5px');
+    expect(slot.height).toBe('15px');
   });
 
   // The box above is only honest while the lines it names are the lines
@@ -942,14 +1028,15 @@ describe('the info card’s gutter', () => {
   it('states the line heights the glyph’s box is measured from', () => {
     show(place({ address: '27 Huỳnh Thúc Kháng' }));
     const value = screen.getByTestId('detail-address');
-    const label = value.parentElement!.firstElementChild;
+    // The label is the first thing in the words column; the value is now
+    // one deeper than that, inside the control that expands it.
+    const label = rowOf(value).querySelector(':scope > div:nth-child(2) > *');
     expect(lineHeightOf(label)).toBe('15px');
     expect(styleOf(label).marginBottom).toBe('5px');
     expect(lineHeightOf(value)).toBe('24px');
-    // The glyph's box is derived from all three, so these are the numbers
-    // its position is measured from: (15/2 + 20 + 24/2) / 2, doubled.
-    const row = value.parentElement!.parentElement!;
-    expect(styleOf(row.firstElementChild).height).toBe('39.5px');
+    // The glyph's box is the label's line, so that 15 is the number its
+    // position is measured from.
+    expect(styleOf(rowOf(value).firstElementChild).height).toBe('15px');
   });
 
   // Both ends of the row are level. This replaces a test that asserted the
@@ -961,7 +1048,7 @@ describe('the info card’s gutter', () => {
     const row = screen.getByRole('button', { name: /^Hours/ });
     for (const end of [row.firstElementChild, row.lastElementChild]) {
       expect(styleOf(end).marginTop).toBe('0px');
-      expect(styleOf(end).height).toBe('39.5px');
+      expect(styleOf(end).height).toBe('15px');
       expect(styleOf(end).justifyContent).toBe('center');
     }
   });
