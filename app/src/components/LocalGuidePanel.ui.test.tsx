@@ -183,7 +183,7 @@ describe('what it offers', () => {
   it('greets the reader by name and asks, instead of instructing', () => {
     draw();
     expect(screen.getByText('Hi Trang,')).toBeTruthy();
-    expect(screen.getByText('Would you like to add more photos?')).toBeTruthy();
+    expect(screen.getByText('Want to add a photo?')).toBeTruthy();
     expect(screen.queryByText(/Keep it up to date/)).toBeNull();
   });
 
