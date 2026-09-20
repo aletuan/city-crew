@@ -603,24 +603,35 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
  *  every continuation under a row lines up against. Glyph 19, air 14. */
 const GUTTER = 33;
 
-/** The two lines a glyph is centred on: the label, the air under it, and
- *  the first line of the value.
+/** Where a glyph sits down its row: level with the first line of the
+ *  value, not with the label above it and not in the gap between them.
  *
- *  Both line heights are stated rather than left to the platform, because
- *  this number is the glyph's position and a position derived from "what
- *  iOS thinks a 12pt line is" is a position nobody can check. 15 is a
- *  rounding of the 14.3 the system face gives at 12pt, so the row keeps
- *  the height it has.
+ *  This is a decision about the address row, because that is the only row
+ *  whose value wraps — Hours and the open-now line are short, and Website
+ *  is held to one line. And it wraps almost always: of the 648 places
+ *  carrying an address, 13 fit on one line. Thirteen. The rest run to two
+ *  lines and thirty-five run to three, so the address row is a label over
+ *  two lines of street, and the shape to design for is that one rather
+ *  than the short address that happens to be on the screenshot.
  *
- *  Only the *first* line of the value counts. An address that wraps makes
- *  its row taller; centring on the whole row would then walk the glyph
- *  down past the label it belongs to, which is the thing top-alignment
- *  got right and the reason this is a fixed box rather than `center` on
- *  the row. */
+ *  Centred on the pair — label plus first line — the glyph lands on the
+ *  top edge of the street and reads as pushed up. Centred on the whole
+ *  row it drifts with the length of the address. Centred on the first
+ *  line of the value it is level with the words it is a marker for, and
+ *  it stays there whether the address runs to one line or four.
+ *
+ *  All three line heights are stated rather than left to the platform: a
+ *  glyph's position derived from "what iOS thinks a 12pt line is" is a
+ *  position nobody can check, and it moves the day that changes. 15 is a
+ *  rounding of the 14.3 the system face gives at 12pt, so the rows keep
+ *  the height they have. */
 const LABEL_LINE = 15;
 const LABEL_GAP = 5;
 const VALUE_LINE = 24;
-const FIRST_PAIR = LABEL_LINE + LABEL_GAP + VALUE_LINE;
+/** Everything above the first line of the value — what a glyph clears
+ *  before it starts. 20 and 24 together are 44, which is the whole of a
+ *  row whose value is one line, so nothing here makes a row taller. */
+const ABOVE_VALUE = LABEL_LINE + LABEL_GAP;
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
@@ -750,11 +761,12 @@ const s = StyleSheet.create({
   // A row is a column — label, then value. Only Hours lays itself across,
   // for the chevron at its end.
   //
-  // Still `flex-start`, and the glyphs are centred by their own boxes
+  // Still `flex-start`, and the glyphs are placed by their own boxes
   // rather than by this. `center` here would centre them on the whole
-  // row, which on a place whose address wraps to two lines is a glyph
-  // sitting beside the second half of an address instead of beside the
-  // word ADDRESS.
+  // row, and the address row's height is the length of the address: the
+  // pin would sit level with the street on a short one and slide down
+  // between the lines on a long one, which is a glyph whose position is
+  // a property of the data.
   infoStack: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 17 },
   // The whole gutter, not the glyph: 19 of it is the glyph and the
   // remaining 14 is the air before the words. Written `GUTTER - 14` it was
@@ -771,14 +783,19 @@ const s = StyleSheet.create({
   // used to be `marginTop: 1` under `alignItems: 'flex-start'`, which
   // pinned the glyph to the top of the row and let it land wherever the
   // icon font's own line box happened to put it — 6pt above the centre of
-  // the pair, measured on the phone, and further up again on any place
-  // whose address wraps, because a taller row moves the bottom line and
-  // not the top. Centred in `FIRST_PAIR` the glyph sits between the label
-  // and the first line of the value, and stays there however long the
-  // address runs.
-  infoIconSlot: { width: GUTTER, height: FIRST_PAIR, justifyContent: 'center' },
+  // the label-and-first-line pair, measured on the phone, and further up
+  // again on the ninety-eight places in a hundred whose address wraps,
+  // because a taller row moves the bottom line and not the top.
+  //
+  // The box clears the label, is exactly one value line tall, and centres
+  // the glyph in it. So the glyph is level with the first line of the
+  // street however long the street runs.
+  infoIconSlot: {
+    width: GUTTER, height: VALUE_LINE, marginTop: ABOVE_VALUE,
+    justifyContent: 'center',
+  },
   infoWords: { flex: 1 },
-  infoChevronSlot: { height: FIRST_PAIR, justifyContent: 'center' },
+  infoChevronSlot: { height: VALUE_LINE, marginTop: ABOVE_VALUE, justifyContent: 'center' },
   // Starts where the labels start. Run to the card's edge it cut the
   // gutter into four pieces; inset, the glyphs read as one column.
   //
