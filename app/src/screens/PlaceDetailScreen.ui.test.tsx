@@ -578,6 +578,15 @@ describe('PlaceDetailScreen — the map', () => {
   // reader to bind "where" to two separate objects — the words in one box,
   // the picture in another. Inside the card it is the address's own
   // illustration, and the proof of that is what it sits between.
+  // It was indented to the text column, which left a 33pt strip of empty
+  // card down its left side, under the pin — a picture that looks like it
+  // failed to load rather than one that is aligned. A map is a picture,
+  // not a row of text, so it takes the card's whole width.
+  it('runs the full width of the card rather than the text column', () => {
+    show();
+    expect(getComputedStyle(map()!.parentElement!).marginLeft).toBe('0px');
+  });
+
   it('sits inside the info card, under the address and above the hours', () => {
     show();
     const card = screen.getByTestId('detail-address').closest('div')!
@@ -872,35 +881,39 @@ describe('the info card’s gutter', () => {
 
   // ── where the glyph sits down the row ──
   //
-  // Level with the first line of the value. The glyph used to be
-  // top-aligned with a 1pt nudge, which left its height to the icon
-  // font's own line box — and which had no answer at all for a second
-  // line, since a longer address moves the bottom of the row and leaves
-  // the top alone. Of the places carrying an address, thirteen fit on one
-  // line; the rest are a label over two lines of street.
+  // Half-way between the middle of the label's line and the middle of the
+  // first line of the value — measured off the reference, where the glyph
+  // sits at 0.500, 0.521 and 0.545 of the way across on its three clean
+  // rows.
+  //
+  // 39.5 rather than the 44 of the two-line box, and the four and a half
+  // points are the point. The two lines are not the same height — a 15pt
+  // label over a 24pt value — so the box's middle sits 2.25pt below the
+  // middle of the pair: near enough to miss by eye, far enough to be the
+  // thing that still looks wrong.
   //
   // jsdom lays nothing out, so these are the box's terms rather than the
-  // pixel it ends on: clear the label, stand exactly one value line tall,
-  // centre the glyph inside. That is the first line of the value wherever
-  // the row is drawn and however far the address runs.
-  it('stands the glyph level with the first line of the value', () => {
+  // pixel it ends on.
+  it('centres the glyph half-way between the label and the first value line', () => {
     show(place({ address: '27 Huỳnh Thúc Kháng' }));
     const row = screen.getByTestId('detail-address').parentElement!.parentElement!;
     const slot = styleOf(row.firstElementChild);
-    expect(slot.marginTop).toBe('20px');   // 15 label + 5 air
-    expect(slot.height).toBe('24px');      // one value line
+    expect(slot.marginTop).toBe('0px');
+    expect(slot.height).toBe('39.5px');
     expect(slot.justifyContent).toBe('center');
   });
 
-  // The address the app actually holds, rather than the short one above:
-  // the glyph must not move when the street takes a second line.
+  // The address the app actually holds, rather than the short one above.
+  // Ninety-eight places in a hundred take a second line, and measuring the
+  // box from the whole row would make the glyph's position a property of
+  // how long an address happens to be.
   it('leaves the glyph where it is when the address wraps', () => {
     show(place({ address: '27/16 Ngõ 18 Huỳnh Thúc Kháng, Giảng Võ, Ba Đình, Hà Nội' }));
     const slot = styleOf(
       screen.getByTestId('detail-address').parentElement!.parentElement!.firstElementChild,
     );
-    expect(slot.marginTop).toBe('20px');
-    expect(slot.height).toBe('24px');
+    expect(slot.marginTop).toBe('0px');
+    expect(slot.height).toBe('39.5px');
   });
 
   // The box above is only honest while the lines it names are the lines
@@ -933,19 +946,22 @@ describe('the info card’s gutter', () => {
     expect(lineHeightOf(label)).toBe('15px');
     expect(styleOf(label).marginBottom).toBe('5px');
     expect(lineHeightOf(value)).toBe('24px');
-    // 15 + 5 is what the glyph's box clears; 24 is how tall it stands.
+    // The glyph's box is derived from all three, so these are the numbers
+    // its position is measured from: (15/2 + 20 + 24/2) / 2, doubled.
     const row = value.parentElement!.parentElement!;
-    expect(styleOf(row.firstElementChild).marginTop).toBe('20px');
-    expect(styleOf(row.firstElementChild).height).toBe('24px');
+    expect(styleOf(row.firstElementChild).height).toBe('39.5px');
   });
 
-  // Both ends of the Hours row, or the raggedness simply moves across it.
-  it('gives the hours chevron the same box as the clock beside it', () => {
+  // Both ends of the row are level. This replaces a test that asserted the
+  // opposite on the argument that a control lives with the thing it acts
+  // on — which reads well and is not what the reference does: its trailing
+  // glyph sits within 2pt of its leading one on every row measured.
+  it('keeps both ends of the hours row level', () => {
     show(place({ address: '27 Huỳnh Thúc Kháng' }));
     const row = screen.getByRole('button', { name: /^Hours/ });
     for (const end of [row.firstElementChild, row.lastElementChild]) {
-      expect(styleOf(end).marginTop).toBe('20px');
-      expect(styleOf(end).height).toBe('24px');
+      expect(styleOf(end).marginTop).toBe('0px');
+      expect(styleOf(end).height).toBe('39.5px');
       expect(styleOf(end).justifyContent).toBe('center');
     }
   });

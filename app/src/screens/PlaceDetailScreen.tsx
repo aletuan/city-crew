@@ -712,10 +712,28 @@ const GUTTER = 33;
 const LABEL_LINE = 15;
 const LABEL_GAP = 5;
 const VALUE_LINE = 24;
-/** Everything above the first line of the value — what a glyph clears
- *  before it starts. 20 and 24 together are 44, which is the whole of a
- *  row whose value is one line, so nothing here makes a row taller. */
+/** Everything above the first line of the value. */
 const ABOVE_VALUE = LABEL_LINE + LABEL_GAP;
+/**
+ * Where a glyph's middle goes: half-way between the middle of the label's
+ * line and the middle of the first line of the value.
+ *
+ * Measured off the reference rather than reasoned out. On its three clean
+ * rows the glyph sits at 0.500, 0.521 and 0.545 of the way from one ink
+ * centre to the other — half-way, to the pixel the screenshot can carry.
+ *
+ * Which is *not* the centre of the two-line box, and the difference is
+ * the reason this is its own number. That box is 44 tall and its middle
+ * is 22, but the two lines in it are not the same height — a 15pt label
+ * over a 24pt value — so its middle sits 2.25pt below the middle of the
+ * pair. Near enough to miss by eye and far enough to be the thing that
+ * still looks wrong.
+ */
+const GLYPH_MID = (LABEL_LINE / 2 + ABOVE_VALUE + VALUE_LINE / 2) / 2;
+/** A box twice as tall as that, so centring a glyph in it lands the glyph
+ *  exactly there. 39.5, which is shorter than the 44 of a one-line row,
+ *  so nothing here makes a row taller. */
+const GLYPH_BOX = GLYPH_MID * 2;
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
@@ -838,13 +856,23 @@ const s = StyleSheet.create({
   // The Card supplies ground, border and radius; the horizontal inset
   // lives here so each row's hairline can run to the card's edge.
   infoGroup: { marginTop: 18, paddingHorizontal: space.cardPadding },
-  // The map sits inside the info card now, between the address row and
-  // whatever follows it. Inset to the gutter, so its left edge is the one
-  // the hairlines and the hours table already keep, and the card reads as
-  // one column with a picture in it rather than a picture with a card
-  // around it. `overflow: hidden` because MiniMap draws to its own corners.
+  // The map sits inside the info card, between the address row and
+  // whatever follows it, and it takes the card's whole width.
+  //
+  // It was inset to `GUTTER` — the hairlines' own left edge — on the
+  // argument that the card should read as one column. That argument is
+  // about rows of text, and a map is not one: indented to the text column
+  // it left a 33pt strip of empty card down its left side, under the pin,
+  // which reads as a picture that failed to load rather than as alignment.
+  // The reference runs it to the card's padding on both sides, symmetric,
+  // and so does this.
+  //
+  // The hairlines keep their inset. A picture wider than the text under it
+  // is an ordinary card; a picture and a rule at two different insets is
+  // only a problem when both are trying to be the same edge, and they are
+  // not. `overflow: hidden` because MiniMap draws to its own corners.
   mapSlot: {
-    marginLeft: GUTTER, marginBottom: 16,
+    marginBottom: 16,
     borderRadius: radius.card - 8, overflow: 'hidden',
   },
   // `containerStyle`, not `style`: PressableScale puts `style` on its inner
@@ -880,23 +908,38 @@ const s = StyleSheet.create({
   // At `GUTTER` the words begin exactly where the hairline and the hours
   // table already began, and the three are one column.
   //
-  // A box of a stated height rather than a glyph with a nudge on it. It
-  // used to be `marginTop: 1` under `alignItems: 'flex-start'`, which
-  // pinned the glyph to the top of the row and let it land wherever the
-  // icon font's own line box happened to put it — 6pt above the centre of
-  // the label-and-first-line pair, measured on the phone, and further up
-  // again on the ninety-eight places in a hundred whose address wraps,
-  // because a taller row moves the bottom line and not the top.
+  // A box of a stated height rather than a glyph with a nudge on it, and
+  // the box is the label and the first line of the value together.
   //
-  // The box clears the label, is exactly one value line tall, and centres
-  // the glyph in it. So the glyph is level with the first line of the
-  // street however long the street runs.
-  infoIconSlot: {
-    width: GUTTER, height: VALUE_LINE, marginTop: ABOVE_VALUE,
-    justifyContent: 'center',
-  },
+  // The glyph belongs to the pair, not to either line of it. Level with
+  // the label it marks a word and leaves the street unmarked; level with
+  // the street it leaves ADDRESS alone above an empty gutter. Centred
+  // across both it holds the two as one row, which is what a row is.
+  //
+  // It took four tries to land here, and the first three are worth
+  // keeping because each was wrong in its own way. `marginTop: 1` under
+  // `alignItems: 'flex-start'` was no position at all — it pinned the
+  // glyph to the top and let the icon font's line box decide the rest,
+  // and had no answer for a second line of address. Then the first line
+  // of the value. Then the label's line.
+  //
+  // `GLYPH_BOX` centred, which puts the glyph's middle on `GLYPH_MID`.
+  // The *first* line of the value, deliberately: ninety-eight places in a
+  // hundred take two lines of street, and measuring from the whole row
+  // would make the glyph's position a property of how long an address
+  // happens to be.
+  infoIconSlot: { width: GUTTER, height: GLYPH_BOX, justifyContent: 'center' },
   infoWords: { flex: 1 },
-  infoChevronSlot: { height: VALUE_LINE, marginTop: ABOVE_VALUE, justifyContent: 'center' },
+  // The same box at the other end of the row.
+  //
+  // This overturns the note that stood here an hour ago, which argued the
+  // chevron belonged on the value's line because a control lives with the
+  // thing it acts on. It reads well and the reference disagrees: measured
+  // across its three clean rows, the trailing glyph sits within 2pt of the
+  // leading one every time — 1280 against 1275, 1385 against 1384, 1490
+  // against 1490. Both ends of a row are level, and a rule that sounded
+  // right is worth less than a measurement.
+  infoChevronSlot: { height: GLYPH_BOX, justifyContent: 'center' },
   // Starts where the labels start. Run to the card's edge it cut the
   // gutter into four pieces; inset, the glyphs read as one column.
   //
