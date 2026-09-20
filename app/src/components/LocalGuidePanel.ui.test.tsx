@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   uid: 'u1' as string | null,
   granted: true,
   picked: true,
+  name: 'Nguyễn Thu Trang',
 }));
 const added = vi.hoisted(() => vi.fn());
 const uploaded = vi.hoisted(() => vi.fn());
@@ -33,7 +34,10 @@ vi.mock('../lib/i18n', () => ({
 }));
 
 vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
+  useAuth: () => ({
+    session: state.uid ? { user: { id: state.uid } } : null,
+    profile: { full_name: state.name },
+  }),
 }));
 
 vi.mock('../lib/data', () => ({
@@ -90,6 +94,7 @@ beforeEach(() => {
   state.uid = 'u1';
   state.granted = true;
   state.picked = true;
+  state.name = 'Nguyễn Thu Trang';
   added.mockClear();
   uploaded.mockClear();
   onAdded.mockClear();
@@ -170,25 +175,44 @@ describe('what it offers', () => {
     expect(screen.getByText('Thêm ảnh')).toBeTruthy();
   });
 
-  // A greeting, then a question — rather than claiming the place is
+  // Their name, then a question — rather than claiming the place is
   // theirs and handing them a chore. This panel only ever shows to the
   // person who put the café in front of everybody else, and asking is
   // how you speak to them.
-  it('greets the reader and asks, instead of instructing', () => {
+  it('greets the reader by name and asks, instead of instructing', () => {
     draw();
-    expect(screen.getByText('Hi there,')).toBeTruthy();
-    expect(screen.getByText('Would you like to update?')).toBeTruthy();
+    expect(screen.getByText('Hi Trang,')).toBeTruthy();
+    expect(screen.getByText('Would you like to add more photos?')).toBeTruthy();
     expect(screen.queryByText(/Keep it up to date/)).toBeNull();
   });
 
-  // The greeting names them once. "Bạn muốn cập nhật không?" under
-  // "Chào bạn," says it twice in two short lines, which is how a note
-  // starts to sound like a form.
-  it('does not say “bạn” twice in two lines', () => {
+  // The given name, which in a Vietnamese name is the last word. The
+  // family name — Nguyễn — is the first, and greeting somebody by it is
+  // wrong the way "Hi Smith" is wrong. `lib/greet` holds the rule and the
+  // reasoning; this is the screen proving it asked.
+  it('uses the given name, not the family name', () => {
     state.lang = 'vi';
     draw();
+    expect(screen.getByText('Chào Trang,')).toBeTruthy();
+    expect(screen.queryByText(/Nguyễn/)).toBeNull();
+  });
+
+  // さん rather than a bare name, and the same last word: these profiles
+  // are Vietnamese, and a foreign given name with さん is ordinary.
+  it('adds さん for a Japanese reader', () => {
+    state.lang = 'ja';
+    draw();
+    expect(screen.getByText('Trangさん、')).toBeTruthy();
+  });
+
+  // "Chào 2024," is worse than "Chào bạn,". A profile whose name cannot
+  // be greeted gets the stranger's greeting rather than a guess with
+  // somebody's data in it.
+  it('greets a stranger when there is no name worth using', () => {
+    state.lang = 'vi';
+    state.name = 'user 2024';
+    draw();
     expect(screen.getByText('Chào bạn,')).toBeTruthy();
-    expect(screen.getByText('Muốn cập nhật không?')).toBeTruthy();
   });
 });
 

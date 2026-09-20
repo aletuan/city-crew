@@ -34,6 +34,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import welcomeLogo from '../../assets/welcome-logo.png';
 import { useAuth } from '../lib/auth';
+import { greetingName } from '../lib/greet';
 import { useI18n } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 import { addPlacePhoto, fetchMyPhotoCounts, fetchPlaceId, useIsLocalGuide } from '../lib/data';
@@ -54,8 +55,9 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
   testID?: string;
 }) {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const uid = session?.user?.id ?? null;
+  const who = greetingName(profile?.full_name);
   const { data: granted } = useIsLocalGuide(uid);
   const [busy, setBusy] = useState(false);
   const [counts, setCounts] = useState({ mineHere: 0, mineToday: 0 });
@@ -163,32 +165,34 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
           <Image source={welcomeLogo} style={s.markLogo} contentFit="contain" />
         </View>
         <View style={s.words}>
-          {/* A greeting, then a question. Not "Your place / Keep it up to
-              date", which was a claim of ownership followed by a chore —
-              and this panel is neither. It appears to exactly one person,
-              the one who went and put this café in front of everybody
-              else, and asking is how you speak to them.
+          {/* Their name, then a question.
+              Not "Your place / Keep it up to date", which was a claim of
+              ownership followed by a chore — and this panel is neither.
+              It appears to exactly one person, the one who went and put
+              this café in front of everybody else, so it says their name
+              and asks.
 
-              A question is also the form that survives being read for the
-              tenth time, which matters here: the panel shows every time
-              its author opens their own place. A compliment in that slot
-              would wear through in a week.
+              A question is also the form that survives being read for
+              the tenth time, which matters here: the panel shows every
+              time its author opens their own place.
 
-              "Hi there" rather than a literal "Hi friend": in English the
-              second reads translated, while "Chào bạn" is precisely that
-              register in Vietnamese. Each language gets the greeting it
-              actually uses rather than a transliteration of one.
-
-              And "Muốn cập nhật không?", not "Bạn muốn cập nhật không?" —
-              the line above has just said "bạn", and saying it twice in
-              two short lines is how a note starts to sound like a form.
-              It is also four characters shorter, which this column has
-              strong opinions about. */}
-          <Text style={s.title}>
-            {t('Hi there,', 'Chào bạn,', 'こんにちは、')}
+              `greetingName` picks the word — the last one, which is the
+              given name in a Vietnamese name and the name English greets
+              with too; see that module for why the family name would
+              have been wrong in both. It answers null for a profile with
+              no usable name, and then this greets a stranger rather than
+              guessing, because "Chào 2024," is worse than "Chào bạn,". */}
+          <Text style={s.title} numberOfLines={1}>
+            {who
+              ? t(`Hi ${who},`, `Chào ${who},`, `${who}さん、`)
+              : t('Hi there,', 'Chào bạn,', 'こんにちは、')}
           </Text>
           <Text style={s.sub}>
-            {t('Would you like to update?', 'Muốn cập nhật không?', '更新しませんか？')}
+            {t(
+              'Would you like to add more photos?',
+              'Bạn muốn bổ sung thêm ảnh chứ?',
+              'もっと写真を追加しませんか？',
+            )}
           </Text>
         </View>
         <PressableScale
