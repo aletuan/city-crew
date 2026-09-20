@@ -856,13 +856,23 @@ const s = StyleSheet.create({
   // The Card supplies ground, border and radius; the horizontal inset
   // lives here so each row's hairline can run to the card's edge.
   infoGroup: { marginTop: 18, paddingHorizontal: space.cardPadding },
-  // The map sits inside the info card now, between the address row and
-  // whatever follows it. Inset to the gutter, so its left edge is the one
-  // the hairlines and the hours table already keep, and the card reads as
-  // one column with a picture in it rather than a picture with a card
-  // around it. `overflow: hidden` because MiniMap draws to its own corners.
+  // The map sits inside the info card, between the address row and
+  // whatever follows it, and it takes the card's whole width.
+  //
+  // It was inset to `GUTTER` — the hairlines' own left edge — on the
+  // argument that the card should read as one column. That argument is
+  // about rows of text, and a map is not one: indented to the text column
+  // it left a 33pt strip of empty card down its left side, under the pin,
+  // which reads as a picture that failed to load rather than as alignment.
+  // The reference runs it to the card's padding on both sides, symmetric,
+  // and so does this.
+  //
+  // The hairlines keep their inset. A picture wider than the text under it
+  // is an ordinary card; a picture and a rule at two different insets is
+  // only a problem when both are trying to be the same edge, and they are
+  // not. `overflow: hidden` because MiniMap draws to its own corners.
   mapSlot: {
-    marginLeft: GUTTER, marginBottom: 16,
+    marginBottom: 16,
     borderRadius: radius.card - 8, overflow: 'hidden',
   },
   // `containerStyle`, not `style`: PressableScale puts `style` on its inner

@@ -578,6 +578,15 @@ describe('PlaceDetailScreen — the map', () => {
   // reader to bind "where" to two separate objects — the words in one box,
   // the picture in another. Inside the card it is the address's own
   // illustration, and the proof of that is what it sits between.
+  // It was indented to the text column, which left a 33pt strip of empty
+  // card down its left side, under the pin — a picture that looks like it
+  // failed to load rather than one that is aligned. A map is a picture,
+  // not a row of text, so it takes the card's whole width.
+  it('runs the full width of the card rather than the text column', () => {
+    show();
+    expect(getComputedStyle(map()!.parentElement!).marginLeft).toBe('0px');
+  });
+
   it('sits inside the info card, under the address and above the hours', () => {
     show();
     const card = screen.getByTestId('detail-address').closest('div')!
