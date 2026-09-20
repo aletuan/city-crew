@@ -186,18 +186,22 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
               with too; see that module for why the family name would
               have been wrong in both. It answers null for a profile with
               no usable name, and then this greets a stranger rather than
-              guessing, because "Chào 2024," is worse than "Chào bạn,". */}
+              guessing, because "Chào 2024," is worse than "Chào bạn,".
+
+              The question is short because the column is: about twenty
+              characters at this size, beside the button. "Bạn muốn bổ
+              sung thêm ảnh chứ?" was thirty and took two lines on the
+              phone, which is a third line of prose on a card whose whole
+              job is one button. Eighteen fits, and says the same thing.
+              No space before the question mark — Vietnamese does not
+              take one, and neither does any other string in this app. */}
           <Text style={s.title} numberOfLines={1}>
             {who
               ? t(`Hi ${who},`, `Chào ${who},`, `${who}さん、`)
               : t('Hi there,', 'Chào bạn,', 'こんにちは、')}
           </Text>
           <Text style={s.sub}>
-            {t(
-              'Would you like to add more photos?',
-              'Bạn muốn bổ sung thêm ảnh chứ?',
-              'もっと写真を追加しませんか？',
-            )}
+            {t('Want to add a photo?', 'Bạn muốn thêm ảnh?', '写真を追加しませんか？')}
           </Text>
         </View>
         <PressableScale
