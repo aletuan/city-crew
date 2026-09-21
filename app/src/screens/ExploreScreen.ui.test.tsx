@@ -15,7 +15,7 @@ import { Linking } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
-import { CATEGORIES } from '../lib/categories';
+import { pinImage } from '../components/mapPins';
 import { appFlags } from '../lib/flags';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
@@ -123,7 +123,7 @@ vi.mock('../components/mapsModule', async () => {
     R.useImperativeHandle(ref, () => ({ fitToCoordinates: () => {} }));
     return R.createElement('div', { 'data-stub': 'MapView', 'data-testid': p.testID }, p.children);
   });
-  const Marker = (p: any) => R.createElement('button', { type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier, 'data-color': p.pinColor ?? '', onClick: p.onPress }, p.children);
+  const Marker = (p: any) => R.createElement('button', { type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier, 'data-color': p.pinColor ?? '', 'data-icon': p.icon ?? '', onClick: p.onPress }, p.children);
   return { MapView, Marker, PROVIDER_GOOGLE: 'google' };
 });
 // The verdict on whether a map can be drawn is the binary's, not the
@@ -856,21 +856,23 @@ describe('the map', () => {
   // that is also a place to work would otherwise come out café-brown
   // under Focus, because a place that is several things takes the first
   // of them — true at "All", noise inside a chip.
-  it('paints the pins in the chip’s colour, and lets them speak for themselves at All', async () => {
+  it('paints the pins in the chip’s picture, and lets them speak for themselves at All', async () => {
     state.places.data = [
       place('a', { lat: 21, lng: 105, categories: ['cafes', 'focus'] }),
       place('b', { lat: 21.1, lng: 105.1, categories: ['focus'] }),
     ];
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
-    const colours = () => [...document.querySelectorAll('[data-stub="Marker"]')].map((m) => m.getAttribute('data-color'));
-    expect(colours()).toEqual([CATEGORIES.cafes.color, CATEGORIES.focus.color]);
+    const pins = () => [...document.querySelectorAll('[data-stub="Marker"]')].map((m) => m.getAttribute('data-icon'));
+    const cafesPin = String(pinImage({ categories: ['cafes'] }, null, false));
+    const focusPin = String(pinImage({ categories: ['focus'] }, null, false));
+    expect(pins()).toEqual([cafesPin, focusPin]);
 
     fireEvent.click(screen.getByText('Focus'));
-    expect(colours()).toEqual([CATEGORIES.focus.color, CATEGORIES.focus.color]);
+    expect(pins()).toEqual([focusPin, focusPin]);
 
     fireEvent.click(screen.getByText('All'));
-    expect(colours()).toEqual([CATEGORIES.cafes.color, CATEGORIES.focus.color]);
+    expect(pins()).toEqual([cafesPin, focusPin]);
   });
 
   // The spy below is set by a passive effect, not by the render the DOM

@@ -11,27 +11,25 @@
 // stand too close to tell apart — see `lib/cluster`. Stock markers for
 // the places themselves, so 288 of them stay a map rather than 288
 // Views; only the bubbles are drawn, and there are never many of those.
-// The chosen one is coral; the rest wear
-// the colour of their category — the same one the filter row's chip and
-// the detail page's glyph wear, so the map reads in the code the reader
-// already knows. A place with no category is ink on iOS and azure on
-// Android — see `pinColor`.
+// Each pin is a picture carrying its category's own glyph, drawn by
+// `scripts/map-pins.py` and looked up in `mapPins`. It used to be a tint
+// on Google's stock marker, which never worked: that prop sets hue and
+// little else, so nine categories reached the map as nine hues with no
+// glyph and no label beside them. The chosen one is coral with its glyph
+// inverted to ink, and a place no category claims gets a grey pin rather
+// than a guess.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
-import { pinTint } from '../lib/categories';
+import { StyleSheet, Text, View } from 'react-native';
 import { clusterPins, clusterSize, clusterSkin } from '../lib/cluster';
 import { mapStyle } from '../lib/mapStyle';
 import type { Place } from '../lib/data';
 import type { ExploreOrigin } from '../lib/exploreFilters';
 import { useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
-import { colors } from '../theme';
+import { pinImage } from './mapPins';
 import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
-
-/** The unchosen, uncategorised pin's colour — see the note on `pinColor`. */
-const INK = Platform.select({ android: '#4A90D9', default: '#17150F' });
 
 /** How long a bubble is redrawn as it moves before it is frozen. A custom
  *  marker view that is frozen from its first frame comes out blank on
@@ -247,15 +245,30 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
             key={p.slug}
             identifier={p.slug}
             coordinate={{ latitude: p.lat, longitude: p.lng }}
-            // Category colours are fixed hexes, so they draw the same on
-            // both platforms' pins — iOS takes the hex as given, Android's
-            // stock marker keeps its HSV hue, which is the part that tells
-            // them apart. The uncategorised pin is a fixed hex too, not
-            // `colors.text`: that token is a `DynamicColorIOS` object on
-            // iOS and near-white on the dark scheme, and a white pin on a
-            // map is not a pin. It comes out azure on Android (hue 210°)
-            // rather than ink — still far from the chosen pin's coral.
-            pinColor={p.slug === selectedSlug ? colors.accentFill : (pinTint(p, category) ?? INK)}
+            // A picture, not a tint. `pinColor` never drew a pin: on iOS
+            // Google's marker art imposes its own luminance and takes only
+            // hue and some saturation from the prop, and on Android
+            // `setPinColor` runs `Color.colorToHSV` and keeps `hsv[0]`
+            // alone. Nine categories reached the map as nine hues, with no
+            // glyph and no way to say more.
+            //
+            // `icon` rather than `image`: the two are one prop on Android,
+            // but on iOS `image` installs a UIImageView as the marker's
+            // `iconView` — a view-backed marker, which is what
+            // `tracksViewChanges` and `SETTLE_MS` exist to avoid. `icon`
+            // sets `GMSMarker.icon` and stays a picture.
+            //
+            // No `pinColor`, and not as an oversight. `setPinColor:`
+            // assigns `_realMarker.icon = markerImageWithColor:`
+            // unconditionally — it *overwrites the icon* — and
+            // `didInsertInMap` applies it again after the marker is in the
+            // map, synchronously, while `setIconSrc` loads its bitmap
+            // asynchronously. A fallback that erases the thing it backs up.
+            icon={pinImage(p, category, p.slug === selectedSlug)}
+            // Already the default; written down so the tip of the teardrop
+            // is the thing standing on the coordinate. An asset drawn to a
+            // different shape would have to revisit it.
+            anchor={{ x: 0.5, y: 1 }}
             // 251 pins overlap; a coral one buried behind three ink ones is
             // invisible. Put the chosen pin on top.
             zIndex={p.slug === selectedSlug ? 1 : 0}
