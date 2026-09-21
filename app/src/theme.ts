@@ -48,6 +48,25 @@ export const colors = {
   bg: dyn(bgHex.light, bgHex.dark),
   /** Surfaces that must be opaque: sheets, modals, the cards on paper. */
   bgElevated: dyn('#FFFFFF', '#151614'),
+  /**
+   * `bgElevated` with a little of what is behind it showing through — for
+   * a control that floats over something this app did not draw.
+   *
+   * Not `surfaceGlass`, which is a wash with no ground of its own and so
+   * takes the colour of whatever it lands on; this keeps its own and only
+   * thins it.
+   *
+   * 0.88, and the number was measured twice because the first measurement
+   * asked the wrong question. A map preview is *always* a light Google
+   * tile — `MiniMap` passes no night style — so the punishing case is not
+   * the light theme at all, it is the dark theme's near-black disc over
+   * pale roads and park green. Solved for the light tiles both themes
+   * actually land on, 0.88 is where the coral glyph clears 4.5:1 on both:
+   * 4.76 by day, 4.71 by night. At 0.78, which was the first answer, the
+   * night figure is 3.31 — still legal for a glyph, and visibly thinner
+   * than it should be for the one control the card exists for.
+   */
+  bgElevatedVeil: dyn('rgba(255,255,255,0.88)', 'rgba(21,22,20,0.88)'),
   /** Card fill. Smoky and translucent on charcoal so the ambient light
    *  reads through it; plain white on paper, where translucency would only
    *  muddy the ground it sits on. */

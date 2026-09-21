@@ -449,15 +449,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             </View>
           ) : null}
 
-          {/* The one offer this screen makes to the person who put the
-              place here. Draws nothing for everybody else — see
-              `LocalGuidePanel`, which asks `canAddPhoto` before it asks
-              for anything else. Between the name and the facts because
-              that is where it reads as being about *this* place rather
-              than about the app: under the title it answers, above the
-              pills it does not interrupt. */}
-          <LocalGuidePanel place={place} onAdded={reloadCatalog} testID="guide-panel" />
-
           {/* ── fact row ── */}
           {/* ── facts: what kind of place, what it costs, how long ──
               A row of pills, in the shape the filter row and the cards
@@ -469,7 +460,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               glass. Never a tinted fill: that is the rule in
               `lib/categories`, and a row of pastel pills is the one
               thing this app's colour discipline does not do. */}
-          <View style={s.facts}>
+          <View style={s.facts} testID="detail-facts">
             {/* What this place is, on the functional axis — the same
                 `categories` the filter row, the planner and search read.
                 This row used to say something else entirely: the label was
@@ -524,7 +515,44 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 onto a second line. */}
           </View>
 
-          {desc ? <Text style={s.desc}>{desc}</Text> : null}
+          {/* The one offer this screen makes to the person who put the
+              place here. Draws nothing for everybody else — see
+              `LocalGuidePanel`, which asks `canAddPhoto` before it asks
+              for anything else.
+
+              Below the identity block, not inside it. Name, rating and
+              category answer one question between them — what is this
+              place — and this panel answers a different one, addressed to
+              one reader by name and asking them for something. It used to
+              sit between the rating and the pills, on the argument that
+              being above the pills kept it from interrupting; that was
+              backwards. Being above the pills *was* the interruption. */}
+          <LocalGuidePanel place={place} onAdded={reloadCatalog} testID="guide-panel" />
+
+          {/* ── why go ── */}
+          {/* The desk writes these, and they have a voice: "exactly what
+              some nights need" is a person, not a summary. Unlabelled it
+              read as boilerplate and got skimmed; named, it is the one
+              opinion on a screen otherwise made of facts, which is the
+              thing this app actually sells.
+              
+              The label is earned rather than decorative — `desc_*` is in
+              the dashboard's editable set, so it is the desk's own words
+              and not a machine's, and every published place has one.
+              
+              No chevron. There is no fuller version to open, and an arrow
+              that leads nowhere is a promise the screen cannot keep. */}
+          {desc ? (
+            <View style={s.why} testID="detail-why">
+              <View style={s.whyMark}>
+                <Ionicons name="chatbox-ellipses" size={15} color={colors.accent} />
+              </View>
+              <View style={s.whyBody}>
+                <Text style={s.whyLabel}>{t('Why go?', 'Vì sao nên ghé?', 'なぜ行く？')}</Text>
+                <Text style={s.desc}>{desc}</Text>
+              </View>
+            </View>
+          ) : null}
 
           {/* ── info card ── */}
           {firstRow != null && (
@@ -1012,7 +1040,19 @@ const s = StyleSheet.create({
   },
   factText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
 
-  desc: { color: colors.textSecondary, ...type.body, lineHeight: 24, marginTop: 14 },
+  desc: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
+  // The mark sits in its own disc so the label and the text share one
+  // left edge: a glyph inline with the heading would put the paragraph
+  // under the heading and the heading beside the glyph, which is two
+  // columns pretending to be one.
+  why: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  whyMark: {
+    width: 28, height: 28, borderRadius: 14, marginTop: 1,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft,
+  },
+  whyBody: { flex: 1, gap: 2 },
+  whyLabel: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
 
   // The Card supplies ground, border and radius; the horizontal inset
   // lives here so each row's hairline can run to the card's edge.
@@ -1051,18 +1091,27 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlassSoft,
     backgroundColor: colors.surfaceGlass,
   },
-  // A disc over the tiles, built the way `MiniMap`'s own locate button is
-  // built, because it is the same problem and that one has shipped:
-  // `bgElevated` rather than `surfaceGlass`, since glass is translucent
-  // and reads against a surface this app chooses — a Google tile is not
-  // one, being pale beige, white roads and green parks in a different mix
-  // at every address. 40 rather than the locate button's 36 because this
-  // is the only control on the map and the one the card exists for, and
-  // `hitSlop` takes the target past 44 without taking more of the picture.
+  // A disc over the tiles, 40 rather than `MiniMap`'s locate button's 36
+  // because this is the only control on the map and the one the card
+  // exists for; `hitSlop` takes the target past 44 without taking more of
+  // the picture.
+  //
+  // Not quite opaque. The note this replaces said a glass disc could not
+  // work because a Google tile is not a surface this app chooses — pale
+  // beige, white roads and green parks in a different mix at every
+  // address — and that is true of `surfaceGlass`, which is a wash with no
+  // ground of its own. It is not true of `bgElevatedVeil`, which keeps its
+  // own colour and only thins it, so the disc stops reading as a sticker
+  // on a photograph without giving up the ground the glyph stands on.
+  //
+  // See that token for where 0.88 comes from, and for the mistake on the
+  // way: this preview is always a *light* tile, `MiniMap` passing no night
+  // style, so the case that decides the number is the dark theme's disc
+  // over pale roads rather than anything the light theme does.
   goDisc: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.bgElevated,
+    backgroundColor: colors.bgElevatedVeil,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
   goText: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
