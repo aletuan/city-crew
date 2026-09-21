@@ -1284,14 +1284,30 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     return nodes.findIndex((n) => n.getAttribute('data-testid') === id);
   };
 
-  it('puts the category pills under the rating, above the offer to add a photo', () => {
+  // Name, pills and "why go" are one argument about the place, made to
+  // everybody; the panel is a request made to one reader by name. The
+  // argument finishes before the favour is asked, and the facts begin
+  // after. The panel used to sit between the pills and the reason to go,
+  // which cut the argument in half.
+  it('asks for a photo only after the case for the place has been made', () => {
     // The panel only draws for the reader it is addressed to, which is
     // exactly the reader this ordering matters for.
     state.uid = 'u1';
     state.guide = true;
     show(place({ rating: 4.1, rating_count: 604, categories: ['cafes', 'eats'], submitted_by: 'u1' }));
     expect(order('detail-rating')).toBeLessThan(order('detail-facts'));
-    expect(order('detail-facts')).toBeLessThan(order('guide-panel'));
+    expect(order('detail-facts')).toBeLessThan(order('detail-why'));
+    expect(order('detail-why')).toBeLessThan(order('guide-panel'));
+    expect(order('guide-panel')).toBeLessThan(order('detail-address'));
+  });
+
+  // A quotation mark, not a speech bubble: a bubble is what somebody else
+  // said, and this is the desk's own sentence about the place.
+  it('marks the desk\u2019s words with a quote rather than a speech bubble', () => {
+    show();
+    const why = screen.getByTestId('detail-why');
+    expect(why.textContent).toContain('\u201C');
+    expect(why.querySelector('[data-icon="chatbox-ellipses"]')).toBeNull();
   });
 
   // The desk writes these, and they have a voice — "exactly what some
