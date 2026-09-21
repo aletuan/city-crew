@@ -37,7 +37,7 @@ import { useI18n } from '../lib/i18n';
 import { mapsSearchUrl } from '../lib/maps';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
-import { colors, font, onPhoto, radius, space, type } from '../theme';
+import { colors, display, font, onPhoto, radius, space, type } from '../theme';
 import { AmbientWarmth, Card, Empty, PressableScale, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
@@ -515,20 +515,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 onto a second line. */}
           </View>
 
-          {/* The one offer this screen makes to the person who put the
-              place here. Draws nothing for everybody else — see
-              `LocalGuidePanel`, which asks `canAddPhoto` before it asks
-              for anything else.
-
-              Below the identity block, not inside it. Name, rating and
-              category answer one question between them — what is this
-              place — and this panel answers a different one, addressed to
-              one reader by name and asking them for something. It used to
-              sit between the rating and the pills, on the argument that
-              being above the pills kept it from interrupting; that was
-              backwards. Being above the pills *was* the interruption. */}
-          <LocalGuidePanel place={place} onAdded={reloadCatalog} testID="guide-panel" />
-
           {/* ── why go ── */}
           {/* The desk writes these, and they have a voice: "exactly what
               some nights need" is a person, not a summary. Unlabelled it
@@ -544,8 +530,23 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               that leads nowhere is a promise the screen cannot keep. */}
           {desc ? (
             <View style={s.why} testID="detail-why">
+              {/* A quotation mark, not a speech bubble. A bubble is what
+                  somebody else said — a review, a comment, a message — and
+                  this is the desk's own sentence about the place. The mark
+                  that means "these are words somebody chose" is the one
+                  printers have used for that since before there were
+                  screens.
+
+                  A character rather than an icon because Ionicons has no
+                  quote glyph; `“` is in the display face, which the
+                  headings on this screen already use.
+
+                  No nudge. Space Grotesk draws its quotes low enough that
+                  centring the line box centres the ink to within 0.3pt of
+                  the disc's middle — measured off the font, at 22pt in a
+                  28pt disc. */}
               <View style={s.whyMark}>
-                <Ionicons name="chatbox-ellipses" size={15} color={colors.accent} />
+                <Text style={s.whyQuote}>{'\u201C'}</Text>
               </View>
               <View style={s.whyBody}>
                 <Text style={s.whyLabel}>{t('Why go?', 'Vì sao nên ghé?', 'なぜ行く？')}</Text>
@@ -553,6 +554,26 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               </View>
             </View>
           ) : null}
+
+          {/* The one offer this screen makes to the person who put the
+              place here. Draws nothing for everybody else — see
+              `LocalGuidePanel`, which asks `canAddPhoto` before it asks
+              for anything else.
+
+              Last of the four, and it moved twice to get here. It began
+              between the rating and the pills, on the argument that being
+              above the pills kept it from interrupting; being above the
+              pills *was* the interruption, so it went below them. That
+              still left it between the pills and the reason to go, which
+              is the same fault one block further down: name, pills and
+              "why go" are one argument about the place, made to everybody,
+              and this panel is a request made to one person by name. An
+              argument is not interrupted halfway to be asked a favour.
+
+              So it comes after the argument ends and before the facts
+              begin — which is also where the eye is already looking for
+              something to do. */}
+          <LocalGuidePanel place={place} onAdded={reloadCatalog} testID="guide-panel" />
 
           {/* ── info card ── */}
           {firstRow != null && (
@@ -1050,6 +1071,10 @@ const s = StyleSheet.create({
     width: 28, height: 28, borderRadius: 14, marginTop: 1,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.accentSoft,
+  },
+  whyQuote: {
+    color: colors.accent, fontSize: 22, fontFamily: display.bold,
+    includeFontPadding: false,
   },
   whyBody: { flex: 1, gap: 2 },
   whyLabel: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
