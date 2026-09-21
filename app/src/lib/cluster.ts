@@ -105,18 +105,37 @@ export type ClusterSkin = { fill: string; ink: string };
  * How dense the bubble looks, by how much it holds.
  *
  * The same two steps as `clusterSize`, so colour and size tell one story
- * and not two. Warm earth, the app's own family, filled rather than
- * outlined: a white disc inside a hard dark ring is Google's own
- * annotation style, and a reader should be able to tell our groups from
- * the map's furniture without reading either.
+ * and not two. Filled rather than outlined: a white disc inside a hard
+ * dark ring is Google's own annotation style, and a reader should be able
+ * to tell our groups from the map's furniture without reading either.
  *
- * The ramp stops short of the accent's coral on purpose. The one coral
- * thing on this map is the place the reader chose, and a bubble of a
- * hundred must not compete with it. Each step clears 4.5:1 against its
- * own ink, which is why the figure turns white at the top.
+ * Grey, and that is the whole point of these particular numbers.
+ *
+ * They used to be warm earth — the app's own family, which sounded right
+ * and measured wrong. All three sat inside the hue arc `cafes` and `eats`
+ * live in, and once the pins stopped being pastels the hundred-bubble and
+ * the Eats pin came to 1.04:1 against each other, which is to say they
+ * were one colour. A reader scanning a dense map saw brown discs that
+ * were sometimes a restaurant and sometimes forty places.
+ *
+ * Hue could not fix it. Nine categories already spend the wheel, and a
+ * bubble sitting in the one wide gap left would simply read as a tenth
+ * category — which is the opposite of what a bubble is. So the fix is the
+ * other channel: every category pin carries at least 55% saturation and
+ * every step here carries under 10, so a bubble reads as grey. Not a kind
+ * of place. Ours, but furniture.
+ *
+ * Density still steps, in the one channel that is left — darkness — and
+ * the ramp is set so the worst of the three against either map ground is
+ * 1.91:1, where the earth ramp's worst was 1.24. The white ring does the
+ * rest, as it does for the pins.
+ *
+ * The ramp never reaches the accent's coral, which belongs to the one
+ * place the reader chose. Each step clears 4.5:1 against its own ink,
+ * which is why the figure turns white at the top.
  */
 export function clusterSkin(count: number): ClusterSkin {
-  if (count >= 100) return { fill: '#9C6647', ink: '#FFFFFF' };
-  if (count >= 10) return { fill: '#DBA97F', ink: '#17150F' };
-  return { fill: '#F0DCC8', ink: '#17150F' };
+  if (count >= 100) return { fill: '#545045', ink: '#FFFFFF' };
+  if (count >= 10) return { fill: '#857F6F', ink: '#17150F' };
+  return { fill: '#B9B5AC', ink: '#17150F' };
 }

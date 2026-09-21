@@ -121,7 +121,7 @@ export const CATEGORIES: Record<string, CategoryStyle> = {
   // reel, for `fun`: a cinema is what the catalog holds today, but the key
   // has to be as true for bowling or a show as for a screen.
   focus: {
-    en: 'Focus', vi: 'Học tập', ja: '作業', icon: 'laptop-outline', color: '#989AD7',
+    en: 'Focus', vi: 'Học tập', ja: '作業', icon: 'book-outline', color: '#989AD7',
     pin: '#6468E2',
     terms: ['work', 'study', 'laptop', 'wifi', 'coworking', 'quiet', 'làm việc', 'học bài', 'học tập', 'ngồi lâu', '作業', '勉強'],
   },
