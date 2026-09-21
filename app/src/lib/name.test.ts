@@ -73,6 +73,58 @@ describe('subtitleBeside', () => {
     )).toBeNull();
   });
 
+  // ── the street word ──
+  //
+  // Google abbreviates it in an address and an owner spells it out in a
+  // business name, so the two never meet and plain containment missed
+  // this row. Found on a phone, not by the note in the module.
+  it('drops a qualifier whose street word the address abbreviates', () => {
+    expect(subtitleBeside(
+      splitName('Every Half Coffee Roasters - Phố Chả Cá'),
+      'Hoàn Kiếm',
+      '6B P. Chả Cá, Hoàn Kiếm',
+    )).toBeNull();
+    expect(subtitleBeside(
+      splitName('Somewhere - Đường Láng'),
+      'Láng',
+      '1152 Đ. Láng, Láng',
+    )).toBeNull();
+  });
+
+  // The trap the rule is written around. `fold` strips tone marks, so it
+  // turns both "Ngõ" and "Ngô" into `ngo` — a rule applied after folding
+  // would cut "Ngô Quyền", a person a street is named after, down to
+  // "Quyền" and then match any Quyền in the address. The street word is
+  // matched with its tone mark intact, before folding, so it cannot.
+  it('does not mistake Ngô for Ngõ and eat half a name', () => {
+    expect(subtitleBeside(
+      splitName('Somewhere - Ngô Quyền'),
+      'Cửa Nam',
+      '4 P. Lý Thường Quyền, Cửa Nam',
+    )).toBe('Ngô Quyền');
+  });
+
+  // Four characters minimum on what is left. "Phố cổ" reduced to "cổ"
+  // would match a syllable in half the streets in Hanoi.
+  it('keeps a qualifier the street word was most of', () => {
+    expect(subtitleBeside(
+      splitName('Somewhere - Phố cổ'),
+      'Hoàn Kiếm',
+      '15 P. Cổ Tân, Hoàn Kiếm',
+    )).toBe('Phố cổ');
+  });
+
+  // Quận is not a street word and is deliberately not in the list:
+  // "Quận 2" reduced to "2" would find a house number in nearly any
+  // address.
+  it('never reduces a district to its number', () => {
+    expect(subtitleBeside(
+      splitName('Somewhere - Quận 2'),
+      'Bình Trưng',
+      '68 Song Hành, Bình Trưng',
+    )).toBe('Quận 2');
+  });
+
   // Folded on both sides, which is one real row in the catalog: the name
   // is written "Yên Hoà" and the address "Yên Hòa".
   it('drops one whose diacritics are merely typed differently', () => {
