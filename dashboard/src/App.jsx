@@ -193,6 +193,29 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKey);
   }, [sheetOpen]);
 
+  /**
+   * The top bar's own height, published for anything that sticks below it.
+   *
+   * The Places toolbar is the caller: it sticks under this bar, and the
+   * offset cannot be a constant. `.topbar-inner` wraps to a second row at
+   * the widths where its controls stop fitting on one — which is exactly
+   * the range where a hardcoded number would leave a slit of scrolling
+   * rows showing above the toolbar, or hide the toolbar's own top edge.
+   * Measured at mount and again whenever the bar changes size.
+   */
+  const topbarRef = useRef(null);
+  useEffect(() => {
+    const el = topbarRef.current;
+    if (!el) return undefined;
+    const publish = () =>
+      document.documentElement.style.setProperty('--topbar-h', `${el.offsetHeight}px`);
+    publish();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // The bar ducks while you read and returns the moment you reach back —
   // scrolling down is "I'm looking at content", up is "I'm going somewhere".
   //
@@ -334,7 +357,7 @@ export default function App() {
             </aside>
 
             <div className="deskmain">
-              <header className="topbar">
+              <header className="topbar" ref={topbarRef}>
                 <div className="topbar-inner">
                   {/* The brand belongs to the sidebar now; phones, which
                       have no sidebar, keep the logo here as the way home. */}

@@ -147,6 +147,16 @@ const PATHS = {
       <path d="M10.4 6.6a2.2 2.2 0 0 1 0 2.8" />
     </>
   ),
+  // Three tracks with a knob each: the settled glyph for "filters", and
+  // the one the mobile mockup puts beside its search field.
+  sliders: (
+    <>
+      <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" />
+      <circle cx="6" cy="4.5" r="1.5" />
+      <circle cx="10.5" cy="8" r="1.5" />
+      <circle cx="5" cy="11.5" r="1.5" />
+    </>
+  ),
 };
 
 export function CategoryIcon({ name, color = 'currentColor', size = 14 }) {
