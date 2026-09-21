@@ -1,17 +1,19 @@
 // @vitest-environment jsdom
 //
-// The panel that offers a photograph, rendered for real.
+// The panel that offers the gallery, rendered for real.
 //
 // What is worth asserting is almost entirely *absence*: this control is
 // drawn for a handful of people and must be invisible to everyone else,
 // and an appearance test is the only thing that says so. The rule itself
-// is `canAddPhoto`, tested in `lib/guide.test.ts`; this checks that the
-// component actually asks it, and that the upload it starts says the
-// right things to the database.
+// is `canKeepGallery`, tested in `lib/gallery.test.ts`; this checks that
+// the component actually asks it, and that its one button asks the screen
+// to open the gallery rather than doing anything itself. The upload it
+// used to start lives in `useAddPhoto` now and is tested where it is
+// called, in `GalleryScreen.ui.test.tsx`.
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { cleanup, fireEvent, render, screen } from '../uitest/render';
 import type { Lang } from '../lib/i18n';
 import type { Place } from '../lib/types';
 
@@ -19,11 +21,8 @@ const state = vi.hoisted(() => ({
   lang: 'en' as Lang,
   uid: 'u1' as string | null,
   granted: true,
-  picked: true,
   name: 'Nguyễn Thu Trang',
 }));
-const added = vi.hoisted(() => vi.fn());
-const uploaded = vi.hoisted(() => vi.fn());
 
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({
@@ -42,38 +41,6 @@ vi.mock('../lib/auth', () => ({
   }),
 }));
 
-vi.mock('../lib/data', () => ({
-  fetchPlaceId: vi.fn(async () => 'place-uuid'),
-  fetchMyPhotoCounts: vi.fn(async () => ({ mineHere: 0, mineToday: 0 })),
-  addPlacePhoto: (row: unknown) => { added(row); return Promise.resolve('photo-id'); },
-}));
-
-vi.mock('../lib/supabase', () => ({
-  supabase: {
-    storage: {
-      from: () => ({
-        upload: (path: string) => { uploaded(path); return Promise.resolve({ error: null }); },
-        getPublicUrl: (path: string) => ({ data: { publicUrl: `http://cdn/${path}` } }),
-      }),
-    },
-  },
-}));
-
-vi.mock('expo-image-picker', () => ({
-  launchImageLibraryAsync: () => Promise.resolve(
-    state.picked
-      ? { canceled: false, assets: [{ uri: 'file://roll/IMG_1.HEIC' }] }
-      : { canceled: true, assets: [] },
-  ),
-}));
-
-vi.mock('expo-image-manipulator', () => ({
-  manipulateAsync: () => Promise.resolve({ base64: 'AAAA' }),
-  SaveFormat: { JPEG: 'jpeg' },
-}));
-
-vi.mock('base64-arraybuffer', () => ({ decode: () => new ArrayBuffer(4) }));
-
 import LocalGuidePanel from './LocalGuidePanel';
 
 const place = (over: Partial<Place> = {}): Place => ({
@@ -88,21 +55,18 @@ const place = (over: Partial<Place> = {}): Place => ({
   ...over,
 } as unknown as Place);
 
-const onAdded = vi.fn();
+const onOpen = vi.fn();
 
 beforeEach(() => {
   state.lang = 'en';
   state.uid = 'u1';
   state.granted = true;
-  state.picked = true;
   state.name = 'Nguyễn Thu Trang';
-  added.mockClear();
-  uploaded.mockClear();
-  onAdded.mockClear();
+  onOpen.mockClear();
 });
 
 const draw = (p = place()) =>
-  render(<LocalGuidePanel place={p} onAdded={onAdded} testID="panel" />);
+  render(<LocalGuidePanel place={p} onOpen={onOpen} testID="panel" />);
 
 describe('who the panel appears for', () => {
   it('appears for a granted guide on a place they imported', () => {
@@ -110,13 +74,13 @@ describe('who the panel appears for', () => {
     expect(screen.getByTestId('panel')).toBeTruthy();
   });
 
-  // The mark at its head is the app's own, not a camera glyph: the button
-  // below already says "Add photo", and a card that says the same thing
-  // twice says it about the tool rather than about who is being asked.
+  // The mark at its head is the app's own, not a camera glyph: a camera
+  // says what the button beside it says, about the tool rather than about
+  // who is being asked.
   it('wears the app’s own logo at its head', () => {
     draw();
     expect(screen.getByTestId('panel').querySelector('img')).toBeTruthy();
-    expect(document.querySelector('[data-icon="camera-outline"]')).toBeNull();
+    expect(document.querySelector('[data-icon="camera"]')).toBeNull();
   });
 
   // The whole reason the role is handed out by hand: being signed in is
@@ -133,8 +97,8 @@ describe('who the panel appears for', () => {
     expect(screen.queryByTestId('panel')).toBeNull();
   });
 
-  // A guide is not an editor: the grant says "you may add photographs",
-  // not "you may add them anywhere".
+  // A guide is not an editor: the grant says "you may keep your own
+  // gallery", not "you may keep everybody's".
   it('is absent on somebody else’s place', () => {
     state.uid = 'u1';
     draw(place({ submitted_by: 'u2' }));
@@ -156,24 +120,25 @@ describe('what it offers', () => {
   // cannot be done.
   it('offers one button, and does not draw the editing one yet', () => {
     draw();
-    expect(screen.getByTestId('guide-add-photo')).toBeTruthy();
+    expect(screen.getByTestId('guide-open-gallery')).toBeTruthy();
     expect(screen.queryByText(/Edit Place/i)).toBeNull();
   });
 
-  // The provenance line that used to sit under the button is gone. It said
-  // where a photograph was expected to come from, which the picker it opens
-  // says better by only ever opening on this phone's own library — and it
-  // was a third line of prose on a card whose whole job is one button.
-  it('does not explain where the photo should come from', () => {
+  // One door rather than one verb. The button no longer opens the picker:
+  // it opens the screen where adding is one of four things to do.
+  it('opens the gallery and does nothing else', () => {
     draw();
-    expect(screen.queryByText(/from my own Photos/i)).toBeNull();
-    expect(screen.queryByText(/Photos của tôi/)).toBeNull();
+    fireEvent.click(screen.getByTestId('guide-open-gallery'));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Add photo/)).toBeNull();
   });
 
-  it('speaks the reader’s language', () => {
+  // "Gallery" in every language, by request — it is the name of a screen.
+  it('is called Gallery in Vietnamese too', () => {
     state.lang = 'vi';
     draw();
-    expect(screen.getByText('Thêm ảnh')).toBeTruthy();
+    expect(screen.getByText('Gallery')).toBeTruthy();
+    expect(screen.getByText('Bạn muốn sửa ảnh?')).toBeTruthy();
   });
 
   // Their name, then a question — rather than claiming the place is
@@ -183,7 +148,7 @@ describe('what it offers', () => {
   it('greets the reader by name and asks, instead of instructing', () => {
     draw();
     expect(screen.getByText('Hi Trang,')).toBeTruthy();
-    expect(screen.getByText('Want to add a photo?')).toBeTruthy();
+    expect(screen.getByText('Want to update the photos?')).toBeTruthy();
     expect(screen.queryByText(/Keep it up to date/)).toBeNull();
   });
 
@@ -214,48 +179,6 @@ describe('what it offers', () => {
     state.name = 'user 2024';
     draw();
     expect(screen.getByText('Chào bạn,')).toBeTruthy();
-  });
-});
-
-describe('the upload', () => {
-  it('shrinks, stores under the uploader’s own folder, and files the row', async () => {
-    draw();
-    fireEvent.click(screen.getByTestId('guide-add-photo'));
-
-    await waitFor(() => expect(added).toHaveBeenCalled());
-
-    // Namespaced by uid, so one person's uploads cannot collide with
-    // another's and the storage policy can read the first path segment.
-    expect(uploaded.mock.calls[0][0]).toMatch(/^u1\/cong-caphe-\d+\.jpg$/);
-
-    // Every column the insert policy checks, said out loud.
-    expect(added.mock.calls[0][0]).toMatchObject({
-      placeId: 'place-uuid',
-      uid: 'u1',
-      publicUrl: expect.stringContaining('u1/cong-caphe-'),
-    });
-    expect(onAdded).toHaveBeenCalled();
-  });
-
-  // The screen re-reads the place only when something landed on it.
-  it('writes nothing when the picker is dismissed', async () => {
-    state.picked = false;
-    draw();
-    fireEvent.click(screen.getByTestId('guide-add-photo'));
-    await new Promise((r) => setTimeout(r, 0));
-    expect(uploaded).not.toHaveBeenCalled();
-    expect(added).not.toHaveBeenCalled();
-    expect(onAdded).not.toHaveBeenCalled();
-  });
-
-  // Past whatever is already on the place, so `photosOf` — cover first,
-  // then this number — puts it at the end rather than in front of
-  // pictures that were here before it.
-  it('sorts a new photograph after the ones already there', async () => {
-    draw(place({ place_photos: [{}, {}, {}] as Place['place_photos'] }));
-    fireEvent.click(screen.getByTestId('guide-add-photo'));
-    await waitFor(() => expect(added).toHaveBeenCalled());
-    expect(added.mock.calls[0][0]).toMatchObject({ sortOrder: 4 });
   });
 });
 

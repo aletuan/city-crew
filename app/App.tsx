@@ -35,6 +35,7 @@ import ExploreScreen from './src/screens/ExploreScreen';
 import SearchScreen from './src/screens/SearchScreen';
 import AddPlaceScreen from './src/screens/AddPlaceScreen';
 import PlaceDetailScreen from './src/screens/PlaceDetailScreen';
+import GalleryScreen from './src/screens/GalleryScreen';
 import CollectionsScreen from './src/screens/CollectionsScreen';
 import CollectionFormScreen from './src/screens/CollectionFormScreen';
 import CollectionDetailScreen from './src/screens/CollectionDetailScreen';
@@ -82,6 +83,7 @@ function IdeasStack() {
           stack states about CollectionForm: a screen can only navigate to
           screens its own stack has. */}
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
+      <Stack.Screen name="Gallery" component={GalleryScreen} />
     </Stack.Navigator>
   );
 }
@@ -95,6 +97,7 @@ function TripsStack() {
       {/* And here for the same reason: a saved trip lists places and each
           one opens. */}
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
+      <Stack.Screen name="Gallery" component={GalleryScreen} />
     </Stack.Navigator>
   );
 }
@@ -106,6 +109,7 @@ function ExploreStack() {
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="AddPlace" component={AddPlaceScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
+      <Stack.Screen name="Gallery" component={GalleryScreen} />
       {/* The Explore shelf opens collections in place, keeping the tab. */}
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
       {/* Registered here only because CollectionDetail is: a screen that
@@ -125,6 +129,7 @@ function CollectionsStack() {
       <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
+      <Stack.Screen name="Gallery" component={GalleryScreen} />
     </Stack.Navigator>
   );
 }
@@ -152,6 +157,7 @@ function ProfileStack() {
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
       <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
+      <Stack.Screen name="Gallery" component={GalleryScreen} />
     </Stack.Navigator>
   );
 }

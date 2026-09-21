@@ -83,6 +83,11 @@ export type RootStackParamList = {
     copyFrom?: { cityId: string; title: string; desc: string; placeSlugs: string[] };
   } | undefined;
   PlaceDetail: { slug: string };
+  /** The place's photographs, for the guide who brought the place in.
+   *  Keyed by slug like the detail it opens from, and registered in every
+   *  stack that has `PlaceDetail`: the door is on that screen, and a
+   *  screen can only navigate to what its own stack has. */
+  Gallery: { slug: string };
   /** Search Google for a place the catalog is missing, and suggest it.
    *  Reached from Explore's footer and its scroll offer; Search asks
    *  Google in place now rather than sending anyone here. */
