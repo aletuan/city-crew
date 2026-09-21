@@ -252,19 +252,37 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
             // alone. Nine categories reached the map as nine hues, with no
             // glyph and no way to say more.
             //
-            // `icon` rather than `image`: the two are one prop on Android,
-            // but on iOS `image` installs a UIImageView as the marker's
-            // `iconView` — a view-backed marker, which is what
-            // `tracksViewChanges` and `SETTLE_MS` exist to avoid. `icon`
-            // sets `GMSMarker.icon` and stays a picture.
+            // `image` and not `icon`, which is the opposite of what the
+            // shape of the two props suggests and was settled by watching
+            // the simulator rather than by reading them.
+            //
+            // They are one prop on Android. On iOS `icon` sets
+            // `GMSMarker.icon` directly, which sounds lighter than the
+            // `UIImageView` `image` installs — but `didInsertInMap` throws
+            // the real marker away and builds a new one, re-applying a
+            // fixed list of properties. `_iconView` is on that list. The
+            // icon is not. So a marker whose bitmap finished loading
+            // *before* it was inserted lost it, permanently, and came out
+            // as Google's default red pin: seen after one tap, since
+            // selecting a place re-clusters and mounts new markers.
+            //
+            // `image` survives either order. `didInsertInMap` restores the
+            // icon view, and `setImageSrc`'s completion block ends with
+            // `[realMarker setIconView:]`, so whichever of insertion and
+            // loading happens second puts the picture back. Six selections
+            // and three pans later there was not one default pin.
+            //
+            // That assignment is also why `tracksViewChanges={false}` is
+            // safe here, where the note above says a frozen custom view
+            // comes out blank: nothing re-assigns a React child, and the
+            // library re-assigns this.
             //
             // No `pinColor`, and not as an oversight. `setPinColor:`
             // assigns `_realMarker.icon = markerImageWithColor:`
-            // unconditionally — it *overwrites the icon* — and
-            // `didInsertInMap` applies it again after the marker is in the
-            // map, synchronously, while `setIconSrc` loads its bitmap
-            // asynchronously. A fallback that erases the thing it backs up.
-            icon={pinImage(p, category, p.slug === selectedSlug)}
+            // unconditionally, and `didInsertInMap` applies it again — it
+            // would erase the picture on every tap, since the prop used to
+            // vary with the chosen slug. A fallback that eats its subject.
+            image={pinImage(p, category, p.slug === selectedSlug)}
             // Already the default; written down so the tip of the teardrop
             // is the thing standing on the coordinate. An asset drawn to a
             // different shape would have to revisit it.

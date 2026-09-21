@@ -4,7 +4,7 @@
 
 **Goal:** Thay marker mặc định của `react-native-maps` bằng PNG dựng sẵn mang icon category, để bản đồ nói được "đây là quán cà phê" chứ không chỉ "đây là màu nâu" — trên cả iOS lẫn Android.
 
-**Architecture:** Ba lớp tách bạch. `lib/categories.ts` quyết định **category nào thắng** (thuần, đã có sẵn một nửa) và giữ màu nền PNG. `scripts/map-pins.py` đọc chính file đó rồi sinh 60 PNG + một manifest. `components/mapPins.ts` là bảng `import` tĩnh, không logic. `PlacesMap.tsx` bỏ `pinColor` và đặt `icon` — không phải đổi tên prop mà là thay hẳn, vì giữ `pinColor` sẽ ghi đè icon.
+**Architecture:** Ba lớp tách bạch. `lib/categories.ts` quyết định **category nào thắng** (thuần, đã có sẵn một nửa) và giữ màu nền PNG. `scripts/map-pins.py` đọc chính file đó rồi sinh 60 PNG + một manifest. `components/mapPins.ts` là bảng `import` tĩnh, không logic. `PlacesMap.tsx` bỏ `pinColor` và đặt `image` — không phải đổi tên prop mà là thay hẳn, vì giữ `pinColor` sẽ ghi đè icon.
 
 **Tech Stack:** React Native 0.86 (Expo SDK 57), `react-native-maps` 1.27.2, Python 3 + Pillow (chỉ để sinh asset, không nằm trong đường build), vitest + jsdom qua `react-native-web`, Maestro + `simctl` để verify.
 
@@ -16,7 +16,7 @@
 
 | Dữ kiện | Nguồn |
 |---|---|
-| `Marker.icon` gán thẳng `_realMarker.icon` trên iOS; `Marker.image` dựng `UIImageView` → `_realMarker.iconView` (marker nền View). **Phải dùng `icon`.** | `node_modules/react-native-maps/ios/AirGoogleMaps/AIRGoogleMapMarker.m:345` (`setImageSrc`) vs `:417` (`setIconSrc`) |
+| **Phải dùng `image`, không phải `icon`** — đảo ngược tại cổng Task 7. `didInsertInMap` dựng `AIRGMSMarker` mới và áp lại danh sách cố định có `_iconView` nhưng **không có icon**, nên `icon` nào tải xong trước khi chèn sẽ mất vĩnh viễn và thành pin đỏ mặc định `#EA4335`. Đo được: một lần chạm là đủ | `AIRGoogleMapMarker.m:92-135` |
 | Trên Android hai prop là một: cùng gọi `view.setImage(source)` | `MapMarkerManager.java:216` và `:224` |
 | `anchor` **đã mặc định** `{x: 0.5, y: 1.0}` — không có độ lệch nào phải sửa | `MapMarker.d.ts:20`, `MapMarkerManager.java:200-207` |
 | **`pinColor` phải bị bỏ hẳn.** `setPinColor:` gán **vô điều kiện** `_realMarker.icon = markerImageWithColor:` — nó *ghi đè icon*. `didInsertInMap` áp lại `_pinColor` sau khi chèn marker, đồng bộ, trong khi `setIconSrc` nạp ảnh bất đồng bộ. `PlacesMap` lại truyền `pinColor` động theo `selectedSlug`, nên mỗi lần chạm một pin thì icon bị thay bằng pin mặc định của Google và **không** được khôi phục | `AIRGoogleMapMarker.m:470-473` và `:127-130` |
@@ -68,7 +68,7 @@ Ba giá trị vượt ngưỡng (`views` 6.63, `eats` 4.98, neutral 6.86) **khô
 | `app/assets/pins/*.png` (tạo) | 60 file. |
 | `app/assets/pins/pins.manifest.json` (tạo) | Generator ghi ra; test đọc vào. |
 | `app/src/components/mapPins.ts` (tạo) | `import` tĩnh 20 asset + `pinImage(place, chip, chosen)`. Không tính toán category — uỷ cho `lib`. |
-| `app/src/components/PlacesMap.tsx` (sửa) | `pinColor` → `icon`; **bỏ hẳn `pinColor`**. Xoá `INK`, nhánh `?? INK`, và import `Platform`. |
+| `app/src/components/PlacesMap.tsx` (sửa) | `pinColor` → `image`; **bỏ hẳn `pinColor`**. Xoá `INK`, nhánh `?? INK`, và import `Platform`. |
 | `app/src/components/PlacesMap.ui.test.tsx` (sửa) | Stub `Marker` ghi thêm `icon`; khẳng định ảnh theo category, theo chip, pin được chọn, neutral, `tracksViewChanges === false`. |
 | `app/src/screens/ExploreScreen.ui.test.tsx` (sửa) | Stub Marker riêng ở dòng 126 phải ghi thêm `data-icon`; test chip chuyển từ `data-color` sang ảnh. Sửa trong **cùng commit** với Task 6. |
 

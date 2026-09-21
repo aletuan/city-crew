@@ -24,18 +24,26 @@ Dùng prop **`icon`** của `Marker` (`react-native-maps` 1.27.2) với PNG dự
 
 Ảnh là thứ ta kiểm soát từng pixel. Đây là đòn bẩy duy nhất thật sự.
 
-### `icon` chứ không phải `image`
+### `image` chứ không phải `icon`
 
-Hai prop nghe như nhau, và trên Android **đúng là một**: `MapMarkerManager.java:216` và `:224` cùng gọi `view.setImage(source)`. Trên iOS thì khác hẳn.
+Quyết định này **đã bị đảo ngược tại cổng xác minh trên simulator**, và đây là lý do cổng đó tồn tại. Bản thiết kế ban đầu chọn `icon`; chạy thật cho thấy nó hỏng.
 
-| prop | đường đi trên iOS (`AIRGoogleMapMarker.m`) |
-|---|---|
-| `image` | `setImageSrc` dựng `UIImageView` rồi gán vào `_realMarker.iconView` — **marker nền View** |
-| `icon` | `setIconSrc` gán thẳng `_realMarker.icon` — icon GMSMarker thật, không View |
+Hai prop là một trên Android (`MapMarkerManager.java:216` và `:224` cùng gọi `view.setImage(source)`). Trên iOS chúng khác nhau, và cái khác biệt quyết định **không phải** thứ đọc code sẽ đoán ra:
 
-Đây không phải chi tiết nhỏ. Cả `PlacesMap.tsx` được xây quanh mệnh đề "288 marker phải là bản đồ chứ không phải 288 View", và toàn bộ cơ chế `tracksViewChanges` + `SETTLE_MS` tồn tại vì marker nền View trên iOS *hiện ra trắng trơn ở khung hình đầu*. Chọn `image` là tự tay đưa 288 View vào đúng chỗ file này đã cẩn thận tránh.
+| prop | đường đi trên iOS | sống sót qua `didInsertInMap`? |
+|---|---|---|
+| `icon` | `setIconSrc` gán thẳng `_realMarker.icon` | **Không** |
+| `image` | `setImageSrc` dựng `UIImageView` → `_realMarker.iconView` | **Có** |
 
-Với `icon`, marker không có nền View, nên `tracksViewChanges={false}` của pin địa điểm **giữ nguyên** và `SETTLE_MS` vẫn chỉ phục vụ bubble.
+`didInsertInMap` (`AIRGoogleMapMarker.m:92`) **vứt marker cũ đi và dựng một `AIRGMSMarker` mới**, rồi áp lại một danh sách cố định các thuộc tính đã lưu: vị trí, `_iconView`, rotation, identifier, title, anchor, flat, draggable, tappable, `_pinColor`, opacity. **Icon không nằm trong danh sách đó.**
+
+Nên với `icon`, kết quả phụ thuộc vào một cuộc đua: ảnh tải xong *sau* khi chèn thì icon còn, tải xong *trước* thì bị vứt và pin thành **pin đỏ mặc định của Google, vĩnh viễn**. Đo được: chạm một pin là đủ — chọn một địa điểm làm cluster tính lại và mount marker mới. Lấy mẫu pixel ra `#EA4335`, không tự phục hồi.
+
+`image` sống sót cả hai thứ tự. `didInsertInMap` khôi phục icon view, và completion block của `setImageSrc` kết thúc bằng `[realMarker setIconView:]` — thứ nào xảy ra sau cũng đặt lại được ảnh. Đo: sáu lần chọn liên tiếp cộng ba lần pan, **0 pixel đỏ mặc định**.
+
+Chính phép gán lại đó cũng là lý do `tracksViewChanges={false}` an toàn ở đây, dù `cluster.ts` ghi rằng một custom view bị đóng băng sẽ hiện ra trắng trơn: không gì gán lại một React child, còn thư viện thì gán lại cái này.
+
+Cái giá là marker nền View thật. Nhưng đó là **một `UIImageView` cho mỗi pin**, không phải một cây component React — nhẹ hơn hẳn thứ mà mệnh đề "288 marker phải là bản đồ chứ không phải 288 View" nói tới. Ở zoom sâu nhất, nơi cluster tan hết và cả 288 pin cùng vẽ, bản đồ vẫn mượt.
 
 ### Vì sao giọt nước chứ không phải badge tròn
 

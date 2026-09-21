@@ -123,7 +123,7 @@ vi.mock('../components/mapsModule', async () => {
     R.useImperativeHandle(ref, () => ({ fitToCoordinates: () => {} }));
     return R.createElement('div', { 'data-stub': 'MapView', 'data-testid': p.testID }, p.children);
   });
-  const Marker = (p: any) => R.createElement('button', { type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier, 'data-color': p.pinColor ?? '', 'data-icon': p.icon ?? '', onClick: p.onPress }, p.children);
+  const Marker = (p: any) => R.createElement('button', { type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier, 'data-color': p.pinColor ?? '', 'data-icon': p.image ?? '', onClick: p.onPress }, p.children);
   return { MapView, Marker, PROVIDER_GOOGLE: 'google' };
 });
 // The verdict on whether a map can be drawn is the binary's, not the

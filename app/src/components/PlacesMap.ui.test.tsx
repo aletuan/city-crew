@@ -45,7 +45,7 @@ vi.mock('./mapsModule', async () => {
   // the count, where a place's marker carries nothing.
   const Marker = (p: any) => R.createElement('button', {
     type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier,
-    'data-color': p.pinColor ?? '', 'data-icon': p.icon ?? '',
+    'data-color': p.pinColor ?? '', 'data-icon': p.image ?? '',
     'data-anchor': p.anchor ? `${p.anchor.x},${p.anchor.y}` : '',
     'data-label': p.accessibilityLabel ?? '',
     'data-tracks': String(!!p.tracksViewChanges), onClick: p.onPress,
@@ -118,11 +118,13 @@ describe('PlacesMap', () => {
     for (const m of markers()) expect(m.getAttribute('data-icon')).toBe(neutralImage);
   });
 
-  // `icon` and not `image`: on iOS `image` installs a UIImageView as the
-  // marker's `iconView`, which is a view-backed marker — the thing this
-  // file's `tracksViewChanges`/`SETTLE_MS` machinery exists to avoid, and
-  // the reason 288 places can be a map rather than 288 Views.
-  it('never redraws a place’s pin, because a picture is not a view', () => {
+  // `image` and not `icon`. On iOS `didInsertInMap` rebuilds the real
+  // marker and restores a fixed list of properties: the icon view is on
+  // it, the icon is not, so an `icon` whose bitmap loaded before insertion
+  // was lost and the pin came out as Google's default red. `image`
+  // survives either order, and the library re-assigns the icon view when
+  // the bitmap arrives — which is also why freezing it here is safe.
+  it('never redraws a place’s pin, and stands it on the coordinate', () => {
     render(<PlacesMap places={[place('a', 21, 105, ['cafes'])]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     expect(markers()[0].getAttribute('data-tracks')).toBe('false');
     // The teardrop's tip is what stands on the coordinate.
