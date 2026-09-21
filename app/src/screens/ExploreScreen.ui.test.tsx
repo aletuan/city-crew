@@ -521,11 +521,31 @@ describe('loading and failure', () => {
     }
   });
 
-  it('says why the places failed to load, and draws no list', () => {
-    state.places = { ...state.places, error: 'offline' };
+  // Nothing in hand: the failure is the body, in the app's words rather
+  // than the server's, with the one control that can change anything.
+  it('names the failure and offers to try again when there is nothing to show', () => {
+    state.places = { ...state.places, error: 'The Internet connection appears to be offline. (at ExpoModulesCore/Promise.swift:56)', data: [] };
     render(<ExploreScreen navigation={nav()} />);
-    expect(screen.getByText("Couldn't load places: offline")).toBeTruthy();
+    expect(screen.getByTestId('explore-load-fail')).toBeTruthy();
+    expect(screen.getByText('You’re offline.')).toBeTruthy();
+    expect(screen.queryByText(/Swift|Promise/)).toBeNull();
     expect(screen.queryByTestId('explore-list')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(spies.reload).toHaveBeenCalledOnce();
+  });
+
+  // The screenshot that started this: "JWT expired" on an empty screen,
+  // with a whole catalog in the cache behind it. A failed refresh must not
+  // make the screen forget what it knows — the list stays, and the
+  // failure is a line above it.
+  it('keeps the list and says the refresh failed above it', () => {
+    state.places = { ...state.places, error: 'JWT expired', data: [place('a')] };
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.getByTestId('explore-list')).toBeTruthy();
+    expect(screen.getByTestId('explore-load-banner')).toBeTruthy();
+    expect(screen.getByText(/signing you back in/)).toBeTruthy();
+    expect(screen.queryByText(/JWT/)).toBeNull();
+    expect(screen.queryByTestId('explore-load-fail')).toBeNull();
   });
 });
 

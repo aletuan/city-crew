@@ -48,6 +48,8 @@ import { distanceKm } from '../lib/geo';
 import { useBrowseTaste } from '../lib/tasteProfile';
 import { useFlag } from '../lib/useFlag';
 import { useI18n } from '../lib/i18n';
+import { classifyLoadFail } from '../lib/loadfail';
+import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
 import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import { useScheme } from '../lib/theme';
@@ -811,6 +813,13 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // skeletons up for the ~700 ms the cache exists to remove. Same lesson
   // the Collections tab's `mineReady` learned about its focus refresh.
   const holding = !loaded;
+  // A failed read is the body only when there is nothing under it. With a
+  // catalog already in hand — the launch cache, or the last fetch that
+  // worked — it is a banner in the list's header and the list stays, pull
+  // to refresh and all. The first version hid the list behind the error,
+  // and with it the only control that could have fixed anything.
+  const fail = classifyLoadFail(error);
+  const failedEmpty = fail !== null && places.length === 0;
   const [cat, setCat] = useState<string>(ALL);
   const [filterOpen, setFilterOpen] = useState(false);
   const [appliedFilters, setAppliedFilters] = useState<ExploreFilters>({
@@ -1248,6 +1257,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         scrollY={scrollY}
         gone={heroGone}
       />
+      {fail && !failedEmpty ? (
+        <LoadFailBanner kind={fail} onRetry={reload} testID="explore-load-banner" />
+      ) : null}
       <CollectionShelf navigation={navigation} />
     </View>
   );
@@ -1387,12 +1399,12 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             </View>
           </View>
         )}
-        {error && (
+        {!holding && fail && failedEmpty && (
           <View style={{ paddingTop: insets.top + 12 }}>
-            <Empty text={t(`Couldn't load places: ${error}`, `Không tải được địa điểm: ${error}`, `読み込みに失敗しました: ${error}`)} />
+            <LoadFailEmpty kind={fail} onRetry={reload} testID="explore-load-fail" />
           </View>
         )}
-        {!holding && !error && !mapMode && (
+        {!holding && !failedEmpty && !mapMode && (
           <Animated.SectionList
             // One section, whose only job is to give the filter row
             // something to be the header of.
@@ -1452,7 +1464,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             viewabilityConfig={viewabilityConfig}
           />
         )}
-        {!holding && !error && mapMode && city && (
+        {!holding && !failedEmpty && mapMode && city && (
           <View style={{ flex: 1 }}>
             {/* The bar's in-list copy has nothing to scroll away with
                 here, so the floating copy stands in for it permanently:
@@ -1546,7 +1558,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         )}
         {/* Last, so it draws over the list — in the tab bar's own dock,
             which the bar has vacated whenever this is visible. */}
-        {!holding && !error && (
+        {!holding && !failedEmpty && (
           <ScrollNudge
             visible={nudge}
             onSearch={() => navigation.navigate('Search')}

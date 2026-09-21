@@ -25,6 +25,8 @@ import { likesWorthShowing } from '../lib/likes';
 import { findCollections } from '../lib/search';
 import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
+import { classifyLoadFail } from '../lib/loadfail';
+import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
 import { colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -389,6 +391,7 @@ export default function CollectionsScreen({ navigation, route }: {
   const { session } = useAuth();
   const { city } = useCity();
   const cols = useCollections();
+  const colsFail = classifyLoadFail(cols.error);
   // Shared with the save sheet — see SaveProvider. Reading it here through
   // its own hook is what let the two disagree.
   const { mine, askToSignIn } = useSave();
@@ -716,8 +719,17 @@ export default function CollectionsScreen({ navigation, route }: {
             ))}
           </View>
         )}
-        {!holding && cols.error && <Empty text={t(`Couldn't load collections: ${cols.error}`, `Không tải được bộ sưu tập: ${cols.error}`, `読み込みに失敗しました: ${cols.error}`)} />}
-        {!holding && !cols.error && (
+        {/* A failed read is the body only when there is nothing under it.
+            With a shelf already in hand — the launch cache, or the last
+            fetch that worked — it is a banner above the shelf, and the
+            shelf stays; see `components/loadFail`. */}
+        {!holding && colsFail && cols.data.length === 0 && (
+          <LoadFailEmpty kind={colsFail} onRetry={cols.reload} testID="collections-load-fail" />
+        )}
+        {!holding && colsFail && cols.data.length > 0 && (
+          <LoadFailBanner kind={colsFail} onRetry={cols.reload} testID="collections-load-banner" />
+        )}
+        {!holding && !(colsFail && cols.data.length === 0) && (
           <SectionList
             sections={sections}
             keyExtractor={(row) => (row.kind === 'pair' ? row.pair[0].slug : row.c.slug)}

@@ -56,6 +56,8 @@ import { type Trip, type TripStopRow } from '../lib/data';
 import { useMyTrips } from '../lib/mytrips';
 import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import { classifyLoadFail } from '../lib/loadfail';
+import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY } from '../lib/trip';
 import { spansCities, spendVnd, splitTrips, tripCover } from '../lib/trips';
@@ -288,6 +290,7 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
   const clearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
   const trips = useMyTrips();
+  const tripsFail = classifyLoadFail(trips.error);
 
   // Saving happens in the Ideas stack, in another tab, so this list is
   // always out of date by the time anyone looks at it. Every focus reloads
@@ -450,19 +453,15 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
         </View>
       )}
 
-      {trips.loaded && !!trips.error && (
-        <View style={s.body}>
-          <Card style={s.pad}><Text style={s.error}>
-            {t(
-              `Couldn't load your trips: ${trips.error}`,
-              `Không tải được chuyến đi: ${trips.error}`,
-              `旅程を読み込めませんでした: ${trips.error}`,
-            )}
-          </Text></Card>
-        </View>
+      {/* Named, never the server's words; the body when there is nothing
+          to show and a banner when there is — see `components/loadFail`. */}
+      {trips.loaded && tripsFail && (
+        trips.data.length === 0
+          ? <LoadFailEmpty kind={tripsFail} onRetry={trips.reload} testID="trips-load-fail" />
+          : <LoadFailBanner kind={tripsFail} onRetry={trips.reload} testID="trips-load-banner" />
       )}
 
-      {trips.loaded && !trips.error && (
+      {trips.loaded && !(tripsFail && trips.data.length === 0) && (
         <ScrollView
           contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
           showsVerticalScrollIndicator={false}
@@ -553,7 +552,6 @@ const s = StyleSheet.create({
   // cards ran to both edges and the card's own corner radius clipped the
   // first glyph of every title.
   body: { gap: space.cardGap, paddingHorizontal: space.page },
-  error: { ...type.body, color: colors.textSecondary },
   lede: { ...type.body, color: colors.textSecondary, marginBottom: space.titleToContent },
 
   // Caption weight and letterspaced rather than a second title. There is
