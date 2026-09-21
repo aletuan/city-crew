@@ -76,10 +76,17 @@ export async function fetchMyPhotoCounts(placeId: string, uid: string): Promise<
  * written wrongly, but the refusal would be a mystery at this call site.
  * Written out, the row says what it is.
  *
- * `sort_order` puts it at the end of the gallery. `photosOf` sorts the
- * cover first and then by this number, so a new photograph has to come
- * after the ones already there; passed in by the caller, which is what
- * counted them.
+ * `sort_order` puts it at the end of the gallery, and `is_cover` goes in
+ * false because the insert policy refuses anything else — a guide has no
+ * write on that column and no update policy to reach it with afterwards.
+ *
+ * It does not stay false. `guide_upload_becomes_cover`, a definer trigger
+ * on the table, moves the cover onto the row once the insert has cleared
+ * the policy; see `20260921093000_guide_upload_becomes_cover.sql` for why
+ * that has to happen after the write rather than in it. So the row lands
+ * last by `sort_order` and first by `photosOf`, which sorts the cover
+ * ahead of the number — what the reader sees is the photograph they just
+ * took, standing for the place.
  */
 export async function addPlacePhoto(row: {
   placeId: string;

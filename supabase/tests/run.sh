@@ -330,6 +330,16 @@ for f in "$ROOT"/supabase/migrations/*_place_threads_handle.sql \
 done
 run "$DB" -f "$HERE/instagram_handle_test.sql"
 
+# Which picture stands for a place once a reader has added one. Before the
+# search-path sweep on purpose: that block asserts every function in the
+# schema pins its own path, and this one is a `security definer` that has
+# to be in the database by the time it looks.
+echo "→ upload covers"
+for f in "$ROOT"/supabase/migrations/*_guide_upload_becomes_cover.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/upload_cover_test.sql"
+
 echo "→ search paths"
 for f in "$ROOT"/supabase/migrations/*_pin_trigger_search_path.sql; do
   run "$DB" -f "$f" >/dev/null
