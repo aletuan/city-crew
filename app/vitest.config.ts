@@ -98,14 +98,22 @@ import { defineConfig } from 'vitest/config';
 // `perFile` closes that: every screen has to clear the number on its own.
 //
 // The numbers are the lowest screen's, not the average's, and switching
-// the floor to per-file is what showed which screen that was. Three sit
+// the floor to per-file is what showed which screen that was. Three sat
 // well under the old aggregate and had been hiding there: at the switch,
 // `CollectionFormScreen` stood at 82.69% lines / 70.96% branches / 60%
 // functions, `ForgotPasswordScreen` at 85.8 / 81.81 / 44.44, and
-// `DeleteAccountScreen` at 88.23% branches. `TripsScreen` went from 41.75
-// to 99.74 in the same change; those three are the next to raise, and
-// each one lifts the column it is lowest in.
-const SCREENS_FLOOR = { lines: 82, statements: 82, branches: 70, functions: 44 };
+// `DeleteAccountScreen` at 88.23% branches, and the floor was theirs —
+// 82 / 82 / 70 / 44. All three stand at 100 in every column now (the
+// rename, the copy and the daily cap; the recovery code, the countdown
+// and the resend; the account with no handle and the stack with nothing
+// under it), which moved the floor up to the next-lowest screen.
+//
+// That is `SignUpScreen`, alone at the bottom of all four columns: 95.49%
+// lines and statements, 89.06% branches, 61.9% functions. Nothing else is
+// within ten points of it on functions — `TripDetailScreen` is next at
+// 80, `ExploreScreen` at 81.25 — so it is the one screen a further raise
+// has to go through, and the one whose figures these are, rounded down.
+const SCREENS_FLOOR = { lines: 95, statements: 95, branches: 89, functions: 61 };
 
 // ── the components, measured ──
 //

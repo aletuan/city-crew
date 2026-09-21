@@ -177,6 +177,14 @@ describe('the delete account screen', () => {
     )).toBeTruthy();
   });
 
+  it('leaves through the header as well', () => {
+    const navigation = nav();
+    render(<DeleteAccountScreen navigation={navigation} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(navigation.goBack).toHaveBeenCalled();
+    expect(deleteAccount).not.toHaveBeenCalled();
+  });
+
   // Leaving is an answer, and it must be reachable from the bottom of the
   // screen rather than only from the header the reader has scrolled past.
   it('offers keeping the account, next to deleting it', () => {
@@ -187,5 +195,48 @@ describe('the delete account screen', () => {
 
     expect(navigation.goBack).toHaveBeenCalled();
     expect(deleteAccount).not.toHaveBeenCalled();
+  });
+});
+
+// ── the two things the card may lack ──
+
+describe('an account with less to show', () => {
+  // A handle is chosen, not given: an account that has not chosen one
+  // yet has no row for it, rather than "@" with nothing after.
+  it('shows no handle row for an account without a handle', () => {
+    account.profile = { ...account.profile, handle: '' };
+    render(<DeleteAccountScreen navigation={nav()} />);
+    const name = screen.getByText('Trang');
+    expect(screen.queryByText(/^@/)).toBeNull();
+    // No row at all — not an empty one. `atHandle('')` is '', so a row
+    // drawn regardless would pass the line above while still holding a
+    // blank line under the name; the identity block is the name alone.
+    expect(name.parentElement?.childElementCount).toBe(1);
+  });
+
+  // No name and no address is an account `useAuth` never hands out, and
+  // the row still has to render something rather than throw on `null`.
+  it('renders an empty name rather than crashing without one', () => {
+    account.email = null;
+    account.profile = { ...account.profile, full_name: '' };
+    render(<DeleteAccountScreen navigation={nav()} />);
+    expect(screen.getByText('@trang')).toBeTruthy();
+    expect(screen.getByText('Will be deleted')).toBeTruthy();
+  });
+});
+
+describe('the way out when the screen is the stack’s root', () => {
+  // Deep-linked or restored straight onto this screen, there is nothing
+  // under it to pop to; `leaveAuth` swaps it for the profile instead.
+  // Both halves of that helper are its own test's business — this pins
+  // that the screen hands it a navigation it can read the depth from.
+  it('replaces itself with the profile when nothing sits beneath', async () => {
+    const navigation = nav(1);
+    render(<DeleteAccountScreen navigation={navigation} />);
+
+    fireEvent.click(deleteButton());
+
+    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith('ProfileHome'));
+    expect(navigation.popToTop).not.toHaveBeenCalled();
   });
 });
