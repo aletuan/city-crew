@@ -40,6 +40,26 @@ import { fold } from './address';
 
 const SEPARATOR = /\s+[-–—]\s+/;
 
+/**
+ * The street word an address abbreviates and a name spells out.
+ *
+ * "Every Half Coffee Roasters - Phố Chả Cá" stands at "6B P. Chả Cá,
+ * Hoàn Kiếm". Both say Chả Cá; only one says *phố*, and a plain
+ * containment test therefore missed it and printed the street twice.
+ * Google writes the short form in an address and an owner writes the
+ * long one in a business name, so the two never meet.
+ *
+ * Applied to the subtitle before folding, and that order is the whole
+ * care in this constant. `fold` strips tone marks, so it turns both
+ * "Ngõ" and "Ngô" into `ngo` — and a rule written against the folded
+ * text would cut "Ngô Quyền", a person a street is named after, down to
+ * "Quyền". Matched with its tone mark intact, `Ngõ` cannot touch it.
+ *
+ * Quận and Q. are deliberately absent. "Quận 2" reduced to "2" would
+ * find a house number in nearly any address.
+ */
+const STREET_WORD = /^(?:phố|đường|ngõ|ngách|hẻm|p\.|đ\.|ng\.)\s+/i;
+
 export type SplitName = { title: string; subtitle: string | null };
 
 /** The brand before the first spaced dash, and whatever hung off it. */
@@ -94,6 +114,17 @@ export function splitName(name: string): SplitName {
  * contract is the printed string, and a future change to `shortAddress`
  * should move this with it rather than silently diverge.)
  *
+ * ── the street word ──
+ *
+ * One more pass, against the subtitle with a leading `Phố`/`Đường`/`Ngõ`
+ * removed, because Google abbreviates those in an address and an owner
+ * spells them out in a business name. "Phố Chả Cá" against "6B P. Chả
+ * Cá, Hoàn Kiếm" is one such row — the only one in the catalog today,
+ * found on a phone rather than by this note.
+ *
+ * Four characters minimum on what is left, which keeps "Phố cổ" whole:
+ * "cổ" would match a syllable in half the streets in Hanoi.
+ *
  * ── why plain containment is safe enough ──
  *
  * A substring test can fire on a fragment of a longer word. It does not
@@ -124,6 +155,11 @@ export function subtitleBeside(
   if (!split.subtitle) return null;
   const sub = fold(split.subtitle);
   if (neighborhood && fold(neighborhood) === sub) return null;
-  if (address && fold(address).includes(sub)) return null;
+  if (!address) return split.subtitle;
+  const addr = fold(address);
+  if (addr.includes(sub)) return null;
+  // And again without the street word, for the mismatch below.
+  const bare = split.subtitle.replace(STREET_WORD, '').trim();
+  if (bare !== split.subtitle && bare.length >= 4 && addr.includes(fold(bare))) return null;
   return split.subtitle;
 }
