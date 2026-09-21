@@ -71,6 +71,64 @@ function SourceMark({ place }) {
   );
 }
 
+/**
+ * What a row and a card both say about a place, in one place.
+ *
+ * They did not agree before this. The desktop row printed every category,
+ * every vibe, the photo count and the price; the grid card dropped the
+ * Vietnamese name and the vibes entirely and showed category *icons*
+ * instead of labels; and on a phone `.prow .facts` was `display: none`, so
+ * a row said nothing at all about what the place is. One place, three
+ * accounts of it, and a reader who learns the list on a laptop learns a
+ * different list on their phone.
+ *
+ * So: one order (categories, then vibes), one vocabulary (the same labels
+ * the filter rail uses), one price rule, one cap, everywhere. The cap is
+ * two because that is what the narrower of the two views affords, and a
+ * row that says more than a card about the same place is the problem this
+ * exists to end. The rest becomes "+n", whose title lists them all.
+ *
+ * The two warnings are never capped away. "no category" and "no price" are
+ * the reason a desk looks at this list, and a worklist that hides its own
+ * work is not one.
+ */
+const MAX_FACTS = 2;
+
+function tagsOf(place) {
+  const out = [];
+  for (const c of place.categories ?? []) {
+    out.push({ key: `c:${c}`, cls: 'tag', text: CATEGORY_LABEL[c] ?? c });
+  }
+  for (const v of place.vibe_tags ?? []) {
+    out.push({ key: `v:${v}`, cls: 'tag vibe', text: VIBE_STYLE[v]?.label ?? v.replace('_', ' ') });
+  }
+  return out;
+}
+
+/** The price as the desk writes it, or null when the row has none. */
+function priceOf(place) {
+  if (place.price_vnd === 0) return 'free';
+  if (place.price_display) return place.price_display;
+  if (place.price_vnd) return `${Math.round(place.price_vnd / 1000)}k₫`;
+  return null;
+}
+
+function Facts({ place }) {
+  const tags = tagsOf(place);
+  const shown = tags.slice(0, MAX_FACTS);
+  const hidden = tags.length - shown.length;
+  const price = priceOf(place);
+  return (
+    <div className="facts">
+      {!place.categories?.length && <span className="tag noprice">no category</span>}
+      {shown.map((t) => <span className={t.cls} key={t.key}>{t.text}</span>)}
+      {hidden > 0 && <span className="tag more" title={tags.map((t) => t.text).join(' · ')}>+{hidden}</span>}
+      <span className="count">{place.photo_count} photos</span>
+      {price ? <span className="count">{price}</span> : <span className="tag noprice">no price</span>}
+    </div>
+  );
+}
+
 export default function PlaceList() {
   const { city } = useCity();
   const { progress, refresh: refreshProgress } = useProgress();
@@ -435,12 +493,7 @@ export default function PlaceList() {
                     </div>
                     <div className="gcard-tags">
                       <SourceMark place={p} />
-                      {p.categories?.length
-                        ? p.categories.map((c) => (
-                          <CategoryIcon key={c} name={CATEGORY_STYLE[c]?.icon} color={CATEGORY_STYLE[c]?.color} />
-                        ))
-                        : <span className="tag noprice">no category</span>}
-                      <span className="count">{p.photo_count} photos</span>
+                      <Facts place={p} />
                     </div>
                   </div>
                 </Link>
@@ -475,20 +528,7 @@ export default function PlaceList() {
                       {p.rating_count ? ` · ${fmtCount(p.rating_count)} Google reviews` : ' · no reviews'}
                     </div>
                   </div>
-                  <div className="facts">
-                    {p.categories?.length
-                      ? p.categories.map((c) => (
-                        <span className="tag" key={c}>{CATEGORY_LABEL[c] ?? c}</span>
-                      ))
-                      : <span className="tag noprice">no category</span>}
-                    {p.vibe_tags.map((v) => <span className="tag vibe" key={v}>{v.replace('_', ' ')}</span>)}
-                    <span className="count">{p.photo_count} photos</span>
-                    {p.price_vnd === 0
-                      ? <span className="tag">free</span>
-                      : p.price_display || p.price_vnd
-                        ? <span className="count">{p.price_display ?? `${Math.round(p.price_vnd / 1000)}k₫`}</span>
-                        : <span className="tag noprice">no price</span>}
-                  </div>
+                  <Facts place={p} />
                   <div className="stampcol">
                     <span className={`stamp ${p.review_status}`}>{p.review_status}</span>
                     <SourceMark place={p} />
