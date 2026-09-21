@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   uid: 'u1' as string | null,
   granted: true,
   picked: true,
+  name: 'Nguyễn Thu Trang',
 }));
 const added = vi.hoisted(() => vi.fn());
 const uploaded = vi.hoisted(() => vi.fn());
@@ -32,12 +33,16 @@ vi.mock('../lib/i18n', () => ({
   }),
 }));
 
+// The grant is read from a store now, not fetched — see `lib/guideGrant`.
+vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.granted }));
 vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
+  useAuth: () => ({
+    session: state.uid ? { user: { id: state.uid } } : null,
+    profile: { full_name: state.name },
+  }),
 }));
 
 vi.mock('../lib/data', () => ({
-  useIsLocalGuide: () => ({ data: state.granted, loading: false }),
   fetchPlaceId: vi.fn(async () => 'place-uuid'),
   fetchMyPhotoCounts: vi.fn(async () => ({ mineHere: 0, mineToday: 0 })),
   addPlacePhoto: (row: unknown) => { added(row); return Promise.resolve('photo-id'); },
@@ -90,6 +95,7 @@ beforeEach(() => {
   state.uid = 'u1';
   state.granted = true;
   state.picked = true;
+  state.name = 'Nguyễn Thu Trang';
   added.mockClear();
   uploaded.mockClear();
   onAdded.mockClear();
@@ -154,18 +160,60 @@ describe('what it offers', () => {
     expect(screen.queryByText(/Edit Place/i)).toBeNull();
   });
 
-  // The line the person is agreeing to by choosing a picture. In front of
-  // the picker rather than behind a confirm dialog.
-  it('says where the photo is expected to come from', () => {
+  // The provenance line that used to sit under the button is gone. It said
+  // where a photograph was expected to come from, which the picker it opens
+  // says better by only ever opening on this phone's own library — and it
+  // was a third line of prose on a card whose whole job is one button.
+  it('does not explain where the photo should come from', () => {
     draw();
-    expect(screen.getByText('A photo chosen from my own Photos')).toBeTruthy();
+    expect(screen.queryByText(/from my own Photos/i)).toBeNull();
+    expect(screen.queryByText(/Photos của tôi/)).toBeNull();
   });
 
   it('speaks the reader’s language', () => {
     state.lang = 'vi';
     draw();
-    expect(screen.getByText('Ảnh lựa chọn từ Photos của tôi')).toBeTruthy();
     expect(screen.getByText('Thêm ảnh')).toBeTruthy();
+  });
+
+  // Their name, then a question — rather than claiming the place is
+  // theirs and handing them a chore. This panel only ever shows to the
+  // person who put the café in front of everybody else, and asking is
+  // how you speak to them.
+  it('greets the reader by name and asks, instead of instructing', () => {
+    draw();
+    expect(screen.getByText('Hi Trang,')).toBeTruthy();
+    expect(screen.getByText('Want to add a photo?')).toBeTruthy();
+    expect(screen.queryByText(/Keep it up to date/)).toBeNull();
+  });
+
+  // The given name, which in a Vietnamese name is the last word. The
+  // family name — Nguyễn — is the first, and greeting somebody by it is
+  // wrong the way "Hi Smith" is wrong. `lib/greet` holds the rule and the
+  // reasoning; this is the screen proving it asked.
+  it('uses the given name, not the family name', () => {
+    state.lang = 'vi';
+    draw();
+    expect(screen.getByText('Chào Trang,')).toBeTruthy();
+    expect(screen.queryByText(/Nguyễn/)).toBeNull();
+  });
+
+  // さん rather than a bare name, and the same last word: these profiles
+  // are Vietnamese, and a foreign given name with さん is ordinary.
+  it('adds さん for a Japanese reader', () => {
+    state.lang = 'ja';
+    draw();
+    expect(screen.getByText('Trangさん、')).toBeTruthy();
+  });
+
+  // "Chào 2024," is worse than "Chào bạn,". A profile whose name cannot
+  // be greeted gets the stranger's greeting rather than a guess with
+  // somebody's data in it.
+  it('greets a stranger when there is no name worth using', () => {
+    state.lang = 'vi';
+    state.name = 'user 2024';
+    draw();
+    expect(screen.getByText('Chào bạn,')).toBeTruthy();
   });
 });
 

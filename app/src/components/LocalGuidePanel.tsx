@@ -34,15 +34,17 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import welcomeLogo from '../../assets/welcome-logo.png';
 import { useAuth } from '../lib/auth';
+import { greetingName } from '../lib/greet';
 import { useI18n } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
-import { addPlacePhoto, fetchMyPhotoCounts, fetchPlaceId, useIsLocalGuide } from '../lib/data';
+import { addPlacePhoto, fetchMyPhotoCounts, fetchPlaceId } from '../lib/data';
+import { useIsGuide } from '../lib/useGuideGrant';
 import {
   canAddPhoto, photoPath, refusePhoto, PHOTO_PX, PHOTO_QUALITY,
   type PhotoRefusal,
 } from '../lib/guide';
 import type { Place } from '../lib/types';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, font, radius, space } from '../theme';
 import { PressableScale, successHaptic } from './ui';
 
 const BUCKET = 'place-photos';
@@ -54,9 +56,14 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
   testID?: string;
 }) {
   const { t } = useI18n();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const uid = session?.user?.id ?? null;
-  const { data: granted } = useIsLocalGuide(uid);
+  const who = greetingName(profile?.full_name);
+  // Read, not fetched. `useIsGuide` answers from a store the launch
+  // filled, so this component is right on its first frame — a fetch here
+  // drew the card without the panel and then shoved it down a round trip
+  // later, once for every place its owner opened. See `lib/guideGrant`.
+  const granted = useIsGuide();
   const [busy, setBusy] = useState(false);
   const [counts, setCounts] = useState({ mineHere: 0, mineToday: 0 });
 
@@ -151,25 +158,52 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
 
   return (
     <View style={s.panel} testID={testID}>
-      {/* The app's own mark rather than a camera glyph.
-          A camera said what the button below it already says, twice on one
-          card — and said it about the tool instead of about who is being
-          asked. This panel only ever shows to the person who put the place
-          here, so the mark that belongs at its head is the one they
-          recognise. The artwork carries its own cut-out background, so it
-          reads on either ground. */}
-      <View style={s.mark}>
-        <Image source={welcomeLogo} style={s.markLogo} contentFit="contain" />
-      </View>
-      <View style={s.words}>
-        <Text style={s.title}>{t('Your place', 'Địa điểm của bạn', 'あなたの場所')}</Text>
-        <Text style={s.sub}>
-          {t(
-            'Help keep this place up to date',
-            'Giúp giữ địa điểm này luôn đúng',
-            'この場所を最新に保ちましょう',
-          )}
-        </Text>
+      <View style={s.head}>
+        {/* The app's own mark rather than a camera glyph.
+            A camera said what the button beside it already says, twice on
+            one card — and said it about the tool instead of about who is
+            being asked. This panel only ever shows to the person who put
+            the place here, so the mark that belongs at its head is the one
+            they recognise. The artwork carries its own cut-out background,
+            so it reads on either ground. */}
+        <View style={s.mark}>
+          <Image source={welcomeLogo} style={s.markLogo} contentFit="contain" />
+        </View>
+        <View style={s.words}>
+          {/* Their name, then a question.
+              Not "Your place / Keep it up to date", which was a claim of
+              ownership followed by a chore — and this panel is neither.
+              It appears to exactly one person, the one who went and put
+              this café in front of everybody else, so it says their name
+              and asks.
+
+              A question is also the form that survives being read for
+              the tenth time, which matters here: the panel shows every
+              time its author opens their own place.
+
+              `greetingName` picks the word — the last one, which is the
+              given name in a Vietnamese name and the name English greets
+              with too; see that module for why the family name would
+              have been wrong in both. It answers null for a profile with
+              no usable name, and then this greets a stranger rather than
+              guessing, because "Chào 2024," is worse than "Chào bạn,".
+
+              The question is short because the column is: about twenty
+              characters at this size, beside the button. "Bạn muốn bổ
+              sung thêm ảnh chứ?" was thirty and took two lines on the
+              phone, which is a third line of prose on a card whose whole
+              job is one button. Eighteen fits, and says the same thing.
+              No space before the question mark — Vietnamese does not
+              take one, and neither does any other string in this app. */}
+          <Text style={s.title} numberOfLines={1}>
+            {who
+              ? t(`Hi ${who},`, `Chào ${who},`, `${who}さん、`)
+              : t('Hi there,', 'Chào bạn,', 'こんにちは、')}
+          </Text>
+          <Text style={s.sub}>
+            {t('Want to add a photo?', 'Bạn muốn thêm ảnh?', '写真を追加しませんか？')}
+          </Text>
+        </View>
         <PressableScale
           onPress={busy ? undefined : add}
           accessibilityRole="button"
@@ -182,22 +216,11 @@ export default function LocalGuidePanel({ place, onAdded, testID }: {
             ? <ActivityIndicator color={colors.accentInk} />
             : (
               <>
-                <Ionicons name="camera" size={17} color={colors.accentInk} />
+                <Ionicons name="camera" size={16} color={colors.accentInk} />
                 <Text style={s.buttonText}>{t('Add photo', 'Thêm ảnh', '写真を追加')}</Text>
               </>
             )}
         </PressableScale>
-        {/* What the person is saying by choosing one. Kept where it can be
-            read before the picker opens rather than behind a confirm — a
-            dialog between the button and the camera roll is a tap that
-            teaches nobody anything. */}
-        <Text style={s.note}>
-          {t(
-            'A photo chosen from my own Photos',
-            'Ảnh lựa chọn từ Photos của tôi',
-            '自分の写真から選んだ画像',
-          )}
-        </Text>
       </View>
     </View>
   );
@@ -208,11 +231,15 @@ const s = StyleSheet.create({
   // fill: it is an offer rather than a fact, and everything around it —
   // the facts row, the info card — is glass or paper.
   panel: {
-    flexDirection: 'row', gap: 14, alignItems: 'flex-start',
     backgroundColor: colors.accentSoft,
     borderRadius: radius.card, padding: space.cardPadding,
     marginTop: space.headingToContent,
   },
+  // The mark, the words and the button on one line, where they used to
+  // stack. Stacked, this card ran 183pt — a third of the first screen,
+  // spent on an affordance only the person who added the place can even
+  // see, and paid for by pushing the opening hours below the fold.
+  head: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   mark: {
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
@@ -221,18 +248,26 @@ const s = StyleSheet.create({
   // Inside the 40pt disc with a little air: the logo is drawn to its own
   // edges, where a 22pt glyph came with padding built in.
   markLogo: { width: 26, height: 26 },
-  words: { flex: 1, gap: 3 },
-  title: { color: colors.accent, ...type.cardTitle },
-  sub: { color: colors.textSecondary, fontSize: 14 },
+  words: { flex: 1, gap: 2 },
+  // A size down from `type.cardTitle`: the words share their line with a
+  // button now, and the heading of a two-line aside is not a card title.
+  title: { color: colors.accent, fontSize: 15.5, fontWeight: font.semibold },
+  // The sub has ~140pt beside the button, which is about twenty
+  // characters at this size — the reason both these lines are curt. An
+  // earlier draft read "Help keep this place up to date" and wrapped to
+  // three ragged lines in that space.
+  sub: { color: colors.textSecondary, fontSize: 13 },
   // `containerStyle`, not `style`: PressableScale puts `style` on its inner
   // animated view and only `containerStyle` on the Pressable, so a width
   // set on the wrong one leaves the button its content's size.
-  buttonSlot: { alignSelf: 'flex-start', marginTop: 9 },
+  buttonSlot: { flexShrink: 0 },
+  // Narrower than it was — 14pt of padding and a 16pt glyph rather than
+  // 18 and 17 — because it shares the line now. Still 44 high: a target
+  // may lose width to its neighbours and never height.
   button: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    minHeight: 44, paddingHorizontal: 18,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    minHeight: 44, paddingHorizontal: 14,
     borderRadius: radius.pill, backgroundColor: colors.accentFill,
   },
-  buttonText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
-  note: { color: colors.textTertiary, fontSize: 12, marginTop: 8 },
+  buttonText: { color: colors.accentInk, fontSize: 14.5, fontWeight: font.semibold },
 });

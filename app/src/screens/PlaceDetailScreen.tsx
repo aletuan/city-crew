@@ -27,6 +27,10 @@ import { shortAddress } from '../lib/address';
 import { splitName, subtitleBeside } from '../lib/name';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
+import MiniMap, { canDrawMap } from '../components/MiniMap';
+import {
+  atHandle, hostOf, instagramUrl, threadsUrl, websiteRepeatsHandle,
+} from '../lib/links';
 import { clockOf, dotWindow, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { mapsSearchUrl } from '../lib/maps';
@@ -53,23 +57,47 @@ import type { Nav, RootRoute } from '../nav';
 // are the links, the way a phone number is in Contacts — and a row that
 // goes nowhere stays grey. One mark per row, and it is the row's own
 // content.
-function InfoRow({ label, first, onPress, children }: {
+/**
+ * A fact, with the glyph that names its kind in a gutter down the left.
+ *
+ * The glyph is not decoration and it is not a second copy of the label:
+ * it is the thing that lets the eye find the phone number without
+ * reading, and it gives the card a left edge the values line up against.
+ * The hairline starts where the labels do rather than at the card's edge,
+ * so the gutter reads as one column rather than as four interruptions.
+ */
+function InfoRow({ icon, label, first, onPress, trailing, children }: {
+  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   /** The row that opens the card draws no hairline above itself. */
   first?: boolean;
   onPress?: () => void;
+  /** A control at the row's end. A row carrying one is not itself
+   *  pressable: two targets in one row, the outer one swallowing taps
+   *  meant for the inner, is a worse row than one honest button. */
+  trailing?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const tappable = !!onPress && !trailing;
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      style={[s.infoStack, !first && s.rowDivider]}
-      accessibilityRole={onPress ? 'button' : undefined}
-    >
-      <Text style={s.infoLabel}>{label}</Text>
-      {children}
-    </Pressable>
+    <>
+      {!first && <View style={s.rowDivider} />}
+      <Pressable
+        onPress={tappable ? onPress : undefined}
+        disabled={!tappable}
+        style={s.infoStack}
+        accessibilityRole={tappable ? 'button' : undefined}
+      >
+        <View style={s.infoIconSlot}>
+          <Ionicons name={icon} size={19} color={colors.textTertiary} />
+        </View>
+        <View style={s.infoWords}>
+          <Text style={s.infoLabel}>{label}</Text>
+          {children}
+        </View>
+        {trailing}
+      </Pressable>
+    </>
   );
 }
 
@@ -93,6 +121,15 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const [photoIndex, setPhotoIndex] = useState(0);
   const credit = useFlag('photo_attribution');
   const [hoursOpen, setHoursOpen] = useState(false);
+  const showPrice = useFlag('place_price');
+  // How many lines the address wanted before anything clamped it, and
+  // whether the reader has asked for the rest. `null` is "not measured
+  // yet", which is also the one paint that runs unclamped. Up here with
+  // the other hooks rather than beside the row that uses them: there is a
+  // `return` for the not-found face between the two places, and a hook
+  // after it is a hook that some renders do not reach.
+  const [measured, setMeasured] = useState<number | null>(null);
+  const [addrOpen, setAddrOpen] = useState(false);
   const saved = isSaved(route.params.slug);
   const tabClearance = useTabBarClearance();
   const insets = useSafeAreaInsets();
@@ -169,7 +206,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // The brand as the title and the qualifier Google's listing hung off
   // it — a branch, a tagline — as a subtitle beneath, rather than three
   // lines of display type. See `lib/name` for the cut. The subtitle is
-  // dropped when it only repeats the neighbourhood line under it.
+  // dropped when it only repeats what the card already prints: the
+  // neighbourhood line under it, or the address row further down.
   const neighborhood = t(place.neighborhood_en, place.neighborhood_vi, place.neighborhood_ja);
   // The district line under the title is only for a place with no
   // address row: the short address ends in the ward, so with one on the
@@ -182,7 +220,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const showsNeighborhood = !place.address;
   const fullName = t(place.name_en, place.name_vi, place.name_ja);
   const name = splitName(fullName);
-  const subtitle = subtitleBeside(name, neighborhood);
+  // `address`, not `place.address`: the test is against what the reader
+  // can actually see, and the short one is what the row prints.
+  const subtitle = subtitleBeside(name, neighborhood, address);
   // Grouped, not one row per day: see groupHours. A place open the same
   // seven days a week becomes one line instead of seven identical ones.
   const hours = groupHours(place.opening_hours ?? [], lang);
@@ -198,10 +238,22 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // Which row opens the grouped card decides where the hairlines fall:
   // every row below the first draws one above itself, whatever subset of
   // the four a place actually has.
+  // The venue's own accounts, bare and lowercase in the column; the @ and
+  // the host are put back at the edges. A website that is only one of these
+  // accounts said as a URL is dropped — the row above it already says the
+  // same name, better.
+  const ig = place.instagram_handle || null;
+  const th = place.threads_handle || null;
+  const site = place.website && !websiteRepeatsHandle(place.website, { instagram: ig, threads: th })
+    ? place.website
+    : null;
+
   const firstRow = place.address ? 'address'
     : hours.length ? 'hours'
     : place.phone ? 'phone'
-    : place.website ? 'website' : null;
+    : ig ? 'instagram'
+    : th ? 'threads'
+    : site ? 'website' : null;
 
   // The dash only joins two things: a place with no address shares its
   // name alone, not a name trailing off into punctuation.
@@ -216,12 +268,19 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const open = (url: string, failed: string) => {
     Linking.openURL(url).catch(() => Alert.alert(failed));
   };
+  const addrLong = measured != null && measured > ADDRESS_LINES;
+
+  /** Named once: the address row, its button and the map all do this. */
+  const toMaps = () => open(
+    mapsUrl!,
+    t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'),
+  );
   // Websites are typed in by hand and often arrive bare (`congcaphe.com`),
   // which `openURL` cannot route; with no scheme of its own, it is a web
   // address.
-  const websiteUrl = place.website && !/^[a-z][a-z\d+.-]*:\/\//i.test(place.website)
-    ? `https://${place.website}`
-    : place.website;
+  const websiteUrl = site && !/^[a-z][a-z\d+.-]*:\/\//i.test(site)
+    ? `https://${site}`
+    : site;
 
   return (
     // No top safe area: the photograph is what belongs against the top of
@@ -339,28 +398,46 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
         </View>
 
         <View style={s.body}>
-          {/* ── title + rating badge ── */}
-          <View style={s.titleRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.name} testID="detail-name">{name.title}</Text>
-              {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
-              {showsNeighborhood ? (
-                <View style={s.locRow}>
-                  <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
-                  <Text style={s.loc}>{neighborhood}</Text>
-                </View>
+          {/* ── the name, then what it scored ──
+              One column, not two. The rating used to sit in a badge beside
+              the title, which cost the name 109pt of the 386 it could have
+              had and made it wrap far more often than it needed to: 32% of
+              places on a 393pt phone, against 7% at full width. Measured
+              off the catalog, that is 167 places getting a whole line of
+              26pt back.
+              The rating loses nothing by moving. A score and a count are
+              one short line of text; a badge was a box drawn around them,
+              and the box was the part that was expensive. */}
+          <Text style={s.name} testID="detail-name">{name.title}</Text>
+          {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+          {showsNeighborhood ? (
+            <View style={s.locRow}>
+              <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
+              <Text style={s.loc}>{neighborhood}</Text>
+            </View>
+          ) : null}
+          {place.rating ? (
+            // Spoken as one phrase. Left to itself a screen reader reads
+            // the star glyph, then the number, then a lone middle dot,
+            // then the count — four stops for one fact.
+            <View
+              style={s.ratingRow}
+              testID="detail-rating"
+              accessibilityRole="text"
+              accessibilityLabel={reviews
+                ? `${place.rating} — ${reviews} ${t('reviews', 'đánh giá', '件のレビュー')}`
+                : String(place.rating)}
+            >
+              <Ionicons name="star" size={17} color={colors.accent} />
+              <Text style={s.ratingValue}>{place.rating}</Text>
+              {reviews ? (
+                <>
+                  <Text style={s.ratingDot}>·</Text>
+                  <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー')}</Text>
+                </>
               ) : null}
             </View>
-            {place.rating ? (
-              <View style={s.ratingBadge}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <Ionicons name="star" size={16} color={colors.accent} />
-                  <Text style={s.ratingValue}>{place.rating}</Text>
-                </View>
-                {reviews ? <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー')}</Text> : null}
-              </View>
-            ) : null}
-          </View>
+          ) : null}
 
           {/* The one offer this screen makes to the person who put the
               place here. Draws nothing for everybody else — see
@@ -407,8 +484,20 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             ))}
             {/* FREE is already a pill of its own, accented because it is
                 the one price that is a state; a paid price is quiet text
-                and takes the glass pill and a tag like its neighbours. */}
-            {place.price_display || place.price_vnd != null ? (
+                and takes the glass pill and a tag like its neighbours.
+
+                Behind a switch, and off: the price is what pushes a
+                three-category place onto a second line — twelve of the
+                eighteen that have three are café + eats + nightlife, and
+                that row wants 427pt of a 386pt card. Without it every one
+                of them fits, the heaviest by a single point.
+
+                This screen is the only place in the app that has ever
+                drawn a price, so the switch hides it everywhere, on 557
+                published places of 648. That is why it is a row in
+                `app_flags` rather than a deletion — see `lib/flags` for
+                the one line that brings it back on every phone at once. */}
+            {showPrice && (place.price_display || place.price_vnd != null) ? (
               isFree(place) ? (
                 <PricePill place={place} />
               ) : (
@@ -432,18 +521,97 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             <Card style={s.infoGroup}>
               {place.address && (
                 <InfoRow
+                  icon="location-outline"
                   label={t('Address', 'Địa chỉ', '住所')}
                   first={firstRow === 'address'}
-                  onPress={mapsUrl
-                    ? () => open(mapsUrl, t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'))
-                    : undefined}
+                  onPress={mapsUrl ? toMaps : undefined}
+                  /* The affordance that was invisible. Tapping the address
+                     has always opened Maps and nothing on the row said so —
+                     an address looks like a fact, not a button. Said out
+                     loud it is also the thing most readers of this card
+                     actually want, which is why it gets the row's end
+                     rather than a line of its own. */
+                  trailing={mapsUrl ? (
+                    <PressableScale
+                      onPress={toMaps}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('Directions', 'Chỉ đường', '経路')}
+                      containerStyle={s.goSlot}
+                      style={s.go}
+                      testID="detail-directions"
+                    >
+                      <Ionicons name="navigate" size={15} color={colors.accent} />
+                      <Text style={s.goText}>{t('Directions', 'Chỉ đường', '経路')}</Text>
+                    </PressableScale>
+                  ) : undefined}
                 >
-                  <Text style={[s.infoValue, mapsUrl && s.infoLink]} testID="detail-address">{address}</Text>
+                  {/* Two lines, then an ellipsis, and a tap opens it.
+                      Of the 648 published places, 254 fit on one line
+                      beside the button and 606 fit in two; 42 do not, and
+                      those forty-two are the whole of this. A card that
+                      grows to five lines for one address in fifteen costs
+                      the other fourteen the opening hours.
+
+                      `measured` is the first paint, deliberately
+                      unclamped: `onTextLayout` reports the lines it
+                      actually drew, so a Text already limited to two can
+                      only ever report two and could never say whether
+                      there was a third. Measuring before clamping is the
+                      one way to know. It costs one frame on the long ones
+                      — the full address, then the clamp — during the same
+                      mount the photographs are still arriving in. */}
+                  <Pressable
+                    onPress={addrLong ? () => setAddrOpen((v) => !v) : undefined}
+                    disabled={!addrLong}
+                    accessibilityRole={addrLong ? 'button' : undefined}
+                    accessibilityState={addrLong ? { expanded: addrOpen } : undefined}
+                    accessibilityHint={addrLong
+                      ? t('Shows the whole address', 'Xem đầy đủ địa chỉ', '住所の全文を表示')
+                      : undefined}
+                    testID="detail-address-toggle"
+                  >
+                    <Text
+                      style={s.infoValue}
+                      testID="detail-address"
+                      numberOfLines={measured == null || addrOpen ? undefined : ADDRESS_LINES}
+                      onTextLayout={(e) => {
+                        if (measured == null) setMeasured(e.nativeEvent.lines.length);
+                      }}
+                    >
+                      {address}
+                    </Text>
+                  </Pressable>
                 </InfoRow>
               )}
 
+              {/* The map, under the address it answers.
+                  It used to be a card of its own below this one, which asked
+                  the reader to bind "where" to two separate objects — the
+                  words in one box, the picture in another. Here it is the
+                  address's own illustration.
+
+                  Frozen (`interactive={false}`), because a live map inside a
+                  vertical scroll is a hole the page cannot be scrolled
+                  through. And drawn only where the binary has a Google Maps
+                  SDK — Expo Go on iOS, or a build made without the key, get
+                  no map. Being inside the card now, that absence has to be
+                  quiet: the rows close over the gap and the card is simply a
+                  card without a picture. */}
+              {place.lat != null && place.lng != null && mapsUrl && canDrawMap && (
+                <View style={s.mapSlot}>
+                  <MiniMap
+                    lat={place.lat}
+                    lng={place.lng}
+                    height={150}
+                    interactive={false}
+                    onPick={toMaps}
+                  />
+                </View>
+              )}
+
               {hours.length > 0 && (
-                <View style={firstRow !== 'hours' && s.rowDivider}>
+                <View>
+                  {firstRow !== 'hours' && <View style={s.rowDivider} />}
                   {/* The one line most people came for is the whole row;
                       the table it was derived from waits behind the
                       chevron instead of pushing Call and Website off the
@@ -452,11 +620,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                       rather than going red. */}
                   <Pressable
                     onPress={() => setHoursOpen((v) => !v)}
-                    style={s.infoRow}
+                    style={s.infoStack}
                     accessibilityRole="button"
                     accessibilityState={{ expanded: hoursOpen }}
                   >
-                    <View style={{ flex: 1 }}>
+                    <View style={s.infoIconSlot}>
+                      <Ionicons name="time-outline" size={19} color={colors.textTertiary} />
+                    </View>
+                    <View style={s.infoWords}>
                       <Text style={s.infoLabel}>{t('Hours', 'Giờ mở cửa', '営業時間')}</Text>
                       {openNow ? (
                         <Text style={[s.openNow, !openNow.open && s.openNowShut]}>
@@ -485,9 +656,18 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                           their table behind the chevron; the label alone
                           heads the row until it is opened. */}
                     </View>
-                    <Ionicons name={hoursOpen ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textTertiary} />
+                    {/* The same box as the clock opposite it. Left
+                        top-aligned it would have stayed where the clock
+                        used to be and the row would read as two glyphs at
+                        two heights — the raggedness this change is about,
+                        moved to the other end of the row. */}
+                    <View style={s.infoChevronSlot}>
+                      <Ionicons name={hoursOpen ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textTertiary} />
+                    </View>
                   </Pressable>
                   {hoursOpen && (
+                    // Indented to the gutter the values keep, so the table
+                    // reads as this row's working rather than as a fifth fact.
                     <View style={s.hoursTable}>
                       {hours.map((row) => (
                         <View key={row.label} style={s.hourRow}>
@@ -502,6 +682,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
               {place.phone && (
                 <InfoRow
+                  icon="call-outline"
                   label={t('Phone', 'Điện thoại', '電話番号')}
                   first={firstRow === 'phone'}
                   onPress={() => open(
@@ -513,8 +694,48 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 </InfoRow>
               )}
 
-              {place.website && (
+              {/* The venue's own accounts, above the website, because a
+                  handle is a name and a domain is an address — and because
+                  for a café in this catalog the account is usually where
+                  the news is. Ionicons' own `logo-` glyphs rather than the
+                  brands' full-colour marks: two saturated logos in a grey
+                  gutter pull the eye off the words, and the column those
+                  glyphs belong to is the point of the card. */}
+              {ig && (
                 <InfoRow
+                  icon="logo-instagram"
+                  label="Instagram"
+                  first={firstRow === 'instagram'}
+                  onPress={() => open(
+                    instagramUrl(ig),
+                    t('Could not open Instagram', 'Không mở được Instagram', 'Instagramを開けませんでした'),
+                  )}
+                >
+                  <Text style={[s.infoValue, s.infoLink]} numberOfLines={1} testID="detail-instagram">
+                    {atHandle(ig)}
+                  </Text>
+                </InfoRow>
+              )}
+
+              {th && (
+                <InfoRow
+                  icon="logo-threads"
+                  label="Threads"
+                  first={firstRow === 'threads'}
+                  onPress={() => open(
+                    threadsUrl(th),
+                    t('Could not open Threads', 'Không mở được Threads', 'Threadsを開けませんでした'),
+                  )}
+                >
+                  <Text style={[s.infoValue, s.infoLink]} numberOfLines={1} testID="detail-threads">
+                    {atHandle(th)}
+                  </Text>
+                </InfoRow>
+              )}
+
+              {site && (
+                <InfoRow
+                  icon="globe-outline"
                   label={t('Website', 'Trang web', 'ウェブサイト')}
                   first={firstRow === 'website'}
                   onPress={() => open(
@@ -522,18 +743,85 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     t('Could not open the website', 'Không mở được trang web', 'ウェブサイトを開けませんでした'),
                   )}
                 >
-                  <Text style={[s.infoValue, s.infoLink]} numberOfLines={1}>
-                    {place.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+                  {/* The domain, not the URL. What was here trimmed the
+                      scheme and the `www.` and left everything else, so 70
+                      of the catalog's 413 websites ran off the end of the
+                      row mid-tracking-parameter. The tap still carries the
+                      whole address; only the label is short. */}
+                  <Text style={[s.infoValue, s.infoLink]} numberOfLines={1} testID="detail-website">
+                    {hostOf(site)}
                   </Text>
                 </InfoRow>
               )}
             </Card>
           )}
+
         </View>
       </ScrollView>
     </View>
   );
 }
+
+/** The left column the glyphs sit in, and the inset every hairline and
+ *  every continuation under a row lines up against. Glyph 19, air 14. */
+const GUTTER = 33;
+
+/** Where a glyph sits down its row: level with the first line of the
+ *  value, not with the label above it and not in the gap between them.
+ *
+ *  This is a decision about the address row, because that is the only row
+ *  whose value wraps — Hours and the open-now line are short, and Website
+ *  is held to one line. And it wraps almost always: of the 648 places
+ *  carrying an address, 13 fit on one line. Thirteen. The rest run to two
+ *  lines and thirty-five run to three, so the address row is a label over
+ *  two lines of street, and the shape to design for is that one rather
+ *  than the short address that happens to be on the screenshot.
+ *
+ *  Centred on the pair — label plus first line — the glyph lands on the
+ *  top edge of the street and reads as pushed up. Centred on the whole
+ *  row it drifts with the length of the address. Centred on the first
+ *  line of the value it is level with the words it is a marker for, and
+ *  it stays there whether the address runs to one line or four.
+ *
+ *  All three line heights are stated rather than left to the platform: a
+ *  glyph's position derived from "what iOS thinks a 12pt line is" is a
+ *  position nobody can check, and it moves the day that changes. 15 is a
+ *  rounding of the 14.3 the system face gives at 12pt, so the rows keep
+ *  the height they have. */
+const LABEL_LINE = 15;
+const LABEL_GAP = 5;
+const VALUE_LINE = 24;
+/** Everything above the first line of the value. */
+const ABOVE_VALUE = LABEL_LINE + LABEL_GAP;
+/**
+ * Where a glyph sits, and how much room it is given to sit in.
+ *
+ * Two numbers, because the last version conflated them and clipped every
+ * icon on the card. It gave the glyph a box of `LABEL_LINE` — fifteen
+ * points — and a comment claiming that a 19pt glyph would simply overflow
+ * it, top and bottom, because "the box is a position, not a frame".
+ *
+ * It is a frame. A `Text` constrained to a height shorter than its own
+ * line lays out inside that height and the glyph is cut at the bottom
+ * edge, which is exactly what shipped: the pin and the handset with their
+ * feet sliced off. The claim was one I could not check from here and
+ * should not have written as a fact.
+ *
+ * So the box is bigger than any 19pt line can be, and the *position* is
+ * carried by a negative margin instead: centred, the box's middle lands
+ * on `LABEL_LINE / 2`, which is the middle of the label's line. The glyph
+ * is level with the word it names, and it has room to be drawn whole.
+ *
+ * Its footprint is 20.5pt against the words column's 44 or more, so
+ * nothing here sets a row's height either way.
+ */
+const GLYPH_BOX = 26;
+const GLYPH_LIFT = (LABEL_LINE - GLYPH_BOX) / 2;
+
+/** How much of a long address the card shows before it asks. Two, because
+ *  two is where the map still fits above the fold on the shortest phone
+ *  this app supports; the rest is a tap away. */
+const ADDRESS_LINES = 2;
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
@@ -622,7 +910,6 @@ const s = StyleSheet.create({
   },
 
   body: { paddingHorizontal: space.page, paddingTop: 18 },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   // 26, not the 28 this was: the display face runs wider than the system
   // one, and place names are long enough to wrap without help.
   name: { color: colors.text, ...type.titleDetail },
@@ -631,12 +918,25 @@ const s = StyleSheet.create({
   subtitle: { color: colors.textSecondary, ...type.body, marginTop: 4 },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
   loc: { color: colors.textTertiary, ...type.meta },
-  ratingBadge: {
-    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', gap: 3,
-  },
+
+  // ── the rating, as a line rather than a badge ──
+  //
+  // `center`, not a baseline: the star is the tallest thing here and the
+  // eye reads it against the number, not against the number's feet.
+  //
+  // 8 above, against the subtitle's 4. The subtitle is part of the name
+  // and sits close enough to be read with it; the score is a different
+  // fact and takes the wider gap that says so.
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  // The score keeps the size and weight it wore inside the badge. It was
+  // never the type that made the badge expensive.
   ratingValue: { color: colors.text, fontSize: 18, fontWeight: font.bold },
-  ratingCount: { color: colors.textTertiary, fontSize: 12, fontWeight: font.regular },
+  // The count was 12 in the badge, where it had a box to belong to and
+  // two lines of its own. On an open line that reads as fine print, so it
+  // comes up to `type.meta` — the size every other secondary fact on this
+  // screen already uses.
+  ratingDot: { color: colors.textTertiary, fontSize: 15, fontWeight: font.regular },
+  ratingCount: { color: colors.textSecondary, ...type.meta },
 
   facts: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 16 },
   // The filter row's chip, at rest: same hairline, same radius, same
@@ -656,17 +956,101 @@ const s = StyleSheet.create({
   // The Card supplies ground, border and radius; the horizontal inset
   // lives here so each row's hairline can run to the card's edge.
   infoGroup: { marginTop: 18, paddingHorizontal: space.cardPadding },
+  // The map is the third thing in the address's column, under the label
+  // and the street:
+  //
+  //     [icon] ADDRESS
+  //            27/16 Ng. 18 Huỳnh Thúc Kháng
+  //            [map]
+  //
+  // So it starts at `GUTTER`, where the words start and where every
+  // hairline starts, and ends at the card's own padding. Full-bleed was
+  // tried — it is what the reference does — and it broke that column:
+  // the picture reached left past every other thing in the card and the
+  // grid stopped being a grid. `overflow: hidden` because MiniMap draws
+  // to its own corners.
+  mapSlot: {
+    marginLeft: GUTTER, marginBottom: 16,
+    borderRadius: radius.card - 8, overflow: 'hidden',
+  },
+  // `containerStyle`, not `style`: PressableScale puts `style` on its inner
+  // animated view and only `containerStyle` on the Pressable.
+  goSlot: { flexShrink: 0, marginTop: ABOVE_VALUE - 6 },
+  go: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    minHeight: 36, paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    borderWidth: 1, borderColor: colors.borderGlassSoft,
+    backgroundColor: colors.surfaceGlass,
+  },
+  goText: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
   // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
   // A row is a column — label, then value. Only Hours lays itself across,
   // for the chevron at its end.
-  infoStack: { paddingVertical: 17 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 17 },
-  rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  //
+  // Still `flex-start`, and the glyphs are placed by their own boxes
+  // rather than by this. `center` here would centre them on the whole
+  // row, and the address row's height is the length of the address: the
+  // pin would sit level with the street on a short one and slide down
+  // between the lines on a long one, which is a glyph whose position is
+  // a property of the data.
+  infoStack: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 17 },
+  // The whole gutter, not the glyph: 19 of it is the glyph and the
+  // remaining 14 is the air before the words. Written `GUTTER - 14` it was
+  // 19 — exactly the glyph — so there was no air at all and every label
+  // sat against its icon at whatever the glyph's own side bearing happened
+  // to be. Measured on the phone: 4.0pt after the pin, 2.7 after the
+  // clock, 2.4 after the handset. Three different gaps because three
+  // different glyphs, which is what made the column look ragged.
+  //
+  // At `GUTTER` the words begin exactly where the hairline and the hours
+  // table already began, and the three are one column.
+  //
+  // A box of a stated height rather than a glyph with a nudge on it, and
+  // the box is the label and the first line of the value together.
+  //
+  // The glyph belongs to the pair, not to either line of it. Level with
+  // the label it marks a word and leaves the street unmarked; level with
+  // the street it leaves ADDRESS alone above an empty gutter. Centred
+  // across both it holds the two as one row, which is what a row is.
+  //
+  // It took four tries to land here, and the first three are worth
+  // keeping because each was wrong in its own way. `marginTop: 1` under
+  // `alignItems: 'flex-start'` was no position at all — it pinned the
+  // glyph to the top and let the icon font's line box decide the rest,
+  // and had no answer for a second line of address. Then the first line
+  // of the value. Then the label's line.
+  //
+  infoIconSlot: {
+    width: GUTTER, height: GLYPH_BOX, marginTop: GLYPH_LIFT,
+    justifyContent: 'center', overflow: 'visible',
+  },
+  infoWords: { flex: 1, minWidth: 0 },
+  // The same box at the other end of the row, so both ends stay level.
+  infoChevronSlot: {
+    height: GLYPH_BOX, marginTop: GLYPH_LIFT,
+    justifyContent: 'center', overflow: 'visible',
+  },
+  // Starts where the labels start. Run to the card's edge it cut the
+  // gutter into four pieces; inset, the glyphs read as one column.
+  //
+  // Its own element rather than a border on the box that holds the row,
+  // and that is the whole of a bug this card carried: `marginLeft` on a
+  // wrapper moves everything inside it, so every row after the first was
+  // pushed 33pt right — icon, label and value together — while the first
+  // row sat at the card's padding. Measured on the phone: the address pin
+  // at 18pt from the card edge, the clock and the handset at 46. A line
+  // has nothing inside it to drag along.
+  rowDivider: {
+    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
+    marginLeft: GUTTER,
+  },
   infoLabel: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
-    textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 5,
+    textTransform: 'uppercase', letterSpacing: 1.2,
+    lineHeight: LABEL_LINE, marginBottom: LABEL_GAP,
   },
-  infoValue: { color: colors.ink, ...type.meta, lineHeight: 24 },
+  infoValue: { color: colors.ink, ...type.meta, lineHeight: VALUE_LINE },
   /** The value of a row that goes somewhere. Ink like the rest — the
    *  accent came off after a day on the phone, where a two-line address
    *  in red outweighed the title — and a touch of weight is what is
@@ -674,9 +1058,18 @@ const s = StyleSheet.create({
   infoLink: { fontWeight: font.medium },
   // Semibold and a size up on the table under it: this is the answer, and
   // it is the working it was derived from.
-  openNow: { color: colors.open, fontSize: 15.5, fontWeight: font.semibold },
-  openNowShut: { color: colors.textTertiary },
-  hoursTable: { paddingBottom: 16 },
+  // The same 24 the other values keep: it is the second line of its pair,
+  // and the glyph beside it is centred on a box that assumes so.
+  openNow: {
+    color: colors.open, fontSize: 15.5, fontWeight: font.semibold,
+    lineHeight: VALUE_LINE,
+  },
+  // The sash's own brick, not the grey it was. See `colors.shutInk`: the
+  // grey was the label's colour and 3.41:1 on the dark card, so the one
+  // fact a reader opens this screen at night to find was both quiet and
+  // under AA.
+  openNowShut: { color: colors.shutInk },
+  hoursTable: { paddingBottom: 16, paddingLeft: GUTTER },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   hourDay: { color: colors.ink, fontSize: 14.5, fontWeight: font.medium },
   hourTime: { color: colors.ink, fontSize: 14.5, fontWeight: font.regular },

@@ -23,6 +23,7 @@ import { CrewProvider } from './src/lib/crew';
 import { InvitationsProvider } from './src/lib/invitations';
 import { MyTripsProvider } from './src/lib/mytrips';
 import { ReminderSync } from './src/lib/reminderSync';
+import { GuideGrantSync } from './src/lib/useGuideGrant';
 import { SaveProvider } from './src/lib/save';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
@@ -282,6 +283,12 @@ function Root() {
                     <MyTripsProvider>
                     {/* The phone's trip reminders, kept to the trips the
                         reader is going on — planned, or accepted. */}
+                    {/* Asks once whether this account is a local
+                        guide, so the panel on a place's screen is right
+                        on its first frame instead of appearing a round
+                        trip later and shoving the card down. Renders
+                        nothing; see `lib/guideGrant`. */}
+                    <GuideGrantSync />
                     <ReminderSync />
                     <SaveProvider>
                       {/* The duck state sits above the navigator: screens

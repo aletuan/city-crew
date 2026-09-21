@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
+import { colors } from '../theme';
 
 // jsdom lays nothing out, so the document is zero pixels wide — and the hero
 // is sized off the window: a zero-wide carousel pages by dividing by zero,
@@ -42,6 +43,7 @@ const state = vi.hoisted(() => ({
   lang: 'en' as 'en' | 'vi' | 'ja',
   guide: false,
   uid: null as string | null,
+  price: false,
 }));
 const spies = vi.hoisted(() => ({
   save: vi.fn(),
@@ -73,11 +75,12 @@ vi.mock('../lib/data', async () => ({
   // keeps every test below about the screen it is testing: the panel draws
   // nothing, exactly as it does for almost everybody. `state.guide` is
   // what the two tests that *are* about it turn on.
-  useIsLocalGuide: () => ({ data: state.guide, loading: false }),
   fetchPlaceId: async () => 'place-uuid',
   fetchMyPhotoCounts: async () => ({ mineHere: 0, mineToday: 0 }),
   addPlacePhoto: async () => 'photo-id',
 }));
+// The grant is read from a store now, not fetched — see `lib/guideGrant`.
+vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
 }));
@@ -85,7 +88,13 @@ vi.mock('../lib/save', () => ({
   useSave: () => ({ save: spies.save, isSaved: (slug: string) => state.saved.includes(slug) }),
 }));
 vi.mock('../lib/tasteProfile', () => ({ useNoteEvent: () => spies.note }));
-vi.mock('../lib/useFlag', () => ({ useFlag: () => state.credit }));
+// Two switches now, and they are not the same answer. `place_price` ships
+// off, which is what the screen draws for everybody until a row in
+// `app_flags` says otherwise — so that is what these tests see unless one
+// of them turns it on.
+vi.mock('../lib/useFlag', () => ({
+  useFlag: (key: string) => (key === 'place_price' ? state.price : state.credit),
+}));
 vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: 'light', setScheme: () => {}, ready: true }),
 }));
@@ -97,6 +106,25 @@ vi.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
 }));
 vi.mock('expo-status-bar', () => ({ StatusBar: () => null, setStatusBarStyle: spies.setStatusBarStyle }));
+// A stub, which is also what keeps `expo-constants` — and through it the
+// whole native module layer — out of jsdom. The real one answers to the
+// binary's capabilities, which no test can stand in for.
+vi.mock('../components/MiniMap', async () => {
+  const R = await import('react');
+  return {
+    default: (p: any) => R.createElement('button', {
+      type: 'button',
+      'data-stub': 'MiniMap',
+      'data-interactive': String(p.interactive),
+      onClick: () => p.onPick({ lat: p.lat, lng: p.lng }),
+    }),
+    // True here, because the screen asks before it draws and a test that
+    // said no would be testing the empty card every time. Whether a given
+    // binary can actually draw a Google map is the real module's business,
+    // and it answers by asking `expo-constants`.
+    canDrawMap: true,
+  };
+});
 
 import PlaceDetailScreen from './PlaceDetailScreen';
 
@@ -202,6 +230,7 @@ beforeEach(() => {
   state.elsewhere = { loading: false, data: null };
   state.saved = [];
   state.credit = false;
+  state.price = false;
   state.city = null;
   state.lang = 'en';
   state.guide = false;
@@ -278,6 +307,29 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.queryByText('Hai Ba Trung')).toBeNull();
   });
 
+  // ── the subtitle against the address ──
+  //
+  // The commoner half of the rule, and the half the neighbourhood test
+  // cannot reach: 128 of the catalog's 250 subtitles name the street the
+  // address row prints a few lines down. See `subtitleBeside`.
+  it('drops a subtitle the address row already prints', () => {
+    show(place({ name_en: 'Cộng Cà Phê - Trieu Viet Vuong' }));
+    expect(screen.getByTestId('detail-name').textContent).toBe('Cộng Cà Phê');
+    // Once, as the address — not twice.
+    expect(screen.getAllByText(/Trieu Viet Vuong/)).toHaveLength(1);
+  });
+
+  // The one that pins *which* address is used. "Hanoi" is in the raw
+  // column and not in the string the row prints, because `shortAddress`
+  // cuts the city; judged against the raw column this subtitle would
+  // vanish over a word the reader cannot see.
+  it('judges the subtitle against the printed address, not the raw column', () => {
+    show(place({ name_en: 'Cộng Cà Phê - Hanoi', address: '152 Trieu Viet Vuong, Hai Ba Trung, Hanoi, Vietnam' }));
+    expect(screen.getByTestId('detail-name').textContent).toBe('Cộng Cà Phê');
+    expect(screen.getByText('Hanoi')).toBeTruthy();
+    expect(screen.getByTestId('detail-address').textContent).toBe('152 Trieu Viet Vuong, Hai Ba Trung');
+  });
+
   it('prints the rating and the review count, compacted', () => {
     show();
     expect(screen.getByText('4.6')).toBeTruthy();
@@ -290,27 +342,84 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.queryByText(/reviews/)).toBeNull();
   });
 
-  it('has no rating badge for an unrated place', () => {
+  it('has no rating line at all for an unrated place', () => {
     show(place({ rating: null }));
     expect(screen.queryByText(/reviews/)).toBeNull();
+    expect(screen.queryByTestId('detail-rating')).toBeNull();
     expect(document.querySelector('[data-icon="star"]')).toBeNull();
   });
 
-  it('names the category with its own glyph, and a paid price per person', () => {
+  // ── the rating is a line under the name, not a badge beside it ──
+  //
+  // Both halves of this matter and neither is enough alone. Under the old
+  // markup the rating was also "present" and also "after the name" in
+  // document order — it was a sibling of the column the name lived in, one
+  // level up. Asserting the shared parent is what distinguishes a line
+  // below the title from a box next to it, and the shared parent is the
+  // whole point: it is what gives the name the full width of the card.
+  it('puts the rating in the title column, below the name, not beside it', () => {
+    show();
+    const name = screen.getByTestId('detail-name');
+    const rating = screen.getByTestId('detail-rating');
+    expect(rating.parentElement).toBe(name.parentElement);
+    expect(name.compareDocumentPosition(rating) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('reads the score and the count on one line, separated by a dot', () => {
+    show();
+    const rating = screen.getByTestId('detail-rating');
+    expect(rating.textContent).toBe('4.6\u00b71.2k reviews');
+  });
+
+  // Four stops for one fact is what this avoids: the star glyph, the
+  // number, a lone middle dot, then the count.
+  it('speaks the rating as a single phrase', () => {
+    show();
+    expect(screen.getByTestId('detail-rating').getAttribute('aria-label'))
+      .toBe('4.6 \u2014 1.2k reviews');
+  });
+
+  it('says only the score when nobody is counted', () => {
+    show(place({ rating_count: null }));
+    expect(screen.getByTestId('detail-rating').getAttribute('aria-label')).toBe('4.6');
+  });
+
+  it('names the category with its own glyph', () => {
     show();
     expect(screen.getByText('Cafés')).toBeTruthy();
     expect(document.querySelector('[data-icon="cafe-outline"]')).toBeTruthy();
+  });
+
+  // ── the price, which ships hidden ──
+  //
+  // It is the chip that pushes a three-category place onto a second line,
+  // and this screen is the only surface in the app that has ever drawn a
+  // price — so it is a switch rather than a deletion, and the switch is
+  // off. The tests that used to read the price now turn it on, because
+  // what they pin is the rendering, which has to keep working for the
+  // release that brings it back.
+  it('draws no price at all as it ships', () => {
+    show();
+    expect(screen.queryByText(/person|Free/)).toBeNull();
+    expect(document.querySelector('[data-icon="pricetag-outline"]')).toBeNull();
+  });
+
+  it('draws a paid price per person once the switch is on', () => {
+    state.price = true;
+    show();
     expect(screen.getByText('~45k ₫ / person')).toBeTruthy();
     expect(document.querySelector('[data-icon="pricetag-outline"]')).toBeTruthy();
   });
 
   it('shows FREE as its own pill, without a price tag glyph', () => {
+    state.price = true;
     show(place({ price_vnd: 0 }));
     expect(screen.getByText('Free')).toBeTruthy();
     expect(document.querySelector('[data-icon="pricetag-outline"]')).toBeNull();
   });
 
-  it('shows no price at all when none is known', () => {
+  it('shows no price at all when none is known, switch or no switch', () => {
+    state.price = true;
     show(place({ price_vnd: null, price_display: null }));
     expect(screen.queryByText(/person|Free/)).toBeNull();
   });
@@ -456,21 +565,268 @@ describe('PlaceDetailScreen — floating controls', () => {
   });
 });
 
-describe('PlaceDetailScreen — info card', () => {
-  it('shortens the address and opens Google Maps on the exact place', () => {
+// ── the outside links ──
+//
+// Three rows that all had the same fault: they showed a machine's version
+// of an address. The website row trimmed the scheme and the `www.` and left
+// everything else, so 70 of the catalog's 413 websites ran off the end of
+// the row mid-tracking-parameter; and the two accounts a venue actually
+// posts from were not drawn at all, though 166 of them have been sitting in
+// `threads_handle` since September.
+
+// ── a long address ──
+//
+// Of the 648 published places, 254 fit on one line beside the Directions
+// button and 606 fit in two. Forty-two do not, and those forty-two are the
+// whole of this: a card that grows to five lines for one address in
+// fifteen costs the other fourteen the opening hours.
+//
+// `onTextLayout` never fires in jsdom, which lays nothing out, so the
+// screen's own handler is called with the line count a phone would have
+// reported. What that pins is the arithmetic around the measurement, not
+// the measurement.
+
+describe('PlaceDetailScreen — an address too long for the card', () => {
+  const addressProps = () => propsWhere((p) => p.testID === 'detail-address') as
+    unknown as { numberOfLines?: number; onTextLayout: (e: unknown) => void };
+  const measure = (lines: number) => act(() => {
+    addressProps().onTextLayout({ nativeEvent: { lines: Array.from({ length: lines }) } });
+  });
+
+  // The first paint runs unclamped on purpose. `onTextLayout` reports the
+  // lines it actually drew, so a Text already limited to two could only
+  // ever report two and could never say whether there was a third.
+  it('measures before it clamps', () => {
     show();
-    const addr = screen.getByTestId('detail-address');
-    // Country and the city this app is already about are dropped.
-    expect(addr.textContent).toBe('152 Trieu Viet Vuong, Hai Ba Trung');
-    fireEvent.click(screen.getByRole('button', { name: /Address/ }));
+    expect(addressProps().numberOfLines).toBeUndefined();
+  });
+
+  it('holds a long address to two lines once it knows', () => {
+    show();
+    measure(4);
+    expect(addressProps().numberOfLines).toBe(2);
+  });
+
+  it('leaves a short one alone', () => {
+    show();
+    measure(1);
+    expect(addressProps().numberOfLines).toBe(2);
+    expect(screen.queryByTestId('detail-address-toggle')!.getAttribute('role')).toBeNull();
+  });
+
+  // Read off the props, like `hoursState` does: react-native-web drops
+  // `accessibilityState` on a plain View rather than turning it into
+  // `aria-expanded`, so an assertion on the DOM would pass vacuously.
+  const expanded = () => (propsWhere((p) => p.testID === 'detail-address-toggle')
+    .accessibilityState as unknown as { expanded?: boolean } | undefined)?.expanded;
+
+  it('opens on a tap and closes on the next', () => {
+    show();
+    measure(4);
+    expect(expanded()).toBe(false);
+
+    fireEvent.click(screen.getByTestId('detail-address-toggle'));
+    expect(addressProps().numberOfLines).toBeUndefined();
+    expect(expanded()).toBe(true);
+
+    fireEvent.click(screen.getByTestId('detail-address-toggle'));
+    expect(addressProps().numberOfLines).toBe(2);
+    expect(expanded()).toBe(false);
+  });
+
+  // A control that does nothing is worse than no control: VoiceOver would
+  // announce a button on three cards in five and open nothing.
+  it('is not a control at all when there is nothing to open', () => {
+    show();
+    measure(2);
+    expect(screen.getByTestId('detail-address-toggle').getAttribute('role')).toBeNull();
+    expect(expanded()).toBeUndefined();
+  });
+
+  // The button is the row's other half, and a row that grows must not take
+  // it along: a target that moves under the thumb between the look and the
+  // tap is the oldest bug in a list.
+  it('leaves the Directions button exactly where it was', () => {
+    show();
+    measure(4);
+    const before = getComputedStyle(screen.getByTestId('detail-directions').parentElement!);
+    const box = { top: before.marginTop, shrink: before.flexShrink };
+
+    fireEvent.click(screen.getByTestId('detail-address-toggle'));
+    const after = getComputedStyle(screen.getByTestId('detail-directions').parentElement!);
+    expect({ top: after.marginTop, shrink: after.flexShrink }).toEqual(box);
+  });
+});
+
+describe('PlaceDetailScreen — website, Instagram and Threads', () => {
+  it('shows a website as its domain, not as its URL', () => {
+    show(place({
+      website: 'https://anticofornaio.com/?utm_source=google&utm_medium=organic&utm_campaign=mapera',
+    }));
+    expect(screen.getByTestId('detail-website').textContent).toBe('anticofornaio.com');
+  });
+
+  // The label is short; the destination is not. A stripped URL may 404,
+  // and what the venue handed out is what the tap has to carry.
+  it('still opens the whole URL it was given', () => {
+    show(place({ website: 'https://anticofornaio.com/menu?utm_source=google' }));
+    fireEvent.click(screen.getByRole('button', { name: /Website/ }));
+    expect(openURL).toHaveBeenCalledWith('https://anticofornaio.com/menu?utm_source=google');
+  });
+
+  it('draws a handle with its @ back on, and opens the account', () => {
+    show(place({ instagram_handle: 'cab.cafesg', threads_handle: 'sweet.as.hanoi' }));
+    expect(screen.getByTestId('detail-instagram').textContent).toBe('@cab.cafesg');
+    expect(screen.getByTestId('detail-threads').textContent).toBe('@sweet.as.hanoi');
+
+    fireEvent.click(screen.getByRole('button', { name: /Instagram/ }));
+    expect(openURL).toHaveBeenCalledWith('https://www.instagram.com/cab.cafesg');
+    fireEvent.click(screen.getByRole('button', { name: /Threads/ }));
+    expect(openURL).toHaveBeenCalledWith('https://www.threads.com/@sweet.as.hanoi');
+  });
+
+  // Ionicons' own monochrome marks, not the brands' full-colour ones. Two
+  // saturated logos in a grey gutter pull the eye off the words, and that
+  // column is the point of the card.
+  it('uses the icon font\'s own logos rather than the brands\' artwork', () => {
+    show(place({ instagram_handle: 'cab.cafesg', threads_handle: 'cab.cafesg' }));
+    expect(document.querySelector('[data-icon="logo-instagram"]')).toBeTruthy();
+    expect(document.querySelector('[data-icon="logo-threads"]')).toBeTruthy();
+  });
+
+  it('draws no handle row for a place that has none', () => {
+    show();
+    expect(screen.queryByTestId('detail-instagram')).toBeNull();
+    expect(screen.queryByTestId('detail-threads')).toBeNull();
+  });
+
+  // Forty-seven of the catalog's websites are Instagram profile URLs. With
+  // the handle drawn above, the website row would be the same account said
+  // twice — once as a name and once as a URL.
+  it('drops a website that only repeats the handle above it', () => {
+    show(place({
+      website: 'https://www.instagram.com/cab.cafesg?igsh=MXJod3k3',
+      instagram_handle: 'cab.cafesg',
+    }));
+    expect(screen.getByTestId('detail-instagram')).toBeTruthy();
+    expect(screen.queryByTestId('detail-website')).toBeNull();
+  });
+
+  // But only when there is a handle to repeat: on a place nobody has looked
+  // up, that URL is the one way to reach the venue.
+  it('keeps a profile URL when no handle has been recorded', () => {
+    show(place({ website: 'https://www.instagram.com/someone' }));
+    expect(screen.getByTestId('detail-website').textContent).toBe('instagram.com');
+  });
+
+  // A Facebook page has no column and no row, so the website row carries it.
+  it('keeps a Facebook page in the website row', () => {
+    show(place({
+      website: 'https://www.facebook.com/people/magichastand/61567169829674/?mibextid=wwXIfr',
+      instagram_handle: 'magicha.zenbar',
+    }));
+    expect(screen.getByTestId('detail-website').textContent).toBe('facebook.com');
+  });
+
+  // The card opens on whichever row a place actually has, and the hairline
+  // rule follows it: the first row draws none above itself.
+  it('lets a handle open the card when there is nothing above it', () => {
+    show(place({
+      address: null, opening_hours: [], phone: null, website: null,
+      instagram_handle: 'cab.cafesg',
+    }));
+    expect(screen.getByTestId('detail-instagram')).toBeTruthy();
+  });
+});
+
+describe('PlaceDetailScreen — the map', () => {
+  const map = () => document.querySelector('[data-stub="MiniMap"]') as HTMLElement | null;
+
+  it('draws the place on a map', () => {
+    show();
+    expect(map()).toBeTruthy();
+  });
+
+  // It used to be a card of its own below the facts, which asked the
+  // reader to bind "where" to two separate objects — the words in one box,
+  // the picture in another. Inside the card it is the address's own
+  // illustration, and the proof of that is what it sits between.
+  // The third thing in the address's column, under the label and the
+  // street. Full-bleed was tried — it is what the reference does — and it
+  // broke that column: the picture reached left past every other thing in
+  // the card and the grid stopped being a grid.
+  it('starts where the words start, not at the card\u2019s edge', () => {
+    show();
+    expect(getComputedStyle(map()!.parentElement!).marginLeft).toBe('33px');
+  });
+
+  it('sits inside the info card, under the address and above the hours', () => {
+    show();
+    const all = [...document.querySelectorAll('*')];
+    const at = (el: Element | null) => all.indexOf(el as Element);
+    expect(at(screen.getByTestId('detail-address'))).toBeLessThan(at(map()));
+    expect(at(map())).toBeLessThan(at(screen.getByText('Hours')));
+  });
+
+  // A live map inside a vertical scroll is a hole the page cannot be
+  // scrolled through: the native view takes the drag and the thumb stops
+  // working over a third of the screen.
+  it('freezes it, so the page can still be scrolled over it', () => {
+    show();
+    expect(map()?.dataset.interactive).toBe('false');
+  });
+
+  // The only thing this view can usefully do. Routing, street view and
+  // the rest are Maps' job, and the tap is the whole handoff.
+  it('hands off to Maps when tapped', () => {
+    show();
+    fireEvent.click(map()!);
     expect(openURL).toHaveBeenCalledWith(
       `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Cộng Cà Phê - Old Quarter')}&query_place_id=gp1`,
     );
   });
 
+  it('draws none at all for a place with no coordinates', () => {
+    show(place({ lat: null, lng: null }));
+    expect(map()).toBeNull();
+  });
+});
+
+describe('PlaceDetailScreen — info card', () => {
+  // The glyph in the gutter is what lets the eye find the phone number
+  // without reading the labels. Said in the tree as well as drawn, since
+  // an icon nobody can name is decoration.
+  it('names each fact with a glyph of its own', () => {
+    show();
+    const icons = [...document.querySelectorAll('[data-icon]')].map((n) => (n as HTMLElement).dataset.icon);
+    expect(icons).toEqual(expect.arrayContaining([
+      'location-outline', 'time-outline', 'call-outline', 'globe-outline',
+    ]));
+  });
+
+  // The row is no longer the button; the button is. Tapping an address has
+  // always opened Maps and nothing on the row said so — an address looks
+  // like a fact, not a control — so the handoff has a named target now and
+  // the row itself is text again.
+  it('shortens the address and opens Google Maps on the exact place', () => {
+    show();
+    const addr = screen.getByTestId('detail-address');
+    // Country and the city this app is already about are dropped.
+    expect(addr.textContent).toBe('152 Trieu Viet Vuong, Hai Ba Trung');
+    fireEvent.click(screen.getByTestId('detail-directions'));
+    expect(openURL).toHaveBeenCalledWith(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Cộng Cà Phê - Old Quarter')}&query_place_id=gp1`,
+    );
+  });
+
+  it('names that button for VoiceOver', () => {
+    show();
+    expect(screen.getByRole('button', { name: 'Directions' })).toBeTruthy();
+  });
+
   it('opens Maps on the coordinate when the place has no Google id', () => {
     show(place({ google_place_id: null }));
-    fireEvent.click(screen.getByRole('button', { name: /Address/ }));
+    fireEvent.click(screen.getByTestId('detail-directions'));
     expect(openURL).toHaveBeenCalledWith(
       `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('21.01,105.85')}`,
     );
@@ -479,7 +835,7 @@ describe('PlaceDetailScreen — info card', () => {
   it('leaves the address as plain text when the place cannot be put on a map', () => {
     show(place({ lat: null, lng: null }));
     expect(screen.getByTestId('detail-address')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Address/ })).toBeNull();
+    expect(screen.queryByTestId('detail-directions')).toBeNull();
   });
 
   it('also drops the current city\'s own name from the address', () => {
@@ -509,8 +865,11 @@ describe('PlaceDetailScreen — info card', () => {
     expect(openURL).toHaveBeenCalledWith('https://congcaphe.com');
   });
 
+  // Named by their accessible name now rather than by their label, because
+  // Address is the one row whose control is a button beside the words
+  // rather than the words themselves.
   it.each([
-    ['Address', 'Could not open Maps'],
+    ['Directions', 'Could not open Maps'],
     ['Phone', 'Could not place the call'],
     ['Website', 'Could not open the website'],
   ])('says so when the %s row cannot be opened', async (row, words) => {
@@ -557,6 +916,34 @@ describe('PlaceDetailScreen — opening hours (Wednesday 10:00, Hanoi)', () => {
   it('says when a closed place opens later today', () => {
     show(place({ opening_hours: week('5:00 PM – 11:00 PM') }));
     expect(screen.getByText('Closed · opens 17:00')).toBeTruthy();
+  });
+
+  // The closed line used to be `textTertiary` — the colour of the label
+  // above it — so the one fact a reader opens this screen at ten at night
+  // to find read as furniture, and measured 3.41:1 on the dark card, under
+  // the 4.5 small text needs. It takes the sash's own brick now: the red a
+  // reader already met on the diagonal across the closed card they tapped.
+  //
+  // Not the accent, which is this app's voice for "this is the thing" and
+  // is on every link in this very card. The assertion is that the two are
+  // different, because a near-miss of the accent would be worse than the
+  // grey was.
+  it('gives the closed line its own red, and not the accent', () => {
+    show(place({ opening_hours: week('5:00 PM – 11:00 PM') }));
+    const shut = getComputedStyle(screen.getByText('Closed · opens 17:00'));
+    const rgb = (hex: string) => {
+      const n = parseInt(String(hex).slice(1), 16);
+      return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+    };
+    expect(shut.color).toBe(rgb(colors.shutInk as string));
+    expect(shut.color).not.toBe(rgb(colors.accent as string));
+    expect(shut.color).not.toBe(rgb(colors.textTertiary as string));
+  });
+
+  it('leaves an open place its green', () => {
+    show();
+    const open = getComputedStyle(screen.getByText(/^Open now/));
+    expect(open.color).not.toBe(getComputedStyle(screen.getByText('Hours')).color);
   });
 
   it('says closed today when it does not open again today', () => {
@@ -636,5 +1023,150 @@ describe('the local guide’s panel', () => {
     state.guide = true;
     show(place({ submitted_by: 'u2' }));
     expect(screen.queryByTestId('guide-panel')).toBeNull();
+  });
+});
+
+// The info card's left column, which two bugs had quietly pulled apart.
+//
+// Neither was visible in the markup. The gutter constant said "Glyph 19,
+// air 14" and the style that read it was `GUTTER - 14` — the glyph alone,
+// so the air never existed and each label sat against its icon at whatever
+// that glyph's own side bearing happened to be (4.0pt after the pin, 2.7
+// after the clock, 2.4 after the handset, measured on the phone). And the
+// hairline between rows carried `marginLeft` on the box that *held* the
+// row, so every row after the first was pushed 33pt right — icon, label
+// and value together — while the first row sat at the card's padding.
+//
+// Both are geometry, which `react-native-web` does put on the host element,
+// so both can be asserted rather than looked at.
+describe('the info card’s gutter', () => {
+  const styleOf = (el: Element | null) => getComputedStyle(el as Element);
+  /**
+   * The `infoStack` a value sits in — the element whose own first child
+   * holds the glyph.
+   *
+   * Climbed rather than counted, because the address's value is one level
+   * deeper than the others: it is wrapped in the control that expands it,
+   * and the next row to gain one would have broken a fixed count
+   * silently.
+   */
+  const rowOf = (el: Element): HTMLElement => {
+    let n = el.parentElement;
+    while (n && !n.querySelector(':scope > div > [data-icon]')) n = n.parentElement;
+    return n as HTMLElement;
+  };
+
+  it('gives the glyph the whole gutter, so the words start where the lines do', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng' }));
+    const value = screen.getByTestId('detail-address');
+    expect(styleOf(rowOf(value).firstElementChild).width).toBe('33px');
+  });
+
+  // ── where the glyph sits down the row ──
+  //
+  // Level with the label, which makes the row a two-column grid and says
+  // so: glyph beside the name of the thing, the thing itself beneath.
+  //
+  // Position and room are two numbers, and the version that shipped
+  // conflated them: it gave the glyph a box of 15 — the label's line — and
+  // a 19pt glyph laid out inside a 15pt height is cut off at the bottom,
+  // which is what reached the phone. The box is 26 now, big enough for any
+  // 19pt line, and the position is carried by the margin.
+  //
+  // Both halves are asserted together on purpose. Either one alone is
+  // satisfied by the bug: a 15pt box is in the right place and clips, a
+  // 26pt box with no lift is whole and sits too low.
+  it('gives the glyph room, and puts its middle on the label\u2019s', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng' }));
+    const slot = styleOf(rowOf(screen.getByTestId('detail-address')).firstElementChild);
+    const h = parseFloat(slot.height);
+    const top = parseFloat(slot.marginTop);
+    // Room: taller than the 19pt glyph it holds, by enough for its line.
+    expect(h).toBeGreaterThan(19);
+    // Place: the box's middle is the label's middle, 15 / 2.
+    expect(top + h / 2).toBeCloseTo(7.5, 5);
+    expect(slot.justifyContent).toBe('center');
+  });
+
+  // The address the app actually holds, rather than the short one above.
+  // Ninety-eight places in a hundred take a second line, and measuring the
+  // box from the whole row would make the glyph's position a property of
+  // how long an address happens to be.
+  it('leaves the glyph where it is when the address wraps', () => {
+    show(place({ address: '27/16 Ngõ 18 Huỳnh Thúc Kháng, Giảng Võ, Ba Đình, Hà Nội' }));
+    const slot = styleOf(rowOf(screen.getByTestId('detail-address')).firstElementChild);
+    expect(parseFloat(slot.marginTop) + parseFloat(slot.height) / 2).toBeCloseTo(7.5, 5);
+  });
+
+  // The box above is only honest while the lines it names are the lines
+  // the text actually draws. Left to the platform, a 12pt label is 14.3pt
+  // on iOS and something else on the next OS, and the glyph drifts off
+  // centre with nothing in the diff to show why.
+  //
+  // Read off the injected rule rather than `getComputedStyle`, which
+  // answers `normal` for `line-height` in this jsdom however plainly
+  // react-native-web declares it. The class is on the element and the
+  // rule is in the document; the cascade between them is the part that
+  // is missing, so the test steps over it.
+  const lineHeightOf = (el: Element | null) => {
+    const classes = new Set((el as Element).className.split(/\s+/));
+    const rules = [...document.styleSheets].flatMap((sheet) => {
+      try { return [...sheet.cssRules]; } catch { return []; }
+    });
+    for (const rule of rules) {
+      const css = (rule as CSSStyleRule).selectorText ?? '';
+      const px = classes.has(css.slice(1)) && /line-height:\s*([^;}]+)/.exec(rule.cssText);
+      if (px) return px[1].trim();
+    }
+    return null;
+  };
+
+  it('states the line heights the glyph’s box is measured from', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng' }));
+    const value = screen.getByTestId('detail-address');
+    // The label is the first thing in the words column; the value is now
+    // one deeper than that, inside the control that expands it.
+    const label = rowOf(value).querySelector(':scope > div:nth-child(2) > *');
+    expect(lineHeightOf(label)).toBe('15px');
+    expect(styleOf(label).marginBottom).toBe('5px');
+    expect(lineHeightOf(value)).toBe('24px');
+    // The label's 15 is the number the glyph's position is measured from:
+    // its box is centred on half of it.
+    const slot = styleOf(rowOf(value).firstElementChild);
+    expect(parseFloat(slot.marginTop) + parseFloat(slot.height) / 2).toBeCloseTo(7.5, 5);
+  });
+
+  // Both ends of the row are level. This replaces a test that asserted the
+  // opposite on the argument that a control lives with the thing it acts
+  // on — which reads well and is not what the reference does: its trailing
+  // glyph sits within 2pt of its leading one on every row measured.
+  it('keeps both ends of the hours row level', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng' }));
+    const row = screen.getByRole('button', { name: /^Hours/ });
+    for (const end of [row.firstElementChild, row.lastElementChild]) {
+      const css = styleOf(end);
+      expect(parseFloat(css.height)).toBeGreaterThan(19);
+      expect(parseFloat(css.marginTop) + parseFloat(css.height) / 2).toBeCloseTo(7.5, 5);
+      expect(css.justifyContent).toBe('center');
+    }
+  });
+
+  // A line has nothing inside it to drag along. Written as a border on the
+  // wrapper, this inset moved the row; written as its own element, it
+  // moves only itself.
+  //
+  // Found by height as well as inset, because the gutter's inset is not
+  // the hairline's alone any more: the map is indented to the same column
+  // and it very much does have something inside it.
+  it('draws each hairline as its own element, not as a border on a row', () => {
+    show(place({ address: '27 Huỳnh Thúc Kháng', phone: '+84 799 986 201' }));
+    const hairlines = [...document.querySelectorAll('div')].filter((el) => {
+      const css = styleOf(el);
+      return css.marginLeft === '33px' && parseFloat(css.height) <= 1;
+    });
+    expect(hairlines.length).toBeGreaterThan(0);
+    for (const el of hairlines) {
+      expect(el.children.length, 'a hairline that holds a row indents it').toBe(0);
+    }
   });
 });

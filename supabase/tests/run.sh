@@ -318,13 +318,20 @@ run "$DB" -f "$HERE/local_guide_test.sql"
 
 run "$DB" -f "$HERE/function_grants_test.sql"
 
-# Search paths. Last, because the check is over every function the bench
-# has made by now, and because the Threads handle trigger is applied here
-# for it: nothing above needed that migration, and it only adds a column
-# and a trigger to the stub's `places`.
-echo "→ search paths"
+# The two social handles, and then search paths. The handle migrations are
+# applied here rather than above because nothing earlier needs them — each
+# only adds a column and a trigger to the stub's `places` — and applying
+# them here puts both triggers in front of `search_path_test.sql`, which is
+# the check that matters for a function with no `set search_path` of its own.
+echo "→ social handles"
 for f in "$ROOT"/supabase/migrations/*_place_threads_handle.sql \
-         "$ROOT"/supabase/migrations/*_pin_trigger_search_path.sql; do
+         "$ROOT"/supabase/migrations/*_place_instagram_handle.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/instagram_handle_test.sql"
+
+echo "→ search paths"
+for f in "$ROOT"/supabase/migrations/*_pin_trigger_search_path.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/search_path_test.sql"
