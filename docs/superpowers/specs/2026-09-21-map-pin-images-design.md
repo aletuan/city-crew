@@ -64,7 +64,7 @@ Mỗi nền pin giữ **đúng hue** của chip category (trôi 0.00°). Quy t�
 | key | icon Ionicons | chip `color` | nền PNG | icon trắng vs nền |
 |---|---|---|---|---|
 | `cafes` | `cafe-outline` | `#D2A679` | `#B75F05` | 4.51 |
-| `focus` | `laptop-outline` | `#989AD7` | `#6468E2` | 4.55 |
+| `focus` | `book-outline` | `#989AD7` | `#6468E2` | 4.55 |
 | `eats` | `restaurant-outline` | `#E09A6B` | `#A45E2F` | 4.98 |
 | `views` | `business-outline` | `#6FB3C0` | `#216572` | 6.63 |
 | `heritage` | `library-outline` | `#D98A80` | `#DA3C28` | 4.51 |
@@ -174,7 +174,9 @@ Chọn Python + Pillow vì generator chạy **hiếm** — chỉ khi thêm hoặ
 **Trong phạm vi:** pin của địa điểm, pin được chọn, pin không phân loại; cả iOS lẫn Android.
 
 **Ngoài phạm vi:**
-- **Bubble cluster không đổi.** Chúng mang số đếm động nên buộc phải là View tự vẽ; không thể là ảnh dựng sẵn.
+- **Bubble cluster vẫn là View.** Chúng mang số đếm liên tục (tới 288) nên không bộ ảnh hữu hạn nào phủ được; đây là ràng buộc cấu trúc, không phải việc chưa làm. Chúng là thứ duy nhất còn cần `tracksViewChanges` + `SETTLE_MS`.
+
+  *Bổ sung sau khi merge:* bảng màu của chúng **đã đổi**. Xem `clusterSkin` — đất ấm cũ nằm lọt trong cung màu của `cafes` và `eats`, và khi pin thôi là pastel thì bubble-100 với pin Eats đo ra 1.04:1, tức cùng một màu. Nay là xám (saturation dưới 10, trong khi mọi category từ 55 trở lên), nên bubble không thể đọc ra một loại địa điểm.
 - **Không đổi hue category.** Ưu tiên 2 trong bản review ban đầu (tách `heritage` khỏi coral) **không còn cần** — icon đã tách kênh.
 - **Không đổi màu chip.** `CATEGORIES[key].color` giữ nguyên: nó vẽ glyph trên nền app, cạnh chữ, và được vẽ đúng nguyên văn.
 

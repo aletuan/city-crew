@@ -26,13 +26,13 @@
   "focus": {
     "file": "focus.png",
     "fill": "#6468E2",
-    "icon": "laptop-outline",
+    "icon": "book-outline",
     "ink": "#FFFFFF"
   },
   "focus-chosen": {
     "file": "focus-chosen.png",
     "fill": "#FF6F5B",
-    "icon": "laptop-outline",
+    "icon": "book-outline",
     "ink": "#17150F"
   },
   "fun": {

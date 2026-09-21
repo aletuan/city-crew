@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CATEGORIES, CATEGORY_ORDER } from './categories';
 import { clusterPins, clusterSize, clusterSkin, type ClusterPoint } from './cluster';
 
 const p = (slug: string, lat: number, lng: number): ClusterPoint => ({ slug, lat, lng });
@@ -109,5 +110,47 @@ describe('clusterSkin', () => {
   // The one coral thing on the map is the place the reader chose.
   it('never reaches for the accent', () => {
     for (const n of [1, 10, 100, 288]) expect(clusterSkin(n).fill).not.toBe('#FF6F5B');
+  });
+});
+
+/** Saturation, the channel that says whether a colour is *a colour* or a grey. */
+function saturation(hex: string): number {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const l = (max + min) / 2;
+  return ((max - min) / (l > 0.5 ? 2 - max - min : max + min)) * 100;
+}
+
+describe('a bubble is not a kind of place', () => {
+  // The bubbles used to be warm earth, which put all three of them inside
+  // the hue arc `cafes` and `eats` live in — the hundred-bubble and the
+  // Eats pin measured 1.04:1 against each other, which is to say they were
+  // one colour. A reader scanning a busy map saw brown discs that were
+  // sometimes a restaurant and sometimes forty places.
+  //
+  // Hue could not fix it: every hue this map can afford is already spoken
+  // for, and a bubble in the one remaining gap would just read as a tenth
+  // category. So the fix is the other channel. Every category pin carries
+  // at least 55% saturation; a bubble carries under 20 and reads as grey,
+  // which is what map furniture of ours should look like.
+  it('stays too grey to be mistaken for a category', () => {
+    for (const n of [1, 9, 10, 99, 100, 288]) {
+      expect(saturation(clusterSkin(n).fill)).toBeLessThan(20);
+    }
+    for (const key of CATEGORY_ORDER) {
+      expect(saturation(CATEGORIES[key].pin)).toBeGreaterThan(55);
+    }
+  });
+
+  // Density still steps, and it steps in the one channel left: darkness.
+  it('still deepens with the count', () => {
+    const lightness = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+      return (Math.max(r, g, b) + Math.min(r, g, b)) / 2;
+    };
+    expect(lightness(clusterSkin(9).fill)).toBeGreaterThan(lightness(clusterSkin(10).fill));
+    expect(lightness(clusterSkin(10).fill)).toBeGreaterThan(lightness(clusterSkin(100).fill));
   });
 });
