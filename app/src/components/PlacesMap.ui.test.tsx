@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // import is an eslint *error* in this repo.
 import { act, fireEvent, render } from '../uitest/render';
 import type { Place } from '../lib/data';
+import { pinImage } from './mapPins';
 
 const spies = vi.hoisted(() => ({ fitToCoordinates: vi.fn() }));
 
@@ -44,7 +45,9 @@ vi.mock('./mapsModule', async () => {
   // the count, where a place's marker carries nothing.
   const Marker = (p: any) => R.createElement('button', {
     type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier,
-    'data-color': p.pinColor ?? '', 'data-label': p.accessibilityLabel ?? '',
+    'data-color': p.pinColor ?? '', 'data-icon': p.image ?? '',
+    'data-anchor': p.anchor ? `${p.anchor.x},${p.anchor.y}` : '',
+    'data-label': p.accessibilityLabel ?? '',
     'data-tracks': String(!!p.tracksViewChanges), onClick: p.onPress,
   }, p.children);
   return { MapView, Marker, PROVIDER_GOOGLE: 'google' };
@@ -77,43 +80,55 @@ describe('PlacesMap', () => {
   });
 
   // The colour code is the filter row's: a café's pin is the café chip's
-  // brown, a rooftop's the Views chip's blue. The chosen pin is coral
-  // whatever it is, so the one the reader tapped is never lost among its
-  // kind.
-  it('draws the chosen pin in the accent and the rest in their category’s colour', () => {
+  // A pin used to be a hue and nothing else — no glyph, no label, nine
+  // categories on one channel. Now it is a picture, and the picture says
+  // which kind of place it is.
+  it('draws each place in its own category’s picture, and the chosen one in coral', () => {
     render(<PlacesMap places={[place('a', 21, 105, ['cafes']), place('b', 21.1, 105.1, ['cafes']), place('c', 21.2, 105.2, ['views'])]} selectedSlug="b" onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     const [a, b, c] = markers();
-    expect(b.getAttribute('data-color')).toBe('#FF6F5B');
-    expect(a.getAttribute('data-color')).toBe('#D2A679');
-    expect(c.getAttribute('data-color')).toBe('#6FB3C0');
+    expect(a.getAttribute('data-icon')).toBe(String(pinImage({ categories: ['cafes'] }, null, false)));
+    expect(b.getAttribute('data-icon')).toBe(String(pinImage({ categories: ['cafes'] }, null, true)));
+    expect(c.getAttribute('data-icon')).toBe(String(pinImage({ categories: ['views'] }, null, false)));
+    expect(a.getAttribute('data-icon')).not.toBe(b.getAttribute('data-icon'));
   });
 
-  // Inside a chip every pin is that kind of place already, so the chip's
-  // colour is the only one that says anything: one kind asked for, one
-  // colour back. A café that is also a place to work stops reading as the
-  // odd one out under Focus.
-  it('paints every pin in the chip’s colour while a chip is selected', () => {
+  it('paints every pin in the chip’s picture while a chip is selected', () => {
     render(<PlacesMap places={[place('a', 21, 105, ['cafes', 'focus']), place('b', 21.1, 105.1, ['focus']), place('c', 21.2, 105.2, ['focus'])]} selectedSlug="c" onSelect={() => {}} category="focus" origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     const [a, b, c] = markers();
-    expect(a.getAttribute('data-color')).toBe('#989AD7');
-    expect(b.getAttribute('data-color')).toBe('#989AD7');
+    const focusPin = String(pinImage({ categories: ['focus'] }, null, false));
+    // The café that is also a place to work stops reading as the odd one
+    // out under Focus.
+    expect(a.getAttribute('data-icon')).toBe(focusPin);
+    expect(b.getAttribute('data-icon')).toBe(focusPin);
     // The chosen pin is coral under a chip too — it is the one thing the
     // chip does not already say.
-    expect(c.getAttribute('data-color')).toBe('#FF6F5B');
+    expect(c.getAttribute('data-icon')).toBe(String(pinImage({ categories: ['focus'] }, 'focus', true)));
   });
 
   it('lets each pin speak for itself under a chip the table has never heard of', () => {
     render(<PlacesMap places={[place('a', 21, 105, ['cafes']), place('b', 21.1, 105.1)]} selectedSlug={null} onSelect={() => {}} category="street_food" origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
     const [a, b] = markers();
-    expect(a.getAttribute('data-color')).toBe('#D2A679');
-    expect(b.getAttribute('data-color')).toBe('#17150F');
+    expect(a.getAttribute('data-icon')).toBe(String(pinImage({ categories: ['cafes'] }, null, false)));
+    expect(b.getAttribute('data-icon')).toBe(String(pinImage({}, null, false)));
   });
 
-  it('draws a pin nothing classifies in ink, and every pin when the chosen slug matches none of them', () => {
+  it('draws a place nothing classifies in the neutral pin, and no pin as chosen when the slug matches none', () => {
     render(<PlacesMap places={[place('a', 21, 105), place('b', 21.1, 105.1)]} selectedSlug="zzz" onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
-    const [a, b] = markers();
-    expect(a.getAttribute('data-color')).toBe('#17150F');
-    expect(b.getAttribute('data-color')).toBe('#17150F');
+    const neutralImage = String(pinImage({}, null, false));
+    for (const m of markers()) expect(m.getAttribute('data-icon')).toBe(neutralImage);
+  });
+
+  // `image` and not `icon`. On iOS `didInsertInMap` rebuilds the real
+  // marker and restores a fixed list of properties: the icon view is on
+  // it, the icon is not, so an `icon` whose bitmap loaded before insertion
+  // was lost and the pin came out as Google's default red. `image`
+  // survives either order, and the library re-assigns the icon view when
+  // the bitmap arrives — which is also why freezing it here is safe.
+  it('never redraws a place’s pin, and stands it on the coordinate', () => {
+    render(<PlacesMap places={[place('a', 21, 105, ['cafes'])]} selectedSlug={null} onSelect={() => {}} category={null} origin={null} cities={[]} onPickCity={() => {}} fallback={HANOI} />);
+    expect(markers()[0].getAttribute('data-tracks')).toBe('false');
+    // The teardrop's tip is what stands on the coordinate.
+    expect(markers()[0].getAttribute('data-anchor')).toBe('0.5,1');
   });
 
   it('reports which pin was tapped', () => {

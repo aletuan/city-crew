@@ -1,0 +1,122 @@
+{
+  "cafes": {
+    "file": "cafes.png",
+    "fill": "#B75F05",
+    "icon": "cafe-outline",
+    "ink": "#FFFFFF"
+  },
+  "cafes-chosen": {
+    "file": "cafes-chosen.png",
+    "fill": "#FF6F5B",
+    "icon": "cafe-outline",
+    "ink": "#17150F"
+  },
+  "eats": {
+    "file": "eats.png",
+    "fill": "#A45E2F",
+    "icon": "restaurant-outline",
+    "ink": "#FFFFFF"
+  },
+  "eats-chosen": {
+    "file": "eats-chosen.png",
+    "fill": "#FF6F5B",
+    "icon": "restaurant-outline",
+    "ink": "#17150F"
+  },
+  "focus": {
+    "file": "focus.png",
+    "fill": "#6468E2",
+    "icon": "laptop-outline",
+    "ink": "#FFFFFF"
+  },
+  "focus-chosen": {
+    "file": "focus-chosen.png",
+    "fill": "#FF6F5B",
+    "icon": "laptop-outline",
+    "ink": "#17150F"
+  },
+  "fun": {
+    "file": "fun.png",
+    "fill": "#B93FC9",
+    "icon": "ticket-outline",
+    "ink": "#FFFFFF"
+  },
+  "fun-chosen": {
+    "file": "fun-chosen.png",
+    "fill": "#FF6F5B",
+    "icon": "ticket-outline",
+    "ink": "#17150F"
+  },
+  "heritage": {
+    "file": "heritage.png",
+    "fill": "#DA3C28",
+    "icon": "library-outline",
+    "ink": "#FFFFFF"
+  },
+  "heritage-chosen": {
+    "file": "heritage-chosen.png",
+    "fill": "#FF6F5B",
+    "icon": "library-outline",
+    "ink": "#17150F"
+  },
+  "markets": {
+    "file": "markets.png",
+    "fill": "#DB2190",
+    "icon": "bag-outline",
+    "ink": "#FFFFFF"
+  },
+  "markets-chosen": {
+    "file": "markets-chosen.png",
+    "fill": "#FF6F5B",
+    "icon": "bag-outline",
+    "ink": "#17150F"
+  },
+  "nature": {
+    "file": "nature.png",
+    "fill": "#28881E",
+    "icon": "leaf-outline",
+    "ink": "#FFFFFF"
+  },
+  "nature-chosen": {
+    "file": "nature-chosen.png",
+    "fill": "#FF6F5B",
+    "icon": "leaf-outline",
+    "ink": "#17150F"
+  },
+  "neutral": {
+    "file": "neutral.png",
+    "fill": "#5F5A4E",
+    "icon": "ellipse-outline",
+    "ink": "#FFFFFF"
+  },
+  "neutral-chosen": {
+    "file": "neutral-chosen.png",
+    "fill": "#FF6F5B",
+    "icon": "ellipse-outline",
+    "ink": "#17150F"
+  },
+  "nightlife": {
+    "file": "nightlife.png",
+    "fill": "#8E54EE",
+    "icon": "wine-outline",
+    "ink": "#FFFFFF"
+  },
+  "nightlife-chosen": {
+    "file": "nightlife-chosen.png",
+    "fill": "#FF6F5B",
+    "icon": "wine-outline",
+    "ink": "#17150F"
+  },
+  "views": {
+    "file": "views.png",
+    "fill": "#216572",
+    "icon": "business-outline",
+    "ink": "#FFFFFF"
+  },
+  "views-chosen": {
+    "file": "views-chosen.png",
+    "fill": "#FF6F5B",
+    "icon": "business-outline",
+    "ink": "#17150F"
+  }
+}

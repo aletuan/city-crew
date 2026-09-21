@@ -36,6 +36,26 @@ export type CategoryStyle = {
    *  the same concept wears on a place card, so the filter row and the
    *  cards read as one colour code. */
   color: string;
+  /**
+   * The fill behind a map pin's glyph — the same colour as `color`, at the
+   * weight a white glyph on a map tile needs.
+   *
+   * `color` is drawn literally, on a surface this app chose, with the
+   * category's name spelled out beside it: a third and redundant channel,
+   * free to be quiet. A pin has no label, carries a white glyph, and lands
+   * on tiles nobody here chose. The pastels sit between 2.3:1 and 2.7:1
+   * against white, under the 4.5:1 a glyph needs.
+   *
+   * Hue is identical to `color`, which is what makes this the same colour
+   * rather than a second one. Solved in that order and no other: exact
+   * hue first, then saturation at or above 55%, then the lightest
+   * remaining step whose glyph still clears 4.5:1. Never against a fixed
+   * lightness — blue and green carry more luminance at the same HSL step
+   * and would hand `nature` a 2.32:1 glyph. `views` lands at 6.63 because
+   * the lighter candidates on its line miss the hue by a fifth of a
+   * degree, and hue is the clause that wins. `taxonomy.test.ts` holds it.
+   */
+  pin: string;
 };
 
 // Chip labels are two words at most. A filter row is scanned, not read:
@@ -53,30 +73,37 @@ export const CATEGORY_ORDER = [
 export const CATEGORIES: Record<string, CategoryStyle> = {
   cafes: {
     en: 'Cafés', vi: 'Cà phê', ja: 'カフェ', icon: 'cafe-outline', color: '#D2A679',
+    pin: '#B75F05',
     terms: ['coffee', 'espresso', 'latte', 'quán cà phê', 'cà phê', 'コーヒー', '喫茶'],
   },
   eats: {
     en: 'Eats', vi: 'Ăn uống', ja: '食事', icon: 'restaurant-outline', color: '#E09A6B',
+    pin: '#A45E2F',
     terms: ['restaurant', 'food', 'dining', 'lunch', 'dinner', 'nhà hàng', 'quán ăn', 'ăn uống', 'レストラン', 'グルメ'],
   },
   views: {
     en: 'Views', vi: 'Ngắm cảnh', ja: '眺望', icon: 'business-outline', color: '#6FB3C0',
+    pin: '#216572',
     terms: ['rooftop', 'skyline', 'scenic', 'view', 'ngắm cảnh', 'tầng thượng', '展望'],
   },
   heritage: {
     en: 'Culture', vi: 'Văn hóa', ja: '文化', icon: 'library-outline', color: '#D98A80',
+    pin: '#DA3C28',
     terms: ['museum', 'temple', 'pagoda', 'history', 'historic', 'bảo tàng', 'đền', 'chùa', 'di tích', 'lịch sử', '博物館', '寺'],
   },
   nature: {
     en: 'Nature', vi: 'Thiên nhiên', ja: '自然', icon: 'leaf-outline', color: '#8FBF8A',
+    pin: '#28881E',
     terms: ['park', 'garden', 'lake', 'outdoor', 'green', 'công viên', 'vườn', 'hồ nước', 'ngoài trời', '公園'],
   },
   markets: {
     en: 'Shopping', vi: 'Mua sắm', ja: '買い物', icon: 'bag-outline', color: '#C98BB0',
+    pin: '#DB2190',
     terms: ['market', 'shop', 'store', 'mall', 'souvenir', 'chợ', 'cửa hàng', 'mua sắm', '市場'],
   },
   nightlife: {
     en: 'Nightlife', vi: 'Về đêm', ja: 'ナイトライフ', icon: 'wine-outline', color: '#A98CD9',
+    pin: '#8E54EE',
     terms: ['bar', 'pub', 'club', 'beer', 'cocktail', 'drinks', 'quán bar', 'bia', 'nhậu', 'về đêm', 'バー'],
   },
   // The two 2026-08 additions, and why their hues are what they are.
@@ -95,10 +122,12 @@ export const CATEGORIES: Record<string, CategoryStyle> = {
   // has to be as true for bowling or a show as for a screen.
   focus: {
     en: 'Focus', vi: 'Học tập', ja: '作業', icon: 'laptop-outline', color: '#989AD7',
+    pin: '#6468E2',
     terms: ['work', 'study', 'laptop', 'wifi', 'coworking', 'quiet', 'làm việc', 'học bài', 'học tập', 'ngồi lâu', '作業', '勉強'],
   },
   fun: {
     en: 'Fun', vi: 'Giải trí', ja: 'エンタメ', icon: 'ticket-outline', color: '#C88BD0',
+    pin: '#B93FC9',
     terms: ['cinema', 'movie', 'film', 'karaoke', 'bowling', 'arcade', 'show', 'rạp phim', 'rạp', 'phim', 'xem phim', 'giải trí', '映画館', '映画'],
   },
 };
@@ -147,10 +176,38 @@ export function categoriesOf(p: Categorisable): string[] {
  * caller picks its own ink — a guess here would colour a place the data
  * never described.
  */
-export function categoryColor(p: Categorisable): string | null {
+/** The first of a place's categories in the filter row's order — what it
+ *  is *most*, where a place can be several things. */
+function chiefCategory(p: Categorisable): string | null {
   const cats = categoriesOf(p);
-  const key = CATEGORY_ORDER.find((c) => cats.includes(c));
+  return CATEGORY_ORDER.find((c) => cats.includes(c)) ?? null;
+}
+
+export function categoryColor(p: Categorisable): string | null {
+  const key = chiefCategory(p);
   return key ? CATEGORIES[key].color : null;
+}
+
+/**
+ * Which category a place answers to where only one answer fits — the pin
+ * on the map, the dot on the card.
+ *
+ * Under a chip it is the chip, because every place shown is already that
+ * kind of place and painting each one what it is "most" says nothing: the
+ * filter row says Focus while a dozen pins say café, because a place that
+ * is both takes the earlier of the two. Otherwise it is the place's own
+ * first category in the filter row's order.
+ *
+ * Null where nothing classifies it and no chip is asking; the caller draws
+ * its own ink.
+ *
+ * This is the rule. `pinTint` and `pinImage` are two readings of it, and
+ * they live apart so the map's pin and the strip card's dot cannot come to
+ * disagree about which category a place is.
+ */
+export function pinCategory(p: Categorisable, chip?: string | null): string | null {
+  if (chip && CATEGORIES[chip]) return chip;
+  return chiefCategory(p);
 }
 
 /**
@@ -162,8 +219,8 @@ export function categoryColor(p: Categorisable): string | null {
  * classifies it and no chip is asking, and the caller draws its own ink.
  */
 export function pinTint(p: Categorisable, chip?: string | null): string | null {
-  if (chip && CATEGORIES[chip]) return CATEGORIES[chip].color;
-  return categoryColor(p);
+  const key = pinCategory(p, chip);
+  return key ? CATEGORIES[key].color : null;
 }
 
 /**
@@ -179,3 +236,27 @@ export function categoryLabel(key: string, t: (en: string, vi: string, ja?: stri
   if (c) return t(c.en, c.vi, c.ja);
   return key.replace(/_/g, ' ').replace(/^\w/, (ch) => ch.toUpperCase());
 }
+
+/**
+ * The pin under the reader's thumb — the one whose card is open in the
+ * strip.
+ *
+ * The app's own accent, unchanged, because the one pin the reader chose is
+ * the one thing on the map that should be wearing it. Its glyph inverts to
+ * ink rather than the white every other pin carries: white on coral reads
+ * at 2.74:1, and darkening the coral until white worked walked it onto
+ * `heritage`, which shares its hue to within a degree. Inverting keeps the
+ * brand colour and gets 6.67:1.
+ *
+ * The category's own glyph stays, so the chosen pin still says what kind
+ * of place it is. That is what finally retires the coral/Culture
+ * collision: the glyph carries the category and the colour is free to mean
+ * only "this one".
+ */
+export const MAP_PIN_CHOSEN_FILL = '#FF6F5B';
+export const MAP_PIN_CHOSEN_INK = '#17150F';
+
+/** A place no category claims. Grey rather than a guess — see
+ *  `categoriesOf` on why nothing is the honest answer — dark enough to
+ *  carry the same white glyph as the rest. */
+export const MAP_PIN_NEUTRAL_FILL = '#5F5A4E';
