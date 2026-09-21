@@ -26,7 +26,9 @@ import { CATEGORIES } from './categories';
 import { normalizeHandle } from './handle';
 import { mergeTerms, type TermMap } from './search';
 import { useAuth } from './auth';
+import { classifyLoadFail } from './loadfail';
 import { shouldRefresh } from './stale';
+import { supabase } from './supabase';
 import { startupTrace } from './trace';
 
 type Catalog = {
@@ -158,14 +160,42 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
       if (next !== 'active') return;
-      const now = Date.now();
-      for (const f of [latest.current.places, latest.current.collections]) {
-        // Never on top of a request already in flight: the one that is
-        // running is newer than anything this could start.
-        if (!f.loading && shouldRefresh(f.loadedAt, now)) f.reload();
-      }
+      void (async () => {
+        // The session first, then the reads. Coming back from a long
+        // absence, the access token has usually lapsed and `lib/auth`'s
+        // refresh timer is only now restarting; a read fired in the same
+        // tick went out with the old token and came back "JWT expired" —
+        // and stayed that way, because nothing asked again once the
+        // refresh landed. `getSession` refreshes a lapsed token before it
+        // answers (and shares the one refresh already in flight), so the
+        // reads below carry the new one. A guest gets a null session and
+        // no delay worth the name.
+        await supabase.auth.getSession().catch(() => {});
+        const now = Date.now();
+        for (const f of [latest.current.places, latest.current.collections]) {
+          // Never on top of a request already in flight: the one that is
+          // running is newer than anything this could start.
+          if (!f.loading && shouldRefresh(f.loadedAt, now)) f.reload();
+        }
+      })();
     });
     return () => sub.remove();
+  }, []);
+
+  // The second net, for the paths the first cannot cover: a cold start
+  // on a session that lapsed while the app was closed fires the catalog
+  // read and the refresh side by side, and the read can lose. When the
+  // refresh lands, any read that failed *because* the token was old is
+  // asked again — that one and no other, since a dropped connection is
+  // not cured by a new token.
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== 'TOKEN_REFRESHED') return;
+      for (const f of [latest.current.places, latest.current.collections]) {
+        if (!f.loading && classifyLoadFail(f.error) === 'expired') f.reload();
+      }
+    });
+    return () => sub.subscription.unsubscribe();
   }, []);
 
   // Depend on the fields rather than on the objects: `useFetch` returns a

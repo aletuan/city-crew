@@ -243,12 +243,32 @@ describe('CollectionsScreen — as a guest', () => {
     expect(screen.queryByText('List here')).toBeNull();
   });
 
-  it('says the load failed, with the reason, instead of a list', () => {
-    state.cols.error = 'network down';
+  // With a shelf in hand the failure is a banner and the shelf stays —
+  // a refresh that failed must not make the tab forget what it knew.
+  it('keeps the shelf and says the refresh failed above it', () => {
+    state.cols.error = 'Network request failed';
     state.cols.data = [col('here', ['a'])];
     show();
-    expect(screen.getByText("Couldn't load collections: network down")).toBeTruthy();
-    expect(screen.queryByText('List here')).toBeNull();
+    expect(screen.getByTestId('collections-load-banner')).toBeTruthy();
+    expect(screen.getByText(/You’re offline/)).toBeTruthy();
+    expect(screen.getByText('List here')).toBeTruthy();
+    expect(screen.queryByText(/network down|Network request failed/)).toBeNull();
+  });
+
+  // Nothing in hand: the failure is the body, named, with the one control
+  // that can change anything.
+  it('says the load failed in its own words, with a way to try again, when there is nothing to show', () => {
+    state.cols.error = 'JWT expired';
+    state.cols.data = [];
+    show();
+    expect(screen.getByTestId('collections-load-fail')).toBeTruthy();
+    expect(screen.queryByText(/JWT/)).toBeNull();
+    // An expired token retries itself; the button is for the others.
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+    state.cols.error = 'something odd';
+    show();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(spies.colsReload).toHaveBeenCalled();
   });
 
   it('an empty shelf points a guest at Explore, not at creating', () => {

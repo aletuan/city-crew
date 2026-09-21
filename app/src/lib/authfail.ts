@@ -15,8 +15,11 @@
 // `SignInScreen.ui.test.tsx` was written to hold. Naming a failure is a
 // decision to make one at a time, not a net to catch everything in.
 //
-// No imports, so it runs in a plain Node test — see `place.ts` for why
-// that boundary exists.
+// One import, `lib/loadfail`, which is as pure as this file: the shape a
+// dropped connection takes is one list, kept there, so a read and a
+// sign-in agree on what "offline" looks like.
+
+import { isOffline } from './loadfail';
 
 export type AuthFail =
   | 'credentials'
@@ -83,7 +86,6 @@ const BY_CODE: Record<string, AuthFail> = {
  * and Firefox says "NetworkError" — so all three are here rather than
  * only the platform this ships on.
  */
-const OFFLINE = /network request failed|failed to fetch|networkerror/i;
 
 /**
  * The failure behind a Supabase auth error, or null if it has no name yet.
@@ -97,7 +99,7 @@ export function authFail(code: string | undefined, message: string): AuthFail | 
   // case would let a refusal that happens to mention a network read as
   // one — the two are different things to tell somebody.
   if (code) return BY_CODE[code] ?? null;
-  return OFFLINE.test(message) ? 'offline' : null;
+  return isOffline(message) ? 'offline' : null;
 }
 
 /**
