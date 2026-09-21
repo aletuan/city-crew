@@ -20,9 +20,22 @@ Kết luận: chừng nào còn dùng marker mặc định, ta không điều kh
 
 ## Giải pháp
 
-Dùng prop `image` của `Marker` (hỗ trợ **cả iOS lẫn Android**, `react-native-maps` 1.27.2) với PNG dựng sẵn: hình giọt nước, nền màu category, vành trắng, icon Ionicons màu trắng ở giữa.
+Dùng prop **`icon`** của `Marker` (`react-native-maps` 1.27.2) với PNG dựng sẵn: hình giọt nước, nền màu category, vành trắng, icon Ionicons màu trắng ở giữa.
 
 Ảnh là thứ ta kiểm soát từng pixel. Đây là đòn bẩy duy nhất thật sự.
+
+### `icon` chứ không phải `image`
+
+Hai prop nghe như nhau, và trên Android **đúng là một**: `MapMarkerManager.java:216` và `:224` cùng gọi `view.setImage(source)`. Trên iOS thì khác hẳn.
+
+| prop | đường đi trên iOS (`AIRGoogleMapMarker.m`) |
+|---|---|
+| `image` | `setImageSrc` dựng `UIImageView` rồi gán vào `_realMarker.iconView` — **marker nền View** |
+| `icon` | `setIconSrc` gán thẳng `_realMarker.icon` — icon GMSMarker thật, không View |
+
+Đây không phải chi tiết nhỏ. Cả `PlacesMap.tsx` được xây quanh mệnh đề "288 marker phải là bản đồ chứ không phải 288 View", và toàn bộ cơ chế `tracksViewChanges` + `SETTLE_MS` tồn tại vì marker nền View trên iOS *hiện ra trắng trơn ở khung hình đầu*. Chọn `image` là tự tay đưa 288 View vào đúng chỗ file này đã cẩn thận tránh.
+
+Với `icon`, marker không có nền View, nên `tracksViewChanges={false}` của pin địa điểm **giữ nguyên** và `SETTLE_MS` vẫn chỉ phục vụ bubble.
 
 ### Vì sao giọt nước chứ không phải badge tròn
 
@@ -38,7 +51,7 @@ Kiểu "đĩa trắng viền màu" bị loại vì xung đột với quyết đ�
 
 ## Bảng màu
 
-Mỗi nền pin giữ **đúng hue** của chip category (trôi ≤ 0.01°), và được chọn là màu sáng nhất trên đường hue đó mà icon trắng vẫn đạt ≥ 4.5:1.
+Mỗi nền pin giữ **đúng hue** của chip category (trôi 0.00°). Quy tắc chọn đầy đủ nằm ngay dưới bảng — cần cả ba vế.
 
 | key | icon Ionicons | chip `color` | nền PNG | icon trắng vs nền |
 |---|---|---|---|---|
@@ -55,6 +68,18 @@ Mỗi nền pin giữ **đúng hue** của chip category (trôi ≤ 0.01°), và
 
 Ràng buộc là tương phản với icon, **không phải** độ sáng HSL cố định. Lam và lục có luminance cảm nhận cao hơn ở cùng độ sáng HSL, nên `nature` và `views` phải sẫm hơn `heritage` để icon trắng đọc được. Một bảng khoá theo L cố định cho `nature` chỉ 2.32:1.
 
+Quy tắc đầy đủ, theo đúng thứ tự ưu tiên — cần cả ba vế, bỏ vế nào cũng ra bảng khác:
+
+1. **hue trùng khít hue của chip** (đây là vế nặng nhất: nó là thứ làm pin và chip thành *một* màu),
+2. **saturation ≥ 55%** (dưới ngưỡng này màu ngả xám và mất tư cách mã màu),
+3. trong số còn lại, lấy màu **sáng nhất** mà icon trắng vẫn ≥ 4.5:1.
+
+Ba giá trị vượt xa ngưỡng — `views` 6.63, `eats` 4.98, neutral 6.86 — **không phải nhầm lẫn, đừng "sửa" chúng**. Trên hue của `views` có `#2A8192` sáng hơn và vẫn đạt 4.51, nhưng hue của nó lệch 0.18°; `#216572` lệch 0.0000°. Vế 1 thắng vế 3. Tương tự `eats`: `#AD6332` sáng hơn nhưng lệch 0.20°.
+
+Neutral không nằm trên đường hue nào cả — nó là xám chọn tay, vì `#8A8578` có chroma quá nhỏ nên phép giữ-hue khuếch đại sai số và đẩy nó thành cam.
+
+Một category thứ mười phải được giải bằng đúng ba vế này, không phải bằng mắt.
+
 ### Pin đang được chọn
 
 Giữ **nguyên coral thương hiệu `#FF6F5B`** (bằng `colors.accentFill`), nhưng icon **đảo sang mực `#17150F`** thay vì trắng, và pin to hơn **1.28×**. Vẫn giữ icon của category.
@@ -63,14 +88,30 @@ Icon trắng trên coral chỉ đạt 2.74:1. Làm coral tối đi để cõng i
 
 Ba kênh cùng báo "đang chọn": nền coral, icon đảo màu, kích thước lớn hơn. Xung đột hue coral↔Culture **tan hẳn** vì icon đã gánh việc nói category — màu không còn phải làm hai việc.
 
+## Khi một chip đang bật
+
+Hành vi hiện tại **giữ nguyên**: dưới một chip category, **mọi** pin mặc lấy ảnh của chip đó, không phải ảnh category riêng của từng địa điểm.
+
+Quy tắc này đã được bảo vệ trong doc comment của prop `category` (`PlacesMap.tsx:87-96`): *"one kind asked for, one colour back"* — một quán cà phê kiêm chỗ làm việc không được hiện ra nâu-cà-phê khi đang đứng trong chip Focus, vì một địa điểm nhiều nhãn luôn lấy nhãn đứng trước.
+
+Nghĩa là hàm tra ảnh nhận **cả chip**, đúng như `pinTint(p, chip)` hôm nay:
+
+```
+pinImage(place, chip, chosen)  →  chip có trong bảng ? ảnh của chip : ảnh của category đứng đầu
+```
+
+Điều này cũng buộc phải giữ để `MapPlaceCard` ở đáy bản đồ còn đồng bộ: `ExploreScreen.tsx:1538` truyền `tint={pinTint(selected, cat === ALL ? null : cat)}` cho chấm tròn trên thẻ, vốn tồn tại để mắt đi được từ thẻ về đúng cái pin. Hai bên phải cùng một quy tắc chọn category, khác nhau chỉ ở chỗ thẻ lấy `color` (pastel, nền app) còn pin lấy ảnh.
+
+`pinTint` **không đổi** và vẫn phục vụ thẻ.
+
 ## Kiến trúc
 
 ```
 lib/categories.ts        category nào thắng + màu nền PNG của nó   (thuần, cổng 100%)
 scripts/map-pins.py      sinh PNG từ bảng trên                     (chạy tay, hiếm)
-assets/pins/*.png        asset đã commit                           (40 file)
-components/mapPins.ts    bảng tra key → module ảnh                 (import tĩnh, không logic)
-components/PlacesMap.tsx image={...} anchor={{x: 0.5, y: 1}}
+assets/pins/*.png        asset đã commit                           (60 file)
+components/mapPins.ts    pinImage(place, chip, chosen) → module ảnh (import tĩnh)
+components/PlacesMap.tsx icon={...}  tracksViewChanges={false}
 ```
 
 ### Ranh giới từng đơn vị
@@ -78,9 +119,9 @@ components/PlacesMap.tsx image={...} anchor={{x: 0.5, y: 1}}
 | Đơn vị | Làm gì | Phụ thuộc |
 |---|---|---|
 | `lib/categories.ts` | Trả về category đứng đầu của một địa điểm, và màu nền pin của mỗi category. Không biết gì về ảnh. | không |
-| `scripts/map-pins.py` | Đọc bảng category, vẽ 20 PNG × 2 mật độ, ghi `pins.manifest.json`. | Pillow, Ionicons.ttf |
-| `components/mapPins.ts` | `import` tĩnh từng PNG, export hàm `pinImage(key, chosen)`. Không tính toán. | asset |
-| `components/PlacesMap.tsx` | Chọn key qua `lib`, lấy ảnh qua `mapPins`, đặt `image` + `anchor`. | cả hai |
+| `scripts/map-pins.py` | Đọc bảng category, vẽ 20 pin × 3 mật độ = 60 PNG, ghi `pins.manifest.json`. | Pillow, Ionicons.ttf |
+| `components/mapPins.ts` | `import` tĩnh từng PNG, export `pinImage(place, chip, chosen)`. Không tự giải category — uỷ cho `lib` và chỉ tra bảng. | asset + `lib/categories` |
+| `components/PlacesMap.tsx` | Lấy ảnh qua `mapPins`, đặt `icon` + `anchor`. Không truyền `pinColor`. | `mapPins` |
 
 `lib` giữ nguyên quy tắc "không React, không native khi import" của repo — nó không chạm asset.
 
@@ -90,9 +131,9 @@ components/PlacesMap.tsx image={...} anchor={{x: 0.5, y: 1}}
 |---|---|
 | pin thường: 9 category + 1 neutral | 10 |
 | pin được chọn: 9 category + 1 neutral | 10 |
-| × mật độ `@2x`, `@3x` | **40 file** |
+| × ba mật độ: gốc, `@2x`, `@3x` | **60 file** |
 
-Metro tự chọn mật độ theo hậu tố tên file. Không cần `@1x` — không thiết bị nào còn dùng.
+Metro tự chọn mật độ theo hậu tố tên file, nhưng **file gốc bắt buộc phải tồn tại** — `import x from './cafes.png'` phân giải từ tên đó rồi mới tìm `cafes@2x.png` / `cafes@3x.png`. Nên vẫn phải sinh cả bản `@1x` dù không thiết bị nào dùng tới.
 
 Kích thước: pin thường 34×44pt, pin được chọn 44×56pt (1.28×). So được với pin mặc định của Google (~28×44pt).
 
@@ -104,11 +145,21 @@ Generator ghi kèm `assets/pins/pins.manifest.json` dạng `{ key: { file, fill,
 
 Test này thay cho việc chạy generator trong CI, vì generator cần Python và Pillow mà CI không có.
 
+### Vì sao Python, khi `app/scripts/` toàn `.mts`
+
+Đã cân nhắc generator bằng Node cho khớp quy ước (`legal-html.mts`) và để CI chạy được — như thế sẽ **loại bỏ** hẳn lớp lỗi trôi lệch thay vì chỉ phát hiện nó, mạnh hơn hẳn.
+
+Cái giá là rasterizer: Node cần thêm một dependency native (`sharp`, `@napi-rs/canvas`) chỉ để vẽ 20 hình tròn và đặt glyph từ một file TTF. `react-native-svg` 15.15.4 có sẵn nhưng là bộ render lúc chạy, không dùng để build asset được.
+
+Chọn Python + Pillow vì generator chạy **hiếm** — chỉ khi thêm hoặc đổi màu một category, tức vài lần mỗi năm — và test manifest đã chặn được trường hợp quên chạy. Đổi lại là một script không thuộc toolchain của repo; nếu sau này bảng category biến động nhiều hơn dự kiến thì nên chuyển sang Node.
+
 ## Chi tiết dễ sai
 
-- **`anchor={{ x: 0.5, y: 1 }}`** — bắt buộc. Mặc định ảnh canh giữa vào toạ độ, nên thiếu prop này thì đuôi pin nằm dưới điểm thật nửa chiều cao pin.
-- **Giữ `pinColor` bên cạnh `image`.** `react-native-maps` bỏ qua `pinColor` khi có ảnh, nên không tốn gì; nhưng nếu asset lỗi tải thì pin lùi về một màu hợp lý thay vì đỏ mặc định.
-- **Vitest xử lý được `import x from '*.png'`** — Vite phân giải asset tĩnh thành chuỗi URL. Đã có tiền lệ trong repo: `SignUpScreen.tsx:27`, `WelcomeSheet.tsx:68`. Nghĩa là test khẳng định được "category này ra đúng ảnh này".
+- **`anchor` đã mặc định đúng là `{x: 0.5, y: 1}`** (`MapMarker.d.ts:20`, `MapMarkerManager.java:200-207`) — không có độ lệch nào phải sửa. Vẫn truyền tường minh, nhưng lý do là *khoá điểm neo vào đuôi giọt nước*: nếu sau này ai đổi hình asset sang badge tròn, điểm neo phải được xem lại một cách có ý thức chứ không im lặng kế thừa.
+- **`pinColor` phải bị bỏ hẳn, không được giữ làm "lưới đỡ".** Đây là cái bẫy nguy hiểm nhất của thay đổi này. `AIRGoogleMapMarker.m:470-473` — `setPinColor:` gán **vô điều kiện** `_realMarker.icon = [GMSMarker markerImageWithColor:pinColor]`, tức là nó *ghi đè icon*. Tệ hơn, `didInsertInMap:127-130` áp lại `_pinColor` một lần nữa sau khi marker được chèn vào bản đồ, đồng bộ, trong khi `setIconSrc` nạp ảnh bất đồng bộ. Và `PlacesMap.tsx` truyền `pinColor` **động** theo `selectedSlug`, nên mỗi lần người dùng chạm một pin, RN gửi lại `pinColor` → icon vừa nạp bị thay bằng pin mặc định của Google, mà vì `icon` không đổi nên RN **không** gửi lại nó để khôi phục. Giữ `pinColor` không phải vô hại: nó làm hỏng đúng thứ đang xây.
+- **Trên iOS pin vô hình trong một hai khung hình đầu.** `setIconSrc` chèn sẵn một `UIImage` rỗng rồi mới nạp ảnh qua `ImageLoader` bất đồng bộ. Với 288 marker, bước xác minh bằng mắt phải nhìn luôn điều này thay vì phát hiện lúc chạy thật.
+- **Vitest xử lý được `import x from '*.png'`** — Vite phân giải asset tĩnh thành chuỗi URL. Tiền lệ trong repo: `SignUpScreen.tsx:27`, `WelcomeSheet.tsx:68`, cả hai đều có UI test đang chạy. Nghĩa là test khẳng định được "category này ra đúng ảnh này".
+- **Hằng `INK` bị khai tử.** `PlacesMap.tsx:34` hiện tách nền tảng (mực trên iOS, xanh azure trên Android) chỉ vì Android bóp màu về hue. Pin neutral dạng ảnh áp dụng như nhau cho cả hai, nên xoá `INK`, nhánh `?? INK` ở dòng 258, và cả `import { Platform }` — nó không còn ai dùng trong file.
 
 ## Phạm vi
 
@@ -121,7 +172,7 @@ Test này thay cho việc chạy generator trong CI, vì generator cần Python 
 
 ## Android được lợi nhiều nhất
 
-Đây là lần đầu Android có màu pin thật. Hiện tại nó vứt bỏ mọi thứ trừ hue, nên pin `cafes` và `eats` (lệch 6°) gần như trùng nhau trên Android. `image` bỏ qua đường `colorToHSV` hoàn toàn.
+Đây là lần đầu Android có màu pin thật. Hiện tại nó vứt bỏ mọi thứ trừ hue, nên pin `cafes` và `eats` (lệch 6°) gần như trùng nhau trên Android. `icon` bỏ qua đường `colorToHSV` hoàn toàn.
 
 Lần thử trước cố tình không chạm Android; việc này thì sửa hẳn.
 
@@ -131,7 +182,7 @@ Lần thử trước cố tình không chạm Android; việc này thì sửa h�
 |---|---|
 | thuần (`lib`) | category đứng đầu được chọn đúng theo thứ tự filter row — đã có trong `taxonomy.test.ts` |
 | bất biến | manifest phủ hết `CATEGORY_ORDER`; mỗi `fill` khớp màu khai báo |
-| UI (`PlacesMap`) | stub `Marker` ghi `image` và `anchor`; mỗi category ra đúng ảnh; pin được chọn ra ảnh coral; `anchor.y === 1` |
+| UI (`PlacesMap`) | stub `Marker` ghi `icon`, `anchor`, `tracksViewChanges`; mỗi category ra đúng ảnh; **dưới một chip, mọi pin ra ảnh của chip**; pin được chọn ra ảnh coral kể cả khi có chip; địa điểm không phân loại ra ảnh neutral; `anchor.y === 1`; `tracksViewChanges === false` |
 | mắt thường | simulator, cả hai scheme, đo pixel pin để xác nhận PNG tới màn hình nguyên vẹn |
 
 Bước cuối không phải thủ tục: chính nó đã bác bỏ lần thử trước. Không kết luận gì về hiển thị mà không chụp màn hình và lấy mẫu pixel.
