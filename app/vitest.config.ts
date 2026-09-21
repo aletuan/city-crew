@@ -80,14 +80,32 @@ import { defineConfig } from 'vitest/config';
 // Nothing here asks for more.
 //
 // Raise it by hand, in the same change, whenever screen tests are added —
-// run `npm run coverage`, take the reported `src/screens` figures, round
-// down to the whole number. Never lower it to make a change pass; a screen
-// that got bigger gets a test instead. It was 13% of lines before the five
+// run `npm run coverage`, take the lowest screen's figures, round down to
+// the whole number. Never lower it to make a change pass; a screen that
+// got bigger gets a test instead. It was 13% of lines before the five
 // main screens (Explore, Search, TripDetail, PlanEdit, Crew) were tested,
 // 44% after, 75% once Collections, CollectionDetail, Profile, PlaceDetail
 // and PlanOptions joined them, and 95% when the last six at zero —
 // Activity, AddPlace, EditProfile, Ideas, Sketching, TripInvitation — did.
-const SCREENS_FLOOR = { lines: 95, statements: 95, branches: 93, functions: 89 };
+//
+// ── per file, not on average ──
+//
+// The floor held over the *aggregate* of `src/screens` for its first
+// months, and an average is a floor with a hole in it. Twenty-two screens
+// at 96–100% carried `TripsScreen.tsx` at 41.75% lines and one test for
+// half a year without the gate noticing, and a new screen with no test at
+// all would pass the same way as long as it was small next to the rest.
+// `perFile` closes that: every screen has to clear the number on its own.
+//
+// The numbers are the lowest screen's, not the average's, and switching
+// the floor to per-file is what showed which screen that was. Three sit
+// well under the old aggregate and had been hiding there: at the switch,
+// `CollectionFormScreen` stood at 82.69% lines / 70.96% branches / 60%
+// functions, `ForgotPasswordScreen` at 85.8 / 81.81 / 44.44, and
+// `DeleteAccountScreen` at 88.23% branches. `TripsScreen` went from 41.75
+// to 99.74 in the same change; those three are the next to raise, and
+// each one lifts the column it is lowest in.
+const SCREENS_FLOOR = { lines: 82, statements: 82, branches: 70, functions: 44 };
 
 const IMPURE = [
   'src/lib/candidates.ts', // a React hook; imports Alert and Keyboard
@@ -135,6 +153,11 @@ export default defineConfig({
       include: ['src/lib/*.ts', 'src/lib/data/*.ts', 'src/screens/*.tsx'],
       exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', ...IMPURE],
       thresholds: {
+        // Each file on its own — see "per file, not on average" above. The
+        // pure half was already there in practice, since 100% of an
+        // aggregate is 100% of every file; the screens floor is what this
+        // changes.
+        perFile: true,
         // All four at 100, because a threshold at 97 is a number nobody can
         // argue with or about. Either the pure half is covered or it is not.
         'src/lib/**/*.ts': { statements: 100, branches: 100, functions: 100, lines: 100 },

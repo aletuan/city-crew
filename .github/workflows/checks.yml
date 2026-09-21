@@ -148,29 +148,36 @@ jobs:
       - run: npm run lint
       - if: '!cancelled()'
         run: npm test
-      # A ratchet, not a target — same idea as the app job's coverage step,
-      # just one number instead of two. The app's tool (Vitest/Istanbul)
-      # can hold a 100% gate over `src/lib` and a separate floor over
-      # `src/screens` in the same run; Node's built-in coverage reporter
-      # cannot slice like that — its "all files" total is computed over
-      # every module the process actually loads, so trying to isolate a
-      # subset with --test-coverage-include/exclude only changes which
-      # rows print, not what the threshold is checked against (confirmed
-      # by hand: narrowing the include to one file left the printed row
-      # at its own percentage while the enforced total kept counting
-      # every other loaded file anyway).
+      # A ratchet, not a target — same idea as the app job's coverage step.
       #
-      # So this is one floor over everything in `src/` that isn't test
-      # scaffolding: `--test-coverage-lines/branches/functions` below are
-      # today's real combined numbers (see `npm run coverage`'s own
-      # output), rounded down. It cannot celebrate the modules already at
-      # 100% (contributors.js, coverage.js, reports.js, storage.js,
-      # lib/threads.js, lib/authGate.js) — a regression in one of those
-      # can hide behind slack elsewhere in api.js — but it does what a
-      # gate has to: a function added anywhere in `src/` with no test at
-      # all pulls the total down and turns this red, which nothing else
-      # here would notice. Raise it by hand, in the same change, whenever
-      # coverage goes up — never lower it to make a change pass.
+      # Measured by c8 rather than Node's built-in reporter, and the reason
+      # is the denominator. `tests/api.test.mjs` re-imports `api.js` under a
+      # fresh query string per test, and V8 reports coverage per URL; the
+      # built-in reporter counted every `api.js?t=N` as its own file, and
+      # the enforced total was whatever the process happened to load — so
+      # adding a test could *lower* the number (#613 measured 69.57% →
+      # 68.18% for one new test), and "functions 11%" was an artefact of
+      # the split, not a fact about the tests. c8 folds the re-imports back
+      # into one `api.js`, and `--all --src src` fixes the denominator at
+      # every `src/**/*.js` whether a test loaded it or not.
+      #
+      # `--per-file`, so a regression in a module at 100% cannot hide
+      # behind slack in another. Lines and functions are gated; branches
+      # are not, because V8 reports branches only inside functions it saw
+      # run, which makes that one denominator move with the tests no
+      # matter how the files are counted. Three files are excluded by
+      # name: `categories.js` and `vibes.js` are taxonomy tables read by
+      # the React screens, with no statement worth executing in a Node
+      # test; `lib/supabase.js` is the client itself — the same exception
+      # the app's gate makes for its `supabase.ts` — whose only branches
+      # are on environment variables, and a runner with none set covers a
+      # different set of lines than a laptop with a `.env` (80% on CI,
+      # 86% locally, for the same file and the same tests).
+      #
+      # The floors are today's real figures rounded down — api.js at 83.5
+      # lines / 51.3 functions is the lowest file and sets both. Raise them
+      # by hand, in the same change, whenever coverage goes up — never
+      # lower them to make a change pass.
       - if: '!cancelled()'
         run: npm run coverage
 
