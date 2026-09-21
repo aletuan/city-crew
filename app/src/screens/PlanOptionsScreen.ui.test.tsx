@@ -20,7 +20,7 @@
 
 import React from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, fireEvent, render, screen } from '../uitest/render';
 import { addDays, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
 import { narratableOf, NARRATION_HOLD_MS, type Narration } from '../lib/assist';
@@ -114,48 +114,32 @@ const renderScreen = (over: object = {}) => {
 const badges = () => screen.queryAllByText(/^(Best match|Iconic views|Low-key)$/).map((el) => el.textContent);
 const regen = () => screen.getByRole('button', { name: 'Regenerate' });
 /**
- * Wait for Regenerate's swap, on the screen's own budget rather than the
- * library's.
+ * Let Regenerate's swap land.
  *
- * The screen is entitled to hold the old set until the new set's words
- * are in, up to `NARRATION_HOLD_MS` — eight seconds, and it says so. The
- * waits below were on `waitFor`'s default of one, which passes whenever
- * the mocked narration resolves promptly and fails whenever a loaded
- * runner does not get back to the event loop in time. That is the flake
- * this file has been producing on CI, off and on, under `test:tz`:
+ * The screen commits the new set when its narration settles — a chain of
+ * promises ending in one `setState` — or when the cap fires. Neither is
+ * the wall clock, so the test does not wait on the wall clock either: one
+ * turn of the event loop inside `act` drains the chain and flushes the
+ * render, and the assertion after it is plain.
+ *
+ * This replaces a `waitFor` on a budget, and the budget was the flake.
+ * The first version polled on the library's one second; then on
+ * `NARRATION_HOLD_MS + 2000`; and each time a loaded runner — CI under
+ * `test:tz`, a local run under coverage — could still hand back
  *
  *     Regenerate > grows the avoid-list across taps rather than
  *     replacing it
  *     expected [ 'Best match', 'Low-key' ] to deeply equal
  *     [ 'Iconic views' ]
  *
- * — the second set still up, because the third had not arrived inside
- * the second the assertion allowed it. The budget was shorter than the
- * behaviour being asserted, which makes the test a measure of how busy
- * the machine is rather than of what the screen does.
+ * A wait that measures how busy the machine is cannot be made right by
+ * making it longer. `EditProfileScreen.ui.test.tsx` learned the same
+ * lesson (#529): wait for the signal, or drain the work; never the clock.
  *
- * The cap test keeps the plain `waitFor`: it drives the clock itself, and
- * a longer budget there would hide the thing it is checking.
+ * The cap test is the one place the clock *is* the behaviour, and it
+ * drives a fake one by hand.
  */
-const SWAP_BUDGET_MS = NARRATION_HOLD_MS + 2000;
-const forSwap = (fn: () => void) => waitFor(fn, { timeout: SWAP_BUDGET_MS });
-
-/**
- * The `it` budget the waits above have to fit inside.
- *
- * Vitest's own default is 5000 — half of one `forSwap`. So the wait could
- * never actually be spent: the test died at its own limit first, and the
- * failure read `Test timed out in 5000ms` against this `it` rather than
- * naming the assertion that was still waiting. Seen on CI on a PR that
- * touches none of this, green on the rerun, which is how a limit set too
- * low always presents. `SignInScreen.ui.test.tsx` carries the same note
- * for the same reason, and the same fix.
- *
- * 25s is not a budget to spend. Nothing here waits on anything real, so a
- * passing run finishes in milliseconds; the number only has to be further
- * out than the two `forSwap` waits the longest test makes can reach.
- */
-const SWAP_TEST_MS = 25_000;
+const settled = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 const optsOf = (call: number) => planTrips.mock.calls[call][3] as Record<string, unknown>;
 const seedsAsked = () => planTrips.mock.calls.map((c) => (c[3] as { seed: number }).seed);
 
@@ -495,7 +479,8 @@ describe('Regenerate', () => {
   it('asks for the next seed, avoiding every slug on screen, and swaps once the words are in', async () => {
     const navigation = renderScreen();
     fireEvent.click(regen());
-    await forSwap(() => expect(badges()).toEqual(['Best match', 'Low-key']));
+    await settled();
+    expect(badges()).toEqual(['Best match', 'Low-key']);
     expect(screen.getByText('Pop-up Stall')).toBeTruthy();
     expect(screen.queryByText('Cộng Café')).toBeNull();
     const last = planTrips.mock.calls.at(-1)![3] as Record<string, unknown>;
@@ -505,21 +490,23 @@ describe('Regenerate', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('PlanEdit', expect.objectContaining({
       seed: 8, lens: 'lowkey', avoid: ['cafe', 'dinner', 'temple', 'roof', 'lake'],
     }));
-  }, SWAP_TEST_MS);
+  });
 
   it('grows the avoid-list across taps rather than replacing it', async () => {
     planTrips.mockImplementation((_d: unknown, _p: unknown, _c: unknown, o: { seed: number }) =>
       (o.seed === 7 ? FIRST : o.seed === 8 ? SECOND : [plan('iconic', [stop(CAFE, 18 * 60)])]));
     renderScreen();
     fireEvent.click(regen());
-    await forSwap(() => expect(screen.getByText('Pop-up Stall')).toBeTruthy());
+    await settled();
+    expect(screen.getByText('Pop-up Stall')).toBeTruthy();
     fireEvent.click(regen());
-    await forSwap(() => expect(badges()).toEqual(['Iconic views']));
+    await settled();
+    expect(badges()).toEqual(['Iconic views']);
     const last = planTrips.mock.calls.at(-1)![3] as Record<string, unknown>;
     expect(last).toMatchObject({
       seed: 9, avoid: ['cafe', 'dinner', 'temple', 'roof', 'lake', 'nowhere', 'pinned'],
     });
-  }, SWAP_TEST_MS);
+  });
 
   it('holds the old set and shows busy until the new set is narrated, and ignores a second tap', async () => {
     const answers: ReturnType<typeof deferred>[] = [];
@@ -543,9 +530,10 @@ describe('Regenerate', () => {
     await act(async () => { answers[0].resolve(words(null)); });
     expect(badges()).toEqual(['Best match', 'Iconic views', 'Low-key']);
     await act(async () => { answers[1].resolve(words(null)); });
-    await forSwap(() => expect(badges()).toEqual(['Best match', 'Low-key']));
+    await settled();
+    expect(badges()).toEqual(['Best match', 'Low-key']);
     expect(regen().getAttribute('aria-disabled')).not.toBe('true');
-  }, SWAP_TEST_MS);
+  });
 
   it('lands the new cards with the names their narration brought', async () => {
     const named = new Set<string>();
@@ -557,9 +545,10 @@ describe('Regenerate', () => {
     });
     renderScreen();
     fireEvent.click(regen());
-    await forSwap(() => expect(screen.getByText('Named nowhere')).toBeTruthy());
+    await settled();
+    expect(screen.getByText('Named nowhere')).toBeTruthy();
     expect(screen.getByText('Named pinned')).toBeTruthy();
-  }, SWAP_TEST_MS);
+  });
 
   it('gives up waiting at the narration cap and swaps anyway', async () => {
     vi.useFakeTimers();
@@ -577,7 +566,8 @@ describe('Regenerate', () => {
       (o.seed === 7 ? FIRST : []));
     renderScreen();
     fireEvent.click(regen());
-    await forSwap(() => expect(screen.getByText(/^Nothing here matches/)).toBeTruthy());
+    await settled();
+    expect(screen.getByText(/^Nothing here matches/)).toBeTruthy();
     expect(badges()).toEqual([]);
-  }, SWAP_TEST_MS);
+  });
 });
