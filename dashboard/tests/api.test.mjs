@@ -226,9 +226,9 @@ test('places() picks the cover photo, falling back to the first visible one, and
     data: [{
       slug: 'a', added_by: null,
       place_photos: [
-        { photo_uri: 'hidden.jpg', is_cover: false, is_hidden: true },
-        { photo_uri: 'first.jpg', is_cover: false, is_hidden: false },
-        { photo_uri: 'cover.jpg', is_cover: true, is_hidden: false },
+        { photo_uri: 'hidden.jpg', is_cover: false, is_hidden: true, sort_order: -1 },
+        { photo_uri: 'first.jpg', is_cover: false, is_hidden: false, sort_order: 0 },
+        { photo_uri: 'cover.jpg', is_cover: true, is_hidden: false, sort_order: 9 },
       ],
     }],
     error: null, count: 1,
@@ -237,6 +237,26 @@ test('places() picks the cover photo, falling back to the first visible one, and
   assert.equal(rows[0].cover_url, 'cover.jpg');
   assert.equal(rows[0].photo_count, 2);
   assert.equal(client.calls.length, 1); // no submitter lookup: added_by is null
+
+  // And the fallback half of that rule, which is the database's job here.
+  //
+  // `photosOf` in the app reads cover first, then lowest `sort_order`.
+  // This file only ever had the first half: the embed came back in no
+  // order, so a place with no cover handed the desk whichever row
+  // PostgREST felt like and the reader something else. Rare once; not any
+  // more, since a reader's upload takes the cover and deleting it takes
+  // the flag away.
+  //
+  // Asserted on the query rather than the outcome because the ordering is
+  // now PostgREST's — a fake client returns whatever list it was handed,
+  // so an outcome assertion here would pass with the clause deleted.
+  assert.ok(
+    client.calls[0].chain.some(
+      ([m, args]) => m === 'order' && args[0] === 'sort_order'
+        && args[1]?.referencedTable === 'place_photos',
+    ),
+    'the embedded photos are not ordered by sort_order',
+  );
 });
 
 test('places() looks up each contributor once, even when several rows share one', async () => {
