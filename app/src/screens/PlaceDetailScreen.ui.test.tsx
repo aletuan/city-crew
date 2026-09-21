@@ -19,7 +19,8 @@
 import React from 'react';
 import { Alert, Linking, Share } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen } from '../uitest/render';
+import { pinImage } from '../components/mapPins';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
 import { colors } from '../theme';
@@ -119,6 +120,7 @@ vi.mock('../components/MiniMap', async () => {
       type: 'button',
       'data-stub': 'MiniMap',
       'data-interactive': String(p.interactive),
+      'data-pin': String(p.pin),
       onClick: () => p.onPick({ lat: p.lat, lng: p.lng }),
     }),
     // A getter, so a test can answer no. True by default, because the
@@ -756,6 +758,35 @@ describe('PlaceDetailScreen — the map', () => {
     expect(map()).toBeTruthy();
   });
 
+  // The same picture the place wears on Explore's map. Google's default
+  // teardrop said only "a place", on a screen already about one place,
+  // while the chips two rows above it said Focus and Cafés.
+  it('draws the pin in the place\u2019s own category, like the places map', () => {
+    show(place({ categories: ['cafes'] }));
+    expect(map()!.getAttribute('data-pin'))
+      .toBe(String(pinImage({ categories: ['cafes'] }, null, false)));
+  });
+
+  // Different category, different picture — which is the whole claim, and
+  // an assertion against `pinImage` alone would pass on a constant.
+  it('gives a different category a different pin', () => {
+    show(place({ categories: ['nightlife'] }));
+    const nightlife = map()!.getAttribute('data-pin');
+    cleanup();
+    show(place({ categories: ['cafes'] }));
+    expect(map()!.getAttribute('data-pin')).not.toBe(nightlife);
+  });
+
+  // Plain, not the coral `chosen` art: that variant exists to win a fight
+  // with 250 other pins and there is no fight on a page about one place.
+  // Plain is also the variant that keeps the category's own colour as the
+  // fill, which is the thing being said.
+  it('uses the plain pin, not the chosen one', () => {
+    show(place({ categories: ['cafes'] }));
+    expect(map()!.getAttribute('data-pin'))
+      .not.toBe(String(pinImage({ categories: ['cafes'] }, null, true)));
+  });
+
   // ── where the Directions button stands ──
   //
   // On the picture, so the address gets the whole width back. The button
@@ -768,6 +799,17 @@ describe('PlaceDetailScreen — the map', () => {
     const go = screen.getByTestId('detail-directions');
     expect(go.parentElement).toBe(map()!.parentElement);
     expect(screen.getByTestId('detail-address-toggle').contains(go)).toBe(false);
+  });
+
+  // The labelled pill was 104.7pt wide and laid that much of a 320pt map
+  // under itself, over a picture whose whole job is street names. The
+  // name survives for VoiceOver; what goes is the ink on the tiles.
+  it('carries no word on the map, only the arrow and its name', () => {
+    show();
+    const go = screen.getByTestId('detail-directions');
+    expect(go.textContent).toBe('');
+    expect(go.getAttribute('aria-label')).toBe('Directions');
+    expect(go.querySelector('[data-icon="navigate"]')).toBeTruthy();
   });
 
   it('holds the button clear of Google\u2019s attribution in the far corner', () => {
