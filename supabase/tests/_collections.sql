@@ -59,7 +59,13 @@ create table if not exists public.place_photos (
   sort_order int not null default 0,
   is_cover   boolean not null default false,
   is_hidden  boolean not null default false,
-  source     text not null default 'google'
+  source     text not null default 'google',
+  -- Who put it here, and when. Null for everything the desk and the
+  -- importer file; set only by the app. `guide_upload_becomes_cover`
+  -- reads both — the first to tell a reader's photograph from an
+  -- editor's, the second to pick the newest when it backfills.
+  uploaded_by uuid,
+  created_at  timestamptz not null default now()
 );
 
 create table if not exists public.collections (
