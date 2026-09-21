@@ -109,6 +109,9 @@ vi.mock('expo-status-bar', () => ({ StatusBar: () => null, setStatusBarStyle: sp
 // A stub, which is also what keeps `expo-constants` — and through it the
 // whole native module layer — out of jsdom. The real one answers to the
 // binary's capabilities, which no test can stand in for.
+// `vi.hoisted`, because the mock factory is lifted above everything else
+// in this file and would otherwise close over an uninitialised binding.
+const mapStub = vi.hoisted(() => ({ canDraw: true }));
 vi.mock('../components/MiniMap', async () => {
   const R = await import('react');
   return {
@@ -118,11 +121,16 @@ vi.mock('../components/MiniMap', async () => {
       'data-interactive': String(p.interactive),
       onClick: () => p.onPick({ lat: p.lat, lng: p.lng }),
     }),
-    // True here, because the screen asks before it draws and a test that
-    // said no would be testing the empty card every time. Whether a given
-    // binary can actually draw a Google map is the real module's business,
-    // and it answers by asking `expo-constants`.
-    canDrawMap: true,
+    // A getter, so a test can answer no. True by default, because the
+    // screen asks before it draws and a stub that always said no would be
+    // testing the empty card every time — but the no is now reachable,
+    // and it has to be: it is the whole of the Expo Go and
+    // built-without-the-key case, where the Directions button has no map
+    // to stand on and must fall back into the address row.
+    //
+    // Whether a given binary can really draw a Google map stays the real
+    // module's business; it answers by asking `expo-constants`.
+    get canDrawMap() { return mapStub.canDraw; },
   };
 });
 
@@ -235,6 +243,7 @@ beforeEach(() => {
   state.lang = 'en';
   state.guide = false;
   state.uid = null;
+  mapStub.canDraw = true;
   spies.save.mockClear();
   spies.note.mockClear();
   spies.bySlug.mockClear();
@@ -745,6 +754,55 @@ describe('PlaceDetailScreen — the map', () => {
   it('draws the place on a map', () => {
     show();
     expect(map()).toBeTruthy();
+  });
+
+  // ── where the Directions button stands ──
+  //
+  // On the picture, so the address gets the whole width back. The button
+  // measures 104.7pt of the 318.7pt the address could otherwise have — a
+  // third of the row. Beside it 332–415 of 671 addresses fit on one line;
+  // without it 582–613, and the 6–16 that needed a third line stop being
+  // clamped. Measured off a real render at 3x.
+  it('puts the Directions button on the map, not in the address row', () => {
+    show();
+    const go = screen.getByTestId('detail-directions');
+    expect(go.parentElement).toBe(map()!.parentElement);
+    expect(screen.getByTestId('detail-address-toggle').contains(go)).toBe(false);
+  });
+
+  it('holds the button clear of Google\u2019s attribution in the far corner', () => {
+    show();
+    const box = getComputedStyle(screen.getByTestId('detail-directions'));
+    expect(box.position).toBe('absolute');
+    // Bottom right, and that corner is a constraint rather than a taste:
+    // Google's terms require their attribution stay visible, and the logo
+    // sits bottom left — 60 x 29pt, on a map 150pt tall.
+    expect(box.right).toBe('10px');
+    expect(box.bottom).toBe('10px');
+    expect(box.left).toBe('');
+  });
+
+  // The regression this must never have. A binary with no Google Maps SDK
+  // — Expo Go on iOS, or a build made without the key — draws no map, and
+  // the one action this card exists for cannot vanish with it.
+  it('falls back into the address row when the binary cannot draw a map', () => {
+    mapStub.canDraw = false;
+    show();
+    expect(map()).toBeNull();
+    const go = screen.getByTestId('detail-directions');
+    expect(getComputedStyle(go).position).not.toBe('absolute');
+    fireEvent.click(go);
+    expect(openURL).toHaveBeenCalled();
+  });
+
+  // And in that fallback the row finally has a gap. It never had one: the
+  // address is `flex: 1` and the button `flexShrink: 0`, so with nothing
+  // between them the words ran to the pill's edge — measured at 5.0pt on a
+  // real render, and five was only where that line happened to break.
+  it('keeps the fallback button off the address text', () => {
+    mapStub.canDraw = false;
+    show();
+    expect(getComputedStyle(screen.getByTestId('detail-directions')).marginLeft).toBe('12px');
   });
 
   // It used to be a card of its own below the facts, which asked the
