@@ -53,9 +53,13 @@ export function splitName(name: string): SplitName {
 }
 
 /**
- * The subtitle worth printing under a title that already has a place
- * line beneath it — null when the qualifier says the same thing the
- * neighbourhood line is about to say.
+ * The subtitle worth printing under a title that already has the place
+ * written out below it — null when the qualifier only says again what
+ * the card is about to say anyway.
+ *
+ * Two ways that happens, and they are not the same test.
+ *
+ * ── the neighbourhood line ──
  *
  * "Cafe Slow - Thảo Điền" in Thảo Điền would otherwise read
  *
@@ -64,11 +68,62 @@ export function splitName(name: string): SplitName {
  *     ⌖ Thảo Điền
  *
  * and the branch name was only ever there to tell this Cafe Slow from
- * another, which the line below it already does. Compared folded, so
- * "Thao Dien" and "Thảo Điền" agree.
+ * another, which the line below it already does. Equality, because a
+ * neighbourhood line is one name and the qualifier either is it or is
+ * not.
+ *
+ * ── the address ──
+ *
+ * The commoner case by far, and the one equality cannot catch. Of the
+ * 250 places in the catalog that show a subtitle, 128 have a qualifier
+ * that appears *inside* the address the card prints two rows down:
+ *
+ *     Bold Brew
+ *     Huỳnh Thúc Kháng                    ← this
+ *     ĐỊA CHỈ
+ *     27/16 Ng. 18 Huỳnh Thúc Kháng, Giảng Võ   ← and this
+ *
+ * So containment, not equality — the street is a fragment of the
+ * address, never the whole of it.
+ *
+ * `address` must be the address **as printed**, which is `shortAddress`'s
+ * output and not the raw column: the raw one still carries the city and
+ * the country, and matching against text the reader cannot see would
+ * drop a subtitle that is doing its job. (It happens not to change the
+ * count here — every one of the 128 survives the shortening — but the
+ * contract is the printed string, and a future change to `shortAddress`
+ * should move this with it rather than silently diverge.)
+ *
+ * ── why plain containment is safe enough ──
+ *
+ * A substring test can fire on a fragment of a longer word. It does not
+ * here: run against the catalog, containment and a word-boundary match
+ * both drop exactly 128, and the shortest qualifier dropped is six
+ * characters. A boundary regex would buy nothing today and would have to
+ * define a word boundary for Vietnamese to do it, so this stays the
+ * simpler thing with the number written down.
+ *
+ * The 122 that survive are the qualifiers that carry something the
+ * address does not — "Cocktail Bar", "Omurice & Ramen", "Board Games",
+ * and the branch names of places whose ward was renamed under them.
+ * Sixteen places are subtitled "Thảo Điền"; all sixteen now carry the
+ * ward "An Khánh", in the neighbourhood and in the address alike, and
+ * "Thảo Điền" is still what the reader calls it. Fifteen keep the
+ * qualifier. The sixteenth stands on a street named Thảo Điền, so its
+ * address prints the word and the rule drops it — which is right, and
+ * is the rule working rather than an exception to it.
+ *
+ * Everything is compared folded, so "Thao Dien" and "Thảo Điền" agree,
+ * and so do "Yên Hoà" and "Yên Hòa" — which is one real row.
  */
-export function subtitleBeside(split: SplitName, neighborhood: string | null | undefined): string | null {
+export function subtitleBeside(
+  split: SplitName,
+  neighborhood: string | null | undefined,
+  address: string | null | undefined,
+): string | null {
   if (!split.subtitle) return null;
-  if (neighborhood && fold(neighborhood) === fold(split.subtitle)) return null;
+  const sub = fold(split.subtitle);
+  if (neighborhood && fold(neighborhood) === sub) return null;
+  if (address && fold(address).includes(sub)) return null;
   return split.subtitle;
 }

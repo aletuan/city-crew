@@ -206,7 +206,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // The brand as the title and the qualifier Google's listing hung off
   // it — a branch, a tagline — as a subtitle beneath, rather than three
   // lines of display type. See `lib/name` for the cut. The subtitle is
-  // dropped when it only repeats the neighbourhood line under it.
+  // dropped when it only repeats what the card already prints: the
+  // neighbourhood line under it, or the address row further down.
   const neighborhood = t(place.neighborhood_en, place.neighborhood_vi, place.neighborhood_ja);
   // The district line under the title is only for a place with no
   // address row: the short address ends in the ward, so with one on the
@@ -219,7 +220,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const showsNeighborhood = !place.address;
   const fullName = t(place.name_en, place.name_vi, place.name_ja);
   const name = splitName(fullName);
-  const subtitle = subtitleBeside(name, neighborhood);
+  // `address`, not `place.address`: the test is against what the reader
+  // can actually see, and the short one is what the row prints.
+  const subtitle = subtitleBeside(name, neighborhood, address);
   // Grouped, not one row per day: see groupHours. A place open the same
   // seven days a week becomes one line instead of seven identical ones.
   const hours = groupHours(place.opening_hours ?? [], lang);
@@ -395,28 +398,46 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
         </View>
 
         <View style={s.body}>
-          {/* ── title + rating badge ── */}
-          <View style={s.titleRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.name} testID="detail-name">{name.title}</Text>
-              {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
-              {showsNeighborhood ? (
-                <View style={s.locRow}>
-                  <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
-                  <Text style={s.loc}>{neighborhood}</Text>
-                </View>
+          {/* ── the name, then what it scored ──
+              One column, not two. The rating used to sit in a badge beside
+              the title, which cost the name 109pt of the 386 it could have
+              had and made it wrap far more often than it needed to: 32% of
+              places on a 393pt phone, against 7% at full width. Measured
+              off the catalog, that is 167 places getting a whole line of
+              26pt back.
+              The rating loses nothing by moving. A score and a count are
+              one short line of text; a badge was a box drawn around them,
+              and the box was the part that was expensive. */}
+          <Text style={s.name} testID="detail-name">{name.title}</Text>
+          {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
+          {showsNeighborhood ? (
+            <View style={s.locRow}>
+              <Ionicons name="location-outline" size={15} color={colors.textTertiary} />
+              <Text style={s.loc}>{neighborhood}</Text>
+            </View>
+          ) : null}
+          {place.rating ? (
+            // Spoken as one phrase. Left to itself a screen reader reads
+            // the star glyph, then the number, then a lone middle dot,
+            // then the count — four stops for one fact.
+            <View
+              style={s.ratingRow}
+              testID="detail-rating"
+              accessibilityRole="text"
+              accessibilityLabel={reviews
+                ? `${place.rating} — ${reviews} ${t('reviews', 'đánh giá', '件のレビュー')}`
+                : String(place.rating)}
+            >
+              <Ionicons name="star" size={17} color={colors.accent} />
+              <Text style={s.ratingValue}>{place.rating}</Text>
+              {reviews ? (
+                <>
+                  <Text style={s.ratingDot}>·</Text>
+                  <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー')}</Text>
+                </>
               ) : null}
             </View>
-            {place.rating ? (
-              <View style={s.ratingBadge}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <Ionicons name="star" size={16} color={colors.accent} />
-                  <Text style={s.ratingValue}>{place.rating}</Text>
-                </View>
-                {reviews ? <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー')}</Text> : null}
-              </View>
-            ) : null}
-          </View>
+          ) : null}
 
           {/* The one offer this screen makes to the person who put the
               place here. Draws nothing for everybody else — see
@@ -889,7 +910,6 @@ const s = StyleSheet.create({
   },
 
   body: { paddingHorizontal: space.page, paddingTop: 18 },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   // 26, not the 28 this was: the display face runs wider than the system
   // one, and place names are long enough to wrap without help.
   name: { color: colors.text, ...type.titleDetail },
@@ -898,12 +918,25 @@ const s = StyleSheet.create({
   subtitle: { color: colors.textSecondary, ...type.body, marginTop: 4 },
   locRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
   loc: { color: colors.textTertiary, ...type.meta },
-  ratingBadge: {
-    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', gap: 3,
-  },
+
+  // ── the rating, as a line rather than a badge ──
+  //
+  // `center`, not a baseline: the star is the tallest thing here and the
+  // eye reads it against the number, not against the number's feet.
+  //
+  // 8 above, against the subtitle's 4. The subtitle is part of the name
+  // and sits close enough to be read with it; the score is a different
+  // fact and takes the wider gap that says so.
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  // The score keeps the size and weight it wore inside the badge. It was
+  // never the type that made the badge expensive.
   ratingValue: { color: colors.text, fontSize: 18, fontWeight: font.bold },
-  ratingCount: { color: colors.textTertiary, fontSize: 12, fontWeight: font.regular },
+  // The count was 12 in the badge, where it had a box to belong to and
+  // two lines of its own. On an open line that reads as fine print, so it
+  // comes up to `type.meta` — the size every other secondary fact on this
+  // screen already uses.
+  ratingDot: { color: colors.textTertiary, fontSize: 15, fontWeight: font.regular },
+  ratingCount: { color: colors.textSecondary, ...type.meta },
 
   facts: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 16 },
   // The filter row's chip, at rest: same hairline, same radius, same

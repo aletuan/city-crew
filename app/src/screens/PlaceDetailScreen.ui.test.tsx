@@ -307,6 +307,29 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.queryByText('Hai Ba Trung')).toBeNull();
   });
 
+  // ── the subtitle against the address ──
+  //
+  // The commoner half of the rule, and the half the neighbourhood test
+  // cannot reach: 128 of the catalog's 250 subtitles name the street the
+  // address row prints a few lines down. See `subtitleBeside`.
+  it('drops a subtitle the address row already prints', () => {
+    show(place({ name_en: 'Cộng Cà Phê - Trieu Viet Vuong' }));
+    expect(screen.getByTestId('detail-name').textContent).toBe('Cộng Cà Phê');
+    // Once, as the address — not twice.
+    expect(screen.getAllByText(/Trieu Viet Vuong/)).toHaveLength(1);
+  });
+
+  // The one that pins *which* address is used. "Hanoi" is in the raw
+  // column and not in the string the row prints, because `shortAddress`
+  // cuts the city; judged against the raw column this subtitle would
+  // vanish over a word the reader cannot see.
+  it('judges the subtitle against the printed address, not the raw column', () => {
+    show(place({ name_en: 'Cộng Cà Phê - Hanoi', address: '152 Trieu Viet Vuong, Hai Ba Trung, Hanoi, Vietnam' }));
+    expect(screen.getByTestId('detail-name').textContent).toBe('Cộng Cà Phê');
+    expect(screen.getByText('Hanoi')).toBeTruthy();
+    expect(screen.getByTestId('detail-address').textContent).toBe('152 Trieu Viet Vuong, Hai Ba Trung');
+  });
+
   it('prints the rating and the review count, compacted', () => {
     show();
     expect(screen.getByText('4.6')).toBeTruthy();
@@ -319,10 +342,46 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.queryByText(/reviews/)).toBeNull();
   });
 
-  it('has no rating badge for an unrated place', () => {
+  it('has no rating line at all for an unrated place', () => {
     show(place({ rating: null }));
     expect(screen.queryByText(/reviews/)).toBeNull();
+    expect(screen.queryByTestId('detail-rating')).toBeNull();
     expect(document.querySelector('[data-icon="star"]')).toBeNull();
+  });
+
+  // ── the rating is a line under the name, not a badge beside it ──
+  //
+  // Both halves of this matter and neither is enough alone. Under the old
+  // markup the rating was also "present" and also "after the name" in
+  // document order — it was a sibling of the column the name lived in, one
+  // level up. Asserting the shared parent is what distinguishes a line
+  // below the title from a box next to it, and the shared parent is the
+  // whole point: it is what gives the name the full width of the card.
+  it('puts the rating in the title column, below the name, not beside it', () => {
+    show();
+    const name = screen.getByTestId('detail-name');
+    const rating = screen.getByTestId('detail-rating');
+    expect(rating.parentElement).toBe(name.parentElement);
+    expect(name.compareDocumentPosition(rating) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('reads the score and the count on one line, separated by a dot', () => {
+    show();
+    const rating = screen.getByTestId('detail-rating');
+    expect(rating.textContent).toBe('4.6\u00b71.2k reviews');
+  });
+
+  // Four stops for one fact is what this avoids: the star glyph, the
+  // number, a lone middle dot, then the count.
+  it('speaks the rating as a single phrase', () => {
+    show();
+    expect(screen.getByTestId('detail-rating').getAttribute('aria-label'))
+      .toBe('4.6 \u2014 1.2k reviews');
+  });
+
+  it('says only the score when nobody is counted', () => {
+    show(place({ rating_count: null }));
+    expect(screen.getByTestId('detail-rating').getAttribute('aria-label')).toBe('4.6');
   });
 
   it('names the category with its own glyph', () => {
