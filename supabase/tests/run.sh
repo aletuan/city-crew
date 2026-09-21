@@ -340,6 +340,15 @@ for f in "$ROOT"/supabase/migrations/*_guide_upload_becomes_cover.sql; do
 done
 run "$DB" -f "$HERE/upload_cover_test.sql"
 
+# The gallery a guide keeps. After the upload-cover block, whose trigger
+# the seed here has to undo first, and before the search-path sweep, which
+# has to find these definer functions already in the schema.
+echo "→ gallery rpcs"
+for f in "$ROOT"/supabase/migrations/*_gallery_guide_rpcs.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/gallery_rpc_test.sql"
+
 echo "→ search paths"
 for f in "$ROOT"/supabase/migrations/*_pin_trigger_search_path.sql; do
   run "$DB" -f "$f" >/dev/null
