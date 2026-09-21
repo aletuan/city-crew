@@ -233,13 +233,21 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  // Opaque for the same reason the caption is: a control over map tiles
-  // needs its own ground or it is a shape in a photograph.
+  // A control over map tiles needs its own ground or it is a shape in a
+  // photograph — but it does not need an opaque one, which is what this
+  // note used to claim by pointing at the caption below.
+  //
+  // `bgElevatedVeil` keeps the elevated colour and only thins it, which is
+  // the difference between this and `surfaceGlass`: glass is a wash with
+  // no ground of its own and takes whatever it lands on, and a Google tile
+  // is pale beige, white roads and green parks in a different mix at every
+  // address. See the token for where the number comes from; `theme.test.ts`
+  // holds it to a glyph that still reads at 4.5:1 over any of them.
   locate: {
     position: 'absolute', top: 10, right: 10,
     width: 36, height: 36, borderRadius: 18,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.bgElevated,
+    backgroundColor: colors.bgElevatedVeil,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
   // Opaque, not glass: map tiles are busy in a way no scrim can settle,
