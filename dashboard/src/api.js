@@ -188,11 +188,14 @@ export const api = {
     let query = supabase
       .from('places')
       .select(
-        'slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, is_published, rating, rating_count, price_vnd, price_display, created_at, channel, added_by, submitted_by, place_photos(photo_uri, is_cover, is_hidden)',
+        'slug, name_en, name_vi, category, categories, is_featured, vibe_tags, neighborhood_en, review_status, is_published, rating, rating_count, price_vnd, price_display, created_at, channel, added_by, submitted_by, place_photos(photo_uri, is_cover, is_hidden, sort_order)',
         { count: 'exact' },
       )
       .order(sortColumn, { ascending, nullsFirst: false })
-      .order('slug'); // stable tiebreaker
+      .order('slug') // stable tiebreaker
+      // The photos come back ordered too, because the line below has to
+      // pick one of them the way the app does. See the note there.
+      .order('sort_order', { referencedTable: 'place_photos' });
     if (params.city) query = query.eq('city_id', params.city);
     if (params.status) query = query.eq('review_status', params.status);
     if (params.category) query = query.contains('categories', [params.category]);
@@ -225,6 +228,22 @@ export const api = {
     const { data, error, count } = await query;
     if (error) throw new Error(error.message);
     const rows = data.map((r) => {
+      // Cover first, and failing that the lowest `sort_order` — which is
+      // `photosOf`'s rule in the app, and has to be this one too.
+      //
+      // The fallback half was missing. The embed used to come back in no
+      // order, so `visible[0]` was whichever row PostgREST happened to
+      // hand over, and a place with no cover showed the desk one
+      // photograph and the reader another.
+      //
+      // That used to be rare. It is not any more: a reader's upload takes
+      // the cover on the way in, and deleting it takes the flag with it,
+      // so a moderated place routinely has no cover at all. The thumbnail
+      // the desk judges by has to be the picture the reader sees.
+      //
+      // Ordered in the query rather than here, which is why this line did
+      // not change: `place_photos` arrives sorted, so `visible[0]` is
+      // already the lowest `sort_order`.
       const visible = r.place_photos.filter((p) => !p.is_hidden);
       const cover = visible.find((p) => p.is_cover) ?? visible[0];
       const { place_photos, ...rest } = r;
