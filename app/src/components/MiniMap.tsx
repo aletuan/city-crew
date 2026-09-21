@@ -122,6 +122,17 @@ type Props = {
    * business raising that prompt.
    */
   interactive?: boolean;
+  /**
+   * The picture to draw the pin from — a `pinImage` from `mapPins`.
+   *
+   * A number rather than a category, because this map does not know what
+   * a category is and should not learn: it draws one point, and which
+   * picture that point deserves is the caller's question. `PlacesMap`
+   * answers it with `pinImage`; the start sheet does not answer it at
+   * all, and Google's own marker is right there — the pin is where the
+   * day begins, not a kind of place.
+   */
+  pin?: number;
 };
 
 /**
@@ -142,7 +153,7 @@ class Boundary extends React.Component<{ children: React.ReactNode }, { failed: 
   }
 }
 
-export default function MiniMap({ lat, lng, onPick, caption, height, onLocate, interactive = true }: Props) {
+export default function MiniMap({ lat, lng, onPick, caption, height, onLocate, interactive = true, pin }: Props) {
   const map = useRef<any>(null);
 
   // `initialRegion` is what its name says: read once, on mount. The sheet
@@ -181,7 +192,24 @@ export default function MiniMap({ lat, lng, onPick, caption, height, onLocate, i
             if (c) onPick({ lat: c.latitude, lng: c.longitude });
           }}
         >
-          {Marker ? <Marker coordinate={{ latitude: lat, longitude: lng }} /> : null}
+          {Marker ? (
+            <Marker
+              coordinate={{ latitude: lat, longitude: lng }}
+              // `image` and not `icon`, and `anchor` written down rather
+              // than left to the default — both for the reasons
+              // `PlacesMap` sets out at length beside its own marker.
+              // The short of it: `icon` is dropped on iOS when the bitmap
+              // loads before the marker is inserted, and the anchor is
+              // what puts the tip of the teardrop on the coordinate.
+              //
+              // `tracksViewChanges={false}` is safe because the pin is a
+              // picture rather than a React child; the library re-applies
+              // the image itself.
+              image={pin}
+              anchor={pin ? { x: 0.5, y: 1 } : undefined}
+              tracksViewChanges={pin ? false : undefined}
+            />
+          ) : null}
         </MapView>
         {onLocate ? (
           <PressableScale onPress={onLocate} scaleTo={0.9} style={s.locate} accessibilityRole="button">

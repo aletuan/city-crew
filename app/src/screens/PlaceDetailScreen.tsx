@@ -28,6 +28,7 @@ import { splitName, subtitleBeside } from '../lib/name';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
 import MiniMap, { canDrawMap } from '../components/MiniMap';
+import { pinImage } from '../components/mapPins';
 import {
   atHandle, hostOf, instagramUrl, threadsUrl, websiteRepeatsHandle,
 } from '../lib/links';
@@ -623,28 +624,48 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     height={150}
                     interactive={false}
                     onPick={toMaps}
+                    /* The same picture this place wears on Explore's map,
+                       instead of Google's default red teardrop — which
+                       said only "a place", on a screen that is already
+                       about one place, while the chips two rows up said
+                       Focus and Cafés.
+
+                       `chip` is null because a detail page stands in no
+                       filter, and `chosen` is false on purpose: the coral
+                       variant exists to win a fight with 250 other pins,
+                       and there is no fight here. Plain keeps the
+                       category's own colour as the fill, which is the
+                       thing being said. */
+                    pin={pinImage(place, null, false)}
                   />
                   {/* Bottom right, and that corner is not a taste. Google's
                       terms require their attribution stay visible, and the
                       logo sits bottom *left* — measured off a real render,
-                      60 × 29pt. The map is 150pt tall, so a 36pt pill in
+                      60 × 29pt. The map is 150pt tall, so a 40pt disc in
                       the opposite corner clears it with room to spare.
+
+                      A disc and no word. The labelled pill was 104.7pt
+                      wide and laid that much of a 320pt map under itself,
+                      covering street names on a picture whose whole job is
+                      street names. The arrow is the same glyph the row
+                      carried and the same one `MiniMap`'s locate button
+                      wears, and it keeps its name for VoiceOver — what
+                      goes is the ink on the tiles, not the label.
 
                       Tapping the map already opened Maps; this only says
                       so. Which is the same argument that first put the
                       button on the row — an address looks like a fact, not
-                      a button — now made where it costs the address
-                      nothing. */}
+                      a button — now made where it costs the picture least. */}
                   <PressableScale
                     onPress={toMaps}
                     accessibilityRole="button"
                     accessibilityLabel={t('Directions', 'Chỉ đường', '経路')}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     containerStyle={s.goOnMap}
-                    style={[s.go, s.goSolid]}
+                    style={s.goDisc}
                     testID="detail-directions"
                   >
-                    <Ionicons name="navigate" size={15} color={colors.accent} />
-                    <Text style={s.goText}>{t('Directions', 'Chỉ đường', '経路')}</Text>
+                    <Ionicons name="navigate" size={18} color={colors.accent} />
                   </PressableScale>
                 </View>
               )}
@@ -1030,14 +1051,19 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlassSoft,
     backgroundColor: colors.surfaceGlass,
   },
-  // Opaque, and only on the map. `surfaceGlass` is translucent and reads
-  // against a surface this app chooses; a Google tile is not one — pale
-  // beige, white roads, green parks, and a different mix at every address.
-  // A card fill and a shadow make the pill its own object over any of them.
-  goSolid: {
-    backgroundColor: colors.surfaceCard,
-    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 }, elevation: 3,
+  // A disc over the tiles, built the way `MiniMap`'s own locate button is
+  // built, because it is the same problem and that one has shipped:
+  // `bgElevated` rather than `surfaceGlass`, since glass is translucent
+  // and reads against a surface this app chooses — a Google tile is not
+  // one, being pale beige, white roads and green parks in a different mix
+  // at every address. 40 rather than the locate button's 36 because this
+  // is the only control on the map and the one the card exists for, and
+  // `hitSlop` takes the target past 44 without taking more of the picture.
+  goDisc: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.bgElevated,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
   goText: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
   // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
