@@ -453,10 +453,15 @@ def draw(fill, icon, ink, scale, chosen=False):
     # Head, then tail, then head again: the tail is drawn over the head's
     # lower ring so the two read as one outline rather than a circle
     # sitting on a triangle.
+    # The tail is the fill's triangle grown by the ring on every side, not
+    # a thin spike with a white outline: at 34pt a one-ring-wide taper
+    # reads as a needle stuck to a circle, and on the night map the white
+    # swallows what little colour is left in it.
+    tail = r * 1.9
     d.ellipse([0, 0, W - 1, W - 1], fill=WHITE)
-    d.polygon([(W * 0.5 - r * 2, W * 0.78), (W * 0.5 + r * 2, W * 0.78), (W * 0.5, H - 1)], fill=WHITE)
+    d.polygon([(W * 0.5 - tail - r, W * 0.70), (W * 0.5 + tail + r, W * 0.70), (W * 0.5, H - 1)], fill=WHITE)
     d.ellipse([r, r, W - 1 - r, W - 1 - r], fill=rgba(fill))
-    d.polygon([(W * 0.5 - r, W * 0.72), (W * 0.5 + r, W * 0.72), (W * 0.5, H - 1 - r * 1.6)], fill=rgba(fill))
+    d.polygon([(W * 0.5 - tail, W * 0.66), (W * 0.5 + tail, W * 0.66), (W * 0.5, H - 1 - r * 1.5)], fill=rgba(fill))
     im = im.resize((w, h), Image.LANCZOS)
 
     # The glyph is drawn after the downscale: FreeType antialiases type on
