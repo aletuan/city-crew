@@ -467,6 +467,7 @@ export type Database = {
           attribution_uri: string | null
           created_at: string
           height_px: number | null
+          hidden_by: string | null
           id: string
           is_cover: boolean
           is_hidden: boolean
@@ -484,6 +485,7 @@ export type Database = {
           attribution_uri?: string | null
           created_at?: string
           height_px?: number | null
+          hidden_by?: string | null
           id?: string
           is_cover?: boolean
           is_hidden?: boolean
@@ -501,6 +503,7 @@ export type Database = {
           attribution_uri?: string | null
           created_at?: string
           height_px?: number | null
+          hidden_by?: string | null
           id?: string
           is_cover?: boolean
           is_hidden?: boolean
@@ -972,6 +975,16 @@ export type Database = {
           collection_id: string
           likes: number
         }[]
+      }
+      guide_may_manage: { Args: { photo: string }; Returns: boolean }
+      guide_reorder_photos: {
+        Args: { ids: string[]; target_place: string }
+        Returns: undefined
+      }
+      guide_set_cover: { Args: { photo: string }; Returns: undefined }
+      guide_set_hidden: {
+        Args: { hidden: boolean; photo: string }
+        Returns: undefined
       }
       is_blocked_pair: { Args: { a: string; b: string }; Returns: boolean }
       is_editor: { Args: never; Returns: boolean }
