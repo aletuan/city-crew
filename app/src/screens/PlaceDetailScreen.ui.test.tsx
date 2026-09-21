@@ -307,6 +307,29 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.queryByText('Hai Ba Trung')).toBeNull();
   });
 
+  // ── the subtitle against the address ──
+  //
+  // The commoner half of the rule, and the half the neighbourhood test
+  // cannot reach: 128 of the catalog's 250 subtitles name the street the
+  // address row prints a few lines down. See `subtitleBeside`.
+  it('drops a subtitle the address row already prints', () => {
+    show(place({ name_en: 'Cộng Cà Phê - Trieu Viet Vuong' }));
+    expect(screen.getByTestId('detail-name').textContent).toBe('Cộng Cà Phê');
+    // Once, as the address — not twice.
+    expect(screen.getAllByText(/Trieu Viet Vuong/)).toHaveLength(1);
+  });
+
+  // The one that pins *which* address is used. "Hanoi" is in the raw
+  // column and not in the string the row prints, because `shortAddress`
+  // cuts the city; judged against the raw column this subtitle would
+  // vanish over a word the reader cannot see.
+  it('judges the subtitle against the printed address, not the raw column', () => {
+    show(place({ name_en: 'Cộng Cà Phê - Hanoi', address: '152 Trieu Viet Vuong, Hai Ba Trung, Hanoi, Vietnam' }));
+    expect(screen.getByTestId('detail-name').textContent).toBe('Cộng Cà Phê');
+    expect(screen.getByText('Hanoi')).toBeTruthy();
+    expect(screen.getByTestId('detail-address').textContent).toBe('152 Trieu Viet Vuong, Hai Ba Trung');
+  });
+
   it('prints the rating and the review count, compacted', () => {
     show();
     expect(screen.getByText('4.6')).toBeTruthy();

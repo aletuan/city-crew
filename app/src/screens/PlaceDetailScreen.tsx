@@ -206,7 +206,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // The brand as the title and the qualifier Google's listing hung off
   // it — a branch, a tagline — as a subtitle beneath, rather than three
   // lines of display type. See `lib/name` for the cut. The subtitle is
-  // dropped when it only repeats the neighbourhood line under it.
+  // dropped when it only repeats what the card already prints: the
+  // neighbourhood line under it, or the address row further down.
   const neighborhood = t(place.neighborhood_en, place.neighborhood_vi, place.neighborhood_ja);
   // The district line under the title is only for a place with no
   // address row: the short address ends in the ward, so with one on the
@@ -219,7 +220,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const showsNeighborhood = !place.address;
   const fullName = t(place.name_en, place.name_vi, place.name_ja);
   const name = splitName(fullName);
-  const subtitle = subtitleBeside(name, neighborhood);
+  // `address`, not `place.address`: the test is against what the reader
+  // can actually see, and the short one is what the row prints.
+  const subtitle = subtitleBeside(name, neighborhood, address);
   // Grouped, not one row per day: see groupHours. A place open the same
   // seven days a week becomes one line instead of seven identical ones.
   const hours = groupHours(place.opening_hours ?? [], lang);
