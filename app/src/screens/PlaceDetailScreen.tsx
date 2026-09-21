@@ -255,6 +255,15 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     : th ? 'threads'
     : site ? 'website' : null;
 
+  // Whether there is a picture to hang the Directions button on.
+  //
+  // Asked once, because two things now turn on it and they must not
+  // disagree: the map draws, and the button either rides on the map or
+  // falls back into the address row. A build with no Google Maps SDK —
+  // Expo Go on iOS, or a binary made without the key — draws no map, and
+  // the one action this card exists for must not vanish with it.
+  const showsMap = place.lat != null && place.lng != null && !!mapsUrl && canDrawMap;
+
   // The dash only joins two things: a place with no address shares its
   // name alone, not a name trailing off into punctuation.
   const share = () => {
@@ -525,13 +534,22 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   label={t('Address', 'Địa chỉ', '住所')}
                   first={firstRow === 'address'}
                   onPress={mapsUrl ? toMaps : undefined}
-                  /* The affordance that was invisible. Tapping the address
-                     has always opened Maps and nothing on the row said so —
-                     an address looks like a fact, not a button. Said out
-                     loud it is also the thing most readers of this card
-                     actually want, which is why it gets the row's end
-                     rather than a line of its own. */
-                  trailing={mapsUrl ? (
+                  /* Only when there is no map to put the button on. It used
+                     to live here always, and the row has no `gap`, so the
+                     address ran straight into it: measured off a real
+                     render, "The Crest Residence, 15 Đ. Trần" stopped 5pt
+                     short of the pill, and five is where that line happened
+                     to break rather than anything anybody chose.
+
+                     Worse than the touching was the width. The button is
+                     104.7pt of the 318.7pt the address could have, a third
+                     of the row, and it cost half the catalog a second line:
+                     of 671 addresses, 332–415 fit on one line beside it
+                     against 582–613 without, and 6–16 needed a third line
+                     and got clamped where none would. So on a card with a
+                     map the button moves onto the picture and the address
+                     takes the whole width; see `goOnMap`. */
+                  trailing={mapsUrl && !showsMap ? (
                     <PressableScale
                       onPress={toMaps}
                       accessibilityRole="button"
@@ -597,15 +615,37 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   no map. Being inside the card now, that absence has to be
                   quiet: the rows close over the gap and the card is simply a
                   card without a picture. */}
-              {place.lat != null && place.lng != null && mapsUrl && canDrawMap && (
+              {showsMap && (
                 <View style={s.mapSlot}>
                   <MiniMap
-                    lat={place.lat}
-                    lng={place.lng}
+                    lat={place.lat!}
+                    lng={place.lng!}
                     height={150}
                     interactive={false}
                     onPick={toMaps}
                   />
+                  {/* Bottom right, and that corner is not a taste. Google's
+                      terms require their attribution stay visible, and the
+                      logo sits bottom *left* — measured off a real render,
+                      60 × 29pt. The map is 150pt tall, so a 36pt pill in
+                      the opposite corner clears it with room to spare.
+
+                      Tapping the map already opened Maps; this only says
+                      so. Which is the same argument that first put the
+                      button on the row — an address looks like a fact, not
+                      a button — now made where it costs the address
+                      nothing. */}
+                  <PressableScale
+                    onPress={toMaps}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('Directions', 'Chỉ đường', '経路')}
+                    containerStyle={s.goOnMap}
+                    style={[s.go, s.goSolid]}
+                    testID="detail-directions"
+                  >
+                    <Ionicons name="navigate" size={15} color={colors.accent} />
+                    <Text style={s.goText}>{t('Directions', 'Chỉ đường', '経路')}</Text>
+                  </PressableScale>
                 </View>
               )}
 
@@ -975,13 +1015,29 @@ const s = StyleSheet.create({
   },
   // `containerStyle`, not `style`: PressableScale puts `style` on its inner
   // animated view and only `containerStyle` on the Pressable.
-  goSlot: { flexShrink: 0, marginTop: ABOVE_VALUE - 6 },
+  //
+  // The in-row position, which is now the fallback — a card with no map to
+  // stand the button on. `marginLeft` is the gap the row never had: the
+  // address is `flex: 1` and this is `flexShrink: 0`, so with nothing
+  // between them the words ran to the pill's edge.
+  goSlot: { flexShrink: 0, marginLeft: 12, marginTop: ABOVE_VALUE - 6 },
+  // On the map, clear of Google's attribution in the opposite corner.
+  goOnMap: { position: 'absolute', right: 10, bottom: 10 },
   go: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     minHeight: 36, paddingHorizontal: 12,
     borderRadius: radius.pill,
     borderWidth: 1, borderColor: colors.borderGlassSoft,
     backgroundColor: colors.surfaceGlass,
+  },
+  // Opaque, and only on the map. `surfaceGlass` is translucent and reads
+  // against a surface this app chooses; a Google tile is not one — pale
+  // beige, white roads, green parks, and a different mix at every address.
+  // A card fill and a shadow make the pill its own object over any of them.
+  goSolid: {
+    backgroundColor: colors.surfaceCard,
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },
   goText: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
   // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
