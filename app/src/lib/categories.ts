@@ -147,10 +147,38 @@ export function categoriesOf(p: Categorisable): string[] {
  * caller picks its own ink — a guess here would colour a place the data
  * never described.
  */
-export function categoryColor(p: Categorisable): string | null {
+/** The first of a place's categories in the filter row's order — what it
+ *  is *most*, where a place can be several things. */
+function chiefCategory(p: Categorisable): string | null {
   const cats = categoriesOf(p);
-  const key = CATEGORY_ORDER.find((c) => cats.includes(c));
+  return CATEGORY_ORDER.find((c) => cats.includes(c)) ?? null;
+}
+
+export function categoryColor(p: Categorisable): string | null {
+  const key = chiefCategory(p);
   return key ? CATEGORIES[key].color : null;
+}
+
+/**
+ * Which category a place answers to where only one answer fits — the pin
+ * on the map, the dot on the card.
+ *
+ * Under a chip it is the chip, because every place shown is already that
+ * kind of place and painting each one what it is "most" says nothing: the
+ * filter row says Focus while a dozen pins say café, because a place that
+ * is both takes the earlier of the two. Otherwise it is the place's own
+ * first category in the filter row's order.
+ *
+ * Null where nothing classifies it and no chip is asking; the caller draws
+ * its own ink.
+ *
+ * This is the rule. `pinTint` and `pinImage` are two readings of it, and
+ * they live apart so the map's pin and the strip card's dot cannot come to
+ * disagree about which category a place is.
+ */
+export function pinCategory(p: Categorisable, chip?: string | null): string | null {
+  if (chip && CATEGORIES[chip]) return chip;
+  return chiefCategory(p);
 }
 
 /**
@@ -162,8 +190,8 @@ export function categoryColor(p: Categorisable): string | null {
  * classifies it and no chip is asking, and the caller draws its own ink.
  */
 export function pinTint(p: Categorisable, chip?: string | null): string | null {
-  if (chip && CATEGORIES[chip]) return CATEGORIES[chip].color;
-  return categoryColor(p);
+  const key = pinCategory(p, chip);
+  return key ? CATEGORIES[key].color : null;
 }
 
 /**

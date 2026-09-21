@@ -4,7 +4,7 @@
 // place quietly missing from a filter.
 
 import { describe, expect, it } from 'vitest';
-import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryColor, categoryLabel, pinTint } from './categories';
+import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryColor, categoryLabel, pinCategory, pinTint } from './categories';
 import { VIBE_FALLBACK_COLOR, VIBES, vibeColor, vibeLabel } from './vibes';
 
 /** The app's `t`, in English. */
@@ -120,5 +120,42 @@ describe('pinTint', () => {
 
   it('is nothing at all for a place nothing classifies', () => {
     expect(pinTint({}, null)).toBeNull();
+  });
+});
+
+describe('pinCategory', () => {
+  // Under a chip every place *is* that kind of place already, so the chip
+  // is the only answer that adds anything. The rule is defended in the
+  // doc comment on `PlacesMap`'s `category` prop; it lives here so the pin
+  // and the strip card's dot cannot come to answer it differently.
+  it('is the chip while a chip is asking', () => {
+    expect(pinCategory({ categories: ['cafes'] }, 'focus')).toBe('focus');
+  });
+
+  it('is the place’s own first category at All, or under a chip nobody knows', () => {
+    expect(pinCategory({ categories: ['cafes'] }, null)).toBe('cafes');
+    expect(pinCategory({ categories: ['cafes'] })).toBe('cafes');
+    expect(pinCategory({ categories: ['cafes'] }, 'street_food')).toBe('cafes');
+  });
+
+  it('picks the filter row’s order, not the stored order', () => {
+    expect(pinCategory({ categories: ['views', 'cafes'] }, null)).toBe('cafes');
+  });
+
+  it('reaches the legacy fallback the same way categoriesOf does', () => {
+    expect(pinCategory({ vibe_tags: ['food_tour'] }, null)).toBe('eats');
+  });
+
+  it('is nothing at all for a place nothing classifies', () => {
+    expect(pinCategory({}, null)).toBeNull();
+    expect(pinCategory({ categories: ['street_food'] }, null)).toBeNull();
+  });
+
+  // `pinTint` is a reading of this rule now, rather than a second copy of it.
+  it('is the rule pinTint reads', () => {
+    for (const chip of [null, 'focus', 'street_food']) {
+      const key = pinCategory({ categories: ['cafes'] }, chip);
+      expect(pinTint({ categories: ['cafes'] }, chip)).toBe(key ? CATEGORIES[key].color : null);
+    }
   });
 });
