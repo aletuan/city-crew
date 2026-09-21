@@ -223,24 +223,44 @@ describe('the hour', () => {
   // the 122 shut places in this catalog put that tick within three points
   // of the fill — a distinction nobody was going to make on a moving
   // list. The body stays quiet either way; it is the picture that speaks.
-  it('writes the closed hour across the photograph', () => {
+  it('writes the opening hour across the photograph, and leaves the state to the red', () => {
     vi.useFakeTimers();
     atICT('2026-09-09T23:00:00Z'); // 06:00 — two hours before opening
     card(week('8:00 AM – 10:00 PM'));
-    expect(shown()).toContain('Closed · opens 08:00');
+    expect(shown()).toContain('Opens 08:00');
+    expect(shown()).not.toContain('Closed');
   });
 
-  // Once, not twice. The band carried this sentence as an accessibility
-  // label for as long as it was the only mark a shut place had; now that
-  // the sash prints it in a `Text` a screen reader reaches by itself,
-  // a label on the band would read the same words to the same person
-  // again.
-  it('says it once, not once in words and once in a label', () => {
+  // The hour that matters most is tomorrow's: at half past eleven the
+  // feed is mostly shut, and "Closed" was all the sash could say until
+  // `openState` looked a day ahead.
+  it('names tomorrow’s opening late at night', () => {
+    vi.useFakeTimers();
+    atICT('2026-09-10T16:30:00Z'); // 23:30 — the next 08:00 is tomorrow's
+    card(week('8:00 AM – 10:00 PM'));
+    expect(shown()).toContain('Opens 08:00');
+  });
+
+  // The colour says shut; a reader who cannot see it must still hear it.
+  // So the sash's text carries the full sentence as its label, once —
+  // the band stays silent, as before, rather than reading the same words
+  // to the same person again.
+  it('tells a screen reader the state the eye gets from the colour', () => {
     vi.useFakeTimers();
     atICT('2026-09-09T23:00:00Z');
     card(week('8:00 AM – 10:00 PM'));
-    expect(shown().match(/Closed · opens 08:00/g)).toHaveLength(1);
-    expect(screen.queryByLabelText('Closed · opens 08:00')).toBeNull();
+    expect(screen.getAllByLabelText('Closed · opens 08:00')).toHaveLength(1);
+    expect(shown().match(/Opens 08:00/g)).toHaveLength(1);
+  });
+
+  // Nothing within a day to promise — the bare word, which the colour
+  // was already saying, is the honest fallback.
+  it('says Closed alone when nothing opens within a day', () => {
+    vi.useFakeTimers();
+    atICT('2026-09-10T03:00:00Z');
+    card(week('Closed'));
+    expect(shown()).toContain('Closed');
+    expect(shown()).not.toContain('Opens');
   });
 
   // The picture keeps the sash only while the door is shut: the mark is
@@ -259,7 +279,8 @@ describe('the hour', () => {
     atICT('2026-09-09T23:00:00Z');
     state.lang = 'vi';
     card(week('8:00 AM – 10:00 PM'));
-    expect(shown()).toContain('Đóng cửa · mở 08:00');
+    expect(shown()).toContain('Mở 08:00');
+    expect(screen.getByLabelText('Đóng cửa · mở 08:00')).toBeTruthy();
   });
 
   // A place that never closes is the one place where nothing is ever
