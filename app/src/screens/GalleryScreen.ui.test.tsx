@@ -4,12 +4,11 @@
 //
 // What is pinned: that the screen reads the gallery through its own query
 // and draws every row in `sort_order`, hidden ones included; that a tile
-// wears the badge its row says; that the desk's upload opens no menu and
-// says so; that each menu row reaches the write it names and the screen
-// reads back afterwards; that deleting asks first; that the order mode
-// moves a tile and sends the whole list, or nothing; that the choice mode
-// ticks only what is yours; that the header pill runs the upload; and
-// that a stranger is refused before anything is read.
+// wears the badge its row says; that every tile opens the same menu,
+// whoever's photograph it is; that each menu row reaches the write it
+// names and the screen reads back afterwards; that deleting asks first;
+// that the choice mode ticks any tile; that the header pill runs the
+// upload; and that a stranger is refused before anything is read.
 //
 // The boundary itself is `lib/gallery`'s and is tested there; the writes
 // are `lib/data/gallery`'s and are tested there. This is the screen
@@ -112,10 +111,9 @@ const place = (over: Partial<Place> = {}): Place => ({
 
 const photo = (id: string, over: Partial<GalleryPhoto> = {}): GalleryPhoto => ({
   id, photo_uri: `http://cdn/${id}.jpg`, is_cover: false, is_hidden: false, sort_order: 0,
-  source: 'google', uploaded_by: null, hidden_by: null, ...over,
+  source: 'google', ...over,
 });
-const mine = (id: string, over: Partial<GalleryPhoto> = {}) => photo(id, { source: 'upload', uploaded_by: 'u1', ...over });
-const desk = (id: string, over: Partial<GalleryPhoto> = {}) => photo(id, { source: 'upload', uploaded_by: 'editor', ...over });
+const mine = (id: string, over: Partial<GalleryPhoto> = {}) => photo(id, { source: 'upload', ...over });
 
 const nav = () => ({ navigate: vi.fn(), goBack: vi.fn() }) as unknown as Nav;
 const route = (slug = 'cong-caphe') => ({ params: { slug } }) as RootRoute<'Gallery'>;
@@ -154,7 +152,7 @@ afterEach(cleanup);
 
 describe('the read', () => {
   it('reads by the place’s id and draws every row in sort order, hidden ones included', async () => {
-    show([photo('b', { sort_order: 1 }), photo('a', { sort_order: 0 }), mine('c', { sort_order: 2, is_hidden: true, hidden_by: 'u1' })]);
+    show([photo('b', { sort_order: 1 }), photo('a', { sort_order: 0 }), mine('c', { sort_order: 2, is_hidden: true })]);
     await grid();
     expect(data.fetchPlaceId).toHaveBeenCalledWith('cong-caphe');
     expect(data.fetchGallery).toHaveBeenCalledWith('place-uuid');
@@ -172,14 +170,14 @@ describe('the read', () => {
     expect(tileIds()).toEqual(['a', 'b']);
   });
 
-  // The desk's upload is outside the boundary. No menu, and the tile
-  // says whose it is so a tile with no menu is not a tile that is broken.
-  it('opens no menu on the desk’s upload, and says so', async () => {
-    show([desk('d'), mine('m', { sort_order: 1 })]);
+  // No boundary between kinds: an upload and a Google row wear the same
+  // ⋯, and nothing on the tile says whose it is.
+  it('offers the menu on every tile alike', async () => {
+    show([mine('d'), photo('g', { sort_order: 1 })]);
     await grid();
-    expect(screen.queryByTestId('gallery-more-d')).toBeNull();
-    expect(within(screen.getByTestId('gallery-tile-d')).getByText('Desk')).toBeTruthy();
-    expect(screen.getByTestId('gallery-more-m')).toBeTruthy();
+    expect(screen.getByTestId('gallery-more-d')).toBeTruthy();
+    expect(screen.getByTestId('gallery-more-g')).toBeTruthy();
+    expect(screen.queryByText('Desk')).toBeNull();
   });
 
   it('invites the first photo when there is none', async () => {
@@ -264,33 +262,26 @@ describe('the menu on one photograph', () => {
     await waitFor(() => expect(data.setHidden).toHaveBeenCalledWith('a', true));
   });
 
-  it('shows again what it hid itself', async () => {
-    show([photo('a', { is_hidden: true, hidden_by: 'u1' })]);
+  // No veto: hidden by anybody, the way back is offered. A hidden
+  // photograph offers that and delete, not the cover.
+  it('shows a hidden photograph again, whoever hid it', async () => {
+    show([photo('a', { is_hidden: true })]);
     await grid();
-    await pick('a', 'Show it again');
+    fireEvent.click(screen.getByTestId('gallery-tile-a'));
+    expect(await screen.findByRole('button', { name: 'Show it again' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Make it the cover' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Delete it' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Show it again' }));
     await waitFor(() => expect(data.setHidden).toHaveBeenCalledWith('a', false));
   });
 
-  // The desk's veto, made visible: a Google row the desk hid has no menu
-  // at all; their own upload the desk hid can still be deleted, and only
-  // that.
-  it('offers no way back for what the desk hid', async () => {
-    show([photo('a', { is_hidden: true, hidden_by: 'editor' }), mine('m', { sort_order: 1, is_hidden: true, hidden_by: 'editor' })]);
-    await grid();
-    expect(screen.queryByTestId('gallery-more-a')).toBeNull();
-    fireEvent.click(screen.getByTestId('gallery-tile-m'));
-    expect(await screen.findByRole('button', { name: 'Delete it' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Show it again' })).toBeNull();
-  });
-
-  // Hide, not delete, on an imported photograph — the honest word for
-  // what would happen.
-  it('offers hide but never delete on a Google photograph', async () => {
+  // A Google row can be deleted like any other; the sheet says where it
+  // came from, and that is all the source is for.
+  it('offers delete on a Google photograph too, and says where it came from', async () => {
     show([photo('a')]);
     await grid();
     fireEvent.click(screen.getByTestId('gallery-tile-a'));
-    expect(await screen.findByRole('button', { name: 'Hide it' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Delete it' })).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Delete it' })).toBeTruthy();
     expect(screen.getByText('From Google')).toBeTruthy();
   });
 
@@ -316,73 +307,25 @@ describe('the menu on one photograph', () => {
   });
 });
 
-describe('the order', () => {
-  const three = [photo('a', { sort_order: 0 }), photo('b', { sort_order: 1 }), mine('c', { sort_order: 2 })];
-
-  it('moves a tile with the arrows and sends the whole list on save', async () => {
-    show(three);
-    await grid();
-    fireEvent.click(screen.getByTestId('gallery-reorder'));
-    fireEvent.click(screen.getByTestId('gallery-later-a'));
-    expect(tileIds()).toEqual(['b', 'a', 'c']);
-    fireEvent.click(screen.getByTestId('gallery-earlier-c'));
-    expect(tileIds()).toEqual(['b', 'c', 'a']);
-    fireEvent.click(screen.getByTestId('gallery-save-order'));
-    await waitFor(() => expect(data.reorderGallery).toHaveBeenCalledWith('place-uuid', ['b', 'c', 'a']));
-    expect(screen.queryByTestId('gallery-save-order')).toBeNull();
-  });
-
-  // The first tile cannot go earlier and the last cannot go later; the
-  // arrows say so rather than doing nothing quietly.
-  it('disables the arrow that points off the end', async () => {
-    show(three);
-    await grid();
-    fireEvent.click(screen.getByTestId('gallery-reorder'));
-    fireEvent.click(screen.getByTestId('gallery-earlier-a'));
-    fireEvent.click(screen.getByTestId('gallery-later-c'));
-    expect(tileIds()).toEqual(['a', 'b', 'c']);
-  });
-
-  it('writes nothing on cancel, and nothing when nothing moved', async () => {
-    show(three);
-    await grid();
-    fireEvent.click(screen.getByTestId('gallery-reorder'));
-    fireEvent.click(screen.getByTestId('gallery-later-a'));
-    fireEvent.click(screen.getByTestId('gallery-cancel'));
-    expect(tileIds()).toEqual(['a', 'b', 'c']);
-    fireEvent.click(screen.getByTestId('gallery-reorder'));
-    fireEvent.click(screen.getByTestId('gallery-save-order'));
-    await new Promise((r) => setTimeout(r, 0));
-    expect(data.reorderGallery).not.toHaveBeenCalled();
-  });
-
-  it('has nothing to order with one photograph', async () => {
-    show([mine('m')]);
-    await grid();
-    expect(screen.queryByTestId('gallery-reorder')).toBeNull();
-    expect(screen.getByTestId('gallery-select')).toBeTruthy();
-  });
-});
-
 describe('choosing several', () => {
-  it('ticks only what is yours, and deletes the ticked after asking', async () => {
+  it('ticks any tile, untick included, and deletes the ticked after asking', async () => {
     show([mine('m1', { sort_order: 0 }), photo('g', { sort_order: 1 }), mine('m2', { sort_order: 2 })]);
     await grid();
     fireEvent.click(screen.getByTestId('gallery-select'));
-    // A Google tile has no tick to give.
-    expect(screen.queryByTestId('gallery-tick-g')).toBeNull();
+    // Every tile has a tick; the menu is gone while choosing.
+    expect(screen.getByTestId('gallery-tick-g')).toBeTruthy();
+    expect(screen.queryByTestId('gallery-more-g')).toBeNull();
     fireEvent.click(screen.getByTestId('gallery-tile-m1'));
+    fireEvent.click(screen.getByTestId('gallery-tile-g'));
     fireEvent.click(screen.getByTestId('gallery-tile-m2'));
     fireEvent.click(screen.getByTestId('gallery-tile-m1'));
-    fireEvent.click(screen.getByTestId('gallery-tile-m1'));
-    // And pressing it counts for nothing — the tile is not a button now.
-    fireEvent.click(screen.getByTestId('gallery-tile-g'));
     expect(screen.getByRole('button', { name: 'Delete 2' })).toBeTruthy();
     fireEvent.click(screen.getByTestId('gallery-delete-picked'));
     expect(alert.mock.calls.at(-1)![0]).toBe('Delete 2 photos?');
     confirmLast();
     await waitFor(() => expect(data.removePlacePhoto).toHaveBeenCalledTimes(2));
-    expect(data.removePlacePhoto.mock.calls.map((c) => c[0])).toEqual(['m2', 'm1']);
+    expect(data.removePlacePhoto.mock.calls.map((c) => c[0])).toEqual(['g', 'm2']);
+    await waitFor(() => expect(screen.queryByTestId('gallery-delete-picked')).toBeNull());
   });
 
   it('asks nothing with nothing ticked', async () => {
@@ -393,11 +336,15 @@ describe('choosing several', () => {
     expect(alert).not.toHaveBeenCalled();
   });
 
-  it('offers no choosing when none of them are yours', async () => {
-    show([photo('a'), photo('b', { sort_order: 1 })]);
+  it('backs out on cancel with nothing written', async () => {
+    show([photo('a')]);
     await grid();
-    expect(screen.queryByTestId('gallery-select')).toBeNull();
-    expect(screen.getByTestId('gallery-reorder')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('gallery-select'));
+    fireEvent.click(screen.getByTestId('gallery-tile-a'));
+    fireEvent.click(screen.getByTestId('gallery-cancel'));
+    expect(screen.queryByTestId('gallery-tick-a')).toBeNull();
+    expect(screen.getByTestId('gallery-more-a')).toBeTruthy();
+    expect(data.removePlacePhoto).not.toHaveBeenCalled();
   });
 });
 
@@ -433,7 +380,7 @@ describe('adding one', () => {
   it('explains the boundary once, at the bottom', async () => {
     show([mine('m')]);
     await grid();
-    expect(screen.getByText(/A photo the desk hid stays hidden/)).toBeTruthy();
+    expect(screen.getByText(/The last change is the one that counts/)).toBeTruthy();
     expect(screen.getByText(/JPG or PNG, up to 5 of yours/)).toBeTruthy();
   });
 });

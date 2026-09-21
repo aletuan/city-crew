@@ -10,21 +10,21 @@ vi.mock('../supabase', async () => {
   return { supabase: h.fake.client };
 });
 
-import { fetchGallery, reorderGallery, setCover, setHidden } from './gallery';
+import { fetchGallery, setCover, setHidden } from './gallery';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
 
 describe('fetchGallery', () => {
-  // Its own query, not the catalog embed: the embed lacks the three
-  // columns the boundary is decided on, and it is read through `photosOf`,
-  // which drops hidden rows before the gallery could see them.
-  it('reads every photograph on the place with the columns the boundary needs, in order', async () => {
+  // Its own query, not the catalog embed: the embed lacks `source`, and
+  // it is read through `photosOf`, which drops hidden rows before the
+  // gallery could see them.
+  it('reads every photograph on the place, source included, in order', async () => {
     fake().replies({ data: [{ id: 'a', sort_order: 0 }] });
     expect(await fetchGallery('place-1')).toEqual([{ id: 'a', sort_order: 0 }]);
     const q = fake().log[0];
     expect(q).toMatchObject({ table: 'place_photos', op: 'select', filters: [['place_id', 'place-1']] });
-    for (const col of ['source', 'uploaded_by', 'hidden_by', 'is_hidden', 'sort_order']) {
+    for (const col of ['source', 'is_hidden', 'is_cover', 'sort_order']) {
       expect(String(q.payload)).toContain(col);
     }
     expect(JSON.stringify(q.order)).toContain('sort_order');
@@ -50,7 +50,7 @@ describe('fetchGallery', () => {
   });
 });
 
-describe('the three writes', () => {
+describe('the two writes', () => {
   // Rpcs, not updates: there is no update policy for a guide and there is
   // not meant to be one.
   it('sets the cover through guide_set_cover', async () => {
@@ -70,22 +70,12 @@ describe('the three writes', () => {
     expect(JSON.stringify(fake().log[1])).toContain('"hidden":false');
   });
 
-  it('reorders through guide_reorder_photos with the whole list', async () => {
-    fake().replies({ data: null });
-    await reorderGallery('place-1', ['b', 'a']);
-    const q = fake().log[0];
-    expect(q).toMatchObject({ op: 'rpc', fn: 'guide_reorder_photos' });
-    expect(JSON.stringify(q)).toContain('"target_place":"place-1"');
-    expect(JSON.stringify(q)).toContain('["b","a"]');
-  });
-
   // Every one of them throws. A refusal from the server is a bug on one
   // side or the other, and a screen that swallowed it would draw a
   // success it did not have.
   it.each([
     ['setCover', () => setCover('p')],
     ['setHidden', () => setHidden('p', true)],
-    ['reorderGallery', () => reorderGallery('place-1', ['p'])],
   ])('%s throws when the server refuses', async (_name, call) => {
     fake().replies({ error: { message: 'not yours to set' } });
     await expect(call()).rejects.toThrow('not yours to set');

@@ -4,33 +4,24 @@
 //
 // The desk has always been able to do everything to a place's
 // photographs. The guide could add one and take their own back, and
-// asked the desk for the rest. This is the rest, inside the boundary
-// `lib/gallery` states: their own uploads and the importer's are theirs
-// to arrange, the desk's uploads are not, and a photograph the desk hid
-// stays hidden. Both sides write the same rows, so what one does the
-// other sees on its next read — which is the sense in which the two are
-// in step, and the whole of it.
+// asked the desk for the rest. This is the rest, under the plain rule
+// `lib/gallery` states: on a place the guide brought in, the guide and
+// the desk may do the same things to any photograph — cover, hide, show
+// again, delete — and whoever acts last wins. Both sides write the same
+// rows, so what one does the other sees on its next read; that is the
+// sense in which they are in step, and the whole of it.
 //
-// ── three modes, one grid ──
+// ── two modes, one grid ──
 //
-// A tile has three jobs and they do not fit on one tile at once. Looking
-// at the gallery, a tile opens its menu. Putting it in order, a tile
-// carries arrows. Choosing several to delete, a tile is a tick. So the
-// grid has a mode, the toolbar under the header switches it, and a tile
-// draws whichever face the mode calls for. Order and choice are held in
-// state until they are confirmed, so a change of mind costs nothing —
-// "Cancel" throws the draft away and the rows were never touched.
-//
-// Arrows rather than a drag, deliberately. A drag on a grid of
-// photographs needs a long-press to begin, a lifted tile, and a rule for
-// what happens over the toolbar; each is a thing to get wrong on a phone
-// and none can be seen in jsdom. Two arrows on a tile are a tap each,
-// are obvious in every language, and `moveId` is the whole of the logic.
+// Looking at the gallery, a tile opens its menu. Choosing several to
+// delete, a tile is a tick. The draft choice is held in state until it
+// is confirmed, so a change of mind costs nothing — "Cancel" throws it
+// away and the rows were never touched.
 //
 // ── what is not here ──
 //
-// No tags, no captions, no crop. Version one is the desk's four verbs —
-// cover, hide, order, delete — and nothing the desk cannot do yet.
+// No ordering, no tags, no captions, no crop. Version one is the desk's
+// three verbs and nothing the desk cannot do yet.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -44,13 +35,8 @@ import { Card, Empty, PressableScale, Screen, successHaptic, useTabBarClearance 
 import { useAddPhoto } from '../components/useAddPhoto';
 import { useAuth } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
-import {
-  fetchGallery, fetchPlaceId, removePlacePhoto, reorderGallery, setCover, setHidden, usePlaceBySlug,
-} from '../lib/data';
-import {
-  canKeepGallery, galleryActions, galleryIds, galleryOrder, isOwnPhoto, moveId,
-  type GalleryAction, type GalleryPhoto,
-} from '../lib/gallery';
+import { fetchGallery, fetchPlaceId, removePlacePhoto, setCover, setHidden, usePlaceBySlug } from '../lib/data';
+import { canKeepGallery, galleryActions, galleryOrder, type GalleryAction, type GalleryPhoto } from '../lib/gallery';
 import { MAX_PER_PLACE } from '../lib/guide';
 import { useI18n } from '../lib/i18n';
 import { splitName } from '../lib/name';
@@ -58,7 +44,7 @@ import { useIsGuide } from '../lib/useGuideGrant';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
-type Mode = 'view' | 'order' | 'pick';
+type Mode = 'view' | 'pick';
 
 const COLS = 3;
 const GAP = 6;
@@ -86,8 +72,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   const [placeId, setPlaceId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<GalleryPhoto[] | null>(null);
   const [mode, setMode] = useState<Mode>('view');
-  // The draft order and the draft choice, each meaningful in one mode.
-  const [draft, setDraft] = useState<string[]>([]);
+  // The draft choice, meaningful in pick mode only.
   const [picked, setPicked] = useState<string[]>([]);
   const [menuFor, setMenuFor] = useState<GalleryPhoto | null>(null);
   const [busy, setBusy] = useState(false);
@@ -145,10 +130,6 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
 
   const name = place ? splitName(t(place.name_en, place.name_vi, place.name_ja)).title : '';
   const shown = photos ?? [];
-  const ordered = mode === 'order'
-    ? draft.map((id) => shown.find((p) => p.id === id)!).filter(Boolean)
-    : shown;
-  const mine = shown.filter((p) => isOwnPhoto(p, me));
   // The cell: the page's width less its margins, shared three ways with
   // two gutters between. Square, because a gallery of mixed aspect
   // ratios is a gallery whose rows never line up.
@@ -206,27 +187,20 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
     },
   }[a]);
 
-  // Where a photograph came from, for the sheet's header — the one fact
-  // that explains why a menu is short. The desk's upload never opens a
-  // menu, so "the desk" is never printed here; it is printed on the tile.
+  // Where a photograph came from, for the sheet's header. Printed, never
+  // decided on: the menu is the same whichever it says.
   const provenance = (p: GalleryPhoto) => [
     p.source === 'google'
       ? t('From Google', 'Từ Google', 'Googleから')
-      : t('Your upload', 'Bạn đã tải lên', 'あなたがアップロード'),
+      : t('Uploaded', 'Đã tải lên', 'アップロード'),
     p.is_cover ? t('Cover', 'Ảnh bìa', 'カバー') : null,
     p.is_hidden ? t('Hidden', 'Đã ẩn', '非表示') : null,
   ].filter(Boolean).join(' · ');
 
   // ── modes ──
 
-  const startOrder = () => { setDraft(galleryIds(shown)); setMode('order'); };
   const startPick = () => { setPicked([]); setMode('pick'); };
   const cancel = () => { setMode('view'); setPicked([]); };
-  const saveOrder = () => {
-    setMode('view');
-    if (!placeId || draft.join() === galleryIds(shown).join()) return;
-    void run(() => reorderGallery(placeId, draft));
-  };
   const togglePick = (id: string) =>
     setPicked((was) => (was.includes(id) ? was.filter((x) => x !== id) : [...was, id]));
 
@@ -270,26 +244,13 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         contentContainerStyle={{ paddingHorizontal: space.page, paddingTop: 4, paddingBottom: tabClearance, gap: space.cardGap }}
         showsVerticalScrollIndicator={false}
       >
-        {/* The toolbar. Two quiet pills while looking; while in a mode,
-            the way out and the way through, and nothing else — a mode
-            with a third button is a mode you can leave by accident. */}
+        {/* The toolbar. One quiet pill while looking; in pick mode, the
+            way out and the way through, and nothing else — a mode with a
+            third button is a mode you can leave by accident. */}
         {shown.length > 0 && (
           <View style={s.tools} testID="gallery-tools">
             {mode === 'view' && (
-              <>
-                {shown.length > 1 && (
-                  <Tool icon="swap-vertical-outline" label={t('Reorder', 'Sắp xếp', '並べ替え')} onPress={startOrder} testID="gallery-reorder" />
-                )}
-                {mine.length > 0 && (
-                  <Tool icon="checkmark-circle-outline" label={t('Select', 'Chọn', '選択')} onPress={startPick} testID="gallery-select" />
-                )}
-              </>
-            )}
-            {mode === 'order' && (
-              <>
-                <Tool icon="close" label={t('Cancel', 'Huỷ', 'キャンセル')} onPress={cancel} testID="gallery-cancel" />
-                <Tool icon="checkmark" label={t('Save order', 'Lưu thứ tự', '順番を保存')} onPress={saveOrder} primary testID="gallery-save-order" />
-              </>
+              <Tool icon="checkmark-circle-outline" label={t('Select', 'Chọn', '選択')} onPress={startPick} testID="gallery-select" />
             )}
             {mode === 'pick' && (
               <>
@@ -314,18 +275,15 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
           <Empty text={t('No photos yet. Add the first one.', 'Chưa có ảnh nào. Thêm ảnh đầu tiên nhé.', 'まだ写真がありません。最初の1枚を追加しましょう。')} />
         ) : (
           <View style={s.grid} testID="gallery-grid">
-            {ordered.map((p, i) => {
-              const actions = galleryActions(p, me);
-              const own = isOwnPhoto(p, me);
-              const opens = mode === 'view' && actions.length > 0;
-              const picks = mode === 'pick' && own;
+            {shown.map((p, i) => {
+              const picks = mode === 'pick';
               return (
                 <PressableScale
                   key={p.id}
                   scaleTo={0.96}
-                  disabled={busy || (!opens && !picks)}
-                  onPress={picks ? () => togglePick(p.id) : opens ? () => setMenuFor(p) : undefined}
-                  accessibilityRole={opens || picks ? 'button' : 'image'}
+                  disabled={busy}
+                  onPress={picks ? () => togglePick(p.id) : () => setMenuFor(p)}
+                  accessibilityRole="button"
                   accessibilityLabel={`${t('Photo', 'Ảnh', '写真')} ${i + 1}${p.is_cover ? ` · ${t('cover', 'ảnh bìa', 'カバー')}` : ''}${p.is_hidden ? ` · ${t('hidden', 'đã ẩn', '非表示')}` : ''}`}
                   accessibilityState={picks ? { selected: picked.includes(p.id) } : undefined}
                   containerStyle={{ width: cell, height: cell }}
@@ -350,47 +308,15 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                     </View>
                   )}
 
-                  {/* The desk's upload, said on the tile, so a tile with
-                      no menu is not a tile that is broken. */}
-                  {mode === 'view' && actions.length === 0 && !p.is_hidden && (
-                    <View style={[s.badge, s.badgeLow]}>
-                      <Text style={s.badgeText}>{t('Desk', 'Data desk', 'デスク')}</Text>
-                    </View>
-                  )}
-
-                  {opens && (
+                  {mode === 'view' && (
                     <View style={s.more} testID={`gallery-more-${p.id}`}>
                       <Ionicons name="ellipsis-horizontal" size={16} color={onPhoto.text} />
                     </View>
                   )}
 
-                  {mode === 'order' && (
-                    <View style={s.arrows}>
-                      <Arrow
-                        icon="chevron-back"
-                        label={t('Move earlier', 'Lên trước', '前へ')}
-                        disabled={i === 0}
-                        onPress={() => setDraft((d) => moveId(d, i, i - 1))}
-                        testID={`gallery-earlier-${p.id}`}
-                      />
-                      <Text style={s.ordinal}>{i + 1}</Text>
-                      <Arrow
-                        icon="chevron-forward"
-                        label={t('Move later', 'Xuống sau', '後へ')}
-                        disabled={i === ordered.length - 1}
-                        onPress={() => setDraft((d) => moveId(d, i, i + 1))}
-                        testID={`gallery-later-${p.id}`}
-                      />
-                    </View>
-                  )}
-
-                  {mode === 'pick' && (
-                    <View style={[StyleSheet.absoluteFill, !own && s.notMine]}>
-                      {own && (
-                        <View style={[s.tick, picked.includes(p.id) && s.tickOn]} testID={`gallery-tick-${p.id}`}>
-                          {picked.includes(p.id) && <Ionicons name="checkmark" size={14} color={colors.accentInk} />}
-                        </View>
-                      )}
+                  {picks && (
+                    <View style={[s.tick, picked.includes(p.id) && s.tickOn]} testID={`gallery-tick-${p.id}`}>
+                      {picked.includes(p.id) && <Ionicons name="checkmark" size={14} color={colors.accentInk} />}
                     </View>
                   )}
                 </PressableScale>
@@ -409,14 +335,9 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
             'カバーはこの場所を代表する写真です。追加した写真がカバーになります。',
           )} />
           <Tip text={t(
-            'You can arrange your own photos and the ones from Google. The desk’s photos are theirs.',
-            'Bạn sắp xếp được ảnh của mình và ảnh từ Google. Ảnh của data desk thì để desk lo.',
-            '自分の写真とGoogleの写真は並べ替えられます。デスクの写真はデスクのものです。',
-          )} />
-          <Tip text={t(
-            'A photo the desk hid stays hidden. One you hid, you can show again.',
-            'Ảnh data desk đã ẩn thì giữ nguyên. Ảnh bạn tự ẩn thì bạn hiện lại được.',
-            'デスクが非表示にした写真はそのままです。自分で非表示にしたものは再表示できます。',
+            'You and the desk can do the same things to every photo here. The last change is the one that counts.',
+            'Bạn và data desk có quyền như nhau với mọi ảnh ở đây. Ai sửa sau thì tính.',
+            'ここにある写真はあなたとデスクが同じように扱えます。最後の変更が有効です。',
           )} />
           <Tip text={t(
             `JPG or PNG, up to ${MAX_PER_PLACE} of yours per place.`,
@@ -429,7 +350,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
       <ActionSheet
         visible={menuFor !== null}
         onClose={() => setMenuFor(null)}
-        actions={menuFor ? galleryActions(menuFor, me).map((a) => actionRow(menuFor, a)) : []}
+        actions={menuFor ? galleryActions(menuFor).map((a) => actionRow(menuFor, a)) : []}
         header={menuFor ? (
           <View style={s.who}>
             <Image source={{ uri: menuFor.photo_uri }} style={s.thumb} contentFit="cover" />
@@ -446,51 +367,27 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   );
 }
 
-/** A toolbar pill. Quiet by default; `primary` for the way through a
- *  mode, `destructive` for the one that deletes. */
-function Tool({ icon, label, onPress, primary, destructive, testID }: {
+/** A toolbar pill. Quiet by default; `destructive` for the one that
+ *  deletes. */
+function Tool({ icon, label, onPress, destructive, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
-  primary?: boolean;
   destructive?: boolean;
   testID?: string;
 }) {
-  const ink = primary ? colors.accentInk : destructive ? colors.bad : colors.text;
+  const ink = destructive ? colors.bad : colors.text;
   return (
     <PressableScale
       onPress={onPress}
       scaleTo={0.94}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={[s.tool, primary && s.toolPrimary, destructive && s.toolBad]}
+      style={[s.tool, destructive && s.toolBad]}
       testID={testID}
     >
       <Ionicons name={icon} size={15} color={ink} />
       <Text style={[s.toolText, { color: ink }]}>{label}</Text>
-    </PressableScale>
-  );
-}
-
-function Arrow({ icon, label, disabled, onPress, testID }: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  disabled: boolean;
-  onPress: () => void;
-  testID?: string;
-}) {
-  return (
-    <PressableScale
-      onPress={disabled ? undefined : onPress}
-      disabled={disabled}
-      scaleTo={0.9}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      style={[s.arrow, disabled && s.arrowOff]}
-      testID={testID}
-    >
-      <Ionicons name={icon} size={18} color={onPhoto.text} />
     </PressableScale>
   );
 }
@@ -513,7 +410,6 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
     borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
-  toolPrimary: { backgroundColor: colors.accentFill, borderColor: colors.accentFill },
   toolBad: { backgroundColor: colors.badSoft, borderColor: colors.badSoft },
   toolText: { fontSize: 14, fontWeight: font.semibold },
 
@@ -533,7 +429,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 3, borderRadius: radius.pill,
     backgroundColor: 'rgba(6,5,8,0.62)',
   },
-  badgeLow: { top: undefined, bottom: 6 },
   badgeText: { color: onPhoto.text, fontSize: 10.5, fontWeight: font.semibold },
   more: {
     position: 'absolute', top: 6, right: 6,
@@ -542,21 +437,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(6,5,8,0.62)',
   },
 
-  arrows: {
-    ...StyleSheet.absoluteFill,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    backgroundColor: 'rgba(6,5,8,0.28)',
-  },
-  arrow: {
-    width: 30, height: 30, borderRadius: 15,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(6,5,8,0.62)',
-  },
-  arrowOff: { opacity: 0.3 },
-  ordinal: { color: onPhoto.text, fontSize: 15, fontFamily: display.bold },
 
-  notMine: { backgroundColor: 'rgba(6,5,8,0.55)' },
   tick: {
     position: 'absolute', top: 6, right: 6,
     width: 24, height: 24, borderRadius: 12,
