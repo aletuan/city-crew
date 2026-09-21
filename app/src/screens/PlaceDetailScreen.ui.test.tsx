@@ -1270,3 +1270,45 @@ describe('the info card’s gutter', () => {
     }
   });
 });
+
+// ── the identity block ──
+//
+// Name, rating and category answer one question between them — what is
+// this place — and they should be read without being interrupted. The
+// offer to add a photo is a different kind of thing: it is addressed to
+// one reader by name and asks them for something. It sat between the
+// rating and the pills, which is the middle of a sentence.
+describe('PlaceDetailScreen — what is this place, said without interruption', () => {
+  const order = (id: string) => {
+    const nodes = [...document.querySelectorAll('[data-testid]')];
+    return nodes.findIndex((n) => n.getAttribute('data-testid') === id);
+  };
+
+  it('puts the category pills under the rating, above the offer to add a photo', () => {
+    // The panel only draws for the reader it is addressed to, which is
+    // exactly the reader this ordering matters for.
+    state.uid = 'u1';
+    state.guide = true;
+    show(place({ rating: 4.1, rating_count: 604, categories: ['cafes', 'eats'], submitted_by: 'u1' }));
+    expect(order('detail-rating')).toBeLessThan(order('detail-facts'));
+    expect(order('detail-facts')).toBeLessThan(order('guide-panel'));
+  });
+
+  // The desk writes these, and they have a voice — "exactly what some
+  // nights need" is a person, not a summary. Saying so out loud is the
+  // difference between a paragraph a reader skims and a reason they act
+  // on. No chevron: there is nowhere further to go, and an arrow that
+  // leads nowhere is a promise the screen cannot keep.
+  it('says what the description is for, and does not pretend it leads somewhere', () => {
+    show(place({ desc_en: 'Brunch and counter food under the arches.' }));
+    expect(screen.getByTestId('detail-why')).toBeTruthy();
+    expect(screen.getByText('Why go?')).toBeTruthy();
+    expect(screen.getByText('Brunch and counter food under the arches.')).toBeTruthy();
+    expect(screen.queryByTestId('detail-why-chevron')).toBeNull();
+  });
+
+  it('draws no heading where the desk has written nothing', () => {
+    show(place({ desc_en: null, desc_vi: null, desc_ja: null }));
+    expect(screen.queryByTestId('detail-why')).toBeNull();
+  });
+});
