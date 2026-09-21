@@ -1124,6 +1124,17 @@ describe('the local guide’s panel', () => {
     show(place({ submitted_by: 'u2' }));
     expect(screen.queryByTestId('guide-panel')).toBeNull();
   });
+
+  // The panel's button asks; the screen answers with the route. Pinned
+  // here because the panel cannot navigate on its own, and a door that
+  // opens onto nothing is the fault this catches.
+  it('opens the gallery for this place', () => {
+    state.uid = 'u1';
+    state.guide = true;
+    const n = show(place({ submitted_by: 'u1' }));
+    fireEvent.click(screen.getByTestId('guide-open-gallery'));
+    expect(n.navigate).toHaveBeenCalledWith('Gallery', { slug: 'cong-caphe' });
+  });
 });
 
 // The info card's left column, which two bugs had quietly pulled apart.

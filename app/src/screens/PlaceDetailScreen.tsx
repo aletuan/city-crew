@@ -107,7 +107,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const { city } = useCity();
   const { save, isSaved } = useSave();
   const { width } = useWindowDimensions();
-  const { loading: catalogLoading, data: places, reload: reloadCatalog } = usePlaces();
+  const { loading: catalogLoading, data: places } = usePlaces();
   const inCatalog = useMemo(
     () => places.find((p) => p.slug === route.params.slug),
     [places, route.params.slug],
@@ -573,7 +573,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               So it comes after the argument ends and before the facts
               begin — which is also where the eye is already looking for
               something to do. */}
-          <LocalGuidePanel place={place} onAdded={reloadCatalog} testID="guide-panel" />
+          <LocalGuidePanel
+            place={place}
+            onOpen={() => navigation.navigate('Gallery', { slug: place.slug })}
+            testID="guide-panel"
+          />
 
           {/* ── info card ── */}
           {firstRow != null && (

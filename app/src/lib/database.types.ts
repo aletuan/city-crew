@@ -977,10 +977,6 @@ export type Database = {
         }[]
       }
       guide_may_manage: { Args: { photo: string }; Returns: boolean }
-      guide_reorder_photos: {
-        Args: { ids: string[]; target_place: string }
-        Returns: undefined
-      }
       guide_set_cover: { Args: { photo: string }; Returns: undefined }
       guide_set_hidden: {
         Args: { hidden: boolean; photo: string }
