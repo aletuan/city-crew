@@ -107,6 +107,26 @@ import { defineConfig } from 'vitest/config';
 // each one lifts the column it is lowest in.
 const SCREENS_FLOOR = { lines: 82, statements: 82, branches: 70, functions: 44 };
 
+// ── the components, measured ──
+//
+// Thirty-seven files under `src/components`, fifteen with a test of their
+// own, and until now no number over any of them: the gate's `include` did
+// not name the directory, so the report never printed a row. That left a
+// question nobody could answer — a sheet with no test of its own may be
+// covered end to end by the screen tests that open it, or not at all,
+// and the two look identical from outside.
+//
+// So they are in the `include` now, and deliberately under no threshold.
+// A floor is today's truth rounded down, and this is the first reading
+// of it: 75.31% of lines across the directory, twenty-one files at or
+// near 100 — the sheets and cards the screen tests open — and seven at
+// zero that no test has ever rendered: `AvatarPicker`, `EngagementRing`,
+// `FloatingTabBar`, `MiniMap`, `StartSheet`, `TripCrew`, `reportFlow`,
+// with `tabBarDuck` at 24. Once that has been looked at for a while, the
+// per-file floor the screens carry is the shape to give it, with the
+// files that cannot run in jsdom (the native map, the camera roll)
+// excluded by name the way `IMPURE` does for `lib`.
+
 const IMPURE = [
   'src/lib/candidates.ts', // a React hook; imports Alert and Keyboard
   'src/lib/database.types.ts', // generated from the schema; one runtime const, no logic
@@ -150,7 +170,9 @@ export default defineConfig({
       // re-rooting the whole gate at the repository took every other file
       // to zero. Naming the exception is better than contorting the gate
       // for one file, or than a silent hole that reads as coverage.
-      include: ['src/lib/*.ts', 'src/lib/data/*.ts', 'src/screens/*.tsx'],
+      // `src/components` is measured and not gated — see "the components,
+      // measured" below.
+      include: ['src/lib/*.ts', 'src/lib/data/*.ts', 'src/screens/*.tsx', 'src/components/*.tsx'],
       exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', ...IMPURE],
       thresholds: {
         // Each file on its own — see "per file, not on average" above. The
