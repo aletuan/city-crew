@@ -141,7 +141,7 @@ Kích thước: pin thường 34×44pt, pin được chọn 44×56pt (1.28×). S
 
 Rủi ro thật của asset sinh sẵn: thêm một category rồi quên chạy lại generator, và bản đồ im lặng vẽ thiếu.
 
-Generator ghi kèm `assets/pins/pins.manifest.json` dạng `{ key: { file, fill, size } }`. Một vitest đối chiếu manifest với `CATEGORY_ORDER` và với màu nền khai báo trong `CATEGORIES`. Bắt được lệch mà không cần giải mã PNG trong test — đúng tinh thần "test giữ bất biến, không giữ giá trị" của repo.
+Generator ghi kèm `assets/pins/pins.manifest.json` dạng `{ key: { file, icon, fill, ink } }`. Một vitest đối chiếu manifest với `CATEGORY_ORDER` và với màu nền khai báo trong `CATEGORIES`. Bắt được lệch mà không cần giải mã PNG trong test — đúng tinh thần "test giữ bất biến, không giữ giá trị" của repo.
 
 Test này thay cho việc chạy generator trong CI, vì generator cần Python và Pillow mà CI không có.
 

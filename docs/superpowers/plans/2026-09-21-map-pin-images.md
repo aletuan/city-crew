@@ -70,7 +70,7 @@ Ba giá trị vượt ngưỡng (`views` 6.63, `eats` 4.98, neutral 6.86) **khô
 | `app/src/components/mapPins.ts` (tạo) | `import` tĩnh 20 asset + `pinImage(place, chip, chosen)`. Không tính toán category — uỷ cho `lib`. |
 | `app/src/components/PlacesMap.tsx` (sửa) | `pinColor` → `icon`; **bỏ hẳn `pinColor`**. Xoá `INK`, nhánh `?? INK`, và import `Platform`. |
 | `app/src/components/PlacesMap.ui.test.tsx` (sửa) | Stub `Marker` ghi thêm `icon`; khẳng định ảnh theo category, theo chip, pin được chọn, neutral, `tracksViewChanges === false`. |
-| `app/src/screens/ExploreScreen.ui.test.tsx` (sửa) | Test chip hiện đang khẳng định `data-color`; chuyển sang khẳng định ảnh. |
+| `app/src/screens/ExploreScreen.ui.test.tsx` (sửa) | Stub Marker riêng ở dòng 126 phải ghi thêm `data-icon`; test chip chuyển từ `data-color` sang ảnh. Sửa trong **cùng commit** với Task 6. |
 
 Không tạo thư viện mới. Không đụng `cluster.ts`, `mapStyle.ts`, `MiniMap.tsx`.
 
@@ -401,6 +401,7 @@ RING = 2.5         # the white ring that lifts a pin off any tile
 GLYPH = 16
 CHOSEN_SCALE = 1.28
 DENSITIES = [(1, ''), (2, '@2x'), (3, '@3x')]
+SS = 4             # supersample factor; ImageDraw does not antialias
 
 WHITE = (255, 255, 255, 255)
 
@@ -435,20 +436,31 @@ def draw(fill, icon, ink, scale, chosen=False):
     checked against a white road, a light park, the night ground and a dark
     park — and a shadow would push the tail's tip off the bottom edge,
     which is the point `anchor` resolves to.
+
+    Drawn at SS times the wanted size and scaled back down, because
+    `ImageDraw` has no antialiasing at all: a circle drawn straight to the
+    output is visibly stepped along its rim, and on a pin whose whole job
+    is a clean white ring that reads as a stair. Lanczos on the way down
+    is what smooths it.
     """
     k = scale * (CHOSEN_SCALE if chosen else 1.0)
     w, h = round(HEAD * k), round(HEIGHT * k)
+    W, H = w * SS, h * SS
     ring = max(1, round(RING * k))
-    im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    im = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
+    r = ring * SS
     # Head, then tail, then head again: the tail is drawn over the head's
     # lower ring so the two read as one outline rather than a circle
     # sitting on a triangle.
-    d.ellipse([0, 0, w - 1, w - 1], fill=WHITE)
-    d.polygon([(w * 0.5 - ring * 2, w * 0.78), (w * 0.5 + ring * 2, w * 0.78), (w * 0.5, h - 1)], fill=WHITE)
-    d.ellipse([ring, ring, w - 1 - ring, w - 1 - ring], fill=rgba(fill))
-    d.polygon([(w * 0.5 - ring, w * 0.72), (w * 0.5 + ring, w * 0.72), (w * 0.5, h - 1 - ring * 1.6)], fill=rgba(fill))
+    d.ellipse([0, 0, W - 1, W - 1], fill=WHITE)
+    d.polygon([(W * 0.5 - r * 2, W * 0.78), (W * 0.5 + r * 2, W * 0.78), (W * 0.5, H - 1)], fill=WHITE)
+    d.ellipse([r, r, W - 1 - r, W - 1 - r], fill=rgba(fill))
+    d.polygon([(W * 0.5 - r, W * 0.72), (W * 0.5 + r, W * 0.72), (W * 0.5, H - 1 - r * 1.6)], fill=rgba(fill))
+    im = im.resize((w, h), Image.LANCZOS)
 
+    # The glyph is drawn after the downscale: FreeType antialiases type on
+    # its own, and supersampling it too only softens it.
     px = round(GLYPH * k)
     font = ImageFont.truetype(str(TTF), px)
     g = Image.new('RGBA', (px * 2, px * 2), (0, 0, 0, 0))
@@ -503,6 +515,8 @@ Expected: `20 pins, 60 files → assets/pins`
 
 Mở `app/assets/pins/cafes@3x.png` và `app/assets/pins/heritage-chosen@3x.png`.
 Expected: giọt nước, vành trắng, icon ở giữa đọc rõ; bản `-chosen` to hơn rõ rệt và icon màu mực chứ không trắng. Đuôi nhọn chạm đúng cạnh dưới ảnh.
+
+**Đừng hoảng khi mở bản `@1x`** (`cafes.png`, 34×44): ở cỡ đó glyph gần như không đọc được. Nó chỉ tồn tại để Metro phân giải được tên file — không thiết bị nào còn chạy @1x. Chỉ đánh giá bằng `@2x` và `@3x`.
 
 Nếu icon bị lệch hoặc tràn, chỉnh `GLYPH` rồi chạy lại — đừng sửa tay file PNG.
 
@@ -658,7 +672,7 @@ export function pinImage(place: Categorisable, chip: string | null, chosen: bool
 - [ ] **Step 2: Kiểm typecheck**
 
 Run: `cd app && npm run typecheck`
-Expected: PASS. Nếu TS than phiền về `import ... from '*.png'`, kiểm `app/expo-env.d.ts` hoặc `types` — repo đã import PNG ở `SignUpScreen.tsx:27` nên khai báo đã có sẵn.
+Expected: PASS. Nếu TS than phiền về `import ... from '*.png'`, khai báo nằm ở `app/types/assets.d.ts`, đã có sẵn (`declare module '*.png' { const asset: number }`). Comment trong chính file đó cũng ghi rõ chuyện dưới test runner nó là chuỗi URL.
 
 - [ ] **Step 3: Commit**
 
@@ -753,7 +767,13 @@ Expected: FAIL — `data-icon` rỗng, `data-anchor` rỗng.
 
 - [ ] **Step 4: Sửa `PlacesMap.tsx`**
 
-Xoá hằng `INK` (dòng 34), nhánh `?? INK` ở dòng 258, và import `Platform` (dòng 21) — `INK` là chỗ dùng `Platform` duy nhất trong file. Không có hàm `neutralPin` nào để xoá; nó chưa bao giờ tồn tại.
+Xoá ba thứ, không phải hai — **bỏ sót cái thứ ba sẽ làm `npm run lint` đỏ**:
+
+1. hằng `INK` (dòng 34) và nhánh `?? INK` ở dòng 258;
+2. import `Platform` (dòng 21) — `INK` là chỗ dùng `Platform` duy nhất trong file;
+3. import `colors` (dòng 29) — `colors.accentFill` ở dòng 258 là chỗ dùng duy nhất, và dòng đó sắp biến mất.
+
+Không có hàm `neutralPin` nào để xoá; nó chưa bao giờ tồn tại.
 
 Thêm một import, và **không** import `MAP_PIN_NEUTRAL_FILL` vào file này — nó chỉ dùng cho generator và test:
 
@@ -795,65 +815,48 @@ Thay prop trên marker của địa điểm:
 
 Sửa ghi chú ở đầu file cho khớp (pin giờ là ảnh có icon, không còn "ink on iOS and azure on Android").
 
-- [ ] **Step 5: Chạy để thấy xanh**
+- [ ] **Step 5: Sửa test màn hình Explore, trong cùng commit**
 
-Run: `cd app && npx vitest run src/components/PlacesMap.ui.test.tsx && npm run typecheck && npm run lint`
-Expected: PASS cả ba.
+`ExploreScreen.ui.test.tsx` là hộ tiêu thụ thứ hai của cái marker vừa đổi, và Step 4 làm nó đỏ. Sửa ngay tại đây chứ không để sang task sau — một commit đẩy cả bộ test sang đỏ là một commit không bisect được.
 
-- [ ] **Step 6: Commit**
+File đó có **stub Marker riêng** ở dòng 126, chỉ ghi `data-color`. Thêm `data-icon`:
+
+```tsx
+  const Marker = (p: any) => R.createElement('button', { type: 'button', 'data-stub': 'Marker', 'data-slug': p.identifier, 'data-color': p.pinColor ?? '', 'data-icon': p.icon ?? '', onClick: p.onPress }, p.children);
+```
+
+Đổi tên test `paints the pins in the chip’s colour…` thành `…in the chip’s picture…`, thêm `import { pinImage } from '../components/mapPins';`, và thay ba khẳng định:
+
+```tsx
+    const pins = () => [...document.querySelectorAll('[data-stub="Marker"]')].map((m) => m.getAttribute('data-icon'));
+    const cafesPin = String(pinImage({ categories: ['cafes'] }, null, false));
+    const focusPin = String(pinImage({ categories: ['focus'] }, null, false));
+    expect(pins()).toEqual([cafesPin, focusPin]);
+
+    fireEvent.click(screen.getByText('Focus'));
+    expect(pins()).toEqual([focusPin, focusPin]);
+
+    fireEvent.click(screen.getByText('All'));
+    expect(pins()).toEqual([cafesPin, focusPin]);
+```
+
+- [ ] **Step 6: Chạy toàn bộ**
+
+Run: `cd app && npm test && npm run typecheck && npm run lint && npm run coverage`
+Expected: PASS hết; `categories.ts` vẫn 100%; sàn `src/screens/*` không vỡ.
+
+`lint` là bước dễ đỏ nhất ở đây — repo chạy `eslint . --max-warnings=0` với `no-unused-vars` ở mức `error`, nên bất kỳ import nào Step 4 bỏ lại sẽ chặn.
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add app/src/components/PlacesMap.tsx app/src/components/PlacesMap.ui.test.tsx
+git add app/src/components/PlacesMap.tsx app/src/components/PlacesMap.ui.test.tsx app/src/screens/ExploreScreen.ui.test.tsx
 git commit -m "The map draws pictures now, and a picture can say café"
 ```
 
 ---
 
-### Task 7: Test màn hình Explore
-
-`ExploreScreen.ui.test.tsx` có một test khẳng định `data-color` của marker; nó phải nói về ảnh.
-
-**Files:**
-- Modify: `app/src/screens/ExploreScreen.ui.test.tsx`
-
-- [ ] **Step 1: Chạy để thấy nó đỏ**
-
-Run: `cd app && npx vitest run src/screens/ExploreScreen.ui.test.tsx -t "chip"`
-Expected: FAIL ở `paints the pins in the chip’s colour, and lets them speak for themselves at All`.
-
-- [ ] **Step 2: Sửa**
-
-Đổi tên test thành `…in the chip’s picture…`, và thay ba khẳng định:
-
-```tsx
-    const pins = () => [...document.querySelectorAll('[data-stub="Marker"]')].map((m) => m.getAttribute('data-icon'));
-    expect(pins()).toEqual([String(pinImage({ categories: ['cafes'] }, null, false)), String(pinImage({ categories: ['focus'] }, null, false))]);
-
-    fireEvent.click(screen.getByText('Focus'));
-    const focusPin = String(pinImage({ categories: ['focus'] }, null, false));
-    expect(pins()).toEqual([focusPin, focusPin]);
-
-    fireEvent.click(screen.getByText('All'));
-    expect(pins()).toEqual([String(pinImage({ categories: ['cafes'] }, null, false)), String(pinImage({ categories: ['focus'] }, null, false))]);
-```
-
-Thêm `import { pinImage } from '../components/mapPins';` và đảm bảo stub Marker của file này cũng ghi `data-icon` (nếu nó có stub riêng).
-
-- [ ] **Step 3: Chạy toàn bộ**
-
-Run: `cd app && npm test && npm run typecheck && npm run lint && npm run coverage`
-Expected: PASS hết; `categories.ts` vẫn 100%; sàn `src/screens/*` không vỡ.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add app/src/screens/ExploreScreen.ui.test.tsx
-git commit -m "The chip test asks about pictures, since that is what pins are"
-```
-
----
-
-### Task 8: Xác minh trên simulator — cổng thật
+### Task 7: Xác minh trên simulator — cổng thật
 
 Đây không phải thủ tục. Chính bước này đã bác bỏ lần thử trước (nhánh `map-pin-weight`), nơi mọi test đều xanh và thay đổi vẫn vô dụng. **Không kết luận gì về hiển thị mà không chụp màn hình và lấy mẫu pixel.**
 
