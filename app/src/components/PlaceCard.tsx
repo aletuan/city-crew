@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useFlag } from '../lib/useFlag';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
-import { dayBand, MINUTES_IN_DAY, openFragment, openState, shutLabel } from '../lib/format';
+import { dayBand, MINUTES_IN_DAY, openFragment, openState, sashLabel, shutLabel } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
@@ -27,6 +27,11 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
   const at = new Date();
   const hours = openState(place.opening_hours, at);
   const shut = shutLabel(hours, t);
+  // What the sash shows and what it says are two lines about one fact:
+  // the eye gets "Opens 08:00" on a red ground, a screen reader gets
+  // "Closed · opens 08:00" — see `sashLabel` for why the state is left to
+  // the colour, and why that is only safe with the full sentence beside it.
+  const sash = sashLabel(hours, t);
   const band = dayBand(place.opening_hours, at);
   // Only the closing hour reaches the meta line. `openFragment` would
   // also hand back "opens 08:00" for a shut place, and this card says
@@ -125,9 +130,19 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
               So the fact goes back into words, and takes the shape the
               reference asked for. What the sash costs was worth measuring
               before building it, because the objection to it had been
-              mine: it covers 2.8% of the photograph, against the 5.7% of
-              the pill it replaces. It is longer and thinner, and it reads
-              from further away.
+              mine: at twenty characters it covered 2.8% of the photograph,
+              against the 5.7% of the pill it replaced. It is shorter now —
+              "Opens 08:00", eleven characters, the state left to the red —
+              and covers 1.8%; the geometry note on `shutSash` has the
+              arithmetic.
+
+              The words changed for a reason the first version could not
+              see. "Closed" is the one thing the reader already knows from
+              the colour; the hour is the thing they cannot know, and at
+              night it was almost always missing, because `openState` only
+              looked at today. It looks a day ahead now, so at half past
+              eleven the sash says when to come back rather than what is
+              obvious.
 
               It is loud on purpose and it is not always loud. Across a
               browsing day in this catalog the share of cards wearing it
@@ -141,9 +156,9 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
               The Card clips it: `overflow: 'hidden'` and the card radius
               cut the ends, which is what makes it a sash rather than a
               floating bar. */}
-          {shut ? (
+          {sash && shut ? (
             <View style={s.shutSash} pointerEvents="none">
-              <Text style={s.shutSashText} numberOfLines={1}>{shut}</Text>
+              <Text style={s.shutSashText} numberOfLines={1} accessibilityLabel={shut}>{sash}</Text>
             </View>
           ) : null}
         </View>
@@ -410,23 +425,39 @@ const s = StyleSheet.create({
    *     32°       119pt    74pt        34%  /  34%      ← here
    *     45°        99pt    99pt        28%  /  45%
    *
-   * So 74 down and 119 across, and the sash sits on the diagonal of its
-   * own corner rather than along one edge of it.
+   * So the sash sits on the diagonal of its own corner rather than along
+   * one edge of it, and the angle stays whatever the words do.
    *
-   * That last figure is the one that settles the type size. 95pt across
-   * twenty characters is 4.75 per character, which is Lora italic at
-   * **10pt**, not the 12 a first pass guessed from the band's depth — and
-   * the difference is the whole character of the thing. At 12 the
-   * sentence fills the chord end to end and the sash reads as a banner;
-   * at 10 it keeps 22pt of red at each end and reads as a stamp, which is
-   * what the reference drew.
+   * ── the chord, cut to the words ──
+   *
+   * The chord is set by the line it has to hold, and the line got short.
+   * "Closed · opens 08:00" was twenty characters; 95pt across twenty is
+   * 4.75 per character, which is Lora italic at **10pt**, not the 12 a
+   * first pass guessed from the band's depth — and the difference is the
+   * whole character of the thing. At 12 the sentence fills the chord end
+   * to end and the sash reads as a banner; at 10 it keeps 22pt of red at
+   * each end and reads as a stamp, which is what the reference drew.
+   *
+   * "Opens 08:00" is eleven, the longest of the three languages
+   * (`sashLabel` pins that), so 52pt of type. The same 20pt of red at
+   * each end gives a chord of 92, against 140 before:
+   *
+   *              across   down    of the width / of the height
+   *     140pt     119pt    74pt        34%  /  34%
+   *      92pt      78pt    49pt        22%  /  22%      ← here
+   *
+   * Still equal shares of each edge — the chord shrank along the same
+   * 32° line — and the band covers 1.8% of the photograph where it
+   * covered 2.8%. It also clears the rating pill by a wider margin than
+   * before on a short card, which was the one place the old chord came
+   * close to something.
    *
    * The rest is arithmetic. The centre line must pass through the chord's
-   * midpoint (119/2, 74/2); a strip 240 wide leaves 42pt hanging past
-   * each crossing for the card's radius to cut; rotation is about the
-   * centre, so `left` and `top` place that centre and nothing else:
+   * midpoint (78/2, 49/2); a strip 180 wide leaves 44pt hanging past each
+   * crossing for the card's radius to cut; rotation is about the centre,
+   * so `left` and `top` place that centre and nothing else:
    *
-   *   left = 119/2 − 240/2 = −60.5      top = 74/2 − 20/2 = 27
+   *   left = 78/2 − 180/2 = −51      top = 49/2 − 20/2 = 14.5
    *
    * `height` is fixed rather than grown from the text because `top` is
    * derived from it, and a font metric that moved would slide the sash
@@ -437,7 +468,7 @@ const s = StyleSheet.create({
    * photograph under it gets wider.
    */
   shutSash: {
-    position: 'absolute', left: -60.5, top: 27, width: 240, height: 20,
+    position: 'absolute', left: -51, top: 14.5, width: 180, height: 20,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: onPhoto.shut,
     transform: [{ rotate: '-32deg' }],

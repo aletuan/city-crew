@@ -1051,10 +1051,13 @@ describe('PlaceDetailScreen — opening hours (Wednesday 10:00, Hanoi)', () => {
     expect(screen.getByText('Closed today')).toBeTruthy();
   });
 
-  it('reads the place\'s clock, not the device\'s: 23:30 in Hanoi is closed', () => {
+  // Shut, and — since `openState` looks a day ahead — told when it opens:
+  // tomorrow's seven o'clock is the hour that matters at half past eleven.
+  it('reads the place\'s clock, not the device\'s: 23:30 in Hanoi is closed, until 07:00', () => {
     vi.setSystemTime(new Date('2026-09-09T16:30:00Z'));
     show();
-    expect(screen.getByText('Closed today')).toBeTruthy();
+    expect(screen.getByText('Closed · opens 07:00')).toBeTruthy();
+    expect(screen.queryByText('Closed today')).toBeNull();
   });
 
   it('keeps the Hours row but no open-now line for hours it cannot read', () => {

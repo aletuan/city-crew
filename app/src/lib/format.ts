@@ -347,6 +347,11 @@ export function instantOn(day: string, minutes: number): Date | null {
 export type OpenState = {
   open: boolean;
   untilMin?: number;
+  /** When a shut place next opens, in minutes past *today's* midnight —
+   *  so tomorrow morning reads past 1440, the way `untilMin` already runs
+   *  past it for a bar that shuts at two. `clockOf` wraps it. Present
+   *  only when that moment is less than a day away; further off, the
+   *  honest word is "closed" alone — see `openState`. */
   opensAtMin?: number;
   /** Minutes from `now` until `untilMin`, for callers deciding whether a
    *  closing time is worth saying yet. Absent whenever `untilMin` is —
@@ -419,8 +424,27 @@ export function openState(lines: string[] | null | undefined, now: Date): OpenSt
     }
   }
 
-  // Closed, but say when that changes if it changes today.
-  const next = wins.filter((w) => w.from > mins).sort((a, b) => a.from - b.from)[0];
+  // Closed. Say when that changes, if it changes within a day: the rest
+  // of today first, then tomorrow's windows read on today's clock.
+  //
+  // Tomorrow is the case that matters. At half past eleven the next
+  // opening is almost never today, and until this looked ahead the card
+  // could only say "Closed" — which is the one thing the reader already
+  // knew — at exactly the hour most of the feed is shut (58% of cards at
+  // half past ten, measured across the catalog). "Opens 08:00" is the
+  // useful half of the sentence, and it is only ever tomorrow's.
+  //
+  // A day is the limit, and it is a limit of honesty rather than of
+  // arithmetic. At eleven on a Sunday night, a café shut all Monday does
+  // open at seven — on Tuesday — and "opens 07:00" with no day on it
+  // would send somebody to a locked door. Google Maps draws the same line
+  // in the same place: the hour alone within a day, the day named beyond
+  // it; this says nothing beyond it, because a sash has room for one
+  // short line and "Closed" is a true one.
+  const tomorrow = (dayAt(today + 1) ?? []).map((w) => ({ ...w, from: w.from + DAY }));
+  const next = [...wins, ...tomorrow]
+    .filter((w) => w.from > mins && w.from - mins < DAY)
+    .sort((a, b) => a.from - b.from)[0];
   return next ? { open: false, opensAtMin: next.from } : { open: false };
 }
 
@@ -570,16 +594,20 @@ export function dayBand(lines: string[] | null | undefined, now: Date): DayBand 
 }
 
 /**
- * What a shut place says on a photograph: "Closed · opens 08:00", or
- * "Closed" alone when nothing reopens today. `null` while it is open, and
+ * What a shut place says, in full: "Closed · opens 08:00", or "Closed"
+ * alone when nothing reopens within the day. `null` while it is open, and
  * `null` when the hours cannot be read — silence beats telling somebody
  * standing in an open doorway that the place is shut.
  *
  * Separate from `openFragment` rather than a flag on it, because the two
  * are read in different places and one of them has to survive being the
  * only thing said. A search row prints `openFragment` after the district
- * and the sentence carries the subject; this stands alone on a picture,
- * so it names the state before the hour.
+ * and the sentence carries the subject; this stands alone, so it names
+ * the state before the hour.
+ *
+ * On the place card this is what a screen reader hears; what the eye sees
+ * on the sash is `sashLabel`, the same fact with the state left to the
+ * colour. The map card prints this one, because it has no red to lean on.
  *
  * Whole phrases per language for the reason the file keeps repeating:
  * Japanese puts 開店 after the hour, so "Closed · " glued to a translated
@@ -593,4 +621,29 @@ export function shutLabel(
   if (state.opensAtMin == null) return t('Closed', 'Đóng cửa', '閉店');
   const at = clockOf(state.opensAtMin);
   return t(`Closed · opens ${at}`, `Đóng cửa · mở ${at}`, `閉店・${at}開店`);
+}
+
+/**
+ * The sash's own line: "Opens 08:00", or "Closed" when there is no hour
+ * to give within the day. `null` on the same terms as `shutLabel`.
+ *
+ * The state is not spelled out because the sash is red, and red is what
+ * says *shut*; the words are spent on the half the reader cannot see —
+ * when to come back. That trade is only safe with `shutLabel` read
+ * alongside it as the accessibility label, which is why the two live
+ * next to each other and answer the same `state`: a reader who cannot
+ * see the colour still hears "Closed".
+ *
+ * Short on purpose. Twenty characters made the sash a banner across the
+ * corner; eleven let it be a stamp on it — see the geometry note in
+ * `PlaceCard`, which is sized to the longest of these three.
+ */
+export function sashLabel(
+  state: OpenState | null,
+  t: (en: string, vi: string, ja?: string) => string,
+): string | null {
+  if (!state || state.open) return null;
+  if (state.opensAtMin == null) return t('Closed', 'Đóng cửa', '閉店');
+  const at = clockOf(state.opensAtMin);
+  return t(`Opens ${at}`, `Mở ${at}`, `${at}開店`);
 }

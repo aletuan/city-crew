@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dayBand, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, instantOn, openFragment, openState, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dayBand, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, instantOn, openFragment, openState, sashLabel, shutLabel, splitHours } from './format';
 import { fmtDistance } from './geo';
 
 describe('fmtMinutes', () => {
@@ -293,8 +293,59 @@ describe('openState', () => {
     expect(openState(week('5:00 PM – 10:00 PM'), WED_10AM)).toEqual({ open: false, opensAtMin: 17 * 60 });
   });
 
-  it('is closed after the last window, with nothing left to promise today', () => {
-    expect(openState(week('6:00 AM – 9:00 AM'), WED_10AM)).toEqual({ open: false });
+  // Tomorrow morning, read on today's clock — past 1440, the way
+  // `untilMin` already runs past it for a bar that shuts at two.
+  it('is closed after the last window, and promises tomorrow’s first', () => {
+    expect(openState(week('6:00 AM – 9:00 AM'), WED_10AM)).toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 6 * 60 });
+    // 23:30 ICT, the hour the feed is mostly shut.
+    expect(openState(week('8:00 AM – 10:00 PM'), at('2026-08-12T16:30:00Z')))
+      .toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 8 * 60 });
+  });
+
+  // A day is the limit. Sunday night, shut all Monday: seven o'clock is
+  // Tuesday's, and an hour with no day on it would send somebody to a
+  // locked door. So nothing is promised.
+  it('promises nothing further than a day away', () => {
+    const lines = [
+      'Monday: Closed', 'Tuesday: 7:00 AM – 5:00 PM', 'Wednesday: 7:00 AM – 5:00 PM',
+      'Thursday: 7:00 AM – 5:00 PM', 'Friday: 7:00 AM – 5:00 PM', 'Saturday: 7:00 AM – 5:00 PM',
+      'Sunday: 7:00 AM – 5:00 PM',
+    ];
+    // Sunday 23:00 ICT → Monday is shut, Tuesday is 32 hours off.
+    expect(openState(lines, at('2026-08-16T16:00:00Z'))).toEqual({ open: false });
+    // Monday 23:00 ICT → Tuesday 07:00 is eight hours off.
+    expect(openState(lines, at('2026-08-17T16:00:00Z'))).toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 7 * 60 });
+    // And the limit is a day, not "tomorrow": a day off with the next
+    // opening at ten is 25 hours away at nine in the morning and 23 at
+    // eleven. Only the second gets an hour.
+    const dayOff = [
+      'Monday: 10:00 AM – 5:00 PM', 'Tuesday: 10:00 AM – 5:00 PM', 'Wednesday: Closed',
+      'Thursday: 10:00 AM – 5:00 PM', 'Friday: 10:00 AM – 5:00 PM', 'Saturday: 10:00 AM – 5:00 PM',
+      'Sunday: 10:00 AM – 5:00 PM',
+    ];
+    expect(openState(dayOff, at('2026-08-12T02:00:00Z'))).toEqual({ open: false });
+    expect(openState(dayOff, at('2026-08-12T04:00:00Z'))).toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 10 * 60 });
+  });
+
+  // Tomorrow in a shape this cannot read is a tomorrow with nothing to
+  // promise — not a crash, and not a guess.
+  it('promises nothing when tomorrow’s line cannot be read', () => {
+    const lines = [
+      'Monday: 8:00 AM – 5:00 PM', 'Tuesday: 8:00 AM – 5:00 PM', 'Wednesday: 8:00 AM – 5:00 PM',
+      'Thursday: by appointment', 'Friday: 8:00 AM – 5:00 PM', 'Saturday: 8:00 AM – 5:00 PM',
+      'Sunday: 8:00 AM – 5:00 PM',
+    ];
+    // Wednesday 18:00 ICT.
+    expect(openState(lines, at('2026-08-12T11:00:00Z'))).toEqual({ open: false });
+  });
+
+  // The boundary itself: 10:00 today against 10:00 tomorrow is exactly a
+  // day, and exactly a day is not within one.
+  it('draws the day’s limit at the same minute tomorrow', () => {
+    expect(openState(week('10:00 AM – 11:00 AM'), at('2026-08-12T02:59:00Z')))
+      .toEqual({ open: false, opensAtMin: 10 * 60 });
+    expect(openState(week('10:00 AM – 11:00 AM'), at('2026-08-12T04:00:00Z')))
+      .toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 10 * 60 });
   });
 
   // The boundaries themselves: open at the opening minute, shut at the
@@ -305,7 +356,7 @@ describe('openState', () => {
     expect(openState(week('10:00 AM – 11:00 PM'), at('2026-08-12T03:00:00Z')))
       .toEqual({ open: true, untilMin: 23 * 60, closesInMin: 780 });
     expect(openState(week('6:00 AM – 10:00 AM'), at('2026-08-12T03:00:00Z')))
-      .toEqual({ open: false });
+      .toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 6 * 60 });
   });
 
   it('reads the day that actually applies rather than the first line', () => {
@@ -369,7 +420,7 @@ describe('openState', () => {
     expect(openState(week('12:00 PM – 5:00 PM'), at('2026-08-12T06:00:00Z')))
       .toEqual({ open: true, untilMin: 17 * 60, closesInMin: 240 });
     expect(openState(week('12:00 AM – 6:00 AM'), at('2026-08-12T06:00:00Z')))
-      .toEqual({ open: false });
+      .toEqual({ open: false, opensAtMin: MINUTES_IN_DAY });
   });
 
   // The whole point of the offset: a phone in London must still be told
@@ -699,5 +750,42 @@ describe('shutLabel', () => {
   // is the failure `openState`'s own null is there to prevent.
   it('says nothing when the hours could not be read', () => {
     expect(shutLabel(null, en)).toBeNull();
+  });
+});
+
+describe('sashLabel', () => {
+  const en = (e: string) => e;
+  const vi = (_e: string, v: string) => v;
+  const ja = (_e: string, _v: string, j?: string) => j ?? '';
+
+  // The state is the sash's colour; the words go on the hour.
+  it('spends its words on the hour, not the state', () => {
+    const shut = { open: false, opensAtMin: 480 };
+    expect(sashLabel(shut, en)).toBe('Opens 08:00');
+    expect(sashLabel(shut, vi)).toBe('Mở 08:00');
+    expect(sashLabel(shut, ja)).toBe('08:00開店');
+  });
+
+  // Tomorrow's hour wraps onto the clock like `untilMin` does.
+  it('reads tomorrow’s hour on the clock face', () => {
+    expect(sashLabel({ open: false, opensAtMin: MINUTES_IN_DAY + 7 * 60 }, en)).toBe('Opens 07:00');
+  });
+
+  it('falls back to the state when there is no hour within the day', () => {
+    expect(sashLabel({ open: false }, en)).toBe('Closed');
+    expect(sashLabel({ open: false }, vi)).toBe('Đóng cửa');
+    expect(sashLabel({ open: false }, ja)).toBe('閉店');
+  });
+
+  it('says nothing about a place that is open, or one it cannot read', () => {
+    expect(sashLabel({ open: true, untilMin: 1320, closesInMin: 45 }, en)).toBeNull();
+    expect(sashLabel(null, en)).toBeNull();
+  });
+
+  // The longest of the three is what the sash is cut for.
+  it('never runs past eleven characters', () => {
+    for (const t of [en, vi, ja]) {
+      expect(sashLabel({ open: false, opensAtMin: 23 * 60 + 30 }, t)!.length).toBeLessThanOrEqual(11);
+    }
   });
 });
