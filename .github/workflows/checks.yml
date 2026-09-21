@@ -165,9 +165,14 @@ jobs:
       # behind slack in another. Lines and functions are gated; branches
       # are not, because V8 reports branches only inside functions it saw
       # run, which makes that one denominator move with the tests no
-      # matter how the files are counted. `categories.js` and `vibes.js`
-      # are excluded by name: taxonomy tables read by the React screens,
-      # with no statement worth executing in a Node test.
+      # matter how the files are counted. Three files are excluded by
+      # name: `categories.js` and `vibes.js` are taxonomy tables read by
+      # the React screens, with no statement worth executing in a Node
+      # test; `lib/supabase.js` is the client itself — the same exception
+      # the app's gate makes for its `supabase.ts` — whose only branches
+      # are on environment variables, and a runner with none set covers a
+      # different set of lines than a laptop with a `.env` (80% on CI,
+      # 86% locally, for the same file and the same tests).
       #
       # The floors are today's real figures rounded down — api.js at 83.5
       # lines / 51.3 functions is the lowest file and sets both. Raise them

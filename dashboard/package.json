@@ -8,7 +8,7 @@
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "test": "node --experimental-test-module-mocks --test",
-    "coverage": "c8 --all --src src --include 'src/**/*.js' --exclude src/categories.js --exclude src/vibes.js --per-file --check-coverage --lines 83 --functions 51 --branches 0 --statements 0 --reporter text node --experimental-test-module-mocks --test",
+    "coverage": "c8 --all --src src --include 'src/**/*.js' --exclude src/categories.js --exclude src/vibes.js --exclude src/lib/supabase.js --per-file --check-coverage --lines 83 --functions 51 --branches 0 --statements 0 --reporter text node --experimental-test-module-mocks --test",
     "preview": "vite preview"
   },
   "dependencies": {
