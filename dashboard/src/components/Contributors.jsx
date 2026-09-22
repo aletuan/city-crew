@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
-import { chipLabel, useCity } from '../App.jsx';
+import { CityPicker, chipLabel, useCity } from '../App.jsx';
 import {
   SERIES_COLORS, TOP_N,
   windowDays, buildBoard, countStats, scopeRows, niceMax, withGuide,
@@ -314,10 +314,14 @@ export default function Contributors() {
           </p>
           <p className="contribhint">
             {city
-              ? `the top ${TOP_N} within ${scopeLabel} · switch city at the top of the page`
-              : `all cities combined · pick a city at the top of the page to re-rank the top ${TOP_N} within it`}
+              ? `the top ${TOP_N} within ${scopeLabel} · switch city beside the title`
+              : `all cities combined · pick a city beside the title to re-rank the top ${TOP_N} within it`}
           </p>
         </div>
+        {/* The same control the other scoped screens draw, in the slot
+            this head keeps for its own furniture. It replaces the chip row
+            the page head used to carry for all three. */}
+        <CityPicker />
       </div>
 
       {error && (
