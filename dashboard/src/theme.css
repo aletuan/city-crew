@@ -59,7 +59,8 @@
   --shadow-float: 0 8px 24px rgba(5, 3, 10, 0.35);
 
   /* How far down the page anything sticky has to start, because the top
-     bar is already there. Declared with the height the bar has at the
+     bar is already there — on a phone. Above 960px the bar is hidden, so
+     this measures 0 and the sticky things below start at the viewport top. Declared with the height the bar has at the
      widths where it does not wrap, and overwritten from App.jsx with the
      measured one — which is what makes it right at the widths where it
      does. A declaration and not just a JS write: an undeclared var() is a
@@ -69,7 +70,6 @@
      filter rail stuck under it. Declared with the height it has as a single
      row and overwritten from PlaceList with the measured one — it grows a
      second row whenever a filter is on. */
-  --worktop-h: 62px;
 }
 
 * { box-sizing: border-box; }
@@ -158,6 +158,12 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   flex-wrap: wrap;
   max-width: 1280px; margin: 0 auto; padding: 11px 28px;
 }
+/* The desk has a sidebar and a page head; this bar carried one button
+   and a bell across a 56px band that was otherwise empty. Both moved into
+   the page head, and the band goes with them. Below 960px the media query
+   at the foot of this file brings it back, because there the page head is
+   not sticky and the tab bar has no Add. */
+@media (min-width: 961px) { .topbar { display: none; } }
 .topbar .logo { width: 34px; height: 34px; border-radius: 10px; }
 /* The way home on phones; redundant beside the sidebar's own brand. */
 .mobilebrand { display: none; line-height: 0; }
@@ -342,63 +348,64 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   }
 }
 
-/* page head — every route gets the same anchor point: a title where the
-   list has one, the approval rail wherever there's data to measure.
-   Top-aligned, so the numbers sit on the title's own line rather than
-   floating up from the bottom of a block whose height depends on whether
-   a subtitle and a chip row happen to be there. */
-.pagehead {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 16px 24px; flex-wrap: wrap; margin: 0 0 20px;
+/* page head — one row: what the screen is, the numbers it works from, and
+   the actions. It replaces a title on the left and a boxed rail of tiles
+   on the right, with a near-empty sticky bar above both carrying the one
+   button; the bar is now the phone's alone.
+   Centre-aligned, because the three things on the line are all one line
+   tall. The city scope, which is a row of its own, sits under them. */
+.pagehead { display: flex; flex-direction: column; gap: 14px; margin: 0 0 20px; }
+.pagehead-top {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 14px 30px; flex-wrap: wrap;
 }
-.pagehead-lead { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.pagetitles { display: flex; flex-direction: column; gap: 3px; }
+/* The title takes the left and everything else the right. `auto` here
+   rather than on the two that follow: two auto margins in one flex line
+   share the slack between them, which would float the numbers into the
+   middle of the row instead of grouping them with the actions. On a route
+   with no title — the editor — `justify-content` above keeps the rest
+   right where it is. */
+.pagetitles { display: flex; flex-direction: column; gap: 3px; margin-right: auto; min-width: 0; }
 .pagetitle { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin: 0; line-height: 1.15; }
 /* The sentence that says what the screen is for. Places is the desk's front
    door and it opened onto a bare word — everything under it (a scope, four
    counts, a rail, a toolbar) is scaffolding around a job nothing named. */
 .pagesub { margin: 0; font-size: 13.5px; color: var(--text-tertiary); max-width: 52ch; }
+.pagehead-actions { display: flex; align-items: center; gap: 10px; }
+@media (max-width: 960px) { .pagehead-actions { display: none; } }
 
-/* progress rail — the desk's one glowing measure */
-.rail { display: flex; flex-direction: column; gap: 6px; min-width: 340px; margin-left: auto; }
-/* `space-between` with no gap only reads as three facts while the rail is
-   wider than they are. It is not: the rail's floor is 260px and the three
-   labels want ~277px at 11px mono, so at the desk's own minimum they touch
-   — "238/412 approved23 flagged17 not public" — and on a phone the last one
-   sits flush to the shell's padding with nothing between it and the edge.
-   A gap and a wrap instead: they stay three facts at every width, and take
-   a second line when one line cannot hold them. */
-/* Three tiles, each a link into the queue it counts. Sized by the number
-   rather than the word, because the number is what is being read. */
-.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+/* The four numbers the desk works from, each a link into the queue it
+   counts.
+
+   Bare, not boxed. Four filled tiles standing beside the title read as a
+   second toolbar arguing with it, and the edge was doing no work the
+   number was not already doing louder. What they lose in border they take
+   back in size: 26px against the title's 28px, so the row reads as one
+   rank of information rather than a heading and some furniture.
+
+   The selected one is marked with an underline, since there is no longer a
+   fill to tint. It is the only affordance saying these are pressable, so
+   it carries the accent rather than a grey. */
+.stats { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px 26px; }
 .stat {
-  display: flex; flex-direction: column; gap: 1px; flex: 1 1 76px; min-width: 0;
-  padding: 8px 12px; text-decoration: none;
-  background: var(--surface-glass); border: 1px solid transparent;
-  border-radius: var(--radius-input);
-  transition: background 160ms, border-color 160ms;
+  display: flex; flex-direction: column; gap: 1px; min-width: 0;
+  padding-bottom: 4px; text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: border-color 160ms, opacity 160ms;
 }
-.stat:hover { background: var(--surface-glass-strong); }
-.stat.on { border-color: var(--border-control); background: var(--surface-glass-strong); }
-.stat b { font-size: 21px; font-weight: 700; color: var(--text-primary); line-height: 1.15; letter-spacing: -0.01em; }
-.stat span {
-  font-family: var(--font-data); font-size: 10px; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--text-tertiary); white-space: nowrap;
+.stat:hover { border-bottom-color: var(--border-control); }
+.stat.on { border-bottom-color: var(--ai-violet); }
+.stat b {
+  font-size: 26px; font-weight: 700; color: var(--text-primary);
+  line-height: 1.1; letter-spacing: -0.02em;
 }
+.stat span { font-size: 12.5px; color: var(--text-tertiary); white-space: nowrap; }
+.stat.on span { color: var(--text-secondary); }
 /* The colour is carried by a class the markup adds only when the count is
    non-zero — see App.jsx. An empty queue is not news. */
 .stat.approved b { color: var(--ok); }
 .stat.pending b { color: var(--warn); }
 .stat.flagged b { color: var(--bad); }
-.railnote { font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary); }
-.railnote b { color: var(--text-secondary); font-weight: 600; }
-/* Scoped to the track, not to the rail. `.rail .flagged` also matched the
-   Flagged tile above it — a stat sitting inside the same rail — and beat
-   `.stat`'s own background on specificity, so the tile painted itself a
-   solid red block with its number lost inside it. */
-.rail .track { height: 6px; border-radius: 999px; background: var(--surface-glass); overflow: hidden; display: flex; }
-.rail .track .fill { background: var(--grad-ai); height: 100%; transition: width 400ms cubic-bezier(0.22, 1, 0.36, 1); }
-.rail .track .flagged { background: var(--bad); opacity: .75; height: 100%; }
 
 .syncbtn {
   border: 1px solid var(--border-control); background: var(--surface-glass);
@@ -549,13 +556,14 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .worksplit { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 24px; align-items: start; }
 .workmain { min-width: 0; }
 .filterrail {
-  /* Below the toolbar, which is itself below the top bar — both heights
-     measured and published by the components that own them, because
-     neither is a constant: the top bar wraps at narrow widths, and the
-     toolbar grows a chip row whenever a filter is on. Erring short here
-     slides the rail's first rows behind an opaque bar. */
-  position: sticky; top: calc(var(--topbar-h) + var(--worktop-h) + 8px);
-  max-height: calc(100vh - var(--topbar-h) - var(--worktop-h) - 34px); overflow-y: auto;
+  /* Beside the toolbar now, not beneath it: both start on the same line,
+     the rail in its column and the bar over the results. That retires the
+     measured --worktop-h this used to add — the toolbar's height stopped
+     being something the rail has to know the moment it stopped being
+     something the rail sits under. Only the top bar is left to clear, and
+     above 960px it is hidden, so this resolves to 10px. */
+  position: sticky; top: calc(var(--topbar-h) + 10px);
+  max-height: calc(100vh - var(--topbar-h) - 30px); overflow-y: auto;
   background: var(--bg-elevated); border: 1px solid var(--border-glass-soft);
   border-radius: var(--radius-card); padding: 16px 16px 18px;
 }
@@ -627,7 +635,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    either way the question was only ever visible where it was asked: an
    empty result on a phone had no visible cause at all, and on a laptop it
    meant reading four groups to find the one ticked row. */
-.activefilters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 10px; }
+/* Left of the controls, on the bar's own line. `auto` here is what keeps
+   the controls at the right edge when no filter is set and the row is not
+   rendered at all. */
+.activefilters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-right: auto; min-width: 0; }
 .fchip {
   display: inline-flex; align-items: center; gap: 7px;
   border: 1px solid rgba(139, 92, 246, 0.45); background: rgba(139, 92, 246, 0.20);
@@ -654,8 +665,11 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 
 /* ── results toolbar: count, search, sort, row/grid toggle — one row ── */
 /* Spacing comes from .worktop, which is the thing that sticks. */
-.resultsbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.resultscount { font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary); }
+.resultsbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.resultscount { font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary); margin-right: auto; }
+/* The tally, under the bar and above the first result — against the thing
+   it counts rather than tucked into the left of a row of controls. */
+.resulttally { font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary); margin: 2px 0 12px; }
 .resultscontrols { display: flex; align-items: center; gap: 10px; }
 .searchbox { position: relative; display: flex; align-items: center; }
 .searchbox svg { position: absolute; left: 13px; color: var(--text-tertiary); pointer-events: none; }
@@ -1426,8 +1440,12 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .cityselect { display: block; }
   .pagetitle { font-size: 22px; }
   .pagesub { font-size: 12.5px; }
-  .pagehead-lead { gap: 10px; }
-  .rail { min-width: 0; flex: 1 1 100%; }
+  /* The numbers take the full width under the title and spread across
+     it, rather than clustering at the right of a row they no longer
+     share with anything. */
+  .stats { width: 100%; justify-content: space-between; gap: 8px 14px; }
+  .stat b { font-size: 21px; }
+  .stat span { font-size: 11.5px; }
   .syncbtn { font-size: 12px; padding: 7px 12px; }
 
   .filterlabel { flex-basis: 100%; }

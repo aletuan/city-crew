@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { leftBehindNote } from '../storage.js';
 import { api } from '../api.js';
@@ -229,30 +229,6 @@ export default function PlaceList() {
   // Phones only: the rail is a column on desktop and never closed there.
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  /**
-   * The toolbar's own height, published for the rail that sticks below it.
-   *
-   * It was a constant — "a single row of controls at every width where the
-   * rail is a column, so 62px holds". That stopped being true the moment
-   * the active-filter chips got a row of their own: the bar is one row with
-   * no filters set and two with any, and the rail is stuck under whichever
-   * of those the reader is currently looking at. Erring short slides the
-   * rail's first rows behind an opaque bar, which is what a constant would
-   * now do for exactly the reader who has filters on — the one who most
-   * needs to see them. Measured, like the top bar above it.
-   */
-  const worktopRef = useRef(null);
-  useEffect(() => {
-    const el = worktopRef.current;
-    if (!el) return undefined;
-    const publish = () =>
-      document.documentElement.style.setProperty('--worktop-h', `${el.offsetHeight}px`);
-    publish();
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const ro = new ResizeObserver(publish);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const status = params.get('status') ?? '';
   const category = params.get('category') ?? '';
@@ -415,98 +391,6 @@ export default function PlaceList() {
 
   return (
     <>
-      {/* Above the rail rather than inside it: search, sort, the view
-          switch and the batch actions all belong to the result set, not to
-          the question that produced it. It sticks under the top bar where
-          it is one row tall; on phones, where it is two, it stays stuck
-          only while a batch is selected — see the media query in
-          theme.css. */}
-      <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`} ref={worktopRef}>
-        {selected.size > 0 ? (
-          <div className="resultsbar">
-            <span className="resultscount">{selected.size} selected</span>
-            <div className="resultscontrols">
-              <button className="syncbtn" onClick={toggleSelectAll}>
-                {allOnPageSelected ? 'Deselect all' : `Select all ${rows?.length ?? 0} on page`}
-              </button>
-              <button className="syncbtn" onClick={() => setSelected(new Set())}>Cancel</button>
-              <button className="syncbtn primary" onClick={approveSelected} disabled={approving || deleting}>
-                {approving ? 'Approving…' : `Approve ${selected.size}`}
-              </button>
-              <button className="dangerbtn" onClick={deleteSelected} disabled={deleting || approving}>
-                {deleting ? 'Deleting…' : `Delete ${selected.size}`}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="resultsbar">
-            <span className="resultscount">{total != null ? `${total} place${total === 1 ? '' : 's'}` : ''}</span>
-            <div className="resultscontrols">
-              <button
-                className={`filterbtn${activeCount ? ' on' : ''}`}
-                onClick={() => setFiltersOpen(true)}
-                aria-expanded={filtersOpen}
-              >
-                <CategoryIcon name="sliders" />
-                Filters
-                {activeCount > 0 && <span className="filterbadge">{activeCount}</span>}
-              </button>
-              <div className="searchbox">
-                <CategoryIcon name="search" />
-                <input
-                  className="search"
-                  placeholder="Search places…"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  aria-label="Search places"
-                />
-              </div>
-              <select className="sortselect" value={`${sort}:${dir}`} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
-                {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-              <div className="viewtoggle" data-view={view} role="group" aria-label="Layout">
-                <span className="viewtoggle-thumb" />
-                <button className={view === 'row' ? 'on' : ''} onClick={() => setView('row')} aria-pressed={view === 'row'} aria-label="Row view">
-                  <CategoryIcon name="list" />
-                </button>
-                <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-pressed={view === 'grid'} aria-label="Grid view">
-                  <CategoryIcon name="grid" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* What the rail is currently asking, said where the answer is.
-            The rail is a column on a laptop and a shut sheet on a phone,
-            and either way a filter you cannot see is a filter you forget
-            you set — which is how "no places match" arrives with no
-            visible cause. Each chip removes its own filter; the row is
-            absent when nothing is set, and while a batch is selected,
-            since the bar above it has become a different question. */}
-        {activeCount > 0 && selected.size === 0 && (
-          <div className="activefilters">
-            {FILTER_KEYS.map((key) => {
-              const value = params.get(key);
-              if (!value) return null;
-              const label = FILTER_LABEL[key](value);
-              return (
-                <button
-                  key={key}
-                  className={`fchip${key === 'status' ? ` st-${value}` : ''}`}
-                  onClick={() => toggle(key, value)}
-                  aria-label={`Remove filter ${label}`}
-                  title={`Remove filter ${label}`}
-                >
-                  {label}
-                  <CategoryIcon name="x" size={10} />
-                </button>
-              );
-            })}
-            <button className="clearall" onClick={clearFilters}>Clear all</button>
-          </div>
-        )}
-      </div>
-
       <div className="worksplit">
         {filtersOpen && <div className="sheetback" onClick={() => setFiltersOpen(false)} />}
         {/* One rail, two projections. A column beside the results where
@@ -588,6 +472,110 @@ export default function PlaceList() {
         </aside>
 
         <div className="workmain">
+          {/* Inside the results column, not across the page above it.
+              Full width, the bar started at the page's left edge and the
+              chips under it ran along the top of the filter rail — a row
+              naming what the results are filtered to, drawn over the panel
+              that set it rather than over the results it describes. Here
+              its left edge is the grid's left edge, and the rail beside it
+              starts at the same line.
+
+              It sticks under the top bar where it is one row tall; on
+              phones, where it is two, it stays stuck only while a batch is
+              selected — see the media query in theme.css. */}
+          <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`}>
+            {selected.size > 0 ? (
+              <div className="resultsbar">
+                <span className="resultscount">{selected.size} selected</span>
+                <div className="resultscontrols">
+                  <button className="syncbtn" onClick={toggleSelectAll}>
+                    {allOnPageSelected ? 'Deselect all' : `Select all ${rows?.length ?? 0} on page`}
+                  </button>
+                  <button className="syncbtn" onClick={() => setSelected(new Set())}>Cancel</button>
+                  <button className="syncbtn primary" onClick={approveSelected} disabled={approving || deleting}>
+                    {approving ? 'Approving…' : `Approve ${selected.size}`}
+                  </button>
+                  <button className="dangerbtn" onClick={deleteSelected} disabled={deleting || approving}>
+                    {deleting ? 'Deleting…' : `Delete ${selected.size}`}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="resultsbar">
+                {/* What the rail is currently asking, said where the answer
+                    is — and on the same line as the controls, because it is
+                    the other half of one question: these are the results,
+                    filtered like this, searched like that, sorted so. The
+                    rail is a column on a laptop and a shut sheet on a phone,
+                    and either way a filter you cannot see is a filter you
+                    forget you set, which is how "no places match" arrives
+                    with no visible cause. Each chip removes its own filter;
+                    the row is absent when nothing is set. */}
+                {activeCount > 0 && (
+                  <div className="activefilters">
+                    {FILTER_KEYS.map((key) => {
+                      const value = params.get(key);
+                      if (!value) return null;
+                      const label = FILTER_LABEL[key](value);
+                      return (
+                        <button
+                          key={key}
+                          className={`fchip${key === 'status' ? ` st-${value}` : ''}`}
+                          onClick={() => toggle(key, value)}
+                          aria-label={`Remove filter ${label}`}
+                          title={`Remove filter ${label}`}
+                        >
+                          {label}
+                          <CategoryIcon name="x" size={10} />
+                        </button>
+                      );
+                    })}
+                    <button className="clearall" onClick={clearFilters}>Clear all</button>
+                  </div>
+                )}
+                <div className="resultscontrols">
+                  <button
+                    className={`filterbtn${activeCount ? ' on' : ''}`}
+                    onClick={() => setFiltersOpen(true)}
+                    aria-expanded={filtersOpen}
+                  >
+                    <CategoryIcon name="sliders" />
+                    Filters
+                    {activeCount > 0 && <span className="filterbadge">{activeCount}</span>}
+                  </button>
+                  <div className="searchbox">
+                    <CategoryIcon name="search" />
+                    <input
+                      className="search"
+                      placeholder="Search places…"
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      aria-label="Search places"
+                    />
+                  </div>
+                  <select className="sortselect" value={`${sort}:${dir}`} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
+                    {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                  <div className="viewtoggle" data-view={view} role="group" aria-label="Layout">
+                    <span className="viewtoggle-thumb" />
+                    <button className={view === 'row' ? 'on' : ''} onClick={() => setView('row')} aria-pressed={view === 'row'} aria-label="Row view">
+                      <CategoryIcon name="list" />
+                    </button>
+                    <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-pressed={view === 'grid'} aria-label="Grid view">
+                      <CategoryIcon name="grid" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          {/* The tally, on its own line under the bar rather than inside
+              it. It is a fact about the results, so it belongs against the
+              results — and the space it was taking at the bar's left edge
+              is where the filter chips now say what produced it. */}
+          {selected.size === 0 && total != null && (
+            <div className="resulttally">{total} place{total === 1 ? '' : 's'}</div>
+          )}
           {error && (
             <div className="empty">
               Couldn't load places: {error}

@@ -392,6 +392,14 @@ export default function App() {
             </aside>
 
             <div className="deskmain">
+              {/* The phone's bar, and only the phone's: the desk hides it
+                  above 960px, where the same two actions sit in the page
+                  head beside the title. It stays here below that width
+                  because it is sticky and the page head is not, and the
+                  tab bar along the bottom carries navigation, not Add.
+                  Hiding it also zeroes --topbar-h, which is measured from
+                  this element, so the sticky offsets below collapse to the
+                  viewport top on their own. */}
               <header className="topbar" ref={topbarRef}>
                 <div className="topbar-inner">
                   {/* The brand belongs to the sidebar now; phones, which
@@ -410,118 +418,131 @@ export default function App() {
                 </div>
               </header>
               <div className="shell">
-            {(location.pathname === '/' || total > 0) && (
-              <div className="pagehead">
-                <div className="pagehead-lead">
-                  {/* Contributors and Coverage write their own headings,
-                      under their own explanatory line; only Places wants
-                      one here — a title with the sentence that says what
-                      the screen is for, the way every other room on the
-                      desk introduces itself. */}
-                  {location.pathname === '/' && (
-                    <div className="pagetitles">
-                      <h2 className="pagetitle">Places</h2>
-                      <p className="pagesub">Discover, review and manage places for City Crew.</p>
-                    </div>
-                  )}
-                  {CITY_SCOPED.includes(location.pathname) && (
-                    <div className="pagehead-scope">
-                      {/* The workspace scope, where the work is: a chip row
-                          under the title, with the one option the old top-bar
-                          pill could not offer — no filter at all. */}
-                      <div className="cityswitch" role="group" aria-label="City">
-                        <button
-                          className={`chip${city ? '' : ' on'}`}
-                          onClick={() => setCity(ALL)}
-                        >
-                          All cities
-                        </button>
-                        {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
-                          <button
-                            key={c.id}
-                            className={`chip${city?.id === c.id ? ' on' : ''}`}
-                            onClick={() => setCity(c.id)}
-                          >
-                            {chipLabel(c)}
-                          </button>
-                        ))}
-                      </div>
-                      {/* The same choice as the chips, for the width where
-                          nine of them wrap to a second row. Both are in the
-                          markup and CSS shows one: a native menu is the
-                          control a phone already knows, and the chips stay
-                          where they are faster — one press instead of two. */}
-                      <select
-                        className="cityselect"
-                        aria-label="City"
-                        value={city?.id ?? ALL}
-                        onChange={(e) => setCity(e.target.value)}
-                      >
-                        <option value={ALL}>All cities</option>
-                        {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
-                          <option key={c.id} value={c.id}>{chipLabel(c)}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-                {total > 0 && (
-                  <div className="rail" title={`${approved} approved · ${flagged} flagged · ${total - approved - flagged} pending`}>
-                    {/* The four numbers the desk works from, and each one
-                        is the way into the work it counts. They were a line
-                        of grey text before: the pending figure, which is the
-                        whole queue, appeared nowhere but in brackets on a
-                        chip further down the page. */}
-                    <div className="stats" role="group" aria-label="Filter by review status">
-                      <Link className={`stat${status ? '' : ' on'}`} to={statTo(null)}>
-                        <b>{total}</b><span>Places</span>
-                      </Link>
-                      {/* Approved is the fourth because it is the one the
-                          progress bar underneath already draws — it was
-                          readable there and nowhere pressable, so the one
-                          status you cannot reach from the head was the one
-                          holding most of the catalog. */}
-                      <Link
-                        className={`stat${approved ? ' approved' : ''}${status === 'approved' ? ' on' : ''}`}
-                        to={statTo('approved')}
-                      >
-                        <b>{approved}</b><span>Approved</span>
-                      </Link>
-                      {/* A queue with something in it wears its colour; an
-                          empty one is not news and stays quiet. */}
-                      <Link
-                        className={`stat${pending ? ' pending' : ''}${status === 'pending' ? ' on' : ''}`}
-                        to={statTo('pending')}
-                      >
-                        <b>{pending}</b><span>Pending</span>
-                      </Link>
-                      <Link
-                        className={`stat${flagged ? ' flagged' : ''}${status === 'flagged' ? ' on' : ''}`}
-                        to={statTo('flagged')}
-                      >
-                        <b>{flagged}</b><span>Flagged</span>
-                      </Link>
-                    </div>
-                    <div className="track">
-                      <div className="fill" style={{ width: `${(approved / total) * 100}%` }} />
-                      <div className="flagged" style={{ width: `${(flagged / total) * 100}%` }} />
-                    </div>
-                    <div className="railnote"><b>{approved}</b>/{total} approved</div>
-                    {/* Here rather than in the header, because this is the
-                        number it changes. Pressed from the top bar, the
-                        only evidence it had worked was a stamp in a row
-                        somewhere below — which is how a published place
-                        and a hidden one came to look identical to the
-                        person who had just published it. */}
-                    {unpublished > 0 && (
-                      <button className="publishbtn" onClick={publishApproved} disabled={publishing}>
-                        {publishing ? 'Publishing…' : `Publish ${unpublished}`}
-                      </button>
-                    )}
+            {/* One row, the way the reference draws it: what the screen is,
+                the four numbers it works from, and the actions — instead of
+                a title on the left, a boxed rail of tiles on the right, and
+                an almost empty bar above both holding one button.
+
+                It always renders. The actions live here now, so a route
+                that happens to have no title and no counts still needs the
+                row they sit in. */}
+            <div className="pagehead">
+              <div className="pagehead-top">
+                {/* Contributors and Coverage write their own headings,
+                    under their own explanatory line; only Places wants
+                    one here — a title with the sentence that says what
+                    the screen is for, the way every other room on the
+                    desk introduces itself. */}
+                {location.pathname === '/' && (
+                  <div className="pagetitles">
+                    <h2 className="pagetitle">Places</h2>
+                    <p className="pagesub">Discover, review and manage places for City Crew.</p>
                   </div>
                 )}
+                {total > 0 && (
+                  /* The four numbers the desk works from, and each one is
+                     the way into the work it counts. Bare, not boxed: four
+                     filled tiles beside a title read as a second toolbar
+                     competing with it, where the number alone is the thing
+                     being read. What they lose in edge they take back in
+                     size, and the selected one wears an underline.
+
+                     The progress track and its "n/m approved" note went
+                     with the boxes. Both said what the Approved tile now
+                     says two inches to the left, and a bar that only ever
+                     repeats its neighbour is decoration. */
+                  <div className="stats" role="group" aria-label="Filter by review status">
+                    <Link className={`stat${status ? '' : ' on'}`} to={statTo(null)}>
+                      <b>{total}</b><span>places</span>
+                    </Link>
+                    <Link
+                      className={`stat${approved ? ' approved' : ''}${status === 'approved' ? ' on' : ''}`}
+                      to={statTo('approved')}
+                    >
+                      <b>{approved}</b><span>approved</span>
+                    </Link>
+                    {/* A queue with something in it wears its colour; an
+                        empty one is not news and stays quiet. */}
+                    <Link
+                      className={`stat${pending ? ' pending' : ''}${status === 'pending' ? ' on' : ''}`}
+                      to={statTo('pending')}
+                    >
+                      <b>{pending}</b><span>pending</span>
+                    </Link>
+                    <Link
+                      className={`stat${flagged ? ' flagged' : ''}${status === 'flagged' ? ' on' : ''}`}
+                      to={statTo('flagged')}
+                    >
+                      <b>{flagged}</b><span>flagged</span>
+                    </Link>
+                  </div>
+                )}
+                {/* The desk's actions, at the end of the row that names the
+                    screen. The phone keeps its own copy in the top bar —
+                    both are in the markup and CSS shows one, the way the
+                    city chips and the city menu already work — because the
+                    bar is sticky there and this row is not, and the tab bar
+                    along the bottom has no Add of its own. */}
+                <div className="pagehead-actions">
+                  {/* Here rather than in the header, because this is the
+                      number it changes. Pressed from the top bar, the only
+                      evidence it had worked was a stamp in a row somewhere
+                      below — which is how a published place and a hidden
+                      one came to look identical to the person who had just
+                      published it. */}
+                  {unpublished > 0 && (
+                    <button className="publishbtn" onClick={publishApproved} disabled={publishing}>
+                      {publishing ? 'Publishing…' : `Publish ${unpublished}`}
+                    </button>
+                  )}
+                  <Link className="syncbtn addbtn primary" to="/add">
+                    <span aria-hidden="true">＋</span>
+                    <span className="btnlabel">Add place</span>
+                  </Link>
+                  <UnfiledBell places={progress?.unclassified} />
+                </div>
               </div>
-            )}
+              {CITY_SCOPED.includes(location.pathname) && (
+                <div className="pagehead-scope">
+                  {/* The workspace scope, where the work is: a chip row
+                      under the title, with the one option the old top-bar
+                      pill could not offer — no filter at all. */}
+                  <div className="cityswitch" role="group" aria-label="City">
+                    <button
+                      className={`chip${city ? '' : ' on'}`}
+                      onClick={() => setCity(ALL)}
+                    >
+                      All cities
+                    </button>
+                    {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
+                      <button
+                        key={c.id}
+                        className={`chip${city?.id === c.id ? ' on' : ''}`}
+                        onClick={() => setCity(c.id)}
+                      >
+                        {chipLabel(c)}
+                      </button>
+                    ))}
+                  </div>
+                  {/* The same choice as the chips, for the width where
+                      nine of them wrap to a second row. Both are in the
+                      markup and CSS shows one: a native menu is the
+                      control a phone already knows, and the chips stay
+                      where they are faster — one press instead of two. */}
+                  <select
+                    className="cityselect"
+                    aria-label="City"
+                    value={city?.id ?? ALL}
+                    onChange={(e) => setCity(e.target.value)}
+                  >
+                    <option value={ALL}>All cities</option>
+                    {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
+                      <option key={c.id} value={c.id}>{chipLabel(c)}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
                 <Outlet />
                 {toast && <div className="toast" role="status">{toast}</div>}
               </div>
