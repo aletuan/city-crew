@@ -108,12 +108,17 @@ import { defineConfig } from 'vitest/config';
 // and the resend; the account with no handle and the stack with nothing
 // under it), which moved the floor up to the next-lowest screen.
 //
-// That is `SignUpScreen`, alone at the bottom of all four columns: 95.49%
-// lines and statements, 89.06% branches, 61.9% functions. Nothing else is
-// within ten points of it on functions — `TripDetailScreen` is next at
-// 80, `ExploreScreen` at 81.25 — so it is the one screen a further raise
-// has to go through, and the one whose figures these are, rounded down.
-const SCREENS_FLOOR = { lines: 95, statements: 95, branches: 89, functions: 61 };
+// That was `SignUpScreen`, alone at the bottom of all four columns at
+// 95.49 / 89.06 / 61.9 — the form's six checks in field order, the code
+// step and whose account the taste is written to had no test. It stands
+// at 100 in every column now, and for the first time the floor's four
+// numbers come from three different screens, each the lowest in its own
+// column: `ExploreScreen` at 96.96% lines and statements, `IdeasScreen`
+// at 90.41% branches, `TripDetailScreen` at exactly 80% functions (with
+// `ExploreScreen` at 81.25 beside it). Rounded down, as ever — and the
+// functions figure is not rounded at all, so one more untested handler
+// in `TripDetailScreen` is what trips this gate next.
+const SCREENS_FLOOR = { lines: 96, statements: 96, branches: 90, functions: 80 };
 
 // ── the components, measured ──
 //
