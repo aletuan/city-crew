@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { leftBehindNote } from '../storage.js';
 import { api } from '../api.js';
@@ -46,6 +46,18 @@ const FILTER_LABEL = {
    one nobody scrolled to. */
 const GROUP_SHOWN = 6;
 
+/** The heading, which is also the control that folds the group. A button
+ *  rather than a label with a button beside it: a 10.5px word is not a
+ *  target, and the whole row reads as one thing to press. */
+function FilterHead({ label, open, onToggle }) {
+  return (
+    <button type="button" className="filterhead" aria-expanded={open} onClick={onToggle}>
+      <span className="filterlabel">{label}</span>
+      <span className="filterchev" aria-hidden="true"><CategoryIcon name="chevron" size={12} /></span>
+    </button>
+  );
+}
+
 /**
  * One question in the rail: a heading, a row per answer with the count it
  * would return, and a way past the cap when there are more answers than a
@@ -64,11 +76,12 @@ const GROUP_SHOWN = 6;
  * these are on/off statements about the list, and pressing the one that is
  * on turns it off, which is exactly what a checkbox promises.
  *
- * The heading folds the group. `startOpen` decides where it begins, and
- * the three long-tailed questions begin shut — see the calls below for
- * which and why. Folding is per group and kept in the component, not the
- * URL: it says nothing about what the list contains, so it has no business
- * in a link somebody pastes to a colleague.
+ * The heading folds the group, and every group starts open: the rail's
+ * job is to show what can be asked, and a panel that opens as five shut
+ * headings hides that behind a click. `startOpen` is kept for a group
+ * that one day earns being shut. Folding lives in the component, not the
+ * URL: it says nothing about what the list contains, so it has no
+ * business in a link somebody pastes to a colleague.
  */
 function FilterGroup({ label, options, value, onPick, startOpen = true }) {
   const [open, setOpen] = useState(startOpen);
@@ -88,15 +101,7 @@ function FilterGroup({ label, options, value, onPick, startOpen = true }) {
     : (chosen ? [chosen] : []);
   return (
     <div className={`filterset${open ? '' : ' shut'}`}>
-      <button
-        type="button"
-        className="filterhead"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="filterlabel">{label}</span>
-        <span className="filterchev" aria-hidden="true"><CategoryIcon name="chevron" size={12} /></span>
-      </button>
+      <FilterHead label={label} open={open} onToggle={() => setOpen((v) => !v)} />
       <div className="filterlist" role="group" aria-label={label}>
         {shown.map((o) => (
           <button
@@ -118,6 +123,139 @@ function FilterGroup({ label, options, value, onPick, startOpen = true }) {
         <button type="button" className="filtermore" onClick={() => setExpanded((v) => !v)}>
           {expanded ? 'Show less' : `+ Show ${over} more`}
         </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The city, asked with a box you can type in.
+ *
+ * Every other group in this rail is a fixed set — three statuses, nine
+ * categories — and a row each is the right shape for those. Cities are
+ * not fixed: there are nine today, the catalog is two countries wide, and
+ * the answer to "which city" is one a reader usually arrives already
+ * knowing. A list you scan is the wrong instrument for a question you can
+ * already answer; a box you type three letters into is the right one, and
+ * it costs the same two lines of rail at nine cities as at ninety.
+ *
+ * Still single-answer, like the rest of the rail and like `api.places`,
+ * which takes one `city_id`. The chip under the box is the one that is
+ * set, and clearing it means all cities rather than none — "no city" is
+ * not a state this catalog has.
+ *
+ * The counts stay on the rows. They are why this is not a plain `select`:
+ * the desk picks the next city to work by which one is biggest, and a
+ * native menu has nowhere to put that number.
+ */
+function CityFilter({ cities, value, counts, allCount, onPick }) {
+  const [open, setOpen] = useState(true);
+  const [listOpen, setListOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const wrap = useRef(null);
+  const input = useRef(null);
+
+  // A menu that stays open after you have looked away from it is a menu
+  // covering the thing you looked at. Pointerdown rather than click, so it
+  // shuts on the press that starts a scroll, not on the release.
+  useEffect(() => {
+    if (!listOpen) return undefined;
+    const away = (e) => { if (!wrap.current?.contains(e.target)) setListOpen(false); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [listOpen]);
+
+  const options = useMemo(() => [
+    { value: ALL_CITIES, label: 'All cities', count: allCount },
+    ...cities.map((c) => ({ value: c.id, label: chipLabel(c), count: counts?.[c.id] ?? 0 })),
+  ], [cities, counts, allCount]);
+
+  const needle = q.trim().toLowerCase();
+  // Accent-insensitive, because the desk types "da nang" for Đà Nẵng far
+  // more often than it reaches for the diacritics.
+  const flat = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const matches = needle
+    ? options.filter((o) => flat(o.label).includes(flat(needle)))
+    : options;
+
+  const chosen = options.find((o) => o.value === value);
+  const pick = (v) => {
+    onPick(v);
+    setQ('');
+    setListOpen(false);
+  };
+
+  return (
+    <div className={`filterset${open ? '' : ' shut'}`}>
+      <FilterHead label="City" open={open} onToggle={() => setOpen((v) => !v)} />
+      {open && (
+        <div className="citypick" ref={wrap}>
+          <div className="citybox">
+            <span className="cityboxicon" aria-hidden="true"><CategoryIcon name="search" size={12} /></span>
+            <input
+              ref={input}
+              type="text"
+              className="cityinput"
+              role="combobox"
+              aria-expanded={listOpen}
+              aria-label="Search cities"
+              placeholder="Search cities…"
+              value={q}
+              onChange={(e) => { setQ(e.target.value); setListOpen(true); }}
+              onFocus={() => setListOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') { setListOpen(false); setQ(''); }
+                // One match and a reader who has finished typing: take it.
+                if (e.key === 'Enter' && matches.length === 1) pick(matches[0].value);
+              }}
+            />
+            <button
+              type="button"
+              className="cityboxchev"
+              aria-label={listOpen ? 'Hide cities' : 'Show cities'}
+              aria-expanded={listOpen}
+              onClick={() => {
+                setListOpen((v) => !v);
+                if (!listOpen) input.current?.focus();
+              }}
+            >
+              <CategoryIcon name="chevron" size={12} />
+            </button>
+          </div>
+
+          {listOpen && (
+            <div className="citymenu" role="listbox" aria-label="Cities">
+              {matches.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  role="option"
+                  aria-selected={value === o.value}
+                  className={`filterrow${value === o.value ? ' on' : ''}`}
+                  onClick={() => pick(o.value)}
+                >
+                  <span className="filterbox" aria-hidden="true"><CategoryIcon name="check" size={10} /></span>
+                  <span className="filtername">{o.label}</span>
+                  <span className="filtercount">{o.count ?? 0}</span>
+                </button>
+              ))}
+              {matches.length === 0 && <p className="citynone">No city by that name.</p>}
+            </div>
+          )}
+
+          {/* What is set, when the box is not showing it. Clearing goes to
+              all cities, which is this filter's off position. */}
+          {chosen && value !== ALL_CITIES && (
+            <div className="citychips">
+              <span className="citychip">
+                {chosen.label}
+                <button type="button" onClick={() => pick(ALL_CITIES)} aria-label={`Clear ${chosen.label}`}>
+                  <CategoryIcon name="x" size={9} />
+                </button>
+              </span>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -572,28 +710,18 @@ export default function PlaceList() {
           </div>
           <div className="filters">
             {/* First, because it is the question the others are asked
-                inside: which city, then which of its places. It was a menu
-                above this panel, which was fine at nine cities and will
-                not be at thirty — a row per city with its count, folded
-                past six like every other group here, is the shape this
-                column already has.
+                inside: which city, then which of its places.
 
                 Counts come from `api.cityCounts`, which is scoped by
-                nothing: the group has to show every city's size while one
+                nothing: the box has to show every city's size while one
                 of them is picked, and the other groups' counts ignore
                 their siblings too. */}
-            <FilterGroup
-              label="City"
+            <CityFilter
+              cities={cities}
               value={city?.id ?? ALL_CITIES}
+              counts={cityCounts}
+              allCount={allCityCount}
               onPick={(v) => setCity(v)}
-              options={[
-                { value: ALL_CITIES, label: 'All cities', count: allCityCount },
-                ...cities.map((c) => ({
-                  value: c.id,
-                  label: chipLabel(c),
-                  count: cityCounts?.[c.id] ?? 0,
-                })),
-              ]}
             />
             <FilterGroup
               label="Status"
@@ -612,16 +740,8 @@ export default function PlaceList() {
                 duplicated list. Icon colour mirrors the mobile app (see
                 categories.js and vibes.js) — same hue, same concept, on every
                 surface. */}
-            {/* Shut at rest, with Vibe and Threads. Nine categories and
-                eleven vibes is 20 rows of rail below Status, and the three
-                together are the long tail of this panel: a reader scanning
-                for the question they want should see five headings, not
-                scroll past two lists to reach the last one. City and Status
-                stay open because they are the two that get answered on
-                nearly every visit. */}
             <FilterGroup
               label="Category"
-              startOpen={false}
               value={category}
               onPick={(v) => toggle('category', v)}
               options={CATEGORY_KEYS.map(([v, label]) => ({
@@ -634,7 +754,6 @@ export default function PlaceList() {
             />
             <FilterGroup
               label="Vibe"
-              startOpen={false}
               value={vibe}
               onPick={(v) => toggle('vibe', v)}
               options={VIBE_ORDER.map((v) => ({
@@ -654,7 +773,6 @@ export default function PlaceList() {
                 place. */}
             <FilterGroup
               label="Threads"
-              startOpen={false}
               value={threads}
               onPick={(v) => toggle('threads', v)}
               options={THREADS_FILTERS.map(([v, label]) => ({
