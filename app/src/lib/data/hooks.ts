@@ -134,7 +134,7 @@ export const useMyPreferences = (ownerId: string | null | undefined) => {
 // The local guide's grant is not a hook here. It is a property of the
 // session rather than of a screen, and a fetch cannot answer on a first
 // render — so it lives in `lib/guideGrant` as a store the launch fills
-// and a component reads synchronously. `fetchIsLocalGuide` is what that
+// and a component reads synchronously. `fetchGuideCities` is what that
 // store calls.
 
 // Friendships and blocks have no hook here: they are fetched once for

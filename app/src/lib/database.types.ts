@@ -22,24 +22,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _metadata_backup: {
-        Row: {
-          id: string | null
-          raw_user_meta_data: Json | null
-          saved_at: string | null
-        }
-        Insert: {
-          id?: string | null
-          raw_user_meta_data?: Json | null
-          saved_at?: string | null
-        }
-        Update: {
-          id?: string | null
-          raw_user_meta_data?: Json | null
-          saved_at?: string | null
-        }
-        Relationships: []
-      }
       app_flags: {
         Row: {
           enabled: boolean
@@ -315,6 +297,35 @@ export type Database = {
           },
         ]
       }
+      editorial_collection_origin: {
+        Row: {
+          collection_id: string
+          moved_at: string
+          previous_curator_handle: string | null
+          previous_owner_id: string
+        }
+        Insert: {
+          collection_id: string
+          moved_at?: string
+          previous_curator_handle?: string | null
+          previous_owner_id: string
+        }
+        Update: {
+          collection_id?: string
+          moved_at?: string
+          previous_curator_handle?: string | null
+          previous_owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "editorial_collection_origin_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: true
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       editors: {
         Row: {
           added_at: string
@@ -358,22 +369,36 @@ export type Database = {
         Row: {
           added_at: string
           added_by: string | null
+          city_id: string | null
+          id: string
           note: string | null
           user_id: string
         }
         Insert: {
           added_at?: string
           added_by?: string | null
+          city_id?: string | null
+          id?: string
           note?: string | null
           user_id: string
         }
         Update: {
           added_at?: string
           added_by?: string | null
+          city_id?: string | null
+          id?: string
           note?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "local_guides_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       moderation_log: {
         Row: {
@@ -543,8 +568,8 @@ export type Database = {
           emoji: string | null
           google_place_id: string | null
           id: string
-          is_featured: boolean
           instagram_handle: string | null
+          is_featured: boolean
           is_published: boolean
           lat: number | null
           lng: number | null
@@ -591,8 +616,8 @@ export type Database = {
           emoji?: string | null
           google_place_id?: string | null
           id?: string
-          is_featured?: boolean
           instagram_handle?: string | null
+          is_featured?: boolean
           is_published?: boolean
           lat?: number | null
           lng?: number | null
@@ -639,8 +664,8 @@ export type Database = {
           emoji?: string | null
           google_place_id?: string | null
           id?: string
-          is_featured?: boolean
           instagram_handle?: string | null
+          is_featured?: boolean
           is_published?: boolean
           lat?: number | null
           lng?: number | null
@@ -966,6 +991,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adopt_editorial_collections: {
+        Args: { target_email: string }
+        Returns: number
+      }
       block_user: { Args: { target: string }; Returns: undefined }
       blocked_with: { Args: { other: string }; Returns: boolean }
       collection_has_unlive_member: { Args: { cid: string }; Returns: boolean }
@@ -984,6 +1013,9 @@ export type Database = {
       }
       is_blocked_pair: { Args: { a: string; b: string }; Returns: boolean }
       is_editor: { Args: never; Returns: boolean }
+      is_local_guide:
+        | { Args: never; Returns: boolean }
+        | { Args: { p_city_id: string }; Returns: boolean }
       likes_on_mine: {
         Args: { since: string }
         Returns: {
@@ -1016,6 +1048,8 @@ export type Database = {
       my_reports_today: { Args: never; Returns: number }
       on_trip: { Args: { t: string }; Returns: boolean }
       own_collection_places_today: { Args: never; Returns: number }
+      own_photos_on_place: { Args: { target: string }; Returns: number }
+      own_place_photos_today: { Args: never; Returns: number }
       random_handle: { Args: never; Returns: string }
       reports_queue: {
         Args: never
@@ -1033,6 +1067,7 @@ export type Database = {
           title: string
         }[]
       }
+      strip_profile_metadata: { Args: { meta: Json }; Returns: Json }
       suggested_friends: {
         Args: never
         Returns: {

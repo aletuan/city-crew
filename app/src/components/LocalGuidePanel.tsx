@@ -52,7 +52,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
   // filled, so this component is right on its first frame — a fetch here
   // drew the card without the panel and then shoved it down a round trip
   // later, once for every place its owner opened. See `lib/guideGrant`.
-  const granted = useIsGuide();
+  const granted = useIsGuide(place.city_id);
   // On a 320pt window — an SE, or any iPhone with Display Zoom on — the
   // words have about 78pt beside the mark and the button, not the ~140 the
   // lines below were cut to fit: the greeting truncates and the question
