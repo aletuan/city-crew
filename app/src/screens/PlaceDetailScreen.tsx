@@ -34,6 +34,7 @@ import {
 } from '../lib/links';
 import { clockOf, dotWindow, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import { blurbCredit, blurbLink } from '../lib/blurbSource';
 import { mapsSearchUrl } from '../lib/maps';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
@@ -236,6 +237,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // a description written only in Japanese is one for a Japanese reader,
   // and nothing (rather than an empty paragraph) for everyone else.
   const desc = t(place.desc_en, place.desc_vi, place.desc_ja);
+  // Who wrote the sentence above it. Null for most places — the desk wrote
+  // its own copy, and there is nobody outside to name.
+  const blurbFrom = blurbCredit(place);
+  const blurbHref = blurbLink(place);
   // Which row opens the grouped card decides where the hairlines fall:
   // every row below the first draws one above itself, whatever subset of
   // the four a place actually has.
@@ -551,6 +556,46 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               <View style={s.whyBody}>
                 <Text style={s.whyLabel}>{t('Why go?', 'Vì sao nên ghé?', 'なぜ行く？')}</Text>
                 <Text style={s.desc}>{desc}</Text>
+                {/* Whose words those are. A line, not a badge: it belongs to
+                    the paragraph above it and should read as its last line,
+                    the way a pull quote is attributed.
+
+                    Under the blurb rather than over it because the sentence
+                    is what the reader came for; the attribution answers a
+                    question they only have once they have read it.
+
+                    Google is credited by platform alone. The import copies
+                    `editorialSummary`, which Google writes and signs with
+                    nobody, so there is no author to name and naming one
+                    would be an invention. Threads has a person, and that
+                    person is the reason the copy is good.
+
+                    Plain text when there is nowhere to go: a tappable line
+                    that does nothing is worse than an untappable one. */}
+                {blurbFrom ? (
+                  <Text
+                    style={[s.creditLine, blurbHref ? s.creditLink : null]}
+                    onPress={blurbHref
+                      ? () => open(blurbHref, t(
+                        'Could not open the source',
+                        'Không mở được nguồn',
+                        'ソースを開けませんでした',
+                      ))
+                      : undefined}
+                    accessibilityRole={blurbHref ? 'link' : undefined}
+                    testID="blurb-credit"
+                  >
+                    {blurbFrom.kind === 'threads'
+                      ? (blurbFrom.name
+                        ? t(`@${blurbFrom.name} on Threads`, `@${blurbFrom.name} trên Threads`, `@${blurbFrom.name}（Threads）`)
+                        : t('From Threads', 'Từ Threads', 'Threads より'))
+                      : blurbFrom.kind === 'google'
+                        ? t('From Google', 'Từ Google', 'Google より')
+                        : (blurbFrom.name
+                          ? t(`${blurbFrom.name} on ${blurbFrom.source}`, `${blurbFrom.name} trên ${blurbFrom.source}`, `${blurbFrom.name}（${blurbFrom.source}）`)
+                          : blurbFrom.source)}
+                  </Text>
+                ) : null}
               </View>
             </View>
           ) : null}
@@ -1082,6 +1127,13 @@ const s = StyleSheet.create({
   },
   whyBody: { flex: 1, gap: 2 },
   whyLabel: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
+
+  // Smaller and quieter than the blurb: an attribution that competed with
+  // the sentence it attributes would be reading the footnote first. The
+  // link colour is the only thing that marks it as tappable — an icon at
+  // this size is a smudge, and an underline in this face is a scar.
+  creditLine: { color: colors.textTertiary, fontSize: 12.5, marginTop: 6 },
+  creditLink: { color: colors.accent },
 
   // The Card supplies ground, border and radius; the horizontal inset
   // lives here so each row's hairline can run to the card's edge.
