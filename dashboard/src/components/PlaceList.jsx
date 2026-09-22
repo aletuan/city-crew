@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { leftBehindNote } from '../storage.js';
 import { api } from '../api.js';
@@ -9,10 +9,10 @@ import { CategoryIcon } from '../icons.jsx';
 import { useCity, useProgress, useToast } from '../App.jsx';
 
 const STATUSES = ['pending', 'approved', 'flagged'];
-// The params the rail owns, and so the ones the badge counts and "Clear"
-// clears. `q` is not among them: it has its own visible box in the
-// toolbar, and a reader who can see their own search term does not need
-// a number telling them it is there.
+// The params the rail owns, and so the ones the badge counts, the chip row
+// lists and Reset / Clear all clear. `q` is not among them: it has its own
+// visible box in the toolbar, and a reader who can see their own search
+// term does not need a chip telling them it is there.
 const FILTER_KEYS = ['status', 'category', 'vibe', 'threads'];
 const VIEW_KEY = 'citycrew.dashboard.view';
 const SORTS = [
@@ -25,6 +25,81 @@ const SORTS = [
 ];
 
 const fmtCount = (n) => (!n ? null : n >= 1000 ? `${Math.round(n / 100) / 10}k` : String(n));
+
+// How each filter value is spelled once it is *on* — on the chip above the
+// results, away from the group that gave it its meaning. "cafes" under a
+// CATEGORY heading needs no more than itself; adrift in a row of chips it
+// has to carry the same word the rail used, which for vibes and Threads is
+// not the stored value.
+const THREADS_LABEL = Object.fromEntries(THREADS_FILTERS);
+const FILTER_LABEL = {
+  status: (v) => v.charAt(0).toUpperCase() + v.slice(1),
+  category: (v) => CATEGORY_LABEL[v] ?? v,
+  vibe: (v) => VIBE_STYLE[v]?.label ?? v.replace('_', ' '),
+  threads: (v) => THREADS_LABEL[v] ?? v,
+};
+
+/* How many answers a group shows before it offers the rest.
+   Six is what a 236px column holds without becoming a scroll of its own:
+   the two long groups (nine categories, eleven vibes) were 20 chips of
+   rail between "Status" and "Threads", so the question at the bottom was
+   one nobody scrolled to. */
+const GROUP_SHOWN = 6;
+
+/**
+ * One question in the rail: a heading, a row per answer with the count it
+ * would return, and a way past the cap when there are more answers than a
+ * column should hold at rest.
+ *
+ * Rows rather than the wrapped chips this replaces. A chip row packs more
+ * into less, and that is the problem: nine chips wrapping over three lines
+ * have no column for their counts, so every count sat in brackets after
+ * its label and the numbers could not be read down. A row gives the count
+ * a right edge to line up on, which is the whole reason it is there — the
+ * desk picks the next filter by which queue is biggest.
+ *
+ * Single-answer, though it wears a checkbox: `api.places` takes one value
+ * per key (see the query there), so picking a second category replaces the
+ * first rather than widening the search. The box is still the right mark —
+ * these are on/off statements about the list, and pressing the one that is
+ * on turns it off, which is exactly what a checkbox promises.
+ */
+function FilterGroup({ label, options, value, onPick }) {
+  const [expanded, setExpanded] = useState(false);
+  const over = options.length - GROUP_SHOWN;
+  // A chosen answer is never folded away: the row narrowing the list has to
+  // be the row you can see and switch off, wherever it sits in the order.
+  const chosenIsLate = options.findIndex((o) => o.value === value) >= GROUP_SHOWN;
+  const open = expanded || chosenIsLate || over <= 0;
+  const shown = open ? options : options.slice(0, GROUP_SHOWN);
+  return (
+    <div className="filterset">
+      <span className="filterlabel">{label}</span>
+      <div className="filterlist" role="group" aria-label={label}>
+        {shown.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            role="checkbox"
+            aria-checked={value === o.value}
+            className={`filterrow${value === o.value ? ' on' : ''}${o.cls ? ` ${o.cls}` : ''}`}
+            onClick={() => onPick(o.value)}
+          >
+            <span className="filterbox" aria-hidden="true"><CategoryIcon name="check" size={10} /></span>
+            {o.icon && <CategoryIcon name={o.icon} color={o.color} />}
+            <span className="filtername">{o.label}</span>
+            <span className="filtercount">{o.count ?? 0}</span>
+          </button>
+        ))}
+      </div>
+      {over > 0 && !chosenIsLate && (
+        <button type="button" className="filtermore" onClick={() => setExpanded((v) => !v)}>
+          {expanded ? 'Show less' : `+ Show ${over} more`}
+        </button>
+      )}
+    </div>
+  );
+}
 
 // What each door means, in the words a reviewer would use about it.
 const CHANNEL_TITLE = {
@@ -153,6 +228,31 @@ export default function PlaceList() {
   const [approving, setApproving] = useState(false);
   // Phones only: the rail is a column on desktop and never closed there.
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  /**
+   * The toolbar's own height, published for the rail that sticks below it.
+   *
+   * It was a constant — "a single row of controls at every width where the
+   * rail is a column, so 62px holds". That stopped being true the moment
+   * the active-filter chips got a row of their own: the bar is one row with
+   * no filters set and two with any, and the rail is stuck under whichever
+   * of those the reader is currently looking at. Erring short slides the
+   * rail's first rows behind an opaque bar, which is what a constant would
+   * now do for exactly the reader who has filters on — the one who most
+   * needs to see them. Measured, like the top bar above it.
+   */
+  const worktopRef = useRef(null);
+  useEffect(() => {
+    const el = worktopRef.current;
+    if (!el) return undefined;
+    const publish = () =>
+      document.documentElement.style.setProperty('--worktop-h', `${el.offsetHeight}px`);
+    publish();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const status = params.get('status') ?? '';
   const category = params.get('category') ?? '';
@@ -321,7 +421,7 @@ export default function PlaceList() {
           it is one row tall; on phones, where it is two, it stays stuck
           only while a batch is selected — see the media query in
           theme.css. */}
-      <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`}>
+      <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`} ref={worktopRef}>
         {selected.size > 0 ? (
           <div className="resultsbar">
             <span className="resultscount">{selected.size} selected</span>
@@ -376,6 +476,35 @@ export default function PlaceList() {
             </div>
           </div>
         )}
+        {/* What the rail is currently asking, said where the answer is.
+            The rail is a column on a laptop and a shut sheet on a phone,
+            and either way a filter you cannot see is a filter you forget
+            you set — which is how "no places match" arrives with no
+            visible cause. Each chip removes its own filter; the row is
+            absent when nothing is set, and while a batch is selected,
+            since the bar above it has become a different question. */}
+        {activeCount > 0 && selected.size === 0 && (
+          <div className="activefilters">
+            {FILTER_KEYS.map((key) => {
+              const value = params.get(key);
+              if (!value) return null;
+              const label = FILTER_LABEL[key](value);
+              return (
+                <button
+                  key={key}
+                  className={`fchip${key === 'status' ? ` st-${value}` : ''}`}
+                  onClick={() => toggle(key, value)}
+                  aria-label={`Remove filter ${label}`}
+                  title={`Remove filter ${label}`}
+                >
+                  {label}
+                  <CategoryIcon name="x" size={10} />
+                </button>
+              );
+            })}
+            <button className="clearall" onClick={clearFilters}>Clear all</button>
+          </div>
+        )}
       </div>
 
       <div className="worksplit">
@@ -390,62 +519,71 @@ export default function PlaceList() {
           <div className="railhead">
             <span className="railtitle">Filters</span>
             {activeCount > 0 && (
-              <button className="railclear" onClick={clearFilters}>Clear {activeCount}</button>
+              <button className="railclear" onClick={clearFilters}>Reset</button>
             )}
             <button className="railclose" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
-              ✕
+              <CategoryIcon name="x" size={12} />
             </button>
           </div>
           <div className="filters">
-            <div className="filtergroup">
-              <span className="filterlabel">Status</span>
-              {STATUSES.map((s) => (
-                <button key={s} className={`chip st-${s} ${status === s ? 'on' : ''}`} onClick={() => toggle('status', s)}>
-                  {s}
-                  <span className="chipcount">({progress?.by_status?.[s] ?? 0})</span>
-                </button>
-              ))}
-            </div>
+            <FilterGroup
+              label="Status"
+              value={status}
+              onPick={(v) => toggle('status', v)}
+              options={STATUSES.map((v) => ({
+                value: v,
+                label: FILTER_LABEL.status(v),
+                count: progress?.by_status?.[v] ?? 0,
+                cls: `st-${v}`,
+              }))}
+            />
             {/* Category (what a place is) and vibe (how it feels) share some
                 English words — "views", "nightlife" — so each group needs its
-                own labelled row, or the two read as one confusing, duplicated
-                chip list. Icon colour mirrors the mobile app (see categories.js
-                and vibes.js) — same hue, same concept, on every surface. */}
-            <div className="filtergroup">
-              <span className="filterlabel">Category</span>
-              {CATEGORY_KEYS.map(([value, label]) => (
-                <button key={value} className={`chip ${category === value ? 'on' : ''}`} onClick={() => toggle('category', value)}>
-                  <CategoryIcon name={CATEGORY_STYLE[value]?.icon} color={CATEGORY_STYLE[value]?.color} />
-                  {label}
-                  <span className="chipcount">({progress?.by_category_tag?.[value] ?? 0})</span>
-                </button>
-              ))}
-            </div>
-            <div className="filtergroup">
-              <span className="filterlabel">Vibe</span>
-              {VIBE_ORDER.map((v) => (
-                <button key={v} className={`chip ${vibe === v ? 'on' : ''}`} onClick={() => toggle('vibe', v)}>
-                  <CategoryIcon name={VIBE_STYLE[v]?.icon} color={VIBE_STYLE[v]?.color} />
-                  {VIBE_STYLE[v]?.label}
-                  <span className="chipcount">({progress?.by_vibe?.[v] ?? 0})</span>
-                </button>
-              ))}
-            </div>
-            {/* Its own row rather than a chip on one of the rows above, because
-                it asks a different kind of question. Category and vibe ask what
-                a place *is*; this asks whether the desk has finished looking it
-                up. Handles arrive by hand — Google Places does not return one —
-                so "No handle" is a worklist that only shrinks when somebody
-                works it, and it starts out holding nearly every place. */}
-            <div className="filtergroup">
-              <span className="filterlabel">Threads</span>
-              {THREADS_FILTERS.map(([value, label]) => (
-                <button key={value} className={`chip ${threads === value ? 'on' : ''}`} onClick={() => toggle('threads', value)}>
-                  {label}
-                  <span className="chipcount">({progress?.by_threads?.[value] ?? 0})</span>
-                </button>
-              ))}
-            </div>
+                own labelled heading, or the two read as one confusing,
+                duplicated list. Icon colour mirrors the mobile app (see
+                categories.js and vibes.js) — same hue, same concept, on every
+                surface. */}
+            <FilterGroup
+              label="Category"
+              value={category}
+              onPick={(v) => toggle('category', v)}
+              options={CATEGORY_KEYS.map(([v, label]) => ({
+                value: v,
+                label,
+                count: progress?.by_category_tag?.[v] ?? 0,
+                icon: CATEGORY_STYLE[v]?.icon,
+                color: CATEGORY_STYLE[v]?.color,
+              }))}
+            />
+            <FilterGroup
+              label="Vibe"
+              value={vibe}
+              onPick={(v) => toggle('vibe', v)}
+              options={VIBE_ORDER.map((v) => ({
+                value: v,
+                label: VIBE_STYLE[v]?.label ?? v,
+                count: progress?.by_vibe?.[v] ?? 0,
+                icon: VIBE_STYLE[v]?.icon,
+                color: VIBE_STYLE[v]?.color,
+              }))}
+            />
+            {/* Its own group rather than a row inside one above, because it
+                asks a different kind of question. Category and vibe ask what
+                a place *is*; this asks whether the desk has finished looking
+                it up. Handles arrive by hand — Google Places does not return
+                one — so "No handle" is a worklist that only shrinks when
+                somebody works it, and it starts out holding nearly every
+                place. */}
+            <FilterGroup
+              label="Threads"
+              value={threads}
+              onPick={(v) => toggle('threads', v)}
+              options={THREADS_FILTERS.map(([v, label]) => ({
+                value: v,
+                label,
+                count: progress?.by_threads?.[v] ?? 0,
+              }))}
+            />
           </div>
         </aside>
 

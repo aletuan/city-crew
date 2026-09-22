@@ -147,6 +147,46 @@ const PATHS = {
       <path d="M10.4 6.6a2.2 2.2 0 0 1 0 2.8" />
     </>
   ),
+  // ── the desk's own chrome: a donut for a share, and the three glyphs
+  //    the sidebar's footer rows were wearing as bare words ──
+  // Coverage measures a share of a city, so it gets the shape that means
+  // "share": a ring with one wedge marked off. The map pin it used to wear
+  // moved to Places, where a pin is the noun itself.
+  donut: (
+    <>
+      <circle cx="8" cy="8" r="5.6" />
+      <circle cx="8" cy="8" r="2.3" />
+      <path d="M8 2.4v3.3M13.6 8h-3.3" />
+    </>
+  ),
+  refresh: (
+    <>
+      <path d="M13.2 8a5.2 5.2 0 1 1-1.7-3.8" />
+      <path d="M13.6 2.4v3.2h-3.2" />
+    </>
+  ),
+  external: (
+    <>
+      <path d="M12.6 9.4v3a1.2 1.2 0 0 1-1.2 1.2H3.8a1.2 1.2 0 0 1-1.2-1.2V4.8a1.2 1.2 0 0 1 1.2-1.2h3" />
+      <path d="M9.8 2.5h3.7v3.7M13.5 2.5 7.8 8.2" />
+    </>
+  ),
+  signout: (
+    <>
+      <path d="M6.4 13.5H3.7a1.1 1.1 0 0 1-1.1-1.1V3.6a1.1 1.1 0 0 1 1.1-1.1h2.7" />
+      <path d="M10.2 11 13.4 8l-3.2-3M13.4 8H6.1" />
+    </>
+  ),
+  // The tick inside a filter row's box, and the cross on an active filter
+  // chip. Both are drawn rather than typed: "✓" and "✕" are font glyphs,
+  // and a font that has neither renders a box beside every filter.
+  check: (
+    <path d="M3.4 8.3 6.4 11.4l6.2-6.9" />
+  ),
+  x: (
+    <path d="M4.2 4.2 11.8 11.8M11.8 4.2 4.2 11.8" />
+  ),
+
   // Three tracks with a knob each: the settled glyph for "filters", and
   // the one the mobile mockup puts beside its search field.
   sliders: (

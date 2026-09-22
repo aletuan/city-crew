@@ -65,6 +65,11 @@
      does. A declaration and not just a JS write: an undeclared var() is a
      silent unset, and the stylesheet's own test says so. */
   --topbar-h: 56px;
+  /* Same arrangement one level down: the Places toolbar's height, for the
+     filter rail stuck under it. Declared with the height it has as a single
+     row and overwritten from PlaceList with the measured one — it grows a
+     second row whenever a filter is on. */
+  --worktop-h: 62px;
 }
 
 * { box-sizing: border-box; }
@@ -128,9 +133,13 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .side-item svg { flex-shrink: 0; opacity: .75; }
 .side-item:hover { background: var(--surface-glass); color: #fff; }
 .side-item:disabled { opacity: .5; cursor: wait; }
-/* Where you are — the fact the old overflow menu could never show. */
-.side-item.active { background: var(--surface-glass-strong); color: #fff; }
-.side-item.active svg { opacity: 1; }
+/* Where you are — the fact the old overflow menu could never show. A
+   violet wash rather than the grey one it had: the desk has exactly one
+   accent, the gradient's first stop, and "the room you are standing in"
+   is the one piece of navigation state worth spending it on. The glyph
+   takes the same hue, so the row reads as lit rather than merely shaded. */
+.side-item.active { background: rgba(139, 92, 246, 0.20); color: #fff; }
+.side-item.active svg { opacity: 1; color: var(--ai-violet); }
 .side-sep { height: 1px; margin: 8px 6px; background: var(--border-glass-soft); }
 .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; }
 
@@ -334,12 +343,24 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 }
 
 /* page head — every route gets the same anchor point: a title where the
-   list has one, the approval rail wherever there's data to measure. */
-.pagehead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 0 0 18px; }
-.pagetitle { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+   list has one, the approval rail wherever there's data to measure.
+   Top-aligned, so the numbers sit on the title's own line rather than
+   floating up from the bottom of a block whose height depends on whether
+   a subtitle and a chip row happen to be there. */
+.pagehead {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px 24px; flex-wrap: wrap; margin: 0 0 20px;
+}
+.pagehead-lead { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pagetitles { display: flex; flex-direction: column; gap: 3px; }
+.pagetitle { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin: 0; line-height: 1.15; }
+/* The sentence that says what the screen is for. Places is the desk's front
+   door and it opened onto a bare word — everything under it (a scope, four
+   counts, a rail, a toolbar) is scaffolding around a job nothing named. */
+.pagesub { margin: 0; font-size: 13.5px; color: var(--text-tertiary); max-width: 52ch; }
 
 /* progress rail — the desk's one glowing measure */
-.rail { display: flex; flex-direction: column; gap: 5px; min-width: 260px; margin-left: auto; }
+.rail { display: flex; flex-direction: column; gap: 6px; min-width: 340px; margin-left: auto; }
 /* `space-between` with no gap only reads as three facts while the rail is
    wider than they are. It is not: the rail's floor is 260px and the three
    labels want ~277px at 11px mono, so at the desk's own minimum they touch
@@ -349,30 +370,35 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    a second line when one line cannot hold them. */
 /* Three tiles, each a link into the queue it counts. Sized by the number
    rather than the word, because the number is what is being read. */
-.stats { display: flex; gap: 8px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
 .stat {
-  display: flex; flex-direction: column; gap: 1px; flex: 1 1 0; min-width: 0;
-  padding: 7px 12px; text-decoration: none;
+  display: flex; flex-direction: column; gap: 1px; flex: 1 1 76px; min-width: 0;
+  padding: 8px 12px; text-decoration: none;
   background: var(--surface-glass); border: 1px solid transparent;
   border-radius: var(--radius-input);
   transition: background 160ms, border-color 160ms;
 }
 .stat:hover { background: var(--surface-glass-strong); }
 .stat.on { border-color: var(--border-control); background: var(--surface-glass-strong); }
-.stat b { font-size: 17px; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
+.stat b { font-size: 21px; font-weight: 700; color: var(--text-primary); line-height: 1.15; letter-spacing: -0.01em; }
 .stat span {
   font-family: var(--font-data); font-size: 10px; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--text-tertiary); white-space: nowrap;
 }
 /* The colour is carried by a class the markup adds only when the count is
    non-zero — see App.jsx. An empty queue is not news. */
+.stat.approved b { color: var(--ok); }
 .stat.pending b { color: var(--warn); }
 .stat.flagged b { color: var(--bad); }
 .railnote { font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary); }
 .railnote b { color: var(--text-secondary); font-weight: 600; }
+/* Scoped to the track, not to the rail. `.rail .flagged` also matched the
+   Flagged tile above it — a stat sitting inside the same rail — and beat
+   `.stat`'s own background on specificity, so the tile painted itself a
+   solid red block with its number lost inside it. */
 .rail .track { height: 6px; border-radius: 999px; background: var(--surface-glass); overflow: hidden; display: flex; }
-.rail .fill { background: var(--grad-ai); height: 100%; transition: width 400ms cubic-bezier(0.22, 1, 0.36, 1); }
-.rail .flagged { background: var(--bad); opacity: .75; height: 100%; }
+.rail .track .fill { background: var(--grad-ai); height: 100%; transition: width 400ms cubic-bezier(0.22, 1, 0.36, 1); }
+.rail .track .flagged { background: var(--bad); opacity: .75; height: 100%; }
 
 .syncbtn {
   border: 1px solid var(--border-control); background: var(--surface-glass);
@@ -420,17 +446,66 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .publishbtn:disabled { opacity: .5; cursor: wait; }
 
 /* ── filters ──
-   Status, category and vibe are three different questions — some of their
-   English words collide ("views", "nightlife"), so each gets its own
-   labelled row instead of one flat, ambiguous chip soup. Boxed as a .panel
-   so the filter set reads as one distinct region, not chips floating loose
-   on the page background. */
-.filters { display: flex; flex-direction: column; gap: 14px; }
+   Status, category, vibe and Threads are four different questions — some of
+   their English words collide ("views", "nightlife"), so each gets its own
+   labelled group instead of one flat, ambiguous list.
+
+   Each group is a stack of rows: a box, the label, and the count that
+   answer would return, right-aligned. They were wrapped pills with the
+   count in brackets after the word, which is the one thing a pill row
+   cannot do well — twenty of them over six lines, and no column for the
+   numbers, so the figure the desk actually picks its next filter by could
+   not be read down. */
+.filters { display: flex; flex-direction: column; gap: 18px; }
+.filterset { display: flex; flex-direction: column; gap: 3px; }
+.filterset .filterlabel { margin-bottom: 4px; }
+.filterlist { display: flex; flex-direction: column; gap: 1px; }
+.filterrow {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+  border: none; background: transparent; color: var(--text-secondary);
+  font: inherit; font-size: 13px; font-weight: 600;
+  padding: 5px 8px; border-radius: 9px;
+  transition: background 140ms, color 140ms;
+}
+.filterrow:hover { background: var(--surface-glass); color: var(--text-primary); }
+.filterrow.on { color: #fff; }
+/* The one control in the rail with no label of its own, so it answers to
+   1.4.11 the way an input does: --border-control, not a glass hairline. */
+.filterbox {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 5px;
+  border: 1px solid var(--border-control); color: transparent;
+  transition: background 140ms, border-color 140ms, color 140ms;
+}
+.filterrow:hover .filterbox { border-color: var(--border-control-strong); }
+/* Ticked, a box wears the desk's accent — except in Status, where the
+   status colours already mean something everywhere else on the screen (the
+   stamps, the tiles, the progress track) and a violet "approved" would be
+   the one place that disagreed. Their fills are light, so the tick flips
+   to the page's own near-black rather than staying white on green. */
+.filterrow.on .filterbox { background: var(--grad-ai); border-color: transparent; color: #fff; }
+.filterrow.on.st-approved .filterbox { background: var(--ok); color: var(--bg-app); }
+.filterrow.on.st-pending .filterbox { background: var(--warn); color: var(--bg-app); }
+.filterrow.on.st-flagged .filterbox { background: var(--bad); color: var(--bg-app); }
+/* The glyph carries the category/vibe's own hue in both states — selection
+   repaints the label, never the icon, since the hue is what's being learned
+   (same rule as the mobile app's chips and card dots). */
+.filterrow > svg { flex: none; }
+.filtername { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filtercount {
+  flex: none; font-family: var(--font-data); font-size: 11px; font-weight: 600;
+  color: var(--text-tertiary); font-variant-numeric: tabular-nums;
+}
+.filterrow.on .filtercount { color: var(--text-secondary); }
+/* Nine categories and eleven vibes is twenty rows of rail above the
+   question at the bottom of it. Six each, and the rest behind this. */
+.filtermore {
+  align-self: flex-start; margin-top: 3px;
+  border: none; background: transparent; color: var(--text-secondary);
+  font: inherit; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 8px;
+}
+.filtermore:hover { background: var(--surface-glass); color: #fff; }
 .filtergroup { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-/* In a 236px column the label cannot share a line with the chips, so it
-   takes its own — which is what the phone already did with these same
-   chips, for the same reason. */
-.filterrail .filterlabel { flex-basis: 100%; min-width: 0; }
 .filterlabel {
   font-family: var(--font-data); font-size: 10.5px; font-weight: 700;
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);
@@ -445,11 +520,6 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 }
 .chip:hover { border-color: var(--border-control-strong); color: var(--text-primary); }
 .chip.on { background: var(--surface-glass-strong); border-color: transparent; color: #fff; }
-.chip.on.st-approved { color: var(--ok); }
-.chip.on.st-flagged { color: var(--bad); }
-/* The glyph carries the category/vibe's own hue in both states — selection
-   repaints the label, never the icon, since the hue is what's being learned
-   (same rule as the mobile app's chips and card dots). */
 .chip svg { flex: none; }
 .chipcount {
   font-family: var(--font-data); font-size: 10.5px; font-weight: 600;
@@ -479,13 +549,13 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .worksplit { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 24px; align-items: start; }
 .workmain { min-width: 0; }
 .filterrail {
-  /* Below the toolbar, which is itself below the top bar. The toolbar's
-     height is not published the way the top bar's is: it is a single row
-     of controls at every width where this rail is a column, so a constant
-     holds — and erring long costs a few pixels of gap, where erring short
-     would slide the rail's first chips up out of sight. */
-  position: sticky; top: calc(var(--topbar-h) + 62px);
-  max-height: calc(100vh - var(--topbar-h) - 96px); overflow-y: auto;
+  /* Below the toolbar, which is itself below the top bar — both heights
+     measured and published by the components that own them, because
+     neither is a constant: the top bar wraps at narrow widths, and the
+     toolbar grows a chip row whenever a filter is on. Erring short here
+     slides the rail's first rows behind an opaque bar. */
+  position: sticky; top: calc(var(--topbar-h) + var(--worktop-h) + 8px);
+  max-height: calc(100vh - var(--topbar-h) - var(--worktop-h) - 34px); overflow-y: auto;
   background: var(--bg-elevated); border: 1px solid var(--border-glass-soft);
   border-radius: var(--radius-card); padding: 16px 16px 18px;
 }
@@ -550,6 +620,37 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
     border-radius: 50%; font-size: 13px; cursor: pointer;
   }
 }
+
+/* ── what the rail is currently asking, said above the answer ──
+   A chip per live filter, each one its own way off, and a way to clear the
+   lot. The rail is a column on a laptop and a shut sheet on a phone, and
+   either way the question was only ever visible where it was asked: an
+   empty result on a phone had no visible cause at all, and on a laptop it
+   meant reading four groups to find the one ticked row. */
+.activefilters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 10px; }
+.fchip {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid rgba(139, 92, 246, 0.45); background: rgba(139, 92, 246, 0.20);
+  color: #fff; font-size: 12.5px; font-weight: 600;
+  padding: 4px 11px 4px 13px; border-radius: var(--radius-pill);
+  transition: background 160ms, border-color 160ms;
+}
+.fchip svg { opacity: .65; transition: opacity 160ms; }
+.fchip:hover { background: rgba(139, 92, 246, 0.32); border-color: rgba(139, 92, 246, 0.7); }
+.fchip:hover svg { opacity: 1; }
+/* A status chip keeps the colour that status wears everywhere else. */
+.fchip.st-approved { border-color: rgba(74, 222, 128, 0.45); background: rgba(74, 222, 128, 0.16); }
+.fchip.st-approved:hover { border-color: rgba(74, 222, 128, 0.7); background: rgba(74, 222, 128, 0.26); }
+.fchip.st-pending { border-color: rgba(246, 164, 92, 0.45); background: rgba(246, 164, 92, 0.16); }
+.fchip.st-pending:hover { border-color: rgba(246, 164, 92, 0.7); background: rgba(246, 164, 92, 0.26); }
+.fchip.st-flagged { border-color: rgba(248, 113, 113, 0.45); background: rgba(248, 113, 113, 0.16); }
+.fchip.st-flagged:hover { border-color: rgba(248, 113, 113, 0.7); background: rgba(248, 113, 113, 0.26); }
+.clearall {
+  border: none; background: transparent; color: var(--text-secondary);
+  font: inherit; font-size: 12.5px; font-weight: 600; padding: 4px 2px;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.clearall:hover { color: #fff; }
 
 /* ── results toolbar: count, search, sort, row/grid toggle — one row ── */
 /* Spacing comes from .worktop, which is the thing that sticks. */
@@ -1323,7 +1424,9 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   /* Nine chips wrap to two rows here and eat the screen the list needs. */
   .cityswitch { display: none; }
   .cityselect { display: block; }
-  .pagetitle { font-size: 19px; }
+  .pagetitle { font-size: 22px; }
+  .pagesub { font-size: 12.5px; }
+  .pagehead-lead { gap: 10px; }
   .rail { min-width: 0; flex: 1 1 100%; }
   .syncbtn { font-size: 12px; padding: 7px 12px; }
 
