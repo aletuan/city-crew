@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav } from '../nav';
 
 // A session that does not exist until an account is made, which is what
@@ -394,6 +394,26 @@ const field = {
 const type = (el: HTMLElement, value: string) => fireEvent.change(el, { target: { value } });
 const submit = () => fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
 
+/**
+ * A step reached, and settled — not merely on screen.
+ *
+ * `findByText` resolves on the commit that draws the next step. The
+ * header's Back button sits at the same place in the tree on every step,
+ * so React keeps the node and only changes its props — and
+ * react-native-web hands a Pressable its new `onPress` in a passive
+ * effect (`usePressEvents`: `useEffect(() => pressResponder.configure(
+ * config))`), which for a render started outside `act` runs a beat after
+ * the commit. A click that lands in that beat fires the *previous* step's
+ * handler: the form's `navigation.goBack()` on what is now the taste
+ * step's Back, and the step does not change. CI saw exactly that once.
+ * One drained `act` flushes the effect, and the click meets the handler
+ * the screen is showing. Work, not the clock — #529.
+ */
+const reach = async (text: string) => {
+  await screen.findByText(text);
+  await act(async () => {});
+};
+
 describe('the form, checked in field order', () => {
   beforeEach(() => {
     auth.state.session = null;
@@ -538,7 +558,7 @@ describe('the code step', () => {
     await screen.findByText('What are you into?');
     for (const chip of pick) fireEvent.click(screen.getByText(chip));
     fireEvent.click(screen.getByRole('button', { name: pick.length ? 'Continue' : 'Skip for now' }));
-    await screen.findByText('Check your email');
+    await reach('Check your email');
   };
 
   it('says which address the code went to', async () => {
@@ -684,7 +704,7 @@ describe('the ways out', () => {
     const navigation = nav();
     render(<SignUpScreen navigation={navigation} />);
     fillForm();
-    await screen.findByText('What are you into?');
+    await reach('What are you into?');
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
 
     expect(screen.getByRole('button', { name: 'Sign up' })).toBeTruthy();
