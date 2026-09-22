@@ -41,6 +41,31 @@ const state = vi.hoisted(() => ({
 
 const crewProps = vi.hoisted(() => ({ last: null as null | Record<string, unknown> }));
 const sheetProps = vi.hoisted(() => ({ last: null as null | Record<string, unknown> }));
+/** Where the gallery's next swipe lands, in points from the left. */
+const pager = vi.hoisted(() => ({ x: 0 }));
+
+// The gallery is a paged horizontal ScrollView, and react-native-web's
+// ScrollView has no momentum to end: `onMomentumScrollEnd` never fires in
+// jsdom. The stand-in keeps the real ScrollView for everything vertical
+// and, for the pager alone, hands the handler to a button a test can
+// press with an offset of its choosing — a swipe, told in numbers.
+vi.mock('react-native', async (orig) => {
+  const rn = await orig<typeof import('react-native')>();
+  const R = await import('react');
+  type P = React.ComponentProps<typeof rn.ScrollView>;
+  const ScrollView = R.forwardRef<InstanceType<typeof rn.ScrollView>, P>((p, ref) => (
+    p.horizontal && p.onMomentumScrollEnd
+      ? R.createElement(rn.View, null,
+        R.createElement(rn.Pressable, {
+          accessibilityRole: 'button',
+          onPress: () => p.onMomentumScrollEnd!({ nativeEvent: { contentOffset: { x: pager.x, y: 0 } } } as never),
+        }, R.createElement(rn.Text, null, 'swipe')),
+        p.children as React.ReactNode)
+      : R.createElement(rn.ScrollView, { ...p, ref })
+  ));
+  ScrollView.displayName = 'ScrollView';
+  return { ...rn, ScrollView };
+});
 
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({
@@ -105,6 +130,26 @@ vi.mock('../components/InviteSheet', async () => {
 });
 
 import TripDetailScreen from './TripDetailScreen';
+
+// `onLayout` rides react-native-web's one ResizeObserver, which jsdom does
+// not have, so nothing measured ever lands. This one answers the moment a
+// node is observed — the handler is set in the effect before the observe,
+// so it is there to answer. The measurement itself is `offsetWidth`, read
+// a macrotask later (`UIManager.measure` is a `setTimeout(0)`), so every
+// box is 320 wide — the number the gallery divides a swipe's offset by —
+// and a test that needs the width waits one tick for it. Installed before
+// the first render in this file: react-native-web creates its observer
+// once, on the first `onLayout` it meets, and never looks again.
+class InstantResizeObserver {
+  constructor(private readonly cb: (entries: { target: Element }[]) => void) {}
+  observe(target: Element) { this.cb([{ target }]); }
+  unobserve() {}
+  disconnect() {}
+}
+(window as unknown as { ResizeObserver: unknown }).ResizeObserver = InstantResizeObserver;
+Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get: () => 320 });
+/** The tick `onLayout` lands on. */
+const measured = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
 // `setup.tsx` mocks `react-native/Libraries/Alert/Alert`, but under the
 // web alias the screen's `Alert` is `react-native-web`'s, which that mock
@@ -174,6 +219,7 @@ beforeEach(() => {
   state.ships = [];
   crewProps.last = null;
   sheetProps.last = null;
+  pager.x = 0;
 });
 
 describe('before the trip is there', () => {
@@ -213,6 +259,37 @@ describe('the itinerary', () => {
     })];
     show();
     expect(screen.getByText('someday')).toBeTruthy();
+  });
+
+  // The hours need both ends: a last stop with no time leaves the day
+  // alone rather than printing "09:00–NaN".
+  it('prints the day alone when the last stop has no time', () => {
+    state.trips = [trip({
+      trip_stops: [
+        stop(place(), { arrive_min: 9 * 60, dwell_min: 45 }),
+        stop(place({ slug: 'b', name_en: 'B' }), { sort_order: 1 }),
+      ],
+    })];
+    show();
+    expect(screen.getByText('Saturday, Sep 12')).toBeTruthy();
+    expect(screen.queryByText(/–/)).toBeNull();
+  });
+
+  it('ends the hours at the last arrival when no dwell was planned there', () => {
+    state.trips = [trip({
+      trip_stops: [
+        stop(place(), { arrive_min: 9 * 60, dwell_min: 45 }),
+        stop(place({ slug: 'b', name_en: 'B' }), { sort_order: 1, arrive_min: 11 * 60, dwell_min: null }),
+      ],
+    })];
+    show();
+    expect(screen.getByText('Saturday, Sep 12 · 09:00–11:00')).toBeTruthy();
+  });
+
+  it('leaves through the header, by the stack', () => {
+    const navigation = show();
+    fireEvent.click(screen.getByRole('button', { name: /back/i }));
+    expect(navigation.goBack).toHaveBeenCalled();
   });
 
   it('prints every stop with its time, area, dwell and sentence', () => {
@@ -355,6 +432,43 @@ describe('the gallery', () => {
     expect(screen.getByText('Photo by Lan')).toBeTruthy();
   });
 
+  // The credit follows the page: the picture points at a name in the
+  // list, and the line under it says who took *this* picture, not the
+  // first one. The page is the swipe's offset over the gallery's measured
+  // width — 320 here, see the observer at the top of this file.
+  it('credits the photograph that is showing, page by page', async () => {
+    state.credit = true;
+    state.trips = [trip({
+      trip_stops: [
+        stop(place({ place_photos: [photo('https://img/pho.jpg', 'Photo by Lan')] })),
+        stop(place({ slug: 'b', name_en: 'B', place_photos: [photo('https://img/b.jpg', 'Photo by Minh')] })),
+        stop(place({ slug: 'c', name_en: 'C', place_photos: [photo('https://img/c.jpg', null)] })),
+      ],
+    })];
+    show();
+    await measured();
+    expect(screen.getByText('Photo by Lan')).toBeTruthy();
+
+    pager.x = 320;
+    fireEvent.click(screen.getByRole('button', { name: 'swipe' }));
+    expect(screen.getByText('Photo by Minh')).toBeTruthy();
+    expect(screen.queryByText('Photo by Lan')).toBeNull();
+
+    // A page whose photograph nobody signed has no credit line at all.
+    pager.x = 640;
+    fireEvent.click(screen.getByRole('button', { name: 'swipe' }));
+    expect(screen.queryByText(/Photo by/)).toBeNull();
+
+    // Drift rounds to the nearer page, in both directions: 150 of 320
+    // is still the first, 170 is already the second.
+    pager.x = 150;
+    fireEvent.click(screen.getByRole('button', { name: 'swipe' }));
+    expect(screen.getByText('Photo by Lan')).toBeTruthy();
+    pager.x = 170;
+    fireEvent.click(screen.getByRole('button', { name: 'swipe' }));
+    expect(screen.getByText('Photo by Minh')).toBeTruthy();
+  });
+
   it('draws no credit when the switch is off', () => {
     state.trips = [trip({
       trip_stops: [stop(place({ place_photos: [photo('https://img/pho.jpg', 'Photo by Lan')] }))],
@@ -430,6 +544,41 @@ describe('who is coming', () => {
     expect(invitesReload).not.toHaveBeenCalled();
     // And the sheet is usable again rather than stuck on "sending".
     await waitFor(() => expect(sheetProps.last).toMatchObject({ sending: false }));
+  });
+
+  it('sends once, however many times Send is pressed while it is out', async () => {
+    let release: () => void = () => {};
+    sendInvites.mockImplementation(() => new Promise<void>((r) => { release = r; }));
+    show();
+    fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    expect(sendInvites).toHaveBeenCalledTimes(1);
+    expect(sheetProps.last).toMatchObject({ sending: true });
+    await act(async () => { release(); });
+    await waitFor(() => expect(screen.queryByText('Invite sheet')).toBeNull());
+  });
+
+  it('sends nothing for a reader who signed out with the sheet open', async () => {
+    const navigation = nav();
+    const view = render(<TripDetailScreen navigation={navigation} route={route()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
+    // The session goes while the sheet is up — a token that expired, a
+    // sign-out on another screen. The guest view stays; the write does not happen.
+    state.me = null;
+    view.rerender(<TripDetailScreen navigation={navigation} route={route()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(sendInvites).not.toHaveBeenCalled();
+    expect(withdrawInvites).not.toHaveBeenCalled();
+  });
+
+  it('passes a refusal that is not an Error through in its own words', async () => {
+    sendInvites.mockRejectedValueOnce('daily_limit');
+    show();
+    fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not send', 'daily_limit'));
   });
 
   it('closes the sheet without sending', () => {
