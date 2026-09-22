@@ -12,6 +12,10 @@
 //            about the place. Nobody to credit, and no per-summary link —
 //            the place's Maps page is the closest thing, and it is already
 //            derivable from `google_place_id`, so it is not stored.
+//   Editorial the desk wrote it. A source worth recording and not worth
+//            rendering: "City Crew" under City Crew's own paragraph tells
+//            the reader nothing. It exists so that "we wrote this" and
+//            "nobody has looked" stop being the same null.
 //
 // Which is why `reviewer_name` and `reviewer_url` are both optional and the
 // source alone has to be enough to render a credit.
@@ -24,6 +28,7 @@ export const SOURCE_OPTIONS = [
   ['', '— none —'],
   ['threads', 'Threads post'],
   ['google', 'Google editorial summary'],
+  ['editorial', 'Written by the desk'],
 ];
 
 /**
@@ -38,6 +43,10 @@ export function sourceCredit({ reviewer_source, reviewer_name }) {
     return reviewer_name ? `@${reviewer_name} on Threads` : 'Threads';
   }
   if (reviewer_source === 'google') return 'Google';
+  // Shown here, so an editor can see the field is set, and nowhere else:
+  // `blurbCredit` in the app drops it. Named in the desk's own voice
+  // rather than as a credit, because it is not one.
+  if (reviewer_source === 'editorial') return 'Written by the desk (not shown in the app)';
   return reviewer_name ? `${reviewer_name} on ${reviewer_source}` : reviewer_source;
 }
 
@@ -104,6 +113,14 @@ export function sourceProblem({ reviewer_source, reviewer_name, reviewer_url }) 
   if (reviewer_source === 'google') {
     if (reviewer_name) {
       return 'Google does not name the author of an editorial summary — leave the name empty.';
+    }
+    return null;
+  }
+  if (reviewer_source === 'editorial') {
+    // A name or a link here would be a credit, and the whole point of this
+    // value is that the words are the desk's own and credit nobody.
+    if (reviewer_name || reviewer_url) {
+      return 'The desk\'s own copy credits nobody — clear the name and link.';
     }
     return null;
   }

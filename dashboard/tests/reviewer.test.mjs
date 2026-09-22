@@ -22,7 +22,7 @@ test('SOURCE_OPTIONS leads with the empty option', () => {
   // The select is not a required field: "nobody recorded a source" has to be
   // reachable, and it has to be what an untouched row already shows.
   assert.equal(SOURCE_OPTIONS[0][0], '');
-  assert.deepEqual(SOURCE_OPTIONS.map(([v]) => v), ['', 'threads', 'google']);
+  assert.deepEqual(SOURCE_OPTIONS.map(([v]) => v), ['', 'threads', 'google', 'editorial']);
 });
 
 test('sourceCredit names the person for Threads and only the platform for Google', () => {
@@ -145,4 +145,25 @@ test('sourceProblem refuses an author on a Google summary', () => {
 
 test('sourceProblem passes an unknown source rather than blocking the save', () => {
   assert.equal(sourceProblem({ reviewer_source: 'instagram', reviewer_name: 'x' }), null);
+});
+
+// 'editorial' is the desk's own copy: a value that exists so the database can
+// tell "we wrote this" from "nobody has looked", which were the same null
+// until 47 places needed telling apart. It is recorded, and it is not a
+// credit — the app draws nothing for it.
+test("sourceCredit labels the desk's own copy without pretending it is a credit", () => {
+  assert.equal(
+    sourceCredit({ reviewer_source: 'editorial' }),
+    'Written by the desk (not shown in the app)',
+  );
+});
+
+test('sourceLink gives the desk nowhere to send the reader', () => {
+  assert.equal(sourceLink({ reviewer_source: 'editorial', google_place_id: 'ChIJabc' }), null);
+});
+
+test('sourceProblem refuses a name or a link on the desk\'s own copy', () => {
+  assert.equal(sourceProblem({ reviewer_source: 'editorial' }), null);
+  assert.match(sourceProblem({ reviewer_source: 'editorial', reviewer_name: 'andy' }), /credits nobody/);
+  assert.match(sourceProblem({ reviewer_source: 'editorial', reviewer_url: 'https://x' }), /credits nobody/);
 });

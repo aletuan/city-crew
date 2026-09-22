@@ -422,8 +422,10 @@ export default function PlaceEditor() {
                   <input
                     id="reviewer_name"
                     className="mono"
-                    placeholder={form.reviewer_source === 'google' ? 'Google names no author' : 'handle of whoever wrote it'}
-                    disabled={form.reviewer_source === 'google'}
+                    placeholder={form.reviewer_source === 'google' ? 'Google names no author'
+                      : form.reviewer_source === 'editorial' ? 'the desk credits nobody'
+                      : 'handle of whoever wrote it'}
+                    disabled={form.reviewer_source === 'google' || form.reviewer_source === 'editorial'}
                     value={form.reviewer_name ?? ''}
                     onChange={(e) => set('reviewer_name', e.target.value)}
                     onBlur={(e) => set('reviewer_name', normalizeThreads(e.target.value) || null)}

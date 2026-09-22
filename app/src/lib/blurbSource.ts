@@ -12,6 +12,12 @@
 //            there is no author and there never will be one from that path.
 //            The place's Maps page is the closest thing to a source, and it
 //            is derivable from `google_place_id` rather than stored twice.
+//   Editorial the desk wrote it. Recorded in the database so that "we wrote
+//            this" and "nobody has looked" are answerable apart, and drawn
+//            nowhere: "City Crew" under City Crew's own paragraph, inside
+//            City Crew, is a line that costs a reader attention and returns
+//            nothing. So this returns null for it, exactly as it does for a
+//            source nobody recorded.
 //
 // Which is why this returns a discriminated shape rather than a string: the
 // screen owns the wording in three languages, and a module that returned
@@ -33,7 +39,7 @@ export type BlurbCredit =
  */
 export function blurbCredit(place: Pick<Place, 'reviewer_source' | 'reviewer_name'>): BlurbCredit | null {
   const source = place.reviewer_source?.trim();
-  if (!source) return null;
+  if (!source || source === 'editorial') return null;
   const name = place.reviewer_name?.trim() || null;
   if (source === 'threads') return { kind: 'threads', name };
   if (source === 'google') return { kind: 'google' };
@@ -54,6 +60,7 @@ export function blurbLink(
   const url = place.reviewer_url?.trim();
   if (url) return url;
   const source = place.reviewer_source?.trim();
+  if (source === 'editorial') return null;
   const name = place.reviewer_name?.trim();
   if (source === 'threads' && name) return `https://www.threads.com/@${name}`;
   if (source === 'google' && place.google_place_id) {

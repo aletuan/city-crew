@@ -35,6 +35,13 @@ describe('blurbCredit', () => {
     expect(blurbCredit({ reviewer_source: '   ' } as never)).toBeNull();
   });
 
+  it("draws nothing for the desk's own copy, the same as for no source", () => {
+    // 'editorial' is recorded so the desk can tell "we wrote this" from
+    // "nobody has looked". The reader gains nothing from being told that
+    // City Crew wrote the paragraph inside City Crew.
+    expect(blurbCredit({ reviewer_source: 'editorial' } as never)).toBeNull();
+  });
+
   it('carries a source it has never heard of rather than dropping it', () => {
     // The column has no check constraint on purpose; a screen that rendered
     // nothing for a new source would hide the credit instead of showing it.
@@ -67,6 +74,8 @@ describe('blurbLink', () => {
     expect(blurbLink({ reviewer_source: 'google' } as never)).toBeNull();
     expect(blurbLink({ reviewer_source: 'threads' } as never)).toBeNull();
     expect(blurbLink({ reviewer_source: 'instagram', reviewer_name: 'x' } as never)).toBeNull();
+    // Even with a place id to hand: the desk's copy is not Google's.
+    expect(blurbLink({ reviewer_source: 'editorial', google_place_id: 'ChIJabc' } as never)).toBeNull();
     expect(blurbLink({} as never)).toBeNull();
   });
 });
