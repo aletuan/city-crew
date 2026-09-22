@@ -32,6 +32,21 @@ const MAP_H_NARROW = 460;
  * did when a tile CDN was unreachable. The numbers never depend on a map.
  */
 function CoverageMap({ groups, hover, setHover, minZoom }) {
+  /* Two floors, and they have to agree or the fit is computed and then
+     thrown away.
+
+     `fitFloor` is how far out the *fit* may go: nine is right for
+     districts inside one city, where anything looser is bubbles drifting
+     apart over empty province. `mapFloor` is how far out the *reader* may
+     zoom by hand, which has always been five.
+
+     Five is below nine, so for districts the two never met. They do for a
+     view of every city: the fit wants zoom 3 to hold Vietnam and
+     Melbourne, Google clamped setZoom(3) to its own minZoom of 5, and the
+     map landed on the centre of the box at a zoom that showed neither end
+     of it — a sea between two countries and not one bubble on it. */
+  const fitFloor = minZoom ?? 9;
+  const mapFloor = Math.min(5, fitFloor);
   const wrapRef = useRef(null);
   const mapElRef = useRef(null);
   const mapRef = useRef(null);
@@ -64,8 +79,8 @@ function CoverageMap({ groups, hover, setHover, minZoom }) {
     // empty province. It is wrong for a view of every city, which spans
     // Vietnam and Australia and would otherwise be fitted to a frame that
     // cannot hold both.
-    () => (width ? fitView(located, width, mapH, minZoom ? { minZ: minZoom } : undefined) : null),
-    [width, mapH, minZoom, coordsKey], // eslint-disable-line react-hooks/exhaustive-deps
+    () => (width ? fitView(located, width, mapH, { minZ: fitFloor }) : null),
+    [width, mapH, fitFloor, coordsKey], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // The fit as of right now, for the map's first frame. Read through a ref
@@ -74,6 +89,8 @@ function CoverageMap({ groups, hover, setHover, minZoom }) {
   // ocean on every visit to the screen.
   const fittedRef = useRef(null);
   fittedRef.current = fitted;
+  const mapFloorRef = useRef(mapFloor);
+  mapFloorRef.current = mapFloor;
 
   // One map, built when the API arrives. Its container is sized by CSS, so
   // nothing here depends on the fit having been computed yet.
@@ -98,7 +115,7 @@ function CoverageMap({ groups, hover, setHover, minZoom }) {
         // The bubbles are the subject; Google's own POI pins would compete
         // with them for the same few pixels.
         maxZoom: 17,
-        minZoom: 5,
+        minZoom: mapFloorRef.current,
       });
       mapRef.current = map;
       const sync = () => {
@@ -124,9 +141,14 @@ function CoverageMap({ groups, hover, setHover, minZoom }) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !fitted) return;
+    // Before the zoom, not after: the map is built once, so switching
+    // between all-cities and one city changes this floor under a map that
+    // already has the old one — and a setZoom below the floor in force is
+    // silently clamped.
+    map.setOptions({ minZoom: mapFloor });
     map.setZoom(fitted.z);
     map.setCenter({ lat: yToLat(fitted.y, fitted.z), lng: xToLng(fitted.x, fitted.z) });
-  }, [fitted, ready]);
+  }, [fitted, ready, mapFloor]);
 
   // The map's own view wins once it has one; before that — and with no key
   // at all — the fitted view stands in, so the bubbles are never homeless.
