@@ -248,6 +248,13 @@ describe('the search', () => {
     expect(await screen.findByText('Nothing found for that. Try fewer words, or a street and district.')).toBeTruthy();
     // The reader has had their answer; the button offers the pin, not another ask.
     expect(cta().textContent).toBe('Use this location');
+    // The button is one node wearing two handlers in turn, and
+    // react-native-web hands a Pressable its new `onPress` in a passive
+    // effect — a beat after the commit `findByText` was watching for. A
+    // press in that beat runs the old handler, `find`, and `onDone` is
+    // never called: CI saw exactly that once. Settled before the press,
+    // the same way `SignUpScreen`'s `reach` settles a step (#627).
+    await act(async () => {});
     fireEvent.click(cta());
     expect(onDone).toHaveBeenCalledWith(NOWHERE);
     // Typing again is a new question.

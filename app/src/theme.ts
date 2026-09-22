@@ -501,6 +501,31 @@ export const font = {
   extrabold: '800',
 } as const;
 
+/**
+ * How far Dynamic Type may grow a label whose box cannot grow with it.
+ *
+ * iOS lets a reader set the text size from xSmall to the five
+ * accessibility sizes, and React Native multiplies every `Text` by that
+ * setting — 0.82× at the smallest, 3.12× at AX5. Nearly everything in
+ * this app is laid out to take that: buttons and fields are `minHeight`,
+ * rows are padding around their words, cards wrap. Three places are not,
+ * and cannot be: the tab bar is a 64pt island the screens clear a fixed
+ * distance for, the shut sash is a 20pt band drawn across a photograph
+ * at an angle, and the count badge on a tab is a 21pt disc. Text left to
+ * grow inside those does not wrap or push — it is clipped, and a clipped
+ * caption is worse than a smaller one.
+ *
+ * So those three, and only those, cap the multiplier here. 1.3 is where
+ * the Large sizes end and the accessibility sizes begin: the biggest
+ * setting a reader picks from the ordinary slider still reaches every
+ * caption whole, and the AX sizes — where the reader has said legibility
+ * beats layout — still get a third more than the design size in the one
+ * kind of box that could not give them more. Everything else scales
+ * freely; a cap on body copy would be the app deciding how big a reader's
+ * own words may be, which is not its call.
+ */
+export const labelScaleCap = 1.3;
+
 /** Type scale. Hierarchy does the organising, so sizes stay few. */
 export const type = {
   /** Large screen title — the one place the display face carries a whole line. */

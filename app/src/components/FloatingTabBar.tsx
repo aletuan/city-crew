@@ -36,7 +36,7 @@ import { splitFriendships } from '../lib/friends';
 import { useInvitations } from '../lib/invitations';
 import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
-import { colors, font, radius } from '../theme';
+import { colors, font, labelScaleCap, radius } from '../theme';
 import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
 
@@ -235,8 +235,13 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               {route.name === 'Trips' && invitesWaiting > 0
                 ? <View style={[s.reqDot, dotInk]} /> : null}
               </View>
+              {/* Capped, because the island is 64pt whatever the reader's
+                  text size — see `labelScaleCap`. An 11pt caption at the
+                  largest ordinary size is 14, and the row still clears
+                  the glyph; at AX5 it would be 34 and gone off the pill. */}
               <Text
                 numberOfLines={1}
+                maxFontSizeMultiplier={labelScaleCap}
                 style={[s.caption, !focused && glassHalo(light), {
                   color: focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5'),
                   fontWeight: focused ? font.semibold : font.regular,
