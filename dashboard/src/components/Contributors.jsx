@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
+import { chipLabel, useCity } from '../App.jsx';
 import {
-  CITY_META, SERIES_COLORS, TOP_N,
+  SERIES_COLORS, TOP_N,
   windowDays, buildBoard, countStats, scopeRows, niceMax, withGuide,
 } from '../contributors.js';
 
@@ -224,14 +224,18 @@ function StatCard({ label, stat, accent }) {
 }
 
 export default function Contributors() {
-  const [params, setParams] = useSearchParams();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [retryKey, setRetryKey] = useState(0);
   const [hover, setHover] = useState(null);
 
-  const cityParam = params.get('city') ?? '';
-  const city = CITY_META.some((c) => c.id === cityParam) ? cityParam : '';
+  // The city is the desk's, not this screen's. It used to be a `?city=`
+  // param with its own chip row, which meant picking Hà Nội on Places and
+  // coming here showed all cities — and the tiles at the top of the page,
+  // which have always read the workspace city, contradicted the board
+  // underneath them.
+  const { cities, city: workspaceCity } = useCity();
+  const city = workspaceCity?.id ?? '';
 
   useEffect(() => {
     let live = true;
@@ -277,12 +281,6 @@ export default function Contributors() {
     }
   };
 
-  const setCity = (id) => {
-    const next = new URLSearchParams(params);
-    if (id) next.set('city', id); else next.delete('city');
-    setParams(next, { replace: true });
-  };
-
   // The window is anchored once per visit — recomputing it mid-hover would
   // reshuffle every series under the cursor at midnight.
   const days = useMemo(() => windowDays(DAYS), []);
@@ -294,11 +292,15 @@ export default function Contributors() {
     if (!data) return null;
     return {
       all: countStats(data.rows),
-      cities: CITY_META.map((c) => ({ ...c, stat: countStats(scopeRows(data.rows, c.id)) })),
+      // Every city the database has, including the ones nobody has
+      // contributed to: an empty card is where the next gap is.
+      cities: cities.map((c) => ({
+        id: c.id, label: chipLabel(c), stat: countStats(scopeRows(data.rows, c.id)),
+      })),
     };
-  }, [data]);
+  }, [data, cities]);
 
-  const scopeLabel = city ? CITY_META.find((c) => c.id === city).label : 'all cities';
+  const scopeLabel = cities.find((c) => c.id === city)?.name_vi ?? 'all cities';
   const topSum = board ? board.top.reduce((n, s) => n + s.total, 0) : 0;
 
   return (
@@ -311,21 +313,10 @@ export default function Contributors() {
             {' · '}<b className="contribem">published</b> — cumulative, last {DAYS} days.
           </p>
           <p className="contribhint">
-            no filter → all cities combined · pick a city to re-rank the top {TOP_N} within it
+            {city
+              ? `the top ${TOP_N} within ${scopeLabel} · switch city at the top of the page`
+              : `all cities combined · pick a city at the top of the page to re-rank the top ${TOP_N} within it`}
           </p>
-        </div>
-        <div className="contribfilter" role="group" aria-label="City filter">
-          <span className="filterlabel">City</span>
-          <button className={`chip${city ? '' : ' on'}`} onClick={() => setCity('')}>All cities</button>
-          {CITY_META.map((c) => (
-            <button
-              key={c.id}
-              className={`chip${city === c.id ? ' on' : ''}`}
-              onClick={() => setCity(city === c.id ? '' : c.id)}
-            >
-              {c.label}
-            </button>
-          ))}
         </div>
       </div>
 

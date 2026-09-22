@@ -15,6 +15,14 @@ export const useProgress = () => useContext(ProgressCtx);
 export const useCity = () => useContext(CityCtx);
 
 const CITY_KEY = 'citycrew.dashboard.city';
+
+/* The screens whose content is scoped by the workspace city, and so the
+   ones that show the control for it. Contributors and Coverage each had a
+   chip row of their own until the three disagreed: the city was in
+   localStorage here and in a `?city=` param there, so picking Hà Nội on
+   Places and walking to Contributors showed all cities, under a page head
+   that was still counting Hà Nội. */
+const CITY_SCOPED = ['/', '/analytics/contributors', '/analytics/coverage'];
 // The stored value for "no city filter". `city` in context is null then —
 // every query that keys off city?.id simply drops its filter, which is what
 // "aggregate across all cities" means everywhere the desk counts anything.
@@ -400,9 +408,12 @@ export default function App() {
               <div className="shell">
             {(location.pathname === '/' || total > 0) && (
               <div className="pagehead">
-                {location.pathname === '/' && (
+                {CITY_SCOPED.includes(location.pathname) && (
                   <div className="pagehead-scope">
-                    <h2 className="pagetitle">Places</h2>
+                    {/* Contributors and Coverage write their own headings,
+                        under their own explanatory line; only Places wants
+                        one here, beside the control. */}
+                    {location.pathname === '/' && <h2 className="pagetitle">Places</h2>}
                     {/* The workspace scope, where the work is: a chip row
                         beside the title, with the one option the old top-bar
                         pill could not offer — no filter at all. */}

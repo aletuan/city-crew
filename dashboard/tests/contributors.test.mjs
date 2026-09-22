@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CITY_META, SERIES_COLORS, TOP_N,
+  CITY_KEY, shortKey, SERIES_COLORS, TOP_N,
   dayKey, windowDays, cumulativeByDay, countStats, scopeRows, buildBoard, niceMax, withGuide,
 } from '../src/contributors.js';
 
@@ -118,7 +118,12 @@ test('niceMax lands on round ticks: the mock axes and the awkward cases', () => 
 test('palette and city metadata hold the shapes the screen leans on', () => {
   assert.equal(SERIES_COLORS.length, TOP_N);
   assert.equal(new Set(SERIES_COLORS).size, TOP_N);
-  assert.deepEqual(CITY_META.map((c) => c.id), ['hcmc', 'hanoi', 'danang', 'dalat', 'hue']);
+  // The shorthand is a lookup with a fallback, not a list of the cities
+  // that exist — the screens read that from the API now.
+  assert.deepEqual(Object.keys(CITY_KEY), ['hcmc', 'hanoi', 'danang', 'dalat', 'hue']);
+  assert.equal(shortKey('hcmc'), 'hcm');
+  assert.equal(shortKey('vungtau'), 'vungtau');
+  assert.equal(shortKey(undefined), '');
   assert.equal(dayKey(new Date(2026, 0, 5)), '2026-01-05');
 });
 
