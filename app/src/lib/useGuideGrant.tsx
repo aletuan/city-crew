@@ -2,21 +2,31 @@
 
 import { useEffect, useSyncExternalStore } from 'react';
 import { useAuth } from './auth';
-import { fetchIsLocalGuide } from './data';
+import { fetchGuideCities } from './data';
 import { guideGrant } from './guideGrant';
 
 /**
- * Whether this account is a local guide, answered on the first render.
+ * Whether this account is a local guide *in this city*, answered on the
+ * first render.
+ *
+ * The city is the place's, not the person's: a guide of Đà Nẵng looking
+ * at something they imported in Huế is, for that place, a reader. That
+ * is the line `is_local_guide(p.city_id)` draws in the insert policy, and
+ * this is the app saying the same thing before it draws the control.
+ *
+ * Called with nothing — a screen whose place has not loaded yet — only an
+ * all-cities grant answers yes, which is the honest reading and also the
+ * safe one.
  *
  * `useSyncExternalStore` rather than a fetch hook, which is the whole
  * point: the panel that reads this must be right the first time it
  * draws, or it appears a round trip late and shoves the card down the
  * screen. See `guideGrant.ts`.
  */
-export function useIsGuide(): boolean {
+export function useIsGuide(cityId?: string | null): boolean {
   const { session } = useAuth();
   const uid = session?.user?.id ?? null;
-  return useSyncExternalStore(guideGrant.subscribe, () => guideGrant.get(uid));
+  return useSyncExternalStore(guideGrant.subscribe, () => guideGrant.get(uid, cityId));
 }
 
 /**
@@ -34,6 +44,6 @@ export function useIsGuide(): boolean {
 export function GuideGrantSync() {
   const { session } = useAuth();
   const uid = session?.user?.id ?? null;
-  useEffect(() => { void guideGrant.load(uid, fetchIsLocalGuide); }, [uid]);
+  useEffect(() => { void guideGrant.load(uid, fetchGuideCities); }, [uid]);
   return null;
 }

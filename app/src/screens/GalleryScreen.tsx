@@ -54,8 +54,6 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   const { slug } = route.params;
   const { session } = useAuth();
   const uid = session?.user?.id ?? null;
-  const granted = useIsGuide();
-  const me = useMemo(() => ({ uid, granted }), [uid, granted]);
   const { width } = useWindowDimensions();
   const tabClearance = useTabBarClearance();
 
@@ -67,6 +65,12 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   const inCatalog = useMemo(() => places.find((p) => p.slug === slug), [places, slug]);
   const elsewhere = usePlaceBySlug(!catalogLoading && !inCatalog ? slug : null);
   const place = inCatalog ?? elsewhere.data ?? null;
+  // Asked after the place, because the grant is per city now and the
+  // city is the place's. While it is still loading this reads as "no
+  // city", which only an all-cities grant answers yes to — and the
+  // boundary below is closed anyway until the place arrives.
+  const granted = useIsGuide(place?.city_id);
+  const me = useMemo(() => ({ uid, granted }), [uid, granted]);
   const mayKeep = place ? canKeepGallery(place, me) : false;
 
   const [placeId, setPlaceId] = useState<string | null>(null);
