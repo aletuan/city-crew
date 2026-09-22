@@ -356,6 +356,24 @@ export const api = {
     return { published: rows.length };
   },
 
+  /**
+   * How many places each city holds, across the whole catalog.
+   *
+   * Apart from `progress`, which takes a city and is therefore the wrong
+   * shape for this: the rail's City group has to show every city's count
+   * while one of them is selected, and a query scoped to the selection can
+   * only ever report the selection.
+   *
+   * Scoped by nothing else either, which matches what the other groups in
+   * the rail do — their counts come from `progress(city)` and ignore the
+   * sibling filters. A count that moved as you ticked other boxes would be
+   * a different promise from the one the rest of the column makes.
+   */
+  cityCounts: async () => {
+    const rows = db(await supabase.from('places').select('city_id'));
+    return rows.reduce((acc, r) => ((acc[r.city_id] = (acc[r.city_id] ?? 0) + 1), acc), {});
+  },
+
   progress: async (city) => {
     let query = supabase.from('places')
       .select('slug, name_en, review_status, is_published, category, categories, vibe_tags, needs_classification, threads_handle');
