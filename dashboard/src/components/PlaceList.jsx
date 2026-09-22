@@ -63,18 +63,40 @@ const GROUP_SHOWN = 6;
  * first rather than widening the search. The box is still the right mark —
  * these are on/off statements about the list, and pressing the one that is
  * on turns it off, which is exactly what a checkbox promises.
+ *
+ * The heading folds the group. `startOpen` decides where it begins, and
+ * the three long-tailed questions begin shut — see the calls below for
+ * which and why. Folding is per group and kept in the component, not the
+ * URL: it says nothing about what the list contains, so it has no business
+ * in a link somebody pastes to a colleague.
  */
-function FilterGroup({ label, options, value, onPick }) {
+function FilterGroup({ label, options, value, onPick, startOpen = true }) {
+  const [open, setOpen] = useState(startOpen);
   const [expanded, setExpanded] = useState(false);
   const over = options.length - GROUP_SHOWN;
   // A chosen answer is never folded away: the row narrowing the list has to
   // be the row you can see and switch off, wherever it sits in the order.
+  // That holds for both folds — past the cap, and the whole section.
   const chosenIsLate = options.findIndex((o) => o.value === value) >= GROUP_SHOWN;
-  const open = expanded || chosenIsLate || over <= 0;
-  const shown = open ? options : options.slice(0, GROUP_SHOWN);
+  const full = expanded || chosenIsLate || over <= 0;
+  const chosen = options.find((o) => o.value === value);
+  // Shut, a group keeps the one row that is doing something and drops the
+  // rest — rather than hiding the answer and leaving a heading that gives
+  // no sign the list below is narrowed by it.
+  const shown = open
+    ? (full ? options : options.slice(0, GROUP_SHOWN))
+    : (chosen ? [chosen] : []);
   return (
-    <div className="filterset">
-      <span className="filterlabel">{label}</span>
+    <div className={`filterset${open ? '' : ' shut'}`}>
+      <button
+        type="button"
+        className="filterhead"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="filterlabel">{label}</span>
+        <span className="filterchev" aria-hidden="true"><CategoryIcon name="chevron" size={12} /></span>
+      </button>
       <div className="filterlist" role="group" aria-label={label}>
         {shown.map((o) => (
           <button
@@ -92,7 +114,7 @@ function FilterGroup({ label, options, value, onPick }) {
           </button>
         ))}
       </div>
-      {over > 0 && !chosenIsLate && (
+      {open && over > 0 && !chosenIsLate && (
         <button type="button" className="filtermore" onClick={() => setExpanded((v) => !v)}>
           {expanded ? 'Show less' : `+ Show ${over} more`}
         </button>
@@ -590,8 +612,16 @@ export default function PlaceList() {
                 duplicated list. Icon colour mirrors the mobile app (see
                 categories.js and vibes.js) — same hue, same concept, on every
                 surface. */}
+            {/* Shut at rest, with Vibe and Threads. Nine categories and
+                eleven vibes is 20 rows of rail below Status, and the three
+                together are the long tail of this panel: a reader scanning
+                for the question they want should see five headings, not
+                scroll past two lists to reach the last one. City and Status
+                stay open because they are the two that get answered on
+                nearly every visit. */}
             <FilterGroup
               label="Category"
+              startOpen={false}
               value={category}
               onPick={(v) => toggle('category', v)}
               options={CATEGORY_KEYS.map(([v, label]) => ({
@@ -604,6 +634,7 @@ export default function PlaceList() {
             />
             <FilterGroup
               label="Vibe"
+              startOpen={false}
               value={vibe}
               onPick={(v) => toggle('vibe', v)}
               options={VIBE_ORDER.map((v) => ({
@@ -623,6 +654,7 @@ export default function PlaceList() {
                 place. */}
             <FilterGroup
               label="Threads"
+              startOpen={false}
               value={threads}
               onPick={(v) => toggle('threads', v)}
               options={THREADS_FILTERS.map(([v, label]) => ({
