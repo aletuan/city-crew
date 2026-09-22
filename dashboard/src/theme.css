@@ -702,7 +702,13 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .resultscount { font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary); margin-right: auto; }
 /* The tally, under the bar and above the first result — against the thing
    it counts rather than tucked into the left of a row of controls. */
-.resulttally { font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary); margin: 2px 0 12px; }
+/* Inline with the controls, not a row of its own. `margin-right` keeps it
+   a fact rather than a button: the same gap as between the controls would
+   read as a fourth one. */
+.resulttally {
+  font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary);
+  white-space: nowrap; margin-right: 2px;
+}
 .resultscontrols { display: flex; align-items: center; gap: 10px; }
 .searchbox { position: relative; display: flex; align-items: center; }
 .searchbox svg { position: absolute; left: 13px; color: var(--text-tertiary); pointer-events: none; }
