@@ -361,29 +361,33 @@ export default function App() {
                 <span>Data desk</span>
               </Link>
               <nav className="sidenav" aria-label="Main">
-                <NavLink end to="/" className={navCls}><CategoryIcon name="list" />Places</NavLink>
-                <NavLink to="/analytics/contributors" className={navCls}><CategoryIcon name="users" />Contributors</NavLink>
-                <NavLink to="/analytics/coverage" className={navCls}><CategoryIcon name="pin" />Coverage</NavLink>
+                <NavLink end to="/" className={navCls}><CategoryIcon name="pin" size={17} />Places</NavLink>
+                <NavLink to="/analytics/contributors" className={navCls}><CategoryIcon name="users" size={17} />Contributors</NavLink>
+                <NavLink to="/analytics/coverage" className={navCls}><CategoryIcon name="donut" size={17} />Coverage</NavLink>
                 <div className="side-sep" />
-                <NavLink to="/city" className={navCls}><CategoryIcon name="photo" />City hero</NavLink>
-                <NavLink to="/scan" className={navCls}><CategoryIcon name="radar" />Scan city</NavLink>
-                <NavLink to="/search-words" className={navCls}><CategoryIcon name="search" />Search words</NavLink>
+                <NavLink to="/city" className={navCls}><CategoryIcon name="photo" size={17} />City hero</NavLink>
+                <NavLink to="/scan" className={navCls}><CategoryIcon name="radar" size={17} />Scan city</NavLink>
+                <NavLink to="/search-words" className={navCls}><CategoryIcon name="search" size={17} />Search words</NavLink>
                 {/* The count is the feature, not the link: a queue with a
                     day's deadline has to say so from wherever the desk
                     happens to be standing. */}
                 <NavLink to="/reports" className={navCls}>
-                  <CategoryIcon name="alert" />Reports
+                  <CategoryIcon name="alert" size={17} />Reports
                   {waitingReports > 0 ? <span className="navcount">{waitingReports}</span> : null}
                 </NavLink>
               </nav>
               <div className="side-foot">
                 {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
-                <a className="side-item" href="mockup.html" target="_blank" rel="noreferrer">Mockup ↗</a>
+                <a className="side-item" href="mockup.html" target="_blank" rel="noreferrer">
+                  <CategoryIcon name="external" size={17} />Mockup
+                </a>
                 <button className="side-item" disabled={syncing} onClick={runSync}>
-                  {syncing ? 'Syncing…' : 'Sync mockup'}
+                  <CategoryIcon name="refresh" size={17} />{syncing ? 'Syncing…' : 'Sync mockup'}
                 </button>
                 <div className="side-sep" />
-                <button className="side-item" onClick={signOut}>Sign out</button>
+                <button className="side-item" onClick={signOut}>
+                  <CategoryIcon name="signout" size={17} />Sign out
+                </button>
               </div>
             </aside>
 
@@ -408,60 +412,80 @@ export default function App() {
               <div className="shell">
             {(location.pathname === '/' || total > 0) && (
               <div className="pagehead">
-                {CITY_SCOPED.includes(location.pathname) && (
-                  <div className="pagehead-scope">
-                    {/* Contributors and Coverage write their own headings,
-                        under their own explanatory line; only Places wants
-                        one here, beside the control. */}
-                    {location.pathname === '/' && <h2 className="pagetitle">Places</h2>}
-                    {/* The workspace scope, where the work is: a chip row
-                        beside the title, with the one option the old top-bar
-                        pill could not offer — no filter at all. */}
-                    <div className="cityswitch" role="group" aria-label="City">
-                      <button
-                        className={`chip${city ? '' : ' on'}`}
-                        onClick={() => setCity(ALL)}
-                      >
-                        All cities
-                      </button>
-                      {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
-                        <button
-                          key={c.id}
-                          className={`chip${city?.id === c.id ? ' on' : ''}`}
-                          onClick={() => setCity(c.id)}
-                        >
-                          {chipLabel(c)}
-                        </button>
-                      ))}
+                <div className="pagehead-lead">
+                  {/* Contributors and Coverage write their own headings,
+                      under their own explanatory line; only Places wants
+                      one here — a title with the sentence that says what
+                      the screen is for, the way every other room on the
+                      desk introduces itself. */}
+                  {location.pathname === '/' && (
+                    <div className="pagetitles">
+                      <h2 className="pagetitle">Places</h2>
+                      <p className="pagesub">Discover, review and manage places for City Crew.</p>
                     </div>
-                    {/* The same choice as the chips, for the width where
-                        nine of them wrap to a second row. Both are in the
-                        markup and CSS shows one: a native menu is the
-                        control a phone already knows, and the chips stay
-                        where they are faster — one press instead of two. */}
-                    <select
-                      className="cityselect"
-                      aria-label="City"
-                      value={city?.id ?? ALL}
-                      onChange={(e) => setCity(e.target.value)}
-                    >
-                      <option value={ALL}>All cities</option>
-                      {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
-                        <option key={c.id} value={c.id}>{chipLabel(c)}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                  )}
+                  {CITY_SCOPED.includes(location.pathname) && (
+                    <div className="pagehead-scope">
+                      {/* The workspace scope, where the work is: a chip row
+                          under the title, with the one option the old top-bar
+                          pill could not offer — no filter at all. */}
+                      <div className="cityswitch" role="group" aria-label="City">
+                        <button
+                          className={`chip${city ? '' : ' on'}`}
+                          onClick={() => setCity(ALL)}
+                        >
+                          All cities
+                        </button>
+                        {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
+                          <button
+                            key={c.id}
+                            className={`chip${city?.id === c.id ? ' on' : ''}`}
+                            onClick={() => setCity(c.id)}
+                          >
+                            {chipLabel(c)}
+                          </button>
+                        ))}
+                      </div>
+                      {/* The same choice as the chips, for the width where
+                          nine of them wrap to a second row. Both are in the
+                          markup and CSS shows one: a native menu is the
+                          control a phone already knows, and the chips stay
+                          where they are faster — one press instead of two. */}
+                      <select
+                        className="cityselect"
+                        aria-label="City"
+                        value={city?.id ?? ALL}
+                        onChange={(e) => setCity(e.target.value)}
+                      >
+                        <option value={ALL}>All cities</option>
+                        {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
+                          <option key={c.id} value={c.id}>{chipLabel(c)}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
                 {total > 0 && (
                   <div className="rail" title={`${approved} approved · ${flagged} flagged · ${total - approved - flagged} pending`}>
-                    {/* Three numbers the desk works from, and each one is
-                        the way into the work it counts. They were a line of
-                        grey text before: the pending figure, which is the
+                    {/* The four numbers the desk works from, and each one
+                        is the way into the work it counts. They were a line
+                        of grey text before: the pending figure, which is the
                         whole queue, appeared nowhere but in brackets on a
                         chip further down the page. */}
                     <div className="stats" role="group" aria-label="Filter by review status">
                       <Link className={`stat${status ? '' : ' on'}`} to={statTo(null)}>
                         <b>{total}</b><span>Places</span>
+                      </Link>
+                      {/* Approved is the fourth because it is the one the
+                          progress bar underneath already draws — it was
+                          readable there and nowhere pressable, so the one
+                          status you cannot reach from the head was the one
+                          holding most of the catalog. */}
+                      <Link
+                        className={`stat${approved ? ' approved' : ''}${status === 'approved' ? ' on' : ''}`}
+                        to={statTo('approved')}
+                      >
+                        <b>{approved}</b><span>Approved</span>
                       </Link>
                       {/* A queue with something in it wears its colour; an
                           empty one is not news and stays quiet. */}
@@ -512,13 +536,13 @@ export default function App() {
               names still exist — for screen readers and long-press. */}
           <nav className={`tabbar${barHidden && !sheetOpen ? ' ducked' : ''}`} aria-label="Main">
             <NavLink end to="/" className={tabCls} aria-label="Places" title="Places">
-              <span className="tabpill"><CategoryIcon name="list" size={22} /></span>
+              <span className="tabpill"><CategoryIcon name="pin" size={22} /></span>
             </NavLink>
             <NavLink to="/analytics/contributors" className={tabCls} aria-label="Contributors" title="Contributors">
               <span className="tabpill"><CategoryIcon name="users" size={22} /></span>
             </NavLink>
             <NavLink to="/analytics/coverage" className={tabCls} aria-label="Coverage" title="Coverage">
-              <span className="tabpill"><CategoryIcon name="pin" size={22} /></span>
+              <span className="tabpill"><CategoryIcon name="donut" size={22} /></span>
             </NavLink>
             <button
               className={`tab-item${sheetOpen ? ' active' : ''}`}
