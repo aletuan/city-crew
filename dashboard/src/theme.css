@@ -67,10 +67,13 @@
      silent unset, and the stylesheet's own test says so. */
   --topbar-h: 56px;
 
-  /* Same arrangement one level down: the Places toolbar's height, for the
-     filter rail stuck under it. Declared with the height it has as a single
-     row and overwritten from PlaceList with the measured one — it grows a
-     second row whenever a filter is on. */
+  /* Same arrangement one level down: the Places toolbar's height, for
+     the filter rail stuck under it. The rail needs this again now that
+     the bar spans both columns rather than sitting beside it. Declared
+     with the height it has as a single row and overwritten from
+     PlaceList with the measured one — it is two rows on a phone, and
+     another height again while a batch is selected. */
+  --worktop-h: 52px;
 }
 
 * { box-sizing: border-box; }
@@ -645,43 +648,32 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   background: var(--bg-app);
   padding: 10px 0 6px; margin-bottom: 4px;
 }
-/* The rail takes both rows; the bar and the results share the right one.
-   This has been all three arrangements, and the city is why. While the
-   rail held only filters, starting it level with the toolbar made a panel
-   of narrowing controls lead a page it does not introduce, so it was
-   pushed down to the grid's line — which left the top-left corner empty
-   and the city menu was put there to fill it.
-   The city is a row in the rail now, and it is the first question the
-   screen asks. A column that opens with "which city" belongs at the top
-   of the work area, the corner has nothing left to fill it with, and the
-   reference layout draws it the same way. */
+/* Two columns and nothing else: the filters and the results, starting
+   level with each other. The toolbar is no longer one of the parts —
+   it is a block above this, which is what the reference draws and also
+   the only way it can stick (see PlaceList.jsx).
+
+   What the bar no longer carries is the chips naming the live filters.
+   Those describe the results, so they sit over the results — a row of
+   them starting at the page's left edge would run along the top of the
+   panel that produced them. See `.resultlead`. */
 .worksplit {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
-  grid-template-areas:
-    ".    bar"
-    "rail results";
-  /* The rail starts where the results start, not where the toolbar does.
-     The toolbar is about the list — how it is sorted, how it is drawn,
-     what is searched in it — so a panel level with it reads as part of
-     the same row of controls; level with the first card it reads as what
-     it is, the column the cards are filtered by. The corner above it is
-     left empty on purpose: the page head already fills that band across
-     the full width, and the city that used to sit here is now a group
-     inside the rail. */
-  grid-template-rows: auto 1fr;
   gap: 0 24px; align-items: start;
 }
-.workbar { grid-area: bar; min-width: 0; }
-.workmain { grid-area: results; min-width: 0; }
+.workmain { min-width: 0; }
 .filterrail {
-  grid-area: rail;
-  /* It starts beside the first card and then rides up to the topbar as
-     the page scrolls, where it stays. The toolbar is sticky too and sits
-     in the other column, so nothing of the rail can hide under it —
-     which retires the measured --worktop-h this offset used to add. */
-  position: sticky; top: calc(var(--topbar-h) + 10px);
-  max-height: calc(100vh - var(--topbar-h) - 30px); overflow-y: auto;
+  /* It starts beside the first card and then rides up as the page
+     scrolls, stopping under the toolbar rather than behind it. The
+     toolbar is sticky and now spans both columns, so its height is the
+     rail's ceiling — hence --worktop-h, measured in PlaceList.jsx
+     because the bar is one row on a laptop, two on a phone, and another
+     height again mid-selection. Its :root value is the laptop's one row,
+     which is what holds for the frame before the measurement lands. */
+  position: sticky; top: calc(var(--topbar-h) + var(--worktop-h) + 10px);
+  max-height: calc(100vh - var(--topbar-h) - var(--worktop-h) - 30px);
+  overflow-y: auto;
   background: var(--bg-elevated); border: 1px solid var(--border-glass-soft);
   border-radius: var(--radius-card); padding: 16px 16px 18px;
 }
@@ -757,7 +749,14 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    lives here rather than on either of them, because either can be absent
    — no filter set, or no count yet — and a margin on a thing that is not
    rendered does not hold the controls at the right edge. */
-.barlead { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-right: auto; min-width: 0; }
+/* The tally and the live-filter chips, at the head of the results
+   column. They left the toolbar when it went full width: a description
+   of the results has to start where the results start, or it runs along
+   the top of the rail instead. */
+.resultlead {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 8px 12px; min-width: 0; margin: 0 0 14px;
+}
 .activefilters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .fchip {
   display: inline-flex; align-items: center; gap: 7px;
@@ -787,22 +786,29 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 /* Spacing comes from .worktop, which is the thing that sticks. */
 .resultsbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .resultscount { font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary); margin-right: auto; }
-/* The tally, under the bar and above the first result — against the thing
-   it counts rather than tucked into the left of a row of controls. */
-/* Inline with the controls, not a row of its own. `margin-right` keeps it
-   a fact rather than a button: the same gap as between the controls would
-   read as a fourth one. */
+/* Against the thing it counts. `margin-right` keeps it a fact rather
+   than a button: the chips' own gap would read as one more of them. */
 .resulttally {
   font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary);
   white-space: nowrap; margin-right: 2px;
 }
 .resultscontrols { display: flex; align-items: center; gap: 10px; }
-.searchbox { position: relative; display: flex; align-items: center; }
+/* Browsing, the controls are the whole bar and the search takes the slack
+   in it — the bar spans the page now, and 210px of box in 1250px of rule
+   was a control apologising for being there. Capped, because a search
+   field wider than the words anybody types into it is just a long line.
+   Selecting, the bar holds a count and four buttons instead, and those
+   stay at the right where a destructive one is expected. */
+.resultsbar.browse .resultscontrols { flex: 1; }
+.searchbox {
+  position: relative; display: flex; align-items: center;
+  flex: 1 1 240px; max-width: 420px; margin-right: auto;
+}
 .searchbox svg { position: absolute; left: 13px; color: var(--text-tertiary); pointer-events: none; }
 .search {
   background: var(--bg-input); border: 1px solid var(--border-control);
   border-radius: var(--radius-pill); color: var(--text-primary);
-  font-size: 13px; padding: 7px 16px 7px 34px; width: 210px;
+  font-size: 13px; padding: 7px 16px 7px 34px; width: 100%;
 }
 .search::placeholder { color: var(--text-tertiary); }
 .sortselect {
@@ -815,23 +821,26 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 }
 .sortselect:hover { background-color: var(--surface-glass-strong); }
 /* One switch, not two buttons standing next to each other: a single track
-   with a pill that slides to whichever side is active. */
+   with a pill that slides to whichever side is active. Grid is the left
+   half, so the thumb rests there and travels for List — both halves are
+   the same width, which is what lets the travel be one number. */
 .viewtoggle {
   position: relative; display: flex; gap: 2px;
   background: var(--surface-glass); border: 1px solid var(--border-glass-soft);
-  border-radius: var(--radius-pill); padding: 3px;
+  border-radius: var(--radius-pill); padding: 3px; flex-shrink: 0;
 }
 .viewtoggle-thumb {
   position: absolute; top: 3px; left: 3px;
-  width: 28px; height: 26px; border-radius: var(--radius-pill);
+  width: 68px; height: 26px; border-radius: var(--radius-pill);
   background: var(--surface-glass-strong);
   transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.viewtoggle[data-view="grid"] .viewtoggle-thumb { transform: translateX(30px); }
+.viewtoggle[data-view="row"] .viewtoggle-thumb { transform: translateX(70px); }
 .viewtoggle button {
   position: relative; z-index: 1;
-  display: flex; align-items: center; justify-content: center;
-  width: 28px; height: 26px; border: none; background: transparent;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 68px; height: 26px; border: none; background: transparent;
+  font: inherit; font-size: 12.5px; font-weight: 600;
   border-radius: var(--radius-pill); color: var(--text-tertiary); transition: color 160ms;
 }
 .viewtoggle button:hover { color: var(--text-secondary); }
