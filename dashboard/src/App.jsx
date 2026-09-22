@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from './api.js';
 import { signOut } from './auth.jsx';
 import { CategoryIcon } from './icons.jsx';
@@ -312,6 +312,29 @@ export default function App() {
   // zero, which makes their absence the signal that nothing is waiting —
   // a button that is always there says nothing by being there.
   const unpublished = progress?.unpublished ?? 0;
+  const pending = progress?.by_status?.pending ?? 0;
+
+  /**
+   * Where a status tile points.
+   *
+   * A tile is a door into a queue, so it leads to the list — from the
+   * editor, from Reports, from wherever the rail happens to be showing.
+   * It keeps the filters already in the URL rather than replacing them,
+   * because "pending" is a narrowing of the question being asked, not a
+   * new one; and it drops the page, because page four of the old answer
+   * is not page four of the new one. Pressing the tile that is already on
+   * turns it off, the way the chips in the rail do.
+   */
+  const [params] = useSearchParams();
+  const status = params.get('status');
+  const statTo = (next) => {
+    const q = new URLSearchParams(params);
+    if (next && q.get('status') !== next) q.set('status', next);
+    else q.delete('status');
+    q.delete('page');
+    const search = q.toString();
+    return { pathname: '/', search: search ? `?${search}` : '' };
+  };
 
   return (
     <ToastCtx.Provider value={showToast}>
@@ -400,19 +423,55 @@ export default function App() {
                         </button>
                       ))}
                     </div>
+                    {/* The same choice as the chips, for the width where
+                        nine of them wrap to a second row. Both are in the
+                        markup and CSS shows one: a native menu is the
+                        control a phone already knows, and the chips stay
+                        where they are faster — one press instead of two. */}
+                    <select
+                      className="cityselect"
+                      aria-label="City"
+                      value={city?.id ?? ALL}
+                      onChange={(e) => setCity(e.target.value)}
+                    >
+                      <option value={ALL}>All cities</option>
+                      {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
+                        <option key={c.id} value={c.id}>{chipLabel(c)}</option>
+                      ))}
+                    </select>
                   </div>
                 )}
                 {total > 0 && (
                   <div className="rail" title={`${approved} approved · ${flagged} flagged · ${total - approved - flagged} pending`}>
-                    <div className="counts">
-                      <span><b>{approved}</b>/{total} approved</span>
-                      {flagged > 0 && <span style={{ color: 'var(--bad)' }}>{flagged} flagged</span>}
-                      {unpublished > 0 && <span style={{ color: 'var(--warn)' }}>{unpublished} not public</span>}
+                    {/* Three numbers the desk works from, and each one is
+                        the way into the work it counts. They were a line of
+                        grey text before: the pending figure, which is the
+                        whole queue, appeared nowhere but in brackets on a
+                        chip further down the page. */}
+                    <div className="stats" role="group" aria-label="Filter by review status">
+                      <Link className={`stat${status ? '' : ' on'}`} to={statTo(null)}>
+                        <b>{total}</b><span>Places</span>
+                      </Link>
+                      {/* A queue with something in it wears its colour; an
+                          empty one is not news and stays quiet. */}
+                      <Link
+                        className={`stat${pending ? ' pending' : ''}${status === 'pending' ? ' on' : ''}`}
+                        to={statTo('pending')}
+                      >
+                        <b>{pending}</b><span>Pending</span>
+                      </Link>
+                      <Link
+                        className={`stat${flagged ? ' flagged' : ''}${status === 'flagged' ? ' on' : ''}`}
+                        to={statTo('flagged')}
+                      >
+                        <b>{flagged}</b><span>Flagged</span>
+                      </Link>
                     </div>
                     <div className="track">
                       <div className="fill" style={{ width: `${(approved / total) * 100}%` }} />
                       <div className="flagged" style={{ width: `${(flagged / total) * 100}%` }} />
                     </div>
+                    <div className="railnote"><b>{approved}</b>/{total} approved</div>
                     {/* Here rather than in the header, because this is the
                         number it changes. Pressed from the top bar, the
                         only evidence it had worked was a stamp in a row
