@@ -10,6 +10,7 @@
 // screen lying about a statement that reaches other people.
 
 import React from 'react';
+import * as Haptics from 'expo-haptics';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '../uitest/render';
 
@@ -166,5 +167,124 @@ describe('the sentence under the title', () => {
     unmount();
     show({ company: 'family' });
     expect(screen.getByText('A family day — pick who joins.')).toBeTruthy();
+  });
+});
+
+// ── the seat rule ──
+//
+// A couple's evening holds one guest. One tick fills the seat and the rest
+// of the list stands down, with the note saying why; unticking wakes it.
+// A seat held by somebody who has already answered greys the list for
+// good, and the note says that instead. The arithmetic is `seatsFull`
+// and `togglePick`, held at 100% in `lib/invites`; what is pinned here is
+// that the sheet reads them — a benched row that still took the tap would
+// be a checkbox ignoring a press, which is the exact thing the greying
+// exists to avoid.
+
+describe('a couple’s evening', () => {
+  it('benches the rest of the list once one guest is ticked, and says why', () => {
+    show({ company: 'couple' });
+    fireEvent.click(screen.getByText('Lan Phương'));
+    expect(screen.getByText('Send 1 invite')).toBeTruthy();
+    expect(screen.getByText(/seats one guest — untick to choose someone else/)).toBeTruthy();
+
+    // The tap on a benched row lands on nothing: still one invite, and
+    // no click under the thumb either — a benched row is told apart from
+    // a live one by the haptic it withholds, which is the one thing about
+    // "standing down" this runner can hear. (`togglePick` would refuse
+    // the pick regardless; the greying and the silence are the sheet's.)
+    const felt = vi.mocked(Haptics.selectionAsync);
+    felt.mockClear();
+    fireEvent.click(screen.getByText('Minh Đỗ'));
+    expect(screen.getByText('Send 1 invite')).toBeTruthy();
+    expect(felt).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('Send 1 invite'));
+    expect(onSend).toHaveBeenCalledWith(['lan'], []);
+    // A live row still clicks.
+    fireEvent.click(screen.getByText('Lan Phương'));
+    expect(felt).toHaveBeenCalledTimes(1);
+  });
+
+  it('wakes the list back up when the tick comes off', () => {
+    show({ company: 'couple' });
+    fireEvent.click(screen.getByText('Lan Phương'));
+    fireEvent.click(screen.getByText('Lan Phương'));
+    expect(screen.getByText(/Times and stops stay yours to edit/)).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Minh Đỗ'));
+    expect(screen.getByText('Send 1 invite')).toBeTruthy();
+    fireEvent.click(screen.getByText('Send 1 invite'));
+    expect(onSend).toHaveBeenCalledWith(['minh'], []);
+  });
+
+  it('is complete once the guest has answered, and the list stays down', () => {
+    show({ company: 'couple', invites: [inv({ invitee_id: 'lan', status: 'accepted' })] });
+    expect(screen.getByText(/A couple’s evening is complete — your guest has answered/)).toBeTruthy();
+    expect(screen.getByText('Answered')).toBeTruthy();
+
+    // Nobody else can be ticked in, and the answered seat cannot be
+    // untapped: nothing moves, so the button has nothing to promise.
+    fireEvent.click(screen.getByText('Minh Đỗ'));
+    fireEvent.click(screen.getByText('Lan Phương'));
+    expect(screen.getByText('Send invites')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send invites' }).getAttribute('aria-disabled')).toBe('true');
+  });
+
+  // The same words for the same seat, whoever holds it: a guest who said
+  // no has not taken the seat, so the list stays awake.
+  it('keeps the seat open after a refusal', () => {
+    show({ company: 'couple', invites: [inv({ invitee_id: 'lan', status: 'declined' })] });
+    expect(screen.getByText(/Times and stops stay yours to edit/)).toBeTruthy();
+    fireEvent.click(screen.getByText('Minh Đỗ'));
+    expect(screen.getByText('Send 1 invite')).toBeTruthy();
+  });
+});
+
+describe('a row with less to say', () => {
+  it('names a friend by handle when the profile has no name', () => {
+    show({ people: { ...people, minh: { ...people.minh, full_name: '' } }, mutual: {} });
+    // As the name, and again as the meta line — the handle is all there is.
+    expect(screen.getAllByText(/minhdi/)).toHaveLength(2);
+  });
+
+  it('calls a friend the crew copy has not loaded Someone, with an empty meta line', () => {
+    show({ people: { lan: people.lan }, mutual: {} });
+    expect(screen.getAllByText('Someone')).toHaveLength(2);
+    // One handle on the sheet — Lan's. Not "@undefined" twice under the
+    // two the crew copy has not loaded.
+    expect(screen.getAllByText(/@/).map((el) => el.textContent)).toEqual(['@lanphuong']);
+  });
+});
+
+describe('closed, and opened again', () => {
+  it('draws nothing while closed, and reseeds the ticks from the truth on opening', () => {
+    const view = render(
+      <InviteSheet
+        open={false} company="friends" friendIds={friendIds} people={people} mutual={{}}
+        invites={[inv({ invitee_id: 'lan' })]} sending={false} onClose={() => {}} onSend={onSend}
+      />,
+    );
+    expect(screen.queryByText('Who’s coming?')).toBeNull();
+
+    view.rerender(
+      <InviteSheet
+        open company="friends" friendIds={friendIds} people={people} mutual={{}}
+        invites={[inv({ invitee_id: 'lan' })]} sending={false} onClose={() => {}} onSend={onSend}
+      />,
+    );
+    expect(screen.getByText('Who’s coming?')).toBeTruthy();
+    // Lan opens ticked — what is already sent — so a bare press sends nothing.
+    expect(screen.getByText('Send invites')).toBeTruthy();
+    fireEvent.click(screen.getByText('Lan Phương'));
+    expect(screen.getByText('Take back 1')).toBeTruthy();
+  });
+
+  it('leaves through Not now and through the page behind it', () => {
+    const onClose = vi.fn();
+    show({ onClose });
+    fireEvent.click(screen.getByText('Not now'));
+    fireEvent.click(screen.getByLabelText('Close'));
+    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(onSend).not.toHaveBeenCalled();
   });
 });
