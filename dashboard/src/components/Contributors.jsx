@@ -2,11 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { CityPicker, chipLabel, useCity } from '../App.jsx';
 import {
-  SERIES_COLORS, TOP_N,
+  DAYS, SERIES_COLORS, TOP_N,
   windowDays, buildBoard, countStats, scopeRows, niceMax, withGuide,
 } from '../contributors.js';
 
-const DAYS = 30;
 
 // ── chart geometry ──
 // Fixed viewBox, fluid width. The desk caps the shell at 1280px, so the
@@ -305,17 +304,14 @@ export default function Contributors() {
 
   return (
     <div className="contrib">
+      {/* The name and the sentence are the page head's now, where every
+          room's are. What stays is what only this screen knows. */}
       <div className="contribhead">
         <div>
-          <h2>Contributors</h2>
-          <p className="addsub">
-            Places added from the app that made it to <b className="contribem">approved</b>
-            {' · '}<b className="contribem">published</b> — cumulative, last {DAYS} days.
-          </p>
           <p className="contribhint">
             {city
-              ? `the top ${TOP_N} within ${scopeLabel} · switch city beside the title`
-              : `all cities combined · pick a city beside the title to re-rank the top ${TOP_N} within it`}
+              ? `the top ${TOP_N} within ${scopeLabel} · switch city on the right`
+              : `all cities combined · pick a city on the right to re-rank the top ${TOP_N} within it`}
           </p>
         </div>
         {/* The same control the other scoped screens draw, in the slot
