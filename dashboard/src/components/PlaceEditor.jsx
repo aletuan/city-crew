@@ -7,6 +7,7 @@ import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { useCity, useProgress, useToast } from '../App.jsx';
 import PhotoManager, { emptyPhotoEdits, photoEditsDirty } from './PhotoManager.jsx';
 import { normalizeThreads, threadsProblem, threadsUrl } from '../lib/threads.js';
+import { SOURCE_OPTIONS, sourceCredit, sourceLink, sourceProblem, sniffSource } from '../lib/reviewer.js';
 import { loadGoogleMaps, DARK_STYLE } from '../lib/googleMaps.js';
 
 const FORM_FIELDS = [
@@ -14,6 +15,7 @@ const FORM_FIELDS = [
   'address', 'category', 'categories', 'is_featured', 'vibe_tags', 'emoji',
   'price_display', 'price_vnd', 'duration_min', 'duration_max',
   'website', 'phone', 'threads_handle', 'is_published', 'review_note',
+  'reviewer_source', 'reviewer_name', 'reviewer_url',
 ];
 
 const pickForm = (place) => Object.fromEntries(FORM_FIELDS.map((k) => [k, place[k]]));
@@ -255,6 +257,12 @@ export default function PlaceEditor() {
   const threadsHandle = normalizeThreads(form.threads_handle);
   const threadsMsg = threadsProblem(threadsHandle);
 
+  // The blurb's source is three fields that only make sense together, so it
+  // is validated as one thing rather than field by field.
+  const sourceMsg = sourceProblem(form);
+  const sourcePreview = sourceCredit(form);
+  const sourceHref = sourceLink({ ...form, google_place_id: place.google_place_id });
+
   return (
     <>
       <div className="crumbs">
@@ -382,6 +390,74 @@ export default function PlaceEditor() {
                   ? <a className="verifylink" href={threadsUrl(threadsHandle)} target="_blank" rel="noreferrer">Open profile ↗</a>
                   : <span className="fieldnote">Nothing to check yet.</span>}
               </div>
+            </div>
+          </section>
+
+          {/* Where the blurb came from — its own panel, not a third row of
+              Contact & links, because it is about the words above and not
+              about reaching the venue. `threads_handle` up there is the
+              venue's account; this is whoever wrote the blurb, and they are
+              routinely different people. Google is a source with no author:
+              the import copies `editorialSummary`, which Google writes, so
+              the name stays empty and the credit reads "Google". */}
+          <section className="panel">
+            <h3>Blurb source</h3>
+            <div className="inline-fields" style={{ alignItems: 'flex-start' }}>
+              <div className="field">
+                <label htmlFor="reviewer_source">Source</label>
+                <select
+                  id="reviewer_source"
+                  value={form.reviewer_source ?? ''}
+                  onChange={(e) => set('reviewer_source', e.target.value || null)}
+                >
+                  {SOURCE_OPTIONS.map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label htmlFor="reviewer_name">Credit</label>
+                <div className="prefixed">
+                  <span className="prefix" aria-hidden="true">@</span>
+                  <input
+                    id="reviewer_name"
+                    className="mono"
+                    placeholder={form.reviewer_source === 'google' ? 'Google names no author' : 'handle of whoever wrote it'}
+                    disabled={form.reviewer_source === 'google'}
+                    value={form.reviewer_name ?? ''}
+                    onChange={(e) => set('reviewer_name', e.target.value)}
+                    onBlur={(e) => set('reviewer_name', normalizeThreads(e.target.value) || null)}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="field" style={{ marginTop: 12 }}>
+              <label htmlFor="reviewer_url">Link</label>
+              {/* Paste the permalink and the other two boxes fill themselves:
+                  the URL is the only thing an editor has in the clipboard. */}
+              <input
+                id="reviewer_url"
+                className="mono"
+                placeholder="paste the post permalink"
+                value={form.reviewer_url ?? ''}
+                onChange={(e) => set('reviewer_url', e.target.value)}
+                onBlur={(e) => {
+                  const sniffed = sniffSource(e.target.value);
+                  if (sniffed) setForm((f) => ({ ...f, ...sniffed }));
+                  else set('reviewer_url', e.target.value.trim() || null);
+                }}
+              />
+            </div>
+            {sourceMsg
+              ? <p className="fieldnote warn">{sourceMsg}</p>
+              : <p className="fieldnote">Leave empty when nobody recorded where the blurb came from.</p>}
+            <div className="field" style={{ marginTop: 12 }}>
+              <label>Reads as</label>
+              {sourcePreview
+                ? (sourceHref
+                    ? <a className="verifylink" href={sourceHref} target="_blank" rel="noreferrer">{sourcePreview} ↗</a>
+                    : <span className="fieldnote">{sourcePreview} — no link to open.</span>)
+                : <span className="fieldnote">Nothing to credit yet.</span>}
             </div>
           </section>
 

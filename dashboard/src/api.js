@@ -18,6 +18,7 @@ const EDITABLE = new Set([
   'price_level', 'price_display', 'price_vnd', 'duration_min', 'duration_max',
   'opening_hours', 'website', 'phone', 'threads_handle', 'sort_order', 'is_published',
   'review_status', 'review_note',
+  'reviewer_source', 'reviewer_name', 'reviewer_url',
 ]);
 
 // `saved_count` used to sit in that list. It is a number an editor typed, it
