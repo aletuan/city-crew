@@ -1341,4 +1341,69 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     show(place({ desc_en: null, desc_vi: null, desc_ja: null }));
     expect(screen.queryByTestId('detail-why')).toBeNull();
   });
+
+  // Whose words these are. Most blurbs are the desk's own and carry no
+  // credit at all; the ones that came out of somebody's Threads post are
+  // theirs, and the line under the paragraph is where that gets said.
+  const blurb = { desc_en: 'Shaded courtyard, two quiet floors.' };
+
+  it('credits the person whose post the blurb came from, and opens it', () => {
+    show(place({
+      ...blurb,
+      reviewer_source: 'threads',
+      reviewer_name: 'gowithchinne',
+      reviewer_url: 'https://www.threads.com/@gowithchinne/post/DdeLnFwj10o',
+    }));
+    fireEvent.click(screen.getByTestId('blurb-credit'));
+    expect(screen.getByText('@gowithchinne on Threads')).toBeTruthy();
+    expect(openURL).toHaveBeenCalledWith('https://www.threads.com/@gowithchinne/post/DdeLnFwj10o');
+  });
+
+  // Google writes the editorial summary the import copies and signs it with
+  // nobody — `import-place.ts` does not even ask for `reviews`. A name here
+  // could only have been invented, so the line names the platform and the
+  // tap goes to the place's own Maps page.
+  it('credits Google by platform alone and opens the Maps page', () => {
+    show(place({
+      ...blurb,
+      reviewer_source: 'google',
+      reviewer_name: null,
+      reviewer_url: null,
+      google_place_id: 'ChIJabc',
+    }));
+    expect(screen.queryByText(/on Google/)).toBeNull();
+    fireEvent.click(screen.getByTestId('blurb-credit'));
+    expect(openURL).toHaveBeenCalledWith('https://www.google.com/maps/place/?q=place_id:ChIJabc');
+  });
+
+  it('says nothing under a blurb the desk wrote itself', () => {
+    // The majority case, and the one worth protecting: a credit line on
+    // house copy would attribute it to nobody in particular, at length.
+    show(place({ ...blurb, reviewer_source: null }));
+    expect(screen.getByTestId('detail-why')).toBeTruthy();
+    expect(screen.queryByTestId('blurb-credit')).toBeNull();
+  });
+
+  it('shows the credit as plain text when there is nowhere to send the reader', () => {
+    // A tappable line that does nothing is worse than an untappable one.
+    show(place({
+      ...blurb, reviewer_source: 'threads', reviewer_name: null, reviewer_url: null,
+    }));
+    fireEvent.click(screen.getByTestId('blurb-credit'));
+    expect(screen.getByText('From Threads')).toBeTruthy();
+    expect(openURL).not.toHaveBeenCalled();
+  });
+
+  it('tells the reader when the source will not open', async () => {
+    openURL.mockRejectedValueOnce(new Error('nope'));
+    show(place({
+      ...blurb,
+      reviewer_source: 'threads',
+      reviewer_name: 'gowithchinne',
+      reviewer_url: 'https://www.threads.com/@gowithchinne/post/DdeLnFwj10o',
+    }));
+    fireEvent.click(screen.getByTestId('blurb-credit'));
+    await settle();
+    expect(alert).toHaveBeenCalledWith('Could not open the source');
+  });
 });

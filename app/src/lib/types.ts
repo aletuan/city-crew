@@ -89,6 +89,21 @@ export type Place = {
    */
   instagram_handle?: string | null;
   threads_handle?: string | null;
+  /**
+   * Where the blurb came from — see `blurbSource.ts` and
+   * `20260922170000_blurb_source_generalised.sql`. Not the venue's account:
+   * `threads_handle` above is the café's, this is whoever wrote the words.
+   *
+   * All three optional, and all three routinely null together: most places
+   * carry no blurb at all, and a blurb the desk wrote itself has no outside
+   * source to name. `reviewer_name` is null for Google specifically, which
+   * writes the editorial summary the import copies and credits nobody for
+   * it; `reviewer_url` is null there too, because the Maps link is built
+   * from `google_place_id`.
+   */
+  reviewer_source?: string | null;
+  reviewer_name?: string | null;
+  reviewer_url?: string | null;
   place_photos: PlacePhoto[];
   /**
    * When the row was written. Optional, because most of the app never

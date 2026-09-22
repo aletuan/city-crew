@@ -288,6 +288,19 @@ export async function importPlace(
       // Google's editorial one-liner where it exists (EN only) — the
       // Vietnamese description stays editorial work in the dashboard.
       desc_en: d.editorialSummary?.text ?? null,
+      // Whose one-liner that is. Stamped at import so the answer is never
+      // reconstructed later from the shape of the text — the first
+      // backfill had to read twenty-three blurbs and recognise Google's
+      // house voice, which worked and should not have to work twice.
+      //
+      // No name: Google writes the editorial summary about the place and
+      // credits nobody for it, and the field mask above does not ask for
+      // `reviews`, so there is no author on this path at all. No URL
+      // either — the Maps page is built from `google_place_id`.
+      //
+      // Only where there is something to attribute. A place Google has no
+      // summary for gets no blurb and so has no source.
+      reviewer_source: d.editorialSummary?.text ? "google" : null,
       // Same value in both languages, like name_en/name_vi above — a
       // starting point the editor refines, not a translation.
       //
