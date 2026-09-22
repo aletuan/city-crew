@@ -162,7 +162,15 @@ function SettingToggleRow({ icon, label, on, onChange, last }: {
   return (
     <View style={[s.featureRow, !last && s.featureRowDivider]}>
       <RoundIcon name={icon} />
-      <Text style={s.settingLabel} numberOfLines={1}>{label}</Text>
+      {/* Two lines, where `SettingRow` allows one. A value row can give
+          its label the line and let the value truncate; this row has no
+          value to give up, and the switch is a fixed 51pt that cannot
+          shrink. At 320pt of window — an iPhone SE, or any iPhone with
+          Display Zoom on — the line is 244pt inside the card, and "Always
+          show welcome" beside the icon and the switch is more than that.
+          The label wraps rather than clips, which is what the platform's
+          own settings rows do with a switch beside a long name. */}
+      <Text style={s.settingLabel} numberOfLines={2}>{label}</Text>
       {/* The spacer `SettingRow` uses when it has no value, for the same
           reason: it is what holds the control against the right edge. */}
       <View style={{ flex: 1 }} />
@@ -801,9 +809,21 @@ const s = StyleSheet.create({
   // Regular, not semibold: a settings label names a row, it does not head
   // a paragraph. The value takes the rest of the line and is pushed right
   // by its own flex rather than by a spacer view.
-  settingLabel: { color: colors.text, fontSize: 16, fontWeight: font.regular },
+  // `flexShrink: 1` is what keeps the row's right-hand control on the
+  // screen. Without it the label is rigid: on a 320pt window (an iPhone SE,
+  // or an iPhone 15 with Display Zoom on) the switch row's label plus the
+  // icon and the switch came to more than the card's 244pt, and the switch
+  // was pushed past the card's edge and clipped. The value rows never
+  // clipped, because their value has `flex: 1` and gives way first — the
+  // label still takes the line ahead of it, and only shrinks once it is
+  // the label alone that does not fit.
+  settingLabel: { flexShrink: 1, color: colors.text, fontSize: 16, fontWeight: font.regular },
+  // No margin of its own: the row's 14pt gap already separates it from
+  // the label, and the 10 this used to add was a quarter of the value's
+  // room on a narrow screen — "Automatic" truncated to "Automa…" with the
+  // gap it did not need.
   settingValue: {
-    flex: 1, marginLeft: 10, textAlign: 'right',
+    flex: 1, textAlign: 'right',
     color: colors.textTertiary, fontSize: 15, fontWeight: font.regular,
   },
   featureSub: { color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, lineHeight: 19 },
