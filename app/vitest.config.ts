@@ -139,16 +139,18 @@ const SCREENS_FLOOR = { lines: 96, statements: 96, branches: 90, functions: 80 }
 //
 // So the directory carries the same per-file floor the screens do, at
 // today's truth rounded down, and each number is one file's:
-// `AddBatchBar` at 94.39% lines and statements, `InviteSheet` at 84.48%
-// branches, `ExploreFilterSheet` at 90.9% functions.
+// `AddBatchBar` at 94.39% lines and statements and 92.59% branches,
+// `ExploreFilterSheet` at 90.9% functions.
 //
 // The branches column started at 60, which was `InviteCard`'s — every
 // fallback on that card (a day it could not read, a stop with no place,
 // an asker with no name, the credit switch) had gone unexercised — with
 // `PricePill` next at 71.42 for a `compact` form nothing calls and a
-// price nobody knows. Both stand at 100 now, and the column moved up to
-// `InviteSheet`; `AddBatchBar` (92.59) and `SaveSheet` (93.75) follow.
-const COMPONENTS_FLOOR = { lines: 94, statements: 94, branches: 84, functions: 90 };
+// price nobody knows, and `InviteSheet` at 84.48 for the seat rule a
+// couple's evening imposes and the rows the crew copy had not loaded.
+// All three stand at 100 now; `SaveSheet` (93.75) and `LegalSheet`
+// (94.44) are the next in that column, and `AddBatchBar` holds two.
+const COMPONENTS_FLOOR = { lines: 94, statements: 94, branches: 92, functions: 90 };
 
 // The one component the gate does not hold, for the same reason `IMPURE`
 // exists: it cannot run where the tests run. `MiniMap` IS the native map
