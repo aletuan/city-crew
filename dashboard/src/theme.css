@@ -432,8 +432,18 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .syncbtn:hover { background: var(--surface-glass-strong); }
 .syncbtn:disabled { opacity: .5; cursor: wait; }
 /* One accent action per header: the create flow every session starts with. */
-.syncbtn.primary { background: var(--grad-ai); border-color: transparent; color: #fff; }
-.syncbtn.primary:hover { filter: brightness(1.08); }
+/* One accent action per head, and one colour on it. It wore the desk's
+   three-stop gradient — violet into pink into amber — which is the mark
+   the desk spends on things that are *measures*: the progress track, a
+   selected filter, the featured tag. On a button it is decoration
+   competing with the four counts beside it, and the amber end lands a
+   hand's width from the amber "pending" figure while meaning nothing of
+   the sort. Flat violet: the accent's first stop, which is also what the
+   sidebar's active row and the selected stat's underline already use. */
+.syncbtn.primary {
+  background: var(--ai-violet); border-color: transparent; color: #fff;
+}
+.syncbtn.primary:hover { background: #7C4DF4; }
 
 /* Anchor wrapper for the bell's dropdown panel (the old overflow menu is
    gone — its items live in the sidebar / More sheet now, and .moremenu-item
@@ -1249,7 +1259,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .addresult { display: flex; align-items: center; gap: 10px; }
 .addresult .addbtn { text-decoration: none; }
 
-.topbar .addbtn { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+/* Unscoped. This was `.topbar .addbtn` while the button lived in the top
+   bar; it is in the page head above 960px now, where the rule matched
+   nothing and the anchor drew its own underline. */
+.addbtn { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 
 /* ── contributors analytics ──
    The desk's one measuring room. Same skin as everything else — panels,
