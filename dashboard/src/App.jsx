@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from './api.js';
+import { DAYS } from './contributors.js';
 import { signOut } from './auth.jsx';
 import { CategoryIcon } from './icons.jsx';
 import { newCount } from './reports.js';
@@ -28,6 +29,35 @@ const CITY_KEY = 'citycrew.dashboard.city';
 const ALL = 'all';
 
 const UNFILED_SHOWN = 6;
+
+/* What each room calls itself, and the sentence saying what it is for.
+   It used to live here for Places and inside the component for the other
+   two, which is why only Places had its name on the line with the counts
+   and the actions — the analytics screens started theirs a whole band
+   lower, under a head that named nothing.
+
+   The subtitles are static; anything a screen has to say that depends on
+   its own data (which city it fell back to, how the ranking is scoped)
+   stays with the screen, under this. */
+const PAGE_HEAD = {
+  '/': {
+    title: 'Places',
+    sub: 'Discover, review and manage places for City Crew.',
+  },
+  '/analytics/contributors': {
+    title: 'Contributors',
+    sub: (
+      <>
+        Places added from the app that made it to <b className="contribem">approved</b>
+        {' · '}<b className="contribem">published</b> — cumulative, last {DAYS} days.
+      </>
+    ),
+  },
+  '/analytics/coverage': {
+    title: 'Coverage',
+    sub: 'Where the catalog actually is — published places per district, so thin quận stand out before users notice.',
+  },
+};
 
 // The chip spelling for each city — the desk's own abbreviations, matching
 // the analytics screens.
@@ -468,15 +498,12 @@ export default function App() {
                 row they sit in. */}
             <div className="pagehead">
               <div className="pagehead-top">
-                {/* Contributors and Coverage write their own headings,
-                    under their own explanatory line; only Places wants
-                    one here — a title with the sentence that says what
-                    the screen is for, the way every other room on the
-                    desk introduces itself. */}
-                {location.pathname === '/' && (
+{/* Every room that has a name says it here, on the line with the
+                    counts and the actions — not just Places. */}
+                {PAGE_HEAD[location.pathname] && (
                   <div className="pagetitles">
-                    <h2 className="pagetitle">Places</h2>
-                    <p className="pagesub">Discover, review and manage places for City Crew.</p>
+                    <h2 className="pagetitle">{PAGE_HEAD[location.pathname].title}</h2>
+                    <p className="pagesub">{PAGE_HEAD[location.pathname].sub}</p>
                   </div>
                 )}
                 {total > 0 && (

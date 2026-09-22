@@ -31,6 +31,11 @@ export const shortKey = (id) => CITY_KEY[id] ?? String(id ?? '');
 
 export const TOP_N = 10;
 
+/* How far back the board looks. Here rather than in the screen because
+   the page head now writes the sentence that quotes it, and two copies of
+   a number that has to agree is how they stop agreeing. */
+export const DAYS = 30;
+
 /** One colour per leaderboard slot, top rank first. The colour belongs to the
  *  slot, so the chart line, its end dot and the board row always agree.
  *

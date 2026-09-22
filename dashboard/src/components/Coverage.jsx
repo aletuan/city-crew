@@ -228,19 +228,17 @@ export default function Coverage() {
 
   return (
     <div className="coverage">
+      {/* The name and the sentence are the page head's now. The fallback
+          note is not: it depends on what this screen found, so it reads
+          under the head rather than inside a constant. */}
       <div className="contribhead">
         <div>
-          <h2>Coverage</h2>
-          <p className="addsub">
-            Where the catalog actually is — published places per district, so thin
-            quận stand out before users notice.
-            {fellBack && (
-              <>
-                {' '}A map draws one city, so with the desk set to all cities this
-                one shows <b className="contribem">{longName}</b>, the busiest.
-              </>
-            )}
-          </p>
+          {fellBack && (
+            <p className="contribhint">
+              a map draws one city, so with the desk set to all cities this one
+              shows <b className="contribem">{longName}</b>, the busiest
+            </p>
+          )}
         </div>
         {/* The scope, then what each city holds. The counts were never
             a control — what a city holds is this screen's subject, not its
