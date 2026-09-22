@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { leftBehindNote } from '../storage.js';
@@ -7,6 +7,7 @@ import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { useCity, useProgress, useToast } from '../App.jsx';
 import PhotoManager, { emptyPhotoEdits, photoEditsDirty } from './PhotoManager.jsx';
 import { normalizeThreads, threadsProblem, threadsUrl } from '../lib/threads.js';
+import { loadGoogleMaps, DARK_STYLE } from '../lib/googleMaps.js';
 
 const FORM_FIELDS = [
   'name_en', 'name_vi', 'desc_en', 'desc_vi', 'neighborhood_en', 'neighborhood_vi',
@@ -16,6 +17,77 @@ const FORM_FIELDS = [
 ];
 
 const pickForm = (place) => Object.fromEntries(FORM_FIELDS.map((k) => [k, place[k]]));
+
+/**
+ * The Fact-check map: is the pin where the address says it is?
+ *
+ * This was an OpenStreetMap <iframe>, which meant the curator checked a
+ * place on one company's map and then opened "Open in Google Maps ↗" to see
+ * a different company's idea of the same street. Now both agree, and the map
+ * pans and zooms so a wrong-side-of-the-road pin is visible without leaving
+ * the desk.
+ *
+ * A circle, not a pin: a teardrop marks its spot with a tip a few pixels
+ * below its own weight, and this is the one screen where those pixels are
+ * the entire question.
+ */
+function FactCheckMap({ lat, lng, name }) {
+  const elRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+  const [mapsApi, setMapsApi] = useState(undefined); // undefined = still asking
+
+  useEffect(() => {
+    let cancelled = false;
+    loadGoogleMaps().then((maps) => { if (!cancelled) setMapsApi(maps); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!mapsApi || !elRef.current || lat == null || lng == null) return;
+    const position = { lat, lng };
+    if (!mapRef.current) {
+      mapRef.current = new mapsApi.Map(elRef.current, {
+        center: position,
+        zoom: 16,
+        styles: DARK_STYLE,
+        backgroundColor: '#0d0a12',
+        disableDefaultUI: true,
+        zoomControl: true,
+        clickableIcons: false,
+        // Without this the zoom control is Google's white plate, which on
+        // this desk reads as a hole punched in the map.
+        colorScheme: 'DARK',
+      });
+      markerRef.current = new mapsApi.Marker({
+        map: mapRef.current,
+        icon: {
+          path: mapsApi.SymbolPath.CIRCLE,
+          scale: 7,
+          fillColor: '#EC96E9',
+          fillOpacity: 0.95,
+          strokeColor: '#ffffff',
+          strokeWeight: 2,
+        },
+      });
+    } else {
+      mapRef.current.setCenter(position);
+    }
+    markerRef.current.setPosition(position);
+    markerRef.current.setTitle(name ?? '');
+  }, [mapsApi, lat, lng, name]);
+
+  if (lat == null || lng == null) {
+    return <div className="mapblank">No coordinates on this place yet.</div>;
+  }
+  // `mapsApi === null` is a desk with no key, or a key the browser was
+  // refused. Say so once, quietly, and let the coordinates below carry the
+  // screen — they are the fact being checked.
+  if (mapsApi === null) {
+    return <div className="mapblank">Map unavailable — set VITE_GOOGLE_MAPS_KEY.</div>;
+  }
+  return <div className="mapframe" ref={elRef} />;
+}
 
 function BilingualField({ label, nameEn, nameVi, form, set, textarea }) {
   const Input = textarea ? 'textarea' : 'input';
@@ -353,12 +425,7 @@ export default function PlaceEditor() {
 
           <section className="panel">
             <h3>Fact-check</h3>
-            <iframe
-              className="mapframe"
-              title="Map location"
-              loading="lazy"
-              src={`https://www.openstreetmap.org/export/embed.html?bbox=${place.lng - 0.004}%2C${place.lat - 0.003}%2C${place.lng + 0.004}%2C${place.lat + 0.003}&layer=mapnik&marker=${place.lat}%2C${place.lng}`}
-            />
+            <FactCheckMap lat={place.lat} lng={place.lng} name={place.name_en} />
             {/* Observed numbers, all of them read-only. `saves` counts rows in
                 collection_places — the thing `places.saved_count` was supposed
                 to mirror and never did. */}

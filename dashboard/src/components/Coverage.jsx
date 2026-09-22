@@ -3,27 +3,43 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { chipLabel, useCity } from '../App.jsx';
 import {
-  buildCoverage, fitView, lngToX, latToY, bubbleRadius, TILE,
+  buildCoverage, fitView, lngToX, latToY, xToLng, yToLat, bubbleRadius,
 } from '../coverage.js';
+import { loadGoogleMaps, DARK_STYLE } from '../lib/googleMaps.js';
 
 const MAP_H = 620;
 const MAP_H_NARROW = 460;
-// Dark basemap, the one the mock wears. Public tile CDN; attribution is the
-// licence, not decoration.
-const tileUrl = (z, x, y, dpr) =>
-  `https://${'abcd'[(x + y) % 4]}.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}${dpr > 1 ? '@2x' : ''}.png`;
 
 /**
- * A static mosaic, not a map widget: the screen answers "where is the
- * catalog thin", which needs one well-framed look at the city, not pan and
- * zoom — so no map library rides along. Tiles for the fitted view are laid
- * as plain <img>, bubbles as SVG on top, both from the same mercator math
- * (see coverage.js). If the tile CDN is unreachable the bubbles still
- * stand on the dark ground — the numbers never depend on the network.
+ * The desk's one look at geography: a Google basemap with a bubble per
+ * district drawn over it.
+ *
+ * The bubbles are plain SVG, not map markers, and they stay that way. The
+ * arithmetic that places them lives in coverage.js and projects into the
+ * same 256px web-mercator world `google.maps.Map` uses, so a world pixel
+ * computed here lands on the same spot as the basemap underneath — all this
+ * component has to know is which world pixel the top-left corner of the
+ * viewport is currently at. `bounds_changed` gives it that on every pan and
+ * zoom.
+ *
+ * Keeping the overlay outside the map (rather than inside an OverlayView)
+ * costs a re-render per frame while dragging — about a hundred SVG nodes,
+ * which React reconciles well inside a frame — and buys the bubbles staying
+ * testable arithmetic that does not import anything from Google.
+ *
+ * With no key, `loadGoogleMaps` resolves null: no basemap is built, the
+ * fitted view stands, and the bubbles sit on the dark ground exactly as they
+ * did when a tile CDN was unreachable. The numbers never depend on a map.
  */
 function CoverageMap({ groups, hover, setHover }) {
   const wrapRef = useRef(null);
+  const mapElRef = useRef(null);
+  const mapRef = useRef(null);
   const [width, setWidth] = useState(0);
+  const [ready, setReady] = useState(false);
+  // Where the live map is looking. Null until the map moves for the first
+  // time — or forever, if there is no map.
+  const [mapFrame, setMapFrame] = useState(null);
   // A phone gets a shorter frame: 620px of map on a 360px column is mostly
   // empty mercator.
   const mapH = width && width < 520 ? MAP_H_NARROW : MAP_H;
@@ -39,25 +55,81 @@ function CoverageMap({ groups, hover, setHover }) {
 
   const located = groups.filter((g) => g.lat != null);
   // Keyed on the coordinates themselves, not the array identity — groups is
-  // rebuilt every render, and refitting the view on each one would refetch
-  // every tile.
+  // rebuilt every render, and refitting the view on each one would yank the
+  // map out from under whoever is reading it.
   const coordsKey = located.map((g) => `${g.lat},${g.lng}`).join(';');
-  const view = useMemo(
+  const fitted = useMemo(
     () => (width ? fitView(located, width, mapH) : null),
     [width, mapH, coordsKey], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  let tiles = [];
+  // The fit as of right now, for the map's first frame. Read through a ref
+  // because the map is built inside a promise: without it the map opens on
+  // the whole world and jumps to the city a tick later, which is a flash of
+  // ocean on every visit to the screen.
+  const fittedRef = useRef(null);
+  fittedRef.current = fitted;
+
+  // One map, built when the API arrives. Its container is sized by CSS, so
+  // nothing here depends on the fit having been computed yet.
+  useEffect(() => {
+    let cancelled = false;
+    loadGoogleMaps().then((maps) => {
+      if (cancelled || !maps || !mapElRef.current || mapRef.current) return;
+      const first = fittedRef.current;
+      const map = new maps.Map(mapElRef.current, {
+        center: first
+          ? { lat: yToLat(first.y, first.z), lng: xToLng(first.x, first.z) }
+          : { lat: 0, lng: 0 },
+        zoom: first ? first.z : 2,
+        styles: DARK_STYLE,
+        backgroundColor: '#0d0a12',
+        disableDefaultUI: true,
+        zoomControl: true,
+        clickableIcons: false,
+        // Without this the zoom control is Google's white plate, which on
+        // this desk reads as a hole punched in the map.
+        colorScheme: 'DARK',
+        // The bubbles are the subject; Google's own POI pins would compete
+        // with them for the same few pixels.
+        maxZoom: 17,
+        minZoom: 5,
+      });
+      mapRef.current = map;
+      const sync = () => {
+        const c = map.getCenter();
+        const z = map.getZoom();
+        const el = mapElRef.current;
+        if (!c || z == null || !el) return;
+        setMapFrame({
+          z,
+          left: lngToX(c.lng(), z) - el.clientWidth / 2,
+          top: latToY(c.lat(), z) - el.clientHeight / 2,
+        });
+      };
+      map.addListener('bounds_changed', sync);
+      setReady(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Frame the map on the data. `fitted` is memoised, so this runs when the
+  // districts or the viewport change — and once more when the map itself
+  // becomes ready — but not while someone is panning.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !fitted) return;
+    map.setZoom(fitted.z);
+    map.setCenter({ lat: yToLat(fitted.y, fitted.z), lng: xToLng(fitted.x, fitted.z) });
+  }, [fitted, ready]);
+
+  // The map's own view wins once it has one; before that — and with no key
+  // at all — the fitted view stands in, so the bubbles are never homeless.
+  const frame = mapFrame
+    ?? (fitted ? { z: fitted.z, left: fitted.x - width / 2, top: fitted.y - mapH / 2 } : null);
+
   let bubbles = [];
-  if (view) {
-    const left = view.x - width / 2;
-    const top = view.y - mapH / 2;
-    const maxTile = 2 ** view.z - 1;
-    for (let tx = Math.floor(left / TILE); tx * TILE < left + width; tx++) {
-      for (let ty = Math.max(0, Math.floor(top / TILE)); ty * TILE < top + mapH && ty <= maxTile; ty++) {
-        tiles.push({ tx, ty, x: tx * TILE - left, y: ty * TILE - top });
-      }
-    }
+  if (frame && located.length) {
     const maxCount = Math.max(...located.map((g) => g.count));
     // Small bubbles drawn last so a big neighbour never swallows their hover.
     bubbles = [...located]
@@ -65,28 +137,15 @@ function CoverageMap({ groups, hover, setHover }) {
       .map((g) => ({
         g,
         r: bubbleRadius(g.count, maxCount),
-        x: lngToX(g.lng, view.z) - left,
-        y: latToY(g.lat, view.z) - top,
+        x: lngToX(g.lng, frame.z) - frame.left,
+        y: latToY(g.lat, frame.z) - frame.top,
       }));
   }
 
-  const dpr = window.devicePixelRatio ?? 1;
-
   return (
     <div className="covmap" ref={wrapRef} style={{ height: mapH }}>
-      {tiles.map((t) => (
-        <img
-          key={`${t.tx}/${t.ty}`}
-          className="covtile"
-          src={tileUrl(view.z, t.tx, t.ty, dpr)}
-          style={{ left: t.x, top: t.y }}
-          alt=""
-          loading="lazy"
-          draggable={false}
-          onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
-        />
-      ))}
-      {view && (
+      <div className="covbasemap" ref={mapElRef} />
+      {frame && (
         <svg className="covbubbles" width={width} height={mapH} role="img"
           aria-label={`${located.length} districts on the map; the list beside it carries the same numbers.`}>
           {bubbles.map(({ g, r, x, y }) => {
@@ -107,7 +166,6 @@ function CoverageMap({ groups, hover, setHover }) {
           })}
         </svg>
       )}
-      <span className="covattr">© OpenStreetMap · © CARTO</span>
     </div>
   );
 }

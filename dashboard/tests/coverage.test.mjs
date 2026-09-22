@@ -2,7 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  foldKey, districtOf, buildCoverage, fitView, lngToX, latToY, bubbleRadius, TILE,
+  foldKey, districtOf, buildCoverage, fitView, lngToX, latToY, xToLng, yToLat,
+  bubbleRadius, TILE,
 } from '../src/coverage.js';
 
 const row = (over = {}) => ({
@@ -104,6 +105,24 @@ test('fitView picks the deepest zoom that fits and centres the box', () => {
   }
   assert.equal(v.x, (lngToX(106.62, v.z) + lngToX(106.75, v.z)) / 2);
   assert.equal(fitView([], 700, 700), null);
+});
+
+// The Google map is centred by lat/lng, but `fitView` answers in world
+// pixels — so the inverse has to be exact enough that the basemap and the
+// bubbles drawn on top of it agree about where a coordinate is.
+test('the inverse projection returns the coordinate it was given', () => {
+  for (const z of [9, 12, 14]) {
+    for (const [lat, lng] of [[10.7769, 106.7009], [16.0544, 108.2022], [0, 0], [-33.87, 151.21]]) {
+      assert.ok(Math.abs(xToLng(lngToX(lng, z), z) - lng) < 1e-9, `lng ${lng} at z${z}`);
+      assert.ok(Math.abs(yToLat(latToY(lat, z), z) - lat) < 1e-9, `lat ${lat} at z${z}`);
+    }
+  }
+});
+
+test('the inverse projection agrees with the round numbers', () => {
+  assert.equal(xToLng(0, 0), -180);
+  assert.equal(xToLng(TILE, 0), 180);
+  assert.ok(Math.abs(yToLat(TILE / 2, 0)) < 1e-9);
 });
 
 test('mercator round numbers hold', () => {

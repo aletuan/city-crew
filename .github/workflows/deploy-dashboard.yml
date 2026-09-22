@@ -7,6 +7,12 @@
 # The Supabase URL and anon key are public by design (RLS is the security
 # boundary) and default below; repo Actions variables VITE_SUPABASE_URL /
 # VITE_SUPABASE_ANON_KEY override them, e.g. after rotating the key.
+#
+# VITE_GOOGLE_MAPS_KEY is not like them. Nothing enforces access behind it,
+# so it is a repo *secret* with no default, and the restriction that actually
+# protects it lives in Google Cloud Console: an HTTP-referrer allowlist that
+# must include https://aletuan.github.io/* or every map on Pages renders
+# blank, plus a daily quota cap.
 
 name: Deploy dashboard to GitHub Pages
 
@@ -46,6 +52,11 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://amdvitzpogaejzzqroco.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'sb_publishable_VVol99Jqs0QYzeVrmOawlw_ZpXqcv7B' }}
+          # No default for this one, and a secret rather than a variable: see
+          # the note above. An unset key builds a desk whose maps are dark
+          # rectangles; a wrong referrer allowlist does the same thing only
+          # on Pages, which is the likelier way for this to go wrong.
+          VITE_GOOGLE_MAPS_KEY: ${{ secrets.VITE_GOOGLE_MAPS_KEY }}
       # Ship the mockup alongside the dashboard so the freshly synced demo is
       # viewable at <pages-url>/mockup.html — sync commits re-trigger this
       # workflow via the paths filter above.
