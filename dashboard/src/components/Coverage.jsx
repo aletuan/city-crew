@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
-import { useCity } from '../App.jsx';
-import { CITY_META } from '../contributors.js';
+import { chipLabel, useCity } from '../App.jsx';
 import {
   buildCoverage, fitView, lngToX, latToY, bubbleRadius, TILE,
 } from '../coverage.js';
@@ -114,15 +113,12 @@ function CoverageMap({ groups, hover, setHover }) {
 }
 
 export default function Coverage() {
-  const [params, setParams] = useSearchParams();
-  const { cities } = useCity();
+  const { cities, city: workspaceCity } = useCity();
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
   const [retryKey, setRetryKey] = useState(0);
   const [hover, setHover] = useState(null);
 
-  const cityParam = params.get('city') ?? '';
-  const city = CITY_META.some((c) => c.id === cityParam) ? cityParam : CITY_META[0].id;
 
   useEffect(() => {
     let live = true;
@@ -133,22 +129,43 @@ export default function Coverage() {
     return () => { live = false; };
   }, [retryKey]);
 
-  const setCity = (id) => {
-    const next = new URLSearchParams(params);
-    next.set('city', id);
-    setParams(next, { replace: true });
-  };
-
+  // Grouped off the rows, so a city added to the database appears here the
+  // day its first place is published, without anyone editing a list.
   const perCity = useMemo(() => {
     if (!rows) return null;
-    return Object.fromEntries(CITY_META.map((c) => [c.id, rows.filter((r) => r.city_id === c.id)]));
+    const m = {};
+    for (const r of rows) (m[r.city_id] ??= []).push(r);
+    return m;
   }, [rows]);
-  const cov = useMemo(() => (perCity ? buildCoverage(perCity[city]) : null), [perCity, city]);
 
-  // The app's own long name for the panel heading; CITY_META's short label
-  // stays on the chip, same as the mock.
-  const longName = cities.find((c) => c.id === city)?.name_vi
-    ?? { hcmc: 'TP. Hồ Chí Minh', hanoi: 'Hà Nội', danang: 'Đà Nẵng', dalat: 'Đà Lạt', hue: 'Huế' }[city];
+  /**
+   * The city this map draws.
+   *
+   * The desk's workspace city, which is now the only city control on the
+   * page — except for the one answer a map cannot draw. "All cities" is a
+   * legitimate scope everywhere else and meaningless here, so it falls back
+   * to whichever city has the most published places: the most useful thing
+   * to be looking at when you have not said, and the caption says so rather
+   * than letting the map imply a choice nobody made.
+   *
+   * A *named* city with nothing published is not a fallback case. It is an
+   * answer — an empty map and "nothing published here yet" — and swapping
+   * it for a busier city would make the page disagree with its own header.
+   */
+  const busiest = useMemo(() => {
+    if (!perCity) return null;
+    return Object.entries(perCity)
+      .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
+  }, [perCity]);
+  const city = workspaceCity?.id ?? busiest;
+  const fellBack = !workspaceCity && !!city;
+
+  const cov = useMemo(
+    () => (perCity && city ? buildCoverage(perCity[city] ?? []) : null),
+    [perCity, city],
+  );
+
+  const longName = cities.find((c) => c.id === city)?.name_vi ?? city;
   const maxCount = cov?.groups[0]?.count ?? 0;
 
   return (
@@ -159,18 +176,23 @@ export default function Coverage() {
           <p className="addsub">
             Where the catalog actually is — published places per district, so thin
             quận stand out before users notice.
+            {fellBack && (
+              <>
+                {' '}A map draws one city, so with the desk set to all cities this
+                one shows <b className="contribem">{longName}</b>, the busiest.
+              </>
+            )}
           </p>
         </div>
-        <div className="contribfilter" role="group" aria-label="City">
-          {CITY_META.map((c) => (
-            <button
-              key={c.id}
-              className={`chip${city === c.id ? ' on' : ''}`}
-              onClick={() => setCity(c.id)}
-            >
-              {c.label}
-              <span className="chipcount">{perCity ? perCity[c.id].length : '–'}</span>
-            </button>
+        {/* The counts stay; the chips do not. They were a second city
+            control disagreeing with the one at the top of the page — but
+            what each city holds is this screen's subject, not its
+            navigation, so it is read out instead. */}
+        <div className="covcounts">
+          {cities.map((c) => (
+            <span key={c.id} className={c.id === city ? 'on' : ''}>
+              {chipLabel(c)} <b>{perCity ? (perCity[c.id]?.length ?? 0) : '–'}</b>
+            </span>
           ))}
         </div>
       </div>

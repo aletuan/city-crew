@@ -7,17 +7,27 @@
 // cumulative lines, the leaderboard — is a different fold over the same rows,
 // which is what keeps the four corners of the page agreeing with each other.
 
-/** The cities as the screen abbreviates them. `key` is the two-or-three
- *  letter mark the leaderboard breakdown uses (`hcm 17 · hn 6 · dn 3`) —
- *  lowercase mono shorthand, not a display name. Zero-count cities never
- *  print in a breakdown, so a city can sit here before its catalog does. */
-export const CITY_META = [
-  { id: 'hcmc', label: 'TP.HCM', key: 'hcm' },
-  { id: 'hanoi', label: 'Hà Nội', key: 'hn' },
-  { id: 'danang', label: 'Đà Nẵng', key: 'dn' },
-  { id: 'dalat', label: 'Đà Lạt', key: 'dl' },
-  { id: 'hue', label: 'Huế', key: 'hue' },
-];
+/** The two-or-three letter mark the leaderboard breakdown prints
+ *  (`hcm 17 · hn 6 · dn 3`) — lowercase mono shorthand, not a display name.
+ *
+ *  This used to be one field of a `CITY_META` list that also served as *the*
+ *  list of cities, which is how the two analytics screens came to know about
+ *  five cities while the rest of the desk knew about nine: a city added to
+ *  the database appeared in Places and nowhere else. The list comes from the
+ *  API now, the same as everywhere else, and what is left here is only the
+ *  abbreviation — a typographic choice about a particular name, not a fact
+ *  the database holds.
+ *
+ *  A city with no entry falls back to its id, which is long but true. */
+export const CITY_KEY = {
+  hcmc: 'hcm',
+  hanoi: 'hn',
+  danang: 'dn',
+  dalat: 'dl',
+  hue: 'hue',
+};
+
+export const shortKey = (id) => CITY_KEY[id] ?? String(id ?? '');
 
 export const TOP_N = 10;
 
@@ -116,10 +126,15 @@ export function buildBoard(rows, profiles, days, cityId) {
       handle: handleOf(id),
       full_name: profiles[id]?.full_name ?? null,
       total: userRows.length,
-      byCity: CITY_META.map(({ id: cid, key }) => ({
-        key,
-        count: userRows.filter((r) => r.city_id === cid).length,
-      })).filter((c) => c.count > 0),
+      // Counted off the rows rather than walked down a list of cities, so
+      // this fold needs to know nothing about which cities exist. Biggest
+      // term first, because that is what a breakdown is read for.
+      byCity: [...userRows.reduce(
+        (m, r) => m.set(r.city_id, (m.get(r.city_id) ?? 0) + 1),
+        new Map(),
+      )]
+        .map(([cid, count]) => ({ key: shortKey(cid), count }))
+        .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key)),
       series: cumulativeByDay(userRows, days),
     }))
     .sort((a, b) => b.total - a.total || a.handle.localeCompare(b.handle))
