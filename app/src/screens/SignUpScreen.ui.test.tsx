@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav } from '../nav';
 
 // A session that does not exist until an account is made, which is what
@@ -59,8 +59,11 @@ vi.mock('../lib/signup', async (orig) => ({
 
 import SignUpScreen from './SignUpScreen';
 
+// Two routes under this one, so `leaveAuth` pops rather than replaces —
+// the same shape `ForgotPasswordScreen`'s test hands over.
 const nav = () => ({
   navigate: vi.fn(), goBack: vi.fn(), replace: vi.fn(), popToTop: vi.fn(),
+  getState: () => ({ routes: [{ name: 'r0' }, { name: 'r1' }] }),
 }) as unknown as Nav;
 
 describe('the legal sheet over the form', () => {
@@ -371,5 +374,355 @@ describe('the step bar', () => {
 
     expect(await screen.findByText('Check your email')).toBeTruthy();
     expect(screen.getByLabelText('Step 3 of 3')).toBeTruthy();
+  });
+});
+
+// ── the form, checked in the order the fields are in ──
+//
+// Six checks before anything leaves the phone, and the order is the
+// screen's order: a form with an empty name and a short password names
+// the name. Each sentence below is pinned to the field it is about, and
+// to the fact that nothing was asked of the server to produce it.
+
+const field = {
+  name: () => screen.getByPlaceholderText('Enter your full name'),
+  handle: () => screen.getByPlaceholderText('yourname'),
+  email: () => screen.getByPlaceholderText("We'll never share your email."),
+  password: () => screen.getByPlaceholderText('Use at least 8 characters'),
+  confirm: () => screen.getByPlaceholderText('Type your password again'),
+};
+const type = (el: HTMLElement, value: string) => fireEvent.change(el, { target: { value } });
+const submit = () => fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
+
+/**
+ * A step reached, and settled — not merely on screen.
+ *
+ * `findByText` resolves on the commit that draws the next step. The
+ * header's Back button sits at the same place in the tree on every step,
+ * so React keeps the node and only changes its props — and
+ * react-native-web hands a Pressable its new `onPress` in a passive
+ * effect (`usePressEvents`: `useEffect(() => pressResponder.configure(
+ * config))`), which for a render started outside `act` runs a beat after
+ * the commit. A click that lands in that beat fires the *previous* step's
+ * handler: the form's `navigation.goBack()` on what is now the taste
+ * step's Back, and the step does not change. CI saw exactly that once.
+ * One drained `act` flushes the effect, and the click meets the handler
+ * the screen is showing. Work, not the clock — #529.
+ */
+const reach = async (text: string) => {
+  await screen.findByText(text);
+  await act(async () => {});
+};
+
+describe('the form, checked in field order', () => {
+  beforeEach(() => {
+    auth.state.session = null;
+    signUp.mockClear();
+    isHandleFree.mockClear();
+    isHandleFree.mockResolvedValue(true);
+  });
+
+  it('asks for a name first, with everything else empty too', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    submit();
+
+    expect(await screen.findByText('Tell us what to call you.')).toBeTruthy();
+    expect(isHandleFree).not.toHaveBeenCalled();
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  // The username's shape, named at submit on the field itself rather than
+  // in the banner — the field is where the fix goes. Nothing is asked of
+  // the server about a handle the shape rules already reject.
+  it('names a username the display name could not suggest', async () => {
+    // A name with no Latin letters leaves `suggestHandle` nothing to
+    // work with, so the field stays empty and the empty case is the
+    // handle's own sentence rather than `need_name`.
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), '日本 太郎');
+    expect((field.handle() as HTMLInputElement).value).toBe('');
+    submit();
+
+    expect(await screen.findByText('Choose a username.')).toBeTruthy();
+    expect(isHandleFree).not.toHaveBeenCalled();
+  });
+
+  it('names a username that is too short', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Trang');
+    type(field.handle(), 'ab');
+    submit();
+
+    expect(await screen.findByText('At least 3 characters.')).toBeTruthy();
+    expect(isHandleFree).not.toHaveBeenCalled();
+  });
+
+  it('names a username that is too long', async () => {
+    // `maxLength` stops the keyboard at twenty; a paste, or a change
+    // event in this runner, does not go through the keyboard.
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Trang');
+    type(field.handle(), 'a'.repeat(21));
+    submit();
+
+    expect(await screen.findByText('20 characters at most.')).toBeTruthy();
+  });
+
+  it('names a username with a character the database refuses', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Trang');
+    type(field.handle(), 'tr-ang');
+    submit();
+
+    expect(await screen.findByText('Letters, numbers and _ only.')).toBeTruthy();
+    expect(isHandleFree).not.toHaveBeenCalled();
+  });
+
+  it('asks for an address once the name and username are in', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Trang');
+    type(field.password(), 'short');
+    submit();
+
+    // Not the password: the address sits above it.
+    expect(await screen.findByText('Enter your email address.')).toBeTruthy();
+    expect(screen.queryByText('Password must be at least 8 characters.')).toBeNull();
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it('refuses a short password before comparing it with the confirmation', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Trang');
+    type(field.email(), 'a@b.co');
+    type(field.password(), 'short');
+    type(field.confirm(), 'different');
+    submit();
+
+    expect(await screen.findByText('Password must be at least 8 characters.')).toBeTruthy();
+    expect(screen.queryByText("Passwords don't match.")).toBeNull();
+    expect(screen.queryByText('What are you into?')).toBeNull();
+  });
+
+  it('refuses a confirmation that does not match', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Trang');
+    type(field.email(), 'a@b.co');
+    type(field.password(), 'password1');
+    type(field.confirm(), 'password2');
+    submit();
+
+    expect(await screen.findByText("Passwords don't match.")).toBeTruthy();
+    expect(screen.queryByText('What are you into?')).toBeNull();
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  // The suggestion stops the moment the field is edited: a suggestion
+  // that keeps overwriting what you typed is worse than none.
+  it('suggests the username from the name, until the username is edited', () => {
+    render(<SignUpScreen navigation={nav()} />);
+    type(field.name(), 'Nguyễn Văn A');
+    expect((field.handle() as HTMLInputElement).value).toBe('nguyenvana');
+
+    type(field.handle(), '@Mine');
+    expect((field.handle() as HTMLInputElement).value).toBe('mine');
+    type(field.name(), 'Somebody Else');
+    expect((field.handle() as HTMLInputElement).value).toBe('mine');
+  });
+});
+
+// ── the code step ──
+//
+// With confirmation on, `signUp` lands no session: the account exists
+// but cannot be used until the emailed code is entered, and the taste
+// picked one screen earlier has been waiting for a session to belong to.
+
+describe('the code step', () => {
+  beforeEach(() => {
+    auth.state.session = null;
+    signUp.mockClear();
+    auth.confirmSignUp.mockClear();
+    auth.confirmSignUp.mockImplementation(async () => { auth.state.session = { user: { id: 'u1' } }; });
+    savePreferences.mockClear();
+    isHandleFree.mockResolvedValue(true);
+    needsCode.value = null;
+  });
+
+  const codeField = () => screen.getByPlaceholderText('Paste the code from the email') as HTMLInputElement;
+  const verify = () => fireEvent.click(screen.getByRole('button', { name: 'Verify & continue' }));
+
+  /** Through the form and the taste step, on a server that wants a code. */
+  const reachCode = async (pick: string[] = []) => {
+    signUp.mockImplementationOnce(async () => ({ needsConfirm: true }));
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    await screen.findByText('What are you into?');
+    for (const chip of pick) fireEvent.click(screen.getByText(chip));
+    fireEvent.click(screen.getByRole('button', { name: pick.length ? 'Continue' : 'Skip for now' }));
+    await reach('Check your email');
+  };
+
+  it('says which address the code went to', async () => {
+    await reachCode();
+    expect(screen.getByText(/We sent a confirmation code to a@b\.co\./)).toBeTruthy();
+  });
+
+  it('asks for the code before asking the server anything', async () => {
+    await reachCode();
+    verify();
+
+    expect(await screen.findByText('Enter the code from the email.')).toBeTruthy();
+    expect(auth.confirmSignUp).not.toHaveBeenCalled();
+  });
+
+  it('keeps only the digits of what was pasted', async () => {
+    await reachCode();
+    type(codeField(), '12 34 56');
+    expect(codeField().value).toBe('123456');
+  });
+
+  it('confirms with the address and the code, then arrives', async () => {
+    await reachCode();
+    type(codeField(), '123456');
+    verify();
+
+    await waitFor(() => expect(auth.confirmSignUp).toHaveBeenCalledWith('a@b.co', '123456'));
+    expect(await screen.findByText('Welcome, Trang')).toBeTruthy();
+  });
+
+  it('shows a refused code in place, and stays on the step', async () => {
+    auth.confirmSignUp.mockImplementationOnce(async () => { throw new Error('Token has expired or is invalid'); });
+    await reachCode();
+    type(codeField(), '123456');
+    verify();
+
+    // Not a name `useFailText` knows, so the server's own words, as a
+    // sentence — and the field is still there to try again in.
+    expect(await screen.findByText('Token has expired or is invalid')).toBeTruthy();
+    expect(screen.getByText('Check your email')).toBeTruthy();
+    expect(screen.queryByText('Welcome, Trang')).toBeNull();
+  });
+
+  // The whole reason the taste is held rather than written at the tap:
+  // there is no session to write it under until the code lands.
+  it('writes the taste only once the code has landed a session', async () => {
+    await reachCode(['Cafés']);
+    expect(savePreferences).not.toHaveBeenCalled();
+
+    type(codeField(), '123456');
+    verify();
+
+    await waitFor(() => expect(savePreferences).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ categories: ['cafes'] }),
+    ));
+    expect(savePreferences).toHaveBeenCalledTimes(1);
+  });
+
+  // The bar grew to three on this screen, and going back to fix the
+  // address must not shrink it again: three is now known to be the truth.
+  it('goes back to the form, which now promises three steps too', async () => {
+    await reachCode();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(screen.getByRole('button', { name: 'Sign up' })).toBeTruthy();
+    expect(screen.getByLabelText('Step 1 of 3')).toBeTruthy();
+    expect((field.email() as HTMLInputElement).value).toBe('a@b.co');
+  });
+});
+
+// ── whose account the taste is written to ──
+//
+// The write fires on whichever session is present, so it has to know
+// the session that was there *before* `signUp` — a screen reached while
+// already signed in must not write this taste onto that account.
+
+describe('a reader who was already signed in', () => {
+  beforeEach(() => {
+    auth.state.session = { user: { id: 'u0' } };
+    signUp.mockClear();
+    auth.confirmSignUp.mockClear();
+    auth.confirmSignUp.mockImplementation(async () => { auth.state.session = { user: { id: 'u1' } }; });
+    savePreferences.mockClear();
+    isHandleFree.mockResolvedValue(true);
+    needsCode.value = null;
+  });
+
+  it('writes the taste to the new account, never to the old one', async () => {
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    await screen.findByText('What are you into?');
+    fireEvent.click(screen.getByText('Cafés'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    await waitFor(() => expect(savePreferences).toHaveBeenCalledWith('u1', expect.anything()));
+    expect(savePreferences).not.toHaveBeenCalledWith('u0', expect.anything());
+  });
+
+  it('writes nothing while the old session is still the only one', async () => {
+    // Confirmation on: `signUp` lands no session, so the session present
+    // is still the old account's — and the taste stays held.
+    signUp.mockImplementationOnce(async () => ({ needsConfirm: true }));
+    render(<SignUpScreen navigation={nav()} />);
+    fillForm();
+    await screen.findByText('What are you into?');
+    fireEvent.click(screen.getByText('Cafés'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await screen.findByText('Check your email');
+
+    expect(savePreferences).not.toHaveBeenCalled();
+  });
+});
+
+// ── the ways out ──
+
+describe('the ways out', () => {
+  beforeEach(() => {
+    auth.state.session = null;
+    signUp.mockClear();
+    signUp.mockImplementation(async () => { auth.state.session = { user: { id: 'u1' } }; return { needsConfirm: false }; });
+    isHandleFree.mockResolvedValue(true);
+  });
+
+  it('leaves the form through the header, by the stack', () => {
+    const navigation = nav();
+    render(<SignUpScreen navigation={navigation} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(navigation.goBack).toHaveBeenCalled();
+  });
+
+  it('swaps itself for Sign in rather than stacking on it', () => {
+    const navigation = nav();
+    render(<SignUpScreen navigation={navigation} />);
+    fireEvent.click(screen.getByText('Sign in'));
+    expect(navigation.replace).toHaveBeenCalledWith('SignIn');
+    expect(navigation.navigate).not.toHaveBeenCalled();
+  });
+
+  // The taste step used to refuse a back control — "the form is spent
+  // and the account is made". Neither is true any more.
+  it('lets the taste step go back to a form that is still filled in', async () => {
+    const navigation = nav();
+    render(<SignUpScreen navigation={navigation} />);
+    fillForm();
+    await reach('What are you into?');
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(screen.getByRole('button', { name: 'Sign up' })).toBeTruthy();
+    expect((field.email() as HTMLInputElement).value).toBe('a@b.co');
+    // Its own step, not the stack's.
+    expect(navigation.goBack).not.toHaveBeenCalled();
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it('starts exploring by leaving the auth stack behind', async () => {
+    const navigation = nav();
+    render(<SignUpScreen navigation={navigation} />);
+    fillForm();
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip for now' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Start exploring/ }));
+
+    // Two routes under this one, so `leaveAuth` pops to the tab root.
+    expect(navigation.popToTop).toHaveBeenCalled();
+    expect(navigation.replace).not.toHaveBeenCalled();
   });
 });
