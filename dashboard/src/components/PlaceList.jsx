@@ -371,6 +371,36 @@ export default function PlaceList() {
   // a city switch: the answer does not depend on which city is picked,
   // which is the whole reason it is not read off `progress`.
   const [cityCounts, setCityCounts] = useState(null);
+
+  /**
+   * How tall the toolbar is, so the rail can stick below it.
+   *
+   * This measurement has been added and retired twice, and it is back
+   * because the geometry is genuinely different this time. While the bar
+   * sat in the results column the rail was *beside* it and had nothing of
+   * it to clear; now the bar spans both columns, so a rail sticking at
+   * the top bar's edge slides its first rows underneath an opaque
+   * toolbar. A constant will not do — the bar is one row on a laptop and
+   * two on a phone, and it changes height when a batch is selected.
+   *
+   * Same shape as `--topbar-h` in App.jsx: publish on mount, again on
+   * resize, and clear it on the way out so no other screen inherits a
+   * number that describes a bar it does not have.
+   */
+  const worktopRef = useRef(null);
+  useEffect(() => {
+    const el = worktopRef.current;
+    if (!el) return undefined;
+    const publish = () =>
+      document.documentElement.style.setProperty('--worktop-h', `${el.offsetHeight}px`);
+    publish();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish);
+    ro?.observe(el);
+    return () => {
+      ro?.disconnect();
+      document.documentElement.style.removeProperty('--worktop-h');
+    };
+  }, []);
   useEffect(() => {
     let live = true;
     api.cityCounts()
@@ -570,27 +600,28 @@ export default function PlaceList() {
 
   return (
     <>
-      <div className="worksplit">
-        {filtersOpen && <div className="sheetback" onClick={() => setFiltersOpen(false)} />}
-        {/* Row one of the split, over the results column only.
+      {/* Search, sort and layout, across the page.
 
-            It was full width above the split, so the chips naming the live
-            filters began at the page's left edge and ran along the top of
-            the filter rail — a row describing the results, drawn over the
-            panel that produces them. Then it shared a line with the rail,
-            which put the panel's top edge above both the search box and
-            the first card. Neither is where it belongs: the bar acts on
-            the results, so it sits over the results, and the rail starts
-            where the grid starts.
+            These act on the whole screen rather than on the results
+            column alone, and the reference gives them the whole width to
+            say so. What used to ride with them and no longer does is the
+            row of chips naming the live filters: those describe the
+            results, and starting them at the page's left edge ran them
+            along the top of the panel that produced them. They are in
+          `.workmain` now, above the first card.
 
-            Grid areas rather than measured offsets do the placing: the bar
-            takes row one of the right column, and the rail and the grid
-            share row two. */}
-        <div className="workbar">
-          {/* It sticks under the top bar where it is one row tall; on
-              phones, where it is two, it stays stuck only while a batch is
-              selected — see the media query in theme.css. */}
-          <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`}>
+          It is also a child of the page rather than of a wrapper, and
+          that is load-bearing: a `position: sticky` element can only
+          travel inside its own containing block, so a bar wrapped in a
+          div of exactly its own height — or sitting in a grid row sized
+          to its content, which is where this one used to be — is
+          nominally sticky and factually not. It has been that for as
+          long as it has been inside the split. Out here its containing
+          block is `.shell` and it actually sticks.
+
+          On phones, where it is two rows tall, it stays stuck only while
+          a batch is selected — see the media query in theme.css. */}
+      <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`} ref={worktopRef}>
             {selected.size > 0 ? (
               <div className="resultsbar">
                 <span className="resultscount">{selected.size} selected</span>
@@ -608,53 +639,7 @@ export default function PlaceList() {
                 </div>
               </div>
             ) : (
-              <div className="resultsbar">
-                {/* What the rail is currently asking, said where the answer
-                    is — and on the same line as the controls, because it is
-                    the other half of one question: these are the results,
-                    filtered like this, searched like that, sorted so. The
-                    rail is a column on a laptop and a shut sheet on a phone,
-                    and either way a filter you cannot see is a filter you
-                    forget you set, which is how "no places match" arrives
-                    with no visible cause. Each chip removes its own filter;
-                    the row is absent when nothing is set. */}
-                <div className="barlead">
-                  {/* Only when it is telling you something the head is
-                      not. With no filter and no search this is the same
-                      number as "places" in the page head, two inches up
-                      and larger — printing it twice says nothing the
-                      second time. Narrow the list and it stops agreeing
-                      with the head, which is the moment it starts being
-                      worth a line.
-                      Absent while a batch is selected: the bar answers a
-                      different question then and says how many are
-                      ticked. */}
-                  {total != null && (activeCount > 0 || q) && (
-                    <span className="resulttally">{total} place{total === 1 ? '' : 's'}</span>
-                  )}
-                {activeCount > 0 && (
-                  <div className="activefilters">
-                    {FILTER_KEYS.map((key) => {
-                      const value = params.get(key);
-                      if (!value) return null;
-                      const label = FILTER_LABEL[key](value);
-                      return (
-                        <button
-                          key={key}
-                          className={`fchip${key === 'status' ? ` st-${value}` : ''}`}
-                          onClick={() => toggle(key, value)}
-                          aria-label={`Remove filter ${label}`}
-                          title={`Remove filter ${label}`}
-                        >
-                          {label}
-                          <CategoryIcon name="x" size={10} />
-                        </button>
-                      );
-                    })}
-                    <button className="clearall" onClick={clearFilters}>Clear all</button>
-                  </div>
-                )}
-                </div>
+              <div className="resultsbar browse">
                 <div className="resultscontrols">
                   <button
                     className={`filterbtn${activeCount ? ' on' : ''}`}
@@ -678,20 +663,28 @@ export default function PlaceList() {
                   <select className="sortselect" value={`${sort}:${dir}`} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
                     {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
+                  {/* Grid first, List second, as the reference draws it.
+                      The words are on at every width: two abstract glyphs
+                      in a pill are a guess until you press one, and the
+                      bar has the room now that it spans the page. */}
                   <div className="viewtoggle" data-view={view} role="group" aria-label="Layout">
                     <span className="viewtoggle-thumb" />
-                    <button className={view === 'row' ? 'on' : ''} onClick={() => setView('row')} aria-pressed={view === 'row'} aria-label="Row view">
-                      <CategoryIcon name="list" />
-                    </button>
-                    <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-pressed={view === 'grid'} aria-label="Grid view">
+                    <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-pressed={view === 'grid'}>
                       <CategoryIcon name="grid" />
+                      <span>Grid</span>
+                    </button>
+                    <button className={view === 'row' ? 'on' : ''} onClick={() => setView('row')} aria-pressed={view === 'row'}>
+                      <CategoryIcon name="list" />
+                      <span>List</span>
                     </button>
                   </div>
                 </div>
               </div>
             )}
-          </div>
-        </div>
+      </div>
+
+      <div className="worksplit">
+        {filtersOpen && <div className="sheetback" onClick={() => setFiltersOpen(false)} />}
         {/* One rail, two projections. A column beside the results where
             there is width for one, a sheet over them where there is not —
             same markup, same URL params, either way. The phone is the
@@ -785,6 +778,49 @@ export default function PlaceList() {
         </aside>
 
         <div className="workmain">
+          {/* What the rail is currently asking, said where the answer is.
+              Over the results rather than in the toolbar: the toolbar
+              spans the page now, and a row of chips starting at the
+              page's left edge runs along the top of the panel that
+              produced them — a description of the results drawn over
+              their cause. The rail is a column on a laptop and a shut
+              sheet on a phone, and either way a filter you cannot see is
+              a filter you forget you set, which is how "no places match"
+              arrives without a visible reason. Each chip removes its own
+              filter; the row is absent when nothing is set. */}
+          {selected.size === 0 && (activeCount > 0 || (q && total != null)) && (
+            <div className="resultlead">
+              {/* Only when it is telling you something the head is not.
+                  With no filter and no search this is the same number as
+                  "places" in the page head, larger and an inch up —
+                  printing it twice says nothing the second time. */}
+              {total != null && (
+                <span className="resulttally">{total} place{total === 1 ? '' : 's'}</span>
+              )}
+              {activeCount > 0 && (
+                <div className="activefilters">
+                  {FILTER_KEYS.map((key) => {
+                    const value = params.get(key);
+                    if (!value) return null;
+                    const label = FILTER_LABEL[key](value);
+                    return (
+                      <button
+                        key={key}
+                        className={`fchip${key === 'status' ? ` st-${value}` : ''}`}
+                        onClick={() => toggle(key, value)}
+                        aria-label={`Remove filter ${label}`}
+                        title={`Remove filter ${label}`}
+                      >
+                        {label}
+                        <CategoryIcon name="x" size={10} />
+                      </button>
+                    );
+                  })}
+                  <button className="clearall" onClick={clearFilters}>Clear all</button>
+                </div>
+              )}
+            </div>
+          )}
           {error && (
             <div className="empty">
               Couldn't load places: {error}

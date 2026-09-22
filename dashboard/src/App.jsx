@@ -60,7 +60,19 @@ const PAGE_HEAD = {
     title: 'Coverage',
     sub: 'Where the catalog actually is — published places per district, so thin quận stand out before users notice.',
   },
+  // The editor. Its title is the room's name, not the place's, for the
+  // same reason the three above are: these name the screen you are in,
+  // and the place's own name is already the loudest thing on it — the
+  // hero, the first field, and the breadcrumb under this band.
+  '/place': {
+    title: 'Place',
+    sub: 'One place, end to end — its words, its photographs, what it is, and whether it ships.',
+  },
 };
+
+/** The head for a path, including the one route that carries a slug. */
+const pageHead = (pathname) =>
+  (pathname.startsWith('/place/') ? PAGE_HEAD['/place'] : PAGE_HEAD[pathname]);
 
 // The chip spelling for each city — the desk's own abbreviations, matching
 // the analytics screens.
@@ -240,6 +252,7 @@ function UnfiledBell({ places }) {
 
 export default function App() {
   const location = useLocation();
+  const head = pageHead(location.pathname);
   const [toast, setToast] = useState(null);
   const [progress, setProgress] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -503,10 +516,10 @@ export default function App() {
               <div className="pagehead-top">
 {/* Every room that has a name says it here, on the line with the
                     counts and the actions — not just Places. */}
-                {PAGE_HEAD[location.pathname] && (
+                {head && (
                   <div className="pagetitles">
-                    <h2 className="pagetitle">{PAGE_HEAD[location.pathname].title}</h2>
-                    <p className="pagesub">{PAGE_HEAD[location.pathname].sub}</p>
+                    <h2 className="pagetitle">{head.title}</h2>
+                    <p className="pagesub">{head.sub}</p>
                   </div>
                 )}
                 {total > 0 && (
