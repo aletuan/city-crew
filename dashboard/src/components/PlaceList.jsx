@@ -473,6 +473,21 @@ export default function PlaceList() {
                     forget you set, which is how "no places match" arrives
                     with no visible cause. Each chip removes its own filter;
                     the row is absent when nothing is set. */}
+                <div className="barlead">
+                  {/* The size of the answer, first on the bar and so hard
+                      against the city menu in the column beside it — the
+                      two facts that bound the list before any filter does:
+                      this city, this many. It has been on a row of its own
+                      under the bar and at the head of the controls on the
+                      right; neither put it near the thing that scopes it,
+                      and the right-hand cluster is where the controls live,
+                      not the count they produce.
+                      Only in this branch: while a batch is selected the bar
+                      answers a different question and says how many are
+                      ticked. */}
+                  {total != null && (
+                    <span className="resulttally">{total} place{total === 1 ? '' : 's'}</span>
+                  )}
                 {activeCount > 0 && (
                   <div className="activefilters">
                     {FILTER_KEYS.map((key) => {
@@ -495,21 +510,8 @@ export default function PlaceList() {
                     <button className="clearall" onClick={clearFilters}>Clear all</button>
                   </div>
                 )}
+                </div>
                 <div className="resultscontrols">
-                  {/* The answer, at the head of the controls that produce
-                      it. A line of its own under the bar gave one short
-                      phrase a full row of the page and set it apart from
-                      the search and the sort, which are the other half of
-                      the same sentence — these results, filtered so,
-                      searched so, sorted so. It reads right-aligned with
-                      them instead, and the row it used to own goes back
-                      to the grid.
-                      Only in this branch: while a batch is selected the
-                      bar answers a different question and says how many
-                      are ticked. */}
-                  {total != null && (
-                    <span className="resulttally">{total} place{total === 1 ? '' : 's'}</span>
-                  )}
                   <button
                     className={`filterbtn${activeCount ? ' on' : ''}`}
                     onClick={() => setFiltersOpen(true)}
