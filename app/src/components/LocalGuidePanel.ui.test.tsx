@@ -138,7 +138,7 @@ describe('what it offers', () => {
     state.lang = 'vi';
     draw();
     expect(screen.getByText('Gallery')).toBeTruthy();
-    expect(screen.getByText('Bạn muốn sửa ảnh?')).toBeTruthy();
+    expect(screen.getByText('Bạn muốn cải thiện gallery?')).toBeTruthy();
   });
 
   // Their name, then a question — rather than claiming the place is
@@ -148,7 +148,7 @@ describe('what it offers', () => {
   it('greets the reader by name and asks, instead of instructing', () => {
     draw();
     expect(screen.getByText('Hi Trang,')).toBeTruthy();
-    expect(screen.getByText('Want to update the photos?')).toBeTruthy();
+    expect(screen.getByText('Want to improve your gallery?')).toBeTruthy();
     expect(screen.queryByText(/Keep it up to date/)).toBeNull();
   });
 

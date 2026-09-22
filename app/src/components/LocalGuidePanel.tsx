@@ -109,7 +109,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
               : t('Hi there,', 'Chào bạn,', 'こんにちは、')}
           </Text>
           <Text style={s.sub}>
-            {t('Want to update the photos?', 'Bạn muốn sửa ảnh?', '写真を整えますか？')}
+            {t('Want to improve your gallery?', 'Bạn muốn cải thiện gallery?', 'ギャラリーを充実させますか？')}
           </Text>
         </View>
         {/* "Gallery" in every language, by request: it is the name of a
