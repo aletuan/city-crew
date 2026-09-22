@@ -369,7 +369,13 @@ export default function Contributors() {
                   <span className="boardrank">{i + 1}</span>
                   <span className="boarddot" style={{ background: SERIES_COLORS[i] }} />
                   <span className="boardhandle">@{s.handle}</span>
-                  <span className="boardcities">
+                  {/* Truncated when the row runs out of width, so the
+                      whole of it is on the element itself — a cut-off fact
+                      with no way to read the rest is the bug, not the fix. */}
+                  <span
+                    className="boardcities"
+                    title={s.byCity.map((c) => `${c.key} ${c.count}`).join(' · ')}
+                  >
                     {s.byCity.map((c, n) => (
                       <React.Fragment key={c.key}>
                         {n > 0 && <span className="dotsep"> · </span>}

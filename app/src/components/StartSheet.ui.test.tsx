@@ -410,7 +410,12 @@ describe('the locate button', () => {
     openSheet();
     locate();
     await screen.findByText(NOTICE);
-    expect(onChange).not.toBeNull();
+    // The notice and the AppState subscription are registered by two
+    // different effects, so the text appearing is not the signal that the
+    // listener is there — this asserted straight off the wrong one and
+    // failed intermittently with "expected null not to be null". Wait for
+    // the thing the next line actually calls.
+    await waitFor(() => expect(onChange).not.toBeNull());
 
     location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: false } as never);
     await act(async () => { onChange!('active'); });
@@ -427,6 +432,7 @@ describe('the locate button', () => {
     openSheet();
     locate();
     await screen.findByText(NOTICE);
+    await waitFor(() => expect(onChange).not.toBeNull());
 
     await act(async () => { onChange!('background'); onChange!('active'); });
     expect(screen.getByText(NOTICE)).toBeTruthy();
