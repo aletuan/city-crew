@@ -67,11 +67,6 @@
      silent unset, and the stylesheet's own test says so. */
   --topbar-h: 56px;
 
-  /* The toolbar's height, for the rail that sticks below it. Declared with
-     the height the bar has as a single row and overwritten from
-     PlaceList.jsx with the measured one, because an undeclared var() is a
-     silent unset and the stylesheet's own test says so. */
-  --worktop-h: 50px;
   /* Same arrangement one level down: the Places toolbar's height, for the
      filter rail stuck under it. Declared with the height it has as a single
      row and overwritten from PlaceList with the measured one — it grows a
@@ -576,37 +571,40 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   background: var(--bg-app);
   padding: 10px 0 6px; margin-bottom: 4px;
 }
-/* Two rows, three areas. The bar takes row one of the right column so it
-   sits over the results it acts on; the rail and the grid share row two,
-   which is what puts the panel's top edge on the first card's rather than
-   above the search box. Row gap is zero — the bar and the tally carry
-   their own margins, and a grid gap on top of them was 24px of nothing. */
+/* The rail takes both rows; the bar and the results share the right one.
+   This has been all three arrangements, and the city is why. While the
+   rail held only filters, starting it level with the toolbar made a panel
+   of narrowing controls lead a page it does not introduce, so it was
+   pushed down to the grid's line — which left the top-left corner empty
+   and the city menu was put there to fill it.
+   The city is a row in the rail now, and it is the first question the
+   screen asks. A column that opens with "which city" belongs at the top
+   of the work area, the corner has nothing left to fill it with, and the
+   reference layout draws it the same way. */
 .worksplit {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
   grid-template-areas:
-    "scope bar"
-    "rail  results";
+    "rail bar"
+    "rail results";
+  /* Row one is the bar and nothing more. Without this the rail — which
+     spans both rows and is usually the tallest thing on the page — has
+     its surplus height shared out between them, and row one grows by
+     half of it: a 69px hole between the toolbar and the first card that
+     belongs to neither. */
+  grid-template-rows: auto 1fr;
   gap: 0 24px; align-items: start;
 }
 .workbar { grid-area: bar; min-width: 0; }
-/* Level with the search box across the gap, not with the top of the bar:
-   the menu and the box are the same kind of control and read as one line.
-   Full width here because the column has one, and a control floating at
-   its own width in a 236px column reads as debris. */
-.workscope { grid-area: scope; min-width: 0; padding-top: 12px; }
-.workscope .cityselect { width: 100%; }
 .workmain { grid-area: results; min-width: 0; }
 .filterrail {
   grid-area: rail;
-  /* The grid places it below the bar; this keeps it there once the page
-     scrolls. The bar is sticky at the top, so a rail pinned any higher
-     would slide its own "Filters / Reset" head under an opaque strip —
-     which is the whole reason the toolbar's height is measured rather
-     than assumed. It is not a constant: the chips wrap at narrow widths
-     and the batch bar replaces the row outright. */
-  position: sticky; top: calc(var(--topbar-h) + var(--worktop-h) + 10px);
-  max-height: calc(100vh - var(--topbar-h) - var(--worktop-h) - 30px); overflow-y: auto;
+  /* Level with the bar, and staying there once the page scrolls. The bar
+     is sticky too and sits in the other column, so nothing of the rail
+     can hide under it — which retires the measured --worktop-h this
+     offset used to add. */
+  position: sticky; top: calc(var(--topbar-h) + 10px);
+  max-height: calc(100vh - var(--topbar-h) - 30px); overflow-y: auto;
   background: var(--bg-elevated); border: 1px solid var(--border-glass-soft);
   border-radius: var(--radius-card); padding: 16px 16px 18px;
 }

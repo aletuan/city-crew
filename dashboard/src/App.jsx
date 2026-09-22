@@ -27,6 +27,9 @@ const CITY_KEY = 'citycrew.dashboard.city';
 // every query that keys off city?.id simply drops its filter, which is what
 // "aggregate across all cities" means everywhere the desk counts anything.
 const ALL = 'all';
+/* Exported for the Places rail, which offers the same "no city filter"
+   answer as a row in its City group rather than as a menu option. */
+export const ALL_CITIES = ALL;
 
 const UNFILED_SHOWN = 6;
 

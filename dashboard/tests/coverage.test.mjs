@@ -228,3 +228,42 @@ test('buildCityCoverage on nothing at all', () => {
   assert.deepEqual(cov.groups, []);
   assert.equal(cov.total, 0);
 });
+
+
+// ---- fitView across two countries. The all-cities view has to hold
+// Hanoi and Melbourne in one frame, which is a far looser fit than the
+// districts of one city and the reason the floor is a parameter.
+
+test('fitView holds every city in the frame, Melbourne included', () => {
+  const cities = [
+    { lat: 10.78, lng: 106.70 }, // TP.HCM
+    { lat: 21.03, lng: 105.85 }, // Hà Nội
+    { lat: 16.05, lng: 108.22 }, // Đà Nẵng
+    { lat: 11.94, lng: 108.44 }, // Đà Lạt
+    { lat: 16.46, lng: 107.59 }, // Huế
+    { lat: 10.35, lng: 107.08 }, // Vũng Tàu
+    { lat: -37.81, lng: 144.96 }, // Melbourne
+  ];
+  const W = 915; const H = 620;
+  const fit = fitView(cities, W, H, { minZ: 2 });
+
+  // Loose enough to be worth the parameter: the districts floor of 9
+  // could not have produced this.
+  assert.ok(fit.z < 9, `fitted at zoom ${fit.z}, which the old floor forbade`);
+
+  for (const c of cities) {
+    const dx = Math.abs(lngToX(c.lng, fit.z) - fit.x);
+    const dy = Math.abs(latToY(c.lat, fit.z) - fit.y);
+    assert.ok(dx <= W / 2, `${c.lat},${c.lng} is ${Math.round(dx - W / 2)}px off the side`);
+    assert.ok(dy <= H / 2, `${c.lat},${c.lng} is ${Math.round(dy - H / 2)}px off the top or bottom`);
+  }
+});
+
+// The floor is a floor, not a target: one city's districts must not be
+// fitted loosely just because the parameter exists.
+test('fitView still frames one city tightly', () => {
+  const districts = [
+    { lat: 10.78, lng: 106.70 }, { lat: 10.80, lng: 106.65 }, { lat: 10.75, lng: 106.72 },
+  ];
+  assert.ok(fitView(districts, 915, 620, { minZ: 2 }).z >= 12);
+});

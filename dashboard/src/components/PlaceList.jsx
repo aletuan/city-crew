@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { leftBehindNote } from '../storage.js';
 import { api } from '../api.js';
@@ -6,7 +6,7 @@ import { CATEGORY_KEYS, CATEGORY_LABEL, CATEGORY_STYLE } from '../categories.js'
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { THREADS_FILTERS } from '../lib/threads.js';
 import { CategoryIcon } from '../icons.jsx';
-import { CityPicker, useCity, useProgress, useToast } from '../App.jsx';
+import { ALL_CITIES, chipLabel, useCity, useProgress, useToast } from '../App.jsx';
 
 const STATUSES = ['pending', 'approved', 'flagged'];
 // The params the rail owns, and so the ones the badge counts, the chip row
@@ -205,7 +205,25 @@ function Facts({ place }) {
 }
 
 export default function PlaceList() {
-  const { city } = useCity();
+  const { cities, city, setCity } = useCity();
+
+  // Every city's size, for the rail's City group. Fetched once and not on
+  // a city switch: the answer does not depend on which city is picked,
+  // which is the whole reason it is not read off `progress`.
+  const [cityCounts, setCityCounts] = useState(null);
+  useEffect(() => {
+    let live = true;
+    api.cityCounts()
+      .then((c) => { if (live) setCityCounts(c); })
+      // A failure leaves the counts blank and the rows still pressable —
+      // the group is a control first and a measure second.
+      .catch(() => { if (live) setCityCounts({}); });
+    return () => { live = false; };
+  }, []);
+  const allCityCount = useMemo(
+    () => (cityCounts ? Object.values(cityCounts).reduce((n, v) => n + v, 0) : 0),
+    [cityCounts],
+  );
   const { progress, refresh: refreshProgress } = useProgress();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
@@ -229,31 +247,6 @@ export default function PlaceList() {
   // Phones only: the rail is a column on desktop and never closed there.
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  /**
-   * The toolbar's height, published for the rail that sticks below it.
-   *
-   * This came back with the rail's move down the page. While the two
-   * started on the same line the rail had nothing to clear and the
-   * measurement went; now the bar sits above it and is sticky, so a rail
-   * pinned at the top bar's height alone would pull its own head under an
-   * opaque strip as soon as the page scrolled.
-   *
-   * Measured rather than assumed, because it is not a constant: the chips
-   * wrap once there are enough of them, and selecting a batch swaps the
-   * row for four buttons.
-   */
-  const worktopRef = useRef(null);
-  useEffect(() => {
-    const el = worktopRef.current;
-    if (!el) return undefined;
-    const publish = () =>
-      document.documentElement.style.setProperty('--worktop-h', `${el.offsetHeight}px`);
-    publish();
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const ro = new ResizeObserver(publish);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
 
   const status = params.get('status') ?? '';
@@ -419,14 +412,6 @@ export default function PlaceList() {
     <>
       <div className="worksplit">
         {filtersOpen && <div className="sheetback" onClick={() => setFiltersOpen(false)} />}
-        {/* The workspace city, in the column with the other things that
-            narrow the list. It used to be a chip row across the page head,
-            which cost a full-width row and left this corner of the split
-            empty once the toolbar moved over the results. Scope above
-            filters reads in the order the question is asked — which city,
-            then which of its places — and the menu lines up with the
-            search box across the gap. */}
-        <div className="workscope"><CityPicker /></div>
         {/* Row one of the split, over the results column only.
 
             It was full width above the split, so the chips naming the live
@@ -445,7 +430,7 @@ export default function PlaceList() {
           {/* It sticks under the top bar where it is one row tall; on
               phones, where it is two, it stays stuck only while a batch is
               selected — see the media query in theme.css. */}
-          <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`} ref={worktopRef}>
+          <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`}>
             {selected.size > 0 ? (
               <div className="resultsbar">
                 <span className="resultscount">{selected.size} selected</span>
@@ -474,18 +459,17 @@ export default function PlaceList() {
                     with no visible cause. Each chip removes its own filter;
                     the row is absent when nothing is set. */}
                 <div className="barlead">
-                  {/* The size of the answer, first on the bar and so hard
-                      against the city menu in the column beside it — the
-                      two facts that bound the list before any filter does:
-                      this city, this many. It has been on a row of its own
-                      under the bar and at the head of the controls on the
-                      right; neither put it near the thing that scopes it,
-                      and the right-hand cluster is where the controls live,
-                      not the count they produce.
-                      Only in this branch: while a batch is selected the bar
-                      answers a different question and says how many are
+                  {/* Only when it is telling you something the head is
+                      not. With no filter and no search this is the same
+                      number as "places" in the page head, two inches up
+                      and larger — printing it twice says nothing the
+                      second time. Narrow the list and it stops agreeing
+                      with the head, which is the moment it starts being
+                      worth a line.
+                      Absent while a batch is selected: the bar answers a
+                      different question then and says how many are
                       ticked. */}
-                  {total != null && (
+                  {total != null && (activeCount > 0 || q) && (
                     <span className="resulttally">{total} place{total === 1 ? '' : 's'}</span>
                   )}
                 {activeCount > 0 && (
@@ -565,6 +549,30 @@ export default function PlaceList() {
             </button>
           </div>
           <div className="filters">
+            {/* First, because it is the question the others are asked
+                inside: which city, then which of its places. It was a menu
+                above this panel, which was fine at nine cities and will
+                not be at thirty — a row per city with its count, folded
+                past six like every other group here, is the shape this
+                column already has.
+
+                Counts come from `api.cityCounts`, which is scoped by
+                nothing: the group has to show every city's size while one
+                of them is picked, and the other groups' counts ignore
+                their siblings too. */}
+            <FilterGroup
+              label="City"
+              value={city?.id ?? ALL_CITIES}
+              onPick={(v) => setCity(v)}
+              options={[
+                { value: ALL_CITIES, label: 'All cities', count: allCityCount },
+                ...cities.map((c) => ({
+                  value: c.id,
+                  label: chipLabel(c),
+                  count: cityCounts?.[c.id] ?? 0,
+                })),
+              ]}
+            />
             <FilterGroup
               label="Status"
               value={status}
