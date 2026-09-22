@@ -4,7 +4,7 @@
 import React, { useEffect, useRef } from 'react';
 import {
   AccessibilityInfo, Animated, ColorValue, Easing, Pressable, PressableProps, StyleProp, StyleSheet,
-  Switch, Text, View, ViewStyle,
+  Switch, Text, useWindowDimensions, View, ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -87,6 +87,36 @@ export function useTabBarClearance(extra = 18): number {
 export function useTabBarLift(): number {
   const insets = useSafeAreaInsets();
   return Math.max(insets.bottom - 18, TAB_BAR_GAP);
+}
+
+/**
+ * A window narrower than this is a small phone.
+ *
+ * Every layout in this app was drawn against a 393pt phone, and most of
+ * it is fluid enough to fold down without being told. This is for the
+ * rest: the few rows whose furniture is fixed — a switch, a pill button,
+ * a tab strip's gaps — and whose width budget was reasoned out in a
+ * comment against 393 and simply does not hold at 320.
+ *
+ * 320 is not only the iPhone SE. Any iPhone with Display Zoom on
+ * ("Larger Text" under Display & Brightness) reports 320pt of width, so
+ * an iPhone 15 can be a small phone by a setting — which is how the
+ * Profile card's switch was first seen clipped off the right edge on
+ * one. 360 as the line, not 321: the zoomed Max models report 375, and a
+ * threshold between the two real widths is one no device will ever sit
+ * on the wrong side of by a rounding.
+ */
+export const NARROW_WINDOW = 360;
+
+/** True on a 320pt window — an SE, or any iPhone zoomed. See NARROW_WINDOW.
+ *
+ *  A width of 0 is a window that has not reported, not a small one: under
+ *  jsdom `react-native-web` measures the document at 0, and without this
+ *  guard every UI test would have run the small-phone layout without
+ *  saying so. */
+export function useNarrowWindow(): boolean {
+  const { width } = useWindowDimensions();
+  return width > 0 && width < NARROW_WINDOW;
 }
 
 export type HapticKind = 'light' | 'selection' | 'none';
@@ -571,8 +601,15 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
    *  once as unused; back with a tenant. */
   right?: React.ReactNode;
 }) {
+  // The strip's gap is the one thing in it that can give on a small
+  // phone: Crew's two tabs — "Requests" with its bubble, "Your friends
+  // (12)" — come to about 280pt with the 26pt gap, and a 320pt window has
+  // 276 between the page margins. The tabs can also shrink now, so on a
+  // width nothing anticipated the last label ellipsizes rather than
+  // running off the edge under the screen's rounded corner.
+  const narrow = useNarrowWindow();
   return (
-    <View style={s.tabsRow}>
+    <View style={[s.tabsRow, narrow && s.tabsRowNarrow]}>
       {tabs.map(({ key, icon, label, count, tally }) => {
         const on = active === key;
         const worded = tally
@@ -601,7 +638,7 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
           </PressableScale>
         );
       })}
-      {right ? <View style={{ marginLeft: 'auto' }}>{right}</View> : null}
+      {right ? <View style={{ marginLeft: 'auto', flexShrink: 0 }}>{right}</View> : null}
     </View>
   );
 }
@@ -1022,15 +1059,16 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 26,
     marginHorizontal: space.page, marginBottom: 14,
   },
+  tabsRowNarrow: { gap: 18 },
   tabItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
+    flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1,
     paddingVertical: 7,
     // The rule is drawn transparent when unchosen rather than added when
     // chosen, so switching tabs never moves a pixel of layout.
     borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
   tabItemOn: { borderBottomColor: colors.accent },
-  tabText: { color: colors.textTertiary, fontSize: 15, fontWeight: font.medium },
+  tabText: { color: colors.textTertiary, fontSize: 15, fontWeight: font.medium, flexShrink: 1 },
   tabTextOn: { color: colors.accent, fontWeight: font.semibold },
   tabBadge: {
     minWidth: 21, height: 21, borderRadius: 10.5, paddingHorizontal: 6,

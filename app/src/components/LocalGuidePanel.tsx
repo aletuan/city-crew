@@ -36,7 +36,7 @@ import { useIsGuide } from '../lib/useGuideGrant';
 import { canKeepGallery } from '../lib/gallery';
 import type { Place } from '../lib/types';
 import { colors, font, radius, space } from '../theme';
-import { PressableScale } from './ui';
+import { PressableScale, useNarrowWindow } from './ui';
 
 export default function LocalGuidePanel({ place, onOpen, testID }: {
   place: Place;
@@ -53,6 +53,14 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
   // drew the card without the panel and then shoved it down a round trip
   // later, once for every place its owner opened. See `lib/guideGrant`.
   const granted = useIsGuide();
+  // On a 320pt window — an SE, or any iPhone with Display Zoom on — the
+  // words have about 78pt beside the mark and the button, not the ~140 the
+  // lines below were cut to fit: the greeting truncates and the question
+  // wraps to three lines, the exact shape this row was redrawn to avoid.
+  // The button gives up its word there and keeps its glyph; the word
+  // stays on it as the accessible name, so a screen reader hears
+  // "Gallery" on either width.
+  const narrow = useNarrowWindow();
 
   if (!canKeepGallery(place, { uid, granted })) return null;
 
@@ -109,12 +117,13 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
         <PressableScale
           onPress={onOpen}
           accessibilityRole="button"
+          accessibilityLabel={t('Gallery', 'Gallery', 'ギャラリー')}
           containerStyle={s.buttonSlot}
-          style={s.button}
+          style={[s.button, narrow && s.buttonNarrow]}
           testID="guide-open-gallery"
         >
-          <Ionicons name="images-outline" size={16} color={colors.accentInk} />
-          <Text style={s.buttonText}>{t('Gallery', 'Gallery', 'ギャラリー')}</Text>
+          <Ionicons name={narrow ? 'images' : 'images-outline'} size={narrow ? 20 : 16} color={colors.accentInk} />
+          {narrow ? null : <Text style={s.buttonText}>{t('Gallery', 'Gallery', 'ギャラリー')}</Text>}
         </PressableScale>
       </View>
     </View>
@@ -164,5 +173,9 @@ const s = StyleSheet.create({
     minHeight: 44, paddingHorizontal: 14,
     borderRadius: radius.pill, backgroundColor: colors.accentFill,
   },
+  // The glyph alone, in a 44pt disc: a pill with one icon in it reads as
+  // a pill missing its word, a circle reads as a button that was drawn
+  // that way.
+  buttonNarrow: { width: 44, paddingHorizontal: 0, justifyContent: 'center' },
   buttonText: { color: colors.accentInk, fontSize: 14.5, fontWeight: font.semibold },
 });

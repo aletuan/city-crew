@@ -50,7 +50,10 @@ const VIEW_KEY = 'citycrew.collections.view';
  *
  *  126 is a bit over a third of a 349pt card. It buys the picture more
  *  than twice the area of the 92pt square it replaces *and* leaves the
- *  text wider than before — the chevron paid for both. */
+ *  text wider than before — the chevron paid for both.
+
+  The number is the ceiling; the row draws `coverW`, which is this share of
+  the card at 393 and less on a narrower window — see it by `gcardW`. */
 const COVER = 126;
 const COVER_OPEN = 88;
 
@@ -572,6 +575,13 @@ export default function CollectionsScreen({ navigation, route }: {
   const { width: winW } = useWindowDimensions();
   const gcardW = Math.round((winW - space.page * 2 - space.cardGap) / 2);
   const gcardH = Math.round(gcardW * 1.18);
+  // The reading row's cover, at the share of the card COVER is on a
+  // 393pt phone and never wider. Fixed at 126 it left the text column
+  // 118pt on a 320pt window — an SE, or any iPhone with Display Zoom on
+  // — which is thirteen characters a line where the blurb's two lines
+  // were budgeted for twenty-three. At 320 this comes out at 99, and the
+  // column keeps 145.
+  const coverW = Math.min(COVER, Math.round((winW - space.page * 2) * 0.36));
   const [view, setView] = useState<'tile' | 'row'>('tile');
   useEffect(() => {
     AsyncStorage.getItem(VIEW_KEY)
@@ -709,7 +719,7 @@ export default function CollectionsScreen({ navigation, route }: {
             {[0, 1, 2].map((i) => (
               <View key={i} style={s.row}>
                 <Card style={s.card}>
-                  <Skeleton style={s.thumb} />
+                  <Skeleton style={[s.thumb, { width: coverW }]} />
                   <View style={s.cardText}>
                     <Skeleton style={{ height: 18, width: '70%', borderRadius: 8 }} />
                     <Skeleton style={{ height: 13, width: '45%', borderRadius: 7 }} />
@@ -918,7 +928,7 @@ export default function CollectionsScreen({ navigation, route }: {
                         : t(c.title_en, c.title_vi, c.title_ja)}
                     >
                       <Card style={s.card}>
-                        <View style={s.thumb}>
+                        <View style={[s.thumb, { width: coverW }]}>
                           {cover
                             ? <Image source={{ uri: cover }} style={s.thumbFill} contentFit="cover" transition={200} />
                             : <EmptyCover />}
@@ -1107,8 +1117,8 @@ export default function CollectionsScreen({ navigation, route }: {
                 >
                   <Card style={s.card}>
                     <Animated.View
-                      style={[s.thumb, drag && {
-                        width: Animated.add(COVER, Animated.multiply(drag, (COVER - COVER_OPEN) / ACTIONS_W)),
+                      style={[s.thumb, { width: coverW }, drag && {
+                        width: Animated.add(coverW, Animated.multiply(drag, (coverW - COVER_OPEN) / ACTIONS_W)),
                       }]}
                     >
                       {uri
@@ -1435,7 +1445,11 @@ const s = StyleSheet.create({
   },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
-  meta: { color: colors.textTertiary, ...type.meta },
+  // `flexShrink: 1`: in `metaRow` this sits beside an 18pt face or a
+  // padlock, and a Text that cannot shrink sizes to its words — "@handle
+  // · 5 places" is wider than the column on a 320pt window, and the card's
+  // `overflow: hidden` cut it rather than the ellipsis it asks for.
+  meta: { color: colors.textTertiary, ...type.meta, flexShrink: 1 },
   // A third step, between the title and the metadata. The title is what
   // the list is called and the meta line is bookkeeping; this is the only
   // thing on the card a person wrote about it, so it takes the middle

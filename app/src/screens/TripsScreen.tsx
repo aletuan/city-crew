@@ -639,7 +639,12 @@ const s = StyleSheet.create({
   // Right-aligned and capped: it is the answer to "whereabouts", read after
   // the name, and letting it grow would push the name into an ellipsis to
   // print a district nobody was looking for yet.
-  stopArea: { ...CAPTION, color: colors.textTertiary, maxWidth: 108, textAlign: 'right' },
+  // A share of the row rather than the 108pt it was: 108 is a third of
+  // the line on a 393pt phone, and on a 320pt one — an SE, or any iPhone
+  // with Display Zoom on — the same 108 beside the 46pt time and the dot
+  // column left the place name about 50pt, six characters. A third holds
+  // the same proportion on both.
+  stopArea: { ...CAPTION, color: colors.textTertiary, maxWidth: '33%', textAlign: 'right' },
   stopGone: { ...type.body, color: colors.textTertiary, fontStyle: 'italic', flex: 1 },
   more: { ...CAPTION, color: colors.textTertiary, marginLeft: 56, marginTop: 4 },
 
