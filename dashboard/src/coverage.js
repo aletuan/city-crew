@@ -127,12 +127,24 @@ export function buildCoverage(rows) {
   };
 }
 
-// ── web mercator, for the static tile mosaic ──
+// ── web mercator, the projection the Google basemap is drawn in ──
+// Same 256px world at zoom 0, so a world pixel computed here and a world
+// pixel inside `google.maps.Map` are the same pixel. That is what lets the
+// bubbles be plain SVG over the map instead of an OverlayView inside it.
 export const TILE = 256;
 export const lngToX = (lng, z) => ((lng + 180) / 360) * TILE * 2 ** z;
 export const latToY = (lat, z) => {
   const s = Math.sin((lat * Math.PI) / 180);
   return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * TILE * 2 ** z;
+};
+
+// The way back. `fitView` answers in world pixels; a Google map is centred
+// by coordinate, so the framing it picks has to be translated before the map
+// can be told about it.
+export const xToLng = (x, z) => (x / (TILE * 2 ** z)) * 360 - 180;
+export const yToLat = (y, z) => {
+  const f = y / (TILE * 2 ** z);
+  return (Math.atan(Math.sinh(Math.PI * (1 - 2 * f))) * 180) / Math.PI;
 };
 
 /**

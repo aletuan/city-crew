@@ -962,7 +962,15 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   border: 1px solid var(--border-control); border-radius: var(--radius-pill); padding: 5px 13px;
 }
 .factlinks a:hover { color: #fff; border-color: var(--border-control-strong); }
-.mapframe { border: 0; width: 100%; height: 190px; border-radius: 14px; filter: grayscale(.2) contrast(1.05); }
+/* A Google map lives here now, not an iframe — so the frame owns the radius
+   and the overflow, and nothing filters the tiles: the dark style is the
+   map's own, and grayscale on top of it only muddied the pin. */
+.mapframe { width: 100%; height: 190px; border-radius: 14px; overflow: hidden; background: #0d0a12; }
+.mapblank {
+  width: 100%; height: 190px; border-radius: 14px; background: #0d0a12;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 0 24px; font-size: 12.5px; color: var(--text-tertiary);
+}
 .coordline { font-family: var(--font-data); font-size: 11.5px; color: var(--text-tertiary); margin-top: 6px; }
 .hoursline { font-family: var(--font-data); font-size: 11.5px; color: var(--text-secondary); line-height: 1.8; white-space: pre-line; }
 
@@ -1252,8 +1260,13 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   position: relative; overflow: hidden;
   background: #0d0a12; /* tile-less ground: bubbles must stand on their own */
 }
-.covtile { position: absolute; width: 256px; height: 256px; user-select: none; }
-.covbubbles { position: absolute; inset: 0; }
+.covbasemap { position: absolute; inset: 0; }
+/* The overlay is a drawing, not a surface: clicks, drags and wheel events
+   belong to the map underneath, and only the bubbles take them back. Google's
+   logo and attribution sit under transparent pixels, which is what their
+   terms require — never cover them with anything opaque. */
+.covbubbles { position: absolute; inset: 0; pointer-events: none; }
+.covbubble { pointer-events: auto; }
 .covbubble .halo { fill: rgba(139, 92, 246, 0.16); }
 .covbubble .body {
   fill: rgba(196, 92, 200, 0.34);
@@ -1270,12 +1283,6 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   /* a halo, not a plate: readable over any tile without boxing the map */
   stroke: rgba(11, 9, 16, 0.9); stroke-width: 3px; paint-order: stroke;
 }
-.covattr {
-  position: absolute; right: 10px; bottom: 8px;
-  font-family: var(--font-data); font-size: 10px; color: rgba(255, 255, 255, 0.45);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-}
-
 /* district rows share the leaderboard's bones; the bar is the one addition */
 .covrow { gap: 12px; }
 .covname {
@@ -1354,7 +1361,7 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .herolangs { flex-wrap: wrap; }
   .heropicked { margin-left: 0; flex-basis: 100%; }
   .panel { padding: 16px; }
-  .mapframe { height: 150px; }
+  .mapframe, .mapblank { height: 150px; }
 
   .reviewbar {
     left: 10px; right: 10px; transform: none;

@@ -58,7 +58,31 @@ up** (RLS đã chặn người ngoài ghi data, tắt luôn cho sạch).
   `aletuan/city-crew`, quyền **Actions: Read and write**. Bỏ qua cũng được —
   sync bằng GitHub app: Actions → *Sync mockup from database* → Run workflow.
 
-### 3. GitHub — Pages (bắt buộc)
+### 3. GitHub — secret cho bản đồ (bắt buộc nếu muốn thấy bản đồ)
+
+Repo → Settings → Secrets and variables → Actions → **New repository
+secret**: `VITE_GOOGLE_MAPS_KEY`, giá trị là một **browser key** của Google
+Maps Platform.
+
+Key đó cần, trong Google Cloud Console → Credentials:
+
+- **API restrictions**: bật **Maps JavaScript API**. Desk không gọi Embed,
+  Static hay Places bằng key này, nên không cần bật gì thêm.
+- **Website restrictions**: thêm `https://aletuan.github.io/*` và
+  `http://localhost:*`. Thiếu dòng đầu thì bản đồ chạy ở máy bạn và **trắng
+  trên Pages** — đây là cách hỏng hay gặp nhất.
+- **Quota cap** hằng ngày. Key nằm trong bundle công khai và referrer thì giả
+  mạo được, nên hạn mức mới là cái phanh thật.
+
+Đây là secret chứ không phải variable, và không có giá trị mặc định trong
+repo: khác `VITE_SUPABASE_ANON_KEY`, phía sau nó không có RLS. Bỏ qua bước
+này thì desk vẫn chạy — Coverage vẫn vẽ bubble trên nền tối, khung Fact-check
+vẫn hiện toạ độ — chỉ là không có bản đồ.
+
+Dev local: đặt `VITE_GOOGLE_MAPS_KEY` trong `dashboard/.env.local` (đã được
+gitignore) hoặc truyền thẳng vào lệnh: `VITE_GOOGLE_MAPS_KEY=… npm run dev`.
+
+### 4. GitHub — Pages (bắt buộc)
 
 Repo → Settings → Pages → **Source: GitHub Actions**. Merge PR này vào
 `main` là workflow *Deploy dashboard to GitHub Pages* tự chạy; dashboard lên
