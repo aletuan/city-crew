@@ -544,6 +544,61 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .filterrow.on .filtercount { color: var(--text-secondary); }
 /* Nine categories and eleven vibes is twenty rows of rail above the
    question at the bottom of it. Six each, and the rest behind this. */
+/* ── the city, as a box you type in ────────────────────────────────── */
+
+.citypick { position: relative; display: flex; flex-direction: column; gap: 7px; }
+.citybox {
+  display: flex; align-items: center; gap: 7px;
+  border: 1px solid var(--border-control); border-radius: 10px;
+  padding: 0 6px 0 9px; height: 32px;
+  transition: border-color 160ms;
+}
+.citybox:focus-within { border-color: var(--border-control-strong); }
+.cityboxicon { display: inline-flex; color: var(--text-tertiary); flex-shrink: 0; }
+.cityinput {
+  flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+  color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 600;
+  padding: 0;
+}
+.cityinput::placeholder { color: var(--text-tertiary); font-weight: 600; }
+.cityboxchev {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; flex-shrink: 0; padding: 0;
+  border: none; background: transparent; color: var(--text-tertiary);
+  border-radius: 7px; transition: color 140ms, background 140ms, transform 160ms;
+}
+.cityboxchev:hover { background: var(--surface-glass); color: var(--text-primary); }
+.cityboxchev[aria-expanded="true"] { transform: rotate(180deg); }
+
+/* Over the groups below rather than pushing them down the rail: a list
+   that shoves Status out from under the pointer on every keystroke is a
+   list you cannot aim at. */
+.citymenu {
+  position: absolute; left: 0; right: 0; top: 38px; z-index: 20;
+  display: flex; flex-direction: column; gap: 1px;
+  max-height: 232px; overflow-y: auto;
+  background: var(--bg-elevated); border: 1px solid var(--border-glass);
+  border-radius: 10px; padding: 5px; box-shadow: var(--shadow-float);
+}
+.citynone {
+  margin: 0; padding: 7px 8px; font-size: 12.5px; font-weight: 600;
+  color: var(--text-tertiary);
+}
+.citychips { display: flex; flex-wrap: wrap; gap: 6px; }
+.citychip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border-control); border-radius: var(--radius-pill);
+  padding: 3px 5px 3px 11px;
+  font-size: 12.5px; font-weight: 600; color: var(--text-primary);
+}
+.citychip button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; padding: 0; border: none; border-radius: 50%;
+  background: var(--surface-glass); color: var(--text-secondary);
+  transition: background 140ms, color 140ms;
+}
+.citychip button:hover { background: var(--ai-violet); color: #fff; }
+
 .filtermore {
   align-self: flex-start; margin-top: 3px;
   border: none; background: transparent; color: var(--text-secondary);
