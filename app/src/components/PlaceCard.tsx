@@ -8,7 +8,7 @@ import { dayBand, MINUTES_IN_DAY, openFragment, openState, sashLabel, shutLabel 
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
-import { colors, font, onPhoto, quoteFace, radius, space, type } from '../theme';
+import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
 import { Card, PressableScale } from './ui';
 
 export default function PlaceCard({ place, onPress, testID }: { place: Place; onPress: () => void; testID?: string }) {
@@ -158,7 +158,10 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
               floating bar. */}
           {sash && shut ? (
             <View style={s.shutSash} pointerEvents="none">
-              <Text style={s.shutSashText} numberOfLines={1} accessibilityLabel={shut}>{sash}</Text>
+              {/* The band is 20pt tall and drawn at an angle; a word that
+                  outgrew it would be cut at the top and bottom rather than
+                  wrap. See `labelScaleCap`. */}
+              <Text style={s.shutSashText} numberOfLines={1} maxFontSizeMultiplier={labelScaleCap} accessibilityLabel={shut}>{sash}</Text>
             </View>
           ) : null}
         </View>

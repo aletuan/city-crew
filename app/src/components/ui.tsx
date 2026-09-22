@@ -16,7 +16,7 @@ import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
-import { colors, display, font, gradAI, radius, space, type } from '../theme';
+import { colors, display, font, gradAI, labelScaleCap, radius, space, type } from '../theme';
 
 // ── tab bar geometry ──
 // A floating glass island (see FloatingTabBar), inset from the screen
@@ -632,7 +632,10 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
             </Text>
             {!on && count ? (
               <View style={s.tabBadge}>
-                <Text style={s.tabBadgeText}>{count}</Text>
+                {/* A 21pt disc; the number is capped so it stays a
+                    number in a disc rather than a digit spilling out of
+                    one. See `labelScaleCap`. */}
+                <Text style={s.tabBadgeText} maxFontSizeMultiplier={labelScaleCap}>{count}</Text>
               </View>
             ) : null}
           </PressableScale>
