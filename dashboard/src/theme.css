@@ -66,6 +66,12 @@
      does. A declaration and not just a JS write: an undeclared var() is a
      silent unset, and the stylesheet's own test says so. */
   --topbar-h: 56px;
+
+  /* The toolbar's height, for the rail that sticks below it. Declared with
+     the height the bar has as a single row and overwritten from
+     PlaceList.jsx with the measured one, because an undeclared var() is a
+     silent unset and the stylesheet's own test says so. */
+  --worktop-h: 50px;
   /* Same arrangement one level down: the Places toolbar's height, for the
      filter rail stuck under it. Declared with the height it has as a single
      row and overwritten from PlaceList with the measured one — it grows a
@@ -553,17 +559,31 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   background: var(--bg-app);
   padding: 10px 0 6px; margin-bottom: 4px;
 }
-.worksplit { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 24px; align-items: start; }
-.workmain { min-width: 0; }
+/* Two rows, three areas. The bar takes row one of the right column so it
+   sits over the results it acts on; the rail and the grid share row two,
+   which is what puts the panel's top edge on the first card's rather than
+   above the search box. Row gap is zero — the bar and the tally carry
+   their own margins, and a grid gap on top of them was 24px of nothing. */
+.worksplit {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  grid-template-areas:
+    ".    bar"
+    "rail results";
+  gap: 0 24px; align-items: start;
+}
+.workbar { grid-area: bar; min-width: 0; }
+.workmain { grid-area: results; min-width: 0; }
 .filterrail {
-  /* Beside the toolbar now, not beneath it: both start on the same line,
-     the rail in its column and the bar over the results. That retires the
-     measured --worktop-h this used to add — the toolbar's height stopped
-     being something the rail has to know the moment it stopped being
-     something the rail sits under. Only the top bar is left to clear, and
-     above 960px it is hidden, so this resolves to 10px. */
-  position: sticky; top: calc(var(--topbar-h) + 10px);
-  max-height: calc(100vh - var(--topbar-h) - 30px); overflow-y: auto;
+  grid-area: rail;
+  /* The grid places it below the bar; this keeps it there once the page
+     scrolls. The bar is sticky at the top, so a rail pinned any higher
+     would slide its own "Filters / Reset" head under an opaque strip —
+     which is the whole reason the toolbar's height is measured rather
+     than assumed. It is not a constant: the chips wrap at narrow widths
+     and the batch bar replaces the row outright. */
+  position: sticky; top: calc(var(--topbar-h) + var(--worktop-h) + 10px);
+  max-height: calc(100vh - var(--topbar-h) - var(--worktop-h) - 30px); overflow-y: auto;
   background: var(--bg-elevated); border: 1px solid var(--border-glass-soft);
   border-radius: var(--radius-card); padding: 16px 16px 18px;
 }

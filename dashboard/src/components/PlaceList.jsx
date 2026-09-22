@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { leftBehindNote } from '../storage.js';
 import { api } from '../api.js';
@@ -229,6 +229,32 @@ export default function PlaceList() {
   // Phones only: the rail is a column on desktop and never closed there.
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  /**
+   * The toolbar's height, published for the rail that sticks below it.
+   *
+   * This came back with the rail's move down the page. While the two
+   * started on the same line the rail had nothing to clear and the
+   * measurement went; now the bar sits above it and is sticky, so a rail
+   * pinned at the top bar's height alone would pull its own head under an
+   * opaque strip as soon as the page scrolled.
+   *
+   * Measured rather than assumed, because it is not a constant: the chips
+   * wrap once there are enough of them, and selecting a batch swaps the
+   * row for four buttons.
+   */
+  const worktopRef = useRef(null);
+  useEffect(() => {
+    const el = worktopRef.current;
+    if (!el) return undefined;
+    const publish = () =>
+      document.documentElement.style.setProperty('--worktop-h', `${el.offsetHeight}px`);
+    publish();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
 
   const status = params.get('status') ?? '';
   const category = params.get('category') ?? '';
@@ -393,97 +419,25 @@ export default function PlaceList() {
     <>
       <div className="worksplit">
         {filtersOpen && <div className="sheetback" onClick={() => setFiltersOpen(false)} />}
-        {/* One rail, two projections. A column beside the results where
-            there is width for one, a sheet over them where there is not —
-            same markup, same URL params, either way. The phone is the
-            surface that could not afford it inline, and the phone is what
-            ended up with six rows of chips standing between the reader and
-            the first place. */}
-        <aside className={`filterrail${filtersOpen ? ' open' : ''}`} aria-label="Filters">
-          <div className="railhead">
-            <span className="railtitle">Filters</span>
-            {activeCount > 0 && (
-              <button className="railclear" onClick={clearFilters}>Reset</button>
-            )}
-            <button className="railclose" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
-              <CategoryIcon name="x" size={12} />
-            </button>
-          </div>
-          <div className="filters">
-            <FilterGroup
-              label="Status"
-              value={status}
-              onPick={(v) => toggle('status', v)}
-              options={STATUSES.map((v) => ({
-                value: v,
-                label: FILTER_LABEL.status(v),
-                count: progress?.by_status?.[v] ?? 0,
-                cls: `st-${v}`,
-              }))}
-            />
-            {/* Category (what a place is) and vibe (how it feels) share some
-                English words — "views", "nightlife" — so each group needs its
-                own labelled heading, or the two read as one confusing,
-                duplicated list. Icon colour mirrors the mobile app (see
-                categories.js and vibes.js) — same hue, same concept, on every
-                surface. */}
-            <FilterGroup
-              label="Category"
-              value={category}
-              onPick={(v) => toggle('category', v)}
-              options={CATEGORY_KEYS.map(([v, label]) => ({
-                value: v,
-                label,
-                count: progress?.by_category_tag?.[v] ?? 0,
-                icon: CATEGORY_STYLE[v]?.icon,
-                color: CATEGORY_STYLE[v]?.color,
-              }))}
-            />
-            <FilterGroup
-              label="Vibe"
-              value={vibe}
-              onPick={(v) => toggle('vibe', v)}
-              options={VIBE_ORDER.map((v) => ({
-                value: v,
-                label: VIBE_STYLE[v]?.label ?? v,
-                count: progress?.by_vibe?.[v] ?? 0,
-                icon: VIBE_STYLE[v]?.icon,
-                color: VIBE_STYLE[v]?.color,
-              }))}
-            />
-            {/* Its own group rather than a row inside one above, because it
-                asks a different kind of question. Category and vibe ask what
-                a place *is*; this asks whether the desk has finished looking
-                it up. Handles arrive by hand — Google Places does not return
-                one — so "No handle" is a worklist that only shrinks when
-                somebody works it, and it starts out holding nearly every
-                place. */}
-            <FilterGroup
-              label="Threads"
-              value={threads}
-              onPick={(v) => toggle('threads', v)}
-              options={THREADS_FILTERS.map(([v, label]) => ({
-                value: v,
-                label,
-                count: progress?.by_threads?.[v] ?? 0,
-              }))}
-            />
-          </div>
-        </aside>
+        {/* Row one of the split, over the results column only.
 
-        <div className="workmain">
-          {/* Inside the results column, not across the page above it.
-              Full width, the bar started at the page's left edge and the
-              chips under it ran along the top of the filter rail — a row
-              naming what the results are filtered to, drawn over the panel
-              that set it rather than over the results it describes. Here
-              its left edge is the grid's left edge, and the rail beside it
-              starts at the same line.
+            It was full width above the split, so the chips naming the live
+            filters began at the page's left edge and ran along the top of
+            the filter rail — a row describing the results, drawn over the
+            panel that produces them. Then it shared a line with the rail,
+            which put the panel's top edge above both the search box and
+            the first card. Neither is where it belongs: the bar acts on
+            the results, so it sits over the results, and the rail starts
+            where the grid starts.
 
-              It sticks under the top bar where it is one row tall; on
+            Grid areas rather than measured offsets do the placing: the bar
+            takes row one of the right column, and the rail and the grid
+            share row two. */}
+        <div className="workbar">
+          {/* It sticks under the top bar where it is one row tall; on
               phones, where it is two, it stays stuck only while a batch is
               selected — see the media query in theme.css. */}
-          <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`}>
+          <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`} ref={worktopRef}>
             {selected.size > 0 ? (
               <div className="resultsbar">
                 <span className="resultscount">{selected.size} selected</span>
@@ -576,6 +530,86 @@ export default function PlaceList() {
           {selected.size === 0 && total != null && (
             <div className="resulttally">{total} place{total === 1 ? '' : 's'}</div>
           )}
+        </div>
+        {/* One rail, two projections. A column beside the results where
+            there is width for one, a sheet over them where there is not —
+            same markup, same URL params, either way. The phone is the
+            surface that could not afford it inline, and the phone is what
+            ended up with six rows of chips standing between the reader and
+            the first place. */}
+        <aside className={`filterrail${filtersOpen ? ' open' : ''}`} aria-label="Filters">
+          <div className="railhead">
+            <span className="railtitle">Filters</span>
+            {activeCount > 0 && (
+              <button className="railclear" onClick={clearFilters}>Reset</button>
+            )}
+            <button className="railclose" onClick={() => setFiltersOpen(false)} aria-label="Close filters">
+              <CategoryIcon name="x" size={12} />
+            </button>
+          </div>
+          <div className="filters">
+            <FilterGroup
+              label="Status"
+              value={status}
+              onPick={(v) => toggle('status', v)}
+              options={STATUSES.map((v) => ({
+                value: v,
+                label: FILTER_LABEL.status(v),
+                count: progress?.by_status?.[v] ?? 0,
+                cls: `st-${v}`,
+              }))}
+            />
+            {/* Category (what a place is) and vibe (how it feels) share some
+                English words — "views", "nightlife" — so each group needs its
+                own labelled heading, or the two read as one confusing,
+                duplicated list. Icon colour mirrors the mobile app (see
+                categories.js and vibes.js) — same hue, same concept, on every
+                surface. */}
+            <FilterGroup
+              label="Category"
+              value={category}
+              onPick={(v) => toggle('category', v)}
+              options={CATEGORY_KEYS.map(([v, label]) => ({
+                value: v,
+                label,
+                count: progress?.by_category_tag?.[v] ?? 0,
+                icon: CATEGORY_STYLE[v]?.icon,
+                color: CATEGORY_STYLE[v]?.color,
+              }))}
+            />
+            <FilterGroup
+              label="Vibe"
+              value={vibe}
+              onPick={(v) => toggle('vibe', v)}
+              options={VIBE_ORDER.map((v) => ({
+                value: v,
+                label: VIBE_STYLE[v]?.label ?? v,
+                count: progress?.by_vibe?.[v] ?? 0,
+                icon: VIBE_STYLE[v]?.icon,
+                color: VIBE_STYLE[v]?.color,
+              }))}
+            />
+            {/* Its own group rather than a row inside one above, because it
+                asks a different kind of question. Category and vibe ask what
+                a place *is*; this asks whether the desk has finished looking
+                it up. Handles arrive by hand — Google Places does not return
+                one — so "No handle" is a worklist that only shrinks when
+                somebody works it, and it starts out holding nearly every
+                place. */}
+            <FilterGroup
+              label="Threads"
+              value={threads}
+              onPick={(v) => toggle('threads', v)}
+              options={THREADS_FILTERS.map(([v, label]) => ({
+                value: v,
+                label,
+                count: progress?.by_threads?.[v] ?? 0,
+              }))}
+            />
+          </div>
+        </aside>
+
+        <div className="workmain">
           {error && (
             <div className="empty">
               Couldn't load places: {error}
