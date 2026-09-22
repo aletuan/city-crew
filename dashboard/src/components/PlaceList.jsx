@@ -496,6 +496,20 @@ export default function PlaceList() {
                   </div>
                 )}
                 <div className="resultscontrols">
+                  {/* The answer, at the head of the controls that produce
+                      it. A line of its own under the bar gave one short
+                      phrase a full row of the page and set it apart from
+                      the search and the sort, which are the other half of
+                      the same sentence — these results, filtered so,
+                      searched so, sorted so. It reads right-aligned with
+                      them instead, and the row it used to own goes back
+                      to the grid.
+                      Only in this branch: while a batch is selected the
+                      bar answers a different question and says how many
+                      are ticked. */}
+                  {total != null && (
+                    <span className="resulttally">{total} place{total === 1 ? '' : 's'}</span>
+                  )}
                   <button
                     className={`filterbtn${activeCount ? ' on' : ''}`}
                     onClick={() => setFiltersOpen(true)}
@@ -531,13 +545,6 @@ export default function PlaceList() {
               </div>
             )}
           </div>
-          {/* The tally, on its own line under the bar rather than inside
-              it. It is a fact about the results, so it belongs against the
-              results — and the space it was taking at the bar's left edge
-              is where the filter chips now say what produced it. */}
-          {selected.size === 0 && total != null && (
-            <div className="resulttally">{total} place{total === 1 ? '' : 's'}</div>
-          )}
         </div>
         {/* One rail, two projections. A column beside the results where
             there is width for one, a sheet over them where there is not —
