@@ -668,10 +668,12 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    either way the question was only ever visible where it was asked: an
    empty result on a phone had no visible cause at all, and on a laptop it
    meant reading four groups to find the one ticked row. */
-/* Left of the controls, on the bar's own line. `auto` here is what keeps
-   the controls at the right edge when no filter is set and the row is not
-   rendered at all. */
-.activefilters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-right: auto; min-width: 0; }
+/* Everything on the left of the bar: the tally, then the chips. `auto`
+   lives here rather than on either of them, because either can be absent
+   — no filter set, or no count yet — and a margin on a thing that is not
+   rendered does not hold the controls at the right edge. */
+.barlead { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-right: auto; min-width: 0; }
+.activefilters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .fchip {
   display: inline-flex; align-items: center; gap: 7px;
   border: 1px solid rgba(139, 92, 246, 0.45); background: rgba(139, 92, 246, 0.20);
