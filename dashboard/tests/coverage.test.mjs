@@ -2,8 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  foldKey, districtOf, buildCoverage, fitView, lngToX, latToY, xToLng, yToLat,
-  bubbleRadius, TILE,
+  foldKey, districtOf, buildCoverage, buildCityCoverage, fitView, lngToX, latToY,
+  xToLng, yToLat, bubbleRadius, TILE,
 } from '../src/coverage.js';
 
 const row = (over = {}) => ({
@@ -168,4 +168,63 @@ test('buildCoverage keeps "empty" and "unreadable" apart', () => {
   assert.equal(nowhere.groups.length, 1);
   assert.equal(nowhere.groups[0].lat, null);
   assert.equal(nowhere.noCoords.length, 1);
+});
+
+
+// ---- buildCityCoverage: the same fold one rung up, for the view that used
+// to have no map of its own. "All cities" picked the busiest city and drew
+// that, which is the one view from which you could not see which cities the
+// catalog is thin in.
+
+const at = (lat, lng) => row({ lat, lng });
+const LABELS = { hcmc: 'TP.HCM', hanoi: 'Hà Nội', danang: 'Đà Nẵng' };
+const labelOf = (id) => LABELS[id] ?? id;
+
+test('buildCityCoverage: one group per city, biggest first, centroid of its own rows', () => {
+  const cov = buildCityCoverage({
+    hanoi: [at(21.0, 105.8), at(21.2, 106.0)],
+    hcmc: [at(10.7, 106.6), at(10.8, 106.7), at(10.9, 106.8)],
+  }, labelOf);
+
+  assert.deepEqual(cov.groups.map((g) => g.key), ['hcmc', 'hanoi']);
+  assert.deepEqual(cov.groups.map((g) => g.label), ['TP.HCM', 'Hà Nội']);
+  assert.deepEqual(cov.groups.map((g) => g.count), [3, 2]);
+  // Placed on its own places, not on a stored centre — a city whose catalog
+  // sits in one district belongs on that district.
+  assert.equal(cov.groups[1].lat, 21.1);
+  assert.equal(cov.groups[1].lng, 105.9);
+  assert.equal(cov.total, 5);
+  // Every row already has a city, or it would not be in `perCity`.
+  assert.deepEqual(cov.unplaced, []);
+});
+
+// A dot on a map is a claim that something is there. A city with nothing
+// published has nothing there, and the counts beside the menu already say so.
+test('buildCityCoverage leaves an empty city off the map', () => {
+  const cov = buildCityCoverage({ hanoi: [at(21, 105)], haiphong: [] }, labelOf);
+  assert.deepEqual(cov.groups.map((g) => g.key), ['hanoi']);
+  assert.equal(cov.total, 1);
+});
+
+// A city whose rows have no coordinates is counted but cannot be drawn —
+// the same distinction buildCoverage draws for a district.
+test('buildCityCoverage counts a city it cannot place, and says which rows', () => {
+  const nowhere = () => row({ lat: null, lng: null });
+  const cov = buildCityCoverage({ hue: [nowhere(), nowhere()] }, labelOf);
+  assert.equal(cov.groups.length, 1);
+  assert.equal(cov.groups[0].count, 2);
+  assert.equal(cov.groups[0].lat, null);
+  assert.equal(cov.noCoords.length, 2);
+});
+
+// Ties break on the label, so the order does not wobble between renders.
+test('buildCityCoverage breaks a tie on the name', () => {
+  const cov = buildCityCoverage({ hcmc: [at(10, 106)], hanoi: [at(21, 105)] }, labelOf);
+  assert.deepEqual(cov.groups.map((g) => g.label), ['Hà Nội', 'TP.HCM']);
+});
+
+test('buildCityCoverage on nothing at all', () => {
+  const cov = buildCityCoverage({}, labelOf);
+  assert.deepEqual(cov.groups, []);
+  assert.equal(cov.total, 0);
 });

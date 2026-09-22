@@ -127,6 +127,48 @@ export function buildCoverage(rows) {
   };
 }
 
+/**
+ * The same shape as `buildCoverage`, one rung up: a group per city rather
+ * than a group per district.
+ *
+ * "All cities" used to have no map of its own. A map draws one city, so
+ * the screen picked the busiest and said so in a caption — an answer to a
+ * question nobody asked, and the one view from which you could not see
+ * that Hải Phòng has nothing in it. At city level the same map works: one
+ * bubble per city, placed on its own places rather than on a stored
+ * centre, so a city whose catalog is all in one district sits on that
+ * district and not on a point no place occupies.
+ *
+ * `unplaced` is empty by construction — every row already has a city, or
+ * it would not be in `perCity`. `noCoords` counts the rows this view
+ * cannot place, which is a city's worth rather than a place's, so it is
+ * summed across the cities that have none.
+ */
+export function buildCityCoverage(perCity, labelOf) {
+  const groups = Object.entries(perCity)
+    .map(([id, rows]) => {
+      const located = rows.filter(hasCoords);
+      return {
+        key: id,
+        label: labelOf(id),
+        count: rows.length,
+        lat: located.length ? located.reduce((s, r) => s + r.lat, 0) / located.length : null,
+        lng: located.length ? located.reduce((s, r) => s + r.lng, 0) / located.length : null,
+      };
+    })
+    // A city with nothing published is a fact the counts beside the menu
+    // already carry; an empty bubble on a map is just a dot lying about
+    // where the catalog is.
+    .filter((g) => g.count > 0)
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  return {
+    groups,
+    unplaced: [],
+    noCoords: Object.values(perCity).flat().filter((r) => !hasCoords(r)),
+    total: Object.values(perCity).reduce((n, rows) => n + rows.length, 0),
+  };
+}
+
 // ── web mercator, the projection the Google basemap is drawn in ──
 // Same 256px world at zoom 0, so a world pixel computed here and a world
 // pixel inside `google.maps.Map` are the same pixel. That is what lets the

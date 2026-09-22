@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { CityPicker, chipLabel, useCity } from '../App.jsx';
 import {
-  buildCoverage, fitView, lngToX, latToY, xToLng, yToLat, bubbleRadius,
+  buildCoverage, buildCityCoverage, fitView, lngToX, latToY, xToLng, yToLat, bubbleRadius,
 } from '../coverage.js';
 import { loadGoogleMaps, DARK_STYLE } from '../lib/googleMaps.js';
 
@@ -31,7 +31,7 @@ const MAP_H_NARROW = 460;
  * fitted view stands, and the bubbles sit on the dark ground exactly as they
  * did when a tile CDN was unreachable. The numbers never depend on a map.
  */
-function CoverageMap({ groups, hover, setHover }) {
+function CoverageMap({ groups, hover, setHover, minZoom }) {
   const wrapRef = useRef(null);
   const mapElRef = useRef(null);
   const mapRef = useRef(null);
@@ -59,8 +59,13 @@ function CoverageMap({ groups, hover, setHover }) {
   // map out from under whoever is reading it.
   const coordsKey = located.map((g) => `${g.lat},${g.lng}`).join(';');
   const fitted = useMemo(
-    () => (width ? fitView(located, width, mapH) : null),
-    [width, mapH, coordsKey], // eslint-disable-line react-hooks/exhaustive-deps
+    // `minZ` is a floor on how far out the fit may go. Nine is right for
+    // districts inside one city — below it the bubbles drift apart over
+    // empty province. It is wrong for a view of every city, which spans
+    // Vietnam and Australia and would otherwise be fitted to a frame that
+    // cannot hold both.
+    () => (width ? fitView(located, width, mapH, minZoom ? { minZ: minZoom } : undefined) : null),
+    [width, mapH, minZoom, coordsKey], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // The fit as of right now, for the map's first frame. Read through a ref
@@ -197,33 +202,36 @@ export default function Coverage() {
   }, [rows]);
 
   /**
-   * The city this map draws.
+   * What this map draws, and at which rung.
    *
-   * The desk's workspace city, which is now the only city control on the
-   * page — except for the one answer a map cannot draw. "All cities" is a
-   * legitimate scope everywhere else and meaningless here, so it falls back
-   * to whichever city has the most published places: the most useful thing
-   * to be looking at when you have not said, and the caption says so rather
-   * than letting the map imply a choice nobody made.
+   * With a city picked it is that city's districts, as it always was. With
+   * the desk on all cities it is the cities themselves — one bubble each,
+   * fitted to a frame that holds the lot.
    *
-   * A *named* city with nothing published is not a fallback case. It is an
-   * answer — an empty map and "nothing published here yet" — and swapping
-   * it for a busier city would make the page disagree with its own header.
+   * It used to answer "all cities" by picking the busiest and saying so in
+   * a caption. That was an answer to a question nobody asked, and it was
+   * the one view from which you could not see the thing the screen exists
+   * to show: which cities the catalog is thin in. Hải Phòng has nothing in
+   * it, and the old all-cities view drew Ho Chi Minh City.
+   *
+   * A *named* city with nothing published still is not a fallback case. It
+   * is an answer — an empty map and "nothing published here yet".
    */
-  const busiest = useMemo(() => {
+  const city = workspaceCity?.id ?? null;
+  const labelOf = useMemo(() => {
+    const byId = new Map(cities.map((c) => [c.id, chipLabel(c)]));
+    return (id) => byId.get(id) ?? id;
+  }, [cities]);
+
+  const cov = useMemo(() => {
     if (!perCity) return null;
-    return Object.entries(perCity)
-      .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
-  }, [perCity]);
-  const city = workspaceCity?.id ?? busiest;
-  const fellBack = !workspaceCity && !!city;
+    return city ? buildCoverage(perCity[city] ?? []) : buildCityCoverage(perCity, labelOf);
+  }, [perCity, city, labelOf]);
 
-  const cov = useMemo(
-    () => (perCity && city ? buildCoverage(perCity[city] ?? []) : null),
-    [perCity, city],
-  );
-
-  const longName = cities.find((c) => c.id === city)?.name_vi ?? city;
+  const longName = city ? (cities.find((c) => c.id === city)?.name_vi ?? city) : 'All cities';
+  // The rung the panel is counting, so its caption names the right noun.
+  const unit = city ? 'district' : 'city';
+  const units = city ? 'districts' : 'cities';
   const maxCount = cov?.groups[0]?.count ?? 0;
 
   return (
@@ -233,10 +241,9 @@ export default function Coverage() {
           under the head rather than inside a constant. */}
       <div className="contribhead">
         <div>
-          {fellBack && (
+          {!city && (
             <p className="contribhint">
-              a map draws one city, so with the desk set to all cities this one
-              shows <b className="contribem">{longName}</b>, the busiest
+              every city at once · pick one on the right to open its districts
             </p>
           )}
         </div>
@@ -268,7 +275,7 @@ export default function Coverage() {
         <div className="contribgrid">
           <div className="panel covmappanel">
             {cov.groups.some((g) => g.lat != null)
-              ? <CoverageMap groups={cov.groups} hover={hover} setHover={setHover} />
+              ? <CoverageMap groups={cov.groups} hover={hover} setHover={setHover} minZoom={city ? undefined : 2} />
               // Three ways for the map to be blank, and they are not the same
               // news. Nothing published is a catalog to fill; addresses that
               // name no district is a parse to fix (the bubbles are per
@@ -292,7 +299,7 @@ export default function Coverage() {
               <div className="boardhead">
                 <h3 className="boardtitle">{longName}</h3>
                 <span className="boardpct">
-                  {cov.total} place{cov.total === 1 ? '' : 's'} · {cov.groups.length} district{cov.groups.length === 1 ? '' : 's'}
+                  {cov.total} place{cov.total === 1 ? '' : 's'} · {cov.groups.length} {cov.groups.length === 1 ? unit : units}
                 </span>
               </div>
               {/* Two different nothings, and the screen used to print the
