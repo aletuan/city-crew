@@ -120,25 +120,45 @@ import { defineConfig } from 'vitest/config';
 // in `TripDetailScreen` is what trips this gate next.
 const SCREENS_FLOOR = { lines: 96, statements: 96, branches: 90, functions: 80 };
 
-// ── the components, measured ──
+// ── the components' floor ──
 //
-// Thirty-seven files under `src/components`, fifteen with a test of their
-// own, and until now no number over any of them: the gate's `include` did
-// not name the directory, so the report never printed a row. That left a
-// question nobody could answer — a sheet with no test of its own may be
-// covered end to end by the screen tests that open it, or not at all,
-// and the two look identical from outside.
+// Forty-seven files under `src/components`, and until #623 no number
+// over any of them: the gate's `include` did not name the directory, so
+// the report never printed a row, and a sheet with no test of its own
+// could be covered end to end by the screen tests that open it — or not
+// at all — and the two looked identical from outside.
 //
-// So they are in the `include` now, and deliberately under no threshold.
-// A floor is today's truth rounded down, and this is the first reading
-// of it: 75.31% of lines across the directory, twenty-one files at or
-// near 100 — the sheets and cards the screen tests open — and seven at
-// zero that no test has ever rendered: `AvatarPicker`, `EngagementRing`,
-// `FloatingTabBar`, `MiniMap`, `StartSheet`, `TripCrew`, `reportFlow`,
-// with `tabBarDuck` at 24. Once that has been looked at for a while, the
-// per-file floor the screens carry is the shape to give it, with the
-// files that cannot run in jsdom (the native map, the camera roll)
-// excluded by name the way `IMPURE` does for `lib`.
+// The first reading (#623) said which: 75.31% of lines across the
+// directory, twenty-one files at or near 100, and seven at zero that no
+// test had ever rendered, because every screen that mounts them stands
+// them in with a stub: `AvatarPicker`, `EngagementRing`, `FloatingTabBar`,
+// `MiniMap`, `StartSheet`, `TripCrew`, `reportFlow`, with `tabBarDuck` at
+// 24 and `TastePicker` at 72. Eight of the nine have their own tests now
+// and stand at or near 100 in every column. The ninth is excluded below,
+// by name and for a reason that is not "it has no test".
+//
+// So the directory carries the same per-file floor the screens do, at
+// today's truth rounded down, and each number is one file's:
+// `AddBatchBar` at 94.39% lines and statements, `InviteCard` at 60.86%
+// branches, `ExploreFilterSheet` at 90.9% functions. The branches figure
+// is the one to look at next — `InviteCard` and `PricePill` (71.42) sit
+// well under everything else in that column, and are where a raise goes.
+const COMPONENTS_FLOOR = { lines: 94, statements: 94, branches: 60, functions: 90 };
+
+// The one component the gate does not hold, for the same reason `IMPURE`
+// exists: it cannot run where the tests run. `MiniMap` IS the native map
+// — three guarded `require('react-native-maps')` calls, a platform gate
+// read off `expo-constants`, and the view — and under jsdom the module
+// will not even import: `expo-constants` pulls `expo-modules-core`, which
+// reads an `EventEmitter` off a global that only the Expo runtime sets.
+// Every test that mounts a screen holding it stands it in (`PlacesMap`,
+// `PlaceDetailScreen`, `ExploreScreen`, `StartSheet`), and a test of the
+// real one could only ever watch it render `null`. `mapsModule.ts`, the
+// same three requires for `PlacesMap`, is outside the `*.tsx` include
+// for the same reason.
+const NATIVE_ONLY = [
+  'src/components/MiniMap.tsx',
+];
 
 const IMPURE = [
   'src/lib/candidates.ts', // a React hook; imports Alert and Keyboard
@@ -183,10 +203,10 @@ export default defineConfig({
       // re-rooting the whole gate at the repository took every other file
       // to zero. Naming the exception is better than contorting the gate
       // for one file, or than a silent hole that reads as coverage.
-      // `src/components` is measured and not gated — see "the components,
-      // measured" below.
+      // `src/components` carries its own floor — see "the components'
+      // floor" above.
       include: ['src/lib/*.ts', 'src/lib/data/*.ts', 'src/screens/*.tsx', 'src/components/*.tsx'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', ...IMPURE],
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', ...IMPURE, ...NATIVE_ONLY],
       thresholds: {
         // Each file on its own — see "per file, not on average" above. The
         // pure half was already there in practice, since 100% of an
@@ -199,6 +219,8 @@ export default defineConfig({
         // A floor, not a target: the figures the screens stood at when their
         // tests last grew, rounded down. See "the screens floor" above.
         'src/screens/*.tsx': SCREENS_FLOOR,
+        // The same shape for the components — see "the components' floor".
+        'src/components/*.tsx': COMPONENTS_FLOOR,
       },
     },
   },
