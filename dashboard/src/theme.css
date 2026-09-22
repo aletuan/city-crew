@@ -483,7 +483,27 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    not be read down. */
 .filters { display: flex; flex-direction: column; gap: 18px; }
 .filterset { display: flex; flex-direction: column; gap: 3px; }
-.filterset .filterlabel { margin-bottom: 4px; }
+/* The heading folds the group, so it is a button — full width, because a
+   10.5px word is not a target and the whole row reads as one. */
+.filterhead {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  margin-bottom: 4px; padding: 3px 8px 3px 0;
+  border: none; background: transparent; text-align: left;
+  font: inherit; border-radius: 8px;
+}
+.filterhead:hover .filterlabel { color: var(--text-secondary); }
+.filterhead:hover .filterchev { color: var(--text-secondary); }
+.filterchev {
+  display: inline-flex; margin-left: auto; color: var(--text-tertiary);
+  transition: transform 160ms, color 140ms;
+}
+/* Shut, the chevron points at the heading it would open rather than at
+   the rows that are not there. */
+.filterset.shut .filterchev { transform: rotate(-90deg); }
+/* A shut group still shows the row that is narrowing the list, and that
+   row needs its own air — the 4px under the heading is spacing between a
+   label and the list it introduces, not between a label and one answer. */
+.filterset.shut .filterlist:not(:empty) { margin-top: 2px; }
 .filterlist { display: flex; flex-direction: column; gap: 1px; }
 .filterrow {
   display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
@@ -530,7 +550,6 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   font: inherit; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 8px;
 }
 .filtermore:hover { background: var(--surface-glass); color: #fff; }
-.filtergroup { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .filterlabel {
   font-family: var(--font-data); font-size: 10.5px; font-weight: 700;
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);
@@ -585,13 +604,16 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
   grid-template-areas:
-    "rail bar"
+    ".    bar"
     "rail results";
-  /* Row one is the bar and nothing more. Without this the rail — which
-     spans both rows and is usually the tallest thing on the page — has
-     its surplus height shared out between them, and row one grows by
-     half of it: a 69px hole between the toolbar and the first card that
-     belongs to neither. */
+  /* The rail starts where the results start, not where the toolbar does.
+     The toolbar is about the list — how it is sorted, how it is drawn,
+     what is searched in it — so a panel level with it reads as part of
+     the same row of controls; level with the first card it reads as what
+     it is, the column the cards are filtered by. The corner above it is
+     left empty on purpose: the page head already fills that band across
+     the full width, and the city that used to sit here is now a group
+     inside the rail. */
   grid-template-rows: auto 1fr;
   gap: 0 24px; align-items: start;
 }
@@ -599,10 +621,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .workmain { grid-area: results; min-width: 0; }
 .filterrail {
   grid-area: rail;
-  /* Level with the bar, and staying there once the page scrolls. The bar
-     is sticky too and sits in the other column, so nothing of the rail
-     can hide under it — which retires the measured --worktop-h this
-     offset used to add. */
+  /* It starts beside the first card and then rides up to the topbar as
+     the page scrolls, where it stays. The toolbar is sticky too and sits
+     in the other column, so nothing of the rail can hide under it —
+     which retires the measured --worktop-h this offset used to add. */
   position: sticky; top: calc(var(--topbar-h) + 10px);
   max-height: calc(100vh - var(--topbar-h) - 30px); overflow-y: auto;
   background: var(--bg-elevated); border: 1px solid var(--border-glass-soft);
@@ -1532,7 +1554,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .stat span { font-size: 11.5px; }
   .syncbtn { font-size: 12px; padding: 7px 12px; }
 
-  .filterlabel { flex-basis: 100%; }
+  /* Written for the rail's old wrapped chip rows. Left unscoped it now
+     catches the rail's heading too — a flex row whose label does not
+     shrink — and pushes the chevron off the end of it. */
+  .herolangs .filterlabel { flex-basis: 100%; }
 
   .resultsbar { flex-wrap: wrap; }
   .resultscontrols { flex-wrap: wrap; width: 100%; }
