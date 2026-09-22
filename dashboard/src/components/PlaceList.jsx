@@ -6,7 +6,7 @@ import { CATEGORY_KEYS, CATEGORY_LABEL, CATEGORY_STYLE } from '../categories.js'
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { THREADS_FILTERS } from '../lib/threads.js';
 import { CategoryIcon } from '../icons.jsx';
-import { useCity, useProgress, useToast } from '../App.jsx';
+import { CityPicker, useCity, useProgress, useToast } from '../App.jsx';
 
 const STATUSES = ['pending', 'approved', 'flagged'];
 // The params the rail owns, and so the ones the badge counts, the chip row
@@ -419,6 +419,14 @@ export default function PlaceList() {
     <>
       <div className="worksplit">
         {filtersOpen && <div className="sheetback" onClick={() => setFiltersOpen(false)} />}
+        {/* The workspace city, in the column with the other things that
+            narrow the list. It used to be a chip row across the page head,
+            which cost a full-width row and left this corner of the split
+            empty once the toolbar moved over the results. Scope above
+            filters reads in the order the question is asked — which city,
+            then which of its places — and the menu lines up with the
+            search box across the gap. */}
+        <div className="workscope"><CityPicker /></div>
         {/* Row one of the split, over the results column only.
 
             It was full width above the split, so the chips naming the live

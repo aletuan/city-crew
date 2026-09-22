@@ -22,7 +22,6 @@ const CITY_KEY = 'citycrew.dashboard.city';
    localStorage here and in a `?city=` param there, so picking Hà Nội on
    Places and walking to Contributors showed all cities, under a page head
    that was still counting Hà Nội. */
-const CITY_SCOPED = ['/', '/analytics/contributors', '/analytics/coverage'];
 // The stored value for "no city filter". `city` in context is null then —
 // every query that keys off city?.id simply drops its filter, which is what
 // "aggregate across all cities" means everywhere the desk counts anything.
@@ -47,6 +46,41 @@ const tabCls = ({ isActive }) => `tab-item${isActive ? ' active' : ''}`;
  * they would otherwise have to invent a scope; instead they ask, and the
  * answer sets the workspace city the whole desk then follows.
  */
+/**
+ * The workspace scope, as one control.
+ *
+ * It was a row of chips: one press instead of two, which is the right
+ * trade while the row is short. It is not going to stay short — the
+ * catalog has picked up Vũng Tàu, Hải Phòng and Melbourne since the chips
+ * were written, and nine of them already wrap and eat a full page-head
+ * row on the way to eating two. A menu costs the second press and then
+ * stops costing anything as the list grows.
+ *
+ * One component rather than a copy per screen, because the abbreviation,
+ * the "All cities" option and the empty-list fallback were three things
+ * that had to agree and were written out three times.
+ *
+ * No label of its own: it sits on the line the screen's other controls
+ * are already on, and a caption over it would push it off that line and
+ * make the column it sits in top-heavy. The options name cities, which is
+ * the only thing it could say.
+ */
+export function CityPicker({ allowAll = true }) {
+  const { cities, city, setCity } = useCity();
+  const list = cities.length ? cities : [{ id: 'hcmc' }];
+  return (
+    <select
+      className="cityselect"
+      aria-label="City"
+      value={city?.id ?? ALL}
+      onChange={(e) => setCity(e.target.value)}
+    >
+      {allowAll && <option value={ALL}>All cities</option>}
+      {list.map((c) => <option key={c.id} value={c.id}>{chipLabel(c)}</option>)}
+    </select>
+  );
+}
+
 export function CityGate({ children }) {
   const { cities, city, setCity } = useCity();
   if (city) return children;
@@ -54,13 +88,19 @@ export function CityGate({ children }) {
     <div className="panel citygate">
       <h3>One city at a time</h3>
       <p>This screen works on a single city. Pick one — the whole desk follows.</p>
-      <div className="cityswitch">
+      {/* The same menu as everywhere else, without "All cities" — that
+          is the answer this screen cannot take, which is why it is here. */}
+      <select
+        className="cityselect"
+        aria-label="City"
+        defaultValue=""
+        onChange={(e) => setCity(e.target.value)}
+      >
+        <option value="" disabled>Choose a city…</option>
         {cities.map((c) => (
-          <button key={c.id} className="chip" onClick={() => setCity(c.id)}>
-            {chipLabel(c)}
-          </button>
+          <option key={c.id} value={c.id}>{chipLabel(c)}</option>
         ))}
-      </div>
+      </select>
     </div>
   );
 }
@@ -502,46 +542,6 @@ export default function App() {
                   <UnfiledBell places={progress?.unclassified} />
                 </div>
               </div>
-              {CITY_SCOPED.includes(location.pathname) && (
-                <div className="pagehead-scope">
-                  {/* The workspace scope, where the work is: a chip row
-                      under the title, with the one option the old top-bar
-                      pill could not offer — no filter at all. */}
-                  <div className="cityswitch" role="group" aria-label="City">
-                    <button
-                      className={`chip${city ? '' : ' on'}`}
-                      onClick={() => setCity(ALL)}
-                    >
-                      All cities
-                    </button>
-                    {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
-                      <button
-                        key={c.id}
-                        className={`chip${city?.id === c.id ? ' on' : ''}`}
-                        onClick={() => setCity(c.id)}
-                      >
-                        {chipLabel(c)}
-                      </button>
-                    ))}
-                  </div>
-                  {/* The same choice as the chips, for the width where
-                      nine of them wrap to a second row. Both are in the
-                      markup and CSS shows one: a native menu is the
-                      control a phone already knows, and the chips stay
-                      where they are faster — one press instead of two. */}
-                  <select
-                    className="cityselect"
-                    aria-label="City"
-                    value={city?.id ?? ALL}
-                    onChange={(e) => setCity(e.target.value)}
-                  >
-                    <option value={ALL}>All cities</option>
-                    {(cities.length ? cities : [{ id: 'hcmc' }]).map((c) => (
-                      <option key={c.id} value={c.id}>{chipLabel(c)}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
                 <Outlet />
                 {toast && <div className="toast" role="status">{toast}</div>}

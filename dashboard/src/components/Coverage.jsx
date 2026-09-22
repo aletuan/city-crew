@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
-import { chipLabel, useCity } from '../App.jsx';
+import { CityPicker, chipLabel, useCity } from '../App.jsx';
 import {
   buildCoverage, fitView, lngToX, latToY, xToLng, yToLat, bubbleRadius,
 } from '../coverage.js';
@@ -242,16 +242,19 @@ export default function Coverage() {
             )}
           </p>
         </div>
-        {/* The counts stay; the chips do not. They were a second city
-            control disagreeing with the one at the top of the page — but
-            what each city holds is this screen's subject, not its
-            navigation, so it is read out instead. */}
+        {/* The scope, then what each city holds. The counts were never
+            a control — what a city holds is this screen's subject, not its
+            navigation — so they are read out under the menu that does the
+            choosing rather than competing with it. */}
+        <div className="covscope">
+        <CityPicker />
         <div className="covcounts">
           {cities.map((c) => (
             <span key={c.id} className={c.id === city ? 'on' : ''}>
               {chipLabel(c)} <b>{perCity ? (perCity[c.id]?.length ?? 0) : '–'}</b>
             </span>
           ))}
+        </div>
         </div>
       </div>
 

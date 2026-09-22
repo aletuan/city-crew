@@ -239,23 +239,30 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 /* The workspace city, as a chip row beside the page title — where the old
    top-bar <select> lived until "All cities" needed a seat a scope pill
    could not offer. Same chips as the analytics screens. */
-.pagehead-scope { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.cityswitch { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* The workspace scope. A menu at every width now, not chips above 960px:
+   the city list grows with the catalog and a row of nine already wrapped,
+   so the press it costs is paid once and the row it costs is saved for
+   good.
+   No caption over it — it sits on the line the screen's other controls
+   are already on. The explicit height is what puts it on that line: a
+   select keeps a minimum content box of its own even under
+   `appearance: none`, so padding alone left it 5px taller than the search
+   box beside it. 31px is that box, measured. */
 .cityselect {
-  display: none;
+  display: block; width: auto; height: 31px;
   appearance: none; -webkit-appearance: none;
   border: 1px solid var(--border-control); background-color: var(--surface-glass);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%23ffffff' stroke-opacity='0.6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 12px center; background-size: 10px 6px;
   color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 700;
-  padding: 7px 34px 7px 14px; border-radius: var(--radius-pill); cursor: pointer;
+  padding: 0 34px 0 14px; border-radius: var(--radius-pill); cursor: pointer;
 }
 
 /* The ask that replaces a guess: screens that write to one city, opened
    while no city is selected. */
 .citygate { max-width: 480px; margin: 40px auto; text-align: center; }
 .citygate p { color: var(--text-tertiary); font-size: 13.5px; margin: 0 0 16px; }
-.citygate .cityswitch { justify-content: center; }
+.citygate .cityselect { max-width: 260px; margin: 0 auto; text-align: center; }
 
 /* ── the unfiled notice ──
    A bell in the bar with a count, and a panel naming the places behind it.
@@ -568,11 +575,17 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
   grid-template-areas:
-    ".    bar"
-    "rail results";
+    "scope bar"
+    "rail  results";
   gap: 0 24px; align-items: start;
 }
 .workbar { grid-area: bar; min-width: 0; }
+/* Level with the search box across the gap, not with the top of the bar:
+   the menu and the box are the same kind of control and read as one line.
+   Full width here because the column has one, and a control floating at
+   its own width in a 236px column reads as debris. */
+.workscope { grid-area: scope; min-width: 0; padding-top: 12px; }
+.workscope .cityselect { width: 100%; }
 .workmain { grid-area: results; min-width: 0; }
 .filterrail {
   grid-area: rail;
@@ -1232,6 +1245,12 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 18px; flex-wrap: wrap; margin-bottom: 20px;
 }
+/* The lead takes the slack and the scope keeps its width. Without a basis
+   the lead's subtitle ran the full row on its own and pushed Coverage's
+   scope — menu over counts, ~370px of it — onto a second line, where it
+   landed under the title instead of opposite it. */
+.contribhead > :first-child { flex: 1 1 420px; min-width: 0; }
+.contribhead > .cityselect, .contribhead > .covscope { flex: 0 0 auto; }
 .contribhead h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
 /* The two gate words in the subtitle wear the data voice: they are column
    values, quoted, not English. */
@@ -1241,8 +1260,9 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 /* What each city holds, read out rather than offered: Coverage's city
    chips were a second control for a choice the page head already makes,
    but the counts on them are the screen's own subject. */
+.covscope { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 0; }
 .covcounts {
-  display: flex; flex-wrap: wrap; gap: 4px 16px; padding-top: 8px;
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 16px; padding-top: 8px;
   font-family: var(--font-data); font-size: 11.5px; color: var(--text-tertiary);
 }
 .covcounts b { font-weight: 700; color: var(--text-secondary); }
@@ -1455,9 +1475,6 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
      label spelled out at every phone width down to 320. */
   .topbar-inner { flex-wrap: nowrap; gap: 8px; padding: 12px; }
   .pagehead { flex-wrap: wrap; margin-bottom: 14px; }
-  /* Nine chips wrap to two rows here and eat the screen the list needs. */
-  .cityswitch { display: none; }
-  .cityselect { display: block; }
   .pagetitle { font-size: 22px; }
   .pagesub { font-size: 12.5px; }
   /* The numbers take the full width under the title and spread across
