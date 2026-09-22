@@ -168,7 +168,33 @@ export function niceMax(value, segments = 3) {
 }
 
 /**
- * The guide set with one id added or taken out — a new Set, never the one
+ * What a grant covers, read for one person and one city.
+ *
+ * The grants arrive as a Map of user id to a Set of city ids, in which
+ * `null` is a member like any other and means every city — the shape the
+ * table itself uses, kept rather than flattened so the screen can tell
+ * "a guide of Đà Nẵng" from "a guide everywhere" without a second query.
+ *
+ * `city` is null when the desk is set to all cities. That is not the same
+ * question as "which cities is this person a guide of": with no city in
+ * hand the box can only speak for the everywhere grant, so that is the
+ * only thing it reports.
+ *
+ * `locked` is the case the box cannot express. Somebody granted every
+ * city is a guide here too, so the box is ticked — but unticking it while
+ * looking at one city would have to either revoke the lot (not what the
+ * click looks like) or do nothing (a box that ignores you). It says so in
+ * its title instead, and refuses the click.
+ */
+export function guideScope(grants, id, city) {
+  const set = grants?.get(id);
+  const everywhere = !!set?.has(null);
+  const here = city != null && !!set?.has(city);
+  return { on: everywhere || here, everywhere, locked: everywhere && city != null };
+}
+
+/**
+ * The grants with one person's scope changed — a new Map, never the one
  * handed in.
  *
  * Extracted here rather than written inline in the screen for the reason
@@ -179,12 +205,21 @@ export function niceMax(value, segments = 3) {
  * second one backwards leaves a box that lies about what the database
  * says.
  *
- * `null` for the set covers the moment before the grants have loaded,
+ * Turning it off with no city in hand clears every row for that person,
+ * city grants included. It is the only reading that matches the control:
+ * the box was ticked because they are a guide, and it has just been
+ * unticked.
+ *
+ * `null` for the map covers the moment before the grants have loaded,
  * when nothing is known and a click should still be able to describe what
  * it wants.
  */
-export function withGuide(guides, id, on) {
-  const next = new Set(guides ?? []);
-  if (on) next.add(id); else next.delete(id);
+export function withGuide(grants, id, city, on) {
+  const next = new Map(grants ?? []);
+  const set = new Set(next.get(id) ?? []);
+  if (on) set.add(city ?? null);
+  else if (city == null) set.clear();
+  else set.delete(city);
+  if (set.size) next.set(id, set); else next.delete(id);
   return next;
 }

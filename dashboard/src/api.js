@@ -440,40 +440,60 @@ export const api = {
   },
 
   /**
-   * Which accounts the desk has made local guides.
+   * Which accounts the desk has made local guides, and where.
    *
-   * A set of ids, not rows: the contributors board already holds everything
-   * else about these people — handle, name, what they have added — and the
-   * only fact missing from it is this one bit. Read whole rather than per
-   * row, because the board draws ten at a time and ten round trips to
-   * answer ten yes/no questions is ten times the wrong shape.
+   * A Map of user id to a Set of city ids, in which `null` is a member
+   * meaning every city — the shape the table uses, kept rather than
+   * flattened to a boolean so the board can tell a guide of one city from
+   * a guide of all of them. It was a Set of ids while the grant was
+   * global; see `20260922100000_local_guides_per_city.sql`.
+   *
+   * Read whole rather than per row, because the board draws ten at a time
+   * and ten round trips to answer ten questions is ten times the wrong
+   * shape.
    *
    * `editors manage local guides` is what lets the desk see all of them;
    * an app account reading this same table sees only its own row.
    */
   localGuides: async () => {
-    const rows = db(await supabase.from('local_guides').select('user_id'));
-    return new Set(rows.map((r) => r.user_id));
+    const rows = db(await supabase.from('local_guides').select('user_id, city_id'));
+    const byUser = new Map();
+    for (const r of rows) {
+      if (!byUser.has(r.user_id)) byUser.set(r.user_id, new Set());
+      byUser.get(r.user_id).add(r.city_id);
+    }
+    return byUser;
   },
 
   /**
-   * Grant or take back the role.
+   * Grant or take back the role, for one city or for all of them.
    *
-   * Two verbs behind one boolean, because the caller has a checkbox and a
-   * checkbox has one state. `upsert` rather than `insert` so a second click
-   * on an already-granted account is harmless rather than a duplicate-key
-   * error — the desk should not be able to break anything by being fast.
+   * `cityId` null is the all-cities grant — one row with a null `city_id`,
+   * which covers every city including ones added later.
+   *
+   * Granting deletes the row it is about to write rather than upserting
+   * it. The two shapes of uniqueness are partial indexes ("one everywhere
+   * row per person", "one row per person per city") and a partial index
+   * cannot be named as an ON CONFLICT target, so there is no upsert to
+   * write; deleting first is what keeps a second click harmless.
+   *
+   * Revoking with no city in hand takes every row for that person, city
+   * grants included — the box was ticked because they are a guide, and it
+   * has just been unticked.
    *
    * Nothing is passed for `added_by`: the column defaults to `auth.uid()`,
    * so the database records which editor did this from the request's own
    * credentials. See `20260919180000_local_guide_granted_by.sql`.
    */
-  setLocalGuide: async (userId, on) => {
+  setLocalGuide: async (userId, on, cityId = null) => {
+    const scoped = (q) => (cityId == null ? q.is('city_id', null) : q.eq('city_id', cityId));
     if (on) {
-      db(await supabase.from('local_guides')
-        .upsert({ user_id: userId }, { onConflict: 'user_id' }));
-    } else {
+      db(await scoped(supabase.from('local_guides').delete().eq('user_id', userId)));
+      db(await supabase.from('local_guides').insert({ user_id: userId, city_id: cityId }));
+    } else if (cityId == null) {
       db(await supabase.from('local_guides').delete().eq('user_id', userId));
+    } else {
+      db(await scoped(supabase.from('local_guides').delete().eq('user_id', userId)));
     }
     return on;
   },
