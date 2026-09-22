@@ -373,20 +373,20 @@ export default function Contributors() {
                 >
                   <span className="boardrank">{i + 1}</span>
                   <span className="boarddot" style={{ background: SERIES_COLORS[i] }} />
-                  <span className="boardhandle">@{s.handle}</span>
-                  {/* Truncated when the row runs out of width, so the
-                      whole of it is on the element itself — a cut-off fact
-                      with no way to read the rest is the bug, not the fix. */}
+                  {/* The breakdown is not drawn. On one city it said the
+                      total again in smaller type — `buildBoard` has already
+                      scoped the rows, so there is only ever one term and it
+                      equals the count beside it. On all cities it said
+                      something real and said it at ruinous length: six
+                      terms today, and one more every time the catalog
+                      takes a city. It stays on the name, where a hover
+                      answers "where do their places are" without spending
+                      a line of the panel on the answer nobody asked. */}
                   <span
-                    className="boardcities"
+                    className="boardhandle"
                     title={s.byCity.map((c) => `${c.key} ${c.count}`).join(' · ')}
                   >
-                    {s.byCity.map((c, n) => (
-                      <React.Fragment key={c.key}>
-                        {n > 0 && <span className="dotsep"> · </span>}
-                        {c.key} <b>{c.count}</b>
-                      </React.Fragment>
-                    ))}
+                    @{s.handle}
                   </span>
                   <b className="boardtotal">{s.total}</b>
                   {/* The one thing on this row that is a control rather than
