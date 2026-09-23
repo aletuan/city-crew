@@ -1062,6 +1062,17 @@ describe('PlaceDetailScreen — opening hours (Wednesday 10:00, Hanoi)', () => {
     expect(screen.queryByText('Closed today')).toBeNull();
   });
 
+  // And the city's clock, not Vietnam's. The instant that found the bug:
+  // 06:56Z is 16:56 in Melbourne, where a café open 3 PM to 10 PM has
+  // five hours left — and 13:56 in Hanoi, where the app used to read it
+  // and say "opens 15:00".
+  it('reads a Melbourne place on Melbourne’s clock', () => {
+    vi.setSystemTime(new Date('2026-09-22T06:56:00Z'));
+    state.city = { id: 'melbourne', tz: 'Australia/Melbourne' };
+    show(place({ city_id: 'melbourne', opening_hours: ['Monday: Closed', ...week('3:00 – 10:00 PM').slice(1)] }));
+    expect(screen.getByText('Open now · until 22:00')).toBeTruthy();
+  });
+
   it('keeps the Hours row but no open-now line for hours it cannot read', () => {
     show(place({ opening_hours: week('by appointment') }));
     expect(screen.getByText('Hours')).toBeTruthy();
