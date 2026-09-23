@@ -279,6 +279,18 @@ describe('the cards', () => {
     expect(later.querySelectorAll('[data-icon="paw"]')).toHaveLength(0);
   });
 
+  // The cards rise into place in order. What matters here is not how
+  // that looks — this environment cannot say — but that it *finishes*:
+  // an arrival that never runs leaves the answer at zero opacity, and
+  // the screen is then blank with the content technically present.
+  it('settles the risen cards at full opacity and no offset', () => {
+    renderScreen();
+    const wrap = screen.getAllByTestId('plan-card-best')[0].parentElement as HTMLElement;
+    const style = wrap.getAttribute('style') ?? '';
+    expect(style).toContain('opacity: 1');
+    expect(style).toContain('translateY(0px)');
+  });
+
   it('summarises count, hours, distance and per-person spend, in thousands or millions', () => {
     renderScreen();
     expect(screen.getByText('2 stops · ~3h · 350 m · ~250k ₫')).toBeTruthy();

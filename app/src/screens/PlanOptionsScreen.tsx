@@ -22,12 +22,13 @@
 // however many that is, with a line saying so. The one thing it must never
 // do is pad.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  AmbientWarmth, Card, GradientCta, PressableScale, Screen, useReducedMotion, useTabBarClearance,
+  AmbientWarmth, Card, GradientCta, PressableScale, Screen, useArrival, useReducedMotion,
+  useTabBarClearance,
 } from '../components/ui';
 import {
   cachedNarration, narratableOf, NARRATION_HOLD_MS, prefetchNarration,
@@ -453,6 +454,23 @@ function heading(
 }
 
 /**
+ * How the list arrives.
+ *
+ * `CARD_IN_MS` is what one card's rise takes; `CARD_STEP_MS` is the gap
+ * between them. The stagger only ever delays the *later* cards — the
+ * first is fully readable inside 280ms, which is the rule this pacing is
+ * built on. The reader has just waited five seconds for these; the
+ * reveal is allowed to be a sequence, but the answer is not allowed to
+ * be withheld while it plays.
+ *
+ * Three cards therefore finish at 140 + 280 = 420ms, and their marks by
+ * about 540. The reference this was taken from spent 1.25 seconds on the
+ * same moment, most of it on a blank screen.
+ */
+const CARD_IN_MS = 280;
+const CARD_STEP_MS = 70;
+
+/**
  * Where the day starts, in the mark the reader has been watching.
  *
  * The screen before this one spends five seconds on a paw inside a ring,
@@ -473,19 +491,10 @@ function heading(
  */
 function StartMark({ nth }: { nth: number }) {
   const still = useReducedMotion();
-  const land = useRef(new Animated.Value(still ? 1 : 0)).current;
-  useEffect(() => {
-    if (still) { land.setValue(1); return; }
-    const run = Animated.timing(land, {
-      toValue: 1,
-      duration: 300,
-      delay: nth * 70,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    });
-    run.start();
-    return () => run.stop();
-  }, [land, nth, still]);
+  // `CARD_IN` behind its own card's delay: the mark lands into a card
+  // that has arrived, rather than hanging in the space where one is
+  // about to be.
+  const land = useArrival(260, nth * CARD_STEP_MS + CARD_IN_MS / 2, still);
   return (
     <Animated.View
       style={[
@@ -522,98 +531,113 @@ function PlanCard({ plan, name, nth, onPress }: {
   const best = !!badge.star;
   const total = plan.costVnd.food + plan.costVnd.activity + plan.costVnd.transport;
   const km = plan.legs.reduce((n, l) => n + (l?.km ?? 0), 0);
+  // The cards rise into place in order, which is the one thing worth
+  // taking from the reference video: a list that assembles reads as a
+  // list that was *made*, where three cards appearing at once reads as a
+  // page that was always there.
+  const rise = useArrival(CARD_IN_MS, nth * CARD_STEP_MS, useReducedMotion());
 
   return (
-    <PressableScale
-      scaleTo={0.985}
-      onPress={onPress}
-      containerStyle={s.cardWrap}
-      // A card is the screen's main control, and without these VoiceOver
-      // read it as loose text with no hint it could be tapped.
-      accessibilityRole="button"
-      accessibilityLabel={`${name}, ${badgeText}`}
-      // The highlight is a border, which nothing but a pixel can see; the
-      // id names the card that wears it so the rule can be pinned.
-      testID={best ? 'plan-card-best' : undefined}
+    <Animated.View
+      style={{
+        opacity: rise,
+        // 14pt, and up rather than in from the side. The cards are a
+        // list, and a list assembles downward; sliding them in
+        // horizontally would say "these came from somewhere else".
+        transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
+      }}
     >
-      <Card style={[s.card, best && s.cardBest]}>
-        <View style={s.head}>
-          {/* The model's name when the sketch screen managed to fetch
-              one, the areas when it did not. Resolved on the screen, from
-              `titles`, which is captured per set of plans and never
-              changes under the reader. */}
-          <Text style={s.name} numberOfLines={1}>{name}</Text>
-          {best ? (
-            <LinearGradient {...gradAI} style={s.badgeOn}>
-              <Ionicons name="star" size={11} color={colors.accentInk} />
-              <Text style={s.badgeOnText}>{badgeText}</Text>
-            </LinearGradient>
-          ) : (
-            <View style={s.badge}>
-              <Text style={s.badgeText}>{badgeText}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* The leg lives *inside* the stop's own column, and that is
-            structural rather than cosmetic. The rail used to be
-            `height: 34` — a number measured once against a one-line row and
-            then load-bearing, so any change to the spacing broke the
-            timeline into disconnected stubs. Nested this way the dot column
-            spans the name, the meta line and the leg together, and the rail
-            is `flex: 1`: it reaches the next dot whatever is between them,
-            and nobody has to remember to re-measure it. */}
-        {plan.stops.map((st, i) => (
-          <View key={st.place.slug} style={s.stop}>
-            <Text style={s.time}>{clockOf(st.arriveMin)}</Text>
-            <View style={s.dotCol}>
-              {i === 0 ? <StartMark nth={nth} /> : <View style={s.dot} />}
-              {i + 1 < plan.stops.length && <View style={s.rail} />}
-            </View>
-            <View style={s.body}>
-              <Text style={s.stopName} numberOfLines={1}>{st.place.name_en}</Text>
-              {/* The district under the name rather than in a column beside
-                  it, which is how the editor and the saved trip already
-                  print it. Right-aligned it took 96pt off every name on the
-                  one screen where the names *are* the choice — and half
-                  this catalog has a name longer than what was left. It also
-                  makes room for the dwell, which this screen never showed
-                  at all while both screens after it did. */}
-              <Text style={s.stopMeta} numberOfLines={1}>
-                {summaryLine([st.place.neighborhood_en, fmtMinutes(st.dwellMin, lang)])}
-              </Text>
-              {/* Dropped rather than guessed when a stop has no coordinates
-                  — `legBetween` returns null and the row would be a number
-                  nobody measured. */}
-              {plan.legs[i] && (
-                <View style={s.legRow}>
-                  <Ionicons
-                    name={plan.legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
-                    size={12}
-                    color={colors.textTertiary}
-                  />
-                  <Text style={s.legText}>
-                    {fmtDistance(plan.legs[i]!.km)} · ≈ {fmtMinutes(plan.legs[i]!.minutes, lang)}
-                  </Text>
-                </View>
-              )}
-            </View>
+      <PressableScale
+        scaleTo={0.985}
+        onPress={onPress}
+        containerStyle={s.cardWrap}
+        // A card is the screen's main control, and without these VoiceOver
+        // read it as loose text with no hint it could be tapped.
+        accessibilityRole="button"
+        accessibilityLabel={`${name}, ${badgeText}`}
+        // The highlight is a border, which nothing but a pixel can see; the
+        // id names the card that wears it so the rule can be pinned.
+        testID={best ? 'plan-card-best' : undefined}
+      >
+        <Card style={[s.card, best && s.cardBest]}>
+          <View style={s.head}>
+            {/* The model's name when the sketch screen managed to fetch
+                one, the areas when it did not. Resolved on the screen, from
+                `titles`, which is captured per set of plans and never
+                changes under the reader. */}
+            <Text style={s.name} numberOfLines={1}>{name}</Text>
+            {best ? (
+              <LinearGradient {...gradAI} style={s.badgeOn}>
+                <Ionicons name="star" size={11} color={colors.accentInk} />
+                <Text style={s.badgeOnText}>{badgeText}</Text>
+              </LinearGradient>
+            ) : (
+              <View style={s.badge}>
+                <Text style={s.badgeText}>{badgeText}</Text>
+              </View>
+            )}
           </View>
-        ))}
 
-        <View style={s.foot}>
-          <Text style={s.summary}>
-            {summaryLine([
-              stopCount(plan.stops.length, t),
-              `~${hours(plan.windowMin)}`,
-              km > 0 ? fmtDistance(km) : null,
-              total > 0 ? `~${money(total)}` : null,
-            ])}
-          </Text>
-        </View>
+          {/* The leg lives *inside* the stop's own column, and that is
+              structural rather than cosmetic. The rail used to be
+              `height: 34` — a number measured once against a one-line row and
+              then load-bearing, so any change to the spacing broke the
+              timeline into disconnected stubs. Nested this way the dot column
+              spans the name, the meta line and the leg together, and the rail
+              is `flex: 1`: it reaches the next dot whatever is between them,
+              and nobody has to remember to re-measure it. */}
+          {plan.stops.map((st, i) => (
+            <View key={st.place.slug} style={s.stop}>
+              <Text style={s.time}>{clockOf(st.arriveMin)}</Text>
+              <View style={s.dotCol}>
+                {i === 0 ? <StartMark nth={nth} /> : <View style={s.dot} />}
+                {i + 1 < plan.stops.length && <View style={s.rail} />}
+              </View>
+              <View style={s.body}>
+                <Text style={s.stopName} numberOfLines={1}>{st.place.name_en}</Text>
+                {/* The district under the name rather than in a column beside
+                    it, which is how the editor and the saved trip already
+                    print it. Right-aligned it took 96pt off every name on the
+                    one screen where the names *are* the choice — and half
+                    this catalog has a name longer than what was left. It also
+                    makes room for the dwell, which this screen never showed
+                    at all while both screens after it did. */}
+                <Text style={s.stopMeta} numberOfLines={1}>
+                  {summaryLine([st.place.neighborhood_en, fmtMinutes(st.dwellMin, lang)])}
+                </Text>
+                {/* Dropped rather than guessed when a stop has no coordinates
+                    — `legBetween` returns null and the row would be a number
+                    nobody measured. */}
+                {plan.legs[i] && (
+                  <View style={s.legRow}>
+                    <Ionicons
+                      name={plan.legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
+                      size={12}
+                      color={colors.textTertiary}
+                    />
+                    <Text style={s.legText}>
+                      {fmtDistance(plan.legs[i]!.km)} · ≈ {fmtMinutes(plan.legs[i]!.minutes, lang)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          ))}
 
-      </Card>
-    </PressableScale>
+          <View style={s.foot}>
+            <Text style={s.summary}>
+              {summaryLine([
+                stopCount(plan.stops.length, t),
+                `~${hours(plan.windowMin)}`,
+                km > 0 ? fmtDistance(km) : null,
+                total > 0 ? `~${money(total)}` : null,
+              ])}
+            </Text>
+          </View>
+
+        </Card>
+      </PressableScale>
+    </Animated.View>
   );
 }
 

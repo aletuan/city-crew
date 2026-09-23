@@ -235,6 +235,46 @@ export function useLoop(ms: number, still: boolean, mode: 'linear' | 'inOut' = '
   return v;
 }
 
+/**
+ * A value that runs 0 → 1 once, when the thing it animates first appears.
+ *
+ * The counterpart to `useLoop`: that one is for motion that says "still
+ * working", this one for motion that says "here". Four of these had been
+ * written by hand — two in the sketch screen's feed, two more in the plan
+ * list — as the same `Animated.Value`, the same `useEffect`, the same
+ * `useNativeDriver`, differing only in the numbers and in which property
+ * they drove. The timing is what they shared, so the timing is what this
+ * holds; the caller still says what moves, by interpolating.
+ *
+ * `still` parks it at 1 rather than at 0. An arrival held still has to be
+ * the arrived state — a reader who asked for less motion wants the
+ * content, not the absence of it, which is the way this is easy to get
+ * backwards.
+ *
+ * It does not re-run. A component that should arrive again is one that
+ * remounted, and a `key` says that more honestly than a dependency does.
+ */
+export function useArrival(ms: number, delay: number, still: boolean) {
+  const v = useRef(new Animated.Value(still ? 1 : 0)).current;
+  useEffect(() => {
+    if (still) { v.setValue(1); return; }
+    const run = Animated.timing(v, {
+      toValue: 1,
+      duration: ms,
+      delay,
+      // Out, not inOut: a thing arriving decelerates into its place. An
+      // ease-in start makes the same move look like it is being pushed.
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    run.start();
+    return () => run.stop();
+    // Mount only — see the note above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return v;
+}
+
 /** Soft pulsing placeholder shown while content loads. */
 export function Skeleton({ style }: { style?: StyleProp<ViewStyle> }) {
   const pulse = useRef(new Animated.Value(0.45)).current;
