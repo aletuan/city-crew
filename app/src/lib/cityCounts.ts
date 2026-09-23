@@ -33,6 +33,7 @@ export function countsByCity(
     savedOnly: boolean;
     isSaved: (slug: string) => boolean;
     now: Date;
+    tz: (cityId: string | null | undefined) => string;
   },
 ): Record<string, number> {
   const out: Record<string, number> = {};

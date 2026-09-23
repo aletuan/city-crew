@@ -113,6 +113,7 @@ export function derivedTitle(
 export function factLine(
   stop: Narratable,
   now: Date,
+  tz: string,
   t: (en: string, vi: string, ja: string) => string,
 ): string {
   const bits: string[] = [];
@@ -122,7 +123,7 @@ export function factLine(
       ? `${Math.round(stop.km * 1000)} m`
       : `${Math.round(stop.km * 10) / 10} km`);
   }
-  const state = openState(stop.openingHours, now);
+  const state = openState(stop.openingHours, now, tz);
   // `null` from `openState` means the hours are unknown, which is not the
   // same as closed and must not be printed as either.
   if (state?.open && state.untilMin != null) {

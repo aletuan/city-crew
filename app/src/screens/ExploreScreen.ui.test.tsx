@@ -179,6 +179,11 @@ const collection = (slug: string, members: string[], over: Partial<Collection> =
 
 const hanoi: City = { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' };
 
+// Google's weekday strings, the shape `opening_hours` holds.
+const week = (value: string) =>
+  ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    .map((day) => `${day}: ${value}`);
+
 type NavSpy = Nav & {
   navigate: ReturnType<typeof vi.fn>;
   parentNavigate: ReturnType<typeof vi.fn>;
@@ -643,10 +648,6 @@ describe('the category filter', () => {
 });
 
 describe('sort and filter', () => {
-  const week = (value: string) =>
-    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-      .map((day) => `${day}: ${value}`);
-
   it('opens beside the Places heading and applies rating order', async () => {
     state.places.data = [
       place('low', { rating: 3.8 }),
@@ -673,6 +674,32 @@ describe('sort and filter', () => {
     await act(async () => { fireEvent.click(screen.getByText('Show 1 place')); });
     expect(cardNames()).toHaveLength(1);
     expect(cardNames()[0]).toContain('Place open');
+  });
+
+  // Each place is read on its own city's clock, not the chosen city's
+  // and not Vietnam's: two places with the same hours, 3 PM to 10 PM, at
+  // 06:56Z — 16:56 in Melbourne, open; 13:56 in Hanoi, shut.
+  it('reads Open now on each place’s own city clock', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-09-22T06:56:00Z'));
+      state.cities = [
+        { id: 'hanoi', short_en: 'Hanoi', tz: 'Asia/Ho_Chi_Minh' },
+        { id: 'melbourne', short_en: 'Melbourne', tz: 'Australia/Melbourne' },
+      ];
+      state.places.data = [
+        place('kumo', { city_id: 'melbourne', opening_hours: week('3:00 – 10:00 PM') }),
+        place('twin', { city_id: 'hanoi', opening_hours: week('3:00 – 10:00 PM') }),
+      ];
+      render(<ExploreScreen navigation={nav()} />);
+      fireEvent.click(screen.getByTestId('explore-filter'));
+      fireEvent.click(screen.getByText('Open now'));
+      await act(async () => { fireEvent.click(screen.getByText('Show 1 place')); });
+      expect(cardNames()).toHaveLength(1);
+      expect(cardNames()[0]).toContain('Place kumo');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('asks a guest to sign in when Bookmarked only is tapped', async () => {
@@ -962,6 +989,31 @@ describe('the map', () => {
     expect(pill().textContent).toBe('2');
   });
 
+  // And under Open now, each of those cities is counted on its own clock:
+  // at 06:56Z a Melbourne place open 3 PM to 10 PM is open (16:56 there),
+  // and would have counted as shut on Vietnam's (13:56).
+  it('counts another city’s open places on that city’s clock', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-09-22T06:56:00Z'));
+      state.cities = [
+        { ...hanoi, tz: 'Asia/Ho_Chi_Minh' },
+        { id: 'melbourne', short_en: 'Melbourne', short_vi: 'Melbourne', short_ja: 'メルボルン', center_lat: -37.81, center_lng: 144.96, tz: 'Australia/Melbourne' } as City,
+      ];
+      state.index = [{ slug: 'kumo', city_id: 'melbourne', categories: ['cafes'], vibe_tags: [], opening_hours: week('3:00 – 10:00 PM') }];
+      state.places.data = [place('a', { lat: 21, lng: 105, opening_hours: week('Open 24 hours') })];
+      render(<ExploreScreen navigation={nav()} />);
+      await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+      const pill = () => document.querySelector('[data-slug="city-melbourne"]')!;
+      await waitFor(() => expect(pill().textContent).toBe('1'));
+
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+      expect(pill().textContent).toBe('1');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // The tab bar's only way onto this screen is a scroll-up — the map
   // never scrolls — so a reader who ducked it on the list and then
   // switched to the map must not be left with a strip floating above no
@@ -1055,9 +1107,6 @@ describe('the map’s quick filters', () => {
   });
 
   it('narrows the pinned places when the status disc picks Open now', async () => {
-    const week = (value: string) =>
-      ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        .map((day) => `${day}: ${value}`);
     state.places.data = [
       place('open', { lat: 21, lng: 105, opening_hours: week('Open 24 hours') }),
       place('closed', { lat: 21.1, lng: 105.1, opening_hours: week('Closed') }),

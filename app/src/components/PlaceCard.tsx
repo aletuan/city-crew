@@ -4,6 +4,8 @@ import { Image } from 'expo-image';
 import { useFlag } from '../lib/useFlag';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
+import { useCity } from '../lib/city';
+import { cityTz } from '../lib/clock';
 import { dayBand, MINUTES_IN_DAY, openFragment, openState, sashLabel, shutLabel } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
@@ -25,14 +27,17 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
       place.neighborhood_ja ?? place.neighborhood_en)
     : null;
   const at = new Date();
-  const hours = openState(place.opening_hours, at);
+  // On the place's own clock: a list can hold places from more than one
+  // city (see `membersOf`), so the zone is the card's to look up.
+  const tz = cityTz(useCity().cities, place.city_id);
+  const hours = openState(place.opening_hours, at, tz);
   const shut = shutLabel(hours, t);
   // What the sash shows and what it says are two lines about one fact:
   // the eye gets "Opens 08:00" on a red ground, a screen reader gets
   // "Closed · opens 08:00" — see `sashLabel` for why the state is left to
   // the colour, and why that is only safe with the full sentence beside it.
   const sash = sashLabel(hours, t);
-  const band = dayBand(place.opening_hours, at);
+  const band = dayBand(place.opening_hours, at, tz);
   // Only the closing hour reaches the meta line. `openFragment` would
   // also hand back "opens 08:00" for a shut place, and this card says
   // that on the photograph instead — printing both would be the same

@@ -12,7 +12,7 @@ const week = (line: string) => Array.from({ length: 7 }, (_, i) =>
 const NOW = new Date('2026-09-15T08:00:00Z');
 const NONE = () => false;
 const ALL = 'all';
-const plain = { category: ALL, allCategory: ALL, status: 'any' as const, savedOnly: false, isSaved: NONE, now: NOW };
+const plain = { category: ALL, allCategory: ALL, status: 'any' as const, savedOnly: false, isSaved: NONE, now: NOW, tz: () => 'Asia/Ho_Chi_Minh' };
 
 describe('countsByCity', () => {
   it('counts each city under its own id', () => {

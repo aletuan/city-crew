@@ -65,7 +65,9 @@ vi.mock('../lib/i18n', () => ({
         : en ?? vi ?? ''),
   }),
 }));
-vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city }) }));
+// The list carries the chosen city alone: the hours ribbon reads the
+// place's zone off it, and a place from another city reads as Vietnam.
+vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city, cities: state.city ? [state.city] : [] }) }));
 vi.mock('../lib/catalog', () => ({ usePlaces: () => state.catalog }));
 // The barrel pulls in Supabase; the pure helpers it re-exports from
 // `lib/place` are kept real, and only the fetch hook is stood in for.
@@ -1058,6 +1060,17 @@ describe('PlaceDetailScreen — opening hours (Wednesday 10:00, Hanoi)', () => {
     show();
     expect(screen.getByText('Closed · opens 07:00')).toBeTruthy();
     expect(screen.queryByText('Closed today')).toBeNull();
+  });
+
+  // And the city's clock, not Vietnam's. The instant that found the bug:
+  // 06:56Z is 16:56 in Melbourne, where a café open 3 PM to 10 PM has
+  // five hours left — and 13:56 in Hanoi, where the app used to read it
+  // and say "opens 15:00".
+  it('reads a Melbourne place on Melbourne’s clock', () => {
+    vi.setSystemTime(new Date('2026-09-22T06:56:00Z'));
+    state.city = { id: 'melbourne', tz: 'Australia/Melbourne' };
+    show(place({ city_id: 'melbourne', opening_hours: ['Monday: Closed', ...week('3:00 – 10:00 PM').slice(1)] }));
+    expect(screen.getByText('Open now · until 22:00')).toBeTruthy();
   });
 
   it('keeps the Hours row but no open-now line for hours it cannot read', () => {

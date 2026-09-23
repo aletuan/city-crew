@@ -107,6 +107,7 @@ export type Database = {
           short_ja: string | null
           short_vi: string
           sort_order: number
+          tz: string
         }
         Insert: {
           center_lat: number
@@ -135,6 +136,7 @@ export type Database = {
           short_ja?: string | null
           short_vi: string
           sort_order?: number
+          tz?: string
         }
         Update: {
           center_lat?: number
@@ -163,6 +165,7 @@ export type Database = {
           short_ja?: string | null
           short_vi?: string
           sort_order?: number
+          tz?: string
         }
         Relationships: []
       }

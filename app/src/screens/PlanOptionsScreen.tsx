@@ -32,6 +32,7 @@ import {
 import {
   cachedNarration, narratableOf, NARRATION_HOLD_MS, prefetchNarration,
 } from '../lib/assist';
+import { DEFAULT_TZ } from '../lib/clock';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
@@ -112,8 +113,8 @@ export default function PlanOptionsScreen({ navigation, route }: {
 
   const plans = useMemo(
     () => planTrips(draft, places, city?.id ?? null,
-      { seed, startMin: p.startMin, pinned, avoid: shown, taste, budgetVnd }),
-    [draft, places, city?.id, seed, p.startMin, pinned, shown, taste, budgetVnd],
+      { seed, startMin: p.startMin, pinned, avoid: shown, taste, budgetVnd, tz: city?.tz ?? DEFAULT_TZ }),
+    [draft, places, city?.id, city?.tz, seed, p.startMin, pinned, shown, taste, budgetVnd],
   );
 
   /**
@@ -199,9 +200,9 @@ export default function PlanOptionsScreen({ navigation, route }: {
   const nextPlans = useMemo(
     () => (pending
       ? planTrips(draft, places, city?.id ?? null,
-        { seed: pending.seed, startMin: p.startMin, pinned, avoid: pending.avoid, taste, budgetVnd })
+        { seed: pending.seed, startMin: p.startMin, pinned, avoid: pending.avoid, taste, budgetVnd, tz: city?.tz ?? DEFAULT_TZ })
       : null),
-    [pending, draft, places, city?.id, p.startMin, pinned, taste, budgetVnd],
+    [pending, draft, places, city?.id, city?.tz, p.startMin, pinned, taste, budgetVnd],
   );
 
   useEffect(() => {

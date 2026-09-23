@@ -48,8 +48,11 @@ const g = vi.hoisted(() => ({
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
+// Hanoi, with no zone on the row — which reads as Vietnam — unless a
+// test puts a city with one in its place.
+const cityState = vi.hoisted(() => ({ current: { id: 'hanoi' } as { id: string; tz?: string } }));
 vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: { id: 'hanoi' } }),
+  useCity: () => ({ city: cityState.current, cities: [cityState.current] }),
 }));
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ data: cat.places }),
@@ -185,6 +188,7 @@ const mount = () => {
 beforeEach(async () => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOW);
+  cityState.current = { id: 'hanoi' };
   cat.places = [cong, pho, museum, pending];
   cat.cols = [crawl, gallery, saigon];
   cat.terms = { heritage: ['temple'] };
@@ -250,6 +254,19 @@ describe('the zero-state', () => {
     const open = textAfter('Open right now');
     const section = open.slice(0, open.indexOf('Most popular'));
     expect(section).toContain('Hoan Kiem · until 22:00');
+  });
+
+  // "Open right now" is read on the city's clock. The instant that found
+  // the bug: 06:56Z is 16:56 in Melbourne and 13:56 in Hanoi. A place
+  // open 3 PM to 10 PM is open on the first clock and shut on the second,
+  // and the app used to read every city on the second.
+  it('reads "open right now" on the city’s clock', () => {
+    cityState.current = { id: 'melbourne', tz: 'Australia/Melbourne' };
+    vi.setSystemTime(new Date('2026-09-22T06:56:00Z'));
+    cat.places = [{ ...cong, opening_hours: week('3:00 – 10:00 PM') }, pho, museum];
+    mount();
+    const open = textAfter('Open right now');
+    expect(open.slice(0, open.indexOf('Most popular'))).toContain('Hoan Kiem');
   });
 
   it('says when a closed place opens, and shows the rating on the right', () => {

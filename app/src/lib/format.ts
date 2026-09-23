@@ -2,6 +2,8 @@
 // be tested in a plain Node process — the screen itself imports React
 // Native, which a test runner cannot load.
 
+import { wallClock } from './clock';
+
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const DAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
@@ -243,10 +245,6 @@ export function groupHours(lines: string[], lang = 'en'): HourRow[] {
  * "no answer" rather than as a wrong one.
  */
 
-/** Vietnam keeps UTC+7 all year and has run no DST since 1975, and every
- *  city in the app is in it — so the place's local time is arithmetic
- *  rather than a timezone database the runtime may not carry. */
-const ICT_OFFSET_MIN = 7 * 60;
 const DAY = 24 * 60;
 
 /**
@@ -303,41 +301,6 @@ function parseDay(hours: string): Window[] | null {
   return out;
 }
 
-/**
- * The instant at `minutes` past midnight on `day`, read on the catalog's
- * own clock.
- *
- * Exists so a planner can ask `openState` about seven in the evening next
- * Saturday. Building that Date at the call site would mean either copying
- * `ICT_OFFSET_MIN` — a constant with one right home — or going through the
- * device's offset, and the device is in New York for one of the two clocks
- * the test suite runs on.
- *
- * Null for anything that is not a real day, including "2026-02-30", which
- * `Date.UTC` would roll forward to the 2nd of March rather than refuse.
- */
-export function instantOn(day: string, minutes: number): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day.trim());
-  if (!m) return null;
-  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  // The day is checked at midnight and `minutes` added afterwards, in that
-  // order and not the other way round. Building the instant first and
-  // validating it is what the first version did, and it refused every
-  // evening on the last day of a month that ran past midnight: 25:00 on
-  // the 31st reads back as the 1st, which is a real hour and looked like
-  // an overflow. The reader saw no error — `openAt` treats null as
-  // "unknown", so those stops silently stopped being checked against
-  // opening hours at all.
-  const midnight = new Date(Date.UTC(y, mo - 1, d, 0, -ICT_OFFSET_MIN));
-  // Read back on the clock the day was written on, undoing the shift
-  // first — otherwise midnight ICT is 17:00 the day before in UTC and
-  // every date in the catalog looks invalid.
-  const back = new Date(midnight.getTime() + ICT_OFFSET_MIN * 60_000);
-  if (back.getUTCFullYear() !== y || back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d) {
-    return null;
-  }
-  return new Date(midnight.getTime() + minutes * 60_000);
-}
 
 /**
  * Whether a place is open, and the hour that changes it — in minutes past
@@ -370,24 +333,24 @@ export type OpenState = {
  * "Closed" to someone standing in the doorway of an open café.
  *
  * `now` is injected so this is a pure function of its inputs; the screen
- * passes the real clock.
+ * passes the real clock. `tz` is the place's city's zone (`cityTz`), and
+ * it is required rather than defaulted on purpose: a caller that forgot
+ * it would get Vietnam's clock silently, which is the exact bug this
+ * parameter exists to end.
  */
 /**
  * The place's own clock, and a way to read any day of its week.
  *
  * Extracted because two functions need it and none of it is arithmetic
- * worth having two copies of: the timezone shift that must not be applied
- * twice, the Monday/Sunday disagreement between Google's week and
- * JavaScript's, and the wrap that lets a caller ask for `today - 1`.
+ * worth having two copies of: the zone the clock is read in, the
+ * Monday-first week the hours strings are written in, and the wrap that
+ * lets a caller ask for `today - 1`.
  */
-function readWeek(lines: string[] | null | undefined, now: Date) {
+function readWeek(lines: string[] | null | undefined, now: Date, tz: string) {
   if (!lines?.length) return null;
-  // Shift onto the place's clock, then read the shifted instant in UTC —
-  // the local accessors would apply the device's offset a second time.
-  const local = new Date(now.getTime() + ICT_OFFSET_MIN * 60_000);
-  const mins = local.getUTCHours() * 60 + local.getUTCMinutes();
-  // Google's week starts on Monday; JavaScript's on Sunday.
-  const today = (local.getUTCDay() + 6) % 7;
+  // The place's own clock, not the phone's — see `lib/clock` for the
+  // three hours Melbourne lost while this was a constant.
+  const { mins, weekday: today } = wallClock(now, tz);
   const dayAt = (i: number) => {
     const line = lines[((i % lines.length) + lines.length) % lines.length];
     return line === undefined ? null : parseDay(splitHours(line)[1]);
@@ -395,8 +358,8 @@ function readWeek(lines: string[] | null | undefined, now: Date) {
   return { mins, today, dayAt };
 }
 
-export function openState(lines: string[] | null | undefined, now: Date): OpenState | null {
-  const week = readWeek(lines, now);
+export function openState(lines: string[] | null | undefined, now: Date, tz: string): OpenState | null {
+  const week = readWeek(lines, now, tz);
   if (!week) return null;
   const { mins, today, dayAt } = week;
 
@@ -574,8 +537,8 @@ export type DayBand = { nowMin: number; segments: BandSegment[] };
  * not null: it means the hours were read and say the place is shut all
  * day, which is worth drawing as an empty track.
  */
-export function dayBand(lines: string[] | null | undefined, now: Date): DayBand | null {
-  const week = readWeek(lines, now);
+export function dayBand(lines: string[] | null | undefined, now: Date, tz: string): DayBand | null {
+  const week = readWeek(lines, now, tz);
   if (!week) return null;
   const { mins, today, dayAt } = week;
   const wins = dayAt(today);

@@ -13,6 +13,8 @@ import {
   type Narratable, type Narration, type ParsedAsk,
 } from './assist';
 
+const ICT = 'Asia/Ho_Chi_Minh';
+
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
 
@@ -60,34 +62,33 @@ describe('factLine', () => {
   it('joins what is known and nothing else', () => {
     const line = factLine(
       stop({ slug: 'a', rating: 4.6, km: 2.14, openingHours: week('8:00 AM – 11:00 PM') }),
-      WED_10AM, t,
-    );
+      WED_10AM, ICT, t);
     expect(line).toBe('4.6★  ·  2.1 km  ·  open until 23:00');
   });
 
   it('says metres for anything under a kilometre', () => {
-    expect(factLine(stop({ slug: 'a', km: 0.42 }), WED_10AM, t)).toBe('420 m');
+    expect(factLine(stop({ slug: 'a', km: 0.42 }), WED_10AM, ICT, t)).toBe('420 m');
   });
 
   it('says when a closed place opens', () => {
-    expect(factLine(stop({ slug: 'a', openingHours: week('5:00 PM – 10:00 PM') }), WED_10AM, t))
+    expect(factLine(stop({ slug: 'a', openingHours: week('5:00 PM – 10:00 PM') }), WED_10AM, ICT, t))
       .toBe('opens 17:00');
   });
 
   // Unknown hours are not closed hours. A place that posts none — a public
   // park — must not be described either way.
   it('says nothing about hours it does not have', () => {
-    expect(factLine(stop({ slug: 'a', rating: 4.2 }), WED_10AM, t)).toBe('4.2★');
-    expect(factLine(stop({ slug: 'a', rating: 4.2, openingHours: [] }), WED_10AM, t)).toBe('4.2★');
+    expect(factLine(stop({ slug: 'a', rating: 4.2 }), WED_10AM, ICT, t)).toBe('4.2★');
+    expect(factLine(stop({ slug: 'a', rating: 4.2, openingHours: [] }), WED_10AM, ICT, t)).toBe('4.2★');
   });
 
   it('says nothing at all about a row with nothing filled in', () => {
-    expect(factLine(stop({ slug: 'a' }), WED_10AM, t)).toBe('');
+    expect(factLine(stop({ slug: 'a' }), WED_10AM, ICT, t)).toBe('');
   });
 
   // Round the clock: open, with no closing hour worth naming.
   it('leaves out a closing time there is none of', () => {
-    expect(factLine(stop({ slug: 'a', openingHours: week('Open 24 hours') }), WED_10AM, t)).toBe('');
+    expect(factLine(stop({ slug: 'a', openingHours: week('Open 24 hours') }), WED_10AM, ICT, t)).toBe('');
   });
 });
 

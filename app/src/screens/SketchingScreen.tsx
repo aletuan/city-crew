@@ -34,7 +34,8 @@ import {
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
-import { clockOf, dateline, fmtMinutes, instantOn, openState } from '../lib/format';
+import { DEFAULT_TZ, instantOn } from '../lib/clock';
+import { clockOf, dateline, fmtMinutes, openState } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { planGap } from '../lib/gaps';
 import { useI18n } from '../lib/i18n';
@@ -210,8 +211,8 @@ export default function SketchingScreen({ navigation, route }: {
   // running it here is what lets this screen report rather than perform.
   const plans = useMemo(
     () => (loading ? [] : planTrips(draft, places, city?.id ?? null,
-      { seed, startMin: p.startMin, pinned, taste, budgetVnd })),
-    [loading, places, city?.id, draft, seed, p.startMin, pinned, taste, budgetVnd],
+      { seed, startMin: p.startMin, pinned, taste, budgetVnd, tz: city?.tz ?? DEFAULT_TZ })),
+    [loading, places, city?.id, city?.tz, draft, seed, p.startMin, pinned, taste, budgetVnd],
   );
   const gap = useMemo(() => planGap(p.categories, places), [p.categories, places]);
 
@@ -237,9 +238,10 @@ export default function SketchingScreen({ navigation, route }: {
   const findings = useMemo(() => {
     const day = clampDay(p.date || todayISO());
     const startMin = p.startMin ?? plans[0]?.windowMin[0] ?? 0;
-    const at = instantOn(day, startMin);
+    const tz = city?.tz ?? DEFAULT_TZ;
+    const at = instantOn(day, startMin, tz);
     const openNow = at
-      ? places.filter((pl) => openState(pl.opening_hours, at)?.open).length
+      ? places.filter((pl) => openState(pl.opening_hours, at, tz)?.open).length
       : 0;
     const best = plans[0];
     return findingsOf(
@@ -253,7 +255,7 @@ export default function SketchingScreen({ navigation, route }: {
       t,
       { clock: clockOf, distance: fmtDistance, minutes: (n) => fmtMinutes(n, lang) },
     );
-  }, [places, plans, p.date, p.startMin, t, lang]);
+  }, [places, plans, p.date, p.startMin, city?.tz, t, lang]);
 
 
   /**

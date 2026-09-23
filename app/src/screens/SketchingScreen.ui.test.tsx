@@ -35,7 +35,7 @@ const legsOf = vi.hoisted(() => vi.fn());
 const catalog = vi.hoisted(() => ({
   current: { data: [] as unknown[], loading: false, error: null as Error | null, reload: (() => {}) as () => void },
 }));
-const cityState = vi.hoisted(() => ({ current: { city: { id: 'hanoi' } as { id: string } | null } }));
+const cityState = vi.hoisted(() => ({ current: { city: { id: 'hanoi' } as { id: string; tz?: string } | null } }));
 const mine = vi.hoisted(() => ({ current: [] as unknown[] }));
 // One object for the run, as the real hook's memo hands back: a fresh one
 // per render would re-plan on every render and restart the words' cap.
@@ -151,10 +151,19 @@ describe('what it asks', () => {
     });
     expect(places).toBe(PLACES);
     expect(cityId).toBe('hanoi');
-    expect(opts).toEqual({ seed: NOW.getTime(), startMin: 18 * 60, pinned: [], taste: { cafes: 2 }, budgetVnd: 400000 });
+    expect(opts).toEqual({ seed: NOW.getTime(), startMin: 18 * 60, pinned: [], taste: { cafes: 2 }, budgetVnd: 400000, tz: 'Asia/Ho_Chi_Minh' });
     // A later render does not redraw: every call carries the same seed.
     await tick(STEP_FLOOR_MS * 2);
     expect(new Set(planTrips.mock.calls.map((c) => (c[3] as { seed: number }).seed))).toEqual(new Set([NOW.getTime()]));
+  });
+
+  // The planner asks `openState` about seven on Saturday, and builds
+  // that instant on the zone it is given — the city's, so a Melbourne
+  // evening is not read on Vietnam's clock.
+  it('asks the planner on the city’s clock', () => {
+    cityState.current = { city: { id: 'melbourne', tz: 'Australia/Melbourne' } };
+    renderScreen();
+    expect((planTrips.mock.calls[0][3] as { tz: string }).tz).toBe('Australia/Melbourne');
   });
 
   it('plans with no city as null, and with the places of the collections it was seeded from', () => {

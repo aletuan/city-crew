@@ -30,7 +30,7 @@ import type { Nav, RootRoute } from '../nav';
 const planTrips = vi.hoisted(() => vi.fn());
 const cachedNarration = vi.hoisted(() => vi.fn());
 const prefetchNarration = vi.hoisted(() => vi.fn());
-const cityState = vi.hoisted(() => ({ current: { city: { id: 'hanoi' } as { id: string } | null } }));
+const cityState = vi.hoisted(() => ({ current: { city: { id: 'hanoi' } as { id: string; tz?: string } | null } }));
 const mine = vi.hoisted(() => ({ current: [] as unknown[] }));
 
 vi.mock('../lib/city', () => ({ useCity: () => cityState.current }));
@@ -362,8 +362,17 @@ describe('what the planner is asked', () => {
       expect.objectContaining({ categories: ['cafes', 'eats'], district: 'hoan-kiem', when: 'evening', from: [] }),
       PLACES,
       'hanoi',
-      { seed: 7, startMin: 18 * 60, pinned: [], avoid: [], taste: null, budgetVnd: 400000 },
+      { seed: 7, startMin: 18 * 60, pinned: [], avoid: [], taste: null, budgetVnd: 400000, tz: 'Asia/Ho_Chi_Minh' },
     );
+  });
+
+  // The planner asks `openState` about seven on Saturday, and builds
+  // that instant on the zone it is given — the city's, so a Melbourne
+  // evening is not read on Vietnam's clock.
+  it('asks the planner on the city’s clock', () => {
+    cityState.current = { city: { id: 'melbourne', tz: 'Australia/Melbourne' } };
+    renderScreen();
+    expect((planTrips.mock.calls[0][3] as { tz: string }).tz).toBe('Australia/Melbourne');
   });
 
   it('asks with no city when none is chosen', () => {
