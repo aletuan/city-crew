@@ -78,13 +78,12 @@ function FilterHead({ label, open, onToggle }) {
  *
  * The heading folds the group, and every group starts open: the rail's
  * job is to show what can be asked, and a panel that opens as five shut
- * headings hides that behind a click. `startOpen` is kept for a group
- * that one day earns being shut. Folding lives in the component, not the
- * URL: it says nothing about what the list contains, so it has no
- * business in a link somebody pastes to a colleague.
+ * headings hides that behind a click. Folding lives in the component,
+ * not the URL: it says nothing about what the list contains, so it has
+ * no business in a link somebody pastes to a colleague.
  */
-function FilterGroup({ label, options, value, onPick, startOpen = true }) {
-  const [open, setOpen] = useState(startOpen);
+function FilterGroup({ label, options, value, onPick }) {
+  const [open, setOpen] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const over = options.length - GROUP_SHOWN;
   // A chosen answer is never folded away: the row narrowing the list has to

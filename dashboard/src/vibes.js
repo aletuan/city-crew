@@ -29,4 +29,3 @@ export const VIBE_STYLE = {
   quiet: { label: 'quiet', color: '#A8A79B', icon: 'hush' },
 };
 
-export const VIBE_LABEL = Object.fromEntries(VIBE_ORDER.map((v) => [v, VIBE_STYLE[v].label]));
