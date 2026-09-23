@@ -32,6 +32,7 @@ import { pinImage } from '../components/mapPins';
 import {
   atHandle, hostOf, instagramUrl, threadsUrl, websiteRepeatsHandle,
 } from '../lib/links';
+import { cityTz } from '../lib/clock';
 import { clockOf, dotWindow, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { mapsSearchUrl } from '../lib/maps';
@@ -104,7 +105,7 @@ function InfoRow({ icon, label, first, onPress, trailing, children }: {
 
 export default function PlaceDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'PlaceDetail'> }) {
   const { t, lang } = useI18n();
-  const { city } = useCity();
+  const { city, cities } = useCity();
   const { save, isSaved } = useSave();
   const { width } = useWindowDimensions();
   const { loading: catalogLoading, data: places } = usePlaces();
@@ -231,7 +232,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // visit, which is when the answer is being asked for; a ticking clock
   // would only matter to someone parked on this screen at closing time,
   // and would cost a re-render a minute on every place in the app.
-  const openNow = openState(place.opening_hours, new Date());
+  const openNow = openState(place.opening_hours, new Date(), cityTz(cities, place.city_id));
   // Asked of the string the reader will actually get, not of the columns:
   // a description written only in Japanese is one for a Japanese reader,
   // and nothing (rather than an empty paragraph) for everyone else.

@@ -42,11 +42,11 @@ export const OPEN_SHOWN = 5;
  * fallback content: five great closed places would make the title a lie.
  */
 export function openNowPlaces<T extends OpenablePlace>(
-  places: readonly T[], now: Date, n: number = OPEN_SHOWN, taste?: Affinity<T> | null,
+  places: readonly T[], now: Date, tz: string, n: number = OPEN_SHOWN, taste?: Affinity<T> | null,
 ): T[] {
   // Filter, then rank, then cap — and the ranking is `bestFirst`, the same
   // one Explore uses. The order these two lists arrive in was never meant
   // to differ; only which places are in them is.
-  return bestFirst(places.filter((p) => openState(p.opening_hours, now)?.open === true), taste)
+  return bestFirst(places.filter((p) => openState(p.opening_hours, now, tz)?.open === true), taste)
     .slice(0, n);
 }

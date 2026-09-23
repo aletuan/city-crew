@@ -21,6 +21,8 @@ export type ExploreOrigin = { lat: number; lng: number };
 export type Filterable = Parameters<typeof categoriesOf>[0] & {
   slug: string;
   opening_hours?: unknown;
+  /** Which city's clock the hours are read on — see `options.tz`. */
+  city_id?: string | null;
 };
 
 /**
@@ -36,10 +38,14 @@ export function matchesExplore(row: Filterable, options: {
   savedOnly: boolean;
   isSaved: (slug: string) => boolean;
   now: Date;
+  /** The zone a row's hours are read in, by the row's city: Explore's
+   *  rows are all one city, the city counts' rows are every city, and a
+   *  function serves both. See `cityTz`. */
+  tz: (cityId: string | null | undefined) => string;
 }): boolean {
   return (options.category === options.allCategory || categoriesOf(row).includes(options.category))
     && (options.status === 'any'
-      || openState(row.opening_hours as Parameters<typeof openState>[0], options.now)?.open === (options.status === 'open'))
+      || openState(row.opening_hours as Parameters<typeof openState>[0], options.now, options.tz(row.city_id))?.open === (options.status === 'open'))
     && (!options.savedOnly || options.isSaved(row.slug));
 }
 
@@ -57,6 +63,7 @@ export function filterExplorePlaces(
     origin: ExploreOrigin | null;
     isSaved: (slug: string) => boolean;
     now: Date;
+    tz: (cityId: string | null | undefined) => string;
   },
 ): Place[] {
   const indexed = recommended

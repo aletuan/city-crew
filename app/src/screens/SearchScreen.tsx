@@ -25,6 +25,7 @@ import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/
 import { useCity } from '../lib/city';
 import { freshOnly, useCandidates } from '../lib/candidates';
 import { escapeRoutes } from '../lib/deadend';
+import { DEFAULT_TZ } from '../lib/clock';
 import { openFragment, openState } from '../lib/format';
 import type { Candidate } from '../lib/suggest';
 import { useCollections, useLikes, usePlaces, useSearchTerms } from '../lib/catalog';
@@ -214,7 +215,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
     // the reader edits their chips, which must reorder this the next
     // time they look, and `useBrowseTaste` memoises so it is stable
     // between those edits.
-    () => openNowPlaces(places.filter(isLive), now, undefined, taste),
+    () => openNowPlaces(places.filter(isLive), now, city?.tz ?? DEFAULT_TZ, undefined, taste),
     [places, taste], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
@@ -547,7 +548,7 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
             // the hours cannot be read. The grammar lives in
             // `openFragment`, shared with the Explore cards, so the two
             // lists can never learn to disagree about what an hour says.
-            const when = openFragment(openState(pl.opening_hours, now), t);
+            const when = openFragment(openState(pl.opening_hours, now, city?.tz ?? DEFAULT_TZ), t);
             const area = t(pl.neighborhood_en, pl.neighborhood_vi, pl.neighborhood_ja);
             const meta = [area, when].filter(Boolean).join(' · ');
             return (

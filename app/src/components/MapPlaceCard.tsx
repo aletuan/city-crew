@@ -10,6 +10,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { coverOf, fmtCount, type Place } from '../lib/data';
+import { useCity } from '../lib/city';
+import { cityTz } from '../lib/clock';
 import { openFragment, openState, shutLabel } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space } from '../theme';
@@ -34,7 +36,7 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   // is silent otherwise. Shut: `shutLabel`. One of the two is null by
   // construction, so at most one fact about hours reaches the line —
   // the same split `PlaceCard` makes.
-  const state = openState(place.opening_hours, now);
+  const state = openState(place.opening_hours, now, cityTz(useCity().cities, place.city_id));
   const hours = state?.open ? openFragment(state, t) : shutLabel(state, t);
   const name = t(place.name_en, place.name_vi, place.name_ja);
   const ratingFact = place.rating ? `${place.rating.toFixed(1)}${place.rating_count ? ` (${fmtCount(place.rating_count)})` : ''}` : null;

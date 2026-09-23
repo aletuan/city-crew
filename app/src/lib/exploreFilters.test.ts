@@ -45,7 +45,7 @@ const run = (places: Place[], over: Partial<Parameters<typeof filterExplorePlace
     allCategory: 'all',
     origin: null,
     isSaved: () => false,
-    now: new Date('2026-08-12T03:00:00Z'),
+    now: new Date('2026-08-12T03:00:00Z'), tz: () => 'Asia/Ho_Chi_Minh',
     ...over,
   });
 

@@ -38,6 +38,7 @@ import {
   cachedNarration, derivedTitle, factLine, freshen, narratableOf, prefetchNarration,
   type Narration,
 } from '../lib/assist';
+import { DEFAULT_TZ } from '../lib/clock';
 import { useAuth } from '../lib/auth';
 import { CATEGORIES, categoriesOf } from '../lib/categories';
 import { usePlaces } from '../lib/catalog';
@@ -105,10 +106,10 @@ export default function PlanEditScreen({ navigation, route }: {
   // avoid — so the reader tapped one evening and opened another.
   const picked = useMemo(() => {
     const plans = planTrips(draft, places, city?.id ?? null, {
-      seed: p.seed, startMin: p.startMin, pinned, avoid: p.avoid, taste, budgetVnd,
+      seed: p.seed, startMin: p.startMin, pinned, avoid: p.avoid, taste, budgetVnd, tz: city?.tz ?? DEFAULT_TZ,
     });
     return plans.find((pl) => pl.lens === p.lens) ?? plans[0] ?? null;
-  }, [draft, places, city?.id, p.seed, p.startMin, p.lens, p.avoid, pinned, taste, budgetVnd]);
+  }, [draft, places, city?.id, city?.tz, p.seed, p.startMin, p.lens, p.avoid, pinned, taste, budgetVnd]);
 
   const [stops, setStops] = useState<Editable<Place>[] | null>(null);
   const [saving, setSaving] = useState(false);
@@ -488,7 +489,7 @@ export default function PlanEditScreen({ navigation, route }: {
                     rating: null,
                     openingHours: stop.place.opening_hours,
                     arriveMin: stop.arriveMin,
-                  }, now, t)}
+                  }, now, city?.tz ?? DEFAULT_TZ, t)}
               </Text>
 
               {/* Only when the reader made it so. A plan reading backwards

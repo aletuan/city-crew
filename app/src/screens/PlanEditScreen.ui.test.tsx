@@ -220,7 +220,7 @@ describe('the plan as it arrives', () => {
       expect.objectContaining({ categories: ['cafes'], when: 'evening', from: ['weekend'] }),
       PLACES,
       'hanoi',
-      { seed: 7, startMin: 18 * 60, pinned: [PINNED], avoid: ['old-bar'], taste: null, budgetVnd: 400000 },
+      { seed: 7, startMin: 18 * 60, pinned: [PINNED], avoid: ['old-bar'], taste: null, budgetVnd: 400000, tz: 'Asia/Ho_Chi_Minh' },
     );
   });
 

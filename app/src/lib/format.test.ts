@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dayBand, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, instantOn, openFragment, openState, sashLabel, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dayBand, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, openFragment, openState, sashLabel, shutLabel, splitHours } from './format';
+import { instantOn } from './clock';
 import { fmtDistance } from './geo';
+
+/** Every place in these tests is in Vietnam, on the clock it always was. */
+const ICT = 'Asia/Ho_Chi_Minh';
 
 describe('fmtMinutes', () => {
   it('spells the unit in the reader\'s own language', () => {
@@ -249,12 +253,12 @@ describe('openState', () => {
 
   // `parseTime`: a word where a clock should be.
   it('says nothing when a time does not parse', () => {
-    expect(openState(week('noon – 5:00 PM'), WED_10AM)).toBeNull();
+    expect(openState(week('noon – 5:00 PM'), WED_10AM, ICT)).toBeNull();
   });
 
   // `parseDay`: the day is listed but carries no hours.
   it('says nothing when a day line is blank', () => {
-    expect(openState(week(''), WED_10AM)).toBeNull();
+    expect(openState(week(''), WED_10AM, ICT)).toBeNull();
   });
 
   // `dayAt`: a week with a hole in it, which is what a partial row from
@@ -262,7 +266,7 @@ describe('openState', () => {
   it('says nothing when the day itself is missing from the list', () => {
     const holed = week('8:00 AM – 11:00 PM');
     holed[2] = undefined as unknown as string; // Wednesday
-    expect(openState(holed, WED_10AM)).toBeNull();
+    expect(openState(holed, WED_10AM, ICT)).toBeNull();
   });
 
   // Yesterday being unreadable must not cost today its answer — the
@@ -270,35 +274,35 @@ describe('openState', () => {
   it('still answers from today when yesterday does not parse', () => {
     const mixed = week('5:00 PM – 10:00 PM');
     mixed[1] = 'Tuesday: ';
-    expect(openState(mixed, WED_10AM)).toEqual({ open: false, opensAtMin: 17 * 60 });
+    expect(openState(mixed, WED_10AM, ICT)).toEqual({ open: false, opensAtMin: 17 * 60 });
   });
 
   // Round the clock from yesterday: open, with no closing time worth
   // naming. The same rule as today's windows, on the other loop.
   it('names no closing time for a full-day window that began yesterday', () => {
-    expect(openState(week('1:00 AM – 1:00 AM'), WED_MIDNIGHT_30)).toEqual({ open: true });
+    expect(openState(week('1:00 AM – 1:00 AM'), WED_MIDNIGHT_30, ICT)).toEqual({ open: true });
   });
 
   it('says nothing when there are no hours at all', () => {
-    expect(openState(null, WED_10AM)).toBeNull();
-    expect(openState([], WED_10AM)).toBeNull();
+    expect(openState(null, WED_10AM, ICT)).toBeNull();
+    expect(openState([], WED_10AM, ICT)).toBeNull();
   });
 
   it('is open inside the window, and names the closing time', () => {
-    expect(openState(week('8:00 AM – 11:00 PM'), WED_10AM))
+    expect(openState(week('8:00 AM – 11:00 PM'), WED_10AM, ICT))
       .toEqual({ open: true, untilMin: 23 * 60, closesInMin: 780 });
   });
 
   it('is closed before opening, and names the opening time', () => {
-    expect(openState(week('5:00 PM – 10:00 PM'), WED_10AM)).toEqual({ open: false, opensAtMin: 17 * 60 });
+    expect(openState(week('5:00 PM – 10:00 PM'), WED_10AM, ICT)).toEqual({ open: false, opensAtMin: 17 * 60 });
   });
 
   // Tomorrow morning, read on today's clock — past 1440, the way
   // `untilMin` already runs past it for a bar that shuts at two.
   it('is closed after the last window, and promises tomorrow’s first', () => {
-    expect(openState(week('6:00 AM – 9:00 AM'), WED_10AM)).toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 6 * 60 });
+    expect(openState(week('6:00 AM – 9:00 AM'), WED_10AM, ICT)).toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 6 * 60 });
     // 23:30 ICT, the hour the feed is mostly shut.
-    expect(openState(week('8:00 AM – 10:00 PM'), at('2026-08-12T16:30:00Z')))
+    expect(openState(week('8:00 AM – 10:00 PM'), at('2026-08-12T16:30:00Z'), ICT))
       .toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 8 * 60 });
   });
 
@@ -312,9 +316,9 @@ describe('openState', () => {
       'Sunday: 7:00 AM – 5:00 PM',
     ];
     // Sunday 23:00 ICT → Monday is shut, Tuesday is 32 hours off.
-    expect(openState(lines, at('2026-08-16T16:00:00Z'))).toEqual({ open: false });
+    expect(openState(lines, at('2026-08-16T16:00:00Z'), ICT)).toEqual({ open: false });
     // Monday 23:00 ICT → Tuesday 07:00 is eight hours off.
-    expect(openState(lines, at('2026-08-17T16:00:00Z'))).toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 7 * 60 });
+    expect(openState(lines, at('2026-08-17T16:00:00Z'), ICT)).toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 7 * 60 });
     // And the limit is a day, not "tomorrow": a day off with the next
     // opening at ten is 25 hours away at nine in the morning and 23 at
     // eleven. Only the second gets an hour.
@@ -323,8 +327,8 @@ describe('openState', () => {
       'Thursday: 10:00 AM – 5:00 PM', 'Friday: 10:00 AM – 5:00 PM', 'Saturday: 10:00 AM – 5:00 PM',
       'Sunday: 10:00 AM – 5:00 PM',
     ];
-    expect(openState(dayOff, at('2026-08-12T02:00:00Z'))).toEqual({ open: false });
-    expect(openState(dayOff, at('2026-08-12T04:00:00Z'))).toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 10 * 60 });
+    expect(openState(dayOff, at('2026-08-12T02:00:00Z'), ICT)).toEqual({ open: false });
+    expect(openState(dayOff, at('2026-08-12T04:00:00Z'), ICT)).toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 10 * 60 });
   });
 
   // Tomorrow in a shape this cannot read is a tomorrow with nothing to
@@ -336,15 +340,15 @@ describe('openState', () => {
       'Sunday: 8:00 AM – 5:00 PM',
     ];
     // Wednesday 18:00 ICT.
-    expect(openState(lines, at('2026-08-12T11:00:00Z'))).toEqual({ open: false });
+    expect(openState(lines, at('2026-08-12T11:00:00Z'), ICT)).toEqual({ open: false });
   });
 
   // The boundary itself: 10:00 today against 10:00 tomorrow is exactly a
   // day, and exactly a day is not within one.
   it('draws the day’s limit at the same minute tomorrow', () => {
-    expect(openState(week('10:00 AM – 11:00 AM'), at('2026-08-12T02:59:00Z')))
+    expect(openState(week('10:00 AM – 11:00 AM'), at('2026-08-12T02:59:00Z'), ICT))
       .toEqual({ open: false, opensAtMin: 10 * 60 });
-    expect(openState(week('10:00 AM – 11:00 AM'), at('2026-08-12T04:00:00Z')))
+    expect(openState(week('10:00 AM – 11:00 AM'), at('2026-08-12T04:00:00Z'), ICT))
       .toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 10 * 60 });
   });
 
@@ -353,9 +357,9 @@ describe('openState', () => {
   it('opens on the minute and closes on the minute', () => {
     // 10:00 ICT exactly: inside a window that starts then, outside one
     // that ends then.
-    expect(openState(week('10:00 AM – 11:00 PM'), at('2026-08-12T03:00:00Z')))
+    expect(openState(week('10:00 AM – 11:00 PM'), at('2026-08-12T03:00:00Z'), ICT))
       .toEqual({ open: true, untilMin: 23 * 60, closesInMin: 780 });
-    expect(openState(week('6:00 AM – 10:00 AM'), at('2026-08-12T03:00:00Z')))
+    expect(openState(week('6:00 AM – 10:00 AM'), at('2026-08-12T03:00:00Z'), ICT))
       .toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 6 * 60 });
   });
 
@@ -365,61 +369,61 @@ describe('openState', () => {
       'Wednesday: 9:00 AM – 6:00 PM', 'Thursday: Closed',
       'Friday: Closed', 'Saturday: Closed', 'Sunday: Closed',
     ];
-    expect(openState(lines, WED_10AM)).toEqual({ open: true, untilMin: 18 * 60, closesInMin: 480 });
+    expect(openState(lines, WED_10AM, ICT)).toEqual({ open: true, untilMin: 18 * 60, closesInMin: 480 });
   });
 
   it('stays open past midnight on the window that started yesterday', () => {
     // Half an hour left, not fourteen and a half: `closesInMin` is read on
     // yesterday's clock, which is the arithmetic that field exists to own.
-    expect(openState(week('7:00 PM – 1:00 AM'), WED_MIDNIGHT_30))
+    expect(openState(week('7:00 PM – 1:00 AM'), WED_MIDNIGHT_30, ICT))
       .toEqual({ open: true, untilMin: 25 * 60, closesInMin: 30 });
   });
 
   // Same clock, but nothing ran into today — the small hours are shut.
   it('is closed after midnight when yesterday did not run over', () => {
-    expect(openState(week('8:00 AM – 11:00 PM'), WED_MIDNIGHT_30))
+    expect(openState(week('8:00 AM – 11:00 PM'), WED_MIDNIGHT_30, ICT))
       .toEqual({ open: false, opensAtMin: 8 * 60 });
   });
 
   it('treats a midnight close as the end of the day, not the start', () => {
-    expect(openState(week('8:00 AM – 12:00 AM'), at('2026-08-12T15:00:00Z')))
+    expect(openState(week('8:00 AM – 12:00 AM'), at('2026-08-12T15:00:00Z'), ICT))
       .toEqual({ open: true, untilMin: 24 * 60, closesInMin: 120 });
   });
 
   it('is open around the clock without inventing a closing time', () => {
-    expect(openState(week('Open 24 hours'), WED_10AM)).toEqual({ open: true });
-    expect(openState(week('Open 24 hours'), WED_MIDNIGHT_30)).toEqual({ open: true });
+    expect(openState(week('Open 24 hours'), WED_10AM, ICT)).toEqual({ open: true });
+    expect(openState(week('Open 24 hours'), WED_MIDNIGHT_30, ICT)).toEqual({ open: true });
   });
 
   it('is shut all day when the day says Closed', () => {
-    expect(openState(week('Closed'), WED_10AM)).toEqual({ open: false });
+    expect(openState(week('Closed'), WED_10AM, ICT)).toEqual({ open: false });
   });
 
   // Google drops the meridiem on the opening time when it matches the
   // closing one, so "4:00 – 8:50 PM" is an afternoon, not a dawn.
   it('borrows the missing meridiem from the closing time', () => {
-    expect(openState(week('5:00 – 10:00 PM'), WED_10AM)).toEqual({ open: false, opensAtMin: 17 * 60 });
-    expect(openState(week('5:00 – 10:00 PM'), at('2026-08-12T11:00:00Z')))
+    expect(openState(week('5:00 – 10:00 PM'), WED_10AM, ICT)).toEqual({ open: false, opensAtMin: 17 * 60 });
+    expect(openState(week('5:00 – 10:00 PM'), at('2026-08-12T11:00:00Z'), ICT))
       .toEqual({ open: true, untilMin: 22 * 60, closesInMin: 240 });
   });
 
   it('handles a lunch break as two windows', () => {
     const hours = week('10:00 AM – 1:50 PM, 4:00 – 8:50 PM');
-    expect(openState(hours, WED_10AM))
+    expect(openState(hours, WED_10AM, ICT))
       .toEqual({ open: true, untilMin: 13 * 60 + 50, closesInMin: 230 });
     // 15:00 ICT — after the first window, before the second.
-    expect(openState(hours, at('2026-08-12T08:00:00Z'))).toEqual({ open: false, opensAtMin: 16 * 60 });
+    expect(openState(hours, at('2026-08-12T08:00:00Z'), ICT)).toEqual({ open: false, opensAtMin: 16 * 60 });
     // 17:00 ICT — inside the second.
-    expect(openState(hours, at('2026-08-12T10:00:00Z')))
+    expect(openState(hours, at('2026-08-12T10:00:00Z'), ICT))
       .toEqual({ open: true, untilMin: 20 * 60 + 50, closesInMin: 230 });
   });
 
   it('noon and midnight do not collapse into each other', () => {
     // Both read "12:00"; only the meridiem separates midday from the top
     // of the morning. At 13:00 ICT one is open and the other shut hours ago.
-    expect(openState(week('12:00 PM – 5:00 PM'), at('2026-08-12T06:00:00Z')))
+    expect(openState(week('12:00 PM – 5:00 PM'), at('2026-08-12T06:00:00Z'), ICT))
       .toEqual({ open: true, untilMin: 17 * 60, closesInMin: 240 });
-    expect(openState(week('12:00 AM – 6:00 AM'), at('2026-08-12T06:00:00Z')))
+    expect(openState(week('12:00 AM – 6:00 AM'), at('2026-08-12T06:00:00Z'), ICT))
       .toEqual({ open: false, opensAtMin: MINUTES_IN_DAY });
   });
 
@@ -428,14 +432,42 @@ describe('openState', () => {
   it('answers on the place\'s clock, not the reader\'s', () => {
     // 20:00Z is 03:00 the next morning in Saigon — shut, whatever the
     // device thinks the hour is.
-    expect(openState(week('8:00 AM – 11:00 PM'), at('2026-08-12T20:00:00Z')))
+    expect(openState(week('8:00 AM – 11:00 PM'), at('2026-08-12T20:00:00Z'), ICT))
       .toEqual({ open: false, opensAtMin: 8 * 60 });
   });
 
   it('declines to guess at a shape it does not know', () => {
-    expect(openState(week('Opening hours vary'), WED_10AM)).toBeNull();
-    expect(openState(week('8:00 AM'), WED_10AM)).toBeNull();
-    expect(openState(week('25:00 AM – 9:00 PM'), WED_10AM)).toBeNull();
+    expect(openState(week('Opening hours vary'), WED_10AM, ICT)).toBeNull();
+    expect(openState(week('8:00 AM'), WED_10AM, ICT)).toBeNull();
+    expect(openState(week('25:00 AM – 9:00 PM'), WED_10AM, ICT)).toBeNull();
+  });
+
+  // ── the place's own clock ──
+  //
+  // The screenshot that found the bug: Kumo Desserts in Melbourne, hours
+  // 3 PM to 10 PM, a reader at the door at 16:56 on a Tuesday, and a
+  // ribbon saying "opens 15:00". The instant is the same for both
+  // readings below; only the clock it is read on differs, and the ribbon
+  // must follow the café's, not the country the catalog began in.
+  it('reads the hours on the city’s clock, not Vietnam’s', () => {
+    const kumo = ['Monday: Closed', ...week('3:00 – 10:00 PM').slice(1)];
+    const tuesday1656Melbourne = at('2026-09-22T06:56:00Z');
+    expect(openState(kumo, tuesday1656Melbourne, 'Australia/Melbourne'))
+      .toEqual({ open: true, untilMin: 22 * 60, closesInMin: 5 * 60 + 4 });
+    // What the app used to say: the same instant is 13:56 in Hanoi.
+    expect(openState(kumo, tuesday1656Melbourne, ICT))
+      .toEqual({ open: false, opensAtMin: 15 * 60 });
+  });
+
+  it('crosses the date line where the city does', () => {
+    // 15:30Z on Monday: Melbourne is already into Tuesday's small hours,
+    // so Monday's "Closed" is not the line that answers and the café
+    // opens later *today*. Hanoi is still on Monday evening, and the
+    // same opening is tomorrow's — past 1440, the way `clockOf` expects.
+    const kumo = ['Monday: Closed', ...week('3:00 – 10:00 PM').slice(1)];
+    const monday1530Z = at('2026-09-21T15:30:00Z');
+    expect(openState(kumo, monday1530Z, 'Australia/Melbourne')).toEqual({ open: false, opensAtMin: 15 * 60 });
+    expect(openState(kumo, monday1530Z, ICT)).toEqual({ open: false, opensAtMin: MINUTES_IN_DAY + 15 * 60 });
   });
 });
 
@@ -486,7 +518,7 @@ describe('instantOn', () => {
   // assertion is in UTC because that is the only frame both test clocks
   // agree on: 19:00 ICT is 12:00 UTC wherever the runner is standing.
   it('lands on the right instant whatever clock the runner is on', () => {
-    const at = instantOn('2026-08-15', 19 * 60)!;
+    const at = instantOn('2026-08-15', 19 * 60, ICT)!;
     expect(at.toISOString()).toBe('2026-08-15T12:00:00.000Z');
   });
 
@@ -496,22 +528,22 @@ describe('instantOn', () => {
   // — and refusing meant "hours unknown", so those stops quietly stopped
   // being checked against opening hours.
   it('lets a plan run past midnight, including off the end of a month', () => {
-    expect(instantOn('2026-08-15', 25 * 60)!.toISOString()).toBe('2026-08-15T18:00:00.000Z');
-    expect(instantOn('2026-08-31', 25 * 60)!.toISOString()).toBe('2026-08-31T18:00:00.000Z');
-    expect(instantOn('2026-12-31', 25 * 60)!.toISOString()).toBe('2026-12-31T18:00:00.000Z');
+    expect(instantOn('2026-08-15', 25 * 60, ICT)!.toISOString()).toBe('2026-08-15T18:00:00.000Z');
+    expect(instantOn('2026-08-31', 25 * 60, ICT)!.toISOString()).toBe('2026-08-31T18:00:00.000Z');
+    expect(instantOn('2026-12-31', 25 * 60, ICT)!.toISOString()).toBe('2026-12-31T18:00:00.000Z');
   });
 
   it('refuses anything that is not a day', () => {
-    expect(instantOn('', 540)).toBeNull();
-    expect(instantOn('15/08/2026', 540)).toBeNull();
-    expect(instantOn('2026-8-15', 540)).toBeNull();
+    expect(instantOn('', 540, ICT)).toBeNull();
+    expect(instantOn('15/08/2026', 540, ICT)).toBeNull();
+    expect(instantOn('2026-8-15', 540, ICT)).toBeNull();
   });
 
   // The one `Date.UTC` accepts and rolls forward to the 2nd of March,
   // which is how a mistyped date becomes a plan for the wrong week.
   it('refuses a day the calendar does not have', () => {
-    expect(instantOn('2026-02-30', 540)).toBeNull();
-    expect(instantOn('2026-13-01', 540)).toBeNull();
+    expect(instantOn('2026-02-30', 540, ICT)).toBeNull();
+    expect(instantOn('2026-13-01', 540, ICT)).toBeNull();
   });
 });
 
@@ -556,7 +588,7 @@ describe('clockOf', () => {
     const lines = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
       .map((d) => `${d}: 5:00 – 10:00 PM`);
     // Wednesday 10:00 ICT.
-    const state = openState(lines, new Date('2026-08-12T03:00:00Z'));
+    const state = openState(lines, new Date('2026-08-12T03:00:00Z'), ICT);
     expect(state?.opensAtMin != null && clockOf(state.opensAtMin)).toBe('17:00');
   });
 });
@@ -633,7 +665,7 @@ describe('dayBand', () => {
   const WED_MIDNIGHT_30 = at('2026-08-12T17:30:00Z'); // 00:30 Thursday in ICT
 
   it('draws one stretch for a plain day, and says where the clock is', () => {
-    expect(dayBand(week('8:00 AM – 11:00 PM'), WED_10AM)).toEqual({
+    expect(dayBand(week('8:00 AM – 11:00 PM'), WED_10AM, ICT)).toEqual({
       nowMin: 600,
       segments: [{ fromMin: 480, toMin: 1380, runsOn: false }],
     });
@@ -642,7 +674,7 @@ describe('dayBand', () => {
   // The tenth of the catalog a sentence cannot hold. `openState` answers
   // "shut" here and stops; the band shows the afternoon coming back.
   it('draws a lunch break as the two stretches it is', () => {
-    const band = dayBand(week('10:00 AM – 1:50 PM, 4:00 – 8:50 PM'), at('2026-08-12T08:00:00Z'));
+    const band = dayBand(week('10:00 AM – 1:50 PM, 4:00 – 8:50 PM'), at('2026-08-12T08:00:00Z'), ICT);
     expect(band).toEqual({
       nowMin: 900, // 15:00, in the gap
       segments: [
@@ -659,7 +691,7 @@ describe('dayBand', () => {
   // thorough: at ten in the morning this place really was open from
   // midnight until one, and the day it draws is the whole day.
   it('clips a window that runs past midnight and says that it did', () => {
-    expect(dayBand(week('7:00 PM – 1:00 AM'), WED_10AM)).toEqual({
+    expect(dayBand(week('7:00 PM – 1:00 AM'), WED_10AM, ICT)).toEqual({
       nowMin: 600,
       segments: [
         { fromMin: 0, toMin: 60, runsOn: false },
@@ -672,7 +704,7 @@ describe('dayBand', () => {
   // in a bar, and the band has to draw the bar they are standing in — at
   // the left edge, where this morning actually is.
   it('draws yesterday\'s overrun at the left edge, before today', () => {
-    expect(dayBand(week('7:00 PM – 1:00 AM'), WED_MIDNIGHT_30)).toEqual({
+    expect(dayBand(week('7:00 PM – 1:00 AM'), WED_MIDNIGHT_30, ICT)).toEqual({
       nowMin: 30,
       segments: [
         { fromMin: 0, toMin: 60, runsOn: false },
@@ -682,7 +714,7 @@ describe('dayBand', () => {
   });
 
   it('fills the whole axis for a place that never closes', () => {
-    expect(dayBand(week('Open 24 hours'), WED_10AM)).toEqual({
+    expect(dayBand(week('Open 24 hours'), WED_10AM, ICT)).toEqual({
       nowMin: 600,
       segments: [{ fromMin: 0, toMin: MINUTES_IN_DAY, runsOn: false }],
     });
@@ -691,13 +723,13 @@ describe('dayBand', () => {
   // Not null: the hours were read and they say shut. An empty track with
   // a mark on it is a true drawing of a closed day.
   it('draws an empty day when the day says Closed', () => {
-    expect(dayBand(week('Closed'), WED_10AM)).toEqual({ nowMin: 600, segments: [] });
+    expect(dayBand(week('Closed'), WED_10AM, ICT)).toEqual({ nowMin: 600, segments: [] });
   });
 
   it('says nothing when the hours cannot be read', () => {
-    expect(dayBand(null, WED_10AM)).toBeNull();
-    expect(dayBand([], WED_10AM)).toBeNull();
-    expect(dayBand(week('noon – 5:00 PM'), WED_10AM)).toBeNull();
+    expect(dayBand(null, WED_10AM, ICT)).toBeNull();
+    expect(dayBand([], WED_10AM, ICT)).toBeNull();
+    expect(dayBand(week('noon – 5:00 PM'), WED_10AM, ICT)).toBeNull();
   });
 
   // A week with a hole in it, which is what a partial row from the desk
@@ -705,7 +737,7 @@ describe('dayBand', () => {
   it('says nothing when the day itself is missing from the list', () => {
     const holed = week('8:00 AM – 11:00 PM');
     holed[2] = undefined as unknown as string; // Wednesday
-    expect(dayBand(holed, WED_10AM)).toBeNull();
+    expect(dayBand(holed, WED_10AM, ICT)).toBeNull();
   });
 
   // Yesterday being unreadable must not cost today its band — the
@@ -713,7 +745,7 @@ describe('dayBand', () => {
   it('still draws today when yesterday does not parse', () => {
     const mixed = week('8:00 AM – 11:00 PM');
     mixed[1] = 'Tuesday: ';
-    expect(dayBand(mixed, WED_10AM)).toEqual({
+    expect(dayBand(mixed, WED_10AM, ICT)).toEqual({
       nowMin: 600,
       segments: [{ fromMin: 480, toMin: 1380, runsOn: false }],
     });

@@ -362,7 +362,7 @@ describe('what the planner is asked', () => {
       expect.objectContaining({ categories: ['cafes', 'eats'], district: 'hoan-kiem', when: 'evening', from: [] }),
       PLACES,
       'hanoi',
-      { seed: 7, startMin: 18 * 60, pinned: [], avoid: [], taste: null, budgetVnd: 400000 },
+      { seed: 7, startMin: 18 * 60, pinned: [], avoid: [], taste: null, budgetVnd: 400000, tz: 'Asia/Ho_Chi_Minh' },
     );
   });
 

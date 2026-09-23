@@ -38,7 +38,8 @@
 import { brandKey } from './brand';
 import { categoriesOf } from './categories';
 import { minutesOf, toISO } from './day';
-import { instantOn, openState } from './format';
+import { openState } from './format';
+import { DEFAULT_TZ, instantOn } from './clock';
 import { distanceKm } from './geo';
 import { isLive } from './live';
 import { legsOf, RIDE_VND, type Leg } from './travel';
@@ -88,6 +89,11 @@ export type TripPlan = {
 export type Taste = { affinity: (p: Place) => number };
 
 export type PlanOptions = {
+  /** The zone the catalog's hours are read in — the city's, from
+   *  `cityTz`. Defaults to Vietnam, which is what every caller meant
+   *  before a city outside it existed; a screen planning Melbourne
+   *  passes Melbourne's. */
+  tz?: string;
   /** Null as well as undefined, so a screen holding "this reader has no
    *  profile" can pass it straight through instead of converting a null
    *  that means exactly what the absent value means. */
@@ -627,20 +633,20 @@ function overlap(a: readonly string[], b: readonly string[]): number {
  * comment settles it — "showing nothing beats showing 'Closed' to someone
  * standing in the doorway of an open café".
  */
-function openAt(p: Place, day: string, minutes: number): boolean {
+function openAt(p: Place, day: string, minutes: number, tz: string): boolean {
   if (!p.opening_hours?.length) return true;
-  const at = instantOn(day, minutes);
+  const at = instantOn(day, minutes, tz);
   if (!at) return true;
-  const state = openState(p.opening_hours, at);
+  const state = openState(p.opening_hours, at, tz);
   return state === null || state.open;
 }
 
 /** Why this place cannot be used, or null when it can. Ordered so the
  *  reason the reader can act on comes first. */
-function dropReason(p: Place, draft: TripDraft, cityId: string | null, when: number): DropReason | null {
+function dropReason(p: Place, draft: TripDraft, cityId: string | null, when: number, tz: string): DropReason | null {
   if (!isLive(p)) return 'unlive';
   if (cityId && p.city_id && p.city_id !== cityId) return 'city';
-  if (!openAt(p, draft.date, when)) return 'closed';
+  if (!openAt(p, draft.date, when, tz)) return 'closed';
   if (draft.categories.length && !overlap(categoriesOf(p), draft.categories)) return 'slot';
   return null;
 }
@@ -777,6 +783,7 @@ function buildPlan(
   usedBrands: ReadonlySet<string>, rnd: () => number,
   start: number, origin: Point | null,
 ): Place[] {
+  const tz = opts.tz ?? DEFAULT_TZ;
   const taken = new Set<string>();
   // Within one day the brand rule is hard where the cross-plan one is
   // soft: two branches of one chain are the same place twice, not two
@@ -800,7 +807,7 @@ function buildPlan(
     const at = start + i * NOMINAL_STEP;
 
     const fits = (p: Place) => {
-      if (taken.has(p.slug) || !openAt(p, draft.date, at)) return false;
+      if (taken.has(p.slug) || !openAt(p, draft.date, at, tz)) return false;
       const brand = brandKey(p.name_en);
       return brand === '' || !takenBrands.has(brand);
     };
@@ -888,6 +895,7 @@ export function planTrips(
   opts: PlanOptions = {},
 ): TripPlan[] {
   const rnd = mulberry32(opts.seed ?? 1);
+  const tz = opts.tz ?? DEFAULT_TZ;
   // The shape's own hour unless the caller resolved a later one against the
   // clock. `?? `, not `||`, so a caller that genuinely means midnight is not
   // silently moved to nine — and null is accepted alongside undefined so a
@@ -904,7 +912,7 @@ export function planTrips(
   // the pool is what could plausibly appear, and each slot re-checks its
   // own hour when it picks.
   const middle = start + Math.floor(slots.length / 2) * NOMINAL_STEP;
-  const pool = places.filter((p) => dropReason(p, draft, cityId, middle) === null);
+  const pool = places.filter((p) => dropReason(p, draft, cityId, middle, tz) === null);
 
   // Pinned places carry their rejection reason out with them. Somebody who
   // seeded an evening from a café list where everything shuts at six
@@ -912,7 +920,7 @@ export function planTrips(
   const pinnedOk: Place[] = [];
   const pinnedDropped: TripPlan['pinnedDropped'] = [];
   for (const p of opts.pinned ?? []) {
-    const reason = dropReason(p, draft, cityId, middle);
+    const reason = dropReason(p, draft, cityId, middle, tz);
     if (reason) pinnedDropped.push({ slug: p.slug, reason });
     else pinnedOk.push(p);
   }

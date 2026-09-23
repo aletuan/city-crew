@@ -36,6 +36,13 @@ export type City = {
    *  `useMyPosition`'s callers use it to decide whether the reader is
    *  standing in this city at all. */
   radius_km: number;
+  /** The city's IANA zone — `Australia/Melbourne`, `Asia/Ho_Chi_Minh` —
+   *  which every question about a place's opening hours is read on. See
+   *  `lib/clock`. Optional because a row hydrated from a launch cache
+   *  written before the column existed has none; `cityTz` reads that as
+   *  Vietnam, which is right for seven cities of eight until the next
+   *  fetch fills it in. */
+  tz?: string | null;
   // Explore hero, editable from the data desk. All nullable: a missing
   // title/CTA falls back to the app's generic copy, a missing slug to the
   // automatic featured-place photo pick (see ExploreScreen).
@@ -153,7 +160,7 @@ export const CACHE_CITY_LIST = true;
 const FALLBACK: City = {
   id: 'hcmc', name_en: 'Ho Chi Minh City', name_vi: 'TP. Hồ Chí Minh', name_ja: 'ホーチミン市',
   short_en: 'Saigon', short_vi: 'Sài Gòn', short_ja: 'サイゴン', center_lat: 10.7769, center_lng: 106.7009,
-  radius_km: 25,
+  radius_km: 25, tz: 'Asia/Ho_Chi_Minh',
   hero_title_en: null, hero_title_vi: null, hero_title_ja: null,
   hero_sub_en: null, hero_sub_vi: null, hero_sub_ja: null,
   hero_cta_en: null, hero_cta_vi: null, hero_cta_ja: null, hero_place_slug: null,
@@ -265,8 +272,8 @@ export function useMyPosition(nonce = 0): { lat: number; lng: number } | null {
 
 /** `withSub` and `withPhoto` each drop the newest group of columns, so a
  *  client shipped ahead of its migration still gets a city list. */
-const CITY_COLS = (withSub: boolean, withPhoto: boolean) =>
-  `id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng, radius_km, hero_title_en, hero_title_vi, hero_title_ja${withSub ? ', hero_sub_en, hero_sub_vi, hero_sub_ja' : ''}, hero_cta_en, hero_cta_vi, hero_cta_ja, hero_place_slug${withPhoto ? ', hero_photo_uri, hero_photo_credit, hero_photo_credit_uri' : ''}`;
+const CITY_COLS = (withSub: boolean, withPhoto: boolean, withTz: boolean) =>
+  `id, name_en, name_vi, name_ja, short_en, short_vi, short_ja, center_lat, center_lng, radius_km${withTz ? ', tz' : ''}, hero_title_en, hero_title_vi, hero_title_ja${withSub ? ', hero_sub_en, hero_sub_vi, hero_sub_ja' : ''}, hero_cta_en, hero_cta_vi, hero_cta_ja, hero_place_slug${withPhoto ? ', hero_photo_uri, hero_photo_credit, hero_photo_credit_uri' : ''}`;
 
 /**
  * The city list, and a way back when the database is older than the app.
@@ -286,16 +293,19 @@ const CITY_COLS = (withSub: boolean, withPhoto: boolean) =>
  * `hero_sub`.
  */
 async function fetchCities(): Promise<City[]> {
-  const run = (withSub: boolean, withPhoto: boolean) =>
+  const run = (withSub: boolean, withPhoto: boolean, withTz = true) =>
     supabase
       .from('cities')
-      .select(CITY_COLS(withSub, withPhoto))
+      .select(CITY_COLS(withSub, withPhoto, withTz))
       .eq('is_active', true)
       .order('sort_order');
 
   let { data, error } = await run(true, true);
-  if (error && error.message.includes('hero_photo')) ({ data, error } = await run(true, false));
-  if (error && error.message.includes('hero_sub')) ({ data, error } = await run(false, false));
+  // Newest column first, the way the others are ordered: a database
+  // without `tz` answers about it before it answers about the hero.
+  if (error && /\btz\b/.test(error.message)) ({ data, error } = await run(true, true, false));
+  if (error && error.message.includes('hero_photo')) ({ data, error } = await run(true, false, false));
+  if (error && error.message.includes('hero_sub')) ({ data, error } = await run(false, false, false));
   return (data as City[] | null) ?? [];
 }
 

@@ -27,6 +27,7 @@ import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, pinTint } from '../lib/categories';
 import { useCity } from '../lib/city';
+import { cityTz } from '../lib/clock';
 import { useSky } from '../lib/sky';
 import WeatherLayer, { useWeatherStill, WEATHER_EFFECTS } from '../components/weather/WeatherLayer';
 import WeatherDebug, { DEBUG_DEFAULT, debugSky, type Debug } from '../components/weather/WeatherDebug';
@@ -853,6 +854,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         savedOnly: appliedFilters.savedOnly,
         isSaved,
         now: new Date(),
+        // Every city's rows are counted, each on its own clock.
+        tz: (id) => cityTz(cities, id),
       })
       : null;
     return cities
@@ -1016,7 +1019,8 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     origin: sortOrigin,
     isSaved,
     now: new Date(),
-  }), [recommended, sortOrigin, isSaved]);
+    tz: (id) => cityTz(cities, id),
+  }), [recommended, sortOrigin, isSaved, cities]);
 
   const shown = useMemo(() => filteredFor(appliedFilters), [filteredFor, appliedFilters]);
 

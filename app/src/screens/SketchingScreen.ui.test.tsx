@@ -151,7 +151,7 @@ describe('what it asks', () => {
     });
     expect(places).toBe(PLACES);
     expect(cityId).toBe('hanoi');
-    expect(opts).toEqual({ seed: NOW.getTime(), startMin: 18 * 60, pinned: [], taste: { cafes: 2 }, budgetVnd: 400000 });
+    expect(opts).toEqual({ seed: NOW.getTime(), startMin: 18 * 60, pinned: [], taste: { cafes: 2 }, budgetVnd: 400000, tz: 'Asia/Ho_Chi_Minh' });
     // A later render does not redraw: every call carries the same seed.
     await tick(STEP_FLOOR_MS * 2);
     expect(new Set(planTrips.mock.calls.map((c) => (c[3] as { seed: number }).seed))).toEqual(new Set([NOW.getTime()]));

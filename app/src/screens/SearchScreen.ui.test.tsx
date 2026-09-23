@@ -49,7 +49,7 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 vi.mock('../lib/city', () => ({
-  useCity: () => ({ city: { id: 'hanoi' } }),
+  useCity: () => ({ city: { id: 'hanoi' }, cities: [{ id: 'hanoi' }] }),
 }));
 vi.mock('../lib/catalog', () => ({
   usePlaces: () => ({ data: cat.places }),
