@@ -2,7 +2,16 @@
 //
 // The design was written as CSS — a conic-gradient ring on `spin`, a core
 // on `pulse` — and neither of those exists here. What follows is the
-// translation, and the two places it is not a literal one are called out.
+// translation, and the places it is not a literal one are called out.
+//
+// ── the core does not pulse ──
+//
+// The one departure from the design rather than from the platform. A
+// breathing core is what every spinner in every app does, and it says
+// only "busy". The core carries this app's own mark, so it walks instead:
+// two footfalls to one turn of the ring. Same two animated properties,
+// same native driver, and the reader is told which app they are in while
+// they wait.
 //
 // ── the conic gradient ──
 //
@@ -17,9 +26,9 @@
 //
 // `Animated`, not Reanimated, because the app does not carry Reanimated
 // and a spinner is not the reason to add it. Both loops drive `transform`
-// and `opacity` only, so both run on the native driver: the JS thread is
-// about to be busy, and a progress indicator that stutters exactly when
-// work starts is worse than none.
+// only, so both run on the native driver: the JS thread is about to be
+// busy, and a progress indicator that stutters exactly when work starts
+// is worse than none.
 //
 // ── reduced motion ──
 //
@@ -73,7 +82,11 @@ export default function SketchOrb({ still }: {
   still?: boolean;
 }) {
   const spin = useLoop(1600, !!still);
-  const breath = useLoop(2000, !!still, 'inOut');
+  // The same 1600ms the ring turns by, and deliberately so: two footfalls
+  // to one turn of the ring puts the walk in step with it rather than
+  // beside it. Linear, because the shape of the gait is in the
+  // interpolations below, not in an easing curve.
+  const walk = useLoop(1600, !!still);
 
   const c = BOX / 2;
   const r = c - STROKE / 2;
@@ -109,18 +122,36 @@ export default function SketchOrb({ still }: {
           centred over the ring rather than nested inside the rotating
           view — a child of that would turn with it. */}
       <View style={[s.inset, { backgroundColor: colors.bg }]} pointerEvents="none" />
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          s.core,
-          {
-            transform: [{ scale: breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] }) }],
-            opacity: breath.interpolate({ inputRange: [0, 1], outputRange: [1, 0.8] }),
-          },
-        ]}
-      >
-        <Ionicons name="sparkles" size={26} color={colors.accent} />
-      </Animated.View>
+      <View style={s.core} pointerEvents="none">
+        {/* A step rather than a pulse.
+            A breathing core says "busy" the way every spinner does. A paw
+            that walks says which app you are in, and it costs the same
+            two interpolations.
+            One cycle is two footfalls — left, then right — built from the
+            three things a step actually is: the print lifts, swings across
+            and sets down, tipping the way it travels. `still` parks the
+            loop at 0, which is why every track starts and ends at its
+            neutral value: held still, the paw stands square and upright
+            rather than frozen mid-stride. It is also why the snap back
+            from 1 to 0 that `useLoop` does on a linear loop is invisible
+            here — 0 and 1 are the same pose. */}
+        <Animated.View
+          style={{
+            transform: [
+              { translateX: walk.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, -4, 0, 4, 0] }) },
+              { translateY: walk.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, -3, 0, -3, 0] }) },
+              {
+                rotate: walk.interpolate({
+                  inputRange: [0, 0.25, 0.5, 0.75, 1],
+                  outputRange: ['0deg', '-9deg', '0deg', '9deg', '0deg'],
+                }),
+              },
+            ],
+          }}
+        >
+          <Ionicons name="paw" size={26} color={colors.accent} />
+        </Animated.View>
+      </View>
     </View>
   );
 }
