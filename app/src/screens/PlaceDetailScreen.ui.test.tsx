@@ -1354,8 +1354,12 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
       reviewer_name: 'gowithchinne',
       reviewer_url: 'https://www.threads.com/@gowithchinne/post/DdeLnFwj10o',
     }));
-    fireEvent.click(screen.getByTestId('blurb-credit'));
-    expect(screen.getByText('@gowithchinne on Threads')).toBeTruthy();
+    const credit = screen.getByTestId('blurb-credit');
+    fireEvent.click(credit);
+    // The mark carries the platform, so the words stop repeating it.
+    expect(credit.querySelector('[data-icon="logo-threads"]')).toBeTruthy();
+    expect(credit.textContent).toContain('@gowithchinne');
+    expect(credit.textContent).not.toContain('on Threads');
     expect(openURL).toHaveBeenCalledWith('https://www.threads.com/@gowithchinne/post/DdeLnFwj10o');
   });
 
@@ -1372,7 +1376,10 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
       google_place_id: 'ChIJabc',
     }));
     expect(screen.queryByText(/on Google/)).toBeNull();
-    fireEvent.click(screen.getByTestId('blurb-credit'));
+    const credit = screen.getByTestId('blurb-credit');
+    expect(credit.querySelector('[data-icon="logo-google"]')).toBeTruthy();
+    expect(credit.textContent).toContain('Google');
+    fireEvent.click(credit);
     expect(openURL).toHaveBeenCalledWith('https://www.google.com/maps/place/?q=place_id:ChIJabc');
   });
 
@@ -1389,9 +1396,24 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     show(place({
       ...blurb, reviewer_source: 'threads', reviewer_name: null, reviewer_url: null,
     }));
-    fireEvent.click(screen.getByTestId('blurb-credit'));
-    expect(screen.getByText('From Threads')).toBeTruthy();
+    const credit = screen.getByTestId('blurb-credit');
+    fireEvent.click(credit);
+    // No handle, so the mark's own name is the label — and the glyph is
+    // still there, because the platform is the whole of what is known.
+    expect(credit.querySelector('[data-icon="logo-threads"]')).toBeTruthy();
+    expect(credit.textContent).toContain('Threads');
     expect(openURL).not.toHaveBeenCalled();
+  });
+
+  // A source recorded before this app learned about it. No glyph would be
+  // wrong to guess, so the long wording carries the platform instead.
+  it('spells out a source it has no mark for', () => {
+    show(place({
+      ...blurb, reviewer_source: 'tiktok', reviewer_name: 'chinne', reviewer_url: null,
+    }));
+    const credit = screen.getByTestId('blurb-credit');
+    expect(credit.querySelector('[data-icon^="logo-"]')).toBeNull();
+    expect(credit.textContent).toContain('chinne on tiktok');
   });
 
   it('tells the reader when the source will not open', async () => {

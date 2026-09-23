@@ -34,7 +34,7 @@ import {
 } from '../lib/links';
 import { clockOf, dotWindow, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
-import { blurbCredit, blurbLink } from '../lib/blurbSource';
+import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsSearchUrl } from '../lib/maps';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
@@ -241,6 +241,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // its own copy, and there is nobody outside to name.
   const blurbFrom = blurbCredit(place);
   const blurbHref = blurbLink(place);
+  const blurbMark = blurbFrom && blurbIcon(blurbFrom);
   // Which row opens the grouped card decides where the hairlines fall:
   // every row below the first draws one above itself, whatever subset of
   // the four a place actually has.
@@ -571,7 +572,18 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     person is the reason the copy is good.
 
                     Plain text when there is nowhere to go: a tappable line
-                    that does nothing is worse than an untappable one. */}
+                    that does nothing is worse than an untappable one.
+
+                    The platform's mark leads the line, and once it is there
+                    the words stop naming the platform: "@gowithchinne" under
+                    the Threads glyph says what "@gowithchinne on Threads"
+                    said, in half the line. An earlier draft of this argued
+                    an icon at 12.5pt is a smudge — it is not, because it
+                    rides inside the Text and takes its baseline, which is
+                    the thing that makes a glyph beside words read as one
+                    line rather than as two objects. A source with no mark
+                    keeps the long wording; there is nothing else to carry
+                    it. */}
                 {blurbFrom ? (
                   <Text
                     style={[s.creditLine, blurbHref ? s.creditLink : null]}
@@ -585,12 +597,18 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     accessibilityRole={blurbHref ? 'link' : undefined}
                     testID="blurb-credit"
                   >
+                    {blurbMark ? (
+                      <Ionicons
+                        name={blurbMark}
+                        size={13}
+                        color={blurbHref ? colors.accent : colors.textTertiary}
+                      />
+                    ) : null}
+                    {blurbMark ? '  ' : ''}
                     {blurbFrom.kind === 'threads'
-                      ? (blurbFrom.name
-                        ? t(`@${blurbFrom.name} on Threads`, `@${blurbFrom.name} trên Threads`, `@${blurbFrom.name}（Threads）`)
-                        : t('From Threads', 'Từ Threads', 'Threads より'))
+                      ? (blurbFrom.name ? `@${blurbFrom.name}` : 'Threads')
                       : blurbFrom.kind === 'google'
-                        ? t('From Google', 'Từ Google', 'Google より')
+                        ? 'Google'
                         : (blurbFrom.name
                           ? t(`${blurbFrom.name} on ${blurbFrom.source}`, `${blurbFrom.name} trên ${blurbFrom.source}`, `${blurbFrom.name}（${blurbFrom.source}）`)
                           : blurbFrom.source)}

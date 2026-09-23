@@ -68,3 +68,23 @@ export function blurbLink(
   }
   return null;
 }
+
+/**
+ * The mark that stands for a source, or null when we have none.
+ *
+ * The glyph is what makes the platform legible at a glance, and it lets the
+ * line stop spelling out what it already shows: "@gowithchinne" under the
+ * Threads mark says everything "@gowithchinne on Threads" does, in half a
+ * line of a 320pt screen. The wording stays with the screen, which owns the
+ * three languages; only the choice of mark is here, where the shape of each
+ * source already lives.
+ *
+ * Null for `other` on purpose. That branch is a source recorded before this
+ * app knew about it, and a wrong mark is worse than none: the text still
+ * names it, so nothing is lost.
+ */
+export function blurbIcon(credit: BlurbCredit): 'logo-threads' | 'logo-google' | null {
+  if (credit.kind === 'threads') return 'logo-threads';
+  if (credit.kind === 'google') return 'logo-google';
+  return null;
+}

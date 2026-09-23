@@ -2,7 +2,7 @@
 // `dashboard/tests/reviewer.test.mjs`; if the two drift, the screen credits
 // somebody the editor did not.
 import { describe, it, expect } from 'vitest';
-import { blurbCredit, blurbLink } from './blurbSource';
+import { blurbCredit, blurbIcon, blurbLink } from './blurbSource';
 
 const POST = 'https://www.threads.com/@gowithchinne/post/DdeLnFwj10o';
 const threads = (over = {}) => ({
@@ -77,5 +77,22 @@ describe('blurbLink', () => {
     // Even with a place id to hand: the desk's copy is not Google's.
     expect(blurbLink({ reviewer_source: 'editorial', google_place_id: 'ChIJabc' } as never)).toBeNull();
     expect(blurbLink({} as never)).toBeNull();
+  });
+});
+
+describe('blurbIcon', () => {
+  // The two the app can draw. The glyph is what lets the line stop
+  // spelling out the platform beside the handle.
+  it('gives each known source its own mark', () => {
+    expect(blurbIcon({ kind: 'threads', name: 'gowithchinne' })).toBe('logo-threads');
+    expect(blurbIcon({ kind: 'threads', name: null })).toBe('logo-threads');
+    expect(blurbIcon({ kind: 'google' })).toBe('logo-google');
+  });
+
+  // A source recorded before the app knew about it. A wrong mark would be
+  // worse than none, and the line still names it in words.
+  it('has no mark for a source it does not know', () => {
+    expect(blurbIcon({ kind: 'other', source: 'tiktok', name: 'chinne' })).toBeNull();
+    expect(blurbIcon({ kind: 'other', source: 'lonelyplanet', name: null })).toBeNull();
   });
 });
