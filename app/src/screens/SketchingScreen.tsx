@@ -351,7 +351,15 @@ export default function SketchingScreen({ navigation, route }: {
         {/* Still only when there is nothing coming. While the steps run the
             screen is about to hand over a plan, and an orb that settles
             first reads as the work having stopped short. */}
-        <SketchOrb still={empty || failed || calm} />
+        <SketchOrb
+          still={empty || failed || calm}
+          // The ring carries the same count the list below it does, so
+          // the arc grows on the frame a row ticks. A failed run reports
+          // a full ring rather than the stub it stopped on: the arc is
+          // how far the work got, and the work is not going any further,
+          // so a frozen sliver would read as a screen still trying.
+          pct={failed ? 1 : step / SKETCH_STEPS.length}
+        />
 
         <Text style={s.title}>
           {failed

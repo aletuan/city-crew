@@ -126,6 +126,11 @@ const feedTexts = () => [...document.querySelectorAll('[data-icon$="-outline"]')
 const settledLine = () => document.querySelector('[data-icon="checkmark"] + div')?.textContent ?? null;
 /** The mark beside a step label: the element before the label. */
 const markOf = (label: string) => screen.getByText(label).previousElementSibling as HTMLElement;
+/** The orb's ring, as the paths `arcSweep` cuts it into — one per 6°. */
+const ringArcs = () => [...document.querySelectorAll('[data-stub="Svg"] [data-stub="Path"]')];
+/** The colour at the arc's leading edge, which the ramp takes to lime. */
+const ringHead = () => ringArcs().at(-1)?.getAttribute('stroke') ?? '';
+const greenOf = (hex: string) => parseInt(hex.slice(3, 5), 16);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -254,6 +259,31 @@ describe('while it waits', () => {
     await tick(STEP_FLOOR_MS);
     expect(doneCount()).toBe(4);
     expect(feedTexts()).toEqual(['Your day runs 18:00–20:45']);
+  });
+
+  // The ring used to be a closed circle that only turned: "busy", and
+  // nothing the list underneath was not already counting off.
+  it('grows the orb ring a step at a time, and takes its leading edge to green', async () => {
+    renderScreen();
+    await tick(0);
+    // A stub, not nothing. The first stage waits on the catalog, and a
+    // bare disc through that wait reads as a screen that has died.
+    expect(ringArcs().length).toBe(5);
+    const warm = ringHead();
+
+    await tick(STEP_FLOOR_MS);
+    expect(doneCount()).toBe(1);
+    // A fifth of the circle, cut at 6° a segment.
+    expect(ringArcs().length).toBe(12);
+
+    await tick(STEP_FLOOR_MS);
+    expect(doneCount()).toBe(2);
+    expect(ringArcs().length).toBe(24);
+
+    await tick(STEP_FLOOR_MS * 3);
+    // Capped just short of a full turn, so the two ends never meet.
+    expect(ringArcs().length).toBe(58);
+    expect(greenOf(ringHead())).toBeGreaterThan(greenOf(warm));
   });
 
   it('takes the starting hour from the first plan when the answers carry none', async () => {

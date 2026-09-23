@@ -49,22 +49,44 @@ import { arcSweep, sampleSweep, type Stop } from '../lib/ring';
 import { colors, gradAI } from '../theme';
 
 /**
- * The ramp, ending where it began so the seam does not show.
+ * The ramp, read across the whole circle rather than across the drawn arc.
  *
- * The design named coral → amber → lime → coral. The first and last stops
- * are the same colour on purpose: a rotating ring whose ends differ has a
- * visible join going round it, which reads as a rendering fault rather
- * than as a design.
+ * It used to end where it began — coral → amber → lime → coral — because
+ * a full ring whose ends differ has a visible join going round it. The
+ * ring is an arc with a gap now, so there are no ends to meet, and the
+ * ramp can go somewhere: coral at the tail, lime at the head. Which makes
+ * the colour say what the length says. A quarter done is a short warm
+ * stub; nearly done is a long arc whose leading edge has gone green.
+ *
+ * This only works because the sample is taken at the segment's angle
+ * round the *circle*, not at its position along the arc. Sampled along
+ * the arc, every length would show the whole ramp and the colour would
+ * mean nothing.
  */
 const SWEEP: Stop[] = [
   { at: 0, hex: gradAI.colors[0] },
-  { at: 0.33, hex: '#FFC94A' },
-  { at: 0.66, hex: '#C6F24E' },
-  { at: 1, hex: gradAI.colors[0] },
+  { at: 0.45, hex: '#FFC94A' },
+  { at: 1, hex: '#C6F24E' },
 ];
 
 const BOX = 92;
 const STROKE = 5;
+
+/**
+ * The shortest and longest arc drawn, whatever the caller reports.
+ *
+ * A floor because a ring of nothing is not a spinner: the first stage
+ * waits on the catalog, which is the one part of this that is genuinely
+ * slow, and a reader watching a bare disc through it has been told the
+ * screen is broken.
+ *
+ * A cap because the two ends must never meet. At a full turn the lime
+ * head would butt against the coral tail and the ramp would read as a
+ * join. The gap left at the top is also what keeps the rotation legible
+ * — a closed ring turning looks like a ring standing still.
+ */
+const ARC_FLOOR = 0.08;
+const ARC_CAP = 0.96;
 
 /** A segment of the ring, as an SVG arc path. */
 function seg(a0: number, a1: number, r: number, c: number): string {
@@ -77,9 +99,24 @@ function seg(a0: number, a1: number, r: number, c: number): string {
   return `M ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1}`;
 }
 
-export default function SketchOrb({ still }: {
+export default function SketchOrb({ still, pct = 1 }: {
   /** Held still — the run has ended, or the reader asked for less motion. */
   still?: boolean;
+  /**
+   * How much of the work is behind us, 0 to 1 — the fraction of the
+   * screen's stages that have finished.
+   *
+   * The ring used to be a closed circle that only turned, which says
+   * "busy" and nothing else, while the list underneath it was already
+   * counting the stages off one by one. Two indicators, one of them
+   * carrying no information. The arc's length is that count now.
+   *
+   * It advances in steps rather than sliding, and lands on the same
+   * frame as the row below it ticks — the two say one thing together.
+   * Sliding would mean animating a run of SVG paths from JS, on the one
+   * screen whose header explains why its motion stays off that thread.
+   */
+  pct?: number;
 }) {
   const spin = useLoop(1600, !!still);
   // The same 1600ms the ring turns by, and deliberately so: two footfalls
@@ -90,7 +127,8 @@ export default function SketchOrb({ still }: {
 
   const c = BOX / 2;
   const r = c - STROKE / 2;
-  const segments = arcSweep(1, 6);
+  const shown = Math.min(ARC_CAP, Math.max(ARC_FLOOR, pct));
+  const segments = arcSweep(shown, 6);
 
   return (
     <View style={s.box}>
@@ -109,7 +147,10 @@ export default function SketchOrb({ still }: {
               // Each segment overlaps its neighbour by a hair via the round
               // cap, so the ring reads as one stroke rather than as a
               // dotted line at small sizes.
-              stroke={sampleSweep(SWEEP, g.t)}
+              // `g.t` runs 0 → 1 along the arc; scaling it by the arc's
+              // own length turns it back into an angle round the circle,
+              // which is what the ramp is written against.
+              stroke={sampleSweep(SWEEP, g.t * shown)}
               strokeWidth={STROKE}
               strokeLinecap="round"
               fill="none"
