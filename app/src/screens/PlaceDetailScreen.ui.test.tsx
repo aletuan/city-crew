@@ -1356,9 +1356,11 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     }));
     const credit = screen.getByTestId('blurb-credit');
     fireEvent.click(credit);
-    // The mark carries the platform, so the words stop repeating it.
+    // The mark carries the platform, so the words stop repeating it —
+    // and the @ goes with them, being a second marker for the same thing.
     expect(credit.querySelector('[data-icon="logo-threads"]')).toBeTruthy();
-    expect(credit.textContent).toContain('@gowithchinne');
+    expect(credit.textContent).toContain('gowithchinne');
+    expect(credit.textContent).not.toContain('@');
     expect(credit.textContent).not.toContain('on Threads');
     expect(openURL).toHaveBeenCalledWith('https://www.threads.com/@gowithchinne/post/DdeLnFwj10o');
   });
@@ -1380,7 +1382,33 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     expect(credit.querySelector('[data-icon="logo-google"]')).toBeTruthy();
     expect(credit.textContent).toContain('Google');
     fireEvent.click(credit);
-    expect(openURL).toHaveBeenCalledWith('https://www.google.com/maps/place/?q=place_id:ChIJabc');
+    // The documented pair, which is what the address row sends too.
+    // `maps/place/?q=place_id:…` searched for the literal string and
+    // Maps answered "No results found".
+    expect(openURL).toHaveBeenCalledWith(
+      'https://www.google.com/maps/search/?api=1'
+      + '&query=C%E1%BB%99ng%20C%C3%A0%20Ph%C3%AA%20-%20Old%20Quarter&query_place_id=ChIJabc',
+    );
+  });
+
+  // The words and the credit are one object to a reader. Tapping the
+  // paragraph used to do nothing at all, which made the source look like
+  // it was only reachable through a 12.5pt grey line.
+  it('opens the source from the blurb itself, not only from the credit', () => {
+    show(place({
+      ...blurb,
+      reviewer_source: 'threads',
+      reviewer_name: 'gowithchinne',
+      reviewer_url: 'https://www.threads.com/@gowithchinne/post/DdeLnFwj10o',
+    }));
+    fireEvent.click(screen.getByTestId('detail-desc'));
+    expect(openURL).toHaveBeenCalledWith('https://www.threads.com/@gowithchinne/post/DdeLnFwj10o');
+  });
+
+  it('leaves the blurb inert when there is nowhere to send anybody', () => {
+    show(place({ ...blurb, reviewer_source: null }));
+    fireEvent.click(screen.getByTestId('detail-desc'));
+    expect(openURL).not.toHaveBeenCalled();
   });
 
   it('says nothing under a blurb the desk wrote itself', () => {

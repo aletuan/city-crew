@@ -23,6 +23,7 @@
 // screen owns the wording in three languages, and a module that returned
 // "Google" would own it in one.
 
+import { mapsSearchUrl, type Point } from './maps';
 import type { Place } from './types';
 
 export type BlurbCredit =
@@ -40,7 +41,7 @@ export type BlurbCredit =
 export function blurbCredit(place: Pick<Place, 'reviewer_source' | 'reviewer_name'>): BlurbCredit | null {
   const source = place.reviewer_source?.trim();
   if (!source || source === 'editorial') return null;
-  const name = place.reviewer_name?.trim() || null;
+  const name = place.reviewer_name?.trim().replace(/^@+/, '') || null;
   if (source === 'threads') return { kind: 'threads', name };
   if (source === 'google') return { kind: 'google' };
   return { kind: 'other', source, name };
@@ -52,20 +53,35 @@ export function blurbCredit(place: Pick<Place, 'reviewer_source' | 'reviewer_nam
  *
  * The stored permalink wins. Failing that each source gets one derivation:
  * the Threads profile from the handle (weaker than the post, but real), and
- * the Maps page from the place id.
+ * for Google the place's own Maps page.
+ *
+ * ── the Maps link is `mapsSearchUrl`'s, not its own ──
+ *
+ * This shipped spelling its own URL, `maps/place/?q=place_id:<id>`, and
+ * that form does not resolve: Maps takes the whole `place_id:ChIJ…` as a
+ * search string, finds no business by that name, and offers to search the
+ * web instead. The address row a few hundred points down the same screen
+ * has always used `mapsSearchUrl`, which sends the documented pair —
+ * `query` for the name, `query_place_id` for the id — and opens the right
+ * pin every time.
+ *
+ * So there is one builder again. `mapsSearchUrl`'s own note says it was
+ * extracted because a formatting rule in two places became five; this was
+ * the third spelling, written six days later, arriving at exactly the
+ * failure that note predicted.
  */
 export function blurbLink(
-  place: Pick<Place, 'reviewer_source' | 'reviewer_name' | 'reviewer_url' | 'google_place_id'>,
+  place: Pick<Place, 'reviewer_source' | 'reviewer_name' | 'reviewer_url'> & Point,
 ): string | null {
   const url = place.reviewer_url?.trim();
   if (url) return url;
   const source = place.reviewer_source?.trim();
   if (source === 'editorial') return null;
-  const name = place.reviewer_name?.trim();
+  // A handle pasted with its @ would otherwise reach the URL as `@@name`.
+  // The desk's `sourceProblem` warns about it; this is the other half.
+  const name = place.reviewer_name?.trim().replace(/^@+/, '');
   if (source === 'threads' && name) return `https://www.threads.com/@${name}`;
-  if (source === 'google' && place.google_place_id) {
-    return `https://www.google.com/maps/place/?q=place_id:${place.google_place_id}`;
-  }
+  if (source === 'google') return mapsSearchUrl(place);
   return null;
 }
 
