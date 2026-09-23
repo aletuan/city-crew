@@ -242,6 +242,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const blurbFrom = blurbCredit(place);
   const blurbHref = blurbLink(place);
   const blurbMark = blurbFrom && blurbIcon(blurbFrom);
+  // The words and the credit under them are one object to a reader: both
+  // are the quote, and a reader who wants the source taps whichever their
+  // thumb is nearest. So they share a handler rather than only the small
+  // grey line at the bottom carrying it.
+  const openBlurb = blurbHref
+    ? () => open(blurbHref, t('Could not open the source', 'Không mở được nguồn', 'ソースを開けませんでした'))
+    : undefined;
   // Which row opens the grouped card decides where the hairlines fall:
   // every row below the first draws one above itself, whatever subset of
   // the four a place actually has.
@@ -556,7 +563,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               </View>
               <View style={s.whyBody}>
                 <Text style={s.whyLabel}>{t('Why go?', 'Vì sao nên ghé?', 'なぜ行く？')}</Text>
-                <Text style={s.desc}>{desc}</Text>
+                <Text style={s.desc} onPress={openBlurb} testID="detail-desc">{desc}</Text>
                 {/* Whose words those are. A line, not a badge: it belongs to
                     the paragraph above it and should read as its last line,
                     the way a pull quote is attributed.
@@ -575,9 +582,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     that does nothing is worse than an untappable one.
 
                     The platform's mark leads the line, and once it is there
-                    the words stop naming the platform: "@gowithchinne" under
+                    the words stop naming the platform: "gowithchinne" under
                     the Threads glyph says what "@gowithchinne on Threads"
-                    said, in half the line. An earlier draft of this argued
+                    said, in a third of the line. The @ goes with them — it
+                    is a second marker for the thing the glyph already
+                    marks. An earlier draft of this argued
                     an icon at 12.5pt is a smudge — it is not, because it
                     rides inside the Text and takes its baseline, which is
                     the thing that makes a glyph beside words read as one
@@ -587,13 +596,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 {blurbFrom ? (
                   <Text
                     style={[s.creditLine, blurbHref ? s.creditLink : null]}
-                    onPress={blurbHref
-                      ? () => open(blurbHref, t(
-                        'Could not open the source',
-                        'Không mở được nguồn',
-                        'ソースを開けませんでした',
-                      ))
-                      : undefined}
+                    onPress={openBlurb}
                     accessibilityRole={blurbHref ? 'link' : undefined}
                     testID="blurb-credit"
                   >
@@ -606,7 +609,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     ) : null}
                     {blurbMark ? '  ' : ''}
                     {blurbFrom.kind === 'threads'
-                      ? (blurbFrom.name ? `@${blurbFrom.name}` : 'Threads')
+                      ? (blurbFrom.name ?? 'Threads')
                       : blurbFrom.kind === 'google'
                         ? 'Google'
                         : (blurbFrom.name
