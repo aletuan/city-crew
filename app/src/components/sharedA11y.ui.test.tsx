@@ -79,6 +79,23 @@ describe('GradientCta', () => {
     fireEvent.click(cta);
     expect(onPress).not.toHaveBeenCalled();
   });
+
+  it('is its words alone, and still pressable, without a glyph', () => {
+    const onPress = vi.fn();
+    const { container } = render(<GradientCta label="Plan a trip" onPress={onPress} />);
+    expect(container.querySelector('[data-icon]')).toBeNull();
+    const cta = screen.getByRole('button', { name: 'Plan a trip' });
+    fireEvent.click(cta);
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  // Without a glyph of its own there would be nothing left to turn, and a
+  // button that takes a press and shows nothing reads as broken.
+  it('borrows a mark to turn when it is busy without one of its own', () => {
+    const { container } = render(<GradientCta label="Plan a trip" onPress={vi.fn()} busy />);
+    expect(container.querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('sync');
+    expect(screen.getByRole('button', { name: 'Plan a trip' }).getAttribute('aria-busy')).toBe('true');
+  });
 });
 
 describe('PrimaryButton', () => {

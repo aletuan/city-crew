@@ -844,7 +844,13 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color }: {
  * only thing on its card and carries a full sentence of a label.
  */
 export function GradientCta({ icon, label, onPress, wide, busy, disabled, testID }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  /**
+   * Optional, and the omission is a choice rather than an oversight. A
+   * glyph beside a label is a second way of saying the same thing, worth
+   * it where the label is generic — and noise where the button is the
+   * only action on the screen and the words already name it.
+   */
+  icon?: keyof typeof Ionicons.glyphMap;
   /** For the iOS smoke flows; see `.maestro/README.md`. */
   testID?: string;
   label: string;
@@ -881,6 +887,9 @@ export function GradientCta({ icon, label, onPress, wide, busy, disabled, testID
 }) {
   const still = useReducedMotion();
   const spin = useLoop(1600, still || !busy);
+  // An iconless button still has to show that it is working, so `busy`
+  // borrows a mark rather than leaving the reader with a dead press.
+  const glyph = icon ?? (busy ? 'sync' : null);
   return (
     <PressableScale
       onPress={onPress}
@@ -900,14 +909,19 @@ export function GradientCta({ icon, label, onPress, wide, busy, disabled, testID
           nothing at all to the readers who asked for less movement, which
           is worse than the label it replaces. Fade is not motion. */}
       <LinearGradient {...gradAI} style={[s.cta, busy && s.ctaBusy]}>
-        {/* Wrapped unconditionally. At rest `useLoop` holds zero, so the
-            rotation is the identity transform — no branch, no reflow, and
-            the icon cannot shift by a pixel between the two states. */}
-        <Animated.View
-          style={{ transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }}
-        >
-          <Ionicons name={icon} size={20} color={colors.accentInk} />
-        </Animated.View>
+        {/* The rotation wraps the glyph whether or not it is turning. At
+            rest `useLoop` holds zero, so it is the identity transform —
+            no branch between rest and busy, no reflow, and the icon
+            cannot shift by a pixel between the two states. The branch
+            here is over having a glyph at all, which does not change
+            while the button is on screen. */}
+        {glyph && (
+          <Animated.View
+            style={{ transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }}
+          >
+            <Ionicons name={glyph} size={20} color={colors.accentInk} />
+          </Animated.View>
+        )}
         <Text style={s.ctaText}>{label}</Text>
       </LinearGradient>
     </PressableScale>

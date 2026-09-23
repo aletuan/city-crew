@@ -412,12 +412,14 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
               they missed; one that explains itself does not. */}
           <View style={ready ? undefined : s.ctaOff} pointerEvents={ready ? 'auto' : 'none'}>
             <GradientCta
-              icon="sparkles"
               wide
               disabled={!ready}
               testID="ideas-sketch"
+              // No glyph. It is the only button on the screen and the
+              // words say what it does; a sparkle beside them was
+              // decoration, not a second reading of the label.
               // Generic, and it stays generic — see the lede's note.
-              label={t('Sketch the plan', 'Phác kế hoạch', 'プランを下描き')}
+              label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
               // `whereLabel` rather than the raw draft: only this screen
               // knows which of the three the reader ended up with — a
               // district, a pin, or the position behind "near me" — and
