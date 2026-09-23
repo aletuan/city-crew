@@ -71,8 +71,18 @@ const chip = (name: string) => screen.getByRole('button', { name });
 const cta = () => screen.getByRole('button', { name: /Search|Use this location/ });
 const field = () => screen.getByPlaceholderText('Search an address or place') as HTMLInputElement;
 const type = (q: string) => fireEvent.change(field(), { target: { value: q } });
-/** The sheet asks the geocoder on every move; settled once its answer is in. */
-const named = () => waitFor(() => expect(caption()).not.toBe(''));
+/**
+ * The sheet asks the geocoder on every move; settled once *this* answer is
+ * in, which is why it takes the name.
+ *
+ * Waiting on "not empty" was not enough. Every move clears the caption and
+ * refills it a promise later (`onPick` sets `where` to '' on purpose, so
+ * the old point's name is never read as the new one's), so a poll can land
+ * on the previous name or on the gap and return. The test then reads a
+ * `where` that is about to change, and on a loaded machine that is the
+ * read it gets: CI caught it as `atName: null` where 'Hà Đông' was due.
+ */
+const named = (name: string) => waitFor(() => expect(caption()).toBe(name));
 
 beforeEach(() => {
   findSpots.mockClear();
@@ -109,9 +119,8 @@ describe('the map, and what it shows', () => {
     world.me = { lat: 21.02, lng: 105.84 };
     openSheet();
     expect(centre()).toBe('21.02,105.84');
-    await named();
+    await named("You're here · Hoàn Kiếm");
     expect(nameOf).toHaveBeenCalledWith({ lat: 21.02, lng: 105.84 }, 'en');
-    expect(caption()).toBe("You're here · Hoàn Kiếm");
   });
 
   // The one this missed: picking an area set a district and no point, so
@@ -122,21 +131,19 @@ describe('the map, and what it shows', () => {
     fireEvent.click(chip('Hà Đông'));
     expect(centre()).toBe('20.97,105.77');
     // Named as the area's point, and no longer "here".
-    await named();
-    expect(caption()).toBe('Hoàn Kiếm');
+    await named('Hoàn Kiếm');
   });
 
   it('moves to a tapped pin, and forgets the old point’s name while the new one is asked for', async () => {
     world.me = { lat: 21.02, lng: 105.84 };
     openSheet();
-    await named();
+    await named("You're here · Hoàn Kiếm");
     nameOf.mockResolvedValue('Hà Đông');
     fireEvent.click(screen.getByRole('button', { name: 'drop a pin' }));
     expect(centre()).toBe('20.97,105.77');
     // Cleared at the tap: the old point's name must not be read as this one's.
     expect(caption()).toBe('');
-    await named();
-    expect(caption()).toBe('Hà Đông');
+    await named('Hà Đông');
   });
 });
 
@@ -332,7 +339,7 @@ describe('a pin with no name of its own', () => {
     nameOf.mockResolvedValue('Hà Đông');
     const { onDone } = openSheet();
     fireEvent.click(screen.getByRole('button', { name: 'drop a pin' }));
-    await named();
+    await named('Hà Đông');
     fireEvent.click(cta());
     expect(onDone).toHaveBeenCalledWith({ district: null, at: { lat: 20.97, lng: 105.77 }, atName: 'Hà Đông' });
   });
