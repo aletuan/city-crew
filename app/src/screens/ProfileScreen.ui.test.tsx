@@ -261,10 +261,14 @@ describe('guest hub', () => {
     expect(document.body.textContent?.toLowerCase()).not.toContain('guest');
   });
 
-  it('closes on the tagline and its author', () => {
+  it("closes on the tagline and its author, under the app's own mark", () => {
     draw();
     expect(screen.getByText(/We do not remember days/)).toBeTruthy();
     expect(screen.getByText('— Cesare Pavese')).toBeTruthy();
+    // A glyph, not an emoji: the platform used to choose the shape and
+    // nothing gave it the theme's colour.
+    expect(document.querySelector('[data-icon="paw"]')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('\u2728');
   });
 });
 
