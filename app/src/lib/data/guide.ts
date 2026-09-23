@@ -10,20 +10,27 @@
 import { supabase } from '../supabase';
 
 /**
- * Has the desk granted this account the local-guide role?
+ * Which cities the desk has made this account a local guide of.
+ *
+ * A list of city ids in which `null` is a member meaning *every* city —
+ * the shape `local_guides` itself uses since
+ * `20260922100000_local_guides_per_city.sql`. Kept rather than flattened
+ * to a boolean, because the question the app asks is not "is this person
+ * a guide" but "is this person a guide *here*", and only the caller
+ * holding a place knows where here is.
  *
  * Asked with no filter on purpose. `guides read their own grant` scopes
- * the table to the caller's own row, so a filter here would be a second,
+ * the table to the caller's own rows, so a filter here would be a second,
  * weaker copy of a rule Postgres already enforces — and the one that
- * could drift. An empty answer means "no", which is also what a guest
- * gets and what a database that predates the table gives: three
+ * could drift. An empty answer means "nowhere", which is also what a
+ * guest gets and what a database that predates the table gives: three
  * different facts, one safe answer, and the safe answer is the one that
  * draws no control.
  */
-export async function fetchIsLocalGuide(): Promise<boolean> {
-  const { data, error } = await supabase.from('local_guides').select('user_id').limit(1);
-  if (error) return false;
-  return (data?.length ?? 0) > 0;
+export async function fetchGuideCities(): Promise<(string | null)[]> {
+  const { data, error } = await supabase.from('local_guides').select('city_id');
+  if (error) return [];
+  return (data ?? []).map((r) => r.city_id ?? null);
 }
 
 /**

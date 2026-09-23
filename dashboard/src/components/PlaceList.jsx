@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { leftBehindNote } from '../storage.js';
 import { api } from '../api.js';
@@ -6,7 +6,7 @@ import { CATEGORY_KEYS, CATEGORY_LABEL, CATEGORY_STYLE } from '../categories.js'
 import { VIBE_ORDER, VIBE_STYLE } from '../vibes.js';
 import { THREADS_FILTERS } from '../lib/threads.js';
 import { CategoryIcon } from '../icons.jsx';
-import { useCity, useProgress, useToast } from '../App.jsx';
+import { ALL_CITIES, chipLabel, useCity, useProgress, useToast } from '../App.jsx';
 
 const STATUSES = ['pending', 'approved', 'flagged'];
 // The params the rail owns, and so the ones the badge counts, the chip row
@@ -46,6 +46,18 @@ const FILTER_LABEL = {
    one nobody scrolled to. */
 const GROUP_SHOWN = 6;
 
+/** The heading, which is also the control that folds the group. A button
+ *  rather than a label with a button beside it: a 10.5px word is not a
+ *  target, and the whole row reads as one thing to press. */
+function FilterHead({ label, open, onToggle }) {
+  return (
+    <button type="button" className="filterhead" aria-expanded={open} onClick={onToggle}>
+      <span className="filterlabel">{label}</span>
+      <span className="filterchev" aria-hidden="true"><CategoryIcon name="chevron" size={12} /></span>
+    </button>
+  );
+}
+
 /**
  * One question in the rail: a heading, a row per answer with the count it
  * would return, and a way past the cap when there are more answers than a
@@ -63,18 +75,32 @@ const GROUP_SHOWN = 6;
  * first rather than widening the search. The box is still the right mark —
  * these are on/off statements about the list, and pressing the one that is
  * on turns it off, which is exactly what a checkbox promises.
+ *
+ * The heading folds the group, and every group starts open: the rail's
+ * job is to show what can be asked, and a panel that opens as five shut
+ * headings hides that behind a click. Folding lives in the component,
+ * not the URL: it says nothing about what the list contains, so it has
+ * no business in a link somebody pastes to a colleague.
  */
 function FilterGroup({ label, options, value, onPick }) {
+  const [open, setOpen] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const over = options.length - GROUP_SHOWN;
   // A chosen answer is never folded away: the row narrowing the list has to
   // be the row you can see and switch off, wherever it sits in the order.
+  // That holds for both folds — past the cap, and the whole section.
   const chosenIsLate = options.findIndex((o) => o.value === value) >= GROUP_SHOWN;
-  const open = expanded || chosenIsLate || over <= 0;
-  const shown = open ? options : options.slice(0, GROUP_SHOWN);
+  const full = expanded || chosenIsLate || over <= 0;
+  const chosen = options.find((o) => o.value === value);
+  // Shut, a group keeps the one row that is doing something and drops the
+  // rest — rather than hiding the answer and leaving a heading that gives
+  // no sign the list below is narrowed by it.
+  const shown = open
+    ? (full ? options : options.slice(0, GROUP_SHOWN))
+    : (chosen ? [chosen] : []);
   return (
-    <div className="filterset">
-      <span className="filterlabel">{label}</span>
+    <div className={`filterset${open ? '' : ' shut'}`}>
+      <FilterHead label={label} open={open} onToggle={() => setOpen((v) => !v)} />
       <div className="filterlist" role="group" aria-label={label}>
         {shown.map((o) => (
           <button
@@ -92,10 +118,143 @@ function FilterGroup({ label, options, value, onPick }) {
           </button>
         ))}
       </div>
-      {over > 0 && !chosenIsLate && (
+      {open && over > 0 && !chosenIsLate && (
         <button type="button" className="filtermore" onClick={() => setExpanded((v) => !v)}>
           {expanded ? 'Show less' : `+ Show ${over} more`}
         </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The city, asked with a box you can type in.
+ *
+ * Every other group in this rail is a fixed set — three statuses, nine
+ * categories — and a row each is the right shape for those. Cities are
+ * not fixed: there are nine today, the catalog is two countries wide, and
+ * the answer to "which city" is one a reader usually arrives already
+ * knowing. A list you scan is the wrong instrument for a question you can
+ * already answer; a box you type three letters into is the right one, and
+ * it costs the same two lines of rail at nine cities as at ninety.
+ *
+ * Still single-answer, like the rest of the rail and like `api.places`,
+ * which takes one `city_id`. The chip under the box is the one that is
+ * set, and clearing it means all cities rather than none — "no city" is
+ * not a state this catalog has.
+ *
+ * The counts stay on the rows. They are why this is not a plain `select`:
+ * the desk picks the next city to work by which one is biggest, and a
+ * native menu has nowhere to put that number.
+ */
+function CityFilter({ cities, value, counts, allCount, onPick }) {
+  const [open, setOpen] = useState(true);
+  const [listOpen, setListOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const wrap = useRef(null);
+  const input = useRef(null);
+
+  // A menu that stays open after you have looked away from it is a menu
+  // covering the thing you looked at. Pointerdown rather than click, so it
+  // shuts on the press that starts a scroll, not on the release.
+  useEffect(() => {
+    if (!listOpen) return undefined;
+    const away = (e) => { if (!wrap.current?.contains(e.target)) setListOpen(false); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [listOpen]);
+
+  const options = useMemo(() => [
+    { value: ALL_CITIES, label: 'All cities', count: allCount },
+    ...cities.map((c) => ({ value: c.id, label: chipLabel(c), count: counts?.[c.id] ?? 0 })),
+  ], [cities, counts, allCount]);
+
+  const needle = q.trim().toLowerCase();
+  // Accent-insensitive, because the desk types "da nang" for Đà Nẵng far
+  // more often than it reaches for the diacritics.
+  const flat = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const matches = needle
+    ? options.filter((o) => flat(o.label).includes(flat(needle)))
+    : options;
+
+  const chosen = options.find((o) => o.value === value);
+  const pick = (v) => {
+    onPick(v);
+    setQ('');
+    setListOpen(false);
+  };
+
+  return (
+    <div className={`filterset${open ? '' : ' shut'}`}>
+      <FilterHead label="City" open={open} onToggle={() => setOpen((v) => !v)} />
+      {open && (
+        <div className="citypick" ref={wrap}>
+          <div className="citybox">
+            <span className="cityboxicon" aria-hidden="true"><CategoryIcon name="search" size={12} /></span>
+            <input
+              ref={input}
+              type="text"
+              className="cityinput"
+              role="combobox"
+              aria-expanded={listOpen}
+              aria-label="Search cities"
+              placeholder="Search cities…"
+              value={q}
+              onChange={(e) => { setQ(e.target.value); setListOpen(true); }}
+              onFocus={() => setListOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') { setListOpen(false); setQ(''); }
+                // One match and a reader who has finished typing: take it.
+                if (e.key === 'Enter' && matches.length === 1) pick(matches[0].value);
+              }}
+            />
+            <button
+              type="button"
+              className="cityboxchev"
+              aria-label={listOpen ? 'Hide cities' : 'Show cities'}
+              aria-expanded={listOpen}
+              onClick={() => {
+                setListOpen((v) => !v);
+                if (!listOpen) input.current?.focus();
+              }}
+            >
+              <CategoryIcon name="chevron" size={12} />
+            </button>
+          </div>
+
+          {listOpen && (
+            <div className="citymenu" role="listbox" aria-label="Cities">
+              {matches.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  role="option"
+                  aria-selected={value === o.value}
+                  className={`filterrow${value === o.value ? ' on' : ''}`}
+                  onClick={() => pick(o.value)}
+                >
+                  <span className="filterbox" aria-hidden="true"><CategoryIcon name="check" size={10} /></span>
+                  <span className="filtername">{o.label}</span>
+                  <span className="filtercount">{o.count ?? 0}</span>
+                </button>
+              ))}
+              {matches.length === 0 && <p className="citynone">No city by that name.</p>}
+            </div>
+          )}
+
+          {/* What is set, when the box is not showing it. Clearing goes to
+              all cities, which is this filter's off position. */}
+          {chosen && value !== ALL_CITIES && (
+            <div className="citychips">
+              <span className="citychip">
+                {chosen.label}
+                <button type="button" onClick={() => pick(ALL_CITIES)} aria-label={`Clear ${chosen.label}`}>
+                  <CategoryIcon name="x" size={9} />
+                </button>
+              </span>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -205,7 +364,55 @@ function Facts({ place }) {
 }
 
 export default function PlaceList() {
-  const { city } = useCity();
+  const { cities, city, setCity } = useCity();
+
+  // Every city's size, for the rail's City group. Fetched once and not on
+  // a city switch: the answer does not depend on which city is picked,
+  // which is the whole reason it is not read off `progress`.
+  const [cityCounts, setCityCounts] = useState(null);
+
+  /**
+   * How tall the toolbar is, so the rail can stick below it.
+   *
+   * This measurement has been added and retired twice, and it is back
+   * because the geometry is genuinely different this time. While the bar
+   * sat in the results column the rail was *beside* it and had nothing of
+   * it to clear; now the bar spans both columns, so a rail sticking at
+   * the top bar's edge slides its first rows underneath an opaque
+   * toolbar. A constant will not do — the bar is one row on a laptop and
+   * two on a phone, and it changes height when a batch is selected.
+   *
+   * Same shape as `--topbar-h` in App.jsx: publish on mount, again on
+   * resize, and clear it on the way out so no other screen inherits a
+   * number that describes a bar it does not have.
+   */
+  const worktopRef = useRef(null);
+  useEffect(() => {
+    const el = worktopRef.current;
+    if (!el) return undefined;
+    const publish = () =>
+      document.documentElement.style.setProperty('--worktop-h', `${el.offsetHeight}px`);
+    publish();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(publish);
+    ro?.observe(el);
+    return () => {
+      ro?.disconnect();
+      document.documentElement.style.removeProperty('--worktop-h');
+    };
+  }, []);
+  useEffect(() => {
+    let live = true;
+    api.cityCounts()
+      .then((c) => { if (live) setCityCounts(c); })
+      // A failure leaves the counts blank and the rows still pressable —
+      // the group is a control first and a measure second.
+      .catch(() => { if (live) setCityCounts({}); });
+    return () => { live = false; };
+  }, []);
+  const allCityCount = useMemo(
+    () => (cityCounts ? Object.values(cityCounts).reduce((n, v) => n + v, 0) : 0),
+    [cityCounts],
+  );
   const { progress, refresh: refreshProgress } = useProgress();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
@@ -228,6 +435,7 @@ export default function PlaceList() {
   const [approving, setApproving] = useState(false);
   // Phones only: the rail is a column on desktop and never closed there.
   const [filtersOpen, setFiltersOpen] = useState(false);
+
 
 
   const status = params.get('status') ?? '';
@@ -391,6 +599,89 @@ export default function PlaceList() {
 
   return (
     <>
+      {/* Search, sort and layout, across the page.
+
+            These act on the whole screen rather than on the results
+            column alone, and the reference gives them the whole width to
+            say so. What used to ride with them and no longer does is the
+            row of chips naming the live filters: those describe the
+            results, and starting them at the page's left edge ran them
+            along the top of the panel that produced them. They are in
+          `.workmain` now, above the first card.
+
+          It is also a child of the page rather than of a wrapper, and
+          that is load-bearing: a `position: sticky` element can only
+          travel inside its own containing block, so a bar wrapped in a
+          div of exactly its own height — or sitting in a grid row sized
+          to its content, which is where this one used to be — is
+          nominally sticky and factually not. It has been that for as
+          long as it has been inside the split. Out here its containing
+          block is `.shell` and it actually sticks.
+
+          On phones, where it is two rows tall, it stays stuck only while
+          a batch is selected — see the media query in theme.css. */}
+      <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`} ref={worktopRef}>
+            {selected.size > 0 ? (
+              <div className="resultsbar">
+                <span className="resultscount">{selected.size} selected</span>
+                <div className="resultscontrols">
+                  <button className="syncbtn" onClick={toggleSelectAll}>
+                    {allOnPageSelected ? 'Deselect all' : `Select all ${rows?.length ?? 0} on page`}
+                  </button>
+                  <button className="syncbtn" onClick={() => setSelected(new Set())}>Cancel</button>
+                  <button className="syncbtn primary" onClick={approveSelected} disabled={approving || deleting}>
+                    {approving ? 'Approving…' : `Approve ${selected.size}`}
+                  </button>
+                  <button className="dangerbtn" onClick={deleteSelected} disabled={deleting || approving}>
+                    {deleting ? 'Deleting…' : `Delete ${selected.size}`}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="resultsbar browse">
+                <div className="resultscontrols">
+                  <button
+                    className={`filterbtn${activeCount ? ' on' : ''}`}
+                    onClick={() => setFiltersOpen(true)}
+                    aria-expanded={filtersOpen}
+                  >
+                    <CategoryIcon name="sliders" />
+                    Filters
+                    {activeCount > 0 && <span className="filterbadge">{activeCount}</span>}
+                  </button>
+                  <div className="searchbox">
+                    <CategoryIcon name="search" />
+                    <input
+                      className="search"
+                      placeholder="Search places…"
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      aria-label="Search places"
+                    />
+                  </div>
+                  <select className="sortselect" value={`${sort}:${dir}`} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
+                    {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                  {/* Grid first, List second, as the reference draws it.
+                      The words are on at every width: two abstract glyphs
+                      in a pill are a guess until you press one, and the
+                      bar has the room now that it spans the page. */}
+                  <div className="viewtoggle" data-view={view} role="group" aria-label="Layout">
+                    <span className="viewtoggle-thumb" />
+                    <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-pressed={view === 'grid'}>
+                      <CategoryIcon name="grid" />
+                      <span>Grid</span>
+                    </button>
+                    <button className={view === 'row' ? 'on' : ''} onClick={() => setView('row')} aria-pressed={view === 'row'}>
+                      <CategoryIcon name="list" />
+                      <span>List</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+      </div>
+
       <div className="worksplit">
         {filtersOpen && <div className="sheetback" onClick={() => setFiltersOpen(false)} />}
         {/* One rail, two projections. A column beside the results where
@@ -410,6 +701,20 @@ export default function PlaceList() {
             </button>
           </div>
           <div className="filters">
+            {/* First, because it is the question the others are asked
+                inside: which city, then which of its places.
+
+                Counts come from `api.cityCounts`, which is scoped by
+                nothing: the box has to show every city's size while one
+                of them is picked, and the other groups' counts ignore
+                their siblings too. */}
+            <CityFilter
+              cities={cities}
+              value={city?.id ?? ALL_CITIES}
+              counts={cityCounts}
+              allCount={allCityCount}
+              onPick={(v) => setCity(v)}
+            />
             <FilterGroup
               label="Status"
               value={status}
@@ -472,109 +777,48 @@ export default function PlaceList() {
         </aside>
 
         <div className="workmain">
-          {/* Inside the results column, not across the page above it.
-              Full width, the bar started at the page's left edge and the
-              chips under it ran along the top of the filter rail — a row
-              naming what the results are filtered to, drawn over the panel
-              that set it rather than over the results it describes. Here
-              its left edge is the grid's left edge, and the rail beside it
-              starts at the same line.
-
-              It sticks under the top bar where it is one row tall; on
-              phones, where it is two, it stays stuck only while a batch is
-              selected — see the media query in theme.css. */}
-          <div className={`worktop${selected.size > 0 ? ' pinned' : ''}`}>
-            {selected.size > 0 ? (
-              <div className="resultsbar">
-                <span className="resultscount">{selected.size} selected</span>
-                <div className="resultscontrols">
-                  <button className="syncbtn" onClick={toggleSelectAll}>
-                    {allOnPageSelected ? 'Deselect all' : `Select all ${rows?.length ?? 0} on page`}
-                  </button>
-                  <button className="syncbtn" onClick={() => setSelected(new Set())}>Cancel</button>
-                  <button className="syncbtn primary" onClick={approveSelected} disabled={approving || deleting}>
-                    {approving ? 'Approving…' : `Approve ${selected.size}`}
-                  </button>
-                  <button className="dangerbtn" onClick={deleteSelected} disabled={deleting || approving}>
-                    {deleting ? 'Deleting…' : `Delete ${selected.size}`}
-                  </button>
+          {/* What the rail is currently asking, said where the answer is.
+              Over the results rather than in the toolbar: the toolbar
+              spans the page now, and a row of chips starting at the
+              page's left edge runs along the top of the panel that
+              produced them — a description of the results drawn over
+              their cause. The rail is a column on a laptop and a shut
+              sheet on a phone, and either way a filter you cannot see is
+              a filter you forget you set, which is how "no places match"
+              arrives without a visible reason. Each chip removes its own
+              filter; the row is absent when nothing is set. */}
+          {selected.size === 0 && (activeCount > 0 || (q && total != null)) && (
+            <div className="resultlead">
+              {/* Only when it is telling you something the head is not.
+                  With no filter and no search this is the same number as
+                  "places" in the page head, larger and an inch up —
+                  printing it twice says nothing the second time. */}
+              {total != null && (
+                <span className="resulttally">{total} place{total === 1 ? '' : 's'}</span>
+              )}
+              {activeCount > 0 && (
+                <div className="activefilters">
+                  {FILTER_KEYS.map((key) => {
+                    const value = params.get(key);
+                    if (!value) return null;
+                    const label = FILTER_LABEL[key](value);
+                    return (
+                      <button
+                        key={key}
+                        className={`fchip${key === 'status' ? ` st-${value}` : ''}`}
+                        onClick={() => toggle(key, value)}
+                        aria-label={`Remove filter ${label}`}
+                        title={`Remove filter ${label}`}
+                      >
+                        {label}
+                        <CategoryIcon name="x" size={10} />
+                      </button>
+                    );
+                  })}
+                  <button className="clearall" onClick={clearFilters}>Clear all</button>
                 </div>
-              </div>
-            ) : (
-              <div className="resultsbar">
-                {/* What the rail is currently asking, said where the answer
-                    is — and on the same line as the controls, because it is
-                    the other half of one question: these are the results,
-                    filtered like this, searched like that, sorted so. The
-                    rail is a column on a laptop and a shut sheet on a phone,
-                    and either way a filter you cannot see is a filter you
-                    forget you set, which is how "no places match" arrives
-                    with no visible cause. Each chip removes its own filter;
-                    the row is absent when nothing is set. */}
-                {activeCount > 0 && (
-                  <div className="activefilters">
-                    {FILTER_KEYS.map((key) => {
-                      const value = params.get(key);
-                      if (!value) return null;
-                      const label = FILTER_LABEL[key](value);
-                      return (
-                        <button
-                          key={key}
-                          className={`fchip${key === 'status' ? ` st-${value}` : ''}`}
-                          onClick={() => toggle(key, value)}
-                          aria-label={`Remove filter ${label}`}
-                          title={`Remove filter ${label}`}
-                        >
-                          {label}
-                          <CategoryIcon name="x" size={10} />
-                        </button>
-                      );
-                    })}
-                    <button className="clearall" onClick={clearFilters}>Clear all</button>
-                  </div>
-                )}
-                <div className="resultscontrols">
-                  <button
-                    className={`filterbtn${activeCount ? ' on' : ''}`}
-                    onClick={() => setFiltersOpen(true)}
-                    aria-expanded={filtersOpen}
-                  >
-                    <CategoryIcon name="sliders" />
-                    Filters
-                    {activeCount > 0 && <span className="filterbadge">{activeCount}</span>}
-                  </button>
-                  <div className="searchbox">
-                    <CategoryIcon name="search" />
-                    <input
-                      className="search"
-                      placeholder="Search places…"
-                      value={q}
-                      onChange={(e) => setQ(e.target.value)}
-                      aria-label="Search places"
-                    />
-                  </div>
-                  <select className="sortselect" value={`${sort}:${dir}`} onChange={(e) => setSort(e.target.value)} aria-label="Sort by">
-                    {SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                  </select>
-                  <div className="viewtoggle" data-view={view} role="group" aria-label="Layout">
-                    <span className="viewtoggle-thumb" />
-                    <button className={view === 'row' ? 'on' : ''} onClick={() => setView('row')} aria-pressed={view === 'row'} aria-label="Row view">
-                      <CategoryIcon name="list" />
-                    </button>
-                    <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-pressed={view === 'grid'} aria-label="Grid view">
-                      <CategoryIcon name="grid" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          {/* The tally, on its own line under the bar rather than inside
-              it. It is a fact about the results, so it belongs against the
-              results — and the space it was taking at the bar's left edge
-              is where the filter chips now say what produced it. */}
-          {selected.size === 0 && total != null && (
-            <div className="resulttally">{total} place{total === 1 ? '' : 's'}</div>
+              )}
+            </div>
           )}
           {error && (
             <div className="empty">

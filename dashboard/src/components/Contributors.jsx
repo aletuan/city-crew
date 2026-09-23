@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
-import { chipLabel, useCity } from '../App.jsx';
+import { CityPicker, chipLabel, useCity } from '../App.jsx';
 import {
-  SERIES_COLORS, TOP_N,
-  windowDays, buildBoard, countStats, scopeRows, niceMax, withGuide,
+  DAYS, SERIES_COLORS, TOP_N,
+  windowDays, buildBoard, countStats, scopeRows, niceMax, guideScope, withGuide,
 } from '../contributors.js';
 
-const DAYS = 30;
 
 // ── chart geometry ──
 // Fixed viewBox, fluid width. The desk caps the shell at 1280px, so the
@@ -258,23 +257,28 @@ export default function Contributors() {
     let live = true;
     api.localGuides()
       .then((g) => { if (live) setGuides(g); })
-      .catch(() => { if (live) setGuides(new Set()); });
+      .catch(() => { if (live) setGuides(new Map()); });
     return () => { live = false; };
   }, [retryKey]);
 
   // Which row is mid-write, so its box can say so and refuse a second click.
   const [saving, setSaving] = useState(null);
 
+  // The grant is made for whichever city the desk is scoped to; with no
+  // city picked it is made for all of them, including cities the catalog
+  // has not got yet.
+  const grantCity = workspaceCity?.id ?? null;
+
   const toggleGuide = async (id, on) => {
     setSaving(id);
     // Moved before the request, and put back if it fails. A checkbox that
     // waits for a round trip before it ticks reads as a checkbox that did
     // not register the click, and the second click undoes the first.
-    setGuides((prev) => withGuide(prev, id, on));
+    setGuides((prev) => withGuide(prev, id, grantCity, on));
     try {
-      await api.setLocalGuide(id, on);
+      await api.setLocalGuide(id, on, grantCity);
     } catch (err) {
-      setGuides((prev) => withGuide(prev, id, !on));
+      setGuides((prev) => withGuide(prev, id, grantCity, !on));
       setError(err.message);
     } finally {
       setSaving(null);
@@ -305,19 +309,20 @@ export default function Contributors() {
 
   return (
     <div className="contrib">
+      {/* The name and the sentence are the page head's now, where every
+          room's are. What stays is what only this screen knows. */}
       <div className="contribhead">
         <div>
-          <h2>Contributors</h2>
-          <p className="addsub">
-            Places added from the app that made it to <b className="contribem">approved</b>
-            {' · '}<b className="contribem">published</b> — cumulative, last {DAYS} days.
-          </p>
           <p className="contribhint">
             {city
-              ? `the top ${TOP_N} within ${scopeLabel} · switch city at the top of the page`
-              : `all cities combined · pick a city at the top of the page to re-rank the top ${TOP_N} within it`}
+              ? `the top ${TOP_N} within ${scopeLabel} · switch city on the right`
+              : `all cities combined · pick a city on the right to re-rank the top ${TOP_N} within it`}
           </p>
         </div>
+        {/* The same control the other scoped screens draw, in the slot
+            this head keeps for its own furniture. It replaces the chip row
+            the page head used to carry for all three. */}
+        <CityPicker />
       </div>
 
       {error && (
@@ -368,14 +373,20 @@ export default function Contributors() {
                 >
                   <span className="boardrank">{i + 1}</span>
                   <span className="boarddot" style={{ background: SERIES_COLORS[i] }} />
-                  <span className="boardhandle">@{s.handle}</span>
-                  <span className="boardcities">
-                    {s.byCity.map((c, n) => (
-                      <React.Fragment key={c.key}>
-                        {n > 0 && <span className="dotsep"> · </span>}
-                        {c.key} <b>{c.count}</b>
-                      </React.Fragment>
-                    ))}
+                  {/* The breakdown is not drawn. On one city it said the
+                      total again in smaller type — `buildBoard` has already
+                      scoped the rows, so there is only ever one term and it
+                      equals the count beside it. On all cities it said
+                      something real and said it at ruinous length: six
+                      terms today, and one more every time the catalog
+                      takes a city. It stays on the name, where a hover
+                      answers "where do their places are" without spending
+                      a line of the panel on the answer nobody asked. */}
+                  <span
+                    className="boardhandle"
+                    title={s.byCity.map((c) => `${c.key} ${c.count}`).join(' · ')}
+                  >
+                    @{s.handle}
                   </span>
                   <b className="boardtotal">{s.total}</b>
                   {/* The one thing on this row that is a control rather than
@@ -387,20 +398,31 @@ export default function Contributors() {
                       The label is the target: a 13px box is a poor thing to
                       aim at, and wrapping it gives the whole word-and-box
                       pair one hit area without a second element to style. */}
-                  <label
-                    className={`guidebox${guides?.has(s.id) ? ' on' : ''}`}
-                    title={guides?.has(s.id)
-                      ? `@${s.handle} may add photos to places they imported`
-                      : `Let @${s.handle} add photos to places they imported`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={guides?.has(s.id) ?? false}
-                      disabled={guides === null || saving === s.id}
-                      onChange={(e) => toggleGuide(s.id, e.target.checked)}
-                    />
-                    guide
-                  </label>
+                  {(() => {
+                    /* The grant is a city now, so the box answers for the
+                       city the desk is on — and for the one case it cannot
+                       answer, it says so rather than doing nothing. */
+                    const g = guideScope(guides, s.id, grantCity);
+                    const where = grantCity ? scopeLabel : 'every city';
+                    return (
+                      <label
+                        className={`guidebox${g.on ? ' on' : ''}`}
+                        title={g.locked
+                          ? `@${s.handle} is a guide in every city — switch to All cities to change it`
+                          : g.on
+                            ? `@${s.handle} may add photos to places they imported in ${where}`
+                            : `Let @${s.handle} add photos to places they imported in ${where}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={g.on}
+                          disabled={guides === null || saving === s.id || g.locked}
+                          onChange={(e) => toggleGuide(s.id, e.target.checked)}
+                        />
+                        guide
+                      </label>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

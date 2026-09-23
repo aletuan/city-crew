@@ -8,7 +8,7 @@
 // where it is needed — bookmarking a place — rather than from a
 // permanent control in a corner.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
@@ -29,9 +29,6 @@ import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, pinTint } from
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { useSky } from '../lib/sky';
-import WeatherLayer, { useWeatherStill, WEATHER_EFFECTS } from '../components/weather/WeatherLayer';
-import WeatherDebug, { DEBUG_DEFAULT, debugSky, type Debug } from '../components/weather/WeatherDebug';
-import type { Sky } from '../lib/weather';
 import { dateline } from '../lib/format';
 import { Collection, coverOf, fetchPlaceIndex, membersOf, Place, PlaceIndexRow, touchesCity } from '../lib/data';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
@@ -251,72 +248,7 @@ function heroPlace(places: Place[], pinnedSlug?: string | null): Place | undefin
   );
 }
 
-/**
- * "Has the hero scrolled off the top", as a subscription rather than as
- * screen state.
- *
- * This shipped as `useState` on the screen, and that was a regression
- * dressed as plumbing: every crossing of the hero boundary re-rendered
- * the entire screen — FlatList, shelf, chips — in the middle of the very
- * scroll gesture that caused it. The status bar next to this fact solves
- * the same problem imperatively (`applyBar` repaints without a render);
- * the weather cannot be imperative because a paused animation has to be
- * unmounted-from, so its render is scoped instead: the one component
- * that needs the boolean subscribes to it, and a crossing re-renders the
- * Hero and nothing else.
- */
-type HeroGone = {
-  set: (past: boolean) => void;
-  subscribe: (onChange: () => void) => () => void;
-  get: () => boolean;
-};
-
-function heroGoneStore(): HeroGone {
-  let past = false;
-  const subs = new Set<() => void>();
-  return {
-    set: (next) => {
-      if (past === next) return;
-      past = next;
-      subs.forEach((f) => f());
-    },
-    subscribe: (f) => { subs.add(f); return () => { subs.delete(f); }; },
-    get: () => past,
-  };
-}
-
-/**
- * The weather and the two hooks that serve it, behind the switch.
- *
- * A component rather than two hook calls in `Hero`, because hooks cannot
- * sit behind a conditional — and with `WEATHER_EFFECTS` off this never
- * mounts, so the focus listener, the AppState listener and the
- * scroll-crossing subscription never exist. Parking the feature has to
- * mean parking its whole cost, not just its pixels.
- */
-function HeroWeather({ gone, sky, width, height, hour, intensity }: {
-  gone: HeroGone;
-  sky: Sky | null;
-  width: number;
-  height: number;
-  hour: number;
-  intensity: number;
-}) {
-  const heroGone = useSyncExternalStore(gone.subscribe, gone.get);
-  const still = useWeatherStill(heroGone);
-  return (
-    <WeatherLayer
-      sky={sky}
-      width={width}
-      height={height}
-      still={still}
-      hour={hour}
-      intensity={intensity}
-    />
-  );
-}
-
-function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
+function Hero({ place, heroH, onStart, onSearch, scrollY }: {
   place: Place | undefined;
   /** Decided by the screen, not here: the screen needs the same number
    *  for its status-bar threshold, so there is exactly one of it. */
@@ -333,11 +265,6 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
    *  re-offers search the moment browsing starts to look like hunting. */
   onSearch: () => void;
   scrollY: Animated.Value;
-  /** Whether the photograph has scrolled off the top. The screen already
-   *  computes this for the status bar; the weather stops for it too, so
-   *  nothing animates behind a page nobody is looking at. A store, not a
-   *  boolean — see `heroGoneStore` for why. */
-  gone: HeroGone;
 }) {
   const { t, lang } = useI18n();
   const { city } = useCity();
@@ -377,23 +304,8 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
   const showCredit = useFlag('photo_attribution');
   const credit = cityPhoto && showCredit ? city?.hero_photo_credit ?? null : null;
   const creditUri = credit ? city?.hero_photo_credit_uri ?? null : null;
-  const { width: winW } = useWindowDimensions();
-
-  /**
-   * The dev override for the weather.
-   *
-   * `__DEV__` gates both the state and the panel, so a production bundle
-   * carries a `null` and a constant. It is reached by holding the date
-   * pill — the one control on this screen that is already about the
-   * weather, and one no reader has any reason to press for half a
-   * second.
-   */
-  const [debug, setDebug] = useState<Debug | null>(null);
-  const [debugOpen, setDebugOpen] = useState(false);
   // The city switcher, openable from here — see the chip in heroContent.
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const shown = __DEV__ && debug ? debugSky(debug, sky) : sky;
-  const hour = __DEV__ && debug ? debug.hour : new Date().getHours();
   // The photo trails the scroll slightly; pre-scaled so no edge shows.
   const parallax = scrollY.interpolate({
     inputRange: [0, heroH], outputRange: [0, Math.round(heroH * 0.08)], extrapolate: 'clamp',
@@ -418,18 +330,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
           rather than by a second gradient that would drift the first time
           either was tuned.
 
-          Behind the switch, and the switch is off — see `WEATHER_EFFECTS`
-          for why and for how to turn it back on. */}
-      {WEATHER_EFFECTS ? (
-        <HeroWeather
-          gone={gone}
-          sky={shown}
-          width={winW}
-          height={heroH}
-          hour={hour}
-          intensity={__DEV__ && debug ? debug.intensity : 1}
-        />
-      ) : null}
+       */}
       <LinearGradient
         colors={['rgba(10,11,10,0.45)', 'rgba(10,11,10,0.06)', 'rgba(10,11,10,0.55)', 'rgba(10,11,10,0.97)']}
         locations={[0, 0.22, 0.64, 1]}
@@ -466,16 +367,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
           does not — and the search control. Both carry their own dark
           glass, because the top of this picture can be any sky. */}
       <View style={[s.heroTop, { top: insets.top + 6 }]}>
-        {/* A long press opens the weather tuner, in development only.
-            Nothing about the pill changes: no ripple, no scale, no hint.
-            It is a back door for whoever is tuning `weatherfx.ts`, and a
-            reader who holds it for half a second in a shipped build gets
-            what they have always got, which is nothing. */}
-        <Pressable
-          style={s.heroDate}
-          onLongPress={__DEV__ && WEATHER_EFFECTS ? () => { setDebug((d) => d ?? DEBUG_DEFAULT); setDebugOpen(true); } : undefined}
-          delayLongPress={600}
-        >
+        <View style={s.heroDate}>
           <Text style={s.heroDateText}>{dateline(lang, new Date())}</Text>
           {sky ? (
             <>
@@ -483,7 +375,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
               <Text style={s.heroDateText}>{`${sky.temp}°`}</Text>
             </>
           ) : null}
-        </Pressable>
+        </View>
         <PressableScale
           onPress={onSearch}
           scaleTo={0.9}
@@ -559,15 +451,6 @@ function Hero({ place, heroH, onStart, onSearch, scrollY, gone }: {
           </LinearGradient>
         </PressableScale>
       </View>
-      {__DEV__ && WEATHER_EFFECTS && debug ? (
-        <WeatherDebug
-          visible={debugOpen}
-          state={debug}
-          onChange={setDebug}
-          onClose={() => setDebugOpen(false)}
-          onUseLive={() => setDebug(null)}
-        />
-      ) : null}
       <CitySwitcherModal visible={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </View>
   );
@@ -1122,9 +1005,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const duckScroll = useDuckOnScroll();
   const duckRef = useRef(duckScroll);
   duckRef.current = duckScroll;
-  // A subscription, not state, so a crossing re-renders the Hero alone.
-  // See `heroGoneStore`.
-  const heroGone = useRef(heroGoneStore()).current;
   /**
    * Whether the chips row has reached the top of the screen.
    *
@@ -1176,7 +1056,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     setPinned(false);
     pastHeroRef.current = false;
     applyBar();
-    heroGone.set(false);
     setFirst(0);
     show();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- refs and once-built setters; only the mode matters
@@ -1200,10 +1079,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     if (past !== pastHeroRef.current) {
       pastHeroRef.current = past;
       applyBar();
-      // Once per crossing, not per frame — the same budget `applyBar`
-      // has always spent here. The weather stops when the photograph
-      // it is drawn on is no longer on screen.
-      heroGone.set(past);
     }
     duckRef.current?.(e as never);
   }).current;
@@ -1259,7 +1134,6 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         onStart={() => goTo('Ideas', { screen: 'IdeasHome' })}
         onSearch={() => navigation.navigate('Search')}
         scrollY={scrollY}
-        gone={heroGone}
       />
       {fail && !failedEmpty ? (
         <LoadFailBanner kind={fail} onRetry={reload} testID="explore-load-banner" />

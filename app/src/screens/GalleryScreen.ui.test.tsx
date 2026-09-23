@@ -17,7 +17,7 @@
 import React from 'react';
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { GalleryPhoto } from '../lib/gallery';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
@@ -125,7 +125,23 @@ const show = (rows: GalleryPhoto[], p: Place | null = place()) => {
   render(<GalleryScreen navigation={n} route={route()} />);
   return n;
 };
-const grid = () => screen.findByTestId('gallery-grid');
+/**
+ * The grid, drawn and settled.
+ *
+ * The header's Add pill is the same node before and after the gallery
+ * loads, and react-native-web hands a Pressable its new `onPress` in a
+ * passive effect — a beat after the commit `findByTestId` was watching
+ * for. A press in that beat runs the handler from the loading render,
+ * whose `add` knew no photographs yet, and nothing is uploaded: CI saw
+ * exactly that once. One drained `act` and the pill wears the handler
+ * the screen is showing — the same settling `SignUpScreen`'s `reach`
+ * does (#627).
+ */
+const grid = async () => {
+  const g = await screen.findByTestId('gallery-grid');
+  await act(async () => {});
+  return g;
+};
 /** The tiles, in the order the grid draws them. */
 const tileIds = () => [...screen.getByTestId('gallery-grid').querySelectorAll('[data-testid^="gallery-tile-"]')]
   .map((el) => el.getAttribute('data-testid')!.replace('gallery-tile-', ''));

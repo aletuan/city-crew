@@ -66,10 +66,14 @@
      does. A declaration and not just a JS write: an undeclared var() is a
      silent unset, and the stylesheet's own test says so. */
   --topbar-h: 56px;
-  /* Same arrangement one level down: the Places toolbar's height, for the
-     filter rail stuck under it. Declared with the height it has as a single
-     row and overwritten from PlaceList with the measured one — it grows a
-     second row whenever a filter is on. */
+
+  /* Same arrangement one level down: the Places toolbar's height, for
+     the filter rail stuck under it. The rail needs this again now that
+     the bar spans both columns rather than sitting beside it. Declared
+     with the height it has as a single row and overwritten from
+     PlaceList with the measured one — it is two rows on a phone, and
+     another height again while a batch is selected. */
+  --worktop-h: 52px;
 }
 
 * { box-sizing: border-box; }
@@ -233,23 +237,30 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 /* The workspace city, as a chip row beside the page title — where the old
    top-bar <select> lived until "All cities" needed a seat a scope pill
    could not offer. Same chips as the analytics screens. */
-.pagehead-scope { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.cityswitch { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* The workspace scope. A menu at every width now, not chips above 960px:
+   the city list grows with the catalog and a row of nine already wrapped,
+   so the press it costs is paid once and the row it costs is saved for
+   good.
+   No caption over it — it sits on the line the screen's other controls
+   are already on. The explicit height is what puts it on that line: a
+   select keeps a minimum content box of its own even under
+   `appearance: none`, so padding alone left it 5px taller than the search
+   box beside it. 31px is that box, measured. */
 .cityselect {
-  display: none;
+  display: block; width: auto; height: 31px;
   appearance: none; -webkit-appearance: none;
   border: 1px solid var(--border-control); background-color: var(--surface-glass);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%23ffffff' stroke-opacity='0.6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 12px center; background-size: 10px 6px;
   color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 700;
-  padding: 7px 34px 7px 14px; border-radius: var(--radius-pill); cursor: pointer;
+  padding: 0 34px 0 14px; border-radius: var(--radius-pill); cursor: pointer;
 }
 
 /* The ask that replaces a guess: screens that write to one city, opened
    while no city is selected. */
 .citygate { max-width: 480px; margin: 40px auto; text-align: center; }
 .citygate p { color: var(--text-tertiary); font-size: 13.5px; margin: 0 0 16px; }
-.citygate .cityswitch { justify-content: center; }
+.citygate .cityselect { max-width: 260px; margin: 0 auto; text-align: center; }
 
 /* ── the unfiled notice ──
    A bell in the bar with a count, and a panel naming the places behind it.
@@ -419,8 +430,18 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .syncbtn:hover { background: var(--surface-glass-strong); }
 .syncbtn:disabled { opacity: .5; cursor: wait; }
 /* One accent action per header: the create flow every session starts with. */
-.syncbtn.primary { background: var(--grad-ai); border-color: transparent; color: #fff; }
-.syncbtn.primary:hover { filter: brightness(1.08); }
+/* One accent action per head, and one colour on it. It wore the desk's
+   three-stop gradient — violet into pink into amber — which is the mark
+   the desk spends on things that are *measures*: the progress track, a
+   selected filter, the featured tag. On a button it is decoration
+   competing with the four counts beside it, and the amber end lands a
+   hand's width from the amber "pending" figure while meaning nothing of
+   the sort. Flat violet: the accent's first stop, which is also what the
+   sidebar's active row and the selected stat's underline already use. */
+.syncbtn.primary {
+  background: var(--ai-violet); border-color: transparent; color: #fff;
+}
+.syncbtn.primary:hover { background: #7C4DF4; }
 
 /* Anchor wrapper for the bell's dropdown panel (the old overflow menu is
    gone — its items live in the sidebar / More sheet now, and .moremenu-item
@@ -465,7 +486,27 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    not be read down. */
 .filters { display: flex; flex-direction: column; gap: 18px; }
 .filterset { display: flex; flex-direction: column; gap: 3px; }
-.filterset .filterlabel { margin-bottom: 4px; }
+/* The heading folds the group, so it is a button — full width, because a
+   10.5px word is not a target and the whole row reads as one. */
+.filterhead {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  margin-bottom: 4px; padding: 3px 8px 3px 0;
+  border: none; background: transparent; text-align: left;
+  font: inherit; border-radius: 8px;
+}
+.filterhead:hover .filterlabel { color: var(--text-secondary); }
+.filterhead:hover .filterchev { color: var(--text-secondary); }
+.filterchev {
+  display: inline-flex; margin-left: auto; color: var(--text-tertiary);
+  transition: transform 160ms, color 140ms;
+}
+/* Shut, the chevron points at the heading it would open rather than at
+   the rows that are not there. */
+.filterset.shut .filterchev { transform: rotate(-90deg); }
+/* A shut group still shows the row that is narrowing the list, and that
+   row needs its own air — the 4px under the heading is spacing between a
+   label and the list it introduces, not between a label and one answer. */
+.filterset.shut .filterlist:not(:empty) { margin-top: 2px; }
 .filterlist { display: flex; flex-direction: column; gap: 1px; }
 .filterrow {
   display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
@@ -506,13 +547,67 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .filterrow.on .filtercount { color: var(--text-secondary); }
 /* Nine categories and eleven vibes is twenty rows of rail above the
    question at the bottom of it. Six each, and the rest behind this. */
+/* ── the city, as a box you type in ────────────────────────────────── */
+
+.citypick { position: relative; display: flex; flex-direction: column; gap: 7px; }
+.citybox {
+  display: flex; align-items: center; gap: 7px;
+  border: 1px solid var(--border-control); border-radius: 10px;
+  padding: 0 6px 0 9px; height: 32px;
+  transition: border-color 160ms;
+}
+.citybox:focus-within { border-color: var(--border-control-strong); }
+.cityboxicon { display: inline-flex; color: var(--text-tertiary); flex-shrink: 0; }
+.cityinput {
+  flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+  color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 600;
+  padding: 0;
+}
+.cityinput::placeholder { color: var(--text-tertiary); font-weight: 600; }
+.cityboxchev {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; flex-shrink: 0; padding: 0;
+  border: none; background: transparent; color: var(--text-tertiary);
+  border-radius: 7px; transition: color 140ms, background 140ms, transform 160ms;
+}
+.cityboxchev:hover { background: var(--surface-glass); color: var(--text-primary); }
+.cityboxchev[aria-expanded="true"] { transform: rotate(180deg); }
+
+/* Over the groups below rather than pushing them down the rail: a list
+   that shoves Status out from under the pointer on every keystroke is a
+   list you cannot aim at. */
+.citymenu {
+  position: absolute; left: 0; right: 0; top: 38px; z-index: 20;
+  display: flex; flex-direction: column; gap: 1px;
+  max-height: 232px; overflow-y: auto;
+  background: var(--bg-elevated); border: 1px solid var(--border-glass);
+  border-radius: 10px; padding: 5px; box-shadow: var(--shadow-float);
+}
+.citynone {
+  margin: 0; padding: 7px 8px; font-size: 12.5px; font-weight: 600;
+  color: var(--text-tertiary);
+}
+.citychips { display: flex; flex-wrap: wrap; gap: 6px; }
+.citychip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border-control); border-radius: var(--radius-pill);
+  padding: 3px 5px 3px 11px;
+  font-size: 12.5px; font-weight: 600; color: var(--text-primary);
+}
+.citychip button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; padding: 0; border: none; border-radius: 50%;
+  background: var(--surface-glass); color: var(--text-secondary);
+  transition: background 140ms, color 140ms;
+}
+.citychip button:hover { background: var(--ai-violet); color: #fff; }
+
 .filtermore {
   align-self: flex-start; margin-top: 3px;
   border: none; background: transparent; color: var(--text-secondary);
   font: inherit; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 8px;
 }
 .filtermore:hover { background: var(--surface-glass); color: #fff; }
-.filtergroup { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .filterlabel {
   font-family: var(--font-data); font-size: 10.5px; font-weight: 700;
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary);
@@ -553,17 +648,32 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   background: var(--bg-app);
   padding: 10px 0 6px; margin-bottom: 4px;
 }
-.worksplit { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 24px; align-items: start; }
+/* Two columns and nothing else: the filters and the results, starting
+   level with each other. The toolbar is no longer one of the parts —
+   it is a block above this, which is what the reference draws and also
+   the only way it can stick (see PlaceList.jsx).
+
+   What the bar no longer carries is the chips naming the live filters.
+   Those describe the results, so they sit over the results — a row of
+   them starting at the page's left edge would run along the top of the
+   panel that produced them. See `.resultlead`. */
+.worksplit {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 0 24px; align-items: start;
+}
 .workmain { min-width: 0; }
 .filterrail {
-  /* Beside the toolbar now, not beneath it: both start on the same line,
-     the rail in its column and the bar over the results. That retires the
-     measured --worktop-h this used to add — the toolbar's height stopped
-     being something the rail has to know the moment it stopped being
-     something the rail sits under. Only the top bar is left to clear, and
-     above 960px it is hidden, so this resolves to 10px. */
-  position: sticky; top: calc(var(--topbar-h) + 10px);
-  max-height: calc(100vh - var(--topbar-h) - 30px); overflow-y: auto;
+  /* It starts beside the first card and then rides up as the page
+     scrolls, stopping under the toolbar rather than behind it. The
+     toolbar is sticky and now spans both columns, so its height is the
+     rail's ceiling — hence --worktop-h, measured in PlaceList.jsx
+     because the bar is one row on a laptop, two on a phone, and another
+     height again mid-selection. Its :root value is the laptop's one row,
+     which is what holds for the frame before the measurement lands. */
+  position: sticky; top: calc(var(--topbar-h) + var(--worktop-h) + 10px);
+  max-height: calc(100vh - var(--topbar-h) - var(--worktop-h) - 30px);
+  overflow-y: auto;
   background: var(--bg-elevated); border: 1px solid var(--border-glass-soft);
   border-radius: var(--radius-card); padding: 16px 16px 18px;
 }
@@ -635,10 +745,19 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    either way the question was only ever visible where it was asked: an
    empty result on a phone had no visible cause at all, and on a laptop it
    meant reading four groups to find the one ticked row. */
-/* Left of the controls, on the bar's own line. `auto` here is what keeps
-   the controls at the right edge when no filter is set and the row is not
-   rendered at all. */
-.activefilters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-right: auto; min-width: 0; }
+/* Everything on the left of the bar: the tally, then the chips. `auto`
+   lives here rather than on either of them, because either can be absent
+   — no filter set, or no count yet — and a margin on a thing that is not
+   rendered does not hold the controls at the right edge. */
+/* The tally and the live-filter chips, at the head of the results
+   column. They left the toolbar when it went full width: a description
+   of the results has to start where the results start, or it runs along
+   the top of the rail instead. */
+.resultlead {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 8px 12px; min-width: 0; margin: 0 0 14px;
+}
+.activefilters { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .fchip {
   display: inline-flex; align-items: center; gap: 7px;
   border: 1px solid rgba(139, 92, 246, 0.45); background: rgba(139, 92, 246, 0.20);
@@ -667,16 +786,29 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 /* Spacing comes from .worktop, which is the thing that sticks. */
 .resultsbar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .resultscount { font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary); margin-right: auto; }
-/* The tally, under the bar and above the first result — against the thing
-   it counts rather than tucked into the left of a row of controls. */
-.resulttally { font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary); margin: 2px 0 12px; }
+/* Against the thing it counts. `margin-right` keeps it a fact rather
+   than a button: the chips' own gap would read as one more of them. */
+.resulttally {
+  font-family: var(--font-data); font-size: 12px; color: var(--text-tertiary);
+  white-space: nowrap; margin-right: 2px;
+}
 .resultscontrols { display: flex; align-items: center; gap: 10px; }
-.searchbox { position: relative; display: flex; align-items: center; }
+/* Browsing, the controls are the whole bar and the search takes the slack
+   in it — the bar spans the page now, and 210px of box in 1250px of rule
+   was a control apologising for being there. Capped, because a search
+   field wider than the words anybody types into it is just a long line.
+   Selecting, the bar holds a count and four buttons instead, and those
+   stay at the right where a destructive one is expected. */
+.resultsbar.browse .resultscontrols { flex: 1; }
+.searchbox {
+  position: relative; display: flex; align-items: center;
+  flex: 1 1 240px; max-width: 420px; margin-right: auto;
+}
 .searchbox svg { position: absolute; left: 13px; color: var(--text-tertiary); pointer-events: none; }
 .search {
   background: var(--bg-input); border: 1px solid var(--border-control);
   border-radius: var(--radius-pill); color: var(--text-primary);
-  font-size: 13px; padding: 7px 16px 7px 34px; width: 210px;
+  font-size: 13px; padding: 7px 16px 7px 34px; width: 100%;
 }
 .search::placeholder { color: var(--text-tertiary); }
 .sortselect {
@@ -689,23 +821,26 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 }
 .sortselect:hover { background-color: var(--surface-glass-strong); }
 /* One switch, not two buttons standing next to each other: a single track
-   with a pill that slides to whichever side is active. */
+   with a pill that slides to whichever side is active. Grid is the left
+   half, so the thumb rests there and travels for List — both halves are
+   the same width, which is what lets the travel be one number. */
 .viewtoggle {
   position: relative; display: flex; gap: 2px;
   background: var(--surface-glass); border: 1px solid var(--border-glass-soft);
-  border-radius: var(--radius-pill); padding: 3px;
+  border-radius: var(--radius-pill); padding: 3px; flex-shrink: 0;
 }
 .viewtoggle-thumb {
   position: absolute; top: 3px; left: 3px;
-  width: 28px; height: 26px; border-radius: var(--radius-pill);
+  width: 68px; height: 26px; border-radius: var(--radius-pill);
   background: var(--surface-glass-strong);
   transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.viewtoggle[data-view="grid"] .viewtoggle-thumb { transform: translateX(30px); }
+.viewtoggle[data-view="row"] .viewtoggle-thumb { transform: translateX(70px); }
 .viewtoggle button {
   position: relative; z-index: 1;
-  display: flex; align-items: center; justify-content: center;
-  width: 28px; height: 26px; border: none; background: transparent;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 68px; height: 26px; border: none; background: transparent;
+  font: inherit; font-size: 12.5px; font-weight: 600;
   border-radius: var(--radius-pill); color: var(--text-tertiary); transition: color 160ms;
 }
 .viewtoggle button:hover { color: var(--text-secondary); }
@@ -866,11 +1001,16 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .count { font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary); }
 
 /* status stamp — editorial proof mark */
+/* Square to the grid. The 2° tilt was an editorial flourish — a proof
+   mark pressed by hand — and it cost more than it gave: every card in the
+   grid carries one at the same corner, so the tilt repeated nine times a
+   screen and each one sat slightly out of true with the card edge it
+   overlaps. A status is read down a column of results, and a column reads
+   straight. */
 .stamp {
   font-family: var(--font-data); font-size: 10.5px; font-weight: 700;
   letter-spacing: 0.14em; text-transform: uppercase;
   padding: 4px 10px; border-radius: 6px; border: 1.5px solid;
-  transform: rotate(-2deg);
 }
 .stamp.pending { color: var(--text-tertiary); border-color: rgba(255,255,255,0.22); }
 /* Which door a place came in through, under the stamp that says what was
@@ -1203,7 +1343,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 .addresult { display: flex; align-items: center; gap: 10px; }
 .addresult .addbtn { text-decoration: none; }
 
-.topbar .addbtn { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+/* Unscoped. This was `.topbar .addbtn` while the button lived in the top
+   bar; it is in the page head above 960px now, where the rule matched
+   nothing and the anchor drew its own underline. */
+.addbtn { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 
 /* ── contributors analytics ──
    The desk's one measuring room. Same skin as everything else — panels,
@@ -1212,6 +1355,12 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 18px; flex-wrap: wrap; margin-bottom: 20px;
 }
+/* The lead takes the slack and the scope keeps its width. Without a basis
+   the lead's subtitle ran the full row on its own and pushed Coverage's
+   scope — menu over counts, ~370px of it — onto a second line, where it
+   landed under the title instead of opposite it. */
+.contribhead > :first-child { flex: 1 1 420px; min-width: 0; }
+.contribhead > .cityselect, .contribhead > .covscope { flex: 0 0 auto; }
 .contribhead h2 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
 /* The two gate words in the subtitle wear the data voice: they are column
    values, quoted, not English. */
@@ -1221,8 +1370,9 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 /* What each city holds, read out rather than offered: Coverage's city
    chips were a second control for a choice the page head already makes,
    but the counts on them are the screen's own subject. */
+.covscope { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 0; }
 .covcounts {
-  display: flex; flex-wrap: wrap; gap: 4px 16px; padding-top: 8px;
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 16px; padding-top: 8px;
   font-family: var(--font-data); font-size: 11.5px; color: var(--text-tertiary);
 }
 .covcounts b { font-weight: 700; color: var(--text-secondary); }
@@ -1319,28 +1469,36 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   font-family: var(--font-ui); text-transform: none; color: var(--text-primary);
 }
 .boardpct { font-family: var(--font-data); font-size: 11.5px; color: var(--text-tertiary); white-space: nowrap; }
+/* Five columns, one line. A grid rather than the flex line it was,
+   because the row is a table of fixed roles and a flex line let the
+   widest of them bully the rest: with the per-city breakdown still in
+   here, it pushed the total and the guide box past the panel's edge and
+   squeezed the handle — the thing naming the row — down to nothing.
+   The breakdown is gone (see Contributors.jsx) and the four that are
+   left fit at any width this panel takes, but the columns stay: they are
+   what makes that true rather than lucky. */
 .boardrow {
-  display: flex; align-items: center; gap: 10px;
+  display: grid;
+  grid-template-columns: 18px 9px minmax(0, 1fr) auto auto;
+  align-items: center; gap: 10px;
   padding: 10px 2px; border-top: 1px solid var(--border-glass-soft);
   border-radius: 6px; transition: background 120ms;
 }
 .boardrow.hot { background: var(--surface-glass); }
 .boardrank {
   font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary);
-  width: 18px; flex-shrink: 0; text-align: right;
+  text-align: right;
 }
-.boarddot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.boarddot { width: 9px; height: 9px; border-radius: 50%; }
+/* The flexible column, so a long handle truncates rather than shoving
+   the count and the control off the end. Its title carries the per-city
+   breakdown the row no longer prints. */
 .boardhandle {
+  min-width: 0;
   font-weight: 700; font-size: 14px; letter-spacing: -0.01em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.boardcities {
-  margin-left: auto; flex-shrink: 0;
-  font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary);
-}
-.boardcities b { color: var(--text-secondary); font-weight: 600; }
-.boardcities .dotsep { opacity: .6; }
-.boardtotal { font-size: 15px; font-weight: 700; width: 26px; text-align: right; flex-shrink: 0; }
+.boardtotal { font-size: 15px; font-weight: 700; min-width: 26px; text-align: right; }
 
 /* The guide grant, as a box at the end of the row.
    Quiet until it is on: an unticked box is administration the reader is
@@ -1350,7 +1508,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
    neighbours and the difference is the point.
    The label is the hit area; `gap` keeps the word off the box. */
 .guidebox {
-  display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+  /* nowrap so the column sizes to the word. `auto` takes a column's
+     min-content first, and a wrappable label's min-content is one letter
+     — which is how the box kept its tick and lost "guide". */
+  display: flex; align-items: center; gap: 5px; white-space: nowrap;
   font-family: var(--font-data); font-size: 11px; color: var(--text-tertiary);
   cursor: pointer; user-select: none; padding: 4px 2px;
 }
@@ -1399,14 +1560,26 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   stroke: rgba(11, 9, 16, 0.9); stroke-width: 3px; paint-order: stroke;
 }
 /* district rows share the leaderboard's bones; the bar is the one addition */
-.covrow { gap: 12px; }
+/* Its own three columns, not the leaderboard's five.
+   These rows borrow `.boardrow` for its skin — the hairline, the radius,
+   the hover wash — and that class became a five-column grid when the
+   leaderboard did. A three-child row then landed in the first three of
+   five: the name in an 18px rank column, cut to one letter and an
+   ellipsis, and the bar in a 9px dot column. Same skin, own columns.
+   The track is fixed rather than flexible so the bars share one scale:
+   they are read against each other, and a bar whose width depends on how
+   long its neighbour's name is compares nothing. */
+.covrow {
+  grid-template-columns: minmax(0, 1fr) 96px auto;
+  gap: 12px;
+}
 .covname {
-  font-weight: 600; font-size: 13.5px; flex: 0 0 112px;
+  min-width: 0; font-weight: 600; font-size: 13.5px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .covname.unplaced { color: var(--text-tertiary); font-weight: 400; font-size: 12.5px; }
 .covtrack {
-  flex: 1; height: 6px; border-radius: 999px;
+  height: 6px; border-radius: 999px;
   background: var(--surface-glass); overflow: hidden;
 }
 .covbar {
@@ -1435,9 +1608,6 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
      label spelled out at every phone width down to 320. */
   .topbar-inner { flex-wrap: nowrap; gap: 8px; padding: 12px; }
   .pagehead { flex-wrap: wrap; margin-bottom: 14px; }
-  /* Nine chips wrap to two rows here and eat the screen the list needs. */
-  .cityswitch { display: none; }
-  .cityselect { display: block; }
   .pagetitle { font-size: 22px; }
   .pagesub { font-size: 12.5px; }
   /* The numbers take the full width under the title and spread across
@@ -1448,7 +1618,10 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
   .stat span { font-size: 11.5px; }
   .syncbtn { font-size: 12px; padding: 7px 12px; }
 
-  .filterlabel { flex-basis: 100%; }
+  /* Written for the rail's old wrapped chip rows. Left unscoped it now
+     catches the rail's heading too — a flex row whose label does not
+     shrink — and pushes the chevron off the end of it. */
+  .herolangs .filterlabel { flex-basis: 100%; }
 
   .resultsbar { flex-wrap: wrap; }
   .resultscontrols { flex-wrap: wrap; width: 100%; }
@@ -1503,7 +1676,6 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
      below that the axis text starts aliasing, so let the chart scroll. */
   .contribchartwrap { overflow-x: auto; }
   .contribchart { min-width: 480px; }
-  .boardcities { display: none; } /* same rule as .prow .facts — phones keep the verdict, drop the breakdown */
   .boardtotal { margin-left: auto; } /* the breakdown was what pushed it right */
   /* The word goes, the box stays: on a phone the row has no room for a
      caption, and a lone accent-coloured checkbox at the row's end is still

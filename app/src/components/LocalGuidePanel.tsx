@@ -52,7 +52,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
   // filled, so this component is right on its first frame — a fetch here
   // drew the card without the panel and then shoved it down a round trip
   // later, once for every place its owner opened. See `lib/guideGrant`.
-  const granted = useIsGuide();
+  const granted = useIsGuide(place.city_id);
   // On a 320pt window — an SE, or any iPhone with Display Zoom on — the
   // words have about 78pt beside the mark and the button, not the ~140 the
   // lines below were cut to fit: the greeting truncates and the question
@@ -109,7 +109,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
               : t('Hi there,', 'Chào bạn,', 'こんにちは、')}
           </Text>
           <Text style={s.sub}>
-            {t('Want to update the photos?', 'Bạn muốn sửa ảnh?', '写真を整えますか？')}
+            {t('Want to improve your gallery?', 'Bạn muốn cải thiện gallery?', 'ギャラリーを充実させますか？')}
           </Text>
         </View>
         {/* "Gallery" in every language, by request: it is the name of a

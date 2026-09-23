@@ -1354,4 +1354,119 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     show(place({ desc_en: null, desc_vi: null, desc_ja: null }));
     expect(screen.queryByTestId('detail-why')).toBeNull();
   });
+
+  // Whose words these are. Most blurbs are the desk's own and carry no
+  // credit at all; the ones that came out of somebody's Threads post are
+  // theirs, and the line under the paragraph is where that gets said.
+  const blurb = { desc_en: 'Shaded courtyard, two quiet floors.' };
+
+  it('credits the person whose post the blurb came from, and opens it', () => {
+    show(place({
+      ...blurb,
+      reviewer_source: 'threads',
+      reviewer_name: 'gowithchinne',
+      reviewer_url: 'https://www.threads.com/@gowithchinne/post/DdeLnFwj10o',
+    }));
+    const credit = screen.getByTestId('blurb-credit');
+    fireEvent.click(credit);
+    // The mark carries the platform, so the words stop repeating it —
+    // and the @ goes with them, being a second marker for the same thing.
+    expect(credit.querySelector('[data-icon="logo-threads"]')).toBeTruthy();
+    expect(credit.textContent).toContain('gowithchinne');
+    expect(credit.textContent).not.toContain('@');
+    expect(credit.textContent).not.toContain('on Threads');
+    expect(openURL).toHaveBeenCalledWith('https://www.threads.com/@gowithchinne/post/DdeLnFwj10o');
+  });
+
+  // Google writes the editorial summary the import copies and signs it with
+  // nobody — `import-place.ts` does not even ask for `reviews`. A name here
+  // could only have been invented, so the line names the platform and the
+  // tap goes to the place's own Maps page.
+  it('credits Google by platform alone and opens the Maps page', () => {
+    show(place({
+      ...blurb,
+      reviewer_source: 'google',
+      reviewer_name: null,
+      reviewer_url: null,
+      google_place_id: 'ChIJabc',
+    }));
+    expect(screen.queryByText(/on Google/)).toBeNull();
+    const credit = screen.getByTestId('blurb-credit');
+    expect(credit.querySelector('[data-icon="logo-google"]')).toBeTruthy();
+    expect(credit.textContent).toContain('Google');
+    fireEvent.click(credit);
+    // The documented pair, which is what the address row sends too.
+    // `maps/place/?q=place_id:…` searched for the literal string and
+    // Maps answered "No results found".
+    expect(openURL).toHaveBeenCalledWith(
+      'https://www.google.com/maps/search/?api=1'
+      + '&query=C%E1%BB%99ng%20C%C3%A0%20Ph%C3%AA%20-%20Old%20Quarter&query_place_id=ChIJabc',
+    );
+  });
+
+  // The words and the credit are one object to a reader. Tapping the
+  // paragraph used to do nothing at all, which made the source look like
+  // it was only reachable through a 12.5pt grey line.
+  it('opens the source from the blurb itself, not only from the credit', () => {
+    show(place({
+      ...blurb,
+      reviewer_source: 'threads',
+      reviewer_name: 'gowithchinne',
+      reviewer_url: 'https://www.threads.com/@gowithchinne/post/DdeLnFwj10o',
+    }));
+    fireEvent.click(screen.getByTestId('detail-desc'));
+    expect(openURL).toHaveBeenCalledWith('https://www.threads.com/@gowithchinne/post/DdeLnFwj10o');
+  });
+
+  it('leaves the blurb inert when there is nowhere to send anybody', () => {
+    show(place({ ...blurb, reviewer_source: null }));
+    fireEvent.click(screen.getByTestId('detail-desc'));
+    expect(openURL).not.toHaveBeenCalled();
+  });
+
+  it('says nothing under a blurb the desk wrote itself', () => {
+    // The majority case, and the one worth protecting: a credit line on
+    // house copy would attribute it to nobody in particular, at length.
+    show(place({ ...blurb, reviewer_source: null }));
+    expect(screen.getByTestId('detail-why')).toBeTruthy();
+    expect(screen.queryByTestId('blurb-credit')).toBeNull();
+  });
+
+  it('shows the credit as plain text when there is nowhere to send the reader', () => {
+    // A tappable line that does nothing is worse than an untappable one.
+    show(place({
+      ...blurb, reviewer_source: 'threads', reviewer_name: null, reviewer_url: null,
+    }));
+    const credit = screen.getByTestId('blurb-credit');
+    fireEvent.click(credit);
+    // No handle, so the mark's own name is the label — and the glyph is
+    // still there, because the platform is the whole of what is known.
+    expect(credit.querySelector('[data-icon="logo-threads"]')).toBeTruthy();
+    expect(credit.textContent).toContain('Threads');
+    expect(openURL).not.toHaveBeenCalled();
+  });
+
+  // A source recorded before this app learned about it. No glyph would be
+  // wrong to guess, so the long wording carries the platform instead.
+  it('spells out a source it has no mark for', () => {
+    show(place({
+      ...blurb, reviewer_source: 'tiktok', reviewer_name: 'chinne', reviewer_url: null,
+    }));
+    const credit = screen.getByTestId('blurb-credit');
+    expect(credit.querySelector('[data-icon^="logo-"]')).toBeNull();
+    expect(credit.textContent).toContain('chinne on tiktok');
+  });
+
+  it('tells the reader when the source will not open', async () => {
+    openURL.mockRejectedValueOnce(new Error('nope'));
+    show(place({
+      ...blurb,
+      reviewer_source: 'threads',
+      reviewer_name: 'gowithchinne',
+      reviewer_url: 'https://www.threads.com/@gowithchinne/post/DdeLnFwj10o',
+    }));
+    fireEvent.click(screen.getByTestId('blurb-credit'));
+    await settle();
+    expect(alert).toHaveBeenCalledWith('Could not open the source');
+  });
 });

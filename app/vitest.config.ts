@@ -111,14 +111,18 @@ import { defineConfig } from 'vitest/config';
 // That was `SignUpScreen`, alone at the bottom of all four columns at
 // 95.49 / 89.06 / 61.9 — the form's six checks in field order, the code
 // step and whose account the taste is written to had no test. It stands
-// at 100 in every column now, and for the first time the floor's four
-// numbers come from three different screens, each the lowest in its own
-// column: `ExploreScreen` at 96.96% lines and statements, `IdeasScreen`
-// at 90.41% branches, `TripDetailScreen` at exactly 80% functions (with
-// `ExploreScreen` at 81.25 beside it). Rounded down, as ever — and the
-// functions figure is not rounded at all, so one more untested handler
-// in `TripDetailScreen` is what trips this gate next.
-const SCREENS_FLOOR = { lines: 96, statements: 96, branches: 90, functions: 80 };
+// at 100 in every column now, and the floor's numbers come from the
+// screens each lowest in their own column: `ExploreScreen` at 96.96%
+// lines and statements and 81.25% functions, `IdeasScreen` at 90.41%
+// branches. Rounded down, as ever.
+//
+// `TripDetailScreen` held the functions column at exactly 80 for a
+// while — three handlers no test could reach in jsdom (the gallery's
+// layout and its swipe, the header's back) — until its test stood the
+// pager in and gave react-native-web a ResizeObserver to measure with.
+// It stands at 100 now; `ExploreScreen` is the one to raise next, in
+// two columns of the three.
+const SCREENS_FLOOR = { lines: 96, statements: 96, branches: 90, functions: 81 };
 
 // ── the components' floor ──
 //

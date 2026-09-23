@@ -349,6 +349,15 @@ for f in "$ROOT"/supabase/migrations/*_gallery_guide_rpcs.sql "$ROOT"/supabase/m
 done
 run "$DB" -f "$HERE/gallery_rpc_test.sql"
 
+# Per-city grants. Last of the four migrations that touch these policies,
+# so it is applied last here too — the order production applies them in,
+# and the only order in which the schema under test is the one we ship.
+echo "→ local guides, per city"
+for f in "$ROOT"/supabase/migrations/*_local_guides_per_city.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/local_guide_city_test.sql"
+
 echo "→ search paths"
 for f in "$ROOT"/supabase/migrations/*_pin_trigger_search_path.sql; do
   run "$DB" -f "$f" >/dev/null

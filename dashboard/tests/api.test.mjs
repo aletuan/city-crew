@@ -367,13 +367,19 @@ test('markReport stamps handled_at and the chosen status', async () => {
 // two calls, because a wrong verb here is a grant that silently does
 // nothing (delete matching no rows) or one that throws on the second click.
 
-test('localGuides answers a Set of ids, not rows', async () => {
+test('localGuides answers a map of who, to where', async () => {
   const { api } = await loadApi([
-    { data: [{ user_id: 'a' }, { user_id: 'b' }], error: null },
+    { data: [
+      { user_id: 'a', city_id: 'hanoi' },
+      { user_id: 'a', city_id: 'danang' },
+      { user_id: 'b', city_id: null },
+    ], error: null },
   ]);
   const guides = await api.localGuides();
-  assert.ok(guides instanceof Set);
-  assert.deepEqual([...guides].sort(), ['a', 'b']);
+  assert.ok(guides instanceof Map);
+  assert.deepEqual([...guides.get('a')].sort(), ['danang', 'hanoi']);
+  // null is a member, not an absence: it is the all-cities grant.
+  assert.deepEqual([...guides.get('b')], [null]);
 });
 
 // Read whole rather than per row: the board draws ten at a time, and ten
@@ -386,33 +392,60 @@ test('localGuides asks once, with no filter — RLS is what scopes it', async ()
   assert.equal(client.calls[0].chain.some(([m]) => m === 'eq'), false);
 });
 
-// `upsert`, not `insert`: a second click on an already-granted account has
-// to be harmless rather than a duplicate-key error. The desk should not be
-// able to break anything by being fast.
-test('setLocalGuide upserts on the primary key when granting', async () => {
-  const { api, client } = await loadApi([{ data: null, error: null }]);
+// Delete then insert, not upsert: the two shapes of uniqueness are partial
+// indexes, and a partial index cannot be an ON CONFLICT target. Deleting
+// the row it is about to write is what keeps a second click harmless.
+test('setLocalGuide clears the scope it is about to write', async () => {
+  const { api, client } = await loadApi([
+    { data: null, error: null }, { data: null, error: null },
+  ]);
+  await api.setLocalGuide('u1', true, 'hanoi');
+  assert.ok(client.calls[0].chain.some(([m]) => m === 'delete'));
+  const eqs = client.calls[0].chain.filter(([m]) => m === 'eq').map(([, a]) => a);
+  assert.deepEqual(eqs, [['user_id', 'u1'], ['city_id', 'hanoi']]);
+  const [, insArgs] = client.calls[1].chain.find(([m]) => m === 'insert');
+  assert.deepEqual(insArgs[0], { user_id: 'u1', city_id: 'hanoi' });
+});
+
+// No city is the all-cities grant: one row whose city_id is null, matched
+// with `is` rather than `eq` because SQL will not compare to null.
+test('setLocalGuide writes the everywhere grant as a null city', async () => {
+  const { api, client } = await loadApi([
+    { data: null, error: null }, { data: null, error: null },
+  ]);
   await api.setLocalGuide('u1', true);
-  const [, args] = client.calls[0].chain.find(([m]) => m === 'upsert');
-  assert.deepEqual(args[0], { user_id: 'u1' });
-  assert.equal(args[1].onConflict, 'user_id');
+  const [, isArgs] = client.calls[0].chain.find(([m]) => m === 'is');
+  assert.deepEqual(isArgs, ['city_id', null]);
+  const [, insArgs] = client.calls[1].chain.find(([m]) => m === 'insert');
+  assert.deepEqual(insArgs[0], { user_id: 'u1', city_id: null });
 });
 
 // Nothing is sent for `added_by`. The column defaults to `auth.uid()`, so
 // the database records which editor did this from the request's own
 // credentials — see 20260919180000_local_guide_granted_by.sql.
 test('setLocalGuide leaves added_by to the database', async () => {
-  const { api, client } = await loadApi([{ data: null, error: null }]);
+  const { api, client } = await loadApi([
+    { data: null, error: null }, { data: null, error: null },
+  ]);
   await api.setLocalGuide('u1', true);
-  const [, args] = client.calls[0].chain.find(([m]) => m === 'upsert');
+  const [, args] = client.calls[1].chain.find(([m]) => m === 'insert');
   assert.equal('added_by' in args[0], false);
 });
 
-test('setLocalGuide deletes the one row when taking the grant back', async () => {
-  const { api, client } = await loadApi([{ data: null, error: null }]);
-  await api.setLocalGuide('u1', false);
-  assert.ok(client.calls[0].chain.some(([m]) => m === 'delete'));
-  const [, eqArgs] = client.calls[0].chain.find(([m]) => m === 'eq');
-  assert.deepEqual(eqArgs, ['user_id', 'u1']);
+// Revoking one city leaves the others standing; revoking with no city in
+// hand takes the person's rows entirely, which is the only reading that
+// matches a box that was ticked and has just been unticked.
+test('setLocalGuide revokes one city, or the lot', async () => {
+  const one = await loadApi([{ data: null, error: null }]);
+  await one.api.setLocalGuide('u1', false, 'hanoi');
+  const eqs = one.client.calls[0].chain.filter(([m]) => m === 'eq').map(([, a]) => a);
+  assert.deepEqual(eqs, [['user_id', 'u1'], ['city_id', 'hanoi']]);
+
+  const all = await loadApi([{ data: null, error: null }]);
+  await all.api.setLocalGuide('u1', false);
+  const chain = all.client.calls[0].chain;
+  assert.deepEqual(chain.filter(([m]) => m === 'eq').map(([, a]) => a), [['user_id', 'u1']]);
+  assert.equal(chain.some(([m]) => m === 'is'), false, 'the lot means no city filter at all');
 });
 
 // Loud, so the screen can put its optimistic tick back.

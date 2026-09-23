@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
-import { chipLabel, useCity } from '../App.jsx';
+import { CityPicker, chipLabel, useCity } from '../App.jsx';
 import {
-  buildCoverage, fitView, lngToX, latToY, xToLng, yToLat, bubbleRadius,
+  buildCoverage, buildCityCoverage, fitView, lngToX, latToY, xToLng, yToLat, bubbleRadius,
 } from '../coverage.js';
 import { loadGoogleMaps, DARK_STYLE } from '../lib/googleMaps.js';
 
@@ -31,7 +31,22 @@ const MAP_H_NARROW = 460;
  * fitted view stands, and the bubbles sit on the dark ground exactly as they
  * did when a tile CDN was unreachable. The numbers never depend on a map.
  */
-function CoverageMap({ groups, hover, setHover }) {
+function CoverageMap({ groups, hover, setHover, minZoom }) {
+  /* Two floors, and they have to agree or the fit is computed and then
+     thrown away.
+
+     `fitFloor` is how far out the *fit* may go: nine is right for
+     districts inside one city, where anything looser is bubbles drifting
+     apart over empty province. `mapFloor` is how far out the *reader* may
+     zoom by hand, which has always been five.
+
+     Five is below nine, so for districts the two never met. They do for a
+     view of every city: the fit wants zoom 3 to hold Vietnam and
+     Melbourne, Google clamped setZoom(3) to its own minZoom of 5, and the
+     map landed on the centre of the box at a zoom that showed neither end
+     of it — a sea between two countries and not one bubble on it. */
+  const fitFloor = minZoom ?? 9;
+  const mapFloor = Math.min(5, fitFloor);
   const wrapRef = useRef(null);
   const mapElRef = useRef(null);
   const mapRef = useRef(null);
@@ -59,8 +74,13 @@ function CoverageMap({ groups, hover, setHover }) {
   // map out from under whoever is reading it.
   const coordsKey = located.map((g) => `${g.lat},${g.lng}`).join(';');
   const fitted = useMemo(
-    () => (width ? fitView(located, width, mapH) : null),
-    [width, mapH, coordsKey], // eslint-disable-line react-hooks/exhaustive-deps
+    // `minZ` is a floor on how far out the fit may go. Nine is right for
+    // districts inside one city — below it the bubbles drift apart over
+    // empty province. It is wrong for a view of every city, which spans
+    // Vietnam and Australia and would otherwise be fitted to a frame that
+    // cannot hold both.
+    () => (width ? fitView(located, width, mapH, { minZ: fitFloor }) : null),
+    [width, mapH, fitFloor, coordsKey], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   // The fit as of right now, for the map's first frame. Read through a ref
@@ -69,6 +89,8 @@ function CoverageMap({ groups, hover, setHover }) {
   // ocean on every visit to the screen.
   const fittedRef = useRef(null);
   fittedRef.current = fitted;
+  const mapFloorRef = useRef(mapFloor);
+  mapFloorRef.current = mapFloor;
 
   // One map, built when the API arrives. Its container is sized by CSS, so
   // nothing here depends on the fit having been computed yet.
@@ -93,7 +115,7 @@ function CoverageMap({ groups, hover, setHover }) {
         // The bubbles are the subject; Google's own POI pins would compete
         // with them for the same few pixels.
         maxZoom: 17,
-        minZoom: 5,
+        minZoom: mapFloorRef.current,
       });
       mapRef.current = map;
       const sync = () => {
@@ -119,9 +141,14 @@ function CoverageMap({ groups, hover, setHover }) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !fitted) return;
+    // Before the zoom, not after: the map is built once, so switching
+    // between all-cities and one city changes this floor under a map that
+    // already has the old one — and a setZoom below the floor in force is
+    // silently clamped.
+    map.setOptions({ minZoom: mapFloor });
     map.setZoom(fitted.z);
     map.setCenter({ lat: yToLat(fitted.y, fitted.z), lng: xToLng(fitted.x, fitted.z) });
-  }, [fitted, ready]);
+  }, [fitted, ready, mapFloor]);
 
   // The map's own view wins once it has one; before that — and with no key
   // at all — the fitted view stands in, so the bubbles are never homeless.
@@ -197,61 +224,64 @@ export default function Coverage() {
   }, [rows]);
 
   /**
-   * The city this map draws.
+   * What this map draws, and at which rung.
    *
-   * The desk's workspace city, which is now the only city control on the
-   * page — except for the one answer a map cannot draw. "All cities" is a
-   * legitimate scope everywhere else and meaningless here, so it falls back
-   * to whichever city has the most published places: the most useful thing
-   * to be looking at when you have not said, and the caption says so rather
-   * than letting the map imply a choice nobody made.
+   * With a city picked it is that city's districts, as it always was. With
+   * the desk on all cities it is the cities themselves — one bubble each,
+   * fitted to a frame that holds the lot.
    *
-   * A *named* city with nothing published is not a fallback case. It is an
-   * answer — an empty map and "nothing published here yet" — and swapping
-   * it for a busier city would make the page disagree with its own header.
+   * It used to answer "all cities" by picking the busiest and saying so in
+   * a caption. That was an answer to a question nobody asked, and it was
+   * the one view from which you could not see the thing the screen exists
+   * to show: which cities the catalog is thin in. Hải Phòng has nothing in
+   * it, and the old all-cities view drew Ho Chi Minh City.
+   *
+   * A *named* city with nothing published still is not a fallback case. It
+   * is an answer — an empty map and "nothing published here yet".
    */
-  const busiest = useMemo(() => {
+  const city = workspaceCity?.id ?? null;
+  const labelOf = useMemo(() => {
+    const byId = new Map(cities.map((c) => [c.id, chipLabel(c)]));
+    return (id) => byId.get(id) ?? id;
+  }, [cities]);
+
+  const cov = useMemo(() => {
     if (!perCity) return null;
-    return Object.entries(perCity)
-      .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
-  }, [perCity]);
-  const city = workspaceCity?.id ?? busiest;
-  const fellBack = !workspaceCity && !!city;
+    return city ? buildCoverage(perCity[city] ?? []) : buildCityCoverage(perCity, labelOf);
+  }, [perCity, city, labelOf]);
 
-  const cov = useMemo(
-    () => (perCity && city ? buildCoverage(perCity[city] ?? []) : null),
-    [perCity, city],
-  );
-
-  const longName = cities.find((c) => c.id === city)?.name_vi ?? city;
+  const longName = city ? (cities.find((c) => c.id === city)?.name_vi ?? city) : 'All cities';
+  // The rung the panel is counting, so its caption names the right noun.
+  const unit = city ? 'district' : 'city';
+  const units = city ? 'districts' : 'cities';
   const maxCount = cov?.groups[0]?.count ?? 0;
 
   return (
     <div className="coverage">
+      {/* The name and the sentence are the page head's now. The fallback
+          note is not: it depends on what this screen found, so it reads
+          under the head rather than inside a constant. */}
       <div className="contribhead">
         <div>
-          <h2>Coverage</h2>
-          <p className="addsub">
-            Where the catalog actually is — published places per district, so thin
-            quận stand out before users notice.
-            {fellBack && (
-              <>
-                {' '}A map draws one city, so with the desk set to all cities this
-                one shows <b className="contribem">{longName}</b>, the busiest.
-              </>
-            )}
-          </p>
+          {!city && (
+            <p className="contribhint">
+              every city at once · pick one on the right to open its districts
+            </p>
+          )}
         </div>
-        {/* The counts stay; the chips do not. They were a second city
-            control disagreeing with the one at the top of the page — but
-            what each city holds is this screen's subject, not its
-            navigation, so it is read out instead. */}
+        {/* The scope, then what each city holds. The counts were never
+            a control — what a city holds is this screen's subject, not its
+            navigation — so they are read out under the menu that does the
+            choosing rather than competing with it. */}
+        <div className="covscope">
+        <CityPicker />
         <div className="covcounts">
           {cities.map((c) => (
             <span key={c.id} className={c.id === city ? 'on' : ''}>
               {chipLabel(c)} <b>{perCity ? (perCity[c.id]?.length ?? 0) : '–'}</b>
             </span>
           ))}
+        </div>
         </div>
       </div>
 
@@ -267,7 +297,7 @@ export default function Coverage() {
         <div className="contribgrid">
           <div className="panel covmappanel">
             {cov.groups.some((g) => g.lat != null)
-              ? <CoverageMap groups={cov.groups} hover={hover} setHover={setHover} />
+              ? <CoverageMap groups={cov.groups} hover={hover} setHover={setHover} minZoom={city ? undefined : 2} />
               // Three ways for the map to be blank, and they are not the same
               // news. Nothing published is a catalog to fill; addresses that
               // name no district is a parse to fix (the bubbles are per
@@ -291,7 +321,7 @@ export default function Coverage() {
               <div className="boardhead">
                 <h3 className="boardtitle">{longName}</h3>
                 <span className="boardpct">
-                  {cov.total} place{cov.total === 1 ? '' : 's'} · {cov.groups.length} district{cov.groups.length === 1 ? '' : 's'}
+                  {cov.total} place{cov.total === 1 ? '' : 's'} · {cov.groups.length} {cov.groups.length === 1 ? unit : units}
                 </span>
               </div>
               {/* Two different nothings, and the screen used to print the

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CITY_KEY, shortKey, SERIES_COLORS, TOP_N,
-  dayKey, windowDays, cumulativeByDay, countStats, scopeRows, buildBoard, niceMax, withGuide,
+  dayKey, windowDays, cumulativeByDay, countStats, scopeRows, buildBoard, niceMax, guideScope, withGuide,
 } from '../src/contributors.js';
 
 const TODAY = new Date(2026, 7, 16); // Aug 16 2026, local
@@ -127,44 +127,113 @@ test('palette and city metadata hold the shapes the screen leans on', () => {
   assert.equal(dayKey(new Date(2026, 0, 5)), '2026-01-05');
 });
 
-// ---- withGuide: the optimistic tick, and the rollback that has to be its
-// exact opposite. Both halves live in the screen, which has no test of its
-// own; the fold does, because getting the rollback backwards leaves a box
-// that lies about what the database says.
+// ---- guideScope / withGuide: the optimistic tick, and the rollback that
+// has to be its exact opposite. Both halves live in the screen, which has
+// no test of its own; the folds do, because getting the rollback backwards
+// leaves a box that lies about what the database says.
+//
+// A grant is a city now. The map is user id → Set of city ids, and `null`
+// in that Set means every city — the shape the table itself uses.
 
-test('withGuide adds and removes without touching the set it was given', () => {
-  const before = new Set(['a']);
-  const added = withGuide(before, 'b', true);
-  assert.deepEqual([...added].sort(), ['a', 'b']);
-  assert.deepEqual([...before], ['a'], 'the original set was mutated');
+const grants = (o) => new Map(Object.entries(o).map(([k, v]) => [k, new Set(v)]));
 
-  const removed = withGuide(added, 'a', false);
-  assert.deepEqual([...removed], ['b']);
+test('guideScope answers for the city in hand', () => {
+  const g = grants({ hn: ['hanoi'], all: [null], both: [null, 'hanoi'] });
+  assert.deepEqual(guideScope(g, 'hn', 'hanoi'), { on: true, everywhere: false, locked: false });
+  assert.deepEqual(guideScope(g, 'hn', 'danang'), { on: false, everywhere: false, locked: false });
+  // Nobody at all.
+  assert.deepEqual(guideScope(g, 'nobody', 'hanoi'), { on: false, everywhere: false, locked: false });
+});
+
+// An everywhere grant covers a city it never named — the whole point of
+// writing it as one null row rather than one row per city.
+test('guideScope counts an everywhere grant as a grant here', () => {
+  const g = grants({ all: [null] });
+  assert.equal(guideScope(g, 'all', 'hanoi').on, true);
+  assert.equal(guideScope(g, 'all', 'danang').on, true);
+  assert.equal(guideScope(g, 'all', null).on, true);
+});
+
+// With no city in hand the box speaks only for the everywhere grant: a
+// guide of Hanoi alone is not "a guide" when the desk is on all cities,
+// because ticking that box would grant them everywhere.
+test('guideScope with no city reports only the everywhere grant', () => {
+  const g = grants({ hn: ['hanoi'], all: [null] });
+  assert.equal(guideScope(g, 'hn', null).on, false);
+  assert.equal(guideScope(g, 'all', null).on, true);
+});
+
+// The one state the box cannot express: ticked because of a wider grant,
+// on a screen scoped to one city.
+test('guideScope locks the box when a wider grant is what ticked it', () => {
+  const g = grants({ all: [null] });
+  assert.equal(guideScope(g, 'all', 'hanoi').locked, true);
+  assert.equal(guideScope(g, 'all', null).locked, false, 'nothing to lock at all cities');
+  assert.equal(guideScope(grants({ hn: ['hanoi'] }), 'hn', 'hanoi').locked, false);
+});
+
+test('guideScope treats a map that has not loaded as empty', () => {
+  assert.deepEqual(guideScope(null, 'a', 'hanoi'), { on: false, everywhere: false, locked: false });
+});
+
+test('withGuide adds and removes without touching the map it was given', () => {
+  const before = grants({ a: ['hanoi'] });
+  const added = withGuide(before, 'b', 'danang', true);
+  assert.deepEqual([...added.get('b')], ['danang']);
+  assert.deepEqual([...before.keys()], ['a'], 'the original map was mutated');
+  assert.equal(before.get('a').size, 1, 'the original set was mutated');
+
+  const removed = withGuide(added, 'a', 'hanoi', false);
+  assert.equal(removed.has('a'), false, 'a person with no cities left should be gone');
+});
+
+// One city off leaves the others alone — the failure this shape exists to
+// prevent is a click on Huế revoking Hanoi.
+test('withGuide changes one city and leaves the rest', () => {
+  const g = grants({ a: ['hanoi', 'danang'] });
+  assert.deepEqual([...withGuide(g, 'a', 'hanoi', false).get('a')], ['danang']);
+  assert.deepEqual([...withGuide(g, 'a', 'hue', true).get('a')].sort(), ['danang', 'hanoi', 'hue']);
+});
+
+// Off with no city in hand is the whole person, city grants included: the
+// box was ticked because they are a guide and has just been unticked.
+test('withGuide with no city revokes everything for that person', () => {
+  const g = grants({ a: ['hanoi', 'danang', null], b: ['hanoi'] });
+  const next = withGuide(g, 'a', null, false);
+  assert.equal(next.has('a'), false);
+  assert.deepEqual([...next.get('b')], ['hanoi'], 'somebody else was touched');
 });
 
 // The rollback path calls this with `!on`, so the two have to undo each
-// other exactly — for an id that was there and one that was not.
+// other exactly — for a city that was there and one that was not.
 test('withGuide undoes itself when called with the opposite answer', () => {
-  for (const [start, id, on] of [
-    [['a'], 'b', true], [['a', 'b'], 'b', false],
-    [[], 'a', true], [['a'], 'a', false],
+  for (const [start, id, city, on] of [
+    [{ a: ['hanoi'] }, 'b', 'hanoi', true],
+    [{ a: ['hanoi'], b: ['hanoi'] }, 'b', 'hanoi', false],
+    [{}, 'a', 'danang', true],
+    [{ a: ['danang'] }, 'a', 'danang', false],
+    [{}, 'a', null, true],
   ]) {
-    const from = new Set(start);
-    const there = withGuide(from, id, on);
-    const back = withGuide(there, id, !on);
-    assert.deepEqual([...back].sort(), [...from].sort());
+    const from = grants(start);
+    const there = withGuide(from, id, city, on);
+    const back = withGuide(there, id, city, !on);
+    assert.deepEqual(
+      [...back].map(([k, v]) => [k, [...v].sort()]).sort(),
+      [...from].map(([k, v]) => [k, [...v].sort()]).sort(),
+      `${id}/${city}/${on}`,
+    );
   }
 });
 
 // A click before the grants have loaded still describes what it wants.
-test('withGuide treats a set that has not loaded as an empty one', () => {
-  assert.deepEqual([...withGuide(null, 'a', true)], ['a']);
-  assert.deepEqual([...withGuide(null, 'a', false)], []);
+test('withGuide treats a map that has not loaded as an empty one', () => {
+  assert.deepEqual([...withGuide(null, 'a', 'hanoi', true).get('a')], ['hanoi']);
+  assert.equal(withGuide(null, 'a', 'hanoi', false).has('a'), false);
 });
 
 // Ticking a box that is already on is not an error — the board can be
 // clicked faster than the round trip it starts.
 test('withGuide is idempotent in both directions', () => {
-  assert.deepEqual([...withGuide(new Set(['a']), 'a', true)], ['a']);
-  assert.deepEqual([...withGuide(new Set(), 'a', false)], []);
+  assert.deepEqual([...withGuide(grants({ a: ['hanoi'] }), 'a', 'hanoi', true).get('a')], ['hanoi']);
+  assert.equal(withGuide(grants({}), 'a', 'hanoi', false).has('a'), false);
 });

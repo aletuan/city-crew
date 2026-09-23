@@ -187,6 +187,13 @@ const PATHS = {
     <path d="M4.2 4.2 11.8 11.8M11.8 4.2 4.2 11.8" />
   ),
 
+  // Points down when a section is open, and is turned a quarter by CSS
+  // when it is shut — one glyph for both states, so the two can be
+  // animated into each other rather than swapped.
+  chevron: (
+    <path d="M4 6.2 8 10.2l4-4" />
+  ),
+
   // Three tracks with a knob each: the settled glyph for "filters", and
   // the one the mobile mockup puts beside its search field.
   sliders: (

@@ -30,7 +30,7 @@ import { successHaptic } from './ui';
 const BUCKET = 'place-photos';
 
 export function useAddPhoto({ place, placeId, count, onAdded }: {
-  place: Guidable & { slug: string };
+  place: Guidable & { slug: string; city_id?: string | null };
   /** The row id, looked up by the caller — see `fetchPlaceId` for why it
    *  is not in the catalog. Null until it is known, and `add` does
    *  nothing useful before then. */
@@ -44,7 +44,9 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
   const { t } = useI18n();
   const { session } = useAuth();
   const uid = session?.user?.id ?? null;
-  const granted = useIsGuide();
+  // The place's city, not the person's: a grant that names Đà Nẵng
+  // does not reach a café in Huế, and the insert policy says so too.
+  const granted = useIsGuide(place.city_id);
   const [busy, setBusy] = useState(false);
   const [counts, setCounts] = useState({ mineHere: 0, mineToday: 0 });
 

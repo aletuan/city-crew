@@ -15,39 +15,54 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  addPlacePhoto, fetchIsLocalGuide, fetchMyPhotoCounts, fetchPlaceId, removePlacePhoto,
+  addPlacePhoto, fetchGuideCities, fetchMyPhotoCounts, fetchPlaceId, removePlacePhoto,
 } from './guide';
 
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
 
-describe('fetchIsLocalGuide', () => {
+describe('fetchGuideCities', () => {
   // No filter, because `guides read their own grant` is the filter. A
   // `where user_id = me` here would be a second, weaker copy of it.
   it('takes no filter, because RLS is the filter', async () => {
-    fake().replies({ data: [{ user_id: 'u1' }] });
-    expect(await fetchIsLocalGuide()).toBe(true);
+    fake().replies({ data: [{ city_id: 'hanoi' }] });
+    expect(await fetchGuideCities()).toEqual(['hanoi']);
     expect(fake().log[0]).toMatchObject({ table: 'local_guides', op: 'select', filters: [] });
   });
 
-  it('is false for an account the desk has not granted', async () => {
+  // The row shape every grant had before the column existed, and the one
+  // the migration left them in. It has to keep meaning "anywhere", which
+  // downstream is a null in the list rather than a city.
+  it('keeps an all-cities grant as a null rather than dropping it', async () => {
+    fake().replies({ data: [{ city_id: null }] });
+    expect(await fetchGuideCities()).toEqual([null]);
+  });
+
+  // Two narrow grants and a wide one can sit together: the reading is
+  // the union, so the list is returned whole and judged by the store.
+  it('returns every grant, not the first', async () => {
+    fake().replies({ data: [{ city_id: 'hanoi' }, { city_id: 'danang' }] });
+    expect(await fetchGuideCities()).toEqual(['hanoi', 'danang']);
+  });
+
+  it('is empty for an account the desk has not granted', async () => {
     fake().replies({ data: [] });
-    expect(await fetchIsLocalGuide()).toBe(false);
+    expect(await fetchGuideCities()).toEqual([]);
   });
 
   // A guest, a database that predates the table, and a network that went
-  // away are three different facts. All three answer "no", because the
-  // safe answer is the one that draws no control.
-  it('is false when the read fails rather than throwing', async () => {
+  // away are three different facts. All three answer "nowhere", because
+  // the safe answer is the one that draws no control.
+  it('is empty when the read fails rather than throwing', async () => {
     fake().replies({ error: { message: 'relation does not exist' } });
-    expect(await fetchIsLocalGuide()).toBe(false);
+    expect(await fetchGuideCities()).toEqual([]);
   });
 
   // No error and no rows either — what PostgREST gives for a `head`
-  // request or a reply whose body never arrived. Still "no".
-  it('is false when there is no error and no data', async () => {
+  // request or a reply whose body never arrived. Still "nowhere".
+  it('is empty when there is no error and no data', async () => {
     fake().replies({});
-    expect(await fetchIsLocalGuide()).toBe(false);
+    expect(await fetchGuideCities()).toEqual([]);
   });
 });
 
