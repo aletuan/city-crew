@@ -22,12 +22,12 @@
 // however many that is, with a line saying so. The one thing it must never
 // do is pad.
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  AmbientWarmth, Card, GradientCta, PressableScale, Screen, useTabBarClearance,
+  AmbientWarmth, Card, GradientCta, PressableScale, Screen, useReducedMotion, useTabBarClearance,
 } from '../components/ui';
 import {
   cachedNarration, narratableOf, NARRATION_HOLD_MS, prefetchNarration,
@@ -351,6 +351,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
               key={`${plan.lens}-${i}`}
               plan={plan}
               name={name}
+              nth={i}
               // The card's own name rides along, so the editor's header
               // matches the card that was tapped even if the cache has let
               // this narration go by the time it opens.
@@ -451,10 +452,65 @@ function heading(
   return t('Your evening, three ways', 'Buổi tối của bạn, ba cách', 'あなたの夜、三通り');
 }
 
+/**
+ * Where the day starts, in the mark the reader has been watching.
+ *
+ * The screen before this one spends five seconds on a paw inside a ring,
+ * and then used to hand over to three cards whose every stop was the same
+ * 8pt dot — the mark the reader had been watching for the whole wait
+ * simply stopped existing. The first stop of each plan wears that paw
+ * now, so the thing that was working becomes the thing it made.
+ *
+ * It settles rather than flies. A flight would have to know where it
+ * started, and the screen it started on is unmounting as this one
+ * mounts — the position could only be guessed, and the path would cross
+ * the card's own text on the way down. Arriving in place, in the same
+ * glyph, is the part of a shared element that actually does the work.
+ *
+ * `scale` and `opacity` only, so it runs on the native driver, and the
+ * stagger is by card rather than by stop: three marks landing in order
+ * reads as one hand dealing three options.
+ */
+function StartMark({ nth }: { nth: number }) {
+  const still = useReducedMotion();
+  const land = useRef(new Animated.Value(still ? 1 : 0)).current;
+  useEffect(() => {
+    if (still) { land.setValue(1); return; }
+    const run = Animated.timing(land, {
+      toValue: 1,
+      duration: 300,
+      delay: nth * 70,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    run.start();
+    return () => run.stop();
+  }, [land, nth, still]);
+  return (
+    <Animated.View
+      style={[
+        s.start,
+        {
+          opacity: land,
+          // 2.6 rather than the orb's true ratio to this mark. Landing
+          // from the full 92pt would put a disc over the stop's name for
+          // a sixth of a second, which is a bloom across the text rather
+          // than a mark arriving.
+          transform: [{ scale: land.interpolate({ inputRange: [0, 1], outputRange: [2.6, 1] }) }],
+        },
+      ]}
+    >
+      <Ionicons name="paw" size={9} color={colors.accentInk} />
+    </Animated.View>
+  );
+}
+
 /** One draft. Tapping it opens the editor, where times and order become
  *  the reader's rather than the planner's. */
-function PlanCard({ plan, name, onPress }: {
+function PlanCard({ plan, name, nth, onPress }: {
   plan: TripPlan; name: string; onPress: () => void;
+  /** Which card down the list this is — the start marks settle in order. */
+  nth: number;
 }) {
   const { t, lang } = useI18n();
   const badge = BADGE[plan.lens];
@@ -511,7 +567,7 @@ function PlanCard({ plan, name, onPress }: {
           <View key={st.place.slug} style={s.stop}>
             <Text style={s.time}>{clockOf(st.arriveMin)}</Text>
             <View style={s.dotCol}>
-              <View style={s.dot} />
+              {i === 0 ? <StartMark nth={nth} /> : <View style={s.dot} />}
               {i + 1 < plan.stops.length && <View style={s.rail} />}
             </View>
             <View style={s.body}>
@@ -604,9 +660,21 @@ const s = StyleSheet.create({
     ...CAPTION, color: colors.textSecondary, width: 44,
     fontVariant: ['tabular-nums'], paddingTop: 2,
   },
-  dotCol: { alignItems: 'center', width: 10, alignSelf: 'stretch' },
+  // 16 rather than 10, which is what the start mark needs to hold a
+  // legible glyph. The rest of the column centres in it, so the dots and
+  // the rail stay on one axis and only the body moves, by 6pt.
+  dotCol: { alignItems: 'center', width: 16, alignSelf: 'stretch' },
   dot: {
     width: 8, height: 8, borderRadius: 4, marginTop: 6, backgroundColor: colors.accentFill,
+  },
+  // The same fill the dots wear, at the size a 9pt paw can be read in.
+  // `marginTop` is 2 against the dot's 6: a disc twice the width sits
+  // right against the name's cap height where a dot has to be nudged down
+  // to reach it.
+  start: {
+    width: 16, height: 16, borderRadius: 8, marginTop: 2,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentFill,
   },
   // No height. It fills whatever the stop beside it turned out to be —
   // see the note where the leg is nested.

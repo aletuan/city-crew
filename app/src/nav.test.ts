@@ -39,7 +39,12 @@ function stacksOf(source: string) {
   for (const m of source.matchAll(/function (\w+Stack)\(\)\s*\{([\s\S]*?)\n\}/g)) {
     const [, name, body] = m;
     stacks.set(name, {
-      routes: new Set([...body.matchAll(/<Stack\.Screen name="(\w+)"/g)].map((r) => r[1])),
+      // `\s+` rather than a space: a screen that carries options is
+      // written over several lines, and the tag's name then sits on the
+      // next one. Matching only the one-line spelling made this parser
+      // assert a formatting rule, and it reported the first screen to
+      // take options as unregistered.
+      routes: new Set([...body.matchAll(/<Stack\.Screen\s+name="(\w+)"/g)].map((r) => r[1])),
       components: [...body.matchAll(/component=\{(\w+)\}/g)].map((r) => r[1]),
     });
   }
