@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { brandKey } from './brand';
-import { backtracks, partAt, partGone, planTrips, shortHopPenalty, startMinFor, START_MIN } from './planner';
+import {
+  backtracks, originPenalty, partAt, partGone, planTrips, shortHopPenalty, startMinFor, START_MIN,
+} from './planner';
 import type { TripDraft } from './trip';
 import type { Place } from './types';
 
@@ -168,6 +170,47 @@ describe('planTrips', () => {
       expect(shortHopPenalty(0.15)).toBeCloseTo(0.75, 10);
       expect(shortHopPenalty(0.3)).toBe(0);
       expect(shortHopPenalty(2)).toBe(0);
+    });
+
+    // The opening charge, which is a different question from a hop: not
+    // "is this a stride" but "is this worth crossing the city for".
+    it('charges the measured rate out to the knee', () => {
+      expect(originPenalty(0)).toBe(0);
+      expect(originPenalty(2)).toBeCloseTo(2, 10);
+      expect(originPenalty(4.2)).toBeCloseTo(4.2, 10);
+      expect(originPenalty(5)).toBeCloseTo(5, 10);
+    });
+
+    it('doubles the rate past it', () => {
+      expect(originPenalty(6)).toBeCloseTo(7, 10);
+      expect(originPenalty(8)).toBeCloseTo(11, 10);
+    });
+
+    // The case that retired the flat cap, in the catalog's own numbers: a
+    // pin on Trần Thủ Độ, a bistro in Bồ Đề at 9.71km and a café in Hai
+    // Bà Trưng at 4.20km. Capped at five, the river cost 0.8 of a point
+    // more than the near side — less than the popularity term hands a
+    // busy place, so across the city kept winning.
+    it('separates the far side of the city from the near side', () => {
+      const near = originPenalty(4.20);
+      const across = originPenalty(9.71);
+      expect(near).toBeCloseTo(4.2, 2);
+      expect(across).toBeCloseTo(14.42, 2);
+      expect(across - near).toBeGreaterThan(10);
+    });
+
+    // It only ever adds. A curve that went cheap anywhere would move
+    // plans that were never complained about — which a free radius near
+    // zero did, in the 2–5km band, where most of a city's choices sit.
+    it('is never cheaper than the flat-capped curve it replaces', () => {
+      for (let km = 0; km <= 20; km += 0.25) {
+        expect(originPenalty(km)).toBeGreaterThanOrEqual(Math.min(5, km) - 1e-9);
+      }
+    });
+
+    it('still caps, so two places across town are judged on what they are', () => {
+      expect(originPenalty(10)).toBe(15);
+      expect(originPenalty(40)).toBe(15);
     });
 
     it('knows a step back toward covered ground when it sees one', () => {

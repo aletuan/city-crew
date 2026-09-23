@@ -522,13 +522,66 @@ const BACKTRACK_PENALTY = 1;
  * with a thousand reviews carries about 1.5 points over one with thirty —
  * and in Hanoi that difference tracks the tourist centre almost exactly.
  * At 0.4/km the three kilometres out of Ba Đình cost 1.2 and the centre
- * still won; at 1.0 they cost 3.0, which a near place needs only to be
- * roughly comparable to survive. The cap keeps it a nudge: past five
- * kilometres nothing further is charged, so a genuinely better place
- * across town is still allowed to win.
+ * still won; the rate below is what makes a near place able to survive
+ * that.
+ *
+ * It was linear and capped at five kilometres, on the argument that the
+ * cap kept it a nudge. It kept it a nudge for the first five and nothing
+ * at all after — see `originPenalty`, which carries the measurement that
+ * retired that shape.
  */
 const ORIGIN_KM_PENALTY = 1.0;
-const ORIGIN_KM_PENALTY_MAX = 5;
+/** Where an errand becomes a journey, and the rate doubles. */
+const ORIGIN_KNEE_KM = 5;
+const ORIGIN_KM_PENALTY_FAR = 2.0;
+const ORIGIN_KM_PENALTY_MAX = 15;
+
+/**
+ * The opening charge for a first stop `km` from where the day starts:
+ * 1.0 a kilometre out to the knee, 2.0 a kilometre past it.
+ *
+ * ── why the flat cap stopped working ──
+ *
+ * It was `min(5, km * 1.0)`, which reaches its ceiling at exactly five
+ * kilometres. Hanoi is about fifteen across, so for two thirds of the
+ * city the term was a constant that separated nothing.
+ *
+ * Measured from the catalog, with a pin on Trần Thủ Độ: a bistro in Bồ
+ * Đề, 9.71km away across the river, was charged 5.00 — and a café in Hai
+ * Bà Trưng, 4.20km away, was charged 4.20. Five and a half extra
+ * kilometres cost 0.8 of a point, against a popularity term worth up to
+ * 7.2 on the `iconic` lens. The far side of the city was winning on an
+ * edge it only needed a fraction of.
+ *
+ * ── the shape ──
+ *
+ * Distance is not felt linearly. Four kilometres and nine are not the
+ * same errand, and the old curve called them the same price. So the rate
+ * doubles at the knee rather than stopping there.
+ *
+ * A free radius near zero was tried first and was worse, which is the
+ * useful half of this note: charging nothing inside two kilometres made
+ * the 2–5km band *cheaper* than it had been, and that band is where most
+ * of a city's choices actually sit. `opens near the pin rather than
+ * across town` caught it — its "across town" is 4.0km, and the squared
+ * curve charged 1.0 there where the old one charged 4.03. This curve is
+ * at or above the old one at every distance; it only ever adds.
+ *
+ * Same numbers, this shape: 4.20km still costs 4.20, and 9.71km costs
+ * 14.42 — a gap of 10.2, which no popularity edge buys its way out of.
+ * The cap is 15, reached at 10km, so two places that are both genuinely
+ * across town are still separated by what they are.
+ *
+ * Exported for the tests that pin the curve.
+ */
+export function originPenalty(km: number): number {
+  const far = Math.max(0, km - ORIGIN_KNEE_KM);
+  const near = Math.min(km, ORIGIN_KNEE_KM);
+  return Math.min(
+    ORIGIN_KM_PENALTY_MAX,
+    near * ORIGIN_KM_PENALTY + far * ORIGIN_KM_PENALTY_FAR,
+  );
+}
 
 /** The short-hop charge for a hop of `km` — zero from `HOP_FLOOR_KM` up,
  *  climbing linearly to `HOP_FLOOR_PENALTY` at zero. Exported for the
@@ -714,10 +767,7 @@ function scoreOf(
     }
     if (backtracks(path, p)) s -= BACKTRACK_PENALTY;
   } else if (origin && p.lat != null && p.lng != null) {
-    s -= Math.min(
-      ORIGIN_KM_PENALTY_MAX,
-      distanceKm(origin.lat, origin.lng, p.lat, p.lng) * ORIGIN_KM_PENALTY,
-    );
+    s -= originPenalty(distanceKm(origin.lat, origin.lng, p.lat, p.lng));
   }
 
   // A brand counts as a repeat the way a slug does: three cards each
