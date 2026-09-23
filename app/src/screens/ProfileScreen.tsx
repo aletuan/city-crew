@@ -339,7 +339,21 @@ function Tagline() {
   const { t } = useI18n();
   return (
     <View style={s.tagline}>
-      <Text style={{ fontSize: 18 }}>✨</Text>
+      {/* The app's own mark, not a sparkle. An emoji here was whatever
+          the reader's platform drew — a different sparkle on iOS, on
+          Android and on the web, none of them ours, and none of them
+          taking the theme's colour. A glyph does both: one shape
+          everywhere, in the accent, and it turns with the theme.
+          `accessibilityElementsHidden` because it says nothing the
+          quote under it does not; a screen reader should reach the
+          words, not "paw". */}
+      <Ionicons
+        name="paw"
+        size={18}
+        color={colors.accent}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
       <Text style={s.taglineText}>
         {t(
           '“We do not remember days,\nwe remember moments.”',

@@ -99,7 +99,7 @@ const renderScreen = () => {
   return navigation;
 };
 const tap = (text: string) => fireEvent.click(screen.getByText(text));
-const cta = () => screen.getByRole('button', { name: /Sketch the plan/ });
+const cta = () => screen.getByRole('button', { name: /Plan a trip/ });
 const sent = (navigation: { navigate: ReturnType<typeof vi.fn> }) => {
   expect(navigation.navigate).toHaveBeenCalledTimes(1);
   expect(navigation.navigate.mock.calls[0][0]).toBe('Sketching');
