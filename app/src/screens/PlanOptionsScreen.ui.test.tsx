@@ -263,6 +263,22 @@ describe('the cards', () => {
     expect(document.querySelectorAll('[data-icon="car-outline"]')).toHaveLength(1);
   });
 
+  // The screen before this one spends five seconds on a paw in a ring,
+  // and this one used to open on three cards of identical 8pt dots — the
+  // mark the reader had been watching simply stopped existing.
+  it('opens each plan on the paw, and leaves the later stops their dots', () => {
+    renderScreen();
+    const paws = [...document.querySelectorAll('[data-icon="paw"]')];
+    // One apiece, and `FIRST` is three plans.
+    expect(paws).toHaveLength(3);
+    // The mark sits in the dot column, whose neighbour is the arrival time.
+    const timeBeside = (el: Element) =>
+      el.parentElement?.parentElement?.previousElementSibling?.textContent;
+    expect(paws.map(timeBeside)).toEqual(['18:00', '18:00', '18:00']);
+    const later = screen.getByText('19:15').parentElement as HTMLElement;
+    expect(later.querySelectorAll('[data-icon="paw"]')).toHaveLength(0);
+  });
+
   it('summarises count, hours, distance and per-person spend, in thousands or millions', () => {
     renderScreen();
     expect(screen.getByText('2 stops · ~3h · 350 m · ~250k ₫')).toBeTruthy();

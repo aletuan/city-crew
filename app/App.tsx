@@ -73,7 +73,18 @@ function IdeasStack() {
     <Stack.Navigator screenOptions={stackOptions}>
       <Stack.Screen name="IdeasHome" component={IdeasScreen} />
       <Stack.Screen name="Sketching" component={SketchingScreen} />
-      <Stack.Screen name="PlanOptions" component={PlanOptionsScreen} />
+      {/* Dissolve rather than slide. The sketching screen hands this one
+          a mark the reader has been watching for five seconds — the paw
+          on each plan's first stop — and a page sliding in over another
+          says "a new screen", which is the opposite of what that mark is
+          for. Cross-faded, the paw reads as the same object arriving
+          somewhere. This is the only push in the app that carries
+          anything across, so it is the only one that changes. */}
+      <Stack.Screen
+        name="PlanOptions"
+        component={PlanOptionsScreen}
+        options={{ animation: 'fade' }}
+      />
       <Stack.Screen name="PlanEdit" component={PlanEditScreen} />
       {/* The editor names a place on every card and opens it. Without this
           the navigate finds no handler here, bubbles up to the tabs, and
