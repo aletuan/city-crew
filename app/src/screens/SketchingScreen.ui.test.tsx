@@ -286,6 +286,19 @@ describe('while it waits', () => {
     expect(screen.queryByText('Sky Bar')).toBeNull();
   });
 
+  it('caps the deck at three, however many stops the plan has', () => {
+    planTrips.mockImplementation(() => [plan('match', [
+      stop(CAFE, 18 * 60), stop(DINNER, 19 * 60), stop(ROOF, 20 * 60), stop(PINNED, 21 * 60),
+    ], [18 * 60, 22 * 60])]);
+    renderScreen();
+    expect(screen.getByText('Cộng Café')).toBeTruthy();
+    expect(screen.getByText('Bún Chả Hương Liên')).toBeTruthy();
+    expect(screen.getByText('Sky Bar')).toBeTruthy();
+    // A fourth would shrink all of them below reading size, so the plan
+    // keeps the stop and the deck does not show it.
+    expect(screen.queryByText('Collection Pick')).toBeNull();
+  });
+
   it("draws the place's cover when it has one", () => {
     const shot = { photo_uri: 'https://example.test/cafe.jpg', is_cover: true, is_hidden: false, sort_order: 0 };
     planTrips.mockImplementation(() => [
