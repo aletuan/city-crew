@@ -19,18 +19,24 @@
 // state. A component that went looking for its own places could disagree
 // with the screen around it, which is the whole reason this one cannot.
 
-import React from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useArrival } from './ui';
 import { coverOf, type Place } from '../lib/data';
 import { colors, font, radius } from '../theme';
 
-/** Three at most. A fourth would shrink all of them below reading size. */
-const MAX = 3;
-/** One card's arrival, and the gap before the next one starts. */
+/** One card's arrival, and the gap before the next one starts.
+ *
+ *  Two staggers, because the deck has two jobs. Showing one plan it has
+ *  the whole wait, and 400 apart is an unhurried deal. Showing three it
+ *  has about a second and a half each, so 250 gets the set assembled in
+ *  half of that and leaves the rest of it still. */
 const IN_MS = 300;
 const STEP_MS = 400;
+const STEP_FAST_MS = 250;
+/** The dissolve between one plan's places and the next one's. */
+const SWAP_MS = 160;
 /** How far the middle card stands above its neighbours. */
 const LIFT = 12;
 
@@ -41,14 +47,14 @@ const LIFT = 12;
  * here would be a card the reader wants to act on, on a screen where
  * there is nothing yet to act on.
  */
-function Card({ place, nth, of: count, still }: {
-  place: Place; nth: number; of: number; still: boolean;
+function Card({ place, nth, of: count, still, step }: {
+  place: Place; nth: number; of: number; still: boolean; step: number;
 }) {
   // Always animated, even under Reduce Motion — what that setting turns
   // off is the travel below, not the fade. This app has said so before:
   // see `GradientCta`, "fade is not motion". A card that blinks into
   // existence is the thing the setting is meant to prevent.
-  const arrive = useArrival(IN_MS, nth * STEP_MS, false);
+  const arrive = useArrival(IN_MS, nth * step, false);
   const cover = coverOf(place);
   // Fanned from the centre, so one card sits straight, two lean apart and
   // three read as a hand laid down. Three degrees is the whole effect:
@@ -60,7 +66,7 @@ function Card({ place, nth, of: count, still }: {
     <Animated.View
       style={[
         s.card,
-        count === MAX && nth === 1 && { marginBottom: LIFT },
+        count === 3 && nth === 1 && { marginBottom: LIFT },
         { opacity: arrive },
         !still && {
           transform: [
@@ -80,21 +86,86 @@ function Card({ place, nth, of: count, still }: {
   );
 }
 
-export default function SketchDeck({ places, still }: {
-  /** The stops of the plan being drawn. Only the first three are shown. */
+export default function SketchDeck({ places, seq, span, still }: {
+  /** The stops of the plan being drawn now. */
   places: readonly Place[];
-  /** The reader asked for less motion; the cards fade without travelling. */
+  /**
+   * Which plan these are. A change means a swap, and nothing else does —
+   * the deck neither knows nor asks how the caller chose.
+   */
+  seq: number;
+  /**
+   * How many slots to hold, measured across every plan rather than this
+   * one. A slot with nothing in it is an empty frame the same size as a
+   * card, which is what keeps the row from re-laying itself out when a
+   * three-stop day is followed by a two-stop one — on a narrow phone the
+   * cap that hides that does not bind, and every card would jump wider.
+   */
+  span: number;
+  /** The reader asked for less motion. */
   still?: boolean;
 }) {
-  const shown = places.slice(0, MAX);
+  // The places on screen, which lag the ones passed in by the length of
+  // the dissolve. The only state here, and it is about drawing rather
+  // than about planning: which set is currently up.
+  const [shown, setShown] = useState(places);
+  const fade = useRef(new Animated.Value(1)).current;
+  const was = useRef(seq);
+
+  useEffect(() => {
+    if (was.current === seq) { setShown(places); return; }
+    was.current = seq;
+    // Out, swap, and let the cards fade themselves back in: their own
+    // arrival re-runs on the new key, so a second fade here would be the
+    // same move twice.
+    //
+    // The still path is for the reader who turns Reduce Motion on in the
+    // middle of a wait. The caller holds `seq` at zero while it is on, so
+    // that flip is the one moment the number changes and the answer is
+    // "yes, but not like that": the places swap, without the dissolve.
+    if (still) { setShown(places); return; }
+    const out = Animated.timing(fade, {
+      toValue: 0, duration: SWAP_MS, easing: Easing.in(Easing.quad), useNativeDriver: true,
+    });
+    out.start(({ finished }) => {
+      // A dissolve that was stopped rather than run out is one a newer
+      // swap has already taken over, or an unmount. Swapping here would
+      // land the deck on the plan this fade set out for and not the one
+      // the caller has since asked for.
+      if (!finished) return;
+      setShown(places);
+      fade.setValue(1);
+    });
+    return () => out.stop();
+  }, [seq, places, still, fade]);
+
+  const cards = shown.slice(0, span);
+  const stagger = seq > 0 || span < shown.length ? STEP_FAST_MS : STEP_MS;
+
   // The height is held whether or not there is anything to hold it, so
   // the heading under it does not jump when the catalog lands.
   return (
-    <View style={s.deck}>
-      {shown.map((place, i) => (
-        <Card key={place.slug} place={place} nth={i} of={shown.length} still={!!still} />
-      ))}
-    </View>
+    <Animated.View style={[s.deck, { opacity: fade }]}>
+      {Array.from({ length: Math.max(span, cards.length) }, (_, i) => {
+        const place = cards[i];
+        // An empty frame rather than nothing: it holds its share of the
+        // row so the cards beside it keep their width.
+        if (!place) return <View key={`slot-${i}`} style={s.slot} />;
+        return (
+          <Card
+            // Keyed by the plan as well as the place, so a card that
+            // appears in two plans arrives again rather than sitting
+            // through the swap untouched.
+            key={`${seq}-${place.slug}`}
+            place={place}
+            nth={i}
+            of={cards.length}
+            still={!!still}
+            step={stagger}
+          />
+        );
+      })}
+    </Animated.View>
   );
 }
 
@@ -110,6 +181,8 @@ const s = StyleSheet.create({
   // `flex: 1` with a ceiling: three cards have to fit a 320pt phone as
   // well as they fit a 430pt one, and a fixed width fits exactly one of
   // those.
+  // An empty slot: the same box a card occupies, drawing nothing.
+  slot: { flex: 1, maxWidth: 108 },
   card: {
     flex: 1, maxWidth: 108,
     backgroundColor: colors.bgElevated, borderRadius: radius.card, padding: 6, gap: 5,

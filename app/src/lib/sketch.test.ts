@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  findingFeed, finished, findingsOf, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, stopCount, summaryLine, type Step,
+  findingFeed, finished, findingsOf, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, stopCount, summaryLine, type Step, deckPlan, deckSpan,
 } from './sketch';
 
 const steps: Step[] = [
@@ -263,5 +263,48 @@ describe('findingFeed', () => {
   it('has nothing to hold when nothing was found', () => {
     expect(findingFeed([null, null], 5)).toEqual({ previous: null, current: null });
     expect(findingFeed([], 0)).toEqual({ previous: null, current: null });
+  });
+});
+
+describe('deckPlan', () => {
+  it('walks the plans in step with the stages, and only forwards', () => {
+    // Five stages, three plans: two stages each for the first two and the
+    // last one for the third.
+    expect([0, 1, 2, 3, 4].map((n) => deckPlan(n, 3, 5))).toEqual([0, 0, 1, 1, 2]);
+  });
+
+  it('holds on the last plan once every stage is done', () => {
+    // A caller past the end is a screen about to leave, not a fault.
+    expect(deckPlan(5, 3, 5)).toBe(2);
+    expect(deckPlan(99, 3, 5)).toBe(2);
+  });
+
+  it('has nowhere to walk with one plan, or none', () => {
+    expect(deckPlan(4, 1, 5)).toBe(0);
+    expect(deckPlan(4, 0, 5)).toBe(0);
+  });
+
+  it('refuses to divide by a stage count of nothing, and floors a count below zero', () => {
+    expect(deckPlan(4, 3, 0)).toBe(0);
+    expect(deckPlan(-2, 3, 5)).toBe(0);
+  });
+
+  it('defaults to the screen’s own stages', () => {
+    expect(deckPlan(SKETCH_STEPS.length, 2)).toBe(1);
+  });
+});
+
+describe('deckSpan', () => {
+  it('holds as many slots as the longest plan needs', () => {
+    expect(deckSpan([{ stops: [1] }, { stops: [1, 2] }, { stops: [1] }])).toBe(2);
+  });
+
+  it('caps the row, however long a plan runs', () => {
+    expect(deckSpan([{ stops: [1, 2, 3, 4, 5] }])).toBe(3);
+    expect(deckSpan([{ stops: [1, 2, 3, 4, 5] }], 4)).toBe(4);
+  });
+
+  it('is nothing when there is nothing to plan', () => {
+    expect(deckSpan([])).toBe(0);
   });
 });

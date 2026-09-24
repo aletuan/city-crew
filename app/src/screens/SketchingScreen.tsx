@@ -46,7 +46,8 @@ import { legsOf } from '../lib/travel';
 import { useSave } from '../lib/save';
 import { usePlanProfile } from '../lib/tasteProfile';
 import {
-  findingFeed, type FindingLine, finished, findingsOf, SKETCH_STEPS, STEP_FLOOR_MS, stepStates,
+  deckPlan, deckSpan, findingFeed, type FindingLine, finished, findingsOf, SKETCH_STEPS,
+  STEP_FLOOR_MS, stepStates,
   summaryLine, type StepState,
 } from '../lib/sketch';
 import { draftFrom, type TripDraft } from '../lib/trip';
@@ -322,6 +323,9 @@ export default function SketchingScreen({ navigation, route }: {
    *  then the skeleton stands. */
   const feed = findingFeed(findings, step);
 
+  // Held at the first plan when motion is reduced — see the note where
+  // the deck is drawn.
+  const deck = calm ? 0 : deckPlan(step, plans.length);
   const states = stepStates(step);
   const done = finished(step);
   const empty = !failed && done && plans.length === 0;
@@ -374,8 +378,18 @@ export default function SketchingScreen({ navigation, route }: {
             tappable and nothing here is presented as settled — the
             heading still says the day is being sketched, and the list
             below still has a step running. */}
+        {/* One plan's places at a time, moving through them as the
+            stages tick — so the wait shows all three ways rather than
+            spoiling the first one and never mentioning the others.
+            `deckPlan` reads the stage count rather than a clock of its
+            own; the note on it says why. Reduce Motion holds at the
+            first plan: content that changes itself is the thing that
+            setting exists to stop, and slowing the change down is not
+            the same as not changing. */}
         <SketchDeck
-          places={plans[0]?.stops.map((st) => st.place) ?? []}
+          seq={deck}
+          span={deckSpan(plans)}
+          places={plans[deck]?.stops.map((st) => st.place) ?? []}
           still={calm}
         />
 
