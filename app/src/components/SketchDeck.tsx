@@ -95,6 +95,7 @@ import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useArrival } from './ui';
 import { coverOf, type Place } from '../lib/data';
+import { deckTrace } from '../lib/decktrace';
 import { colors, font, radius } from '../theme';
 
 /** A slot's first arrival, and the gap before the next slot starts. */
@@ -141,8 +142,10 @@ const LIFT = 12;
  * and lags by the length of its own dip. Both are about drawing rather
  * than about planning.
  */
-function Slot({ place, nth, of: count, still }: {
+function Slot({ place, nth, of: count, still, option }: {
   place: Place | undefined; nth: number; of: number; still: boolean;
+  /** Which plan is up, carried only so the timeline can say so. */
+  option: number;
 }) {
   // Always animated, even under Reduce Motion — what that setting turns
   // off is the travel below, not the fade. This app has said so before:
@@ -165,6 +168,10 @@ function Slot({ place, nth, of: count, still }: {
     // picture's half of the change is not an animation here: it is the
     // moment the source is handed over, and `expo-image` times the rest.
     const id = setTimeout(() => {
+      // The dissolve is asked for here, and `expo-image` starts it once
+      // the photo below is decoded. The gap between the two is the thing
+      // this timeline exists to show — see `lib/decktrace`.
+      deckTrace.log({ option, slot: nth, what: 'ask', place: place?.slug ?? null });
       setSrc(place);
       const out = Animated.timing(word, {
         toValue: 0, duration: NAME_OUT, easing: Easing.in(Easing.quad), useNativeDriver: true,
@@ -174,6 +181,7 @@ function Slot({ place, nth, of: count, still }: {
         // over, or the deck has gone. Swapping here would put back the
         // name this dip set out for and not the one now asked for.
         if (!finished) return;
+        deckTrace.log({ option, slot: nth, what: 'name', place: place?.slug ?? null });
         setSeen(place);
         Animated.timing(word, {
           toValue: 1, duration: NAME_IN, easing: Easing.out(Easing.quad), useNativeDriver: true,
@@ -181,7 +189,9 @@ function Slot({ place, nth, of: count, still }: {
       });
     }, nth * SWAP_STEP_MS);
     return () => { clearTimeout(id); word.stopAnimation(); };
-    // `seen` is what the effect settles, not what it watches.
+    // `seen` is what the effect settles, not what it watches. `option`
+    // only rides along to the timeline, and re-running this on it would
+    // restart a swap that is already running.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [place?.slug, still, nth, word]);
 
@@ -226,6 +236,12 @@ function Slot({ place, nth, of: count, still }: {
                 style={s.photo}
                 contentFit="cover"
                 transition={swapped.current ? CROSS_MS : FIRST_MS}
+                // The two ends of the wait. Only the timeline reads
+                // them: nothing here changes on either, because the
+                // dissolve is `expo-image`'s to run and holding the old
+                // picture until it can is the whole design.
+                onLoad={() => deckTrace.log({ option, slot: nth, what: 'load', place: src?.slug ?? null })}
+                onError={() => deckTrace.log({ option, slot: nth, what: 'fail', place: src?.slug ?? null })}
               />
             )
             : <View style={s.photo} />)
@@ -242,7 +258,7 @@ function Slot({ place, nth, of: count, still }: {
   );
 }
 
-export default function SketchDeck({ places, next, span, still }: {
+export default function SketchDeck({ places, next, span, still, option }: {
   /** The stops of the plan showing now. */
   places: readonly Place[];
   /**
@@ -261,6 +277,13 @@ export default function SketchDeck({ places, next, span, still }: {
   span: number;
   /** The reader asked for less motion. */
   still?: boolean;
+  /**
+   * Which of the plans this set belongs to. Drawn nowhere and changing
+   * nothing — it rides through only so the timeline in `lib/decktrace`
+   * can say which option a photo's arrival belonged to, which is the
+   * whole point of a trace across three sets that look alike.
+   */
+  option?: number;
 }) {
   const shown = places.slice(0, span);
   const slots = Math.max(span, shown.length);
@@ -279,7 +302,14 @@ export default function SketchDeck({ places, next, span, still }: {
   return (
     <View style={s.deck}>
       {Array.from({ length: slots }, (_, i) => (
-        <Slot key={`slot-${i}`} place={shown[i]} nth={i} of={slots} still={!!still} />
+        <Slot
+          key={`slot-${i}`}
+          place={shown[i]}
+          nth={i}
+          of={slots}
+          still={!!still}
+          option={option ?? 0}
+        />
       ))}
     </View>
   );

@@ -24,10 +24,11 @@
 // where a test can reach them. What is left here is the drawing.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import SketchDeck from '../components/SketchDeck';
+import { deckTrace, reportDeck } from '../lib/decktrace';
 import {
   Chip, GradientCta, Screen, Skeleton, useLoop, useReducedMotion, useTabBarClearance,
 } from '../components/ui';
@@ -366,6 +367,22 @@ export default function SketchingScreen({ navigation, route }: {
   }, [calm, deck, lastPlan]);
   const deckDone = calm || deck >= lastPlan;
 
+  // The timeline this visit files, and the two ends of it.
+  //
+  // A visit starts the clock on arrival, notes each time the deck moves
+  // on, and files the row on the way out. Why any of this exists, and
+  // what the six kinds of event mean, is in `lib/decktrace`; the short of
+  // it is that every number in this animation was chosen rather than
+  // measured, because the console it would have been measured in is on a
+  // phone this side cannot see.
+  useEffect(() => {
+    deckTrace.start();
+    reportDeck.reset();
+  }, []);
+  useEffect(() => {
+    deckTrace.log({ option: deck, slot: null, what: 'option', place: null });
+  }, [deck]);
+
   const states = stepStates(step);
   const done = finished(step);
   const empty = !failed && done && plans.length === 0;
@@ -379,8 +396,17 @@ export default function SketchingScreen({ navigation, route }: {
   useEffect(() => {
     if (!done || !deckDone || !plans.length || left.current) return;
     left.current = true;
+    // Filed before the replace rather than after: this screen is about to
+    // stop existing, and a send scheduled for later would be racing its
+    // own unmount. The insert is fire-and-forget, so it costs the
+    // transition nothing — see the rules in `lib/decktrace`.
+    reportDeck.report(
+      deckTrace.events(),
+      { options: plans.length, span: deckSpan(plans), still: calm },
+      { platform: Platform.OS, osVersion: String(Platform.Version), isDev: __DEV__ },
+    );
     navigation.replace('PlanOptions', { ...p, seed });
-  }, [done, deckDone, plans.length, navigation, p, seed]);
+  }, [done, deckDone, plans.length, navigation, p, seed, calm, plans]);
 
   const day = clampDay(p.date || todayISO());
   // Date first, then the half of it, then where — company nowhere, the
@@ -448,6 +474,7 @@ export default function SketchingScreen({ navigation, route }: {
           // while this one is still standing. See the note on `next`.
           next={plans[deck + 1]?.stops.map((st) => st.place)}
           still={calm}
+          option={deck}
         />
 
         <Text style={s.title}>
