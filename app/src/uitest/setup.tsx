@@ -36,13 +36,17 @@ vi.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 // `expo-image` takes a `source` where the web `img` takes `src`, and tests
 // assert on alt text and on which photo was chosen, so this one keeps the
 // mapping rather than throwing the props away.
-vi.mock('expo-image', () => ({
-  Image: ({ source, ...rest }: { source?: { uri?: string } | string }) =>
+vi.mock('expo-image', () => {
+  const Image = ({ source, ...rest }: { source?: { uri?: string } | string }) =>
     React.createElement('img', {
       src: typeof source === 'string' ? source : source?.uri,
       ...rest,
-    }),
-}));
+    });
+  // A static on the component, which is where `expo-image` puts it. There
+  // is no cache here to warm, so it answers the way a miss answers.
+  Image.prefetch = vi.fn(async () => false);
+  return { Image };
+});
 
 // `react-native-svg` is a native renderer with no half that runs here.
 // Shapes become named divs, so a test can still see that a drawing

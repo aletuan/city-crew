@@ -17,21 +17,25 @@
 import React from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen } from '../uitest/render';
+import { Image } from 'expo-image';
 import SketchDeck from './SketchDeck';
 import type { Place } from '../lib/data';
 
-const place = (slug: string, name: string): Place => ({
+const prefetch = Image.prefetch as unknown as ReturnType<typeof vi.fn>;
+
+const shot = (uri: string) => ({ photo_uri: uri, is_cover: true, is_hidden: false, sort_order: 0 });
+const place = (slug: string, name: string, photos: unknown[] = []): Place => ({
   slug, name_en: name, name_vi: name, name_ja: null, category: 'food', categories: ['eats'],
   is_featured: false, vibe_tags: [], neighborhood_en: 'Hoàn Kiếm', neighborhood_vi: null,
   neighborhood_ja: null, address: null, lat: null, lng: null, opening_hours: null,
-  place_photos: [],
+  place_photos: photos,
 } as unknown as Place);
 
 const A = place('a', 'Alpha');
 const B = place('b', 'Bravo');
 const C = place('c', 'Charlie');
 
-beforeEach(() => { vi.useFakeTimers(); });
+beforeEach(() => { vi.useFakeTimers(); prefetch.mockClear(); });
 afterEach(() => { vi.useRealTimers(); });
 
 const draw = (props: Partial<React.ComponentProps<typeof SketchDeck>> = {}) =>
@@ -65,6 +69,24 @@ describe('SketchDeck', () => {
     expect(screen.getByText('Charlie')).toBeTruthy();
     // Not the set the first dissolve set out for.
     expect(screen.queryByText('Bravo')).toBeNull();
+  });
+
+  // The jerk this fixes was not the fade. A cover is only asked for when
+  // something renders it, so the first card of a set used to be asking
+  // the network for its photo at the moment it was uncovered, and what
+  // came back up was an empty frame that filled in a beat later.
+  it('asks for the next plan’s covers while this one is still up', () => {
+    const D = place('d', 'Delta', [shot('https://example.test/d.jpg')]);
+    const E = place('e', 'Echo', [shot('https://example.test/e.jpg')]);
+    draw({ places: [A], next: [D, E], span: 2 });
+    expect(prefetch).toHaveBeenCalledWith(['https://example.test/d.jpg', 'https://example.test/e.jpg']);
+    // And they are not on screen — only asked for.
+    expect(screen.queryByText('Delta')).toBeNull();
+  });
+
+  it('asks for nothing when there is no plan after this one', () => {
+    draw({ places: [A] });
+    expect(prefetch).not.toHaveBeenCalled();
   });
 
   it('swaps without a dissolve for a reader who turns Reduce Motion on mid-wait', () => {
