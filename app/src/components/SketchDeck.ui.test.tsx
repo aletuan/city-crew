@@ -18,7 +18,8 @@ import React from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen } from '../uitest/render';
 import { Image } from 'expo-image';
-import SketchDeck from './SketchDeck';
+import SketchDeck, { BACK_MS, OUT_MS, SWAP_STEP_MS } from './SketchDeck';
+import { DECK_HOLD_MS } from '../lib/sketch';
 import type { Place } from '../lib/data';
 
 const prefetch = Image.prefetch as unknown as ReturnType<typeof vi.fn>;
@@ -42,6 +43,18 @@ const draw = (props: Partial<React.ComponentProps<typeof SketchDeck>> = {}) =>
   render(<SketchDeck places={[A]} span={1} {...props} />);
 
 describe('SketchDeck', () => {
+  // The two paces live in two files — the swap here, the hold in `lib` —
+  // and nothing but this checks that they agree. Lengthen the swap past
+  // the hold and every set spends its whole turn changing, which is the
+  // fault these numbers were raised to fix, arrived at from the other
+  // side.
+  it('finishes a swap with the set still standing', () => {
+    const rowSwap = 2 * SWAP_STEP_MS + OUT_MS + BACK_MS;
+    expect(rowSwap).toBeLessThan(DECK_HOLD_MS);
+    // And by enough to be a rest rather than a gap between two moves.
+    expect(DECK_HOLD_MS - rowSwap).toBeGreaterThan(rowSwap);
+  });
+
   it('draws the places it was handed, and nothing it was not', () => {
     draw({ places: [A, B], span: 2 });
     expect(screen.getByText('Alpha')).toBeTruthy();

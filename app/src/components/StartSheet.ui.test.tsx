@@ -73,14 +73,16 @@ const field = () => screen.getByPlaceholderText('Search an address or place') as
 const type = (q: string) => fireEvent.change(field(), { target: { value: q } });
 /**
  * The sheet asks the geocoder on every move; settled once *this* answer is
- * in, which is why it takes the name.
+ * in, which is why it takes the name rather than "not empty".
  *
- * Waiting on "not empty" was not enough. Every move clears the caption and
- * refills it a promise later (`onPick` sets `where` to '' on purpose, so
- * the old point's name is never read as the new one's), so a poll can land
- * on the previous name or on the gap and return. The test then reads a
- * `where` that is about to change, and on a loaded machine that is the
- * read it gets: CI caught it as `atName: null` where 'Hà Đông' was due.
+ * Polling is enough where the caption *is* the assertion. It is not enough
+ * for a test that goes on to press the button, because every move clears
+ * the caption and refills it a promise later (`onPick` sets `where` to ''
+ * on purpose, so the old point's name is never read as the new one's): a
+ * poll can return on a name that is already on its way out, and the press
+ * then reads the gap. CI caught that three times as `atName: null` where
+ * 'Hà Đông' was due. Such a test holds the geocoder open instead — see
+ * "a pin with no name of its own".
  */
 const named = (name: string) => waitFor(() => expect(caption()).toBe(name));
 
@@ -336,10 +338,18 @@ describe('a pin with no name of its own', () => {
   // The row on the Ideas screen prints these words; before this it said
   // "A pin you dropped" over a place the reader had just picked by name.
   it('leaves with the name the geocoder gave the point', async () => {
-    nameOf.mockResolvedValue('Hà Đông');
+    // The geocoder answers when this test says so, rather than a promise
+    // after the pin lands. Waiting on the caption instead was a poll
+    // against a value that moves, and it failed in CI three times.
+    let answer!: (name: string) => void;
+    nameOf.mockReturnValue(new Promise<string>((res) => { answer = res; }));
     const { onDone } = openSheet();
     fireEvent.click(screen.getByRole('button', { name: 'drop a pin' }));
-    await named('Hà Đông');
+    expect(nameOf).toHaveBeenCalledWith({ lat: 20.97, lng: 105.77 }, 'en');
+    // Nothing else is in flight, so this is the whole of what the sheet
+    // knows when the button is pressed on the next line.
+    await act(async () => { answer('Hà Đông'); });
+    expect(caption()).toBe('Hà Đông');
     fireEvent.click(cta());
     expect(onDone).toHaveBeenCalledWith({ district: null, at: { lat: 20.97, lng: 105.77 }, atName: 'Hà Đông' });
   });
