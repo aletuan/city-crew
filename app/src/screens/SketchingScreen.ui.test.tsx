@@ -23,7 +23,7 @@ import { AccessibilityInfo } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import { narratableOf, NARRATION_HOLD_MS, type Narration } from '../lib/assist';
-import { SKETCH_STEPS, STEP_FLOOR_MS } from '../lib/sketch';
+import { DECK_HOLD_MS, SKETCH_STEPS, STEP_FLOOR_MS } from '../lib/sketch';
 import { dateline } from '../lib/format';
 import { fromISO, todayISO } from '../lib/day';
 import type { Place } from '../lib/types';
@@ -286,17 +286,16 @@ describe('while it waits', () => {
     expect(screen.queryByText('Sky Bar')).toBeNull();
   });
 
-  // One plan at a time, moving through them as the stages tick. It used
-  // to draw `plans[0]` and stop there, which spoiled the first card of
-  // the screen after it and never mentioned that two more ways existed.
-  it('walks the deck from one plan to the next as the stages tick', async () => {
+  // One plan at a time. It used to draw `plans[0]` and stop there, which
+  // spoiled the first card of the screen after it and never mentioned
+  // that two more ways existed.
+  it('walks the deck from one plan to the next on its own clock', async () => {
     renderScreen();
     // `PLANS` is two: the first has Cộng Café and Bún Chả, the second Sky Bar.
     expect(screen.getByText('Cộng Café')).toBeTruthy();
     expect(screen.queryByText('Sky Bar')).toBeNull();
 
-    // Two plans over five stages puts the swap after the third.
-    await tick(STEP_FLOOR_MS * 3);
+    await tick(DECK_HOLD_MS + 500);
     expect(screen.getByText('Sky Bar')).toBeTruthy();
     expect(screen.queryByText('Cộng Café')).toBeNull();
   });
@@ -304,7 +303,7 @@ describe('while it waits', () => {
   it('holds the deck on the first plan when the reader asked for less motion', async () => {
     vi.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
     renderScreen();
-    await tick(STEP_FLOOR_MS * 3);
+    await tick(DECK_HOLD_MS + 500);
     // Content that changes itself is what that setting exists to stop.
     expect(screen.getByText('Cộng Café')).toBeTruthy();
     expect(screen.queryByText('Sky Bar')).toBeNull();
@@ -384,6 +383,21 @@ describe('while it waits', () => {
 
 describe('leaving', () => {
   const allSteps = STEP_FLOOR_MS * SKETCH_STEPS.length;
+
+  // The deck and the stages are on different clocks on purpose, so the
+  // one thing that keeps a plan from never being shown is this: the
+  // screen waits for whichever of the two finishes last. Two plans take
+  // less than the stages do, so it takes four to see the gate hold.
+  it('waits for the deck to finish its plans, not only for the stages', async () => {
+    const four = [MATCH, ICONIC, MATCH, ICONIC];
+    planTrips.mockImplementation(() => four);
+    const { navigation } = renderScreen();
+    await tick(allSteps);
+    // Stages done; the deck is still two plans from the end.
+    expect(navigation.replace).not.toHaveBeenCalled();
+    await tick(DECK_HOLD_MS * 3);
+    expect(navigation.replace).toHaveBeenCalledTimes(1);
+  });
 
   it('replaces itself with PlanOptions, carrying the answers and the seed', async () => {
     const { navigation, route } = renderScreen();
