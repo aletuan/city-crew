@@ -56,30 +56,44 @@
 // about drawing. `start()` at the top of a visit is what keeps two visits
 // from sharing a clock.
 
-import { IS_PRODUCTION_CHANNEL } from './channel';
 import { supabase } from './supabase';
 
 /**
- * The switch. On, every visit writes its timeline to the console and files
- * a row; off, `log` returns before touching the clock.
+ * The switch. On, every visit records its timeline, says it out loud, and
+ * files a row; off, `log` returns before touching the clock.
  *
- * `!IS_PRODUCTION_CHANNEL`, exactly as the launch trace decided it: on in
- * Expo Go, a dev build and the TestFlight "preview" channel, off in the
- * App Store build. Nothing is learned from a reader's phone measuring an
- * animation nobody is looking at, and the App Store build should not be
- * writing rows for a question that is being worked on elsewhere.
+ * TEMPORARY, and hand-flipped on purpose.
+ *
+ * It asked the channel first — `!IS_PRODUCTION_CHANNEL`, exactly as the
+ * launch trace decided it: on in Expo Go, a dev build and the TestFlight
+ * "preview" channel, off in the App Store build. That rule is right in
+ * general and was wrong here, and the table said so: the deck filed
+ * nothing, and `startup_traces` — gated on the identical condition — had
+ * filed nothing for three days either, through a week of the animation
+ * being worked on daily. The phone this is being investigated from is
+ * running a production-channel build, so the one install whose numbers
+ * are wanted is the one install the rule excludes.
+ *
+ * The cost is that every install reports, App Store readers included. It
+ * was weighed and taken: a row carries milliseconds, a platform, an OS
+ * version and slugs from a public catalog, and the table's RLS lets a
+ * phone file its own row and read nobody's.
+ *
+ * Put both constants back to `!IS_PRODUCTION_CHANNEL` when the deck's
+ * timings are settled — or to `false`, which is where the table's own
+ * retention note expects them to end up.
  */
-export const DECK_TRACE = !IS_PRODUCTION_CHANNEL;
+export const DECK_TRACE = true;
 /**
- * The switch for the *upload* — `DECK_TRACE` governs the console lines and
- * this governs whether they leave the phone.
+ * The switch for the *upload* — `DECK_TRACE` governs the recording and
+ * this governs whether it leaves the phone.
  *
  * Two constants rather than one, the way `lib/trace` and `lib/tracereport`
  * keep theirs apart: the console half and the server half are different
  * costs, and either can be turned off by hand here without taking the
- * other with it.
+ * other with it. Both are on for the reason above.
  */
-export const DECK_TRACE_UPLOAD = !IS_PRODUCTION_CHANNEL;
+export const DECK_TRACE_UPLOAD = true;
 
 /** How many events one visit may record. Three plans across three boxes
  *  is about forty; the cap is where a stuck screen stops writing rather
