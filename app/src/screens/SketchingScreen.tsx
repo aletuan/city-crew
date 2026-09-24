@@ -556,18 +556,32 @@ function StepRow({ label, state, still, last }: {
         <StepMark state={state} still={still} />
         {!last && <View style={s.rail} />}
       </View>
-      <Animated.Text
-        style={[
-          s.stepText,
-          !last && s.stepTextGap,
-          state === 'pending' && s.stepTextOff,
-          state === 'active' && s.stepTextOn,
-          { opacity: dim },
-        ]}
-        numberOfLines={2}
-      >
-        {label}
-      </Animated.Text>
+      <View style={s.stepBody}>
+        <Animated.Text
+          style={[
+            s.stepText,
+            state === 'pending' && s.stepTextOff,
+            state === 'active' && s.stepTextOn,
+            { opacity: dim },
+          ]}
+          numberOfLines={2}
+        >
+          {label}
+        </Animated.Text>
+        {/* The rule under the label, and it has to earn its place beside
+            the rail — two separators in one row is the way this reads as
+            busy rather than as clear.
+            They are given different jobs and different means. The rail is
+            vertical and tinted: it is the thread, and it says these five
+            are one thing in order. The rule is horizontal, neutral and a
+            hairline: it is the row's floor, and it only says where to
+            look next. Nothing carries both an axis and a colour, so
+            neither is saying what the other already said.
+            It is also inset — it starts at the label, not at the card —
+            so the thread runs past it uninterrupted rather than being
+            crossed out five times. */}
+        {!last && <View style={s.rule} />}
+      </View>
     </View>
   );
 }
@@ -617,13 +631,19 @@ const s = StyleSheet.create({
   },
   markStill: { borderWidth: 2, borderColor: colors.accent },
   markPending: { borderWidth: 1.5, borderColor: colors.borderGlass, borderStyle: 'dashed' },
+  // The label and its rule. The column carries the row's height, which
+  // is what the stretched mark column — and therefore the rail — spans.
+  stepBody: { flex: 1 },
   // 2 of lead, because the 24pt mark beside a 21pt line box sits a
   // pixel and a half proud of it.
-  stepText: { flex: 1, color: colors.textSecondary, fontSize: 15, paddingTop: 2 },
-  // The gap between one step and the next, carried by the label so the
-  // stretched mark column — and therefore the rail — covers it. The last
-  // step has none; the card's own padding ends the list.
-  stepTextGap: { paddingBottom: 22 },
+  stepText: { color: colors.textSecondary, fontSize: 15, paddingTop: 2 },
+  // 11 above and below, which is the rhythm the rows used to carry as
+  // padding. The last step has no rule, so the card's own padding ends
+  // the list.
+  rule: {
+    height: StyleSheet.hairlineWidth, marginVertical: 11,
+    backgroundColor: colors.borderGlassSoft,
+  },
   stepTextOn: { color: colors.text, fontWeight: font.semibold },
   stepTextOff: { color: colors.textTertiary },
 

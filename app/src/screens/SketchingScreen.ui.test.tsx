@@ -124,14 +124,17 @@ const doneCount = () => document.querySelectorAll('[data-stub="LinearGradient"] 
 const feedTexts = () => [...document.querySelectorAll('[data-icon$="-outline"]')]
   .map((el) => el.parentElement?.nextElementSibling?.textContent ?? '');
 const settledLine = () => document.querySelector('[data-icon="checkmark"] + div')?.textContent ?? null;
-/** The mark beside a step label. The column before the label holds the
- *  mark and, on every step but the last, the rail down to the next one —
- *  so the mark is the column's first child, not the column. */
+/** A step row is two columns: the mark and its rail, then the label and
+ *  its rule. The label sits inside the second, so everything here starts
+ *  from the label's own column. */
+const colOf = (label: string) => screen.getByText(label).parentElement!;
+/** The mark beside a step label — the first thing in the column before it. */
 const markOf = (label: string) =>
-  screen.getByText(label).previousElementSibling!.firstElementChild as HTMLElement;
+  colOf(label).previousElementSibling!.firstElementChild as HTMLElement;
 /** The connector under a step's mark, when it has one. */
-const railOf = (label: string) =>
-  screen.getByText(label).previousElementSibling!.children[1] ?? null;
+const railOf = (label: string) => colOf(label).previousElementSibling!.children[1] ?? null;
+/** The hairline under a step's label, when it has one. */
+const ruleOf = (label: string) => colOf(label).children[1] ?? null;
 /** The orb's ring, as the paths `arcSweep` cuts it into — one per 6°. */
 const ringArcs = () => [...document.querySelectorAll('[data-stub="Svg"] [data-stub="Path"]')];
 /** The colour at the arc's leading edge, which the ramp takes to lime. */
@@ -311,6 +314,19 @@ describe('while it waits', () => {
     }
     // Nothing below the final step for a rail to reach.
     expect(railOf(SKETCH_STEPS[SKETCH_STEPS.length - 1].en)).toBeNull();
+  });
+
+  // The rail and the rule are two separators in one row, so they are
+  // given different axes and different colours: the rail is the thread
+  // through the sequence, the rule is only the row's floor. The rule is
+  // inset to the label, so the thread runs past it rather than being
+  // crossed out at every step.
+  it('floors every step but the last with a rule, inset beside the rail', () => {
+    renderScreen();
+    for (const st of SKETCH_STEPS.slice(0, -1)) {
+      expect(ruleOf(st.en), `${st.key} should be floored`).toBeTruthy();
+    }
+    expect(ruleOf(SKETCH_STEPS[SKETCH_STEPS.length - 1].en)).toBeNull();
   });
 
   it('closes the running mark into a still ring when the reader asked for less motion', async () => {
