@@ -124,8 +124,14 @@ const doneCount = () => document.querySelectorAll('[data-stub="LinearGradient"] 
 const feedTexts = () => [...document.querySelectorAll('[data-icon$="-outline"]')]
   .map((el) => el.parentElement?.nextElementSibling?.textContent ?? '');
 const settledLine = () => document.querySelector('[data-icon="checkmark"] + div')?.textContent ?? null;
-/** The mark beside a step label: the element before the label. */
-const markOf = (label: string) => screen.getByText(label).previousElementSibling as HTMLElement;
+/** The mark beside a step label. The column before the label holds the
+ *  mark and, on every step but the last, the rail down to the next one —
+ *  so the mark is the column's first child, not the column. */
+const markOf = (label: string) =>
+  screen.getByText(label).previousElementSibling!.firstElementChild as HTMLElement;
+/** The connector under a step's mark, when it has one. */
+const railOf = (label: string) =>
+  screen.getByText(label).previousElementSibling!.children[1] ?? null;
 /** The orb's ring, as the paths `arcSweep` cuts it into — one per 6°. */
 const ringArcs = () => [...document.querySelectorAll('[data-stub="Svg"] [data-stub="Path"]')];
 /** The colour at the arc's leading edge, which the ramp takes to lime. */
@@ -218,7 +224,11 @@ describe('while it waits', () => {
   it('names the evening, the date, the half and the place, and the categories it knows', () => {
     renderScreen({ categories: ['cafes', 'mystery'] });
     expect(screen.getByText('Sketching your evening…')).toBeTruthy();
-    expect(screen.getByText(`${dateline('en', fromISO(todayISO())!)} · Evening · Old Quarter`)).toBeTruthy();
+    // Two lines, and the break is chosen: when above, where below. One
+    // line wrapped wherever the last word fell, which on a real screen
+    // left "tôi" alone under four segments.
+    expect(screen.getByText(`${dateline('en', fromISO(todayISO())!)} · Evening`)).toBeTruthy();
+    expect(screen.getByText('Old Quarter')).toBeTruthy();
     // An unknown key is dropped rather than printed as a raw slug.
     expect(screen.getByText('Cafés')).toBeTruthy();
     expect(screen.getByText('You can edit everything afterwards.')).toBeTruthy();
@@ -290,6 +300,17 @@ describe('while it waits', () => {
     renderScreen({ startMin: undefined });
     await tick(STEP_FLOOR_MS);
     expect(feedTexts()).toEqual(['2 places open at 18:00']);
+  });
+
+  // Five circles down a card read as five things. A line through them
+  // reads as one thing happening in order, which is what is happening.
+  it('joins the step marks with a rail, and stops it at the last', () => {
+    renderScreen();
+    for (const st of SKETCH_STEPS.slice(0, -1)) {
+      expect(railOf(st.en), `${st.key} should reach the next mark`).toBeTruthy();
+    }
+    // Nothing below the final step for a rail to reach.
+    expect(railOf(SKETCH_STEPS[SKETCH_STEPS.length - 1].en)).toBeNull();
   });
 
   it('closes the running mark into a still ring when the reader asked for less motion', async () => {
