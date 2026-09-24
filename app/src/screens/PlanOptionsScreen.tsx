@@ -263,9 +263,8 @@ export default function PlanOptionsScreen({ navigation, route }: {
    * looking at three evenings wants a sentence, not a table.
    *
    * And it sits under the cards rather than on them. `pinnedDropped` is
-   * computed once and handed to all three plans, so on the cards it was the
-   * same sentence three times — which is exactly why `perPerson` below
-   * lives here too.
+   * computed once and handed to all three plans, so on the cards it was
+   * the same sentence three times.
    */
   const dropped = plans[0]?.pinnedDropped ?? [];
   const shutOnly = dropped.length > 0 && dropped.every((d) => d.reason === 'closed');
@@ -280,15 +279,6 @@ export default function PlanOptionsScreen({ navigation, route }: {
       'Một số chỗ trong bộ sưu tập của bạn chưa hợp với plan này.',
       'コレクションの一部は今回のプランには入りませんでした。',
     );
-
-  // Said once under the cards rather than on each of them: it is the same
-  // sentence three times otherwise, and it is about how every figure on
-  // the screen is read.
-  const perPerson = t(
-    'Costs are estimated for one person.',
-    'Chi phí ước tính cho một người.',
-    '費用は1人あたりの目安です。',
-  );
 
   return (
     <Screen
@@ -382,11 +372,11 @@ export default function PlanOptionsScreen({ navigation, route }: {
 
         {plans.length > 0 && (
           <Text style={s.footnote}>
-            {`${perPerson} ${t(
+            {t(
               'Tap one to nudge its times and save it.',
               'Chạm vào một cái để chỉnh giờ và lưu lại.',
               'ひとつ選ぶと時刻を調整して保存できます。',
-            )}`}
+            )}
           </Text>
         )}
 
