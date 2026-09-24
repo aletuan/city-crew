@@ -1,9 +1,9 @@
-// The places going into the day, arriving one at a time.
+// The places going into the day, arriving one at a time, and changing as
+// the screen works through the plans it has drawn.
 //
 // This sits where the spinner used to. A ring says "working"; three
-// covers say what is being worked on, out of the plan the screen has
-// already computed — so the wait shows its material rather than its
-// existence.
+// covers say what is being worked on — so the wait shows its material
+// rather than its existence.
 //
 // ── what it is not ──
 //
@@ -12,12 +12,29 @@
 // places going in, in the order the plan puts them, not a result to act
 // on. Nothing here is tappable, for that reason.
 //
+// ── the frames hold still; the contents change ──
+//
+// The first version dissolved the whole deck and dealt the next set in
+// from nothing. It was reported as a jerk, and it was one: the deck went
+// to zero, then the cards came back one at a time, so for a quarter of a
+// second the row was empty. Three white frames blinking out and back is
+// a bigger movement than anything they contain.
+//
+// A slot keeps its box, its shadow and its lean for as long as the deck
+// is up, and only what is inside it cross-fades. Nothing moves on a swap
+// except a picture becoming another picture, which is also why a slot
+// with nothing in it still draws its frame: the row's geometry is fixed
+// by `span` before the first card arrives and does not move again.
+//
+// The assembly — the rise, the scale, the stagger — happens once, when a
+// slot first appears. That is what it is for.
+//
 // ── where the places come from ──
 //
-// The caller's, not its own. `SketchingScreen` already holds `plans` and
-// this takes the stops of the first one — no fetch, no planning, no
-// state. A component that went looking for its own places could disagree
-// with the screen around it, which is the whole reason this one cannot.
+// The caller's, not its own. `SketchingScreen` holds the plans and hands
+// over one at a time. A component that went looking for its own places
+// could disagree with the screen around it, which is the whole reason
+// this one cannot.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
@@ -26,36 +43,58 @@ import { useArrival } from './ui';
 import { coverOf, type Place } from '../lib/data';
 import { colors, font, radius } from '../theme';
 
-/** One card's arrival, and the gap before the next one starts.
- *
- *  Two staggers, because the deck has two jobs. Showing one plan it has
- *  the whole wait, and 400 apart is an unhurried deal. Showing three it
- *  has about a second and a half each, so 250 gets the set assembled in
- *  half of that and leaves the rest of it still. */
+/** A slot's first arrival, and the gap before the next slot starts. */
 const IN_MS = 300;
 const STEP_MS = 400;
-const STEP_FAST_MS = 250;
-/** The dissolve between one plan's places and the next one's. */
-const SWAP_MS = 160;
+/** A change of contents: down, swap at the bottom, back up. */
+const OUT_MS = 140;
+const BACK_MS = 220;
+const SWAP_STEP_MS = 80;
 /** How far the middle card stands above its neighbours. */
 const LIFT = 12;
 
 /**
- * A place, face up.
+ * One box in the row, and whatever is in it at the moment.
  *
- * Cover and name, and deliberately nothing else: a rating or a category
- * here would be a card the reader wants to act on, on a screen where
- * there is nothing yet to act on.
+ * `seen` lags `place` by the length of the dip, which is the point: the
+ * picture is changed at the bottom of the fade, where the change cannot
+ * be seen. Still the only state here, and it is about drawing rather
+ * than about planning.
  */
-function Card({ place, nth, of: count, still, step }: {
-  place: Place; nth: number; of: number; still: boolean; step: number;
+function Slot({ place, nth, of: count, still }: {
+  place: Place | undefined; nth: number; of: number; still: boolean;
 }) {
   // Always animated, even under Reduce Motion — what that setting turns
   // off is the travel below, not the fade. This app has said so before:
   // see `GradientCta`, "fade is not motion". A card that blinks into
   // existence is the thing the setting is meant to prevent.
-  const arrive = useArrival(IN_MS, nth * step, false);
-  const cover = coverOf(place);
+  const arrive = useArrival(IN_MS, nth * STEP_MS, false);
+  const dip = useRef(new Animated.Value(1)).current;
+  const [seen, setSeen] = useState(place);
+
+  useEffect(() => {
+    if (seen?.slug === place?.slug) return;
+    if (still) { setSeen(place); return; }
+    const out = Animated.timing(dip, {
+      toValue: 0, duration: OUT_MS, delay: nth * SWAP_STEP_MS,
+      easing: Easing.in(Easing.quad), useNativeDriver: true,
+    });
+    out.start(({ finished }) => {
+      // Stopped rather than run out means a newer change has taken over,
+      // or the deck has gone. Swapping here would put back the picture
+      // this dip set out for and not the one now asked for.
+      if (!finished) return;
+      setSeen(place);
+      Animated.timing(dip, {
+        toValue: 1, duration: BACK_MS, easing: Easing.out(Easing.quad), useNativeDriver: true,
+      }).start();
+    });
+    return () => out.stop();
+    // `seen` is what the effect settles, not what it watches.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [place?.slug, still, nth, dip]);
+
+  const cover = seen && coverOf(seen);
   // Fanned from the centre, so one card sits straight, two lean apart and
   // three read as a hand laid down. Three degrees is the whole effect:
   // enough that the edges are not parallel, little enough that no name
@@ -78,22 +117,24 @@ function Card({ place, nth, of: count, still, step }: {
         still && { transform: [{ rotate: `${tilt}deg` }] },
       ]}
     >
-      {cover
-        ? <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" />
-        : <View style={[s.photo, s.photoOff]} />}
-      <Text style={s.name} numberOfLines={1}>{place.name_en}</Text>
+      {/* Inside the frame, so the box and its shadow never move. */}
+      <Animated.View style={[s.face, { opacity: dip }]}>
+        {seen ? (
+          <>
+            {cover
+              ? <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" />
+              : <View style={[s.photo, s.photoOff]} />}
+            <Text style={s.name} numberOfLines={1}>{seen.name_en}</Text>
+          </>
+        ) : null}
+      </Animated.View>
     </Animated.View>
   );
 }
 
-export default function SketchDeck({ places, seq, span, still }: {
-  /** The stops of the plan being drawn now. */
+export default function SketchDeck({ places, span, still }: {
+  /** The stops of the plan showing now. */
   places: readonly Place[];
-  /**
-   * Which plan these are. A change means a swap, and nothing else does —
-   * the deck neither knows nor asks how the caller chose.
-   */
-  seq: number;
   /**
    * How many slots to hold, measured across every plan rather than this
    * one. A slot with nothing in it is an empty frame the same size as a
@@ -105,67 +146,16 @@ export default function SketchDeck({ places, seq, span, still }: {
   /** The reader asked for less motion. */
   still?: boolean;
 }) {
-  // The places on screen, which lag the ones passed in by the length of
-  // the dissolve. The only state here, and it is about drawing rather
-  // than about planning: which set is currently up.
-  const [shown, setShown] = useState(places);
-  const fade = useRef(new Animated.Value(1)).current;
-  const was = useRef(seq);
-
-  useEffect(() => {
-    if (was.current === seq) { setShown(places); return; }
-    was.current = seq;
-    // Out, swap, and let the cards fade themselves back in: their own
-    // arrival re-runs on the new key, so a second fade here would be the
-    // same move twice.
-    //
-    // The still path is for the reader who turns Reduce Motion on in the
-    // middle of a wait. The caller holds `seq` at zero while it is on, so
-    // that flip is the one moment the number changes and the answer is
-    // "yes, but not like that": the places swap, without the dissolve.
-    if (still) { setShown(places); return; }
-    const out = Animated.timing(fade, {
-      toValue: 0, duration: SWAP_MS, easing: Easing.in(Easing.quad), useNativeDriver: true,
-    });
-    out.start(({ finished }) => {
-      // A dissolve that was stopped rather than run out is one a newer
-      // swap has already taken over, or an unmount. Swapping here would
-      // land the deck on the plan this fade set out for and not the one
-      // the caller has since asked for.
-      if (!finished) return;
-      setShown(places);
-      fade.setValue(1);
-    });
-    return () => out.stop();
-  }, [seq, places, still, fade]);
-
-  const cards = shown.slice(0, span);
-  const stagger = seq > 0 || span < shown.length ? STEP_FAST_MS : STEP_MS;
-
+  const shown = places.slice(0, span);
+  const slots = Math.max(span, shown.length);
   // The height is held whether or not there is anything to hold it, so
   // the heading under it does not jump when the catalog lands.
   return (
-    <Animated.View style={[s.deck, { opacity: fade }]}>
-      {Array.from({ length: Math.max(span, cards.length) }, (_, i) => {
-        const place = cards[i];
-        // An empty frame rather than nothing: it holds its share of the
-        // row so the cards beside it keep their width.
-        if (!place) return <View key={`slot-${i}`} style={s.slot} />;
-        return (
-          <Card
-            // Keyed by the plan as well as the place, so a card that
-            // appears in two plans arrives again rather than sitting
-            // through the swap untouched.
-            key={`${seq}-${place.slug}`}
-            place={place}
-            nth={i}
-            of={cards.length}
-            still={!!still}
-            step={stagger}
-          />
-        );
-      })}
-    </Animated.View>
+    <View style={s.deck}>
+      {Array.from({ length: slots }, (_, i) => (
+        <Slot key={`slot-${i}`} place={shown[i]} nth={i} of={slots} still={!!still} />
+      ))}
+    </View>
   );
 }
 
@@ -181,14 +171,13 @@ const s = StyleSheet.create({
   // `flex: 1` with a ceiling: three cards have to fit a 320pt phone as
   // well as they fit a 430pt one, and a fixed width fits exactly one of
   // those.
-  // An empty slot: the same box a card occupies, drawing nothing.
-  slot: { flex: 1, maxWidth: 108 },
   card: {
     flex: 1, maxWidth: 108,
-    backgroundColor: colors.bgElevated, borderRadius: radius.card, padding: 6, gap: 5,
+    backgroundColor: colors.bgElevated, borderRadius: radius.card, padding: 6,
     shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
+  face: { gap: 5 },
   // 4:3, so the height follows whatever width the row settled on.
   photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.card - 6 },
   // The same fill every other card in the app shows for a place with no

@@ -46,7 +46,7 @@ import { legsOf } from '../lib/travel';
 import { useSave } from '../lib/save';
 import { usePlanProfile } from '../lib/tasteProfile';
 import {
-  deckPlan, deckSpan, findingFeed, type FindingLine, finished, findingsOf, SKETCH_STEPS,
+  DECK_HOLD_MS, deckSpan, findingFeed, type FindingLine, finished, findingsOf, SKETCH_STEPS,
   STEP_FLOOR_MS, stepStates,
   summaryLine, type StepState,
 } from '../lib/sketch';
@@ -323,9 +323,36 @@ export default function SketchingScreen({ navigation, route }: {
    *  then the skeleton stands. */
   const feed = findingFeed(findings, step);
 
-  // Held at the first plan when motion is reduced — see the note where
-  // the deck is drawn.
-  const deck = calm ? 0 : deckPlan(step, plans.length);
+  /**
+   * Which plan the deck is showing, on a clock of its own.
+   *
+   * It used to take the stage count, so that the screen could not hand
+   * over mid-deck. Sharing a clock made both of them worse: three plans
+   * had to fit whatever the stages took, which on a fast catalog was
+   * about a second and a half each — reported as jerky and rushed, and
+   * it was both.
+   *
+   * They are two different things being reported and they are allowed to
+   * take two different lengths of time. What keeps the deck from being
+   * cut off is not a shared pace but the condition below: the screen
+   * leaves when the stages are done *and* the deck has been through
+   * every plan. In practice the stages are the longer of the two and the
+   * gate never holds anything up; it is there for the run where they are
+   * not.
+   *
+   * Reduce Motion holds at the first plan and reports itself done at
+   * once. Content that changes itself is what that setting exists to
+   * stop, and slowing the change down is not the same as not changing.
+   */
+  const [deck, setDeck] = useState(0);
+  const lastPlan = Math.max(0, plans.length - 1);
+  useEffect(() => {
+    if (calm || deck >= lastPlan) return;
+    const id = setTimeout(() => setDeck((n) => n + 1), DECK_HOLD_MS);
+    return () => clearTimeout(id);
+  }, [calm, deck, lastPlan]);
+  const deckDone = calm || deck >= lastPlan;
+
   const states = stepStates(step);
   const done = finished(step);
   const empty = !failed && done && plans.length === 0;
@@ -337,10 +364,10 @@ export default function SketchingScreen({ navigation, route }: {
   // ref, stacked a second PlanOptions.
   const left = useRef(false);
   useEffect(() => {
-    if (!done || !plans.length || left.current) return;
+    if (!done || !deckDone || !plans.length || left.current) return;
     left.current = true;
     navigation.replace('PlanOptions', { ...p, seed });
-  }, [done, plans.length, navigation, p, seed]);
+  }, [done, deckDone, plans.length, navigation, p, seed]);
 
   const day = clampDay(p.date || todayISO());
   // Date first, then the half of it, then where — company nowhere, the
@@ -387,7 +414,6 @@ export default function SketchingScreen({ navigation, route }: {
             setting exists to stop, and slowing the change down is not
             the same as not changing. */}
         <SketchDeck
-          seq={deck}
           span={deckSpan(plans)}
           places={plans[deck]?.stops.map((st) => st.place) ?? []}
           still={calm}

@@ -347,31 +347,6 @@ export function findingFeed(
   return { previous, current };
 }
 
-/**
- * Which plan the deck at the top of the screen is showing, from how many
- * stages have finished.
- *
- * The screen draws one plan's places at a time and moves through them
- * while it waits. What paces that is the stage count, not a clock of its
- * own, and the reason is that this wait has no fixed length: the first
- * stage waits on the catalog and the last on the narration. A timer
- * would either still be on the second plan when the screen hands over —
- * so a third of the work is never shown — or run out and have to start
- * again, and a deck that loops is a deck that is decorating rather than
- * reporting.
- *
- * Tied to the stages it always finishes exactly when they do, and it
- * only ever goes forward.
- *
- * Counts past the end land on the last plan rather than off it: a caller
- * that has finished every stage is not an error, it is a screen about to
- * leave.
- */
-export function deckPlan(step: number, plans: number, steps = SKETCH_STEPS.length): number {
-  if (plans <= 1 || steps <= 0) return 0;
-  const at = Math.floor(Math.max(0, step) * plans / steps);
-  return Math.min(plans - 1, at);
-}
 
 /**
  * How many card slots the deck holds — the longest plan, capped.
@@ -387,3 +362,19 @@ export function deckPlan(step: number, plans: number, steps = SKETCH_STEPS.lengt
 export function deckSpan(plans: readonly { stops: readonly unknown[] }[], max = 3): number {
   return Math.min(max, plans.reduce((n, p) => Math.max(n, p.stops.length), 0));
 }
+
+/**
+ * How long one plan's places stay up before the next plan's replace them.
+ *
+ * On its own clock, not the stages': the two are different things being
+ * reported and are allowed to take different lengths of time. Tied to
+ * the stages, three plans had to fit whatever the stages took, which on
+ * a fast catalog was about a second and a half each — and a second and a
+ * half is mostly the cards still arriving.
+ *
+ * 1800 leaves about 1.3 seconds of stillness after a set has assembled.
+ * Three plans therefore take 3.6 seconds against the stages' floor of
+ * 4.25, so the deck finishes first on any ordinary run and the screen
+ * waits for nobody.
+ */
+export const DECK_HOLD_MS = 1800;
