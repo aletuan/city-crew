@@ -911,8 +911,8 @@ export function GradientCta({ icon, label, onPress, wide, busy, disabled, testID
    * button, not as the same one running.
    *
    * So the mark holds its place and rotates, which is what a circular
-   * arrow is for. `useLoop` and the 1600ms turn are the ones `SketchOrb`
-   * and the sketch screen already spin by; a third rotation in this app
+   * arrow is for. `useLoop` and the 1600ms turn are the ones the sketch
+   * screen's step marks already spin by; a third rotation in this app
    * should not be a third speed.
    */
   busy?: boolean;

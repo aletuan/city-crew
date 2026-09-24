@@ -65,7 +65,12 @@ const ALL_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 const place = (slug: string, name: string, extra: Partial<Place> = {}): Place => ({
   slug, name_en: name, name_vi: name, name_ja: null, category: 'food', categories: ['eats'],
   is_featured: false, vibe_tags: [], neighborhood_en: 'Hoàn Kiếm', neighborhood_vi: null,
-  neighborhood_ja: null, address: null, lat: null, lng: null, opening_hours: null, ...extra,
+  neighborhood_ja: null, address: null, lat: null, lng: null, opening_hours: null,
+  // The cast below hides every field left out, and this one stopped
+  // being safe to leave out when the screen started drawing covers:
+  // `coverOf` spreads it, so a place without it throws rather than
+  // reporting no photo. Real rows always carry the array.
+  place_photos: [], ...extra,
 } as Place);
 
 const CAFE = place('cafe', 'Cộng Café', { categories: ['cafes'], opening_hours: ALL_WEEK } as Partial<Place>);
@@ -135,11 +140,6 @@ const markOf = (label: string) =>
 const railOf = (label: string) => colOf(label).previousElementSibling!.children[1] ?? null;
 /** The hairline under a step's label, when it has one. */
 const ruleOf = (label: string) => colOf(label).children[1] ?? null;
-/** The orb's ring, as the paths `arcSweep` cuts it into — one per 6°. */
-const ringArcs = () => [...document.querySelectorAll('[data-stub="Svg"] [data-stub="Path"]')];
-/** The colour at the arc's leading edge, which the ramp takes to lime. */
-const ringHead = () => ringArcs().at(-1)?.getAttribute('stroke') ?? '';
-const greenOf = (hex: string) => parseInt(hex.slice(3, 5), 16);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -274,29 +274,39 @@ describe('while it waits', () => {
     expect(feedTexts()).toEqual(['Your day runs 18:00–20:45']);
   });
 
-  // The ring used to be a closed circle that only turned: "busy", and
-  // nothing the list underneath was not already counting off.
-  it('grows the orb ring a step at a time, and takes its leading edge to green', async () => {
+  // The ring that used to stand here said the screen was working. Three
+  // covers say what it is working on, which is the same wait spent
+  // looking at your own day.
+  it('shows the plan it has drawn, one card a place, three at most', () => {
     renderScreen();
-    await tick(0);
-    // A stub, not nothing. The first stage waits on the catalog, and a
-    // bare disc through that wait reads as a screen that has died.
-    expect(ringArcs().length).toBe(5);
-    const warm = ringHead();
+    // `PLANS[0]` has two stops, so two cards — not a padded three.
+    expect(screen.getByText('Cộng Café')).toBeTruthy();
+    expect(screen.getByText('Bún Chả Hương Liên')).toBeTruthy();
+    // The second plan's stop is not in the deck; this is one plan's day.
+    expect(screen.queryByText('Sky Bar')).toBeNull();
+  });
 
-    await tick(STEP_FLOOR_MS);
-    expect(doneCount()).toBe(1);
-    // A fifth of the circle, cut at 6° a segment.
-    expect(ringArcs().length).toBe(12);
+  it('caps the deck at three, however many stops the plan has', () => {
+    planTrips.mockImplementation(() => [plan('match', [
+      stop(CAFE, 18 * 60), stop(DINNER, 19 * 60), stop(ROOF, 20 * 60), stop(PINNED, 21 * 60),
+    ], [18 * 60, 22 * 60])]);
+    renderScreen();
+    expect(screen.getByText('Cộng Café')).toBeTruthy();
+    expect(screen.getByText('Bún Chả Hương Liên')).toBeTruthy();
+    expect(screen.getByText('Sky Bar')).toBeTruthy();
+    // A fourth would shrink all of them below reading size, so the plan
+    // keeps the stop and the deck does not show it.
+    expect(screen.queryByText('Collection Pick')).toBeNull();
+  });
 
-    await tick(STEP_FLOOR_MS);
-    expect(doneCount()).toBe(2);
-    expect(ringArcs().length).toBe(24);
-
-    await tick(STEP_FLOOR_MS * 3);
-    // Capped just short of a full turn, so the two ends never meet.
-    expect(ringArcs().length).toBe(58);
-    expect(greenOf(ringHead())).toBeGreaterThan(greenOf(warm));
+  it("draws the place's cover when it has one", () => {
+    const shot = { photo_uri: 'https://example.test/cafe.jpg', is_cover: true, is_hidden: false, sort_order: 0 };
+    planTrips.mockImplementation(() => [
+      plan('match', [stop({ ...CAFE, place_photos: [shot] } as Place, 18 * 60)], [18 * 60, 19 * 60]),
+    ]);
+    renderScreen();
+    const img = document.querySelector('img');
+    expect(img?.getAttribute('src')).toBe(shot.photo_uri);
   });
 
   it('takes the starting hour from the first plan when the answers carry none', async () => {
