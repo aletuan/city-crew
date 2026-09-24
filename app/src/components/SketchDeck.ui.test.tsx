@@ -20,13 +20,21 @@
 
 import React from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen } from '../uitest/render';
+import { act, fireEvent, render, screen } from '../uitest/render';
 import { Image } from 'expo-image';
 import SketchDeck, { CROSS_MS, NAME_IN, NAME_OUT, SWAP_STEP_MS } from './SketchDeck';
 import { DECK_HOLD_MS } from '../lib/sketch';
 import type { Place } from '../lib/data';
 
 const prefetch = Image.prefetch as unknown as ReturnType<typeof vi.fn>;
+
+// The timeline the deck files. Stood in for rather than let run, because
+// the real one reads the release channel — which reaches `expo-updates`,
+// and there is no native half of that here.
+const trace = vi.hoisted(() => ({ log: vi.fn() }));
+vi.mock('../lib/decktrace', () => ({
+  deckTrace: { start: vi.fn(), log: trace.log, events: () => [] },
+}));
 
 const shot = (uri: string) => ({ photo_uri: uri, is_cover: true, is_hidden: false, sort_order: 0 });
 const place = (slug: string, name: string, photos: unknown[] = []): Place => ({
@@ -40,7 +48,7 @@ const A = place('a', 'Alpha');
 const B = place('b', 'Bravo');
 const C = place('c', 'Charlie');
 
-beforeEach(() => { vi.useFakeTimers(); prefetch.mockClear(); });
+beforeEach(() => { vi.useFakeTimers(); prefetch.mockClear(); trace.log.mockClear(); });
 afterEach(() => { vi.useRealTimers(); });
 
 const draw = (props: Partial<React.ComponentProps<typeof SketchDeck>> = {}) =>
@@ -132,6 +140,55 @@ describe('SketchDeck', () => {
     // The same node wearing the new source: the old view held on to, not
     // replaced.
     expect(after).toBe(before);
+  });
+
+  // Every number in this animation was chosen rather than measured, and
+  // the console that would have measured them is on a phone. So the deck
+  // writes down what it did — see `lib/decktrace` for what the six kinds
+  // of event mean and why a place leaving is the `ask` of the one that
+  // follows it.
+  describe('what it writes down', () => {
+    const P = place('p', 'Papa', [shot('https://example.test/p.jpg')]);
+    const Q = place('q', 'Quebec', [shot('https://example.test/q.jpg')]);
+    const img = () => document.querySelector('img')!;
+    const kinds = () => trace.log.mock.calls.map(([e]) => e.what);
+    const of = (what: string) => trace.log.mock.calls.map(([e]) => e).filter((e) => e.what === what);
+
+    it('records a swap from the handover through to the word changing', async () => {
+      const { rerender } = draw({ places: [P], span: 1, option: 0 });
+      rerender(<SketchDeck places={[Q]} span={1} option={1} />);
+      await act(async () => { await vi.advanceTimersByTimeAsync(600); });
+
+      // In this order and no other: the photo is handed over first, and
+      // the word waits for its own dip.
+      expect(kinds()).toEqual(['ask', 'name']);
+      for (const e of trace.log.mock.calls.map(([x]) => x)) {
+        expect(e).toMatchObject({ option: 1, slot: 0, place: 'q' });
+      }
+    });
+
+    // `load - ask` is the whole question: a gap there is the old picture
+    // standing while the new one catches up, which is what "the picture
+    // appears late" looked like from the outside.
+    it('records the photo becoming drawable', () => {
+      draw({ places: [P], span: 1, option: 2 });
+      fireEvent.load(img());
+      expect(of('load')).toEqual([{ option: 2, slot: 0, what: 'load', place: 'p' }]);
+    });
+
+    it('records a photo that never arrives', () => {
+      draw({ places: [P], span: 1 });
+      fireEvent.error(img());
+      expect(of('fail')).toEqual([{ option: 0, slot: 0, what: 'fail', place: 'p' }]);
+    });
+
+    // Reduce Motion takes the dissolve away entirely, so there is no
+    // handover to time and nothing worth writing down.
+    it('writes nothing down for a swap that does not animate', () => {
+      const { rerender } = draw({ places: [P], span: 1 });
+      rerender(<SketchDeck places={[Q]} span={1} still />);
+      expect(kinds()).toEqual([]);
+    });
   });
 
   it('asks for nothing when there is no plan after this one', () => {

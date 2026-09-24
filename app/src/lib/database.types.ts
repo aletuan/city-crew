@@ -300,6 +300,45 @@ export type Database = {
           },
         ]
       }
+      deck_traces: {
+        Row: {
+          created_at: string
+          events: Json
+          id: string
+          is_dev: boolean
+          options: number
+          os_version: string | null
+          platform: string
+          span: number
+          still: boolean
+          total_ms: number
+        }
+        Insert: {
+          created_at?: string
+          events: Json
+          id?: string
+          is_dev?: boolean
+          options: number
+          os_version?: string | null
+          platform: string
+          span: number
+          still?: boolean
+          total_ms: number
+        }
+        Update: {
+          created_at?: string
+          events?: Json
+          id?: string
+          is_dev?: boolean
+          options?: number
+          os_version?: string | null
+          platform?: string
+          span?: number
+          still?: boolean
+          total_ms?: number
+        }
+        Relationships: []
+      }
       editorial_collection_origin: {
         Row: {
           collection_id: string
