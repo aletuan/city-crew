@@ -27,7 +27,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import SketchOrb from '../components/SketchOrb';
+import SketchDeck from '../components/SketchDeck';
 import {
   GradientCta, Screen, Skeleton, useLoop, useReducedMotion, useTabBarClearance,
 } from '../components/ui';
@@ -364,17 +364,19 @@ export default function SketchingScreen({ navigation, route }: {
         contentContainerStyle={[s.body, { paddingBottom: clearance }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Still only when there is nothing coming. While the steps run the
-            screen is about to hand over a plan, and an orb that settles
-            first reads as the work having stopped short. */}
-        <SketchOrb
-          still={empty || failed || calm}
-          // The ring carries the same count the list below it does, so
-          // the arc grows on the frame a row ticks. A failed run reports
-          // a full ring rather than the stub it stopped on: the arc is
-          // how far the work got, and the work is not going any further,
-          // so a frozen sliver would read as a screen still trying.
-          pct={failed ? 1 : step / SKETCH_STEPS.length}
+        {/* The places going in, where the ring used to be. A ring said
+            the screen was working; three covers say what it is working
+            on, and the reader spends the wait looking at their day
+            rather than at a spinner.
+            `plans[0]` rather than a pool of candidates: it is the plan
+            this screen has already decided on, so the cards cannot
+            disagree with the list the next screen shows. Nothing is
+            tappable and nothing here is presented as settled — the
+            heading still says the day is being sketched, and the list
+            below still has a step running. */}
+        <SketchDeck
+          places={plans[0]?.stops.map((st) => st.place) ?? []}
+          still={calm}
         />
 
         <Text style={s.title}>
