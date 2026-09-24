@@ -153,10 +153,16 @@ function FindingFeed({ previous, current, still }: {
       ) : null}
       <Animated.View style={[s.findingRow, { opacity: fade, transform: [{ translateY: rise }] }]}>
         <Animated.View style={{ opacity: pulse }}>
+          {/* The colour of the words it sits with, not the accent. Coral
+              on this screen means progress — the ring's arc, a step done,
+              the step running — and a glyph that only says which kind of
+              fact this is was spending that meaning on a label. What
+              marks the line as the current one is the pulse around this
+              view and the weight of the text, both of which stay. */}
           <Ionicons
             name={current.icon as React.ComponentProps<typeof Ionicons>['name']}
             size={16}
-            color={colors.accent}
+            color={colors.textSecondary}
           />
         </Animated.View>
         <Text style={s.findingText}>{current.text}</Text>
@@ -335,10 +341,20 @@ export default function SketchingScreen({ navigation, route }: {
   const day = clampDay(p.date || todayISO());
   // Date first, then the half of it, then where — company nowhere, the
   // order every trip subtitle keeps.
-  const line = summaryLine([
+  //
+  // Two lines rather than one, and the break is chosen rather than found.
+  // Centred, at 15pt, "Thứ Sáu, 25 tháng 9 · Ban ngày · Quanh Melbourne ·
+  // gần tôi" is wider than a phone, and the wrap landed wherever the last
+  // word fell — on a real screen that was "tôi", alone on its own line
+  // under four segments. An orphan reads as a layout that came out wrong.
+  //
+  // When on top, where beneath it: the one boundary in the string that
+  // means anything. `p.where` already carries its own separator when it
+  // is a city rather than a district ("Quanh Melbourne · gần tôi"), so
+  // the second line is a phrase and not a fragment.
+  const when = summaryLine([
     dateline(lang, fromISO(day) ?? new Date()),
     p.when === 'day' ? t('Day', 'Ban ngày', '昼') : t('Evening', 'Buổi tối', '夜'),
-    p.where,
   ]);
   const wants = summaryLine(p.categories.map((c) => (CATEGORIES[c] ? categoryLabel(c, t) : null)));
 
@@ -370,7 +386,8 @@ export default function SketchingScreen({ navigation, route }: {
               ? t('Sketching your day…', 'Đang phác ngày của bạn…', '一日を下描き中…')
               : t('Sketching your evening…', 'Đang phác buổi tối của bạn…', '夜を下描き中…')}
         </Text>
-        {!!line && <Text style={s.sub}>{line}</Text>}
+        {!!when && <Text style={s.sub}>{when}</Text>}
+        {!!p.where?.trim() && <Text style={s.sub}>{p.where.trim()}</Text>}
         {!!wants && <Text style={s.sub}>{wants}</Text>}
 
         <View style={s.card}>
@@ -380,6 +397,7 @@ export default function SketchingScreen({ navigation, route }: {
               label={t(step.en, step.vi, step.ja)}
               state={states[i]}
               still={calm}
+              last={i + 1 === SKETCH_STEPS.length}
             />
           ))}
         </View>
@@ -509,7 +527,11 @@ function StepMark({ state, still }: { state: StepState; still: boolean }) {
   );
 }
 
-function StepRow({ label, state, still }: { label: string; state: StepState; still: boolean }) {
+function StepRow({ label, state, still, last }: {
+  label: string; state: StepState; still: boolean;
+  /** No rail below the final step — there is nothing for it to reach. */
+  last: boolean;
+}) {
   // The label breathes while its step is running — the `shimmer` the design
   // asked for, at 0.62 rather than 0.45 at the bottom. Text that fades most
   // of the way out is text somebody is mid-sentence with when it goes.
@@ -520,18 +542,46 @@ function StepRow({ label, state, still }: { label: string; state: StepState; sti
 
   return (
     <View style={s.step}>
-      <StepMark state={state} still={still} />
-      <Animated.Text
-        style={[
-          s.stepText,
-          state === 'pending' && s.stepTextOff,
-          state === 'active' && s.stepTextOn,
-          { opacity: dim },
-        ]}
-        numberOfLines={2}
-      >
-        {label}
-      </Animated.Text>
+      {/* The marks are joined, because the steps are. Five circles down a
+          card read as five things; a line through them reads as one
+          thing happening in order, which is what the screen is reporting.
+          It is also the shape the plan list already uses for its stops —
+          see `dotCol` and `rail` there — so the two screens describe a
+          sequence the same way.
+          The column stretches and the rail is `flex: 1`, so it reaches
+          the next mark whatever the label under it turned out to be;
+          which is why the row's vertical rhythm moved onto the label
+          below, where the stretch can see it. */}
+      <View style={s.markCol}>
+        <StepMark state={state} still={still} />
+        {!last && <View style={s.rail} />}
+      </View>
+      <View style={s.stepBody}>
+        <Animated.Text
+          style={[
+            s.stepText,
+            state === 'pending' && s.stepTextOff,
+            state === 'active' && s.stepTextOn,
+            { opacity: dim },
+          ]}
+          numberOfLines={2}
+        >
+          {label}
+        </Animated.Text>
+        {/* The rule under the label, and it has to earn its place beside
+            the rail — two separators in one row is the way this reads as
+            busy rather than as clear.
+            They are given different jobs and different means. The rail is
+            vertical and tinted: it is the thread, and it says these five
+            are one thing in order. The rule is horizontal, neutral and a
+            hairline: it is the row's floor, and it only says where to
+            look next. Nothing carries both an axis and a colour, so
+            neither is saying what the other already said.
+            It is also inset — it starts at the label, not at the card —
+            so the thread runs past it uninterrupted rather than being
+            crossed out five times. */}
+        {!last && <View style={s.rule} />}
+      </View>
     </View>
   );
 }
@@ -546,7 +596,11 @@ const s = StyleSheet.create({
     alignSelf: 'stretch', marginTop: 6,
     backgroundColor: colors.surfaceCard, borderRadius: radius.card,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
-    paddingVertical: 6,
+    // 16, where it was 6. The rows used to carry 11 of their own on top
+    // of it; that had to go so the rail could reach between them, and
+    // the card takes it back at the two ends where there is no next mark
+    // to reach.
+    paddingVertical: 16,
   },
   // No tint under the running row. `accentSoft` on a full-width row
   // already means "you chose this" — see `CandidateRow.rowOn`, where a
@@ -555,7 +609,17 @@ const s = StyleSheet.create({
   // block was heavy enough to outweigh the orb it was meant to sit under.
   //
   // The signal lives in the mark instead. See `StepMark`.
-  step: { flexDirection: 'row', alignItems: 'center', gap: 13, paddingHorizontal: 16, paddingVertical: 11 },
+  // No vertical padding, and the mark at the top rather than the middle:
+  // both are what lets `markCol` stretch the full row so its rail can
+  // span to the next mark. The rhythm the padding used to give is on
+  // `stepTextGap` instead. Top-aligned is also the right answer for a
+  // label that runs to two lines — the node marks where the step starts,
+  // not the middle of its sentence.
+  step: { flexDirection: 'row', alignItems: 'flex-start', gap: 13, paddingHorizontal: 16 },
+  markCol: { width: 24, alignSelf: 'stretch', alignItems: 'center' },
+  // Reaches whatever is left of the row under the mark. The margins keep
+  // it off both circles rather than growing out of them.
+  rail: { flex: 1, width: 2, marginVertical: 3, backgroundColor: colors.accentLine },
   mark: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   // The faint full circle the arc rides on.
   markTrack: { borderRadius: 12, borderWidth: 2, borderColor: colors.accentLine },
@@ -567,7 +631,19 @@ const s = StyleSheet.create({
   },
   markStill: { borderWidth: 2, borderColor: colors.accent },
   markPending: { borderWidth: 1.5, borderColor: colors.borderGlass, borderStyle: 'dashed' },
-  stepText: { flex: 1, color: colors.textSecondary, fontSize: 15 },
+  // The label and its rule. The column carries the row's height, which
+  // is what the stretched mark column — and therefore the rail — spans.
+  stepBody: { flex: 1 },
+  // 2 of lead, because the 24pt mark beside a 21pt line box sits a
+  // pixel and a half proud of it.
+  stepText: { color: colors.textSecondary, fontSize: 15, paddingTop: 2 },
+  // 11 above and below, which is the rhythm the rows used to carry as
+  // padding. The last step has no rule, so the card's own padding ends
+  // the list.
+  rule: {
+    height: StyleSheet.hairlineWidth, marginVertical: 11,
+    backgroundColor: colors.borderGlassSoft,
+  },
   stepTextOn: { color: colors.text, fontWeight: font.semibold },
   stepTextOff: { color: colors.textTertiary },
 
