@@ -358,8 +358,34 @@ export default function SketchingScreen({ navigation, route }: {
    * once. Content that changes itself is what that setting exists to
    * stop, and slowing the change down is not the same as not changing.
    */
+  /**
+   * The plans the deck walks, fixed at the first set that exists.
+   *
+   * `planTrips` re-runs whenever the catalog, the saved lists or the
+   * taste profile land, and all three arrive asynchronously — the note on
+   * the narration hold above already names it. What that costs the
+   * *words* is a second wait, and it is paid there. What it cost the
+   * *pictures* went unnoticed until the deck was measured, and the
+   * timeline is unambiguous: a set replaced 557ms into the first option,
+   * with no option change to announce it, and the set it replaced turning
+   * up again two seconds later as the third of three. Four sets of
+   * photographs for three plans, one of them a repeat.
+   *
+   * So the deck holds the set it started with. This screen lives about
+   * five seconds; a list that redraws itself inside that is not new
+   * information to anybody looking at it, it is the same day flickering.
+   *
+   * Only the deck. `done`, `empty` and what leaves for `PlanOptions` go
+   * on reading `plans`, because those are about what the screen *knows*
+   * rather than what it is showing, and the options screen plans again
+   * from the same seed regardless.
+   */
+  const held = useRef<typeof plans | null>(null);
+  if (held.current === null && plans.length > 0) held.current = plans;
+  const deckPlans = held.current ?? plans;
+
   const [deck, setDeck] = useState(0);
-  const lastPlan = Math.max(0, plans.length - 1);
+  const lastPlan = Math.max(0, deckPlans.length - 1);
   useEffect(() => {
     if (calm || deck >= lastPlan) return;
     const id = setTimeout(() => setDeck((n) => n + 1), DECK_HOLD_MS);
@@ -402,11 +428,11 @@ export default function SketchingScreen({ navigation, route }: {
     // transition nothing — see the rules in `lib/decktrace`.
     reportDeck.report(
       deckTrace.events(),
-      { options: plans.length, span: deckSpan(plans), still: calm },
+      { options: deckPlans.length, span: deckSpan(deckPlans), still: calm },
       { platform: Platform.OS, osVersion: String(Platform.Version), isDev: __DEV__ },
     );
     navigation.replace('PlanOptions', { ...p, seed });
-  }, [done, deckDone, plans.length, navigation, p, seed, calm, plans]);
+  }, [done, deckDone, plans.length, navigation, p, seed, calm, plans, deckPlans]);
 
   const day = clampDay(p.date || todayISO());
   // Date first, then the half of it, then where — company nowhere, the
@@ -468,11 +494,11 @@ export default function SketchingScreen({ navigation, route }: {
             setting exists to stop, and slowing the change down is not
             the same as not changing. */}
         <SketchDeck
-          span={deckSpan(plans)}
-          places={plans[deck]?.stops.map((st) => st.place) ?? []}
+          span={deckSpan(deckPlans)}
+          places={deckPlans[deck]?.stops.map((st) => st.place) ?? []}
           // The plan after this one, so the deck can ask for its covers
           // while this one is still standing. See the note on `next`.
-          next={plans[deck + 1]?.stops.map((st) => st.place)}
+          next={deckPlans[deck + 1]?.stops.map((st) => st.place)}
           still={calm}
           option={deck}
         />
