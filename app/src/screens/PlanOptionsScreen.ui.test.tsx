@@ -204,6 +204,11 @@ describe('the header', () => {
     renderScreen({ date });
     expect(screen.getByText(`${dateline('en', fromISO(date)!)} · Old Quarter`)).toBeTruthy();
     expect(screen.queryByText(/friends/)).toBeNull();
+    // And no sparkle beside it. That glyph is what every product now uses
+    // for "a model made this", and these plans come out of a scoring
+    // function — the line was carrying the one claim the screen's own
+    // comment refuses to make.
+    expect(document.querySelectorAll('[data-icon^="sparkles"]')).toHaveLength(0);
   });
 
   it('dates a past or missing day as today', () => {
