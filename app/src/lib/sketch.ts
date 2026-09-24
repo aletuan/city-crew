@@ -346,3 +346,44 @@ export function findingFeed(
   }
   return { previous, current };
 }
+
+/**
+ * Which plan the deck at the top of the screen is showing, from how many
+ * stages have finished.
+ *
+ * The screen draws one plan's places at a time and moves through them
+ * while it waits. What paces that is the stage count, not a clock of its
+ * own, and the reason is that this wait has no fixed length: the first
+ * stage waits on the catalog and the last on the narration. A timer
+ * would either still be on the second plan when the screen hands over —
+ * so a third of the work is never shown — or run out and have to start
+ * again, and a deck that loops is a deck that is decorating rather than
+ * reporting.
+ *
+ * Tied to the stages it always finishes exactly when they do, and it
+ * only ever goes forward.
+ *
+ * Counts past the end land on the last plan rather than off it: a caller
+ * that has finished every stage is not an error, it is a screen about to
+ * leave.
+ */
+export function deckPlan(step: number, plans: number, steps = SKETCH_STEPS.length): number {
+  if (plans <= 1 || steps <= 0) return 0;
+  const at = Math.floor(Math.max(0, step) * plans / steps);
+  return Math.min(plans - 1, at);
+}
+
+/**
+ * How many card slots the deck holds — the longest plan, capped.
+ *
+ * Measured across every plan rather than per plan, because the slots have
+ * to stay the same width while the places inside them change. Sized to
+ * whichever plan is showing, a three-stop day followed by a two-stop one
+ * would make every card jump wider on the swap.
+ *
+ * Generic over the plan shape: this file imports nothing, and a stop's
+ * own type is the planner's business.
+ */
+export function deckSpan(plans: readonly { stops: readonly unknown[] }[], max = 3): number {
+  return Math.min(max, plans.reduce((n, p) => Math.max(n, p.stops.length), 0));
+}

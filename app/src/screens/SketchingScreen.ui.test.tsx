@@ -286,6 +286,30 @@ describe('while it waits', () => {
     expect(screen.queryByText('Sky Bar')).toBeNull();
   });
 
+  // One plan at a time, moving through them as the stages tick. It used
+  // to draw `plans[0]` and stop there, which spoiled the first card of
+  // the screen after it and never mentioned that two more ways existed.
+  it('walks the deck from one plan to the next as the stages tick', async () => {
+    renderScreen();
+    // `PLANS` is two: the first has Cộng Café and Bún Chả, the second Sky Bar.
+    expect(screen.getByText('Cộng Café')).toBeTruthy();
+    expect(screen.queryByText('Sky Bar')).toBeNull();
+
+    // Two plans over five stages puts the swap after the third.
+    await tick(STEP_FLOOR_MS * 3);
+    expect(screen.getByText('Sky Bar')).toBeTruthy();
+    expect(screen.queryByText('Cộng Café')).toBeNull();
+  });
+
+  it('holds the deck on the first plan when the reader asked for less motion', async () => {
+    vi.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    renderScreen();
+    await tick(STEP_FLOOR_MS * 3);
+    // Content that changes itself is what that setting exists to stop.
+    expect(screen.getByText('Cộng Café')).toBeTruthy();
+    expect(screen.queryByText('Sky Bar')).toBeNull();
+  });
+
   it('caps the deck at three, however many stops the plan has', () => {
     planTrips.mockImplementation(() => [plan('match', [
       stop(CAFE, 18 * 60), stop(DINNER, 19 * 60), stop(ROOF, 20 * 60), stop(PINNED, 21 * 60),
