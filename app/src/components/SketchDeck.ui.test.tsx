@@ -22,7 +22,7 @@ import React from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen } from '../uitest/render';
 import { Image } from 'expo-image';
-import SketchDeck, { CROSS_MS, NAME_IN, NAME_OUT, SWAP_STEP_MS } from './SketchDeck';
+import SketchDeck, { CROSS_MS, lieOf, NAME_IN, NAME_OUT, SWAP_STEP_MS } from './SketchDeck';
 import { DECK_HOLD_MS } from '../lib/sketch';
 import type { Place } from '../lib/data';
 
@@ -64,6 +64,52 @@ describe('SketchDeck', () => {
   // is the card changing twice.
   it('lands the name inside the picture it belongs to', () => {
     expect(NAME_OUT + NAME_IN).toBe(CROSS_MS);
+  });
+
+  // The row is a hand of cards laid on a table, not a rack. What a test
+  // can hold is the arithmetic under that: the shape of the row, not how
+  // it looks, which is for a phone.
+  describe('how the cards lie', () => {
+    const row = (count: number) => Array.from({ length: count }, (_, i) => lieOf(i, count));
+
+    it('stands the middle card highest and puts it in front', () => {
+      const three = row(3);
+      expect(three[1].hang).toBe(0);
+      expect(Math.min(...three.map((c) => c.hang))).toBe(three[1].hang);
+      expect(Math.max(...three.map((c) => c.over))).toBe(three[1].over);
+    });
+
+    // Mirrored about the middle, a row is a diagram: the eye finds the
+    // axis and stops looking. No two cards may share a baseline.
+    it('hangs no two cards at the same height', () => {
+      for (const count of [2, 3]) {
+        const hangs = row(count).map((c) => c.hang);
+        expect(new Set(hangs).size).toBe(count);
+      }
+    });
+
+    // A single card is still a card somebody put down.
+    it('leans every card, including the only one', () => {
+      for (const count of [1, 2, 3]) {
+        for (const card of row(count)) expect(card.tilt).not.toBe(0);
+      }
+    });
+
+    // The formula has to cover a row wider than `deckSpan` allows today,
+    // which is the reason it is a formula.
+    it('lies a row wider than the deck asks for', () => {
+      const four = row(4);
+      expect(new Set(four.map((c) => c.hang)).size).toBe(4);
+      expect(four.every((c) => Number.isFinite(c.over))).toBe(true);
+    });
+  });
+
+  // Scenery behind the cards: a dotted run, a handful of loose strokes,
+  // and the pin they run to.
+  it('draws the trail behind the cards', () => {
+    draw();
+    expect(document.querySelectorAll('[data-stub="Path"]').length).toBe(2);
+    expect(document.querySelector('[data-icon="location"]')).toBeTruthy();
   });
 
   it('draws the places it was handed, and nothing it was not', () => {
