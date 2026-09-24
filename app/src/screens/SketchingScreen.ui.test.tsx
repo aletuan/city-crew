@@ -125,10 +125,25 @@ const tick = async (ms: number) => {
 
 /** How many step marks are the gradient disc that means done. */
 const doneCount = () => document.querySelectorAll('[data-stub="LinearGradient"] > [data-icon="checkmark"]').length;
-/** The text currently in the feed's bright slot and its dimmed seat. */
-const feedTexts = () => [...document.querySelectorAll('[data-icon$="-outline"]')]
+/**
+ * Both of the feed's slots, in the order they are drawn: the dimmed seat
+ * first where there is one, then the bright slot.
+ *
+ * Every row carries the glyph of the fact it states, which is what makes
+ * one query enough. It used to be two, because the settled row wore a
+ * tick instead of its own glyph and had to be found by it.
+ *
+ * Scoped to the box, because the glyph is no longer unique to it: the
+ * categories above the steps are chips now, and a category's glyph is
+ * the same shape of name as a finding's.
+ */
+const feedTexts = () => [...(document.querySelector('[data-testid="findings"]')
+  ?.querySelectorAll('[data-icon$="-outline"]') ?? [])]
   .map((el) => el.parentElement?.nextElementSibling?.textContent ?? '');
-const settledLine = () => document.querySelector('[data-icon="checkmark"] + div')?.textContent ?? null;
+/** The bright slot — the fact the screen is stating now. */
+const currentLine = () => feedTexts().at(-1) ?? null;
+/** The dimmed seat above it, or null while nothing has settled into it. */
+const settledLine = () => { const rows = feedTexts(); return rows.length > 1 ? rows[0] : null; };
 /** A step row is two columns: the mark and its rail, then the label and
  *  its rule. The label sits inside the second, so everything here starts
  *  from the label's own column. */
@@ -201,7 +216,7 @@ describe('what it asks', () => {
     expect(doneCount()).toBe(0);
     expect(navigation.replace).not.toHaveBeenCalled();
     // The skeleton stands in the box until there is a fact to show.
-    expect(document.querySelectorAll('[data-icon$="-outline"]').length).toBe(0);
+    expect(feedTexts()).toEqual([]);
 
     catalog.current = { data: PLACES, loading: false, error: null, reload: vi.fn() };
     rerender(<SketchingScreen navigation={navigation as unknown as Nav} route={route} />);
@@ -256,22 +271,22 @@ describe('while it waits', () => {
     await tick(1);
     expect(doneCount()).toBe(1);
     // Two of the four places post hours, and both are open all day.
-    expect(feedTexts()).toEqual(['2 places open at 18:00']);
+    expect(currentLine()).toBe('2 places open at 18:00');
     expect(settledLine()).toBeNull();
 
     await tick(STEP_FLOOR_MS);
     expect(doneCount()).toBe(2);
-    expect(feedTexts()).toEqual(['Starting at Cộng Café']);
+    expect(currentLine()).toBe('Starting at Cộng Café');
     expect(settledLine()).toBe('2 places open at 18:00');
 
     await tick(STEP_FLOOR_MS);
-    expect(feedTexts()).toEqual(['350 m to the next stop, about 5 min']);
+    expect(currentLine()).toBe('350 m to the next stop, about 5 min');
     expect(settledLine()).toBe('Starting at Cộng Café');
     expect(legsOf).toHaveBeenCalledWith([CAFE, DINNER]);
 
     await tick(STEP_FLOOR_MS);
     expect(doneCount()).toBe(4);
-    expect(feedTexts()).toEqual(['Your day runs 18:00–20:45']);
+    expect(currentLine()).toBe('Your day runs 18:00–20:45');
   });
 
   // The ring that used to stand here said the screen was working. Three
@@ -335,7 +350,7 @@ describe('while it waits', () => {
   it('takes the starting hour from the first plan when the answers carry none', async () => {
     renderScreen({ startMin: undefined });
     await tick(STEP_FLOOR_MS);
-    expect(feedTexts()).toEqual(['2 places open at 18:00']);
+    expect(currentLine()).toBe('2 places open at 18:00');
   });
 
   // Five circles down a card read as five things. A line through them
@@ -369,7 +384,7 @@ describe('while it waits', () => {
     // Still: no track and no travelling arc inside the mark.
     expect(markOf(SKETCH_STEPS[0].en).children.length).toBe(0);
     await tick(STEP_FLOOR_MS * 2);
-    expect(feedTexts()).toEqual(['Starting at Cộng Café']);
+    expect(currentLine()).toBe('Starting at Cộng Café');
     expect(settledLine()).toBe('2 places open at 18:00');
   });
 
@@ -536,7 +551,7 @@ describe('the dead end', () => {
     )).toBeTruthy();
     expect(screen.queryByText('You can edit everything afterwards.')).toBeNull();
     // The skeleton box is gone: nothing is on its way.
-    expect(document.querySelectorAll('[data-icon$="-outline"]').length).toBe(0);
+    expect(feedTexts()).toEqual([]);
     expect(doneCount()).toBe(SKETCH_STEPS.length);
     expect(navigation.replace).not.toHaveBeenCalled();
 

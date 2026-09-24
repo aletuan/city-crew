@@ -29,7 +29,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import SketchDeck from '../components/SketchDeck';
 import {
-  GradientCta, Screen, Skeleton, useLoop, useReducedMotion, useTabBarClearance,
+  Chip, GradientCta, Screen, Skeleton, useLoop, useReducedMotion, useTabBarClearance,
 } from '../components/ui';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { usePlaces } from '../lib/catalog';
@@ -63,7 +63,7 @@ import { colors, font, gradAI, radius, space } from '../theme';
  *
  * Two slots, never more. The current line fades up bright with its mark
  * pulsing; when the next fact lands, it slides into the seat above —
- * dimmed, behind a small check — and the feed moves on. Nothing loops
+ * dimmed, keeping its own glyph — and the feed moves on. Nothing loops
  * and there is no marquee: a status line that comes back round is the
  * tell of a progress bar with nothing behind it, and this screen spent
  * its first life being exactly that. Every line here is a fact about a
@@ -108,6 +108,13 @@ function FindingFeed({ previous, current, still }: {
   // whole costume: a real blur is Android-only in RN and a milky overlay
   // everywhere else, and a line at 60% in the footnote colour says
   // "already handled" just as clearly on both platforms.
+  //
+  // Which is also why the tick that used to sit here is gone. It said
+  // the same word the dim already says, in a second glyph a size below
+  // the one across from it — so the two rows never lined up, and the
+  // settled fact lost the one mark that said what *kind* of fact it
+  // was. Keeping its own glyph costs nothing the dim was not already
+  // paying for.
   const prevIn = useRef(new Animated.Value(0)).current;
   const prevRise = useRef(new Animated.Value(12)).current;
   useEffect(() => {
@@ -140,7 +147,7 @@ function FindingFeed({ previous, current, still }: {
   }, [still, pulse]);
 
   return (
-    <View style={s.finding}>
+    <View style={s.finding} testID="findings">
       {previous ? (
         <Animated.View
           style={[s.findingRow, {
@@ -148,12 +155,18 @@ function FindingFeed({ previous, current, still }: {
             transform: [{ translateY: prevRise }],
           }]}
         >
-          <Ionicons name="checkmark" size={13} color={colors.textTertiary} />
+          <View style={s.findingBadge}>
+            <Ionicons
+              name={previous.icon as React.ComponentProps<typeof Ionicons>['name']}
+              size={15}
+              color={colors.textSecondary}
+            />
+          </View>
           <Text style={s.findingPrevText} numberOfLines={1}>{previous.text}</Text>
         </Animated.View>
       ) : null}
       <Animated.View style={[s.findingRow, { opacity: fade, transform: [{ translateY: rise }] }]}>
-        <Animated.View style={{ opacity: pulse }}>
+        <Animated.View style={[s.findingBadge, { opacity: pulse }]}>
           {/* The colour of the words it sits with, not the accent. Coral
               on this screen means progress — the ring's arc, a step done,
               the step running — and a glyph that only says which kind of
@@ -162,7 +175,7 @@ function FindingFeed({ previous, current, still }: {
               view and the weight of the text, both of which stay. */}
           <Ionicons
             name={current.icon as React.ComponentProps<typeof Ionicons>['name']}
-            size={16}
+            size={15}
             color={colors.textSecondary}
           />
         </Animated.View>
@@ -387,7 +400,22 @@ export default function SketchingScreen({ navigation, route }: {
     dateline(lang, fromISO(day) ?? new Date()),
     p.when === 'day' ? t('Day', 'Ban ngày', '昼') : t('Evening', 'Buổi tối', '夜'),
   ]);
-  const wants = summaryLine(p.categories.map((c) => (CATEGORIES[c] ? categoryLabel(c, t) : null)));
+  // What was asked for, as the chips it was asked with.
+  //
+  // It was a third grey line reading "Cà phê · Ăn uống", which is the one
+  // part of this summary the reader chose by tapping something that had a
+  // glyph and a colour — and arrived here stripped of both. The filter
+  // row, the Ideas screen and a place's own detail all draw a category as
+  // its glyph in its own hue beside its name; this now says it the same
+  // way, so the answer on this screen and the question on the last one
+  // are recognisably the same object.
+  //
+  // The hue stays on the glyph and off the type, which is the table's own
+  // rule — `CategoryStyle.color` is a pastel solved to be read as a mark,
+  // not as words. Keys the table has never heard of are dropped rather
+  // than drawn grey: a chip with no glyph among chips that have one reads
+  // as a chip that failed to load.
+  const wants = p.categories.filter((c) => CATEGORIES[c]);
 
   return (
     <Screen title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}>
@@ -433,7 +461,18 @@ export default function SketchingScreen({ navigation, route }: {
         </Text>
         {!!when && <Text style={s.sub}>{when}</Text>}
         {!!p.where?.trim() && <Text style={s.sub}>{p.where.trim()}</Text>}
-        {!!wants && <Text style={s.sub}>{wants}</Text>}
+        {wants.length > 0 && (
+          <View style={s.wants}>
+            {wants.map((c) => (
+              <Chip
+                key={c}
+                label={categoryLabel(c, t)}
+                icon={CATEGORIES[c].icon}
+                iconColor={CATEGORIES[c].color}
+              />
+            ))}
+          </View>
+        )}
 
         <View style={s.card}>
           {SKETCH_STEPS.map((step, i) => (
@@ -636,6 +675,9 @@ const s = StyleSheet.create({
 
   title: { color: colors.text, fontSize: 27, fontFamily: 'SpaceGrotesk_700Bold', textAlign: 'center', marginTop: 6 },
   sub: { color: colors.textSecondary, fontSize: 15, lineHeight: 21, textAlign: 'center' },
+  // Centred and wrapping: one category is the common case and four is the
+  // most the wizard allows, which is two rows on a narrow phone.
+  wants: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
 
   card: {
     alignSelf: 'stretch', marginTop: 6,
@@ -702,22 +744,41 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceCard, borderRadius: radius.card,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  finding: { alignSelf: 'stretch', gap: 8 },
-  findingRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  finding: { alignSelf: 'stretch', gap: 10 },
+  // Left, not centred. Two sentences of different lengths centred put
+  // their glyphs at two different x's, and a mark that moves between
+  // rows is the thing that read as unbalanced: against an edge they
+  // stack into a column and the eye reads down it.
+  findingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // A disc, so a 15pt glyph lands on a surface of its own instead of
+  // floating loose beside a sentence at the same weight.
+  //
+  // Not the accent, and not a coral tint under it. Coral on this screen
+  // means progress — the ring's arc, a step done, the step running — and
+  // a glyph that only says which *kind* of fact this is would be
+  // spending that meaning on a label. The disc is the same quiet wash
+  // every other well in the app uses.
+  findingBadge: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceGlass,
   },
-  // The settled line, a size down and in the footnote colour — the
-  // animated 0.6 opacity above does the rest of the receding.
+  // The settled line: the same size as the current one, in the footnote
+  // colour, with the animated 0.6 opacity above doing the receding.
+  //
+  // It was 13 against the current line's 15. Two sizes two rows apart
+  // read as two kinds of thing, and these are the same kind of thing at
+  // two moments — so the size holds and only the ink moves.
   findingPrevText: {
-    color: colors.textTertiary, fontSize: 13, lineHeight: 18,
-    textAlign: 'center', flexShrink: 1,
+    color: colors.textTertiary, fontSize: 15, lineHeight: 21,
+    flexShrink: 1,
   },
   // A size up from `note` and in the reading colour, because this is
   // content rather than a footnote about the screen — it is the first
   // piece of the answer the reader gets.
   findingText: {
     color: colors.textSecondary, fontSize: 15, lineHeight: 21,
-    textAlign: 'center', flexShrink: 1,
+    flexShrink: 1,
   },
   note: { color: colors.textTertiary, fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 2 },
 });
