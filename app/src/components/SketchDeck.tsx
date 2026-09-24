@@ -12,6 +12,25 @@
 // places going in, in the order the plan puts them, not a result to act
 // on. Nothing here is tappable, for that reason.
 //
+// ── laid down, not lined up ──
+//
+// The row was three cards of equal height sitting on a common floor with
+// a gap between each, the middle one twelve points proud and every card
+// leaning three degrees. Tidy, and tidy was the fault: a rack, not a
+// hand. Cards somebody has just put down on a table overlap, sit at
+// angles that do not match, and hang at heights that do not mirror each
+// other about the middle.
+//
+// So `lieOf` hangs them from a ceiling instead of standing them on a
+// floor, leans them five degrees with an offset so none of them is quite
+// straight, brings the slots past the middle up by twelve so no two share
+// a baseline, and the cards overlap by twelve points rather than clearing
+// each other by ten. The one that stands highest is the one in front.
+//
+// Behind all of it, `SketchTrail` — a dotted run with a pin at the end
+// and a few loose strokes. Scenery: it joins nothing, measures nothing,
+// and moves with nothing.
+//
 // ── the frames hold still; the contents change ──
 //
 // The first version dissolved the whole deck and dealt the next set in
@@ -93,8 +112,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import Svg, { Path } from 'react-native-svg';
 import { useArrival } from './ui';
 import { coverOf, type Place } from '../lib/data';
+import { useScheme } from '../lib/theme';
 import { colors, font, radius } from '../theme';
 
 /** A slot's first arrival, and the gap before the next slot starts. */
@@ -129,8 +151,100 @@ export const NAME_IN = 320;
  * `DECK_HOLD_MS` has to stay clear of — the test below holds that.
  */
 export const SWAP_STEP_MS = 140;
-/** How far the middle card stands above its neighbours. */
-const LIFT = 12;
+/** The band above the cards that the drawing has to itself. */
+const SKY = 30;
+
+/**
+ * Where a card lies in the row.
+ *
+ * Fanned from the centre and hung from it: the middle card stands
+ * highest and the ones beside it drop away, so three cards read as a
+ * hand laid down rather than as three things in a rack.
+ *
+ * The drop is *not* symmetrical, and that is the whole of it. Mirrored
+ * about the middle, a row is a diagram — the eye finds the axis, reads
+ * the pattern, and stops looking. The slots past the middle come up
+ * twelve points, which is enough that no two cards share a baseline and
+ * little enough that the row still reads as one row.
+ *
+ * A formula rather than a table of three, so a row of any width lies the
+ * same way. `deckSpan` caps the caller at three today; a table would
+ * have had a fourth card falling out of the pattern the day that moved.
+ */
+export function lieOf(nth: number, count: number) {
+  const mid = (count - 1) / 2;
+  const out = Math.abs(nth - mid);
+  const hang = Math.round(out * 26) - (nth > mid ? 12 : 0);
+  return {
+    hang,
+    // Three degrees was the old fan and it was too polite to see under a
+    // photograph. Five leans; the offset means no card in an odd row
+    // stands perfectly straight, which is what separates a drawing from
+    // a layout.
+    tilt: (nth - mid) * 5 - 1,
+    // The card that stands highest is the one in front. Derived from the
+    // hang rather than set beside it, so the two can never disagree.
+    over: 40 - hang,
+  };
+}
+
+/** The drawing's ink: the reference's coral, brighter than the accent
+ *  token is on paper, chosen against the drawing exactly as the welcome
+ *  screen's heart was. See `welcomeArt`. */
+const TRAIL_INK = { light: '#E8542F', dark: '#FF6F5B' } as const;
+/** The trail's own grid. Drawn to a fixed box and stretched to whatever
+ *  width the row turns out to be — a dashed line and five loose strokes
+ *  have no proportion to keep, so this needs no measuring pass. */
+const TRAIL_W = 340;
+const TRAIL_H = 84;
+/** Out from behind the first card, up over the gap, to the pin. */
+const TRAIL = `M ${0.18 * TRAIL_W} ${0.90 * TRAIL_H}`
+  + ` C ${0.31 * TRAIL_W} ${0.86 * TRAIL_H}, ${0.35 * TRAIL_W} ${0.26 * TRAIL_H}, ${0.60 * TRAIL_W} ${0.18 * TRAIL_H}`;
+/** Two strokes off the left shoulder and three off the right — the same
+ *  hand as the heart's, and the same thing they say: this is being drawn
+ *  right now. */
+const SPARKS = 'M 34 46 l -12 -8 M 27 62 l -13 -3'
+  + ' M 300 26 l 12 -8 M 308 38 l 14 -3 M 309 50 l 12 5';
+
+/**
+ * What the cards are laid out on.
+ *
+ * A dotted run with a pin at the end of it, and a few loose strokes where
+ * a hand would have flicked them. It is scenery and nothing else: it says
+ * no distance, joins no two places, and moves with nothing — which is
+ * exactly why it can be here. The deck's rule is that it must not look
+ * like the answer, and a doodle is the one kind of mark that cannot be
+ * mistaken for one.
+ *
+ * Stretched rather than measured. `preserveAspectRatio="none"` lets the
+ * box be whatever the row is wide without a layout pass and without the
+ * state one would need, and the cost is a dash that is a few percent
+ * longer on a big phone than on a small one.
+ *
+ * The pin is a glyph rather than a path, because a glyph is the one thing
+ * in here that would show the stretching.
+ */
+function SketchTrail() {
+  const { scheme } = useScheme();
+  const ink = TRAIL_INK[scheme];
+  return (
+    <View style={s.trail} pointerEvents="none">
+      <Svg width="100%" height="100%" viewBox={`0 0 ${TRAIL_W} ${TRAIL_H}`} preserveAspectRatio="none">
+        <Path
+          d={TRAIL}
+          stroke={ink}
+          strokeWidth={2.4}
+          strokeLinecap="round"
+          strokeDasharray="1 11"
+          fill="none"
+          opacity={0.7}
+        />
+        <Path d={SPARKS} stroke={ink} strokeWidth={2.4} strokeLinecap="round" fill="none" />
+      </Svg>
+      <Ionicons name="location" size={20} color={ink} style={s.trailPin} />
+    </View>
+  );
+}
 
 /**
  * One box in the row, and whatever is in it at the moment.
@@ -191,18 +305,15 @@ function Slot({ place, nth, of: count, still }: {
   // whole face borrows the word's fade, which is the only case left in
   // which this card ever goes dark.
   const alone = !src || !seen;
-  // Fanned from the centre, so one card sits straight, two lean apart and
-  // three read as a hand laid down. Three degrees is the whole effect:
-  // enough that the edges are not parallel, little enough that no name
-  // looks crooked.
-  const tilt = (nth - (count - 1) / 2) * 3;
+  // Where this one lies. Layout rather than motion, so Reduce Motion
+  // keeps all of it: a card lying at an angle is not a card moving.
+  const { hang, tilt, over } = lieOf(nth, count);
 
   return (
     <Animated.View
       style={[
         s.card,
-        count === 3 && nth === 1 && { marginBottom: LIFT },
-        { opacity: arrive },
+        { marginTop: hang, zIndex: over, opacity: arrive },
         !still && {
           transform: [
             { translateY: arrive.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },
@@ -278,6 +389,7 @@ export default function SketchDeck({ places, next, span, still }: {
   // the heading under it does not jump when the catalog lands.
   return (
     <View style={s.deck}>
+      <SketchTrail />
       {Array.from({ length: slots }, (_, i) => (
         <Slot key={`slot-${i}`} place={shown[i]} nth={i} of={slots} still={!!still} />
       ))}
@@ -286,19 +398,31 @@ export default function SketchDeck({ places, next, span, still }: {
 }
 
 const s = StyleSheet.create({
-  // `flex-end` so the lifted middle card rises out of a common floor
-  // rather than the others dropping. The minimum is the tallest a card
-  // gets plus its lift, which is what keeps the layout still while the
-  // catalog is still coming.
+  // `flex-start`, because the cards hang from a common ceiling now rather
+  // than standing on a common floor: `lieOf` says how far each one drops
+  // and a floor would have fought it.
+  //
+  // The padding is the band the drawing has to itself, and the minimum is
+  // the tallest a card gets plus the furthest one hangs plus that band —
+  // which is what keeps the heading below from jumping while the catalog
+  // is still coming.
   deck: {
-    alignSelf: 'stretch', minHeight: 104,
-    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 10,
+    alignSelf: 'stretch', minHeight: 148, paddingTop: SKY,
+    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center',
   },
+  // The drawing sits in the band above the cards and reaches a little way
+  // behind their tops, which is where the dotted run disappears.
+  trail: { position: 'absolute', left: 0, right: 0, top: 0, height: TRAIL_H },
+  trailPin: { position: 'absolute', left: '60%', top: 4, marginLeft: -10 },
   // `flex: 1` with a ceiling: three cards have to fit a 320pt phone as
   // well as they fit a 430pt one, and a fixed width fits exactly one of
   // those.
+  //
+  // The negative margin is the overlap. Laid cards touch; a row with a
+  // gap down the middle of it is a row of three separate cards, which is
+  // what this was and what the reference is not.
   card: {
-    flex: 1, maxWidth: 108,
+    flex: 1, maxWidth: 108, marginHorizontal: -6,
     backgroundColor: colors.bgElevated, borderRadius: radius.card, padding: 6,
     shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
     elevation: 3,
