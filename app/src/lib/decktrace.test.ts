@@ -6,14 +6,16 @@ vi.mock('./supabase', async () => {
   h.fake = fakeSupabase();
   return { supabase: h.fake.client };
 });
-// The channel read touches expo-updates, which a Node process has no
-// native half for. Non-production here, so the singletons under test are
-// the recording and reporting ones.
+// `./supabase` reads the channel on the way in, and that read touches
+// expo-updates, which a Node process has no native half for. The two
+// switches no longer ask it — see `DECK_TRACE` on why they are hand-held
+// on — so this only has to keep the import chain standing.
 vi.mock('./channel', () => ({ CHANNEL: null, IS_PRODUCTION_CHANNEL: false }));
 
 import {
-  buildDeckRow, deckLine, deckTrace, makeDeckReporter, makeDeckTrace,
-  reportDeck, sendDeckRow, type DeckEvent, type DeckRow,
+  buildDeckRow, deckLine, DECK_TRACE, DECK_TRACE_UPLOAD, deckTrace,
+  makeDeckReporter, makeDeckTrace, reportDeck, sendDeckRow,
+  type DeckEvent, type DeckRow,
 } from './decktrace';
 
 const fake = () => h.fake!;
@@ -183,6 +185,16 @@ describe('makeDeckReporter', () => {
 });
 
 describe('the app’s own pair', () => {
+  // Hand-flipped on, against the channel, because the phone the deck is
+  // being investigated from runs a production-channel build — the one
+  // install whose numbers are wanted was the one the channel rule
+  // excluded. Asserted rather than commented, so putting them back is a
+  // change a test notices.
+  it('is on everywhere until the deck’s timings are settled', () => {
+    expect(DECK_TRACE).toBe(true);
+    expect(DECK_TRACE_UPLOAD).toBe(true);
+  });
+
   it('records through the singleton and files the row into deck_traces', async () => {
     fake().replies({ data: null, error: null });
     deckTrace.start();
