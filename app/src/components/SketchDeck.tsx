@@ -29,6 +29,25 @@
 // The assembly — the rise, the scale, the stagger — happens once, when a
 // slot first appears. That is what it is for.
 //
+// ── the pictures are asked for before they are needed ──
+//
+// The swap was reported as a jerk on the second plan's first card, and
+// it was not the fade: the fade was fine and the picture behind it was
+// not there yet. A cover is only requested when something renders it, so
+// the first card of a set was asking the network for a photo at the
+// exact moment it was being uncovered, and what came back up was an
+// empty frame that filled in a beat later.
+//
+// So the deck is handed the *next* plan's places as well, and asks for
+// their covers while the current set is still standing — a second and a
+// half of lead where there was none. Nothing extra is downloaded: these
+// are the same files the next swap would have fetched anyway, moved
+// earlier.
+//
+// `transition` on the image is the net under that, for the run where the
+// lead was not enough: a bitmap that lands late fades in rather than
+// appearing between two frames.
+//
 // ── where the places come from ──
 //
 // The caller's, not its own. `SketchingScreen` holds the plans and hands
@@ -122,7 +141,14 @@ function Slot({ place, nth, of: count, still }: {
         {seen ? (
           <>
             {cover
-              ? <Image source={{ uri: cover.photo_uri }} style={s.photo} contentFit="cover" />
+              ? (
+                <Image
+                  source={{ uri: cover.photo_uri }}
+                  style={s.photo}
+                  contentFit="cover"
+                  transition={180}
+                />
+              )
               : <View style={[s.photo, s.photoOff]} />}
             <Text style={s.name} numberOfLines={1}>{seen.name_en}</Text>
           </>
@@ -132,9 +158,15 @@ function Slot({ place, nth, of: count, still }: {
   );
 }
 
-export default function SketchDeck({ places, span, still }: {
+export default function SketchDeck({ places, next, span, still }: {
   /** The stops of the plan showing now. */
   places: readonly Place[];
+  /**
+   * The stops of the plan after this one, if there is one. Not drawn —
+   * their covers are asked for now so that the swap has something to
+   * show the instant it uncovers them.
+   */
+  next?: readonly Place[];
   /**
    * How many slots to hold, measured across every plan rather than this
    * one. A slot with nothing in it is an empty frame the same size as a
@@ -148,6 +180,16 @@ export default function SketchDeck({ places, span, still }: {
 }) {
   const shown = places.slice(0, span);
   const slots = Math.max(span, shown.length);
+
+  // Joined rather than passed as the array, which is fresh every render.
+  const ahead = (next ?? []).slice(0, span)
+    .map((pl) => coverOf(pl)?.photo_uri).filter((u): u is string => !!u).join(' ');
+  useEffect(() => {
+    if (!ahead) return;
+    // Nothing waits on this and nothing breaks without it: a cache that
+    // refuses is a swap back to how it used to be, not a failure.
+    Image.prefetch(ahead.split(' ')).catch(() => {});
+  }, [ahead]);
   // The height is held whether or not there is anything to hold it, so
   // the heading under it does not jump when the catalog lands.
   return (

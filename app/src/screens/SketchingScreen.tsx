@@ -416,6 +416,9 @@ export default function SketchingScreen({ navigation, route }: {
         <SketchDeck
           span={deckSpan(plans)}
           places={plans[deck]?.stops.map((st) => st.place) ?? []}
+          // The plan after this one, so the deck can ask for its covers
+          // while this one is still standing. See the note on `next`.
+          next={plans[deck + 1]?.stops.map((st) => st.place)}
           still={calm}
         />
 
