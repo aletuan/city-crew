@@ -372,9 +372,16 @@ export function deckSpan(plans: readonly { stops: readonly unknown[] }[], max = 
  * a fast catalog was about a second and a half each — and a second and a
  * half is mostly the cards still arriving.
  *
- * 1800 leaves about 1.3 seconds of stillness after a set has assembled.
- * Three plans therefore take 3.6 seconds against the stages' floor of
- * 4.25, so the deck finishes first on any ordinary run and the screen
- * waits for nobody.
+ * 2400 leaves about 1.5 seconds of stillness after a set has finished
+ * changing, which at the swap's current length is 920ms of it. It was
+ * 1800 while the swap was 360ms and the stagger 80; both went up when
+ * the change was reported as too quick to read, and the hold went up
+ * with them so that a set still stands still for longer than it moves.
+ *
+ * Three plans now take 4.8 seconds against the stages' floor of 4.25, so
+ * the deck is the longer of the two and the screen waits for it — by
+ * about half a second, on the run where the catalog is warm. That is
+ * what the gate in `SketchingScreen` is for, and it is the price of the
+ * deck being legible.
  */
-export const DECK_HOLD_MS = 1800;
+export const DECK_HOLD_MS = 2400;

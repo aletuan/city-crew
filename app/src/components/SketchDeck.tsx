@@ -82,10 +82,26 @@ import { colors, font, radius } from '../theme';
 /** A slot's first arrival, and the gap before the next slot starts. */
 const IN_MS = 300;
 const STEP_MS = 400;
-/** A change of contents: down, swap at the bottom, back up. */
-const OUT_MS = 140;
-const BACK_MS = 220;
-const SWAP_STEP_MS = 80;
+/**
+ * A change of contents: down, swap at the bottom, back up.
+ *
+ * Longer than the arrival above it, and deliberately. An arrival travels
+ * and grows, and the eye reads a move as something meant; a change of
+ * contents is nothing but brightness, and brightness that changes in a
+ * third of a second reads as a flicker rather than as a transition. At
+ * 140 and 220 it was 360ms of pure fade and was reported, three times,
+ * as too quick.
+ *
+ * The stagger went up with it, and for the same reason. At 80 the three
+ * slots moved near enough together to read as one blink of the whole
+ * row; at 140 they read as three things changing in order.
+ *
+ * A row therefore finishes a swap at 2 × 140 + 640 = 920ms, which is
+ * what `DECK_HOLD_MS` has to stay clear of — the test below holds that.
+ */
+export const OUT_MS = 260;
+export const BACK_MS = 380;
+export const SWAP_STEP_MS = 140;
 /** How far the middle card stands above its neighbours. */
 const LIFT = 12;
 
@@ -153,8 +169,20 @@ function Slot({ place, nth, of: count, still }: {
         still && { transform: [{ rotate: `${tilt}deg` }] },
       ]}
     >
-      {/* Inside the frame, so the box and its shadow never move. */}
-      <Animated.View style={[s.face, { opacity: dip }]}>
+      {/* Inside the frame, so the box and its shadow never move.
+          A breath of scale with the fade: an opacity change on its own
+          is a flicker whatever its length, and three percent is enough
+          to give the eye something to follow without the picture
+          appearing to move. */}
+      <Animated.View
+        style={[
+          s.face,
+          {
+            opacity: dip,
+            transform: [{ scale: dip.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1] }) }],
+          },
+        ]}
+      >
         {seen ? (
           <>
             {cover
