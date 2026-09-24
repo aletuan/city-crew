@@ -323,13 +323,16 @@ export default function PlanOptionsScreen({ navigation, route }: {
       >
         {/* Named for what it is. The plans come out of a scoring function,
             not a model, and calling that AI would be a claim the code does
-            not back. */}
-        {!!line && (
-          <View style={s.byline}>
-            <Ionicons name="sparkles" size={13} color={colors.accent} />
-            <Text style={s.bylineText}>{line}</Text>
-          </View>
-        )}
+            not back.
+            Which is what the sparkle that used to sit here was doing. It
+            is the glyph every product in the world now uses to mean "a
+            model made this", so the line carried the exact claim the
+            comment above it refuses, in the one place a reader would
+            read it as a label. No glyph replaces it: the sketching
+            screen prints this same summary as plain text, and a subtitle
+            that needs a mark to be understood is a subtitle that has not
+            been written. */}
+        {!!line && <Text style={s.byline}>{line}</Text>}
 
         {plans.length > 0 && plans.length < 3 && (
           <Text style={s.thin}>
@@ -368,7 +371,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
             <Text style={s.emptyText}>
               {t(
                 'Nothing here matches those answers now. Try Regenerate, or change what you asked for.',
-                'Hiện không có gì khớp với lựa chọn đó. Thử tạo lại, hoặc sửa câu trả lời.',
+                'Hiện không có gì khớp với lựa chọn đó. Thử thực hiện lại, hoặc sửa câu trả lời.',
                 '今の条件に合うものがありません。作り直すか、条件を変えてみてください。',
               )}
             </Text>
@@ -391,7 +394,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
           <GradientCta
             icon="refresh"
             wide
-            label={t('Regenerate', 'Tạo lại', '作り直す')}
+            label={t('Regenerate', 'Thực hiện lại', '作り直す')}
             busy={!!pending}
             onPress={regenerate}
           />
@@ -670,8 +673,7 @@ function PlanCard({ plan, name, nth, onPress }: {
 const CAPTION = { fontSize: 13, fontWeight: font.regular } as const;
 
 const s = StyleSheet.create({
-  byline: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: space.headingToContent },
-  bylineText: { ...CAPTION, color: colors.textSecondary },
+  byline: { ...CAPTION, color: colors.textSecondary, marginBottom: space.headingToContent },
   thin: { ...CAPTION, color: colors.textTertiary, marginBottom: 10 },
 
   cardWrap: { marginBottom: space.cardGap },
