@@ -108,11 +108,16 @@ const STEP_MS = 400;
  */
 export const CROSS_MS = 520;
 /**
- * The first picture a slot ever draws, which fades from the fill behind
- * it rather than from another picture. Kept short so the assembly stays
- * crisp — that part of this screen was never what was reported.
+ * The first picture a slot ever draws, which fades up from the fill
+ * behind it rather than from another picture.
+ *
+ * 180 once, chosen to keep the assembly crisp. Long enough to be a fade
+ * on paper and short enough to read as a snap on a phone, which is what
+ * it was asked to stop doing. 320 still lands inside the card's own
+ * 300ms arrival, so the photograph resolves as the card settles rather
+ * than after it.
  */
-const FIRST_MS = 180;
+const FIRST_MS = 320;
 /**
  * The name, which cannot overlap another name and be read. It leaves,
  * changes where the change cannot be seen, and comes back — inside the
@@ -196,11 +201,23 @@ function Slot({ place, nth, of: count, still, option }: {
   }, [place?.slug, still, nth, word]);
 
   const cover = src && coverOf(src);
-  // A picture dissolves into another picture by itself. A slot filling
-  // from empty, or emptying, has nothing to dissolve with — so there the
-  // whole face borrows the word's fade, which is the only case left in
-  // which this card ever goes dark.
-  const alone = !src || !seen;
+  const worn = seen && coverOf(seen);
+  /**
+   * Whether this change has to be faded rather than dissolved.
+   *
+   * A picture dissolves into another picture by itself, in place, and
+   * that is the good case — measured at 9 to 47ms from the handover, so
+   * it starts at once. Everything else has nothing to dissolve *with*
+   * and was a hard cut: a slot filling from empty or emptying, which
+   * this already covered, and — which it did not — a photograph becoming
+   * the grey fill of a place that has no photo, or that fill becoming a
+   * photograph. Those two swapped one view for another mid-change and
+   * showed the seam.
+   *
+   * So the test is about the pictures rather than the places: fade the
+   * whole face unless there is a photograph on both sides of the change.
+   */
+  const alone = !cover || !worn;
   // Fanned from the centre, so one card sits straight, two lean apart and
   // three read as a hand laid down. Three degrees is the whole effect:
   // enough that the edges are not parallel, little enough that no name

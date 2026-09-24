@@ -288,6 +288,34 @@ describe('while it waits', () => {
     expect(currentLine()).toBe('Your day runs 18:00–20:45');
   });
 
+  // Measured, not reasoned. The deck filed its own timeline and it showed
+  // the first set of photographs being replaced 557ms into the first
+  // option — no option change to announce it, and the set it replaced
+  // coming back two seconds later as the third of three. Four sets of
+  // pictures for three plans, one of them a repeat.
+  //
+  // `planTrips` re-runs whenever the catalog, the saved lists or the
+  // taste profile land, and all three arrive asynchronously; the note on
+  // the narration hold has named that since before this screen drew
+  // anything. What was new was that the pictures were paying for it too.
+  it('walks the plans it started with, not the ones that land mid-hold', async () => {
+    const LATER = place('later', 'Late Arrival', { opening_hours: ALL_WEEK } as Partial<Place>);
+    const { navigation, rerender, route } = renderScreen();
+    expect(screen.getByText('Cộng Café')).toBeTruthy();
+
+    // The saved lists land and the day is drawn again, differently.
+    planTrips.mockImplementation(() => [plan('match', [stop(LATER, 18 * 60)], [18 * 60, 19 * 60])]);
+    catalog.current = { data: [...PLACES, LATER], loading: false, error: null, reload: vi.fn() };
+    rerender(<SketchingScreen navigation={navigation as unknown as Nav} route={route} />);
+    // Past the hold and past the swap the hold releases, which is
+    // staggered and then waits on the word's dip.
+    await tick(DECK_HOLD_MS + 500);
+
+    // The deck is still walking the set it opened with.
+    expect(screen.queryByText('Late Arrival')).toBeNull();
+    expect(screen.getByText('Sky Bar')).toBeTruthy();
+  });
+
   // The ring that used to stand here said the screen was working. Three
   // covers say what it is working on, which is the same wait spent
   // looking at your own day.

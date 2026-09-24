@@ -51,6 +51,9 @@
 create table if not exists public.deck_traces (
   id          uuid primary key default gen_random_uuid(),
   created_at  timestamptz not null default now(),
+  -- Loosened by 20260924203000: this enumeration refused every row the
+  -- app sent, and a trace table that will not store the value that
+  -- explains a failure is the wrong shape of strict.
   platform    text not null check (platform in ('ios', 'android')),
   os_version  text check (os_version is null or length(os_version) <= 40),
   is_dev      boolean not null default false,
