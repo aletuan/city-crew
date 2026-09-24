@@ -84,6 +84,27 @@ describe('SketchDeck', () => {
     expect(screen.queryByText('Delta')).toBeNull();
   });
 
+  // `transition` is an old-to-new cross-fade on one view. The source is
+  // switched at the bottom of the dip, so that cross-fade ran while the
+  // deck was hidden and was still going as the dip brought the card back
+  // — what came up was the previous photo blended into the new one.
+  it('gives a new plan a new picture view rather than re-dressing the old one', async () => {
+    const P = place('p', 'Papa', [shot('https://example.test/p.jpg')]);
+    const Q = place('q', 'Quebec', [shot('https://example.test/q.jpg')]);
+    const { rerender } = draw({ places: [P], span: 1 });
+    const before = document.querySelector('img');
+    expect(before?.getAttribute('src')).toBe('https://example.test/p.jpg');
+
+    rerender(<SketchDeck places={[Q]} span={1} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(600); });
+
+    const after = document.querySelector('img');
+    expect(after?.getAttribute('src')).toBe('https://example.test/q.jpg');
+    // The same node with a new `src` is the old view being re-dressed,
+    // which is exactly what starts the blend.
+    expect(after).not.toBe(before);
+  });
+
   it('asks for nothing when there is no plan after this one', () => {
     draw({ places: [A] });
     expect(prefetch).not.toHaveBeenCalled();

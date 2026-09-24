@@ -46,7 +46,24 @@
 //
 // `transition` on the image is the net under that, for the run where the
 // lead was not enough: a bitmap that lands late fades in rather than
-// appearing between two frames.
+// appearing between two frames. It is keyed to the photo, and that is
+// load-bearing — see below.
+//
+// ── the picture is a new view, not the old one holding a new source ──
+//
+// `transition` is documented as how the view "should transition the
+// contents when switching the image source": an old-to-new cross-fade on
+// one view. The source is switched at the bottom of the dip, so that
+// cross-fade started while the deck was hidden and was still running for
+// its whole 180ms as the dip brought the card back over 220 — and what
+// came up was the previous photo blended into the new one, brightening.
+// Reported as the picture not appearing cleanly, and that is what it
+// was.
+//
+// Keyed by the photo's own uri, the old view goes and a new one arrives,
+// so there is no previous bitmap to blend with. The transition then
+// covers only the thing it was added for: a picture that is not decoded
+// yet.
 //
 // ── where the places come from ──
 //
@@ -143,13 +160,14 @@ function Slot({ place, nth, of: count, still }: {
             {cover
               ? (
                 <Image
+                  key={cover.photo_uri}
                   source={{ uri: cover.photo_uri }}
                   style={s.photo}
                   contentFit="cover"
                   transition={180}
                 />
               )
-              : <View style={[s.photo, s.photoOff]} />}
+              : <View style={s.photo} />}
             <Text style={s.name} numberOfLines={1}>{seen.name_en}</Text>
           </>
         ) : null}
@@ -221,10 +239,17 @@ const s = StyleSheet.create({
   },
   face: { gap: 5 },
   // 4:3, so the height follows whatever width the row settled on.
-  photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.card - 6 },
-  // The same fill every other card in the app shows for a place with no
-  // photo — see `MapPlaceCard`.
-  photoOff: { backgroundColor: colors.surfaceGlass },
+  //
+  // The fill is under every photo, not only under the places that have
+  // none. A picture that is not decoded yet draws nothing, and nothing
+  // over an elevated card is a white hole the size of the photo; the
+  // same grey every other card in the app shows for a place without one
+  // — see `MapPlaceCard` — makes that moment a placeholder instead of a
+  // flash, and it is covered the instant the bitmap lands.
+  photo: {
+    width: '100%', aspectRatio: 4 / 3, borderRadius: radius.card - 6,
+    backgroundColor: colors.surfaceGlass,
+  },
   // 13, which is the caption size the screens that need one write for
   // themselves — `type` stops at `meta` (15). Semibold because it is the
   // only word on the card and has to hold against the photo above it.
