@@ -249,7 +249,6 @@ describe('while it waits', () => {
     expect(screen.getByText('Old Quarter')).toBeTruthy();
     // An unknown key is dropped rather than printed as a raw slug.
     expect(screen.getByText('Cafés')).toBeTruthy();
-    expect(screen.getByText('You can edit everything afterwards.')).toBeTruthy();
     expect(screen.getByText('Plan a trip')).toBeTruthy();
     for (const st of SKETCH_STEPS) expect(screen.getByText(st.en)).toBeTruthy();
   });
@@ -549,7 +548,6 @@ describe('the dead end', () => {
     expect(screen.getByText(
       'Nothing in this city matches those choices for that hour. Cafés has places open — try adding it.',
     )).toBeTruthy();
-    expect(screen.queryByText('You can edit everything afterwards.')).toBeNull();
     // The skeleton box is gone: nothing is on its way.
     expect(feedTexts()).toEqual([]);
     expect(doneCount()).toBe(SKETCH_STEPS.length);

@@ -350,10 +350,13 @@ describe('the cards', () => {
     expect(cachedNarration).toHaveBeenCalledWith(narratableOf(ICONIC.stops as never), 'en');
   });
 
-  it('says per-person once under the cards, not on each', () => {
+  // Said once under the cards rather than on each of them, which is the
+  // claim: `pinnedDropped` and this line are both computed once for all
+  // three plans, so on a card either would have been the same sentence
+  // three times.
+  it('says what a tap does once under the cards, not on each', () => {
     renderScreen();
-    expect(screen.getAllByText(/Costs are estimated for one person\./)).toHaveLength(1);
-    expect(screen.getByText('Costs are estimated for one person. Tap one to nudge its times and save it.')).toBeTruthy();
+    expect(screen.getAllByText('Tap one to nudge its times and save it.')).toHaveLength(1);
   });
 });
 
@@ -380,7 +383,7 @@ describe('fewer than three, and none', () => {
     planTrips.mockImplementation(() => []);
     renderScreen();
     expect(screen.getByText('Nothing here matches those answers now. Try Regenerate, or change what you asked for.')).toBeTruthy();
-    expect(screen.queryByText(/Costs are estimated/)).toBeNull();
+    expect(screen.queryByText(/^Tap one/)).toBeNull();
     expect(screen.queryByText(/^Only /)).toBeNull();
     expect(badges()).toEqual([]);
     expect(regen()).toBeTruthy();

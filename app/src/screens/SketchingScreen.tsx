@@ -547,15 +547,7 @@ export default function SketchingScreen({ navigation, route }: {
               wide
             />
           </>
-        ) : (
-          <Text style={s.note}>
-            {t(
-              'You can edit everything afterwards.',
-              'Bạn có thể sửa lại mọi thứ sau.',
-              'あとから全部編集できます。',
-            )}
-          </Text>
-        )}
+        ) : null}
       </ScrollView>
     </Screen>
   );
