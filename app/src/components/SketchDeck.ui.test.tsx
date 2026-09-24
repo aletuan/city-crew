@@ -12,13 +12,17 @@
 //
 // Nothing here asserts how it looks. `Animated` values do not tick in
 // this environment and no layout is computed, so the visible claims —
-// the fan, the lift, the dissolve — are for a phone.
+// the fan, the lift, the dissolve — are for a phone. That also rules out
+// asserting the order of the two clocks inside a slot: the picture is
+// handed over before the word, but with the fade completing instantly
+// both land in one tick, and a test of it passed against a version that
+// had them the other way round. It is not here for that reason.
 
 import React from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen } from '../uitest/render';
 import { Image } from 'expo-image';
-import SketchDeck, { BACK_MS, OUT_MS, SWAP_STEP_MS } from './SketchDeck';
+import SketchDeck, { CROSS_MS, NAME_IN, NAME_OUT, SWAP_STEP_MS } from './SketchDeck';
 import { DECK_HOLD_MS } from '../lib/sketch';
 import type { Place } from '../lib/data';
 
@@ -49,10 +53,17 @@ describe('SketchDeck', () => {
   // fault these numbers were raised to fix, arrived at from the other
   // side.
   it('finishes a swap with the set still standing', () => {
-    const rowSwap = 2 * SWAP_STEP_MS + OUT_MS + BACK_MS;
+    const rowSwap = 2 * SWAP_STEP_MS + CROSS_MS;
     expect(rowSwap).toBeLessThan(DECK_HOLD_MS);
     // And by enough to be a rest rather than a gap between two moves.
     expect(DECK_HOLD_MS - rowSwap).toBeGreaterThan(rowSwap);
+  });
+
+  // The picture and the word are timed apart on purpose and have to land
+  // together: a name that settles after its photo has finished dissolving
+  // is the card changing twice.
+  it('lands the name inside the picture it belongs to', () => {
+    expect(NAME_OUT + NAME_IN).toBe(CROSS_MS);
   });
 
   it('draws the places it was handed, and nothing it was not', () => {
@@ -97,11 +108,16 @@ describe('SketchDeck', () => {
     expect(screen.queryByText('Delta')).toBeNull();
   });
 
-  // `transition` is an old-to-new cross-fade on one view. The source is
-  // switched at the bottom of the dip, so that cross-fade ran while the
-  // deck was hidden and was still going as the dip brought the card back
-  // — what came up was the previous photo blended into the new one.
-  it('gives a new plan a new picture view rather than re-dressing the old one', async () => {
+  // The reverse of what #669 asserted, and deliberately.
+  //
+  // That change keyed the view by its uri so a swap threw the old one
+  // away, because an old-to-new blend running under a dip came back up as
+  // two photos mixed. With the dip gone the blend is the effect, and it
+  // needs the old bitmap to blend *from* — which only the same view has.
+  // A new view would have nothing, and would show the fill until its own
+  // picture decoded: the empty frame this screen has been reported for
+  // four times.
+  it('keeps one picture view across a swap, so it has something to dissolve from', async () => {
     const P = place('p', 'Papa', [shot('https://example.test/p.jpg')]);
     const Q = place('q', 'Quebec', [shot('https://example.test/q.jpg')]);
     const { rerender } = draw({ places: [P], span: 1 });
@@ -113,9 +129,9 @@ describe('SketchDeck', () => {
 
     const after = document.querySelector('img');
     expect(after?.getAttribute('src')).toBe('https://example.test/q.jpg');
-    // The same node with a new `src` is the old view being re-dressed,
-    // which is exactly what starts the blend.
-    expect(after).not.toBe(before);
+    // The same node wearing the new source: the old view held on to, not
+    // replaced.
+    expect(after).toBe(before);
   });
 
   it('asks for nothing when there is no plan after this one', () => {
