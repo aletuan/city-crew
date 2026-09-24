@@ -456,19 +456,38 @@ function heading(
 /**
  * How the list arrives.
  *
- * `CARD_IN_MS` is what one card's rise takes; `CARD_STEP_MS` is the gap
- * between them. The stagger only ever delays the *later* cards — the
- * first is fully readable inside 280ms, which is the rule this pacing is
- * built on. The reader has just waited five seconds for these; the
- * reveal is allowed to be a sequence, but the answer is not allowed to
- * be withheld while it plays.
+ * ── the screen's own fade comes first, and it used to eat this ──
  *
- * Three cards therefore finish at 140 + 280 = 420ms, and their marks by
- * about 540. The reference this was taken from spent 1.25 seconds on the
- * same moment, most of it on a blank screen.
+ * This screen cross-fades in, and a screen's opacity multiplies every
+ * card's. Starting the rise at mount meant starting it at the *beginning*
+ * of that fade: by the time a card reached its own full opacity at 280ms
+ * the screen was only at about 0.8, so the whole movement played while
+ * the page was still translucent and what the reader met was three cards
+ * already in place. Reported as "it feels swallowed", which is exactly
+ * what it was.
+ *
+ * `ENTER_MS` holds the group until the page is solid. It is a constant
+ * rather than a reading of the real thing because there is nothing to
+ * read: `animationDuration` is Android-only on a native stack, and the
+ * iOS fade is the platform's ~350ms. 300 is deliberately a little short
+ * of that — landing early costs a few percent of the fade, landing late
+ * costs a visibly empty page, and only one of those is worth avoiding.
+ *
+ * ── the pacing ──
+ *
+ * `CARD_IN_MS` is one card's rise; `CARD_STEP_MS` the gap between them.
+ * The stagger only ever delays the *later* cards. Three finish at
+ * 300 + 120 + 260 = 680ms and their marks by about 790.
+ *
+ * That is slower than it was on paper and faster than it was to watch:
+ * the rise now happens where it can be seen. The reference this was
+ * taken from spent 1.25 seconds on the same moment, 250 of them on a
+ * blank screen.
  */
-const CARD_IN_MS = 280;
-const CARD_STEP_MS = 70;
+const ENTER_MS = 300;
+const CARD_IN_MS = 260;
+const CARD_STEP_MS = 60;
+
 
 /**
  * Where the day starts, in the mark the reader has been watching.
@@ -494,7 +513,7 @@ function StartMark({ nth }: { nth: number }) {
   // `CARD_IN` behind its own card's delay: the mark lands into a card
   // that has arrived, rather than hanging in the space where one is
   // about to be.
-  const land = useArrival(260, nth * CARD_STEP_MS + CARD_IN_MS / 2, still);
+  const land = useArrival(240, ENTER_MS + nth * CARD_STEP_MS + CARD_IN_MS / 2, still);
   return (
     <Animated.View
       style={[
@@ -535,16 +554,19 @@ function PlanCard({ plan, name, nth, onPress }: {
   // taking from the reference video: a list that assembles reads as a
   // list that was *made*, where three cards appearing at once reads as a
   // page that was always there.
-  const rise = useArrival(CARD_IN_MS, nth * CARD_STEP_MS, useReducedMotion());
+  const rise = useArrival(CARD_IN_MS, ENTER_MS + nth * CARD_STEP_MS, useReducedMotion());
 
   return (
     <Animated.View
       style={{
         opacity: rise,
-        // 14pt, and up rather than in from the side. The cards are a
+        // 18pt, and up rather than in from the side. The cards are a
         // list, and a list assembles downward; sliding them in
         // horizontally would say "these came from somewhere else".
-        transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
+        // 14 was the first figure and it was too quiet to read even once
+        // the fade stopped hiding it — a card moving a tenth of its own
+        // height is a card that did not move.
+        transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
       }}
     >
       <PressableScale
