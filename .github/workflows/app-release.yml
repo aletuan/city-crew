@@ -47,6 +47,27 @@
 # the production profile in `eas.json`). Tag and version agreeing is a
 # courtesy to whoever reads the tag list later, and nothing checks it.
 #
+# ── bump `version` after every App Store release ──
+#
+# A build number is not enough. Apple keeps a pre-release train per
+# `CFBundleShortVersionString`, and approving that version on the App
+# Store closes its train for good: every later upload under it is
+# refused, whatever its build number.
+#
+#   Invalid Pre-Release Train. The train version '1.0.3' is closed for
+#   new build submissions (409)
+#
+# That is what happened to 1.0.3 (21), the first `preview` build. EAS
+# incremented 20 → 21 and built it fine; App Store Connect refused the
+# upload because 1.0.3 was already live. `autoIncrement` cannot see this
+# — it counts builds, and the train is about the version.
+#
+# So `app.json` moves to the next patch as soon as a release is
+# approved, and every TestFlight build after that — diagnostic ones
+# included — rides the open train. The refusal costs a whole build, and
+# it arrives at submit time, minutes after the build everybody already
+# paid for.
+#
 # ── why it does not wait ──
 #
 # `--no-wait` returns as soon as EAS has the job. A queued build on the
