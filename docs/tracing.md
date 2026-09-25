@@ -117,7 +117,9 @@ Năm loại `what`:
 
 **`load − ask` là phép đo quan trọng nhất.** `expo-image` giữ ảnh cũ cho
 tới khi ảnh mới giải mã xong, nên khoảng đó *chính là* thời gian ảnh cũ
-đứng chờ. Đo thực tế trên iPhone: **9–47ms** (prefetch hoạt động tốt).
+đứng chờ. Đo thực tế trên iPhone: **21–31ms** trên bản preview, **9–47ms**
+trên bản production trước đó — prefetch hoạt động tốt, và hai bản độc lập
+cho cùng một câu trả lời. Số liệu đầy đủ ở mục 6.
 
 Không có sự kiện "biến mất": một địa điểm rời ô đúng vào `ask` của địa
 điểm kế tiếp trong ô đó. Cũng không có sự kiện "xong": bằng `name` cộng
@@ -144,6 +146,22 @@ Khác nhau có chủ đích:
   lại có `EVENT_CAP`.
 - Gửi **một lần/tiến trình** (khởi động) so với **một lần/lượt vào màn
   hình** (deck mở lại được, nên có `reportDeck.reset()`).
+
+Khác nhau **không** có chủ đích — `startup_traces` thiếu cột `channel`:
+
+`deck_traces` có `channel`, `startup_traces` không. Cột đó là thứ duy
+nhất kết thúc được hai ngày chẩn đoán sai kênh build, và bảng kia không
+có nó. Giá phải trả đã hiện ra ngay: dòng `startup_traces` lúc
+`03:15:26` ngày 25/9 **không giải thích được**. Công tắc khởi động luôn
+là `!IS_PRODUCTION_CHANNEL` và chưa từng bị bật tay (khác công tắc deck,
+xem #679), nên một bản production đáng lẽ không ghi gì; mà bản preview
+thì tới 03:46 mới được dựng. Không có cột `channel` thì không cách nào
+biết máy lúc ấy đang chạy kênh gì, và mọi câu trả lời đều là suy đoán —
+đúng thứ tài liệu này tồn tại để chặn.
+
+**Việc cần làm:** thêm `channel` vào `startup_traces` với cùng
+`default '(not sent)'`, và gửi nó từ `tracereport.ts` như `decktrace.ts`
+đang gửi.
 
 ---
 
@@ -251,6 +269,115 @@ order by ms;
 - Một `load` xuất hiện *trước* `ask` của cùng ô là `expo-image` báo xong
   tấm ảnh nó **đang giữ**, không phải tấm mới. Đừng trừ nhầm cặp đó.
 
+### Dữ liệu mẫu — 25/9/2026, bản preview 1.0.4 (22)
+
+iPhone, iOS 26.3, `is_dev: false`, `channel: preview`, `span: 2`. Đây là
+lượt đo hợp lệ đầu tiên: mọi con số trước đó đến từ bản production chạy
+bundle có công tắc bị bật tay, thứ đã phải gỡ ở #679.
+
+**Lượt A** — `04:05:18`, `options: 2`, `total_ms: 2785`, 10 sự kiện:
+
+```
+   ms  opt  slot  what   place
+    0    0    -   option
+   36    0    0   load   sidney-myer-music-bowl
+   46    0    1   load   her-bar
+ 2415    1    -   option
+ 2418    1    0   ask    melbourne-skydeck
+ 2439    1    0   load   melbourne-skydeck
+ 2568    1    1   ask    la-camera-italian-restaurant
+ 2599    1    1   load   la-camera-italian-restaurant
+ 2634    1    0   name   melbourne-skydeck
+ 2785    1    1   name   la-camera-italian-restaurant
+```
+
+**Lượt B** — `04:06:01`, `options: 2`, `total_ms: 2781`, 11 sự kiện:
+
+```
+   ms  opt  slot  what   place
+    0    0    -   option
+   27    0    0   load   sidney-myer-music-bowl
+   43    0    1   load   la-camera-italian-restaurant
+ 2424    1    -   option
+ 2431    1    0   ask    melbourne-skydeck
+ 2452    1    0   load   melbourne-skydeck
+ 2485    1    1   load   la-camera-italian-restaurant   ← load không có ask
+ 2564    1    1   ask    her-bar
+ 2592    1    1   load   her-bar
+ 2649    1    0   name   melbourne-skydeck
+ 2781    1    1   name   her-bar
+```
+
+Dòng `2485` là **đúng cái bẫy nói ở trên**, gặp ngoài đời: ô 1 báo `load`
+cho `la-camera` trong khi `ask` của nó (`her-bar`) mãi `2564` mới tới.
+Đó là `expo-image` báo xong tấm nó *đang giữ* từ option 0. Trừ `2485 −
+2431` sẽ ra 54ms và hoàn toàn vô nghĩa. Cặp đúng là `2592 − 2564 = 28`.
+Đây cũng là lý do lượt B có 11 sự kiện còn lượt A có 10 — không phải lỗi.
+
+**Rút ra từ hai lượt:**
+
+| đại lượng | công thức | thiết kế | lượt A | lượt B |
+|---|---|---|---|---|
+| hold mỗi option | `option[n+1] − option[n]` | 2400 | 2415 | 2424 |
+| lệch giữa hai ô | `ask(slot1) − ask(slot0)` | 140 | 150 | 133 |
+| chữ chìm rồi nổi | `name − ask` cùng ô | 200 | 216 / 217 | 218 / 217 |
+| giải mã ảnh | `load − ask` cùng ô | — | 21 / 31 | 21 / 28 |
+
+Ba dòng đầu bám sát con số thiết kế trong `SketchDeck.tsx`, sai lệch
+7–13ms — đúng mức một `setTimeout` của JS thread. Dòng cuối là con số
+**không ai thiết kế cả, và là con số quan trọng nhất**: khoảng cách từ
+lúc hỏi ảnh tới lúc ảnh sẵn sàng chỉ 21–31ms. Bốn vòng sửa trước đó đã
+đuổi theo một độ trễ giải mã không tồn tại. Số liệu cũ trên bản
+production (9–47ms) cho cùng kết luận — hai bản khác nhau, cùng một câu
+trả lời, nên đây không phải nhiễu.
+
+Không lượt nào có `ask` trước lần `option` đầu tiên. Lỗi vẽ lại giữa
+chừng đã sửa ở #676 không quay lại.
+
+**Hai lượt quá ngắn để đo** — `04:04:43` và `04:04:54`, cùng
+`options: 1` và 3 sự kiện, `total_ms` 45 và 22. Lượt đầu:
+
+```
+   ms  opt  slot  what   place
+    0    0    -   option
+   36    0    0   load   her-bar
+   45    0    1   load   la-camera-italian-restaurant
+```
+
+Màn hình rời đi trước khi hết hold đầu tiên, nên không có `ask`, không có
+`name`, không có lần đổi option nào. Không có gì để đo — nhưng dòng vẫn
+được ghi, và **`options: 1` là dấu hiệu nhận ra ngay**. Khi lọc dữ liệu
+để phân tích thì bỏ các dòng `options < 2`.
+
+### Dữ liệu mẫu — `startup_traces`, cùng máy, `04:04:28`
+
+`total_ms: 2695`, `is_dev: false`:
+
+```
+    9  bundle:evaluated
+   26  theme:ready
+   39  fonts:settled
+   39  first-frame:released      ← người dùng thấy gì đó ở đây
+   88  explore:mounted
+   91  city:bootstrap
+   93  city:store-read
+   94  city:committed(cached)
+  368  explore:content
+  368  catalog:places(cached)
+  368  catalog:collections(cached)
+  368  catalog:avatars
+ 1975  city:cities-fetched
+ 1975  city:committed(stored)
+ 2102  catalog:places
+ 2695  catalog:collections
+```
+
+Cách đọc: **39ms tới khung hình đầu, 368ms tới nội dung thật** (từ cache),
+rồi mạng về dần trong 2.7 giây tiếp theo và thay dữ liệu cache bằng dữ
+liệu tươi. Cái đáng theo dõi là `first-frame:released` và
+`explore:content`; các mốc sau đó là mạng, thay đổi theo từng lần và
+không nói gì về app.
+
 ---
 
 ## 7. Khi bảng trống — thứ tự chẩn đoán
@@ -305,8 +432,26 @@ lỗi là ràng buộc phá thứ nó gắn vào.**
 | giá trị | nghĩa |
 |---|---|
 | `(not sent)` | bundle cũ hơn cột này — máy chưa update |
-| `null` | bundle mới, build không có dấu channel (Expo Go / dev) |
+| `null` | xem ngay dưới — **hai nghĩa**, phân biệt bằng `created_at` |
 | `preview` / `production` | channel thật |
+
+`null` mơ hồ vì `alter table add column` **điền null vào mọi dòng đã có**,
+và `default` chỉ áp cho dòng ghi *sau* đó. Nên `null` là:
+
+- **dòng ghi trước migration** — không phải máy nói gì cả, chỉ là cột
+  chưa tồn tại lúc ấy. Cột thêm ở `20260925003000`, default thêm ở
+  `20260925011500`.
+- **dòng ghi sau đó mà bundle gửi null thật** — build không có dấu
+  channel (Expo Go, hoặc dev không qua EAS).
+
+So `created_at` với hai mốc trên là xong. Ví dụ thật: 17 dòng `null` từ
+21:10 ngày 24/9 tới 01:06 ngày 25/9 **cùng một máy** (`ios 26.3`,
+`is_dev: false`) với các dòng đọc `production` từ 01:51 — máy không đổi
+gì, cột mới sinh ra ở giữa.
+
+*(Bài học: giá trị mặc định chỉ cứu được tương lai. Muốn dòng cũ nói
+đúng thì phải `update` chúng trong chính migration ấy, hoặc chấp nhận
+rằng `created_at` là thứ duy nhất phân biệt được.)*
 
 *(Bài học tổng quát: đừng để giá trị mặc định của một dụng cụ đo trùng
 với một trong các câu trả lời nó cần phân biệt.)*
