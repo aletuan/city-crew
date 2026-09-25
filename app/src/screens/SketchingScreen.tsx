@@ -24,7 +24,9 @@
 // where a test can reach them. What is left here is the drawing.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import SketchDeck from '../components/SketchDeck';
@@ -49,7 +51,7 @@ import { useSave } from '../lib/save';
 import { usePlanProfile } from '../lib/tasteProfile';
 import {
   DECK_HOLD_MS, deckSpan, findingFeed, type FindingLine, finished, findingsOf, SKETCH_STEPS,
-  STEP_FLOOR_MS, stepStates,
+  fitWants, STEP_FLOOR_MS, stepStates,
   type StepState,
 } from '../lib/sketch';
 import { draftFrom, type TripDraft } from '../lib/trip';
@@ -188,10 +190,11 @@ function FindingFeed({ previous, current, still }: {
 }
 
 /**
- * How many category chips the facts card draws before it starts counting.
- * See the note at `shownWants` for why this number exists at all.
+ * The facts card's own padding, named because two places need it: the
+ * styles that draw it, and the arithmetic that works out how much room
+ * the chips inside it have left.
  */
-const WANTS_SHOWN = 3;
+const CARD_PAD = 14;
 
 export default function SketchingScreen({ navigation, route }: {
   navigation: Nav;
@@ -199,6 +202,9 @@ export default function SketchingScreen({ navigation, route }: {
 }) {
   const { t, lang } = useI18n();
   const clearance = useTabBarClearance(10);
+  // For the chip row's own arithmetic — see `wantsFit`. The real width,
+  // so a wider phone shows one more chip rather than the same three.
+  const { width } = useWindowDimensions();
   const calm = useReducedMotion();
   const p = route.params;
   const { data: places, loading, error, reload } = usePlaces();
@@ -527,7 +533,7 @@ export default function SketchingScreen({ navigation, route }: {
   // than drawn grey: a chip with no glyph among chips that have one reads
   // as a chip that failed to load.
   const wants = p.categories.filter((c) => CATEGORIES[c]);
-  // Three, then a count.
+  // As many as fit on one line, then a count.
   //
   // There is no cap on the group this comes from, and there must not be
   // one — `IdeasScreen` says why: `planner.ts` sizes the outing from how
@@ -535,15 +541,24 @@ export default function SketchingScreen({ navigation, route }: {
   // somebody's day. Nine exist. Drawn in full inside a card, six of them
   // take three rows and push the findings box off the screen.
   //
-  // So the card shows three and counts the rest. Three because that is
-  // where the common case sits, and because it bounds the row at two
-  // lines on a 390pt phone whatever the labels are.
+  // The rule is width rather than a number, because whether three fit is
+  // a question about their labels: "Cà phê · Ăn uống · Về đêm" is 311pt
+  // and fits the 318 a card leaves on a 390pt phone; "Thiên nhiên ·
+  // Ngắm cảnh · Giải trí" is 376 and does not. `fitWants` does that
+  // arithmetic and its note says why it estimates rather than measures.
+  //
+  // The width is the real one, from `useWindowDimensions`, so a wider
+  // phone shows more and a narrower one shows fewer — and the page's own
+  // margins and the card's padding are subtracted here rather than
+  // guessed there.
   //
   // The overflow pill hides the same fact from everybody: a reader who
   // sees "+2" and a reader who hears it both know two more were chosen
   // and neither is told which. That parity is why it needs no separate
   // accessibility label.
-  const shownWants = wants.slice(0, WANTS_SHOWN);
+  const wantLabels = wants.map((c) => categoryLabel(c, t));
+  const wantsFit = fitWants(wantLabels, width - space.page * 2 - CARD_PAD * 2);
+  const shownWants = wants.slice(0, wantsFit);
   const moreWants = wants.length - shownWants.length;
 
   return (

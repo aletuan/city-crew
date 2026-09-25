@@ -35,11 +35,20 @@ const legsOf = vi.hoisted(() => vi.fn());
 const catalog = vi.hoisted(() => ({
   current: { data: [] as unknown[], loading: false, error: null as Error | null, reload: (() => {}) as () => void },
 }));
-const cityState = vi.hoisted(() => ({ current: { city: { id: 'hanoi' } as { id: string; tz?: string } | null } }));
+type FakeCity = { id: string; tz?: string; short_en?: string; short_vi?: string; short_ja?: string | null };
+const cityState = vi.hoisted(() => ({ current: { city: { id: 'hanoi' } as FakeCity | null } }));
 const mine = vi.hoisted(() => ({ current: [] as unknown[] }));
 // One object for the run, as the real hook's memo hands back: a fresh one
 // per render would re-plan on every render and restart the words' cap.
 const profile = vi.hoisted(() => ({ taste: { cafes: 2 }, budgetVnd: 400000 }));
+
+// A 390pt phone, because the chip row's arithmetic asks the window how
+// wide it is and `react-native-web` would otherwise answer with jsdom's
+// 1024 — a window no reader has, and one where every category fits.
+vi.mock('react-native', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  useWindowDimensions: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
+}));
 
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -326,26 +335,33 @@ describe('while it waits', () => {
   // cell splits on it rather than printing it, so the default reads as
   // two ranks the way a district reads as one.
   it('splits a where that carries its own separator', () => {
-    renderScreen({ where: 'Around Melbourne · near me' });
+    renderScreen({ where: 'Around Melbourne · Near you' });
     expect(screen.getByText('Around Melbourne')).toBeTruthy();
-    expect(screen.getByText('near me')).toBeTruthy();
-    expect(screen.queryByText('Around Melbourne · near me')).toBeNull();
+    expect(screen.getByText('Near you')).toBeTruthy();
+    expect(screen.queryByText('Around Melbourne · Near you')).toBeNull();
   });
 
-  // Three, then a count — there are nine categories and no cap on
-  // choosing them, and six drawn in full push the findings box off screen.
-  it('draws three categories and counts the rest', () => {
+  // Nine categories exist and nothing caps the choosing, so the row is
+  // bounded by what fits rather than by a number. On a 390pt phone that
+  // is two chips and a count once the count itself needs room: three
+  // chips are 276pt of the 318 a card leaves, and the pill wants 50 more.
+  it('draws what fits and counts the rest', () => {
     renderScreen({ categories: ['cafes', 'eats', 'views', 'nature', 'nightlife'] });
     expect(screen.getByText('Cafés')).toBeTruthy();
     expect(screen.getByText('Eats')).toBeTruthy();
-    expect(screen.getByText('Views')).toBeTruthy();
+    expect(screen.queryByText('Views')).toBeNull();
     expect(screen.queryByText('Nature')).toBeNull();
     expect(screen.queryByText('Nightlife')).toBeNull();
-    expect(screen.getByText('+2')).toBeTruthy();
+    expect(screen.getByText('+3')).toBeTruthy();
   });
 
+  // And the common case keeps all of them, because with no pill to make
+  // room for, three fit. A fixed cap would have been right here and wrong
+  // in the test above.
   it('counts nothing when three is all there is', () => {
     renderScreen({ categories: ['cafes', 'eats', 'views'] });
+    expect(screen.getByText('Cafés')).toBeTruthy();
+    expect(screen.getByText('Eats')).toBeTruthy();
     expect(screen.getByText('Views')).toBeTruthy();
     expect(screen.queryByText(/^\+/)).toBeNull();
   });
