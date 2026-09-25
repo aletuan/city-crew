@@ -1,0 +1,26 @@
+-- A null channel had two meanings, so it had none.
+--
+-- `channel` was added nullable, because a build with no stamp — Expo Go,
+-- a bare dev build — genuinely has none, and null is the honest answer
+-- there. What that missed is that null is *also* what the column holds
+-- when the row never carried it: a phone still running the bundle from
+-- before the column existed inserts without it, and the default fills in
+-- null.
+--
+-- The first row back read null, and could not be used. It might have
+-- been a build with no channel, or a build that had not updated yet, and
+-- the whole point of the column was to stop guessing between two
+-- possibilities exactly like those.
+--
+-- So the two get different words. An insert that omits the column takes
+-- the default and says `(not sent)`; an insert that carries the column
+-- with no channel in it stores null, because an explicit null in an
+-- INSERT beats a DEFAULT. Nothing in the app changes, and the next visit
+-- from a phone that has updated is legible.
+--
+--   (not sent)    the bundle predates the column
+--   null          the bundle sends it; the build has no channel stamp
+--   preview       …and the switches in `lib/decktrace` can go back
+--   production    …and they cannot, without a rebuild on that profile
+
+alter table public.deck_traces alter column channel set default '(not sent)';
