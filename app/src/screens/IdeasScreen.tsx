@@ -130,14 +130,25 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const set = <K extends keyof TripDraft>(k: K, v: TripDraft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
-  // Plain "near me" until the city resolves: "Around  · near me" printed
+  // Plain "near you" until the city resolves: "Around  · near you" printed
   // the hole where its name goes.
+  //
+  // "Near you", not "near me". The app addresses the reader everywhere
+  // else it speaks — "Ghim bạn đã thả", "Lựa chọn của bạn" — and this one
+  // row answered in their voice instead, which reads as the app quoting
+  // them rather than telling them something.
+  //
+  // Capitalised after the separator, because that is what every other
+  // pair in this app does: "Thứ Bảy, 26 tháng 9 · Ban ngày". The lower
+  // case here was the exception, and it showed once `SketchingScreen`
+  // split the pair onto two lines and the second one opened with a small
+  // letter.
   const whereLabel = draft.district
     ?? (draft.at
       ? (draft.atName ?? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン'))
       : city
-        ? t(`Around ${city.short_en} · near me`, `Quanh ${city.short_vi} · gần tôi`, `${city.short_ja ?? city.short_en}周辺 · 現在地`)
-        : t('Near me', 'Gần tôi', '現在地'));
+        ? t(`Around ${city.short_en} · Near you`, `Quanh ${city.short_vi} · Gần bạn`, `${city.short_ja ?? city.short_en}周辺 · 現在地`)
+        : t('Near you', 'Gần bạn', '現在地'));
 
   /**
    * Where the reader is, for the default the label has always claimed.

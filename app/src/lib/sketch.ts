@@ -385,3 +385,64 @@ export function deckSpan(plans: readonly { stops: readonly unknown[] }[], max = 
  * deck being legible.
  */
 export const DECK_HOLD_MS = 2400;
+
+/**
+ * How many category chips fit on one line, and whether the rest need a
+ * count.
+ *
+ * ── why this is arithmetic rather than a constant ──
+ *
+ * The first attempt drew three and counted the rest, and three is the
+ * wrong shape of answer: whether three fit is a question about their
+ * labels, not their number. Measured against the nine this app ships,
+ * on the 318pt a card leaves inside a 390pt phone:
+ *
+ *   Cà phê · Ăn uống · Về đêm          311pt   three fit
+ *   Thiên nhiên · Ngắm cảnh · Giải trí  376pt   three do not
+ *
+ * So the rule is width, and the caller passes the width it has.
+ *
+ * ── why it estimates rather than measures ──
+ *
+ * `onLayout` would give the true width, one frame late and one render
+ * later, and under the harness these tests run in it gives nothing at
+ * all — so the behaviour would ship untested. An estimate is a worse
+ * number and a better rule: it is pure, it is exercised by the labels
+ * this catalog actually holds, and its failure mode is the one the
+ * screen already had, a row that wraps.
+ *
+ * The constants come off `Chip`'s own style — 14pt of padding each side,
+ * a 15pt glyph, a 7pt gap, an 8pt margin — and the per-character figure
+ * is the one place a measurement stands in for a font metric: 13.5pt of
+ * the medium weight this app ships, which is not available to arithmetic.
+ * Dynamic Type scales that text and this does not know it has, so a
+ * reader at the largest sizes gets a wrapped row. That is the behaviour
+ * they get everywhere else in the app, and it is honest: their words are
+ * bigger and fewer of them fit.
+ */
+const CHIP_FIXED = 50;
+const CHIP_PER_CHAR = 7.2;
+const CHIP_MARGIN = 8;
+const MORE_FIXED = 28;
+
+function chipWidth(label: string): number {
+  return CHIP_FIXED + CHIP_PER_CHAR * label.length + CHIP_MARGIN;
+}
+
+/**
+ * The number of `labels` to draw so that they and a "+n" pill for the
+ * rest stay on one line of `width` points. `labels.length` when they all
+ * fit; never fewer than one, because a lone "+9" says nothing at all.
+ */
+export function fitWants(labels: readonly string[], width: number): number {
+  if (labels.length === 0) return 0;
+  const widths = labels.map(chipWidth);
+  const all = widths.reduce((a, b) => a + b, 0);
+  if (all <= width) return labels.length;
+  for (let n = labels.length - 1; n > 1; n -= 1) {
+    const shown = widths.slice(0, n).reduce((a, b) => a + b, 0);
+    const more = MORE_FIXED + CHIP_PER_CHAR * `+${labels.length - n}`.length + CHIP_MARGIN;
+    if (shown + more <= width) return n;
+  }
+  return 1;
+}

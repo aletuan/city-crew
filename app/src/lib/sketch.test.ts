@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  findingFeed, finished, findingsOf, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, stopCount, summaryLine, type Step, DECK_HOLD_MS, deckSpan,
+  findingFeed, finished, findingsOf, fitWants, SKETCH_STEPS, STEP_FLOOR_MS, stepStates, stopCount, summaryLine, type Step, DECK_HOLD_MS, deckSpan,
 } from './sketch';
 
 const steps: Step[] = [
@@ -288,5 +288,54 @@ describe('deckSpan', () => {
 
   it('is nothing when there is nothing to plan', () => {
     expect(deckSpan([])).toBe(0);
+  });
+});
+
+describe('fitWants', () => {
+  // The width a card leaves inside a 390pt phone: the page gives up 22 at
+  // each edge and the card 14 more.
+  const PHONE = 390 - 22 * 2 - 14 * 2;
+
+  it('draws nothing when nothing was chosen', () => {
+    expect(fitWants([], PHONE)).toBe(0);
+  });
+
+  it('draws them all when they fit', () => {
+    expect(fitWants(['Cà phê'], PHONE)).toBe(1);
+    expect(fitWants(['Cà phê', 'Ăn uống'], PHONE)).toBe(2);
+    // Three short ones do fit, and a fixed cap of three would have been
+    // right here and wrong two lines down.
+    expect(fitWants(['Cà phê', 'Ăn uống', 'Về đêm'], PHONE)).toBe(3);
+  });
+
+  // The case that made this arithmetic rather than a constant: the same
+  // three-ness, labels long enough to overflow.
+  it('drops one when the labels are long', () => {
+    expect(fitWants(['Thiên nhiên', 'Ngắm cảnh', 'Giải trí'], PHONE)).toBe(2);
+  });
+
+  it('counts the rest of a long list rather than wrapping it', () => {
+    const all = ['Cà phê', 'Học tập', 'Ăn uống', 'Ngắm cảnh', 'Văn hóa',
+      'Thiên nhiên', 'Mua sắm', 'Về đêm', 'Giải trí'];
+    const n = fitWants(all, PHONE);
+    expect(n).toBeGreaterThan(0);
+    expect(n).toBeLessThan(all.length);
+  });
+
+  // A lone "+9" would say nothing at all, so one always survives however
+  // narrow the room is.
+  it('keeps one chip even when there is no room for it', () => {
+    expect(fitWants(['Thiên nhiên', 'Ngắm cảnh'], 40)).toBe(1);
+  });
+
+  // Room is the whole rule, so more of it shows more. The three long ones
+  // want 376pt between them: 318 is a phone and refuses the third, 400 is
+  // a tablet's column and takes it. A 430pt phone still refuses — which
+  // is the point of asking the window rather than assuming a phone.
+  it('shows more when there is more room, and not before', () => {
+    const three = ['Thiên nhiên', 'Ngắm cảnh', 'Giải trí'];
+    expect(fitWants(three, PHONE)).toBe(2);
+    expect(fitWants(three, 430 - 22 * 2 - 14 * 2)).toBe(2);
+    expect(fitWants(three, 400)).toBe(3);
   });
 });

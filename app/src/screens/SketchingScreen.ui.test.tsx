@@ -35,11 +35,20 @@ const legsOf = vi.hoisted(() => vi.fn());
 const catalog = vi.hoisted(() => ({
   current: { data: [] as unknown[], loading: false, error: null as Error | null, reload: (() => {}) as () => void },
 }));
-const cityState = vi.hoisted(() => ({ current: { city: { id: 'hanoi' } as { id: string; tz?: string } | null } }));
+type FakeCity = { id: string; tz?: string; short_en?: string; short_vi?: string; short_ja?: string | null };
+const cityState = vi.hoisted(() => ({ current: { city: { id: 'hanoi' } as FakeCity | null } }));
 const mine = vi.hoisted(() => ({ current: [] as unknown[] }));
 // One object for the run, as the real hook's memo hands back: a fresh one
 // per render would re-plan on every render and restart the words' cap.
 const profile = vi.hoisted(() => ({ taste: { cafes: 2 }, budgetVnd: 400000 }));
+
+// A 390pt phone, because the chip row's arithmetic asks the window how
+// wide it is and `react-native-web` would otherwise answer with jsdom's
+// 1024 — a window no reader has, and one where every category fits.
+vi.mock('react-native', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  useWindowDimensions: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
+}));
 
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -179,7 +188,9 @@ beforeEach(() => {
   prefetchNarration.mockImplementation(async () => words());
   legsOf.mockImplementation(() => [{ mode: 'walk', km: 0.35, minutes: 5 }]);
   catalog.current = { data: PLACES, loading: false, error: null, reload: vi.fn() };
-  cityState.current = { city: { id: 'hanoi' } };
+  // Short names too: the facts card falls back to the city's own when
+  // the reader gave no place at all.
+  cityState.current = { city: { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội' } };
   mine.current = [];
 });
 
@@ -270,25 +281,89 @@ describe('what it asks', () => {
 });
 
 describe('while it waits', () => {
-  it('names the evening, the date, the half and the place, and the categories it knows', () => {
+  // The date and its half are two ranks now rather than one line joined
+  // by a separator, which is what retires the hand-chosen break: each
+  // cell sizes itself, so there is no line left to overflow.
+  it('names the date, the half and the place as separate ranks', () => {
     renderScreen({ categories: ['cafes', 'mystery'] });
-    expect(screen.getByText('Sketching your evening…')).toBeTruthy();
-    // Two lines, and the break is chosen: when above, where below. One
-    // line wrapped wherever the last word fell, which on a real screen
-    // left "tôi" alone under four segments.
-    expect(screen.getByText(`${dateline('en', fromISO(todayISO())!)} · Evening`)).toBeTruthy();
+    expect(screen.getByText(dateline('en', fromISO(todayISO())!))).toBeTruthy();
+    expect(screen.getByText('Evening')).toBeTruthy();
     expect(screen.getByText('Old Quarter')).toBeTruthy();
+    // Joined, it is gone: the separator was the thing being replaced.
+    expect(screen.queryByText(/ · Evening$/)).toBeNull();
     // An unknown key is dropped rather than printed as a raw slug.
     expect(screen.getByText('Cafés')).toBeTruthy();
     expect(screen.getByText('Plan a trip')).toBeTruthy();
     for (const st of SKETCH_STEPS) expect(screen.getByText(st.en)).toBeTruthy();
   });
 
-  it('calls a day a day, and prints no category line when none is known', () => {
+  // "Sketching your evening…" is gone: it repeated the screen's own
+  // header in the same weight, and the one fact it carried that the
+  // header does not — day or evening — is the date cell's second line.
+  it('says nothing about sketching, and lets the card carry the half', () => {
+    renderScreen();
+    expect(screen.queryByText(/^Sketching/)).toBeNull();
+    expect(screen.getByText('Evening')).toBeTruthy();
+  });
+
+  it('calls a day a day, and prints no category chip when none is known', () => {
     renderScreen({ when: 'day', where: '', categories: ['mystery'] });
-    expect(screen.getByText('Sketching your day…')).toBeTruthy();
-    expect(screen.getByText(`${dateline('en', fromISO(todayISO())!)} · Day`)).toBeTruthy();
+    expect(screen.getByText('Day')).toBeTruthy();
+    expect(screen.getByText(dateline('en', fromISO(todayISO())!))).toBeTruthy();
     expect(screen.queryByText('Mystery')).toBeNull();
+  });
+
+  // `where` is absent whenever the reader picked no district, dropped no
+  // pin and has not granted location — `canPlan` does not ask for a
+  // place, so that plan runs and the planner searches the whole city.
+  // The cell says so rather than going missing.
+  it('names the city and the width of the search when no place was given', () => {
+    renderScreen({ where: null });
+    expect(screen.getByText('Hanoi')).toBeTruthy();
+    expect(screen.getByText('Anywhere in the city')).toBeTruthy();
+  });
+
+  // The one case left with nothing to say: no place and no city either.
+  it('draws the date alone when there is no city to fall back on', () => {
+    cityState.current = { city: null };
+    renderScreen({ where: null });
+    expect(screen.getByText(dateline('en', fromISO(todayISO())!))).toBeTruthy();
+    expect(screen.queryByText('Anywhere in the city')).toBeNull();
+  });
+
+  // `p.where` arrives joined and sometimes carries its own separator. The
+  // cell splits on it rather than printing it, so the default reads as
+  // two ranks the way a district reads as one.
+  it('splits a where that carries its own separator', () => {
+    renderScreen({ where: 'Around Melbourne · Near you' });
+    expect(screen.getByText('Around Melbourne')).toBeTruthy();
+    expect(screen.getByText('Near you')).toBeTruthy();
+    expect(screen.queryByText('Around Melbourne · Near you')).toBeNull();
+  });
+
+  // Nine categories exist and nothing caps the choosing, so the row is
+  // bounded by what fits rather than by a number. On a 390pt phone that
+  // is two chips and a count once the count itself needs room: three
+  // chips are 276pt of the 318 a card leaves, and the pill wants 50 more.
+  it('draws what fits and counts the rest', () => {
+    renderScreen({ categories: ['cafes', 'eats', 'views', 'nature', 'nightlife'] });
+    expect(screen.getByText('Cafés')).toBeTruthy();
+    expect(screen.getByText('Eats')).toBeTruthy();
+    expect(screen.queryByText('Views')).toBeNull();
+    expect(screen.queryByText('Nature')).toBeNull();
+    expect(screen.queryByText('Nightlife')).toBeNull();
+    expect(screen.getByText('+3')).toBeTruthy();
+  });
+
+  // And the common case keeps all of them, because with no pill to make
+  // room for, three fit. A fixed cap would have been right here and wrong
+  // in the test above.
+  it('counts nothing when three is all there is', () => {
+    renderScreen({ categories: ['cafes', 'eats', 'views'] });
+    expect(screen.getByText('Cafés')).toBeTruthy();
+    expect(screen.getByText('Eats')).toBeTruthy();
+    expect(screen.getByText('Views')).toBeTruthy();
+    expect(screen.queryByText(/^\+/)).toBeNull();
   });
 
   it('advances one step per reading floor and reports a finding under each', async () => {

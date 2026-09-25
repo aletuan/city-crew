@@ -24,7 +24,9 @@
 // where a test can reach them. What is left here is the drawing.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import SketchDeck from '../components/SketchDeck';
@@ -49,8 +51,8 @@ import { useSave } from '../lib/save';
 import { usePlanProfile } from '../lib/tasteProfile';
 import {
   DECK_HOLD_MS, deckSpan, findingFeed, type FindingLine, finished, findingsOf, SKETCH_STEPS,
-  STEP_FLOOR_MS, stepStates,
-  summaryLine, type StepState,
+  fitWants, STEP_FLOOR_MS, stepStates,
+  type StepState,
 } from '../lib/sketch';
 import { draftFrom, type TripDraft } from '../lib/trip';
 import { clampDay, fromISO, todayISO } from '../lib/day';
@@ -187,12 +189,22 @@ function FindingFeed({ previous, current, still }: {
   );
 }
 
+/**
+ * The facts card's own padding, named because two places need it: the
+ * styles that draw it, and the arithmetic that works out how much room
+ * the chips inside it have left.
+ */
+const CARD_PAD = 14;
+
 export default function SketchingScreen({ navigation, route }: {
   navigation: Nav;
   route: RootRoute<'Sketching'>;
 }) {
   const { t, lang } = useI18n();
   const clearance = useTabBarClearance(10);
+  // For the chip row's own arithmetic — see `wantsFit`. The real width,
+  // so a wider phone shows one more chip rather than the same three.
+  const { width } = useWindowDimensions();
   const calm = useReducedMotion();
   const p = route.params;
   const { data: places, loading, error, reload } = usePlaces();
@@ -464,10 +476,47 @@ export default function SketchingScreen({ navigation, route }: {
   // means anything. `p.where` already carries its own separator when it
   // is a city rather than a district ("Quanh Melbourne · gần tôi"), so
   // the second line is a phrase and not a fragment.
-  const when = summaryLine([
-    dateline(lang, fromISO(day) ?? new Date()),
-    p.when === 'day' ? t('Day', 'Ban ngày', '昼') : t('Evening', 'Buổi tối', '夜'),
-  ]);
+  // The two halves of the dateline, kept apart rather than joined.
+  //
+  // They used to be one `summaryLine` — "Thứ Bảy, 26 tháng 9 · Ban ngày" —
+  // centred at 15pt with the whole of `p.where` on a second line under it,
+  // and the note this replaces recorded what that cost: the four segments
+  // are wider than a phone, so the break had to be *chosen by hand*
+  // because letting it wrap left "tôi" alone on a line of its own.
+  //
+  // The card below needs them separate anyway, and having them separate
+  // is what retires the hand-chosen break: each cell sizes itself, so
+  // there is no line left to overflow.
+  const dateText = dateline(lang, fromISO(day) ?? new Date());
+  const halfText = p.when === 'day' ? t('Day', 'Ban ngày', '昼') : t('Evening', 'Buổi tối', '夜');
+
+  // `p.where` arrives already joined, and sometimes with a separator in
+  // it: a district is "Hoàn Kiếm", a dropped pin is its own name, and the
+  // default is "Quanh Melbourne · gần tôi". Splitting on the separator
+  // `summaryLine` uses gives the cell the same two ranks the date has —
+  // and when there is no separator the cell simply has one line, which is
+  // the honest answer rather than an invented second one.
+  //
+  // And `where` really can be absent, which is easy to assume it cannot:
+  // a plan needs a day and a mood, not a place. `canPlan` asks for
+  // `company` and at least one category and nothing else, and
+  // `IdeasScreen` hands over `district ?? (origin ? whereLabel : null)`
+  // where `origin` is `startPoint` — null when the reader picked no
+  // district, dropped no pin, and has not granted location. That plan
+  // runs: the planner picks the first stop on merit from anywhere in the
+  // city, which the note on `me` there calls "the honest floor: no origin
+  // rather than an invented one".
+  //
+  // So the cell says that rather than disappearing. The city, and the
+  // truth about how wide the search was — a reader who sees the day
+  // anchored nowhere should be told it was not anchored, not left with
+  // half a card and no explanation.
+  const whereParts = (p.where?.trim() ?? '').split(' · ');
+  const cityName = city ? t(city.short_en, city.short_vi, city.short_ja ?? city.short_en) : null;
+  const wherePrimary = whereParts[0] || cityName;
+  const whereSecondary = whereParts[0]
+    ? whereParts.slice(1).join(' · ') || null
+    : t('Anywhere in the city', 'Khắp thành phố', '市内どこでも');
   // What was asked for, as the chips it was asked with.
   //
   // It was a third grey line reading "Cà phê · Ăn uống", which is the one
@@ -484,6 +533,33 @@ export default function SketchingScreen({ navigation, route }: {
   // than drawn grey: a chip with no glyph among chips that have one reads
   // as a chip that failed to load.
   const wants = p.categories.filter((c) => CATEGORIES[c]);
+  // As many as fit on one line, then a count.
+  //
+  // There is no cap on the group this comes from, and there must not be
+  // one — `IdeasScreen` says why: `planner.ts` sizes the outing from how
+  // many categories were named, so a limit there would quietly shorten
+  // somebody's day. Nine exist. Drawn in full inside a card, six of them
+  // take three rows and push the findings box off the screen.
+  //
+  // The rule is width rather than a number, because whether three fit is
+  // a question about their labels: "Cà phê · Ăn uống · Về đêm" is 311pt
+  // and fits the 318 a card leaves on a 390pt phone; "Thiên nhiên ·
+  // Ngắm cảnh · Giải trí" is 376 and does not. `fitWants` does that
+  // arithmetic and its note says why it estimates rather than measures.
+  //
+  // The width is the real one, from `useWindowDimensions`, so a wider
+  // phone shows more and a narrower one shows fewer — and the page's own
+  // margins and the card's padding are subtracted here rather than
+  // guessed there.
+  //
+  // The overflow pill hides the same fact from everybody: a reader who
+  // sees "+2" and a reader who hears it both know two more were chosen
+  // and neither is told which. That parity is why it needs no separate
+  // accessibility label.
+  const wantLabels = wants.map((c) => categoryLabel(c, t));
+  const wantsFit = fitWants(wantLabels, width - space.page * 2 - CARD_PAD * 2);
+  const shownWants = wants.slice(0, wantsFit);
+  const moreWants = wants.length - shownWants.length;
 
   return (
     <Screen title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}>
@@ -519,29 +595,66 @@ export default function SketchingScreen({ navigation, route }: {
           option={deck}
         />
 
-        <Text style={s.title}>
-          {failed
-            ? t("Couldn't load places", 'Không tải được địa điểm', '場所を読み込めませんでした')
-            : empty
-            ? t('Nothing to build a day from', 'Chưa đủ chỗ để dựng một ngày', '一日を組む材料が足りません')
-            : p.when === 'day'
-              ? t('Sketching your day…', 'Đang phác ngày của bạn…', '一日を下描き中…')
-              : t('Sketching your evening…', 'Đang phác buổi tối của bạn…', '夜を下描き中…')}
-        </Text>
-        {!!when && <Text style={s.sub}>{when}</Text>}
-        {!!p.where?.trim() && <Text style={s.sub}>{p.where.trim()}</Text>}
-        {wants.length > 0 && (
-          <View style={s.wants}>
-            {wants.map((c) => (
-              <Chip
-                key={c}
-                label={categoryLabel(c, t)}
-                icon={CATEGORIES[c].icon}
-                iconColor={CATEGORIES[c].color}
-              />
-            ))}
-          </View>
+        {/* Only the two that report something.
+
+            This heading was four states of one line, and the other two —
+            "Sketching your day…", "Sketching your evening…" — said in
+            27pt bold what the screen's own header already says in the
+            same weight: "Plan a trip", two lines above. The one fact they
+            carried that the header does not is whether this is a day or
+            an evening, and the card below now says that under the date.
+            Losing them was only safe once the card existed.
+
+            These two stay because nothing else on the screen says them. A
+            failed fetch and an empty catalog are not progress, and the
+            step list below can only report progress. */}
+        {(failed || empty) && (
+          <Text style={s.title}>
+            {failed
+              ? t("Couldn't load places", 'Không tải được địa điểm', '場所を読み込めませんでした')
+              : t('Nothing to build a day from', 'Chưa đủ chỗ để dựng một ngày', '一日を組む材料が足りません')}
+          </Text>
         )}
+
+        {/* What was asked, in the order it was asked.
+
+            `IdeasScreen` puts the mood group before "Where and when…", so
+            the chips lead and the pair follows — the card reads back the
+            wizard rather than reordering it.
+
+            One card rather than three loose rows, because these are three
+            answers to one set of questions and they were drawn as two
+            grey sentences and a floating chip row: three ranks of
+            importance for facts that have one. */}
+        {/* Always drawn, because the date always exists: a trip has a day
+            even when the reader named no district and the catalog knew
+            none of their categories. Guarding the card on the chips hid
+            the date with them. */}
+        <View style={s.facts}>
+          {wants.length > 0 && (
+            <>
+              <View style={s.factChips}>
+                {shownWants.map((c) => (
+                  <Chip
+                    key={c}
+                    label={categoryLabel(c, t)}
+                    icon={CATEGORIES[c].icon}
+                    iconColor={CATEGORIES[c].color}
+                  />
+                ))}
+                {moreWants > 0 && <Chip label={`+${moreWants}`} />}
+              </View>
+              <View style={s.factRule} />
+            </>
+          )}
+          <View style={s.factRow}>
+            <Fact icon="calendar-outline" primary={dateText} secondary={halfText} />
+            {!!wherePrimary && <View style={s.factDivide} />}
+            {!!wherePrimary && (
+              <Fact icon="location-outline" primary={wherePrimary} secondary={whereSecondary} />
+            )}
+          </View>
+        </View>
 
         <View style={s.card}>
           {SKETCH_STEPS.map((step, i) => (
@@ -637,6 +750,38 @@ export default function SketchingScreen({ navigation, route }: {
  * on hold. Two spinners at two speeds read as two separate things
  * happening; two turning in step read as one thing, in two sizes.
  */
+/**
+ * One answer in the facts card: a glyph, what was chosen, and what
+ * qualifies it.
+ *
+ * The qualifier is optional and the cell does not invent one. `p.where`
+ * is a district on one visit and "Quanh Melbourne · gần tôi" on the next,
+ * so a cell that always drew two lines would have to make the second one
+ * up — and the date cell beside it fixes the row's height either way, so
+ * a one-line cell centres against it rather than shrinking the row.
+ *
+ * `numberOfLines={1}` on both: a long district under a long city name
+ * would otherwise wrap inside a cell half a phone wide, which is the
+ * problem this card was built to end rather than move.
+ */
+function Fact({ icon, primary, secondary }: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  primary: string;
+  secondary?: string | null;
+}) {
+  return (
+    <View style={s.factCell}>
+      <View style={s.factDisc}>
+        <Ionicons name={icon} size={19} color={colors.text} />
+      </View>
+      <View style={s.factText}>
+        <Text style={s.factPrimary} numberOfLines={1}>{primary}</Text>
+        {!!secondary && <Text style={s.factSecondary} numberOfLines={1}>{secondary}</Text>}
+      </View>
+    </View>
+  );
+}
+
 function StepMark({ state, still }: { state: StepState; still: boolean }) {
   const spin = useLoop(1600, still || state !== 'active');
 
@@ -735,10 +880,45 @@ const s = StyleSheet.create({
   body: { alignItems: 'center', paddingHorizontal: space.page, paddingTop: 10, gap: 14 },
 
   title: { color: colors.text, fontSize: 27, fontFamily: 'SpaceGrotesk_700Bold', textAlign: 'center', marginTop: 6 },
-  sub: { color: colors.textSecondary, fontSize: 15, lineHeight: 21, textAlign: 'center' },
-  // Centred and wrapping: one category is the common case and four is the
-  // most the wizard allows, which is two rows on a narrow phone.
-  wants: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
+
+  // ── the facts card ──
+  //
+  // The same white-on-paper card as the step list and the findings box
+  // below it, so the screen reads as three tiers of one material rather
+  // than a card, some loose grey type, and another card.
+  facts: {
+    alignSelf: 'stretch',
+    backgroundColor: colors.surfaceCard, borderRadius: radius.card,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  // `gap` on top of the 8pt `Chip` already carries, which is what every
+  // other chip row in the app spends — matched here rather than tightened,
+  // because a row that is denser inside this card than outside it reads as
+  // a different kind of chip.
+  factChips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, padding: 14 },
+  factRule: {
+    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
+    marginHorizontal: 14,
+  },
+  factRow: { flexDirection: 'row', alignItems: 'center', padding: 14 },
+  // `flexBasis: 0` with `minWidth: 0`, so the two cells split the row
+  // evenly and a long name truncates inside its own half instead of
+  // pushing the divider across.
+  factCell: {
+    flexGrow: 1, flexBasis: 0, minWidth: 0,
+    flexDirection: 'row', alignItems: 'center', gap: 11,
+  },
+  factDisc: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: colors.surfaceGlass, alignItems: 'center', justifyContent: 'center',
+  },
+  factText: { flexShrink: 1, minWidth: 0 },
+  factPrimary: { color: colors.text, fontSize: 14.5, fontWeight: font.semibold },
+  factSecondary: { color: colors.textTertiary, fontSize: 13, marginTop: 1 },
+  factDivide: {
+    width: StyleSheet.hairlineWidth, height: 36,
+    backgroundColor: colors.borderGlassSoft, marginHorizontal: 12,
+  },
 
   card: {
     alignSelf: 'stretch', marginTop: 6,

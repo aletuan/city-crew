@@ -209,14 +209,14 @@ describe('the button', () => {
     expect(p).toMatchObject({ company: 'solo', when: 'day', date: TODAY, startMin: 9 * 60 });
   });
 
-  it('carries the reader’s position as “near me” when neither district nor pin is chosen', () => {
+  it('carries the reader’s position as “near you” when neither district nor pin is chosen', () => {
     state.me = { lat: 21.03, lng: 105.85 };
     const navigation = renderScreen();
     tap('Couple');
     tap('Cafés');
     fireEvent.click(cta());
     expect(sent(navigation)).toMatchObject({
-      where: 'Around Hanoi · near me', district: null, atLat: 21.03, atLng: 105.85,
+      where: 'Around Hanoi · Near you', district: null, atLat: 21.03, atLng: 105.85,
     });
   });
 });
@@ -374,10 +374,10 @@ describe('day or evening', () => {
 });
 
 describe('where the day starts', () => {
-  it('says “near me” around the city, and the sheet opens on the empty answer', () => {
+  it('says “near you” around the city, and the sheet opens on the empty answer', () => {
     renderScreen();
     expect(sheet.props!.visible).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: /Around Hanoi · near me/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Around Hanoi · Near you/ }));
     expect(screen.getByText('start-sheet-open')).toBeTruthy();
     expect(sheet.props!.value).toEqual({ district: null, at: null, atName: null });
     expect(sheet.props!.places).toBe(state.places);
@@ -385,12 +385,12 @@ describe('where the day starts', () => {
     expect(screen.queryByText('start-sheet-open')).toBeNull();
   });
 
-  // Before the city resolves the label printed "Around  · near me" — a
+  // Before the city resolves the label printed "Around  · Near you" — a
   // hole where the name goes.
-  it('says plain “near me” before the city has loaded, with no hole for its name', () => {
+  it('says plain “near you” before the city has loaded, with no hole for its name', () => {
     state.city = null;
     renderScreen();
-    expect(screen.getByRole('button', { name: 'Near me' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Near you' })).toBeTruthy();
     expect(screen.queryByText(/Around/)).toBeNull();
   });
 
@@ -407,7 +407,7 @@ describe('where the day starts', () => {
   it('takes a district from the sheet, and sends it with no coordinate even when the reader has one', () => {
     state.me = { lat: 1, lng: 2 };
     const navigation = renderScreen();
-    fireEvent.click(screen.getByRole('button', { name: /near me/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Near you/ }));
     act(() => { (sheet.props!.onDone as (s: object) => void)({ district: 'Tây Hồ', at: null }); });
     expect(screen.queryByText('start-sheet-open')).toBeNull();
     expect(screen.getByText('Tây Hồ')).toBeTruthy();
@@ -421,7 +421,7 @@ describe('where the day starts', () => {
   it('takes a dropped pin, which wins over the reader’s own position', () => {
     state.me = { lat: 1, lng: 2 };
     const navigation = renderScreen();
-    fireEvent.click(screen.getByRole('button', { name: /near me/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Near you/ }));
     act(() => { (sheet.props!.onDone as (s: object) => void)({ district: null, at: { lat: 21.04, lng: 105.81 } }); });
     expect(screen.getByText('A pin you dropped')).toBeTruthy();
     tap('Friends');
@@ -432,7 +432,7 @@ describe('where the day starts', () => {
 
   it('prints the name a pin was given, and sends those words on', () => {
     const navigation = renderScreen();
-    fireEvent.click(screen.getByRole('button', { name: /near me/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Near you/ }));
     act(() => {
       (sheet.props!.onDone as (s: object) => void)({
         district: null, at: { lat: 21.04, lng: 105.81 }, atName: "Pizza 4P's Hoàng Thành Tower",
