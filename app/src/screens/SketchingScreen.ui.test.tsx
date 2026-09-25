@@ -211,6 +211,21 @@ describe('what it asks', () => {
     expect((planTrips.mock.calls[0][3] as { tz: string }).tz).toBe('Australia/Melbourne');
   });
 
+  // Regenerate has no machinery of its own: it sends the reader back here
+  // with the next seed and everything already offered, and this screen is
+  // the one that waits for the plans and their words. So both have to
+  // reach the planner, and a first visit — which has neither — has to go
+  // on drawing its own seed.
+  it('takes the seed Regenerate gives it rather than drawing one', () => {
+    renderScreen({ seed: 4242 });
+    expect((planTrips.mock.calls[0][3] as { seed: number }).seed).toBe(4242);
+  });
+
+  it('avoids what a previous set already offered', () => {
+    renderScreen({ seed: 4242, avoid: ['cafe', 'roof'] });
+    expect((planTrips.mock.calls[0][3] as { avoid: string[] }).avoid).toEqual(['cafe', 'roof']);
+  });
+
   it('plans with no city as null, and with the places of the collections it was seeded from', () => {
     cityState.current = { city: null };
     mine.current = [
@@ -466,6 +481,18 @@ describe('leaving', () => {
     expect(navigation.replace).toHaveBeenCalledWith('PlanOptions', { ...route.params, seed: NOW.getTime() });
     expect(navigation.navigate).not.toHaveBeenCalled();
     expect(navigation.goBack).not.toHaveBeenCalled();
+  });
+
+  // The next screen rebuilds the plans from pure inputs, so it needs every
+  // input that produced them. The seed alone is not enough after a
+  // Regenerate: the same seed without the avoid-list is a different draw.
+  it('carries a Regenerate’s seed and avoid-list on to PlanOptions', async () => {
+    const avoid = ['cafe', 'roof'];
+    const { navigation } = renderScreen({ seed: 4242, avoid });
+    await tick(allSteps);
+    expect(navigation.replace).toHaveBeenCalledWith(
+      'PlanOptions', expect.objectContaining({ seed: 4242, avoid }),
+    );
   });
 
   it('holds the last step until the words settle, then gives it one more floor', async () => {
