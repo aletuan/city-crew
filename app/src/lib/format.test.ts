@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, openFragment, openState, sashLabel, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, openFragment, openState, sashLabel, shortDateline, shutLabel, splitHours } from './format';
 import { instantOn } from './clock';
 import { fmtDistance } from './geo';
 
@@ -723,5 +723,41 @@ describe('sashLabel', () => {
     for (const t of [en, vi, ja]) {
       expect(sashLabel({ open: false, opensAtMin: 23 * 60 + 30 }, t)!.length).toBeLessThanOrEqual(11);
     }
+  });
+});
+
+describe('shortDateline', () => {
+  // A Friday, so the weekday is worth reading and the month has two
+  // digits — the shape the facts card was clipping.
+  const fri = new Date(2026, 8, 25);
+  // A single-digit day and month, which is where padding shows.
+  const jan = new Date(2026, 0, 4);
+
+  it('numbers the month in Vietnamese and keeps the weekday short', () => {
+    expect(shortDateline('vi', fri)).toBe('T6, 25/09');
+    expect(shortDateline('vi', jan)).toBe('CN, 04/01');
+  });
+
+  it('keeps a three-letter month in English, because d/m is not read the same everywhere', () => {
+    expect(shortDateline('en', fri)).toBe('Fri, 25 Sep');
+    expect(shortDateline('en', jan)).toBe('Sun, 4 Jan');
+  });
+
+  it('writes the Japanese form the way the long one does', () => {
+    expect(shortDateline('ja', fri)).toBe('9/25（金）');
+  });
+
+  // The point of it: short enough for a cell with half a card's width,
+  // where `dateline` is not.
+  it('is short enough for the cell that wanted it', () => {
+    expect(shortDateline('vi', fri).length).toBeLessThan(dateline('vi', fri).length);
+    expect(shortDateline('vi', fri).length).toBeLessThanOrEqual(13);
+    expect(shortDateline('en', fri).length).toBeLessThanOrEqual(13);
+  });
+
+  // An unknown language falls to English, the way every other helper in
+  // this file does.
+  it('falls back to English for a language it does not know', () => {
+    expect(shortDateline('fr', fri)).toBe('Fri, 25 Sep');
   });
 });

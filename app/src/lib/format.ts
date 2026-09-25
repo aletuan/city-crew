@@ -7,6 +7,11 @@ import { wallClock } from './clock';
 const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAYS_VI = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const DAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+// Vietnamese numbers its weekdays, so the short forms are the numbers:
+// Sunday is CN (chủ nhật) and the rest are T2 through T7. The same
+// convention `SHORT_DAY` uses for the opening-hours rows, by index here
+// because a `Date` gives a number and not one of Google's day names.
+const SHORT_DAYS_VI = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 // Short, and uniformly short — including the three that are already
 // three letters. A column of day labels where some months are spelled
 // and some are clipped reads as an accident rather than a convention.
@@ -47,6 +52,44 @@ export function dateline(lang: string, now: Date): string {
   if (lang === 'vi') return `${DAYS_VI[now.getDay()]}, ${now.getDate()} tháng ${now.getMonth() + 1}`;
   if (lang === 'ja') return `${now.getMonth() + 1}月${now.getDate()}日（${DAYS_JA[now.getDay()]}）`;
   return `${DAYS_EN[now.getDay()]}, ${MONTHS_EN[now.getMonth()]} ${now.getDate()}`;
+}
+
+/**
+ * The same date with the month as a numeral: "Fri, 25 Sep" / "T6, 25/09"
+ * / "9/25（金）".
+ *
+ * For a cell that has half a card's width. `dateline` runs to "Thứ Sáu,
+ * 25 tháng 9" — nineteen characters where the facts card on the sketching
+ * screen has room for about thirteen, and what a reader saw there was
+ * "Thứ Sáu, 25 thá…": a date clipped in the middle of its own month.
+ *
+ * ── the weekday survives, and it is the whole argument ──
+ *
+ * The obvious short form is "25/09" and it drops the wrong half.
+ * `dateline`'s own note says why: the weekday is the only token here the
+ * reader does not already have. Their phone's clock says the date;
+ * nothing says it is a Friday, and that is the half that decides which
+ * places are open and what kind of day it is to plan.
+ *
+ * So the weekday keeps its place and loses its spelling — three letters
+ * in English, two in Vietnamese, the one character Japanese already uses
+ * — and the month goes to a numeral. "T6, 25/09" is nine characters and
+ * says both things.
+ *
+ * ── and English does not get "25/09" ──
+ *
+ * A bare `d/m` is read as `m/d` by half the English-speaking world, so
+ * "09/10" is two different days depending on the reader. Vietnamese and
+ * Japanese have one convention each and can use numerals safely;
+ * English keeps its three-letter month, which is unambiguous everywhere
+ * and costs two characters.
+ */
+export function shortDateline(lang: string, now: Date): string {
+  const d = String(now.getDate()).padStart(2, '0');
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  if (lang === 'vi') return `${SHORT_DAYS_VI[now.getDay()]}, ${d}/${m}`;
+  if (lang === 'ja') return `${now.getMonth() + 1}/${now.getDate()}（${DAYS_JA[now.getDay()]}）`;
+  return `${DAYS_EN[now.getDay()].slice(0, 3)}, ${now.getDate()} ${MONTHS_EN[now.getMonth()]}`;
 }
 
 /**

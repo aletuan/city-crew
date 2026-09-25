@@ -24,7 +24,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import { narratableOf, NARRATION_HOLD_MS, type Narration } from '../lib/assist';
 import { DECK_HOLD_MS, SKETCH_STEPS, STEP_FLOOR_MS } from '../lib/sketch';
-import { dateline } from '../lib/format';
+import { shortDateline } from '../lib/format';
 import { fromISO, todayISO } from '../lib/day';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
@@ -286,7 +286,7 @@ describe('while it waits', () => {
   // cell sizes itself, so there is no line left to overflow.
   it('names the date, the half and the place as separate ranks', () => {
     renderScreen({ categories: ['cafes', 'mystery'] });
-    expect(screen.getByText(dateline('en', fromISO(todayISO())!))).toBeTruthy();
+    expect(screen.getByText(shortDateline('en', fromISO(todayISO())!))).toBeTruthy();
     expect(screen.getByText('Evening')).toBeTruthy();
     expect(screen.getByText('Old Quarter')).toBeTruthy();
     // Joined, it is gone: the separator was the thing being replaced.
@@ -309,7 +309,7 @@ describe('while it waits', () => {
   it('calls a day a day, and prints no category chip when none is known', () => {
     renderScreen({ when: 'day', where: '', categories: ['mystery'] });
     expect(screen.getByText('Day')).toBeTruthy();
-    expect(screen.getByText(dateline('en', fromISO(todayISO())!))).toBeTruthy();
+    expect(screen.getByText(shortDateline('en', fromISO(todayISO())!))).toBeTruthy();
     expect(screen.queryByText('Mystery')).toBeNull();
   });
 
@@ -327,7 +327,7 @@ describe('while it waits', () => {
   it('draws the date alone when there is no city to fall back on', () => {
     cityState.current = { city: null };
     renderScreen({ where: null });
-    expect(screen.getByText(dateline('en', fromISO(todayISO())!))).toBeTruthy();
+    expect(screen.getByText(shortDateline('en', fromISO(todayISO())!))).toBeTruthy();
     expect(screen.queryByText('Anywhere in the city')).toBeNull();
   });
 
