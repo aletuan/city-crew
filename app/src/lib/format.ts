@@ -500,61 +500,19 @@ export function openFragment(
 }
 
 /**
- * One stretch of a day a place is open, in minutes past this midnight.
+ * The length of a day in minutes, and the point every hour in this file
+ * wraps at.
  *
- * `runsOn` means the window does not end today — the bar that shuts at two
- * in the morning. The segment is clipped at midnight and the flag says the
- * clipping happened, so a renderer can square that edge off rather than
- * drawing a rounded end that claims the place shuts at twelve.
+ * `openState` counts `opensAtMin` and `untilMin` from *today's* midnight,
+ * so tomorrow morning reads past this number and a bar shutting at two
+ * reads 1560 rather than 120. Exported because that wrap is part of the
+ * contract — a caller comparing hours has to know where the day ends, and
+ * `clockOf` is the one that hides it again.
+ *
+ * It was `DAY` alone until a band renderer needed to scale by the same
+ * day this file clips to. The band is gone; the wrap is not.
  */
-export type BandSegment = { fromMin: number; toMin: number; runsOn: boolean };
-
-/** The width of the axis a `DayBand` is drawn on. Exported so a renderer
- *  scales by the same day this file clips to, rather than its own 1440. */
 export const MINUTES_IN_DAY = DAY;
-
-/** A day's opening, drawn rather than summarised: every window of today
- *  plus wherever the clock has reached. */
-export type DayBand = { nowMin: number; segments: BandSegment[] };
-
-/**
- * A day laid out end to end, for a card to draw as a band.
- *
- * `openState` answers a question — open, shut, closing when — and three
- * answers is all a word can carry. This hands back the shape instead: the
- * lunch break that splits a day in two, the bar that runs past midnight,
- * the place that is shut today and open tomorrow. A tenth of this catalog
- * has a shape a sentence cannot hold.
- *
- * Segments are clipped to today, and yesterday's overrun is drawn at the
- * left edge where it actually falls: the bar that opened at seven last
- * night and shuts at one is part of *this* morning, and a reader looking
- * at half past midnight should see the bar they are standing in.
- *
- * `null` on hours that cannot be read, for the reason everything else in
- * this file returns null there — a band drawn from nothing would be a
- * confident drawing of a guess. An empty `segments` is different and is
- * not null: it means the hours were read and say the place is shut all
- * day, which is worth drawing as an empty track.
- */
-export function dayBand(lines: string[] | null | undefined, now: Date, tz: string): DayBand | null {
-  const week = readWeek(lines, now, tz);
-  if (!week) return null;
-  const { mins, today, dayAt } = week;
-  const wins = dayAt(today);
-  if (!wins) return null;
-
-  const segments: BandSegment[] = [];
-  // Yesterday first, so the early hours are drawn before the morning that
-  // follows them and the band reads left to right in the order of the day.
-  for (const w of dayAt(today - 1) ?? []) {
-    if (w.to > DAY) segments.push({ fromMin: 0, toMin: Math.min(w.to - DAY, DAY), runsOn: false });
-  }
-  for (const w of wins) {
-    segments.push({ fromMin: w.from, toMin: Math.min(w.to, DAY), runsOn: w.to > DAY });
-  }
-  return { nowMin: mins, segments };
-}
 
 /**
  * What a shut place says, in full: "Closed · opens 08:00", or "Closed"

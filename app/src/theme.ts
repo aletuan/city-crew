@@ -193,19 +193,6 @@ export const colors = {
    */
   soon: dyn('#94670F', '#F2B441'),
 
-  /**
-   * The hours band under a place card's photograph: the track it is drawn
-   * on, and the stretches the place is open.
-   *
-   * Translucent ink rather than opaque greys, so the pair holds on the
-   * card's white and on the dark card's smoky fill without a third value
-   * for each. The fill is deliberately not `accent` and not `text`: it is
-   * the day, which is context, and the one thing on this band allowed to
-   * be a colour is the mark saying where in that day the reader is.
-   */
-  bandTrack: dyn('rgba(23,21,15,0.09)', 'rgba(247,247,245,0.10)'),
-  bandFill: dyn('rgba(23,21,15,0.38)', 'rgba(247,247,245,0.42)'),
-
   ok: dyn('#3F7A4A', '#8FBF8A'),
   /** "Open now" on the place card's hours row: a shade greener and
    *  lighter than `ok`, chosen for that one line against white. */
