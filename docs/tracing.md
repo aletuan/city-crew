@@ -182,6 +182,36 @@ lại bằng `eas channel:view preview` nếu có nghi ngờ — cả hai lệnh
 đăng nhập EAS, nên phải chạy ở máy có `eas login`, không chạy được từ
 phiên agent.
 
+### Version phải cao hơn bản đang ở trên App Store
+
+Bản `preview` vẫn đi qua App Store Connect — đó là đường duy nhất tới
+TestFlight — nên nó chịu đúng luật của một bản nộp thật.
+
+Apple giữ một **pre-release train cho mỗi `version`** (tức
+`CFBundleShortVersionString`). Khi một version được duyệt lên App Store,
+train của nó **đóng vĩnh viễn**: mọi lần upload sau đó dưới version ấy
+đều bị từ chối, bất kể build number là bao nhiêu.
+
+```
+Validation failed (409) Invalid Pre-Release Train.
+The train version '1.0.3' is closed for new build submissions
+```
+
+Bản preview đầu tiên chết đúng ở đây. EAS tăng build number 20 → 21 và
+build thành công; App Store Connect từ chối vì 1.0.3 đã lên store rồi.
+`autoIncrement` không cứu được — nó đếm build, còn train tính theo
+version.
+
+**Luật:** ngay sau khi một version được duyệt, nâng `version` trong
+`app/app.json` lên patch kế tiếp. Mọi build TestFlight sau đó — kể cả
+build chỉ để đo — đi trên train đang mở.
+
+Giá của việc quên: mất trọn một lượt build, và lỗi chỉ hiện ra ở bước
+submit, vài phút **sau** khi build đã chạy xong và đã trả tiền. Nếu binary
+vẫn tốt và chỉ hỏng khâu submit vì lý do khác, dùng input `build_id` của
+`app-release.yml` để nộp lại chính binary đó, khỏi build lần hai — nhưng
+train đóng thì không: phải đổi version, tức là phải build lại.
+
 ---
 
 ## 6. Đọc dữ liệu
@@ -247,6 +277,13 @@ group by minute, status order by minute desc
 **2. Không có POST** → hoặc công tắc đang tắt (máy chạy production
 channel), hoặc máy chưa nhận bundle mới. EAS Update **tải ở lần mở này,
 áp dụng ở lần mở kế tiếp** — phải tắt hẳn app và mở lại **hai lần**.
+
+Nếu đang chờ một bản preview mới: **build xanh không có nghĩa là bản đó
+đã tới TestFlight.** `app-release.yml` chạy `--no-wait`, nên job GitHub
+xanh chỉ nghĩa là "EAS đã nhận việc". Sau khi build xong còn một bước
+submit chạy trên EAS, và bước đó có thể hỏng riêng — xem trang
+*Submissions* trên expo.dev chứ không chỉ trang *Builds*. Mục 5 có hai
+kiểu hỏng đã gặp ở đây.
 
 **3. Có POST nhưng lỗi** → xem lý do thật:
 
