@@ -24,6 +24,23 @@
 #
 # or Actions → Release app to TestFlight → Run workflow.
 #
+# ── the two profiles, and why the choice is here ──
+#
+# `production` is the App Store build and what a tag push makes.
+# `preview` is the same release binary with a different channel stamped
+# into it, and the stamp is the whole difference: `lib/channel` reads it,
+# and the diagnostics that must never run for a reader — the launch
+# waterfall, the deck's timeline — ask it before recording anything.
+#
+# So a number measured on a production build cannot be measured at all,
+# and one measured on a dev client is measured on unoptimised JavaScript.
+# `preview` is the only build that is both honest about speed and allowed
+# to say what it saw. Making one is a deliberate act, which is why it is
+# an input rather than a second workflow.
+#
+# Both submit through the `production` submit profile: there is one app
+# in App Store Connect and `eas.json` carries its id once.
+#
 # The tag is a name for the release, not a version: the version comes from
 # `app.json`, and the build number from EAS, which holds it remotely and
 # increments it per build (`appVersionSource: remote`, `autoIncrement` on
@@ -73,6 +90,12 @@ on:
         default: ios
         options: [ios, android, all]
         required: true
+      profile:
+        description: 'Build profile — preview stamps the channel that lets diagnostics record'
+        type: choice
+        default: production
+        options: [production, preview]
+        required: true
       build_id:
         description: 'Submit this existing build instead of making a new one'
         type: string
@@ -84,8 +107,9 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       # A tag push has no inputs, so it picks the platform this app
-      # actually ships through TestFlight.
+      # actually ships through TestFlight, and the profile a release is.
       PLATFORM: ${{ inputs.platform || 'ios' }}
+      PROFILE: ${{ inputs.profile || 'production' }}
     steps:
       - uses: actions/checkout@v5
       - name: Skip when EXPO_TOKEN is not configured
@@ -107,14 +131,17 @@ jobs:
       # to answer. The Maps keys are not passed here: `eas build` reads
       # them from the EAS environment the production profile resolves to,
       # which is where they live.
+      # `--auto-submit-with-profile` rather than `--auto-submit`, which
+      # looks for a submit profile named after the *build* profile and
+      # would find none for `preview`.
       - name: Build and submit
         if: env.EXPO_TOKEN != '' && inputs.build_id == ''
         working-directory: app
         run: |
           npx eas-cli@latest build \
-            --profile production \
+            --profile "$PROFILE" \
             --platform "$PLATFORM" \
-            --auto-submit \
+            --auto-submit-with-profile production \
             --no-wait \
             --non-interactive
       - name: Submit an existing build
