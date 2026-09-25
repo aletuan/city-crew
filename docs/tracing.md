@@ -159,19 +159,28 @@ Khác nhau có chủ đích:
 5. Xong việc thì xoá: `delete from deck_traces;` — **không có cơ chế xoá
    tự động**, cả hai bảng đều dọn bằng tay.
 
-### ⚠️ Bản preview và EAS Update
+### Bản preview và EAS Update — đã sửa 25/9/2026
 
 `app-preview.yml` đẩy update bằng `eas update --branch main`. Channel nào
-nhận branch nào là do ánh xạ trên EAS. Nếu channel `preview` chưa được
-trỏ vào branch `main`, **bản preview sẽ không nhận được update JS** — mỗi
-lần sửa code phải build lại binary.
+nhận branch nào là do ánh xạ trên EAS, và ánh xạ đó **không tự có**.
 
-Kiểm tra và sửa (cần EXPO_TOKEN, chạy ở máy có đăng nhập EAS):
+Lần đầu dựng bản preview, channel `preview` đang trỏ vào branch `preview`
+— một branch chưa từng có update nào (`Platforms`, `Runtime Version`,
+`Group ID` đều `N/A`). Bản preview cài lên máy sẽ không bao giờ nhận
+được EAS Update, và triệu chứng là "sửa JS mà app không đổi" — rất khó
+đoán ra nếu không biết trước.
+
+Đã trỏ lại:
 
 ```
-eas channel:view preview
 eas channel:edit preview --branch main
+→ Channel preview is now set to branch main.
 ```
+
+Từ đó bản preview nhận cùng luồng update với bản production. Kiểm tra
+lại bằng `eas channel:view preview` nếu có nghi ngờ — cả hai lệnh cần
+đăng nhập EAS, nên phải chạy ở máy có `eas login`, không chạy được từ
+phiên agent.
 
 ---
 
