@@ -270,25 +270,64 @@ describe('what it asks', () => {
 });
 
 describe('while it waits', () => {
-  it('names the evening, the date, the half and the place, and the categories it knows', () => {
+  // The date and its half are two ranks now rather than one line joined
+  // by a separator, which is what retires the hand-chosen break: each
+  // cell sizes itself, so there is no line left to overflow.
+  it('names the date, the half and the place as separate ranks', () => {
     renderScreen({ categories: ['cafes', 'mystery'] });
-    expect(screen.getByText('Sketching your evening…')).toBeTruthy();
-    // Two lines, and the break is chosen: when above, where below. One
-    // line wrapped wherever the last word fell, which on a real screen
-    // left "tôi" alone under four segments.
-    expect(screen.getByText(`${dateline('en', fromISO(todayISO())!)} · Evening`)).toBeTruthy();
+    expect(screen.getByText(dateline('en', fromISO(todayISO())!))).toBeTruthy();
+    expect(screen.getByText('Evening')).toBeTruthy();
     expect(screen.getByText('Old Quarter')).toBeTruthy();
+    // Joined, it is gone: the separator was the thing being replaced.
+    expect(screen.queryByText(/ · Evening$/)).toBeNull();
     // An unknown key is dropped rather than printed as a raw slug.
     expect(screen.getByText('Cafés')).toBeTruthy();
     expect(screen.getByText('Plan a trip')).toBeTruthy();
     for (const st of SKETCH_STEPS) expect(screen.getByText(st.en)).toBeTruthy();
   });
 
-  it('calls a day a day, and prints no category line when none is known', () => {
+  // "Sketching your evening…" is gone: it repeated the screen's own
+  // header in the same weight, and the one fact it carried that the
+  // header does not — day or evening — is the date cell's second line.
+  it('says nothing about sketching, and lets the card carry the half', () => {
+    renderScreen();
+    expect(screen.queryByText(/^Sketching/)).toBeNull();
+    expect(screen.getByText('Evening')).toBeTruthy();
+  });
+
+  it('calls a day a day, and prints no category chip when none is known', () => {
     renderScreen({ when: 'day', where: '', categories: ['mystery'] });
-    expect(screen.getByText('Sketching your day…')).toBeTruthy();
-    expect(screen.getByText(`${dateline('en', fromISO(todayISO())!)} · Day`)).toBeTruthy();
+    expect(screen.getByText('Day')).toBeTruthy();
+    expect(screen.getByText(dateline('en', fromISO(todayISO())!))).toBeTruthy();
     expect(screen.queryByText('Mystery')).toBeNull();
+  });
+
+  // `p.where` arrives joined and sometimes carries its own separator. The
+  // cell splits on it rather than printing it, so the default reads as
+  // two ranks the way a district reads as one.
+  it('splits a where that carries its own separator', () => {
+    renderScreen({ where: 'Around Melbourne · near me' });
+    expect(screen.getByText('Around Melbourne')).toBeTruthy();
+    expect(screen.getByText('near me')).toBeTruthy();
+    expect(screen.queryByText('Around Melbourne · near me')).toBeNull();
+  });
+
+  // Three, then a count — there are nine categories and no cap on
+  // choosing them, and six drawn in full push the findings box off screen.
+  it('draws three categories and counts the rest', () => {
+    renderScreen({ categories: ['cafes', 'eats', 'views', 'nature', 'nightlife'] });
+    expect(screen.getByText('Cafés')).toBeTruthy();
+    expect(screen.getByText('Eats')).toBeTruthy();
+    expect(screen.getByText('Views')).toBeTruthy();
+    expect(screen.queryByText('Nature')).toBeNull();
+    expect(screen.queryByText('Nightlife')).toBeNull();
+    expect(screen.getByText('+2')).toBeTruthy();
+  });
+
+  it('counts nothing when three is all there is', () => {
+    renderScreen({ categories: ['cafes', 'eats', 'views'] });
+    expect(screen.getByText('Views')).toBeTruthy();
+    expect(screen.queryByText(/^\+/)).toBeNull();
   });
 
   it('advances one step per reading floor and reports a finding under each', async () => {
