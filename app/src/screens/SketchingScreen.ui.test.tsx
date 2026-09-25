@@ -50,6 +50,22 @@ vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: mine.current, re
 vi.mock('../lib/tasteProfile', () => ({
   usePlanProfile: () => profile,
 }));
+// The deck's timeline, stood in for — for quiet, not for safety.
+//
+// Safety is `uitest/setup.tsx`, which stands the Supabase client in for
+// every test and is asserted by `uitest/network.test.ts`. This file is
+// why that guard exists: left real, `reportDeck` reached the real client
+// and filed a row, and every run of this suite — CI's included —
+// inserted its fixtures into the production `deck_traces` table.
+//
+// What is left here is the noise. `DECK_TRACE` is hand-held on while the
+// deck is being measured, so the real recorder writes a `[deck]` line
+// per event to the console, and a screen that walks three plans writes
+// seventeen of them per test.
+vi.mock('../lib/decktrace', () => ({
+  deckTrace: { start: vi.fn(), log: vi.fn(), events: () => [] },
+  reportDeck: { reset: vi.fn(), report: vi.fn() },
+}));
 vi.mock('../lib/planner', () => ({ planTrips }));
 vi.mock('../lib/travel', () => ({ legsOf }));
 vi.mock('../lib/assist', async (orig) => ({
