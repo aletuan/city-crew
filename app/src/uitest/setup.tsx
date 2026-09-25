@@ -29,6 +29,38 @@ const passthrough = (name: string) =>
     return React.createElement('div', { 'data-stub': name, ...rest }, children);
   };
 
+// ── the network, which no test may reach ──
+//
+// Everything else in this file stands in for a native module. This one
+// stands in for the server, and it is here for a different reason: not
+// that a test *cannot* reach it, but that a test that does reaches the
+// real one.
+//
+// `SketchingScreen.ui.test.tsx` did, for a day. It renders a screen that
+// files a row when it leaves, nothing stopped the client being the real
+// client, and every run of the suite — CI's included — inserted its
+// fixtures into the production `deck_traces` table. Sixty-odd rows,
+// caught only because somebody was reading that table for another
+// reason. Nothing failed, and nothing was ever going to.
+//
+// So the client is a stand-in for every test, and a test that wants to
+// assert what was asked mocks `../lib/supabase` itself and keeps its own
+// handle on `fakeSupabase` — which is what the tests that already do this
+// were doing, and their mock still wins over this one.
+//
+// Inert rather than loud, deliberately. A stub that threw would fail the
+// tests of every screen that fires a query and swallows the answer, which
+// is a lot of them and none of them wrong. What matters here is that the
+// query goes nowhere, and this is the smallest thing that guarantees it.
+vi.mock('../lib/supabase', async () => {
+  const { fakeSupabase } = await import('../lib/testing');
+  return {
+    supabase: fakeSupabase().client,
+    supabaseUrl: 'https://test.invalid',
+    supabaseAnonKey: 'test-anon-key',
+  };
+});
+
 vi.mock('expo-linear-gradient', () => ({ LinearGradient: passthrough('LinearGradient') }));
 vi.mock('expo-blur', () => ({ BlurView: passthrough('BlurView') }));
 vi.mock('expo-status-bar', () => ({ StatusBar: () => null }));
