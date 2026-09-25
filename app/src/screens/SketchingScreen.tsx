@@ -895,7 +895,22 @@ const s = StyleSheet.create({
   // other chip row in the app spends — matched here rather than tightened,
   // because a row that is denser inside this card than outside it reads as
   // a different kind of chip.
-  factChips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, padding: 14 },
+  //
+  // ── and why the right padding is 6 rather than 14 ──
+  //
+  // `Chip` carries `marginRight: 8` of its own, which the last chip on a
+  // line spends into empty space. Centring measures *that* line, trailing
+  // margin and all, so the chips a reader can see land 4pt left of centre
+  // — the amount the old loose row outside this card has always been off
+  // by, unnoticed because nothing sat under it to be off against.
+  //
+  // Widening the box by exactly that 8 puts the visible run back on the
+  // middle, and the last chip still ends 14 from the card's edge: 6 of
+  // padding plus the 8 it brought.
+  factChips: {
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center',
+    gap: 8, padding: 14, paddingRight: 6,
+  },
   factRule: {
     height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
     marginHorizontal: 14,
