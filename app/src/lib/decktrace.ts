@@ -157,12 +157,30 @@ export function makeDeckTrace(
 /** The app's one deck trace. */
 export const deckTrace = makeDeckTrace(DECK_TRACE, Date.now, (line) => console.log(line));
 
-export type Device = { platform: string; osVersion: string; isDev: boolean };
+export type Device = {
+  platform: string;
+  osVersion: string;
+  isDev: boolean;
+  /**
+   * The release channel stamped into this build, or null for one with no
+   * stamp — Expo Go, or a bare dev build.
+   *
+   * Here because the two switches above are hand-held on against the rule
+   * the launch trace follows, and the reason given was that the device
+   * being investigated from *appeared* to be on the production channel.
+   * Appeared: inferred twice from the silence of `startup_traces`, and
+   * wrong once. A row that says which channel filed it settles in one
+   * visit whether putting the switches back would cost the investigation
+   * its only device.
+   */
+  channel: string | null;
+};
 
 export type DeckRow = {
   platform: string;
   os_version: string;
   is_dev: boolean;
+  channel: string | null;
   options: number;
   span: number;
   still: boolean;
@@ -185,6 +203,7 @@ export function buildDeckRow(
     platform: device.platform,
     os_version: device.osVersion,
     is_dev: device.isDev,
+    channel: device.channel,
     options: shape.options,
     span: shape.span,
     still: shape.still,

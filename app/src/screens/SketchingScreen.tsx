@@ -28,6 +28,7 @@ import { Animated, Platform, ScrollView, StyleSheet, Text, View } from 'react-na
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import SketchDeck from '../components/SketchDeck';
+import { CHANNEL } from '../lib/channel';
 import { deckTrace, reportDeck } from '../lib/decktrace';
 import {
   Chip, GradientCta, Screen, Skeleton, useLoop, useReducedMotion, useTabBarClearance,
@@ -429,7 +430,12 @@ export default function SketchingScreen({ navigation, route }: {
     reportDeck.report(
       deckTrace.events(),
       { options: deckPlans.length, span: deckSpan(deckPlans), still: calm },
-      { platform: Platform.OS, osVersion: String(Platform.Version), isDev: __DEV__ },
+      {
+        platform: Platform.OS,
+        osVersion: String(Platform.Version),
+        isDev: __DEV__,
+        channel: CHANNEL,
+      },
     );
     navigation.replace('PlanOptions', { ...p, seed });
   }, [done, deckDone, plans.length, navigation, p, seed, calm, plans, deckPlans]);

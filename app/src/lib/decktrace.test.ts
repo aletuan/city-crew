@@ -21,7 +21,7 @@ import {
 const fake = () => h.fake!;
 beforeEach(() => fake().reset());
 
-const DEVICE = { platform: 'ios', osVersion: '18.1', isDev: false };
+const DEVICE = { platform: 'ios', osVersion: '18.1', isDev: false, channel: 'preview' };
 const SHAPE = { options: 3, span: 3, still: false };
 const ev = (ms: number, over: Partial<DeckEvent> = {}): DeckEvent => ({
   ms, option: 0, slot: 0, what: 'ask', place: 'cong-cafe', ...over,
@@ -117,6 +117,7 @@ describe('buildDeckRow', () => {
       platform: 'ios',
       os_version: '18.1',
       is_dev: false,
+      channel: 'preview',
       options: 3,
       span: 3,
       still: false,
@@ -136,6 +137,14 @@ describe('buildDeckRow', () => {
 
   it('has nothing to say about a visit that recorded nothing', () => {
     expect(buildDeckRow([], SHAPE, DEVICE)).toBeNull();
+  });
+
+  // Which build filed the row is the question the two hand-held switches
+  // above turn on, and it has been inferred twice and got wrong once. A
+  // build with no stamp — Expo Go, a bare dev build — says so rather than
+  // being given a word invented for it.
+  it('carries the channel, and null where a build has no stamp', () => {
+    expect(buildDeckRow([ev(5)], SHAPE, { ...DEVICE, channel: null })!.channel).toBeNull();
   });
 });
 
@@ -200,13 +209,16 @@ describe('the app’s own pair', () => {
     deckTrace.start();
     deckTrace.log({ option: 0, slot: null, what: 'option', place: null });
     reportDeck.reset();
-    reportDeck.report(deckTrace.events(), SHAPE, { platform: 'android', osVersion: '35', isDev: true });
+    reportDeck.report(deckTrace.events(), SHAPE,
+      { platform: 'android', osVersion: '35', isDev: true, channel: 'production' });
     await Promise.resolve();
     expect(fake().log).toEqual([
       expect.objectContaining({
         table: 'deck_traces',
         op: 'insert',
-        payload: expect.objectContaining({ platform: 'android', is_dev: true, options: 3 }),
+        payload: expect.objectContaining({
+          platform: 'android', is_dev: true, options: 3, channel: 'production',
+        }),
       }),
     ]);
   });
