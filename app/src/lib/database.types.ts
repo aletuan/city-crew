@@ -302,6 +302,7 @@ export type Database = {
       }
       deck_traces: {
         Row: {
+          channel: string | null
           created_at: string
           events: Json
           id: string
@@ -314,6 +315,7 @@ export type Database = {
           total_ms: number
         }
         Insert: {
+          channel?: string | null
           created_at?: string
           events: Json
           id?: string
@@ -326,6 +328,7 @@ export type Database = {
           total_ms: number
         }
         Update: {
+          channel?: string | null
           created_at?: string
           events?: Json
           id?: string
