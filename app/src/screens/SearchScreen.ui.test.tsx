@@ -40,8 +40,7 @@ const g = vi.hoisted(() => ({
   adding: null as string | null,
   batch: { running: false, state: {}, done: 0, total: 0 } as unknown,
   run: vi.fn(),
-  addMany: vi.fn(async () => ({ done: 0, skipped: 0, failed: 0, held: 0, cancelled: false })),
-  cancel: vi.fn(),
+  addMany: vi.fn(async () => ({ done: 0, skipped: 0, failed: 0, held: 0 })),
   clear: vi.fn(),
 }));
 

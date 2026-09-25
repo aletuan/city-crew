@@ -16,7 +16,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GradientCta, PressableScale, useTabBarClearance } from './ui';
+import { GradientCta, useTabBarClearance } from './ui';
 import { Batch, finished, heldCount } from '../lib/batch';
 import { useI18n } from '../lib/i18n';
 import { colors, font, gradAI, radius, space } from '../theme';
@@ -34,12 +34,11 @@ export function batchBarShown(chosen: number, batch: Batch, done?: Done): boolea
   return chosen > 0 || batch.running || heldCount(batch) > 0 || (!!done && finished(batch));
 }
 
-export default function AddBatchBar({ chosen, batch, onAdd, onCancel, done }: {
+export default function AddBatchBar({ chosen, batch, onAdd, done }: {
   /** How many are selected and can still be added. */
   chosen: number;
   batch: Batch;
   onAdd: () => void;
-  onCancel: () => void;
   /** The way out once a run has ended and nothing is left to add. Omitted
    *  by screens the reader already has a reason to be on. */
   done?: Done;
@@ -55,23 +54,22 @@ export default function AddBatchBar({ chosen, batch, onAdd, onCancel, done }: {
   return (
     <View style={[s.foot, { paddingBottom: clearance }]}>
       {batch.running ? (
-        <>
-          <LinearGradient {...gradAI} style={s.progress}>
-            <ActivityIndicator color={colors.accentInk} />
-            <Text style={s.progressText}>
-              {t(
-                `Adding ${batch.done + 1} of ${batch.total}…`,
-                `Đang thêm ${batch.done + 1}/${batch.total}…`,
-                `${batch.total}件中 ${batch.done + 1}件目…`,
-              )}
-            </Text>
-          </LinearGradient>
-          <PressableScale onPress={onCancel} accessibilityRole="button">
-            <Text style={s.cancel}>
-              {t('Stop after this one', 'Dừng sau chỗ này', 'この件で止める')}
-            </Text>
-          </PressableScale>
-        </>
+        // The progress alone. A "Stop after this one" sat under it, and
+        // what it could do was narrower than it looked: the place in
+        // flight is already with the server and finishes either way, so
+        // on a run of one — the common run — pressing it changed nothing
+        // at all. On a longer one it left the rest selected and the
+        // reader where they were, which is where they already were.
+        <LinearGradient {...gradAI} style={s.progress}>
+          <ActivityIndicator color={colors.accentInk} />
+          <Text style={s.progressText}>
+            {t(
+              `Adding ${batch.done + 1} of ${batch.total}…`,
+              `Đang thêm ${batch.done + 1}/${batch.total}…`,
+              `${batch.total}件中 ${batch.done + 1}件目…`,
+            )}
+          </Text>
+        </LinearGradient>
       ) : held > 0 ? (
         // Before the CTA, and that order is the point. The cap is per
         // account per day, so every remaining selection would be refused
@@ -119,25 +117,27 @@ export default function AddBatchBar({ chosen, batch, onAdd, onCancel, done }: {
       {!batch.running && held > 0 && done ? (
         <GradientCta wide icon="arrow-back" label={done.label} onPress={done.onPress} />
       ) : null}
-      <Text style={s.footNote}>
-        {held > 0 && !batch.running
-          ? t(
+      {/* One note, for the one state a reader cannot read off the bar.
+
+          There were three. "We fill in the name, photos and hours" sat
+          under a button reading "Add this place" and described the app's
+          own job; "You can keep browsing — this finishes on its own" sat
+          under a progress bar that was visibly running and under a
+          control saying how to stop it. Both explained the obvious in a
+          place a reader looks once and never again.
+
+          This one stays because nothing else says it: the bar is about to
+          go, the places that could not be added are still selected, and
+          without the line the only reading is that they were lost. */}
+      {held > 0 && !batch.running ? (
+        <Text style={s.footNote}>
+          {t(
             'They keep their place — come back and add them then.',
             'Chúng vẫn ở đây — quay lại thêm sau nhé.',
             'そのまま残ります — またあとで追加できます。',
-          )
-          : batch.running
-          ? t(
-            'You can keep browsing — this finishes on its own.',
-            'Bạn cứ dùng tiếp — phần này tự chạy xong.',
-            'そのまま閲覧できます — 追加は自動で終わります。',
-          )
-          : t(
-            'We fill in the name, photos and hours.',
-            'Chúng tôi điền tên, ảnh và giờ mở cửa.',
-            '名前・写真・営業時間はこちらで埋めます。',
           )}
-      </Text>
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -163,6 +163,5 @@ const s = StyleSheet.create({
     color: colors.text, fontSize: 15, fontWeight: font.semibold,
     textAlign: 'center', paddingVertical: 4,
   },
-  cancel: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold, textAlign: 'center' },
   footNote: { color: colors.textTertiary, fontSize: 12.5, lineHeight: 18, textAlign: 'center' },
 });

@@ -49,7 +49,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { city } = useCity();
   const tabClearance = useTabBarClearance();
-  const { results, known, searching, adding, batch, run, addMany, cancel, awayFrom, clear } = useCandidates();
+  const { results, known, searching, adding, batch, run, addMany, awayFrom, clear } = useCandidates();
 
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
@@ -83,7 +83,10 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
       // places now are. Not when something failed, and not when the cap
       // held anything back: navigating away from either is the app
       // deciding the reader does not need to know.
-      if (r.failed === 0 && r.held === 0 && !r.cancelled) navigation.goBack();
+      //
+      // A third reason used to sit here — the reader had pressed Stop —
+      // and went with the control.
+      if (r.failed === 0 && r.held === 0) navigation.goBack();
     }).finally(() => { sending.current = false; });
   };
 
@@ -214,7 +217,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
       {/* The commit, pinned rather than at the end of the list. It acts on
           a selection that is visible above it, and a button you have to
           scroll to find is a button you lose track of while choosing. */}
-      <AddBatchBar chosen={chosen.length} batch={batch} onAdd={go} onCancel={cancel} done={done} />
+      <AddBatchBar chosen={chosen.length} batch={batch} onAdd={go} done={done} />
 
     </Screen>
   );

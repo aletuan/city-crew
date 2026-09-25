@@ -721,7 +721,6 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
         chosen={chosen.length}
         batch={google.batch}
         onAdd={() => { if (chosen.length) google.addMany(chosen); }}
-        onCancel={google.cancel}
       />
     </SafeAreaView>
   );

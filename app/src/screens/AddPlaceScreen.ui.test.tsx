@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import type { Candidate, Known } from '../lib/suggest';
 
-type Tally = { done: number; skipped: number; failed: number; held: number; cancelled: boolean };
+type Tally = { done: number; skipped: number; failed: number; held: number };
 
 const g = vi.hoisted(() => ({
   results: null as unknown[] | null,
@@ -26,7 +26,6 @@ const g = vi.hoisted(() => ({
   },
   run: vi.fn(),
   addMany: vi.fn(),
-  cancel: vi.fn(),
   clear: vi.fn(),
   awayFrom: vi.fn(() => ''),
 }));
@@ -72,7 +71,7 @@ const field = () => screen.getByPlaceholderText(/Name of a place in|Tên một �
 const type = (text: string) => fireEvent.change(field(), { target: { value: text } });
 const submit = () => fireEvent.keyDown(field(), { key: 'Enter' });
 const row = (name: string) => screen.getByText(name).closest('[role="checkbox"]') as HTMLElement;
-const clean: Tally = { done: 1, skipped: 0, failed: 0, held: 0, cancelled: false };
+const clean: Tally = { done: 1, skipped: 0, failed: 0, held: 0 };
 
 beforeEach(() => {
   env.lang = 'en';
@@ -85,7 +84,6 @@ beforeEach(() => {
   g.run.mockReset();
   g.addMany.mockReset();
   g.addMany.mockResolvedValue(clean);
-  g.cancel.mockReset();
   g.clear.mockReset();
   g.awayFrom.mockReset();
   g.awayFrom.mockReturnValue('');
@@ -100,7 +98,7 @@ describe('before a search', () => {
     expect(screen.queryByText(/Results from Google Maps/)).toBeNull();
     expect(screen.queryByText(/Nothing found/)).toBeNull();
     // No selection and no batch: the foot is not drawn at all.
-    expect(screen.queryByText('We fill in the name, photos and hours.')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Add/ })).toBeNull();
   });
 
   it('speaks the city in the reader’s language', () => {
@@ -245,7 +243,10 @@ describe('picking and adding', () => {
     mount();
     fireEvent.click(row('Place a'));
     expect(screen.getByRole('button', { name: /Add this place/ })).toBeTruthy();
-    expect(screen.getByText('We fill in the name, photos and hours.')).toBeTruthy();
+    // And nothing under it. "We fill in the name, photos and hours" used
+    // to sit here, describing the app's own job beneath a button that
+    // already says what it does.
+    expect(screen.queryByText(/We fill in the name/)).toBeNull();
     fireEvent.click(row('Place b'));
     expect(screen.getByText('Add 2 places')).toBeTruthy();
     fireEvent.click(row('Place a'));
@@ -321,7 +322,6 @@ describe('picking and adding', () => {
   it.each([
     ['something failed', { failed: 1 }],
     ['the daily cap held some back', { held: 2 }],
-    ['the reader stopped it', { cancelled: true }],
   ])('stays when %s', async (_why, over) => {
     g.results = [cand('a')];
     g.addMany.mockResolvedValue({ ...clean, ...over });
@@ -333,7 +333,11 @@ describe('picking and adding', () => {
 });
 
 describe('while a batch runs and after', () => {
-  it('heads the list with progress and offers to stop', () => {
+  // The progress and nothing else. A "Stop after this one" sat under it
+  // and a note under that; what the stop could do was narrower than it
+  // looked — the place in flight is already with the server — so on a run
+  // of one it changed nothing at all.
+  it('heads the list with progress, and puts nothing under it', () => {
     g.results = [cand('a'), cand('b'), cand('c')];
     g.batch = { running: true, state: { a: 'done', b: 'running', c: 'queued' }, done: 1, total: 3 };
     g.adding = 'b';
@@ -341,8 +345,8 @@ describe('while a batch runs and after', () => {
     expect(screen.getByText('ADDING 3 · 1 DONE')).toBeTruthy();
     expect(screen.getByText('Adding 2 of 3…')).toBeTruthy();
     expect(screen.getByText('Fetching name, photos and hours…')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Stop after this one' }));
-    expect(g.cancel).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Stop after/)).toBeNull();
+    expect(screen.queryByText(/You can keep browsing/)).toBeNull();
   });
 
   it('counts only the places actually added once a run has finished', () => {
@@ -374,6 +378,19 @@ describe('while a batch runs and after', () => {
     expect(screen.getAllByText('Not added — no goes left today')).toHaveLength(2);
     expect(screen.getByText('They keep their place — come back and add them then.')).toBeTruthy();
     expect(screen.queryByText(/^Add (this|\d)/)).toBeNull();
+  });
+
+  // The singular, which the plural above does not reach: "1 place still
+  // to add" is its own sentence rather than the same one with a number in
+  // front, and it is the commoner of the two — the cap is hit one place
+  // before it stops you.
+  it('says it in the singular when one place was held', () => {
+    g.results = [cand('a'), cand('b')];
+    g.batch = { running: false, state: { a: 'done', b: 'held' }, done: 1, total: 2 };
+    g.known = { a: { state: 'mine', slug: 'a' } };
+    mount();
+    expect(screen.getByText('1 place still to add — no goes left today')).toBeTruthy();
+    expect(screen.queryByText(/^1 places/)).toBeNull();
   });
 
   it('heads a Japanese reader’s finished run in Japanese', () => {
