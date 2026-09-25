@@ -409,6 +409,21 @@ export default function App() {
   const pending = progress?.by_status?.pending ?? 0;
 
   /**
+   * The publish action, built once and placed twice — in the page head
+   * above 960px and in the phone's top bar below it, the way Add place
+   * already is. It was only in the page head for a while (#634 moved it
+   * there from the top bar, to sit beside the number it changes), and
+   * the page head is hidden on phones; so a phone had no way to publish
+   * at all, with twenty-four approved places waiting. One element for
+   * both seats, so the two copies cannot drift apart again.
+   */
+  const publishButton = unpublished > 0 && (
+    <button className="publishbtn" onClick={publishApproved} disabled={publishing}>
+      {publishing ? 'Publishing…' : `Publish ${unpublished}`}
+    </button>
+  );
+
+  /**
    * Where a status tile points.
    *
    * A tile is a door into a queue, so it leads to the list — from the
@@ -494,8 +509,11 @@ export default function App() {
                     <img className="logo" src="logo.png" alt="City Crew" />
                   </Link>
                   <div className="spacer" />
-                  {/* Actions only — the one every session starts with, and
-                      the one warning worth a badge. Navigation moved out. */}
+                  {/* Actions only — the same three the page head carries:
+                      what is waiting to go live, the one every session
+                      starts with, and the one warning worth a badge.
+                      Navigation moved out. */}
+                  {publishButton}
                   <Link className="syncbtn addbtn primary" to="/add">
                     <span aria-hidden="true">＋</span>
                     <span className="btnlabel">Add<span className="btnlabel-more"> place</span></span>
@@ -573,11 +591,7 @@ export default function App() {
                       below — which is how a published place and a hidden
                       one came to look identical to the person who had just
                       published it. */}
-                  {unpublished > 0 && (
-                    <button className="publishbtn" onClick={publishApproved} disabled={publishing}>
-                      {publishing ? 'Publishing…' : `Publish ${unpublished}`}
-                    </button>
-                  )}
+                  {publishButton}
                   <Link className="syncbtn addbtn primary" to="/add">
                     <span aria-hidden="true">＋</span>
                     <span className="btnlabel">Add place</span>
