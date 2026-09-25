@@ -44,12 +44,11 @@ export type Candidates = {
   adding: string | null;
   batch: Batch;
   run: (query: string) => void;
-  /** Submit several, one at a time. Resolves once every one has settled or
-   *  the run was cancelled. */
+  /** Submit several, one at a time. Resolves once every one has settled,
+   *  or once the daily cap has ended the run. */
   addMany: (list: Candidate[]) => Promise<{
-    done: number; skipped: number; failed: number; held: number; cancelled: boolean;
+    done: number; skipped: number; failed: number; held: number;
   }>;
-  cancel: () => void;
   /** Formatted distance from the reader, or '' — see `awayFrom` below. */
   awayFrom: (c: Candidate) => string;
   clear: () => void;
@@ -69,17 +68,18 @@ export function useCandidates(): Candidates {
   const [searching, setSearching] = useState(false);
   const [batch, setBatch] = useState<Batch>(IDLE_BATCH);
   /**
-   * Why the run is stopping, read between items and never mid-flight.
+   * Whether the daily cap has ended the run, read between items and never
+   * mid-flight.
    *
-   * The reason matters, which is why this is not a boolean any more. A
-   * reader who pressed Stop still has their goes and can try again in a
-   * second; a run the daily cap ended cannot succeed at all today. Both
-   * used to leave the remaining rows looking identical — and looking, in
-   * fact, like nothing had happened to them.
+   * It was a two-valued ref — cap, or a Stop the reader pressed — because
+   * the two leave the remaining rows in different states. The Stop is
+   * gone: on a run of one, the one place is already with the server and
+   * pressing it changed nothing, and on a longer run nobody reached for
+   * it. What is left has one cause, so it is a flag again.
    */
-  const stop = useRef<null | 'cancel' | 'cap'>(null);
+  const capped = useRef(false);
 
-  const clear = useCallback(() => { setResults(null); setKnown({}); setBatch(IDLE_BATCH); stop.current = null; }, []);
+  const clear = useCallback(() => { setResults(null); setKnown({}); setBatch(IDLE_BATCH); capped.current = false; }, []);
 
   const run = useCallback((raw: string) => {
     const q = raw.trim();
@@ -213,7 +213,7 @@ export function useCandidates(): Candidates {
       // `held`, not `failed`: nothing is wrong with this place and nobody
       // tried to add it. The server refused the account before it looked
       // at the request, and tomorrow the same tap works.
-      stop.current = 'cap';
+      capped.current = true;
       return 'held';
     }
     Alert.alert(t('Could not add it', 'Không thêm được', '追加できませんでした'), out.message);
@@ -233,8 +233,8 @@ export function useCandidates(): Candidates {
    * server is working on, not one of five that might be.
    */
   const addMany = useCallback(async (list: Candidate[]) => {
-    if (!city || !list.length) return { done: 0, skipped: 0, failed: 0, held: 0, cancelled: false };
-    stop.current = null;
+    if (!city || !list.length) return { done: 0, skipped: 0, failed: 0, held: 0 };
+    capped.current = false;
     setBatch({
       running: true,
       total: list.length,
@@ -244,14 +244,12 @@ export function useCandidates(): Candidates {
 
     const tally = { done: 0, skipped: 0, failed: 0, held: 0 };
     for (const c of list) {
-      // Whatever stopped the run, these were never attempted — but why
-      // decides what the row is allowed to say. The cap means "not today",
-      // which the reader has to be told; a cancel means "you stopped it",
-      // which they already know, so the row goes back to waiting.
-      if (stop.current) {
-        const rest: ItemState = stop.current === 'cap' ? 'held' : 'queued';
-        mark(c.place_id, rest);
-        if (rest === 'held') tally.held += 1;
+      // Never attempted, and the row has to say so: the cap means "not
+      // today", which is not something a reader can work out from a row
+      // that simply stopped changing.
+      if (capped.current) {
+        mark(c.place_id, 'held');
+        tally.held += 1;
         continue;
       }
       mark(c.place_id, 'running');
@@ -270,21 +268,14 @@ export function useCandidates(): Candidates {
     // and five of them would be four wasted round trips and four list
     // re-renders under the reader's finger.
     if (tally.done > 0) places.reload();
-    // Cancelled is not the same as clean, and only the caller can act on
-    // the difference: a run stopped halfway must not be followed by the
-    // screen leaving, however few things went wrong before it stopped.
-    return { ...tally, cancelled: stop.current === 'cancel' };
+    return tally;
   // `city.id` is the stable key — see the note above `search`.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [city?.id, places, suggestOne]);
 
-  /** Stop before the next one starts. The one in flight is already with
-   *  the server and finishing it is cheaper than orphaning it. */
-  const cancel = useCallback(() => { stop.current = 'cancel'; }, []);
-
   const adding = Object.keys(batch.state).find((id) => batch.state[id] === 'running') ?? null;
 
-  return { results, known, searching, adding, batch, run, addMany, cancel, awayFrom, clear };
+  return { results, known, searching, adding, batch, run, addMany, awayFrom, clear };
 }
 
 /** Only the ones the catalog has never heard of. What Search shows, since

@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import type { Candidate, Known } from '../lib/suggest';
 
-type Tally = { done: number; skipped: number; failed: number; held: number; cancelled: boolean };
+type Tally = { done: number; skipped: number; failed: number; held: number };
 
 const g = vi.hoisted(() => ({
   results: null as unknown[] | null,
@@ -26,7 +26,6 @@ const g = vi.hoisted(() => ({
   },
   run: vi.fn(),
   addMany: vi.fn(),
-  cancel: vi.fn(),
   clear: vi.fn(),
   awayFrom: vi.fn(() => ''),
 }));
@@ -72,7 +71,7 @@ const field = () => screen.getByPlaceholderText(/Name of a place in|Tên một �
 const type = (text: string) => fireEvent.change(field(), { target: { value: text } });
 const submit = () => fireEvent.keyDown(field(), { key: 'Enter' });
 const row = (name: string) => screen.getByText(name).closest('[role="checkbox"]') as HTMLElement;
-const clean: Tally = { done: 1, skipped: 0, failed: 0, held: 0, cancelled: false };
+const clean: Tally = { done: 1, skipped: 0, failed: 0, held: 0 };
 
 beforeEach(() => {
   env.lang = 'en';
@@ -85,7 +84,6 @@ beforeEach(() => {
   g.run.mockReset();
   g.addMany.mockReset();
   g.addMany.mockResolvedValue(clean);
-  g.cancel.mockReset();
   g.clear.mockReset();
   g.awayFrom.mockReset();
   g.awayFrom.mockReturnValue('');
@@ -324,7 +322,6 @@ describe('picking and adding', () => {
   it.each([
     ['something failed', { failed: 1 }],
     ['the daily cap held some back', { held: 2 }],
-    ['the reader stopped it', { cancelled: true }],
   ])('stays when %s', async (_why, over) => {
     g.results = [cand('a')];
     g.addMany.mockResolvedValue({ ...clean, ...over });
@@ -336,7 +333,11 @@ describe('picking and adding', () => {
 });
 
 describe('while a batch runs and after', () => {
-  it('heads the list with progress and offers to stop', () => {
+  // The progress and nothing else. A "Stop after this one" sat under it
+  // and a note under that; what the stop could do was narrower than it
+  // looked — the place in flight is already with the server — so on a run
+  // of one it changed nothing at all.
+  it('heads the list with progress, and puts nothing under it', () => {
     g.results = [cand('a'), cand('b'), cand('c')];
     g.batch = { running: true, state: { a: 'done', b: 'running', c: 'queued' }, done: 1, total: 3 };
     g.adding = 'b';
@@ -344,14 +345,8 @@ describe('while a batch runs and after', () => {
     expect(screen.getByText('ADDING 3 · 1 DONE')).toBeTruthy();
     expect(screen.getByText('Adding 2 of 3…')).toBeTruthy();
     expect(screen.getByText('Fetching name, photos and hours…')).toBeTruthy();
-    // And no note under it. "You can keep browsing — this finishes on its
-    // own" sat beneath a progress bar that was visibly running and a
-    // control saying how to stop it.
+    expect(screen.queryByText(/Stop after/)).toBeNull();
     expect(screen.queryByText(/You can keep browsing/)).toBeNull();
-    // The stop is the one thing under the bar that is not a caption, and
-    // it is the only way out of a run.
-    fireEvent.click(screen.getByRole('button', { name: 'Stop after this one' }));
-    expect(g.cancel).toHaveBeenCalledTimes(1);
   });
 
   it('counts only the places actually added once a run has finished', () => {
