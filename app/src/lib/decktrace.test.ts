@@ -194,14 +194,39 @@ describe('makeDeckReporter', () => {
 });
 
 describe('the app’s own pair', () => {
-  // Hand-flipped on, against the channel, because the phone the deck is
-  // being investigated from runs a production-channel build — the one
-  // install whose numbers are wanted was the one the channel rule
-  // excluded. Asserted rather than commented, so putting them back is a
-  // change a test notices.
-  it('is on everywhere until the deck’s timings are settled', () => {
+  it('reports on a build the policy allows', () => {
     expect(DECK_TRACE).toBe(true);
     expect(DECK_TRACE_UPLOAD).toBe(true);
+  });
+
+  /**
+   * The one that matters, and the one the assertion above cannot make.
+   *
+   * `lib/legal` promises a reader, in the policy they can open, that the
+   * App Store build "sends no diagnostics or usage analytics of any
+   * kind". For a day these two constants were hand-flipped to `true` to
+   * get numbers off a production build, and it did.
+   *
+   * Asserting `true` under the file's non-production mock proves
+   * nothing: a hand-flipped literal passes it too. So this one loads the
+   * module against a production channel, which is the only arrangement
+   * where a literal `true` shows up as what it is.
+   *
+   * Anything that needs these on in an App Store build needs `lib/legal`
+   * changed first, in the same commit. This test is where that argument
+   * has to be had.
+   */
+  it('is silent on the build the policy says is silent', async () => {
+    vi.resetModules();
+    vi.doMock('./channel', () => ({ CHANNEL: 'production', IS_PRODUCTION_CHANNEL: true }));
+    try {
+      const shipped = await import('./decktrace');
+      expect(shipped.DECK_TRACE).toBe(false);
+      expect(shipped.DECK_TRACE_UPLOAD).toBe(false);
+    } finally {
+      vi.doUnmock('./channel');
+      vi.resetModules();
+    }
   });
 
   it('records through the singleton and files the row into deck_traces', async () => {

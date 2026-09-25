@@ -56,34 +56,37 @@
 // about drawing. `start()` at the top of a visit is what keeps two visits
 // from sharing a clock.
 
+import { IS_PRODUCTION_CHANNEL } from './channel';
 import { supabase } from './supabase';
 
 /**
  * The switch. On, every visit records its timeline, says it out loud, and
  * files a row; off, `log` returns before touching the clock.
  *
- * TEMPORARY, and hand-flipped on purpose.
+ * `!IS_PRODUCTION_CHANNEL`, exactly as the launch trace decides it: on in
+ * Expo Go, a dev build and a `preview` build, off in the App Store one.
  *
- * It asked the channel first — `!IS_PRODUCTION_CHANNEL`, exactly as the
- * launch trace decided it: on in Expo Go, a dev build and the TestFlight
- * "preview" channel, off in the App Store build. That rule is right in
- * general and was wrong here, and the table said so: the deck filed
- * nothing, and `startup_traces` — gated on the identical condition — had
- * filed nothing for three days either, through a week of the animation
- * being worked on daily. The phone this is being investigated from is
- * running a production-channel build, so the one install whose numbers
- * are wanted is the one install the rule excludes.
+ * ── it was hand-flipped to `true` for a day, and should not have been ──
  *
- * The cost is that every install reports, App Store readers included. It
- * was weighed and taken: a row carries milliseconds, a platform, an OS
- * version and slugs from a public catalog, and the table's RLS lets a
- * phone file its own row and read nobody's.
+ * The reason was real: the deck was filing nothing, and the phone it was
+ * being investigated from turned out to be running a production-channel
+ * build — the one install whose numbers were wanted was the one install
+ * this rule excludes. Turning the rule off got the numbers.
  *
- * Put both constants back to `!IS_PRODUCTION_CHANNEL` when the deck's
- * timings are settled — or to `false`, which is where the table's own
- * retention note expects them to end up.
+ * What that missed is that this app promises otherwise. `lib/legal`, in
+ * the policy a reader can open: *"No advertising, no trackers, no
+ * third-party analytics. The App Store build sends no diagnostics or
+ * usage analytics of any kind."* For a day it did. The rows carried
+ * nothing that identifies anybody, so nobody was exposed — but the
+ * sentence was false while they were being written, and a promise in a
+ * privacy policy is not a default to be traded for convenience.
+ *
+ * The right answer was the one this returns to, with the investigation
+ * moved onto a build the rule allows. Anything that needs these on in an
+ * App Store build needs `lib/legal` changed first, in the same commit,
+ * or it is not allowed.
  */
-export const DECK_TRACE = true;
+export const DECK_TRACE = !IS_PRODUCTION_CHANNEL;
 /**
  * The switch for the *upload* — `DECK_TRACE` governs the recording and
  * this governs whether it leaves the phone.
@@ -91,9 +94,9 @@ export const DECK_TRACE = true;
  * Two constants rather than one, the way `lib/trace` and `lib/tracereport`
  * keep theirs apart: the console half and the server half are different
  * costs, and either can be turned off by hand here without taking the
- * other with it. Both are on for the reason above.
+ * other with it. This is the one the policy above is about.
  */
-export const DECK_TRACE_UPLOAD = true;
+export const DECK_TRACE_UPLOAD = !IS_PRODUCTION_CHANNEL;
 
 /** How many events one visit may record. Three plans across three boxes
  *  is about forty; the cap is where a stuck screen stops writing rather
