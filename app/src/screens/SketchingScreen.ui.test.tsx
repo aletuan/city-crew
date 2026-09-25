@@ -50,6 +50,21 @@ vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: mine.current, re
 vi.mock('../lib/tasteProfile', () => ({
   usePlanProfile: () => profile,
 }));
+// The deck's timeline, stood in for.
+//
+// Not for speed, and not because this screen's behaviour depends on it.
+// Left real, `reportDeck` reaches the real `supabase` client and files a
+// row — and it did: every run of this suite, CI's included, inserted its
+// fixtures into the production `deck_traces` table. They are easy to
+// spot after the fact (`platform: 'web'`, `os_version: '0.0.0'`, a
+// five-second wait finishing in forty milliseconds) and they should
+// never have been there to spot. `SketchDeck.ui.test.tsx` already stands
+// it in; this file rendered the same component through the screen and
+// did not.
+vi.mock('../lib/decktrace', () => ({
+  deckTrace: { start: vi.fn(), log: vi.fn(), events: () => [] },
+  reportDeck: { reset: vi.fn(), report: vi.fn() },
+}));
 vi.mock('../lib/planner', () => ({ planTrips }));
 vi.mock('../lib/travel', () => ({ legsOf }));
 vi.mock('../lib/assist', async (orig) => ({
