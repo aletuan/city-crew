@@ -379,25 +379,22 @@ Thêm ba thành phố, và trang địa điểm đọc được trong một cái
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
 sai theo thời gian (Apple guideline 2.3 — Accurate Metadata). Tính đến
-2026-09-26, database production có **8 thành phố active / 690 địa điểm đã
-duyệt**:
+2026-09-26, database production có **7 thành phố active / 715 địa điểm đã
+duyệt** (Hải Phòng tắt `is_active` ngày 26/09 vì 0 địa điểm):
 
 | Thành phố | Địa điểm đã publish |
 |---|---|
-| TP. Hồ Chí Minh | 292 |
-| Hà Nội | 237 |
+| TP. Hồ Chí Minh | 295 |
+| Hà Nội | 239 |
 | Đà Nẵng | 64 |
-| Đà Lạt | 44 |
-| Huế | 31 |
-| Melbourne | 14 |
+| Đà Lạt | 45 |
+| Huế | 39 |
+| Melbourne | 25 |
 | Vũng Tàu | 8 |
-| Hải Phòng | **0** |
+| Hải Phòng | 0 — **inactive** |
 
-Description bản 1.0.4 kể **bảy** — Hải Phòng active nhưng trống, không kể và
-phải tắt `is_active` trước khi nộp (một thành phố trống trong city sheet là
-thứ reviewer bấm vào đầu tiên). Melbourne 14 địa điểm là mỏng; nếu quyết
-không đưa ra thì tắt `is_active` và sửa câu mở đầu về "six cities in
-Vietnam" — cả ba bản.
+Description bản 1.0.4 kể đúng bảy thành phố active. Bật lại Hải Phòng khi có
+địa điểm, và sửa câu mở đầu — cả ba bản — cùng lúc.
 
 Câu kiểm tra lại:
 `select c.id, c.is_active, count(p.*) filter (where p.is_published and p.review_status='approved') from cities c left join places p on p.city_id = c.id group by 1,2 order by 3 desc;`
