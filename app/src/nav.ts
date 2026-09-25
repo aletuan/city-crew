@@ -97,12 +97,23 @@ export type RootStackParamList = {
   /** The screen that does the work. Carries the answers rather than
    *  re-reading the draft, because the draft lives in the screen behind
    *  this one and a plan should be built from what was asked at the
-   *  moment it was asked. */
-  Sketching: PlanAsk;
+   *  moment it was asked.
+   *
+   *  `seed` and `avoid` are absent on the way in from the wizard — a first
+   *  visit draws its own seed and avoids nothing — and present when
+   *  Regenerate sends the reader back through here for another set. That
+   *  is the only way to ask for one: this screen is what a wait for plans
+   *  looks like, and having a second, quieter one on `PlanOptions` meant
+   *  maintaining the same hold twice. */
+  Sketching: PlanAsk & { seed?: number; avoid?: string[] };
   /** The three drafts, and the button that asks for three more. Takes the
    *  same answers plus the draw, so the plans are rebuilt from pure inputs
-   *  rather than carried through navigation as objects. */
-  PlanOptions: PlanAsk & { seed: number };
+   *  rather than carried through navigation as objects.
+   *
+   *  `avoid` arrives with them for the same reason: after a Regenerate the
+   *  slugs already shown are part of what produced this set, and a rebuild
+   *  without them is a different draw wearing the same seed. */
+  PlanOptions: PlanAsk & { seed: number; avoid?: string[] };
   /** One of those drafts, opened for nudging. Named by the lens that
    *  produced it rather than by an index, so the plan the reader tapped is
    *  the plan they get even if a thin catalog returned fewer than three.

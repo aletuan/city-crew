@@ -11,7 +11,10 @@
 // and the same seed give the identical three — cheaper than serialising
 // plans through navigation, and it leaves one source of truth for what a
 // set of answers produces. Regenerate is a new seed and the slugs already
-// shown, so the next set moves rather than relying on luck.
+// shown, so the next set moves rather than relying on luck — and it asks
+// for them by sending the reader back through `Sketching`, which is the
+// screen that knows how to wait for plans. Nothing here holds a set that
+// is still being built.
 //
 // ── on showing fewer than three ──
 //
@@ -19,10 +22,15 @@
 // shopping places at all. Three near-identical cards would be worse than
 // one, because they claim a choice the catalog cannot back — so
 // `planTrips` returns what it can honestly build and this screen renders
-// however many that is, with a line saying so. The one thing it must never
-// do is pad.
+// however many that is. The one thing it must never do is pad.
+//
+// It used to say so as well, in a line under the header: "Only 2 ways to
+// do this with what is open here." The heading above it already counts
+// the set — "Your evening, two ways" — so the line repeated the count to
+// add a reason, and a reason nobody asked for reads as an apology for the
+// catalog. The count stays; the apology went.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,7 +39,7 @@ import {
   useTabBarClearance,
 } from '../components/ui';
 import {
-  cachedNarration, narratableOf, NARRATION_HOLD_MS, prefetchNarration,
+  cachedNarration, narratableOf, prefetchNarration,
 } from '../lib/assist';
 import { DEFAULT_TZ } from '../lib/clock';
 import { usePlaces } from '../lib/catalog';
@@ -94,11 +102,16 @@ export default function PlanOptionsScreen({ navigation, route }: {
   const { mine } = useSave();
   const { taste, budgetVnd } = usePlanProfile();
 
-  const [seed, setSeed] = useState(p.seed);
+  // Both are the route's, not this screen's. Regenerate hands them to
+  // `Sketching` and arrives back here through it, so a set of plans is
+  // described entirely by the params that produced it — there is no state
+  // here that a re-mount could disagree with.
+  const seed = p.seed;
   // Everything already offered, so Regenerate moves rather than rolling
   // the dice again and hoping. Grows across taps: the second Regenerate
-  // avoids what the first one showed too.
-  const [shown, setShown] = useState<string[]>([]);
+  // avoids what the first one showed too. Memoised because it feeds the
+  // `plans` memo, and a fresh `[]` every render would redraw every render.
+  const shown = useMemo(() => p.avoid ?? [], [p.avoid]);
 
   const day = clampDay(p.date || todayISO());
   const draft: TripDraft = useMemo(() => draftFrom(p, day), [p, day]);
@@ -168,78 +181,30 @@ export default function PlanOptionsScreen({ navigation, route }: {
   ]);
 
   /**
-   * A Regenerate the reader has asked for, whose words are still on the
-   * wire. Held rather than committed, so the new set arrives complete.
+   * Regenerate asks the screen before this one, rather than doing the work
+   * here.
    *
-   * Regenerate used to be two `setState`s: the plans were pure and
-   * synchronous, so a fresh set rendered in the same frame and the
-   * prefetch above chased it. That is the bug `SketchingScreen` was
-   * rebuilt to fix — "the reader's few seconds of comparing cards ran
-   * against a model that takes three to eight, so the editor still opened
-   * on facts and rewrote itself" — fixed there for the *first* set of
-   * plans, and left standing here for every set after it. There were two
-   * ways in and only one of them waited.
+   * It used to build the next set in place: a `pending` seed, the same
+   * `planTrips` call, a prefetch of all its narration, and a commit that
+   * raced the words against `NARRATION_HOLD_MS` so the cards never landed
+   * without their names. All of which `SketchingScreen` already does — it
+   * exists to be what a wait for plans looks like — so the hold was
+   * written twice, and the copy on this screen showed it as a spinner on
+   * a button while the other shows the deck and names the steps.
    *
-   * It cost more than the rewrite. `titles` below is keyed on `plans` on
-   * purpose, so a name landing mid-comparison does not pop onto a card;
-   * with the cache cold at commit time that memo held `null` for the whole
-   * life of the set, the cards fell back to their district, and the editor
-   * showed the model's title for a plan the list was calling "Cửa Nam".
-   * The list and the screen it opens disagreed about what the plan was
-   * called.
+   * `replace`, not `navigate`: `Sketching` replaces itself with
+   * `PlanOptions` when it is done, so the stack ends one deep either way
+   * and Back still leaves the planner rather than walking back through
+   * every set the reader asked for.
    *
-   * So the swap waits. The old set stays on screen — no blank, nothing to
-   * re-find — the button says what it is doing, and when the new plans
-   * land they land with their names on them.
+   * The seed moves by one and the avoid-list grows by what is on screen,
+   * exactly as before; they travel as params now instead of as state.
    */
-  const [pending, setPending] = useState<
-    { seed: number; avoid: string[]; until: number } | null
-  >(null);
-
-  // The asked-for set, built but not shown. Same pure call as `plans`, on
-  // the seed and the avoid-list the reader has not been given yet.
-  const nextPlans = useMemo(
-    () => (pending
-      ? planTrips(draft, places, city?.id ?? null,
-        { seed: pending.seed, startMin: p.startMin, pinned, avoid: pending.avoid, taste, budgetVnd, tz: city?.tz ?? DEFAULT_TZ })
-      : null),
-    [pending, draft, places, city?.id, city?.tz, p.startMin, pinned, taste, budgetVnd],
-  );
-
-  useEffect(() => {
-    if (!pending || !nextPlans) return;
-    let live = true;
-    // Commit is idempotent and races itself on purpose: whichever of the
-    // words and the cap arrives first ends the wait, and `live` stops the
-    // loser. An empty `nextPlans` settles instantly, which is right — a
-    // set with nothing in it has nothing to narrate.
-    const commit = () => {
-      if (!live) return;
-      live = false;
-      setSeed(pending.seed);
-      setShown(pending.avoid);
-      setPending(null);
-    };
-    const asks = nextPlans.map((plan) => prefetchNarration(
-      narratableOf(plan.stops),
-      { company: p.company, categories: p.categories, when: p.when, where: p.where },
-      lang,
-    ));
-    void Promise.allSettled(asks).then(commit);
-    // An absolute deadline, not a fresh eight seconds. This effect re-runs
-    // whenever `nextPlans` changes identity — a catalog refetch, a saved
-    // list — and a relative timer would restart the clock each time,
-    // leaving the button spinning past the cap it promises.
-    const cap = setTimeout(commit, Math.max(0, pending.until - Date.now()));
-    return () => { live = false; clearTimeout(cap); };
-  }, [pending, nextPlans, p.company, p.categories, p.when, p.where, lang]);
-
   const regenerate = () => {
-    if (pending) return;
-    setPending({
+    navigation.replace('Sketching', {
+      ...p,
       seed: seed + 1,
       avoid: [...shown, ...plans.flatMap((pl) => pl.stops.map((s) => s.place.slug))],
-      until: Date.now() + NARRATION_HOLD_MS,
     });
   };
 
@@ -324,16 +289,6 @@ export default function PlanOptionsScreen({ navigation, route }: {
             been written. */}
         {!!line && <Text style={s.byline}>{line}</Text>}
 
-        {plans.length > 0 && plans.length < 3 && (
-          <Text style={s.thin}>
-            {t(
-              `Only ${plans.length === 1 ? 'one way' : `${plans.length} ways`} to do this with what is open here.`,
-              `Chỉ dựng được ${plans.length} cách với những chỗ đang mở ở đây.`,
-              `この街で開いている店では${plans.length}通りだけです。`,
-            )}
-          </Text>
-        )}
-
         {plans.map((plan, i) => {
           // Resolved once, here, and handed to both the card and the
           // editor. The editor used to get `undefined` whenever the card
@@ -370,22 +325,11 @@ export default function PlanOptionsScreen({ navigation, route }: {
 
         {!!droppedLine && <Text style={s.dropped}>{droppedLine}</Text>}
 
-        {plans.length > 0 && (
-          <Text style={s.footnote}>
-            {t(
-              'Tap one to nudge its times and save it.',
-              'Chạm vào một cái để chỉnh giờ và lưu lại.',
-              'ひとつ選ぶと時刻を調整して保存できます。',
-            )}
-          </Text>
-        )}
-
         <View style={s.regen}>
           <GradientCta
             icon="refresh"
             wide
             label={t('Regenerate', 'Thực hiện lại', '作り直す')}
-            busy={!!pending}
             onPress={regenerate}
           />
         </View>
@@ -664,7 +608,6 @@ const CAPTION = { fontSize: 13, fontWeight: font.regular } as const;
 
 const s = StyleSheet.create({
   byline: { ...CAPTION, color: colors.textSecondary, marginBottom: space.headingToContent },
-  thin: { ...CAPTION, color: colors.textTertiary, marginBottom: 10 },
 
   cardWrap: { marginBottom: space.cardGap },
   // `Card` carries no padding of its own — see the note on the component.
@@ -736,6 +679,10 @@ const s = StyleSheet.create({
   emptyCard: { alignItems: 'center' },
   emptyText: { ...type.body, color: colors.textSecondary, textAlign: 'center' },
 
-  footnote: { ...CAPTION, color: colors.textTertiary, marginTop: 2, marginBottom: 16 },
-  regen: { marginTop: 4 },
+  // The footnote that used to sit here — "Tap one to nudge its times and
+  // save it" — carried 18pt of its own plus 18 of margin, and taking it
+  // out left the button 4pt under the last card. `cardGap` and this make
+  // 22: the stack ends, then the button, rather than the button reading as
+  // a fourth card.
+  regen: { marginTop: 8 },
 });

@@ -20,10 +20,10 @@
 
 import React from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '../uitest/render';
+import { fireEvent, render, screen } from '../uitest/render';
 import { addDays, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
-import { narratableOf, NARRATION_HOLD_MS, type Narration } from '../lib/assist';
+import { narratableOf, type Narration } from '../lib/assist';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
 
@@ -96,7 +96,7 @@ const SECOND = [
 
 const words = (title: string | null): Narration => ({ title, why: new Map(), fromModel: !!title });
 
-const nav = () => ({ navigate: vi.fn(), goBack: vi.fn() });
+const nav = () => ({ navigate: vi.fn(), replace: vi.fn(), push: vi.fn(), goBack: vi.fn() });
 const routeWith = (over: object = {}) => ({
   params: {
     company: 'friends', categories: ['cafes', 'eats'], where: 'Old Quarter', district: 'hoan-kiem',
@@ -113,42 +113,7 @@ const renderScreen = (over: object = {}) => {
 /** Every badge on screen, top to bottom — which is the order of the lenses. */
 const badges = () => screen.queryAllByText(/^(Best match|Iconic views|Low-key)$/).map((el) => el.textContent);
 const regen = () => screen.getByRole('button', { name: 'Regenerate' });
-/**
- * Let Regenerate's swap land.
- *
- * The screen commits the new set when its narration settles — a chain of
- * promises ending in one `setState` — or when the cap fires. Neither is
- * the wall clock, so the test does not wait on the wall clock either: one
- * turn of the event loop inside `act` drains the chain and flushes the
- * render, and the assertion after it is plain.
- *
- * This replaces a `waitFor` on a budget, and the budget was the flake.
- * The first version polled on the library's one second; then on
- * `NARRATION_HOLD_MS + 2000`; and each time a loaded runner — CI under
- * `test:tz`, a local run under coverage — could still hand back
- *
- *     Regenerate > grows the avoid-list across taps rather than
- *     replacing it
- *     expected [ 'Best match', 'Low-key' ] to deeply equal
- *     [ 'Iconic views' ]
- *
- * A wait that measures how busy the machine is cannot be made right by
- * making it longer. `EditProfileScreen.ui.test.tsx` learned the same
- * lesson (#529): wait for the signal, or drain the work; never the clock.
- *
- * The cap test is the one place the clock *is* the behaviour, and it
- * drives a fake one by hand.
- */
-const settled = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 const optsOf = (call: number) => planTrips.mock.calls[call][3] as Record<string, unknown>;
-const seedsAsked = () => planTrips.mock.calls.map((c) => (c[3] as { seed: number }).seed);
-
-/** A narration answer the test decides when to deliver. */
-const deferred = () => {
-  let resolve!: (n: Narration) => void;
-  const promise = new Promise<Narration>((r) => { resolve = r; });
-  return { promise, resolve };
-};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -350,32 +315,41 @@ describe('the cards', () => {
     expect(cachedNarration).toHaveBeenCalledWith(narratableOf(ICONIC.stops as never), 'en');
   });
 
-  // Said once under the cards rather than on each of them, which is the
-  // claim: `pinnedDropped` and this line are both computed once for all
-  // three plans, so on a card either would have been the same sentence
-  // three times.
-  it('says what a tap does once under the cards, not on each', () => {
+  // A card is a button with a name, a badge and a row of stops, and the
+  // footnote under them — "Tap one to nudge its times and save it" —
+  // spent a line saying what the shape already says. Gone; what has to
+  // survive its going is the affordance a screen reader hears, which was
+  // never carried by the sentence.
+  it('offers each card as a button, with no line telling the reader so', () => {
     renderScreen();
-    expect(screen.getAllByText('Tap one to nudge its times and save it.')).toHaveLength(1);
+    expect(screen.queryByText(/^Tap one/)).toBeNull();
+    expect(screen.getAllByRole('button', { name: /Best match|Iconic views|Low-key/ })).toHaveLength(3);
   });
 });
 
 describe('fewer than three, and none', () => {
-  it('says there is only one way, and does not pad', () => {
+  // The count is the heading's job and only the heading's. A second line
+  // under it — "Only 2 ways to do this with what is open here" — said the
+  // same number again to add a reason, and a reason nobody asked for
+  // reads as an apology for the catalog.
+  it('counts a thin set in the heading, and does not pad it', () => {
     planTrips.mockImplementation(() => [MATCH]);
     renderScreen();
-    expect(screen.getByText('Only one way to do this with what is open here.')).toBeTruthy();
+    expect(screen.getByText('Your evening, one way')).toBeTruthy();
     expect(badges()).toEqual(['Best match']);
+    expect(screen.queryByText(/^Only /)).toBeNull();
   });
 
-  it('counts two ways as two', () => {
+  it('counts two ways as two, in the heading', () => {
     planTrips.mockImplementation(() => [MATCH, LOWKEY]);
     renderScreen();
-    expect(screen.getByText('Only 2 ways to do this with what is open here.')).toBeTruthy();
+    expect(screen.getByText('Your evening, two ways')).toBeTruthy();
+    expect(screen.queryByText(/^Only /)).toBeNull();
   });
 
-  it('says nothing about thinness when there are three', () => {
+  it('says three when there are three', () => {
     renderScreen();
+    expect(screen.getByText('Your evening, three ways')).toBeTruthy();
     expect(screen.queryByText(/^Only /)).toBeNull();
   });
 
@@ -521,98 +495,77 @@ describe('picking a card', () => {
 });
 
 describe('Regenerate', () => {
-  it('asks for the next seed, avoiding every slug on screen, and swaps once the words are in', async () => {
+  // The whole of what this button does now. It used to build the next set
+  // in place — a held seed, a prefetch of its narration, a commit racing
+  // `NARRATION_HOLD_MS` — all of which `SketchingScreen` already does, and
+  // does visibly. Six tests over that machinery went with it; what is left
+  // to check is that the right question is asked of the right screen.
+  it('sends the next seed and every slug on screen back to the sketch', () => {
     const navigation = renderScreen();
     fireEvent.click(regen());
-    await settled();
-    expect(badges()).toEqual(['Best match', 'Low-key']);
-    expect(screen.getByText('Pop-up Stall')).toBeTruthy();
-    expect(screen.queryByText('Cộng Café')).toBeNull();
-    const last = planTrips.mock.calls.at(-1)![3] as Record<string, unknown>;
-    expect(last).toMatchObject({ seed: 8, avoid: ['cafe', 'dinner', 'temple', 'roof', 'lake'] });
-    // The editor rebuilds the new set, not the old one.
-    fireEvent.click(screen.getByText('Collection Pick'));
-    expect(navigation.navigate).toHaveBeenCalledWith('PlanEdit', expect.objectContaining({
-      seed: 8, lens: 'lowkey', avoid: ['cafe', 'dinner', 'temple', 'roof', 'lake'],
+    expect(navigation.replace).toHaveBeenCalledWith('Sketching', expect.objectContaining({
+      seed: 8,
+      avoid: ['cafe', 'dinner', 'temple', 'roof', 'lake'],
+      where: 'Old Quarter',
+      startMin: 18 * 60,
     }));
   });
 
-  it('grows the avoid-list across taps rather than replacing it', async () => {
-    planTrips.mockImplementation((_d: unknown, _p: unknown, _c: unknown, o: { seed: number }) =>
-      (o.seed === 7 ? FIRST : o.seed === 8 ? SECOND : [plan('iconic', [stop(CAFE, 18 * 60)])]));
-    renderScreen();
+  // `replace`, because `Sketching` replaces itself with this screen when
+  // it is done: navigating would leave both on the stack and Back would
+  // walk the reader through every set they had asked for.
+  it('replaces rather than pushes, so Back still leaves the planner', () => {
+    const navigation = renderScreen();
     fireEvent.click(regen());
-    await settled();
-    expect(screen.getByText('Pop-up Stall')).toBeTruthy();
-    fireEvent.click(regen());
-    await settled();
-    expect(badges()).toEqual(['Iconic views']);
-    const last = planTrips.mock.calls.at(-1)![3] as Record<string, unknown>;
-    expect(last).toMatchObject({
-      seed: 9, avoid: ['cafe', 'dinner', 'temple', 'roof', 'lake', 'nowhere', 'pinned'],
-    });
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(navigation.push).not.toHaveBeenCalled();
   });
 
-  it('holds the old set and shows busy until the new set is narrated, and ignores a second tap', async () => {
-    const answers: ReturnType<typeof deferred>[] = [];
-    renderScreen();
-    prefetchNarration.mockImplementation(() => { const d = deferred(); answers.push(d); return d.promise; });
+  // The avoid-list grows across taps because it arrives as a param and
+  // leaves with what this set added. The screen holds none of it, so the
+  // growing happens even though this render is a fresh mount.
+  it('grows the avoid-list it was given rather than replacing it', () => {
+    const navigation = renderScreen({ avoid: ['already', 'seen'] });
     fireEvent.click(regen());
-    // RN-web drops `accessibilityState.busy`; what reaches the DOM is the
-    // disabled state `busy` drives on the Pressable.
-    expect(regen().getAttribute('aria-disabled')).toBe('true');
-    // Asked for the two plans of the new set, while the old three stay up.
-    expect(answers).toHaveLength(2);
-    expect(prefetchNarration).toHaveBeenCalledWith(
-      narratableOf(SECOND[0].stops as never), expect.objectContaining({ where: 'Old Quarter' }), 'en',
-    );
-    expect(badges()).toEqual(['Best match', 'Iconic views', 'Low-key']);
-    // A tap while busy asks for nothing new (the button is disabled, so
-    // the screen's own `if (pending)` guard is belt and braces).
-    fireEvent.click(regen());
-    expect(seedsAsked().filter((s) => s === 9)).toHaveLength(0);
-
-    await act(async () => { answers[0].resolve(words(null)); });
-    expect(badges()).toEqual(['Best match', 'Iconic views', 'Low-key']);
-    await act(async () => { answers[1].resolve(words(null)); });
-    await settled();
-    expect(badges()).toEqual(['Best match', 'Low-key']);
-    expect(regen().getAttribute('aria-disabled')).not.toBe('true');
+    expect(navigation.replace).toHaveBeenCalledWith('Sketching', expect.objectContaining({
+      seed: 8,
+      avoid: ['already', 'seen', 'cafe', 'dinner', 'temple', 'roof', 'lake'],
+    }));
   });
 
-  it('lands the new cards with the names their narration brought', async () => {
-    const named = new Set<string>();
-    cachedNarration.mockImplementation((stops: { slug: string }[]) =>
-      (named.has(stops[0].slug) ? words(`Named ${stops[0].slug}`) : null));
-    prefetchNarration.mockImplementation(async (stops: { slug: string }[]) => {
-      named.add(stops[0].slug);
-      return words(`Named ${stops[0].slug}`);
-    });
+  // Nothing is built here any more, so the button asks the planner for
+  // nothing either — the next `planTrips` call happens on the next screen.
+  it('asks the planner for nothing itself', () => {
     renderScreen();
+    const before = planTrips.mock.calls.length;
     fireEvent.click(regen());
-    await settled();
-    expect(screen.getByText('Named nowhere')).toBeTruthy();
-    expect(screen.getByText('Named pinned')).toBeTruthy();
+    expect(planTrips.mock.calls.length).toBe(before);
   });
 
-  it('gives up waiting at the narration cap and swaps anyway', async () => {
-    vi.useFakeTimers();
-    renderScreen();
-    prefetchNarration.mockImplementation(() => new Promise(() => {}));
-    fireEvent.click(regen());
-    await act(async () => { vi.advanceTimersByTime(NARRATION_HOLD_MS - 100); });
-    expect(badges()).toEqual(['Best match', 'Iconic views', 'Low-key']);
-    await act(async () => { vi.advanceTimersByTime(200); });
-    expect(badges()).toEqual(['Best match', 'Low-key']);
+  // An avoid-list handed in is one of the pure inputs this screen rebuilds
+  // from, exactly as the seed is; without it the rebuild after a
+  // Regenerate is a different draw wearing the same seed.
+  it('rebuilds from the avoid-list it arrived with', () => {
+    renderScreen({ avoid: ['already', 'seen'] });
+    expect(optsOf(0)).toMatchObject({ seed: 7, avoid: ['already', 'seen'] });
   });
 
-  it('settles at once when the new set is empty', async () => {
-    planTrips.mockImplementation((_d: unknown, _p: unknown, _c: unknown, o: { seed: number }) =>
-      (o.seed === 7 ? FIRST : []));
-    renderScreen();
+  // And hands the same one on, so the editor rebuilds the plan the reader
+  // tapped rather than the one the seed alone would draw.
+  it('carries that avoid-list into the editor', () => {
+    const navigation = renderScreen({ avoid: ['already', 'seen'] });
+    fireEvent.click(screen.getByText('Cộng Café'));
+    expect(navigation.navigate).toHaveBeenCalledWith('PlanEdit', expect.objectContaining({
+      seed: 7, avoid: ['already', 'seen'],
+    }));
+  });
+
+  it('still offers the button when there is nothing to show', () => {
+    planTrips.mockImplementation(() => []);
+    const navigation = renderScreen();
     fireEvent.click(regen());
-    await settled();
-    expect(screen.getByText(/^Nothing here matches/)).toBeTruthy();
-    expect(badges()).toEqual([]);
+    expect(navigation.replace).toHaveBeenCalledWith('Sketching', expect.objectContaining({
+      seed: 8, avoid: [],
+    }));
   });
 });

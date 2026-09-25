@@ -209,7 +209,17 @@ export default function SketchingScreen({ navigation, route }: {
   // The seed is fixed for this visit rather than read at render: a new
   // draw on every re-render would mean the plans the reader is shown are
   // not the plans this screen decided existed.
-  const seed = useRef(Date.now()).current;
+  //
+  // Given by Regenerate, drawn here on a first visit. `p.seed` is the
+  // whole of what Regenerate asks for beyond the avoid-list, and taking
+  // it as a param rather than incrementing one held on `PlanOptions` is
+  // what lets that screen keep no state of its own.
+  const seed = useRef(p.seed ?? Date.now()).current;
+  // Everything a previous set already offered. Absent on a first visit,
+  // and growing with each Regenerate, so the next set moves rather than
+  // rolling the dice again and hoping — the catalogs this plans over are
+  // small enough that a fresh seed alone often redraws the same evening.
+  const avoid = p.avoid;
 
   const draft: TripDraft = useMemo(
     () => draftFrom(p, clampDay(p.date || todayISO())),
@@ -233,8 +243,8 @@ export default function SketchingScreen({ navigation, route }: {
   // running it here is what lets this screen report rather than perform.
   const plans = useMemo(
     () => (loading ? [] : planTrips(draft, places, city?.id ?? null,
-      { seed, startMin: p.startMin, pinned, taste, budgetVnd, tz: city?.tz ?? DEFAULT_TZ })),
-    [loading, places, city?.id, city?.tz, draft, seed, p.startMin, pinned, taste, budgetVnd],
+      { seed, startMin: p.startMin, pinned, avoid, taste, budgetVnd, tz: city?.tz ?? DEFAULT_TZ })),
+    [loading, places, city?.id, city?.tz, draft, seed, p.startMin, pinned, avoid, taste, budgetVnd],
   );
   const gap = useMemo(() => planGap(p.categories, places), [p.categories, places]);
 
@@ -437,8 +447,8 @@ export default function SketchingScreen({ navigation, route }: {
         channel: CHANNEL,
       },
     );
-    navigation.replace('PlanOptions', { ...p, seed });
-  }, [done, deckDone, plans.length, navigation, p, seed, calm, plans, deckPlans]);
+    navigation.replace('PlanOptions', { ...p, seed, avoid });
+  }, [done, deckDone, plans.length, navigation, p, seed, avoid, calm, plans, deckPlans]);
 
   const day = clampDay(p.date || todayISO());
   // Date first, then the half of it, then where — company nowhere, the
