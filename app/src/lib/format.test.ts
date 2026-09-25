@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dayBand, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, openFragment, openState, sashLabel, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, openFragment, openState, sashLabel, shutLabel, splitHours } from './format';
 import { instantOn } from './clock';
 import { fmtDistance } from './geo';
 
@@ -653,102 +653,6 @@ describe('openFragment', () => {
 
   it('wraps a past-midnight closing time like the clock it is', () => {
     expect(openFragment({ open: true, untilMin: 1560, closesInMin: 30 }, en)).toBe('until 02:00');
-  });
-});
-
-describe('dayBand', () => {
-  const at = (iso: string) => new Date(iso);
-  const week = (hours: string) =>
-    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-      .map((d) => `${d}: ${hours}`);
-  const WED_10AM = at('2026-08-12T03:00:00Z');
-  const WED_MIDNIGHT_30 = at('2026-08-12T17:30:00Z'); // 00:30 Thursday in ICT
-
-  it('draws one stretch for a plain day, and says where the clock is', () => {
-    expect(dayBand(week('8:00 AM – 11:00 PM'), WED_10AM, ICT)).toEqual({
-      nowMin: 600,
-      segments: [{ fromMin: 480, toMin: 1380, runsOn: false }],
-    });
-  });
-
-  // The tenth of the catalog a sentence cannot hold. `openState` answers
-  // "shut" here and stops; the band shows the afternoon coming back.
-  it('draws a lunch break as the two stretches it is', () => {
-    const band = dayBand(week('10:00 AM – 1:50 PM, 4:00 – 8:50 PM'), at('2026-08-12T08:00:00Z'), ICT);
-    expect(band).toEqual({
-      nowMin: 900, // 15:00, in the gap
-      segments: [
-        { fromMin: 600, toMin: 830, runsOn: false },
-        { fromMin: 960, toMin: 1250, runsOn: false },
-      ],
-    });
-  });
-
-  // Clipped at midnight with the flag set, so a renderer can square the
-  // edge rather than drawing a rounded end that claims a midnight close.
-  //
-  // Two stretches, not one, and that is the band being right rather than
-  // thorough: at ten in the morning this place really was open from
-  // midnight until one, and the day it draws is the whole day.
-  it('clips a window that runs past midnight and says that it did', () => {
-    expect(dayBand(week('7:00 PM – 1:00 AM'), WED_10AM, ICT)).toEqual({
-      nowMin: 600,
-      segments: [
-        { fromMin: 0, toMin: 60, runsOn: false },
-        { fromMin: 1140, toMin: MINUTES_IN_DAY, runsOn: true },
-      ],
-    });
-  });
-
-  // Half past midnight, inside last night's window. The reader is standing
-  // in a bar, and the band has to draw the bar they are standing in — at
-  // the left edge, where this morning actually is.
-  it('draws yesterday\'s overrun at the left edge, before today', () => {
-    expect(dayBand(week('7:00 PM – 1:00 AM'), WED_MIDNIGHT_30, ICT)).toEqual({
-      nowMin: 30,
-      segments: [
-        { fromMin: 0, toMin: 60, runsOn: false },
-        { fromMin: 1140, toMin: MINUTES_IN_DAY, runsOn: true },
-      ],
-    });
-  });
-
-  it('fills the whole axis for a place that never closes', () => {
-    expect(dayBand(week('Open 24 hours'), WED_10AM, ICT)).toEqual({
-      nowMin: 600,
-      segments: [{ fromMin: 0, toMin: MINUTES_IN_DAY, runsOn: false }],
-    });
-  });
-
-  // Not null: the hours were read and they say shut. An empty track with
-  // a mark on it is a true drawing of a closed day.
-  it('draws an empty day when the day says Closed', () => {
-    expect(dayBand(week('Closed'), WED_10AM, ICT)).toEqual({ nowMin: 600, segments: [] });
-  });
-
-  it('says nothing when the hours cannot be read', () => {
-    expect(dayBand(null, WED_10AM, ICT)).toBeNull();
-    expect(dayBand([], WED_10AM, ICT)).toBeNull();
-    expect(dayBand(week('noon – 5:00 PM'), WED_10AM, ICT)).toBeNull();
-  });
-
-  // A week with a hole in it, which is what a partial row from the desk
-  // looks like by the time it reaches here.
-  it('says nothing when the day itself is missing from the list', () => {
-    const holed = week('8:00 AM – 11:00 PM');
-    holed[2] = undefined as unknown as string; // Wednesday
-    expect(dayBand(holed, WED_10AM, ICT)).toBeNull();
-  });
-
-  // Yesterday being unreadable must not cost today its band — the
-  // look-back is an extra stretch to draw, not a prerequisite.
-  it('still draws today when yesterday does not parse', () => {
-    const mixed = week('8:00 AM – 11:00 PM');
-    mixed[1] = 'Tuesday: ';
-    expect(dayBand(mixed, WED_10AM, ICT)).toEqual({
-      nowMin: 600,
-      segments: [{ fromMin: 480, toMin: 1380, runsOn: false }],
-    });
   });
 });
 

@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
-import { dayBand, MINUTES_IN_DAY, openFragment, openState, sashLabel, shutLabel } from '../lib/format';
+import { openFragment, openState, sashLabel, shutLabel } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
@@ -37,7 +37,6 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
   // "Closed · opens 08:00" — see `sashLabel` for why the state is left to
   // the colour, and why that is only safe with the full sentence beside it.
   const sash = sashLabel(hours, t);
-  const band = dayBand(place.opening_hours, at, tz);
   // Only the closing hour reaches the meta line. `openFragment` would
   // also hand back "opens 08:00" for a shut place, and this card says
   // that on the photograph instead — printing both would be the same
@@ -123,14 +122,36 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
               A band across the corner nothing else wants. The three marks
               above hold the other three: bookmark top-right, rating
               bottom-left, attribution bottom-right. Top-left has been
-              empty since the pill that used to sit there went, and the
-              band under the photograph took over its job — which it could
-              not do. The band draws *when* a place is open; it has no way
-              to say *not now* except by where a two-point tick falls, and
-              at 22:42 a café that shut at ten puts that tick ten points
-              past the end of the fill. Measured across the catalog at
-              that hour: 23 of 122 shut places land the tick inside three
-              points of the fill it is supposed to sit outside of.
+              empty since the pill that used to sit there went.
+
+              For three versions a drawing tried to hold this fact — a
+              three-point track under the photograph, twenty-four hours
+              wide, the open stretches filled and a tick at the hour it
+              was. It could show a shape no sentence can: of the places
+              with readable hours, 55 shut for lunch and open again and
+              51 run past midnight. It could not say *not now*, except
+              by where a two-point tick fell, and at 22:42 a café that
+              shut at ten puts that tick ten points past the end of the
+              fill — 23 of 122 shut places land it within three points
+              of the fill it is meant to sit outside of.
+
+              It is gone now, and the reason it went is worth keeping.
+              Nobody read it. The drawing was argued from this catalog
+              rather than borrowed from anywhere, so it arrived carrying
+              no convention a reader could lean on, and the person who
+              commissioned it looked at a screenshot two versions later
+              and reported the tick as a rendering fault. The contrast
+              could have been raised — the track sat at 1.20:1 against
+              the card, where the tick sat at 4.96:1 — but that would
+              have made an unreadable thing visible rather than legible.
+
+              What it drew is not lost. A shut place gets this sash, with
+              the hour it opens; an open place within `CLOSING_SOON_MIN`
+              of closing gets the hour on the meta line. Those are the
+              two moments the answer changes a decision, and both are in
+              words. An open place with hours left said nothing then
+              either — the tick was there, and it told the reader what
+              they already had: time.
 
               So the fact goes back into words, and takes the shape the
               reference asked for. What the sash costs was worth measuring
@@ -170,48 +191,6 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
             </View>
           ) : null}
         </View>
-        {/* ── the day, drawn ──
-
-            A three-point track under the photograph, twenty-four hours
-            wide, with the open stretches filled and a mark at the hour it
-            is now. It replaced a pill reading "Closed · opens 08:00",
-            and the trade is deliberate: the pill said three states and
-            this says the shape. A tenth of the catalog has a shape a
-            sentence cannot hold — 55 of the 524 places with readable
-            hours shut for lunch and open again, 51 run past midnight —
-            and those are exactly the places a word gets wrong.
-
-            It sits in the seam between the picture and the body, which
-            was nobody's, and that is still the right home for it: the
-            sash above says whether the door is open now, and this says
-            what the day behind that answer looks like.
-
-            Decorative to a screen reader, always. It briefly carried
-            `shutLabel` — while the sash did not exist and a reader who
-            cannot see a three-point bar would otherwise have been told
-            nothing. The sash carries those words now, in a `Text` a
-            screen reader reaches on its own, so repeating them here
-            would read the same sentence to the same person twice. */}
-        {band ? (
-          <View style={s.band} accessible={false} importantForAccessibility="no-hide-descendants">
-            {band.segments.map((seg) => (
-              <View
-                key={`${seg.fromMin}-${seg.toMin}`}
-                style={[
-                  s.bandOpen,
-                  {
-                    left: `${(seg.fromMin / MINUTES_IN_DAY) * 100}%`,
-                    width: `${((seg.toMin - seg.fromMin) / MINUTES_IN_DAY) * 100}%`,
-                  },
-                  // A window clipped at midnight keeps a square edge: a
-                  // rounded one would claim the place shuts at twelve.
-                  seg.runsOn && s.bandRunsOn,
-                ]}
-              />
-            ))}
-            <View style={[s.bandNow, { left: `${(band.nowMin / MINUTES_IN_DAY) * 100}%` }]} />
-          </View>
-        ) : null}
         <View style={s.body}>
           {/* The whole line is the name's now that the bookmark rides the
               photograph — a 40pt disc used to sit beside it, and the
@@ -375,20 +354,6 @@ const s = StyleSheet.create({
   body: { paddingHorizontal: space.cardPadding, paddingVertical: 13 },
   // Top-right of the image, mirroring the attribution bottom-right.
   saveSlot: { position: 'absolute', top: 10, right: 10 },
-  // The day's track, in the seam between the picture and the body.
-  band: { height: 3, backgroundColor: colors.bandTrack },
-  bandOpen: {
-    position: 'absolute', top: 0, bottom: 0,
-    backgroundColor: colors.bandFill, borderRadius: 1.5,
-  },
-  bandRunsOn: { borderTopRightRadius: 0, borderBottomRightRadius: 0 },
-  // The only colour on the band, and the only thing on it that moves.
-  // Taller than the track it crosses, because a 3pt mark inside a 3pt
-  // track is a change of shade rather than a position.
-  bandNow: {
-    position: 'absolute', top: -2, bottom: -2, width: 2, marginLeft: -1,
-    backgroundColor: colors.accent, borderRadius: 1,
-  },
   /**
    * The closed-sash, solved against the reference rather than eyeballed.
    *
@@ -528,7 +493,7 @@ const s = StyleSheet.create({
   // The same tertiary weight the plan and trip screens give a district, so
   // the fact wears one face across the app.
   where: { flex: 1, color: colors.textTertiary, ...type.meta },
-  // The hour, for the ninety minutes it is urgent — see CLOSING_SOON_MIN.
+  // The hour, for the forty-five minutes it is urgent — see CLOSING_SOON_MIN.
   // Weight as well as colour: amber alone is a hue difference, and the
   // readers most likely to be planning an evening around a closing time
   // are not all seeing the hue.
