@@ -47,6 +47,12 @@ Store nhận ra ngay.
   (`KM_PENALTY` trong `lib/planner.ts`) để các điểm gần nhau, và tôn trọng giờ
   mở cửa — nhưng không hứa đi bộ được. Nói "gần nhau" và "đang mở cửa" là đúng
   với những gì mã thật sự làm.
+- **Số thành phố phải khớp `cities.is_active` có địa điểm.** Câu mở đầu từng
+  nói "five Vietnamese cities" trong khi DB đã có Vũng Tàu và Melbourne
+  active (#586/#587) — Melbourne còn làm sai cả chữ "Vietnamese". Kiểm bằng
+  câu SQL ở mục "Phạm vi phủ" trước mỗi lần nộp; một thành phố active nhưng
+  0 địa điểm (Hải Phòng lúc viết) thì **tắt** `is_active` trước khi nộp chứ
+  không kể vào description.
 - **Không viết giá** — Apple cấm đưa thông tin giá vào metadata.
 - **Không viết "one-time code"/"mã một lần"/"không mật khẩu".** App đăng nhập
   bằng **email + mật khẩu** (`supabase.auth.signInWithPassword`, xem
@@ -60,13 +66,16 @@ Store nhận ra ngay.
 ### EN
 
 ```
-City Crew is a hand-picked guide to five Vietnamese cities: Ho Chi Minh
-City, Hanoi, Da Nang, Da Lat and Hue. No account needed to look around.
+City Crew is a hand-picked guide to seven cities: Ho Chi Minh City, Hanoi,
+Da Nang, Da Lat, Hue and Vung Tau in Vietnam, and Melbourne. No account
+needed to look around.
 
 EXPLORE
 Cafés, restaurants, bars and places worth going out of your way for. Our
 editors check every one before it appears, so the list stays short and
-stays good. The app opens on the city nearest you.
+stays good. See them as a list or as pins on a map, sort by what is nearest
+or best rated, and open one for its hours, photos and a map of where it is.
+The app opens on the city nearest you.
 
 COLLECTIONS
 Lists made by people who actually go: where to take a date, where to bring
@@ -85,9 +94,9 @@ than five people pasting links into a group chat.
 
 PRIVACY
 Browsing needs no account. Signing in takes an email address and a
-password. Your location is read on the phone to pick the nearest city and
-is never sent to us. No ads, no tracking. You can delete your account from
-inside the app.
+password. Your location is used on the phone to pick the nearest city and
+to sort places by distance, and is never sent to us. No ads, no tracking.
+You can delete your account from inside the app.
 
 More cities are on the way.
 ```
@@ -95,13 +104,16 @@ More cities are on the way.
 ### VI
 
 ```
-City Crew là cẩm nang chọn tay cho năm thành phố Việt Nam: TP. Hồ Chí Minh,
-Hà Nội, Đà Nẵng, Đà Lạt và Huế. Không cần tài khoản để xem.
+City Crew là cẩm nang chọn tay cho bảy thành phố: TP. Hồ Chí Minh, Hà Nội,
+Đà Nẵng, Đà Lạt, Huế và Vũng Tàu ở Việt Nam, cùng Melbourne. Không cần tài
+khoản để xem.
 
 KHÁM PHÁ
 Quán cà phê, nhà hàng, bar và những nơi đáng đi xa một chút. Ban biên tập
 duyệt từng chỗ trước khi lên app, nên danh sách ngắn mà chỗ nào cũng đáng.
-Mở app là vào đúng thành phố gần bạn nhất.
+Xem dạng danh sách hoặc ghim trên bản đồ, sắp theo gần nhất hay điểm cao
+nhất, mở một chỗ để thấy giờ mở cửa, ảnh và bản đồ tới đó. Mở app là vào
+đúng thành phố gần bạn nhất.
 
 BỘ SƯU TẬP
 Danh sách do người đi thật lập: chỗ nào hợp buổi hẹn, chỗ nào chứa được sáu
@@ -119,8 +131,9 @@ năm người dán link vào nhóm chat.
 
 RIÊNG TƯ
 Xem không cần tài khoản. Đăng nhập chỉ cần email và mật khẩu. Vị trí được
-đọc ngay trên máy để chọn thành phố gần nhất, không gửi về chúng tôi. Không
-quảng cáo, không theo dõi. Bạn có thể tự xoá tài khoản ngay trong app.
+dùng ngay trên máy để chọn thành phố gần nhất và sắp địa điểm theo khoảng
+cách, không gửi về chúng tôi. Không quảng cáo, không theo dõi. Bạn có thể
+tự xoá tài khoản ngay trong app.
 
 Các thành phố khác sẽ sớm có mặt.
 ```
@@ -128,13 +141,14 @@ Các thành phố khác sẽ sớm có mặt.
 ### JA
 
 ```
-City Crewは、ベトナム5都市の厳選ガイドです。ホーチミン市、ハノイ、ダナン、
-ダラット、フエ。アカウントなしで閲覧できます。
+City Crewは、7都市の厳選ガイドです。ベトナムのホーチミン市、ハノイ、ダナン、
+ダラット、フエ、ブンタウ、そしてメルボルン。アカウントなしで閲覧できます。
 
 さがす
 カフェ、レストラン、バー、少し足を延ばす価値のある場所。編集部が一軒ずつ確認
-してから掲載するので、リストは短く、質は高いまま。アプリを開けば、いちばん近い
-街から。
+してから掲載するので、リストは短く、質は高いまま。リストでも地図のピンでも見ら
+れ、近い順・評価順に並べ替え、開けば営業時間と写真と場所の地図。アプリを開けば、
+いちばん近い街から。
 
 コレクション
 実際に通う人がつくるリスト:デートに使える店、六人で入れる店、わざわざ行く価値
@@ -151,7 +165,8 @@ City Crewは、ベトナム5都市の厳選ガイドです。ホーチミン市�
 
 プライバシー
 閲覧にアカウントは不要。サインインはメールアドレスとパスワードだけです。
-位置情報は最寄りの街を選ぶために端末上で読むだけで、こちらには送信されません。
+位置情報は最寄りの街を選び、近い順に並べるために端末上で使うだけで、こちらには
+送信されません。
 広告なし、トラッキングなし。アカウントはアプリ内で削除できます。
 
 対応都市は今後さらに増えます。
@@ -160,10 +175,12 @@ City Crewは、ベトナム5都市の厳選ガイドです。ホーチミン市�
 ## Keywords (100 ký tự, phân cách bằng dấu phẩy, KHÔNG có dấu cách sau dấu phẩy)
 
 Không lặp từ đã có trong tên/subtitle — Apple đã lập chỉ mục những từ đó rồi,
-lặp lại là phí ký tự. Tên năm thành phố là từ khoá đáng giá nhất: người ta tìm
-"da nang cafe" nhiều hơn tìm "curated guide".
+lặp lại là phí ký tự. Tên thành phố là từ khoá đáng giá nhất: người ta tìm
+"da nang cafe" nhiều hơn tìm "curated guide". Bản 1.0.4 thêm `vungtau`,
+`melbourne`, `map` và bỏ `itinerary`, `weekend` để lọt 100 ký tự; VI/JA chưa
+có localization trên App Store Connect nên chưa cần cập nhật.
 
-- EN (94/100): `saigon,hanoi,danang,dalat,hue,cafe,restaurant,bar,nightlife,travel,food,date,itinerary,weekend`
+- EN (99/100): `saigon,hanoi,danang,dalat,hue,vungtau,melbourne,cafe,restaurant,bar,nightlife,travel,food,date,map`
 - VI (96/100): `sài gòn,hà nội,đà nẵng,đà lạt,huế,quán cà phê,nhà hàng,ăn uống,đi chơi,hẹn hò,cuối tuần,địa điểm`
 - JA (54/100): `ホーチミン,ハノイ,ダナン,ダラット,フエ,ベトナム,カフェ,レストラン,旅行,グルメ,デート,週末,プラン`
 
@@ -307,28 +324,109 @@ Xem mọi địa điểm trên bản đồ, và sắp danh sách theo ý bạn.
 • 自分で公開したリストが Explore と検索に表示されるようになりました。これまで見えていなかったのは公開した本人だけでした。
 ```
 
+## Release notes v1.0.4 (What's New)
+
+Viết từ các PR merge sau build 1.0.3 (20) — #565 → #690, 124 PR. Build native
+mới: #545-kiểu lần thứ ba (expo 57.0.24 → 57.0.25 cùng bốn module), nên OTA
+không mang được; tag `v1.0.4` cho workflow release. `app.json` đã lên 1.0.4
+ở #681 vì Apple đóng train 1.0.3 ngay khi duyệt.
+
+Không có mặt ở đây dù có trong build: mọi PR về Data Desk (#621–#649, guide
+grant, blurb source), tracing (#674–#680), test (#619–#629, #677) — người
+dùng không thấy. Sketch/deck (#658–#676) gộp thành một dòng vì với người đọc
+đó là một thứ: màn hình chờ khi tạo plan.
+
+### EN
+
+```
+Three more cities, and a place page you can read at a glance.
+
+• Now in Vung Tau, Melbourne and more of Vietnam — pick a city from the new city sheet, or let the phone choose.
+• A place's page shows where it is on a map, with directions one tap away. Photos, hours and address sit in one card.
+• Opening hours follow the city's own clock, so a café in Melbourne reads right from anywhere.
+• Map pins now show the place's photo, and the day's first stop is marked on the map.
+• Planning a trip: watch the day being put together, then swipe through all three ways to spend it before you pick one.
+• Works at the smallest text size and the largest: every row fits.
+```
+
+### VI
+
+```
+Thêm ba thành phố, và trang địa điểm đọc được trong một cái nhìn.
+
+• Có thêm Vũng Tàu, Melbourne và nhiều nơi khác — chọn thành phố trong bảng mới, hoặc để điện thoại tự chọn.
+• Trang địa điểm cho thấy chỗ đó trên bản đồ, chỉ đường trong một chạm. Ảnh, giờ mở cửa và địa chỉ nằm chung một thẻ.
+• Giờ mở cửa tính theo múi giờ của thành phố, nên quán ở Melbourne hiện đúng dù bạn ở đâu.
+• Ghim trên bản đồ giờ là ảnh của địa điểm, và điểm dừng đầu tiên trong ngày được đánh dấu.
+• Lên kế hoạch: xem ngày của bạn được ghép lại, rồi lướt qua cả ba cách đi trước khi chọn.
+• Vừa vặn ở cỡ chữ nhỏ nhất lẫn lớn nhất: hàng nào cũng đủ chỗ.
+```
+
+### JA
+
+```
+3都市を追加。スポットのページはひと目で読めるように。
+
+• ブンタウ、メルボルンなどが加わりました。新しい都市シートから選ぶか、端末におまかせ。
+• スポットのページに地図が入り、ワンタップで経路案内へ。写真・営業時間・住所は一枚のカードに。
+• 営業時間はその街の時計で表示。メルボルンのカフェもどこから見ても正しい時間に。
+• 地図のピンはスポットの写真になり、その日の最初の目的地に印がつきます。
+• 旅程の作成では、一日が組み立てられていく様子を見てから、3つの過ごし方をスワイプして選べます。
+• いちばん小さい文字サイズでも、いちばん大きくても、すべての行が収まります。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
 sai theo thời gian (Apple guideline 2.3 — Accurate Metadata). Tính đến
-2026-09-19, database production có **5 thành phố active / 626 địa điểm đã
+2026-09-26, database production có **8 thành phố active / 690 địa điểm đã
 duyệt**:
 
 | Thành phố | Địa điểm đã publish |
 |---|---|
-| TP. Hồ Chí Minh | 271 |
-| Hà Nội | 227 |
-| Đà Nẵng | 62 |
-| Đà Lạt | 35 |
+| TP. Hồ Chí Minh | 292 |
+| Hà Nội | 237 |
+| Đà Nẵng | 64 |
+| Đà Lạt | 44 |
 | Huế | 31 |
+| Melbourne | 14 |
+| Vũng Tàu | 8 |
+| Hải Phòng | **0** |
 
-Năm thành phố vẫn đúng như description nói, và không thành phố nào mỏng đi —
-nên không câu nào trong description hay release notes cần sửa lần này. Sài Gòn
-đã vượt Hà Nội kể từ lần kiểm trước; thứ tự trong bảng đi theo số liệu, còn
-description không xếp hạng thành phố nên không bị ảnh hưởng.
+Description bản 1.0.4 kể **bảy** — Hải Phòng active nhưng trống, không kể và
+phải tắt `is_active` trước khi nộp (một thành phố trống trong city sheet là
+thứ reviewer bấm vào đầu tiên). Melbourne 14 địa điểm là mỏng; nếu quyết
+không đưa ra thì tắt `is_active` và sửa câu mở đầu về "six cities in
+Vietnam" — cả ba bản.
 
 Câu kiểm tra lại:
-`select c.id, count(p.*) from cities c left join places p on p.city_id = c.id and p.is_published and p.review_status='approved' where c.is_active group by 1;`
+`select c.id, c.is_active, count(p.*) filter (where p.is_published and p.review_status='approved') from cities c left join places p on p.city_id = c.id group by 1,2 order by 3 desc;`
+
+## Screenshots — bộ 1.0.4
+
+Bộ 7 ảnh của 1.0.3 chụp ngày 19/09 trên build 20, trước khi Place detail
+(#589–#607), city sheet (#587), pin ảnh (#604) và màn Sketch (#658–#676)
+đổi. Ảnh phải phản ánh app hiện tại (guideline 2.3.3), nên bộ mới chụp
+26/09 trên build 1.0.4 (TestFlight preview), iPhone Pro Max 1290×2796 — ASC
+nhận cho ô 6.9" và tự scale cho các cỡ nhỏ hơn. Thứ tự đi theo đường người
+dùng đi trong app:
+
+| # | Màn | Có gì trong ảnh |
+|---|---|---|
+| 1 | Explore | hero Sài Gòn, "From the community", nút Open Map |
+| 2 | Explore — list | filter Focus, card có sash "Opens 08:00", thanh "Not finding it? / Add" |
+| 3 | Explore — map | pin theo màu loại, cụm số, bản đồ Google |
+| 4 | Place detail | Eureka 89 (Melbourne) — gallery 6 ảnh, "Why go?" có credit Google, panel local guide, address |
+| 5 | Collections | tab Yours, lưới 6 collection |
+| 6 | Ideas — Plan a trip | hai place đã chọn, chip Cafés/Focus, ngày + nơi, các bước Sketch đang chạy |
+| 7 | Trip | "Slow morning in Hoan Kiem" — lịch trình, quãng đường, Open the route, chi phí |
+
+Ảnh 4 cố ý là một place ở Melbourne — nó làm bằng chứng cho câu mở đầu
+Description nói tới Melbourne, và panel local guide trong ảnh là thứ mục
+UGC của Notes đã nói trước với reviewer.
+
+Trước khi chụp: tắt hotspot, sạc pin, đăng nhập tài khoản có collection và
+trip. Không cần 9:41 — Apple không bắt.
 
 ## Còn thiếu (không làm được từ repo)
 

@@ -37,48 +37,53 @@ là nói dối reviewer — và cả hai đều đã từng sai trong chính fil
 ## Notes (dán nguyên văn)
 
 ```
-Thank you for reviewing City Crew.
+Thank you for reviewing City Crew. Free app: no in-app purchases,
+subscriptions or paid content (confirmed in our 2.1(b) reply on 1.0 (6)).
 
-SIGN-IN: The app is fully browsable without an account — every screen of
-content (Explore, Collections, place details, Search) works signed out.
-An account adds saving, collections, trip plans and friends.
+SIGN-IN: Every content screen (Explore, Collections, place pages, Search,
+the map) works signed out. An account adds saving, collections, trip plans
+and friends. Accounts are an email address and a password; the credentials
+in the Sign-In Information fields above are a working account with saved
+places, collections and a trip. Sign-up creates the account at the end of
+a short form; addresses are auto-confirmed, so no emailed code is needed.
+If the account gives you any trouble: anhlt1983@gmail.com.
 
-Accounts are an email address and a password; demo credentials are in the
-Sign-In Information fields above. Signing up asks for a display name, a
-username, an email address and a password, then an optional list of
-interests that can be skipped, and creates the account at the end.
-Addresses are auto-confirmed on our project, so no emailed code is needed
-to finish. Password recovery emails a numeric code rather than a link. If
-the demo account gives you any trouble, please contact us at
-anhlt1983@gmail.com and we will replace it immediately.
+LOCATION: Requested once, used on the device to open the nearest supported
+city, to sort places by distance ("nearest first"), to centre the map and
+to pick a trip's start point. Denying it is fine — the app falls back to
+Ho Chi Minh City, and the city is changed by hand at Profile > Current
+city. Coordinates are never transmitted to us or stored.
 
-LOCATION: Requested once at launch, used on-device only to open the app on
-the nearest supported city (Ho Chi Minh City, Hanoi, Da Nang, Da Lat or
-Hue). Denying it is fine — the app falls back to Ho Chi Minh City, and the
-city can be changed by hand at Profile > Current city. Coordinates are
-never transmitted or stored.
+MAPS: Google Maps SDK draws the maps (Explore map mode, place pages, the
+trip start sheet). Google Places search and Geocoding are called from our
+own server for the start-point search only; a pin's coordinates are sent,
+never the user's location.
+
+PRICES: Places carry a typical spend for information (what the venue
+charges, not us). In this build the price row is hidden by default behind
+a server-side flag, so you may not see one.
 
 AI: Plan titles and the one-line note under each stop are written by a
-language model (Anthropic's Claude), called from our own server rather than
-from the device. The model never chooses a place: it receives the stops our
-own algorithm already selected from our editor-approved catalog, and the
-output schema restricts it to exactly those places, so it cannot invent a
-venue. A free-text request ("somewhere with live jazz on Saturday") is
-parsed the same constrained way, into the same wizard answers the chips
-produce. No personal data is sent with either call — no name, email,
-account id or location. This is disclosed in our privacy policy.
+language model (Anthropic's Claude) from our own server. The model never
+chooses a place: it receives the stops our algorithm already selected from
+the editor-approved catalog, and its output is restricted to exactly those
+places. No personal data is sent — no name, email, account id or location.
+Disclosed in our privacy policy.
 
-USER-GENERATED CONTENT (guideline 1.2): All catalog places are approved by
-our editorial desk before publication. User-published collections and
-profiles carry in-app Report actions; users can block other users; reports
-are reviewed by our moderation desk, which can unpublish content and action
-accounts. Account deletion is available in-app at Profile → Delete account. The same
-screen offers Download your data, which writes the account's data to a JSON
-file and passes it to the system share sheet; nothing is uploaded.
+USER-GENERATED CONTENT (guideline 1.2): Every catalog place is approved by
+our editorial desk before publication. Some place descriptions quote a
+sentence or two from a public post about that place; the author's name and
+a link to the post are shown with the quote. "Local guides" — accounts our
+desk has individually granted the role, per city — can add photos to
+places they submitted, and only to those; the desk can hide any photo and
+the guide cannot unhide it. User-published collections and profiles carry
+in-app Report actions; users can block other users; reports go to our
+moderation desk, which can unpublish content and action accounts. Account
+deletion is in-app at Profile > Delete account; the same screen offers
+Download your data (a JSON file handed to the system share sheet).
 
-The app is available in English, Vietnamese and Japanese. It opens in
-English and the language is changed at Profile > Language, so the
-screenshots in Vietnamese are one setting away rather than the default.
+The app is available in English, Vietnamese and Japanese; it opens in
+English and the language is changed at Profile > Language.
 ```
 
 ## Vì sao từng đoạn tồn tại (nội bộ, không dán)
@@ -99,7 +104,22 @@ screenshots in Vietnamese are one setting away rather than the default.
   từ chối vẫn dùng được (đúng hành vi thật: fallback + switcher).
 - **UGC**: guideline 1.2 là lý do từ chối phổ biến với app có nội dung người
   dùng; đoạn này chỉ thẳng vào bốn yêu cầu (lọc, report, block, cách liên hệ)
-  và nơi mỗi thứ nằm trong app.
+  và nơi mỗi thứ nằm trong app. Từ 1.0.4 có thêm hai thứ reviewer sẽ thấy và
+  phải được nói trước: **trích dẫn có ghi nguồn** trong mô tả địa điểm
+  (#650/#651 — tên tác giả + link về bài Threads; nói rõ là trích dẫn để
+  không bị đọc thành nội dung sao chép, guideline 5.2.1) và **local guide**
+  upload ảnh (#614/#616/#646 — desk cấp quyền từng người, từng thành phố;
+  chỉ ảnh cho place họ tự đưa vào; desk ẩn được, guide không bỏ ẩn được).
+  Câu "only to those" và "cannot unhide" là hai ranh giới reviewer cần để
+  không hỏi thêm về kiểm duyệt.
+- **MAPS / PRICES**: hai đoạn mới. MAPS thay câu "No Google Maps SDK is
+  bundled" của thư 2.1 cũ — đã sai từ #525. PRICES tồn tại vì lần 2.1(b)
+  reviewer đọc dòng giá thành paid content; giờ giá **ẩn sau cờ
+  `app_flags.place_price`** (#597, mặc định tắt) nên nói trước để reviewer
+  không thắc mắc vì sao Notes cũ nhắc giá mà app không có.
+- **LOCATION**: bản 1.0.3 chỉ nói "nearest city"; giờ location còn dùng cho
+  sort nearest-first, căn giữa map và điểm bắt đầu trip — kể đủ, vì reviewer
+  thấy prompt xin quyền ở nhiều màn hơn.
 - **AI**: nêu trước để reviewer không phải tự phát hiện app có gọi model — và
   để nói rõ ngay hai điều họ sẽ hỏi: model không tự bịa địa điểm, và không có
   dữ liệu cá nhân nào được gửi đi. Cùng nội dung với mục AI trong privacy
@@ -123,7 +143,12 @@ screenshots in Vietnamese are one setting away rather than the default.
    rồi điền vào Sign-In Information. Không có nó thì đừng dán khối Notes.
 2. Bản build production đã lên TestFlight và tự chạy thử ít nhất một vòng:
    mở app, browse, đăng nhập, lưu, tạo collection, report thử, xoá tài khoản
-   bằng một tài khoản nháp.
+   bằng một tài khoản nháp. Từ 1.0.4 thêm: mở city sheet và bấm vào **từng**
+   thành phố — một thành phố active mà trống (Hải Phòng lúc viết) là thứ
+   reviewer bấm đầu tiên; tắt `is_active` trước khi nộp.
+2b. Số thành phố trong Description (ba bản), Keywords và Notes khớp với câu
+   SQL ở `listing.md` → "Phạm vi phủ". Bản 1.0.3 đã nộp với "five Vietnamese
+   cities" trong khi DB có tám — guideline 2.3, và may là chưa bị hỏi.
 3. Privacy Policy URL, Terms URL và Support URL (GitHub Pages) mở được từ trình
    duyệt ẩn danh — reviewer mở chúng từ listing, không phải từ app: hai văn bản
    đầu giờ **đọc được ngay trong app** (dưới nút Đăng ký, và Cá nhân → Tuỳ chọn),

@@ -15,7 +15,7 @@ mới được nộp.
 | Loại dữ liệu (Apple) | Thu thập? | Liên kết danh tính? | Tracking? | Mục đích |
 |---|---|---|---|---|
 | Contact Info → Email Address | **Yes** | Yes (email là tài khoản) | No | App Functionality |
-| User Content → Photos or Videos | **Yes** (ảnh đại diện tự chọn) | Yes | No | App Functionality |
+| User Content → Photos or Videos | **Yes** (ảnh đại diện tự chọn; từ 1.0.4 thêm ảnh địa điểm do local guide upload, #614) | Yes | No | App Functionality |
 | User Content → Other User Content | **Yes** (bộ sưu tập, kế hoạch, lưu/thích, đề xuất địa điểm, hồ sơ, **văn bản mô tả buổi tối gửi cho planner**) | Yes | No | App Functionality |
 | Identifiers → User ID | **Yes** (id tài khoản Supabase) | Yes | No | App Functionality |
 | Usage Data → Product Interaction | **Yes** | Yes | No | App Functionality (xem ghi chú) |
@@ -147,7 +147,8 @@ về Google, nên theo hướng dẫn của Apple nó tính vào bảng App Priv
    đặt chú thích. Cân nhắc đổi câu mô tả cho khớp.
 
 Thư trả lời reviewer `review-reply-2.1.md` ghi "No Google Maps SDK is
-bundled" và liệt kê Photon/Nominatim — đúng ở thời điểm gửi, **sai từ bản này**.
-Lần nộp tới viết lại mục Geocoding và Maps trong Notes: Google Maps SDK vẽ bản
-đồ; Google Places (Text Search) và Google Geocoding API qua Edge Function
-`fetch-place` cho tìm điểm bắt đầu và chú thích.
+bundled" và liệt kê Photon/Nominatim — đúng ở thời điểm gửi, sai từ #525.
+**Đã viết lại** thành mục MAPS trong khối Notes của `review-notes.md` cho
+1.0.4: Google Maps SDK vẽ bản đồ (Explore map, place page, start sheet);
+Google Places và Geocoding qua Edge Function `fetch-place` cho tìm điểm bắt
+đầu, gửi toạ độ ghim chứ không phải vị trí người dùng.
