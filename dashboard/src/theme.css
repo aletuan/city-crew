@@ -472,6 +472,9 @@ option { background: var(--bg-elevated); color: var(--text-primary); }
 }
 .publishbtn:hover { background: var(--warn); color: #141310; }
 .publishbtn:disabled { opacity: .5; cursor: wait; }
+/* In the phone's top bar it sits on the row's centre line with Add and
+   the bell; the flex-end above is for the page head's rail. */
+.topbar .publishbtn { align-self: center; margin-top: 0; }
 
 /* ── filters ──
    Status, category, vibe and Threads are four different questions — some of
