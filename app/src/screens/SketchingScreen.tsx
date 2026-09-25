@@ -490,9 +490,27 @@ export default function SketchingScreen({ navigation, route }: {
   // `summaryLine` uses gives the cell the same two ranks the date has —
   // and when there is no separator the cell simply has one line, which is
   // the honest answer rather than an invented second one.
+  //
+  // And `where` really can be absent, which is easy to assume it cannot:
+  // a plan needs a day and a mood, not a place. `canPlan` asks for
+  // `company` and at least one category and nothing else, and
+  // `IdeasScreen` hands over `district ?? (origin ? whereLabel : null)`
+  // where `origin` is `startPoint` — null when the reader picked no
+  // district, dropped no pin, and has not granted location. That plan
+  // runs: the planner picks the first stop on merit from anywhere in the
+  // city, which the note on `me` there calls "the honest floor: no origin
+  // rather than an invented one".
+  //
+  // So the cell says that rather than disappearing. The city, and the
+  // truth about how wide the search was — a reader who sees the day
+  // anchored nowhere should be told it was not anchored, not left with
+  // half a card and no explanation.
   const whereParts = (p.where?.trim() ?? '').split(' · ');
-  const wherePrimary = whereParts[0] || null;
-  const whereSecondary = whereParts.slice(1).join(' · ') || null;
+  const cityName = city ? t(city.short_en, city.short_vi, city.short_ja ?? city.short_en) : null;
+  const wherePrimary = whereParts[0] || cityName;
+  const whereSecondary = whereParts[0]
+    ? whereParts.slice(1).join(' · ') || null
+    : t('Anywhere in the city', 'Khắp thành phố', '市内どこでも');
   // What was asked for, as the chips it was asked with.
   //
   // It was a third grey line reading "Cà phê · Ăn uống", which is the one

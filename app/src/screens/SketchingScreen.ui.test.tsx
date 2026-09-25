@@ -179,7 +179,9 @@ beforeEach(() => {
   prefetchNarration.mockImplementation(async () => words());
   legsOf.mockImplementation(() => [{ mode: 'walk', km: 0.35, minutes: 5 }]);
   catalog.current = { data: PLACES, loading: false, error: null, reload: vi.fn() };
-  cityState.current = { city: { id: 'hanoi' } };
+  // Short names too: the facts card falls back to the city's own when
+  // the reader gave no place at all.
+  cityState.current = { city: { id: 'hanoi', short_en: 'Hanoi', short_vi: 'Hà Nội' } };
   mine.current = [];
 });
 
@@ -300,6 +302,24 @@ describe('while it waits', () => {
     expect(screen.getByText('Day')).toBeTruthy();
     expect(screen.getByText(dateline('en', fromISO(todayISO())!))).toBeTruthy();
     expect(screen.queryByText('Mystery')).toBeNull();
+  });
+
+  // `where` is absent whenever the reader picked no district, dropped no
+  // pin and has not granted location — `canPlan` does not ask for a
+  // place, so that plan runs and the planner searches the whole city.
+  // The cell says so rather than going missing.
+  it('names the city and the width of the search when no place was given', () => {
+    renderScreen({ where: null });
+    expect(screen.getByText('Hanoi')).toBeTruthy();
+    expect(screen.getByText('Anywhere in the city')).toBeTruthy();
+  });
+
+  // The one case left with nothing to say: no place and no city either.
+  it('draws the date alone when there is no city to fall back on', () => {
+    cityState.current = { city: null };
+    renderScreen({ where: null });
+    expect(screen.getByText(dateline('en', fromISO(todayISO())!))).toBeTruthy();
+    expect(screen.queryByText('Anywhere in the city')).toBeNull();
   });
 
   // `p.where` arrives joined and sometimes carries its own separator. The
