@@ -733,9 +733,18 @@ describe('shortDateline', () => {
   // A single-digit day and month, which is where padding shows.
   const jan = new Date(2026, 0, 4);
 
-  it('numbers the month in Vietnamese and keeps the weekday short', () => {
-    expect(shortDateline('vi', fri)).toBe('T6, 25/09');
+  // "Thứ 6", not "T6": the letter alone is timetable shorthand a reader
+  // has to expand before it means a day.
+  it('numbers the month in Vietnamese and names the weekday', () => {
+    expect(shortDateline('vi', fri)).toBe('Thứ 6, 25/09');
+    expect(shortDateline('vi', new Date(2026, 8, 21))).toBe('Thứ 2, 21/09');
+  });
+
+  // Sunday is the one day the pattern cannot take: it has no number in
+  // this scheme, and spelling it runs past what the cell holds.
+  it('leaves Sunday as CN, which is the only form that fits', () => {
     expect(shortDateline('vi', jan)).toBe('CN, 04/01');
+    expect('Chủ Nhật, 04/01'.length).toBeGreaterThan(13);
   });
 
   it('keeps a three-letter month in English, because d/m is not read the same everywhere', () => {
@@ -752,6 +761,8 @@ describe('shortDateline', () => {
   it('is short enough for the cell that wanted it', () => {
     expect(shortDateline('vi', fri).length).toBeLessThan(dateline('vi', fri).length);
     expect(shortDateline('vi', fri).length).toBeLessThanOrEqual(13);
+    // And the long form it replaces does not.
+    expect(dateline('vi', fri).length).toBeGreaterThan(13);
     expect(shortDateline('en', fri).length).toBeLessThanOrEqual(13);
   });
 
