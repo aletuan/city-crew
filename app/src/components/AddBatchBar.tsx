@@ -119,25 +119,27 @@ export default function AddBatchBar({ chosen, batch, onAdd, onCancel, done }: {
       {!batch.running && held > 0 && done ? (
         <GradientCta wide icon="arrow-back" label={done.label} onPress={done.onPress} />
       ) : null}
-      <Text style={s.footNote}>
-        {held > 0 && !batch.running
-          ? t(
+      {/* One note, for the one state a reader cannot read off the bar.
+
+          There were three. "We fill in the name, photos and hours" sat
+          under a button reading "Add this place" and described the app's
+          own job; "You can keep browsing — this finishes on its own" sat
+          under a progress bar that was visibly running and under a
+          control saying how to stop it. Both explained the obvious in a
+          place a reader looks once and never again.
+
+          This one stays because nothing else says it: the bar is about to
+          go, the places that could not be added are still selected, and
+          without the line the only reading is that they were lost. */}
+      {held > 0 && !batch.running ? (
+        <Text style={s.footNote}>
+          {t(
             'They keep their place — come back and add them then.',
             'Chúng vẫn ở đây — quay lại thêm sau nhé.',
             'そのまま残ります — またあとで追加できます。',
-          )
-          : batch.running
-          ? t(
-            'You can keep browsing — this finishes on its own.',
-            'Bạn cứ dùng tiếp — phần này tự chạy xong.',
-            'そのまま閲覧できます — 追加は自動で終わります。',
-          )
-          : t(
-            'We fill in the name, photos and hours.',
-            'Chúng tôi điền tên, ảnh và giờ mở cửa.',
-            '名前・写真・営業時間はこちらで埋めます。',
           )}
-      </Text>
+        </Text>
+      ) : null}
     </View>
   );
 }

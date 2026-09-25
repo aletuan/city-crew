@@ -100,7 +100,7 @@ describe('before a search', () => {
     expect(screen.queryByText(/Results from Google Maps/)).toBeNull();
     expect(screen.queryByText(/Nothing found/)).toBeNull();
     // No selection and no batch: the foot is not drawn at all.
-    expect(screen.queryByText('We fill in the name, photos and hours.')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Add/ })).toBeNull();
   });
 
   it('speaks the city in the reader’s language', () => {
@@ -245,7 +245,10 @@ describe('picking and adding', () => {
     mount();
     fireEvent.click(row('Place a'));
     expect(screen.getByRole('button', { name: /Add this place/ })).toBeTruthy();
-    expect(screen.getByText('We fill in the name, photos and hours.')).toBeTruthy();
+    // And nothing under it. "We fill in the name, photos and hours" used
+    // to sit here, describing the app's own job beneath a button that
+    // already says what it does.
+    expect(screen.queryByText(/We fill in the name/)).toBeNull();
     fireEvent.click(row('Place b'));
     expect(screen.getByText('Add 2 places')).toBeTruthy();
     fireEvent.click(row('Place a'));
@@ -341,6 +344,12 @@ describe('while a batch runs and after', () => {
     expect(screen.getByText('ADDING 3 · 1 DONE')).toBeTruthy();
     expect(screen.getByText('Adding 2 of 3…')).toBeTruthy();
     expect(screen.getByText('Fetching name, photos and hours…')).toBeTruthy();
+    // And no note under it. "You can keep browsing — this finishes on its
+    // own" sat beneath a progress bar that was visibly running and a
+    // control saying how to stop it.
+    expect(screen.queryByText(/You can keep browsing/)).toBeNull();
+    // The stop is the one thing under the bar that is not a caption, and
+    // it is the only way out of a run.
     fireEvent.click(screen.getByRole('button', { name: 'Stop after this one' }));
     expect(g.cancel).toHaveBeenCalledTimes(1);
   });
@@ -374,6 +383,19 @@ describe('while a batch runs and after', () => {
     expect(screen.getAllByText('Not added — no goes left today')).toHaveLength(2);
     expect(screen.getByText('They keep their place — come back and add them then.')).toBeTruthy();
     expect(screen.queryByText(/^Add (this|\d)/)).toBeNull();
+  });
+
+  // The singular, which the plural above does not reach: "1 place still
+  // to add" is its own sentence rather than the same one with a number in
+  // front, and it is the commoner of the two — the cap is hit one place
+  // before it stops you.
+  it('says it in the singular when one place was held', () => {
+    g.results = [cand('a'), cand('b')];
+    g.batch = { running: false, state: { a: 'done', b: 'held' }, done: 1, total: 2 };
+    g.known = { a: { state: 'mine', slug: 'a' } };
+    mount();
+    expect(screen.getByText('1 place still to add — no goes left today')).toBeTruthy();
+    expect(screen.queryByText(/^1 places/)).toBeNull();
   });
 
   it('heads a Japanese reader’s finished run in Japanese', () => {
