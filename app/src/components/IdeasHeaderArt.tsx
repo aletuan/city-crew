@@ -13,23 +13,32 @@
 //
 // The painting is not a row in the layout. It is pinned to the header's
 // right edge, bleeding past the page padding to the screen edge and up
-// into the status bar, the way the sky in a picture should; the title
-// and the lede are drawn over its empty left quarter. What this
-// component puts *in* the row is a spacer, `reserved` wide, so the title
-// column ends before the cats begin. The title may still overlap the
-// painting by `OVERLAP` points, which is the width of plain sky at its
-// left — measured on both files, and the lede lines are shorter than
-// that margin by half.
+// to the top of the screen; the title and the lede are drawn over its
+// empty left third. What this component puts *in* the row is a spacer,
+// `reserved` wide, so the title column ends before the cats begin. The
+// title may still overlap the painting by `OVERLAP` points, which is
+// less than the plain sky at its left in the rows the title occupies
+// (measured on both files: 38% and 48% of the width), and the lede lines
+// are shorter than that margin by half.
 //
 // Its height follows the band: safe-area inset plus the row's paddings
-// plus the title-and-lede column at one line each. A title that wraps
-// (Japanese does, at 375pt) makes the row taller, the painting keeps its
-// height and its bottom, and what opens above it is a strip of its own
-// sky colour — which is the page colour, so nothing shows. That is why
-// the files were exported with their flat ground shifted onto the page
-// colour exactly (#0A0B0A, #F5F1EA) rather than keyed to alpha: an
-// opaque painting on its own page colour has no edge to hide, and the
-// dark theme's ambient glow lies over both alike.
+// plus the title-and-lede column at one line each. The frame reaches the
+// screen top, but the *paint* does not: the files carry a third of
+// transparent sky above the first brushstroke, so on a phone with a
+// 59pt status bar the plane and the rooftops begin just under it rather
+// than behind it — the first build had them at the very top, and the
+// Dynamic Island sat on the plane. A title that wraps (Japanese does, at
+// 375pt) makes the row taller, the painting keeps its height and its
+// bottom, and the sky above it is transparent anyway.
+//
+// Transparent, because the first build was opaque on a ground shifted
+// to the page colour, and on an OLED the ground was not invisible: the
+// grain of the painting and the ringing of a lossy encoder, at two or
+// three units above black, drew a faint rectangle around the night
+// street. The files are now keyed with colour-to-alpha against the page
+// colour (`scripts/ideas-art.py`): the flat ground is alpha 0, the
+// painting's own fade is partial alpha, and what shows through is the
+// page itself, glow and all. There is no edge left to see.
 //
 // ── when it is not there ──
 //
