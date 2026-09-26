@@ -38,12 +38,16 @@ every flow runs first, so a fresh Expo Go and a warm one behave the same.
 The second one switches off Expo Go's floating "Tools button" — the blue
 gear docks at the top-right corner, exactly over Explore's search button,
 and a tap there opens Expo's dev menu instead of Search. Expo Go remembers
-the setting, so after the first run those steps are no-ops. `config.yaml`
+the setting, so after the first run those steps are no-ops. Expo Go 57's
+menu slides up a beat late and keeps the switch at the foot of its TOOLS
+list, so the subflow waits for the menu and scrolls to the row; it only
+runs while the gear is showing, so it can never switch the button back on. `config.yaml`
 restricts `maestro test .maestro` to the numbered flows and fixes their order.
 
 ## One-time setup
 
-1. Maestro (needs Java 17+; `brew install openjdk@17` if `java -version` fails):
+1. Maestro (needs Java 17+; `brew install openjdk@17` if `java -version` fails —
+   `smoke.sh` ignores a `JAVA_HOME` older than 17 and picks one with `java_home -v 17+`):
 
    ```sh
    curl -Ls "https://get.maestro.mobile.dev" | bash
@@ -81,7 +85,8 @@ Two terminals:
 
 ```sh
 # 1. Boot a simulator and start Metro from app/ (leave it running).
-xcrun simctl boot "iPhone 16"; open -a Simulator
+xcrun simctl list devices booted  # boot one if empty: xcrun simctl boot "<name>"
+open -a Simulator
 cd app && npx expo start          # press i once to open the app in Expo Go
 
 # 2. Run the suite from app/.

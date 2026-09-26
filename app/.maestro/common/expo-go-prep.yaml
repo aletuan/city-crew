@@ -6,25 +6,47 @@
 #
 # The switch only takes effect once the bundle reloads, which is why this
 # taps "Reload" rather than "Close" and then waits for Explore to come back.
+#
+# Expo Go 57's menu (iOS 26) slides up a beat after the tap, and "Tools
+# button" sits at the foot of its TOOLS list, below the fold. So: only when
+# the gear is actually there (the switch is ON — tapping it can then only
+# turn it OFF, never flip it back on), wait for the menu, scroll to the row,
+# flip it, scroll back up to Reload.
 appId: host.exp.Exponent
 ---
-- tapOn:
-    id: "gearshape.fill"
-    optional: true
-# Tapping the row label does not flip a SwiftUI toggle; tap the switch
-# itself — the "1"-valued element to the right of the label.
-- tapOn:
-    text: "1"
-    rightOf:
-      text: "Tools button"
-    optional: true
-- tapOn:
-    text: "Reload"
-    optional: true
-- extendedWaitUntil:
-    visible:
-      id: "tab-explore"
-    timeout: 90000
+- runFlow:
+    when:
+      visible:
+        id: "gearshape.fill"
+    commands:
+      - tapOn:
+          id: "gearshape.fill"
+      - extendedWaitUntil:
+          visible:
+            text: "Reload"
+          timeout: 10000
+      - scrollUntilVisible:
+          element:
+            text: "Tools button"
+          direction: DOWN
+          timeout: 10000
+      # Tapping the row label does not flip a SwiftUI toggle; tap the switch
+      # itself — the "1"-valued element to the right of the label.
+      - tapOn:
+          text: "1"
+          rightOf:
+            text: "Tools button"
+      - scrollUntilVisible:
+          element:
+            text: "Reload"
+          direction: UP
+          timeout: 10000
+      - tapOn:
+          text: "Reload"
+      - extendedWaitUntil:
+          visible:
+            id: "tab-explore"
+          timeout: 90000
 - runFlow: dismiss-welcome.yaml
 - extendedWaitUntil:
     notVisible:
