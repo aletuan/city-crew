@@ -42,7 +42,7 @@
 // Pure except for the two things it is handed — a client and a fetch — so
 // it is tested from the app's runner, the way `rehost.ts` is.
 
-import { PRICE_LEVELS } from "./import-place.ts";
+import { PRICE_LEVELS } from "./price-level.ts";
 
 /**
  * The fields asked for. Every one of them is read below, and none is asked

@@ -6,23 +6,11 @@ import { MAX_CITY_KM, nearestCity } from "./nearest-city.ts";
 import { cleanName } from "./place-name.ts";
 import { copyPhoto } from "./rehost.ts";
 import { wardFromAddress } from "./ward.ts";
+import { PRICE_LEVEL_VND, PRICE_LEVELS } from "./price-level.ts";
 
-export const PRICE_LEVELS: Record<string, number> = {
-  PRICE_LEVEL_INEXPENSIVE: 1,
-  PRICE_LEVEL_MODERATE: 2,
-  PRICE_LEVEL_EXPENSIVE: 3,
-  PRICE_LEVEL_VERY_EXPENSIVE: 4,
-};
-
-// Representative VND per Google price level, so every import speaks the
-// same "150k₫" language as the curated seed data instead of "₫₫" glyphs.
-// Rough by design — editors refine the number during review.
-export const PRICE_LEVEL_VND: Record<number, number> = {
-  1: 50000,
-  2: 150000,
-  3: 300000,
-  4: 500000,
-};
+// The tables live in `price-level.ts` (see why there); still exported from
+// here, where callers have always found them.
+export { PRICE_LEVEL_VND, PRICE_LEVELS };
 
 /**
  * A slug from Google's display name.

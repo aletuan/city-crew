@@ -7,6 +7,7 @@
 // only while they are still Google's, and never overwritten once a hand
 // has changed them.
 
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import {
   NOT_FOUND, REFRESH_MASK, refreshPatch, refreshPlace,
@@ -205,5 +206,17 @@ describe('the mask', () => {
       'businessStatus', 'editorialSummary', 'id', 'internationalPhoneNumber', 'nationalPhoneNumber',
       'priceLevel', 'rating', 'regularOpeningHours', 'userRatingCount', 'websiteUri',
     ]);
+  });
+});
+
+// The function is deployed by uploading every file it reaches, by hand
+// (`CLAUDE.md`, Supabase). Reaching `import-place.ts` would drag the
+// classifier, the photo copy and the city finder along — 57 KB for one
+// four-line table — so the table has its own module and this holds it there.
+describe('what the refresh reaches', () => {
+  it('imports only the price table, not the import', () => {
+    const src = readFileSync(
+      new URL('../../../supabase/functions/_shared/refresh-place.ts', import.meta.url), 'utf8');
+    expect([...src.matchAll(/from "(.+?)"/g)].map((m) => m[1])).toEqual(['./price-level.ts']);
   });
 });
