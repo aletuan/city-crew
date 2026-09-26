@@ -1,63 +1,37 @@
-# Việc còn mở trước pilot — bên thứ ba và vận hành
+# Dữ liệu bên thứ ba — những gì đã đo và đã quyết
 
-Tài liệu này từng là bản đánh giá "còn cách App Store bao xa", viết 16/08/2026
-khi app chưa từng có bản build native. Câu hỏi đó đã trả lời xong: app ở
-`1.0.0`, đã nộp App Store, và hai nhóm chặn của bản gốc — A (build native) và
-B (chính sách Apple) — đóng hết. Giữ nguyên chúng ở đây chỉ tạo ra một danh
-sách mà 2/3 nội dung nói sai về hiện tại.
+Tài liệu này ghi **kiến thức**, không ghi việc cần làm. Việc còn mở nằm ở
+[issue #708](https://github.com/aletuan/city-crew/issues/708), nơi mỗi mục
+đóng được khi xong.
 
-Nên từ 02/09/2026 nó chỉ còn là **danh sách việc chưa làm**: rủi ro bên thứ
-ba (nhóm C) và mức sẵn sàng vận hành (nhóm D). Bản đánh giá đầy đủ — cả nhóm
-A và B với đủ lý do từng mục tồn tại — nằm nguyên trong lịch sử git ở commit
-ngay trước bản cắt này: `git show ef911e3:docs/tech-eval-app-store.md`.
+Nó từng là một danh sách việc cần làm, và đó là lý do nó phải đổi. Đến
+26/09/2026 file vẫn ghi ba việc đã làm là chưa làm — trong đó có việc nó
+xếp **số 1**, nâng Supabase lên Pro, đã là Pro từ lâu. Một danh sách trong
+markdown không có dấu "xong": làm xong một việc, không ai quay lại gạch đi.
 
-Kết luận của bản gốc vẫn đúng và không cần nhắc lại dài dòng: **stack không
-phải vấn đề.** Expo + Supabase + RLS là lựa chọn phù hợp, nền móng tốt hơn
-mặt bằng, không có gì phải viết lại.
+Tên file giữ nguyên vì #485 và lịch sử commit trỏ vào nó. Lịch sử của nó:
 
-Bản trước ghi kèm bốn con số quy mô — SDK 54, ~51k dòng TS/TSX, 45 migration,
-7 Edge Function. Đến 26/09/2026 cả bốn đều sai (57, ~83k, 76, 10) và không
-con số nào trong đó đỡ cho kết luận trên, nên chúng đi. Cần số thật thì đếm:
-`ls supabase/migrations/*.sql | wc -l`.
+- bản đánh giá gốc tháng 8, đủ nhóm A và B: `git show ef911e3:docs/tech-eval-app-store.md`
+- danh sách C + D ngay trước khi chuyển sang #708: `git show b8941bb:docs/tech-eval-app-store.md`
+
+Kết luận của bản gốc vẫn đúng: **stack không phải vấn đề.** Expo + Supabase
++ RLS là lựa chọn phù hợp, nền móng tốt hơn mặt bằng, không có gì phải viết
+lại.
 
 ---
 
-## Đã đóng — không liệt kê chi tiết nữa
-
-Kiểm lại từng mục ngày 02/09/2026, đối chiếu mã nguồn chứ không theo trí nhớ:
-
-| Nhóm | Bản gốc nói | Hiện tại |
-|---|---|---|
-| A1–A2 | thiếu bundle id / package | `com.aletuan.citycrew` cả hai |
-| A3 | không có `eas.json` | có, đủ `development` / `preview` / `production` |
-| A4 | `version: 0.1.0`, không versioning | `1.0.0` + `autoIncrement` |
-| A5–A6 | thiếu splash, adaptiveIcon trỏ sai | đã cấu hình, trỏ `android-icon-foreground.png` |
-| A7–A8 | chưa verify New Architecture, chỉ có kênh `main` | đã test trên máy thật; ba kênh OTA tách riêng |
-| B1 | không có filter / report / block / EULA | `blocks.sql`, `reports.sql`, `moderation_actions.sql`, `reportFlow.tsx`, Edge Function `suspend-user` |
-| B2 | không có xoá tài khoản | `functions/delete-account` + `DeleteAccountScreen.tsx` |
-| B3 | không có privacy policy | `privacy.html`, `terms.html`, `support.html`, `docs/store/app-privacy-labels.md` |
-| B4 | tab Ideas chạy đồng hồ giả | planner thật từ Phase 1–4 |
-
-**Đường găng 14 ngày closed testing của Google Play** — cảnh báo lớn nhất của
-bản gốc — vẫn còn nguyên giá trị nếu định phát hành qua Play Store, và vẫn là
-việc phải khởi động sớm nhất.
-
----
-
-## 1. Nhóm C — Rủi ro pháp lý bên thứ ba
-
-### C1. Cache dữ liệu Google Places
+## C1. Cache dữ liệu Google Places
 
 `import-place.ts` ghi vĩnh viễn vào Postgres: `rating`, `rating_count`,
 `price_level`, `opening_hours`, `website`, `phone`, `editorialSummary`, và
 tham chiếu ảnh. Google Maps Platform ToS chỉ cho cache **`place_id` vô thời
 hạn**; nội dung khác bị giới hạn (thường hiểu là 30 ngày).
 
-Việc cần làm: thêm `google_refreshed_at`, job làm mới định kỳ theo
+Việc cần làm (theo dõi ở #708): thêm `google_refreshed_at`, job làm mới định kỳ theo
 `google_place_id`, và cân nhắc trường nào thật sự cần lưu — giờ mở cửa và
 rating là hai trường "tươi" nhất, cũng là hai trường sai nhiều nhất khi cũ.
 
-#### Cập nhật 01/09/2026 — hoãn có chủ đích, kèm số đo
+### Cập nhật 01/09/2026 — hoãn có chủ đích, kèm số đo
 
 Đã rà lại và **quyết định hoãn** job làm mới. Ghi lại số đo tại thời điểm
 hoãn để lần sau không phải đo lại:
@@ -80,29 +54,37 @@ Khi làm, hai thứ nên đi cùng nhau vì cùng một job trả cả hai:
    luỹ, và phủ 441/442 địa điểm. Đây là câu trả lời đúng cho "địa điểm nào
    đang hot", tốt hơn hẳn follower count trên mạng xã hội (xem C4).
 
-### C2. Nominatim / Photon ở quy mô pilot — đã đóng (09/2026)
+### Cập nhật 26/09/2026 — ảnh đã về nhà
 
-`find-address` (Photon + Nominatim) đã bỏ. StartSheet tìm bằng Google Places
-qua `fetch-place`, cùng key và cùng hạn mức với Add a place; chú thích dưới
-bản đồ dùng Geocoding API của Google. Không còn giới hạn 1 request/giây hay
+Ảnh không còn là phần lớn của C1. Truy vấn `place_photos` theo host của
+`photo_uri`: **4.171** ảnh nằm trên storage Supabase của mình (việc của
+`rehost-photos`), **2** ảnh còn ở `lh3.googleusercontent.com`, 1 ở
+`aletuan.github.io`. Hai ảnh còn trên Google là việc dọn dữ liệu, không
+phải lý do để thiết kế job làm mới quanh ảnh. Phần còn lại của C1 là các
+trường văn bản ở trên, và vẫn chưa có cột `google_refreshed_at`.
+
+## C2. Google thay Nominatim / Photon — hoá đơn là thứ phải canh
+
+`find-address` (Photon + Nominatim) đã bỏ từ 09/2026; tìm điểm bắt đầu và
+chú thích dưới bản đồ đi qua `fetch-place` tới Google Places và Geocoding.
+Không còn giới hạn 1 request/giây hay
 câu hỏi self-host; cái phải theo dõi thay vào đó là hoá đơn Google: một lần
 tìm là một Text Search, một lần dời ghim là một Geocoding call, cả hai tính
 theo nghìn request sau hạn mức miễn phí hàng tháng.
 
-Lý do có thể làm được: app đã ship thành binary riêng (EAS Build →
-TestFlight), bundle được Google Maps SDK, nên bản đồ là của Google và điều
-khoản Places §5.3 không còn chặn. Xem đầu `app/src/components/MiniMap.tsx`.
+Đây là lý do D8 (cảnh báo ngân sách trên key Google) nằm trong #708.
 
-### C3. Attribution còn thiếu
+## C3. Ghi nguồn
 
-- **Open-Meteo** yêu cầu ghi nguồn (CC-BY-4.0) — chưa thấy ở đâu.
-- ~~**Apple Maps** yêu cầu hiển thị logo/legal notice khi dùng MapKit.~~
-  Không còn dùng MapKit; bản đồ là Google Maps SDK, logo Google do SDK vẽ.
-- ~~**OpenStreetMap** đã có nhãn trên StartSheet~~ — không còn dùng OSM.
-  Toạ độ điểm bắt đầu đã lưu trong `trips` từ trước 09/2026 có thể đến từ
-  kết quả OSM; ODbL áp dụng cho chúng nếu có ngày xuất ra ngoài.
+- **Open-Meteo** (CC BY 4.0) — ghi ở mục "Weather data" của Điều khoản
+  (#706), có test trong `weather.test.ts` giữ cho dòng ghi nguồn khớp với nhà
+  cung cấp mà code thật sự gọi.
+- **Google Maps** — logo do SDK tự vẽ.
+- **OpenStreetMap** — không còn dùng. Toạ độ điểm bắt đầu lưu trong `trips`
+  từ trước 09/2026 có thể đến từ kết quả OSM; ODbL áp dụng cho chúng nếu có
+  ngày xuất ra ngoài.
 
-### C4. Chỉ số mạng xã hội — đã cân nhắc và không lưu (01/09/2026)
+## C4. Chỉ số mạng xã hội — đã cân nhắc và không lưu (01/09/2026)
 
 Đã cân nhắc lưu `followers` / "recent views" của tài khoản Threads chính chủ
 để đo độ hot. Không làm, vì bốn lý do:
@@ -127,61 +109,3 @@ không phải "độ phổ biến".
 
 Đây là lý do `places.threads_handle` (PR #452) chỉ lưu handle: handle là định
 danh bền và tra cứu được, follower count là con số đo sai thứ cần đo.
-
----
-
-## 2. Nhóm D — Sẵn sàng vận hành
-
-Nhóm này quyết định pilot *học được gì*, không phải pilot *chạy được hay
-không*. Trạng thái kiểm lại 02/09/2026.
-
-| # | Thiếu | Vì sao quan trọng |
-|---|---|---|
-| D1 | **Không có crash reporting.** Không có Sentry/Bugsnag/Crashlytics trong `app/package.json` | Với người dùng thật, một crash không được báo cáo là một crash không tồn tại. Hạng mục đơn lẻ giá trị cao nhất trong cả tài liệu — và app **đã lên App Store**, nên nó không còn là việc chuẩn bị |
-| D2 | **Không có ErrorBoundary** ở `App.tsx` | Một lỗi render = màn hình trắng, không thông báo, không phục hồi |
-| D3 | **Không có analytics** | Pilot không đo được thì không phải pilot, chỉ là phát hành sớm |
-| D4 | **Một môi trường Supabase duy nhất** | Migration apply thẳng vào production. Không có staging để thử |
-| D5 | **Migration/Edge Function không deploy tự động** | CI *test* migration trên Postgres thật nhưng không *chạy* chúng lên project. Deploy thủ công là nơi lỗi sẽ xảy ra |
-| D6 | **Supabase vẫn ở gói `free`** (xác nhận qua API ngày 02/09) | Project **tự pause sau 7 ngày không hoạt động**, 500MB DB, 5GB egress. App đang ở trên App Store — pause là app chết với người lạ đang cài. Pro **25 USD/tháng**, kèm PITR backup. Đây là mục gấp nhất nhóm D |
-| D7 | **Không có quota chống lạm dụng** | Một tài khoản có thể tạo vô hạn collection, upload lại avatar không giới hạn, spam `place_submissions`. RLS kiểm soát *ai*, không kiểm soát *bao nhiêu* |
-| D7b | **`place_events` không có gì trim** | Taste profile chỉ đọc 90 ngày gần nhất, nên dòng cũ hơn là nợ và là rủi ro. Chặn duy nhất hiện có là nút xoá của người dùng và cascade khi xoá tài khoản. `pg_cron` có sẵn trên project, chưa cài |
-| D8 | **Không có budget alarm trên Google Maps key** | `scan-city` có `MAX_API_CALLS = 45` mỗi lần gọi, nhưng không giới hạn số lần gọi. Một tài khoản editor bị chiếm có thể đốt hết ngân sách |
-| D9 | Không có xử lý offline / retry | Mỗi màn hình gọi mạng trực tiếp. Có timeout trong `auth.tsx` nhưng không cache, không retry, không trạng thái offline |
-| D10 | Không có E2E test | Test hiện có đều là hàm thuần và test UI ở mức component — không có luồng nào chạy trên thiết bị |
-| D11 | Accessibility chưa được đánh giá | Dynamic Type, VoiceOver label, độ tương phản. Apple kiểm nhẹ; người dùng pilot thì không |
-
----
-
-## 3. Thứ tự nên làm
-
-Xếp theo "hỏng thì mất gì", không theo công sức:
-
-1. **D6 — nâng Supabase Pro.** App đã ở trên store; free tier tự pause là
-   hỏng ngoài tầm kiểm soát. 25 USD/tháng.
-2. **D1 + D2 — crash reporting và ErrorBoundary.** Người lạ đang cài app mà
-   không có đường nào để lỗi của họ đi về.
-3. **C1 — job làm mới Google Places.** Mốc 30 ngày đầu tiên rơi vào khoảng
-   05/09/2026; sau mốc đó là cache quá hạn theo ToS.
-4. **D8 + D7 — budget alarm rồi quota.** Chặn thiệt hại tài chính trước, chặn
-   phiền nhiễu sau.
-5. D3 analytics — tối thiểu: mở app, xem place, lưu place, tạo collection, publish.
-6. C3 attribution Open-Meteo (Apple Maps không còn dùng).
-7. D7b `pg_cron` trim `place_events` cũ hơn 90 ngày.
-8. ~~C2 cache `find-address` trong Postgres.~~ — không còn cần; C2 đã đóng.
-9. D4/D5 staging + tự động `supabase db push` và deploy function trong CI.
-10. D9 offline, D10 E2E, D11 accessibility.
-
----
-
-## 4. Tiêu chí "xong" cho pilot
-
-Những điều kiện của bản gốc đã đạt (xoá tài khoản trong app, không có màn
-hình chạy tiến trình giả, privacy policy công khai, có report/block) không
-liệt kê lại. Còn lại bốn điều, tất cả đều thuộc nhóm C và D:
-
-1. Một crash trên máy người lạ **tới được** người phát triển trong vài phút,
-   kèm stack trace.
-2. Supabase ở gói Pro, không có nguy cơ tự pause giữa pilot.
-3. Một tài khoản đơn lẻ không thể làm hỏng trải nghiệm của người khác, cũng
-   không đốt được ngân sách API.
-4. Không trường Google Places nào bị giữ quá hạn ToS mà không có đường làm mới.
