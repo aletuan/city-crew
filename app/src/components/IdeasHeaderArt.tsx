@@ -23,11 +23,13 @@
 //
 // Its height follows the band: safe-area inset plus the row's paddings
 // plus the title-and-lede column at one line each. The frame reaches the
-// screen top, but the *paint* does not: the files carry a third of
-// transparent sky above the first brushstroke, so on a phone with a
-// 59pt status bar the plane and the rooftops begin just under it rather
-// than behind it — the first build had them at the very top, and the
-// Dynamic Island sat on the plane. A title that wraps (Japanese does, at
+// screen top, but the *paint* does not: the files carry transparent sky
+// for the top 30% of the frame, so on a phone with a 59pt status bar
+// the plane and the rooftops begin just under it rather than behind it
+// — the first build had them at the very top, and the Dynamic Island
+// sat on the plane. The second had a full third of sky and the cats
+// came out small; the paint now runs to 97% of the frame, and the band
+// is 12pt taller for the room the lede keeps under itself. A title that wraps (Japanese does, at
 // 375pt) makes the row taller, the painting keeps its height and its
 // bottom, and the sky above it is transparent anyway.
 //
@@ -68,10 +70,11 @@ export const ART_ASPECT = 600 / 572;
 /** Plain sky at the painting's left edge, in points at the rendered
  *  size: how far the title may run onto it. */
 export const OVERLAP = 50;
-/** The title-and-lede column at one line each: a 34pt title's line box
- *  and three 24pt lede lines with the gap between. The header row adds
- *  its own paddings (8 above, 14 below). */
-export const BAND = 41 + 6 + 3 * 24;
+/** The title-and-lede column at one line each: a 34pt title's line box,
+ *  three 24pt lede lines with the gap between, and the room the lede
+ *  keeps under itself before the first section. The header row adds its
+ *  own paddings (8 above, 14 below). */
+export const BAND = 41 + 6 + 3 * 24 + 12;
 const ROW_PADDING = 8 + 14;
 
 /** Rendered height of the painting for a given top inset. Exported for

@@ -12,18 +12,19 @@ colour, the painting in its right half. The steps, for each:
 
   1. shift the whole image so the ground lands on the page colour
      exactly (#0A0B0A for the night, #F5F1EA for the afternoon);
-  2. crop a window of the frame's aspect (600:572) with the paint in its
-     lower two thirds — the top third is what keeps the rooftops from
-     under the status bar — padding with the ground colour where the
-     window runs off the source;
+  2. crop a window of the frame's aspect (600:572) with the paint from
+     30% to 97% of its height — the empty top is what keeps the rooftops
+     from under a 59pt status bar; the ground's faintest fade runs off
+     the bottom, which a page shows as nothing — padding with the ground
+     colour where the window runs off the source;
   3. resize, then key the ground to alpha with colour-to-alpha: the
      smallest alpha that reproduces each pixel over the page colour,
      zeroed where the pixel is within three units of it (grain) and
      ramped to full weight by ten.
 
 The crop windows below were chosen by measuring where the paint is
-(pixels more than twelve units from the ground) so it fills 33%–93% of
-the frame's height; a new render with the cats elsewhere needs them
+(alpha above 0.2 after keying, which is what the build prints) so it
+fills 30%–97% of the frame's height; a new render with the cats elsewhere needs them
 re-measured. Needs Pillow and numpy.
 """
 
@@ -36,8 +37,8 @@ from PIL import Image
 OUT = (600, 572)
 # name, page colour, crop window (x0, y0, x1, y1) on the 1536×1024 source
 JOBS = [
-    ('dark', (0x0A, 0x0B, 0x0A), (581, -300, 1536, 610)),
-    ('light', (0xF5, 0xF1, 0xEA), (331, -342, 1536, 807)),
+    ('dark', (0x0A, 0x0B, 0x0A), (680, -237, 1536, 579)),
+    ('light', (0xF5, 0xF1, 0xEA), (451, -273, 1536, 761)),
 ]
 
 
