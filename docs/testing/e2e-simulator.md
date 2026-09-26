@@ -32,41 +32,37 @@ flowchart LR
 
 ## 2. Các flow hiện có
 
-| # | Flow | Trạng thái đăng nhập | Kiểm | Thời gian (26/09) |
-|---|---|---|---|---|
-| 00 | `launch` | guest | Mở bundle, đóng WelcomeSheet, thấy tab Explore | 22 s |
-| 01 | `explore` | guest | Card đầu render, cuộn lên/xuống, đổi thành phố qua city sheet rồi trả lại | 42 s |
-| 02 | `place-detail` | guest | Mở card đầu: tên, địa chỉ, ảnh hero; quay lại | 27 s |
-| 03 | `search` | guest | Gõ `cafe`, mở kết quả đầu, quay lại, xoá query | 41 s |
-| 04 | `sign-in` | test account | Sai mật khẩu báo lỗi; đúng thì vào; cold start vẫn đăng nhập; đăng xuất | 1 m 27 s |
-| 05 | `plan-trip` | test account | Wizard Ideas (Friends + 3 mood) → Sketching → plan tốt nhất → lưu → thấy trên Trips → xoá | 1 m 33 s |
-| 06 | `save-place` | test account | Lưu place đầu vào collection (tự tạo "Maestro smoke" nếu chưa có), bỏ lưu, đăng xuất | 1 m 14 s |
-| 07 | `sign-up-delete` | tài khoản dùng một lần | Đăng ký rồi xoá tài khoản (App Store 5.1.1(v)). **Không chạy tự động** — panel "Use Strong Password?" của iOS nằm ngoài tầm Maestro; QA tay mỗi release | — |
+Danh sách và thứ tự nằm ở `app/.maestro/config.yaml`; flow nào kiểm những gì,
+cùng các subflow trong `common/`, thì
+[`README.md`](../../app/.maestro/README.md) có bảng đầy đủ. Ở đây chỉ ghi thứ
+hai file kia không có: **thời gian đo được**, vì đó là ngân sách của cả suite.
 
-Subflow dùng chung (`common/`): `start` (kill Expo Go, mở lại, cấp quyền
-notification), `dismiss-welcome`, `expo-go-prep` (tắt nút bánh răng của Expo
-Go), `ensure-signed-in`, `ensure-signed-out`, `sign-in`, `delete-first-trip`.
+| Flow | Đăng nhập | Thời gian (26/09) |
+|---|---|---|
+| `00-launch` | guest | 22 s |
+| `01-explore` | guest | 42 s |
+| `02-place-detail` | guest | 27 s |
+| `03-search` | guest | 41 s |
+| `04-sign-in` | test account | 1 m 27 s |
+| `05-plan-trip` | test account | 1 m 33 s |
+| `06-save-place` | test account | 1 m 14 s |
+| `08-explore-filter` | guest | chưa đo |
+| `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
 **Kết quả gần nhất:** 26/09/2026, iPhone 17 · iOS 26.5 · Expo Go SDK 57, code
-tại `001f75af` (main `da8c8f7` + nhánh `release/1.0.4-coverage`) —
-**7/7 passed trong 6 m 27 s**.
+tại `001f75af` (main `da8c8f7` + nhánh `release/1.0.4-coverage`) — **7/7
+passed trong 6 m 27 s**. Lần đo đó chạy **trước** khi `08-explore-filter` vào
+`config.yaml`, nên flow thứ tám không nằm trong con số 6 m 27 s.
 
 ## 3. Chạy
 
-```sh
-# Tab 1 — simulator + Metro (để chạy suốt)
-xcrun simctl list devices booted            # đã có máy nào boot chưa
-open -a Simulator
-cd app && npx expo start                    # bấm i một lần để Expo Go mở app
+Lệnh chạy và cách đọc kết quả: [`README.md`](../../app/.maestro/README.md),
+mục *Running* và *Reading a failure*.
 
-# Tab 2 — bộ smoke
-cd app && npm run smoke:ios                         # 7 flow (00–06)
-npm run smoke:ios -- .maestro/05-plan-trip.yaml     # một flow
-open ../.smoke-local/maestro/latest                 # xem kết quả
-```
-
-Trước khi chạy: `git fetch && git log --oneline HEAD..origin/main` phải rỗng,
-nếu không thì merge rồi bấm `r` ở tab Metro — nếu không bộ test đang kiểm code cũ.
+Một điều kiện chỉ ghi ở đây, vì nó thuộc về lúc chạy chứ không thuộc về công
+cụ: trước khi chạy, `git fetch && git log --oneline HEAD..origin/main` phải
+rỗng. Nếu không thì merge rồi bấm `r` ở tab Metro — bằng không bộ test đang
+kiểm code cũ, và một lần xanh không nói lên điều gì.
 
 ## 4. Sự cố môi trường đã gặp (26/09) và cách xử lý
 
@@ -95,7 +91,8 @@ flowchart TB
   PT[Ideas → Plan → Save trip]:::ok
   SP[Save place]:::ok
   SU[Sign up + delete account]:::man
-  MAP[Explore map + filter/sort]:::gap
+  FILT[Explore filter + sort]:::ok
+  MAP[Explore map + pin ảnh]:::gap
   COL[Collections tab + detail]:::gap
   CC[Tạo/sửa/xoá collection]:::gap
   LANG[Đổi ngôn ngữ VI/JA]:::gap
@@ -149,8 +146,9 @@ sách toàn suite ≤ 12 phút.
    release OTA: `npm run smoke:ios -- --include-tags guest`.
 2. **`maestro check-syntax` + `maestroIds.test.ts` trong CI** đã có; thêm kiểm
    mọi flow trong `config.yaml` đều tồn tại và ngược lại.
-3. **Cập nhật README**: bỏ tên máy cố định trong lệnh `boot`, ghi chú Expo Go 57
-   menu và Java.
+3. ~~**Cập nhật README**: bỏ tên máy cố định trong lệnh `boot`, ghi chú Expo Go
+   57 menu và Java.~~ — xong: lệnh `boot` dùng `"<name>"`, mục *One-time setup*
+   nói Java 17+, và phần subflow nói về menu TOOLS của Expo Go 57.
 4. **Chạy smoke trước mỗi lần bump version** — ghi vào checklist release
    (`docs/store/review-notes.md`).
 

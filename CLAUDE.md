@@ -14,8 +14,8 @@ only the map.
 
 | | what it is |
 |---|---|
-| `app/` | The product. Expo / React Native, TypeScript. 351 source files — this is where almost all work happens. |
-| `supabase/` | Migrations, Edge Functions, RLS. 131 files. |
+| `app/` | The product. Expo / React Native, TypeScript. Almost all work happens here. |
+| `supabase/` | Migrations, Edge Functions, RLS. |
 | `dashboard/` | The data desk: a small web app for curating the catalog. |
 | `data/` | Seeds, review scripts, and frozen bootstrap pipelines kept for provenance. |
 
@@ -143,5 +143,6 @@ the point:
 | `docs/store/listing.md` | App Store copy in three languages, and the catalog figures to re-check before each submission. |
 | `app/README.md` | Running the app, the three ways onto a phone, and the Google Maps keys. |
 | `docs/testing/e2e-simulator.md` | The Maestro suite on the iOS simulator: what it checks, and the environment failures already hit. Setup is `app/.maestro/README.md`; how to write a flow is `app/.maestro/GUIDELINES.md`. |
+| `docs/tech-eval-app-store.md` | The open items nobody links to: the Google Places cache that outlives what the Maps Platform ToS allows (C1), and the attribution still missing (C3). Read it before touching `import-place.ts` or photo display. |
 | `docs/place-naming.md`, `docs/planner-origin-distance.md`, `docs/threads-handles.md` | One question each, answered specifically. |
 | `docs/history/` | Plans and specs for work that already shipped. Provenance, not instructions. |

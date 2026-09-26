@@ -2,7 +2,7 @@
 
 How the iOS smoke suite is built, and the rules a new flow follows. The
 rules are not style: each one is a failure this suite has already had.
-Setup and running are in [README.md](README.md).
+Setup, running and reading a failure are in [README.md](README.md).
 
 ## What the suite is for
 
@@ -88,16 +88,6 @@ minute or more per run; keep the suite short.
 - [ ] Cleans up leftovers first and its own data last.
 - [ ] `maestro check-syntax` passes; `npm test` (maestroIds) passes.
 - [ ] Green twice in a row locally — the second run proves the cleanup.
-
-## Reading a failure
-
-`npm run smoke:ios` prints `[Passed]` / `[Failed]` per flow and writes
-`.smoke-local/maestro/latest/`: `report.xml`, `console.log`, and per flow
-the commands log, a screenshot and the view hierarchy at the failing step.
-The hierarchy answers "was the id on screen?"; the screenshot answers
-"what was in the way?". Most failures in this suite's history were a
-hidden tab bar, a button under it, or missing account data — check those
-first.
 
 ## Manual QA
 

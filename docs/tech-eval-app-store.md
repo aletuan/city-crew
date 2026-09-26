@@ -12,9 +12,13 @@ A và B với đủ lý do từng mục tồn tại — nằm nguyên trong lị
 ngay trước bản cắt này: `git show ef911e3:docs/tech-eval-app-store.md`.
 
 Kết luận của bản gốc vẫn đúng và không cần nhắc lại dài dòng: **stack không
-phải vấn đề.** Expo SDK 54 + Supabase + RLS là lựa chọn phù hợp, nền móng
-tốt hơn mặt bằng, không có gì phải viết lại. Quy mô hiện tại: ~51k dòng
-TS/TSX trong `app/`, 45 migration, 7 Edge Function.
+phải vấn đề.** Expo + Supabase + RLS là lựa chọn phù hợp, nền móng tốt hơn
+mặt bằng, không có gì phải viết lại.
+
+Bản trước ghi kèm bốn con số quy mô — SDK 54, ~51k dòng TS/TSX, 45 migration,
+7 Edge Function. Đến 26/09/2026 cả bốn đều sai (57, ~83k, 76, 10) và không
+con số nào trong đó đỡ cho kết luận trên, nên chúng đi. Cần số thật thì đếm:
+`ls supabase/migrations/*.sql | wc -l`.
 
 ---
 
