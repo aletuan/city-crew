@@ -1,7 +1,7 @@
 # Data Desk chuyển từ OpenStreetMap sang Google Maps — Thiết kế
 
 **Ngày:** 2026-09-22
-**Trạng thái:** đã duyệt, triển khai ngay (người dùng yêu cầu bỏ qua bước viết kế hoạch riêng)
+**Trạng thái:** đã ship (không có kế hoạch triển khai riêng — người dùng yêu cầu làm ngay).
 
 ## Vấn đề
 

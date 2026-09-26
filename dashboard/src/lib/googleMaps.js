@@ -5,7 +5,7 @@
 // else. Maps Embed (an <iframe>, which is what the OSM version was) and Maps
 // Static (which is what the Coverage tile mosaic was) are both blocked on
 // it, so neither of the small ways across was open. See
-// docs/superpowers/specs/2026-09-22-datadesk-google-maps-design.md.
+// docs/history/2026-09-22-datadesk-google-maps-design.md.
 //
 // Two consequences worth knowing before editing anything here:
 //
