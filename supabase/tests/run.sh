@@ -372,3 +372,11 @@ for f in "$ROOT"/supabase/migrations/*_profile_metadata_single_source.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/profile_metadata_test.sql"
+
+# The Google refresh: five columns on `places` and the memory that tells
+# Google's website and phone from the desk's. Needs only the stub table.
+echo "→ google refresh"
+for f in "$ROOT"/supabase/migrations/*_google_refresh.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/google_refresh_test.sql"
