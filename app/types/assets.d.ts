@@ -9,3 +9,9 @@ declare module '*.png' {
   const asset: number;
   export default asset;
 }
+// The header illustrations; WebP because the same painting is a fifth
+// of the PNG, and both platforms have decoded it natively for years.
+declare module '*.webp' {
+  const asset: number;
+  export default asset;
+}
