@@ -25,7 +25,7 @@
 <body>
 <main>
   <h1>City Crew — Privacy Policy</h1>
-  <p class="muted">Effective 29 August 2026 · <a href="#vi">Tiếng Việt bên dưới</a></p>
+  <p class="muted">Effective 26 September 2026 · <a href="#vi">Tiếng Việt bên dưới</a></p>
 
   <p>City Crew is a curated city guide. You can browse everything in it without an account. This policy describes what the app collects when you do sign in, what it deliberately does not collect, and how to erase everything.</p>
   <h2>What we collect</h2>
@@ -37,15 +37,30 @@
   <p>The app remembers which places you open, so somewhere you looked at and walked away from stops coming back. This is <strong>on when your account is made</strong>, and the sign-up screen tells you so before anything is recorded. Turn it off any time under Edit profile → Remember what I open: the switch is enforced in our database, not just in the app, so once it is off nothing can record for you. <strong>Delete my history</strong> sits beside it and works whether the switch is on or off — switching recording off and being unable to remove what was already kept would be no protection at all. This history is never shown to anyone else and never leaves your account.</p>
   <h2>What we do not collect</h2>
   <ul>
-    <li><strong>Your location never leaves your phone.</strong> The app reads it once, on-device, to open on the nearest city. It is not sent to our servers and not stored anywhere.</li>
+    <li><strong>We do not keep your location.</strong> What the app does with it, and who else sees it, is set out under “Your location and the map” below.</li>
     <li><strong>No advertising, no trackers, no third-party analytics.</strong> The App Store build sends no diagnostics or usage analytics of any kind.</li>
     <li><strong>No device identifiers.</strong> We do not collect advertising IDs or fingerprint your device.</li>
   </ul>
+  <h2>Your location and the map</h2>
+  <p>If you allow it, the app reads your position on your phone and uses it in three places:</p>
+  <ul>
+    <li><strong>Choosing a city.</strong> On your phone only, to open on the nearest city the app covers.</li>
+    <li><strong>Where should it start?</strong> When you open this screen without dropping a pin, your position is sent through our server to Google, so the map can say which street you are on and a search can look near you first. Our server passes it on and keeps nothing; Google receives it to answer that request.</li>
+    <li><strong>The maps.</strong> The maps in the app are drawn by Google Maps, which runs inside the app. When a map shows where you are, that position is handled by Google’s map software, under <a href="https://policies.google.com/privacy">Google’s privacy policy</a>.</li>
+  </ul>
+  <p>A pin you drop, a search you type and an area you pick travel the same way — through our server to Google — to name the spot and find places near it. If you save a trip that starts from a pin, the pin is saved with the trip. Your own position is never saved with it.</p>
   <h2>Where your data lives</h2>
   <p>Data is stored with <a href="https://supabase.com">Supabase</a> in Singapore (AWS ap-southeast-1). Supabase processes it on our behalf and has no right to use it for anything else.</p>
   <h2>Plans are written with an AI assistant</h2>
   <p>The app picks the stops in a plan itself, from our own catalog. To give the plan a title and a line about each stop, it sends those already-chosen stops — place names, neighbourhoods, times — together with the answers you gave (who you are with, when, what you feel like) to <a href="https://www.anthropic.com">Anthropic</a>'s Claude model, through our own server. If you describe your evening in your own words instead of using the chips, <strong>that text is sent too</strong>.</p>
-  <p>Nothing identifying goes with it: not your name, not your email, not your account id, not your location. The model can never choose a place — it may only write about the ones the app already picked. Anthropic processes this on our behalf as a service provider, and under its API terms does not use it to train models. Apart from Supabase and this, we share data with no one.</p>
+  <p>Nothing identifying goes with it: not your name, not your email, not your account id, not your location. The model can never choose a place — it may only write about the ones the app already picked. Anthropic processes this on our behalf as a service provider, and under its API terms does not use it to train models. Apart from Supabase, this, and the services under “Other services the app talks to” below, we share data with no one.</p>
+  <h2>Other services the app talks to</h2>
+  <p>Besides Supabase, your phone reaches three services directly. Like any request on the internet, each of them sees your phone’s IP address; none of them is sent your name, your email or your account.</p>
+  <ul>
+    <li>Google Maps — draws the maps inside the app. Naming and finding places for “Where should it start?” goes to Google through our server, as set out above.</li>
+    <li><a href="https://open-meteo.com/">Open-Meteo</a> — the weather on Explore. It is asked about the centre of the city you are browsing, never about your own position.</li>
+    <li><a href="https://expo.dev">Expo</a> — delivers updates to the app itself.</li>
+  </ul>
   <h2>Public content and moderation</h2>
   <p>Collections you publish, and your profile, are visible to other users. Every user can report content or block another user from inside the app; reports are reviewed by our editorial desk.</p>
   <h2>Getting a copy of your data</h2>
@@ -61,7 +76,7 @@
   <hr />
 
   <h1 id="vi">City Crew — Chính sách quyền riêng tư</h1>
-  <p class="muted">Hiệu lực từ 29/08/2026</p>
+  <p class="muted">Hiệu lực từ 26/09/2026</p>
 
   <p>City Crew là cẩm nang thành phố có tuyển chọn. Bạn có thể xem toàn bộ nội dung mà không cần tài khoản. Chính sách này mô tả app thu thập gì khi bạn đăng nhập, những gì app cố tình không thu thập, và cách xoá mọi thứ.</p>
   <h2>Chúng tôi thu thập gì</h2>
@@ -73,15 +88,30 @@
   <p>App ghi nhớ những địa điểm bạn mở, để nơi bạn đã xem rồi bỏ qua thôi quay lại. Việc này <strong>bật sẵn khi tài khoản được tạo</strong>, và màn hình đăng ký nói rõ điều đó trước khi bất cứ gì được ghi. Tắt lúc nào cũng được trong Sửa hồ sơ → Nhớ những chỗ tôi mở: công tắc này được ép ngay ở tầng cơ sở dữ liệu, không chỉ trong app, nên khi đã tắt thì không gì ghi được cho bạn nữa. Nút <strong>Xoá lịch sử của tôi</strong> nằm ngay cạnh và dùng được dù công tắc đang bật hay tắt — tắt ghi mà không xoá được thứ đã ghi thì chẳng bảo vệ được gì. Lịch sử này không bao giờ hiển thị cho người khác và không bao giờ rời khỏi tài khoản của bạn.</p>
   <h2>Chúng tôi không thu thập gì</h2>
   <ul>
-    <li><strong>Vị trí của bạn không bao giờ rời khỏi điện thoại.</strong> App đọc vị trí một lần, ngay trên máy, để mở đúng thành phố gần nhất. Vị trí không được gửi lên máy chủ và không được lưu ở bất cứ đâu.</li>
+    <li><strong>Chúng tôi không lưu vị trí của bạn.</strong> App dùng vị trí vào việc gì, và ai khác nhìn thấy nó, được nêu ở mục “Vị trí của bạn và bản đồ” bên dưới.</li>
     <li><strong>Không quảng cáo, không tracker, không analytics bên thứ ba.</strong> Bản phát hành trên App Store không gửi bất kỳ dữ liệu chẩn đoán hay thống kê sử dụng nào.</li>
     <li><strong>Không định danh thiết bị.</strong> Chúng tôi không thu thập advertising ID hay nhận dạng thiết bị của bạn.</li>
   </ul>
+  <h2>Vị trí của bạn và bản đồ</h2>
+  <p>Nếu bạn cho phép, app đọc vị trí của bạn ngay trên điện thoại và dùng nó ở ba chỗ:</p>
+  <ul>
+    <li><strong>Chọn thành phố.</strong> Chỉ trên điện thoại, để mở đúng thành phố gần nhất mà app có.</li>
+    <li><strong>Bắt đầu từ đâu?</strong> Khi bạn mở màn này mà chưa thả ghim, vị trí của bạn được gửi qua máy chủ của chúng tôi tới Google, để bản đồ ghi được bạn đang ở đường nào và ô tìm kiếm ưu tiên những chỗ gần bạn. Máy chủ của chúng tôi chỉ chuyển tiếp và không giữ lại gì; Google nhận vị trí để trả lời đúng yêu cầu đó.</li>
+    <li><strong>Bản đồ.</strong> Bản đồ trong app do Google Maps vẽ, chạy ngay bên trong app. Khi bản đồ hiện vị trí của bạn, vị trí đó do phần mềm bản đồ của Google xử lý, theo <a href="https://policies.google.com/privacy">chính sách quyền riêng tư của Google</a>.</li>
+  </ul>
+  <p>Ghim bạn thả, nội dung bạn tìm và khu vực bạn chọn cũng đi theo đúng đường đó — qua máy chủ của chúng tôi tới Google — để đặt tên cho điểm đó và tìm chỗ gần. Nếu bạn lưu một chuyến đi bắt đầu từ ghim, ghim được lưu cùng chuyến đi. Vị trí của chính bạn không bao giờ được lưu cùng.</p>
   <h2>Dữ liệu được lưu ở đâu</h2>
   <p>Dữ liệu lưu tại <a href="https://supabase.com">Supabase</a>, đặt ở Singapore (AWS ap-southeast-1). Supabase xử lý dữ liệu thay chúng tôi và không có quyền dùng cho mục đích nào khác.</p>
   <h2>Kế hoạch được viết bằng trợ lý AI</h2>
   <p>App tự chọn các điểm dừng trong một kế hoạch, từ danh mục của chính chúng tôi. Để đặt tên cho kế hoạch và viết một dòng về mỗi điểm dừng, app gửi những điểm dừng đã chọn đó — tên địa điểm, khu vực, giờ giấc — cùng các câu trả lời của bạn (đi với ai, khi nào, đang muốn gì) tới model Claude của <a href="https://www.anthropic.com">Anthropic</a>, thông qua máy chủ của chúng tôi. Nếu bạn tự gõ mô tả buổi tối của mình thay vì chọn các thẻ có sẵn, <strong>đoạn văn bản đó cũng được gửi đi</strong>.</p>
-  <p>Không có gì nhận dạng bạn đi kèm: không tên, không email, không id tài khoản, không vị trí. Model không bao giờ được chọn địa điểm — nó chỉ được viết về những nơi app đã chọn sẵn. Anthropic xử lý dữ liệu này với vai trò nhà cung cấp dịch vụ cho chúng tôi, và theo điều khoản API của họ, không dùng để huấn luyện model. Ngoài Supabase và trường hợp này, chúng tôi không chia sẻ dữ liệu với bất kỳ ai.</p>
+  <p>Không có gì nhận dạng bạn đi kèm: không tên, không email, không id tài khoản, không vị trí. Model không bao giờ được chọn địa điểm — nó chỉ được viết về những nơi app đã chọn sẵn. Anthropic xử lý dữ liệu này với vai trò nhà cung cấp dịch vụ cho chúng tôi, và theo điều khoản API của họ, không dùng để huấn luyện model. Ngoài Supabase, trường hợp này và các dịch vụ ở mục “Những dịch vụ khác app kết nối tới” bên dưới, chúng tôi không chia sẻ dữ liệu với bất kỳ ai.</p>
+  <h2>Những dịch vụ khác app kết nối tới</h2>
+  <p>Ngoài Supabase, điện thoại của bạn kết nối trực tiếp tới ba dịch vụ. Như mọi yêu cầu trên internet, mỗi dịch vụ đều thấy địa chỉ IP của điện thoại; không dịch vụ nào nhận tên, email hay tài khoản của bạn.</p>
+  <ul>
+    <li>Google Maps — vẽ bản đồ bên trong app. Việc đặt tên và tìm chỗ cho “Bắt đầu từ đâu?” đi tới Google qua máy chủ của chúng tôi, như đã nêu ở trên.</li>
+    <li><a href="https://open-meteo.com/">Open-Meteo</a> — thời tiết trên màn Khám phá. App hỏi về trung tâm thành phố bạn đang xem, không bao giờ hỏi về vị trí của bạn.</li>
+    <li><a href="https://expo.dev">Expo</a> — phân phối các bản cập nhật cho chính app.</li>
+  </ul>
   <h2>Nội dung công khai và kiểm duyệt</h2>
   <p>Bộ sưu tập bạn công khai và hồ sơ của bạn hiển thị với người dùng khác. Mọi người dùng đều có thể báo cáo nội dung hoặc chặn người khác ngay trong app; báo cáo được ban biên tập xem xét.</p>
   <h2>Lấy bản sao dữ liệu của bạn</h2>
