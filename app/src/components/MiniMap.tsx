@@ -42,6 +42,7 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { PressableScale } from './ui';
 import { colors, font, radius } from '../theme';
+import MapBoundary from './MapBoundary';
 
 /** Resolved once, at module load, so a missing native module is a null
  *  rather than a red screen. */
@@ -135,24 +136,6 @@ type Props = {
   pin?: number;
 };
 
-/**
- * Catches a native module that mounts and then throws.
- *
- * A class, because this is the one thing hooks cannot do. There is no
- * retry: if the map failed once on this device it will fail again, and
- * offering a button that re-crashes the screen is not a kindness.
- */
-class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-
-  static getDerivedStateFromError() { return { failed: true }; }
-
-  render() {
-    if (this.state.failed) return null;
-    return this.props.children;
-  }
-}
-
 export default function MiniMap({ lat, lng, onPick, caption, height, onLocate, interactive = true, pin }: Props) {
   const map = useRef<any>(null);
 
@@ -170,7 +153,7 @@ export default function MiniMap({ lat, lng, onPick, caption, height, onLocate, i
 
   if (!canDrawMap) return null;
   return (
-    <Boundary>
+    <MapBoundary>
       <View style={[s.wrap, height ? { height } : null]}>
         <MapView
           ref={map}
@@ -223,7 +206,7 @@ export default function MiniMap({ lat, lng, onPick, caption, height, onLocate, i
           </View>
         ) : null}
       </View>
-    </Boundary>
+    </MapBoundary>
   );
 }
 

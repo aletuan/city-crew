@@ -5,7 +5,7 @@
 // from the binary, and on iOS needs a key. `canDrawMap` is the verdict;
 // the screen that renders this checks it first and never shows the map
 // mode where it is false, so by the time this mounts the answer is yes.
-// The `Boundary` is for the one case that answer was wrong.
+// The `MapBoundary` is for the one case that answer was wrong.
 //
 // Plain pins for single places, and a bubble with a count where several
 // stand too close to tell apart — see `lib/cluster`. Stock markers for
@@ -30,6 +30,7 @@ import { useScheme } from '../lib/theme';
 import { pinImage } from './mapPins';
 import { canDrawMap } from './MiniMap';
 import { MapView, Marker, PROVIDER_GOOGLE } from './mapsModule';
+import MapBoundary from './MapBoundary';
 
 /** How long a bubble is redrawn as it moves before it is frozen. A custom
  *  marker view that is frozen from its first frame comes out blank on
@@ -59,12 +60,6 @@ function Bubble({ count }: { count: number }) {
 /** The same figure, in words, for a listener. */
 function spokenCount(n: number, t: (en: string, vi: string, ja?: string) => string): string {
   return t(`${n} ${n === 1 ? 'place' : 'places'}`, `${n} địa điểm`, `${n}件`);
-}
-
-class Boundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() { return { failed: true }; }
-  render() { return this.state.failed ? null : this.props.children; }
 }
 
 type Pinned = Place & { lat: number; lng: number };
@@ -194,7 +189,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
 
   const first = origin ?? (pins[0] ? { lat: pins[0].lat, lng: pins[0].lng } : fallback);
   return (
-    <Boundary>
+    <MapBoundary>
       <MapView
         ref={ref}
         style={s.fill}
@@ -317,7 +312,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
           </Marker>
         ))}
       </MapView>
-    </Boundary>
+    </MapBoundary>
   );
 }
 
