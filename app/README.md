@@ -22,8 +22,8 @@ là một bảng sẽ sai; nên thay bằng thứ không cần sửa:
 
 Danh sách đầy đủ là `ls src/screens/`, và nó luôn đúng.
 
-Mockup HTML (`citycrew-mockup-dark.html`) từ giờ **đóng băng** làm
-artifact cho pitch video — sản phẩm phát triển ở đây.
+Mockup HTML (`citycrew-mockup-dark.html`) **đã xoá** — nó là bản dựng
+trước khi có app, và app chính là bản demo. Xem `git show cc5d64f`.
 
 ## Chạy trên điện thoại
 

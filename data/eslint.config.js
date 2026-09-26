@@ -2,9 +2,8 @@
 // dashboard/eslint.config.js): plain JavaScript with no typecheck behind
 // it, so lint is the only automated reader these scripts have — and
 // until this file existed they had none at all. Most of them are frozen
-// bootstrap pipelines kept for provenance; the ones still run are the
-// snapshot export and the mockup injection, and `itinerary-runtime.js`
-// is shipped into the mockup verbatim.
+// bootstrap pipelines kept for provenance; the one still run is the
+// snapshot export.
 
 import js from '@eslint/js';
 import globals from 'globals';
@@ -33,23 +32,6 @@ export default [
         caughtErrorsIgnorePattern: '^_',
         ignoreRestSiblings: true,
       }],
-    },
-  },
-
-  // The itinerary generator is not a module: it is ES5 pasted between
-  // markers into the mockup page, where `PLACES`, `CITIES`, `CITY` and
-  // `gsize` are the page's own globals and `document` is the real one.
-  // Read as a script, with those names known, so lint sees what the
-  // browser will.
-  {
-    files: ['scripts/itinerary-runtime.js'],
-    languageOptions: {
-      ecmaVersion: 2023,
-      sourceType: 'script',
-      globals: {
-        ...globals.browser,
-        PLACES: 'readonly', CITIES: 'readonly', CITY: 'readonly', gsize: 'readonly',
-      },
     },
   },
 ];

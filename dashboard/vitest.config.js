@@ -29,14 +29,21 @@
 // 98% of lines, and each column's floor is one file's. `CityHero` holds
 // lines and statements at 98.98 — the three lines are the credit check
 // inside `upload`, which the disabled drop zone stops a test from
-// reaching the way it stops a reader. `AddPlace` holds branches at 90,
-// and `App` holds functions at 89.65: the no-op defaults its three
-// contexts carry for a screen mounted outside the shell, which nothing
-// here does, and one link's own close.
+// reaching the way it stops a reader. `AddPlace` holds branches at 90.
+//
+// Functions moved, and the reason is worth keeping. `App` held them at
+// 89.65 on three uncovered functions: the no-op defaults its contexts
+// carry for a screen mounted outside the shell, and the overflow link's
+// own close. Removing the Sync button took a *covered* function out and
+// pushed the file under the floor with no test changed — the arithmetic
+// this file's own doctrine warns about. The link's close is covered now,
+// so `App` sits at 92.59 and `CityHero` holds functions at 90.9: its
+// `beforeunload` guard, which jsdom never fires on its own, and the same
+// disabled drop zone that already holds the lines column.
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
-const FLOOR = { lines: 98, statements: 98, branches: 90, functions: 89 };
+const FLOOR = { lines: 98, statements: 98, branches: 90, functions: 90 };
 
 export default defineConfig({
   plugins: [react()],

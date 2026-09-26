@@ -6,7 +6,6 @@
     "fetch": "node --env-file=../.env scripts/fetch-places.mjs",
     "upsert": "node --env-file=.env scripts/upsert-supabase.mjs",
     "snapshot": "node --env-file=.env scripts/export-snapshot.mjs",
-    "inject": "node scripts/inject-mockup.mjs",
     "lint": "eslint . --max-warnings=0",
     "test": "node --test"
   },

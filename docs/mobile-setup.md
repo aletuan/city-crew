@@ -5,10 +5,13 @@ Sau thay đổi này, toàn bộ quy trình curation chạy không cần máy t�
 ```
 Điện thoại ──▶ Dashboard (GitHub Pages, đăng nhập magic link)
                  │  đọc/ghi trực tiếp Supabase (anon key + RLS)
-                 ├─ "Add place" ──▶ Edge Function fetch-place ──▶ Google Places ──▶ DB
-                 └─ "Sync mockup" ─▶ Edge Function sync-mockup ─▶ GitHub Actions
-                                        └─ export-snapshot + inject-mockup → commit
+                 └─ "Add place" ──▶ Edge Function fetch-place ──▶ Google Places ──▶ DB
 ```
+
+Trước 26/09/2026 còn một nhánh thứ hai — nút **Sync mockup** đẩy snapshot
+vào `citycrew-mockup-dark.html` rồi publish lên Pages. Cả nhánh đó đã xoá
+(`cc5d64f` là commit cuối còn giữ): mockup chưa sync từ 08/08 và đang phục
+vụ công khai 3 địa điểm/1 thành phố. App là bản demo.
 
 ## Đã cấu hình sẵn phía Supabase ✅
 
@@ -23,7 +26,23 @@ Những phần này đã được apply trực tiếp lên project `citycrew-dat
   Người lạ (kể cả đã đăng nhập) chỉ đọc được nội dung published + approved;
   đã kiểm chứng: role anon thấy đúng 22/41 địa điểm, 0 dòng bảng `editors`.
   Thêm editor mới: `insert into editors (email) values ('em@example.com');`
-- **Edge Functions `fetch-place` và `sync-mockup`** đã deploy (verify JWT bật,
+- ⚠️ **Dọn tay sau khi xoá mockup — theo đúng thứ tự này.** Xoá file trong
+  repo không gỡ được thứ gì đang chạy.
+
+  1. **Thu hồi `GH_PAT` trên GitHub** (Settings → Developer settings →
+     Fine-grained tokens). Đây là bước duy nhất thật sự kết thúc rủi ro:
+     token đã thu hồi thì nằm ở đâu cũng vô hại.
+  2. **Xoá secret `GH_PAT` và `GH_REPO`** ở Supabase → Edge Functions →
+     Secrets. Secret của Edge Function là **biến môi trường cấp project**,
+     nên `GH_PAT` hiện đang có mặt trong môi trường của *mọi* function —
+     `fetch-place`, `scan-city`, `plan-assist`, `delete-account`,
+     `suspend-user`… — chứ không riêng `sync-mockup`. Đây mới là chỗ phơi
+     nhiễm thật.
+  3. **Xoá function `sync-mockup`** (vẫn ACTIVE, version 4). Bước này gần
+     như chỉ để cho gọn: function đòi đăng nhập *và* có tên trong
+     `public.editors`, và workflow nó dispatch đã xoá nên GitHub trả 404 →
+     function trả 502. Nó đã là một endpoint chết.
+- **Edge Function `fetch-place`** đã deploy (verify JWT bật,
   kèm kiểm tra allow-list `editors` bên trong). Nguồn: `supabase/functions/`.
 
 Key phía client là **publishable key** (`sb_publishable_…`) — công khai theo
@@ -53,10 +72,9 @@ up** (RLS đã chặn người ngoài ghi data, tắt luôn cho sạch).
 
 - `GOOGLE_MAPS_API_KEY` — bắt buộc cho **＋ Add place** (key Google Maps
   Platform đã dùng cho `data/scripts/fetch-places.mjs`).
-- `GH_PAT` — chỉ cần cho nút **Sync mockup** trong dashboard: GitHub →
-  Settings → Developer settings → Fine-grained tokens → repo
-  `aletuan/city-crew`, quyền **Actions: Read and write**. Bỏ qua cũng được —
-  sync bằng GitHub app: Actions → *Sync mockup from database* → Run workflow.
+`GH_PAT` từng có ở đây cho nút **Sync mockup**. Nút và workflow đã xoá, nên
+secret đó giờ không ai đọc — **xoá nó khỏi Supabase** để không còn một token
+`Actions: Read and write` nằm lại mà không việc gì dùng tới.
 
 ### 3. GitHub — secret cho bản đồ (bắt buộc nếu muốn thấy bản đồ)
 
@@ -94,11 +112,8 @@ Share → **Add to Home Screen** để dùng như app.
 1. Mở Data desk → đăng nhập bằng email (magic link, một lần mỗi thiết bị).
 2. Duyệt/sửa địa điểm, chụp & upload ảnh, Approve/Flag như cũ.
 3. Đứng ở quán mới? **＋ Add place** → gõ tên → Import → chỉnh → Approve.
-4. Xong phiên: bấm **Sync mockup** — GitHub Actions xuất snapshot từ database
-   và commit mockup mới lên `main`.
-5. Xem kết quả: mockup mới nhất luôn ở
-   **https://aletuan.github.io/city-crew/mockup.html** (commit sync tự
-   kích hoạt deploy lại Pages, chờ ~1 phút sau khi sync).
+4. Hết. Không còn bước sync nào — thay đổi vào thẳng Supabase, và app đọc
+   thẳng từ đó.
 
 ## Ghi chú
 

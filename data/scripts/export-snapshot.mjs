@@ -1,5 +1,8 @@
+// FROZEN. The mockup this fed was deleted at cc5d64f; nothing reads
+// its output now. Kept as provenance, like the rest of `data/scripts`.
+//
 // Export published places + collections into the exact shape the mockup
-// consumes, bucketed per city:
+// consumed, bucketed per city:
 //   { generated_from, default_city,
 //     cities: [{ id, name_en, name_vi, short_en, short_vi, sort_order }],
 //     places: { hcmc: { foryou, food, out }, hanoi: {…}, … },

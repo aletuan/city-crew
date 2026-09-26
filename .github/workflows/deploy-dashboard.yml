@@ -21,7 +21,6 @@ on:
     branches: [main]
     paths:
       - 'dashboard/**'
-      - 'citycrew-mockup-dark.html'
       - '.github/workflows/deploy-dashboard.yml'
   workflow_dispatch:
 
@@ -57,11 +56,6 @@ jobs:
           # rectangles; a wrong referrer allowlist does the same thing only
           # on Pages, which is the likelier way for this to go wrong.
           VITE_GOOGLE_MAPS_KEY: ${{ secrets.VITE_GOOGLE_MAPS_KEY }}
-      # Ship the mockup alongside the dashboard so the freshly synced demo is
-      # viewable at <pages-url>/mockup.html — sync commits re-trigger this
-      # workflow via the paths filter above.
-      - name: Include the mockup page
-        run: cp ../citycrew-mockup-dark.html dist/mockup.html
       - uses: actions/configure-pages@v5
         with:
           enablement: true

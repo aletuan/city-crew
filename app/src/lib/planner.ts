@@ -7,7 +7,8 @@
 // gets a plan.
 //
 // The algorithm is ported from `data/scripts/itinerary-runtime.js`, the
-// ES5 script the pitch mockup runs, with three things it never did:
+// ES5 script the pitch mockup ran — both deleted, last held at cc5d64f —
+// with three things that script never did:
 // opening hours are honoured, distance shapes the route, and the answer is
 // three plans rather than one.
 //

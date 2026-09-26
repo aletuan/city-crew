@@ -206,11 +206,12 @@ jobs:
       - if: '!cancelled()'
         run: npm run coverage:ui
 
-  # The data scripts: plain JavaScript with nothing else reading them. Most
-  # are frozen bootstrap pipelines kept for provenance, but the snapshot
-  # export and the mockup injection still run, and `itinerary-runtime.js`
-  # is pasted into the mockup verbatim — so the one test here evaluates it
-  # the way the page does and pins the plan it makes.
+  # The data scripts: plain JavaScript with nothing else reading them, now
+  # all frozen bootstrap pipelines kept for provenance — the mockup they
+  # fed is gone (cc5d64f). `npm test` here runs no tests as a result;
+  # lint is what this job still holds, and it is the only automated reader
+  # these scripts have. Delete the job, or give it something to test, but
+  # do not leave a green test step that asserts nothing without saying so.
   data:
     runs-on: ubuntu-latest
     defaults:

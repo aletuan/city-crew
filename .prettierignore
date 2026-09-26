@@ -4,8 +4,6 @@ dashboard/node_modules/
 dashboard/dist/
 # A 4.4 MB generated artifact, and the one file that would take Prettier
 # minutes to reflow for nothing.
-citycrew-mockup-dark.html
 data/snapshot/
 images/
-pitch/
 supabase/migrations/
