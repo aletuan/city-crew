@@ -44,7 +44,9 @@ describe('CityHero', () => {
     api.places.mockResolvedValue(PLACES);
     renderDesk('/city', { city: 'hcmc' });
     expect(await screen.findByRole('heading', { name: 'City hero — Ho Chi Minh City' })).toBeTruthy();
-    expect(api.places).toHaveBeenCalledWith({ city: 'hcmc', all: true });
+    // The heading comes from the city row; the places are a second read
+    // that can land after it.
+    await waitFor(() => expect(api.places).toHaveBeenCalledWith({ city: 'hcmc', all: true }));
     expect(previewTitle()).toBe('Ideas for a night in Saigon');
     expect(previewSub()).toBe('Browse public collections and places — no account needed.');
     expect(previewCta()).toBe("Let's go →");

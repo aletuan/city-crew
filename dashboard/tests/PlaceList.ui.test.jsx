@@ -47,7 +47,11 @@ describe('PlaceList', () => {
     const { router } = renderDesk('/');
     expect(screen.getByText('Loading places…')).toBeTruthy();
     await screen.findByText('cafe-a');
-    expect(api.places).toHaveBeenCalledWith({ city: 'hcmc' });
+    // The list asks once before the city has resolved ({ city: undefined })
+    // and again with it; the mock answers both with the same page, so the
+    // rows can be on screen before the second ask. Wait for it rather than
+    // assume it — under coverage on CI it lands a beat later.
+    await waitFor(() => expect(api.places).toHaveBeenCalledWith({ city: 'hcmc' }));
     const [a, b, c] = rows();
     expect(a.getAttribute('href')).toBe('/place/cafe-a');
     expect(a.querySelector('.vi').textContent).toBe('cafe-a vi');
