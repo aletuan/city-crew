@@ -12,6 +12,7 @@ flows:
   - "04-sign-in.yaml"
   - "05-plan-trip.yaml"
   - "06-save-place.yaml"
+  - "08-explore-filter.yaml"
 executionOrder:
   continueOnFailure: true
   flowsOrder:
@@ -22,3 +23,4 @@ executionOrder:
     - 04-sign-in
     - 05-plan-trip
     - 06-save-place
+    - 08-explore-filter

@@ -47,7 +47,8 @@ describe('Contributors', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('@minh')).toBeTruthy();
     expect(api.contributors).toHaveBeenCalledTimes(2);
-    expect(api.localGuides).toHaveBeenCalledTimes(2);
+    // "@minh" is the board's; the guides are their own read and can trail it.
+    await waitFor(() => expect(api.localGuides).toHaveBeenCalledTimes(2));
   });
 
   it('cards for every city, and a board ranked within the desk\'s city', async () => {

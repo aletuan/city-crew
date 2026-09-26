@@ -24,6 +24,12 @@ die() { printf '✗ %s\n' "$*" >&2; exit 1; }
 
 # ── tools ──
 command -v maestro >/dev/null || die "maestro not found — see .maestro/README.md, One-time setup."
+# Maestro 2 needs Java 17+. A JAVA_HOME left pointing at an older JDK (a
+# Java 8 kept for other projects) is replaced for this run only.
+java_major() { "$1/bin/java" -version 2>&1 | sed -nE 's/.*version "(1\.)?([0-9]+).*/\2/p' | head -1; }
+if [ -n "${JAVA_HOME:-}" ] && [ "$(java_major "$JAVA_HOME")" -lt 17 ] 2>/dev/null; then
+  unset JAVA_HOME
+fi
 if [ -z "${JAVA_HOME:-}" ] && [ -x /usr/libexec/java_home ]; then
   JAVA_HOME="$(/usr/libexec/java_home -v 17+ 2>/dev/null || true)"
   [ -n "$JAVA_HOME" ] && export JAVA_HOME

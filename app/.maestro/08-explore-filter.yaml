@@ -1,0 +1,120 @@
+# Sort & filter on Explore: sort by distance (needs a location fix), then
+# narrow to places open now, see the button count both, and reset.
+#
+# Filters live in component state, not storage, so a cold start is a clean
+# sheet — nothing to clean up before or after. The location is pinned to
+# central Hanoi so "nearest" has a fix whatever the simulator last had,
+# and granted up front ("inuse" — iOS takes always/inuse/never, not
+# "allow") so no permission alert stands over the sheet.
+#
+# The map half of this screen (`explore-view`, `places-map`) is not here:
+# `canDrawMap` is false in Expo Go on iOS (no Google Maps key in the store
+# client), so the button is not drawn. It needs a dev-client run — see
+# docs/testing/e2e-simulator.md.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- launchApp:
+    stopApp: true
+    permissions:
+      notifications: allow
+      location: inuse
+- setLocation:
+    latitude: 21.0285
+    longitude: 105.8542
+- openLink: ${EXPO_URL}
+- extendedWaitUntil:
+    visible:
+      id: "tab-explore"
+    timeout: 90000
+- runFlow: common/dismiss-welcome.yaml
+- runFlow: common/expo-go-prep.yaml
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+
+# The badge sits inside the button, and iOS folds an accessible button's
+# children into it — the badge never reaches the tree on its own. What
+# does is the button's label, which carries the count in all three
+# languages ("1 applied", "đang áp dụng 1", "1件適用中") and no digit at
+# all when nothing is applied. So the flow reads the number, not a word.
+#
+# Nothing applied yet: no count.
+- scrollUntilVisible:
+    element:
+      id: "explore-filter"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- assertNotVisible:
+    id: "explore-filter"
+    text: ".*[0-9].*"
+
+# Nearest first. Applying asks for a fix, then closes the sheet.
+- tapOn:
+    id: "explore-filter"
+- extendedWaitUntil:
+    visible:
+      id: "filter-sort-distance"
+    timeout: 10000
+- tapOn:
+    id: "filter-sort-distance"
+- tapOn:
+    id: "filter-apply"
+- extendedWaitUntil:
+    notVisible:
+      id: "filter-apply"
+    timeout: 20000
+- assertVisible:
+    id: "explore-filter"
+    text: ".*1.*"
+# Sorting reorders; it never empties the list.
+- assertVisible:
+    id: "place-card-0"
+
+# Add "open now". The count of places depends on the hour, so the flow
+# checks the sheet and the badge, not the list.
+- tapOn:
+    id: "explore-filter"
+- extendedWaitUntil:
+    visible:
+      id: "filter-status-open"
+    timeout: 10000
+- tapOn:
+    id: "filter-status-open"
+- tapOn:
+    id: "filter-apply"
+- extendedWaitUntil:
+    notVisible:
+      id: "filter-apply"
+    timeout: 20000
+- assertVisible:
+    id: "explore-filter"
+    text: ".*2.*"
+
+# Reset clears both, and the badge goes with them.
+- tapOn:
+    id: "explore-filter"
+- extendedWaitUntil:
+    visible:
+      id: "filter-reset"
+    timeout: 10000
+- tapOn:
+    id: "filter-reset"
+- assertNotVisible:
+    id: "filter-reset"
+- tapOn:
+    id: "filter-apply"
+- extendedWaitUntil:
+    notVisible:
+      id: "filter-apply"
+    timeout: 20000
+- assertNotVisible:
+    id: "explore-filter"
+    text: ".*[0-9].*"
+- assertVisible:
+    id: "place-card-0"

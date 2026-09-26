@@ -24,6 +24,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `04-sign-in.yaml` | Signs out if needed; a wrong password shows the form error; the right one signs in; a cold start is still signed in; signs out. |
 | `05-plan-trip.yaml` | Deletes the account's leftover upcoming trips; answers the Ideas wizard (Friends + up to three moods); waits out Sketching; opens the recommended plan; saves it; finds it as the only upcoming trip; deletes it. |
 | `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
+| `08-explore-filter.yaml` | Pins the location to Hanoi; sorts Explore by distance, then adds "open now"; the filter button's count shows both; Reset clears them and the list is back. The map toggle is not covered — Expo Go on iOS draws no map. |
 | `07-sign-up-delete.yaml` | **Not run by `npm run smoke:ios`** — see GUIDELINES.md ("Manual QA"). Documents signing up a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skipping the taste picker, then deleting that same account from Profile → Delete account, ending back on the guest view; iOS's own "Use Strong Password?" panel on the password field can't be driven by Maestro, so this path is checked by hand once per release instead. |
 
 The signed-in flows share `common/start.yaml` (open fresh, grant
@@ -38,12 +39,16 @@ every flow runs first, so a fresh Expo Go and a warm one behave the same.
 The second one switches off Expo Go's floating "Tools button" — the blue
 gear docks at the top-right corner, exactly over Explore's search button,
 and a tap there opens Expo's dev menu instead of Search. Expo Go remembers
-the setting, so after the first run those steps are no-ops. `config.yaml`
+the setting, so after the first run those steps are no-ops. Expo Go 57's
+menu slides up a beat late and keeps the switch at the foot of its TOOLS
+list, so the subflow waits for the menu and scrolls to the row; it only
+runs while the gear is showing, so it can never switch the button back on. `config.yaml`
 restricts `maestro test .maestro` to the numbered flows and fixes their order.
 
 ## One-time setup
 
-1. Maestro (needs Java 17+; `brew install openjdk@17` if `java -version` fails):
+1. Maestro (needs Java 17+; `brew install openjdk@17` if `java -version` fails —
+   `smoke.sh` ignores a `JAVA_HOME` older than 17 and picks one with `java_home -v 17+`):
 
    ```sh
    curl -Ls "https://get.maestro.mobile.dev" | bash
@@ -81,7 +86,8 @@ Two terminals:
 
 ```sh
 # 1. Boot a simulator and start Metro from app/ (leave it running).
-xcrun simctl boot "iPhone 16"; open -a Simulator
+xcrun simctl list devices booted  # boot one if empty: xcrun simctl boot "<name>"
+open -a Simulator
 cd app && npx expo start          # press i once to open the app in Expo Go
 
 # 2. Run the suite from app/.
@@ -148,6 +154,8 @@ reaches the native view.
 | `FloatingTabBar` | `tab-ideas`, `tab-explore`, `tab-trips`, `tab-collections`, `tab-profile` |
 | `WelcomeSheet` | `welcome-dismiss` |
 | `ExploreScreen` | `explore-search`, `explore-city`, `explore-list`, `place-card-<index>` |
+| `ExploreScreen` (filter) | `explore-filter` / `explore-filter-pinned` (its label carries the applied count as a digit — the badge inside it has no id of its own on iOS), `explore-view` (map toggle — dev build only) |
+| `ExploreFilterSheet` | `filter-sort-<recommended\|distance\|rating>`, `filter-status-<any\|open\|closed>`, `filter-saved`, `filter-reset` (only when dirty), `filter-apply`, `filter-close` |
 | `CitySwitcher` | `city-row-<index>` |
 | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
 | `SearchScreen` | `search-input`, `search-clear`, `search-result-<index>` |
