@@ -53,15 +53,20 @@ const toTerms = (text) => text.split('\n').map((t) => t.trim()).filter(Boolean);
 
 function Row({ cat, label, saved, onSaved }) {
   const toast = useToast();
-  const [text, setText] = useState(toText(saved));
+  const savedText = toText(saved);
+  const [text, setText] = useState(savedText);
   const [saving, setSaving] = useState(false);
 
-  // Re-seed when the fetch lands, but never over a half-typed edit.
-  useEffect(() => { setText(toText(saved)); }, [saved]);
+  // Re-seed when what is saved changes — the fetch landing, or a save
+  // coming back cleaned — and not when the array is merely new. The parent
+  // passes `saved[cat] ?? []`, a fresh [] on every render for a category
+  // with no terms, so keying this on the array wiped a half-typed edit
+  // whenever the page re-rendered for any other reason.
+  useEffect(() => { setText(savedText); }, [savedText]);
 
   const terms = useMemo(() => toTerms(text), [text]);
   const short = useMemo(() => terms.filter(tooShort), [terms]);
-  const dirty = toText(saved) !== toText(terms);
+  const dirty = savedText !== toText(terms);
 
   const save = async () => {
     if (!dirty || saving) return;

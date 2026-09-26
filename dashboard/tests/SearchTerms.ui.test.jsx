@@ -44,6 +44,21 @@ describe('SearchTerms', () => {
     expect(within(panel('fun')).queryByText(/The app ignores/)).toBeNull();
   });
 
+  it('saving one category keeps what is half-typed in another', async () => {
+    api.categoryTerms.mockResolvedValue({});
+    api.saveCategoryTerms.mockResolvedValue(['pho']);
+    renderDesk('/search-words');
+    await screen.findByRole('heading', { name: /^fun/ });
+    fireEvent.change(box('fun'), { target: { value: 'cinema\nbowling' } });
+    fireEvent.change(box('eats'), { target: { value: 'pho' } });
+    fireEvent.click(within(panel('eats')).getByRole('button', { name: 'Save' }));
+    await findToast();
+    // The save re-renders the page. `fun` has nothing saved, so it is handed
+    // a fresh [] — which used to re-seed the box and wipe the typing.
+    expect(box('fun').value).toBe('cinema\nbowling');
+    expect(within(panel('fun')).getByRole('button', { name: 'Save' }).disabled).toBe(false);
+  });
+
   it('saves the lines, shows what the desk kept, and says so', async () => {
     api.categoryTerms.mockResolvedValue({ fun: ['cinema'] });
     api.saveCategoryTerms.mockResolvedValue(['cinema', 'bowling']);
