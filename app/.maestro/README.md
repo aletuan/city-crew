@@ -1,13 +1,17 @@
 # iOS smoke tests (Maestro)
 
-Eight end-to-end flows (how to write more: [GUIDELINES.md](GUIDELINES.md)) that drive the dev bundle inside Expo Go on an iOS
-simulator against real Supabase data. Four walk the guest path (launch,
-Explore, place detail, search); three sign in as a dedicated test account
-and walk the paths a signed-in reader cannot do without (sign in, plan and
-save a trip, save a place); one signs up and deletes a throwaway account
-of its own. They select by `testID` only — never by label — because every
-label is trilingual. The one exception is iOS's own alert buttons, which
-take no id and are matched in all three languages.
+End-to-end flows (how to write more: [GUIDELINES.md](GUIDELINES.md)) that
+drive the dev bundle inside Expo Go on an iOS simulator against real
+Supabase data — the guest path, the paths a signed-in reader cannot do
+without, and one that signs up and deletes a throwaway account of its own.
+**`config.yaml` is the list of what runs, and its order.** The table below
+says what each flow checks; it does not say how many there are, because a
+count written here is a count that goes stale — this sentence replaced one
+that said eight when the directory held nine.
+
+They select by `testID` only — never by label — because every label is
+trilingual. The one exception is iOS's own alert buttons, which take no id
+and are matched in all three languages.
 
 **Not wired into CI.** These run on a developer's Mac by hand. Running them
 on GitHub would need a macOS runner plus a dev build (Expo Go cannot be
@@ -91,7 +95,7 @@ open -a Simulator
 cd app && npx expo start          # press i once to open the app in Expo Go
 
 # 2. Run the suite from app/.
-npm run smoke:ios                                   # all seven flows
+npm run smoke:ios                                   # every flow config.yaml lists
 npm run smoke:ios -- .maestro/05-plan-trip.yaml     # one flow
 ```
 
@@ -140,8 +144,11 @@ at the failing step. Open the newest:
 open ../.smoke-local/maestro/latest      # from app/
 ```
 
-The hierarchy is the quickest answer to "was it there?": it lists every
-`id` on screen at that moment.
+The hierarchy is the quickest answer to "was it there?" — it lists every
+`id` on screen at that moment — and the screenshot answers the follow-up,
+"what was in the way?". Most failures in this suite's history were one of
+three things: a hidden tab bar, a button under it, or missing account
+data. Check those before anything cleverer.
 
 `maestro studio` opens an inspector on the running simulator and shows every
 element's `id`, which is the fastest way to check a `testID` actually
