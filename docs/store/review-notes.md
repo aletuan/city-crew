@@ -48,16 +48,20 @@ places, collections and a trip. Sign-up creates the account at the end of
 a short form; addresses are auto-confirmed, so no emailed code is needed.
 If the account gives you any trouble: anhlt1983@gmail.com.
 
-LOCATION: Requested once, used on the device to open the nearest supported
-city, to sort places by distance ("nearest first"), to centre the map and
-to pick a trip's start point. Denying it is fine — the app falls back to
-Ho Chi Minh City, and the city is changed by hand at Profile > Current
-city. Coordinates are never transmitted to us or stored.
+LOCATION: Requested once. On the device it opens the nearest supported
+city, sorts places by distance ("nearest first") and centres the maps.
+On the trip start sheet, when no pin has been dropped, the position is
+sent through our own server to Google Geocoding and Places, to name the
+street and rank search results near the user; our server relays it and
+stores nothing. Denying it is fine — the app falls back to Ho Chi Minh
+City, and the city is changed by hand at Profile > Current city. The
+position is never stored, by us or with a saved trip.
 
 MAPS: Google Maps SDK draws the maps (Explore map mode, place pages, the
-trip start sheet). Google Places search and Geocoding are called from our
-own server for the start-point search only; a pin's coordinates are sent,
-never the user's location.
+trip start sheet) and shows the user's position on them. Google Places
+and Geocoding are called from our own server, for the start sheet only,
+with the search text and a point to search near: a dropped pin, a picked
+area, or — when neither is set — the user's position (see LOCATION).
 
 PRICES: Places carry a typical spend for information (what the venue
 charges, not us). In this build the price row is hidden by default behind
@@ -100,8 +104,14 @@ English and the language is changed at Profile > Language.
   chạy khi bật "Confirm email" trong Supabase — hiện **đang tắt**, nên đăng
   ký xong là vào thẳng) và khôi phục mật khẩu. Cả hai gửi **mã số** chứ
   không phải link, vì link không deep-link ngược vào app được.
-- **LOCATION**: chặn trước câu hỏi "xin quyền để làm gì" — nêu rõ on-device,
-  từ chối vẫn dùng được (đúng hành vi thật: fallback + switcher).
+- **LOCATION**: chặn trước câu hỏi "xin quyền để làm gì" — nêu rõ phần nào
+  on-device và **đường duy nhất vị trí rời máy** (màn Bắt đầu từ đâu? khi
+  chưa có ghim, qua `fetch-place` tới Google); từ chối vẫn dùng được (đúng
+  hành vi thật: fallback + switcher). Trước 26/09 đoạn này và đoạn MAPS nói
+  vị trí "never transmitted" / "never the user's location" — sai từ khi chú
+  thích dưới bản đồ đặt tên theo vị trí người dùng (`StartSheet`:
+  `near = pinned ?? me`). Đổi hành vi đó thì đổi hai đoạn này, privacy
+  policy và `app-privacy-labels.md` cùng lúc.
 - **UGC**: guideline 1.2 là lý do từ chối phổ biến với app có nội dung người
   dùng; đoạn này chỉ thẳng vào bốn yêu cầu (lọc, report, block, cách liên hệ)
   và nơi mỗi thứ nằm trong app. Từ 1.0.4 có thêm hai thứ reviewer sẽ thấy và

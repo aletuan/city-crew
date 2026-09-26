@@ -19,7 +19,7 @@ mới được nộp.
 | User Content → Other User Content | **Yes** (bộ sưu tập, kế hoạch, lưu/thích, đề xuất địa điểm, hồ sơ, **văn bản mô tả buổi tối gửi cho planner**) | Yes | No | App Functionality |
 | Identifiers → User ID | **Yes** (id tài khoản Supabase) | Yes | No | App Functionality |
 | Usage Data → Product Interaction | **Yes** | Yes | No | App Functionality (xem ghi chú) |
-| Location (Precise/Coarse) | **No** | — | — | Vị trí chỉ đọc trên máy để chọn thành phố gần nhất; **không bao giờ gửi lên server** → theo định nghĩa của Apple là *không thu thập* |
+| Location (Precise/Coarse) | **No — xem lại trước lần nộp tới** | — | — | Trên máy: chọn thành phố gần nhất, sắp theo khoảng cách. **Rời máy ở một chỗ**: màn "Bắt đầu từ đâu?" khi chưa có ghim gửi vị trí qua `fetch-place` tới Google Geocoding/Places; server của mình chuyển tiếp, không lưu. Định nghĩa *collect* của Apple là truyền ra khỏi máy **và** giữ lâu hơn thời gian phục vụ yêu cầu: phía mình vẫn là không thu thập, phía Google tuỳ điều khoản Google Maps Platform — xem mục Google Maps SDK. Câu cũ ở ô này ("không bao giờ gửi lên server") sai, phát hiện 26/09 |
 | Identifiers → Device ID | **No** | — | — | Không đọc advertising ID / định danh thiết bị |
 | Diagnostics | **No** | — | — | `STARTUP_TRACE_UPLOAD` tự tắt trên channel `production` (`lib/channel.ts`) — bản App Store không gửi telemetry |
 | Purchases / Financial / Health / Contacts / Browsing / Search history ngoài app | **No** | — | — | Không tồn tại trong app |
@@ -113,7 +113,13 @@ Hai trang HTML này **được sinh ra**, không sửa tay: nội dung nằm ở
 
 ## Điều kiện phải giữ để tài liệu này còn đúng
 
-1. Vị trí tiếp tục chỉ xử lý on-device (không thêm query gửi toạ độ lên server).
+1. Vị trí chỉ rời máy qua đúng hai đường đã khai trong privacy policy (mục
+   "Vị trí của bạn và bản đồ"): màn Bắt đầu từ đâu? khi chưa có ghim (qua
+   `fetch-place` tới Google), và chấm xanh do Google Maps SDK vẽ. Thêm đường
+   thứ ba, hoặc bắt đầu *lưu* vị trí, là phải sửa policy, bảng này và khối
+   Notes trong `review-notes.md` **trước** khi nộp. (Điều kiện cũ ở đây là
+   "chỉ on-device" — nó đã bị phá khi chú thích dưới bản đồ bắt đầu đặt tên
+   theo vị trí người dùng, và không ai thấy cho tới 26/09.)
 2. `STARTUP_TRACE_UPLOAD` tiếp tục đọc channel — nếu có ngày ép bật cả
    production, phải khai thêm Diagnostics → Performance Data. (`STARTUP_TRACE`,
    cờ log console, cũng đọc cùng channel; nó không rời khỏi máy nên không đụng
@@ -141,14 +147,20 @@ về Google, nên theo hướng dẫn của Apple nó tính vào bảng App Priv
    `react-native-maps` đang pin, vì nội dung đó đổi theo bản SDK.
 2. Khai đúng những mục Google liệt kê — thường là dữ liệu chẩn đoán/hiệu năng
    và định danh thiết bị ở mức không liên kết danh tính — vào bảng ở trên.
-3. Vị trí: dòng *Location* ở trên vẫn đúng về phía app (không gửi toạ độ người
-   dùng lên server của mình), nhưng SDK nhận toạ độ để vẽ chấm xanh và
-   `fetch-place` nhận toạ độ **ghim** (không phải vị trí người dùng) để tìm và
-   đặt chú thích. Cân nhắc đổi câu mô tả cho khớp.
+3. Vị trí: SDK nhận toạ độ để vẽ chấm xanh. `fetch-place` nhận **vị trí người
+   dùng** khi màn Bắt đầu từ đâu? mở mà chưa có ghim (`StartSheet`:
+   `near = pinned ?? me`), để đặt tên đường và làm điểm ưu tiên cho ô tìm
+   kiếm. Câu cũ ở đây — "toạ độ ghim (không phải vị trí người dùng)" — là
+   sai; đã kiểm trong code ngày 26/09. Khi quyết dòng *Location* ở bảng trên,
+   đọc cả điều khoản Google Maps Platform về việc Google giữ dữ liệu request
+   bao lâu: đó là điều quyết định phía Google có tính là "thu thập" không.
 
 Thư trả lời reviewer `review-reply-2.1.md` ghi "No Google Maps SDK is
 bundled" và liệt kê Photon/Nominatim — đúng ở thời điểm gửi, sai từ #525.
 **Đã viết lại** thành mục MAPS trong khối Notes của `review-notes.md` cho
 1.0.4: Google Maps SDK vẽ bản đồ (Explore map, place page, start sheet);
 Google Places và Geocoding qua Edge Function `fetch-place` cho tìm điểm bắt
-đầu, gửi toạ độ ghim chứ không phải vị trí người dùng.
+đầu, gửi toạ độ ghim chứ không phải vị trí người dùng. **Vế cuối đó sai** —
+xem mục 3 ở trên. MAPS và LOCATION trong `review-notes.md` đã viết lại ngày
+26/09; nếu khối Notes cũ đã được dán cho 1.0.4 thì Apple đã nhận câu sai, và
+lần nộp tới dán bản đã sửa.

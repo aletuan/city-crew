@@ -110,7 +110,18 @@ describe('against the real documents', () => {
     // that dropped either link here would be a credit that no longer meets
     // it. `weather.test.ts` checks the links point at the right places;
     // this only notices that they are still there.
-    expect(links).toBe(16);
-    expect(bolds).toBe(48);
+    //
+    // 16 became 22, and 48 became 54, when the privacy policy stopped
+    // promising something the app does not do. It had said, in bold, that
+    // your location never leaves your phone — while "Where should it
+    // start?" sends it through our server to Google to name the street
+    // under the pin. The bold line now says only what is true (we do not
+    // keep it) and points at a section that says the rest: three uses,
+    // each in bold, one of them with a link to Google's policy; and a list
+    // of the three services the phone talks to directly, two of them
+    // linked. Per language that is three links and three emphases, and the
+    // one false emphasis replaced by one true one.
+    expect(links).toBe(22);
+    expect(bolds).toBe(54);
   });
 });

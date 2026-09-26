@@ -95,7 +95,9 @@ than five people pasting links into a group chat.
 PRIVACY
 Browsing needs no account. Signing in takes an email address and a
 password. Your location is used on the phone to pick the nearest city and
-to sort places by distance, and is never sent to us. No ads, no tracking.
+to sort places by distance. When you set where a plan starts, it goes
+through our server to Google to name the street — and it is never stored.
+No ads, no tracking.
 You can delete your account from inside the app.
 
 More cities are on the way.
@@ -132,7 +134,9 @@ năm người dán link vào nhóm chat.
 RIÊNG TƯ
 Xem không cần tài khoản. Đăng nhập chỉ cần email và mật khẩu. Vị trí được
 dùng ngay trên máy để chọn thành phố gần nhất và sắp địa điểm theo khoảng
-cách, không gửi về chúng tôi. Không quảng cáo, không theo dõi. Bạn có thể
+cách. Khi bạn chọn điểm bắt đầu cho kế hoạch, vị trí đi qua máy chủ của
+chúng tôi tới Google để lấy tên đường — và không bao giờ được lưu. Không
+quảng cáo, không theo dõi. Bạn có thể
 tự xoá tài khoản ngay trong app.
 
 Các thành phố khác sẽ sớm có mặt.
@@ -165,8 +169,9 @@ City Crewは、7都市の厳選ガイドです。ベトナムのホーチミン�
 
 プライバシー
 閲覧にアカウントは不要。サインインはメールアドレスとパスワードだけです。
-位置情報は最寄りの街を選び、近い順に並べるために端末上で使うだけで、こちらには
-送信されません。
+位置情報は最寄りの街を選び、近い順に並べるために端末上で使います。プランの
+出発地を決めるときは、通りの名前を調べるため当社のサーバーを通じてGoogleに
+送られますが、保存されることはありません。
 広告なし、トラッキングなし。アカウントはアプリ内で削除できます。
 
 対応都市は今後さらに増えます。

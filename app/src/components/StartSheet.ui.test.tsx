@@ -117,6 +117,14 @@ describe('the map, and what it shows', () => {
     expect(field()).toBeTruthy();
   });
 
+  // The last line of this test is a privacy fact, not only a UI one: the
+  // reader's own position leaves the phone here — through `fetch-place` to
+  // Google — so the caption can name the street. The privacy policy says so
+  // under "Your location and the map" (`lib/legal.ts`), and for a month it
+  // said the opposite ("never leaves your phone") while this line passed.
+  // Change what is sent here and that section changes in the same commit;
+  // so do `docs/store/app-privacy-labels.md` and the MAPS and LOCATION
+  // paragraphs in `docs/store/review-notes.md`, which is what Apple reads.
   it('opens on the reader when their position is known, and says so under the map', async () => {
     world.me = { lat: 21.02, lng: 105.84 };
     openSheet();
