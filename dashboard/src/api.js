@@ -525,8 +525,6 @@ export const api = {
     .select('slug, name_en, address, neighborhood_en, lat, lng, city_id')
     .eq('is_published', true)),
 
-  sync: () => invoke('sync-mockup', {}),
-
   // Keyed by google_place_id — global, not city-scoped, matching the
   // fetch-place import guard's own duplicate check. Lets "Add a place"
   // flag a search result that's already in the catalog before the editor

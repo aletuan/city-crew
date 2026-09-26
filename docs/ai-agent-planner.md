@@ -28,6 +28,11 @@ Ngoài ra app chưa cá nhân hoá được gì: `profiles.interests` là free t
 ai đọc, `places.saved_count` là số biên tập viên gõ tay chứ không phải hành vi
 quan sát được, và không có event tracking nào.
 
+> **Ghi chú 26/09/2026.** `data/scripts/itinerary-runtime.js` và mockup HTML
+> đã bị xoá cùng cả đường ống sync (`cc5d64f` là commit cuối còn giữ). Mọi
+> chỗ dưới đây nhắc tới chúng là **mô tả điểm xuất phát**, không phải file
+> còn tra được. Thuật toán đang chạy là `app/src/lib/planner.ts`.
+
 ## Những chỗ đã cắt sẵn seam
 
 Người viết các file dưới đây đã để lại đúng chỗ cho planner cắm vào. Không cần
@@ -38,7 +43,7 @@ Người viết các file dưới đây đã để lại đúng chỗ cho planne
 | Input contract | `app/src/lib/trip.ts` — `TripDraft` | Đầu vào của planner |
 | Handoff | `app/src/nav.ts` — route `Sketching` | Truyền draft sang màn chờ |
 | Progress | `app/src/lib/sketch.ts` — `SKETCH_STEPS` | Timer trở thành report thật |
-| Thuật toán | `data/scripts/itinerary-runtime.js` | Nguồn port: `itiScore`, `ITI_SLOTS`, budget pass, time pass |
+| Thuật toán | ~~`data/scripts/itinerary-runtime.js`~~ — đã xoá 26/09/2026, xem `git show cc5d64f` | Nguồn port: `itiScore`, `ITI_SLOTS`, budget pass, time pass. Bản chạy thật giờ là `app/src/lib/planner.ts` |
 | Giờ mở cửa | `app/src/lib/format.ts` — `openState()`, `splitHours()` | Lọc chỗ mở cửa đúng giờ |
 | Khoảng cách | `app/src/lib/geo.ts` — `distanceKm()` | Xếp lộ trình |
 | Hiển thị | `app/src/lib/live.ts` — `isLive()` | Hai cổng lọc place vào plan |

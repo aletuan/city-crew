@@ -255,7 +255,6 @@ export default function App() {
   const head = pageHead(location.pathname);
   const [toast, setToast] = useState(null);
   const [progress, setProgress] = useState(null);
-  const [syncing, setSyncing] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [cities, setCities] = useState([]);
   const [cityId, setCityId] = useState(() => localStorage.getItem(CITY_KEY) ?? 'hcmc');
@@ -372,18 +371,6 @@ export default function App() {
   }, [cityId]);
   useEffect(refreshProgress, [refreshProgress]);
 
-  const runSync = async () => {
-    setSyncing(true);
-    try {
-      await api.sync();
-      showToast('Mockup synced from database');
-    } catch (err) {
-      showToast(`Sync failed: ${err.message}`);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const publishApproved = async () => {
     setPublishing(true);
     try {
@@ -478,14 +465,6 @@ export default function App() {
                 </NavLink>
               </nav>
               <div className="side-foot">
-                {/* Served next to the dashboard by the Pages deploy (dist/mockup.html) */}
-                <a className="side-item" href="mockup.html" target="_blank" rel="noreferrer">
-                  <CategoryIcon name="external" size={17} />Mockup
-                </a>
-                <button className="side-item" disabled={syncing} onClick={runSync}>
-                  <CategoryIcon name="refresh" size={17} />{syncing ? 'Syncing…' : 'Sync mockup'}
-                </button>
-                <div className="side-sep" />
                 <button className="side-item" onClick={signOut}>
                   <CategoryIcon name="signout" size={17} />Sign out
                 </button>
@@ -643,16 +622,6 @@ export default function App() {
                 <Link className="moremenu-item" to="/reports" role="menuitem">
                   Reports{waitingReports > 0 ? ` · ${waitingReports}` : ''}
                 </Link>
-                <div className="moremenu-sep" />
-                <a className="moremenu-item" href="mockup.html" target="_blank" rel="noreferrer" role="menuitem">Mockup ↗</a>
-                <button
-                  className="moremenu-item"
-                  role="menuitem"
-                  disabled={syncing}
-                  onClick={() => { setSheetOpen(false); runSync(); }}
-                >
-                  {syncing ? 'Syncing…' : 'Sync mockup'}
-                </button>
                 <div className="moremenu-sep" />
                 <button className="moremenu-item" role="menuitem" onClick={signOut}>Sign out</button>
               </div>

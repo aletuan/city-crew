@@ -101,24 +101,28 @@ describe('App', () => {
   });
 
   it('the toast leaves on its own', async () => {
-    api.sync.mockResolvedValue({});
-    renderDesk('/');
-    await screen.findByRole('heading', { name: 'Places' });
-    fireEvent.click(sidebar().getByRole('button', { name: 'Sync mockup' }));
-    expect((await findToast()).textContent).toBe('Mockup synced from database');
+    api.progress.mockResolvedValue(progress({ total: 1, by_status: { approved: 1 }, unpublished: 1 }));
+    api.publishApproved.mockResolvedValueOnce({ published: 1 });
+    renderDesk('/', { city: 'all' });
+    await screen.findByRole('group', { name: 'Filter by review status' });
+    fireEvent.click(pagehead().getByRole('button', { name: 'Publish 1' }));
+    expect((await findToast()).textContent).toBe('Published 1 approved place in all cities');
     await waitFor(() => expect(screen.queryByRole('status')).toBeNull(), { timeout: 4000 });
   }, 6000);
 
-  it('sync says while it works and why it failed', async () => {
+  // The in-flight state, which the toast tests above do not reach: the
+  // button says what it is doing and cannot be pressed twice.
+  it('publish says while it works, and is pressable again after it fails', async () => {
+    api.progress.mockResolvedValue(progress({ total: 1, by_status: { approved: 1 }, unpublished: 1 }));
     let finish;
-    api.sync.mockReturnValueOnce(new Promise((_, reject) => { finish = reject; }));
-    renderDesk('/');
-    await screen.findByRole('heading', { name: 'Places' });
-    fireEvent.click(sidebar().getByRole('button', { name: 'Sync mockup' }));
-    expect((await sidebar().findByRole('button', { name: 'Syncing…' })).disabled).toBe(true);
-    await act(async () => finish(new Error('function missing')));
-    expect((await findToast()).textContent).toBe('Sync failed: function missing');
-    expect(sidebar().getByRole('button', { name: 'Sync mockup' }).disabled).toBe(false);
+    api.publishApproved.mockReturnValueOnce(new Promise((_, reject) => { finish = reject; }));
+    renderDesk('/', { city: 'all' });
+    await screen.findByRole('group', { name: 'Filter by review status' });
+    fireEvent.click(pagehead().getByRole('button', { name: 'Publish 1' }));
+    expect((await pagehead().findByRole('button', { name: 'Publishing…' })).disabled).toBe(true);
+    await act(async () => finish(new Error('rls')));
+    expect((await findToast()).textContent).toBe('Publish failed: rls');
+    expect(pagehead().getByRole('button', { name: 'Publish 1' }).disabled).toBe(false);
   });
 
   it('sign out is one press from the rail and one from the sheet', async () => {
@@ -156,13 +160,6 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Search words' }));
     expect(await screen.findByRole('heading', { name: 'Search words' })).toBeTruthy();
     expect(screen.queryByRole('menu')).toBeNull();
-    // Sync from the sheet shuts it and runs.
-    fireEvent.click(more);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Sync mockup' }));
-    expect(screen.queryByRole('menu')).toBeNull();
-    expect(api.sync).toHaveBeenCalledTimes(1);
-    // The Mockup link opens the page beside the desk in a new tab.
-    expect(sidebar().getByRole('link', { name: 'Mockup' }).getAttribute('href')).toBe('mockup.html');
   });
 
   it('the bell counts the unfiled and names them, up to six, with a door to each', async () => {
@@ -196,6 +193,12 @@ describe('App', () => {
     fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('link', { name: 'Fix' })[0]);
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(await screen.findByRole('heading', { name: 'Place' })).toBeTruthy();
+    // The overflow link is a door too: past the cap it hands the reader to
+    // the filter, and the panel has no business staying open behind it.
+    fireEvent.click(bell);
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('link', { name: '2 more →' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(await screen.findByRole('heading', { name: 'Places' })).toBeTruthy();
   });
 
   it('one unfiled place is singular, and none is no bell at all', async () => {

@@ -19,9 +19,13 @@ only the map.
 | `dashboard/` | The data desk: a small web app for curating the catalog. |
 | `data/` | Seeds, review scripts, and frozen bootstrap pipelines kept for provenance. |
 
-`citycrew-mockup-dark.html` at the root is a 4.3 MB frozen artifact for
-the pitch video. Never read it, never edit it, never glob the root
-without excluding it.
+The 4.2 MB `citycrew-mockup-dark.html` that used to sit at the root is
+gone (cc5d64f is the last commit holding it), along with its whole
+pipeline: the Sync button, the `sync-mockup` workflow and Edge Function,
+`inject-mockup.mjs`, and the ES5 `itinerary-runtime.js` it was built
+from. It had not been re-synced since 8 August and was serving three
+places from one city, publicly, on every dashboard deploy. The app is
+the demo now.
 
 ## Before you push: the gates, in full
 

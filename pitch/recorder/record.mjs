@@ -1,3 +1,9 @@
+// BROKEN SINCE 26/09/2026: the mockup this drives was deleted (last held at
+// cc5d64f). To run it again, restore the page first:
+//   git show cc5d64f:citycrew-mockup-dark.html > citycrew-mockup-dark.html
+// Left in place because the clip choreography below is the only record of
+// how the pitch video was shot.
+//
 // Records phone-isolated demo clips of the CityCrew mockup for the pitch video,
 // simulating a real user session: a visible finger dot moves between controls,
 // taps ripple, buttons press, tile rows swipe.
