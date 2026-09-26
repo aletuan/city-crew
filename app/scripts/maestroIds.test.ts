@@ -41,7 +41,8 @@ const sourceIds = () => {
   const files = walk(join(app, 'src'), (f) => f.endsWith('.tsx') && !/\.test\.tsx$/.test(f));
   for (const file of files) {
     for (const line of readFileSync(file, 'utf8').split('\n')) {
-      if (!line.includes('testID')) continue;
+      // Case-blind: a prop that forwards an id (`backTestID`) counts too.
+      if (!/testid/i.test(line)) continue;
       for (const m of line.matchAll(/['"]([a-z0-9][a-z0-9-]*)['"]/g)) exact.add(m[1]);
       for (const m of line.matchAll(/`([a-z0-9-]+)\$\{/g)) prefixes.add(m[1]);
     }

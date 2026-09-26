@@ -119,7 +119,7 @@ sách toàn suite ≤ 12 phút.
 | Flow mới | Đăng nhập | Kiểm | testID cần thêm | Ghi chú |
 |---|---|---|---|---|
 | `08-explore-filter` ✅ viết xong 26/09 | guest | Ghim vị trí Hà Nội; sort theo khoảng cách, thêm "đang mở", số bộ lọc trên nút đúng, Reset trả về như cũ | `filter-sort-*`, `filter-status-*`, `filter-saved`, `filter-reset`, `filter-apply`, `filter-close` (đã thêm; đếm qua số trong nhãn nút `explore-filter`, vì badge bên trong nút không lên cây trợ năng iOS) | Bản đồ **không test được trong Expo Go**: `canDrawMap` = false trên iOS store client (không có Google Maps key), nút `explore-view` không được vẽ. Phần map chuyển sang đợt 3 (dev client) |
-| `09-collections-browse` | guest | Tab Collections: collection cộng đồng đầu tiên → detail → place đầu → quay về; cũng mở từ "From the community" trên Explore | `collection-card-<i>`, `collection-place-<i>`, `collection-back` | Hiện Collections/CollectionDetail chưa có testID nào ngoài banner lỗi |
+| `09-collections-browse` ✅ 26/09 | guest | Tab Collections → collection cộng đồng đầu tiên → place đầu tiên → Back → Back | `collection-card-<i>`, `collection-place-<i>`, `collection-back` (đã thêm; `Screen` có prop `backTestID`) | Xanh 2 lần liên tiếp (50 s, 55 s). Đường vào từ "From the community" trên Explore chưa phủ |
 | `10-place-detail-deep` | guest | Mở place có map + giờ mở cửa: `detail-facts` hiện, MiniMap hiện, `detail-directions` mở action sheet (không rời app), gallery mở và đóng | `detail-minimap`, `detail-hours`, `detail-gallery` | Nối dài 02 thay vì flow riêng nếu muốn tiết kiệm thời gian |
 
 ### Đợt 2 — tài khoản và dữ liệu của người dùng

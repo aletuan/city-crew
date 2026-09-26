@@ -1,0 +1,52 @@
+# Collections, as a guest: the community list renders, the first collection
+# opens on its places, a place opens on its own page, and Back walks the
+# stack home again — place → collection → list.
+#
+# `collection-card-<n>` is the n-th community card whichever way the list
+# is drawn (grid or rows — the choice is remembered per device), so the
+# flow does not care which one the last person picked.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
+
+- tapOn:
+    id: "tab-collections"
+- extendedWaitUntil:
+    visible:
+      id: "collection-card-0"
+    timeout: 30000
+- tapOn:
+    id: "collection-card-0"
+
+# The collection's own page: its places, as cards.
+- extendedWaitUntil:
+    visible:
+      id: "collection-place-0"
+    timeout: 20000
+- tapOn:
+    id: "collection-place-0"
+- extendedWaitUntil:
+    visible:
+      id: "detail-name"
+    timeout: 20000
+- assertVisible:
+    id: "detail-address"
+
+# Back twice: to the collection, then to the list.
+- tapOn:
+    id: "detail-back"
+- extendedWaitUntil:
+    visible:
+      id: "collection-place-0"
+    timeout: 10000
+- tapOn:
+    id: "collection-back"
+- extendedWaitUntil:
+    visible:
+      id: "collection-card-0"
+    timeout: 10000
+- assertVisible:
+    id: "tab-collections"

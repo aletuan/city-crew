@@ -736,6 +736,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       title={title}
       subtitle={byline}
       onBack={() => navigation.goBack()}
+      backTestID="collection-back"
       right={headerRight}
     >
       <AmbientWarmth />
@@ -822,7 +823,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
               onDown={() => shuffle(index, index + 1)}
             />
           )
-          : <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
+          : <PlaceCard place={item} testID={`collection-place-${index}`} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
         )}
         ListEmptyComponent={!loading && col
           ? (owned

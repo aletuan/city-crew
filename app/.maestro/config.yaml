@@ -13,6 +13,7 @@ flows:
   - "05-plan-trip.yaml"
   - "06-save-place.yaml"
   - "08-explore-filter.yaml"
+  - "09-collections-browse.yaml"
 executionOrder:
   continueOnFailure: true
   flowsOrder:
@@ -24,3 +25,4 @@ executionOrder:
     - 05-plan-trip
     - 06-save-place
     - 08-explore-filter
+    - 09-collections-browse

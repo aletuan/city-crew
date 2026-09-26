@@ -747,11 +747,11 @@ export default function CollectionsScreen({ navigation, route }: {
             scrollEventThrottle={16}
             keyboardShouldPersistTaps="handled"
             ListHeaderComponent={<GuestNotice navigation={navigation} />}
-            renderItem={({ item }) => {
+            renderItem={({ item, index }) => {
               if (item.kind === 'pair') {
                 return (
                   <View style={s.gridRow}>
-                    {item.pair.map((c) => {
+                    {item.pair.map((c, j) => {
                       const uri = coverFor(c);
                       const members = membersOf(c, places).length;
                       const my = !!c.id && myLikes.includes(c.id);
@@ -760,6 +760,9 @@ export default function CollectionsScreen({ navigation, route }: {
                           key={c.slug}
                           style={[s.gcard, { width: gcardW, height: gcardH }]}
                           onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
+                          // Same id in the grid and the rows: the n-th card
+                          // of the list, whichever way it is drawn.
+                          testID={item.own ? undefined : `collection-card-${index * 2 + j}`}
                           accessibilityRole="button"
                           accessibilityLabel={t(c.title_en, c.title_vi, c.title_ja)}
                         >
@@ -922,6 +925,7 @@ export default function CollectionsScreen({ navigation, route }: {
                         silence the one the meta line keeps. */}
                     <PressableScale
                       onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
+                      testID={`collection-card-${index}`}
                       accessibilityRole="button"
                       accessibilityLabel={byline
                         ? `${t(c.title_en, c.title_vi, c.title_ja)}, ${byline}`

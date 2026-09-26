@@ -382,7 +382,7 @@ export function IconSubtitle({ icon, text }: {
   );
 }
 
-export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack }: {
+export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backTestID }: {
   title: string;
   /** One quiet line under the title. Only in the pushed-screen header —
    *  a tab root's large title has an eyebrow above it instead, and a
@@ -434,12 +434,14 @@ export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack
    * edge-swipe and no sign that it is there.
    */
   onBack?: () => void;
+  /** For the smoke suite: an id on the back button of a pushed screen. */
+  backTestID?: string;
 }) {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       {onBack ? (
         <View style={s.headerInline}>
-          <BackButton onPress={onBack} />
+          <BackButton onPress={onBack} testID={backTestID} />
           <View style={s.headerText}>
             <Text style={s.titleInline} numberOfLines={2}>{title}</Text>
             {/* The falsy guard comes first and stays: a caller computing
@@ -847,10 +849,11 @@ export const glassHalo = (light: boolean) => ({
   textShadowRadius: 3,
 });
 
-export function RoundIconButton({ icon, onPress, label, size = 21, color }: {
+export function RoundIconButton({ icon, onPress, label, size = 21, color, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   label?: string;
+  testID?: string;
   size?: number;
   /**
    * Ink, when the glyph carries a state rather than an action.
@@ -876,6 +879,7 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color }: {
       style={s.backBtn}
       accessibilityRole="button"
       accessibilityLabel={label}
+      testID={testID}
     >
       <Ionicons name={icon} size={size} color={color ?? colors.text} />
     </PressableScale>
@@ -1045,13 +1049,14 @@ export function Avatar({ url, size }: { url?: string | null; size: number }) {
 }
 
 /** In-page back control: the round glass button wearing a chevron. */
-export function BackButton({ onPress }: { onPress: () => void }) {
+export function BackButton({ onPress, testID }: { onPress: () => void; testID?: string }) {
   const { t } = useI18n();
   return (
     <RoundIconButton
       icon="chevron-back"
       size={22}
       onPress={onPress}
+      testID={testID}
       label={t('Back', 'Quay lại', '戻る')}
     />
   );
