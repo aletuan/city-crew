@@ -102,7 +102,15 @@ describe('against the real documents', () => {
     // first — a section called "Deleting your data" and nothing about
     // getting it. The link count does not move: neither addition points
     // anywhere, because both name a screen rather than a page.
-    expect(links).toBe(12);
+    //
+    // 12 became 16 when the Terms learned to credit the weather: two links
+    // per language, one to Open-Meteo and one to the CC BY 4.0 licence the
+    // credit is owed under. The licence asks for both — the source and the
+    // licence itself, "to the extent reasonably practicable" — so a credit
+    // that dropped either link here would be a credit that no longer meets
+    // it. `weather.test.ts` checks the links point at the right places;
+    // this only notices that they are still there.
+    expect(links).toBe(16);
     expect(bolds).toBe(48);
   });
 });
