@@ -171,8 +171,10 @@ function CityFilter({ cities, value, counts, allCount, onPick }) {
 
   const needle = q.trim().toLowerCase();
   // Accent-insensitive, because the desk types "da nang" for Đà Nẵng far
-  // more often than it reaches for the diacritics.
-  const flat = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  // more often than it reaches for the diacritics. Đ is its own letter,
+  // not a D with a mark, so NFD leaves it alone — the one city this box
+  // was written for did not answer to "da" until the second replace.
+  const flat = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
   const matches = needle
     ? options.filter((o) => flat(o.label).includes(flat(needle)))
     : options;
@@ -559,24 +561,42 @@ export default function PlaceList() {
   }, []);
 
   useEffect(() => {
+    // Nothing to write when the box already says what the address says —
+    // which is every mount. Without this line the effect ran once on
+    // arrival, found nothing to change about `q`, and dropped `page`
+    // anyway: a link pasted to a colleague as page 3 opened on page 1.
+    if ((params.get('q') ?? '') === q) return undefined;
     const t = setTimeout(() => {
       const next = new URLSearchParams(params);
       if (q) next.set('q', q);
       else next.delete('q');
       next.delete('page');
-      if (next.toString() !== params.toString()) setParams(next, { replace: true });
+      setParams(next, { replace: true });
     }, 250);
     return () => clearTimeout(t);
   }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A city switch invalidates the current page the same way a filter change
   // does — only worth acting on if we actually had one set.
+  //
+  // A switch, not an arrival. The city is null until the desk has read its
+  // cities, and the moment it has, this effect saw a change and dropped the
+  // page — so a link pasted as page 3 opened on page 1, every time. The
+  // first city the desk resolves is where the reader started, not a move.
+  const cityBefore = useRef(undefined);
   useEffect(() => {
+    if (!cities.length) return;
+    const id = city?.id ?? null;
+    if (cityBefore.current === undefined || cityBefore.current === id) {
+      cityBefore.current = id;
+      return;
+    }
+    cityBefore.current = id;
     if (!params.get('page')) return;
     const next = new URLSearchParams(params);
     next.delete('page');
     setParams(next, { replace: true });
-  }, [city?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [city?.id, cities.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let live = true;

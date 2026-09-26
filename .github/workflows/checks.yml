@@ -5,9 +5,13 @@
 # error shipped. Runs on every pull request and every push to main, so a
 # red mark appears before a merge rather than after one.
 #
-# The tests are pure functions in a plain Node process: no React Native, no
-# simulator, no Supabase. See `app/src/lib/place.ts` for why that is
-# possible and what keeps it that way.
+# Everything here runs in a plain Node process: no simulator, no Supabase.
+# The pure modules are tested as functions (see `app/src/lib/place.ts` for
+# why that is possible and what keeps it that way); the screens and
+# components are rendered through `react-native-web` into jsdom and driven
+# (see `app/src/uitest/setup.tsx` for what that substitution is worth).
+# The one suite that needs a real device — the Maestro flows under
+# `app/.maestro/` — runs by hand on a Mac and is not here; see its README.
 
 name: Checks
 
@@ -51,15 +55,21 @@ jobs:
       # Hanoi, whose phone is on New York time.
       - if: '!cancelled()'
         run: npm run test:tz
-      # The same suite again, with a floor under it. Not to measure what is
-      # covered — every pure module is already at 100% — but to stop that
-      # eroding: a function added to `src/lib` without a test turns this
-      # step red, and nothing else in this repository would notice.
+      # The same suite again, with floors under it. Not to measure what is
+      # covered but to stop it eroding: a function added without a test
+      # turns this step red, and nothing else in this repository would
+      # notice.
       #
-      # Scoped to `src/lib/*.ts`, which is about 9% of the app's
-      # statements. The other 91% is components and screens, which no
-      # runner here can load. A green step means the arithmetic is held and
-      # says nothing about how any of it looks — see `vitest.config.ts`.
+      # Three floors, each per file — see `vitest.config.ts` for the
+      # numbers and the reasoning. `src/lib/**/*.ts` is held at 100 in
+      # every column, because either the pure half is covered or it is
+      # not. `src/screens/*.tsx` and `src/components/*.tsx` each carry a
+      # ratchet: the figures the lowest screen or component stood at when
+      # its tests last grew, rounded down, raised by hand and never
+      # lowered. A green step means the arithmetic is held and every
+      # screen still has the tests it had. It still says nothing about how
+      # any of it looks: layout is not simulated, and no assertion here
+      # has ever seen a pixel.
       - if: '!cancelled()'
         run: npm run coverage
 
@@ -118,14 +128,22 @@ jobs:
       - if: '!cancelled()'
         run: npx expo export --platform all --output-dir "$RUNNER_TEMP/expo-export"
 
-  # The dashboard's own modules, same doctrine as the app job: plain
-  # functions (or, for api.js, a faked Supabase client — see
-  # tests/_fakeSupabase.mjs) in a plain Node process, no React, no
-  # network. Started as just the Contributors screen's arithmetic — the
+  # The dashboard, same doctrine as the app job, in two halves.
+  #
+  # The modules first: plain functions (or, for api.js, a faked Supabase
+  # client — see tests/_fakeSupabase.mjs) under `node --test`, no React,
+  # no network. Started as just the Contributors screen's arithmetic — the
   # aggregation every corner of that page reads from (see
   # dashboard/src/contributors.js) — and grew to cover api.js, the desk's
   # whole write path to Supabase, and auth.jsx's login-gate decision
   # (dashboard/src/lib/authGate.js).
+  #
+  # Then the components, which `node --test` could never load: rendered
+  # into jsdom by vitest and driven, every screen inside the real App
+  # shell at its real route — see dashboard/tests/_ui/desk.jsx. For months
+  # the README beside them said "everything in src/components/ is
+  # untested", and the only gate that mentioned them was a function
+  # percentage that fell every time the desk gained a feature.
   #
   # This job ran without an `npm ci` until lint arrived: `node --test` finds
   # dashboard/tests/ on its own and the modules under test import nothing
@@ -180,6 +198,13 @@ jobs:
       # lower them to make a change pass.
       - if: '!cancelled()'
         run: npm run coverage
+      # The components, rendered. Same two steps as the app: the suite, then
+      # the suite again under a per-file floor (see dashboard/vitest.config.js
+      # for the numbers and what they are for).
+      - if: '!cancelled()'
+        run: npm run test:ui
+      - if: '!cancelled()'
+        run: npm run coverage:ui
 
   # The data scripts: plain JavaScript with nothing else reading them. Most
   # are frozen bootstrap pipelines kept for provenance, but the snapshot
