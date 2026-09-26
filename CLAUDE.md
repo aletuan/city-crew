@@ -27,6 +27,13 @@ from. It had not been re-synced since 8 August and was serving three
 places from one city, publicly, on every dashboard deploy. The app is
 the demo now.
 
+`pitch/` went with it (6b28404): the recorder that drove the mockup, the
+Remotion project, the script and the music credits. Nothing in the four
+workspaces referenced it and no CI job read it. **If a rendered pitch
+video is still published anywhere, the CC BY 4.0 credit for Kevin
+MacLeod's "Carefree" and "Life of Riley" is still owed wherever that
+video lives** — deleting the credits file does not end the licence.
+
 ## Before you push: the gates, in full
 
 CI (`.github/workflows/checks.yml`) runs five jobs. The `app` job is four

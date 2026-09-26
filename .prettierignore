@@ -6,5 +6,4 @@ dashboard/dist/
 # minutes to reflow for nothing.
 data/snapshot/
 images/
-pitch/
 supabase/migrations/

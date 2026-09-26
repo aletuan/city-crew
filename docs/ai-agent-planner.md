@@ -6,9 +6,10 @@ kiến trúc "không app server" hiện tại.
 
 ## Tại sao
 
-Toàn bộ giá trị hứa hẹn trong `pitch/script.md` nằm ở một khoảnh khắc:
+Toàn bộ giá trị hứa hẹn trong kịch bản pitch nằm ở một khoảnh khắc:
 *"tap ✨ Generate plan → WHOLE DAY. DRAFTED IN 30 SECONDS"*. Khoảnh khắc đó
-chưa tồn tại trong app.
+chưa tồn tại trong app. (`pitch/script.md` đã xoá cùng cả thư mục `pitch/`
+— xem `git show 6b28404`; câu trích trên là phần duy nhất còn cần.)
 
 Điểm xuất phát — trạng thái repo trước Phase 1, giữ lại vì nó là lý do của mọi
 quyết định phía dưới:
