@@ -34,6 +34,12 @@ create table if not exists public.places (
   -- reads a venue's website to find the profile URL filed under it; without
   -- the column the migration cannot be applied on this bench at all.
   website        text,
+  -- Nullable, as production has them. Here for the Google refresh
+  -- migration, which remembers today's website and phone as Google's and
+  -- reads `desc_en` where the desk has marked it Google's words.
+  phone           text,
+  desc_en         text,
+  reviewer_source text,
   created_at     timestamptz not null default now(),
   -- `not null default now()` exactly as production has it. The stamping
   -- migration reasons about this column, and a stub that let it be null
