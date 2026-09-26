@@ -26,11 +26,22 @@ Những phần này đã được apply trực tiếp lên project `citycrew-dat
   Người lạ (kể cả đã đăng nhập) chỉ đọc được nội dung published + approved;
   đã kiểm chứng: role anon thấy đúng 22/41 địa điểm, 0 dòng bảng `editors`.
   Thêm editor mới: `insert into editors (email) values ('em@example.com');`
-- ⚠️ **`sync-mockup` vẫn đang deploy trên Supabase** (ACTIVE, version 4) dù
-  mã nguồn đã xoá khỏi repo — xoá file không gỡ function. **Việc phải làm
-  tay:** xoá function `sync-mockup` và secret `GH_PAT` trong Supabase
-  dashboard. Cho tới lúc đó vẫn còn một endpoint sống cầm token GitHub
-  `Actions: Read and write` mà không ai gọi.
+- ⚠️ **Dọn tay sau khi xoá mockup — theo đúng thứ tự này.** Xoá file trong
+  repo không gỡ được thứ gì đang chạy.
+
+  1. **Thu hồi `GH_PAT` trên GitHub** (Settings → Developer settings →
+     Fine-grained tokens). Đây là bước duy nhất thật sự kết thúc rủi ro:
+     token đã thu hồi thì nằm ở đâu cũng vô hại.
+  2. **Xoá secret `GH_PAT` và `GH_REPO`** ở Supabase → Edge Functions →
+     Secrets. Secret của Edge Function là **biến môi trường cấp project**,
+     nên `GH_PAT` hiện đang có mặt trong môi trường của *mọi* function —
+     `fetch-place`, `scan-city`, `plan-assist`, `delete-account`,
+     `suspend-user`… — chứ không riêng `sync-mockup`. Đây mới là chỗ phơi
+     nhiễm thật.
+  3. **Xoá function `sync-mockup`** (vẫn ACTIVE, version 4). Bước này gần
+     như chỉ để cho gọn: function đòi đăng nhập *và* có tên trong
+     `public.editors`, và workflow nó dispatch đã xoá nên GitHub trả 404 →
+     function trả 502. Nó đã là một endpoint chết.
 - **Edge Function `fetch-place`** đã deploy (verify JWT bật,
   kèm kiểm tra allow-list `editors` bên trong). Nguồn: `supabase/functions/`.
 
