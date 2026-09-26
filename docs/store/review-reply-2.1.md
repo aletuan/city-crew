@@ -7,9 +7,14 @@ Review, and the screen recording is attached to the version as
 City-Crew-review.mp4 (H.264, 720x1560, 9.1 MB, 4m40s, captured on a physical
 iPhone 15 Pro Max on iOS 26.3). The password typed during registration is
 blurred between t=68s and t=115s. The blocks below are the long-form source
-the submitted text was condensed from. Keep them in this
-file rather than in `review-notes.md` until PR #450 lands, so the two do not
-fight over the same lines.
+the submitted text was condensed from.
+
+**Vai của file này, sau khi PR #450 đã merge (02/09/2026).** Điều kiện cũ ở
+đây là "giữ trong file này cho tới khi #450 land" — nó đã land, và câu đó hết
+hiệu lực từ đó. Hai file không tranh nhau, vì chúng khác vai: `review-notes.md`
+là khối **sẽ dán lần sau** và phải luôn đúng với hiện tại; file này là **biên
+bản lần đã dán**, giữ nguyên văn cả những câu sai (xem mục 6). Không đồng bộ
+file này theo file kia.
 
 ## 2. Devices and iOS versions tested
 
