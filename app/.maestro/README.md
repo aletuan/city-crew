@@ -24,6 +24,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `04-sign-in.yaml` | Signs out if needed; a wrong password shows the form error; the right one signs in; a cold start is still signed in; signs out. |
 | `05-plan-trip.yaml` | Deletes the account's leftover upcoming trips; answers the Ideas wizard (Friends + up to three moods); waits out Sketching; opens the recommended plan; saves it; finds it as the only upcoming trip; deletes it. |
 | `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
+| `08-explore-filter.yaml` | Pins the location to Hanoi; sorts Explore by distance, then adds "open now"; the filter button's count shows both; Reset clears them and the list is back. The map toggle is not covered — Expo Go on iOS draws no map. |
 | `07-sign-up-delete.yaml` | **Not run by `npm run smoke:ios`** — see GUIDELINES.md ("Manual QA"). Documents signing up a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skipping the taste picker, then deleting that same account from Profile → Delete account, ending back on the guest view; iOS's own "Use Strong Password?" panel on the password field can't be driven by Maestro, so this path is checked by hand once per release instead. |
 
 The signed-in flows share `common/start.yaml` (open fresh, grant
@@ -153,6 +154,8 @@ reaches the native view.
 | `FloatingTabBar` | `tab-ideas`, `tab-explore`, `tab-trips`, `tab-collections`, `tab-profile` |
 | `WelcomeSheet` | `welcome-dismiss` |
 | `ExploreScreen` | `explore-search`, `explore-city`, `explore-list`, `place-card-<index>` |
+| `ExploreScreen` (filter) | `explore-filter` / `explore-filter-pinned` (its label carries the applied count as a digit — the badge inside it has no id of its own on iOS), `explore-view` (map toggle — dev build only) |
+| `ExploreFilterSheet` | `filter-sort-<recommended\|distance\|rating>`, `filter-status-<any\|open\|closed>`, `filter-saved`, `filter-reset` (only when dirty), `filter-apply`, `filter-close` |
 | `CitySwitcher` | `city-row-<index>` |
 | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
 | `SearchScreen` | `search-input`, `search-clear`, `search-result-<index>` |

@@ -126,6 +126,7 @@ export default function ExploreFilterSheet({
           <Text style={s.title}>{t('Sort & filter', 'Sắp xếp & lọc', '並べ替え・絞り込み')}</Text>
           <PressableScale
             onPress={onClose}
+            testID="filter-close"
             accessibilityRole="button"
             accessibilityLabel={t('Close filters', 'Đóng bộ lọc', 'フィルターを閉じる')}
             style={s.close}
@@ -163,6 +164,7 @@ export default function ExploreFilterSheet({
               <PressableScale
                 key={value}
                 onPress={() => choose('sort', value)}
+                testID={`filter-sort-${value}`}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 // Said in words, not assembled from children: without
@@ -206,6 +208,7 @@ export default function ExploreFilterSheet({
               <PressableScale
                 key={value}
                 onPress={() => choose('status', value)}
+                testID={`filter-status-${value}`}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 // react-native-web drops `accessibilityState` from the DOM
@@ -238,6 +241,7 @@ export default function ExploreFilterSheet({
             if (!signedIn) { onNeedSignIn(); return; }
             choose('savedOnly', !draft.savedOnly);
           }}
+          testID="filter-saved"
           accessibilityRole="checkbox"
           accessibilityState={{ checked: draft.savedOnly, disabled: !signedIn }}
           // Same reason as the sort rows: the tree otherwise reads the
@@ -285,6 +289,7 @@ export default function ExploreFilterSheet({
           {dirty ? (
             <PressableScale
               onPress={() => { setDraft(NOTHING_APPLIED); setError(null); }}
+              testID="filter-reset"
               accessibilityRole="button"
               style={s.reset}
             >
@@ -309,6 +314,7 @@ export default function ExploreFilterSheet({
               wide
               busy={busy}
               onPress={() => { void apply(); }}
+              testID="filter-apply"
               label={`${t('Show', 'Hiện', '表示')} ${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', '件')}`}
             />
           </View>

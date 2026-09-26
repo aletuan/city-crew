@@ -118,7 +118,7 @@ sách toàn suite ≤ 12 phút.
 
 | Flow mới | Đăng nhập | Kiểm | testID cần thêm | Ghi chú |
 |---|---|---|---|---|
-| `08-explore-map` | guest | Chuyển list → map, `places-map` hiện, có pin/cluster, tap pin mở `MapPlaceCard` → place detail; đổi sort "nearest" trong filter sheet; về list | `explore-view-toggle`, `explore-filter` (đã có), `filter-sort-<key>`, `filter-apply`, `map-card` | Map pin có ảnh là tính năng mới của 1.0.4. Cấp quyền `location: allow` trong `launchApp` và đặt vị trí bằng `setLocation` để "nearest" ổn định. Chế độ list/map được lưu trong AsyncStorage (`VIEW_KEY`): flow **phải trả về list** ở cuối và dọn nếu lần trước chết giữa chừng, nếu không 01/02 sẽ fail |
+| `08-explore-filter` ✅ viết xong 26/09 | guest | Ghim vị trí Hà Nội; sort theo khoảng cách, thêm "đang mở", số bộ lọc trên nút đúng, Reset trả về như cũ | `filter-sort-*`, `filter-status-*`, `filter-saved`, `filter-reset`, `filter-apply`, `filter-close` (đã thêm; đếm qua số trong nhãn nút `explore-filter`, vì badge bên trong nút không lên cây trợ năng iOS) | Bản đồ **không test được trong Expo Go**: `canDrawMap` = false trên iOS store client (không có Google Maps key), nút `explore-view` không được vẽ. Phần map chuyển sang đợt 3 (dev client) |
 | `09-collections-browse` | guest | Tab Collections: collection cộng đồng đầu tiên → detail → place đầu → quay về; cũng mở từ "From the community" trên Explore | `collection-card-<i>`, `collection-place-<i>`, `collection-back` | Hiện Collections/CollectionDetail chưa có testID nào ngoài banner lỗi |
 | `10-place-detail-deep` | guest | Mở place có map + giờ mở cửa: `detail-facts` hiện, MiniMap hiện, `detail-directions` mở action sheet (không rời app), gallery mở và đóng | `detail-minimap`, `detail-hours`, `detail-gallery` | Nối dài 02 thay vì flow riêng nếu muốn tiết kiệm thời gian |
 
@@ -139,6 +139,7 @@ sách toàn suite ≤ 12 phút.
 | Mời bạn vào trip / Crew | Cần hai tài khoản đăng nhập cùng lúc | Tài khoản test thứ hai trong Keychain (`citycrew-maestro-2`); flow A mời, flow B chấp nhận qua `TripInvitationScreen` |
 | Local guide (ảnh, cover, ẩn ảnh) | Cần quyền guide, ghi vào dữ liệu thật | Chỉ làm khi có Supabase staging; không cấp quyền guide cho test account trên production |
 | Deep link `citycrew://place/<id>` | Link chia sẻ là đường vào của người dùng mới | Cần dev client (Expo Go không nhận scheme của app) |
+| Explore map (`explore-view`, `places-map`, pin → `MapPlaceCard`) | Pin có ảnh là tính năng chính của 1.0.4 | Cần dev client có Google Maps key (`npx expo run:ios`), suite thứ hai với `appId: com.aletuan.citycrew`. Chế độ list/map lưu trong AsyncStorage (`VIEW_KEY`) — flow phải trả về list ở cuối |
 | Mất mạng / `*-load-fail` | Banner lỗi và retry | `xcrun simctl` không tắt mạng được; dùng Network Link Conditioner hoặc biến môi trường ép lỗi trong bundle dev |
 | CI nightly | Không phụ thuộc máy Andy | macOS runner + `eas build --profile development` + Supabase staging + secrets |
 
