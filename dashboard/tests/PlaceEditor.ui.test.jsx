@@ -72,14 +72,21 @@ describe('PlaceEditor', () => {
   });
 
   it('the save count is counted beside the row: one, none, or nothing to say', async () => {
-    const { unmount } = openEditor();
+    // Each answer is queued before the editor that asks for it mounts.
     api.saveCount.mockResolvedValueOnce(1);
+    const { unmount } = openEditor();
     expect(await screen.findByText(/in 1 list$/)).toBeTruthy();
     unmount();
     let finish;
-    openEditor();
     api.saveCount.mockReturnValueOnce(new Promise((_, reject) => { finish = reject; }));
+    const asked = api.saveCount.mock.calls.length;
+    openEditor();
     expect(await screen.findByText(/counting saves…/)).toBeTruthy();
+    // "counting saves…" is drawn before the place has loaded, so seeing it
+    // does not mean the count was asked for. Rejecting a promise nobody
+    // holds yet is an unhandled rejection — green tests, red job on a slow
+    // runner. Wait for the editor to take the promise, then fail it.
+    await waitFor(() => expect(api.saveCount.mock.calls.length).toBe(asked + 1));
     await act(async () => finish(new Error('slow')));
     expect(await screen.findByText(/saves —/)).toBeTruthy();
   });
