@@ -71,11 +71,13 @@ env:
     id: "plan-save"
 
 # Saving pops the wizard and lands on Trips, where the new trip is the
-# only upcoming one.
+# only upcoming one. Three writes (trip, place lookup, stops) sit between
+# the tap and Trips; over a phone hotspot the first alone has taken 31 s,
+# with the row landing a second after a 30 s wait gave up.
 - extendedWaitUntil:
     visible:
       id: "trip-upcoming-0"
-    timeout: 30000
+    timeout: 60000
 - assertNotVisible:
     id: "trip-upcoming-1"
 - runFlow: common/delete-first-trip.yaml
