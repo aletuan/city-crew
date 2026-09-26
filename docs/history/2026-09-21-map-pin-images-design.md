@@ -1,7 +1,7 @@
 # Marker dạng ảnh có icon cho PlacesMap — Thiết kế
 
 **Ngày:** 2026-09-21
-**Trạng thái:** đã duyệt, chờ viết kế hoạch triển khai
+**Trạng thái:** đã ship. Kế hoạch triển khai: `docs/history/2026-09-21-map-pin-images.md`. Code hiện tại là `app/src/components/mapPins.ts`.
 
 ## Vấn đề
 

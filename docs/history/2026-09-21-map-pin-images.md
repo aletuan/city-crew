@@ -1,6 +1,9 @@
 # Marker dạng ảnh có icon cho PlacesMap — Kế hoạch triển khai
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **ĐÃ SHIP — lưu làm chứng cứ, không phải việc cần làm.** Kế hoạch này
+> đã thực hiện xong; code hiện tại mới là nguồn đúng. Đừng triển khai lại từ
+> file này, và đừng coi các ô `- [ ]` là việc còn tồn. Xem
+> `docs/history/README.md`.
 
 **Goal:** Thay marker mặc định của `react-native-maps` bằng PNG dựng sẵn mang icon category, để bản đồ nói được "đây là quán cà phê" chứ không chỉ "đây là màu nâu" — trên cả iOS lẫn Android.
 
@@ -8,7 +11,7 @@
 
 **Tech Stack:** React Native 0.86 (Expo SDK 57), `react-native-maps` 1.27.2, Python 3 + Pillow (chỉ để sinh asset, không nằm trong đường build), vitest + jsdom qua `react-native-web`, Maestro + `simctl` để verify.
 
-**Spec:** `docs/superpowers/specs/2026-09-21-map-pin-images-design.md`
+**Thiết kế đi kèm:** `docs/history/2026-09-21-map-pin-images-design.md`
 
 ---
 

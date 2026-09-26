@@ -6,13 +6,21 @@ mockup snapshot dùng, không cần server riêng).
 
 **Trạng thái hiện tại**
 
-| Màn hình | Trạng thái |
+App đã lên App Store (1.0.3) và có 23 màn hình chạy dữ liệu thật. Bảng
+này từng liệt kê từng màn và đã nói sai suốt một thời gian — Ideas,
+Trips và Profile bị ghi là placeholder rất lâu sau khi cả ba đã ship,
+mỗi màn kèm bộ test riêng. Một bảng phải sửa bằng tay sau mỗi lần ship
+là một bảng sẽ sai; nên thay bằng thứ không cần sửa:
+
+| | |
 |---|---|
-| Explore (For you / Food / Outdoors, thẻ địa điểm) | ✅ dữ liệu thật |
-| Place detail (ảnh vuốt ngang, rating Google thật, giờ mở cửa, maps/web) | ✅ dữ liệu thật |
-| Collections + Collection detail | ✅ dữ liệu thật |
-| Ideas (wizard) / Trips (itinerary) / Profile | 🚧 placeholder — port từ `data/scripts/itinerary-runtime.js` ở bước sau |
-| Song ngữ EN/VI | ✅ nút chuyển ở góc mỗi màn hình |
+| Đọc | Explore (danh sách + bản đồ Google), Place detail, Gallery, Collections, Search |
+| Lên kế hoạch | Ideas → Sketching → PlanOptions → PlanEdit → Trips → Trip detail |
+| Người dùng | Profile, Edit profile, Sign in / Sign up, Crew, Activity |
+| Thêm dữ liệu | Add place, Scan city — hỏi Google rồi đề xuất vào catalog |
+| Ba ngôn ngữ | EN / VI / JA, đổi trong Cá nhân |
+
+Danh sách đầy đủ là `ls src/screens/`, và nó luôn đúng.
 
 Mockup HTML (`citycrew-mockup-dark.html`) từ giờ **đóng băng** làm
 artifact cho pitch video — sản phẩm phát triển ở đây.
@@ -84,19 +92,29 @@ Google Maps từ môi trường lúc build. Không bao giờ ghi key vào `app.j
 
 ```
 App.tsx                 — fonts, i18n provider, stack + bottom tabs
-src/theme.ts            — design tokens port từ mockup (màu, gradient, chữ Figtree)
+src/theme.ts            — design tokens: màu, gradient, khoảng cách, bo góc,
+                          chữ Space Grotesk
 src/lib/supabase.ts     — public Supabase client
-src/lib/data.ts         — types + hooks usePlaces/useCollections (query y hệt export-snapshot)
-src/lib/i18n.tsx        — chuyển EN/VI toàn app
-src/components/         — Screen/Chip/Card/LangPill, PlaceCard
+src/lib/data.ts         — types + hooks usePlaces/useCollections
+src/lib/i18n.tsx        — chuyển EN/VI/JA toàn app
 src/lib/planner.ts      — chọn/xếp/định giờ ba phương án, thuần và deterministic
 src/lib/itinerary.ts    — sửa plan mà không đè lên giờ người dùng đã đặt
-src/screens/            — Explore, PlaceDetail, Collections, CollectionDetail,
-                          Ideas → Sketching → PlanOptions → PlanEdit, Trips
+src/lib/format.ts       — giờ mở cửa, ngày tháng, đơn vị — thuần, 100% coverage
+src/components/         — Screen, Card, Chip, GradientCta… trong ui.tsx,
+                          cộng các component có màn hình riêng
+src/screens/            — 23 màn; `ls src/screens/` là danh sách đúng
 ```
 
-## Bước tiếp theo (đề xuất)
+`src/lib/*.ts` là nửa thuần của app và bị chặn ở **100% coverage** — thêm
+một hàm vào đó mà không có test thì CI đỏ. Đó là cơ chế duy nhất trong
+repo này không phụ thuộc vào việc người viết có nhớ hay không.
 
-1. `plan-assist` Edge Function: đặt tên chuyến đi và viết lý do cho từng điểm.
-2. Ô "kể tôi nghe bạn muốn gì" ở Ideas, parse thành `TripDraft`.
-3. ~~EAS Build + TestFlight~~ — đã có; xem Cách 3 ở trên.
+## Đã xong, giữ lại để biết chúng ở đâu
+
+1. ~~`plan-assist` Edge Function~~ — có ở `supabase/functions/plan-assist`;
+   phía app là `src/lib/assist.ts`, gọi trước ở màn Sketching để thẻ hiện
+   ra là đã có tên chứ không phải viết lại dưới tay người đọc.
+2. ~~EAS Build + TestFlight~~ — xem Cách 3 ở trên.
+
+Việc còn mở nằm ở issue chứ không ở đây: một danh sách "bước tiếp theo"
+trong README là danh sách sẽ mục, và nó đã mục.
