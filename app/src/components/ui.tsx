@@ -382,7 +382,7 @@ export function IconSubtitle({ icon, text }: {
   );
 }
 
-export function Screen({ title, subtitle, eyebrow, children, right, onBack }: {
+export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack }: {
   title: string;
   /** One quiet line under the title. Only in the pushed-screen header —
    *  a tab root's large title has an eyebrow above it instead, and a
@@ -397,6 +397,17 @@ export function Screen({ title, subtitle, eyebrow, children, right, onBack }: {
   subtitle?: React.ReactNode;
   /** Small uppercase line above the title — e.g. today's date. */
   eyebrow?: React.ReactNode;
+  /**
+   * A line or three under the large title, inside the title's own column
+   * — so a `right` node that reserves width narrows this too, and the
+   * two never meet. Large-title screens only; the inline header has
+   * `subtitle`. Brings its own type, the way `eyebrow` does.
+   *
+   * Exists for the Ideas screen, whose lede used to open the scrolling
+   * content and now shares the fixed band with the title and the
+   * illustration beside both (see `IdeasHeaderArt`).
+   */
+  lede?: React.ReactNode;
   children: React.ReactNode;
   right?: React.ReactNode;
   /**
@@ -453,6 +464,7 @@ export function Screen({ title, subtitle, eyebrow, children, right, onBack }: {
               </View>
             ) : null}
             <Text style={s.title}>{title}</Text>
+            {lede ?? null}
           </View>
           {right}
         </View>

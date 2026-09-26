@@ -28,6 +28,7 @@ import {
   useTabBarClearance,
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
+import IdeasHeaderArt from '../components/IdeasHeaderArt';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity, useMyPosition } from '../lib/city';
 import { usePlaces } from '../lib/catalog';
@@ -196,7 +197,32 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const ready = canPlan(draft);
 
   return (
-    <Screen title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}>
+    <Screen
+      title={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
+      /* The lede shares the fixed band with the title now, and the two
+         cats share it with both — see `IdeasHeaderArt` for how the
+         painting sits and when it steps aside.
+
+         Three short lines where a borrowed sentence stood. Laozi's
+         thousand miles gave a reason to begin; these name the three
+         things the screen asks about, in the order it asks them —
+         eats, views, company — and read as the answers before the
+         reader has given any. Set in `quoteFace` like the Profile
+         footer, unsigned because nobody said it first. Vietnamese
+         keeps the folk cadence of three two-beat words rather than a
+         translation; Japanese falls back to the system face, the
+         known deal. */
+      lede={(
+        <Text style={s.lede}>
+          {t(
+            'Good food.\nGood views.\nGood company.',
+            'Món ngon.\nCảnh đẹp.\nBạn hiền.',
+            '美味しいもの。\nいい景色。\nいい仲間。',
+          )}
+        </Text>
+      )}
+      right={<IdeasHeaderArt />}
+    >
       <AmbientWarmth />
       <ScrollView
         contentContainerStyle={{ paddingBottom: tabClearance }}
@@ -204,27 +230,13 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
         onScroll={duckScroll}
         scrollEventThrottle={16}
       >
-        {/* Laozi where the instructions used to stand. The old lede
-            explained the screen ("tell us a little, we sketch, change
-            it later") — and the screen explains itself now: the section
-            headers open the sentences, the chips answer them, and the
-            one button says what it does. What was left for this line was
-            a reason to begin, and a borrowed sentence in the quote face
-            says it better than instructions did. Set in `quoteFace`
-            like the Profile footer's Pavese, signed the same way —
-            Japanese falls back to the system face, the known deal.
-
+        {/* The lede that stood here moved up into the title band (see
+            the `lede` prop above). Nothing explains the screen any more,
+            and nothing needs to: the section headers open the sentences,
+            the chips answer them, and the one button says what it does.
             Still generic on `when`, as before: a lede that rewrites
             itself while the reader taps the chips below is the screen
             fidgeting under their hand (the CTA note points here). */}
-        <Text style={s.ledeQuote}>
-          {t(
-            '“A journey of a thousand miles begins with a single step.”',
-            '“Hành trình vạn dặm bắt đầu từ một bước chân.”',
-            '「千里の道も一歩から」',
-          )}
-        </Text>
-        <Text style={s.ledeBy}>— {t('Laozi', 'Lão Tử', '老子')}</Text>
 
         {/* The three headers below open a sentence and the chips finish
             it — "Going with… ✓ Friends". They used to be questions
@@ -549,15 +561,13 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
-  // The quote and its signature — the same pair the Profile footer
-  // wears, sized for a lede. A face means no fontWeight (theme's rule).
-  ledeQuote: {
+  // The quote face the Profile footer wears, sized for a lede, in the
+  // title's own column — so no page padding of its own. The 24pt line
+  // and the 6pt above are what `IdeasHeaderArt.BAND` counts on; change
+  // one, change both. A face means no fontWeight (theme's rule).
+  lede: {
     color: colors.textTertiary, fontFamily: quoteFace, fontSize: 16, lineHeight: 24,
-    paddingHorizontal: space.page,
-  },
-  ledeBy: {
-    color: colors.textTertiary, fontFamily: quoteFace, fontSize: 12.5, letterSpacing: 0.4,
-    paddingHorizontal: space.page, marginTop: 3, marginBottom: space.titleToContent,
+    marginTop: 6,
   },
   heading: {
     color: colors.text, ...type.headline,

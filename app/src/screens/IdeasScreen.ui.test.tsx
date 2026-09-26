@@ -121,6 +121,27 @@ beforeEach(() => {
 });
 afterEach(() => { vi.useRealTimers(); });
 
+describe('the title band', () => {
+  // Three short answers where Laozi's sentence stood, in the order the
+  // screen asks its questions; and the painting beside them.
+  it('opens with the three good things, unsigned', () => {
+    renderScreen();
+    expect(screen.getByText('Good food. Good views. Good company.')).toBeTruthy();
+    expect(screen.queryByText(/thousand miles|Laozi/)).toBeNull();
+  });
+
+  it('says them in the reader’s language', () => {
+    state.lang = 'vi';
+    renderScreen();
+    expect(screen.getByText('Món ngon. Cảnh đẹp. Bạn hiền.')).toBeTruthy();
+  });
+
+  it('carries the two cats beside the title', () => {
+    renderScreen();
+    expect(screen.getByTestId('ideas-art')).toBeTruthy();
+  });
+});
+
 describe('the questions', () => {
   it('offers the four companies and only the categories this city has, in the taxonomy order', () => {
     renderScreen();
@@ -468,7 +489,9 @@ describe('start from what you love', () => {
     expect(screen.getByText('2 places')).toBeTruthy();
     expect(screen.getByText('1 place')).toBeTruthy();
     expect(screen.getByText('0 places')).toBeTruthy();
-    expect([...document.querySelectorAll('img')].map((i) => i.getAttribute('src')))
+    // The header's painting is an image too; the covers are the ones
+    // under the collections.
+    expect([...document.querySelectorAll('img')].map((i) => i.getAttribute('src')).filter((src) => !src?.includes('ideas-art')))
       .toEqual(['https://x/pho.jpg', 'https://x/lake.jpg']);
 
     // react-native-web drops `accessibilityState`, so "ticked" is read off
