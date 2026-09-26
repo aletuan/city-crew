@@ -17,7 +17,11 @@ export default [
   // writes it at the package root — where `dashboard/.gitignore` hides it from
   // git and nothing hid it from here. Lint then read 500 lines of minified
   // React and failed the gate on vendor code that no one in this repo wrote.
-  { ignores: ['node_modules/**', 'dist/**', '.vite/**'] },
+  //
+  // `coverage/` holds c8's raw dumps and, since the component harness,
+  // vitest's HTML report — a copy of Istanbul's own scripts, which carry
+  // an eslint-disable of their own that this config has no rule for.
+  { ignores: ['node_modules/**', 'dist/**', '.vite/**', 'coverage/**'] },
 
   js.configs.recommended,
 
@@ -59,9 +63,10 @@ export default [
     },
   },
 
-  // The tests run under `node --test`, not in a browser.
+  // The module tests run under `node --test`, not in a browser; the UI
+  // tests run under vitest in jsdom, which is both at once.
   {
-    files: ['tests/**/*.mjs'],
+    files: ['tests/**/*.{mjs,jsx}'],
     languageOptions: { globals: { ...globals.node } },
   },
 ];
