@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { TERMS } from './legal';
 import { isClear, parseSky, skyIcon, skyUrl } from './weather';
 
 /** What the four later fields read as when the response does not carry
@@ -131,6 +132,36 @@ describe('skyUrl', () => {
 // The empty-string case is the same trap as null: Number('') is 0, and 0
 // is the code for a clear sky, so a blank field would have rendered as a
 // sunny afternoon.
+// Open-Meteo's data is CC BY 4.0, so showing it obliges a credit, and the
+// credit lives in the Terms (`legal.ts`), which is a binding document. The
+// two can drift apart in either direction: the provider changes and the
+// Terms keep crediting the old one, or the Terms are tidied and the credit
+// goes while the data keeps flowing. Either way the app would be showing
+// somebody's data without the credit its licence asks for, and nothing
+// would notice. This is what notices: the credit must name the host this
+// module actually asks, and carry the licence, in both languages.
+describe('the credit the weather is owed', () => {
+  const site = new URL(skyUrl(10.78, 106.7)).hostname.replace(/^api\./, '');
+  const paragraphs = TERMS.blocks.filter((b) => b.k === 'p');
+
+  it('names the provider skyUrl asks, and its licence, in English and Vietnamese', () => {
+    for (const lang of ['en', 'vi'] as const) {
+      const credit = paragraphs.find((b) => b.k === 'p' && b[lang].includes(`](https://${site}/)`));
+      expect(credit, `no Terms paragraph links https://${site}/ in ${lang}`).toBeDefined();
+      expect(credit![lang]).toContain('](https://creativecommons.org/licenses/by/4.0/)');
+    }
+  });
+
+  // The credit says the app changes the data in exactly one way that a
+  // reader could see, and the licence asks for modifications to be
+  // indicated. That sentence is only true while the parser rounds.
+  it('says the temperature is rounded, which is only true while parseSky rounds it', () => {
+    expect(parseSky({ current: { temperature_2m: 31.7, weather_code: 0, is_day: 1 } })?.temp).toBe(32);
+    const credit = paragraphs.find((b) => b.k === 'p' && b.en.includes(`](https://${site}/)`));
+    expect(credit && credit.k === 'p' && credit.en).toMatch(/rounds the temperature/);
+  });
+});
+
 describe('parseSky rejects everything that is not a number', () => {
   for (const bad of [null, undefined, '', '  ', true, false, {}, [], NaN, Infinity]) {
     it(`refuses weather_code = ${JSON.stringify(bad)}`, () => {
