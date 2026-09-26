@@ -28,6 +28,7 @@ import { SaveProvider } from './src/lib/save';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
 import FloatingTabBar from './src/components/FloatingTabBar';
+import { AppBoundary, ScreenBoundary } from './src/components/ScreenBoundary';
 import WelcomeSheet from './src/components/WelcomeSheet';
 import { TabBarDuckProvider } from './src/components/tabBarDuck';
 import { navRef, type RootStackParamList } from './src/nav';
@@ -65,12 +66,22 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const stackOptions = { headerShown: false, contentStyle: { backgroundColor: colors.bg } } as const;
 
+// A catch around every screen, so a render that throws takes its own
+// screen with it and nothing else — the tab bar is outside it, and the
+// reader can walk away to another tab. See `components/ScreenBoundary`.
+// Fitted here once rather than inside twenty-odd screens, which is what
+// `screenLayout` is for.
+const screenLayout = ({ children, navigation }: {
+  children: React.ReactNode;
+  navigation: { canGoBack: () => boolean; goBack: () => void };
+}) => <ScreenBoundary navigation={navigation}>{children}</ScreenBoundary>;
+
 // Each tab owns its stack, so detail screens keep the bottom tab bar visible.
 // Ideas got a stack of its own when the sketching screen arrived: it is a
 // screen the reader can back out of, not a modal, and the tab bar stays.
 function IdeasStack() {
   return (
-    <Stack.Navigator screenOptions={stackOptions}>
+    <Stack.Navigator screenOptions={stackOptions} screenLayout={screenLayout}>
       <Stack.Screen name="IdeasHome" component={IdeasScreen} />
       <Stack.Screen name="Sketching" component={SketchingScreen} />
       {/* Dissolve rather than slide. The sketching screen hands this one
@@ -101,7 +112,7 @@ function IdeasStack() {
 
 function TripsStack() {
   return (
-    <Stack.Navigator screenOptions={stackOptions}>
+    <Stack.Navigator screenOptions={stackOptions} screenLayout={screenLayout}>
       <Stack.Screen name="TripsHome" component={TripsScreen} />
       <Stack.Screen name="TripDetail" component={TripDetailScreen} />
       <Stack.Screen name="TripInvitation" component={TripInvitationScreen} />
@@ -115,7 +126,7 @@ function TripsStack() {
 
 function ExploreStack() {
   return (
-    <Stack.Navigator screenOptions={stackOptions}>
+    <Stack.Navigator screenOptions={stackOptions} screenLayout={screenLayout}>
       <Stack.Screen name="ExploreHome" component={ExploreScreen} />
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="AddPlace" component={AddPlaceScreen} />
@@ -135,7 +146,7 @@ function ExploreStack() {
 
 function CollectionsStack() {
   return (
-    <Stack.Navigator screenOptions={stackOptions}>
+    <Stack.Navigator screenOptions={stackOptions} screenLayout={screenLayout}>
       <Stack.Screen name="CollectionsHome" component={CollectionsScreen} />
       <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
@@ -147,7 +158,7 @@ function CollectionsStack() {
 
 function ProfileStack() {
   return (
-    <Stack.Navigator screenOptions={stackOptions}>
+    <Stack.Navigator screenOptions={stackOptions} screenLayout={screenLayout}>
       <Stack.Screen name="ProfileHome" component={ProfileScreen} />
       <Stack.Screen name="SignIn" component={SignInScreen} />
       <Stack.Screen name="SignUp" component={SignUpScreen} />
@@ -269,6 +280,10 @@ function Root() {
     // wrapper receives one at all.
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        {/* The last catch: only a failure outside every screen — the tab
+            bar, a provider — reaches it. Inside the safe-area provider so
+            its message can keep clear of the notch. */}
+        <AppBoundary>
         <AuthProvider>
           <I18nProvider>
             <CityProvider>
@@ -330,6 +345,7 @@ function Root() {
             </CityProvider>
           </I18nProvider>
         </AuthProvider>
+        </AppBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
