@@ -562,12 +562,14 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
 
 const s = StyleSheet.create({
   // The quote face the Profile footer wears, sized for a lede, in the
-  // title's own column — so no page padding of its own. The 24pt line
-  // and the 6pt above are what `IdeasHeaderArt.BAND` counts on; change
-  // one, change both. A face means no fontWeight (theme's rule).
+  // title's own column — so no page padding of its own. The 24pt line,
+  // the 6pt above and the 12pt below are what `IdeasHeaderArt.BAND`
+  // counts on; change one, change both. The 12 is the room before the
+  // first section heading, which sat 13pt under the lede without it.
+  // A face means no fontWeight (theme's rule).
   lede: {
     color: colors.textTertiary, fontFamily: quoteFace, fontSize: 16, lineHeight: 24,
-    marginTop: 6,
+    marginTop: 6, marginBottom: 12,
   },
   heading: {
     color: colors.text, ...type.headline,
