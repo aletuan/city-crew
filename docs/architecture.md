@@ -65,6 +65,7 @@ Chiều mũi tên chỉ đi xuống. Hai điểm hay bị hiểu nhầm:
 | `lib/*.ts` và `lib/data/*.ts` thuần, test được trong Node | coverage 100% từng file, `app/vitest.config.ts` | `npm run coverage` |
 | màn nào cũng có cầu dao lỗi riêng | `ScreenBoundary.ui.test.tsx` đọc `App.tsx` | `npm test` |
 | taxonomy khớp ở app, dashboard và check constraint | `data/test/categories-sync.test.mjs` | job `data` |
+| policy RLS hỏi "bạn là ai" một lần mỗi truy vấn — viết `(select auth.uid())`, `(select is_editor())` — và không đọc lại chính bảng của nó | `supabase/tests/rls_ask_once_test.sql`; lượt chạy thứ hai của `run.sh` chạy lại mọi test RLS trên policy đã viết lại | job `migrations` |
 
 Ba luật đầu được viết ra ngày 27/09. Hai trong số đó đã đúng từ trước mà
 không ai canh; luật thứ nhất thì **đã bị phá một chỗ**: `useAddPhoto`
@@ -91,7 +92,7 @@ một lời từ chối là lỗi ở phía này hoặc phía kia, và màn hìn
 thay vì vẽ ra một thành công không có thật. Chỗ nào cần phản hồi tức thì
 thì lạc quan có đối chiếu lại (`likes.ts`).
 
-**Quyền.** Luôn ở Postgres. Một bộ lọc viết ở client mà trùng với một
+**Quyền.** Luôn ở Postgres. Một policy mới viết `(select auth.uid())`, không phải `auth.uid()`: dạng sau chạy lại ở từng dòng — xem `20260927120000_rls_ask_once.sql` cho số đo và cho cái bẫy đệ quy mà việc bọc mở ra. Một bộ lọc viết ở client mà trùng với một
 policy là bản sao yếu hơn của policy đó — `lib/data/guide.ts` giải thích
 chỗ nào có lọc và vì sao.
 

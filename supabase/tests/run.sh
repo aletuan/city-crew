@@ -46,7 +46,17 @@ for _ in $(seq 1 20); do
 done
 fi
 
-run() { psql_ "$@"; }
+# `ASK_ONCE_EVERY_STEP=1` is the second pass, which CI also runs:
+# the ask-once rewrite is applied after every migration, so every RLS test
+# below runs against rewritten policies. If the rewrite changed any rule,
+# a test written for that rule fails.
+ASK_ONCE="$(ls "$ROOT"/supabase/migrations/*_rls_ask_once.sql)"
+run() {
+  psql_ "$@"
+  if [ -n "${ASK_ONCE_EVERY_STEP:-}" ] && [[ "$*" == *"/supabase/migrations/"* ]]; then
+    psql_ "$1" -f "$ASK_ONCE" >/dev/null
+  fi
+}
 
 admin -c "drop database if exists $DB;" -c "create database $DB;"
 echo "→ auth stub"
@@ -380,3 +390,12 @@ for f in "$ROOT"/supabase/migrations/*_google_refresh.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/google_refresh_test.sql"
+
+# Every policy asks who you are once per query. Last, so it rewrites every
+# policy the blocks above created; a block added after it must write
+# `(select auth.uid())` itself, and the test below fails until it does.
+echo "→ rls asks once"
+for f in "$ROOT"/supabase/migrations/*_rls_ask_once.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/rls_ask_once_test.sql"

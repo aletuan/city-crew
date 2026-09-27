@@ -16,7 +16,10 @@ do $$
 declare
   allowed text[] := array[
     'is_editor', 'on_trip', 'my_reports_today', 'own_collection_places_today',
-    'trip_invite_count', 'collection_like_counts'
+    'trip_invite_count', 'collection_like_counts',
+    -- The three daily caps' counts, moved out of their policies by
+    -- 20260927120000_rls_ask_once. Present only in the second pass here.
+    'own_collections_today', 'own_place_events_today', 'own_friend_requests_today'
   ];
   stray text;
 begin

@@ -260,3 +260,10 @@ jobs:
       - run: supabase/tests/run.sh
         env:
           PG_URL: postgres://tester:tester@localhost:5432
+      # The same suite with the ask-once rewrite applied after every
+      # migration: every RLS test, against rewritten policies. See
+      # supabase/migrations/*_rls_ask_once.sql.
+      - run: supabase/tests/run.sh
+        env:
+          PG_URL: postgres://tester:tester@localhost:5432
+          ASK_ONCE_EVERY_STEP: '1'
