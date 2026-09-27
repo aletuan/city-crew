@@ -124,6 +124,25 @@ export async function addPlacePhoto(row: {
 }
 
 /**
+ * Put the file in the bucket, and say where a reader will find it.
+ *
+ * Here and not in the hook that picks the photograph, because this is
+ * the storage half of the same write `addPlacePhoto` finishes, and every
+ * other question this app puts to Supabase is asked from `lib/`. It was
+ * the one call in `components/` that reached for the client itself — see
+ * the layer rules in `docs/architecture.md`.
+ *
+ * Loud for the same reason the insert is: the caller must not go on to
+ * write a row pointing at a file that is not there.
+ */
+export async function uploadPlacePhoto(path: string, bytes: ArrayBuffer): Promise<string> {
+  const bucket = supabase.storage.from('place-photos');
+  const up = await bucket.upload(path, bytes, { contentType: 'image/jpeg' });
+  if (up.error) throw new Error(up.error.message);
+  return bucket.getPublicUrl(path).data.publicUrl;
+}
+
+/**
  * Take one back.
  *
  * `uploaders remove their own photos` is what makes this safe to call
