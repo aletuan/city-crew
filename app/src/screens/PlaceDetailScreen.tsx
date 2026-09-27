@@ -21,7 +21,7 @@ import { useFlag } from '../lib/useFlag';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { fmtCount, isFree, photosOf, usePlaceBySlug } from '../lib/data';
+import { coverOf, fmtCount, isFree, photosOf, usePlaceBySlug } from '../lib/data';
 import { usePlaces } from '../lib/catalog';
 import { shortAddress } from '../lib/address';
 import { splitName, subtitleBeside } from '../lib/name';
@@ -122,6 +122,21 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const place = inCatalog ?? elsewhere.data ?? undefined;
   const loading = catalogLoading || elsewhere.loading;
   const [photoIndex, setPhotoIndex] = useState(0);
+  // Back to the first page when the cover changes under the reader. The
+  // gallery is opened from this screen, and the way a keeper picks a new
+  // cover is by swiping here first: they find the picture on page 5, set
+  // it, and come back. The catalog reloads and puts it first — while the
+  // carousel stays on page 5, now showing somebody else, with "5 / 6"
+  // still under it. The screen looked as if the change had not taken.
+  // Reset during render rather than in an effect, so the stale page is
+  // never painted; the carousel below is keyed on the same value so the
+  // native scroll offset starts over too.
+  const coverUri = place ? coverOf(place)?.photo_uri ?? null : null;
+  const [pagedFor, setPagedFor] = useState(coverUri);
+  if (pagedFor !== coverUri) {
+    setPagedFor(coverUri);
+    setPhotoIndex(0);
+  }
   const credit = useFlag('photo_attribution');
   const [hoursOpen, setHoursOpen] = useState(false);
   const showPrice = useFlag('place_price');
@@ -322,6 +337,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
         <View style={[s.heroWrap, { height: heroH }]}>
           {photos.length > 0 ? (
             <ScrollView
+              key={coverUri ?? 'no-cover'}
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}

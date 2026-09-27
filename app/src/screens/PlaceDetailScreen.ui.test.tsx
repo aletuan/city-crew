@@ -502,6 +502,39 @@ describe('PlaceDetailScreen — hero', () => {
     expect(screen.getByText('3 / 3')).toBeTruthy();
   });
 
+  // The keeper's way of choosing a cover: swipe to the picture here, set
+  // it in the gallery, come back. The catalog reload puts it first; the
+  // carousel has to follow it there rather than stay on the page it was
+  // on, which now holds a different photograph under the same counter.
+  it('goes back to the first page, on the new cover, when the cover changes', () => {
+    const three = (cover: string) => place({
+      place_photos: ['a.jpg', 'b.jpg', 'c.jpg'].map((u, i) => photo(u, { sort_order: i, is_cover: u === cover })),
+    });
+    state.catalog = { loading: false, data: [three('a.jpg')] };
+    const n = nav();
+    const r = render(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
+    swipeTo(2);
+    expect(screen.getByText('3 / 3')).toBeTruthy();
+
+    state.catalog = { loading: false, data: [three('c.jpg')] };
+    r.rerender(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
+    expect(screen.getByText('1 / 3')).toBeTruthy();
+    expect(heroPhotos()[0]).toBe('c.jpg');
+  });
+
+  // Only a new cover moves the reader. A reload that changes nothing
+  // else about the photographs must not throw away where they had got to.
+  it('keeps the page across a reload that leaves the cover where it was', () => {
+    const p = place({ place_photos: [photo('a.jpg', { is_cover: true }), photo('b.jpg', { sort_order: 1 })] });
+    state.catalog = { loading: false, data: [p] };
+    const n = nav();
+    const r = render(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
+    swipeTo(1);
+    state.catalog = { loading: false, data: [{ ...p, rating: 4.9 } as Place] };
+    r.rerender(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
+    expect(screen.getByText('2 / 2')).toBeTruthy();
+  });
+
   it('credits the photographer of the photo on screen when attribution is on', () => {
     state.credit = true;
     show(place({
