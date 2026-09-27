@@ -83,7 +83,7 @@ vi.mock('../lib/data', async () => ({
   addPlacePhoto: async () => 'photo-id',
 }));
 // The grant is read from a store now, not fetched — see `lib/guideGrant`.
-vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide }));
+vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide, useIsEditor: () => false }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
 }));

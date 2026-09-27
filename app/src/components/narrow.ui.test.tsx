@@ -22,7 +22,7 @@ vi.mock('react-native', async (orig) => ({
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
-vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => true }));
+vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => true, useIsEditor: () => false }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: { user: { id: 'u1' } }, profile: { full_name: 'Nguyễn Thu Trang' } }),
 }));

@@ -48,7 +48,18 @@
  *  `cities` is the raw column: city ids, with `null` a member meaning
  *  every city. An all-cities grant is one null, not a list of every city
  *  there is, so a city added tomorrow is covered without asking again. */
-type State = { uid: string | null; cities: (string | null)[]; asked: boolean };
+type State = { uid: string | null; cities: (string | null)[]; editor: boolean; asked: boolean };
+
+/** What one launch asks the database, in one go: the guide grant's
+ *  cities, and whether this account is an editor.
+ *
+ *  The editor is here, not in a store of its own, because the question a
+ *  screen asks is the same one — may this person keep this gallery — and
+ *  an editor's answer is yes on every place (`guide_may_manage`, since
+ *  `20260927140000_editors_keep_every_gallery.sql`). Two stores would be
+ *  two loads, two subscriptions, and two moments a panel could draw with
+ *  half the answer. */
+export type Grant = { cities: (string | null)[]; editor: boolean };
 
 export type GuideGrant = {
   /** Whether this account may act as a guide in this city, as of now.
@@ -62,18 +73,21 @@ export type GuideGrant = {
   /** Ask once per account. Idempotent: a second call for a uid already
    *  asked about does nothing, so mounting this in two places costs one
    *  request. Never throws — a grant that cannot be read is no grant. */
-  load: (uid: string | null, ask: () => Promise<(string | null)[]>) => Promise<void>;
+  load: (uid: string | null, ask: () => Promise<Grant>) => Promise<void>;
+  /** Whether this account is an editor, as of now: the desk's hand, which
+   *  keeps every gallery. `false` until known, like `get`. */
+  isEditor: (uid: string | null) => boolean;
   /** Back to knowing nothing. For tests, and for signing out. */
   reset: () => void;
 };
 
-const EMPTY: State = { uid: null, cities: [], asked: false };
+const EMPTY: State = { uid: null, cities: [], editor: false, asked: false };
 
 /** Same account, same grants, same asked — compared by value, because the
  *  list is rebuilt by every load and an identity check would notify every
  *  subscriber on a request that changed nothing. */
 const same = (a: State, b: State) =>
-  a.uid === b.uid && a.asked === b.asked
+  a.uid === b.uid && a.asked === b.asked && a.editor === b.editor
   && a.cities.length === b.cities.length
   && a.cities.every((c, i) => c === b.cities[i]);
 
@@ -108,16 +122,17 @@ export function guideGrantStore(): GuideGrant {
       // the early return that catches those. The one thing that clears
       // `asked` is `reset`, which clears the uid with it, so there is no
       // way to arrive here holding a yes.
-      set({ uid, cities: [], asked: true });
+      set({ uid, cities: [], editor: false, asked: true });
       try {
-        const cities = await ask();
-        set({ uid, cities, asked: true });
+        const { cities, editor } = await ask();
+        set({ uid, cities, editor, asked: true });
       } catch {
         // A signed-out reader, a table that is not there yet, a network
         // that went away: all of them mean "draw no control", which is
         // what the state already says.
       }
     },
+    isEditor: (uid) => !!uid && state.uid === uid && state.editor,
     reset: () => set(EMPTY),
   };
 }

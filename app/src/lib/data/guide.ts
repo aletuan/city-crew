@@ -34,6 +34,20 @@ export async function fetchGuideCities(): Promise<(string | null)[]> {
 }
 
 /**
+ * Whether this account is on the desk's `editors` list.
+ *
+ * Asked through `is_editor()`, the same function every policy asks, so the
+ * app and the database cannot disagree about who the desk is. Like the
+ * grant above, a failure reads as no: the answer that draws nothing is the
+ * one that cannot draw a control the database would then refuse.
+ */
+export async function fetchIsEditor(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('is_editor');
+  if (error) return false;
+  return data === true;
+}
+
+/**
  * How many photographs this account has already put on this place, and
  * how many it has put anywhere today.
  *

@@ -16,7 +16,7 @@ vi.mock('../supabase', async () => {
 
 import {
   addPlacePhoto, fetchGuideCities, fetchMyPhotoCounts, fetchPlaceId, removePlacePhoto,
-  uploadPlacePhoto,
+  uploadPlacePhoto, fetchIsEditor,
 } from './guide';
 
 const fake = () => h.fake!;
@@ -64,6 +64,31 @@ describe('fetchGuideCities', () => {
   it('is empty when there is no error and no data', async () => {
     fake().replies({});
     expect(await fetchGuideCities()).toEqual([]);
+  });
+});
+
+describe('fetchIsEditor', () => {
+  // The same function every policy asks, so the app cannot hold a
+  // different opinion of who the desk is than the database does.
+  it('asks is_editor() and takes a yes', async () => {
+    fake().replies({ data: true });
+    expect(await fetchIsEditor()).toBe(true);
+    expect(fake().log[0]).toMatchObject({ fn: 'is_editor', op: 'rpc' });
+  });
+
+  it('reads anything but a plain true as no', async () => {
+    fake().replies({ data: false });
+    expect(await fetchIsEditor()).toBe(false);
+    fake().replies({ data: null });
+    expect(await fetchIsEditor()).toBe(false);
+    // Truthy is not true: only the function's own boolean opens the desk.
+    fake().replies({ data: 'true' });
+    expect(await fetchIsEditor()).toBe(false);
+  });
+
+  it('reads a failure as no, which draws nothing', async () => {
+    fake().replies({ error: { message: 'down' } });
+    expect(await fetchIsEditor()).toBe(false);
   });
 });
 
