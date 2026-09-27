@@ -18,16 +18,13 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { decode } from 'base64-arraybuffer';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
-import { supabase } from '../lib/supabase';
-import { addPlacePhoto, fetchMyPhotoCounts } from '../lib/data';
+import { addPlacePhoto, fetchMyPhotoCounts, uploadPlacePhoto } from '../lib/data';
 import { useIsGuide } from '../lib/useGuideGrant';
 import {
   canAddPhoto, photoPath, refusePhoto, PHOTO_PX, PHOTO_QUALITY,
   type Guidable, type PhotoRefusal,
 } from '../lib/guide';
 import { successHaptic } from './ui';
-
-const BUCKET = 'place-photos';
 
 export function useAddPhoto({ place, placeId, count, onAdded }: {
   place: Guidable & { slug: string; city_id?: string | null };
@@ -103,16 +100,11 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
       if (!shrunk.base64) throw new Error('bad_image');
 
       const path = photoPath(uid, place.slug, Date.now());
-      const up = await supabase.storage
-        .from(BUCKET)
-        .upload(path, decode(shrunk.base64), { contentType: 'image/jpeg' });
-      if (up.error) throw new Error(up.error.message);
-
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      const publicUrl = await uploadPlacePhoto(path, decode(shrunk.base64));
       await addPlacePhoto({
         placeId,
         uid,
-        publicUrl: data.publicUrl,
+        publicUrl,
         storagePath: path,
         // Past everything already on the place, so the gallery — which is
         // in `sort_order` — puts it at the end rather than in front of

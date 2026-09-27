@@ -105,6 +105,8 @@ src/components/         — Screen, Card, Chip, GradientCta… trong ui.tsx,
 src/screens/            — 23 màn; `ls src/screens/` là danh sách đúng
 ```
 
+Các tầng, luật import giữa chúng và cái gì canh luật: `docs/architecture.md`.
+
 `src/lib/*.ts` là nửa thuần của app và bị chặn ở **100% coverage** — thêm
 một hàm vào đó mà không có test thì CI đỏ. Đó là cơ chế duy nhất trong
 repo này không phụ thuộc vào việc người viết có nhớ hay không.

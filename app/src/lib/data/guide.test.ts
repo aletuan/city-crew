@@ -16,6 +16,7 @@ vi.mock('../supabase', async () => {
 
 import {
   addPlacePhoto, fetchGuideCities, fetchMyPhotoCounts, fetchPlaceId, removePlacePhoto,
+  uploadPlacePhoto,
 } from './guide';
 
 const fake = () => h.fake!;
@@ -125,6 +126,29 @@ describe('addPlacePhoto', () => {
   it('throws when the policy refuses', async () => {
     fake().replies({ error: { message: 'new row violates row-level security policy' } });
     await expect(addPlacePhoto(row)).rejects.toThrow(/row-level security/);
+  });
+});
+
+describe('uploadPlacePhoto', () => {
+  const bytes = new ArrayBuffer(4);
+
+  // The bucket the storage policy guards, the path it reads the uploader
+  // from, and a type the CDN will serve as a picture.
+  it('puts the file in the place-photos bucket and answers with where it lives', async () => {
+    fake().replies({ error: null });
+    expect(await uploadPlacePhoto('u1/cong-1.jpg', bytes))
+      .toBe('https://storage.test/place-photos/u1/cong-1.jpg');
+    expect(fake().log[0]).toMatchObject({
+      table: 'place-photos', op: 'storage', fn: 'upload',
+      payload: { path: 'u1/cong-1.jpg', opts: { contentType: 'image/jpeg' } },
+    });
+  });
+
+  // Loud, so the caller never writes a row pointing at a file that is
+  // not there.
+  it('throws when the bucket refuses', async () => {
+    fake().replies({ error: { message: 'new row violates row-level security policy' } });
+    await expect(uploadPlacePhoto('u1/cong-1.jpg', bytes)).rejects.toThrow(/row-level security/);
   });
 });
 

@@ -69,16 +69,7 @@ vi.mock('../lib/data', () => ({
   removePlacePhoto: data.removePlacePhoto,
   fetchMyPhotoCounts: data.fetchMyPhotoCounts,
   addPlacePhoto: data.addPlacePhoto,
-}));
-vi.mock('../lib/supabase', () => ({
-  supabase: {
-    storage: {
-      from: () => ({
-        upload: (path: string) => { data.uploaded(path); return Promise.resolve({ error: null }); },
-        getPublicUrl: (path: string) => ({ data: { publicUrl: `http://cdn/${path}` } }),
-      }),
-    },
-  },
+  uploadPlacePhoto: (path: string) => { data.uploaded(path); return Promise.resolve(`http://cdn/${path}`); },
 }));
 vi.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: () => Promise.resolve(

@@ -115,6 +115,42 @@ module.exports = [
     },
   },
 
+  // ── the layer rules ──
+  //
+  // Which directory may import which, as written in
+  // `docs/architecture.md`. Every one of these held before it was written
+  // down except the first, which one file broke: `useAddPhoto` called
+  // Supabase storage from `components/` until its upload moved to
+  // `lib/data/guide.ts`. That is the case for having them here: a rule
+  // kept by everybody remembering it is kept until somebody doesn't.
+  //
+  // Flat config does not merge a rule across blocks — the last block that
+  // sets it wins — so each directory states its whole list in one place.
+  ...(() => {
+    const backend = {
+      regex: '(^|/)lib/supabase$|^@supabase/',
+      message: 'The UI asks lib/ (lib/data, a provider), never Supabase itself. See docs/architecture.md.',
+    };
+    const screens = {
+      regex: '(^|/)screens/',
+      message: 'A component is used by screens and must not reach back into one. See docs/architecture.md.',
+    };
+    const ui = {
+      regex: '(^|/)(components|screens)/',
+      message: 'lib/ sits under the UI and must not import it. See docs/architecture.md.',
+    };
+    const restrict = (...patterns) => ({ 'no-restricted-imports': ['error', { patterns }] });
+    return [
+      { files: ['src/screens/**'], rules: restrict(backend) },
+      { files: ['src/components/**'], rules: restrict(backend, screens) },
+      // `save.tsx` is the one exception, and knowingly: it is a UI
+      // orchestrator that opens `AuthSheet` and `SaveSheet` from three
+      // screens, filed under `lib/` because it is a provider. Its header
+      // says why; `docs/architecture.md` says where it should live.
+      { files: ['src/lib/**'], ignores: ['src/lib/save.tsx'], rules: restrict(ui) },
+    ];
+  })(),
+
   // Test files hoist `vi.mock` above their imports on purpose: the factory
   // has to be registered before the module under test is pulled in, so
   // `import/first` is asking for the one order that does not work.
