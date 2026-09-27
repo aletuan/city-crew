@@ -41,6 +41,10 @@ export type Guide = {
   uid: string | null;
   /** Whether the desk has granted this account the local-guide role. */
   granted: boolean;
+  /** Whether this account is an editor — the desk's hand. Optional so a
+   *  caller that never learned it reads as a guide, which is the narrower
+   *  answer. */
+  editor?: boolean;
 };
 
 /** The part of a place this rule reads. */
@@ -62,7 +66,12 @@ export type Guidable = { submitted_by?: string | null };
  * telling them to forget.
  */
 export function canAddPhoto(place: Guidable, me: Guide): boolean {
-  if (!me.uid || !me.granted) return false;
+  if (!me.uid) return false;
+  // The desk's hand, on any place: `editors manage photos` already lets an
+  // editor do all of this in the database, and `guide_may_manage` says so
+  // too since 20260927140000. Whose place it is does not come into it.
+  if (me.editor) return true;
+  if (!me.granted) return false;
   return !!place.submitted_by && place.submitted_by === me.uid;
 }
 
@@ -108,6 +117,11 @@ export function refusePhoto(
   me: Guide,
   counts: { mineHere: number; mineToday: number },
 ): PhotoRefusal | null {
+  // An editor is refused nothing here. The two caps are clauses of the
+  // guides' insert policy; the editors' policy has none, as the Data Desk
+  // never had — counting against a limit the database will not apply
+  // would only stop the desk doing from the phone what it does anyway.
+  if (me.uid && me.editor) return null;
   if (!me.uid || !me.granted) return 'not_a_guide';
   if (!canAddPhoto(place, me)) return 'not_your_place';
   if (counts.mineHere >= MAX_PER_PLACE) return 'place_full';

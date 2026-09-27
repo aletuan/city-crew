@@ -368,6 +368,15 @@ for f in "$ROOT"/supabase/migrations/*_local_guides_per_city.sql; do
 done
 run "$DB" -f "$HERE/local_guide_city_test.sql"
 
+# The desk's hand on every gallery. After the per-city grants, which
+# last redefined `guide_may_manage`, and before the search-path sweep,
+# which has to find the function as it now stands.
+echo "→ editors keep every gallery"
+for f in "$ROOT"/supabase/migrations/*_editors_keep_every_gallery.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/editor_gallery_test.sql"
+
 echo "→ search paths"
 for f in "$ROOT"/supabase/migrations/*_pin_trigger_search_path.sql; do
   run "$DB" -f "$f" >/dev/null

@@ -32,7 +32,7 @@ import welcomeLogo from '../../assets/welcome-logo.png';
 import { useAuth } from '../lib/auth';
 import { greetingName } from '../lib/greet';
 import { useI18n } from '../lib/i18n';
-import { useIsGuide } from '../lib/useGuideGrant';
+import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import { canKeepGallery } from '../lib/gallery';
 import type { Place } from '../lib/types';
 import { colors, font, radius, space } from '../theme';
@@ -53,6 +53,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
   // drew the card without the panel and then shoved it down a round trip
   // later, once for every place its owner opened. See `lib/guideGrant`.
   const granted = useIsGuide(place.city_id);
+  const editor = useIsEditor();
   // On a 320pt window — an SE, or any iPhone with Display Zoom on — the
   // words have about 78pt beside the mark and the button, not the ~140 the
   // lines below were cut to fit: the greeting truncates and the question
@@ -62,7 +63,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
   // "Gallery" on either width.
   const narrow = useNarrowWindow();
 
-  if (!canKeepGallery(place, { uid, granted })) return null;
+  if (!canKeepGallery(place, { uid, granted, editor })) return null;
 
   return (
     <View style={s.panel} testID={testID}>

@@ -4,11 +4,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { guideGrantStore } from './guideGrant';
 
+const grant = (cities: (string | null)[], editor = false) => () => Promise.resolve({ cities, editor });
 /** A grant of every city: the shape every row had before the column. */
-const everywhere = () => Promise.resolve([null]);
+const everywhere = grant([null]);
 /** A grant of one city, and nowhere else. */
-const hanoi = () => Promise.resolve(['hanoi']);
-const nowhere = () => Promise.resolve([]);
+const hanoi = grant(['hanoi']);
+const nowhere = grant([]);
+/** The desk: on the editors list, and no guide grant at all. */
+const desk = grant([], true);
 
 describe('guideGrantStore', () => {
   it('knows nothing until it is asked, which draws no control', () => {
@@ -57,7 +60,7 @@ describe('guideGrantStore', () => {
 
   it('reads several grants as their union', async () => {
     const s = guideGrantStore();
-    await s.load('u1', () => Promise.resolve(['hanoi', 'danang']));
+    await s.load('u1', grant(['hanoi', 'danang']));
     expect(s.get('u1', 'hanoi')).toBe(true);
     expect(s.get('u1', 'danang')).toBe(true);
     expect(s.get('u1', 'hue')).toBe(false);
@@ -144,5 +147,44 @@ describe('guideGrantStore', () => {
     await s.load('u1', everywhere);
     s.reset();
     expect(s.get('u1', 'hanoi')).toBe(false);
+  });
+
+  // ── the desk ──
+
+  // An editor is answered separately from the grant, and neither implies
+  // the other: the desk without a guide grant is still the desk, and a
+  // guide of every city is still not the desk.
+  it('knows an editor from a guide, in both directions', async () => {
+    const d = guideGrantStore();
+    await d.load('u1', desk);
+    expect(d.isEditor('u1')).toBe(true);
+    expect(d.get('u1', 'hanoi')).toBe(false);
+
+    const g = guideGrantStore();
+    await g.load('u1', everywhere);
+    expect(g.isEditor('u1')).toBe(false);
+  });
+
+  it('never says editor for an account it was not asked about, or for nobody', async () => {
+    const s = guideGrantStore();
+    await s.load('u1', desk);
+    expect(s.isEditor('u2')).toBe(false);
+    expect(s.isEditor(null)).toBe(false);
+    s.reset();
+    expect(s.isEditor('u1')).toBe(false);
+  });
+
+  // Same cities, different desk: that is a change, and a panel waiting
+  // on it has to hear.
+  it('tells its subscribers when only the editor answer moves', async () => {
+    const s = guideGrantStore();
+    await s.load('u1', nowhere);
+    const saw = vi.fn();
+    s.subscribe(saw);
+    s.reset();
+    saw.mockClear();
+    await s.load('u1', desk);
+    expect(saw).toHaveBeenCalled();
+    expect(s.isEditor('u1')).toBe(true);
   });
 });

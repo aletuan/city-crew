@@ -40,7 +40,7 @@ import { canKeepGallery, galleryActions, galleryOrder, type GalleryAction, type 
 import { MAX_PER_PLACE } from '../lib/guide';
 import { useI18n } from '../lib/i18n';
 import { splitName } from '../lib/name';
-import { useIsGuide } from '../lib/useGuideGrant';
+import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import { colors, display, font, onPhoto, radius, space } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
@@ -70,7 +70,8 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
   // city", which only an all-cities grant answers yes to — and the
   // boundary below is closed anyway until the place arrives.
   const granted = useIsGuide(place?.city_id);
-  const me = useMemo(() => ({ uid, granted }), [uid, granted]);
+  const editor = useIsEditor();
+  const me = useMemo(() => ({ uid, granted, editor }), [uid, granted, editor]);
   const mayKeep = place ? canKeepGallery(place, me) : false;
 
   const [placeId, setPlaceId] = useState<string | null>(null);

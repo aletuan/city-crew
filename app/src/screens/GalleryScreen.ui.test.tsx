@@ -31,6 +31,7 @@ vi.hoisted(() => {
 const state = vi.hoisted(() => ({
   uid: 'u1' as string | null,
   guide: true,
+  editor: false,
   catalog: { loading: false, data: [] as unknown[] },
   elsewhere: { loading: false, data: null as unknown },
   rows: [] as GalleryPhoto[],
@@ -52,7 +53,7 @@ const data = vi.hoisted(() => ({
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
-vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide }));
+vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide, useIsEditor: () => state.editor }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }),
 }));
@@ -149,6 +150,7 @@ const confirmLast = () => {
 
 beforeEach(() => {
   state.uid = 'u1';
+  state.editor = false;
   state.guide = true;
   state.elsewhere = { loading: false, data: null };
   state.picked = true;
@@ -225,6 +227,17 @@ describe('who may keep it', () => {
     show([mine('m')], place({ submitted_by: 'u2' }));
     expect(await screen.findByText('This is not yours to keep.')).toBeTruthy();
     expect(data.fetchGallery).not.toHaveBeenCalled();
+  });
+
+  // The desk's hand: an editor who is no guide, on a place somebody else
+  // imported, keeps the gallery — reads it, and may add to it.
+  it('opens for an editor on anybody\u2019s place, grant or no grant', async () => {
+    state.guide = false;
+    state.editor = true;
+    show([mine('m')], place({ submitted_by: 'u2' }));
+    await waitFor(() => expect(data.fetchGallery).toHaveBeenCalled());
+    expect(screen.queryByText('This is not yours to keep.')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Add a photo' })).toBeTruthy();
   });
 
   it('draws nothing but the header while the place is still loading', () => {

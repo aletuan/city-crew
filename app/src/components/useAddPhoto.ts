@@ -19,7 +19,7 @@ import { decode } from 'base64-arraybuffer';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import { addPlacePhoto, fetchMyPhotoCounts, uploadPlacePhoto } from '../lib/data';
-import { useIsGuide } from '../lib/useGuideGrant';
+import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import {
   canAddPhoto, photoPath, refusePhoto, PHOTO_PX, PHOTO_QUALITY,
   type Guidable, type PhotoRefusal,
@@ -44,10 +44,11 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
   // The place's city, not the person's: a grant that names Đà Nẵng
   // does not reach a café in Huế, and the insert policy says so too.
   const granted = useIsGuide(place.city_id);
+  const editor = useIsEditor();
   const [busy, setBusy] = useState(false);
   const [counts, setCounts] = useState({ mineHere: 0, mineToday: 0 });
 
-  const me = { uid, granted };
+  const me = { uid, granted, editor };
   const mayOffer = canAddPhoto(place, me);
 
   // Counted before the picker rather than after the upload, which is the

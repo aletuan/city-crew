@@ -21,6 +21,7 @@ const state = vi.hoisted(() => ({
   lang: 'en' as Lang,
   uid: 'u1' as string | null,
   granted: true,
+  editor: false,
   name: 'Nguyễn Thu Trang',
 }));
 
@@ -33,7 +34,7 @@ vi.mock('../lib/i18n', () => ({
 }));
 
 // The grant is read from a store now, not fetched — see `lib/guideGrant`.
-vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.granted }));
+vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.granted, useIsEditor: () => state.editor }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({
     session: state.uid ? { user: { id: state.uid } } : null,
@@ -59,6 +60,7 @@ const onOpen = vi.fn();
 
 beforeEach(() => {
   state.lang = 'en';
+  state.editor = false;
   state.uid = 'u1';
   state.granted = true;
   state.name = 'Nguyễn Thu Trang';
@@ -110,6 +112,18 @@ describe('who the panel appears for', () => {
   it('is absent on a place nobody in the app imported', () => {
     draw(place({ submitted_by: null }));
     expect(screen.queryByTestId('panel')).toBeNull();
+  });
+
+  // An editor is the desk, and the desk keeps every gallery — including a
+  // place somebody else imported, or nobody did, and with no guide grant.
+  it('appears for an editor on any place', () => {
+    state.granted = false;
+    state.editor = true;
+    draw(place({ submitted_by: 'u2' }));
+    expect(screen.getByTestId('panel')).toBeTruthy();
+    cleanup();
+    draw(place({ submitted_by: null }));
+    expect(screen.getByTestId('panel')).toBeTruthy();
   });
 });
 

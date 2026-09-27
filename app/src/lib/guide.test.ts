@@ -41,6 +41,38 @@ describe('who may add a photograph', () => {
   });
 });
 
+// The desk's hand: `@trang`'s "super" account is an editor, and an editor
+// keeps every gallery — whoever imported the place, grant or no grant.
+describe('an editor', () => {
+  const DESK = { uid: 'd1', granted: false, editor: true };
+
+  it('may add to any place, including one nobody in the app imported', () => {
+    expect(canAddPhoto({ submitted_by: 'u2' }, DESK)).toBe(true);
+    expect(canAddPhoto({ submitted_by: null }, DESK)).toBe(true);
+    expect(canAddPhoto({}, DESK)).toBe(true);
+  });
+
+  // The flag is a claim about a signed-in account. Without one there is
+  // nobody for `is_editor()` to be true of.
+  it('is nobody when signed out, flag or not', () => {
+    expect(canAddPhoto({ submitted_by: 'u2' }, { ...DESK, uid: null })).toBe(false);
+    expect(refusePhoto({ submitted_by: 'u2' }, { ...DESK, uid: null }, { mineHere: 0, mineToday: 0 }))
+      .toBe('not_a_guide');
+  });
+
+  // The guides' caps are clauses of the guides' insert policy; the
+  // editors' policy has none, so neither does this.
+  it('is refused nothing, past both caps', () => {
+    expect(refusePhoto({ submitted_by: 'u2' }, DESK, { mineHere: MAX_PER_PLACE, mineToday: MAX_PER_DAY }))
+      .toBeNull();
+  });
+
+  // Leaving the flag off is the narrower answer, never the wider one.
+  it('reads a caller that never learned the flag as a guide', () => {
+    expect(canAddPhoto({ submitted_by: 'u2' }, { uid: 'u1', granted: true })).toBe(false);
+  });
+});
+
 describe('the path in the bucket', () => {
   it('puts the file under the uploader’s own id', () => {
     expect(photoPath('u1', 'cong-caphe', 1700000000000))

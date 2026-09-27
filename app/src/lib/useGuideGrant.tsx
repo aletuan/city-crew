@@ -2,7 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from 'react';
 import { useAuth } from './auth';
-import { fetchGuideCities } from './data';
+import { fetchGuideCities, fetchIsEditor } from './data';
 import { guideGrant } from './guideGrant';
 
 /**
@@ -30,6 +30,23 @@ export function useIsGuide(cityId?: string | null): boolean {
 }
 
 /**
+ * Whether this account is an editor, answered on the first render — the
+ * desk's hand, which keeps every gallery rather than only the ones it
+ * imported. Read from the same store, loaded by the same one request.
+ */
+export function useIsEditor(): boolean {
+  const { session } = useAuth();
+  const uid = session?.user?.id ?? null;
+  return useSyncExternalStore(guideGrant.subscribe, () => guideGrant.isEditor(uid));
+}
+
+/** The one launch question: both answers, side by side. */
+async function askGrant() {
+  const [cities, editor] = await Promise.all([fetchGuideCities(), fetchIsEditor()]);
+  return { cities, editor };
+}
+
+/**
  * Asks once, at launch, and renders nothing.
  *
  * Mounted beside `ReminderSync`, inside the auth provider, for the same
@@ -44,6 +61,6 @@ export function useIsGuide(cityId?: string | null): boolean {
 export function GuideGrantSync() {
   const { session } = useAuth();
   const uid = session?.user?.id ?? null;
-  useEffect(() => { void guideGrant.load(uid, fetchGuideCities); }, [uid]);
+  useEffect(() => { void guideGrant.load(uid, askGrant); }, [uid]);
   return null;
 }
