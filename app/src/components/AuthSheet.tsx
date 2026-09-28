@@ -11,11 +11,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
+import type { SignInWhy } from '../lib/save';
 import { colors, display, font, gradAI, space } from '../theme';
 import { PressableScale } from './ui';
 
-export default function AuthSheet({ visible, onClose, onSignIn }: {
+export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: {
   visible: boolean;
+  /** Which glyph opened it — see `SignInWhy`. */
+  why?: SignInWhy;
   onClose: () => void;
   onSignIn: () => void;
 }) {
@@ -42,7 +45,7 @@ export default function AuthSheet({ visible, onClose, onSignIn }: {
       >
         <View style={s.grabber} />
         <View style={s.badge}>
-          <Ionicons name="heart" size={28} color={colors.accent} />
+          <Ionicons name={why === 'like' ? 'heart' : 'bookmark'} size={28} color={colors.accent} />
         </View>
         <Text style={s.title}>
           {t('Save places you love', 'Lưu những nơi bạn thích', 'お気に入りを保存')}

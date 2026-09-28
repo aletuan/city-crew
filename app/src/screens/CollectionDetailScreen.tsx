@@ -276,7 +276,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     // button in the header; in the byline it sits beside a tally everyone
     // can see, and a heart drawn next to a number the reader cannot join
     // has to do something when pressed.
-    if (!uid) { askToSignIn(); return; }
+    if (!uid) { askToSignIn('like'); return; }
     if (!col?.id) return;
     fireHaptic('light');
     void toggleLike({ id: col.id, slug: col.slug });

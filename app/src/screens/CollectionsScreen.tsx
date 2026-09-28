@@ -484,7 +484,7 @@ export default function CollectionsScreen({ navigation, route }: {
   // optimistic count, so a like made here shows there.
   const onHeart = useCallback((c: Collection) => {
     if (!c.id) return;
-    if (!me) { askToSignIn(); return; }
+    if (!me) { askToSignIn('like'); return; }
     fireHaptic('light');
     void toggleLike({ id: c.id, slug: c.slug });
   }, [me, toggleLike, askToSignIn]);
