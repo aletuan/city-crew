@@ -11,11 +11,13 @@
 // bug this file exists to keep dead.
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
 import { cacheKey, packCache } from './data/cache';
 import type { Trip } from './data';
+import { appStateStub } from '../uitest/appState';
+import { STALE_MS } from './stale';
 
 const world = vi.hoisted(() => ({
   ready: true,
@@ -110,5 +112,44 @@ describe('one copy', () => {
     fireEvent.click(screen.getByText('detail-reload'));
     await waitFor(() => expect(screen.getByTestId('detail-count').textContent).toBe('2'));
     expect(screen.getByTestId('tab-count').textContent).toBe('2');
+  });
+});
+
+// Coming back from the background asks again — but only for a list older
+// than `STALE_MS`, and not on the way out: iOS reports `active` after every
+// notification shade, and a request per glance is not what this is for.
+describe('coming back to the foreground', () => {
+  let app: ReturnType<typeof appStateStub>;
+  beforeEach(() => { app = appStateStub(); });
+  afterEach(() => { app.restore(); });
+
+  const settle = async () => {
+    mount();
+    await waitFor(() => expect(fetchMyTrips).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByTestId('tab-count').textContent !== '0').toBeTruthy());
+    fetchMyTrips.mockClear();
+  };
+
+  it('asks again once the list has gone stale', async () => {
+    await settle();
+    app.later(STALE_MS + 1000);
+    app.emit('active');
+    await waitFor(() => expect(fetchMyTrips).toHaveBeenCalledOnce());
+  });
+
+  it('leaves a list younger than that alone', async () => {
+    await settle();
+    app.later(STALE_MS - 1000);
+    app.emit('active');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(fetchMyTrips).not.toHaveBeenCalled();
+  });
+
+  it('does nothing on the way to the background', async () => {
+    await settle();
+    app.later(STALE_MS + 1000);
+    app.emit('background');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(fetchMyTrips).not.toHaveBeenCalled();
   });
 });

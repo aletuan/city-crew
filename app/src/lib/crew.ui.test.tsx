@@ -12,12 +12,14 @@
 // no red test to say so.
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
 import { cacheKey, packCache } from './data/cache';
 import type { FriendProfile } from './data';
 import type { FriendshipRow } from './friends';
+import { appStateStub } from '../uitest/appState';
+import { STALE_MS } from './stale';
 
 const world = vi.hoisted(() => ({
   ready: true,
@@ -202,5 +204,48 @@ describe('absorb', () => {
     fireEvent.click(screen.getByText('absorb'));
     await waitFor(() => expect(screen.getByTestId('faces').textContent).toBe('f1,s9'));
     expect(fetchProfilesById).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Coming back from the background asks again — but only for a list older
+// than `STALE_MS`, and not on the way out: iOS reports `active` after every
+// notification shade, and a request per glance is not what this is for.
+describe('coming back to the foreground', () => {
+  let app: ReturnType<typeof appStateStub>;
+  beforeEach(() => { app = appStateStub(); });
+  afterEach(() => { app.restore(); });
+
+  const settle = async () => {
+    mount();
+    await waitFor(() => expect(fetchFriendships).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByTestId('edges').textContent !== '0').toBeTruthy());
+    fetchFriendships.mockClear();
+    fetchMyBlocks.mockClear();
+  };
+
+  it('asks again once the list has gone stale', async () => {
+    await settle();
+    app.later(STALE_MS + 1000);
+    app.emit('active');
+    await waitFor(() => expect(fetchFriendships).toHaveBeenCalledOnce());
+    // Both lists the provider keeps, not only the one on screen: a block
+    // made on another device must reach this one too.
+    await waitFor(() => expect(fetchMyBlocks).toHaveBeenCalled());
+  });
+
+  it('leaves a list younger than that alone', async () => {
+    await settle();
+    app.later(STALE_MS - 1000);
+    app.emit('active');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(fetchFriendships).not.toHaveBeenCalled();
+  });
+
+  it('does nothing on the way to the background', async () => {
+    await settle();
+    app.later(STALE_MS + 1000);
+    app.emit('background');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(fetchFriendships).not.toHaveBeenCalled();
   });
 });

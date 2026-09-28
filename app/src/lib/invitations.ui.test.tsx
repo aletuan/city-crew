@@ -12,9 +12,11 @@
 // reads them through the context the way a screen would.
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { InviteRow } from './invites';
+import { appStateStub } from '../uitest/appState';
+import { STALE_MS } from './stale';
 
 const world = vi.hoisted(() => ({
   ready: true,
@@ -120,5 +122,44 @@ describe('the batch', () => {
     refresh();
     await waitFor(() => expect(fetchCrewCounts).toHaveBeenCalledTimes(3));
     expect(screen.getByTestId('counts').textContent).toBe('{"trip-a":1,"trip-b":2}');
+  });
+});
+
+// Coming back from the background asks again — but only for a list older
+// than `STALE_MS`, and not on the way out: iOS reports `active` after every
+// notification shade, and a request per glance is not what this is for.
+describe('coming back to the foreground', () => {
+  let app: ReturnType<typeof appStateStub>;
+  beforeEach(() => { app = appStateStub(); });
+  afterEach(() => { app.restore(); });
+
+  const settle = async () => {
+    mount();
+    await waitFor(() => expect(fetchInvites).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByTestId('rows').textContent !== '0').toBeTruthy());
+    fetchInvites.mockClear();
+  };
+
+  it('asks again once the list has gone stale', async () => {
+    await settle();
+    app.later(STALE_MS + 1000);
+    app.emit('active');
+    await waitFor(() => expect(fetchInvites).toHaveBeenCalledOnce());
+  });
+
+  it('leaves a list younger than that alone', async () => {
+    await settle();
+    app.later(STALE_MS - 1000);
+    app.emit('active');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(fetchInvites).not.toHaveBeenCalled();
+  });
+
+  it('does nothing on the way to the background', async () => {
+    await settle();
+    app.later(STALE_MS + 1000);
+    app.emit('background');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(fetchInvites).not.toHaveBeenCalled();
   });
 });

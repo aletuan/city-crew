@@ -9,6 +9,10 @@
 // lands — that one, and not a read that failed for a reason a token
 // cannot cure. The data hooks are stood in for, because what is under
 // test is the wiring between AppState, auth and `reload`, not the reads.
+//
+// And the heart: that a tap moves it — and the tally beside it — before
+// the server has answered, that a refused write falls back to the
+// server's own answer, and that a double tap is one write, not two racing.
 
 import React from 'react';
 import { AppState } from 'react-native';
@@ -30,6 +34,13 @@ const world = vi.hoisted(() => ({
   authCb: null as null | ((event: string) => void),
   appStateCb: null as null | ((s: string) => void),
   sessionResolved: 0,
+  me: 'u1' as string | null,
+  likeCounts: null as unknown as F,
+  myLikes: null as unknown as F,
+}));
+const writes = vi.hoisted(() => ({
+  like: vi.fn(async (_id: string, _me: string) => true),
+  unlike: vi.fn(async (_id: string, _me: string) => true),
 }));
 const auth = vi.hoisted(() => ({
   getSession: vi.fn(async () => { world.sessionResolved += 1; return { data: { session: null } }; }),
@@ -39,7 +50,7 @@ const auth = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock('./auth', () => ({ useAuth: () => ({ session: { user: { id: 'u1' } } }) }));
+vi.mock('./auth', () => ({ useAuth: () => ({ session: world.me ? { user: { id: world.me } } : null }) }));
 vi.mock('./supabase', () => ({ supabase: { auth } }));
 vi.mock('./data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
@@ -47,11 +58,13 @@ vi.mock('./data', async (orig) => ({
   useCollectionsQuery: () => world.collections,
   useCuratorAvatarsQuery: () => fetch({ data: {} as unknown as unknown[] }),
   useCategoryTermsQuery: () => fetch({ data: {} as unknown as unknown[] }),
-  useLikeCountsQuery: () => fetch({ data: {} as unknown as unknown[] }),
-  useMyLikesQuery: () => fetch(),
+  useLikeCountsQuery: () => world.likeCounts,
+  useMyLikesQuery: () => world.myLikes,
+  likeCollection: writes.like,
+  unlikeCollection: writes.unlike,
 }));
 
-import { CatalogProvider } from './catalog';
+import { CatalogProvider, useLikes } from './catalog';
 
 const OLD = Date.now() - 10 * 60 * 1000;
 
@@ -61,6 +74,13 @@ beforeEach(() => {
   world.authCb = null;
   world.appStateCb = null;
   world.sessionResolved = 0;
+  world.me = 'u1';
+  // Counted a second ago, so a tap made now is newer than the tally and
+  // shows in it — the rule `countsNow` keeps.
+  world.likeCounts = fetch({ data: { 'hue-noodles': 3 } as unknown as unknown[], loadedAt: Date.now() - 1000 });
+  world.myLikes = fetch({ data: [] });
+  writes.like.mockReset().mockResolvedValue(true);
+  writes.unlike.mockReset().mockResolvedValue(true);
   auth.getSession.mockClear();
   vi.spyOn(AppState, 'addEventListener').mockImplementation((_type, fn) => {
     world.appStateCb = fn as (s: string) => void;
@@ -129,5 +149,74 @@ describe('when a new token lands', () => {
     mount();
     act(() => { world.authCb!('SIGNED_IN'); world.authCb!('USER_UPDATED'); });
     expect(world.places.reload).not.toHaveBeenCalled();
+  });
+});
+
+describe('the heart', () => {
+  const list = { id: 'c1', slug: 'hue-noodles' };
+  let seen: ReturnType<typeof useLikes>;
+  const Reader = () => { seen = useLikes(); return null; };
+  const mountReader = () => render(<CatalogProvider><Reader /></CatalogProvider>);
+
+  it('moves the heart and the tally at once, before the server answers', async () => {
+    let answer: (ok: boolean) => void = () => {};
+    writes.like.mockImplementation(() => new Promise<boolean>((r) => { answer = r; }));
+    mountReader();
+    let done: Promise<void> = Promise.resolve();
+    act(() => { done = seen.toggleLike(list); });
+    expect(writes.like).toHaveBeenCalledWith('c1', 'u1');
+    expect(seen.myLikes).toContain('c1');
+    expect(seen.likes['hue-noodles']).toBe(4);
+    // Nothing is asked again until the write has landed.
+    expect(world.likeCounts.reload).not.toHaveBeenCalled();
+    await act(async () => { answer(true); await done; });
+    // Both at once: a count refetched without your own set is a filled
+    // heart beside a number that has not moved.
+    expect(world.likeCounts.reload).toHaveBeenCalledOnce();
+    expect(world.myLikes.reload).toHaveBeenCalledOnce();
+  });
+
+  it('takes back a like that is already there', async () => {
+    world.myLikes = fetch({ data: ['c1'] });
+    mountReader();
+    await act(async () => { await seen.toggleLike(list); });
+    expect(writes.unlike).toHaveBeenCalledWith('c1', 'u1');
+    expect(writes.like).not.toHaveBeenCalled();
+    expect(seen.myLikes).not.toContain('c1');
+    expect(seen.likes['hue-noodles']).toBe(2);
+  });
+
+  it('falls back to the server’s answer when the write is refused', async () => {
+    writes.like.mockResolvedValue(false);
+    mountReader();
+    await act(async () => { await seen.toggleLike(list); });
+    // The server still says not liked, and with the tap dropped that is
+    // what shows — rather than a heart the database does not hold.
+    expect(seen.myLikes).not.toContain('c1');
+    expect(seen.likes['hue-noodles']).toBe(3);
+    expect(world.myLikes.reload).toHaveBeenCalledOnce();
+  });
+
+  it('sends one write for a double tap', async () => {
+    let answer: (ok: boolean) => void = () => {};
+    writes.like.mockImplementation(() => new Promise<boolean>((r) => { answer = r; }));
+    mountReader();
+    let first: Promise<void> = Promise.resolve();
+    act(() => { first = seen.toggleLike(list); });
+    await act(async () => { await seen.toggleLike(list); });
+    expect(writes.like).toHaveBeenCalledOnce();
+    expect(writes.unlike).not.toHaveBeenCalled();
+    await act(async () => { answer(true); await first; });
+    // And the id is free again once the write has landed.
+    await act(async () => { await seen.toggleLike(list); });
+    expect(writes.unlike).toHaveBeenCalledOnce();
+  });
+
+  it('does nothing for a guest, who has no likes of their own', async () => {
+    world.me = null;
+    mountReader();
+    await act(async () => { await seen.toggleLike(list); });
+    expect(writes.like).not.toHaveBeenCalled();
+    expect(seen.myLikes).toEqual([]);
   });
 });
