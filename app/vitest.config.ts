@@ -120,9 +120,16 @@ import { defineConfig } from 'vitest/config';
 // while — three handlers no test could reach in jsdom (the gallery's
 // layout and its swipe, the header's back) — until its test stood the
 // pager in and gave react-native-web a ResizeObserver to measure with.
-// It stands at 100 now; `ExploreScreen` is the one to raise next, in
-// two columns of the three.
-const SCREENS_FLOOR = { lines: 96, statements: 96, branches: 90, functions: 81 };
+// It stands at 100 now.
+//
+// `ExploreScreen` rose after that — 99.89% lines, 92.85% functions — and
+// the floor did not rise with it, which left three points of room for a
+// screen to lose tests in with CI still green. Caught on 28 September and
+// raised to the truth: every column is `IdeasScreen`'s now, at 98.24%
+// lines and statements, 90.41% branches and 84.21% functions. Its date
+// picker's ways out — the scrim, Done, Android's back — are what no test
+// reaches, and they are the next thing to test in this directory.
+const SCREENS_FLOOR = { lines: 98, statements: 98, branches: 90, functions: 84 };
 
 // ── the components' floor ──
 //
@@ -142,9 +149,12 @@ const SCREENS_FLOOR = { lines: 96, statements: 96, branches: 90, functions: 81 }
 // by name and for a reason that is not "it has no test".
 //
 // So the directory carries the same per-file floor the screens do, at
-// today's truth rounded down, and each number is one file's:
-// `AddBatchBar` at 94.39% lines and statements and 92.59% branches,
-// `ExploreFilterSheet` at 90.9% functions.
+// today's truth rounded down, and each number is one file's. It was
+// `AddBatchBar` at 94.39% lines and statements and 92.59% branches; that
+// file rose to 98.87 / 96.15 and the floor stayed, until 28 September.
+// Now: `WelcomeSheet` at 95.76% lines and statements, `SaveSheet` and
+// `SketchDeck` at 93.75% branches, `ExploreFilterSheet` at 90.9%
+// functions.
 //
 // The branches column started at 60, which was `InviteCard`'s — every
 // fallback on that card (a day it could not read, a stop with no place,
@@ -152,9 +162,9 @@ const SCREENS_FLOOR = { lines: 96, statements: 96, branches: 90, functions: 81 }
 // `PricePill` next at 71.42 for a `compact` form nothing calls and a
 // price nobody knows, and `InviteSheet` at 84.48 for the seat rule a
 // couple's evening imposes and the rows the crew copy had not loaded.
-// All three stand at 100 now; `SaveSheet` (93.75) and `LegalSheet`
-// (94.44) are the next in that column, and `AddBatchBar` holds two.
-const COMPONENTS_FLOOR = { lines: 94, statements: 94, branches: 92, functions: 90 };
+// All three stand at 100 now; `SaveSheet` and `SketchDeck` (93.75) hold
+// that column, with `LegalSheet` (94.44) next.
+const COMPONENTS_FLOOR = { lines: 95, statements: 95, branches: 93, functions: 90 };
 
 // The one component the gate does not hold, for the same reason `IMPURE`
 // exists: it cannot run where the tests run. `MiniMap` IS the native map

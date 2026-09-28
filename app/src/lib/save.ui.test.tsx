@@ -13,9 +13,11 @@
 // rendered test rather than a test of a function.
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Alert } from 'react-native';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Collection, Place } from './data';
+import { DAILY_CAPS, DAILY_LIMIT } from './quota';
 
 const world = vi.hoisted(() => ({
   session: null as { user: { id: string } } | null,
@@ -223,5 +225,98 @@ describe('what gets remembered', () => {
     fireEvent.click(await screen.findByText('coffee'));
     await waitFor(() => expect(addPlaceToCollection).toHaveBeenCalled());
     expect(logPlaceEvent).not.toHaveBeenCalled();
+  });
+});
+
+// A refused save is said, not swallowed — and the one refusal a reader can
+// act on, the daily cap, is said in words of the app's own rather than the
+// policy's.
+describe('when the write is refused', () => {
+  let alert: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    world.mine = { ...world.mine, data: [list('coffee')] };
+    alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
+  });
+  afterEach(() => { alert.mockRestore(); });
+
+  it('names the daily cap, with its number, and comes back tomorrow', async () => {
+    addPlaceToCollection.mockImplementationOnce(async () => { throw new Error(DAILY_LIMIT); });
+    mount();
+    tap();
+    fireEvent.click(await screen.findByText('coffee'));
+    await waitFor(() => expect(alert).toHaveBeenCalledOnce());
+    expect(alert).toHaveBeenCalledWith(
+      'That is enough for today',
+      `You can save ${DAILY_CAPS.placesIntoLists} places a day. Come back tomorrow.`,
+    );
+    // Nothing happened, so nothing is asked again and nothing is noted.
+    expect(reload).not.toHaveBeenCalled();
+    expect(logPlaceEvent).not.toHaveBeenCalled();
+  });
+
+  it('says what went wrong for any other refusal', async () => {
+    addPlaceToCollection.mockImplementationOnce(async () => { throw new Error('Network request failed'); });
+    mount();
+    tap();
+    fireEvent.click(await screen.findByText('coffee'));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not save', 'Network request failed'));
+  });
+
+  it('says it even when what was thrown is not an Error', async () => {
+    addPlaceToCollection.mockImplementationOnce(async () => { throw 'offline'; });
+    mount();
+    tap();
+    fireEvent.click(await screen.findByText('coffee'));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not save', 'offline'));
+  });
+});
+
+// The two sheets this provider draws, and their ways out.
+describe('the sheets’ ways out', () => {
+  // react-native-web's Modal keeps a closed sheet in the tree until its
+  // fade-out ends, and jsdom never ends an animation — so the test ends
+  // it, the way the browser would, before asking whether the sheet left.
+  const fadeOut = () => {
+    for (const el of document.querySelectorAll('[class*="r-animationKeyframes"]')) fireEvent.animationEnd(el);
+  };
+  it('closes the sign-in sheet without going anywhere', async () => {
+    world.session = null;
+    mount();
+    tap();
+    fireEvent.click(screen.getAllByLabelText('Close')[0]);
+    fadeOut();
+    await waitFor(() => expect(screen.queryByText('Save places you love')).toBeNull());
+    expect(goTo).not.toHaveBeenCalled();
+  });
+
+  it('takes a guest to Sign in, over the Profile stack rather than instead of it', async () => {
+    world.session = null;
+    mount();
+    tap();
+    fireEvent.click(screen.getByText('Sign in'));
+    expect(goTo).toHaveBeenCalledWith('Profile', { screen: 'SignIn', initial: false });
+    fadeOut();
+    await waitFor(() => expect(screen.queryByText('Save places you love')).toBeNull());
+  });
+
+  it('closes the lists sheet on Done', async () => {
+    world.mine = { ...world.mine, data: [list('coffee')] };
+    mount();
+    tap();
+    fireEvent.click(await screen.findByTestId('save-done'));
+    fadeOut();
+    await waitFor(() => expect(screen.queryByText('coffee')).toBeNull());
+  });
+
+  it('starts a new list with the place in hand', async () => {
+    world.mine = { ...world.mine, data: [list('coffee')] };
+    mount();
+    tap();
+    fireEvent.click(await screen.findByText('New collection'));
+    expect(goTo).toHaveBeenCalledWith('Collections', {
+      screen: 'CollectionForm', initial: false, params: { addPlaceSlug: 'cong-caphe' },
+    });
+    fadeOut();
+    await waitFor(() => expect(screen.queryByText('coffee')).toBeNull());
   });
 });

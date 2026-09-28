@@ -56,13 +56,17 @@ speculative ones, and a red PR costs a cycle of the reviewer's trust.
 | scope | floor |
 |---|---|
 | `src/lib/**/*.ts` | **100** on statements, branches, functions and lines |
-| `src/screens/*.tsx` | 96 lines / 96 statements / 90 branches / 81 functions |
-| `src/components/*.tsx` | 94 lines / 94 statements / 92 branches / 90 functions |
+| `src/screens/*.tsx` | 98 lines / 98 statements / 90 branches / 84 functions |
+| `src/components/*.tsx` | 95 lines / 95 statements / 93 branches / 90 functions |
 
 The screens and components floors are a ratchet: when a file's coverage
 goes up, raise the floor by hand in the same change. They are the figures
 the weakest file stood at, so removing a covered line can drop a file
 under the floor without any behaviour changing — that has happened.
+
+**`src/lib/*.tsx` has no floor at all.** The providers are React contexts,
+outside the `*.ts` gate, and nothing turns red when one ships untested. Their
+own `*.ui.test.tsx` files are the only thing holding them — write one.
 
 The other jobs: `bundle` (`npx expo export`), `dashboard`, `data`, and
 `migrations`, which runs `supabase/tests/run.sh` against a throwaway
