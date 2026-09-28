@@ -721,6 +721,9 @@ describe('sort and filter', () => {
     fireEvent.click(screen.getByTestId('explore-filter'));
     fireEvent.click(screen.getByText('Bookmarked only'));
     await waitFor(() => expect(spies.askToSignIn).toHaveBeenCalledOnce());
+    // Not the frame's timestamp, which is what a bare
+    // `requestAnimationFrame(askToSignIn)` would have handed it.
+    expect(spies.askToSignIn).toHaveBeenCalledWith();
   });
 
   // Distance is the one control that can fail, and it fails in two
@@ -1362,6 +1365,7 @@ describe('the community shelf', () => {
     render(<ExploreScreen navigation={navigation} />);
     fireEvent.click(screen.getByRole('button', { name: 'Like this collection' }));
     expect(spies.askToSignIn).toHaveBeenCalledOnce();
+    expect(spies.askToSignIn).toHaveBeenCalledWith('like');
     expect(spies.toggleLike).not.toHaveBeenCalled();
     expect(navigation.navigate).not.toHaveBeenCalled();
   });

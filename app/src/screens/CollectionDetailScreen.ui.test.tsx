@@ -780,7 +780,7 @@ describe('signed out', () => {
   it('the heart opens the sign-in sheet instead of liking', () => {
     show();
     fireEvent.click(button('Like'));
-    expect(spies.askToSignIn).toHaveBeenCalled();
+    expect(spies.askToSignIn).toHaveBeenCalledWith('like');
     expect(spies.toggleLike).not.toHaveBeenCalled();
   });
 
@@ -788,7 +788,8 @@ describe('signed out', () => {
     const { raw } = show();
     openMenu();
     fireEvent.click(menuRow('Save a copy'));
-    expect(spies.askToSignIn).toHaveBeenCalled();
+    // Saving somebody's list is a save, so the bookmark sheet.
+    expect(spies.askToSignIn).toHaveBeenCalledWith();
     expect(raw.navigate).not.toHaveBeenCalled();
   });
 

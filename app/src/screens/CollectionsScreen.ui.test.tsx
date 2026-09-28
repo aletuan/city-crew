@@ -292,6 +292,8 @@ describe('CollectionsScreen — as a guest', () => {
     show();
     fireEvent.click(screen.getByRole('button', { name: 'Like this collection' }));
     expect(spies.askToSignIn).toHaveBeenCalledTimes(1);
+    // A heart raises the heart sheet, not the bookmark one.
+    expect(spies.askToSignIn).toHaveBeenCalledWith('like');
     expect(spies.toggleLike).not.toHaveBeenCalled();
   });
 

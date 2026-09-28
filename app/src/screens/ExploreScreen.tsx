@@ -478,7 +478,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
   // there until a refetch happened to land.
   const onHeart = useCallback((c: Collection) => {
     if (!c.id) return;
-    if (!uid) { askToSignIn(); return; }
+    if (!uid) { askToSignIn('like'); return; }
     fireHaptic('light');
     void toggleLike({ id: c.id, slug: c.slug });
   }, [uid, toggleLike, askToSignIn]);
@@ -1517,7 +1517,9 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
           onApply={applyFilters}
           onNeedSignIn={() => {
             setFilterOpen(false);
-            requestAnimationFrame(askToSignIn);
+            // Wrapped: handed over bare, the frame's timestamp would
+            // arrive as `askToSignIn`'s reason.
+            requestAnimationFrame(() => askToSignIn());
           }}
         />
       </View>

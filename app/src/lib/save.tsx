@@ -24,6 +24,15 @@ import { useI18n } from './i18n';
 import { DAILY_CAPS, isDailyLimit } from './quota';
 import { goTo } from '../nav';
 
+/**
+ * What the reader reached for when they were asked to sign in: a bookmark
+ * (a place, the map's saved-only disc, a list to copy) or a heart (a
+ * collection). The sheet wears the same glyph, so the thing that opened it
+ * and the thing it shows are one object — a bookmark tapped used to raise
+ * a heart, which read as the app answering some other question.
+ */
+export type SignInWhy = 'save' | 'like';
+
 type Save = {
   /** Open whatever this person needs next in order to save this place. */
   save: (place: Place) => void;
@@ -35,8 +44,10 @@ type Save = {
    * `save` — no place to put anywhere, no list to choose. Without this a
    * signed-out reader taps a heart and nothing happens, which is the
    * "control that does nothing" this app keeps deciding against.
+   *
+   * `why` picks the sheet's glyph; a heart passes `'like'`.
    */
-  askToSignIn: () => void;
+  askToSignIn: (why?: SignInWhy) => void;
   /** Is the place in any of their lists? Drives the bookmark's fill. */
   isSaved: (placeSlug: string) => boolean;
   /**
@@ -78,6 +89,9 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   const historyOn = prefs.loaded && prefs.data.history_on;
   const [target, setTarget] = useState<Place | null>(null);
   const [authSheet, setAuthSheet] = useState(false);
+  // Kept apart from `authSheet` so the glyph does not change while the
+  // sheet fades out: closing clears the one and leaves the other.
+  const [signInWhy, setSignInWhy] = useState<SignInWhy>('save');
 
   const savedSlugs = useMemo(() => {
     const set = new Set<string>();
@@ -88,7 +102,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   }, [mine.data]);
 
   const save = useCallback((place: Place) => {
-    if (!session) { setAuthSheet(true); return; }
+    if (!session) { setSignInWhy('save'); setAuthSheet(true); return; }
     // Nowhere to put it yet — *known*, not merely not-yet-known. Rather
     // than open a sheet with one row in it that says "make a list first",
     // go straight to making the list and carry the place along — the
@@ -154,7 +168,10 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mine.reload, t, session, city?.id, historyOn]);
 
-  const askToSignIn = useCallback(() => setAuthSheet(true), []);
+  const askToSignIn = useCallback((why: SignInWhy = 'save') => {
+    setSignInWhy(why);
+    setAuthSheet(true);
+  }, []);
 
   const value = useMemo<Save>(() => ({
     save,
@@ -170,6 +187,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       {children}
       <AuthSheet
         visible={authSheet}
+        why={signInWhy}
         onClose={() => setAuthSheet(false)}
         onSignIn={() => { setAuthSheet(false); goTo('Profile', { screen: 'SignIn', initial: false }); }}
       />
