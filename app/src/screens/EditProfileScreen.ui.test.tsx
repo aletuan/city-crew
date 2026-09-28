@@ -172,7 +172,7 @@ describe('the form as it opens', () => {
     const { navigation } = renderScreen();
     expect(spies.prefsFor).toHaveBeenCalledWith(null);
     expect(screen.queryByText('Interests')).toBeNull();
-    expect(screen.queryByText('Remember what I open')).toBeNull();
+    expect(screen.queryByText('Personalise my experience')).toBeNull();
     expect(screen.queryByRole('button', { name: /Delete my history/ })).toBeNull();
     touch();
     save();
@@ -347,7 +347,7 @@ describe('the recording switch', () => {
   // so a top-aligned switch drifts here as well.
   it('sits centred beside the words it belongs to', () => {
     renderScreen();
-    const sw = screen.getByRole('switch', { name: 'Remember what I open' });
+    const sw = screen.getByRole('switch', { name: 'Personalise my experience' });
     expect(getComputedStyle(sw.parentElement!).alignSelf).toBe('center');
   });
 });
@@ -388,7 +388,7 @@ describe('interests and recording', () => {
     fireEvent.click(screen.getByText('Cafés'));
     fireEvent.click(screen.getByText('Eats'));
     fireEvent.click(screen.getByText('Views'));
-    fireEvent.click(screen.getByRole('switch', { name: 'Remember what I open' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Personalise my experience' }));
     save();
     await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
     expect(spies.savePreferences).toHaveBeenCalledWith('me', {
@@ -454,7 +454,7 @@ describe('before the preferences row lands', () => {
       data: { categories: ['cafes'], budget_vnd: null, history_on: true }, loadedAt: 1, fromCache: true,
     };
     const { navigation } = renderScreen();
-    const sw = screen.getByRole('switch', { name: 'Remember what I open' }) as HTMLInputElement;
+    const sw = screen.getByRole('switch', { name: 'Personalise my experience' }) as HTMLInputElement;
     expect(sw.checked).toBe(false);
     touch();
     save();
@@ -522,7 +522,7 @@ describe('leaving', () => {
     ['the hometown', () => type(townField(), 'Hue')],
     ['the bio', () => type(bioField(), 'Tea now')],
     ['an interest', () => fireEvent.click(screen.getByText('Cafés'))],
-    ['the switch', () => fireEvent.click(screen.getByRole('switch', { name: 'Remember what I open' }))],
+    ['the switch', () => fireEvent.click(screen.getByRole('switch', { name: 'Personalise my experience' }))],
   ])('holds the screen after a change to %s and asks first', (_what, change) => {
     const { navigation } = renderScreen();
     change();
