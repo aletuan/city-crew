@@ -54,6 +54,7 @@ const spies = vi.hoisted(() => ({
   settle: vi.fn(),
   reportStartup: vi.fn(),
   setStatusBarStyle: vi.fn(),
+  useScrollToTop: vi.fn(),
   show: vi.fn(),
   getForegroundPermissionsAsync: vi.fn(async () => ({ status: state.locationGranted ? 'granted' : 'denied' })),
   requestForegroundPermissionsAsync: vi.fn(async () => ({ status: state.locationGranted ? 'granted' : 'denied' })),
@@ -110,6 +111,7 @@ vi.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ isFocused: () => true, addListener: () => () => {} }),
   useIsFocused: () => true,
   useFocusEffect: () => {},
+  useScrollToTop: spies.useScrollToTop,
   createNavigationContainerRef: () => ({ isReady: () => false, navigate: () => {} }),
 }));
 vi.mock('expo-status-bar', () => ({ StatusBar: () => null, setStatusBarStyle: spies.setStatusBarStyle }));
@@ -188,16 +190,27 @@ type NavSpy = Nav & {
   navigate: ReturnType<typeof vi.fn>;
   parentNavigate: ReturnType<typeof vi.fn>;
   focus: () => void;
+  /** Explore's own tab pressed while it is already the selected one. */
+  retap: (opts?: { prevented?: boolean }) => void;
+  /** Whether this screen is the one on top — false under a place's page. */
+  focused: boolean;
 };
 const nav = (): NavSpy => {
   const parentNavigate = vi.fn();
   let onFocus = () => {};
+  let onTabPress: (e: { defaultPrevented: boolean }) => void = () => {};
   const n = {
     navigate: vi.fn(), goBack: vi.fn(), replace: vi.fn(), popToTop: vi.fn(),
-    getParent: () => ({ navigate: parentNavigate }),
+    getParent: () => ({
+      navigate: parentNavigate,
+      addListener: (ev: string, cb: typeof onTabPress) => { if (ev === 'tabPress') onTabPress = cb; return () => {}; },
+    }),
     addListener: vi.fn((ev: string, cb: () => void) => { if (ev === 'focus') onFocus = cb; return () => {}; }),
+    isFocused: () => n.focused,
+    focused: true,
     parentNavigate,
     focus: () => onFocus(),
+    retap: ({ prevented = false } = {}) => onTabPress({ defaultPrevented: prevented }),
   };
   return n as unknown as NavSpy;
 };
@@ -1131,6 +1144,122 @@ describe('the map’s quick filters', () => {
     fireEvent.click(screen.getByTestId('explore-filter-pinned'));
     const row = screen.getByRole('checkbox', { name: 'Bookmarked only' });
     expect(row.querySelector('[data-icon="bookmark"]')).toBeTruthy();
+  });
+});
+
+// The discs' switch is a colour change on a busy map, which the owner could
+// not read from a screenshot; the toast says what the press did, and how
+// many places it left.
+describe('the map’s quick filters, said aloud', () => {
+  beforeEach(async () => { await AsyncStorage.setItem('citycrew.explore.view', 'map'); });
+  const toast = () => screen.getByTestId('explore-map-toast').textContent;
+
+  it('names each opening-hours answer with the count it leaves', async () => {
+    state.places.data = [
+      place('open', { lat: 21, lng: 105, opening_hours: week('Open 24 hours') }),
+      place('closed', { lat: 21.1, lng: 105.1, opening_hours: week('Closed') }),
+      place('also-closed', { lat: 21.2, lng: 105.2, opening_hours: week('Closed') }),
+    ];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    expect(screen.queryByTestId('explore-map-toast')).toBeNull();
+    const status = () => screen.getByRole('button', { name: /opening hours/i });
+    await act(async () => { fireEvent.click(status()); });
+    expect(toast()).toBe('Open now · 1 place');
+    await act(async () => { fireEvent.click(status()); });
+    expect(toast()).toBe('Closed now · 2 places');
+    // Off is said as what the map now shows, not as "Any time", which
+    // reads like a filter that is still on.
+    await act(async () => { fireEvent.click(status()); });
+    expect(toast()).toBe('All opening hours · 3 places');
+  });
+
+  it('says so when a filter leaves nothing on the map', async () => {
+    state.places.data = [place('shut', { lat: 21, lng: 105, opening_hours: week('Closed') })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
+    expect(toast()).toBe('Open now · nothing here');
+  });
+
+  it('names Bookmarked only on, and all places off, for a signed-in reader', async () => {
+    state.uid = 'u1';
+    state.places.data = [place('a', { lat: 21, lng: 105 }), place('b', { lat: 21.1, lng: 105.1 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    const saved = screen.getByRole('button', { name: /bookmarked only/i });
+    await act(async () => { fireEvent.click(saved); });
+    expect(toast()).toMatch(/^Bookmarked only · /);
+    await act(async () => { fireEvent.click(saved); });
+    expect(toast()).toBe('All places · 2 places');
+  });
+
+  it('says nothing to a guest, who is asked to sign in instead', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    render(<ExploreScreen navigation={nav()} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /bookmarked only/i })); });
+    expect(spies.askToSignIn).toHaveBeenCalledOnce();
+    expect(screen.queryByTestId('explore-map-toast')).toBeNull();
+  });
+});
+
+// Explore's tab pressed while it is already the selected one. The stack's
+// pop and the scroll to the top are React Navigation's; closing the map is
+// this screen's, and it must happen only when this screen is the one on top.
+describe('its tab, pressed again', () => {
+  beforeEach(async () => { await AsyncStorage.setItem('citycrew.explore.view', 'map'); });
+
+  it('closes the map, and remembers the list', async () => {
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    const navigation = nav();
+    render(<ExploreScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { navigation.retap(); });
+    expect(screen.getByTestId('explore-list')).toBeTruthy();
+    expect(screen.queryByTestId('places-map')).toBeNull();
+    expect(await AsyncStorage.getItem('citycrew.explore.view')).toBe('list');
+  });
+
+  it('leaves the map up when a place’s page is on top — that press only pops', async () => {
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    const navigation = nav();
+    render(<ExploreScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    navigation.focused = false;
+    await act(async () => { navigation.retap(); });
+    expect(screen.getByTestId('places-map')).toBeTruthy();
+  });
+
+  it('leaves the map up when something else took the press', async () => {
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    const navigation = nav();
+    render(<ExploreScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { navigation.retap({ prevented: true }); });
+    expect(screen.getByTestId('places-map')).toBeTruthy();
+  });
+
+  it('does nothing to the list, which the scroll to the top is for', async () => {
+    await AsyncStorage.setItem('citycrew.explore.view', 'list');
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    const navigation = nav();
+    render(<ExploreScreen navigation={navigation} />);
+    await act(async () => {});
+    await act(async () => { navigation.retap(); });
+    expect(screen.getByTestId('explore-list')).toBeTruthy();
+    expect(screen.queryByTestId('places-map')).toBeNull();
+  });
+
+  it('hands the scroll to the top the list itself', async () => {
+    await AsyncStorage.setItem('citycrew.explore.view', 'list');
+    state.places.data = [place('p1')];
+    render(<ExploreScreen navigation={nav()} />);
+    await act(async () => {});
+    const ref = spies.useScrollToTop.mock.calls.at(-1)?.[0] as { current: unknown };
+    // A SectionList, which is what `useScrollToTop` knows how to scroll —
+    // not null, which is what a ref left off the list would be.
+    expect(ref.current).toHaveProperty('scrollToLocation');
   });
 });
 

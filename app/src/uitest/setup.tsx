@@ -231,7 +231,7 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
 
 // React Navigation ships source this toolchain cannot parse, and a smoke
 // test has no navigator anyway: every screen takes `navigation` as a prop,
-// which is what a test hands it and asserts on. The two hooks below are the
+// which is what a test hands it and asserts on. The hooks below are the
 // only parts a component reaches for without going through that prop.
 vi.mock('@react-navigation/native', () => ({
   // Runs its effect once on mount. The real one re-runs it on every focus,
@@ -243,6 +243,11 @@ vi.mock('@react-navigation/native', () => ({
   }),
   useIsFocused: () => true,
   useRoute: () => ({ params: {} }),
+  // A spy, so a tab's root screen can be asked what it handed over: the
+  // real hook only listens for a press on the tab, which a test without a
+  // navigator has no way to make, and all that is left to get wrong on
+  // this side is the ref — whether it is the thing that scrolls.
+  useScrollToTop: vi.fn(),
   NavigationContainer: passthrough('NavigationContainer'),
   createNavigationContainerRef: () => ({ isReady: () => false, navigate: vi.fn() }),
   DefaultTheme: { colors: {} },

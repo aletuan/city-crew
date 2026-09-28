@@ -10,8 +10,10 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View,
+  Animated, Linking, Platform, Pressable, ScrollView, SectionList, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
+import { useScrollToTop, type ParamListBase } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
@@ -40,6 +42,7 @@ import { filterExplorePlaces, type ExploreFilters, type ExploreOrigin } from '..
 import { countsByCity } from '../lib/cityCounts';
 import { cycleStatus, parseView, VIEW_KEY, type ExploreView } from '../lib/exploreView';
 import { canDrawMap } from '../components/MiniMap';
+import { Toast, type ToastNote } from '../components/Toast';
 import PlacesMap from '../components/PlacesMap';
 import MapPlaceCard from '../components/MapPlaceCard';
 import { distanceKm } from '../lib/geo';
@@ -764,10 +767,10 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     // land after a tap and undo it.
     AsyncStorage.getItem(VIEW_KEY).then((v) => { if (v != null) setView(parseView(v)); }).catch(() => {});
   }, []);
-  const pickView = (v: ExploreView) => {
+  const pickView = useCallback((v: ExploreView) => {
     setView(v);
     AsyncStorage.setItem(VIEW_KEY, v).catch(() => {});
-  };
+  }, []);
   // Where the binary cannot draw a map there is no map mode, and no
   // switch to reach it by. `view` may still say 'map' from a device that
   // could; the list is what shows.
@@ -820,6 +823,30 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
     mapModeRef.current = mapMode;
     applyBar();
   }, [mapMode, applyBar]);
+
+  /**
+   * Explore's tab, pressed again, walks back one step at a time — the
+   * convention every tab bar on the phone keeps, from the App Store to
+   * Instagram: the first press leaves whatever was opened on top of this
+   * screen, the next closes the map, the one after scrolls to the cover.
+   *
+   * The first step is the stack's own (a native stack pops to its root
+   * when its tab is pressed while focused) and the last is
+   * `useScrollToTop` below. This is the middle one. `isFocused` is what
+   * keeps them in order: under a place's page this screen is not
+   * focused, so the press that pops back to it does not also close the
+   * map it pops back to.
+   *
+   * The map is left the way its own "Close Map" leaves it, remembered
+   * and all — a press on the tab is the reader asking for the list, not
+   * for a list this once.
+   */
+  useEffect(() => navigation.getParent<BottomTabNavigationProp<ParamListBase>>()?.addListener('tabPress', (e) => {
+    if (e.defaultPrevented || !navigation.isFocused() || !mapModeRef.current) return;
+    pickView('list');
+  }), [navigation, pickView]);
+  const listRef = useRef<SectionList<Place>>(null);
+  useScrollToTop(listRef);
 
   // Only categories this city actually has, so a chip never leads to an
   // empty list. Order comes from the taxonomy, not from the data.
@@ -963,6 +990,48 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   const filterCount = (appliedFilters.sort === 'recommended' ? 0 : 1)
     + (appliedFilters.status === 'any' ? 0 : 1)
     + (appliedFilters.savedOnly ? 1 : 0);
+
+  /**
+   * What a quick filter on the map just did, said for two seconds.
+   *
+   * The discs change only their glyph's colour when they switch, and on
+   * a busy map that is not enough to tell on from off — the owner could
+   * not, from two screenshots side by side. The toast answers the
+   * question at the moment it is asked, and the count in it answers the
+   * next one ("did that do anything?"), which the pins can only answer
+   * by being counted. See `Toast` for why it is a report and not a state.
+   *
+   * The count is `filteredFor(next)`, the same figure the sheet shows on
+   * its button, so the two cannot disagree about one filter.
+   */
+  const [note, setNote] = useState<ToastNote | null>(null);
+  const say = (next: ExploreFilters, what: string) => {
+    const n = filteredFor(next).length;
+    const count = n === 0
+      ? t('nothing here', 'không có địa điểm nào', '該当なし')
+      : n === 1
+        ? t('1 place', '1 địa điểm', '1件')
+        : t(`${n} places`, `${n} địa điểm`, `${n}件`);
+    setNote((prev) => ({ id: (prev?.id ?? 0) + 1, text: `${what} · ${count}` }));
+  };
+  const pickStatus = () => {
+    const next = { ...appliedFilters, status: cycleStatus(appliedFilters.status) };
+    setAppliedFilters(next);
+    // Back to "any" is said as what the map now shows — every place —
+    // rather than as the name of the answer, "Any time", which reads as
+    // a filter still on.
+    say(next, next.status === 'any'
+      ? t('All opening hours', 'Mọi giờ mở cửa', 'すべての営業時間')
+      : statusLabel(next.status, t));
+  };
+  const pickSaved = () => {
+    if (!session) { askToSignIn(); return; }
+    const next = { ...appliedFilters, savedOnly: !appliedFilters.savedOnly };
+    setAppliedFilters(next);
+    say(next, next.savedOnly
+      ? t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')
+      : t('All places', 'Tất cả địa điểm', 'すべてのスポット'));
+  };
 
   const hero = useMemo(() => heroPlace(places, city?.hero_place_slug), [places, city?.hero_place_slug]);
 
@@ -1284,6 +1353,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         )}
         {!holding && !failedEmpty && !mapMode && (
           <Animated.SectionList
+            ref={listRef}
             // One section, whose only job is to give the filter row
             // something to be the header of.
             sections={[{ data: shown }]}
@@ -1362,9 +1432,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                   three sorts is a slot machine. */}
               <View style={s.mapQuick}>
                 <PressableScale
-                  onPress={() => {
-                    setAppliedFilters((f) => ({ ...f, status: cycleStatus(f.status) }));
-                  }}
+                  onPress={pickStatus}
                   haptic="selection"
                   accessibilityRole="button"
                   accessibilityLabel={`${t('Opening hours', 'Giờ mở cửa', '営業時間')}: ${statusLabel(appliedFilters.status, t)}`}
@@ -1379,10 +1447,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                   />
                 </PressableScale>
                 <PressableScale
-                  onPress={() => {
-                    if (!session) { askToSignIn(); return; }
-                    setAppliedFilters((f) => ({ ...f, savedOnly: !f.savedOnly }));
-                  }}
+                  onPress={pickSaved}
                   haptic="selection"
                   accessibilityRole="button"
                   accessibilityLabel={t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')}
@@ -1396,6 +1461,13 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                     color={appliedFilters.savedOnly ? colors.accent : colors.textSecondary}
                   />
                 </PressableScale>
+                {/* Beside the two discs rather than centred or at the
+                    foot: the reader's eyes are on the disc they just
+                    pressed, and the foot of the map is spoken for — the
+                    selected place's strip and the tab bar both live
+                    there. Read as the disc's caption, which is what it
+                    is for two seconds. */}
+                <Toast note={note} testID="explore-map-toast" />
               </View>
               <PlacesMap
                 places={shown}
@@ -1692,8 +1764,10 @@ const s = StyleSheet.create({
   // reader has already learned what that disc means.
   // `pointerEvents` as a style, not a prop: the prop form is deprecated in
   // this React Native, and a style travels with the element it is on.
+  // Both edges, so the toast in it has a width to shrink inside; the
+  // row between and around its children stays the map's to pan.
   mapQuick: {
-    position: 'absolute', left: space.page, top: 12, zIndex: 5,
-    flexDirection: 'row', gap: 10, pointerEvents: 'box-none',
+    position: 'absolute', left: space.page, right: space.page, top: 12, zIndex: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 10, pointerEvents: 'box-none',
   },
 });

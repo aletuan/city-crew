@@ -19,6 +19,7 @@ import React from 'react';
 import { Alert } from 'react-native';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { useScrollToTop } from '@react-navigation/native';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
 
@@ -741,5 +742,16 @@ describe('CollectionsScreen — search', () => {
     fireEvent.change(screen.getByPlaceholderText('Name, place, or @username'), { target: { value: 'zzz' } });
     expect(screen.getByText('Nothing here matches "zzz".')).toBeTruthy();
     expect(screen.queryByText('New collection')).toBeNull();
+  });
+});
+
+// Its tab pressed again at this root scrolls back to the top. The press
+// is React Navigation's to hear; what is this screen's is the ref, and a
+// ref left off the list would hand over null and scroll nothing.
+describe('its tab, pressed again', () => {
+  it('hands the scroll to the top the screen’s own list', async () => {
+    show();
+    const ref = vi.mocked(useScrollToTop).mock.calls.at(-1)?.[0] as { current: unknown };
+    expect(ref.current).toHaveProperty('scrollToLocation');
   });
 });
