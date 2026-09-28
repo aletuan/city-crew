@@ -125,11 +125,15 @@ import { defineConfig } from 'vitest/config';
 // `ExploreScreen` rose after that — 99.89% lines, 92.85% functions — and
 // the floor did not rise with it, which left three points of room for a
 // screen to lose tests in with CI still green. Caught on 28 September and
-// raised to the truth: every column is `IdeasScreen`'s now, at 98.24%
-// lines and statements, 90.41% branches and 84.21% functions. Its date
-// picker's ways out — the scrim, Done, Android's back — are what no test
-// reaches, and they are the next thing to test in this directory.
-const SCREENS_FLOOR = { lines: 98, statements: 98, branches: 90, functions: 84 };
+// raised to the truth: every column was `IdeasScreen`'s, at 98.24% lines
+// and statements, 90.41% branches and 84.21% functions — its date
+// picker's ways out (the scrim, Done, Android's back) had no test. They
+// do now, and it stands at 100 in three columns and 93.58 in branches.
+//
+// Which hands each column to a different screen: `SearchScreen` at
+// 99.29% lines and statements, `CrewScreen` at 91.89% branches,
+// `GalleryScreen` at 91.3% functions.
+const SCREENS_FLOOR = { lines: 99, statements: 99, branches: 91, functions: 91 };
 
 // ── the components' floor ──
 //

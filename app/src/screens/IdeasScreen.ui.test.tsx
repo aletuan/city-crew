@@ -22,6 +22,7 @@
 // start sheet, which are reached through the props the screen hands them.
 
 import React from 'react';
+import { Platform } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
@@ -297,6 +298,10 @@ describe('the day', () => {
 
 describe('the date picker', () => {
   const open = () => fireEvent.click(screen.getByRole('button', { name: line(TODAY) }));
+  const shown = () => document.querySelector('[data-stub="DateTimePicker"]') !== null;
+  const pick = (d: Date) => act(() => {
+    (picker.props!.onChange as (e: object, d?: Date) => void)({ type: 'set' }, d);
+  });
 
   it('opens on the resolved day, floored at today’s midnight and a year ahead at its last instant', () => {
     renderScreen();
@@ -358,6 +363,54 @@ describe('the date picker', () => {
     open();
     act(() => { (picker.props!.onChange as (e: object, d?: Date) => void)({ type: 'set' }, new Date(2030, 0, 1, 12)); });
     expect(screen.getByText(line(addDays(TODAY, 365)))).toBeTruthy();
+  });
+
+  // Three ways out besides a pick, and each has to leave the day as it
+  // was: the scrim, Android's back (Escape, under react-native-web), and
+  // on iOS the Done under the calendar.
+  it('closes from the scrim, keeping the day', () => {
+    renderScreen();
+    open();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(shown()).toBe(false);
+    expect(screen.getByText(line(TODAY))).toBeTruthy();
+  });
+
+  it('closes on the system’s back', () => {
+    renderScreen();
+    open();
+    // react-native-web only lets a modal answer Escape once its fade-in
+    // has ended, and jsdom never ends an animation — so the test ends it.
+    for (const el of document.querySelectorAll('[class*="r-animationKeyframes"]')) fireEvent.animationEnd(el);
+    act(() => { fireEvent.keyUp(document, { key: 'Escape' }); });
+    expect(shown()).toBe(false);
+  });
+
+  it('offers no Done where the picker closes itself', () => {
+    renderScreen();
+    open();
+    expect(picker.props!.display).toBe('default');
+    expect(screen.queryByRole('button', { name: 'Done' })).toBeNull();
+  });
+
+  describe('on iOS', () => {
+    let os: string;
+    beforeEach(() => { os = Platform.OS; (Platform as { OS: string }).OS = 'ios'; });
+    afterEach(() => { (Platform as { OS: string }).OS = os; });
+
+    // The inline calendar fires on every scrub, so a pick must not close
+    // it — the reader is still choosing — and Done is how they say so.
+    it('shows the month, stays open through a pick, and closes on Done', () => {
+      renderScreen();
+      open();
+      expect(picker.props!.display).toBe('inline');
+      pick(new Date(2026, 8, 20, 0, 0));
+      expect(shown()).toBe(true);
+      expect(screen.getByText(line('2026-09-20'))).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+      expect(shown()).toBe(false);
+      expect(screen.getByText(line('2026-09-20'))).toBeTruthy();
+    });
   });
 
   it('sends a chosen today honestly, even once its evening is late', () => {
