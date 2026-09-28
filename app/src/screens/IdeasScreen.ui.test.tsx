@@ -24,6 +24,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '../uitest/render';
+import { useScrollToTop } from '@react-navigation/native';
 import { addDays, toISO } from '../lib/day';
 import { dateline } from '../lib/format';
 import type { Nav } from '../nav';
@@ -508,5 +509,16 @@ describe('start from what you love', () => {
     tap('Cafés');
     fireEvent.click(cta());
     expect(sent(navigation).from).toEqual(['lakes', 'pho']);
+  });
+});
+
+// Its tab pressed again at this root scrolls back to the top. The press
+// is React Navigation's to hear; what is this screen's is the ref, and a
+// ref left off the list would hand over null and scroll nothing.
+describe('its tab, pressed again', () => {
+  it('hands the scroll to the top the screen’s own list', async () => {
+    renderScreen();
+    const ref = vi.mocked(useScrollToTop).mock.calls.at(-1)?.[0] as { current: unknown };
+    expect(ref.current).toHaveProperty('scrollTo');
   });
 });

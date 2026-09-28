@@ -15,10 +15,11 @@
 // The plan itself is not built here. The button hands the draft to
 // Sketching, which builds it, and nothing about the draft is decided twice.
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
+import { useScrollToTop } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
@@ -82,6 +83,10 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const { mine } = useSave();
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
+  // Its tab, pressed again here, scrolls back to the top — the last step
+  // of the walk back that ExploreScreen's `tabPress` note describes.
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
 
   const [draft, setDraft] = useState<TripDraft>(EMPTY_DRAFT);
   const [picking, setPicking] = useState(false);
@@ -225,6 +230,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
     >
       <AmbientWarmth />
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={{ paddingBottom: tabClearance }}
         showsVerticalScrollIndicator={false}
         onScroll={duckScroll}

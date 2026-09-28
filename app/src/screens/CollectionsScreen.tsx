@@ -8,7 +8,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { type AccessibilityProps, Alert, Animated, SectionList, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -408,6 +408,10 @@ export default function CollectionsScreen({ navigation, route }: {
   const { data: places, loading: placesLoading, loaded: placesLoaded } = usePlaces();
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
+  // Its tab, pressed again here, scrolls back to the top — the last step
+  // of the walk back that ExploreScreen's `tabPress` note describes.
+  const scrollRef = useRef<SectionList<ListRow, { own: boolean }>>(null);
+  useScrollToTop(scrollRef);
   // Counting and filtering need the places catalog — until it's in, hold
   // the skeleton rather than showing raw DB membership numbers.
   //
@@ -741,6 +745,7 @@ export default function CollectionsScreen({ navigation, route }: {
         )}
         {!holding && !(colsFail && cols.data.length === 0) && (
           <SectionList
+            ref={scrollRef}
             sections={sections}
             keyExtractor={(row) => (row.kind === 'pair' ? row.pair[0].slug : row.c.slug)}
             onScroll={duckScroll}

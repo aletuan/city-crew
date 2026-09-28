@@ -22,6 +22,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { useScrollToTop } from '@react-navigation/native';
 import type { Nav } from '../nav';
 
 type Lang = 'en' | 'vi' | 'ja';
@@ -579,5 +580,16 @@ describe('ways out', () => {
     press('Delete account');
     expect(raw.navigate).toHaveBeenCalledWith('DeleteAccount');
     expect(spies.signOut).not.toHaveBeenCalled();
+  });
+});
+
+// Its tab pressed again at this root scrolls back to the top. The press
+// is React Navigation's to hear; what is this screen's is the ref, and a
+// ref left off the list would hand over null and scroll nothing.
+describe('its tab, pressed again', () => {
+  it('hands the scroll to the top the screen’s own list', async () => {
+    draw();
+    const ref = vi.mocked(useScrollToTop).mock.calls.at(-1)?.[0] as { current: unknown };
+    expect(ref.current).toHaveProperty('scrollTo');
   });
 });

@@ -38,9 +38,9 @@
 // mock to avoid. The footer keeps the shape and fills it with what is
 // true — how many stops, what it costs.
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useFlag } from '../lib/useFlag';
@@ -289,6 +289,10 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
   const { cities } = useCity();
   const clearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
+  // Its tab, pressed again here, scrolls back to the top — the last step
+  // of the walk back that ExploreScreen's `tabPress` note describes.
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
   const trips = useMyTrips();
   const tripsFail = classifyLoadFail(trips.error);
 
@@ -463,6 +467,7 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
 
       {trips.loaded && !(tripsFail && trips.data.length === 0) && (
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
           showsVerticalScrollIndicator={false}
           onScroll={duckScroll}

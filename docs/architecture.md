@@ -107,6 +107,13 @@ stack. Màn chi tiết được khai báo lặp ở nhiều stack **có chủ ý
 địa điểm từ tab Trips không nhảy sang tab Explore). Mỗi màn được bọc cầu
 dao qua `screenLayout`; `AppBoundary` là lớp cuối.
 
+**Bấm lại tab đang mở** lùi từng bước, như mọi tab bar trên iOS: lần đầu
+về màn gốc của tab (native stack tự làm), lần sau cuộn lên đầu
+(`useScrollToTop` ở màn gốc của cả năm tab). Explore có thêm một bước ở
+giữa — đang ở Map View thì thoát ra danh sách (listener `tabPress` trong
+`ExploreScreen`). Màn gốc mới của một tab phải gắn `useScrollToTop` vào
+list của nó; test "its tab, pressed again" ở mỗi màn canh việc đó.
+
 ## Phía server
 
 **Edge Functions** — `supabase/functions/<tên>/index.ts`, dùng chung code

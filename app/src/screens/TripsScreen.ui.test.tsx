@@ -25,6 +25,7 @@ import React from 'react';
 import { Alert } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { useScrollToTop } from '@react-navigation/native';
 import { addDays, todayISO } from '../lib/day';
 import type { Trip, TripStopRow } from '../lib/data';
 import type { InviteRow } from '../lib/invites';
@@ -396,5 +397,16 @@ describe('a failed read', () => {
     expect(screen.getByTestId('trips-load-banner')).toBeTruthy();
     expect(screen.getByText('Old Quarter crawl')).toBeTruthy();
     expect(screen.queryByText(/JWT/)).toBeNull();
+  });
+});
+
+// Its tab pressed again at this root scrolls back to the top. The press
+// is React Navigation's to hear; what is this screen's is the ref, and a
+// ref left off the list would hand over null and scroll nothing.
+describe('its tab, pressed again', () => {
+  it('hands the scroll to the top the screen’s own list', async () => {
+    show();
+    const ref = vi.mocked(useScrollToTop).mock.calls.at(-1)?.[0] as { current: unknown };
+    expect(ref.current).toHaveProperty('scrollTo');
   });
 });

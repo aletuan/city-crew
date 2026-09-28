@@ -6,13 +6,13 @@
 // About-me card and account actions. Champagne throughout — the
 // reference's violet gradient is translated, not copied.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 // TEMPORARY — read/written only by the "Always show welcome" row.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, Toggle, useTabBarClearance } from '../components/ui';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
@@ -766,12 +766,17 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   const { ready, session } = useAuth();
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
+  // Its tab, pressed again here, scrolls back to the top — the last step
+  // of the walk back that ExploreScreen's `tabPress` note describes.
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
 
   return (
     <Screen title={t('Profile', 'Cá nhân', 'プロフィール')}>
       <View style={{ flex: 1 }}>
         <AmbientWarmth />
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: tabClearance, gap: space.cardGap }}
           showsVerticalScrollIndicator={false}
           onScroll={duckScroll}
