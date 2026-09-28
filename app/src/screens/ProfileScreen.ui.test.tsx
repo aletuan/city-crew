@@ -382,7 +382,7 @@ describe('friends card', () => {
     expect(raw.navigate).not.toHaveBeenCalled();
     press('Connect with friends');
     expect(raw.navigate).toHaveBeenCalledWith('Crew');
-    expect(screen.getByText('Find friends and plan trips together.')).toBeTruthy();
+    expect(screen.getByText('Find friends and share your plans.')).toBeTruthy();
   });
 
   it('counts accepted friends only, and shows no number with none', () => {
