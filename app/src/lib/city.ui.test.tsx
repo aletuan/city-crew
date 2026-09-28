@@ -19,8 +19,8 @@
 // stubbed provider, because the code under test listens to the client.
 // Faking the provider would test a seam that does not exist.
 
-import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import React, { useEffect } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
@@ -32,7 +32,7 @@ vi.mock('./supabase', async () => {
   return { supabase: h.fake.client };
 });
 
-import { CityProvider, useCity } from './city';
+import { CityProvider, useCity, useMyPosition } from './city';
 
 const KEY = 'citycrew.city';
 const CITIES = [
@@ -299,5 +299,253 @@ describe('a database older than the app', () => {
     // What the retries are protecting: the third answer is the real city
     // list, not the single hardcoded Saigon row.
     await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('danang'));
+  });
+});
+
+// ── a launch where the platform already knows ──
+//
+// A cached fix is the quick path, read under a hard time cap and never
+// behind a fresh GPS wait. Behind a remembered automatic city it may only
+// *correct*: agreeing costs nothing, disagreeing moves and remembers.
+describe('a launch with a cached fix', () => {
+  // Counts from the tests before would otherwise be read as this one's.
+  beforeEach(() => { vi.mocked(Location).requestForegroundPermissionsAsync.mockClear(); });
+  const cachedInHanoi = () => {
+    loc.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' } as never);
+    loc.getLastKnownPositionAsync.mockResolvedValue(HANOI as never);
+  };
+
+  it('moves a remembered automatic city to where the phone is, and remembers that', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ id: 'danang', mode: 'auto' }));
+    cachedInHanoi();
+    mount();
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('hanoi'));
+    await waitFor(async () => expect(await remembered()).toEqual({ id: 'hanoi', mode: 'auto' }));
+    // The cached fix answered; nothing waited on a fresh one.
+    expect(loc.getCurrentPositionAsync).not.toHaveBeenCalled();
+  });
+
+  it('writes nothing when the fix agrees with the city already open', async () => {
+    await AsyncStorage.setItem(KEY, JSON.stringify({ id: 'hanoi', mode: 'auto' }));
+    cachedInHanoi();
+    // Cleared before the mount, not after the fix is asked for: the write
+    // this is about would land in between, and be cleared with the rest.
+    vi.mocked(AsyncStorage.setItem).mockClear();
+    mount();
+    await waitFor(() => expect(loc.getLastKnownPositionAsync).toHaveBeenCalled());
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    expect(screen.getByTestId('city').textContent).toBe('hanoi');
+    expect(vi.mocked(AsyncStorage.setItem).mock.calls.filter(([k]) => k === KEY)).toHaveLength(0);
+  });
+
+  it('opens a first launch straight on the city the fix names', async () => {
+    await AsyncStorage.removeItem(KEY);
+    cachedInHanoi();
+    mount();
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('hanoi'));
+    await waitFor(async () => expect(await remembered()).toEqual({ id: 'hanoi', mode: 'auto' }));
+    expect(loc.getCurrentPositionAsync).not.toHaveBeenCalled();
+  });
+
+  it('never asks the platform at all behind a manual pick', async () => {
+    cachedInHanoi();
+    mount();
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('danang'));
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    expect(loc.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+    expect(screen.getByTestId('city').textContent).toBe('danang');
+  });
+});
+
+// ── "Use my location" ──
+//
+// The one place the app may raise the permission dialog after launch: the
+// reader just tapped a row asking for exactly that. And the one place that
+// reports failure, because silence after an explicit request reads as broken.
+describe('following my location', () => {
+  // Handed out through an effect rather than assigned during render,
+  // which the lint rule on components forbids — rightly, for components
+  // that are not test probes.
+  let follow: () => Promise<boolean>;
+  const Follower = ({ give }: { give: (f: () => Promise<boolean>) => void }) => {
+    const { followMyLocation } = useCity();
+    useEffect(() => { give(followMyLocation); });
+    return null;
+  };
+  const mountFollower = async () => {
+    render(<CityProvider><Probe /><Follower give={(f) => { follow = f; }} /></CityProvider>);
+    await waitFor(() => expect(screen.getByTestId('city').textContent).toBe('danang'));
+  };
+  const tap = async () => {
+    let answer = false;
+    await act(async () => { answer = await follow(); });
+    return answer;
+  };
+
+  it('asks, finds the nearest city, follows it, and gives the choice back to the phone', async () => {
+    await mountFollower();
+    loc.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' } as never);
+    loc.getLastKnownPositionAsync.mockResolvedValue(HANOI as never);
+    expect(await tap()).toBe(true);
+    expect(loc.requestForegroundPermissionsAsync).toHaveBeenCalled();
+    expect(screen.getByTestId('city').textContent).toBe('hanoi');
+    expect(screen.getByTestId('mode').textContent).toBe('auto');
+    expect(await remembered()).toEqual({ id: 'hanoi', mode: 'auto' });
+  });
+
+  it('takes a fresh fix when the phone has no cached one', async () => {
+    await mountFollower();
+    coldGpsInHanoi();
+    expect(await tap()).toBe(true);
+    expect(loc.getCurrentPositionAsync).toHaveBeenCalled();
+    expect(screen.getByTestId('city').textContent).toBe('hanoi');
+  });
+
+  it('says it could not when location is refused, and leaves the pick alone', async () => {
+    await mountFollower();
+    // A position the platform would have given, had it been allowed to:
+    // refused means refused, not "refused unless there is a cached fix".
+    loc.getLastKnownPositionAsync.mockResolvedValue(HANOI as never);
+    expect(await tap()).toBe(false);
+    expect(screen.getByTestId('city').textContent).toBe('danang');
+    expect(screen.getByTestId('mode').textContent).toBe('manual');
+    expect(await remembered()).toEqual({ id: 'danang', mode: 'manual' });
+  });
+
+  it('says it could not when the phone has no position to give', async () => {
+    await mountFollower();
+    loc.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' } as never);
+    loc.getCurrentPositionAsync.mockResolvedValue(null as never);
+    expect(await tap()).toBe(false);
+    expect(screen.getByTestId('mode').textContent).toBe('manual');
+  });
+});
+
+// ── where the reader is, for a screen that wants to sharpen a label ──
+//
+// Reads the permission, never requests it: launch has already asked, and a
+// label is no reason to ask twice. Denied stays denied and the caller shows
+// nothing rather than something approximate.
+describe('my position', () => {
+  let seen: { lat: number; lng: number } | null;
+  const Where = ({ nonce = 0, give }: { nonce?: number; give: (p: typeof seen) => void }) => {
+    const pos = useMyPosition(nonce);
+    useEffect(() => { give(pos); });
+    return null;
+  };
+  const report = (p: typeof seen) => { seen = p; };
+
+  beforeEach(() => {
+    seen = null;
+    loc.requestForegroundPermissionsAsync.mockClear();
+    loc.getLastKnownPositionAsync.mockClear();
+  });
+
+  it('is the cached fix when location is allowed', async () => {
+    loc.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' } as never);
+    loc.getLastKnownPositionAsync.mockResolvedValue(HANOI as never);
+    render(<Where give={report} />);
+    await waitFor(() => expect(seen).toEqual({ lat: 21.02, lng: 105.84 }));
+    expect(loc.getCurrentPositionAsync).not.toHaveBeenCalled();
+  });
+
+  it('takes one low-accuracy read when the cache is cold', async () => {
+    coldGpsInHanoi();
+    render(<Where give={report} />);
+    await waitFor(() => expect(seen).toEqual({ lat: 21.02, lng: 105.84 }));
+    expect(loc.getCurrentPositionAsync).toHaveBeenCalledWith({ accuracy: Location.Accuracy.Low });
+  });
+
+  it('is nothing when location is not allowed, and never raises the dialog', async () => {
+    render(<Where give={report} />);
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    expect(seen).toBeNull();
+    expect(loc.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+    expect(loc.getLastKnownPositionAsync).not.toHaveBeenCalled();
+  });
+
+  it('is nothing when the platform fails, rather than an error', async () => {
+    loc.getForegroundPermissionsAsync.mockRejectedValueOnce(new Error('bridge down'));
+    render(<Where give={report} />);
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    expect(seen).toBeNull();
+  });
+
+  // The start sheet may raise the dialog itself, and granting it does
+  // nothing on its own — this read has already happened. A new nonce is
+  // how that caller asks again.
+  it('reads again when its caller changes the nonce', async () => {
+    const view = render(<Where nonce={0} give={report} />);
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    expect(seen).toBeNull();
+    loc.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' } as never);
+    loc.getLastKnownPositionAsync.mockResolvedValue(HANOI as never);
+    view.rerender(<Where nonce={1} give={report} />);
+    await waitFor(() => expect(seen).toEqual({ lat: 21.02, lng: 105.84 }));
+  });
+});
+
+// ── the list last launch knew, and the list healed ──
+const FULL = (id: string, name: string, lat: number, lng: number) => ({
+  id, name_en: name, name_vi: name, name_ja: null, short_en: name, short_vi: name, short_ja: null,
+  center_lat: lat, center_lng: lng, radius_km: 25,
+});
+const LIST_KEY = 'citycrew.cities';
+
+describe('the city list', () => {
+  const Count = () => {
+    const { cities } = useCity();
+    return <span data-testid="cities">{cities.map((c) => c.id).join(',')}</span>;
+  };
+  const mountList = () => render(<CityProvider><Probe /><Count /></CityProvider>);
+
+  afterEach(async () => {
+    vi.useRealTimers();
+    await AsyncStorage.removeItem(LIST_KEY);
+  });
+
+  // A phone that opened the app with no network still has last launch's
+  // cities to switch between, not one hardcoded Saigon.
+  it('falls back to last launch’s list when this launch’s fetch comes back empty', async () => {
+    await AsyncStorage.setItem(LIST_KEY, JSON.stringify([FULL('danang', 'Da Nang', 16.05, 108.2), FULL('hue', 'Hue', 16.46, 107.59)]));
+    h.fake!.reset();
+    h.fake!.replies({ data: [], error: null }, { data: [], error: null });
+    mountList();
+    await waitFor(() => expect(screen.getByTestId('cities').textContent).toBe('danang,hue'));
+    expect(screen.getByTestId('city').textContent).toBe('danang');
+  });
+
+  it('writes down the list each launch fetches, for the next one', async () => {
+    mountList();
+    await waitFor(async () => expect(JSON.parse((await AsyncStorage.getItem(LIST_KEY)) ?? '[]')).toEqual(CITIES));
+  });
+
+  // The reported case: no network at cold start kept the one-row fallback
+  // for the whole session. The healer asks again every fifteen seconds
+  // until the list comes back, and then stops.
+  it('asks again for a list that failed, until it comes back, and then stops', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    h.fake!.reset();
+    const healed = [...CITIES, FULL('hcmc', 'Saigon', 10.78, 106.7)];
+    h.fake!.replies({ data: [], error: null }, { data: [], error: null }, { data: healed, error: null });
+    mountList();
+    const asked = () => h.fake!.log.filter((a) => a.table === 'cities').length;
+    await waitFor(() => expect(asked()).toBe(1));
+    await waitFor(() => expect(screen.getByTestId('cities').textContent).toBe('hcmc'));
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_000); });
+    expect(asked()).toBe(2);
+    expect(screen.getByTestId('cities').textContent).toBe('hcmc');
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(15_000); });
+    await waitFor(() => expect(screen.getByTestId('cities').textContent).toBe('danang,hanoi,hcmc'));
+    // The city already chosen stays chosen — the fallback Saigon, since the
+    // remembered Da Nang was not on the one-row list — and only the list
+    // heals: the reader gets their rows back and taps if they meant
+    // somewhere else.
+    expect(screen.getByTestId('city').textContent).toBe('hcmc');
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(45_000); });
+    expect(asked()).toBe(3);
   });
 });
