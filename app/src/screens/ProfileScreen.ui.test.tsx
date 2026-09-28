@@ -20,7 +20,6 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import type { Nav } from '../nav';
@@ -100,8 +99,6 @@ vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: state.scheme, pref: state.pref, setPref: () => {}, ready: true }),
 }));
 vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined }));
-// The key only; the real sheet drags in the whole onboarding tree.
-vi.mock('../components/WelcomeSheet', () => ({ WELCOME_ALWAYS_KEY: 'citycrew.welcomeAlways' }));
 
 // Sheets have their own suites. What Profile owes each is opening it and
 // closing it, so every stand-in says which it is and offers a close.
@@ -174,8 +171,6 @@ beforeEach(async () => {
     city: { short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' },
     mode: 'manual',
   });
-  await AsyncStorage.removeItem('citycrew.welcomeAlways');
-  vi.mocked(AsyncStorage.removeItem).mockClear();
 });
 
 describe('the gate', () => {
@@ -478,40 +473,14 @@ describe('settings card', () => {
   });
 });
 
-describe('always-show-welcome switch', () => {
-  const sw = () => screen.getByRole('switch', { name: 'Always show welcome' }) as HTMLInputElement;
-
-  it('starts off, and on when storage already says so', async () => {
-    const { unmount } = render(<ProfileScreen navigation={nav().n} />);
-    await act(async () => {});
-    expect(sw().checked).toBe(false);
-    unmount();
-    await AsyncStorage.setItem('citycrew.welcomeAlways', '1');
+// The welcome's always-show switch was here while the sheet was being
+// worked on. It went with the rule that the welcome is for guests alone:
+// a reader cannot be shown it twice, so there is nothing to switch.
+describe('settings, without the welcome switch', () => {
+  it('has no always-show-welcome row', () => {
     draw();
-    await waitFor(() => expect(sw().checked).toBe(true));
-  });
-
-  // React Native's iOS Switch composes `alignSelf: 'flex-start'` into its
-  // own style, so a row that centres every other child leaves this one at
-  // the top — 8pt high on this card, where a 44pt round icon makes the
-  // row 72. `Toggle` overrides it, and this is the assertion that says so:
-  // the markup reads `alignItems: 'center'` and gives a reviewer no reason
-  // to doubt it, which is exactly why the bug survived being looked at.
-  it('sits centred in its row rather than at the top of it', async () => {
-    draw();
-    await act(async () => {});
-    expect(getComputedStyle(sw().parentElement!).alignSelf).toBe('center');
-  });
-
-  it('writes the flag on and removes it off', async () => {
-    draw();
-    await act(async () => {});
-    fireEvent.click(sw());
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith('citycrew.welcomeAlways', '1');
-    await waitFor(() => expect(sw().checked).toBe(true));
-    fireEvent.click(sw());
-    expect(AsyncStorage.removeItem).toHaveBeenCalledWith('citycrew.welcomeAlways');
-    await waitFor(() => expect(sw().checked).toBe(false));
+    expect(screen.queryByText('Always show welcome')).toBeNull();
+    expect(screen.queryByRole('switch')).toBeNull();
   });
 });
 

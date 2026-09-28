@@ -51,6 +51,17 @@
 // A launch that never reports — a reader who lands on another tab, a
 // test rendering the sheet alone — still gets its welcome, after a
 // fallback long enough that the burst is over either way.
+//
+// ── who it is for ──
+//
+// Guests, and only guests. It used to greet whoever held no seen-flag,
+// and an account holder on a fresh install, or on the update that first
+// shipped it, was welcomed to an app they already used — with a Sign in
+// link that opened the sign-in form over a session that was already
+// there. The reader is `Auth.userId`, the early id, so the answer is in
+// long before the launch settles. A signed-in reader never sees it and
+// has the flag written for them: they are not new, and signing out later
+// should not make them so.
 
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Animated, BackHandler, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -65,21 +76,11 @@ import { PressableScale } from './ui';
 import { SwitchRow } from './authUi';
 import { goTo } from '../nav';
 import { launchSettled } from '../lib/launch';
+import { useAuth } from '../lib/auth';
 import welcomeLogo from '../../assets/welcome-logo.png';
 
 /** Written once, on the way out. */
 const WELCOME_KEY = 'citycrew.welcomeSeen';
-
-/** TEMPORARY — the "Always show welcome" switch in Profile → Settings.
- *  While it is set, this sheet ignores the seen-flag and greets on every
- *  launch, which is the only way to look at it twice without wiping the
- *  app: an EAS update ships a production bundle, so the `__DEV__` back
- *  doors this codebase uses elsewhere are dead on a real phone.
- *
- *  It is meant to be removed once the welcome stops being worked on.
- *  Three places, all marked TEMPORARY: this constant, the `always` half
- *  of the read below, and the row in ProfileScreen's SettingsCard. */
-export const WELCOME_ALWAYS_KEY = 'citycrew.welcomeAlways';
 
 /** How far the panel travels, how long it takes to arrive, and how
  *  fast it leaves. The entrance is deliberately slower than a sheet
@@ -99,7 +100,11 @@ export default function WelcomeSheet() {
   const insets = useSafeAreaInsets();
   // Hidden until storage says otherwise, which is the whole no-flash
   // guarantee: a returning reader never sees a frame of this.
-  const [wanted, setWanted] = useState(false);
+  const [unseen, setUnseen] = useState(false);
+  // And until the reader is known to be a guest. Undefined is "not known
+  // yet", and waits; an id is an account, and never sees it.
+  const { userId } = useAuth();
+  const wanted = unseen && userId === null;
   // And then until the launch has settled, or the fallback has run out.
   const settled = useSyncExternalStore(launchSettled.subscribe, launchSettled.get);
   const [show, setShow] = useState(false);
@@ -107,12 +112,8 @@ export default function WelcomeSheet() {
 
   useEffect(() => {
     let live = true;
-    // TEMPORARY: the second read is the always-show switch; drop it and
-    // this goes back to `getItem(WELCOME_KEY).then(v => v === null)`.
-    Promise.all([AsyncStorage.getItem(WELCOME_KEY), AsyncStorage.getItem(WELCOME_ALWAYS_KEY)])
-      .then(([seen, always]) => {
-        if (live && (always === '1' || seen === null)) setWanted(true);
-      })
+    AsyncStorage.getItem(WELCOME_KEY)
+      .then((seen) => { if (live && seen === null) setUnseen(true); })
       // A read that failed is not a first launch. If storage is broken
       // the write would fail too, so showing here would mean showing on
       // every launch forever — and missing the welcome once is cheaper
@@ -120,6 +121,12 @@ export default function WelcomeSheet() {
       .catch(() => {});
     return () => { live = false; };
   }, []);
+
+  // An account holder is not new: the flag is written for them, so the
+  // welcome does not wait for them on the far side of a sign-out.
+  useEffect(() => {
+    if (unseen && typeof userId === 'string') AsyncStorage.setItem(WELCOME_KEY, '1').catch(() => {});
+  }, [unseen, userId]);
 
   // The wait proper. Settled: a short grace, so the content commit that
   // just landed gets its paint before the sheet's mount asks for one.
@@ -152,7 +159,7 @@ export default function WelcomeSheet() {
     // whenever `show` drops while `wanted` holds, and it did: the sheet
     // left on the tap and came straight back a grace later, because the
     // one flag that should have ended the launch's welcome was still up.
-    setWanted(false);
+    setUnseen(false);
     // Out under its own power: without a Modal there is no platform
     // dismissal to borrow, and unmounting on the tap would make the sheet
     // vanish rather than leave.

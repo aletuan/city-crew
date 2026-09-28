@@ -6,19 +6,15 @@
 // About-me card and account actions. Champagne throughout — the
 // reference's violet gradient is translated, not copied.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-// TEMPORARY — read/written only by the "Always show welcome" row.
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, Toggle, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
 import { schemeLabel, ThemeSwitcherModal } from '../components/ThemeSwitcher';
-// TEMPORARY — see the "Always show welcome" row below.
-import { WELCOME_ALWAYS_KEY } from '../components/WelcomeSheet';
 import { PrimaryButton } from '../components/authUi';
 import LegalSheet from '../components/LegalSheet';
 import AvatarPicker from '../components/AvatarPicker';
@@ -136,57 +132,6 @@ function SettingRow({ icon, label, value, onPress, last }: {
   );
 }
 
-/**
- * The same row, with a switch where the chevron would be.
- *
- * Its own component rather than a flag on `SettingRow`, because the two
- * differ in more than their right-hand glyph. A chevron row is pressable
- * and promises a screen; this one is not pressable at all — the switch is
- * the control, the way Edit profile's privacy toggle already works and the
- * way the platform's own settings behave. One component taking `onPress`
- * XOR `toggle` would have to be read carefully every time to know which
- * half applied.
- *
- * The switch is what this row should always have been. It kept a chevron
- * while flipping in place, so it wore the promise of a screen and then
- * changed a word on the right instead — the same shape as its three
- * neighbours, doing something else entirely.
- */
-function SettingToggleRow({ icon, label, on, onChange, last }: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  on: boolean;
-  onChange: (next: boolean) => void;
-  last?: boolean;
-}) {
-  return (
-    <View style={[s.featureRow, !last && s.featureRowDivider]}>
-      <RoundIcon name={icon} />
-      {/* Two lines, where `SettingRow` allows one. A value row can give
-          its label the line and let the value truncate; this row has no
-          value to give up, and the switch is a fixed 51pt that cannot
-          shrink. At 320pt of window — an iPhone SE, or any iPhone with
-          Display Zoom on — the line is 244pt inside the card, and "Always
-          show welcome" beside the icon and the switch is more than that.
-          The label wraps rather than clips, which is what the platform's
-          own settings rows do with a switch beside a long name. */}
-      <Text style={s.settingLabel} numberOfLines={2}>{label}</Text>
-      {/* The spacer `SettingRow` uses when it has no value, for the same
-          reason: it is what holds the control against the right edge. */}
-      <View style={{ flex: 1 }} />
-      <Toggle
-        value={on}
-        // The switch carries the row's name, because on its own it is an
-        // unlabelled control: the text beside it is a separate node.
-        accessibilityLabel={label}
-        onValueChange={(next) => { fireHaptic('selection'); onChange(next); }}
-        trackColor={{ false: colors.borderGlass, true: colors.accentFaint }}
-        thumbColor={colors.text}
-      />
-    </View>
-  );
-}
-
 /** Workspace settings, for guests and members alike: which city's
  *  catalog the app shows, which language it speaks, how it looks. The
  *  header carries no switchers — this card is the one place to change
@@ -206,31 +151,6 @@ function SettingsCard() {
   const [themeOpen, setThemeOpen] = useState(false);
   const { scheme, pref } = useScheme();
   const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語' }[lang];
-
-  // TEMPORARY — the always-show switch for the welcome sheet. It exists
-  // because a shipped bundle has no `__DEV__` back door and the only
-  // other way to see that sheet twice is deleting the app, which takes
-  // the session, the city and everything else with it. Delete this
-  // block, the row below, and WELCOME_ALWAYS_KEY when the welcome is
-  // done being worked on.
-  const [always, setAlways] = useState(false);
-  useEffect(() => {
-    let live = true;
-    AsyncStorage.getItem(WELCOME_ALWAYS_KEY)
-      .then((v) => { if (live) setAlways(v === '1'); })
-      .catch(() => {});
-    return () => { live = false; };
-  }, []);
-  // Takes the value the switch reports rather than flipping `always`
-  // again: two sources for one boolean is how a control ends up
-  // disagreeing with the thing it controls.
-  const toggleAlways = (next: boolean) => {
-    setAlways(next);
-    const write = next
-      ? AsyncStorage.setItem(WELCOME_ALWAYS_KEY, '1')
-      : AsyncStorage.removeItem(WELCOME_ALWAYS_KEY);
-    write.catch(() => {});
-  };
 
   return (
     <>
@@ -262,17 +182,6 @@ function SettingsCard() {
           label={t('Appearance', 'Giao diện', '外観')}
           value={schemeLabel(pref, t)}
           onPress={() => setThemeOpen(true)}
-        />
-        {/* TEMPORARY. The sheet reads the flag when the app next starts,
-            so seeing it again is: switch on, close the app, open it.
-            Delete this row with the block above it — and move `last` up
-            to Appearance, which is the row it would leave at the bottom
-            of the card. */}
-        <SettingToggleRow
-          icon="sparkles-outline"
-          label={t('Always show welcome', 'Luôn hiện lời chào', 'ようこそ画面を毎回表示')}
-          on={always}
-          onChange={toggleAlways}
           last
         />
       </Card>
