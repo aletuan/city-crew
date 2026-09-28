@@ -36,7 +36,7 @@ App Privacy trong App Store Connect.
 
 Ghi chú này từng nói "dù mặc định tắt và người dùng phải tự bật" — không còn
 đúng. Mặc định giờ là **bật**, màn hình đăng ký nói rõ điều đó trước khi ghi bất
-cứ gì, và công tắc tắt nằm trong Sửa hồ sơ → *Nhớ những chỗ tôi mở*.
+cứ gì, và công tắc tắt nằm trong Sửa hồ sơ → *Nâng cao trải nghiệm cá nhân*.
 
 **ATT vẫn là No.** Lịch sử này là dữ liệu bên thứ nhất, không rời khỏi tài khoản,
 không ghép với dữ liệu của app hay website nào khác — không phải "tracking" theo

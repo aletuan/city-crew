@@ -350,13 +350,13 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
             <View style={s.toggleRow}>
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={s.toggleTitle}>
-                  {t('Remember what I open', 'Nhớ những chỗ tôi mở', '開いた場所を記憶する')}
+                  {t('Personalise my experience', 'Nâng cao trải nghiệm cá nhân', '体験をパーソナライズ')}
                 </Text>
                 <Text style={s.note}>
                   {t(
-                    'On by default. A place you opened and walked away from stops coming back. Off, nothing is recorded.',
-                    'Mặc định bật. Chỗ bạn mở rồi bỏ qua sẽ thôi quay lại. Tắt thì không ghi gì cả.',
-                    '初期設定はオン。開いて保存しなかった場所は出にくくなります。オフにすると何も記録されません。',
+                    'Uses the places you have viewed to personalise what you see.',
+                    'Sử dụng những địa điểm bạn đã xem để cá nhân hoá nội dung trải nghiệm.',
+                    '閲覧した場所をもとに、表示内容をパーソナライズします。',
                   )}
                 </Text>
               </View>
@@ -365,7 +365,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
                 onValueChange={setHistory}
                 trackColor={{ false: colors.borderGlass, true: colors.accentFaint }}
                 thumbColor={colors.text}
-                accessibilityLabel={t('Remember what I open', 'Nhớ những chỗ tôi mở', '開いた場所を記憶する')}
+                accessibilityLabel={t('Personalise my experience', 'Nâng cao trải nghiệm cá nhân', '体験をパーソナライズ')}
               />
             </View>
           </Card>
