@@ -49,9 +49,9 @@ export default function AuthSheet({ visible, onClose, onSignIn }: {
         </Text>
         <Text style={s.body}>
           {t(
-            'Sign in to keep favourites and build collections with your crew.',
-            'Đăng nhập để giữ địa điểm yêu thích và dựng bộ sưu tập cùng hội của bạn.',
-            'サインインしてお気に入りを保存し、仲間とコレクションを作りましょう。',
+            'Sign in to keep your places, build your own collections, and share your journeys with friends.',
+            'Đăng nhập để lưu giữ địa điểm, tạo bộ sưu tập cá nhân và cùng chia sẻ hành trình kết nối.',
+            'サインインして、場所を保存し、自分だけのコレクションを作り、旅を仲間と共有しよう。',
           )}
         </Text>
         {/* The width has to go on the Pressable itself (containerStyle), not
