@@ -40,7 +40,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
+import { AuthHeader, AuthScreen, FieldRow, FormError, PrimaryButton, useFailText } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
 import TastePicker from '../components/TastePicker';
 import { Card, PressableScale, successHaptic, Toggle } from '../components/ui';
@@ -235,18 +235,20 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         onBack={() => navigation.goBack()}
         title={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}
       />
-      {/* Saved on pick, not on submit — see AvatarPicker. The caption says
-          so, because a form with a Save button implies otherwise. */}
+      {/* Saved on pick, not on submit — see AvatarPicker. The caption
+          names what the circle does rather than when it saves: "tap to
+          change — saved right away" read as an instruction and a footnote,
+          and the photo changing on screen the moment it is picked already
+          says it has been kept. */}
       <View style={{ alignItems: 'center', gap: 10, marginBottom: 22 }}>
         <AvatarPicker size={96} />
         <Text style={{ color: colors.textTertiary, fontSize: 13 }}>
-          {t('Tap to change — saved right away', 'Chạm để đổi — lưu ngay', 'タップで変更 — すぐ保存されます')}
+          {t('Change profile photo', 'Thay đổi ảnh đại diện', 'プロフィール写真を変更')}
         </Text>
       </View>
-      {/* Below the avatar, immediately above the fields it introduces —
-          the avatar is its own self-contained control and needs no
-          sentence of its own. */}
-      <Lede>{t('Tell your crew a little about yourself.', 'Kể cho hội của bạn nghe đôi chút về bạn.', 'あなたのことを少し教えてください。')}</Lede>
+      {/* No lede. "Tell your crew a little about yourself" introduced four
+          fields whose labels already say what they are, on a screen the
+          reader opened on purpose to edit them. */}
       {/* Named to match sign-up; see the note there for why the label
           moved off "Họ tên" and the hint into the imperative. */}
       {/* One card, four rows, hairlines between — and no glyphs.
@@ -324,9 +326,9 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
             <Text style={s.tasteTitle}>{t('Interests', 'Sở thích', '興味')}</Text>
             <Text style={s.tasteSub}>
               {t(
-                'Search and Explore lean towards these. Change them whenever you like.',
-                'Tìm kiếm và Khám phá sẽ nghiêng về những mục này. Đổi lúc nào cũng được.',
-                '検索と探索がこの傾向に寄ります。いつでも変更できます。',
+                'Personalise what you see by the interests you choose.',
+                'Cá nhân hoá nội dung theo sở thích lựa chọn.',
+                '選んだ興味に合わせて表示内容をパーソナライズします。',
               )}
             </Text>
             <TastePicker chosen={taste} onChange={setTaste} />

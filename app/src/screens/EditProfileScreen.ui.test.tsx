@@ -144,7 +144,9 @@ describe('the form as it opens', () => {
     expect(screen.getByText('Edit profile')).toBeTruthy();
     expect(screen.getByTestId('avatar')).toBeTruthy();
     expect(spies.avatarProps).toHaveBeenCalledWith({ size: 96 });
-    expect(screen.getByText('Tap to change — saved right away')).toBeTruthy();
+    expect(screen.getByText('Change profile photo')).toBeTruthy();
+    // No lede over fields whose labels already say what they are.
+    expect(screen.queryByText('Tell your crew a little about yourself.')).toBeNull();
   });
 
   it('asks for the signed-in person’s preferences, and falls back to Saigon with no city', () => {
