@@ -87,6 +87,16 @@ danh sách riêng — được **nâng lên provider** (`catalog.tsx`, `save.tsx
 để chỉ có một bản; header của `catalog.tsx` kể hai lỗi thật đã sinh ra từ
 việc mỗi màn tự fetch.
 
+**Người đọc là một phần của câu hỏi.** Query nào phụ thuộc người đọc (catalog,
+danh sách, lượt thích, sở thích) lấy id từ `useAuth().userId` chứ không từ
+`session`. Lúc mở app, `session` có thể phải chờ một vòng mạng (token hết hạn
+sau 1 giờ thì `getSession` refresh xong mới trả lời); `userId` là id của lần
+mở trước, đọc từ máy trong vài ms, cho tới khi `session` xác nhận hoặc sửa nó.
+`undefined` nghĩa là *chưa biết*, không phải khách, và catalog chờ nó như chờ
+city. Hỏi trước khi biết ai hỏi đã từng có nghĩa là hai lần fetch catalog mỗi
+lần mở app và danh sách về lại skeleton giữa chừng. Còn hành động (mở sheet
+lưu, ghi) vẫn hỏi `session`.
+
 **Ghi.** Hàm trong `lib/data` **ném lỗi khi bị từ chối** thay vì im lặng:
 một lời từ chối là lỗi ở phía này hoặc phía kia, và màn hình phải biết
 thay vì vẽ ra một thành công không có thật. Chỗ nào cần phản hồi tức thì

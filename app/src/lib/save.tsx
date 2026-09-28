@@ -61,8 +61,12 @@ export const useSave = () => useContext(Ctx);
 
 export function SaveProvider({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
-  const { session } = useAuth();
-  const mine = useMyCollections(session?.user?.id);
+  const { session, userId } = useAuth();
+  // The early id, so the lists hydrate with the catalog rather than a
+  // session read later — see `Auth.userId`. `save` itself still asks the
+  // session: opening a sheet is an act, not a read.
+  const me = session?.user?.id ?? userId;
+  const mine = useMyCollections(me);
   const { city } = useCity();
   // Only for the opt-in flag. The insert policy checks it too; this saves
   // a round trip to be told no.
@@ -70,7 +74,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   // Gated on `loaded` for the reason `useNoteEvent` is: the empty
   // preferences now read as recording, so the value is only worth
   // believing once the row it describes has arrived.
-  const prefs = useMyPreferences(session?.user?.id);
+  const prefs = useMyPreferences(me);
   const historyOn = prefs.loaded && prefs.data.history_on;
   const [target, setTarget] = useState<Place | null>(null);
   const [authSheet, setAuthSheet] = useState(false);

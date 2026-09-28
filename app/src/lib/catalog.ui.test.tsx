@@ -35,6 +35,11 @@ const world = vi.hoisted(() => ({
   appStateCb: null as null | ((s: string) => void),
   sessionResolved: 0,
   me: 'u1' as string | null,
+  // `Auth.userId`: the reader before the session is read. Undefined is
+  // "not known yet", which the places query waits on.
+  userId: undefined as string | null | undefined,
+  askedAs: [] as (string | null | undefined)[],
+  likesFor: [] as (string | null | undefined)[],
   likeCounts: null as unknown as F,
   myLikes: null as unknown as F,
 }));
@@ -50,16 +55,18 @@ const auth = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock('./auth', () => ({ useAuth: () => ({ session: world.me ? { user: { id: world.me } } : null }) }));
+vi.mock('./auth', () => ({
+  useAuth: () => ({ session: world.me ? { user: { id: world.me } } : null, userId: world.userId }),
+}));
 vi.mock('./supabase', () => ({ supabase: { auth } }));
 vi.mock('./data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
-  usePlacesQuery: () => world.places,
+  usePlacesQuery: (me: string | null | undefined) => { world.askedAs.push(me); return world.places; },
   useCollectionsQuery: () => world.collections,
   useCuratorAvatarsQuery: () => fetch({ data: {} as unknown as unknown[] }),
   useCategoryTermsQuery: () => fetch({ data: {} as unknown as unknown[] }),
   useLikeCountsQuery: () => world.likeCounts,
-  useMyLikesQuery: () => world.myLikes,
+  useMyLikesQuery: (me: string | null | undefined) => { world.likesFor.push(me); return world.myLikes; },
   likeCollection: writes.like,
   unlikeCollection: writes.unlike,
 }));
@@ -75,6 +82,9 @@ beforeEach(() => {
   world.appStateCb = null;
   world.sessionResolved = 0;
   world.me = 'u1';
+  world.userId = undefined;
+  world.askedAs = [];
+  world.likesFor = [];
   // Counted a second ago, so a tap made now is newer than the tally and
   // shows in it — the rule `countsNow` keeps.
   world.likeCounts = fetch({ data: { 'hue-noodles': 3 } as unknown as unknown[], loadedAt: Date.now() - 1000 });
@@ -91,6 +101,37 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const mount = () => render(<CatalogProvider><></></CatalogProvider>);
 const flush = () => act(async () => { await Promise.resolve(); await Promise.resolve(); });
+
+// ── who the catalog is asked for ──
+//
+// The session can be a network round trip away at launch. The catalog
+// used to be asked for as a guest in that gap and again as the reader
+// when it landed — two fetches, and a cache key that changed under the
+// first paint. It is asked for as `Auth.userId` now, which is the reader
+// the last launch ended on until the session says otherwise.
+describe('who the catalog is asked for', () => {
+  it('the reader the last launch remembered, while the session is still being read', () => {
+    world.me = null;
+    world.userId = 'u1';
+    mount();
+    expect(world.askedAs.at(-1)).toBe('u1');
+    expect(world.likesFor.at(-1)).toBe('u1');
+  });
+
+  it('nobody yet — not a guest — while neither is known', () => {
+    world.me = null;
+    world.userId = undefined;
+    mount();
+    expect(world.askedAs.at(-1)).toBeUndefined();
+  });
+
+  it('the session’s reader, whoever was remembered', () => {
+    world.me = 'u2';
+    world.userId = 'u1';
+    mount();
+    expect(world.askedAs.at(-1)).toBe('u2');
+  });
+});
 
 describe('coming back to the foreground', () => {
   it('refreshes the session before it refreshes a stale catalog', async () => {

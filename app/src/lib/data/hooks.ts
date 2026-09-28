@@ -12,12 +12,12 @@ import { useCity } from '../city';
 import { normalizeHandle } from '../handle';
 import type { Collection, Place } from '../types';
 import { CACHE_CATALOG, cacheKey } from './cache';
-import { useFetch, usePersistedFetch } from './fetch';
+import { type Fetch, useFetch, usePersistedFetch } from './fetch';
 import { fetchCategoryTerms, fetchPlaceBySlug, fetchPlaces } from './places';
 import {
   fetchCollections, fetchLikeCounts, fetchMyCollections, fetchMyLikes,
 } from './collections';
-import { fetchPreferences, NO_PREFERENCES } from './preferences';
+import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import { fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
 
 // Both catalogs scope to the selected city TOGETHER: membersOf() resolves
@@ -30,10 +30,16 @@ import { fetchCuratorAvatars, type FriendProfile, profileByHandle } from './peop
 // them directly and you get a private copy that no one will keep in step.
 const pending = new Promise<never>(() => {}); // keeps skeletons up during city bootstrap
 
-export const usePlacesQuery = (meId?: string | null) => {
+//
+// `meId` is `Auth.userId`: `undefined` is "not known yet", not "nobody",
+// and it holds the query back exactly as an unresolved city does. The
+// reader is part of the question — see `cacheKey` — so asking before
+// knowing who asks is asking a question that is about to be replaced.
+export const usePlacesQuery = (meId: string | null | undefined) => {
   const { city } = useCity();
+  const known = meId !== undefined;
   const fetcher = useCallback(
-    () => (city ? fetchPlaces(city.id, meId) : (pending as Promise<Place[]>)),
+    () => (city && known ? fetchPlaces(city.id, meId) : (pending as Promise<Place[]>)),
     // `city.id` is the stable key. Depending on `city` changes the fetcher identity on renders
     // where the city did not change, and useFetch reloads the whole catalog off that.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -44,7 +50,7 @@ export const usePlacesQuery = (meId?: string | null) => {
   // buys and costs. No key while the city is unresolved, because a cached
   // answer is an answer to a question, and there is no question yet.
   return usePersistedFetch(
-    CACHE_CATALOG && city ? cacheKey('places', city.id, meId) : null,
+    CACHE_CATALOG && city && known ? cacheKey('places', city.id, meId) : null,
     fetcher,
     [] as Place[],
   );
@@ -60,12 +66,27 @@ export const useLikeCountsQuery = () => {
   return useFetch(fetcher, {} as Record<string, number>);
 };
 
+// The reader's own answers — this, their lists and their preferences —
+// remember themselves between launches the way the catalog does, one key
+// per account, so a signed-out reader or the next account is a miss and
+// never somebody else's hit. Without it the catalog opened from its cache
+// and these three arrived a round trip later: the Explore list re-sorted
+// itself under the reader's thumb as their taste landed, and bookmarks
+// and hearts filled in one by one. A like or a list changed since is
+// the cost, shown for that same round trip.
+//
+// The caches outlive a sign-out, as the profile stash does. Nothing reads
+// them without that account's id, and a device shared between accounts
+// holds them under keys only their owner's session opens.
+const mineKey = (kind: string, ownerId: string | null | undefined) =>
+  (CACHE_CATALOG && ownerId ? cacheKey(kind, 'all', ownerId) : null);
+
 export const useMyLikesQuery = (meId?: string | null) => {
   const fetcher = useCallback(
     () => (meId ? fetchMyLikes(meId) : Promise.resolve([] as string[])),
     [meId],
   );
-  return useFetch(fetcher, [] as string[]);
+  return usePersistedFetch(mineKey('likes', meId), fetcher, [] as string[]);
 };
 
 // No reader, in the query or in the key. The public shelf is the same
@@ -116,19 +137,24 @@ export const useMyCollections = (ownerId: string | null | undefined) => {
     () => (ownerId ? fetchMyCollections(ownerId) : Promise.resolve([] as Collection[])),
     [ownerId],
   );
-  return useFetch(fetcher, [] as Collection[]);
+  return usePersistedFetch(mineKey('mine', ownerId), fetcher, [] as Collection[]);
 };
 
 // Trips have no hook here either — `lib/mytrips` fetches them once for
 // the whole app and persists them the way the catalog queries persist
 // themselves; four screens read that one copy.
 
-export const useMyPreferences = (ownerId: string | null | undefined) => {
+// Cached as a list of one, as the profile stash is: `unpackCache` takes
+// lists and nothing else, and one row does not earn it a second shape.
+const NO_PREFERENCES_ROW = [NO_PREFERENCES];
+
+export const useMyPreferences = (ownerId: string | null | undefined): Fetch<Preferences> => {
   const fetcher = useCallback(
-    () => (ownerId ? fetchPreferences(ownerId) : Promise.resolve(NO_PREFERENCES)),
+    () => (ownerId ? fetchPreferences(ownerId) : Promise.resolve(NO_PREFERENCES)).then((p) => [p]),
     [ownerId],
   );
-  return useFetch(fetcher, NO_PREFERENCES);
+  const row = usePersistedFetch(mineKey('prefs', ownerId), fetcher, NO_PREFERENCES_ROW);
+  return { ...row, data: row.data[0] ?? NO_PREFERENCES };
 };
 
 // The local guide's grant is not a hook here. It is a property of the

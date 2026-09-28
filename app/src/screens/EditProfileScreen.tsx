@@ -74,12 +74,16 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   // starts at `NO_PREFERENCES` and fills in a moment later, and copying
   // that into state unconditionally would undo a chip tapped in between.
   // `loadedAt` rather than `loaded` — a failed reload leaves `loaded` true
-  // and must not re-seed the form from the empty answer.
+  // and must not re-seed the form from the empty answer. And never from
+  // the launch cache: the network's row lands a moment behind it and
+  // would re-seed over a chip tapped in between, and a form is where the
+  // reader should be editing what is stored, not what was.
+  const fresh = prefs.loadedAt !== null && !prefs.fromCache;
   useEffect(() => {
-    if (prefs.loadedAt === null) return;
+    if (!fresh) return;
     setHistory(prefs.data.history_on);
     setTaste(cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)));
-  }, [prefs.loadedAt, prefs.data]);
+  }, [fresh, prefs.data]);
   // Kept apart from `error`: this one belongs to a field and is drawn
   // there, where the form-wide one sits by the button that failed.
   const [nameError, setNameError] = useState<string | null>(null);
@@ -95,7 +99,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
   // once their row has landed, because until then there is nothing yet to
   // have changed from.
   const saved = useRef(false);
-  const seeded = prefs.loadedAt === null ? null : prefs.data;
+  const seeded = fresh ? prefs.data : null;
   const edited = name !== profile.full_name
     || handle !== profile.handle
     || location !== profile.location
@@ -187,8 +191,10 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
       // hold this screen's placeholders — recording off, no interests —
       // and writing them would wipe a real answer the reader never saw,
       // which is worse than keeping a tap that the landing row was about to
-      // overwrite anyway (see the seeding above).
-      if (uid && prefs.loadedAt !== null) {
+      // overwrite anyway (see the seeding above). "Landed" is the
+      // network's row: the launch cache's copy never seeded the form, so
+      // the form still holds placeholders while only that copy is here.
+      if (uid && fresh) {
         await savePreferences(uid, {
           categories: taste,
           budget_vnd: prefs.data.budget_vnd,

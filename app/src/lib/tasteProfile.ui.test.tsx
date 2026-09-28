@@ -19,6 +19,7 @@ const place = (slug: string, over: Partial<Place> = {}) => ({ slug, ...over } as
 
 const world = vi.hoisted(() => ({
   uid: 'me' as string | null,
+  userId: undefined as string | null | undefined,
   prefs: { loaded: true, data: { history_on: false, categories: [] as string[] } },
   places: [] as unknown[],
   mine: [] as unknown[],
@@ -32,7 +33,9 @@ const spies = vi.hoisted(() => ({
   logPlaceEvent: vi.fn(async () => {}),
 }));
 
-vi.mock('./auth', () => ({ useAuth: () => ({ session: world.uid ? { user: { id: world.uid } } : null }) }));
+vi.mock('./auth', () => ({
+  useAuth: () => ({ session: world.uid ? { user: { id: world.uid } } : null, userId: world.userId }),
+}));
 vi.mock('./catalog', () => ({
   usePlaces: () => ({ data: world.places }),
   useCatalog: () => ({ collections: { data: world.collections }, myLikes: world.myLikes }),
@@ -55,6 +58,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-09-28T09:00:00Z'));
   world.uid = 'me';
+  world.userId = undefined;
   world.prefs = { loaded: true, data: { history_on: false, categories: [] } };
   world.places = [
     place('saved-a'), place('mine-b', { submitted_by: 'me' }), place('liked-c'), place('elsewhere'),
@@ -82,6 +86,14 @@ describe('the planner’s profile', () => {
     expect(slugs(s.liked)).toEqual(['liked-c']);
     expect(seen.taste).toEqual({ affinity: {} });
     expect(seen.budgetVnd).toBeNull();
+  });
+
+  it('knows the remembered reader before the session is read', () => {
+    world.uid = null;
+    world.userId = 'me';
+    render(<Probe />);
+    expect(slugs(lastSignals().suggested)).toEqual(['mine-b']);
+    expect(seen.taste).toEqual({ affinity: {} });
   });
 
   it('with the history switch off, never reads what was passed over', async () => {
@@ -151,6 +163,17 @@ describe('the browse taste', () => {
     world.uid = null;
     render(<Probe />);
     expect(seen).toBeNull();
+  });
+
+  // A taste that waited for the session re-sorted a list the reader could
+  // already see — the cached catalog drew in one order, and a round trip
+  // later the reader's taste landed and drew it in another.
+  it('knows the remembered reader before the session is read', () => {
+    world.uid = null;
+    world.userId = 'me';
+    render(<Probe />);
+    expect(seen).toEqual({ affinity: {} });
+    expect(slugs(lastSignals().suggested)).toEqual(['mine-b']);
   });
 });
 
