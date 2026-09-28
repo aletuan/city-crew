@@ -56,7 +56,7 @@ speculative ones, and a red PR costs a cycle of the reviewer's trust.
 | scope | floor |
 |---|---|
 | `src/lib/**/*.ts` | **100** on statements, branches, functions and lines |
-| `src/screens/*.tsx` | 98 lines / 98 statements / 90 branches / 84 functions |
+| `src/screens/*.tsx` | 99 lines / 99 statements / 91 branches / 91 functions |
 | `src/components/*.tsx` | 95 lines / 95 statements / 93 branches / 90 functions |
 
 The screens and components floors are a ratchet: when a file's coverage

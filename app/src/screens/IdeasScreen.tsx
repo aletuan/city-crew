@@ -512,7 +512,15 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
           it in one glance. */}
       {picking && (
         <Modal transparent animationType="fade" onRequestClose={() => setPicking(false)}>
-          <Pressable style={s.pickScrim} onPress={() => setPicking(false)} />
+          {/* Named, so VoiceOver has a way out that is not "anywhere off
+              the card" — the same backdrop the save and sign-in sheets
+              give a label for the same reason. */}
+          <Pressable
+            style={s.pickScrim}
+            onPress={() => setPicking(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t('Close', 'Đóng', '閉じる')}
+          />
           <View style={s.pickCard}>
             <DateTimePicker
               value={fromISO(day) ?? new Date()}
