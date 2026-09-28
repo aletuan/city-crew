@@ -587,15 +587,17 @@ export default function SketchingScreen({ navigation, route }: {
             first plan: content that changes itself is the thing that
             setting exists to stop, and slowing the change down is not
             the same as not changing. */}
-        <SketchDeck
-          span={deckSpan(deckPlans)}
-          places={deckPlans[deck]?.stops.map((st) => st.place) ?? []}
-          // The plan after this one, so the deck can ask for its covers
-          // while this one is still standing. See the note on `next`.
-          next={deckPlans[deck + 1]?.stops.map((st) => st.place)}
-          still={calm}
-          option={deck}
-        />
+        <View style={s.deckRoom}>
+          <SketchDeck
+            span={deckSpan(deckPlans)}
+            places={deckPlans[deck]?.stops.map((st) => st.place) ?? []}
+            // The plan after this one, so the deck can ask for its covers
+            // while this one is still standing. See the note on `next`.
+            next={deckPlans[deck + 1]?.stops.map((st) => st.place)}
+            still={calm}
+            option={deck}
+          />
+        </View>
 
         {/* Only the two that report something.
 
@@ -883,6 +885,20 @@ const s = StyleSheet.create({
 
   title: { color: colors.text, fontSize: 27, fontFamily: 'SpaceGrotesk_700Bold', textAlign: 'center', marginTop: 6 },
 
+  // ── the rhythm between the tiers ──
+  //
+  // 20pt between each tier and the next, as the eye measures it: the
+  // body's 14 of `gap`, and each tier taking its own difference on top.
+  //
+  // The deck takes 9 rather than 6, because its box is not where it ends.
+  // The side cards lean 3°, which drops the low corner of a 108pt card
+  // 2.8pt below its box (54 × sin 3°), and their shadow reaches further
+  // still. At the body's 14 alone the gap under the deck read as about
+  // 11 — on the owner's phone, 12 — the tightest on the screen, between
+  // the two things on it least alike: pictures that keep changing, and
+  // the facts the reader chose.
+  deckRoom: { alignSelf: 'stretch', marginBottom: 9 },
+
   // ── the facts card ──
   //
   // The same white-on-paper card as the step list and the findings box
@@ -996,8 +1012,12 @@ const s = StyleSheet.create({
   // lengths and a box that resizes under the step list makes the list
   // jump every time a fact lands. Two lines' worth, centred — the
   // skeleton's three bars fit the same room.
+  // 6 of margin, the step card's own figure, for the 20 the other tiers
+  // keep. It was 2, which left this box 4pt nearer the list than the list
+  // is to the card above it — a difference too small to read as a
+  // decision, so it read as a slip.
   preview: {
-    alignSelf: 'stretch', gap: 10, padding: 16, marginTop: 2,
+    alignSelf: 'stretch', gap: 10, padding: 16, marginTop: 6,
     minHeight: 96, justifyContent: 'center',
     backgroundColor: colors.surfaceCard, borderRadius: radius.card,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
