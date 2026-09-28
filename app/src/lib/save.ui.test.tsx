@@ -26,6 +26,9 @@ const world = vi.hoisted(() => ({
     error: null as string | null, reload: () => {},
   },
   historyOn: false,
+  userId: undefined as string | null | undefined,
+  listsFor: [] as (string | null | undefined)[],
+  prefsFor: [] as (string | null | undefined)[],
 }));
 const goTo = vi.hoisted(() => vi.fn());
 const addPlaceToCollection = vi.hoisted(() => vi.fn(async () => {}));
@@ -34,21 +37,24 @@ const logPlaceEvent = vi.hoisted(() => vi.fn(async () => {}));
 const reload = vi.hoisted(() => vi.fn());
 
 vi.mock('../nav', () => ({ goTo }));
-vi.mock('./auth', () => ({ useAuth: () => ({ session: world.session }) }));
+vi.mock('./auth', () => ({ useAuth: () => ({ session: world.session, userId: world.userId }) }));
 vi.mock('./city', () => ({ useCity: () => ({ city: { id: 'hanoi' } }) }));
 vi.mock('./i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 vi.mock('./data', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
-  useMyCollections: (ownerId?: string | null) => (ownerId
+  useMyCollections: (ownerId?: string | null) => (world.listsFor.push(ownerId), ownerId
     ? { ...world.mine, reload }
     : { data: [], loading: false, loaded: true, error: null, reload }),
   // `loaded` as well as the value: `SaveProvider` only believes the flag
   // once the row it describes has arrived, because the empty preferences
   // now read as recording. A mock without it says "still loading" and
   // suppresses every event.
-  useMyPreferences: () => ({ loaded: true, data: { history_on: world.historyOn } }),
+  useMyPreferences: (ownerId?: string | null) => {
+    world.prefsFor.push(ownerId);
+    return { loaded: true, data: { history_on: world.historyOn } };
+  },
   addPlaceToCollection,
   removePlaceFromCollection,
   logPlaceEvent,
@@ -83,6 +89,9 @@ const tap = () => fireEvent.click(screen.getByText('tap the bookmark'));
 
 beforeEach(() => {
   world.session = { user: { id: 'u1' } };
+  world.userId = undefined;
+  world.listsFor = [];
+  world.prefsFor = [];
   world.mine = { data: [], loading: false, loaded: true, error: null, reload: () => {} };
   world.historyOn = false;
   goTo.mockClear();
@@ -90,6 +99,38 @@ beforeEach(() => {
   removePlaceFromCollection.mockClear();
   logPlaceEvent.mockClear();
   reload.mockClear();
+});
+
+// The lists hydrate with the catalog rather than a session read later:
+// a bookmark that filled in a round trip after the card it sits on read
+// as the app loading twice. See `Auth.userId`.
+describe('whose lists, before the session is read', () => {
+  it('the reader the last launch remembered — lists and preferences both', () => {
+    world.session = null;
+    world.userId = 'u1';
+    world.mine = { ...world.mine, data: [list('weekend', ['cong-caphe'])] };
+    mount();
+    expect(world.listsFor.at(-1)).toBe('u1');
+    expect(world.prefsFor.at(-1)).toBe('u1');
+    expect(screen.getByTestId('saved').textContent).toBe('true');
+  });
+
+  it('the session’s reader over the one remembered', () => {
+    world.userId = 'u2';
+    mount();
+    expect(world.listsFor.at(-1)).toBe('u1');
+    expect(world.prefsFor.at(-1)).toBe('u1');
+  });
+
+  // Opening a sheet is an act, not a read: it waits for the real session.
+  it('still asks a remembered-but-unconfirmed reader to sign in to save', () => {
+    world.session = null;
+    world.userId = 'u1';
+    mount();
+    tap();
+    expect(screen.getByText('Save places you love')).toBeTruthy();
+    expect(goTo).not.toHaveBeenCalled();
+  });
 });
 
 describe('signed out', () => {

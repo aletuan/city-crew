@@ -106,6 +106,30 @@ type Auth = {
   /** False until the persisted session has been read once. */
   ready: boolean;
   session: Session | null;
+  /**
+   * Who is reading, as early as this launch can say — before `session`.
+   *
+   * `undefined` until anything is known, then the session's user id, or
+   * null for nobody. Before the session has been read it is the id the
+   * last launch ended on (`LAST_READER_KEY`), which is one storage read
+   * away where the session can be a network round trip away: with the
+   * access token lapsed — any launch more than an hour after the last —
+   * `getSession` waits for the refresh before it answers at all.
+   *
+   * For the queries that are *about* the reader and nothing else. The
+   * catalog asked as a guest while the session was still unknown and
+   * again as the reader once it landed: two ~900 KB fetches a launch, and
+   * a cache key that changed underneath the first paint, which reset the
+   * list it had just hydrated to skeletons. Supabase's logs had the pair
+   * on every cold start, 60–230 ms apart. With this, the question is
+   * asked once, under the key it will still have when the session lands.
+   *
+   * Not a credential: nothing is sent on the strength of it that RLS does
+   * not check against the real token. If it is wrong — a session revoked
+   * elsewhere — the session corrects it within the launch, and the cost
+   * is the double fetch this replaced.
+   */
+  userId: string | null | undefined;
   email: string | null;
   /** Editable fields, stored in user metadata. */
   profile: Profile;
@@ -133,7 +157,7 @@ type Auth = {
 const EMPTY_PROFILE: Profile = { handle: '', full_name: '', location: '', bio: '', interests: '', avatar_url: '' };
 
 const Ctx = createContext<Auth>({
-  ready: false, session: null, email: null, profile: EMPTY_PROFILE, memberSince: null,
+  ready: false, session: null, userId: undefined, email: null, profile: EMPTY_PROFILE, memberSince: null,
   signIn: async () => {}, signUp: async () => ({ needsConfirm: false }),
   confirmSignUp: async () => {}, requestReset: async () => {}, resetPassword: async () => {},
   updateProfile: async () => {}, setAvatar: async () => {}, clearAvatar: async () => {},
@@ -142,6 +166,9 @@ const Ctx = createContext<Auth>({
 });
 
 export const useAuth = () => useContext(Ctx);
+
+/** Whose session this device held last — see `Auth.userId`. */
+export const LAST_READER_KEY = 'citycrew.auth.lastReader';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -156,6 +183,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // The last launch's reader, read beside the session rather than after
+  // it. A failed read is "nobody", not "unknown": unknown holds the
+  // catalog back, and a storage error must not hold it back for good.
+  const [lastReader, setLastReader] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    AsyncStorage.getItem(LAST_READER_KEY)
+      .then((v) => setLastReader(v || null), () => setLastReader(null));
+  }, []);
+  const uid = session?.user?.id;
+  // Written only once the session has been read: before that, "no
+  // session" means "not read yet", and removing the key then would throw
+  // away the one thing this launch had to go on.
+  useEffect(() => {
+    if (!ready) return;
+    (uid ? AsyncStorage.setItem(LAST_READER_KEY, uid) : AsyncStorage.removeItem(LAST_READER_KEY))
+      .catch(() => {});
+  }, [ready, uid]);
+  const userId = uid ?? (ready ? null : lastReader);
 
   // The profile is a row now, not a claim inside the token, so it has to
   // be fetched — and refetched whenever the account changes. Signing out
@@ -361,13 +407,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return {
       ready,
       session,
+      userId,
       email: session?.user?.email ?? null,
       profile,
       memberSince: session?.user?.created_at ? new Date(session.user.created_at) : null,
       signIn, signUp, confirmSignUp, requestReset, resetPassword, updateProfile,
       setAvatar, clearAvatar, signOut, deleteAccount,
     };
-  }, [ready, session, profile, signIn, signUp, confirmSignUp, requestReset, resetPassword,
+  }, [ready, session, userId, profile, signIn, signUp, confirmSignUp, requestReset, resetPassword,
       updateProfile, setAvatar, clearAvatar, signOut, deleteAccount]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

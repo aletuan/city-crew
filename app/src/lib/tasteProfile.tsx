@@ -132,8 +132,8 @@ function useOwnSignals(uid: string | null) {
  * re-render on each.
  */
 export function usePlanProfile(): PlanProfile {
-  const { session } = useAuth();
-  const uid = session?.user?.id ?? null;
+  const { session, userId } = useAuth();
+  const uid = session?.user?.id ?? userId ?? null;
   const { saved, suggested, liked } = useOwnSignals(uid);
   const prefs = useMyPreferences(uid);
 
@@ -209,8 +209,10 @@ export function usePlanProfile(): PlanProfile {
  * that was deliberately removed is quietly back.
  */
 export function useBrowseTaste(): Taste | null {
-  const { session } = useAuth();
-  const uid = session?.user?.id ?? null;
+  // The early id, as the catalog uses: a taste that waited for the session
+  // re-sorted a list the reader could already see. See `Auth.userId`.
+  const { session, userId } = useAuth();
+  const uid = session?.user?.id ?? userId ?? null;
   const { saved, suggested, liked } = useOwnSignals(uid);
   const prefs = useMyPreferences(uid);
 

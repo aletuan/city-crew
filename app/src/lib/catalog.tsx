@@ -91,8 +91,10 @@ const Ctx = createContext<Catalog>(EMPTY);
 
 export function CatalogProvider({ children }: { children: React.ReactNode }) {
   // The places query needs to know who is reading, so it can include the
-  // reader's own suggestions.
-  const meId = useAuth().session?.user?.id;
+  // reader's own suggestions — and it waits to know, rather than asking as
+  // a guest first. See `Auth.userId`.
+  const { session, userId } = useAuth();
+  const meId = session?.user?.id ?? userId;
   const places = usePlacesQuery(meId);
   // The collections query needs nobody. It answers "every public list",
   // the reader's own included — the Collections tab keeps its own two

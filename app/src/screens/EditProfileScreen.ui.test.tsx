@@ -31,7 +31,10 @@ type Prefs = { categories: string[]; budget_vnd: number | null; history_on: bool
 const state = vi.hoisted(() => ({
   session: { user: { id: 'me' } } as { user: { id: string } } | null,
   profile: { handle: 'minh', full_name: 'Minh Le', location: 'Hanoi', bio: 'Coffee first', interests: '', avatar_url: '' },
-  prefs: { data: { categories: [], budget_vnd: null, history_on: true } as Prefs, loadedAt: 1 as number | null },
+  prefs: {
+    data: { categories: [], budget_vnd: null, history_on: true },
+    loadedAt: 1,
+  } as { data: Prefs; loadedAt: number | null; fromCache?: boolean },
   city: { short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as
     { short_en: string; short_vi: string; short_ja: string } | null,
 }));
@@ -438,6 +441,41 @@ describe('before the preferences row lands', () => {
     await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
     expect(spies.updateProfile).toHaveBeenCalled();
     expect(spies.savePreferences).not.toHaveBeenCalled();
+  });
+
+  // The launch cache's copy is not the row either. It is shown on other
+  // screens for the moment before the network answers; here it would
+  // seed a form the network's answer then re-seeds under the reader's
+  // finger, and saving on the strength of it writes placeholders.
+  it('treats the launch cache’s copy as not landed: no seeding, no write', async () => {
+    state.prefs = {
+      data: { categories: ['cafes'], budget_vnd: null, history_on: true }, loadedAt: 1, fromCache: true,
+    };
+    const { navigation } = renderScreen();
+    const sw = screen.getByRole('switch', { name: 'Remember what I open' }) as HTMLInputElement;
+    expect(sw.checked).toBe(false);
+    touch();
+    save();
+    await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+    expect(spies.updateProfile).toHaveBeenCalled();
+    expect(spies.savePreferences).not.toHaveBeenCalled();
+  });
+
+  it('seeds from the network’s row when it lands behind the cached copy', async () => {
+    state.prefs = {
+      data: { categories: ['views'], budget_vnd: 100000, history_on: true }, loadedAt: 1, fromCache: true,
+    };
+    const { rerender, navigation } = renderScreen();
+    state.prefs = {
+      data: { categories: ['cafes'], budget_vnd: 200000, history_on: false }, loadedAt: 2, fromCache: false,
+    };
+    rerender(<EditProfileScreen navigation={navigation} />);
+    touch();
+    save();
+    await waitFor(() => expect(spies.savePreferences).toHaveBeenCalled());
+    expect(spies.savePreferences).toHaveBeenCalledWith('me', {
+      categories: ['cafes'], budget_vnd: 200000, history_on: false,
+    });
   });
 });
 

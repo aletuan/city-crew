@@ -35,7 +35,7 @@ vi.mock('expo-image-manipulator', () => ({
   SaveFormat: { JPEG: 'jpeg' },
 }));
 
-import { AuthProvider, isHandleFree, useAuth, type Profile } from './auth';
+import { AuthProvider, isHandleFree, LAST_READER_KEY, useAuth, type Profile } from './auth';
 
 type Api = ReturnType<typeof useAuth>;
 /** What the provider last handed its consumers. Written from an effect,
@@ -87,6 +87,8 @@ beforeEach(async () => {
   manipulateAsync.mockReset();
   vi.mocked(AsyncStorage.setItem).mockClear();
   for (const uid of ['u1', 'u2']) await AsyncStorage.removeItem(profileKey(uid));
+  await AsyncStorage.removeItem(LAST_READER_KEY);
+  vi.mocked(AsyncStorage.removeItem).mockClear();
 });
 
 afterEach(() => {
@@ -122,6 +124,89 @@ describe('the session', () => {
     expect(h.fake.listening()).toBe(1);
     view.unmount();
     expect(h.fake.listening()).toBe(0);
+  });
+});
+
+// ── who is reading, before the session says ──
+//
+// The session can be a network round trip away at launch — a lapsed
+// token is refreshed before `getSession` answers — and the catalog asked
+// as a guest in that gap, then again as the reader. `userId` is the id
+// the last launch ended on, until the session is read and replaces it.
+describe('the reader, before the session', () => {
+  /** A stored-session read that answers when the test says. */
+  function heldSession() {
+    let answer!: (s: ReturnType<typeof session> | null) => void;
+    vi.spyOn(h.fake.client.auth, 'getSession').mockReturnValueOnce(
+      new Promise((r) => { answer = (s) => r({ data: { session: s }, error: null }); }) as never,
+    );
+    return (s: ReturnType<typeof session> | null) => act(async () => { answer(s); });
+  }
+
+  it('is not known on the first frame, then is the last launch’s reader', async () => {
+    await AsyncStorage.setItem(LAST_READER_KEY, 'u1');
+    heldSession();
+    render(<AuthProvider><Probe /></AuthProvider>);
+    expect(seen.api.userId).toBeUndefined();
+    await waitFor(() => expect(seen.api.userId).toBe('u1'));
+    expect(seen.api.ready).toBe(false);
+    expect(seen.api.session).toBeNull();
+  });
+
+  it('is nobody, not unknown, when no launch has left a reader behind', async () => {
+    heldSession();
+    render(<AuthProvider><Probe /></AuthProvider>);
+    await waitFor(() => expect(seen.api.userId).toBeNull());
+    expect(seen.api.ready).toBe(false);
+  });
+
+  // Unknown holds the catalog back. A storage error must not hold it back
+  // for the whole launch.
+  it('is nobody when the storage read fails', async () => {
+    vi.mocked(AsyncStorage.getItem).mockRejectedValueOnce(new Error('disk'));
+    heldSession();
+    render(<AuthProvider><Probe /></AuthProvider>);
+    await waitFor(() => expect(seen.api.userId).toBeNull());
+  });
+
+  it('gives way to the session once it is read — another account, or none', async () => {
+    await AsyncStorage.setItem(LAST_READER_KEY, 'u1');
+    const land = heldSession();
+    h.fake.replies({ data: null });
+    render(<AuthProvider><Probe /></AuthProvider>);
+    await waitFor(() => expect(seen.api.userId).toBe('u1'));
+    await land(session('u2'));
+    expect(seen.api.userId).toBe('u2');
+    await act(async () => { h.fake.fireAuth('SIGNED_OUT', null); });
+    expect(seen.api.userId).toBeNull();
+  });
+
+  it('is nobody once the session is read and there is none, whatever was remembered', async () => {
+    await AsyncStorage.setItem(LAST_READER_KEY, 'u1');
+    const land = heldSession();
+    render(<AuthProvider><Probe /></AuthProvider>);
+    await waitFor(() => expect(seen.api.userId).toBe('u1'));
+    await land(null);
+    expect(seen.api.ready).toBe(true);
+    expect(seen.api.userId).toBeNull();
+  });
+
+  it('remembers the signed-in reader, and forgets on sign-out', async () => {
+    await mount({ signedIn: session('u1'), fetched: row() });
+    await waitFor(async () => expect(await AsyncStorage.getItem(LAST_READER_KEY)).toBe('u1'));
+    await act(async () => { h.fake.fireAuth('SIGNED_OUT', null); });
+    await waitFor(async () => expect(await AsyncStorage.getItem(LAST_READER_KEY)).toBeNull());
+  });
+
+  // Before the read, no session means "not read yet". Forgetting then
+  // would throw away the one thing the launch had to go on.
+  it('forgets nothing before the session has been read', async () => {
+    await AsyncStorage.setItem(LAST_READER_KEY, 'u1');
+    heldSession();
+    render(<AuthProvider><Probe /></AuthProvider>);
+    await waitFor(() => expect(seen.api.userId).toBe('u1'));
+    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem(LAST_READER_KEY)).toBe('u1');
   });
 });
 
@@ -162,7 +247,9 @@ describe('the profile', () => {
 
   it('stashes what it fetched under the account’s key, and never stashes the empty profile', async () => {
     await mount({ signedIn: session('u1'), fetched: row({ handle: 'ana' }) });
-    const writes = vi.mocked(AsyncStorage.setItem).mock.calls;
+    // The profile stash's writes only: the reader's id is remembered
+    // beside it, and has tests of its own above.
+    const writes = vi.mocked(AsyncStorage.setItem).mock.calls.filter(([k]) => k !== LAST_READER_KEY);
     expect(writes.map(([k]) => k)).toEqual([profileKey('u1')]);
     expect(writes[0][1]).toContain('"handle":"ana"');
 
