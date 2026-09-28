@@ -887,17 +887,25 @@ const s = StyleSheet.create({
 
   // ── the rhythm between the tiers ──
   //
-  // 20pt between each tier and the next, as the eye measures it: the
-  // body's 14 of `gap`, and each tier taking its own difference on top.
+  // 20pt between each of the three cards, as the eye measures it: the
+  // body's 14 of `gap`, and each card taking its own difference on top.
   //
-  // The deck takes 9 rather than 6, because its box is not where it ends.
-  // The side cards lean 3°, which drops the low corner of a 108pt card
-  // 2.8pt below its box (54 × sin 3°), and their shadow reaches further
-  // still. At the body's 14 alone the gap under the deck read as about
-  // 11 — on the owner's phone, 12 — the tightest on the screen, between
-  // the two things on it least alike: pictures that keep changing, and
-  // the facts the reader chose.
-  deckRoom: { alignSelf: 'stretch', marginBottom: 9 },
+  // The deck is not a fourth card, and 28 under it says so. The cards
+  // below are what the reader chose and what the planner is doing; the
+  // deck is pictures that change on their own while that happens. At an
+  // even 20 — the first answer, measured at 21 on the owner's phone — it
+  // read as the top of the stack, and the owner asked for more.
+  //
+  // 17, not 14, because the deck's box is not where it ends. Three cards
+  // lean ±3°, which drops a 108pt card's low corner 2.8pt below its box
+  // (54 × sin 3°); two lean ±1.5°, 1.4pt. So 28 for three cards and 29.6
+  // for two, and the shadow reaching further still. Before any of this
+  // the gap was the body's 14 alone and read as 11: the tightest on the
+  // screen, between the two things on it least alike.
+  //
+  // The cost is 8pt of height, and the step list and the findings box
+  // below it move down by that much.
+  deckRoom: { alignSelf: 'stretch', marginBottom: 17 },
 
   // ── the facts card ──
   //
