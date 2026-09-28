@@ -732,8 +732,12 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
 
       {/* The way out, whole. The store requires it (5.1.1(v)) and it was
           owed anyway: an account you can open but not close is a trap
-          with good manners. Quiet type, not a red button: it must be
-          findable by someone looking and invisible to someone scrolling.
+          with good manners. Quiet, not a red button: it must be findable
+          by someone looking and invisible to someone scrolling. It wears
+          the trip's delete control — a small outlined pill, a bin, red
+          type, centred — so a destructive act looks the same wherever the
+          app offers one, and never has the breadth of an offer (see the
+          note on `delete` in TripDetailScreen).
 
           Last on the page, below the tagline, and not a point nearer:
           it sat directly under Sign out — the button this screen is
@@ -755,6 +759,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         onPress={() => navigation.navigate('DeleteAccount')}
         testID="profile-delete-account"
       >
+        <Ionicons name="trash-outline" size={15} color={colors.bad} />
         <Text style={s.deleteText}>{t('Delete account', 'Xoá tài khoản', 'アカウントを削除')}</Text>
       </PressableScale>
     </>
@@ -893,8 +898,14 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlassSoft, backgroundColor: colors.surfaceGlass,
   },
   signOutText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
-  deleteBtn: { alignItems: 'center', paddingVertical: 14, marginTop: 22 },
-  deleteText: { color: colors.bad, fontSize: 14, fontWeight: font.medium },
+  // TripDetailScreen's `delete`, measure for measure. The top margin is
+  // this screen's own: the buffer below the tagline, see the note above.
+  deleteBtn: {
+    alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
+    paddingVertical: 11, paddingHorizontal: 20, marginTop: 22,
+  },
+  deleteText: { color: colors.bad, fontSize: 13, fontWeight: font.semibold },
 
   tagline: { alignItems: 'center', gap: 8, paddingVertical: 18 },
   // Lora's italic — see `quoteFace` in theme.ts. A face means no

@@ -581,6 +581,19 @@ describe('ways out', () => {
     expect(raw.navigate).toHaveBeenCalledWith('DeleteAccount');
     expect(spies.signOut).not.toHaveBeenCalled();
   });
+
+  // The trip's delete control, worn here too: a destructive act looks the
+  // same wherever the app offers one — a small outlined pill, centred,
+  // never the breadth of an offer.
+  it('wears the trip’s delete control: a centred, outlined pill', () => {
+    draw();
+    // `PressableScale` puts `style` on the animated view inside the
+    // pressable, which is where the pill is drawn.
+    const style = getComputedStyle(screen.getByTestId('profile-delete-account').firstElementChild!);
+    expect(style.alignSelf).toBe('center');
+    expect(style.flexDirection).toBe('row');
+    expect(style.borderTopWidth).toBe('1px');
+  });
 });
 
 // Its tab pressed again at this root scrolls back to the top. The press
