@@ -64,9 +64,9 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
           row below already carries "no account yet", so the lede says the
           one thing both readers are here for. */}
       <Lede>{t(
-          'Sign in to keep your saved places, collections and trips together in one account.',
-          'Đăng nhập để giữ địa điểm đã lưu, bộ sưu tập và chuyến đi trong cùng một tài khoản.',
-          'サインインすると、保存した場所・コレクション・旅程がひとつのアカウントにまとまります。',
+          'Keep your places, build your own collections, and share your journeys with friends.',
+          'Lưu giữ địa điểm, tạo bộ sưu tập cá nhân và cùng chia sẻ hành trình kết nối.',
+          '場所を保存して、自分だけのコレクションを作り、旅を仲間と共有しよう。',
         )}</Lede>
       <FieldRow
         icon="mail-outline"

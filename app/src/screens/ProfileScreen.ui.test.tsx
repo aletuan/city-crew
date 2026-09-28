@@ -230,7 +230,7 @@ describe('guest hub', () => {
     expect(screen.getByText('Sign in to save your favorite places.')).toBeTruthy();
     expect(screen.getByText('Create and organize your collections.')).toBeTruthy();
     expect(screen.getByText('Plan trips and invite your friends.')).toBeTruthy();
-    expect(screen.getByText('Find friends and plan unforgettable adventures together.')).toBeTruthy();
+    expect(screen.getByText('Find friends and share unforgettable trips.')).toBeTruthy();
   });
 
   it('"Keep exploring" goes to the Explore tab through the parent navigator', () => {
@@ -382,7 +382,7 @@ describe('friends card', () => {
     expect(raw.navigate).not.toHaveBeenCalled();
     press('Connect with friends');
     expect(raw.navigate).toHaveBeenCalledWith('Crew');
-    expect(screen.getByText('Find friends and plan trips together.')).toBeTruthy();
+    expect(screen.getByText('Find friends and share your plans.')).toBeTruthy();
   });
 
   it('counts accepted friends only, and shows no number with none', () => {

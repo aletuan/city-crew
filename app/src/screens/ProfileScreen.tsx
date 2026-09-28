@@ -465,7 +465,7 @@ function GuestHub({ navigation }: { navigation: Nav }) {
           <View style={{ flex: 1, gap: 3 }}>
             <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
             <Text style={s.featureSub}>
-              {t('Find friends and plan unforgettable adventures together.', 'Tìm bạn bè và cùng nhau lên những chuyến đi đáng nhớ.', '友達を見つけて、忘れられない冒険を一緒に。')}
+              {t('Find friends and share unforgettable trips.', 'Tìm kiếm bạn bè và chia sẻ những chuyến đi đáng nhớ.', '友達を探して、忘れられない旅を共有。')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
@@ -667,7 +667,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           <View style={{ flex: 1, gap: 3 }}>
             <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
             <Text style={s.featureSub}>
-              {t('Find friends and plan trips together.', 'Tìm bạn bè và cùng lên kế hoạch.', '友達を見つけて一緒に旅を計画。')}
+              {t('Find friends and share your plans.', 'Tìm kiếm bạn bè và chia sẻ kế hoạch.', '友達を探して、計画を共有。')}
             </Text>
           </View>
           {crew.friends.length > 0 ? <Text style={s.friendCount}>{crew.friends.length}</Text> : null}
