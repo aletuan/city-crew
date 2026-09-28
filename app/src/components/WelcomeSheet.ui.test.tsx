@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 //
 // The welcome, and the promise that it is a welcome rather than a
-// greeting: it appears on the launch where storage holds nothing, and
-// never again — including when storage itself is the thing that failed.
+// greeting: it appears to a guest on the launch where storage holds
+// nothing, and never again — including when storage itself is the thing
+// that failed. An account holder is never welcomed at all.
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,8 +15,11 @@ vi.mock('../lib/i18n', () => ({
 }));
 const goTo = vi.hoisted(() => vi.fn());
 vi.mock('../nav', () => ({ goTo }));
+// `Auth.userId`: undefined not known yet, null a guest, an id an account.
+const reader = vi.hoisted(() => ({ userId: null as string | null | undefined }));
+vi.mock('../lib/auth', () => ({ useAuth: () => ({ userId: reader.userId }) }));
 
-import WelcomeSheet, { WELCOME_ALWAYS_KEY } from './WelcomeSheet';
+import WelcomeSheet from './WelcomeSheet';
 import { launchSettled } from '../lib/launch';
 
 const KEY = 'citycrew.welcomeSeen';
@@ -26,7 +30,7 @@ beforeEach(async () => {
   // tests. `mockClear`, never `mockReset`: reset takes the stub's
   // implementation with it and the Map stops working for everything after.
   await AsyncStorage.removeItem(KEY);
-  await AsyncStorage.removeItem(WELCOME_ALWAYS_KEY);
+  reader.userId = null;
   vi.mocked(AsyncStorage.getItem).mockClear();
   vi.mocked(AsyncStorage.setItem).mockClear();
   goTo.mockClear();
@@ -121,23 +125,29 @@ describe('every launch after', () => {
   });
 });
 
-// TEMPORARY, and pinned so it cannot rot quietly while it is here: the
-// switch in Profile → Settings that makes the welcome greet on every
-// launch. Delete this block along with the switch.
-describe('the always-show switch', () => {
-  it('greets again on a launch that has already seen it', async () => {
-    await AsyncStorage.setItem(KEY, '1');
-    await AsyncStorage.setItem(WELCOME_ALWAYS_KEY, '1');
+// For guests. An account holder on a fresh install — or on the update
+// that first shipped this — was welcomed to an app they already use, and
+// its Sign in link opened the form over a session that was already there.
+describe('an account holder', () => {
+  it('is never welcomed, and is marked as having been', async () => {
+    reader.userId = 'u1';
     render(<WelcomeSheet />);
-    expect(await screen.findByText('Welcome to City Crew')).toBeTruthy();
+    await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledWith(KEY, '1'));
+    await new Promise((r) => setTimeout(r, 700));
+    expect(screen.queryByText('Welcome to City Crew')).toBeNull();
   });
 
-  it('goes back to silence once it is off', async () => {
-    await AsyncStorage.setItem(KEY, '1');
-    render(<WelcomeSheet />);
-
-    await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalledWith(WELCOME_ALWAYS_KEY));
+  // Not known yet is not a guest: the sheet waits for the answer rather
+  // than greeting somebody it is about to find out has an account.
+  it('is waited for while the reader is not yet known', async () => {
+    reader.userId = undefined;
+    const view = render(<WelcomeSheet />);
+    await new Promise((r) => setTimeout(r, 700));
     expect(screen.queryByText('Welcome to City Crew')).toBeNull();
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    reader.userId = null;
+    view.rerender(<WelcomeSheet />);
+    expect(await screen.findByText('Welcome to City Crew')).toBeTruthy();
   });
 });
 
