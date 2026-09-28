@@ -1148,50 +1148,41 @@ describe('the map’s quick filters', () => {
 });
 
 // The discs' switch is a colour change on a busy map, which the owner could
-// not read from a screenshot; the toast says what the press did, and how
-// many places it left.
+// not read from a screenshot; the toast says, in one plain sentence, what
+// the press did.
 describe('the map’s quick filters, said aloud', () => {
   beforeEach(async () => { await AsyncStorage.setItem('citycrew.explore.view', 'map'); });
   const toast = () => screen.getByTestId('explore-map-toast').textContent;
 
-  it('names each opening-hours answer with the count it leaves', async () => {
+  it('says what each opening-hours answer shows', async () => {
     state.places.data = [
       place('open', { lat: 21, lng: 105, opening_hours: week('Open 24 hours') }),
       place('closed', { lat: 21.1, lng: 105.1, opening_hours: week('Closed') }),
-      place('also-closed', { lat: 21.2, lng: 105.2, opening_hours: week('Closed') }),
     ];
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     expect(screen.queryByTestId('explore-map-toast')).toBeNull();
     const status = () => screen.getByRole('button', { name: /opening hours/i });
     await act(async () => { fireEvent.click(status()); });
-    expect(toast()).toBe('Open now · 1 place');
+    expect(toast()).toBe('Showing only places open now.');
     await act(async () => { fireEvent.click(status()); });
-    expect(toast()).toBe('Closed now · 2 places');
-    // Off is said as what the map now shows, not as "Any time", which
-    // reads like a filter that is still on.
+    expect(toast()).toBe('Showing only places closed now.');
+    // Off is said as the filter going, not as "all places": another
+    // filter may still be narrowing the map.
     await act(async () => { fireEvent.click(status()); });
-    expect(toast()).toBe('All opening hours · 3 places');
+    expect(toast()).toBe('Opening-hours filter off.');
   });
 
-  it('says so when a filter leaves nothing on the map', async () => {
-    state.places.data = [place('shut', { lat: 21, lng: 105, opening_hours: week('Closed') })];
-    render(<ExploreScreen navigation={nav()} />);
-    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /opening hours/i })); });
-    expect(toast()).toBe('Open now · nothing here');
-  });
-
-  it('names Bookmarked only on, and all places off, for a signed-in reader', async () => {
+  it('says Bookmarked only on, and the filter going off, for a signed-in reader', async () => {
     state.uid = 'u1';
     state.places.data = [place('a', { lat: 21, lng: 105 }), place('b', { lat: 21.1, lng: 105.1 })];
     render(<ExploreScreen navigation={nav()} />);
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     const saved = screen.getByRole('button', { name: /bookmarked only/i });
     await act(async () => { fireEvent.click(saved); });
-    expect(toast()).toMatch(/^Bookmarked only · /);
+    expect(toast()).toBe('Showing only places you saved.');
     await act(async () => { fireEvent.click(saved); });
-    expect(toast()).toBe('All places · 2 places');
+    expect(toast()).toBe('Saved-places filter off.');
   });
 
   it('says nothing to a guest, who is asked to sign in instead', async () => {

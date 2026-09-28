@@ -997,40 +997,33 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
    * The discs change only their glyph's colour when they switch, and on
    * a busy map that is not enough to tell on from off — the owner could
    * not, from two screenshots side by side. The toast answers the
-   * question at the moment it is asked, and the count in it answers the
-   * next one ("did that do anything?"), which the pins can only answer
-   * by being counted. See `Toast` for why it is a report and not a state.
+   * question at the moment it is asked. See `Toast` for why it is a
+   * report and not a state.
    *
-   * The count is `filteredFor(next)`, the same figure the sheet shows on
-   * its button, so the two cannot disagree about one filter.
+   * One plain sentence, and no count. It said "Open now · 12 places",
+   * which is two answers where the question was one, and the owner asked
+   * for the plainer "only showing places open now". Switching off is said
+   * as the filter going, not as "all places": the other disc, and the
+   * category chips, may well still be narrowing the map.
    */
   const [note, setNote] = useState<ToastNote | null>(null);
-  const say = (next: ExploreFilters, what: string) => {
-    const n = filteredFor(next).length;
-    const count = n === 0
-      ? t('nothing here', 'không có địa điểm nào', '該当なし')
-      : n === 1
-        ? t('1 place', '1 địa điểm', '1件')
-        : t(`${n} places`, `${n} địa điểm`, `${n}件`);
-    setNote((prev) => ({ id: (prev?.id ?? 0) + 1, text: `${what} · ${count}` }));
-  };
+  const say = (text: string) => setNote((prev) => ({ id: (prev?.id ?? 0) + 1, text }));
   const pickStatus = () => {
-    const next = { ...appliedFilters, status: cycleStatus(appliedFilters.status) };
-    setAppliedFilters(next);
-    // Back to "any" is said as what the map now shows — every place —
-    // rather than as the name of the answer, "Any time", which reads as
-    // a filter still on.
-    say(next, next.status === 'any'
-      ? t('All opening hours', 'Mọi giờ mở cửa', 'すべての営業時間')
-      : statusLabel(next.status, t));
+    const next = cycleStatus(appliedFilters.status);
+    setAppliedFilters({ ...appliedFilters, status: next });
+    say(next === 'open'
+      ? t('Showing only places open now.', 'Chỉ hiện những điểm đang mở.', '営業中のスポットのみ表示します。')
+      : next === 'closed'
+        ? t('Showing only places closed now.', 'Chỉ hiện những điểm đã đóng cửa.', '営業時間外のスポットのみ表示します。')
+        : t('Opening-hours filter off.', 'Bỏ lọc theo giờ mở cửa.', '営業時間の絞り込みを解除しました。'));
   };
   const pickSaved = () => {
     if (!session) { askToSignIn(); return; }
-    const next = { ...appliedFilters, savedOnly: !appliedFilters.savedOnly };
-    setAppliedFilters(next);
-    say(next, next.savedOnly
-      ? t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')
-      : t('All places', 'Tất cả địa điểm', 'すべてのスポット'));
+    const on = !appliedFilters.savedOnly;
+    setAppliedFilters({ ...appliedFilters, savedOnly: on });
+    say(on
+      ? t('Showing only places you saved.', 'Chỉ hiện những điểm lưu lại.', '保存したスポットのみ表示します。')
+      : t('Saved-places filter off.', 'Bỏ lọc theo điểm đã lưu.', '保存済みの絞り込みを解除しました。'));
   };
 
   const hero = useMemo(() => heroPlace(places, city?.hero_place_slug), [places, city?.hero_place_slug]);
