@@ -1,12 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, Pressable, StyleProp, StyleSheet, Text, View,
+  ActivityIndicator, Alert, Animated, Dimensions, Modal, Pressable, StyleProp, StyleSheet, Text, View,
   ViewStyle,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { FlatList, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
+import ReorderTip from '../components/ReorderTip';
 import { AddSlot } from '../components/add';
 import {
   AmbientWarmth, Avatar, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
@@ -134,94 +135,100 @@ function blockerSentence(
 /**
  * How long after the last move the order is written.
  *
- * Long enough that walking one place down a list — a run of taps on the
- * same arrow — is one write rather than one per tap; short enough that
- * the header says "Saved" before the reader has looked up. Not measured:
- * a chosen beat. Leaving the mode or the screen writes at once, so the
- * value can only decide how many writes there are, never whether one is
- * lost.
+ * Long enough that a run of moves — three cards dropped one after another
+ * — is one write rather than one per drop; short enough that the header
+ * says "Saved" before the reader has looked up. Not measured: a chosen
+ * beat. Leaving the screen writes at once, so the value can only decide
+ * how many writes there are, never whether one is lost.
  */
 const SAVE_AFTER_MS = 600;
 
 /**
- * How long a finger rests on a row before the row lifts.
+ * How long a finger rests on a card before the card lifts.
  *
- * The platform's own long press is 500 ms; this is shorter because the
- * mode has already been asked for — nobody is scrolling past these rows
- * by accident — and a lift that makes you wait reads as one that did not
- * take. Short enough to feel like holding, long enough that a flick to
- * scroll a long list does not pick a row up on the way.
+ * The same card opens its place on a tap, and the list under it scrolls,
+ * so the hold has to be told apart from both. A tap is over in about a
+ * tenth of a second. A scroll moves the finger first, and more than ten
+ * points of travel before the hold completes cancels the lift, so a
+ * flick never picks a card up. What is left is a finger that lands and
+ * stays, which is only ever a hold or a hesitation. 400 ms sits under
+ * iOS's own 500 ms long press, so the lift does not feel slow to take,
+ * and is long enough that a thumb resting on a card while reading does
+ * not lift it.
  */
-const LIFT_AFTER_MS = 250;
-
-/** The gap under each row, which is part of how far a neighbour steps
- *  aside: `marginBottom` on `arrangeRow`. */
-const ROW_GAP = 8;
-
-/** A row's pitch before it has reported its size — about one row with a
- *  neighbourhood line. Only ever used for the first frame, or on a
- *  platform that does not report layout at all. */
-const PITCH_GUESS = 64;
-
-/** Which row is in the finger, for the cell that holds it; -1 for none. */
-const LiftedRow = createContext(-1);
+const LIFT_AFTER_MS = 400;
 
 /**
- * The list's cell, raised while its row is lifted.
+ * A card's pitch before it has reported its size: a 16:10 photograph the
+ * width of a phone, the two lines under it, and the gap below. Only ever
+ * used for the first frame, or on a platform that does not report layout.
+ * After that each card's own height is used, gap included (the card's
+ * `marginBottom` sits inside the view that is measured).
+ */
+const PITCH_GUESS = 320;
+
+/** Which card is in the finger, for the cell that holds it; -1 for none. */
+const LiftedCard = createContext(-1);
+
+/**
+ * The list's cell, raised while its card is lifted.
  *
- * Each row sits in a cell of its own, and a zIndex on the row does not
- * reach past its cell to the siblings it has to pass over — so it is the
+ * Each card sits in a cell of its own, and a zIndex on the card does not
+ * reach past its cell to the siblings it has to pass over, so it is the
  * cell that goes up. Declared here and fed by context rather than written
  * inline on the list: an inline component is a new type every render, and
- * every lift and every slot passed is a render, so each one remounted every
- * row — the one in the finger with its gesture.
+ * every lift and every slot passed is a render, so each one remounted
+ * every card, the one in the finger with its gesture.
  */
-function ArrangeCell({ index, style, children, ...cell }: {
+function LiftCell({ index, style, children, ...cell }: {
   index: number;
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
 }) {
-  const lifted = useContext(LiftedRow);
+  const lifted = useContext(LiftedCard);
   return <View {...cell} style={[style, lifted === index && s.arrangeCellLifted]}>{children}</View>;
 }
 
 /**
- * A place while the list is being put in order.
+ * A place in your own list: the same card as everywhere else, which can
+ * also be held and dragged to a new position.
  *
- * Deliberately not a `PlaceCard`. Arranging is about the sequence, not
- * about the places — full cards mean two of them fill the screen and you
- * are reordering a list you can only see a fifth of. This is one line each,
- * with the position spelled out, so the whole list is in front of you.
+ * ── on the list itself, not in a mode ──
  *
- * ── held, then dragged ──
+ * The order used to be set in a separate mode, reached through the menu,
+ * that swapped the cards for numbered one-line rows. It worked, and
+ * nobody found it. The list you want to put in order is the one in front
+ * of you, so that is where the order is changed: hold a card and it
+ * lifts; drag it and the cards it passes step aside into the room it
+ * left; let go and it lands, and the new order saves itself.
  *
- * Hold a row and it lifts; drag it and the rows it passes step aside into
- * the room it left; let go and it lands, and the new order saves itself.
- * The arrows it replaced moved a place one step a tap — seven taps to
- * bring the eighth place to the top.
+ * A tap still opens the place. The hold is what tells the two apart (see
+ * `LIFT_AFTER_MS`). Once a card lifts, gesture-handler cancels the
+ * touch the card's own button was holding, so letting go never also
+ * opens the place.
  *
  * Built on what the binary already carries: `react-native-gesture-handler`
  * for the hold-then-pan, and React Native's own `Animated` for the lifted
- * row, on the JS thread. The usual recipe is `react-native-reanimated`,
- * which is a native module — adding it would have meant a new build
+ * card, on the JS thread. The usual recipe is `react-native-reanimated`,
+ * which is a native module. Adding it would have meant a new build
  * through the store before anybody could drag, and every OTA after it
- * refused by the builds already installed. A list of a few dozen short
- * rows does not need the UI thread to keep up with a finger.
+ * refused by the builds already installed.
  *
- * The arrows' work is not lost for VoiceOver, which cannot drag: the row
- * carries "Move up" and "Move down" as accessibility actions.
+ * VoiceOver cannot drag, so the card offers "Move up" and "Move down" as
+ * accessibility actions, and says so in its hint.
  */
-function ArrangeRow({
-  place, index, count, lifted, shift, dragY, onUp, onDown, onLift, onDrag, onDrop, onPitch,
+function DraggableCard({
+  place, index, count, lifted, shift, dragY, onOpen, onUp, onDown, onLift, onDrag, onDrop, onPitch,
 }: {
   place: Place;
   index: number;
   count: number;
-  /** This row is the one in the finger. */
+  /** This card is the one in the finger. */
   lifted: boolean;
-  /** How far this row has stepped aside for the one in the finger. */
+  /** How far this card has stepped aside for the one in the finger. */
   shift: number;
   dragY: Animated.Value;
+  onOpen: () => void;
   onUp: () => void;
   onDown: () => void;
   onLift: (index: number) => void;
@@ -243,42 +250,23 @@ function ArrangeRow({
   return (
     <GestureDetector gesture={pan}>
       <Animated.View
-        onLayout={(e) => onPitch(place.slug, e.nativeEvent.layout.height + ROW_GAP)}
-        style={[
-          s.arrangeRow,
-          lifted
-            ? [s.arrangeLifted, { transform: [{ translateY: dragY }, { scale: 1.02 }] }]
-            : shift !== 0 && { transform: [{ translateY: shift }] },
-        ]}
-        accessible
-        accessibilityRole="adjustable"
-        accessibilityLabel={`${index + 1}. ${t(place.name_en, place.name_vi, place.name_ja)}`}
-        accessibilityHint={t(
-          'Hold and drag to move it.',
-          'Giữ rồi kéo để di chuyển.',
-          '長押ししてドラッグすると移動できます。',
-        )}
-        accessibilityActions={actions}
-        onAccessibilityAction={(e) => (e.nativeEvent.actionName === 'moveUp' ? onUp() : onDown())}
-        testID={`arrange-${place.slug}`}
+        onLayout={(e) => onPitch(place.slug, e.nativeEvent.layout.height)}
+        style={lifted
+          ? [s.cardLifted, { transform: [{ translateY: dragY }, { scale: 1.02 }] }]
+          : shift !== 0 && { transform: [{ translateY: shift }] }}
+        testID={`drag-${place.slug}`}
       >
-        <Text style={s.arrangeNum}>{index + 1}</Text>
-        <View style={s.arrangeText}>
-          {/* In the reader's language, as the card it stands in for is. It
-              was English whatever the app was set to, so the same place
-              changed its name on the way into the mode. */}
-          <Text style={s.arrangeName} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
-          {!!place.neighborhood_en && (
-            <Text style={s.arrangeArea} numberOfLines={1}>
-              {t(place.neighborhood_en, place.neighborhood_vi ?? place.neighborhood_en,
-                place.neighborhood_ja ?? place.neighborhood_en)}
-            </Text>
+        <PlaceCard
+          place={place}
+          onPress={onOpen}
+          accessibilityHint={t(
+            'Hold and drag to change the order.',
+            'Giữ rồi kéo để đổi thứ tự.',
+            '長押ししてドラッグすると並び順を変えられます。',
           )}
-        </View>
-        {/* The grip: what says this row can be picked up. Not a button —
-            the whole row is the handle, and a thumb aiming for three lines
-            is aiming for a target too small to be the only one. */}
-        <Ionicons name="reorder-three-outline" size={22} color={colors.textTertiary} />
+          accessibilityActions={actions}
+          onAccessibilityAction={(e) => (e.nativeEvent.actionName === 'moveUp' ? onUp() : onDown())}
+        />
       </Animated.View>
     </GestureDetector>
   );
@@ -474,26 +462,27 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   const undo = () => setPublic(banner === 'public' ? false : true);
 
   /**
-   * Arranging the list.
+   * Putting the list in order.
    *
-   * A mode rather than always-on controls. Two arrows on every card would
-   * mean tapping a place is one thumb-width from moving it, and a list you
-   * are browsing is not a list you are editing.
+   * On the list itself, by holding a card (see `DraggableCard`). The old
+   * worry about controls on the cards, that tapping a place would be a
+   * thumb-width from moving it, does not apply to a hold: a tap still
+   * only ever opens the place.
    *
    * ── saved as it goes ──
    *
    * There is no Done. Every move is the reader's decision already, and a
-   * button to confirm it was a second decision about the first — one the
-   * back arrow skipped, throwing the order away without a word. So each
-   * move is written on its own, a beat after the last tap (`SAVE_AFTER_MS`)
-   * so that five taps are one write rather than five, and the back arrow
-   * leaves the mode rather than the screen. The header says what the write
-   * is doing instead of offering to do it.
+   * button to confirm it was a second decision about the first, one the
+   * back arrow skipped and so threw the order away without a word. So each
+   * move is written on its own, a beat after the last drop (`SAVE_AFTER_MS`)
+   * so that three drops are one write rather than three. Leaving the
+   * screen writes whatever is waiting at once. The header says what the
+   * write is doing instead of offering to do it.
    *
    * `draft` is the order on screen, as slugs — never places, because the
    * catalog can reload underneath this screen and slugs are what the write
-   * takes anyway. It outlives the mode until the server's order has caught
-   * up with it, so the list does not flick back to the old order for the
+   * takes anyway. It stays until the server's order has caught up with
+   * it, so the list does not flick back to the old order for the
    * moment between the write landing and the reload.
    *
    * One write in flight at a time, always the latest order: a move made
@@ -501,7 +490,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * goes in one statement (`reorder_collection`), so a failure leaves the
    * server's order as it was — and the screen goes back to it, and says so.
    */
-  const [arranging, setArranging] = useState(false);
   const [draft, setDraft] = useState<string[] | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'waiting' | 'saving' | 'saved'>('idle');
   const wanted = useRef<string[] | null>(null);
@@ -520,7 +508,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // The draft steps aside once the server agrees with it and nothing is
   // left to write. Adjusted during render, React's pattern for state that
   // follows props — see `usePersistedFetch`.
-  if (draft && !arranging && (saveState === 'idle' || saveState === 'saved')
+  if (draft && (saveState === 'idle' || saveState === 'saved')
     && sameOrder(drafted.map((p) => p.slug), members.map((p) => p.slug))) {
     setDraft(null);
   }
@@ -570,7 +558,14 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     timer.current = setTimeout(() => { timer.current = null; void flush(); }, SAVE_AFTER_MS);
   };
 
-  // ── the row in the finger ──
+  // Only your own list, and only one with an order to change: a single
+  // place has none, and a card that lifts to go nowhere is a gesture
+  // that seems broken.
+  const canArrange = owned && drafted.length > 1;
+  // Something has moved on this visit, so the tip has been acted on.
+  const moved = saveState !== 'idle';
+
+  // ── the card in the finger ──
   //
   // `lift` is for drawing: which row is up and which slot it hovers over,
   // so the rows between can step aside. `liftRef` is the same thing for
@@ -601,8 +596,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       fireHaptic('selection');
     }
   };
-  // Landing is the same move the arrows made, from the lifted row's place
-  // to the slot it was let go over — and saves the same way.
+  // Landing is the same move VoiceOver's actions make, from the lifted
+  // card's place to the slot it was let go over, and saves the same way.
   const onDrop = () => {
     const held = liftRef.current;
     if (!held) return;
@@ -610,13 +605,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     if (held.to !== held.from) shuffle(held.from, held.to);
   };
   const onPitch = (slug: string, pitch: number) => { pitchBySlug.current.set(slug, pitch); };
-
-  // Out of the mode, not off the screen: whatever is still waiting is
-  // written now rather than a beat later.
-  const finishArranging = () => {
-    if (timer.current) { clearTimeout(timer.current); timer.current = null; void flush(); }
-    setArranging(false);
-  };
 
   // Deliberately inert, and now inert for two different reasons — which
   // is why the sentence branches. A private list has no address to send
@@ -880,11 +868,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   /* The header's right-hand slot.
 
-     While arranging, the one control is the way out of it. Leaving the
-     overflow menu up would offer Delete to a thumb that is currently in
-     the business of tapping small buttons in a row.
-
-     Otherwise ⋯, and everybody gets it, not only the owner: what the
+     ⋯, and everybody gets it, not only the owner: what the
      menu offers branches, but "there is more you can do with this list"
      is true on both sides of that line, and a header whose right-hand
      side is empty for half its visitors reads as a screen that forgot
@@ -897,23 +881,23 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      read `owner_id` off yet — `owned` is false by default, so the owner was
      briefly offered the visitor's "Save a copy" of their own list. Once the
      row is here its `owner_id` settles whose it is. */
-  const headerRight = arranging ? (
-    // A report, not a control: there is nothing to confirm. Blank until
-    // something has moved.
-    <Text style={s.saveState} accessibilityLiveRegion="polite">
-      {saveState === 'waiting' || saveState === 'saving'
-        ? t('Saving…', 'Đang lưu…', '保存中…')
-        : saveState === 'saved'
-          ? t('Saved', 'Đã lưu', '保存しました')
-          : ''}
-    </Text>
-  ) : col ? (
-    <View ref={btn} collapsable={false}>
-      <RoundIconButton
-        icon="ellipsis-horizontal"
-        onPress={openMenu}
-        label={t('More', 'Thêm', 'その他')}
-      />
+  // Beside the menu, a report on the order rather than a control: there
+  // is nothing to confirm. Blank until something has moved.
+  const status = saveState === 'waiting' || saveState === 'saving'
+    ? t('Saving…', 'Đang lưu…', '保存中…')
+    : saveState === 'saved'
+      ? t('Saved', 'Đã lưu', '保存しました')
+      : '';
+  const headerRight = col ? (
+    <View style={s.headerRight}>
+      {!!status && <Text style={s.saveState} accessibilityLiveRegion="polite">{status}</Text>}
+      <View ref={btn} collapsable={false}>
+        <RoundIconButton
+          icon="ellipsis-horizontal"
+          onPress={openMenu}
+          label={t('More', 'Thêm', 'その他')}
+        />
+      </View>
     </View>
   ) : null;
 
@@ -921,10 +905,13 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     <Screen
       title={title}
       subtitle={byline}
-      onBack={() => (arranging ? finishArranging() : navigation.goBack())}
+      onBack={() => navigation.goBack()}
       right={headerRight}
     >
       <AmbientWarmth />
+      {/* Under the title, before anything else: the first thing an owner
+          reads about their own list is that it can be put in order. */}
+      <ReorderTip show={canArrange} used={moved} />
       {/* What just happened, and the way back out of it. Above the
           description rather than floating over the list: it is about the
           collection as a whole, and a toast that covers the first place
@@ -981,47 +968,47 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {!!desc && <Text style={s.desc}>{desc}</Text>}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
-      {/* What the mode is for, said once at the top of it. Without this the
-          numbered rows read as a different screen the reader arrived at by
-          accident. */}
-      {arranging && (
-        <Text style={s.arrangeHint}>
-          {t(
-            'Set the order these places appear in. Changes save as you go.',
-            'Sắp thứ tự các địa điểm. Thay đổi được lưu tự động.',
-            'スポットの並び順を決めます。変更は自動で保存されます。',
-          )}
-        </Text>
-      )}
-      <LiftedRow.Provider value={lift ? lift.from : -1}>
+      {/* gesture-handler's FlatList, not React Native's. The hold and the
+          scroll both start as the same finger on the same card, and with
+          a plain scroll view the two are settled by UIKit: gesture-handler
+          declines to run beside a recognizer it does not own, so whichever
+          one claimed the touch first kept it. Wrapped, the scroll is one of
+          gesture-handler's own gestures, and a card that lifts cancels it
+          outright. A scroll that has started still cannot be interrupted
+          (`disallowInterruption`), so a moving list never drops a card
+          into the finger. */}
+      <LiftedCard.Provider value={lift ? lift.from : -1}>
         <FlatList
           data={drafted}
           keyExtractor={(p) => p.slug}
-          // Held still while a row is in the finger: the pan and the scroll
+          // Held still while a card is in the finger: the pan and the scroll
           // would otherwise both answer the same drag.
           scrollEnabled={!lift}
-          CellRendererComponent={ArrangeCell}
+          CellRendererComponent={LiftCell}
           onScroll={duckScroll}
           scrollEventThrottle={16}
-          renderItem={({ item, index }) => (arranging
-            ? (
-              <ArrangeRow
-                place={item}
-                index={index}
-                count={drafted.length}
-                lifted={lift?.from === index}
-                shift={lift ? stepAside(index, lift.from, lift.to, lift.pitch) : 0}
-                dragY={dragY}
-                onUp={() => shuffle(index, index - 1)}
-                onDown={() => shuffle(index, index + 1)}
-                onLift={onLift}
-                onDrag={onDrag}
-                onDrop={onDrop}
-                onPitch={onPitch}
-              />
-            )
-            : <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
-          )}
+          renderItem={({ item, index }) => {
+            const open = () => navigation.navigate('PlaceDetail', { slug: item.slug });
+            return canArrange
+              ? (
+                <DraggableCard
+                  place={item}
+                  index={index}
+                  count={drafted.length}
+                  lifted={lift?.from === index}
+                  shift={lift ? stepAside(index, lift.from, lift.to, lift.pitch) : 0}
+                  dragY={dragY}
+                  onOpen={open}
+                  onUp={() => shuffle(index, index - 1)}
+                  onDown={() => shuffle(index, index + 1)}
+                  onLift={onLift}
+                  onDrag={onDrag}
+                  onDrop={onDrop}
+                  onPitch={onPitch}
+                />
+              )
+              : <PlaceCard place={item} onPress={open} />;
+          }}
           ListEmptyComponent={!loading && col
             ? (owned
               // One message, not two. The reference stacks "No places in this
@@ -1036,7 +1023,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           // Only once there is a list to end. Empty, the card above is
           // already asking for the first place, and two invitations to do
           // one thing read as two different things.
-          ListFooterComponent={owned && !arranging && members.length > 0
+          ListFooterComponent={owned && members.length > 0
             ? (
               <AddSlot
                 onPress={addPlace}
@@ -1055,7 +1042,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
           showsVerticalScrollIndicator={false}
         />
-      </LiftedRow.Provider>
+      </LiftedCard.Provider>
 
       {/* Anchored under the control that opened it, which is the whole
           argument for a popover over a sheet: the menu is visibly this
@@ -1091,19 +1078,6 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')}
                 onPress={() => act(edit)}
               />
-              {/* Only with something to arrange. One place has no order, and a
-                  row that does nothing is worse than a row that is not there. */}
-              {members.length > 1 && (
-                <MenuRow
-                  icon="swap-vertical-outline"
-                  label={t('Reorder places', 'Sắp xếp thứ tự', '並び順を変更')}
-                  onPress={() => act(() => {
-                    fireHaptic('light');
-                    setSaveState('idle');
-                    setArranging(true);
-                  })}
-                />
-              )}
               <MenuRow
                 icon="share-outline"
                 label={t('Share', 'Chia sẻ', '共有')}
@@ -1254,35 +1228,15 @@ const s = StyleSheet.create({
 
   // A text button, not a pill: it sits where the overflow control was and
   // the header already has one round shape in it on the other side.
+  // The status beside ⋯ and the button, on one line.
+  headerRight: { flexDirection: 'row', alignItems: 'center' },
   saveState: { color: colors.textTertiary, fontSize: 14, fontWeight: font.medium, paddingHorizontal: 10 },
-
-  arrangeHint: {
-    color: colors.textTertiary, fontSize: 13.5, lineHeight: 19,
-    paddingHorizontal: space.page, paddingBottom: 10,
-  },
-  arrangeRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    marginHorizontal: space.page, marginBottom: 8,
-    paddingVertical: 11, paddingHorizontal: 14,
-    backgroundColor: colors.surfaceCard, borderRadius: radius.input,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
-  },
-  // The position, spelled out. The row's place in the list is the one fact
-  // this mode exists to change, and counting rows on screen is what people
-  // do when nothing tells them.
-  arrangeNum: {
-    color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold,
-    width: 18, textAlign: 'center', fontVariant: ['tabular-nums'],
-  },
-  arrangeText: { flex: 1 },
-  arrangeName: { color: colors.text, fontSize: 15.5, fontWeight: font.medium },
-  arrangeArea: { color: colors.textTertiary, ...type.meta, marginTop: 1 },
   // Lifted: above its neighbours, with the shadow of something held off
   // the page. `zIndex` for iOS and the web, `elevation` for Android.
   arrangeCellLifted: { zIndex: 10, elevation: 6 },
-  arrangeLifted: {
+  cardLifted: {
     zIndex: 10, elevation: 6,
-    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 },
+    shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 16, shadowOffset: { width: 0, height: 8 },
   },
 
   // The dashed slot at the end of the list, matching the collections

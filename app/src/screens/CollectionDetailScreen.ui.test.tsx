@@ -14,10 +14,10 @@
 // - publishing refuses (as a sentence, not a Postgres code) while places
 //   are still under review, and otherwise flips the flag, reloads both
 //   catalogs and offers Undo;
-// - reordering is a held row dragged to where it lands (or VoiceOver's
-//   Move up / Move down), saves itself a beat after the last move, the
-//   whole sequence in one write, and the back arrow leaves the mode rather
-//   than the screen;
+// - reordering happens on the list itself: the owner holds a card and
+//   drags it to where it lands (or uses VoiceOver's Move up / Move down),
+//   a tip under the title says so, and the order saves itself a beat
+//   after the last move, the whole sequence in one write;
 // - deleting is behind a confirmation and tells the taste profile.
 //
 // Mocks sit at the screen's own seams: the `lib/*` hooks it reads and the
@@ -106,28 +106,40 @@ vi.mock('../components/reportFlow', () => ({
 }));
 vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined }));
 // A props-recorder for the card: its looks are its own suite's business.
+// Filed by slug on every render, so a test can play the accessibility
+// actions VoiceOver would on the card as last drawn.
+type CardProps = {
+  place: { slug: string; name_en: string };
+  onPress: () => void;
+  accessibilityHint?: string;
+  accessibilityActions?: { name: string; label: string }[];
+  onAccessibilityAction?: (e: { nativeEvent: { actionName: string } }) => void;
+};
+const cardProps = vi.hoisted(() => new Map<string, CardProps>());
 vi.mock('../components/PlaceCard', async () => {
   const { Pressable, Text } = await import('react-native');
   return {
-    default: ({ place, onPress }: { place: { name_en: string }; onPress: () => void }) => (
-      <Pressable accessibilityRole="button" onPress={onPress}>
-        <Text>{`card:${place.name_en}`}</Text>
-      </Pressable>
-    ),
+    default: (p: CardProps) => {
+      cardProps.set(p.place.slug, p);
+      return (
+        <Pressable accessibilityRole="button" onPress={p.onPress}>
+          <Text>{`card:${p.place.name_en}`}</Text>
+        </Pressable>
+      );
+    },
   };
 });
 
 // The hold-and-drag, by hand. A pan that waits out a long press is a
-// native recogniser, and nothing in jsdom will ever recognise it — so the
-// detector stands in by filing each row's gesture and props under the
-// row's testID, where a test can play the three callbacks a real drag
-// fires (start on the lift, update as the finger moves, finalize on the
-// way up) and the accessibility actions VoiceOver would. Filed on every
-// render, so what a test calls is the row as last drawn, with its index.
+// native recogniser, and nothing in jsdom will ever recognise it, so the
+// detector stands in by filing each card's gesture and props under the
+// card's testID, where a test can play the three callbacks a real drag
+// fires: start on the lift, update as the finger moves, finalize on the
+// way up. Filed on every render, so what a test calls is the card as last
+// drawn, with its index. The list is React Native's own: gesture-handler's
+// wrapper differs only in what it tells the native side.
 type RowProps = {
   testID: string;
-  accessibilityActions?: { name: string; label: string }[];
-  onAccessibilityAction?: (e: { nativeEvent: { actionName: string } }) => void;
   onLayout?: (e: { nativeEvent: { layout: { height: number } } }) => void;
 };
 const held = vi.hoisted(() => new Map<string, {
@@ -139,7 +151,8 @@ const held = vi.hoisted(() => new Map<string, {
   };
   props: RowProps;
 }>());
-vi.mock('react-native-gesture-handler', () => {
+vi.mock('react-native-gesture-handler', async () => {
+  const { FlatList } = await import('react-native');
   class Pan {
     longPressMs?: number;
     start?: () => void;
@@ -152,6 +165,7 @@ vi.mock('react-native-gesture-handler', () => {
     onFinalize(f: () => void) { this.finalize = f; return this; }
   }
   return {
+    FlatList,
     Gesture: { Pan: () => new Pan() },
     GestureDetector: ({ gesture, children }: {
       gesture: Pan;
@@ -376,19 +390,13 @@ describe('your own list', () => {
   it('offers the owner the full menu and nothing meant for visitors', () => {
     show();
     openMenu();
-    for (const label of ['Add place', 'Edit collection', 'Reorder places', 'Share', 'Make public', 'Delete collection']) {
+    for (const label of ['Add place', 'Edit collection', 'Share', 'Make public', 'Delete collection']) {
       expect(menuRow(label)).toBeTruthy();
     }
+    // The order is changed on the list itself now, by holding a card.
+    expect(screen.queryByText('Reorder places')).toBeNull();
     expect(screen.queryByText('Save a copy')).toBeNull();
     expect(screen.queryByText('Report this list')).toBeNull();
-  });
-
-  it('leaves Reorder out of the menu when there is only one place', () => {
-    state.mine = [collection({}, [PHO])];
-    show();
-    openMenu();
-    expect(screen.queryByText('Reorder places')).toBeNull();
-    expect(menuRow('Edit collection')).toBeTruthy();
   });
 
   it('labels the publish row by the action it takes on a public list', () => {
@@ -542,94 +550,97 @@ describe('publishing', () => {
 });
 
 describe('reordering', () => {
-  const startArranging = () => {
-    openMenu();
-    fireEvent.click(menuRow('Reorder places'));
-  };
-  const row = (slug: string) => held.get(`arrange-${slug}`)!;
+  const drag = (slug: string) => held.get(`drag-${slug}`)!;
+  const card = (slug: string) => cardProps.get(slug)!;
   const act11y = (slug: string, actionName: string) =>
-    act(() => { row(slug).props.onAccessibilityAction!({ nativeEvent: { actionName } }); });
-  /** One step, the way VoiceOver takes it — the arrows' old work. */
+    act(() => { card(slug).onAccessibilityAction!({ nativeEvent: { actionName } }); });
+  /** One step, the way VoiceOver takes it. */
   const down = (slug: string) => act11y(slug, 'moveDown');
   const up = (slug: string) => act11y(slug, 'moveUp');
   /** A drag in its three beats. */
-  const lift = (slug: string) => act(() => { row(slug).gesture.start!(); });
-  const drag = (slug: string, dy: number) => act(() => { row(slug).gesture.update!({ translationY: dy }); });
-  const drop = (slug: string) => act(() => { row(slug).gesture.finalize!(); });
-  const el = (slug: string) => screen.getByTestId(`arrange-${slug}`);
-  const rows = () => screen.getAllByText(/^(Pho 10|Cafe Giang|Fine Arts Museum)$/).map((el) => el.textContent);
-  const cards = () => screen.getAllByText(/^card:/).map((el) => el.textContent);
+  const lift = (slug: string) => act(() => { drag(slug).gesture.start!(); });
+  const move = (slug: string, dy: number) => act(() => { drag(slug).gesture.update!({ translationY: dy }); });
+  const drop = (slug: string) => act(() => { drag(slug).gesture.finalize!(); });
+  const el = (slug: string) => screen.getByTestId(`drag-${slug}`);
+  const cards = () => screen.getAllByText(/^card:/).map((e) => e.textContent);
   /** Past the beat the screen waits after the last move. On a fake clock:
    *  a real 700 ms wait was the flake under coverage, where the whole run
    *  slows and the beat is no longer a beat. */
   const pastTheBeat = () => act(async () => { await vi.advanceTimersByTimeAsync(700); });
-  beforeEach(() => { vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }); });
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    held.clear();
+    cardProps.clear();
+  });
   afterEach(() => { vi.useRealTimers(); });
 
-  it('switches to numbered rows with a hint, and no button to confirm anything', () => {
+  it('lets the owner hold any card of the list as it is, with no mode to enter first', () => {
     show();
-    startArranging();
-    expect(screen.getByText('Set the order these places appear in. Changes save as you go.')).toBeTruthy();
-    expect(screen.queryByText(/^card:/)).toBeNull();
-    expect(screen.getByText('Pho 10')).toBeTruthy();
-    expect(screen.getByText('Pho 10 area')).toBeTruthy();
-    // The overflow menu is not offered mid-arrange, nor the Add slot.
-    expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
-    expect(screen.queryByText('From search or your bookmarks')).toBeNull();
-    for (const label of ['Done', 'Cancel', 'Saving…', 'Saved']) expect(screen.queryByText(label)).toBeNull();
+    expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
+    for (const slug of ['pho', 'cafe', 'museum']) expect(held.has(`drag-${slug}`)).toBe(true);
+    // The rest of the screen stays what it was: the menu, the Add slot.
+    expect(button('More')).toBeTruthy();
+    expect(screen.getByText('From search or your bookmarks')).toBeTruthy();
+    for (const label of ['Done', 'Saving…', 'Saved']) expect(screen.queryByText(label)).toBeNull();
   });
 
-  // No arrows on the rows any more; VoiceOver, which cannot drag, gets
-  // their work as actions — and only the ones that go somewhere.
-  it('offers Move up and Move down as actions, except off either end', () => {
-    show();
-    startArranging();
-    const names = (slug: string) => row(slug).props.accessibilityActions!.map((a) => a.name);
-    expect(names('pho')).toEqual(['moveDown']);
-    expect(names('cafe')).toEqual(['moveUp', 'moveDown']);
-    expect(names('museum')).toEqual(['moveUp']);
-    expect(row('cafe').props.accessibilityActions!.map((a) => a.label)).toEqual(['Move up', 'Move down']);
-    expect(screen.queryByRole('button', { name: 'Move up' })).toBeNull();
-    expect(screen.getByLabelText('2. Cafe Giang')).toBeTruthy();
+  it('lifts a card only after a hold, so a tap still opens it and a flick still scrolls', () => {
+    const { raw } = show();
+    expect(drag('pho').gesture.longPressMs).toBeGreaterThanOrEqual(300);
+    fireEvent.click(screen.getByText('card:Cafe Giang'));
+    expect(raw.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cafe' });
   });
 
-  it('lifts a row only after a hold, so a flick still scrolls', () => {
+  it('offers no drag on a list of one', () => {
+    state.mine = [collection({}, [PHO])];
     show();
-    startArranging();
-    expect(row('pho').gesture.longPressMs).toBeGreaterThanOrEqual(200);
+    expect(held.size).toBe(0);
+    expect(card('pho').accessibilityActions).toBeUndefined();
   });
 
-  it('lands a dragged row where it is let go, and saves it a beat later', async () => {
+  it('offers no drag to a visitor', () => {
+    state.mine = [];
+    state.cols = [collection({ owner_id: 'curator', is_public: true })];
     show();
-    startArranging();
+    expect(screen.getByText('card:Pho 10')).toBeTruthy();
+    expect(held.size).toBe(0);
+  });
+
+  it('lands a dragged card where it is let go, and saves it a beat later', async () => {
+    show();
     lift('pho');
-    // Past half of the next row (a 64 guess before any row has measured).
-    drag('pho', 40);
-    expect(rows()).toEqual(['Pho 10', 'Cafe Giang', 'Fine Arts Museum']);
+    // Past half of the next card (a 320 guess before any card has measured).
+    move('pho', 170);
+    expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
     drop('pho');
-    expect(rows()).toEqual(['Cafe Giang', 'Pho 10', 'Fine Arts Museum']);
+    expect(cards()).toEqual(['card:Cafe Giang', 'card:Pho 10', 'card:Fine Arts Museum']);
     expect(spies.reorderCollection).not.toHaveBeenCalled();
+    expect(screen.getByText('Saving…')).toBeTruthy();
     await pastTheBeat();
+    expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
     expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'pho', 'museum']);
+    expect(screen.getByText('Saved')).toBeTruthy();
+    expect(spies.mineReload).toHaveBeenCalled();
+    expect(spies.colsReload).toHaveBeenCalled();
+    // The menu is still there beside the report.
+    expect(button('More')).toBeTruthy();
   });
 
-  it('crosses as many rows as the finger does, upward too', async () => {
+  it('crosses as many cards as the finger does, upward too', async () => {
     show();
-    startArranging();
     lift('museum');
-    drag('museum', -100);
+    move('museum', -500);
     drop('museum');
-    expect(rows()).toEqual(['Fine Arts Museum', 'Pho 10', 'Cafe Giang']);
+    expect(cards()).toEqual(['card:Fine Arts Museum', 'card:Pho 10', 'card:Cafe Giang']);
     await pastTheBeat();
     expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['museum', 'pho', 'cafe']);
   });
 
-  // While the row is up: the rows it has passed step into the room it
-  // left, the list stops scrolling under the drag, and the lifted row's
+  // While the card is up: the cards it has passed step into the room it
+  // left, the list stops scrolling under the drag, and the lifted card's
   // cell is raised over the ones it crosses. All of it undone on landing.
-  it('steps the passed rows aside, holds the list still and raises the lifted row', () => {
+  it('steps the passed cards aside, holds the list still and raises the lifted card', () => {
     show();
-    startArranging();
     const scroller = () => {
       for (let e = el('pho').parentElement; e; e = e.parentElement) {
         if (getComputedStyle(e).overflowY) return e;
@@ -639,18 +650,18 @@ describe('reordering', () => {
     expect(getComputedStyle(scroller()).overflowY).not.toBe('hidden');
     const before = el('pho');
     lift('pho');
-    drag('pho', 100);
-    // The same row, not a new one: a remount mid-drag is a dropped gesture.
+    move('pho', 500);
+    // The same card, not a new one: a remount mid-drag is a dropped gesture.
     expect(el('pho')).toBe(before);
-    expect(el('pho').style.transform).toContain('translateY(100px)');
-    expect(el('cafe').style.transform).toBe('translateY(-64px)');
-    expect(el('museum').style.transform).toBe('translateY(-64px)');
+    expect(el('pho').style.transform).toContain('translateY(500px)');
     expect(el('pho').style.transform).toContain('scale(1.02)');
+    expect(el('cafe').style.transform).toBe('translateY(-320px)');
+    expect(el('museum').style.transform).toBe('translateY(-320px)');
     expect(getComputedStyle(el('pho').parentElement!).zIndex).toBe('10');
     expect(getComputedStyle(el('cafe').parentElement!).zIndex).not.toBe('10');
     expect(getComputedStyle(scroller()).overflowY).toBe('hidden');
-    drag('pho', 40);
-    expect(el('cafe').style.transform).toBe('translateY(-64px)');
+    move('pho', 170);
+    expect(el('cafe').style.transform).toBe('translateY(-320px)');
     expect(el('museum').style.transform).toBe('');
     drop('pho');
     for (const slug of ['pho', 'cafe', 'museum']) {
@@ -660,92 +671,63 @@ describe('reordering', () => {
     expect(getComputedStyle(scroller()).overflowY).not.toBe('hidden');
   });
 
-  // A short place — no neighbourhood line — is shorter to cross.
-  it('measures each row, so crossing a short one takes a shorter drag', () => {
+  // A card with no photo, or a longer name, is a different height.
+  it('measures each card, so crossing a short one takes a shorter drag', () => {
     show();
-    startArranging();
-    act(() => { row('cafe').props.onLayout!({ nativeEvent: { layout: { height: 20 } } }); });
+    act(() => { drag('cafe').props.onLayout!({ nativeEvent: { layout: { height: 200 } } }); });
     lift('pho');
-    // 20 tall and the 8 gap under it: passed at half of 28, which the 64
-    // guess would not be — and not at half of the 20 alone.
-    drag('pho', 12);
+    // Passed at half of the measured 200, which the 320 guess would not be.
+    move('pho', 99);
     expect(el('cafe').style.transform).toBe('');
-    drag('pho', 14);
-    expect(el('cafe').style.transform).toBe('translateY(-64px)');
+    move('pho', 100);
+    expect(el('cafe').style.transform).toBe('translateY(-320px)');
     drop('pho');
-    expect(rows()).toEqual(['Cafe Giang', 'Pho 10', 'Fine Arts Museum']);
+    expect(cards()).toEqual(['card:Cafe Giang', 'card:Pho 10', 'card:Fine Arts Museum']);
   });
 
-  it('writes nothing for a row put back where it was, or a hold let go before it lifted', async () => {
+  it('writes nothing for a card put back where it was, or a hold let go before it lifted', async () => {
     show();
-    startArranging();
     lift('cafe');
-    drag('cafe', 90);
-    drag('cafe', 10);
+    move('cafe', 400);
+    move('cafe', 10);
     drop('cafe');
     // The finger came up before the hold was long enough: no start.
     drop('pho');
-    drag('pho', 200);
+    move('pho', 900);
     await pastTheBeat();
-    expect(rows()).toEqual(['Pho 10', 'Cafe Giang', 'Fine Arts Museum']);
+    expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
     expect(spies.reorderCollection).not.toHaveBeenCalled();
     expect(screen.queryByText('Saving…')).toBeNull();
   });
 
-  // In the reader's language, as the cards are — it was English always.
-  it('names the places in the reader\'s language', () => {
-    state.lang = 'vi';
-    state.places = [
-      place('pho', 'Pho 10', { name_vi: 'Phở 10', neighborhood_vi: 'Phố cổ' } as Partial<Place>),
-      CAFE, MUSEUM,
-    ];
+  // VoiceOver cannot drag. Each card offers the moves as actions, only
+  // the ones that go somewhere, and its hint says the card can be held.
+  it('offers Move up and Move down to VoiceOver, except off either end', () => {
     show();
-    fireEvent.click(button('Thêm'));
-    fireEvent.click(menuRow('Sắp xếp thứ tự'));
-    expect(screen.getByText('Phở 10')).toBeTruthy();
-    expect(screen.getByText('Phố cổ')).toBeTruthy();
-    expect(screen.queryByText('Pho 10')).toBeNull();
+    const names = (slug: string) => card(slug).accessibilityActions!.map((a) => a.name);
+    expect(names('pho')).toEqual(['moveDown']);
+    expect(names('cafe')).toEqual(['moveUp', 'moveDown']);
+    expect(names('museum')).toEqual(['moveUp']);
+    expect(card('cafe').accessibilityActions!.map((a) => a.label)).toEqual(['Move up', 'Move down']);
+    expect(card('cafe').accessibilityHint).toBe('Hold and drag to change the order.');
   });
 
-  it('saves on its own a beat after the last move — one write for a run of moves', async () => {
+  it('saves a run of VoiceOver moves as one write', async () => {
     show();
-    startArranging();
     // [pho, cafe, museum] → pho down → [cafe, pho, museum] → museum up → [cafe, museum, pho]
     down('pho');
     up('museum');
-    expect(rows()).toEqual(['Cafe Giang', 'Fine Arts Museum', 'Pho 10']);
-    expect(spies.reorderCollection).not.toHaveBeenCalled();
-    expect(screen.getByText('Saving…')).toBeTruthy();
+    expect(cards()).toEqual(['card:Cafe Giang', 'card:Fine Arts Museum', 'card:Pho 10']);
     await pastTheBeat();
     expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
     expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'museum', 'pho']);
-    expect(screen.getByText('Saved')).toBeTruthy();
-    expect(spies.mineReload).toHaveBeenCalled();
-    expect(spies.colsReload).toHaveBeenCalled();
-    // Still arranging: saving is not leaving.
-    expect(screen.queryByText(/^card:/)).toBeNull();
   });
 
-  it('back leaves the mode, not the screen, and writes a waiting move at once', () => {
-    const { raw } = show();
-    startArranging();
-    down('pho');
-    fireEvent.click(button('Back'));
-    expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'pho', 'museum']);
-    expect(raw.goBack).not.toHaveBeenCalled();
-    // The new order stays on screen while the server catches up.
-    expect(cards()).toEqual(['card:Cafe Giang', 'card:Pho 10', 'card:Fine Arts Museum']);
-    fireEvent.click(button('Back'));
-    expect(raw.goBack).toHaveBeenCalledTimes(1);
-  });
-
-  it('writes nothing when nothing moved', async () => {
+  it('names the actions in the reader\'s language', () => {
+    state.lang = 'vi';
     show();
-    startArranging();
-    fireEvent.click(button('Back'));
-    await pastTheBeat();
-    expect(spies.reorderCollection).not.toHaveBeenCalled();
-    expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
+    expect(card('cafe').accessibilityActions!.map((a) => a.label)).toEqual(['Chuyển lên', 'Chuyển xuống']);
+    expect(card('cafe').accessibilityHint).toBe('Giữ rồi kéo để đổi thứ tự.');
   });
 
   // One write in flight, and the latest order after it: a move made while
@@ -754,7 +736,6 @@ describe('reordering', () => {
     let land!: () => void;
     spies.reorderCollection.mockImplementationOnce(() => new Promise<void>((r) => { land = r; }));
     show();
-    startArranging();
     down('pho');
     await pastTheBeat();
     expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
@@ -770,11 +751,10 @@ describe('reordering', () => {
   it('goes back to the saved order and says so when the order cannot be saved', async () => {
     spies.reorderCollection.mockRejectedValueOnce(new Error('timeout'));
     show();
-    startArranging();
     down('pho');
     await pastTheBeat();
     expect(alert).toHaveBeenCalledWith('Could not save the order', 'timeout');
-    expect(rows()).toEqual(['Pho 10', 'Cafe Giang', 'Fine Arts Museum']);
+    expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
     expect(screen.queryByText('Saving…')).toBeNull();
     expect(screen.queryByText('Saved')).toBeNull();
   });
@@ -786,10 +766,16 @@ describe('reordering', () => {
         route={{ params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>}
       />,
     );
-    startArranging();
     down('pho');
     view.unmount();
     expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'pho', 'museum']);
+  });
+
+  it('back leaves the screen straight away, with no mode to leave first', () => {
+    const { raw } = show();
+    down('pho');
+    fireEvent.click(button('Back'));
+    expect(raw.goBack).toHaveBeenCalledTimes(1);
   });
 
   // The draft is only a bridge to the server's answer. Once the server
@@ -798,16 +784,64 @@ describe('reordering', () => {
     const route = { params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>;
     const navigation = nav().n;
     const view = render(<CollectionDetailScreen navigation={navigation} route={route} />);
-    startArranging();
     down('pho');
     await pastTheBeat();
-    fireEvent.click(button('Back'));
     state.mine = [collection({}, [CAFE, PHO, MUSEUM])];
     view.rerender(<CollectionDetailScreen navigation={navigation} route={route} />);
     expect(cards()).toEqual(['card:Cafe Giang', 'card:Pho 10', 'card:Fine Arts Museum']);
     state.mine = [collection({}, [MUSEUM, CAFE, PHO])];
     view.rerender(<CollectionDetailScreen navigation={navigation} route={route} />);
     expect(cards()).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);
+  });
+});
+
+// The tip under the title: shown to the owner of a list that can be put
+// in order, and to nobody else. Its dismissal and memory are its own
+// suite's business (ReorderTip.ui.test.tsx); what is pinned here is who
+// sees it.
+describe('the reorder tip', () => {
+  const TIP = /Hold a place, then drag it to change the order/;
+  const settle = () => act(async () => {});
+  beforeEach(async () => {
+    const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+    await AsyncStorage.removeItem('tip.holdToReorder.v1');
+  });
+
+  it('tells the owner of a list of two or more', async () => {
+    show();
+    await settle();
+    expect(screen.getByText(TIP)).toBeTruthy();
+  });
+
+  // The screen's half of retiring it: a first move tells the tip it has
+  // done its job, so it does not come back on the next visit.
+  it('is retired by the owner\'s first move', async () => {
+    const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+    show();
+    await settle();
+    expect(await AsyncStorage.getItem('tip.holdToReorder.v1')).toBeNull();
+    act(() => {
+      cardProps.get('pho')!.onAccessibilityAction!({ nativeEvent: { actionName: 'moveDown' } });
+    });
+    await settle();
+    expect(await AsyncStorage.getItem('tip.holdToReorder.v1')).toBe('1');
+    // Still on screen for this visit.
+    expect(screen.getByText(TIP)).toBeTruthy();
+  });
+
+  it('says nothing on a list of one', async () => {
+    state.mine = [collection({}, [PHO])];
+    show();
+    await settle();
+    expect(screen.queryByText(TIP)).toBeNull();
+  });
+
+  it('says nothing to a visitor', async () => {
+    state.mine = [];
+    state.cols = [collection({ owner_id: 'curator', is_public: true })];
+    show();
+    await settle();
+    expect(screen.queryByText(TIP)).toBeNull();
   });
 });
 
