@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  type AccessibilityActionEvent, type AccessibilityActionInfo, StyleSheet, Text, View,
+  type AccessibilityActionEvent, type AccessibilityActionInfo, type GestureResponderEvent, StyleSheet, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useFlag } from '../lib/useFlag';
@@ -16,13 +16,18 @@ import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } 
 import { Card, PressableScale } from './ui';
 
 export default function PlaceCard({
-  place, onPress, testID, accessibilityHint, accessibilityActions, onAccessibilityAction,
+  place, onPress, testID, onLongPress, delayLongPress, onPressOut,
+  accessibilityHint, accessibilityActions, onAccessibilityAction,
 }: {
   place: Place;
   onPress: () => void;
   testID?: string;
   /** For a card that does more than open its place: the collection screen's,
-   *  which can be held and dragged, offers VoiceOver the same moves as actions. */
+   *  which lifts on a hold so it can be dragged, and offers VoiceOver the
+   *  same moves as actions. */
+  onLongPress?: (e: GestureResponderEvent) => void;
+  delayLongPress?: number;
+  onPressOut?: (e: GestureResponderEvent) => void;
   accessibilityHint?: string;
   accessibilityActions?: AccessibilityActionInfo[];
   onAccessibilityAction?: (e: AccessibilityActionEvent) => void;
@@ -62,6 +67,9 @@ export default function PlaceCard({
     <PressableScale
       onPress={onPress}
       testID={testID}
+      onLongPress={onLongPress}
+      delayLongPress={delayLongPress}
+      onPressOut={onPressOut}
       accessibilityHint={accessibilityHint}
       accessibilityActions={accessibilityActions}
       onAccessibilityAction={onAccessibilityAction}

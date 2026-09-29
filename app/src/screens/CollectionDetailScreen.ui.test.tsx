@@ -27,7 +27,7 @@
 // has its own rendering concerns and what this screen owes it is the tap.
 
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, PanResponder, type PanResponderCallbacks } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
@@ -111,6 +111,9 @@ vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined })
 type CardProps = {
   place: { slug: string; name_en: string };
   onPress: () => void;
+  onLongPress?: (e: { nativeEvent: { pageY: number } }) => void;
+  delayLongPress?: number;
+  onPressOut?: () => void;
   accessibilityHint?: string;
   accessibilityActions?: { name: string; label: string }[];
   onAccessibilityAction?: (e: { nativeEvent: { actionName: string } }) => void;
@@ -130,54 +133,19 @@ vi.mock('../components/PlaceCard', async () => {
   };
 });
 
-// The hold-and-drag, by hand. A pan that waits out a long press is a
-// native recogniser, and nothing in jsdom will ever recognise it, so the
-// detector stands in by filing each card's gesture and props under the
-// card's testID, where a test can play the three callbacks a real drag
-// fires: start on the lift, update as the finger moves, finalize on the
-// way up. Filed on every render, so what a test calls is the card as last
-// drawn, with its index. The list is React Native's own: gesture-handler's
-// wrapper differs only in what it tells the native side.
-type RowProps = {
-  testID: string;
-  onLayout?: (e: { nativeEvent: { layout: { height: number } } }) => void;
-};
-const held = vi.hoisted(() => new Map<string, {
-  gesture: {
-    longPressMs?: number;
-    start?: () => void;
-    update?: (e: { translationY: number }) => void;
-    finalize?: () => void;
-  };
-  props: RowProps;
-}>());
-vi.mock('react-native-gesture-handler', async () => {
-  const { FlatList } = await import('react-native');
-  class Pan {
-    longPressMs?: number;
-    start?: () => void;
-    update?: (e: { translationY: number }) => void;
-    finalize?: () => void;
-    runOnJS() { return this; }
-    activateAfterLongPress(ms: number) { this.longPressMs = ms; return this; }
-    onStart(f: () => void) { this.start = f; return this; }
-    onUpdate(f: (e: { translationY: number }) => void) { this.update = f; return this; }
-    onFinalize(f: () => void) { this.finalize = f; return this; }
-  }
-  return {
-    FlatList,
-    Gesture: { Pan: () => new Pan() },
-    GestureDetector: ({ gesture, children }: {
-      gesture: Pan;
-      children: React.ReactElement<RowProps>;
-    }) => {
-      held.set(children.props.testID, { gesture, props: children.props });
-      return children;
-    },
-  };
-});
-
 import CollectionDetailScreen from './CollectionDetailScreen';
+
+// The list's drag responder, as the screen made it: the real one, with
+// its callbacks kept so a test can play the touch system's side. The
+// hold is the card's own long press (the stand-in above records it); the
+// responder then claims the touch on the finger's first move, is granted
+// it, and hears every move and the release.
+const responder = vi.hoisted(() => ({ config: null as null | PanResponderCallbacks }));
+const realCreate = PanResponder.create.bind(PanResponder);
+vi.spyOn(PanResponder, 'create').mockImplementation((config) => {
+  responder.config = config;
+  return realCreate(config);
+});
 
 // The screen's `Alert` is react-native-web's; spy on that object.
 const alert = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -550,18 +518,49 @@ describe('publishing', () => {
 });
 
 describe('reordering', () => {
-  const drag = (slug: string) => held.get(`drag-${slug}`)!;
   const card = (slug: string) => cardProps.get(slug)!;
   const act11y = (slug: string, actionName: string) =>
     act(() => { card(slug).onAccessibilityAction!({ nativeEvent: { actionName } }); });
   /** One step, the way VoiceOver takes it. */
   const down = (slug: string) => act11y(slug, 'moveDown');
   const up = (slug: string) => act11y(slug, 'moveUp');
-  /** A drag in its three beats. */
-  const lift = (slug: string) => act(() => { drag(slug).gesture.start!(); });
-  const move = (slug: string, dy: number) => act(() => { drag(slug).gesture.update!({ translationY: dy }); });
-  const drop = (slug: string) => act(() => { drag(slug).gesture.finalize!(); });
+  // Where the finger is when the card lifts. Any page position: the drag
+  // is measured from here.
+  const Y0 = 480;
+  const cfg = () => responder.config!;
+  const evt = {} as never;
+  const at = (dy: number) => ({ moveY: Y0 + dy }) as never;
+  /** The hold completes: the card's long press. */
+  const lift = (slug: string) => act(() => { card(slug).onLongPress!({ nativeEvent: { pageY: Y0 } }); });
+  /** The finger's first move: the list asks for the touch and, if it wants
+   *  it, is granted it, and the card's button is told it has lost it. */
+  const claim = (slug: string) => {
+    let wanted = false;
+    act(() => {
+      wanted = !!cfg().onMoveShouldSetPanResponderCapture!(evt, at(0));
+      if (wanted) {
+        cfg().onPanResponderGrant!(evt, at(0));
+        card(slug).onPressOut!();
+      }
+    });
+    return wanted;
+  };
+  const move = (dy: number) => act(() => { cfg().onPanResponderMove!(evt, at(dy)); });
+  const drop = () => act(() => { cfg().onPanResponderRelease!(evt, at(0)); });
+  /** A whole drag: hold, first move, the moves, let go. */
+  const dragBy = (slug: string, ...dys: number[]) => {
+    lift(slug);
+    claim(slug);
+    for (const dy of dys) move(dy);
+    drop();
+  };
   const el = (slug: string) => screen.getByTestId(`drag-${slug}`);
+  /** The card as React Native Web measures it, by hand: jsdom has no
+   *  ResizeObserver, and the handler is left on the node for one. */
+  const measure = (slug: string, height: number) => act(() => {
+    (el(slug) as unknown as { __reactLayoutHandler: (e: unknown) => void })
+      .__reactLayoutHandler({ nativeEvent: { layout: { height } } });
+  });
   const cards = () => screen.getAllByText(/^card:/).map((e) => e.textContent);
   /** Past the beat the screen waits after the last move. On a fake clock:
    *  a real 700 ms wait was the flake under coverage, where the whole run
@@ -569,50 +568,64 @@ describe('reordering', () => {
   const pastTheBeat = () => act(async () => { await vi.advanceTimersByTimeAsync(700); });
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    held.clear();
     cardProps.clear();
+    responder.config = null;
   });
   afterEach(() => { vi.useRealTimers(); });
 
   it('lets the owner hold any card of the list as it is, with no mode to enter first', () => {
     show();
     expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
-    for (const slug of ['pho', 'cafe', 'museum']) expect(held.has(`drag-${slug}`)).toBe(true);
+    for (const slug of ['pho', 'cafe', 'museum']) expect(card(slug).onLongPress).toBeTypeOf('function');
     // The rest of the screen stays what it was: the menu, the Add slot.
     expect(button('More')).toBeTruthy();
     expect(screen.getByText('From search or your bookmarks')).toBeTruthy();
     for (const label of ['Done', 'Saving…', 'Saved']) expect(screen.queryByText(label)).toBeNull();
   });
 
-  it('lifts a card only after a hold, so a tap still opens it and a flick still scrolls', () => {
+  it('lifts a card only after a hold, so a tap still opens it', () => {
     const { raw } = show();
-    expect(drag('pho').gesture.longPressMs).toBeGreaterThanOrEqual(300);
+    expect(card('pho').delayLongPress).toBeGreaterThanOrEqual(300);
     fireEvent.click(screen.getByText('card:Cafe Giang'));
     expect(raw.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cafe' });
   });
 
-  it('offers no drag on a list of one', () => {
+  it('offers no hold on a list of one', () => {
     state.mine = [collection({}, [PHO])];
     show();
-    expect(held.size).toBe(0);
+    expect(card('pho').onLongPress).toBeUndefined();
     expect(card('pho').accessibilityActions).toBeUndefined();
+    expect(screen.queryByTestId('drag-pho')).toBeNull();
   });
 
-  it('offers no drag to a visitor', () => {
+  it('offers no hold to a visitor', () => {
     state.mine = [];
     state.cols = [collection({ owner_id: 'curator', is_public: true })];
     show();
     expect(screen.getByText('card:Pho 10')).toBeTruthy();
-    expect(held.size).toBe(0);
+    expect(card('pho').onLongPress).toBeUndefined();
+  });
+
+  // The list's responder must never meet an ordinary scroll or tap: it
+  // wants the touch only once a card is up.
+  it('claims the touch only while a card is lifted, and then never gives it back', () => {
+    show();
+    expect(claim('pho')).toBe(false);
+    lift('pho');
+    expect(claim('pho')).toBe(true);
+    expect(cfg().onPanResponderTerminationRequest!(evt, at(0))).toBe(false);
+    drop();
+    expect(claim('pho')).toBe(false);
   });
 
   it('lands a dragged card where it is let go, and saves it a beat later', async () => {
     show();
     lift('pho');
+    claim('pho');
     // Past half of the next card (a 320 guess before any card has measured).
-    move('pho', 170);
+    move(170);
     expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
-    drop('pho');
+    drop();
     expect(cards()).toEqual(['card:Cafe Giang', 'card:Pho 10', 'card:Fine Arts Museum']);
     expect(spies.reorderCollection).not.toHaveBeenCalled();
     expect(screen.getByText('Saving…')).toBeTruthy();
@@ -628,12 +641,35 @@ describe('reordering', () => {
 
   it('crosses as many cards as the finger does, upward too', async () => {
     show();
-    lift('museum');
-    move('museum', -500);
-    drop('museum');
+    dragBy('museum', -200, -500);
     expect(cards()).toEqual(['card:Fine Arts Museum', 'card:Pho 10', 'card:Cafe Giang']);
     await pastTheBeat();
     expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['museum', 'pho', 'cafe']);
+  });
+
+  // The second drag has to start from the order the first one left. The
+  // responder is made once, so this is what shows it hears the latest
+  // order rather than the one the screen opened with.
+  it('drags again from the order the last drag left', async () => {
+    show();
+    dragBy('pho', 170);
+    expect(cards()).toEqual(['card:Cafe Giang', 'card:Pho 10', 'card:Fine Arts Museum']);
+    dragBy('museum', -500);
+    expect(cards()).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);
+    await pastTheBeat();
+    expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
+    expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['museum', 'cafe', 'pho']);
+  });
+
+  // A terminated touch (a call, the app leaving the screen) lands the
+  // card where it was over, the same as letting go.
+  it('lands the card when the system takes the touch away', () => {
+    show();
+    lift('pho');
+    claim('pho');
+    move(170);
+    act(() => { cfg().onPanResponderTerminate!(evt, at(170)); });
+    expect(cards()).toEqual(['card:Cafe Giang', 'card:Pho 10', 'card:Fine Arts Museum']);
   });
 
   // While the card is up: the cards it has passed step into the room it
@@ -650,8 +686,11 @@ describe('reordering', () => {
     expect(getComputedStyle(scroller()).overflowY).not.toBe('hidden');
     const before = el('pho');
     lift('pho');
-    move('pho', 500);
-    // The same card, not a new one: a remount mid-drag is a dropped gesture.
+    // Held still from the moment it lifts, before the finger has moved.
+    expect(getComputedStyle(scroller()).overflowY).toBe('hidden');
+    claim('pho');
+    move(500);
+    // The same card, not a new one: a remount mid-drag is a dropped touch.
     expect(el('pho')).toBe(before);
     expect(el('pho').style.transform).toContain('translateY(500px)');
     expect(el('pho').style.transform).toContain('scale(1.02)');
@@ -659,11 +698,10 @@ describe('reordering', () => {
     expect(el('museum').style.transform).toBe('translateY(-320px)');
     expect(getComputedStyle(el('pho').parentElement!).zIndex).toBe('10');
     expect(getComputedStyle(el('cafe').parentElement!).zIndex).not.toBe('10');
-    expect(getComputedStyle(scroller()).overflowY).toBe('hidden');
-    move('pho', 170);
+    move(170);
     expect(el('cafe').style.transform).toBe('translateY(-320px)');
     expect(el('museum').style.transform).toBe('');
-    drop('pho');
+    drop();
     for (const slug of ['pho', 'cafe', 'museum']) {
       expect(el(slug).style.transform).toBe('');
       expect(getComputedStyle(el(slug).parentElement!).zIndex).not.toBe('10');
@@ -671,32 +709,62 @@ describe('reordering', () => {
     expect(getComputedStyle(scroller()).overflowY).not.toBe('hidden');
   });
 
+  // Measured from where the finger was when the card lifted, not from
+  // where the touch began or from the top of the page.
+  it('follows the finger from where the card lifted', () => {
+    show();
+    lift('pho');
+    claim('pho');
+    move(0);
+    expect(el('pho').style.transform).toContain('translateY(0px)');
+    move(-40);
+    expect(el('pho').style.transform).toContain('translateY(-40px)');
+  });
+
   // A card with no photo, or a longer name, is a different height.
   it('measures each card, so crossing a short one takes a shorter drag', () => {
     show();
-    act(() => { drag('cafe').props.onLayout!({ nativeEvent: { layout: { height: 200 } } }); });
+    measure('cafe', 200);
     lift('pho');
+    claim('pho');
     // Passed at half of the measured 200, which the 320 guess would not be.
-    move('pho', 99);
+    move(99);
     expect(el('cafe').style.transform).toBe('');
-    move('pho', 100);
+    move(100);
     expect(el('cafe').style.transform).toBe('translateY(-320px)');
-    drop('pho');
+    drop();
     expect(cards()).toEqual(['card:Cafe Giang', 'card:Pho 10', 'card:Fine Arts Museum']);
   });
 
-  it('writes nothing for a card put back where it was, or a hold let go before it lifted', async () => {
+  it('writes nothing for a card put back where it was', async () => {
     show();
-    lift('cafe');
-    move('cafe', 400);
-    move('cafe', 10);
-    drop('cafe');
-    // The finger came up before the hold was long enough: no start.
-    drop('pho');
-    move('pho', 900);
+    dragBy('cafe', 400, 10);
     await pastTheBeat();
     expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
     expect(spies.reorderCollection).not.toHaveBeenCalled();
+    expect(screen.queryByText('Saving…')).toBeNull();
+  });
+
+  // Held, then let go without moving: the finger came up on the card's
+  // own button, which is the only thing that hears it. The card goes back.
+  it('puts a card back when it is held and let go without a move', async () => {
+    show();
+    const before = el('pho');
+    lift('pho');
+    expect(before.style.transform).toContain('scale(1.02)');
+    act(() => { card('pho').onPressOut!(); });
+    expect(el('pho').style.transform).toBe('');
+    // And the list does not think a card is still up.
+    expect(claim('pho')).toBe(false);
+    await pastTheBeat();
+    expect(spies.reorderCollection).not.toHaveBeenCalled();
+  });
+
+  // An ordinary tap lets go of the button too, with nothing lifted.
+  it('ignores a press that ends without a hold', () => {
+    show();
+    act(() => { card('pho').onPressOut!(); });
+    expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
     expect(screen.queryByText('Saving…')).toBeNull();
   });
 

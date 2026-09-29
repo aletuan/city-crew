@@ -413,3 +413,39 @@ describe('the credit', () => {
     expect(screen.queryByText('Bởi Minh')).toBeNull();
   });
 });
+
+// The collection screen lifts a card on a hold. The card's own button is
+// what hears the hold, so the props have to reach it. Played through the
+// real press machinery, not by calling the props: a card that dropped
+// them would still render, and only a hold would find out.
+describe('a hold', () => {
+  it('reaches the card\'s button, and so does letting go', async () => {
+    vi.useFakeTimers();
+    const onLongPress = vi.fn();
+    const onPressOut = vi.fn();
+    const onPress = vi.fn();
+    render(
+      <PlaceCard
+        place={place()}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={100}
+        onPressOut={onPressOut}
+      />,
+    );
+    const target = screen.getByText('Cong Caphe');
+    fireEvent.mouseDown(target, { button: 0, pageY: 300 });
+    // After the delay the card was given, and well before the default
+    // (react-native-web's 450 ms, plus its own 50 ms press-start delay on
+    // top of either): a card that dropped the delay would still lift, late.
+    await vi.advanceTimersByTimeAsync(99);
+    expect(onLongPress).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(200);
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+    fireEvent.mouseUp(target, { button: 0 });
+    expect(onPressOut).toHaveBeenCalled();
+    // A press that lifted is not also a tap.
+    expect(onPress).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+});
