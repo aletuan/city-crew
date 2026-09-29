@@ -408,3 +408,13 @@ for f in "$ROOT"/supabase/migrations/*_rls_ask_once.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/rls_ask_once_test.sql"
+
+# Ordering your own list. The migration settles ties that already exist,
+# so — as for the channel backfill — the rows go in first and the
+# migration runs after them.
+echo "→ reorder collection"
+run "$DB" -f "$HERE/reorder_collection_seed.sql"
+for f in "$ROOT"/supabase/migrations/*_reorder_collection.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/reorder_collection_test.sql"

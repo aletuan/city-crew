@@ -632,55 +632,21 @@ describe('copyCollection', () => {
 });
 
 describe('reorderCollection', () => {
-  // A loop of updates rather than an upsert: the key is
-  // (collection_id, place_id), so positions may collide mid-loop without
-  // anything failing — which is exactly why the position is not in the key.
-  it('writes each place its new position, one update per row', async () => {
-    fake().replies(
-      { data: { id: 'c-1' } },
-      { data: [{ id: 'p-a', slug: 'a' }, { id: 'p-b', slug: 'b' }] },
-      { error: null },
-      { error: null },
-    );
+  // One call, the whole sequence. The per-row updates it replaced matched
+  // nothing for an owner — there is no owner update policy — and reported
+  // success; the function writes in one statement and refuses out loud.
+  it('asks reorder_collection once, with the list and the order', async () => {
+    fake().replies({ error: null });
     await reorderCollection('coffee', ['b', 'a']);
-
-    const [, , first, second] = fake().log;
-    expect(first).toMatchObject({ table: 'collection_places', op: 'update' });
-    expect(first.payload).toEqual({ sort_order: 0 });
-    expect(first.filters).toEqual([['collection_id', 'c-1'], ['place_id', 'p-b']]);
-    expect(second.payload).toEqual({ sort_order: 1 });
-    expect(second.filters).toEqual([['collection_id', 'c-1'], ['place_id', 'p-a']]);
+    expect(fake().log).toHaveLength(1);
+    expect(fake().log[0]).toMatchObject({
+      op: 'rpc', fn: 'reorder_collection',
+      payload: { collection_slug: 'coffee', place_slugs: ['b', 'a'] },
+    });
   });
 
-  it('skips a slug the catalog cannot resolve', async () => {
-    fake().replies(
-      { data: { id: 'c-1' } },
-      { data: [{ id: 'p-a', slug: 'a' }] },
-      { error: null },
-    );
-    await reorderCollection('coffee', ['a', 'gone']);
-    expect(fake().log).toHaveLength(3);
-  });
-
-  it('throws when the list cannot be found', async () => {
-    fake().replies({ error: { message: 'no such list' } });
-    await expect(reorderCollection('coffee', ['a'])).rejects.toThrow('no such list');
-  });
-
-  it('throws when the place lookup failed', async () => {
-    fake().replies({ data: { id: 'c-1' } }, { error: { message: 'timeout' } });
-    await expect(reorderCollection('coffee', ['a'])).rejects.toThrow('timeout');
-  });
-
-  it('throws on the first update the database refuses', async () => {
-    fake().replies(
-      { data: { id: 'c-1' } },
-      { data: [{ id: 'p-a', slug: 'a' }, { id: 'p-b', slug: 'b' }] },
-      { error: { message: 'not yours' } },
-    );
-    await expect(reorderCollection('coffee', ['a', 'b'])).rejects.toThrow('not yours');
-    // Stopped rather than carried on: a half-applied order is worse than a
-    // refused one the reader can retry.
-    expect(fake().log).toHaveLength(3);
+  it('throws what the database said when it refuses', async () => {
+    fake().replies({ error: { message: 'not yours to reorder', code: '42501' } });
+    await expect(reorderCollection('coffee', ['a'])).rejects.toThrow('not yours to reorder');
   });
 });

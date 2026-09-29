@@ -395,7 +395,7 @@ export async function removePlaceFromCollection(collectionSlug: string, placeSlu
  * `addPlaceToCollection` resolves its two ids per call, so looping it
  * over a nine-place list would be twenty-seven round trips for what is
  * one write. The slugs are resolved together here — the shape
- * `reorderCollection` already uses — and the memberships go in as a
+ * `reorderCollection` used to take — and the memberships go in as a
  * single insert, which also makes the order arrive whole instead of
  * settling row by row.
  *
@@ -456,35 +456,20 @@ export async function copyCollection(input: {
 /**
  * Put the members of a collection in a new order.
  *
- * `collection_places.sort_order` has been read everywhere since the table
- * existed and written in exactly one place — `addPlaceToCollection`, with
- * the current length, which only ever appends. This is the writer that was
- * missing.
- *
- * A loop of updates rather than an upsert, following
- * `dashboard/src/api.js:reorderPhotos`. The key is (collection_id,
- * place_id), so positions may collide mid-loop without anything failing —
- * which is exactly why the position is not in the key.
+ * One call to `reorder_collection`, which writes the whole sequence in one
+ * statement. It used to be a loop of row updates from here, and for an
+ * owner every one of them matched nothing: `collection_places` has no
+ * update policy for owners, row security filtered the rows away, and each
+ * update reported success having changed nothing. The loop also meant a
+ * dropped connection left the list half reordered. The function answers
+ * both — it checks the caller owns the list (or is an editor) and refuses
+ * out loud when not, and it lands the order whole or not at all. See
+ * `20260929090000_reorder_collection.sql`.
  */
 export async function reorderCollection(collectionSlug: string, placeSlugs: string[]): Promise<void> {
-  const { data: col, error: colError } = await supabase
-    .from('collections').select('id').eq('slug', collectionSlug).single();
-  if (colError) throw new Error(colError.message);
-  const collectionId = (col as { id: string }).id;
-
-  const { data: rows, error: placesError } = await supabase
-    .from('places').select('id, slug').in('slug', placeSlugs);
-  if (placesError) throw new Error(placesError.message);
-  const idBySlug = new Map((rows as { id: string; slug: string }[]).map((r) => [r.slug, r.id]));
-
-  for (let i = 0; i < placeSlugs.length; i++) {
-    const placeId = idBySlug.get(placeSlugs[i]);
-    if (!placeId) continue;
-    const { error } = await supabase
-      .from('collection_places')
-      .update({ sort_order: i })
-      .eq('collection_id', collectionId)
-      .eq('place_id', placeId);
-    if (error) throw new Error(error.message);
-  }
+  const { error } = await supabase.rpc('reorder_collection', {
+    collection_slug: collectionSlug,
+    place_slugs: placeSlugs,
+  });
+  if (error) throw new Error(error.message);
 }

@@ -1096,6 +1096,10 @@ export type Database = {
       own_photos_on_place: { Args: { target: string }; Returns: number }
       own_place_photos_today: { Args: never; Returns: number }
       random_handle: { Args: never; Returns: string }
+      reorder_collection: {
+        Args: { collection_slug: string; place_slugs: string[] }
+        Returns: undefined
+      }
       reports_queue: {
         Args: never
         Returns: {

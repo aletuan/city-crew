@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, View,
 } from 'react-native';
@@ -8,7 +8,7 @@ import PlaceCard from '../components/PlaceCard';
 import { AddSlot } from '../components/add';
 import {
   AmbientWarmth, Avatar, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
-  fireHaptic, successHaptic, useTabBarClearance,
+  fireHaptic, useTabBarClearance,
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useAuth } from '../lib/auth';
@@ -130,6 +130,18 @@ function blockerSentence(
 }
 
 /**
+ * How long after the last move the order is written.
+ *
+ * Long enough that walking one place down a list — a run of taps on the
+ * same arrow — is one write rather than one per tap; short enough that
+ * the header says "Saved" before the reader has looked up. Not measured:
+ * a chosen beat. Leaving the mode or the screen writes at once, so the
+ * value can only decide how many writes there are, never whether one is
+ * lost.
+ */
+const SAVE_AFTER_MS = 600;
+
+/**
  * A place while the list is being put in order.
  *
  * Deliberately not a `PlaceCard`. Arranging is about the sequence, not
@@ -162,9 +174,15 @@ function ArrangeRow({ place, index, count, onUp, onDown }: {
     <View style={s.arrangeRow}>
       <Text style={s.arrangeNum}>{index + 1}</Text>
       <View style={s.arrangeText}>
-        <Text style={s.arrangeName} numberOfLines={1}>{place.name_en}</Text>
+        {/* In the reader's language, as the card it stands in for is. It
+            was English whatever the app was set to, so the same place
+            changed its name on the way into the mode. */}
+        <Text style={s.arrangeName} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
         {!!place.neighborhood_en && (
-          <Text style={s.arrangeArea} numberOfLines={1}>{place.neighborhood_en}</Text>
+          <Text style={s.arrangeArea} numberOfLines={1}>
+            {t(place.neighborhood_en, place.neighborhood_vi ?? place.neighborhood_en,
+              place.neighborhood_ja ?? place.neighborhood_en)}
+          </Text>
         )}
       </View>
       <PressableScale
@@ -385,51 +403,103 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    *
    * A mode rather than always-on controls. Two arrows on every card would
    * mean tapping a place is one thumb-width from moving it, and a list you
-   * are browsing is not a list you are editing. `arranging` holds the draft
-   * order as slugs — never places — because the catalog can reload
-   * underneath this screen and slugs are what the write takes anyway.
+   * are browsing is not a list you are editing.
    *
-   * Nothing is written until Done. `sort_order` is a column every read in
-   * the app already honours, so a half-applied order would show up
-   * everywhere at once; the whole sequence goes in one go or not at all.
+   * ── saved as it goes ──
+   *
+   * There is no Done. Every move is the reader's decision already, and a
+   * button to confirm it was a second decision about the first — one the
+   * back arrow skipped, throwing the order away without a word. So each
+   * move is written on its own, a beat after the last tap (`SAVE_AFTER_MS`)
+   * so that five taps are one write rather than five, and the back arrow
+   * leaves the mode rather than the screen. The header says what the write
+   * is doing instead of offering to do it.
+   *
+   * `draft` is the order on screen, as slugs — never places, because the
+   * catalog can reload underneath this screen and slugs are what the write
+   * takes anyway. It outlives the mode until the server's order has caught
+   * up with it, so the list does not flick back to the old order for the
+   * moment between the write landing and the reload.
+   *
+   * One write in flight at a time, always the latest order: a move made
+   * while a write is out is picked up when it returns. The whole sequence
+   * goes in one statement (`reorder_collection`), so a failure leaves the
+   * server's order as it was — and the screen goes back to it, and says so.
    */
-  const [arranging, setArranging] = useState<string[] | null>(null);
-  const [ordering, setOrdering] = useState(false);
+  const [arranging, setArranging] = useState(false);
+  const [draft, setDraft] = useState<string[] | null>(null);
+  const [saveState, setSaveState] = useState<'idle' | 'waiting' | 'saving' | 'saved'>('idle');
+  const wanted = useRef<string[] | null>(null);
+  const writing = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bySlug = useMemo(() => new Map(members.map((p) => [p.slug, p])), [members]);
-  // Members that have arrived since arranging began are appended rather
-  // than dropped. Saving would otherwise leave them at whatever position
-  // they had, which is not a decision the reader made.
-  const drafted: Place[] = arranging
+  // Members that have arrived since the draft began are appended rather
+  // than dropped: saving would otherwise leave them wherever they were,
+  // which is not a decision the reader made.
+  const drafted: Place[] = draft
     ? [
-      ...arranging.map((slug) => bySlug.get(slug)).filter((p): p is Place => !!p),
-      ...members.filter((p) => !arranging.includes(p.slug)),
+      ...draft.map((slug) => bySlug.get(slug)).filter((p): p is Place => !!p),
+      ...members.filter((p) => !draft.includes(p.slug)),
     ]
     : members;
-  const dirty = !!arranging && !sameOrder(arranging, members.map((p) => p.slug));
+  // The draft steps aside once the server agrees with it and nothing is
+  // left to write. Adjusted during render, React's pattern for state that
+  // follows props — see `usePersistedFetch`.
+  if (draft && !arranging && (saveState === 'idle' || saveState === 'saved')
+    && sameOrder(drafted.map((p) => p.slug), members.map((p) => p.slug))) {
+    setDraft(null);
+  }
 
-  const shuffle = (from: number, to: number) => setArranging(
-    moveItem(drafted.map((p) => p.slug), from, to),
-  );
-
-  const finishArranging = () => {
-    if (!col || !arranging || ordering) return;
-    if (!dirty) { setArranging(null); return; }
-    setOrdering(true);
-    reorderCollection(col.slug, drafted.map((p) => p.slug))
-      .then(() => {
-        successHaptic();
-        setArranging(null);
-        // Both catalogs: the row is in `mine` and, once published, in the
-        // public list too, and the order is read from whichever copy the
-        // screen that draws it happens to hold.
-        mine.reload();
-        cols.reload();
-      })
-      .catch((e: Error) => Alert.alert(
+  const flush = async () => {
+    if (!col || writing.current || !wanted.current) return;
+    writing.current = true;
+    setSaveState('saving');
+    try {
+      while (wanted.current) {
+        const order = wanted.current;
+        wanted.current = null;
+        await reorderCollection(col.slug, order);
+      }
+      setSaveState('saved');
+      // Both catalogs: the row is in `mine` and, once published, in the
+      // public list too, and the order is read from whichever copy the
+      // screen that draws it happens to hold.
+      mine.reload();
+      cols.reload();
+    } catch (e) {
+      wanted.current = null;
+      setDraft(null);
+      setSaveState('idle');
+      Alert.alert(
         t('Could not save the order', 'Không lưu được thứ tự', '並び順を保存できませんでした'),
-        e.message,
-      ))
-      .finally(() => setOrdering(false));
+        (e as Error).message,
+      );
+    } finally {
+      writing.current = false;
+    }
+  };
+  // The latest `flush`, for the one caller that outlives a render: the
+  // unmount below, which must write a move made a moment before leaving.
+  const flushRef = useRef(flush);
+  useEffect(() => { flushRef.current = flush; });
+  useEffect(() => () => {
+    if (timer.current) { clearTimeout(timer.current); void flushRef.current(); }
+  }, []);
+
+  const shuffle = (from: number, to: number) => {
+    const next = moveItem(drafted.map((p) => p.slug), from, to);
+    setDraft(next);
+    wanted.current = next;
+    setSaveState('waiting');
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => { timer.current = null; void flush(); }, SAVE_AFTER_MS);
+  };
+
+  // Out of the mode, not off the screen: whatever is still waiting is
+  // written now rather than a beat later.
+  const finishArranging = () => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; void flush(); }
+    setArranging(false);
   };
 
   // Deliberately inert, and now inert for two different reasons — which
@@ -711,17 +781,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
      read `owner_id` off yet — `owned` is false by default, so the owner was
      briefly offered the visitor's "Save a copy" of their own list. Once the
      row is here its `owner_id` settles whose it is. */
-  const headerRight = arranging ? (owned ? (
-    <PressableScale onPress={finishArranging} containerStyle={s.done} disabled={ordering}>
-      <Text style={s.doneText}>
-        {ordering
-          ? t('Saving…', 'Đang lưu…', '保存中…')
-          : dirty
-            ? t('Done', 'Xong', '完了')
-            : t('Cancel', 'Huỷ', 'キャンセル')}
-      </Text>
-    </PressableScale>
-  ) : null) : col ? (
+  const headerRight = arranging ? (
+    // A report, not a control: there is nothing to confirm. Blank until
+    // something has moved.
+    <Text style={s.saveState} accessibilityLiveRegion="polite">
+      {saveState === 'waiting' || saveState === 'saving'
+        ? t('Saving…', 'Đang lưu…', '保存中…')
+        : saveState === 'saved'
+          ? t('Saved', 'Đã lưu', '保存しました')
+          : ''}
+    </Text>
+  ) : col ? (
     <View ref={btn} collapsable={false}>
       <RoundIconButton
         icon="ellipsis-horizontal"
@@ -735,7 +805,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     <Screen
       title={title}
       subtitle={byline}
-      onBack={() => navigation.goBack()}
+      onBack={() => (arranging ? finishArranging() : navigation.goBack())}
       right={headerRight}
     >
       <AmbientWarmth />
@@ -801,9 +871,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {arranging && (
         <Text style={s.arrangeHint}>
           {t(
-            'Set the order these places appear in. This is the order a plan builds from.',
-            'Sắp thứ tự các địa điểm. Đây cũng là thứ tự mà một kế hoạch dựa vào.',
-            'スポットの並び順を決めます。プランもこの順番を参照します。',
+            'Set the order these places appear in. Changes save as you go.',
+            'Sắp thứ tự các địa điểm. Thay đổi được lưu tự động.',
+            'スポットの並び順を決めます。変更は自動で保存されます。',
           )}
         </Text>
       )}
@@ -900,7 +970,8 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                   label={t('Reorder places', 'Sắp xếp thứ tự', '並び順を変更')}
                   onPress={() => act(() => {
                     fireHaptic('light');
-                    setArranging(members.map((p) => p.slug));
+                    setSaveState('idle');
+                    setArranging(true);
                   })}
                 />
               )}
@@ -1054,8 +1125,7 @@ const s = StyleSheet.create({
 
   // A text button, not a pill: it sits where the overflow control was and
   // the header already has one round shape in it on the other side.
-  done: { paddingHorizontal: 10, paddingVertical: 8 },
-  doneText: { color: colors.accent, fontSize: 16, fontWeight: font.semibold },
+  saveState: { color: colors.textTertiary, fontSize: 14, fontWeight: font.medium, paddingHorizontal: 10 },
 
   arrangeHint: {
     color: colors.textTertiary, fontSize: 13.5, lineHeight: 19,
