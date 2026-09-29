@@ -1,0 +1,138 @@
+// @vitest-environment jsdom
+//
+// "About City Crew": what it says about the copy of the app it is in, and
+// what it says when it does not know. The unknown cases matter as much as
+// the known ones. An OTA reaches builds that answer with less, and a
+// development build answers with almost nothing.
+
+import React from 'react';
+import { Share } from 'react-native';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '../uitest/render';
+import type { AppInfo } from '../lib/appinfo';
+
+const state = vi.hoisted(() => ({ lang: 'vi' as 'en' | 'vi' | 'ja' }));
+vi.mock('../lib/i18n', () => ({
+  useI18n: () => ({
+    lang: state.lang,
+    setLang: () => {},
+    t: (en: string, vi: string, ja: string) => ({ en, vi, ja })[state.lang],
+  }),
+}));
+
+import AboutSheet from './AboutSheet';
+
+// Local fields, so the date on screen is the same on every clock.
+const PUBLISHED = new Date(2026, 8, 29, 9, 50);
+const RELEASE: AppInfo = {
+  version: '1.0.4', build: '22', channel: 'production', runtime: '57.0.0',
+  update: { id: '28f91171-a086-4959-78f6-6c4a944d5b67', at: PUBLISHED },
+};
+const NOTHING: AppInfo = { version: null, build: null, channel: null, runtime: null, update: null };
+
+const open = (info: AppInfo = RELEASE) => {
+  const onClose = vi.fn();
+  const view = render(<AboutSheet visible onClose={onClose} info={info} />);
+  return { onClose, view };
+};
+
+/** The value on the row with this label. */
+const valueOf = (label: string) => screen.getByText(label).nextSibling?.textContent;
+
+const share = vi.spyOn(Share, 'share');
+beforeEach(() => {
+  state.lang = 'vi';
+  share.mockReset();
+  share.mockResolvedValue({ action: 'sharedAction' });
+});
+afterEach(() => { vi.clearAllMocks(); });
+
+describe('a release build that has taken an update', () => {
+  it('names the binary, the channel, the update and the runtime', () => {
+    open();
+    expect(screen.getByText('Giới thiệu City Crew')).toBeTruthy();
+    expect(valueOf('Phiên bản')).toBe('1.0.4 (22)');
+    expect(valueOf('Kênh')).toBe('production');
+    expect(valueOf('Bản cập nhật')).toBe('29/09/2026 09:50 · 28f91171');
+    expect(valueOf('Runtime')).toBe('57.0.0');
+  });
+
+  it('writes the date the way the reader\'s language does', () => {
+    state.lang = 'en';
+    open();
+    expect(valueOf('Update')).toBe('29 Sep 2026, 09:50 · 28f91171');
+  });
+
+  it('shows the id alone for an update with no date', () => {
+    open({ ...RELEASE, update: { id: '28f91171-a086', at: null } });
+    expect(valueOf('Bản cập nhật')).toBe('28f91171');
+  });
+});
+
+describe('what it does not know', () => {
+  it('says so, in words, for every row', () => {
+    open(NOTHING);
+    expect(valueOf('Phiên bản')).toBe('Không rõ');
+    expect(valueOf('Kênh')).toBe('Bản phát triển');
+    expect(valueOf('Bản cập nhật')).toBe('Đi kèm bản cài');
+    expect(valueOf('Runtime')).toBe('—');
+  });
+
+  it('says the same in Japanese', () => {
+    state.lang = 'ja';
+    open(NOTHING);
+    expect(screen.getByText('City Crewについて')).toBeTruthy();
+    expect(valueOf('バージョン')).toBe('不明');
+    expect(valueOf('チャンネル')).toBe('開発版');
+    expect(valueOf('アップデート')).toBe('ビルドに同梱');
+  });
+});
+
+describe('sharing', () => {
+  it('hands the system sheet the whole answer, full update id included', () => {
+    open();
+    fireEvent.click(screen.getByRole('button', { name: 'Chia sẻ thông tin này' }));
+    expect(share).toHaveBeenCalledTimes(1);
+    const { message } = share.mock.calls[0][0] as { message: string };
+    expect(message).toContain('City Crew 1.0.4 (22)');
+    expect(message).toContain('28f91171-a086-4959-78f6-6c4a944d5b67');
+  });
+
+  // Declined or failed, the share is the reader's business. Nothing
+  // escapes as an unhandled rejection.
+  it('swallows a share that does not go through', () => {
+    // Asked of the promise itself: whether the sheet handles the refusal,
+    // not whether one happened to surface before the test ended — the
+    // unhandled version passed a test that only waited to see.
+    const caught = vi.fn();
+    share.mockReturnValueOnce({ catch: caught } as never);
+    open();
+    fireEvent.click(screen.getByRole('button', { name: 'Chia sẻ thông tin này' }));
+    expect(caught).toHaveBeenCalledTimes(1);
+    expect(() => caught.mock.calls[0][0](new Error('dismissed'))).not.toThrow();
+  });
+});
+
+describe('ways out', () => {
+  it('closes from Done and from the backdrop', () => {
+    const { onClose } = open();
+    fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
+    fireEvent.click(screen.getByLabelText('Đóng'));
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('draws nothing while closed, and rises again when reopened', () => {
+    const onClose = vi.fn();
+    const view = render(<AboutSheet visible={false} onClose={onClose} info={RELEASE} />);
+    expect(screen.queryByText('Giới thiệu City Crew')).toBeNull();
+    view.rerender(<AboutSheet visible onClose={onClose} info={RELEASE} />);
+    expect(screen.getByText('Giới thiệu City Crew')).toBeTruthy();
+  });
+
+  it('describes the running app when no test says otherwise', () => {
+    render(<AboutSheet visible onClose={() => {}} />);
+    // The suite's own answers: no channel, no native module.
+    expect(valueOf('Phiên bản')).toBe('Không rõ');
+    expect(valueOf('Kênh')).toBe('Bản phát triển');
+  });
+});

@@ -121,6 +121,10 @@ vi.mock('../components/LegalSheet', () => ({
   default: ({ id, onClose }: { id: string | null; onClose: () => void }) =>
     (id ? <button type="button" onClick={onClose}>{`close-legal-${id}`}</button> : null),
 }));
+vi.mock('../components/AboutSheet', () => ({
+  default: ({ visible, onClose }: SheetProps) =>
+    (visible ? <button type="button" onClick={onClose}>close-about</button> : null),
+}));
 vi.mock('../components/AvatarPicker', () => ({
   default: ({ showCamera }: { showCamera?: boolean }) => <div data-testid="avatar" data-camera={String(showCamera)} />,
 }));
@@ -495,6 +499,19 @@ describe('legal card', () => {
     press(row);
     fireEvent.click(screen.getByText(closer));
     expect(screen.queryByText(/close-legal/)).toBeNull();
+  });
+});
+
+// Under the documents on both views, on a card of its own: which copy of
+// the app this is, for the reader asked "which version are you on?".
+describe('about card', () => {
+  it.each([['signed in', true], ['a guest', false]])('opens the about sheet and closes it, %s', (_who, signedIn) => {
+    if (!signedIn) state.session = null;
+    draw();
+    expect(screen.queryByText('close-about')).toBeNull();
+    press('About City Crew');
+    fireEvent.click(screen.getByText('close-about'));
+    expect(screen.queryByText('close-about')).toBeNull();
   });
 });
 
