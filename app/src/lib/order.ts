@@ -37,3 +37,45 @@ export function moveItem<T>(list: readonly T[], from: number, to: number): T[] {
 export function sameOrder<T>(a: readonly T[], b: readonly T[]): boolean {
   return a.length === b.length && a.every((x, i) => x === b[i]);
 }
+
+/**
+ * Where a row being dragged would land, from how far it has moved.
+ *
+ * `pitches` is each row's height plus the gap under it, in list order —
+ * the rows are not one height (a place with no neighbourhood is a line
+ * shorter), so a single row height would put the drop a row off once a
+ * short one is crossed. A row is passed once the dragged row's centre is
+ * past the middle of it, which is where the eye says it has swapped.
+ *
+ * `dy` is the finger's travel since the lift, positive downward.
+ */
+export function dropSlot(pitches: readonly number[], from: number, dy: number): number {
+  let to = from;
+  if (dy > 0) {
+    let travelled = 0;
+    for (let i = from + 1; i < pitches.length; i++) {
+      travelled += pitches[i];
+      if (dy < travelled - pitches[i] / 2) break;
+      to = i;
+    }
+  } else {
+    let travelled = 0;
+    for (let i = from - 1; i >= 0; i--) {
+      travelled += pitches[i];
+      if (-dy < travelled - pitches[i] / 2) break;
+      to = i;
+    }
+  }
+  return to;
+}
+
+/**
+ * How far row `i` steps aside while the row at `from` hovers over `to`:
+ * the rows it has passed move one lifted row's pitch the other way, into
+ * the room it left. Everything else stays put.
+ */
+export function stepAside(i: number, from: number, to: number, lifted: number): number {
+  if (from < to && i > from && i <= to) return -lifted;
+  if (to < from && i >= to && i < from) return lifted;
+  return 0;
+}

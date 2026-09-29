@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Dimensions, FlatList, Modal, Pressable, StyleSheet, Text, View,
+  ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, Pressable, StyleProp, StyleSheet, Text, View,
+  ViewStyle,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
@@ -20,7 +22,7 @@ import {
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCity } from '../lib/city';
-import { moveItem, sameOrder } from '../lib/order';
+import { dropSlot, moveItem, sameOrder, stepAside } from '../lib/order';
 import { useReport } from '../components/reportFlow';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
@@ -142,6 +144,48 @@ function blockerSentence(
 const SAVE_AFTER_MS = 600;
 
 /**
+ * How long a finger rests on a row before the row lifts.
+ *
+ * The platform's own long press is 500 ms; this is shorter because the
+ * mode has already been asked for — nobody is scrolling past these rows
+ * by accident — and a lift that makes you wait reads as one that did not
+ * take. Short enough to feel like holding, long enough that a flick to
+ * scroll a long list does not pick a row up on the way.
+ */
+const LIFT_AFTER_MS = 250;
+
+/** The gap under each row, which is part of how far a neighbour steps
+ *  aside: `marginBottom` on `arrangeRow`. */
+const ROW_GAP = 8;
+
+/** A row's pitch before it has reported its size — about one row with a
+ *  neighbourhood line. Only ever used for the first frame, or on a
+ *  platform that does not report layout at all. */
+const PITCH_GUESS = 64;
+
+/** Which row is in the finger, for the cell that holds it; -1 for none. */
+const LiftedRow = createContext(-1);
+
+/**
+ * The list's cell, raised while its row is lifted.
+ *
+ * Each row sits in a cell of its own, and a zIndex on the row does not
+ * reach past its cell to the siblings it has to pass over — so it is the
+ * cell that goes up. Declared here and fed by context rather than written
+ * inline on the list: an inline component is a new type every render, and
+ * every lift and every slot passed is a render, so each one remounted every
+ * row — the one in the finger with its gesture.
+ */
+function ArrangeCell({ index, style, children, ...cell }: {
+  index: number;
+  style?: StyleProp<ViewStyle>;
+  children?: React.ReactNode;
+}) {
+  const lifted = useContext(LiftedRow);
+  return <View {...cell} style={[style, lifted === index && s.arrangeCellLifted]}>{children}</View>;
+}
+
+/**
  * A place while the list is being put in order.
  *
  * Deliberately not a `PlaceCard`. Arranging is about the sequence, not
@@ -149,63 +193,94 @@ const SAVE_AFTER_MS = 600;
  * are reordering a list you can only see a fifth of. This is one line each,
  * with the position spelled out, so the whole list is in front of you.
  *
- * ── on arrows rather than dragging ──
+ * ── held, then dragged ──
  *
- * The app carries `react-native-gesture-handler` and uses it for the swipe
- * rows on the collections list, but a drag-to-reorder list is a different
- * animal: it needs a layout-animated list that reflows under the finger,
- * which in practice means `react-native-reanimated` and a dependency this
- * project does not have. Two buttons reorder a six-place list in a handful
- * of taps, work under VoiceOver, and cannot drop an item somewhere the
- * reader did not mean. When the drag arrives it replaces this; until then
- * this is the feature rather than a placeholder for it.
+ * Hold a row and it lifts; drag it and the rows it passes step aside into
+ * the room it left; let go and it lands, and the new order saves itself.
+ * The arrows it replaced moved a place one step a tap — seven taps to
+ * bring the eighth place to the top.
+ *
+ * Built on what the binary already carries: `react-native-gesture-handler`
+ * for the hold-then-pan, and React Native's own `Animated` for the lifted
+ * row, on the JS thread. The usual recipe is `react-native-reanimated`,
+ * which is a native module — adding it would have meant a new build
+ * through the store before anybody could drag, and every OTA after it
+ * refused by the builds already installed. A list of a few dozen short
+ * rows does not need the UI thread to keep up with a finger.
+ *
+ * The arrows' work is not lost for VoiceOver, which cannot drag: the row
+ * carries "Move up" and "Move down" as accessibility actions.
  */
-function ArrangeRow({ place, index, count, onUp, onDown }: {
+function ArrangeRow({
+  place, index, count, lifted, shift, dragY, onUp, onDown, onLift, onDrag, onDrop, onPitch,
+}: {
   place: Place;
   index: number;
   count: number;
+  /** This row is the one in the finger. */
+  lifted: boolean;
+  /** How far this row has stepped aside for the one in the finger. */
+  shift: number;
+  dragY: Animated.Value;
   onUp: () => void;
   onDown: () => void;
+  onLift: (index: number) => void;
+  onDrag: (dy: number) => void;
+  onDrop: () => void;
+  onPitch: (slug: string, pitch: number) => void;
 }) {
   const { t } = useI18n();
-  const first = index === 0;
-  const last = index === count - 1;
+  const pan = Gesture.Pan()
+    .runOnJS(true)
+    .activateAfterLongPress(LIFT_AFTER_MS)
+    .onStart(() => onLift(index))
+    .onUpdate((e) => onDrag(e.translationY))
+    .onFinalize(() => onDrop());
+  const actions = [
+    ...(index > 0 ? [{ name: 'moveUp', label: t('Move up', 'Chuyển lên', '上へ移動') }] : []),
+    ...(index < count - 1 ? [{ name: 'moveDown', label: t('Move down', 'Chuyển xuống', '下へ移動') }] : []),
+  ];
   return (
-    <View style={s.arrangeRow}>
-      <Text style={s.arrangeNum}>{index + 1}</Text>
-      <View style={s.arrangeText}>
-        {/* In the reader's language, as the card it stands in for is. It
-            was English whatever the app was set to, so the same place
-            changed its name on the way into the mode. */}
-        <Text style={s.arrangeName} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
-        {!!place.neighborhood_en && (
-          <Text style={s.arrangeArea} numberOfLines={1}>
-            {t(place.neighborhood_en, place.neighborhood_vi ?? place.neighborhood_en,
-              place.neighborhood_ja ?? place.neighborhood_en)}
-          </Text>
+    <GestureDetector gesture={pan}>
+      <Animated.View
+        onLayout={(e) => onPitch(place.slug, e.nativeEvent.layout.height + ROW_GAP)}
+        style={[
+          s.arrangeRow,
+          lifted
+            ? [s.arrangeLifted, { transform: [{ translateY: dragY }, { scale: 1.02 }] }]
+            : shift !== 0 && { transform: [{ translateY: shift }] },
+        ]}
+        accessible
+        accessibilityRole="adjustable"
+        accessibilityLabel={`${index + 1}. ${t(place.name_en, place.name_vi, place.name_ja)}`}
+        accessibilityHint={t(
+          'Hold and drag to move it.',
+          'Giữ rồi kéo để di chuyển.',
+          '長押ししてドラッグすると移動できます。',
         )}
-      </View>
-      <PressableScale
-        haptic="selection"
-        onPress={onUp}
-        disabled={first}
-        containerStyle={[s.arrangeBtn, first && s.arrangeBtnOff]}
-        accessibilityRole="button"
-        accessibilityLabel={t('Move up', 'Chuyển lên', '上へ移動')}
+        accessibilityActions={actions}
+        onAccessibilityAction={(e) => (e.nativeEvent.actionName === 'moveUp' ? onUp() : onDown())}
+        testID={`arrange-${place.slug}`}
       >
-        <Ionicons name="chevron-up" size={17} color={colors.textSecondary} />
-      </PressableScale>
-      <PressableScale
-        haptic="selection"
-        onPress={onDown}
-        disabled={last}
-        containerStyle={[s.arrangeBtn, last && s.arrangeBtnOff]}
-        accessibilityRole="button"
-        accessibilityLabel={t('Move down', 'Chuyển xuống', '下へ移動')}
-      >
-        <Ionicons name="chevron-down" size={17} color={colors.textSecondary} />
-      </PressableScale>
-    </View>
+        <Text style={s.arrangeNum}>{index + 1}</Text>
+        <View style={s.arrangeText}>
+          {/* In the reader's language, as the card it stands in for is. It
+              was English whatever the app was set to, so the same place
+              changed its name on the way into the mode. */}
+          <Text style={s.arrangeName} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
+          {!!place.neighborhood_en && (
+            <Text style={s.arrangeArea} numberOfLines={1}>
+              {t(place.neighborhood_en, place.neighborhood_vi ?? place.neighborhood_en,
+                place.neighborhood_ja ?? place.neighborhood_en)}
+            </Text>
+          )}
+        </View>
+        {/* The grip: what says this row can be picked up. Not a button —
+            the whole row is the handle, and a thumb aiming for three lines
+            is aiming for a target too small to be the only one. */}
+        <Ionicons name="reorder-three-outline" size={22} color={colors.textTertiary} />
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
@@ -494,6 +569,47 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => { timer.current = null; void flush(); }, SAVE_AFTER_MS);
   };
+
+  // ── the row in the finger ──
+  //
+  // `lift` is for drawing: which row is up and which slot it hovers over,
+  // so the rows between can step aside. `liftRef` is the same thing for
+  // the gesture's callbacks, which fire faster than renders and must not
+  // read a render behind. `dragY` is the finger's travel, driven straight
+  // into the lifted row's transform so a move does not re-render the list.
+  const [lift, setLift] = useState<{ from: number; to: number; pitch: number } | null>(null);
+  const liftRef = useRef<{ from: number; to: number; pitch: number } | null>(null);
+  const dragY = useRef(new Animated.Value(0)).current;
+  const pitchBySlug = useRef(new Map<string, number>());
+  const raise = (next: { from: number; to: number; pitch: number } | null) => {
+    liftRef.current = next;
+    setLift(next);
+  };
+  const pitches = () => drafted.map((p) => pitchBySlug.current.get(p.slug) ?? PITCH_GUESS);
+  const onLift = (index: number) => {
+    dragY.setValue(0);
+    raise({ from: index, to: index, pitch: pitches()[index] });
+    fireHaptic('light');
+  };
+  const onDrag = (dy: number) => {
+    const held = liftRef.current;
+    if (!held) return;
+    dragY.setValue(dy);
+    const to = dropSlot(pitches(), held.from, dy);
+    if (to !== held.to) {
+      raise({ ...held, to });
+      fireHaptic('selection');
+    }
+  };
+  // Landing is the same move the arrows made, from the lifted row's place
+  // to the slot it was let go over — and saves the same way.
+  const onDrop = () => {
+    const held = liftRef.current;
+    if (!held) return;
+    raise(null);
+    if (held.to !== held.from) shuffle(held.from, held.to);
+  };
+  const onPitch = (slug: string, pitch: number) => { pitchBySlug.current.set(slug, pitch); };
 
   // Out of the mode, not off the screen: whatever is still waiting is
   // written now rather than a beat later.
@@ -877,56 +993,69 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           )}
         </Text>
       )}
-      <FlatList
-        data={drafted}
-        keyExtractor={(p) => p.slug}
-        onScroll={duckScroll}
-        scrollEventThrottle={16}
-        renderItem={({ item, index }) => (arranging
-          ? (
-            <ArrangeRow
-              place={item}
-              index={index}
-              count={drafted.length}
-              onUp={() => shuffle(index, index - 1)}
-              onDown={() => shuffle(index, index + 1)}
-            />
-          )
-          : <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
-        )}
-        ListEmptyComponent={!loading && col
-          ? (owned
-            // One message, not two. The reference stacks "No places in this
-            // collection yet." above a card that says the same thing again.
-            ? <OwnEmpty onExplore={() => navigation.getParent()?.navigate('Explore')} />
-            : <Empty text={t(
-              'No places in this collection yet.',
-              'Bộ sưu tập này chưa có địa điểm nào.',
-              'このコレクションにはまだスポットがありません。',
-            )} />)
-          : null}
-        // Only once there is a list to end. Empty, the card above is
-        // already asking for the first place, and two invitations to do
-        // one thing read as two different things.
-        ListFooterComponent={owned && !arranging && members.length > 0
-          ? (
-            <AddSlot
-              onPress={addPlace}
-              title={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
-              // The second line names where the places come from. Without
-              // it the row is a verb with no object, and "Add place" alone
-              // had already sent one reader to Explore expecting a picker.
-              subtitle={t(
-                'From search or your bookmarks',
-                'Từ tìm kiếm hoặc mục đã lưu',
-                '検索や保存済みから',
-              )}
-            />
-          )
-          : null}
-        contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
-        showsVerticalScrollIndicator={false}
-      />
+      <LiftedRow.Provider value={lift ? lift.from : -1}>
+        <FlatList
+          data={drafted}
+          keyExtractor={(p) => p.slug}
+          // Held still while a row is in the finger: the pan and the scroll
+          // would otherwise both answer the same drag.
+          scrollEnabled={!lift}
+          CellRendererComponent={ArrangeCell}
+          onScroll={duckScroll}
+          scrollEventThrottle={16}
+          renderItem={({ item, index }) => (arranging
+            ? (
+              <ArrangeRow
+                place={item}
+                index={index}
+                count={drafted.length}
+                lifted={lift?.from === index}
+                shift={lift ? stepAside(index, lift.from, lift.to, lift.pitch) : 0}
+                dragY={dragY}
+                onUp={() => shuffle(index, index - 1)}
+                onDown={() => shuffle(index, index + 1)}
+                onLift={onLift}
+                onDrag={onDrag}
+                onDrop={onDrop}
+                onPitch={onPitch}
+              />
+            )
+            : <PlaceCard place={item} onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })} />
+          )}
+          ListEmptyComponent={!loading && col
+            ? (owned
+              // One message, not two. The reference stacks "No places in this
+              // collection yet." above a card that says the same thing again.
+              ? <OwnEmpty onExplore={() => navigation.getParent()?.navigate('Explore')} />
+              : <Empty text={t(
+                'No places in this collection yet.',
+                'Bộ sưu tập này chưa có địa điểm nào.',
+                'このコレクションにはまだスポットがありません。',
+              )} />)
+            : null}
+          // Only once there is a list to end. Empty, the card above is
+          // already asking for the first place, and two invitations to do
+          // one thing read as two different things.
+          ListFooterComponent={owned && !arranging && members.length > 0
+            ? (
+              <AddSlot
+                onPress={addPlace}
+                title={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+                // The second line names where the places come from. Without
+                // it the row is a verb with no object, and "Add place" alone
+                // had already sent one reader to Explore expecting a picker.
+                subtitle={t(
+                  'From search or your bookmarks',
+                  'Từ tìm kiếm hoặc mục đã lưu',
+                  '検索や保存済みから',
+                )}
+              />
+            )
+            : null}
+          contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
+          showsVerticalScrollIndicator={false}
+        />
+      </LiftedRow.Provider>
 
       {/* Anchored under the control that opened it, which is the whole
           argument for a popover over a sheet: the menu is visibly this
@@ -1148,11 +1277,13 @@ const s = StyleSheet.create({
   arrangeText: { flex: 1 },
   arrangeName: { color: colors.text, fontSize: 15.5, fontWeight: font.medium },
   arrangeArea: { color: colors.textTertiary, ...type.meta, marginTop: 1 },
-  arrangeBtn: {
-    width: 34, height: 34, borderRadius: 17,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass,
+  // Lifted: above its neighbours, with the shadow of something held off
+  // the page. `zIndex` for iOS and the web, `elevation` for Android.
+  arrangeCellLifted: { zIndex: 10, elevation: 6 },
+  arrangeLifted: {
+    zIndex: 10, elevation: 6,
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 },
   },
-  arrangeBtnOff: { opacity: 0.28 },
 
   // The dashed slot at the end of the list, matching the collections
   // screen's own last row down to the well and the gap.

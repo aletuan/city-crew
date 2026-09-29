@@ -14,8 +14,10 @@
 // - publishing refuses (as a sentence, not a Postgres code) while places
 //   are still under review, and otherwise flips the flag, reloads both
 //   catalogs and offers Undo;
-// - reordering saves itself a beat after the last move, the whole sequence
-//   in one write, and the back arrow leaves the mode rather than the screen;
+// - reordering is a held row dragged to where it lands (or VoiceOver's
+//   Move up / Move down), saves itself a beat after the last move, the
+//   whole sequence in one write, and the back arrow leaves the mode rather
+//   than the screen;
 // - deleting is behind a confirmation and tells the taste profile.
 //
 // Mocks sit at the screen's own seams: the `lib/*` hooks it reads and the
@@ -112,6 +114,52 @@ vi.mock('../components/PlaceCard', async () => {
         <Text>{`card:${place.name_en}`}</Text>
       </Pressable>
     ),
+  };
+});
+
+// The hold-and-drag, by hand. A pan that waits out a long press is a
+// native recogniser, and nothing in jsdom will ever recognise it — so the
+// detector stands in by filing each row's gesture and props under the
+// row's testID, where a test can play the three callbacks a real drag
+// fires (start on the lift, update as the finger moves, finalize on the
+// way up) and the accessibility actions VoiceOver would. Filed on every
+// render, so what a test calls is the row as last drawn, with its index.
+type RowProps = {
+  testID: string;
+  accessibilityActions?: { name: string; label: string }[];
+  onAccessibilityAction?: (e: { nativeEvent: { actionName: string } }) => void;
+  onLayout?: (e: { nativeEvent: { layout: { height: number } } }) => void;
+};
+const held = vi.hoisted(() => new Map<string, {
+  gesture: {
+    longPressMs?: number;
+    start?: () => void;
+    update?: (e: { translationY: number }) => void;
+    finalize?: () => void;
+  };
+  props: RowProps;
+}>());
+vi.mock('react-native-gesture-handler', () => {
+  class Pan {
+    longPressMs?: number;
+    start?: () => void;
+    update?: (e: { translationY: number }) => void;
+    finalize?: () => void;
+    runOnJS() { return this; }
+    activateAfterLongPress(ms: number) { this.longPressMs = ms; return this; }
+    onStart(f: () => void) { this.start = f; return this; }
+    onUpdate(f: (e: { translationY: number }) => void) { this.update = f; return this; }
+    onFinalize(f: () => void) { this.finalize = f; return this; }
+  }
+  return {
+    Gesture: { Pan: () => new Pan() },
+    GestureDetector: ({ gesture, children }: {
+      gesture: Pan;
+      children: React.ReactElement<RowProps>;
+    }) => {
+      held.set(children.props.testID, { gesture, props: children.props });
+      return children;
+    },
   };
 });
 
@@ -498,8 +546,17 @@ describe('reordering', () => {
     openMenu();
     fireEvent.click(menuRow('Reorder places'));
   };
-  const down = (i: number) => fireEvent.click(screen.getAllByRole('button', { name: 'Move down' })[i]);
-  const up = (i: number) => fireEvent.click(screen.getAllByRole('button', { name: 'Move up' })[i]);
+  const row = (slug: string) => held.get(`arrange-${slug}`)!;
+  const act11y = (slug: string, actionName: string) =>
+    act(() => { row(slug).props.onAccessibilityAction!({ nativeEvent: { actionName } }); });
+  /** One step, the way VoiceOver takes it — the arrows' old work. */
+  const down = (slug: string) => act11y(slug, 'moveDown');
+  const up = (slug: string) => act11y(slug, 'moveUp');
+  /** A drag in its three beats. */
+  const lift = (slug: string) => act(() => { row(slug).gesture.start!(); });
+  const drag = (slug: string, dy: number) => act(() => { row(slug).gesture.update!({ translationY: dy }); });
+  const drop = (slug: string) => act(() => { row(slug).gesture.finalize!(); });
+  const el = (slug: string) => screen.getByTestId(`arrange-${slug}`);
   const rows = () => screen.getAllByText(/^(Pho 10|Cafe Giang|Fine Arts Museum)$/).map((el) => el.textContent);
   const cards = () => screen.getAllByText(/^card:/).map((el) => el.textContent);
   /** Past the beat the screen waits after the last move. On a fake clock:
@@ -522,15 +579,117 @@ describe('reordering', () => {
     for (const label of ['Done', 'Cancel', 'Saving…', 'Saved']) expect(screen.queryByText(label)).toBeNull();
   });
 
-  it('disables Up on the first row and Down on the last', () => {
+  // No arrows on the rows any more; VoiceOver, which cannot drag, gets
+  // their work as actions — and only the ones that go somewhere.
+  it('offers Move up and Move down as actions, except off either end', () => {
     show();
     startArranging();
-    const ups = screen.getAllByRole('button', { name: 'Move up' });
-    const downs = screen.getAllByRole('button', { name: 'Move down' });
-    expect(ups[0].getAttribute('aria-disabled')).toBe('true');
-    expect(ups[1].getAttribute('aria-disabled')).not.toBe('true');
-    expect(downs[2].getAttribute('aria-disabled')).toBe('true');
-    expect(downs[0].getAttribute('aria-disabled')).not.toBe('true');
+    const names = (slug: string) => row(slug).props.accessibilityActions!.map((a) => a.name);
+    expect(names('pho')).toEqual(['moveDown']);
+    expect(names('cafe')).toEqual(['moveUp', 'moveDown']);
+    expect(names('museum')).toEqual(['moveUp']);
+    expect(row('cafe').props.accessibilityActions!.map((a) => a.label)).toEqual(['Move up', 'Move down']);
+    expect(screen.queryByRole('button', { name: 'Move up' })).toBeNull();
+    expect(screen.getByLabelText('2. Cafe Giang')).toBeTruthy();
+  });
+
+  it('lifts a row only after a hold, so a flick still scrolls', () => {
+    show();
+    startArranging();
+    expect(row('pho').gesture.longPressMs).toBeGreaterThanOrEqual(200);
+  });
+
+  it('lands a dragged row where it is let go, and saves it a beat later', async () => {
+    show();
+    startArranging();
+    lift('pho');
+    // Past half of the next row (a 64 guess before any row has measured).
+    drag('pho', 40);
+    expect(rows()).toEqual(['Pho 10', 'Cafe Giang', 'Fine Arts Museum']);
+    drop('pho');
+    expect(rows()).toEqual(['Cafe Giang', 'Pho 10', 'Fine Arts Museum']);
+    expect(spies.reorderCollection).not.toHaveBeenCalled();
+    await pastTheBeat();
+    expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'pho', 'museum']);
+  });
+
+  it('crosses as many rows as the finger does, upward too', async () => {
+    show();
+    startArranging();
+    lift('museum');
+    drag('museum', -100);
+    drop('museum');
+    expect(rows()).toEqual(['Fine Arts Museum', 'Pho 10', 'Cafe Giang']);
+    await pastTheBeat();
+    expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['museum', 'pho', 'cafe']);
+  });
+
+  // While the row is up: the rows it has passed step into the room it
+  // left, the list stops scrolling under the drag, and the lifted row's
+  // cell is raised over the ones it crosses. All of it undone on landing.
+  it('steps the passed rows aside, holds the list still and raises the lifted row', () => {
+    show();
+    startArranging();
+    const scroller = () => {
+      for (let e = el('pho').parentElement; e; e = e.parentElement) {
+        if (getComputedStyle(e).overflowY) return e;
+      }
+      throw new Error('no scroll view');
+    };
+    expect(getComputedStyle(scroller()).overflowY).not.toBe('hidden');
+    const before = el('pho');
+    lift('pho');
+    drag('pho', 100);
+    // The same row, not a new one: a remount mid-drag is a dropped gesture.
+    expect(el('pho')).toBe(before);
+    expect(el('pho').style.transform).toContain('translateY(100px)');
+    expect(el('cafe').style.transform).toBe('translateY(-64px)');
+    expect(el('museum').style.transform).toBe('translateY(-64px)');
+    expect(el('pho').style.transform).toContain('scale(1.02)');
+    expect(getComputedStyle(el('pho').parentElement!).zIndex).toBe('10');
+    expect(getComputedStyle(el('cafe').parentElement!).zIndex).not.toBe('10');
+    expect(getComputedStyle(scroller()).overflowY).toBe('hidden');
+    drag('pho', 40);
+    expect(el('cafe').style.transform).toBe('translateY(-64px)');
+    expect(el('museum').style.transform).toBe('');
+    drop('pho');
+    for (const slug of ['pho', 'cafe', 'museum']) {
+      expect(el(slug).style.transform).toBe('');
+      expect(getComputedStyle(el(slug).parentElement!).zIndex).not.toBe('10');
+    }
+    expect(getComputedStyle(scroller()).overflowY).not.toBe('hidden');
+  });
+
+  // A short place — no neighbourhood line — is shorter to cross.
+  it('measures each row, so crossing a short one takes a shorter drag', () => {
+    show();
+    startArranging();
+    act(() => { row('cafe').props.onLayout!({ nativeEvent: { layout: { height: 20 } } }); });
+    lift('pho');
+    // 20 tall and the 8 gap under it: passed at half of 28, which the 64
+    // guess would not be — and not at half of the 20 alone.
+    drag('pho', 12);
+    expect(el('cafe').style.transform).toBe('');
+    drag('pho', 14);
+    expect(el('cafe').style.transform).toBe('translateY(-64px)');
+    drop('pho');
+    expect(rows()).toEqual(['Cafe Giang', 'Pho 10', 'Fine Arts Museum']);
+  });
+
+  it('writes nothing for a row put back where it was, or a hold let go before it lifted', async () => {
+    show();
+    startArranging();
+    lift('cafe');
+    drag('cafe', 90);
+    drag('cafe', 10);
+    drop('cafe');
+    // The finger came up before the hold was long enough: no start.
+    drop('pho');
+    drag('pho', 200);
+    await pastTheBeat();
+    expect(rows()).toEqual(['Pho 10', 'Cafe Giang', 'Fine Arts Museum']);
+    expect(spies.reorderCollection).not.toHaveBeenCalled();
+    expect(screen.queryByText('Saving…')).toBeNull();
   });
 
   // In the reader's language, as the cards are — it was English always.
@@ -551,9 +710,9 @@ describe('reordering', () => {
   it('saves on its own a beat after the last move — one write for a run of moves', async () => {
     show();
     startArranging();
-    // [pho, cafe, museum] → down(0) → [cafe, pho, museum] → up(2) → [cafe, museum, pho]
-    down(0);
-    up(2);
+    // [pho, cafe, museum] → pho down → [cafe, pho, museum] → museum up → [cafe, museum, pho]
+    down('pho');
+    up('museum');
     expect(rows()).toEqual(['Cafe Giang', 'Fine Arts Museum', 'Pho 10']);
     expect(spies.reorderCollection).not.toHaveBeenCalled();
     expect(screen.getByText('Saving…')).toBeTruthy();
@@ -564,13 +723,13 @@ describe('reordering', () => {
     expect(spies.mineReload).toHaveBeenCalled();
     expect(spies.colsReload).toHaveBeenCalled();
     // Still arranging: saving is not leaving.
-    expect(screen.getAllByRole('button', { name: 'Move up' }).length).toBe(3);
+    expect(screen.queryByText(/^card:/)).toBeNull();
   });
 
   it('back leaves the mode, not the screen, and writes a waiting move at once', () => {
     const { raw } = show();
     startArranging();
-    down(0);
+    down('pho');
     fireEvent.click(button('Back'));
     expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'pho', 'museum']);
     expect(raw.goBack).not.toHaveBeenCalled();
@@ -596,10 +755,10 @@ describe('reordering', () => {
     spies.reorderCollection.mockImplementationOnce(() => new Promise<void>((r) => { land = r; }));
     show();
     startArranging();
-    down(0);
+    down('pho');
     await pastTheBeat();
     expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
-    down(1);
+    down('pho');
     await pastTheBeat();
     expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
     await act(async () => { land(); await vi.advanceTimersByTimeAsync(0); });
@@ -612,7 +771,7 @@ describe('reordering', () => {
     spies.reorderCollection.mockRejectedValueOnce(new Error('timeout'));
     show();
     startArranging();
-    down(0);
+    down('pho');
     await pastTheBeat();
     expect(alert).toHaveBeenCalledWith('Could not save the order', 'timeout');
     expect(rows()).toEqual(['Pho 10', 'Cafe Giang', 'Fine Arts Museum']);
@@ -628,7 +787,7 @@ describe('reordering', () => {
       />,
     );
     startArranging();
-    down(0);
+    down('pho');
     view.unmount();
     expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'pho', 'museum']);
   });
@@ -640,7 +799,7 @@ describe('reordering', () => {
     const navigation = nav().n;
     const view = render(<CollectionDetailScreen navigation={navigation} route={route} />);
     startArranging();
-    down(0);
+    down('pho');
     await pastTheBeat();
     fireEvent.click(button('Back'));
     state.mine = [collection({}, [CAFE, PHO, MUSEUM])];
