@@ -254,6 +254,7 @@ describe('guest hub', () => {
     expect(screen.getByText('Terms of Service')).toBeTruthy();
     expect(screen.queryByText('Preferences')).toBeNull();
     expect(screen.queryByText('Legal')).toBeNull();
+    expect(screen.queryByText('App')).toBeNull();
   });
 
   it('never says "guest"', () => {
@@ -470,10 +471,18 @@ describe('settings card', () => {
     expect(screen.queryByText('close-theme')).toBeNull();
   });
 
-  it('heads the members settings "Preferences" and the documents "Legal"', () => {
+  it('heads the members settings "Preferences" and the app card "App"', () => {
     draw();
     expect(screen.getByText('Preferences')).toBeTruthy();
-    expect(screen.getByText('Legal')).toBeTruthy();
+    expect(screen.getByText('App')).toBeTruthy();
+    expect(screen.queryByText('Legal')).toBeNull();
+  });
+
+  it('says "Ứng dụng" over the app card in Vietnamese', () => {
+    state.lang = 'vi';
+    draw();
+    expect(screen.getByText('Ứng dụng')).toBeTruthy();
+    expect(screen.queryByText('Pháp lý')).toBeNull();
   });
 });
 
@@ -488,7 +497,7 @@ describe('settings, without the welcome switch', () => {
   });
 });
 
-describe('legal card', () => {
+describe('app card', () => {
   it.each([
     ['Terms of Service', 'close-legal-terms'],
     ['Privacy Policy', 'close-legal-privacy'],
@@ -502,9 +511,20 @@ describe('legal card', () => {
   });
 });
 
-// Under the documents on both views, on a card of its own: which copy of
-// the app this is, for the reader asked "which version are you on?".
-describe('about card', () => {
+// The third row of the app card, on both views: which copy of the app
+// this is, for the reader asked "which version are you on?". One card
+// with the documents, not a card of its own, which read as a stray.
+describe('about row', () => {
+  it.each([['signed in', true], ['a guest', false]])('sits under the two documents in the same card, %s', (_who, signedIn) => {
+    if (!signedIn) state.session = null;
+    draw();
+    const rows = ['Terms of Service', 'Privacy Policy', 'About City Crew'].map((name) => button(name));
+    expect(new Set(rows.map((r) => r.parentElement)).size).toBe(1);
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i - 1].compareDocumentPosition(rows[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
   it.each([['signed in', true], ['a guest', false]])('opens the about sheet and closes it, %s', (_who, signedIn) => {
     if (!signedIn) state.session = null;
     draw();
