@@ -974,18 +974,64 @@ describe('tips', () => {
     expect(showing()).toBe('reorder');
   });
 
-  it('retires the edit tip once the list is edited, and the add tip once a place is added', async () => {
-    show();
+  // Saved, not opened: opening the form and backing out is a look, and it
+  // used to retire the tip for good.
+  it('retires the edit tip once an edit is saved, not when the form opens', async () => {
+    const at = () => (
+      <CollectionDetailScreen navigation={nav().n} route={{ params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>} />
+    );
+    const view = render(at());
     await settle();
     openMenu();
     fireEvent.click(menuRow('Edit collection'));
     await settle();
+    // Back from the form with nothing changed.
+    view.rerender(at());
+    await settle();
+    expect(await retiredNow()).not.toContain('edit');
+    // Back with the new name saved: the list this screen reads reloads.
+    state.mine = [collection({ title_en: 'Renamed' })];
+    view.rerender(at());
+    await settle();
     expect(await retiredNow()).toEqual(['edit']);
+  });
+
+  it('retires the edit tip for a new cover too', async () => {
+    const at = () => (
+      <CollectionDetailScreen navigation={nav().n} route={{ params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>} />
+    );
+    const view = render(at());
+    await settle();
+    openMenu();
+    fireEvent.click(menuRow('Edit collection'));
+    state.mine = [collection({ cover: { id: 'p9', photo_uri: 'x' } })];
+    view.rerender(at());
+    await settle();
+    expect(await retiredNow()).toEqual(['edit']);
+  });
+
+  // A change that did not come from this screen's form is not the reader
+  // using it.
+  it('does not retire the edit tip for a change it did not open the form for', async () => {
+    const at = () => (
+      <CollectionDetailScreen navigation={nav().n} route={{ params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>} />
+    );
+    const view = render(at());
+    await settle();
+    state.mine = [collection({ title_en: 'Renamed elsewhere' })];
+    view.rerender(at());
+    await settle();
+    expect(await retiredNow()).not.toContain('edit');
+  });
+
+  it('retires the add tip once a place is added', async () => {
+    show();
+    await settle();
     // The slot at the end of the list (the menu, faded out but still
     // mounted in jsdom, holds the other copy).
     fireEvent.click(screen.getAllByText('Add place')[0]);
     await settle();
-    expect(await retiredNow()).toEqual(['edit', 'add']);
+    expect(await retiredNow()).toEqual(['add']);
   });
 
   it('retires the publish tip once the list is made public, not private', async () => {

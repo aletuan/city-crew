@@ -1216,6 +1216,25 @@ describe('its tab, pressed again', () => {
     expect(await AsyncStorage.getItem('citycrew.explore.view')).toBe('list');
   });
 
+  // The frame between the map being drawn and the screen's passive
+  // effects running: a press there used to be ignored, because the handler
+  // read a mirror of the view those effects keep. The test above met it on
+  // a busy CI runner, whose waitFor saw the map inside that frame. Here
+  // the DOM is polled outside act, so the commit is visible before its
+  // passive effects have run.
+  it('closes a map pressed for the moment it is drawn', async () => {
+    state.places.data = [place('p1', { lat: 21, lng: 105 })];
+    const navigation = nav();
+    render(<ExploreScreen navigation={navigation} />);
+    for (let i = 0; i < 200 && !document.querySelector('[data-testid="places-map"]'); i++) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    expect(document.querySelector('[data-testid="places-map"]')).toBeTruthy();
+    navigation.retap();
+    await act(async () => {});
+    expect(screen.getByTestId('explore-list')).toBeTruthy();
+  });
+
   it('leaves the map up when a place’s page is on top — that press only pops', async () => {
     state.places.data = [place('p1', { lat: 21, lng: 105 })];
     const navigation = nav();

@@ -11,9 +11,13 @@
 // most of what a reader would see. In turn, every tip is seen, and the
 // same one never shows twice running unless it is the only one left.
 //
-// A tip retires for good when it is closed, or when the reader does what it
-// explains. Teaching someone the move they have just made reads as the app
-// not noticing. When every tip has retired, nothing is shown.
+// A tip retires for good when it is closed, when the reader does what it
+// explains, or once it has been shown `MAX_SHOWS` times. Teaching someone
+// the move they have just made reads as the app not noticing, and a tip
+// read three times and neither acted on nor closed is one the reader
+// already knows or does not want: the fourth showing is only noise. When
+// every tip has retired, nothing is shown, until the reader asks for them
+// again from Profile (`resetTips`).
 //
 // Pure, so the rule can be tested without a clock or a store. `seq` is a
 // counter rather than a time: the order tips were shown in is the whole
@@ -28,11 +32,21 @@ export type TipLog = {
   seq: number;
   /** The `seq` each tip was last shown at. */
   last: Partial<Record<TipId, number>>;
+  /** How many times each tip has been shown. */
+  shown: Partial<Record<TipId, number>>;
   /** Closed, or acted on: never shown again. */
   retired: TipId[];
 };
 
-export const EMPTY_LOG: TipLog = { seq: 0, last: {}, retired: [] };
+export const EMPTY_LOG: TipLog = { seq: 0, last: {}, shown: {}, retired: [] };
+
+/**
+ * How many times one tip is shown before it stops on its own. Three, the
+ * number the common advice settles on and the one that fits this screen:
+ * with four owner tips in turn, a tip comes round about every fourth visit,
+ * so three showings span a dozen visits to a list, which is weeks of use.
+ */
+export const MAX_SHOWS = 3;
 
 /** Where the log is kept on the device, for a reader with no account. */
 export const TIPS_KEY = 'tips.v1';
@@ -61,6 +75,15 @@ export const LEGACY_REORDER_KEY = 'tip.holdToReorder.v1';
 
 const isTipId = (v: unknown): v is TipId => TIP_IDS.includes(v as TipId);
 
+/** A per-tip number map, keeping only tips this build knows. */
+const counts = (raw: unknown): Partial<Record<TipId, number>> => {
+  const out: Partial<Record<TipId, number>> = {};
+  for (const [k, n] of Object.entries((raw ?? {}) as Record<string, unknown>)) {
+    if (isTipId(k) && typeof n === 'number') out[k] = n;
+  }
+  return out;
+};
+
 /**
  * The stored log, whatever state it is in. A missing log is an empty one.
  * A log that no longer parses, or holds entries this build does not know,
@@ -72,13 +95,12 @@ export function parseLog(raw: string | null, legacyReorder: string | null = null
   if (raw !== null) {
     try {
       const v = JSON.parse(raw) as Partial<TipLog> | null;
-      const last: Partial<Record<TipId, number>> = {};
-      for (const [k, n] of Object.entries(v?.last ?? {})) {
-        if (isTipId(k) && typeof n === 'number') last[k] = n;
-      }
       log = {
         seq: typeof v?.seq === 'number' ? v.seq : 0,
-        last,
+        last: counts(v?.last),
+        // A record from before the cap has no counts: its tips start from
+        // none, which costs at most three more showings each.
+        shown: counts(v?.shown),
         retired: Array.isArray(v?.retired) ? v.retired.filter(isTipId) : [],
       };
     } catch {
@@ -93,7 +115,7 @@ export function pickTip(eligible: readonly TipId[], log: TipLog): TipId | null {
   let best: TipId | null = null;
   let bestAt = Infinity;
   for (const id of eligible) {
-    if (log.retired.includes(id)) continue;
+    if (log.retired.includes(id) || (log.shown[id] ?? 0) >= MAX_SHOWS) continue;
     const at = log.last[id] ?? -1;
     // Strictly older wins, so a tie goes to the screen's own order.
     if (at < bestAt) { best = id; bestAt = at; }
@@ -103,7 +125,12 @@ export function pickTip(eligible: readonly TipId[], log: TipLog): TipId | null {
 
 /** The log once `id` has been shown. */
 export function markShown(log: TipLog, id: TipId): TipLog {
-  return { ...log, seq: log.seq + 1, last: { ...log.last, [id]: log.seq } };
+  return {
+    ...log,
+    seq: log.seq + 1,
+    last: { ...log.last, [id]: log.seq },
+    shown: { ...log.shown, [id]: (log.shown[id] ?? 0) + 1 },
+  };
 }
 
 /** The log once `id` will not be shown again. */

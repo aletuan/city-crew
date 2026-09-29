@@ -82,6 +82,19 @@ const TIPS: Record<TipId, (t: T) => string> = {
   ),
 };
 
+/**
+ * Every tip back, for one reader: Profile's "Show tips again". Forgets
+ * the reader's record, and the old reorder flag too, which would otherwise
+ * retire that tip again on the next read. The next visit to a list starts
+ * from the first tip that applies, as a first visit does.
+ */
+export async function resetTips(reader: string | null | undefined): Promise<void> {
+  await Promise.all([
+    AsyncStorage.removeItem(tipsKey(reader)),
+    AsyncStorage.removeItem(LEGACY_REORDER_KEY),
+  ]);
+}
+
 export default function TipBox({ eligible, done, reader }: {
   /** The tips true of what is on screen, in the order to offer them. */
   eligible: readonly TipId[];

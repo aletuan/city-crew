@@ -8,7 +8,7 @@
 // where it is needed — bookmarking a place — rather than from a
 // permanent control in a corner.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated, Linking, Platform, Pressable, ScrollView, SectionList, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
@@ -819,7 +819,13 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
   // what keeps the mirror honest and repaints on every crossing, both
   // into map mode and back out of it — unlike the reset effect below,
   // which only ever runs on the way in.
-  useEffect(() => {
+  //
+  // A layout effect, in the commit that draws the map. The tab-press
+  // handler below reads this mirror, and as a passive effect it could
+  // still say "list" after the map was on screen: a press in that gap was
+  // ignored. The Explore suite caught it in CI ("its tab, pressed again"),
+  // where the wait saw the map before the effect had run.
+  useLayoutEffect(() => {
     mapModeRef.current = mapMode;
     applyBar();
   }, [mapMode, applyBar]);

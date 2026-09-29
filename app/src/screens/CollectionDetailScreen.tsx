@@ -431,9 +431,23 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     navigation.getParent()?.navigate('Explore');
   };
 
+  // The edit tip retires when an edit is saved, not when the form opens.
+  // Opening it and backing out is a look, not a lesson, and it retired the
+  // tip for good. The form writes and reloads the list this screen reads,
+  // so a saved edit arrives here as a changed title, description or cover:
+  // the effect runs on that change, and only one the form was opened for
+  // counts.
+  const editFields = col ? `${title}\n${desc}\n${col.cover?.id ?? ''}` : null;
+  const editing = useRef(false);
+  useEffect(() => {
+    if (!editing.current) return;
+    editing.current = false;
+    did('edit');
+  }, [editFields]);
+
   const edit = () => {
     if (!col) return;
-    did('edit');
+    editing.current = true;
     navigation.navigate('CollectionForm', { slug: col.slug, title, desc });
   };
 

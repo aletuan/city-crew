@@ -554,6 +554,45 @@ describe('about row', () => {
   });
 });
 
+// The fourth row: every collection tip back, for whoever is reading. See
+// `lib/tips` for why they retire and `TipBox.resetTips` for what this does.
+describe('show tips again', () => {
+  const storage = async () => (await import('@react-native-async-storage/async-storage')).default;
+  const retiredAll = JSON.stringify({ seq: 9, last: {}, shown: {}, retired: ['reorder', 'publish', 'edit', 'add'] });
+
+  it.each([['signed in', true], ['a guest', false]])('sits last in the app card, after About, %s', (_who, signedIn) => {
+    if (!signedIn) state.session = null;
+    draw();
+    const about = button('About City Crew');
+    const again = button('Show tips again');
+    expect(again.parentElement).toBe(about.parentElement);
+    expect(about.compareDocumentPosition(again) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(again.nextElementSibling).toBeNull();
+  });
+
+  it('brings back the signed-in reader\'s tips, and says so on the row', async () => {
+    const s = await storage();
+    await s.setItem('tips.v1:me', retiredAll);
+    await s.setItem('tips.v1', retiredAll);
+    draw();
+    expect(button('Show tips again').textContent).not.toContain('Done');
+    await act(async () => { press('Show tips again'); });
+    expect(await s.getItem('tips.v1:me')).toBeNull();
+    // Not the guest's record: that is somebody else's.
+    expect(await s.getItem('tips.v1')).toBe(retiredAll);
+    await waitFor(() => expect(button('Show tips again').textContent).toContain('Done'));
+  });
+
+  it('brings back a guest\'s tips', async () => {
+    state.session = null;
+    const s = await storage();
+    await s.setItem('tips.v1', retiredAll);
+    draw();
+    await act(async () => { press('Show tips again'); });
+    expect(await s.getItem('tips.v1')).toBeNull();
+  });
+});
+
 describe('ways out', () => {
   it('calls signOut, with a spinner in place of the word until it settles', async () => {
     let finish!: () => void;
