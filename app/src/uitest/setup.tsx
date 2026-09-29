@@ -155,7 +155,18 @@ vi.mock('@react-native-async-storage/async-storage', () => {
 // it, which `lib/channel` groups with the non-production installs. A test
 // that cares which channel it is on should mock `./channel` directly, as
 // trace.test.ts and tracereport.test.ts do.
-vi.mock('expo-updates', () => ({ channel: null }));
+//
+// The rest are what `lib/appinfo` reads, answered as a development build
+// would: no runtime, and running the code it was built with.
+vi.mock('expo-updates', () => ({
+  channel: null, runtimeVersion: null, updateId: null, createdAt: null, isEmbeddedLaunch: true,
+}));
+
+// The native-module lookup `lib/appinfo` makes for the binary's version,
+// for the same reason: the real `expo-modules-core` cannot load here.
+// Null is the answer a build without the module gets, which the screen
+// already has to survive. appinfo.test.ts mocks it with a module present.
+vi.mock('expo-modules-core', () => ({ requireOptionalNativeModule: () => null }));
 
 vi.mock('expo-location', () => ({
   getForegroundPermissionsAsync: vi.fn(async () => ({ status: 'undetermined' })),

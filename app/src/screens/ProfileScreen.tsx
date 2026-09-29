@@ -17,6 +17,7 @@ import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
 import { schemeLabel, ThemeSwitcherModal } from '../components/ThemeSwitcher';
 import { PrimaryButton } from '../components/authUi';
 import LegalSheet from '../components/LegalSheet';
+import AboutSheet from '../components/AboutSheet';
 import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
@@ -244,6 +245,34 @@ function LegalCard() {
 }
 
 
+/**
+ * Which copy of the app this is, behind one row on a card of its own.
+ *
+ * Its own card rather than a third row under Legal, where it would be
+ * filed as a document it is not. There is no heading, because the label
+ * already says what the row is. The version is not written on the row:
+ * it is one of four answers, and the one that settles "did the update
+ * arrive?" is the update's date, which is too long for a value column.
+ * See `AboutSheet`.
+ */
+function AboutCard() {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Card style={s.featureCard}>
+        <SettingRow
+          icon="information-circle-outline"
+          label={t('About City Crew', 'Giới thiệu City Crew', 'City Crewについて')}
+          onPress={() => { fireHaptic('selection'); setOpen(true); }}
+          last
+        />
+      </Card>
+      <AboutSheet visible={open} onClose={() => setOpen(false)} />
+    </>
+  );
+}
+
 function Tagline() {
   const { t } = useI18n();
   return (
@@ -362,6 +391,7 @@ function GuestHub({ navigation }: { navigation: Nav }) {
           matter most to exactly this reader — the one who has not signed
           up yet. */}
       <LegalCard />
+      <AboutCard />
 
       {/* Real now, so it behaves like every other locked row here:
           the tap leads to signing in, which is where friends begin.
@@ -601,6 +631,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           itself. */}
       <Text style={s.section}>{t('Legal', 'Pháp lý', '法的事項')}</Text>
       <LegalCard />
+      <AboutCard />
 
       <PressableScale
         style={s.signOutBtn}
