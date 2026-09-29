@@ -12,34 +12,55 @@
 // saving places, and five ways in read as one sheet. The line went with
 // the shared title. What they reached for already says why, and a
 // sentence under it was one more thing to read before the button.
+//
+// Above the title, the two cats and the paper plane: the illustration
+// Ideas opens on, here as the app's face at the moment it asks
+// something of the reader. It replaced a glyph in a ring that matched
+// the control tapped (a bookmark, a heart). Two marks competing over
+// one short title made the sheet taller for nothing, and the title now
+// names the control in words.
+//
+// The files are transparent, keyed against this sheet's colour rather
+// than the page's (`scripts/signin-art.py`): the renders came on a
+// cream and a near-black that match neither sheet, and unkeyed the day
+// read as a card laid on a white sheet. Under Display Zoom or large
+// Dynamic Type the painting goes, as the Ideas header's does: 150pt of
+// decoration is the room the title and the buttons need there.
 
 import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
 import type { SignInWhy } from '../lib/save';
-import { colors, display, font, gradAI, space } from '../theme';
-import { PressableScale } from './ui';
+import { useScheme } from '../lib/theme';
+import { colors, display, font, gradAI, labelScaleCap, space } from '../theme';
+import { PressableScale, useNarrowWindow } from './ui';
+import artDark from '../../assets/signin-art-dark.webp';
+import artLight from '../../assets/signin-art-light.webp';
 
 type T = (en: string, vi: string, ja: string) => string;
 
-/**
- * What each reason says, and the glyph it wears.
- *
- * The glyph is the one on the control that opened the sheet, so the two
- * read as one object. The saved filter wears `bookmarks`, not the single
- * bookmark it shows on the map: the sheet is about the whole set of saved
- * places, and one bookmark would read as saving one more.
- */
-const REASONS: Record<SignInWhy, { icon: 'bookmark' | 'heart' | 'copy' | 'bookmarks' | 'search'; title: (t: T) => string }> = {
-  save: { icon: 'bookmark', title: (t) => t('Save this place', 'Lưu địa điểm này', 'このスポットを保存') },
-  like: { icon: 'heart', title: (t) => t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね') },
-  copy: { icon: 'copy', title: (t) => t('Save a copy to your account', 'Lưu bản sao về tài khoản', 'コピーを自分のアカウントに保存') },
-  saved: { icon: 'bookmarks', title: (t) => t('See the places you saved', 'Xem địa điểm đã lưu', '保存したスポットを見る') },
-  search: { icon: 'search', title: (t) => t('Find new places on Google Maps', 'Tìm địa điểm mới trên Google Maps', 'Google マップで新しいスポットを探す') },
+/** What each reason says: the thing that was reached for, by name. */
+const TITLES: Record<SignInWhy, (t: T) => string> = {
+  save: (t) => t('Save this place', 'Lưu địa điểm này', 'このスポットを保存'),
+  like: (t) => t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね'),
+  copy: (t) => t('Save a copy to your account', 'Lưu bản sao về tài khoản', 'コピーを自分のアカウントに保存'),
+  saved: (t) => t('See the places you saved', 'Xem địa điểm đã lưu', '保存したスポットを見る'),
+  search: (t) => t('Find new places on Google Maps', 'Tìm địa điểm mới trên Google Maps', 'Google マップで新しいスポットを探す'),
 };
+
+/** Width over height of both files (900×471). */
+export const ART_ASPECT = 900 / 471;
+/**
+ * The painting's height, in points. The ring it replaced was 66; this is
+ * what the cats need to read as cats rather than as a pattern, and it
+ * leaves the sheet under half of a 667pt screen with a title on two
+ * lines. It is 287pt wide, inside the 335pt a 375pt window has between
+ * the page margins.
+ */
+export const ART_HEIGHT = 150;
 
 export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: {
   visible: boolean;
@@ -49,7 +70,10 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
   onSignIn: () => void;
 }) {
   const { t } = useI18n();
-  const reason = REASONS[why];
+  const { scheme } = useScheme();
+  const { fontScale } = useWindowDimensions();
+  const narrow = useNarrowWindow();
+  const painted = !narrow && fontScale < labelScaleCap;
   const insets = useSafeAreaInsets();
   // Modal's own fade carries the backdrop; the panel gets a spring of its
   // own so it rises like a sheet instead of appearing all at once.
@@ -71,10 +95,17 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
         ]}
       >
         <View style={s.grabber} />
-        <View style={s.badge}>
-          <Ionicons name={reason.icon} size={28} color={colors.accent} />
-        </View>
-        <Text style={s.title}>{reason.title(t)}</Text>
+        {painted ? (
+          <Image
+            source={scheme === 'light' ? artLight : artDark}
+            style={s.art}
+            contentFit="contain"
+            accessible={false}
+            aria-hidden
+            testID="signin-art"
+          />
+        ) : null}
+        <Text style={s.title}>{TITLES[why](t)}</Text>
         {/* The width has to go on the Pressable itself (containerStyle), not
             on the animated child: the sheet centres its children, so an
             un-stretched Pressable shrink-wraps the label and "100%" inside
@@ -112,12 +143,7 @@ const s = StyleSheet.create({
     width: 38, height: 4, borderRadius: 2,
     backgroundColor: colors.textTertiary, marginBottom: 14,
   },
-  badge: {
-    width: 66, height: 66, borderRadius: 33,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
-    borderWidth: 1, borderColor: colors.accentLine,
-  },
+  art: { width: Math.round(ART_HEIGHT * ART_ASPECT), height: ART_HEIGHT },
   // The margin below is the one the explanation line used to hold: the
   // title now sits straight over the button and needs the same air.
   title: {
