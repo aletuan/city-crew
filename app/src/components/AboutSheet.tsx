@@ -134,8 +134,14 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
           <Ionicons name="share-outline" size={18} color={colors.accent} />
           <Text style={s.shareText}>{t('Share these details', 'Chia sẻ thông tin này', 'この情報を共有')}</Text>
         </PressableScale>
+        {/* "Close", not "Done": nothing was being done here. It reads what
+            the documents beside it say (LegalSheet), and it is built like
+            the row above it: glyph and word, the same size and weight, in
+            the quieter colour, so the two read as a pair of rows rather
+            than a link and a stray word. */}
         <PressableScale onPress={onClose} haptic="selection" accessibilityRole="button" style={s.done}>
-          <Text style={s.doneText}>{t('Done', 'Xong', '完了')}</Text>
+          <Ionicons name="close" size={18} color={colors.textSecondary} />
+          <Text style={s.doneText}>{close}</Text>
         </PressableScale>
       </Animated.View>
     </Modal>
@@ -172,7 +178,9 @@ const s = StyleSheet.create({
     marginTop: 14, paddingVertical: 13,
   },
   shareText: { color: colors.accent, ...type.body, fontWeight: font.medium },
-  // The other sheets' quiet Done, word for word.
-  done: { paddingVertical: 12, marginTop: 4, alignSelf: 'center' },
-  doneText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
+  done: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 13,
+  },
+  doneText: { color: colors.textSecondary, ...type.body, fontWeight: font.medium },
 });

@@ -143,7 +143,7 @@ describe('sharing', () => {
     Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true });
     const onClose = vi.fn();
     const view = render(<AboutSheet visible onClose={onClose} info={RELEASE} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Đóng' }));
     view.rerender(<AboutSheet visible={false} onClose={onClose} info={RELEASE} />);
     settleModal();
     expect(share).not.toHaveBeenCalled();
@@ -175,11 +175,38 @@ describe('sharing', () => {
 });
 
 describe('ways out', () => {
-  it('closes from Done and from the backdrop', () => {
+  it('closes from its Close button and from the backdrop', () => {
     const { onClose } = open();
-    fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Đóng' }));
     fireEvent.click(screen.getByLabelText('Đóng'));
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  // "Close", as the documents beside it say, and not "Done": nothing was
+  // being done here.
+  it('says Close, not Done', () => {
+    open();
+    expect(screen.queryByText('Xong')).toBeNull();
+    state.lang = 'en';
+    open();
+    expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy();
+  });
+
+  // The two buttons are a pair of rows: each a glyph and a word, in the
+  // same type, the Close in the quieter colour.
+  it('draws Close the way it draws Share', () => {
+    open();
+    const shareRow = screen.getByRole('button', { name: 'Chia sẻ thông tin này' });
+    const closeRow = screen.getByRole('button', { name: 'Đóng' });
+    expect(shareRow.querySelector('[data-icon="share-outline"]')).toBeTruthy();
+    expect(closeRow.querySelector('[data-icon="close"]')).toBeTruthy();
+    // Read off react-native-web's atomic classes, one per property and
+    // value: jsdom does not resolve their rules into computed styles.
+    const word = (row: HTMLElement, prop: string) =>
+      [...row.querySelector('[dir="auto"]')!.classList].find((c) => c.startsWith(`r-${prop}-`));
+    expect(word(closeRow, 'fontSize')).toBe(word(shareRow, 'fontSize'));
+    expect(word(closeRow, 'fontWeight')).toBe(word(shareRow, 'fontWeight'));
+    expect(word(closeRow, 'color')).not.toBe(word(shareRow, 'color'));
   });
 
   it('draws nothing while closed, and rises again when reopened', () => {
