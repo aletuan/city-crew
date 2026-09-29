@@ -9,7 +9,8 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
+import { resetTips } from '../components/TipBox';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CitySwitcherModal } from '../components/CitySwitcher';
@@ -218,6 +219,12 @@ function SettingsCard() {
  */
 function AppCard() {
   const { t } = useI18n();
+  // The same reader the collection screen keys its tips by: the session,
+  // or nobody for a guest.
+  const { session } = useAuth();
+  // Said on the row itself once it has worked, until the reader leaves:
+  // a row that changes nothing on screen reads as a tap that missed.
+  const [tipsBack, setTipsBack] = useState(false);
   // Which document is open, if any. The same sheet the sign-up screen
   // raises, so the two ways into these documents behave identically —
   // which they did not while one of them left for a browser.
@@ -246,6 +253,23 @@ function AppCard() {
           icon="information-circle-outline"
           label={t('About City Crew', 'Giới thiệu City Crew', 'City Crewについて')}
           onPress={() => { fireHaptic('selection'); setAbout(true); }}
+        />
+        {/* The tips under a collection's title retire once read, closed
+            or acted on (see `lib/tips`), and this is the way back to them.
+            Here rather than under Preferences: it is not a setting with a
+            state to show, it is a thing the app does once. The glyph is
+            "again", not the tips' own circled "i", which About wears one
+            row up. */}
+        <SettingRow
+          icon="refresh-outline"
+          label={t('Show tips again', 'Hiện lại các mẹo', 'ヒントをもう一度表示')}
+          value={tipsBack ? t('Done', 'Đã bật lại', 'オンにしました') : undefined}
+          onPress={() => {
+            void resetTips(session?.user?.id).then(() => {
+              successHaptic();
+              setTipsBack(true);
+            });
+          }}
           last
         />
       </Card>

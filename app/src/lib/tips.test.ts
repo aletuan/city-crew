@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_LOG, markShown, parseLog, pickTip, retire, TIPS_KEY, tipsKey, type TipId, type TipLog } from './tips';
+import { EMPTY_LOG, markShown, MAX_SHOWS, parseLog, pickTip, retire, TIPS_KEY, tipsKey, type TipId, type TipLog } from './tips';
 
 const ALL: TipId[] = ['reorder', 'publish', 'edit', 'add'];
 
@@ -58,7 +58,7 @@ describe('pickTip', () => {
 describe('markShown and retire', () => {
   it('stamps the tip with the counter, then moves the counter on', () => {
     const log = markShown(markShown(EMPTY_LOG, 'edit'), 'add');
-    expect(log).toEqual({ seq: 2, last: { edit: 0, add: 1 }, retired: [] });
+    expect(log).toEqual({ seq: 2, last: { edit: 0, add: 1 }, shown: { edit: 1, add: 1 }, retired: [] });
   });
 
   it('retires a tip once however often it is asked', () => {
@@ -71,8 +71,8 @@ describe('markShown and retire', () => {
     const log = markShown(EMPTY_LOG, 'edit');
     retire(log, 'add');
     markShown(log, 'add');
-    expect(log).toEqual({ seq: 1, last: { edit: 0 }, retired: [] });
-    expect(EMPTY_LOG).toEqual({ seq: 0, last: {}, retired: [] });
+    expect(log).toEqual({ seq: 1, last: { edit: 0 }, shown: { edit: 1 }, retired: [] });
+    expect(EMPTY_LOG).toEqual({ seq: 0, last: {}, shown: {}, retired: [] });
   });
 });
 
@@ -97,9 +97,11 @@ describe('parseLog', () => {
     expect(parseLog(JSON.stringify({
       seq: 'seven',
       last: { edit: 3, rename: 4, add: 'x' },
+      shown: { edit: 2, rename: 1, add: 'x' },
       retired: ['publish', 'rename', 5],
-    }))).toEqual({ seq: 0, last: { edit: 3 }, retired: ['publish'] });
-    expect(parseLog(JSON.stringify({ seq: 4, retired: 'publish' }))).toEqual({ seq: 4, last: {}, retired: [] });
+    }))).toEqual({ seq: 0, last: { edit: 3 }, shown: { edit: 2 }, retired: ['publish'] });
+    // A record from before the cap: no counts, so its tips count from none.
+    expect(parseLog(JSON.stringify({ seq: 4, retired: 'publish' }))).toEqual({ seq: 4, last: {}, shown: {}, retired: [] });
   });
 
   // The reorder tip's own flag, from before there was more than one tip.
@@ -122,5 +124,25 @@ describe('where a reader\'s record is kept', () => {
   it('is a key of its own for each account', () => {
     expect(tipsKey('u1')).toBe(`${TIPS_KEY}:u1`);
     expect(tipsKey('u1')).not.toBe(tipsKey('u2'));
+  });
+});
+
+// Read three times and neither acted on nor closed: the reader knows it,
+// or does not want it.
+describe('the cap', () => {
+  it('shows a tip three times and then no more', () => {
+    expect(MAX_SHOWS).toBe(3);
+    expect(visits(['edit'], 5).seen).toEqual(['edit', 'edit', 'edit', null, null]);
+  });
+
+  it('carries on with the others once one has had its three', () => {
+    expect(visits(['edit', 'add'], 7).seen).toEqual(['edit', 'add', 'edit', 'add', 'edit', 'add', null]);
+  });
+
+  it('counts each tip on its own', () => {
+    const log = markShown(markShown(markShown(EMPTY_LOG, 'edit'), 'add'), 'edit');
+    expect(log.shown).toEqual({ edit: 2, add: 1 });
+    expect(pickTip(['edit'], log)).toBe('edit');
+    expect(pickTip(['edit'], markShown(log, 'edit'))).toBeNull();
   });
 });
