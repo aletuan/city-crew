@@ -1,5 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+  type AccessibilityActionEvent, type AccessibilityActionInfo, StyleSheet, Text, View,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { useFlag } from '../lib/useFlag';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -13,7 +15,18 @@ import { vibeColor, vibeLabel } from '../lib/vibes';
 import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
 import { Card, PressableScale } from './ui';
 
-export default function PlaceCard({ place, onPress, testID }: { place: Place; onPress: () => void; testID?: string }) {
+export default function PlaceCard({
+  place, onPress, testID, accessibilityHint, accessibilityActions, onAccessibilityAction,
+}: {
+  place: Place;
+  onPress: () => void;
+  testID?: string;
+  /** For a card that does more than open its place: the collection screen's,
+   *  which can be held and dragged, offers VoiceOver the same moves as actions. */
+  accessibilityHint?: string;
+  accessibilityActions?: AccessibilityActionInfo[];
+  onAccessibilityAction?: (e: AccessibilityActionEvent) => void;
+}) {
   const { t } = useI18n();
   const { save, isSaved } = useSave();
   const saved = isSaved(place.slug);
@@ -46,7 +59,13 @@ export default function PlaceCard({ place, onPress, testID }: { place: Place; on
   const when = hours?.open ? openFragment(hours, t) : null;
   const credit = useFlag('photo_attribution');
   return (
-    <PressableScale onPress={onPress} testID={testID}>
+    <PressableScale
+      onPress={onPress}
+      testID={testID}
+      accessibilityHint={accessibilityHint}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={onAccessibilityAction}
+    >
       <Card style={s.card}>
         <View>
           {cover ? (
