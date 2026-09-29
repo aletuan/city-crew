@@ -16,9 +16,20 @@
 // does not carry, and this ships by OTA. React Native's own share sheet
 // offers Copy anyway, beside Messages and Mail, which is where the text
 // is going.
+//
+// The share sheet is not raised over this one. Presented from inside the
+// Modal, it opened, and a share cancelled from it left the app frozen on
+// a real phone: nothing on screen took a touch again until the app was
+// killed. On iOS a Modal is a view controller of its own, and the
+// activity sheet was presented from it; when that closed, the Modal's
+// window was left holding every touch. Tapping Share now closes this
+// sheet first and raises the system one once the Modal has gone, which
+// is the path PlaceDetail's share has always taken without trouble. It
+// is also what `AvatarPicker` learned for the camera: iOS will not
+// present one view controller while another is dismissing.
 
 import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_INFO, type AppInfo, shareText, shortUpdateId, updateDate, versionLabel } from '../lib/appinfo';
@@ -61,15 +72,34 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
     // phone, or this is a build that never takes an update.
     : t('Shipped with the build', 'Đi kèm bản cài', 'ビルドに同梱');
 
-  const share = () => {
-    fireHaptic('selection');
+  // The share waiting for this sheet to finish going. See the note at
+  // the top: raised any earlier, it is raised over the Modal.
+  const sharing = useRef(false);
+  const shareNow = () => {
+    if (!sharing.current) return;
+    sharing.current = false;
     // Dismissed and failed shares both come back here; neither is worth
     // telling the reader about, since they chose to close the sheet.
     Share.share({ message: shareText(info) }).catch(() => {});
   };
+  const share = () => {
+    fireHaptic('selection');
+    sharing.current = true;
+    onClose();
+    // `onDismiss` is iOS-only; elsewhere nothing would ever call it. The
+    // wait is the Modal's fade, as `AvatarPicker` waits for its own.
+    if (Platform.OS !== 'ios') setTimeout(shareNow, 250);
+  };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      onDismiss={shareNow}
+      statusBarTranslucent
+    >
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={close} />
       <Animated.View
         accessibilityViewIsModal
