@@ -31,7 +31,12 @@ import { PressableScale } from './ui';
 type T = (en: string, vi: string, ja: string) => string;
 
 /** What each tip says, and the glyph beside it, which is the glyph of the
- *  control it points to wherever there is one. */
+ *  control it points to wherever there is one.
+ *
+ *  The menu is named by where it is and what it looks like, "the three-dot
+ *  button (⋯) at the top right", not by the glyph alone. A bare "⋯" in a
+ *  sentence read as an ellipsis, a gap in the text rather than a button to
+ *  go and find. The glyph stays in brackets so the eye can match it. */
 const TIPS: Record<TipId, { icon: React.ComponentProps<typeof Ionicons>['name']; text: (t: T) => string }> = {
   reorder: {
     icon: 'hand-left-outline',
@@ -44,33 +49,33 @@ const TIPS: Record<TipId, { icon: React.ComponentProps<typeof Ionicons>['name'];
   publish: {
     icon: 'globe-outline',
     text: (t) => t(
-      'This list is private. Open ⋯ and choose Make public so anyone can see it.',
-      'Bộ sưu tập này đang riêng tư. Mở ⋯ rồi chọn Công khai để ai cũng xem được.',
-      'このコレクションは非公開です。⋯ から「公開する」を選ぶと、誰でも見られます。',
+      'This list is private. Tap the three-dot button (⋯) at the top right and choose Make public so anyone can see it.',
+      'Bộ sưu tập này đang riêng tư. Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Công khai để ai cũng xem được.',
+      'このコレクションは非公開です。右上の「⋯」ボタンから「公開する」を選ぶと、誰でも見られます。',
     ),
   },
   edit: {
     icon: 'create-outline',
     text: (t) => t(
-      'To rename it or change the description, open ⋯ and choose Edit collection.',
-      'Muốn đổi tên hay mô tả? Mở ⋯ rồi chọn Sửa bộ sưu tập.',
-      '名前や説明を変えるには、⋯ から「コレクションを編集」を選びます。',
+      'To rename it or change the description, tap the three-dot button (⋯) at the top right and choose Edit collection.',
+      'Muốn đổi tên hay mô tả? Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Sửa bộ sưu tập.',
+      '名前や説明を変えるには、右上の「⋯」ボタンから「コレクションを編集」を選びます。',
     ),
   },
   add: {
     icon: 'bookmark-outline',
     text: (t) => t(
-      'Tap the bookmark on any place card to save it here, or open ⋯ and choose Add place.',
-      'Bấm dấu trang trên thẻ địa điểm ở bất kỳ đâu để lưu vào đây, hoặc mở ⋯ rồi chọn Thêm địa điểm.',
-      'スポットカードのしおりをタップするとここに保存できます。⋯ の「スポットを追加」からも追加できます。',
+      'Tap the bookmark on any place card to save it here, or tap the three-dot button (⋯) at the top right and choose Add place.',
+      'Bấm dấu trang trên thẻ địa điểm ở bất kỳ đâu để lưu vào đây, hoặc bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Thêm địa điểm.',
+      'スポットカードのしおりをタップするとここに保存できます。右上の「⋯」ボタンの「スポットを追加」からも追加できます。',
     ),
   },
   copy: {
     icon: 'duplicate-outline',
     text: (t) => t(
-      'Like this list? Open ⋯ and choose Save a copy to get your own version to change as you like.',
-      'Thích danh sách này? Mở ⋯ rồi chọn Lưu bản sao để có một bản của riêng bạn và chỉnh theo ý mình.',
-      'このリストが気に入ったら、⋯ の「コピーを保存」で自分用に編集できるコピーを作れます。',
+      'Like this list? Tap the three-dot button (⋯) at the top right and choose Save a copy to get your own version to change as you like.',
+      'Thích danh sách này? Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Lưu bản sao để có một bản của riêng bạn và chỉnh theo ý mình.',
+      'このリストが気に入ったら、右上の「⋯」ボタンの「コピーを保存」で自分用に編集できるコピーを作れます。',
     ),
   },
 };
