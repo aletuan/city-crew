@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  coverOf, fmtCount, holds, isFree, membersOf, photosOf, priceLabel, slugify, touchesCity,
+  coverOf, fmtCount, holds, isFree, membersOf, nextSortOrder, photosOf, priceLabel, slugify, touchesCity,
 } from './place';
 import type { Collection, Place, PlacePhoto } from './types';
 
@@ -171,6 +171,25 @@ describe('holds', () => {
   it('does not invent one', () => expect(holds(c, 'y')).toBe(false));
   it('survives a row whose place went missing', () => {
     expect(holds(collection({ collection_places: [{ sort_order: 0, places: null }] }), 'x')).toBe(false);
+  });
+});
+
+// After the last member, never at the count: the count collides with a
+// surviving position once anything earlier has been removed.
+describe('nextSortOrder', () => {
+  it('is 0 for an empty list', () => expect(nextSortOrder(collection({ collection_places: [] }))).toBe(0));
+  it('goes after the highest position, not at the member count', () => {
+    const gappy = collection({ collection_places: [
+      { sort_order: 0, places: { slug: 'a' } },
+      { sort_order: 2, places: { slug: 'c' } },
+    ] });
+    expect(nextSortOrder(gappy)).toBe(3);
+  });
+  it('counts a row whose place went missing, which still holds its position', () => {
+    expect(nextSortOrder(collection({ collection_places: [
+      { sort_order: 4, places: null },
+      { sort_order: 1, places: { slug: 'a' } },
+    ] }))).toBe(5);
   });
 });
 

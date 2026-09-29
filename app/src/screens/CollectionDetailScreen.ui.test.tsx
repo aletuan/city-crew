@@ -14,7 +14,8 @@
 // - publishing refuses (as a sentence, not a Postgres code) while places
 //   are still under review, and otherwise flips the flag, reloads both
 //   catalogs and offers Undo;
-// - reordering writes nothing until Done, and writes the whole sequence;
+// - reordering saves itself a beat after the last move, the whole sequence
+//   in one write, and the back arrow leaves the mode rather than the screen;
 // - deleting is behind a confirmation and tells the taste profile.
 //
 // Mocks sit at the screen's own seams: the `lib/*` hooks it reads and the
@@ -25,7 +26,7 @@
 
 import React from 'react';
 import { Alert } from 'react-native';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
@@ -497,18 +498,28 @@ describe('reordering', () => {
     openMenu();
     fireEvent.click(menuRow('Reorder places'));
   };
+  const down = (i: number) => fireEvent.click(screen.getAllByRole('button', { name: 'Move down' })[i]);
+  const up = (i: number) => fireEvent.click(screen.getAllByRole('button', { name: 'Move up' })[i]);
+  const rows = () => screen.getAllByText(/^(Pho 10|Cafe Giang|Fine Arts Museum)$/).map((el) => el.textContent);
+  const cards = () => screen.getAllByText(/^card:/).map((el) => el.textContent);
+  /** Past the beat the screen waits after the last move. On a fake clock:
+   *  a real 700 ms wait was the flake under coverage, where the whole run
+   *  slows and the beat is no longer a beat. */
+  const pastTheBeat = () => act(async () => { await vi.advanceTimersByTimeAsync(700); });
+  beforeEach(() => { vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }); });
+  afterEach(() => { vi.useRealTimers(); });
 
-  it('switches to numbered rows with a hint, and Cancel until something moves', () => {
+  it('switches to numbered rows with a hint, and no button to confirm anything', () => {
     show();
     startArranging();
-    expect(screen.getByText(/Set the order these places appear in/)).toBeTruthy();
+    expect(screen.getByText('Set the order these places appear in. Changes save as you go.')).toBeTruthy();
     expect(screen.queryByText(/^card:/)).toBeNull();
     expect(screen.getByText('Pho 10')).toBeTruthy();
     expect(screen.getByText('Pho 10 area')).toBeTruthy();
     // The overflow menu is not offered mid-arrange, nor the Add slot.
     expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
     expect(screen.queryByText('From search or your bookmarks')).toBeNull();
-    expect(screen.getByText('Cancel')).toBeTruthy();
+    for (const label of ['Done', 'Cancel', 'Saving…', 'Saved']) expect(screen.queryByText(label)).toBeNull();
   });
 
   it('disables Up on the first row and Down on the last', () => {
@@ -522,52 +533,122 @@ describe('reordering', () => {
     expect(downs[0].getAttribute('aria-disabled')).not.toBe('true');
   });
 
-  it('writes the whole new order on Done, then leaves the mode and reloads', async () => {
+  // In the reader's language, as the cards are — it was English always.
+  it('names the places in the reader\'s language', () => {
+    state.lang = 'vi';
+    state.places = [
+      place('pho', 'Pho 10', { name_vi: 'Phở 10', neighborhood_vi: 'Phố cổ' } as Partial<Place>),
+      CAFE, MUSEUM,
+    ];
+    show();
+    fireEvent.click(button('Thêm'));
+    fireEvent.click(menuRow('Sắp xếp thứ tự'));
+    expect(screen.getByText('Phở 10')).toBeTruthy();
+    expect(screen.getByText('Phố cổ')).toBeTruthy();
+    expect(screen.queryByText('Pho 10')).toBeNull();
+  });
+
+  it('saves on its own a beat after the last move — one write for a run of moves', async () => {
     show();
     startArranging();
     // [pho, cafe, museum] → down(0) → [cafe, pho, museum] → up(2) → [cafe, museum, pho]
-    fireEvent.click(screen.getAllByRole('button', { name: 'Move down' })[0]);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Move up' })[2]);
+    down(0);
+    up(2);
+    expect(rows()).toEqual(['Cafe Giang', 'Fine Arts Museum', 'Pho 10']);
     expect(spies.reorderCollection).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByText('Done'));
+    expect(screen.getByText('Saving…')).toBeTruthy();
+    await pastTheBeat();
+    expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
     expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'museum', 'pho']);
-    await waitFor(() => expect(screen.queryByText('Done')).toBeNull());
-    expect(screen.getAllByText(/^card:/).length).toBe(3);
+    expect(screen.getByText('Saved')).toBeTruthy();
     expect(spies.mineReload).toHaveBeenCalled();
     expect(spies.colsReload).toHaveBeenCalled();
+    // Still arranging: saving is not leaving.
+    expect(screen.getAllByRole('button', { name: 'Move up' }).length).toBe(3);
   });
 
-  it('Cancel with nothing moved leaves without writing', () => {
+  it('back leaves the mode, not the screen, and writes a waiting move at once', () => {
+    const { raw } = show();
+    startArranging();
+    down(0);
+    fireEvent.click(button('Back'));
+    expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'pho', 'museum']);
+    expect(raw.goBack).not.toHaveBeenCalled();
+    // The new order stays on screen while the server catches up.
+    expect(cards()).toEqual(['card:Cafe Giang', 'card:Pho 10', 'card:Fine Arts Museum']);
+    fireEvent.click(button('Back'));
+    expect(raw.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('writes nothing when nothing moved', async () => {
     show();
     startArranging();
-    fireEvent.click(screen.getByText('Cancel'));
+    fireEvent.click(button('Back'));
+    await pastTheBeat();
     expect(spies.reorderCollection).not.toHaveBeenCalled();
-    expect(screen.getAllByText(/^card:/).length).toBe(3);
+    expect(cards()).toEqual(['card:Pho 10', 'card:Cafe Giang', 'card:Fine Arts Museum']);
   });
 
-  it('moving a place back where it was is not a change worth saving', () => {
+  // One write in flight, and the latest order after it: a move made while
+  // the first write is out is not lost, and not written in parallel.
+  it('writes a move made during a write once that write returns', async () => {
+    let land!: () => void;
+    spies.reorderCollection.mockImplementationOnce(() => new Promise<void>((r) => { land = r; }));
     show();
     startArranging();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Move down' })[0]);
-    expect(screen.getByText('Done')).toBeTruthy();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Move up' })[1]);
-    expect(screen.getByText('Cancel')).toBeTruthy();
-  });
-
-  it('stays in the mode and says so when the order cannot be saved', async () => {
-    let fail!: (e: Error) => void;
-    spies.reorderCollection.mockImplementationOnce(() => new Promise((_, rej) => { fail = rej; }));
-    show();
-    startArranging();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Move down' })[0]);
-    fireEvent.click(screen.getByText('Done'));
-    // In flight: the button says so and a second tap does not write twice.
-    expect(screen.getByText('Saving…')).toBeTruthy();
-    fireEvent.click(screen.getByText('Saving…'));
+    down(0);
+    await pastTheBeat();
     expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
-    await act(async () => { fail(new Error('timeout')); });
+    down(1);
+    await pastTheBeat();
+    expect(spies.reorderCollection).toHaveBeenCalledTimes(1);
+    await act(async () => { land(); await vi.advanceTimersByTimeAsync(0); });
+    expect(spies.reorderCollection).toHaveBeenCalledTimes(2);
+    expect(spies.reorderCollection).toHaveBeenLastCalledWith('old-quarter', ['cafe', 'museum', 'pho']);
+    expect(screen.getByText('Saved')).toBeTruthy();
+  });
+
+  it('goes back to the saved order and says so when the order cannot be saved', async () => {
+    spies.reorderCollection.mockRejectedValueOnce(new Error('timeout'));
+    show();
+    startArranging();
+    down(0);
+    await pastTheBeat();
     expect(alert).toHaveBeenCalledWith('Could not save the order', 'timeout');
-    expect(screen.getByText('Done')).toBeTruthy();
+    expect(rows()).toEqual(['Pho 10', 'Cafe Giang', 'Fine Arts Museum']);
+    expect(screen.queryByText('Saving…')).toBeNull();
+    expect(screen.queryByText('Saved')).toBeNull();
+  });
+
+  it('writes a waiting move when the screen goes', () => {
+    const view = render(
+      <CollectionDetailScreen
+        navigation={nav().n}
+        route={{ params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>}
+      />,
+    );
+    startArranging();
+    down(0);
+    view.unmount();
+    expect(spies.reorderCollection).toHaveBeenCalledWith('old-quarter', ['cafe', 'pho', 'museum']);
+  });
+
+  // The draft is only a bridge to the server's answer. Once the server
+  // agrees it steps aside, so an order changed later elsewhere shows here.
+  it('follows the server again once the server has caught up', async () => {
+    const route = { params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>;
+    const navigation = nav().n;
+    const view = render(<CollectionDetailScreen navigation={navigation} route={route} />);
+    startArranging();
+    down(0);
+    await pastTheBeat();
+    fireEvent.click(button('Back'));
+    state.mine = [collection({}, [CAFE, PHO, MUSEUM])];
+    view.rerender(<CollectionDetailScreen navigation={navigation} route={route} />);
+    expect(cards()).toEqual(['card:Cafe Giang', 'card:Pho 10', 'card:Fine Arts Museum']);
+    state.mine = [collection({}, [MUSEUM, CAFE, PHO])];
+    view.rerender(<CollectionDetailScreen navigation={navigation} route={route} />);
+    expect(cards()).toEqual(['card:Fine Arts Museum', 'card:Cafe Giang', 'card:Pho 10']);
   });
 });
 

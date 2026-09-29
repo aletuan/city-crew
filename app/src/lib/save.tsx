@@ -16,7 +16,7 @@ import AuthSheet from '../components/AuthSheet';
 import SaveSheet from '../components/SaveSheet';
 import { useAuth } from './auth';
 import {
-  addPlaceToCollection, Collection, holds, logPlaceEvent, Place, removePlaceFromCollection,
+  addPlaceToCollection, Collection, holds, logPlaceEvent, nextSortOrder, Place, removePlaceFromCollection,
   useMyCollections, useMyPreferences,
 } from './data';
 import { useCity } from './city';
@@ -135,7 +135,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     try {
       const had = holds(c, place.slug);
       if (had) await removePlaceFromCollection(c.slug, place.slug);
-      else await addPlaceToCollection(c.slug, place.slug, c.collection_places.length);
+      else await addPlaceToCollection(c.slug, place.slug, nextSortOrder(c));
       // Noted here rather than in the sheet because this is the one place
       // both verbs pass through, and only after the write succeeded — an
       // event for a save that did not happen is worse than no event.

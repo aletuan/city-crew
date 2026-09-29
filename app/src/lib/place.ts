@@ -87,6 +87,19 @@ export function holds(c: Collection, placeSlug: string): boolean {
 }
 
 /**
+ * Where a place saved into this list goes: after the last one.
+ *
+ * Not the member count, which is what it used to be. After a removal the
+ * count points at a position already taken — 0, 2 after dropping 1, and
+ * the next save lands on 2 again — and two members sharing a position
+ * come back in whatever order the database returns them. Rows whose place
+ * has gone missing still hold a position, so they count here too.
+ */
+export function nextSortOrder(c: Collection): number {
+  return c.collection_places.reduce((top, cp) => Math.max(top, cp.sort_order + 1), 0);
+}
+
+/**
  * A collection's places, in order.
  *
  * A list of the user's own arrives with its members attached and needs no

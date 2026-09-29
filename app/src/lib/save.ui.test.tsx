@@ -240,6 +240,23 @@ describe('signed in with somewhere to put it', () => {
     await waitFor(() => expect(addPlaceToCollection).toHaveBeenCalledWith('coffee', 'cong-caphe', 0));
   });
 
+  // After the last member, not at the count: with 0 and 2 left after a
+  // removal, the count (2) is a position already taken.
+  it('puts it after the last member of a list with a gap in it', async () => {
+    const gappy = {
+      ...list('gappy'),
+      collection_places: [
+        { sort_order: 0, places: { slug: 'a' } },
+        { sort_order: 2, places: { slug: 'c' } },
+      ],
+    } as unknown as Collection;
+    world.mine = { ...world.mine, data: [gappy] };
+    mount();
+    tap();
+    fireEvent.click(await screen.findByText('gappy'));
+    await waitFor(() => expect(addPlaceToCollection).toHaveBeenCalledWith('gappy', 'cong-caphe', 3));
+  });
+
   it('takes it back out of a list that already holds it', async () => {
     mount();
     tap();
