@@ -718,7 +718,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     // Signed out this is the sheet, not an error: wanting somebody's list
     // is a good moment to be offered an account, and a disabled row would
     // have explained nothing.
-    if (!uid) { askToSignIn(); return; }
+    if (!uid) { askToSignIn('copy'); return; }
     const cityId = copyCityId;
     if (!cityId) return;
     const sourceDesc = t(col.desc_en, col.desc_vi, col.desc_ja)?.trim() || '';

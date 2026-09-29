@@ -1018,7 +1018,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         : t('Opening-hours filter off.', 'Bỏ lọc theo giờ mở cửa.', '営業時間の絞り込みを解除しました。'));
   };
   const pickSaved = () => {
-    if (!session) { askToSignIn(); return; }
+    if (!session) { askToSignIn('saved'); return; }
     const on = !appliedFilters.savedOnly;
     setAppliedFilters({ ...appliedFilters, savedOnly: on });
     say(on
@@ -1519,7 +1519,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
             setFilterOpen(false);
             // Wrapped: handed over bare, the frame's timestamp would
             // arrive as `askToSignIn`'s reason.
-            requestAnimationFrame(() => askToSignIn());
+            requestAnimationFrame(() => askToSignIn('saved'));
           }}
         />
       </View>

@@ -128,7 +128,7 @@ describe('whose lists, before the session is read', () => {
     world.userId = 'u1';
     mount();
     tap();
-    expect(screen.getByText('Save places you love')).toBeTruthy();
+    expect(screen.getByText('Save this place')).toBeTruthy();
     expect(goTo).not.toHaveBeenCalled();
   });
 });
@@ -138,7 +138,7 @@ describe('signed out', () => {
     world.session = null;
     mount();
     tap();
-    expect(screen.getByText('Save places you love')).toBeTruthy();
+    expect(screen.getByText('Save this place')).toBeTruthy();
     expect(goTo).not.toHaveBeenCalled();
   });
 
@@ -365,7 +365,7 @@ describe('the sheets’ ways out', () => {
     tap();
     fireEvent.click(screen.getAllByLabelText('Close')[0]);
     fadeOut();
-    await waitFor(() => expect(screen.queryByText('Save places you love')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Save this place')).toBeNull());
     expect(goTo).not.toHaveBeenCalled();
   });
 
@@ -373,10 +373,10 @@ describe('the sheets’ ways out', () => {
     world.session = null;
     mount();
     tap();
-    fireEvent.click(screen.getByText('Sign in'));
+    fireEvent.click(screen.getByText('Sign in / Sign up'));
     expect(goTo).toHaveBeenCalledWith('Profile', { screen: 'SignIn', initial: false });
     fadeOut();
-    await waitFor(() => expect(screen.queryByText('Save places you love')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Save this place')).toBeNull());
   });
 
   it('closes the lists sheet on Done', async () => {

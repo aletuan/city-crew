@@ -55,6 +55,7 @@ describe('asking Google', () => {
     await settle();
 
     expect(h.askToSignIn).toHaveBeenCalledTimes(1);
+    expect(h.askToSignIn).toHaveBeenCalledWith('search');
     expect(h.searchPlaces).not.toHaveBeenCalled();
     expect(alert).not.toHaveBeenCalled();
     expect(result.current.searching).toBe(false);
@@ -77,6 +78,7 @@ describe('asking Google', () => {
     await settle();
 
     expect(h.askToSignIn).toHaveBeenCalledTimes(1);
+    expect(h.askToSignIn).toHaveBeenCalledWith('search');
     expect(alert).not.toHaveBeenCalled();
     expect(result.current.searching).toBe(false);
   });

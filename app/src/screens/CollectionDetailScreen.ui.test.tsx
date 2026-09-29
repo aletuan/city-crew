@@ -1233,8 +1233,8 @@ describe('signed out', () => {
     const { raw } = show();
     openMenu();
     fireEvent.click(menuRow('Save a copy'));
-    // Saving somebody's list is a save, so the bookmark sheet.
-    expect(spies.askToSignIn).toHaveBeenCalledWith();
+    // The sheet names what was reached for: a copy, not a place.
+    expect(spies.askToSignIn).toHaveBeenCalledWith('copy');
     expect(raw.navigate).not.toHaveBeenCalled();
   });
 
