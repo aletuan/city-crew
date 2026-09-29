@@ -6,7 +6,7 @@
 // development build answers with almost nothing.
 
 import React from 'react';
-import { Share } from 'react-native';
+import { Platform, Share } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '../uitest/render';
 import type { AppInfo } from '../lib/appinfo';
@@ -88,14 +88,75 @@ describe('what it does not know', () => {
   });
 });
 
+// The system sheet is raised once this one has gone, never over it: over
+// the Modal, a cancelled share froze the app on a phone. See the note at
+// the top of `AboutSheet`.
 describe('sharing', () => {
-  it('hands the system sheet the whole answer, full update id included', () => {
-    open();
-    fireEvent.click(screen.getByRole('button', { name: 'Chia sẻ thông tin này' }));
+  const tapShare = () => fireEvent.click(screen.getByRole('button', { name: 'Chia sẻ thông tin này' }));
+  /** Lets the closing Modal finish: react-native-web lets it go, and calls
+   *  `onDismiss`, on `animationend`, which jsdom never fires by itself. */
+  const settleModal = () => {
+    document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+  };
+  const os = Platform.OS;
+  afterEach(() => {
+    vi.useRealTimers();
+    Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
+  });
+
+  it('closes itself first, and raises the system sheet once it has gone', () => {
+    vi.useFakeTimers();
+    const { onClose } = open();
+    tapShare();
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(share).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(250);
     expect(share).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands the system sheet the whole answer, full update id included', () => {
+    vi.useFakeTimers();
+    open();
+    tapShare();
+    vi.advanceTimersByTime(250);
     const { message } = share.mock.calls[0][0] as { message: string };
     expect(message).toContain('City Crew 1.0.4 (22)');
     expect(message).toContain('28f91171-a086-4959-78f6-6c4a944d5b67');
+  });
+
+  // iOS says when the Modal has gone; no timer guesses at it there.
+  it('on iOS, waits for the Modal to say it has gone', () => {
+    vi.useFakeTimers();
+    Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true });
+    const onClose = vi.fn();
+    const view = render(<AboutSheet visible onClose={onClose} info={RELEASE} />);
+    tapShare();
+    vi.advanceTimersByTime(1000);
+    expect(share).not.toHaveBeenCalled();
+    view.rerender(<AboutSheet visible={false} onClose={onClose} info={RELEASE} />);
+    settleModal();
+    expect(share).toHaveBeenCalledTimes(1);
+  });
+
+  it('raises nothing when the sheet is closed any other way', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true });
+    const onClose = vi.fn();
+    const view = render(<AboutSheet visible onClose={onClose} info={RELEASE} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
+    view.rerender(<AboutSheet visible={false} onClose={onClose} info={RELEASE} />);
+    settleModal();
+    expect(share).not.toHaveBeenCalled();
+  });
+
+  it('raises it once, however the sheet then goes', () => {
+    vi.useFakeTimers();
+    const onClose = vi.fn();
+    const view = render(<AboutSheet visible onClose={onClose} info={RELEASE} />);
+    tapShare();
+    vi.advanceTimersByTime(250);
+    view.rerender(<AboutSheet visible={false} onClose={onClose} info={RELEASE} />);
+    settleModal();
+    expect(share).toHaveBeenCalledTimes(1);
   });
 
   // Declined or failed, the share is the reader's business. Nothing
@@ -104,10 +165,12 @@ describe('sharing', () => {
     // Asked of the promise itself: whether the sheet handles the refusal,
     // not whether one happened to surface before the test ended — the
     // unhandled version passed a test that only waited to see.
+    vi.useFakeTimers();
     const caught = vi.fn();
     share.mockReturnValueOnce({ catch: caught } as never);
     open();
-    fireEvent.click(screen.getByRole('button', { name: 'Chia sẻ thông tin này' }));
+    tapShare();
+    vi.advanceTimersByTime(250);
     expect(caught).toHaveBeenCalledTimes(1);
     expect(() => caught.mock.calls[0][0](new Error('dismissed'))).not.toThrow();
   });

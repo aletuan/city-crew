@@ -19,7 +19,7 @@
 // stubbed provider, because the code under test listens to the client.
 // Faking the provider would test a seam that does not exist.
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useLayoutEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
@@ -366,10 +366,16 @@ describe('following my location', () => {
   // Handed out through an effect rather than assigned during render,
   // which the lint rule on components forbids — rightly, for components
   // that are not test probes.
+  //
+  // A layout effect, in the commit that draws the city. A passive one ran
+  // after it, and `mountFollower`'s wait could see "danang" in the DOM
+  // before it had: the tap then went through the first render's closure,
+  // whose list was still the one-row fallback, and the city it chose was
+  // not in the list the screen had ('—'). About one run in fifteen.
   let follow: () => Promise<boolean>;
   const Follower = ({ give }: { give: (f: () => Promise<boolean>) => void }) => {
     const { followMyLocation } = useCity();
-    useEffect(() => { give(followMyLocation); });
+    useLayoutEffect(() => { give(followMyLocation); });
     return null;
   };
   const mountFollower = async () => {

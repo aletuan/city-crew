@@ -142,26 +142,46 @@ describe('signed out', () => {
     expect(goTo).not.toHaveBeenCalled();
   });
 
-  // The sheet wears the glyph that was tapped: a bookmark opened it, so a
-  // bookmark is what it shows. It used to be a heart whatever was tapped.
-  it('wears a bookmark when a bookmark opened it', () => {
+  // The sheet names what was reached for. It used to say "Save places you
+  // love" whatever was tapped, a heart included.
+  it('names a place when a bookmark opened it', () => {
     world.session = null;
-    const view = mount();
+    mount();
     tap();
-    expect(view.container.ownerDocument.querySelector('[data-icon="bookmark"]')).toBeTruthy();
-    expect(view.container.ownerDocument.querySelector('[data-icon="heart"]')).toBeNull();
+    expect(screen.getByText('Save this place')).toBeTruthy();
+    expect(screen.queryByText('Like this collection')).toBeNull();
   });
 
-  it('wears a heart when a heart opened it', () => {
+  it('names the collection when a heart opened it', () => {
     world.session = null;
     function Liker() {
       const { askToSignIn } = useSave();
       return <button type="button" onClick={() => askToSignIn('like')}>tap the heart</button>;
     }
-    const view = mount(<Liker />);
+    mount(<Liker />);
     fireEvent.click(screen.getByText('tap the heart'));
-    expect(view.container.ownerDocument.querySelector('[data-icon="heart"]')).toBeTruthy();
-    expect(view.container.ownerDocument.querySelector('[data-icon="bookmark"]')).toBeNull();
+    expect(screen.getByText('Like this collection')).toBeTruthy();
+    expect(screen.queryByText('Save this place')).toBeNull();
+  });
+
+  // The reason is kept apart from the sheet being open, so the title
+  // does not change while it fades out. A bookmark sets its own each time
+  // rather than inheriting the heart's.
+  it('names a place when a bookmark follows a heart', () => {
+    world.session = null;
+    function Both() {
+      const { askToSignIn } = useSave();
+      return (
+        <>
+          <button type="button" onClick={() => askToSignIn('like')}>tap the heart</button>
+          <Tapper />
+        </>
+      );
+    }
+    mount(<Both />);
+    fireEvent.click(screen.getByText('tap the heart'));
+    tap();
+    expect(screen.getByText('Save this place')).toBeTruthy();
   });
 
   // Nothing is saved for nobody: the lists hook is handed no owner, so the
