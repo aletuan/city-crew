@@ -1,9 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Dimensions, Modal, Pressable, StyleProp, StyleSheet, Text, View,
+  ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, PanResponder, Pressable, StyleProp, StyleSheet,
+  Text, View,
   ViewStyle,
 } from 'react-native';
-import { FlatList, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
@@ -203,14 +203,27 @@ function LiftCell({ index, style, children, ...cell }: {
  * left; let go and it lands, and the new order saves itself.
  *
  * A tap still opens the place. The hold is what tells the two apart (see
- * `LIFT_AFTER_MS`). Once a card lifts, gesture-handler cancels the
- * touch the card's own button was holding, so letting go never also
- * opens the place.
+ * `LIFT_AFTER_MS`): it is the card's own long press, so a press that
+ * lifted never also opens the place, and a finger that moves before the
+ * hold completes cancels it and scrolls instead.
  *
- * Built on what the binary already carries: `react-native-gesture-handler`
- * for the hold-then-pan, and React Native's own `Animated` for the lifted
- * card, on the JS thread. The usual recipe is `react-native-reanimated`,
- * which is a native module. Adding it would have meant a new build
+ * ── the lift is the card's, the drag is the list's ──
+ *
+ * The card only lifts. The drag after it belongs to a responder on the
+ * list around the cards (see the screen's `drag`), which claims the touch
+ * from the card's button on the finger's first move. While JavaScript
+ * holds the touch, React Native tells the scroll view to leave it alone,
+ * so the list cannot take the drag over as a scroll.
+ *
+ * This replaced a gesture-handler pan that waited out a long press. On a
+ * phone it lifted (the haptic fired) and then never moved. The pan was
+ * one native recognizer being arbitrated against the scroll view's,
+ * reconfigured on every render mid-gesture, and none of that could be
+ * watched from a test. The responder system is the one every button in
+ * the app already runs on.
+ *
+ * All of it is JavaScript and React Native's own `Animated`. The usual
+ * recipe is `react-native-reanimated`, a native module: a new build
  * through the store before anybody could drag, and every OTA after it
  * refused by the builds already installed.
  *
@@ -218,7 +231,7 @@ function LiftCell({ index, style, children, ...cell }: {
  * accessibility actions, and says so in its hint.
  */
 function DraggableCard({
-  place, index, count, lifted, shift, dragY, onOpen, onUp, onDown, onLift, onDrag, onDrop, onPitch,
+  place, index, count, lifted, shift, dragY, onOpen, onUp, onDown, onLift, onRelease, onPitch,
 }: {
   place: Place;
   index: number;
@@ -231,44 +244,42 @@ function DraggableCard({
   onOpen: () => void;
   onUp: () => void;
   onDown: () => void;
-  onLift: (index: number) => void;
-  onDrag: (dy: number) => void;
-  onDrop: () => void;
+  /** The hold completed: `pageY` is where the finger is, which the drag
+   *  measures its travel from. */
+  onLift: (index: number, pageY: number) => void;
+  /** The card's button let go of the touch, by the finger coming up or by
+   *  the list taking the drag over. */
+  onRelease: () => void;
   onPitch: (slug: string, pitch: number) => void;
 }) {
   const { t } = useI18n();
-  const pan = Gesture.Pan()
-    .runOnJS(true)
-    .activateAfterLongPress(LIFT_AFTER_MS)
-    .onStart(() => onLift(index))
-    .onUpdate((e) => onDrag(e.translationY))
-    .onFinalize(() => onDrop());
   const actions = [
     ...(index > 0 ? [{ name: 'moveUp', label: t('Move up', 'Chuyển lên', '上へ移動') }] : []),
     ...(index < count - 1 ? [{ name: 'moveDown', label: t('Move down', 'Chuyển xuống', '下へ移動') }] : []),
   ];
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View
-        onLayout={(e) => onPitch(place.slug, e.nativeEvent.layout.height)}
-        style={lifted
-          ? [s.cardLifted, { transform: [{ translateY: dragY }, { scale: 1.02 }] }]
-          : shift !== 0 && { transform: [{ translateY: shift }] }}
-        testID={`drag-${place.slug}`}
-      >
-        <PlaceCard
-          place={place}
-          onPress={onOpen}
-          accessibilityHint={t(
-            'Hold and drag to change the order.',
-            'Giữ rồi kéo để đổi thứ tự.',
-            '長押ししてドラッグすると並び順を変えられます。',
-          )}
-          accessibilityActions={actions}
-          onAccessibilityAction={(e) => (e.nativeEvent.actionName === 'moveUp' ? onUp() : onDown())}
-        />
-      </Animated.View>
-    </GestureDetector>
+    <Animated.View
+      onLayout={(e) => onPitch(place.slug, e.nativeEvent.layout.height)}
+      style={lifted
+        ? [s.cardLifted, { transform: [{ translateY: dragY }, { scale: 1.02 }] }]
+        : shift !== 0 && { transform: [{ translateY: shift }] }}
+      testID={`drag-${place.slug}`}
+    >
+      <PlaceCard
+        place={place}
+        onPress={onOpen}
+        onLongPress={(e) => onLift(index, e.nativeEvent.pageY)}
+        delayLongPress={LIFT_AFTER_MS}
+        onPressOut={onRelease}
+        accessibilityHint={t(
+          'Hold and drag to change the order.',
+          'Giữ rồi kéo để đổi thứ tự.',
+          '長押ししてドラッグすると並び順を変えられます。',
+        )}
+        accessibilityActions={actions}
+        onAccessibilityAction={(e) => (e.nativeEvent.actionName === 'moveUp' ? onUp() : onDown())}
+      />
+    </Animated.View>
   );
 }
 
@@ -567,28 +578,35 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   // ── the card in the finger ──
   //
-  // `lift` is for drawing: which row is up and which slot it hovers over,
-  // so the rows between can step aside. `liftRef` is the same thing for
-  // the gesture's callbacks, which fire faster than renders and must not
-  // read a render behind. `dragY` is the finger's travel, driven straight
-  // into the lifted row's transform so a move does not re-render the list.
-  const [lift, setLift] = useState<{ from: number; to: number; pitch: number } | null>(null);
-  const liftRef = useRef<{ from: number; to: number; pitch: number } | null>(null);
+  // `lift` is for drawing: which card is up and which slot it hovers over,
+  // so the cards between can step aside. `liftRef` is the same thing for
+  // the touch handlers, which fire faster than renders and must not read a
+  // render behind. `dragY` is the finger's travel, driven straight into
+  // the lifted card's transform so a move does not re-render the list.
+  // `y0` is where the finger was when the card lifted: the travel is
+  // measured from there, not from where the touch began.
+  type Held = { from: number; to: number; pitch: number; y0: number };
+  const [lift, setLift] = useState<Held | null>(null);
+  const liftRef = useRef<Held | null>(null);
+  // Whether the list's responder has taken the touch from the card.
+  const claimed = useRef(false);
   const dragY = useRef(new Animated.Value(0)).current;
   const pitchBySlug = useRef(new Map<string, number>());
-  const raise = (next: { from: number; to: number; pitch: number } | null) => {
+  const raise = (next: Held | null) => {
     liftRef.current = next;
     setLift(next);
   };
   const pitches = () => drafted.map((p) => pitchBySlug.current.get(p.slug) ?? PITCH_GUESS);
-  const onLift = (index: number) => {
+  const onLift = (index: number, pageY: number) => {
     dragY.setValue(0);
-    raise({ from: index, to: index, pitch: pitches()[index] });
+    claimed.current = false;
+    raise({ from: index, to: index, pitch: pitches()[index], y0: pageY });
     fireHaptic('light');
   };
-  const onDrag = (dy: number) => {
+  const onDrag = (pageY: number) => {
     const held = liftRef.current;
     if (!held) return;
+    const dy = pageY - held.y0;
     dragY.setValue(dy);
     const to = dropSlot(pitches(), held.from, dy);
     if (to !== held.to) {
@@ -604,6 +622,26 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     raise(null);
     if (held.to !== held.from) shuffle(held.from, held.to);
   };
+  // The card's button has let go of the touch. Either the list claimed it,
+  // which is the hand-over and the drag goes on, or the finger came up
+  // without moving, and the card goes back where it was.
+  const onRelease = () => { if (!claimed.current) onDrop(); };
+
+  // The drag itself, on the list around the cards. It asks for the touch
+  // on every move and wants it only while a card is up, so a scroll or a
+  // tap never meets it. Once it has the touch it does not give it back.
+  // Made once. Its handlers read the latest `onDrag` and `onDrop` through
+  // a ref, as the unmount above reads `flush`.
+  const dragTo = useRef({ onDrag, onDrop });
+  useEffect(() => { dragTo.current = { onDrag, onDrop }; });
+  const [drag] = useState(() => PanResponder.create({
+    onMoveShouldSetPanResponderCapture: () => liftRef.current !== null,
+    onPanResponderGrant: () => { claimed.current = true; },
+    onPanResponderMove: (_e, g) => dragTo.current.onDrag(g.moveY),
+    onPanResponderRelease: () => dragTo.current.onDrop(),
+    onPanResponderTerminate: () => dragTo.current.onDrop(),
+    onPanResponderTerminationRequest: () => false,
+  }));
   const onPitch = (slug: string, pitch: number) => { pitchBySlug.current.set(slug, pitch); };
 
   // Deliberately inert, and now inert for two different reasons — which
@@ -968,80 +1006,72 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {!!desc && <Text style={s.desc}>{desc}</Text>}
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
-      {/* gesture-handler's FlatList, not React Native's. The hold and the
-          scroll both start as the same finger on the same card, and with
-          a plain scroll view the two are settled by UIKit: gesture-handler
-          declines to run beside a recognizer it does not own, so whichever
-          one claimed the touch first kept it. Wrapped, the scroll is one of
-          gesture-handler's own gestures, and a card that lifts cancels it
-          outright. A scroll that has started still cannot be interrupted
-          (`disallowInterruption`), so a moving list never drops a card
-          into the finger. */}
       <LiftedCard.Provider value={lift ? lift.from : -1}>
-        <FlatList
-          data={drafted}
-          keyExtractor={(p) => p.slug}
-          // Held still while a card is in the finger: the pan and the scroll
-          // would otherwise both answer the same drag.
-          scrollEnabled={!lift}
-          CellRendererComponent={LiftCell}
-          onScroll={duckScroll}
-          scrollEventThrottle={16}
-          renderItem={({ item, index }) => {
-            const open = () => navigation.navigate('PlaceDetail', { slug: item.slug });
-            return canArrange
+        <View style={s.dragArea} {...drag.panHandlers}>
+          <FlatList
+            data={drafted}
+            keyExtractor={(p) => p.slug}
+            // Held still while a card is in the finger: the drag and the scroll
+            // would otherwise both answer the same drag.
+            scrollEnabled={!lift}
+            CellRendererComponent={LiftCell}
+            onScroll={duckScroll}
+            scrollEventThrottle={16}
+            renderItem={({ item, index }) => {
+              const open = () => navigation.navigate('PlaceDetail', { slug: item.slug });
+              return canArrange
+                ? (
+                  <DraggableCard
+                    place={item}
+                    index={index}
+                    count={drafted.length}
+                    lifted={lift?.from === index}
+                    shift={lift ? stepAside(index, lift.from, lift.to, lift.pitch) : 0}
+                    dragY={dragY}
+                    onOpen={open}
+                    onUp={() => shuffle(index, index - 1)}
+                    onDown={() => shuffle(index, index + 1)}
+                    onLift={onLift}
+                    onRelease={onRelease}
+                    onPitch={onPitch}
+                  />
+                )
+                : <PlaceCard place={item} onPress={open} />;
+            }}
+            ListEmptyComponent={!loading && col
+              ? (owned
+                // One message, not two. The reference stacks "No places in this
+                // collection yet." above a card that says the same thing again.
+                ? <OwnEmpty onExplore={() => navigation.getParent()?.navigate('Explore')} />
+                : <Empty text={t(
+                  'No places in this collection yet.',
+                  'Bộ sưu tập này chưa có địa điểm nào.',
+                  'このコレクションにはまだスポットがありません。',
+                )} />)
+              : null}
+            // Only once there is a list to end. Empty, the card above is
+            // already asking for the first place, and two invitations to do
+            // one thing read as two different things.
+            ListFooterComponent={owned && members.length > 0
               ? (
-                <DraggableCard
-                  place={item}
-                  index={index}
-                  count={drafted.length}
-                  lifted={lift?.from === index}
-                  shift={lift ? stepAside(index, lift.from, lift.to, lift.pitch) : 0}
-                  dragY={dragY}
-                  onOpen={open}
-                  onUp={() => shuffle(index, index - 1)}
-                  onDown={() => shuffle(index, index + 1)}
-                  onLift={onLift}
-                  onDrag={onDrag}
-                  onDrop={onDrop}
-                  onPitch={onPitch}
+                <AddSlot
+                  onPress={addPlace}
+                  title={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
+                  // The second line names where the places come from. Without
+                  // it the row is a verb with no object, and "Add place" alone
+                  // had already sent one reader to Explore expecting a picker.
+                  subtitle={t(
+                    'From search or your bookmarks',
+                    'Từ tìm kiếm hoặc mục đã lưu',
+                    '検索や保存済みから',
+                  )}
                 />
               )
-              : <PlaceCard place={item} onPress={open} />;
-          }}
-          ListEmptyComponent={!loading && col
-            ? (owned
-              // One message, not two. The reference stacks "No places in this
-              // collection yet." above a card that says the same thing again.
-              ? <OwnEmpty onExplore={() => navigation.getParent()?.navigate('Explore')} />
-              : <Empty text={t(
-                'No places in this collection yet.',
-                'Bộ sưu tập này chưa có địa điểm nào.',
-                'このコレクションにはまだスポットがありません。',
-              )} />)
-            : null}
-          // Only once there is a list to end. Empty, the card above is
-          // already asking for the first place, and two invitations to do
-          // one thing read as two different things.
-          ListFooterComponent={owned && members.length > 0
-            ? (
-              <AddSlot
-                onPress={addPlace}
-                title={t('Add place', 'Thêm địa điểm', 'スポットを追加')}
-                // The second line names where the places come from. Without
-                // it the row is a verb with no object, and "Add place" alone
-                // had already sent one reader to Explore expecting a picker.
-                subtitle={t(
-                  'From search or your bookmarks',
-                  'Từ tìm kiếm hoặc mục đã lưu',
-                  '検索や保存済みから',
-                )}
-              />
-            )
-            : null}
-          contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
-          showsVerticalScrollIndicator={false}
-        />
+              : null}
+            contentContainerStyle={{ paddingTop: 8, paddingBottom: tabClearance }}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
       </LiftedCard.Provider>
 
       {/* Anchored under the control that opened it, which is the whole
@@ -1228,6 +1258,8 @@ const s = StyleSheet.create({
 
   // A text button, not a pill: it sits where the overflow control was and
   // the header already has one round shape in it on the other side.
+  // The responder that carries a lifted card: the list's whole height.
+  dragArea: { flex: 1 },
   // The status beside ⋯ and the button, on one line.
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   saveState: { color: colors.textTertiary, fontSize: 14, fontWeight: font.medium, paddingHorizontal: 10 },
