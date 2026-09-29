@@ -248,13 +248,32 @@ describe('guest hub', () => {
     expect(goTo).toHaveBeenCalledWith('Explore', { screen: 'ExploreHome' });
   });
 
-  it('carries the settings and legal cards without section headings', () => {
+  // The same headings as the member view over the same cards, and one
+  // for what an account opens, in the order the screen reads.
+  it('heads its cards the way the member view does', () => {
     draw();
+    const heads = ['With an account', 'Preferences', 'App'].map((h) => screen.getByText(h));
+    for (let i = 1; i < heads.length; i++) {
+      expect(heads[i - 1].compareDocumentPosition(heads[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
     expect(screen.getByText('Current city')).toBeTruthy();
     expect(screen.getByText('Terms of Service')).toBeTruthy();
-    expect(screen.queryByText('Preferences')).toBeNull();
     expect(screen.queryByText('Legal')).toBeNull();
-    expect(screen.queryByText('App')).toBeNull();
+  });
+
+  it('heads them in Vietnamese too', () => {
+    state.lang = 'vi';
+    draw();
+    for (const h of ['Khi có tài khoản', 'Tuỳ chọn', 'Ứng dụng']) expect(screen.getByText(h)).toBeTruthy();
+  });
+
+  // Friends is one more thing an account opens: a fourth locked row with
+  // the other three, not a card stranded after the documents.
+  it('keeps friends with the other things an account opens', () => {
+    draw();
+    const rows = ['Saved places', 'Collections', 'Trips', 'Connect with friends'].map((name) => button(name));
+    expect(new Set(rows.map((r) => r.parentElement)).size).toBe(1);
+    expect(rows[3].compareDocumentPosition(screen.getByText('Preferences')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('never says "guest"', () => {

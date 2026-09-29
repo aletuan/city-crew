@@ -30,49 +30,56 @@ import { PressableScale } from './ui';
 
 type T = (en: string, vi: string, ja: string) => string;
 
-/** What each tip says, and the glyph beside it, which is the glyph of the
- *  control it points to wherever there is one. */
-const TIPS: Record<TipId, { icon: React.ComponentProps<typeof Ionicons>['name']; text: (t: T) => string }> = {
-  reorder: {
-    icon: 'hand-left-outline',
-    text: (t) => t(
-      'Hold a place, then drag it to change the order. Changes save on their own.',
-      'Giữ một địa điểm rồi kéo để đổi thứ tự. Thay đổi được lưu tự động.',
-      'スポットを長押ししてドラッグすると並び順を変えられます。変更は自動で保存されます。',
-    ),
-  },
-  publish: {
-    icon: 'globe-outline',
-    text: (t) => t(
-      'This list is private. Open ⋯ and choose Make public so anyone can see it.',
-      'Bộ sưu tập này đang riêng tư. Mở ⋯ rồi chọn Công khai để ai cũng xem được.',
-      'このコレクションは非公開です。⋯ から「公開する」を選ぶと、誰でも見られます。',
-    ),
-  },
-  edit: {
-    icon: 'create-outline',
-    text: (t) => t(
-      'To rename it or change the description, open ⋯ and choose Edit collection.',
-      'Muốn đổi tên hay mô tả? Mở ⋯ rồi chọn Sửa bộ sưu tập.',
-      '名前や説明を変えるには、⋯ から「コレクションを編集」を選びます。',
-    ),
-  },
-  add: {
-    icon: 'bookmark-outline',
-    text: (t) => t(
-      'Tap the bookmark on any place card to save it here, or open ⋯ and choose Add place.',
-      'Bấm dấu trang trên thẻ địa điểm ở bất kỳ đâu để lưu vào đây, hoặc mở ⋯ rồi chọn Thêm địa điểm.',
-      'スポットカードのしおりをタップするとここに保存できます。⋯ の「スポットを追加」からも追加できます。',
-    ),
-  },
-  copy: {
-    icon: 'duplicate-outline',
-    text: (t) => t(
-      'Like this list? Open ⋯ and choose Save a copy to get your own version to change as you like.',
-      'Thích danh sách này? Mở ⋯ rồi chọn Lưu bản sao để có một bản của riêng bạn và chỉnh theo ý mình.',
-      'このリストが気に入ったら、⋯ の「コピーを保存」で自分用に編集できるコピーを作れます。',
-    ),
-  },
+/**
+ * The one glyph every tip wears.
+ *
+ * One, not one per tip. The glyph's job is to say what kind of box this
+ * is, and the word "Tip" beside it already says so. The first build gave
+ * each tip the glyph of the control it pointed to, and they read as
+ * controls: a bookmark in the add tip sitting just above the real
+ * bookmark on a card, and a pencil that looked like the edit button
+ * itself. Nothing happens when either is tapped.
+ *
+ * Not the light bulb, the usual mark for a tip: that is the Ideas tab's
+ * glyph in the bar at the bottom of the screen, and a bulb up here would
+ * read as a way there. Not sparkles, which stand for suggestions in
+ * Explore and Trips. The circled "i" says "a note for you" and, on this
+ * screen, means nothing else.
+ */
+const TIP_ICON = 'information-circle-outline' as const;
+
+/** What each tip says.
+ *
+ *  The menu is named by where it is and what it looks like, "the three-dot
+ *  button (⋯) at the top right", not by the glyph alone. A bare "⋯" in a
+ *  sentence read as an ellipsis, a gap in the text rather than a button to
+ *  go and find. The glyph stays in brackets so the eye can match it. */
+const TIPS: Record<TipId, (t: T) => string> = {
+  reorder: (t) => t(
+    'Hold a place, then drag it to change the order. Changes save on their own.',
+    'Giữ một địa điểm rồi kéo để đổi thứ tự. Thay đổi được lưu tự động.',
+    'スポットを長押ししてドラッグすると並び順を変えられます。変更は自動で保存されます。',
+  ),
+  publish: (t) => t(
+    'This list is private. Tap the three-dot button (⋯) at the top right and choose Make public so anyone can see it.',
+    'Bộ sưu tập này đang riêng tư. Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Công khai để ai cũng xem được.',
+    'このコレクションは非公開です。右上の「⋯」ボタンから「公開する」を選ぶと、誰でも見られます。',
+  ),
+  edit: (t) => t(
+    'To rename it or change the description, tap the three-dot button (⋯) at the top right and choose Edit collection.',
+    'Muốn đổi tên hay mô tả? Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Sửa bộ sưu tập.',
+    '名前や説明を変えるには、右上の「⋯」ボタンから「コレクションを編集」を選びます。',
+  ),
+  add: (t) => t(
+    'Tap the bookmark on any place card to save it here, or tap the three-dot button (⋯) at the top right and choose Add place.',
+    'Bấm dấu trang trên thẻ địa điểm ở bất kỳ đâu để lưu vào đây, hoặc bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Thêm địa điểm.',
+    'スポットカードのしおりをタップするとここに保存できます。右上の「⋯」ボタンの「スポットを追加」からも追加できます。',
+  ),
+  copy: (t) => t(
+    'Like this list? Tap the three-dot button (⋯) at the top right and choose Save a copy to get your own version to change as you like.',
+    'Thích danh sách này? Bấm nút ba chấm (⋯) ở góc trên bên phải rồi chọn Lưu bản sao để có một bản của riêng bạn và chỉnh theo ý mình.',
+    'このリストが気に入ったら、右上の「⋯」ボタンの「コピーを保存」で自分用に編集できるコピーを作れます。',
+  ),
 };
 
 export default function TipBox({ eligible, done }: {
@@ -133,13 +140,12 @@ export default function TipBox({ eligible, done }: {
   }, [doneKey, log]);
 
   if (!shown || closed || !eligible.includes(shown)) return null;
-  const tip = TIPS[shown];
   return (
     <View style={s.tip} accessibilityRole="summary" testID={`tip-${shown}`}>
-      <Ionicons name={tip.icon} size={18} color={colors.accent} style={s.icon} />
+      <Ionicons name={TIP_ICON} size={18} color={colors.accent} style={s.icon} />
       <Text style={s.text}>
         <Text style={s.lead}>{t('Tip', 'Mẹo', 'ヒント')}  </Text>
-        {tip.text(t)}
+        {TIPS[shown](t)}
       </Text>
       <PressableScale
         onPress={() => {

@@ -213,9 +213,8 @@ function SettingsCard() {
  * somebody still deciding whether to sign up should be able to read the
  * terms without starting the form.
  *
- * The heading is written at each call site the way every other section on
- * this screen is, and the guest view passes none, because none of its
- * cards carry one.
+ * The heading is written at each call site, the way every other section
+ * on this screen is.
  */
 function AppCard() {
   const { t } = useI18n();
@@ -347,6 +346,14 @@ function GuestHub({ navigation }: { navigation: Nav }) {
         <Ionicons name="chevron-forward" size={15} color={colors.textSecondary} />
       </Pressable>
 
+      {/* Headed like the member view's sections, and the same headings
+          where the card is the same card. This view used to carry no
+          headings at all, on the argument that one heading among bare
+          cards would be the odd one out. That held for one screen read
+          alone. Read beside the member view, which is how anyone who signs
+          in meets it, the same Preferences card with a heading on one side
+          and none on the other was the odd one out. */}
+      <Text style={s.section}>{t('With an account', 'Khi có tài khoản', 'アカウントでできること')}</Text>
       <Card style={s.featureCard}>
         <FeatureRow
           icon="bookmark-outline"
@@ -365,33 +372,26 @@ function GuestHub({ navigation }: { navigation: Nav }) {
           title={t('Trips', 'Chuyến đi', '旅程')}
           sub={t('Plan trips and invite your friends.', 'Lên kế hoạch và mời bạn bè cùng đi.', '旅を計画して友達を招待。')}
           onPress={goSignIn}
+        />
+        {/* A fourth row here rather than a card of its own at the foot of
+            the screen, where it sat after the documents: it is one more
+            thing an account opens, and a locked row like the three above
+            it. The tap leads to signing in, which is where friends begin. */}
+        <FeatureRow
+          icon="people-outline"
+          title={t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}
+          sub={t('Find friends and share unforgettable trips.', 'Tìm kiếm bạn bè và chia sẻ những chuyến đi đáng nhớ.', '友達を探して、忘れられない旅を共有。')}
+          onPress={goSignIn}
           last
         />
       </Card>
 
+      <Text style={s.section}>{t('Preferences', 'Tuỳ chọn', '設定')}</Text>
       <SettingsCard />
-      {/* No heading, like every card on the guest view. The documents
-          matter most to exactly this reader — the one who has not signed
-          up yet. */}
+      {/* The documents matter most to exactly this reader, the one who
+          has not signed up yet. */}
+      <Text style={s.section}>{t('App', 'Ứng dụng', 'アプリ')}</Text>
       <AppCard />
-
-      {/* Real now, so it behaves like every other locked row here:
-          the tap leads to signing in, which is where friends begin.
-          The Card stays inside the pressable — `friendsCard` is only
-          the row's inner layout, and without the Card around it the
-          block lost its surface and sat bare on the page. */}
-      <PressableScale onPress={goSignIn} accessibilityRole="button">
-        <Card style={s.friendsCard}>
-          <RoundIcon name="people-outline" />
-          <View style={{ flex: 1, gap: 3 }}>
-            <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
-            <Text style={s.featureSub}>
-              {t('Find friends and share unforgettable trips.', 'Tìm kiếm bạn bè và chia sẻ những chuyến đi đáng nhớ.', '友達を探して、忘れられない旅を共有。')}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
-        </Card>
-      </PressableScale>
 
       <Tagline />
     </>
@@ -597,10 +597,8 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
       </PressableScale>
 
       {/* Named the way About me and Friends are, so this screen reads
-          as three sections rather than two and a stray card between
-          them. Only here: the guest view's cards carry no headings at
-          all, and one heading among them would be the odd thing out in
-          the other direction. */}
+          as sections rather than a stray card between them. The guest
+          view uses the same heading over the same card. */}
       <Text style={s.section}>{t('Preferences', 'Tuỳ chọn', '設定')}</Text>
       <SettingsCard />
 
