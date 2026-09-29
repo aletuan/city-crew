@@ -220,3 +220,20 @@ describe('when storage misbehaves', () => {
     expect(showing()).toBeNull();
   });
 });
+
+// One glyph for every tip: the box says "this is a tip", and a glyph per
+// tip read as the control it pointed at (a bookmark above the bookmarks,
+// a pencil like the edit button).
+describe('the glyph', () => {
+  it('is the same on every tip', async () => {
+    const glyphs = new Set<string>();
+    for (const id of ['reorder', 'publish', 'edit', 'add', 'copy'] as const) {
+      const view = render(<TipBox eligible={[id]} done={[]} />);
+      await settle();
+      const box = document.querySelector(`[data-testid="tip-${id}"]`)!;
+      glyphs.add(box.firstElementChild!.outerHTML);
+      view.unmount();
+    }
+    expect(glyphs.size).toBe(1);
+  });
+});
