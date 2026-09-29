@@ -9,8 +9,8 @@
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '../uitest/render';
-import { LEGACY_REORDER_KEY, TIPS_KEY, type TipId } from '../lib/tips';
+import { act, cleanup as cleanupAll, fireEvent, render, screen } from '../uitest/render';
+import { LEGACY_REORDER_KEY, TIPS_KEY, tipsKey, type TipId } from '../lib/tips';
 
 const state = vi.hoisted(() => ({ lang: 'vi' as 'en' | 'vi' | 'ja' }));
 vi.mock('../lib/i18n', () => ({
@@ -40,7 +40,7 @@ const stored = async () => JSON.parse((await AsyncStorage.getItem(TIPS_KEY))!);
 
 beforeEach(async () => {
   state.lang = 'vi';
-  await AsyncStorage.removeItem(TIPS_KEY);
+  for (const k of [TIPS_KEY, tipsKey('a'), tipsKey('b')]) await AsyncStorage.removeItem(k);
   await AsyncStorage.removeItem(LEGACY_REORDER_KEY);
   vi.mocked(AsyncStorage.getItem).mockClear();
   vi.mocked(AsyncStorage.setItem).mockClear();
@@ -235,5 +235,36 @@ describe('the glyph', () => {
       view.unmount();
     }
     expect(glyphs.size).toBe(1);
+  });
+});
+
+// A tip retires because a person has learned it: each account keeps its
+// own record, and a guest the device's.
+describe('whose record', () => {
+  const visitAs = async (reader: string | null) => {
+    const view = render(<TipBox reader={reader} eligible={['edit']} done={[]} />);
+    await settle();
+    const tip = showing();
+    return { view, tip };
+  };
+
+  it('keeps one account\'s closed tip from another account', async () => {
+    const a = await visitAs('a');
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn mẹo' }));
+    a.view.unmount();
+    expect((await visitAs('a')).tip).toBeNull();
+    cleanupAll();
+    expect((await visitAs('b')).tip).toBe('edit');
+    cleanupAll();
+    expect((await visitAs(null)).tip).toBe('edit');
+  });
+
+  it('writes an account\'s record under its own key, and a guest\'s under the device\'s', async () => {
+    const a = await visitAs('a');
+    a.view.unmount();
+    expect(JSON.parse((await AsyncStorage.getItem(tipsKey('a')))!).last).toEqual({ edit: 0 });
+    expect(await AsyncStorage.getItem(TIPS_KEY)).toBeNull();
+    (await visitAs(null)).view.unmount();
+    expect(JSON.parse((await AsyncStorage.getItem(TIPS_KEY))!).last).toEqual({ edit: 0 });
   });
 });
