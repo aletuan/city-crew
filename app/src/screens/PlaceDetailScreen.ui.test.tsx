@@ -18,6 +18,7 @@
 
 import React from 'react';
 import { Alert, Linking, Share } from 'react-native';
+import { isShielded } from '../lib/share';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '../uitest/render';
 import { pinImage } from '../components/mapPins';
@@ -589,6 +590,17 @@ describe('PlaceDetailScreen — floating controls', () => {
       message: 'Cộng Cà Phê - Old Quarter — 152 Trieu Viet Vuong, Hai Ba Trung, Hanoi, Vietnam\n'
         + `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Cộng Cà Phê - Old Quarter')}&query_place_id=gp1`,
     });
+  });
+
+  // Through `lib/share`, whose shield takes the tap that closes the
+  // system sheet above its top edge, where this screen's buttons are.
+  it('shares behind the shield', () => {
+    let close!: () => void;
+    shareSpy.mockImplementationOnce(() => new Promise((res) => { close = () => res({ action: 'dismissedAction' }); }));
+    show();
+    fireEvent.click(screen.getByLabelText('Share'));
+    expect(isShielded()).toBe(true);
+    close();
   });
 
   it('announces Share as a button', () => {

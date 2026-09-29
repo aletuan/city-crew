@@ -10,6 +10,7 @@ import { Platform, Share } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '../uitest/render';
 import type { AppInfo } from '../lib/appinfo';
+import { isShielded } from '../lib/share';
 
 const state = vi.hoisted(() => ({ lang: 'vi' as 'en' | 'vi' | 'ja' }));
 vi.mock('../lib/i18n', () => ({
@@ -159,20 +160,17 @@ describe('sharing', () => {
     expect(share).toHaveBeenCalledTimes(1);
   });
 
-  // Declined or failed, the share is the reader's business. Nothing
-  // escapes as an unhandled rejection.
-  it('swallows a share that does not go through', () => {
-    // Asked of the promise itself: whether the sheet handles the refusal,
-    // not whether one happened to surface before the test ended — the
-    // unhandled version passed a test that only waited to see.
+  // Through `lib/share`, whose shield takes the tap that closes the
+  // system sheet above its top edge, where Profile's rows are.
+  it('shares behind the shield', () => {
     vi.useFakeTimers();
-    const caught = vi.fn();
-    share.mockReturnValueOnce({ catch: caught } as never);
+    let close!: () => void;
+    share.mockImplementationOnce(() => new Promise((res) => { close = () => res({ action: 'dismissedAction' }); }));
     open();
     tapShare();
     vi.advanceTimersByTime(250);
-    expect(caught).toHaveBeenCalledTimes(1);
-    expect(() => caught.mock.calls[0][0](new Error('dismissed'))).not.toThrow();
+    expect(isShielded()).toBe(true);
+    close();
   });
 });
 

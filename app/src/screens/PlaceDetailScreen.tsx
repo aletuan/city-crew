@@ -13,7 +13,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, StyleSheet,
+  ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet,
   Text, useWindowDimensions, View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -38,6 +38,7 @@ import { useI18n } from '../lib/i18n';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsSearchUrl } from '../lib/maps';
 import { useSave } from '../lib/save';
+import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, display, font, onPhoto, radius, space, type } from '../theme';
 import { AmbientWarmth, Card, Empty, PressableScale, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
@@ -296,10 +297,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
   // The dash only joins two things: a place with no address shares its
   // name alone, not a name trailing off into punctuation.
+  //
+  // Through `lib/share`: the tap that closes the system sheet above its
+  // top edge would otherwise land on this screen's buttons underneath.
   const share = () => {
-    Share.share({
+    void shareSafely({
       message: `${fullName}${place.address ? ` — ${place.address}` : ''}${mapsUrl ? `\n${mapsUrl}` : ''}`,
-    }).catch(() => {});
+    });
   };
   // A row that goes somewhere can fail to get there — a phone that cannot
   // dial, a URL no app claims — and `openURL` says so only by rejecting.
