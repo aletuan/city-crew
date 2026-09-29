@@ -30,6 +30,7 @@ import { fireHaptic } from './src/components/ui';
 import FloatingTabBar from './src/components/FloatingTabBar';
 import { AppBoundary, ScreenBoundary } from './src/components/ScreenBoundary';
 import WelcomeSheet from './src/components/WelcomeSheet';
+import ShareShield from './src/components/ShareShield';
 import { TabBarDuckProvider } from './src/components/tabBarDuck';
 import { navRef, type RootStackParamList } from './src/nav';
 import ExploreScreen from './src/screens/ExploreScreen';
@@ -346,6 +347,10 @@ function Root() {
           </I18nProvider>
         </AuthProvider>
         </AppBoundary>
+        {/* Last, so it paints over everything, the welcome included:
+            while the system share sheet is up it takes the tap that
+            closes it. See `lib/share`. */}
+        <ShareShield />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
