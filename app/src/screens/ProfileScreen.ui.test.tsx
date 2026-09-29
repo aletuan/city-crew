@@ -554,20 +554,38 @@ describe('about row', () => {
   });
 });
 
-// The fourth row: every collection tip back, for whoever is reading. See
-// `lib/tips` for why they retire and `TipBox.resetTips` for what this does.
+// The last row of Preferences: every collection tip back, for whoever is
+// reading. See `lib/tips` for why they retire and `TipBox.resetTips` for
+// what this does.
 describe('show tips again', () => {
   const storage = async () => (await import('@react-native-async-storage/async-storage')).default;
   const retiredAll = JSON.stringify({ seq: 9, last: {}, shown: {}, retired: ['reorder', 'publish', 'edit', 'add'] });
 
-  it.each([['signed in', true], ['a guest', false]])('sits last in the app card, after About, %s', (_who, signedIn) => {
+  // With how the app speaks and looks, not under App, where it read as
+  // something about the build.
+  it.each([['signed in', true], ['a guest', false]])('sits last in Preferences, after Appearance, %s', (_who, signedIn) => {
     if (!signedIn) state.session = null;
     draw();
-    const about = button('About City Crew');
+    const appearance = button('Appearance');
     const again = button('Show tips again');
-    expect(again.parentElement).toBe(about.parentElement);
-    expect(about.compareDocumentPosition(again) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(again.parentElement).toBe(appearance.parentElement);
+    expect(appearance.compareDocumentPosition(again) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(again.nextElementSibling).toBeNull();
+    expect(again.parentElement).not.toBe(button('About City Crew').parentElement);
+    // Appearance is no longer the last row, so it keeps its divider, and
+    // the new last row draws none. Read off react-native-web's atomic
+    // class for the property: jsdom does not resolve those rules.
+    const divided = (row: HTMLElement) => row.outerHTML.includes('r-borderBottomWidth');
+    expect(divided(appearance)).toBe(true);
+    expect(divided(again)).toBe(false);
+  });
+
+  // "tip", the word the owner reads them by, not "mẹo".
+  it('is called "Hiện lại các tip" in Vietnamese', () => {
+    state.lang = 'vi';
+    draw();
+    expect(screen.getByText('Hiện lại các tip')).toBeTruthy();
+    expect(screen.queryByText('Hiện lại các mẹo')).toBeNull();
   });
 
   it('brings back the signed-in reader\'s tips, and says so on the row', async () => {
