@@ -87,7 +87,7 @@ export function useCandidates(): Candidates {
     // Asking Google is a signed-in act — `fetch-place` refuses anybody
     // else — so a guest gets the sheet every other signed-in button in the
     // app opens, not a round trip that can only end in a refusal.
-    if (!meId) { askToSignIn(); return; }
+    if (!meId) { askToSignIn('search'); return; }
     // Both callers reach this from a keyboard that is still up — one from
     // the return key, one from a row tapped under the results — and in
     // both the typing is over.
@@ -111,7 +111,7 @@ export function useCandidates(): Candidates {
       })
       .catch((e: Error) => {
         // A session that lapsed between render and tap: same answer.
-        if (e instanceof SignedOutError) { askToSignIn(); return; }
+        if (e instanceof SignedOutError) { askToSignIn('search'); return; }
         // In the reader's words. The raw message was supabase-js's
         // "Edge Function returned a non-2xx status code", which names the
         // plumbing and says nothing about what to do.

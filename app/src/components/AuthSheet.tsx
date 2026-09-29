@@ -4,6 +4,14 @@
 // found by scrolling to the end of a feed that has no end. As a sheet it
 // arrives when someone reaches for the profile control — asked for, rather
 // than parked in the way.
+//
+// It is only ever raised by a reach for something, so its title names
+// that thing, and nothing else is said. It used to carry one title for
+// every reason ("Save places you love") and a line below it on what an
+// account is for; a reader who had tapped a heart met a sentence about
+// saving places, and five ways in read as one sheet. The line went with
+// the shared title. What they reached for already says why, and a
+// sentence under it was one more thing to read before the button.
 
 import React, { useEffect, useRef } from 'react';
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -15,14 +23,33 @@ import type { SignInWhy } from '../lib/save';
 import { colors, display, font, gradAI, space } from '../theme';
 import { PressableScale } from './ui';
 
+type T = (en: string, vi: string, ja: string) => string;
+
+/**
+ * What each reason says, and the glyph it wears.
+ *
+ * The glyph is the one on the control that opened the sheet, so the two
+ * read as one object. The saved filter wears `bookmarks`, not the single
+ * bookmark it shows on the map: the sheet is about the whole set of saved
+ * places, and one bookmark would read as saving one more.
+ */
+const REASONS: Record<SignInWhy, { icon: 'bookmark' | 'heart' | 'copy' | 'bookmarks' | 'search'; title: (t: T) => string }> = {
+  save: { icon: 'bookmark', title: (t) => t('Save this place', 'Lưu địa điểm này', 'このスポットを保存') },
+  like: { icon: 'heart', title: (t) => t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね') },
+  copy: { icon: 'copy', title: (t) => t('Save a copy to your account', 'Lưu bản sao về tài khoản', 'コピーを自分のアカウントに保存') },
+  saved: { icon: 'bookmarks', title: (t) => t('See the places you saved', 'Xem địa điểm đã lưu', '保存したスポットを見る') },
+  search: { icon: 'search', title: (t) => t('Find new places on Google Maps', 'Tìm địa điểm mới trên Google Maps', 'Google マップで新しいスポットを探す') },
+};
+
 export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: {
   visible: boolean;
-  /** Which glyph opened it — see `SignInWhy`. */
+  /** What was reached for — see `SignInWhy`. */
   why?: SignInWhy;
   onClose: () => void;
   onSignIn: () => void;
 }) {
   const { t } = useI18n();
+  const reason = REASONS[why];
   const insets = useSafeAreaInsets();
   // Modal's own fade carries the backdrop; the panel gets a spring of its
   // own so it rises like a sheet instead of appearing all at once.
@@ -45,18 +72,9 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
       >
         <View style={s.grabber} />
         <View style={s.badge}>
-          <Ionicons name={why === 'like' ? 'heart' : 'bookmark'} size={28} color={colors.accent} />
+          <Ionicons name={reason.icon} size={28} color={colors.accent} />
         </View>
-        <Text style={s.title}>
-          {t('Save places you love', 'Lưu những nơi bạn thích', 'お気に入りを保存')}
-        </Text>
-        <Text style={s.body}>
-          {t(
-            'Sign in to keep your places, build your own collections, and share your journeys with friends.',
-            'Đăng nhập để lưu giữ địa điểm, tạo bộ sưu tập cá nhân và cùng chia sẻ hành trình kết nối.',
-            'サインインして、場所を保存し、自分だけのコレクションを作り、旅を仲間と共有しよう。',
-          )}
-        </Text>
+        <Text style={s.title}>{reason.title(t)}</Text>
         {/* The width has to go on the Pressable itself (containerStyle), not
             on the animated child: the sheet centres its children, so an
             un-stretched Pressable shrink-wraps the label and "100%" inside
@@ -67,7 +85,9 @@ export default function AuthSheet({ visible, why = 'save', onClose, onSignIn }: 
           containerStyle={{ alignSelf: 'stretch' }}
         >
           <LinearGradient {...gradAI} style={s.primary}>
-            <Text style={s.primaryText}>{t('Sign in', 'Đăng nhập', 'サインイン')}</Text>
+            {/* Both words: a reader without an account reads "Sign in" as
+                a door for somebody else. */}
+            <Text style={s.primaryText}>{t('Sign in / Sign up', 'Đăng nhập / Đăng ký', 'サインイン / 登録')}</Text>
           </LinearGradient>
         </PressableScale>
         <PressableScale onPress={onClose} accessibilityRole="button" style={s.secondary}>
@@ -98,10 +118,11 @@ const s = StyleSheet.create({
     backgroundColor: colors.accentSoft,
     borderWidth: 1, borderColor: colors.accentLine,
   },
-  title: { color: colors.text, fontSize: 22, fontFamily: display.bold, marginTop: 4 },
-  body: {
-    color: colors.textSecondary, fontSize: 15, lineHeight: 21,
-    textAlign: 'center', paddingHorizontal: 8, marginBottom: 6,
+  // The margin below is the one the explanation line used to hold: the
+  // title now sits straight over the button and needs the same air.
+  title: {
+    color: colors.text, fontSize: 22, fontFamily: display.bold,
+    textAlign: 'center', marginTop: 4, marginBottom: 6,
   },
   // A rounded rectangle, not a pill. The reference draws it this way and
   // it is the right call at full width: a pill's end caps grow with its

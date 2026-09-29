@@ -25,13 +25,18 @@ import { DAILY_CAPS, isDailyLimit } from './quota';
 import { goTo } from '../nav';
 
 /**
- * What the reader reached for when they were asked to sign in: a bookmark
- * (a place, the map's saved-only disc, a list to copy) or a heart (a
- * collection). The sheet wears the same glyph, so the thing that opened it
+ * What the reader reached for when they were asked to sign in. The sheet
+ * names it in its title and wears its glyph, so the thing that opened it
  * and the thing it shows are one object — a bookmark tapped used to raise
  * a heart, which read as the app answering some other question.
+ *
+ * - `save`: a place's bookmark.
+ * - `like`: a collection's heart.
+ * - `copy`: Save a copy, on somebody else's list.
+ * - `saved`: the map's saved-only filter, as a disc or in the filter sheet.
+ * - `search`: asking Google Maps for places the catalog has not got.
  */
-export type SignInWhy = 'save' | 'like';
+export type SignInWhy = 'save' | 'like' | 'copy' | 'saved' | 'search';
 
 type Save = {
   /** Open whatever this person needs next in order to save this place. */
@@ -45,7 +50,7 @@ type Save = {
    * signed-out reader taps a heart and nothing happens, which is the
    * "control that does nothing" this app keeps deciding against.
    *
-   * `why` picks the sheet's glyph; a heart passes `'like'`.
+   * `why` picks the sheet's title and glyph; see `SignInWhy`.
    */
   askToSignIn: (why?: SignInWhy) => void;
   /** Is the place in any of their lists? Drives the bookmark's fill. */

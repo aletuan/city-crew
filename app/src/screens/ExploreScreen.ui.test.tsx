@@ -723,7 +723,7 @@ describe('sort and filter', () => {
     await waitFor(() => expect(spies.askToSignIn).toHaveBeenCalledOnce());
     // Not the frame's timestamp, which is what a bare
     // `requestAnimationFrame(askToSignIn)` would have handed it.
-    expect(spies.askToSignIn).toHaveBeenCalledWith();
+    expect(spies.askToSignIn).toHaveBeenCalledWith('saved');
   });
 
   // Distance is the one control that can fail, and it fails in two
@@ -1092,6 +1092,7 @@ describe('the map’s quick filters', () => {
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /bookmarked only/i })); });
     expect(spies.askToSignIn).toHaveBeenCalledOnce();
+    expect(spies.askToSignIn).toHaveBeenCalledWith('saved');
     expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
   });
 
