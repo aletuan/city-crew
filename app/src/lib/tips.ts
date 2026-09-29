@@ -34,8 +34,23 @@ export type TipLog = {
 
 export const EMPTY_LOG: TipLog = { seq: 0, last: {}, retired: [] };
 
-/** Where the log is kept on the device. */
+/** Where the log is kept on the device, for a reader with no account. */
 export const TIPS_KEY = 'tips.v1';
+
+/**
+ * Where one reader's log is kept: one per account, and the device's own
+ * for a guest.
+ *
+ * A tip retires because a person has learned what it says, and a phone is
+ * not a person. With one log for the device, signing out and into a
+ * second account met a Collections screen with every tip already retired
+ * by the first, reported from a phone the day tips shipped. An account
+ * signing in for the first time on a device starts with a clean log, so
+ * the account that used the old device-wide log sees its tips once more.
+ */
+export function tipsKey(uid: string | null | undefined): string {
+  return uid ? `${TIPS_KEY}:${uid}` : TIPS_KEY;
+}
 
 /**
  * The flag the reorder tip kept before there was more than one tip. Read

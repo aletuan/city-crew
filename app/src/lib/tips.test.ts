@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_LOG, markShown, parseLog, pickTip, retire, type TipId, type TipLog } from './tips';
+import { EMPTY_LOG, markShown, parseLog, pickTip, retire, TIPS_KEY, tipsKey, type TipId, type TipLog } from './tips';
 
 const ALL: TipId[] = ['reorder', 'publish', 'edit', 'add'];
 
@@ -107,5 +107,20 @@ describe('parseLog', () => {
     expect(parseLog(null, '1').retired).toEqual(['reorder']);
     expect(parseLog(JSON.stringify(retire(EMPTY_LOG, 'reorder')), '1').retired).toEqual(['reorder']);
     expect(parseLog(null, null).retired).toEqual([]);
+  });
+});
+
+// One record per account, and the device's own for a guest: a second
+// account on the same phone met every tip the first had retired.
+describe('where a reader\'s record is kept', () => {
+  it('is the device\'s key for a guest', () => {
+    expect(tipsKey(null)).toBe(TIPS_KEY);
+    expect(tipsKey(undefined)).toBe(TIPS_KEY);
+    expect(tipsKey('')).toBe(TIPS_KEY);
+  });
+
+  it('is a key of its own for each account', () => {
+    expect(tipsKey('u1')).toBe(`${TIPS_KEY}:u1`);
+    expect(tipsKey('u1')).not.toBe(tipsKey('u2'));
   });
 });

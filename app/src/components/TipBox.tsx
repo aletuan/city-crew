@@ -23,7 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../lib/i18n';
 import {
-  LEGACY_REORDER_KEY, markShown, parseLog, pickTip, retire, TIPS_KEY, type TipId, type TipLog,
+  LEGACY_REORDER_KEY, markShown, parseLog, pickTip, retire, tipsKey, type TipId, type TipLog,
 } from '../lib/tips';
 import { colors, font, radius, space, type } from '../theme';
 import { PressableScale } from './ui';
@@ -82,13 +82,17 @@ const TIPS: Record<TipId, (t: T) => string> = {
   ),
 };
 
-export default function TipBox({ eligible, done }: {
+export default function TipBox({ eligible, done, reader }: {
   /** The tips true of what is on screen, in the order to offer them. */
   eligible: readonly TipId[];
   /** Moves made on this visit: their tips retire. */
   done: readonly TipId[];
+  /** Whose record this is: an account id, or nothing for a guest. See
+   *  `tipsKey`. The screen remounts the box when it changes. */
+  reader?: string | null;
 }) {
   const { t } = useI18n();
+  const key = tipsKey(reader);
   // Undefined while storage is out; null when it could not be read.
   const [log, setLog] = useState<TipLog | null | undefined>(undefined);
   // Undefined until a tip is chosen for this visit; null for "none due".
@@ -100,7 +104,7 @@ export default function TipBox({ eligible, done }: {
 
   useEffect(() => {
     let live = true;
-    Promise.all([AsyncStorage.getItem(TIPS_KEY), AsyncStorage.getItem(LEGACY_REORDER_KEY)])
+    Promise.all([AsyncStorage.getItem(key), AsyncStorage.getItem(LEGACY_REORDER_KEY)])
       .then(([raw, legacy]) => {
         if (!live) return;
         record.current = parseLog(raw, legacy);
@@ -108,12 +112,12 @@ export default function TipBox({ eligible, done }: {
       })
       .catch(() => { if (live) setLog(null); });
     return () => { live = false; };
-  }, []);
+  }, [key]);
 
   const write = (next: TipLog) => {
     record.current = next;
     setLog(next);
-    AsyncStorage.setItem(TIPS_KEY, JSON.stringify(next)).catch(() => {});
+    AsyncStorage.setItem(key, JSON.stringify(next)).catch(() => {});
   };
 
   // Chosen once, as soon as there is a record and something applies. The

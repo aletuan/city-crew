@@ -869,20 +869,22 @@ describe('reordering', () => {
 // screen, and which of the reader's moves retire which tip.
 describe('tips', () => {
   const settle = () => act(async () => {});
+  /** The record's key for whoever is signed in: one log per account. */
+  const key = () => (state.uid ? `tips.v1:${state.uid}` : 'tips.v1');
   const storage = async () =>
     (await import('@react-native-async-storage/async-storage')).default;
   /** Start from a record where these tips have already been retired, so
    *  the one on screen is the first of the rest that applies. */
   const retired = async (...ids: string[]) => {
-    await (await storage()).setItem('tips.v1', JSON.stringify({ seq: 0, last: {}, retired: ids }));
+    await (await storage()).setItem(key(), JSON.stringify({ seq: 0, last: {}, retired: ids }));
   };
   const retiredNow = async () =>
-    JSON.parse((await (await storage()).getItem('tips.v1'))!).retired as string[];
+    JSON.parse((await (await storage()).getItem(key()))!).retired as string[];
   const showing = () =>
     document.querySelector('[data-testid^="tip-"]')?.getAttribute('data-testid')?.slice(4) ?? null;
   beforeEach(async () => {
     const s = await storage();
-    await s.removeItem('tips.v1');
+    for (const k of ['tips.v1', 'tips.v1:me', 'tips.v1:someone-else']) await s.removeItem(k);
     await s.removeItem('tip.holdToReorder.v1');
   });
 
@@ -1013,6 +1015,37 @@ describe('tips', () => {
     fireEvent.click(menuRow('Save a copy'));
     await settle();
     expect(await retiredNow()).toEqual(['copy']);
+  });
+  // A tip retires because a person has learned it, and a phone is not a
+  // person: a second account on the same phone starts from its own record.
+  it('keeps each account\'s record apart', async () => {
+    await retired('reorder', 'publish', 'edit', 'add');
+    show();
+    await settle();
+    expect(showing()).toBeNull();
+    cleanup();
+    state.uid = 'someone-else';
+    show();
+    await settle();
+    expect(showing()).not.toBeNull();
+    expect(JSON.parse((await (await storage()).getItem('tips.v1:me'))!).retired).toHaveLength(4);
+  });
+
+  // Signing into another account without leaving the screen: the box
+  // starts over from that account's record, not the tip it had chosen.
+  it('starts over when another account signs in on the screen', async () => {
+    await retired('reorder', 'publish', 'edit', 'add');
+    const view = render(
+      <CollectionDetailScreen navigation={nav().n} route={{ params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>} />,
+    );
+    await settle();
+    expect(showing()).toBeNull();
+    state.uid = 'someone-else';
+    view.rerender(
+      <CollectionDetailScreen navigation={nav().n} route={{ params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>} />,
+    );
+    await settle();
+    expect(showing()).not.toBeNull();
   });
 });
 

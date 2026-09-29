@@ -974,7 +974,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       <AmbientWarmth />
       {/* Under the title, before anything else: one tip a visit, about
           what can be done with this list. */}
-      <TipBox eligible={tipsHere} done={moved ? [...done, 'reorder'] : done} />
+      {/* Keyed by the reader, so another account signing in starts from
+          its own record rather than the last one's chosen tip. */}
+      <TipBox key={uid ?? 'guest'} reader={uid} eligible={tipsHere} done={moved ? [...done, 'reorder'] : done} />
       {/* What just happened, and the way back out of it. Above the
           description rather than floating over the list: it is about the
           collection as a whole, and a toast that covers the first place
