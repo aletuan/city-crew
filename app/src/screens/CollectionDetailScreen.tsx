@@ -7,7 +7,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
-import ReorderTip from '../components/ReorderTip';
+import TipBox from '../components/TipBox';
 import { AddSlot } from '../components/add';
 import {
   AmbientWarmth, Avatar, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
@@ -28,6 +28,7 @@ import { useReport } from '../components/reportFlow';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { useI18n } from '../lib/i18n';
+import type { TipId } from '../lib/tips';
 import { colors, font, radius, space, type } from '../theme';
 import type { Place } from '../lib/types';
 import { type Nav, type RootRoute } from '../nav';
@@ -417,16 +418,24 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // have to dismiss twice.
   const act = (run: () => void) => { setMenu(false); run(); };
 
+  // The moves a tip explains that have been made on this visit. Their
+  // tips retire (see `TipBox`): once you have done it, you know how.
+  const [done, setDone] = useState<TipId[]>([]);
+  const did = (id: TipId) => setDone((d) => (d.includes(id) ? d : [...d, id]));
+
   // Explore is where places are, and saving one from there already offers
   // this list by name. A picker that wrote straight back into this
   // collection would be better, and is a screen rather than a button.
-  const addPlace = () => navigation.getParent()?.navigate('Explore');
+  const addPlace = () => {
+    did('add');
+    navigation.getParent()?.navigate('Explore');
+  };
 
-  const edit = () => col && navigation.navigate('CollectionForm', {
-    slug: col.slug,
-    title,
-    desc,
-  });
+  const edit = () => {
+    if (!col) return;
+    did('edit');
+    navigation.navigate('CollectionForm', { slug: col.slug, title, desc });
+  };
 
   /**
    * Publish, or take it back.
@@ -457,6 +466,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         mine.reload();
         cols.reload();
         setBanner(next ? 'public' : 'private');
+        if (next) did('publish');
       })
       .catch((e: Error) => Alert.alert(
         next
@@ -573,7 +583,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
   // place has none, and a card that lifts to go nowhere is a gesture
   // that seems broken.
   const canArrange = owned && drafted.length > 1;
-  // Something has moved on this visit, so the tip has been acted on.
+  // A card has moved on this visit: the reorder tip has been acted on.
   const moved = saveState !== 'idle';
 
   // ── the card in the finger ──
@@ -719,6 +729,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
         `${atHandle(col.curator_handle)} からコピー`,
       )
       : '';
+    did('copy');
     navigation.navigate('CollectionForm', {
       copyFrom: {
         cityId,
@@ -731,6 +742,20 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       },
     });
   };
+
+  // The tips true of this list as it stands, in the order a first visit
+  // meets them. Held back until everything has loaded: a list whose owner
+  // is not known yet would be offered the visitor's tip.
+  const tipsHere: TipId[] = !col || loading ? [] : owned
+    ? [
+      ...(canArrange ? ['reorder' as const] : []),
+      // Not while places are still under review: the tip would point at a
+      // switch that says no.
+      ...(!isPublic && !blocked ? ['publish' as const] : []),
+      'edit',
+      'add',
+    ]
+    : copyCityId ? ['copy'] : [];
 
   const remove = () => Alert.alert(
     t('Delete this collection?', 'Xoá bộ sưu tập này?', 'このコレクションを削除しますか？'),
@@ -947,9 +972,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       right={headerRight}
     >
       <AmbientWarmth />
-      {/* Under the title, before anything else: the first thing an owner
-          reads about their own list is that it can be put in order. */}
-      <ReorderTip show={canArrange} used={moved} />
+      {/* Under the title, before anything else: one tip a visit, about
+          what can be done with this list. */}
+      <TipBox eligible={tipsHere} done={moved ? [...done, 'reorder'] : done} />
       {/* What just happened, and the way back out of it. Above the
           description rather than floating over the list: it is about the
           collection as a whole, and a toast that covers the first place

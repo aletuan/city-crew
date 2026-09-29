@@ -29,7 +29,7 @@
 import React from 'react';
 import { Alert, PanResponder, type PanResponderCallbacks } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav, RootRoute } from '../nav';
 import type { Collection, Place } from '../lib/types';
 
@@ -863,53 +863,156 @@ describe('reordering', () => {
   });
 });
 
-// The tip under the title: shown to the owner of a list that can be put
-// in order, and to nobody else. Its dismissal and memory are its own
-// suite's business (ReorderTip.ui.test.tsx); what is pinned here is who
-// sees it.
-describe('the reorder tip', () => {
-  const TIP = /Hold a place, then drag it to change the order/;
+// The tip under the title. Which tip is due, and how a tip retires, are
+// `lib/tips`'s and `TipBox`'s business, with suites of their own. What is
+// pinned here is the screen's half: which tips are true of the list on
+// screen, and which of the reader's moves retire which tip.
+describe('tips', () => {
   const settle = () => act(async () => {});
+  const storage = async () =>
+    (await import('@react-native-async-storage/async-storage')).default;
+  /** Start from a record where these tips have already been retired, so
+   *  the one on screen is the first of the rest that applies. */
+  const retired = async (...ids: string[]) => {
+    await (await storage()).setItem('tips.v1', JSON.stringify({ seq: 0, last: {}, retired: ids }));
+  };
+  const retiredNow = async () =>
+    JSON.parse((await (await storage()).getItem('tips.v1'))!).retired as string[];
+  const showing = () =>
+    document.querySelector('[data-testid^="tip-"]')?.getAttribute('data-testid')?.slice(4) ?? null;
   beforeEach(async () => {
-    const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
-    await AsyncStorage.removeItem('tip.holdToReorder.v1');
+    const s = await storage();
+    await s.removeItem('tips.v1');
+    await s.removeItem('tip.holdToReorder.v1');
   });
 
-  it('tells the owner of a list of two or more', async () => {
+  it('opens an owner\'s list of two or more on how to reorder it', async () => {
     show();
     await settle();
-    expect(screen.getByText(TIP)).toBeTruthy();
+    expect(showing()).toBe('reorder');
+    expect(screen.getByText(/Hold a place, then drag it to change the order/)).toBeTruthy();
   });
 
-  // The screen's half of retiring it: a first move tells the tip it has
-  // done its job, so it does not come back on the next visit.
-  it('is retired by the owner\'s first move', async () => {
-    const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+  // Then publish, edit and add, in that order, each while it is true.
+  it('offers an owner\'s private list publishing, then editing, then adding', async () => {
+    await retired('reorder');
     show();
     await settle();
-    expect(await AsyncStorage.getItem('tip.holdToReorder.v1')).toBeNull();
+    expect(showing()).toBe('publish');
+    await retired('reorder', 'publish');
+    cleanup();
+    show();
+    await settle();
+    expect(showing()).toBe('edit');
+    await retired('reorder', 'publish', 'edit');
+    cleanup();
+    show();
+    await settle();
+    expect(showing()).toBe('add');
+  });
+
+  it('says nothing about publishing a list that is already public', async () => {
+    state.mine = [collection({ is_public: true })];
+    await retired('reorder');
+    show();
+    await settle();
+    expect(showing()).toBe('edit');
+  });
+
+  // The switch would say no while places are under review.
+  it('says nothing about publishing while places are under review', async () => {
+    state.places = [PHO, CAFE, place('museum', 'Fine Arts Museum', { is_published: false, review_status: 'pending' } as Partial<Place>)];
+    await retired('reorder');
+    show();
+    await settle();
+    expect(showing()).toBe('edit');
+  });
+
+  it('says nothing about reordering a list of one', async () => {
+    state.mine = [collection({}, [PHO])];
+    show();
+    await settle();
+    expect(showing()).toBe('publish');
+  });
+
+  it('offers a visitor a copy, and nothing an owner would be told', async () => {
+    state.mine = [];
+    state.cols = [theirs()];
+    show();
+    await settle();
+    expect(showing()).toBe('copy');
+  });
+
+  it('offers a visitor nothing when there is no city to file a copy under', async () => {
+    state.mine = [];
+    state.cols = [theirs({ city_id: null } as Partial<Collection>)];
+    state.city = null;
+    show();
+    await settle();
+    expect(showing()).toBeNull();
+  });
+
+  // Until the owner is known, a list could be offered the visitor's tip.
+  it('chooses nothing while the lists are still loading', async () => {
+    state.mineLoading = true;
+    show();
+    await settle();
+    expect(showing()).toBeNull();
+  });
+
+  // Once you have done it, you know how: each move retires its tip.
+  it('retires the reorder tip on the first move', async () => {
+    show();
+    await settle();
     act(() => {
       cardProps.get('pho')!.onAccessibilityAction!({ nativeEvent: { actionName: 'moveDown' } });
     });
     await settle();
-    expect(await AsyncStorage.getItem('tip.holdToReorder.v1')).toBe('1');
-    // Still on screen for this visit.
-    expect(screen.getByText(TIP)).toBeTruthy();
+    expect(await retiredNow()).toContain('reorder');
+    expect(showing()).toBe('reorder');
   });
 
-  it('says nothing on a list of one', async () => {
-    state.mine = [collection({}, [PHO])];
+  it('retires the edit tip once the list is edited, and the add tip once a place is added', async () => {
     show();
     await settle();
-    expect(screen.queryByText(TIP)).toBeNull();
+    openMenu();
+    fireEvent.click(menuRow('Edit collection'));
+    await settle();
+    expect(await retiredNow()).toEqual(['edit']);
+    // The slot at the end of the list (the menu, faded out but still
+    // mounted in jsdom, holds the other copy).
+    fireEvent.click(screen.getAllByText('Add place')[0]);
+    await settle();
+    expect(await retiredNow()).toEqual(['edit', 'add']);
   });
 
-  it('says nothing to a visitor', async () => {
+  it('retires the publish tip once the list is made public, not private', async () => {
+    state.mine = [collection({ is_public: true })];
+    show();
+    await settle();
+    openMenu();
+    fireEvent.click(menuRow('Make private'));
+    await settle();
+    expect(await retiredNow()).not.toContain('publish');
+    cleanup();
+    state.mine = [collection()];
+    show();
+    await settle();
+    openMenu();
+    fireEvent.click(menuRow('Make public'));
+    await settle();
+    expect(await retiredNow()).toContain('publish');
+  });
+
+  it('retires the copy tip once a copy is started', async () => {
     state.mine = [];
-    state.cols = [collection({ owner_id: 'curator', is_public: true })];
+    state.cols = [theirs()];
     show();
     await settle();
-    expect(screen.queryByText(TIP)).toBeNull();
+    openMenu();
+    fireEvent.click(menuRow('Save a copy'));
+    await settle();
+    expect(await retiredNow()).toEqual(['copy']);
   });
 });
 

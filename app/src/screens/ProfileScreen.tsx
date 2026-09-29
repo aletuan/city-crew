@@ -143,7 +143,7 @@ function SettingRow({ icon, label, value, onPress, last }: {
  *  drawn without values to say they were not settings. They are their
  *  own card now: a reader looking for the terms was looking under a
  *  heading that said the app's behaviour was in there, and a drawing
- *  convention is a weaker signal than a heading. See `LegalCard`. */
+ *  convention is a weaker signal than a heading. See `AppCard`. */
 function SettingsCard() {
   const { t, lang } = useI18n();
   const { city, mode } = useCity();
@@ -194,39 +194,45 @@ function SettingsCard() {
 }
 
 /**
- * The two public documents, on a card of their own.
+ * The app itself: its two public documents, and which copy of it this is.
  *
- * They were the last two rows of `SettingsCard`, drawn without a value on
- * the right so the shape would say they were not settings. That is a real
- * distinction and it was too quiet: a reader hunting for the terms reads
- * the heading first, and the heading said the app's behaviour lived there.
- * A section says it outright.
+ * The documents were the last two rows of `SettingsCard`, drawn without a
+ * value on the right so the shape would say they were not settings. That
+ * was too quiet: a reader hunting for the terms reads the heading first,
+ * and the heading said the app's behaviour lived there. A section says it
+ * outright.
+ *
+ * "About City Crew" joined them here, under a heading that names what all
+ * three are about. It was briefly a card of its own under "Legal", where
+ * it read as a stray; filed under "Legal" it would have been a document it
+ * is not. "App" holds both without either being mislabelled.
  *
  * Drawn for guests as well as members, and that is the point rather than
- * a courtesy: the only other link to these is under the Sign up button, on
- * a screen an account holder can never reach again — and somebody still
- * deciding whether to sign up should be able to read the terms without
- * starting the form.
+ * a courtesy: the only other link to the documents is under the Sign up
+ * button, on a screen an account holder can never reach again, and
+ * somebody still deciding whether to sign up should be able to read the
+ * terms without starting the form.
  *
  * The heading is written at each call site the way every other section on
  * this screen is, and the guest view passes none, because none of its
  * cards carry one.
  */
-function LegalCard() {
+function AppCard() {
   const { t } = useI18n();
   // Which document is open, if any. The same sheet the sign-up screen
   // raises, so the two ways into these documents behave identically —
   // which they did not while one of them left for a browser.
   const [legal, setLegal] = useState<LegalId | null>(null);
+  const [about, setAbout] = useState(false);
 
   return (
     <>
       <Card style={s.featureCard}>
         {/* No value on the right, still: these are a destination, not a
-            setting, and the card around them does not change that. The
-            chevron is right, though — they used to open a browser and wore
-            `open-outline` to say so, and now they raise a sheet like every
-            other row on this screen. */}
+            setting. The version is not written on the About row either:
+            it is one of four answers, and the one that settles "did the
+            update arrive?" is the update's date, which is too long for a
+            value column. See `AboutSheet`. */}
         <SettingRow
           icon="document-text-outline"
           label={t('Terms of Service', 'Điều khoản sử dụng', '利用規約')}
@@ -236,39 +242,16 @@ function LegalCard() {
           icon="shield-checkmark-outline"
           label={t('Privacy Policy', 'Chính sách quyền riêng tư', 'プライバシーポリシー')}
           onPress={() => { fireHaptic('selection'); setLegal('privacy'); }}
+        />
+        <SettingRow
+          icon="information-circle-outline"
+          label={t('About City Crew', 'Giới thiệu City Crew', 'City Crewについて')}
+          onPress={() => { fireHaptic('selection'); setAbout(true); }}
           last
         />
       </Card>
       <LegalSheet id={legal} onClose={() => setLegal(null)} />
-    </>
-  );
-}
-
-
-/**
- * Which copy of the app this is, behind one row on a card of its own.
- *
- * Its own card rather than a third row under Legal, where it would be
- * filed as a document it is not. There is no heading, because the label
- * already says what the row is. The version is not written on the row:
- * it is one of four answers, and the one that settles "did the update
- * arrive?" is the update's date, which is too long for a value column.
- * See `AboutSheet`.
- */
-function AboutCard() {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Card style={s.featureCard}>
-        <SettingRow
-          icon="information-circle-outline"
-          label={t('About City Crew', 'Giới thiệu City Crew', 'City Crewについて')}
-          onPress={() => { fireHaptic('selection'); setOpen(true); }}
-          last
-        />
-      </Card>
-      <AboutSheet visible={open} onClose={() => setOpen(false)} />
+      <AboutSheet visible={about} onClose={() => setAbout(false)} />
     </>
   );
 }
@@ -390,8 +373,7 @@ function GuestHub({ navigation }: { navigation: Nav }) {
       {/* No heading, like every card on the guest view. The documents
           matter most to exactly this reader — the one who has not signed
           up yet. */}
-      <LegalCard />
-      <AboutCard />
+      <AppCard />
 
       {/* Real now, so it behaves like every other locked row here:
           the tap leads to signing in, which is where friends begin.
@@ -625,13 +607,12 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
       {/* Last section, and last on purpose. The order this screen reads
           in — who you are, who you go with, how the app behaves — ends on
           the things that are true whether you read them or not, and then
-          the way out. Under Preferences these two were filed as settings
-          by position while being drawn as not-settings; a heading of
-          their own costs one line and stops the screen arguing with
-          itself. */}
-      <Text style={s.section}>{t('Legal', 'Pháp lý', '法的事項')}</Text>
-      <LegalCard />
-      <AboutCard />
+          the way out. Under Preferences the documents were filed as
+          settings by position while being drawn as not-settings; a
+          heading of their own costs one line and stops the screen arguing
+          with itself. */}
+      <Text style={s.section}>{t('App', 'Ứng dụng', 'アプリ')}</Text>
+      <AppCard />
 
       <PressableScale
         style={s.signOutBtn}
