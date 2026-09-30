@@ -549,17 +549,33 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 onto a second line. */}
           </View>
 
-          {/* ── why go ── */}
-          {/* The desk writes these, and they have a voice: "exactly what
-              some nights need" is a person, not a summary. Unlabelled it
-              read as boilerplate and got skimmed; named, it is the one
-              opinion on a screen otherwise made of facts, which is the
-              thing this app actually sells.
-              
-              The label is earned rather than decorative — `desc_*` is in
-              the dashboard's editable set, so it is the desk's own words
-              and not a machine's, and every published place has one.
-              
+          {/* ── highlights ── */}
+          {/* Unlabelled, the description read as boilerplate and got
+              skimmed; named, it is the paragraph a reader stops for.
+
+              "Highlights", not "Why go?", which was the first label. A
+              question waits for an opinion, and it was written when the
+              desk wrote every line. It no longer does: of 103 published
+              descriptions, 54 are Google's `editorialSummary`, a neutral
+              line signed by nobody ("seasonal tasting menus and a robust
+              wine list"), and under "Why go?" that read as an answer
+              nobody gave. What Google writes and what the desk writes
+              are both the place at its best, and that is what the label
+              now says. Whose words they are is the credit line's job.
+
+              Rejected, with what ruled them out:
+              - "Reviews" (Đánh giá): the rating directly above already
+                says "1.8k đánh giá", and this would read as those.
+              - "Our take" (Nhận xét): still an opinion, so still wrong
+                for Google's lines, and close to a user comment.
+              - "Overview" (Thông tin cơ bản): the voice of the address
+                and hours below, and it leaves the quotation mark
+                beside it with nothing to mark.
+              - "About" (Giới thiệu): true of every source, but flat.
+              - One label per source: honest, but the same block
+                changing its name from place to place is a thing to
+                explain, and the credit line already tells them apart.
+
               No chevron. There is no fuller version to open, and an arrow
               that leads nowhere is a promise the screen cannot keep. */}
           {desc ? (
@@ -583,7 +599,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 <Text style={s.whyQuote}>{'\u201C'}</Text>
               </View>
               <View style={s.whyBody}>
-                <Text style={s.whyLabel}>{t('Why go?', 'Vì sao nên ghé?', 'なぜ行く？')}</Text>
+                <Text style={s.whyLabel}>{t('Highlights', 'Điểm nổi bật', '見どころ')}</Text>
                 <Text style={s.desc} onPress={openBlurb} testID="detail-desc">{desc}</Text>
                 {/* Whose words those are. A line, not a badge: it belongs to
                     the paragraph above it and should read as its last line,
@@ -653,7 +669,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               pills *was* the interruption, so it went below them. That
               still left it between the pills and the reason to go, which
               is the same fault one block further down: name, pills and
-              "why go" are one argument about the place, made to everybody,
+              highlights are one argument about the place, made to everybody,
               and this panel is a request made to one person by name. An
               argument is not interrupted halfway to be asked a favour.
 

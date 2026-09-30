@@ -418,7 +418,7 @@ dùng đi trong app:
 | 1 | Explore | hero Sài Gòn, "From the community", nút Open Map |
 | 2 | Explore — list | filter Focus, card có sash "Opens 08:00", thanh "Not finding it? / Add" |
 | 3 | Explore — map | pin theo màu loại, cụm số, bản đồ Google |
-| 4 | Place detail | Eureka 89 (Melbourne) — gallery 6 ảnh, "Why go?" có credit Google, panel local guide, address |
+| 4 | Place detail | Eureka 89 (Melbourne) — gallery 6 ảnh, "Highlights" có credit Google, panel local guide, address |
 | 5 | Collections | tab Yours, lưới 6 collection |
 | 6 | Ideas — Plan a trip | hai place đã chọn, chip Cafés/Focus, ngày + nơi, các bước Sketch đang chạy |
 | 7 | Trip | "Slow morning in Hoan Kiem" — lịch trình, quãng đường, Open the route, chi phí |
