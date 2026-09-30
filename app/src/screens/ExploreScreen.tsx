@@ -50,6 +50,7 @@ import { useBrowseTaste } from '../lib/tasteProfile';
 import { useFlag } from '../lib/useFlag';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
+import { balanceBreak } from '../lib/balance';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
 import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
@@ -309,6 +310,34 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
   const creditUri = credit ? city?.hero_photo_credit_uri ?? null : null;
   // The city switcher, openable from here — see the chip in heroContent.
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const title = city?.hero_title_en
+    ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja)
+    : t(
+        `Ideas for a night in ${city?.short_en ?? 'the city'}`,
+        `Gợi ý cho một đêm ở ${city?.short_vi ?? 'thành phố'}`,
+        `${city?.short_ja ?? city?.short_en ?? 'この街'}、夜のアイデア`,
+      );
+  /**
+   * The headline, broken so its second line is not one word — see
+   * `lib/balance` for why and where. `for` ties the answer to the text it
+   * was worked out for, so a new city or language measures afresh.
+   *
+   * Measure, then break, then check: the first paint wraps by itself and
+   * reports where; the balanced text replaces it; and if that drew more
+   * than two lines (a larger text size than the characters guessed), the
+   * natural wrap comes back and stays. The cost is one frame of the
+   * natural wrap on mount, under a photograph still fading in.
+   */
+  const [balanced, setBalanced] = useState<{ for: string; text: string | null } | null>(null);
+  const settled = balanced?.for === title;
+  const shown = settled && balanced.text ? balanced.text : title;
+  const onTitleLayout = (lines: readonly { text: string }[]) => {
+    if (!settled) {
+      setBalanced({ for: title, text: lines.length === 2 ? balanceBreak(title, lines[0].text) : null });
+    } else if (balanced.text && lines.length > 2) {
+      setBalanced({ for: title, text: null });
+    }
+  };
   // The photo trails the scroll slightly; pre-scaled so no edge shows.
   const parallax = scrollY.interpolate({
     inputRange: [0, heroH], outputRange: [0, Math.round(heroH * 0.08)], extrapolate: 'clamp',
@@ -413,14 +442,12 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
             <Ionicons name="chevron-down" size={12} color={onPhoto.textSecondary} />
           </PressableScale>
         ) : null}
-        <Text style={s.heroTitle}>
-          {city?.hero_title_en
-            ? t(city.hero_title_en, city.hero_title_vi, city.hero_title_ja)
-            : t(
-                `Ideas for a night in ${city?.short_en ?? 'the city'}`,
-                `Gợi ý cho một đêm ở ${city?.short_vi ?? 'thành phố'}`,
-                `${city?.short_ja ?? city?.short_en ?? 'この街'}、夜のアイデア`,
-              )}
+        <Text
+          style={s.heroTitle}
+          testID="explore-hero-title"
+          onTextLayout={(e) => onTitleLayout(e.nativeEvent.lines)}
+        >
+          {shown}
         </Text>
         {/* The desk's line for this city, the same way the headline is.
             Cleared, it falls back to the guest-facing sentence it used
