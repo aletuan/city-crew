@@ -53,10 +53,16 @@ describe('one tip a visit', () => {
     expect(showing()).toBeNull();
     await settle();
     expect(showing()).toBe('reorder');
-    // "Tip", as Profile's "Hiện lại các tip" says, not "Mẹo".
-    expect(screen.getByText(/^Tip/)).toBeTruthy();
-    expect(screen.queryByText(/Mẹo/)).toBeNull();
     expect(screen.getByText('Giữ một địa điểm rồi kéo để đổi thứ tự. Thay đổi được lưu tự động.')).toBeTruthy();
+  });
+
+  // The glyph says "tip" on screen; the word is for VoiceOver only. "Tip",
+  // as Profile's "Hiện lại các tip" says, not "Mẹo".
+  it('says "Tip" to a screen reader and not on screen', async () => {
+    render(<TipBox eligible={OWNER} done={[]} />);
+    await settle();
+    expect(screen.queryByText(/Tip|Mẹo/)).toBeNull();
+    expect(screen.getByLabelText('Tip: Giữ một địa điểm rồi kéo để đổi thứ tự. Thay đổi được lưu tự động.')).toBeTruthy();
   });
 
   it('shows the next tip on the next visit, and comes round again', async () => {
@@ -87,12 +93,12 @@ describe('one tip a visit', () => {
     const view = render(<TipBox eligible={['edit']} done={[]} />);
     await settle();
     expect(screen.getByText('To rename it or change the description, tap the three-dot button (⋯) at the top right and choose Edit collection.')).toBeTruthy();
-    expect(screen.getByText(/^Tip/)).toBeTruthy();
+    expect(screen.getByLabelText(/^Tip: To rename it/)).toBeTruthy();
     view.unmount();
     state.lang = 'ja';
     render(<TipBox eligible={['copy']} done={[]} />);
     await settle();
-    expect(screen.getByText(/^ヒント/)).toBeTruthy();
+    expect(screen.getByLabelText(/^ヒント: このリストが気に入ったら/)).toBeTruthy();
   });
 
   // The screen's list often arrives after storage has answered.

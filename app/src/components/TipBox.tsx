@@ -25,7 +25,7 @@ import { useI18n } from '../lib/i18n';
 import {
   LEGACY_REORDER_KEY, markShown, parseLog, pickTip, retire, tipsKey, type TipId, type TipLog,
 } from '../lib/tips';
-import { colors, font, radius, space, type } from '../theme';
+import { colors, radius, space, type } from '../theme';
 import { PressableScale } from './ui';
 
 type T = (en: string, vi: string, ja: string) => string;
@@ -34,7 +34,9 @@ type T = (en: string, vi: string, ja: string) => string;
  * The one glyph every tip wears.
  *
  * One, not one per tip. The glyph's job is to say what kind of box this
- * is, and the word "Tip" beside it already says so. The first build gave
+ * is, and since the word "Tip" came off the front of the text it says so
+ * alone: the word and the glyph said the same thing twice, and the word
+ * took the first line's best room. The first build gave
  * each tip the glyph of the control it pointed to, and they read as
  * controls: a bookmark in the add tip sitting just above the real
  * bookmark on a card, and a pencil that looked like the edit button
@@ -160,10 +162,12 @@ export default function TipBox({ eligible, done, reader }: {
   return (
     <View style={s.tip} accessibilityRole="summary" testID={`tip-${shown}`}>
       <Ionicons name={TIP_ICON} size={18} color={colors.accent} style={s.icon} />
-      <Text style={s.text}>
-        {/* "Tip" in the Vietnamese too, not "Mẹo": the word the Profile
-            row that brings them back uses ("Hiện lại các tip"). */}
-        <Text style={s.lead}>{t('Tip', 'Tip', 'ヒント')}  </Text>
+      {/* The word is gone from the screen but not from VoiceOver, which
+          does not read the glyph: without it a tip is heard as one more
+          sentence of the page. "Tip" in the Vietnamese too, not "Mẹo",
+          the word the Profile row that brings them back uses ("Hiện lại
+          các tip"). */}
+      <Text style={s.text} accessibilityLabel={`${t('Tip', 'Tip', 'ヒント')}: ${TIPS[shown](t)}`}>
         {TIPS[shown](t)}
       </Text>
       <PressableScale
@@ -194,5 +198,4 @@ const s = StyleSheet.create({
   },
   icon: { marginTop: 1 },
   text: { flex: 1, color: colors.text, ...type.meta, lineHeight: 21 },
-  lead: { fontWeight: font.semibold, color: colors.accent },
 });
