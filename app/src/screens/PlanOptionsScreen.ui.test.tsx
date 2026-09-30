@@ -20,7 +20,7 @@
 
 import React from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '../uitest/render';
+import { act, fireEvent, render, screen } from '../uitest/render';
 import { addDays, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
 import { narratableOf, type Narration } from '../lib/assist';
@@ -54,7 +54,8 @@ import PlanOptionsScreen from './PlanOptionsScreen';
 const place = (slug: string, name: string, extra: Partial<Place> = {}): Place => ({
   slug, name_en: name, name_vi: name, name_ja: null, category: 'food', is_featured: false,
   vibe_tags: [], neighborhood_en: 'Hoàn Kiếm', neighborhood_vi: null, neighborhood_ja: null,
-  address: null, lat: null, lng: null, ...extra,
+  address: null, lat: null, lng: null, place_photos: [], rating: 4.5,
+  duration_min: null, duration_max: null, opening_hours: null, ...extra,
 } as Place);
 
 const CAFE = place('cafe', 'Cộng Café');
@@ -222,15 +223,38 @@ describe('the cards', () => {
     expect(badges()).toEqual(['Low-key', 'Best match']);
   });
 
-  it('prints each stop with its time, district and dwell, and the leg out of it', () => {
+  it('prints each stop with its time, district and rating, and the leg out of it', () => {
     renderScreen();
     expect(screen.getByText('Cộng Café')).toBeTruthy();
     expect(screen.getByText('19:15')).toBeTruthy();
-    expect(screen.getByText('Hoàn Kiếm · 90 min')).toBeTruthy();
+    expect(screen.getAllByText('Hoàn Kiếm · 4.5★')).toHaveLength(2);
     expect(screen.getByText('350 m · ≈ 5 min')).toBeTruthy();
     expect(screen.getByText('4.2 km · ≈ 18 min')).toBeTruthy();
     expect(document.querySelectorAll('[data-icon="walk-outline"]')).toHaveLength(1);
     expect(document.querySelectorAll('[data-icon="car-outline"]')).toHaveLength(1);
+  });
+
+  // The planner's 75 minutes, or whatever it chose, is printed only for a
+  // place that says how long people stay; and open or shut is read at the
+  // hour the plan arrives, on its own day, in the city's zone.
+  it('adds the dwell a place states and the closing time at arrival', () => {
+    const week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+      .map((d) => `${d}: 8:00 AM – 10:00 PM`);
+    const timed = place('timed', 'Timed Café', { duration_min: 60, opening_hours: week } as Partial<Place>);
+    planTrips.mockImplementation(() => [plan('match', [stop(timed, 18 * 60, 75)])]);
+    renderScreen();
+    expect(screen.getByText('Hoàn Kiếm · 4.5★ · 75 min · open until 22:00')).toBeTruthy();
+  });
+
+  // The model wrote a sentence for each stop while the reader waited; the
+  // card now prints it, and prints nothing for a stop it skipped.
+  it('prints the model\'s line under each stop it wrote one for', () => {
+    cachedNarration.mockImplementation(() => ({
+      title: null, why: new Map([['cafe', 'Coffee on the balcony, then down the street.']]), fromModel: true,
+    }));
+    renderScreen();
+    expect(screen.getByText('Coffee on the balcony, then down the street.')).toBeTruthy();
+    expect(document.querySelectorAll('[data-testid="plan-why"]')).toHaveLength(1);
   });
 
   // The screen before this one spends five seconds on a paw in a ring,
@@ -491,6 +515,58 @@ describe('picking a card', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('PlanEdit', expect.objectContaining({
       lens: 'match', title: 'Planner name',
     }));
+  });
+});
+
+// The stops' covers on top of each card. The carousel itself has its own
+// suite (`StopGallery.ui.test.tsx`); what is pinned here is that each card
+// wears its own stops' pictures, and that the stop on screen is the one
+// its row marks — and that nothing is marked when there is no picture.
+describe('the picture on each card', () => {
+  const photo = (uri: string) => ({
+    id: uri, photo_uri: uri, is_cover: true, is_hidden: false, sort_order: 0, attribution_name: null,
+  });
+  const PICTURED = plan('match', [
+    stop(place('a', 'Pictured A', { place_photos: [photo('https://img/a.jpg')] } as Partial<Place>), 18 * 60),
+    stop(place('b', 'Pictured B', { place_photos: [photo('https://img/b.jpg')] } as Partial<Place>), 19 * 60),
+  ], { legs: [{ mode: 'walk', km: 0.2, minutes: 3 }] });
+  /** Class lists of the two stop times, which carry the mark. */
+  const times = () => ['18:00', '19:00'].map((h) => screen.getByText(h).className);
+  const galleryProps = () => {
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    while (stack.length) {
+      const f = stack.pop()!;
+      const p = f.memoizedProps;
+      if (p && typeof p === 'object' && p.testID === 'plan-gallery' && 'onPage' in p) {
+        return p as unknown as { onPage: (i: number) => void };
+      }
+      if (f.sibling) stack.push(f.sibling);
+      if (f.child) stack.push(f.child);
+    }
+    throw new Error('no plan gallery in the committed tree');
+  };
+
+  it('draws each stop\'s cover, and marks the row of the one on screen', () => {
+    planTrips.mockImplementation(() => [PICTURED]);
+    const { container } = render(
+      <PlanOptionsScreen navigation={nav() as unknown as Nav} route={routeWith()} />,
+    );
+    expect(container.querySelector('img[src="https://img/a.jpg"]')).toBeTruthy();
+    expect(container.querySelector('img[src="https://img/b.jpg"]')).toBeTruthy();
+    const [first, second] = times();
+    expect(first).not.toBe(second);
+    act(() => galleryProps().onPage(1));
+    expect(times()).toEqual([second, first]);
+  });
+
+  it('marks no row when no stop has a picture', () => {
+    renderScreen();
+    expect(document.querySelector('[data-testid="plan-gallery"]')).toBeNull();
+    const [a, b] = [screen.getAllByText('18:00')[0], screen.getByText('19:15')].map((el) => el.className);
+    expect(a).toBe(b);
   });
 });
 

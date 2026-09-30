@@ -30,7 +30,7 @@
 // add a reason, and a reason nobody asked for reads as an apology for the
 // catalog. The count stays; the apology went.
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -53,6 +53,8 @@ import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
 import { useSave } from '../lib/save';
 import { stopCount, summaryLine } from '../lib/sketch';
+import { stopFacts } from '../lib/stopFacts';
+import StopGallery, { hasPicture } from '../components/StopGallery';
 import { draftFrom, type TripDraft } from '../lib/trip';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space, type } from '../theme';
@@ -158,18 +160,18 @@ export default function PlanOptionsScreen({ navigation, route }: {
   }, [plans, p.company, p.categories, p.when, p.where, lang]);
 
   /**
-   * The model's names for the cards, captured once per set of plans.
+   * The model's names for the cards, and its line for each stop, captured
+   * once per set of plans.
    *
    * Read in a memo keyed on the plans rather than live in render, and the
    * difference is stability: the sketch screen holds until these are
    * settled, so the ordinary path finds them here on first render — but a
-   * title that settles *after* this render (the sketch's cap fired, or
+   * narration that settles *after* this render (the sketch's cap fired, or
    * Regenerate minted fresh keys) waits for the next set of plans instead
    * of popping onto a card the reader is already comparing.
    */
-  const titles = useMemo(
-    () => new Map(plans.map((pl) =>
-      [pl.lens, cachedNarration(narratableOf(pl.stops), lang)?.title ?? null] as const)),
+  const words = useMemo(
+    () => new Map(plans.map((pl) => [pl.lens, cachedNarration(narratableOf(pl.stops), lang)] as const)),
     [plans, lang],
   );
 
@@ -294,12 +296,16 @@ export default function PlanOptionsScreen({ navigation, route }: {
           // editor. The editor used to get `undefined` whenever the card
           // was headed by its areas, and invent a name of its own — so the
           // list said "Tây Hồ" and the screen it opened said something else.
-          const name = plan.title ?? titles.get(plan.lens) ?? areaLine(plan, t);
+          const told = words.get(plan.lens);
+          const name = plan.title ?? told?.title ?? areaLine(plan, t);
           return (
             <PlanCard
               key={`${plan.lens}-${i}`}
               plan={plan}
               name={name}
+              why={told?.why ?? null}
+              day={day}
+              tz={city?.tz ?? DEFAULT_TZ}
               nth={i}
               // The card's own name rides along, so the editor's header
               // matches the card that was tapped even if the cache has let
@@ -472,12 +478,24 @@ function StartMark({ nth }: { nth: number }) {
 
 /** One draft. Tapping it opens the editor, where times and order become
  *  the reader's rather than the planner's. */
-function PlanCard({ plan, name, nth, onPress }: {
+function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
   plan: TripPlan; name: string; onPress: () => void;
+  /** The model's sentence per stop, by slug, when it has written them. */
+  why: ReadonlyMap<string, string> | null;
+  /** The plan's day and its city's zone: a stop is open or shut at the
+   *  hour the plan arrives, not at the hour the screen is read. */
+  day: string; tz: string;
   /** Which card down the list this is — the start marks settle in order. */
   nth: number;
 }) {
   const { t, lang } = useI18n();
+  // Which stop the picture on top is showing, so its row can say so.
+  const [shot, setShot] = useState(0);
+  const places = plan.stops.map((st) => st.place);
+  // No picture, no page: a plan none of whose stops has a photograph draws
+  // no carousel, and a first row marked as "the one on screen" would be
+  // pointing at nothing.
+  const pictured = hasPicture(places);
   const badge = BADGE[plan.lens];
   const badgeText = t(badge.en, badge.vi, badge.ja);
   // The border and the star follow one rule — the lens — rather than the
@@ -519,79 +537,108 @@ function PlanCard({ plan, name, nth, onPress }: {
         testID={best ? 'plan-card-best' : undefined}
       >
         <Card style={[s.card, best && s.cardBest]}>
-          <View style={s.head}>
-            {/* The model's name when the sketch screen managed to fetch
-                one, the areas when it did not. Resolved on the screen, from
-                `titles`, which is captured per set of plans and never
-                changes under the reader. */}
-            <Text style={s.name} numberOfLines={1}>{name}</Text>
-            {best ? (
-              <LinearGradient {...gradAI} style={s.badgeOn}>
-                <Ionicons name="star" size={11} color={colors.accentInk} />
-                <Text style={s.badgeOnText}>{badgeText}</Text>
-              </LinearGradient>
-            ) : (
-              <View style={s.badge}>
-                <Text style={s.badgeText}>{badgeText}</Text>
-              </View>
-            )}
-          </View>
+          {/* The stops' own covers, one page each — the picture the saved
+              trip opens on, so the plan a reader picks here is the plan
+              they find there. A band rather than the detail's 16:10:
+              three of these stack on one screen, and the stops under the
+              picture are what is being compared.
 
-          {/* The leg lives *inside* the stop's own column, and that is
-              structural rather than cosmetic. The rail used to be
-              `height: 34` — a number measured once against a one-line row and
-              then load-bearing, so any change to the spacing broke the
-              timeline into disconnected stubs. Nested this way the dot column
-              spans the name, the meta line and the leg together, and the rail
-              is `flex: 1`: it reaches the next dot whatever is between them,
-              and nobody has to remember to re-measure it. */}
-          {plan.stops.map((st, i) => (
-            <View key={st.place.slug} style={s.stop}>
-              <Text style={s.time}>{clockOf(st.arriveMin)}</Text>
-              <View style={s.dotCol}>
-                {i === 0 ? <StartMark nth={nth} /> : <View style={s.dot} />}
-                {i + 1 < plan.stops.length && <View style={s.rail} />}
-              </View>
-              <View style={s.body}>
-                <Text style={s.stopName} numberOfLines={1}>{st.place.name_en}</Text>
-                {/* The district under the name rather than in a column beside
-                    it, which is how the editor and the saved trip already
-                    print it. Right-aligned it took 96pt off every name on the
-                    one screen where the names *are* the choice — and half
-                    this catalog has a name longer than what was left. It also
-                    makes room for the dwell, which this screen never showed
-                    at all while both screens after it did. */}
-                <Text style={s.stopMeta} numberOfLines={1}>
-                  {summaryLine([st.place.neighborhood_en, fmtMinutes(st.dwellMin, lang)])}
-                </Text>
-                {/* Dropped rather than guessed when a stop has no coordinates
-                    — `legBetween` returns null and the row would be a number
-                    nobody measured. */}
-                {plan.legs[i] && (
-                  <View style={s.legRow}>
-                    <Ionicons
-                      name={plan.legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
-                      size={12}
-                      color={colors.textTertiary}
-                    />
-                    <Text style={s.legText}>
-                      {fmtDistance(plan.legs[i]!.km)} · ≈ {fmtMinutes(plan.legs[i]!.minutes, lang)}
-                    </Text>
-                  </View>
-                )}
-              </View>
+              The whole card stays one control. A swipe is the carousel's,
+              because a scroll that moves takes the touch from the press;
+              a tap anywhere, the picture included, opens the plan. */}
+          <StopGallery
+            places={places}
+            aspectRatio={3}
+            page={shot}
+            onPage={setShot}
+            testID="plan-gallery"
+          />
+          <View style={s.cardBody}>
+            <View style={s.head}>
+              {/* The model's name when the sketch screen managed to fetch
+                  one, the areas when it did not. Resolved on the screen, from
+                  `words`, which is captured per set of plans and never
+                  changes under the reader. */}
+              <Text style={s.name} numberOfLines={1}>{name}</Text>
+              {best ? (
+                <LinearGradient {...gradAI} style={s.badgeOn}>
+                  <Ionicons name="star" size={11} color={colors.accentInk} />
+                  <Text style={s.badgeOnText}>{badgeText}</Text>
+                </LinearGradient>
+              ) : (
+                <View style={s.badge}>
+                  <Text style={s.badgeText}>{badgeText}</Text>
+                </View>
+              )}
             </View>
-          ))}
 
-          <View style={s.foot}>
-            <Text style={s.summary}>
-              {summaryLine([
-                stopCount(plan.stops.length, t),
-                `~${hours(plan.windowMin)}`,
-                km > 0 ? fmtDistance(km) : null,
-                total > 0 ? `~${money(total)}` : null,
-              ])}
-            </Text>
+            {/* The leg lives *inside* the stop's own column, and that is
+                structural rather than cosmetic. The rail used to be
+                `height: 34` — a number measured once against a one-line row and
+                then load-bearing, so any change to the spacing broke the
+                timeline into disconnected stubs. Nested this way the dot column
+                spans the name, the meta line and the leg together, and the rail
+                is `flex: 1`: it reaches the next dot whatever is between them,
+                and nobody has to remember to re-measure it. */}
+            {plan.stops.map((st, i) => {
+              // Whether the picture on top is this stop's: the hour takes
+              // the accent and the name a heavier weight, the pair the
+              // saved trip uses, so the picture points at a row.
+              const here = pictured && i === shot;
+              const line = why?.get(st.place.slug);
+              return (
+                <View key={st.place.slug} style={s.stop}>
+                  <Text style={[s.time, here && s.timeHere]}>{clockOf(st.arriveMin)}</Text>
+                  <View style={s.dotCol}>
+                    {i === 0 ? <StartMark nth={nth} /> : <View style={s.dot} />}
+                    {i + 1 < plan.stops.length && <View style={s.rail} />}
+                  </View>
+                  <View style={s.body}>
+                    <Text style={[s.stopName, here && s.stopNameHere]} numberOfLines={1}>{st.place.name_en}</Text>
+                    {/* The district under the name rather than in a column beside
+                        it, which is how the editor and the saved trip already
+                        print it. Right-aligned it took 96pt off every name on the
+                        one screen where the names *are* the choice — and half
+                        this catalog has a name longer than what was left. What
+                        else the line carries, and when, is `stopFacts`'s. */}
+                    <Text style={s.stopMeta} numberOfLines={1}>
+                      {stopFacts(st.place, st, day, tz, lang, t)}
+                    </Text>
+                    {/* The model's reason for the stop, which this screen asked
+                        for and then never showed: the editor and the saved trip
+                        both print it. Nothing in its place when there is none —
+                        the line above already carries the facts. */}
+                    {!!line && <Text style={s.why} numberOfLines={2} testID="plan-why">{line}</Text>}
+                    {/* Dropped rather than guessed when a stop has no coordinates
+                        — `legBetween` returns null and the row would be a number
+                        nobody measured. */}
+                    {plan.legs[i] && (
+                      <View style={s.legRow}>
+                        <Ionicons
+                          name={plan.legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
+                          size={12}
+                          color={colors.textTertiary}
+                        />
+                        <Text style={s.legText}>
+                          {fmtDistance(plan.legs[i]!.km)} · ≈ {fmtMinutes(plan.legs[i]!.minutes, lang)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+
+            <View style={s.foot}>
+              <Text style={s.summary}>
+                {summaryLine([
+                  stopCount(plan.stops.length, t),
+                  `~${hours(plan.windowMin)}`,
+                  km > 0 ? fmtDistance(km) : null,
+                  total > 0 ? `~${money(total)}` : null,
+                ])}
+              </Text>
+            </View>
           </View>
 
         </Card>
@@ -610,10 +657,13 @@ const s = StyleSheet.create({
   byline: { ...CAPTION, color: colors.textSecondary, marginBottom: space.headingToContent },
 
   cardWrap: { marginBottom: space.cardGap },
+  // The picture runs to the card's edges, so the padding lives on the body
+  // under it and the corners clip the picture rather than the text.
+  card: { overflow: 'hidden' },
   // `Card` carries no padding of its own — see the note on the component.
   // Without this the cards ran to both screen edges and the corner radius
   // clipped the first glyph of every plan name.
-  card: { padding: space.cardPadding },
+  cardBody: { padding: space.cardPadding },
   cardBest: { borderColor: colors.accentFill, borderWidth: 1 },
 
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
@@ -662,7 +712,12 @@ const s = StyleSheet.create({
   rail: { flex: 1, width: 2, backgroundColor: colors.borderGlassSoft },
   body: { flex: 1, gap: space.nameToMeta },
   stopName: { ...type.body, color: colors.text, fontWeight: font.semibold },
+  stopNameHere: { fontWeight: font.bold },
+  timeHere: { color: colors.accent, fontWeight: font.semibold },
   stopMeta: { ...CAPTION, color: colors.textTertiary },
+  // TripDetail's `why`, so the sentence reads the same before and after
+  // the plan is saved.
+  why: { ...CAPTION, color: colors.textSecondary, lineHeight: 18 },
 
   // Doubled from 5. Ten points of air between two stops read as one block
   // of text with a line in it rather than as two places you go to.
@@ -676,7 +731,7 @@ const s = StyleSheet.create({
   summary: { ...CAPTION, color: colors.textSecondary },
   dropped: { ...CAPTION, color: colors.textTertiary, marginTop: 2, marginBottom: 6 },
 
-  emptyCard: { alignItems: 'center' },
+  emptyCard: { alignItems: 'center', padding: space.cardPadding },
   emptyText: { ...type.body, color: colors.textSecondary, textAlign: 'center' },
 
   // The footnote that used to sit here — "Tap one to nudge its times and
