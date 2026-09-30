@@ -344,6 +344,97 @@ describe('the hero', () => {
     expect(screen.queryByText('Ideas for a night in Hanoi')).toBeNull();
   });
 
+  // `onTextLayout` never fires in jsdom, which lays nothing out, so the
+  // title's own handler is called with the lines a phone reported. What
+  // this pins is what the screen does with a measurement; where the break
+  // goes is `lib/balance`'s rule and has its own suite.
+  describe('its headline, broken so the last line is not one word', () => {
+    const verse = 'Mịt mù khói toả ngàn sương';
+    const titleProps = () => {
+      type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+      const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+      const stack: Fiber[] = [host[key].stateNode.current];
+      while (stack.length) {
+        const f = stack.pop()!;
+        const p = f.memoizedProps;
+        if (p && typeof p === 'object' && p.testID === 'explore-hero-title' && 'onTextLayout' in p) {
+          return p as unknown as { onTextLayout: (e: unknown) => void };
+        }
+        if (f.sibling) stack.push(f.sibling);
+        if (f.child) stack.push(f.child);
+      }
+      throw new Error('no hero title in the committed tree');
+    };
+    const measure = (...lines: string[]) => act(() => {
+      titleProps().onTextLayout({ nativeEvent: { lines: lines.map((text) => ({ text })) } });
+    });
+    const drawn = () => screen.getByTestId('explore-hero-title').textContent;
+    const open = () => {
+      state.city = { ...hanoi, hero_title_en: verse };
+      state.places.data = [place('a')];
+      return render(<ExploreScreen navigation={nav()} />);
+    };
+
+    it('wraps by itself first, then moves the break to the caesura', () => {
+      open();
+      expect(drawn()).toBe(verse);
+      measure('Mịt mù khói toả ngàn ', 'sương');
+      expect(drawn()).toBe('Mịt mù khói toả\nngàn sương');
+    });
+
+    it('leaves a headline that fits one line as it is', () => {
+      open();
+      measure(verse);
+      expect(drawn()).toBe(verse);
+    });
+
+    // Balancing is for two lines. A headline that already needs three,
+    // at a large text size, is not rearranged on a guess.
+    it('leaves a headline that wraps to three lines as it is', () => {
+      open();
+      measure('Mịt mù khói ', 'toả ngàn ', 'sương');
+      expect(drawn()).toBe(verse);
+    });
+
+    // Even one whose first line holds most of it, as when a long word is
+    // split across the last two: that is not a two-line headline.
+    it('leaves three lines alone whatever the first one holds', () => {
+      open();
+      measure('Mịt mù khói toả ngàn ', 'sư', 'ơng');
+      expect(drawn()).toBe(verse);
+    });
+
+    // A larger text size than the characters allowed for: three lines is
+    // worse than a lone word, so the natural wrap comes back, and stays.
+    it('gives the break up if it drew three lines, and does not try again', () => {
+      open();
+      measure('Mịt mù khói toả ngàn ', 'sương');
+      measure('Mịt mù khói ', 'toả ', 'ngàn sương');
+      expect(drawn()).toBe(verse);
+      measure('Mịt mù khói toả ngàn ', 'sương');
+      expect(drawn()).toBe(verse);
+    });
+
+    it('keeps the break once it has drawn two lines', () => {
+      open();
+      measure('Mịt mù khói toả ngàn ', 'sương');
+      measure('Mịt mù khói toả', 'ngàn sương');
+      expect(drawn()).toBe('Mịt mù khói toả\nngàn sương');
+    });
+
+    // The answer belongs to the text it was worked out for.
+    it('measures afresh when the headline changes', () => {
+      const view = open();
+      measure('Mịt mù khói toả ngàn ', 'sương');
+      state.city = { ...hanoi, hero_title_en: 'Bốn mùa trong một ngày' };
+      view.rerender(<ExploreScreen navigation={nav()} />);
+      expect(drawn()).toBe('Bốn mùa trong một ngày');
+      measure('Bốn mùa trong một ', 'ngày');
+      expect(drawn()).toBe('Bốn mùa trong\nmột ngày');
+    });
+  });
+
   it('says "the city" and hides the city chip before a city resolves', () => {
     state.city = null;
     state.places.data = [place('a')];
