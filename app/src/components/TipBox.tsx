@@ -161,7 +161,9 @@ export default function TipBox({ eligible, done, reader }: {
     <View style={s.tip} accessibilityRole="summary" testID={`tip-${shown}`}>
       <Ionicons name={TIP_ICON} size={18} color={colors.accent} style={s.icon} />
       <Text style={s.text}>
-        <Text style={s.lead}>{t('Tip', 'Mẹo', 'ヒント')}  </Text>
+        {/* "Tip" in the Vietnamese too, not "Mẹo": the word the Profile
+            row that brings them back uses ("Hiện lại các tip"). */}
+        <Text style={s.lead}>{t('Tip', 'Tip', 'ヒント')}  </Text>
         {TIPS[shown](t)}
       </Text>
       <PressableScale
@@ -172,7 +174,7 @@ export default function TipBox({ eligible, done, reader }: {
         haptic="selection"
         hitSlop={10}
         accessibilityRole="button"
-        accessibilityLabel={t('Dismiss tip', 'Ẩn mẹo', 'ヒントを閉じる')}
+        accessibilityLabel={t('Dismiss tip', 'Ẩn tip', 'ヒントを閉じる')}
       >
         <Ionicons name="close" size={18} color={colors.textTertiary} />
       </PressableScale>

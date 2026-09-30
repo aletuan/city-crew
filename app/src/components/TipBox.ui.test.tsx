@@ -53,7 +53,9 @@ describe('one tip a visit', () => {
     expect(showing()).toBeNull();
     await settle();
     expect(showing()).toBe('reorder');
-    expect(screen.getByText(/^Mẹo/)).toBeTruthy();
+    // "Tip", as Profile's "Hiện lại các tip" says, not "Mẹo".
+    expect(screen.getByText(/^Tip/)).toBeTruthy();
+    expect(screen.queryByText(/Mẹo/)).toBeNull();
     expect(screen.getByText('Giữ một địa điểm rồi kéo để đổi thứ tự. Thay đổi được lưu tự động.')).toBeTruthy();
   });
 
@@ -129,7 +131,7 @@ describe('retiring', () => {
   it('goes at once when closed, and is never shown again', async () => {
     render(<TipBox eligible={OWNER} done={[]} />);
     await settle();
-    fireEvent.click(screen.getByRole('button', { name: 'Ẩn mẹo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn tip' }));
     expect(showing()).toBeNull();
     expect((await stored()).retired).toEqual(['reorder']);
     const seen = [];
@@ -141,7 +143,7 @@ describe('retiring', () => {
   it('carries on with the others after one is closed', async () => {
     render(<TipBox eligible={OWNER} done={[]} />);
     await settle();
-    fireEvent.click(screen.getByRole('button', { name: 'Ẩn mẹo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn tip' }));
     expect(await visit()).toBe('publish');
   });
 
@@ -198,7 +200,7 @@ describe('when storage misbehaves', () => {
     render(<TipBox eligible={OWNER} done={[]} />);
     await settle();
     expect(showing()).toBe('reorder');
-    fireEvent.click(screen.getByRole('button', { name: 'Ẩn mẹo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn tip' }));
     await settle();
     expect(showing()).toBeNull();
     vi.mocked(AsyncStorage.setItem).mockReset();
@@ -250,7 +252,7 @@ describe('whose record', () => {
 
   it('keeps one account\'s closed tip from another account', async () => {
     const a = await visitAs('a');
-    fireEvent.click(screen.getByRole('button', { name: 'Ẩn mẹo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn tip' }));
     a.view.unmount();
     expect((await visitAs('a')).tip).toBeNull();
     cleanupAll();
