@@ -42,13 +42,20 @@ type T = (en: string, vi: string, ja: string) => string;
  * bookmark on a card, and a pencil that looked like the edit button
  * itself. Nothing happens when either is tapped.
  *
- * Not the light bulb, the usual mark for a tip: that is the Ideas tab's
- * glyph in the bar at the bottom of the screen, and a bulb up here would
- * read as a way there. Not sparkles, which stand for suggestions in
- * Explore and Trips. The circled "i" says "a note for you" and, on this
- * screen, means nothing else.
+ * The light bulb, the usual mark for a tip (Apple's Tips, Material's
+ * `tips_and_updates`). Once the word was gone the glyph had to say "tip"
+ * on its own, and the bulb is the one a reader already knows.
+ *
+ * Rejected: the circled "i", which was here first. It says "a note", not
+ * "a tip", and in the accent on the accent's soft ground it read as an
+ * alert: "this list is private" under it sounded like something wrong.
+ * The bulb was passed over at first because it is also the Ideas tab's
+ * glyph and might read as a way there. It did not weigh much: the box is
+ * not a button, and an idea and a tip are near enough in meaning that
+ * sharing a glyph costs little. Not sparkles, which stand for suggestions
+ * in Explore and Trips.
  */
-const TIP_ICON = 'information-circle-outline' as const;
+const TIP_ICON = 'bulb-outline' as const;
 
 /** What each tip says.
  *

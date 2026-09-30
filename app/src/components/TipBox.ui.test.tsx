@@ -65,6 +65,14 @@ describe('one tip a visit', () => {
     expect(screen.getByLabelText('Tip: Giữ một địa điểm rồi kéo để đổi thứ tự. Thay đổi được lưu tự động.')).toBeTruthy();
   });
 
+  // The bulb, the mark a reader knows for a tip, not the circled "i"
+  // that read as an alert. See `TIP_ICON`.
+  it('wears the light bulb', async () => {
+    render(<TipBox eligible={OWNER} done={[]} />);
+    await settle();
+    expect(document.querySelector('[data-testid="tip-reorder"] [data-icon]')?.getAttribute('data-icon')).toBe('bulb-outline');
+  });
+
   it('shows the next tip on the next visit, and comes round again', async () => {
     const seen = [];
     for (let i = 0; i < 5; i++) seen.push(await visit());
