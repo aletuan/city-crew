@@ -198,7 +198,7 @@ describe('the row', () => {
 
   // The Vietnamese description is the desk's work; only the English one
   // arrives, and it is Google's editorial line verbatim. This is the fact
-  // behind "Vì sao nên ghé?" showing an English sentence on a Vietnamese
+  // behind "Điểm nổi bật" showing an English sentence on a Vietnamese
   // screen for a place a reader imported — see the detail screen.
   it('takes Google’s editorial summary as the English description and leaves the Vietnamese to the desk', async () => {
     const { place } = await run();

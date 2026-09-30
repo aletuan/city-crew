@@ -1356,7 +1356,7 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     return nodes.findIndex((n) => n.getAttribute('data-testid') === id);
   };
 
-  // Name, pills and "why go" are one argument about the place, made to
+  // Name, pills and highlights are one argument about the place, made to
   // everybody; the panel is a request made to one reader by name. The
   // argument finishes before the favour is asked, and the facts begin
   // after. The panel used to sit between the pills and the reason to go,
@@ -1382,17 +1382,28 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     expect(why.querySelector('[data-icon="chatbox-ellipses"]')).toBeNull();
   });
 
-  // The desk writes these, and they have a voice — "exactly what some
-  // nights need" is a person, not a summary. Saying so out loud is the
-  // difference between a paragraph a reader skims and a reason they act
-  // on. No chevron: there is nowhere further to go, and an arrow that
-  // leads nowhere is a promise the screen cannot keep.
+  // Named, the description is a paragraph a reader stops for rather
+  // than skims. "Highlights", not the question "Why go?": most of these
+  // lines are Google's neutral summary, which answers nobody's question.
+  // No chevron: there is nowhere further to go, and an arrow that leads
+  // nowhere is a promise the screen cannot keep.
   it('says what the description is for, and does not pretend it leads somewhere', () => {
     show(place({ desc_en: 'Brunch and counter food under the arches.' }));
     expect(screen.getByTestId('detail-why')).toBeTruthy();
-    expect(screen.getByText('Why go?')).toBeTruthy();
+    expect(screen.getByText('Highlights')).toBeTruthy();
+    expect(screen.queryByText('Why go?')).toBeNull();
     expect(screen.getByText('Brunch and counter food under the arches.')).toBeTruthy();
     expect(screen.queryByTestId('detail-why-chevron')).toBeNull();
+  });
+
+  // 見どころ is the word Japanese travel pages use for exactly this.
+  it.each([
+    ['vi', 'Điểm nổi bật'],
+    ['ja', '見どころ'],
+  ] as const)('names the highlights in %s', (lang, label) => {
+    state.lang = lang;
+    show(place({ desc_en: 'Brunch and counter food under the arches.' }));
+    expect(screen.getByText(label)).toBeTruthy();
   });
 
   it('draws no heading where the desk has written nothing', () => {
