@@ -57,12 +57,25 @@ function Row({ cat, label, saved, onSaved }) {
   const [text, setText] = useState(savedText);
   const [saving, setSaving] = useState(false);
 
-  // Re-seed when what is saved changes — the fetch landing, or a save
-  // coming back cleaned — and not when the array is merely new. The parent
-  // passes `saved[cat] ?? []`, a fresh [] on every render for a category
-  // with no terms, so keying this on the array wiped a half-typed edit
-  // whenever the page re-rendered for any other reason.
-  useEffect(() => { setText(savedText); }, [savedText]);
+  // Re-seed when what is saved changes — a save coming back cleaned — and
+  // not when the array is merely new. The parent passes `saved[cat] ?? []`,
+  // a fresh [] on every render for a category with no terms, so keying
+  // this on the array wiped a half-typed edit whenever the page
+  // re-rendered for any other reason.
+  //
+  // During render, against the text it last seeded from, and not in an
+  // effect. The effect also ran on mount, where it had nothing to do —
+  // `useState(savedText)` has already seeded the box — and its
+  // `setText('')` could land *after* the first keystroke: typed as soon
+  // as the box appeared, the edit was queued ahead of the effect's reset
+  // and wiped by it. That is what turned CI's SearchTerms test red once
+  // in a while on a slow runner, reading "(0)" where it had typed four
+  // lines. Here there is no mount pass and nothing to race.
+  const [seeded, setSeeded] = useState(savedText);
+  if (savedText !== seeded) {
+    setSeeded(savedText);
+    setText(savedText);
+  }
 
   const terms = useMemo(() => toTerms(text), [text]);
   const short = useMemo(() => terms.filter(tooShort), [terms]);
