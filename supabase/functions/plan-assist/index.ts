@@ -10,8 +10,10 @@
 // POST { action: "parse", text, today, categories, districts }
 //   → { company, categories, district, date, when }   (every field nullable)
 //
-// Secrets (Edge Function settings): ANTHROPIC_API_KEY.
-// SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
+// Secrets (Edge Function settings): ANTHROPIC_API_KEY, and GUEST_SALT for
+// the address hash below (falls back to the project URL, which is public —
+// set the secret). SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are injected by
+// the platform.
 //
 // ── the model never picks a place, and never invents a word ──
 //
@@ -33,18 +35,32 @@
 // through the same `planTrips` every wizard answer goes through — so a
 // parsed request still respects opening hours, distance and the catalog.
 //
-// ── on the cost cap ──
+// ── who may ask, and how often ──
 //
-// There isn't one per account, and that is a deliberate copy of what
-// `fetch-place`'s `search` action already does and says: capping this would
-// need a record of narrate calls, which is state with nothing else to
-// justify it, and the exposure is bounded by needing an account at all.
-// What *is* capped is the cost of any single call — at most `MAX_STOPS`
-// places in, a small `max_tokens` out, and a hard timeout. The daily
-// suggestion cap next door works because it can be counted off the `places`
-// rows themselves; there is no equivalent row for a plan nobody saved, and
-// a cap that counts the wrong thing is worse than an honest absence. If the
-// bill ever shows it, the answer is a counter table.
+// `parse` needs an account, as every function here did. `narrate` no
+// longer does: the options screen shows a guest the same cards it shows an
+// account holder, and the one line on them that reads as written for the
+// reader was the line a guest never got. Logs showed the app asking for it
+// anyway and being told 401, twice per visit.
+//
+// There is no way to let the app call this and keep a script out: the anon
+// key, any header, any token in the bundle can be lifted from the bundle.
+// Device attestation (App Attest, Play Integrity) is the one real binding
+// and is a later piece of work. What stands in for it is three ceilings:
+//
+// - the cost of any one call — at most `MAX_STOPS` places in, a small
+//   `max_tokens` out, a hard timeout — which was always here;
+// - a guest's calls per day, by a salted hash of their address
+//   (`GUEST_PER_IP_DAY`): twenty is more plans than the planner draws for
+//   anyone in a day;
+// - all guests' calls per day (`GUEST_PER_DAY`): whatever a script does
+//   with addresses, the day has one ceiling, and at a fraction of a cent a
+//   call that ceiling is the bill. Lowering it is a redeploy.
+//
+// The counter is `guest_assist_allowed` (20261001090000_guest_narration),
+// called as the service role; a refused call is still counted, so the
+// limit cannot be probed for free. Account holders are not counted — they
+// never were, and the exposure there is bounded by needing an account.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.70.1";
@@ -63,6 +79,25 @@ const json = (body: unknown, status = 200) =>
 /** A day out is five stops and an evening is three; eight leaves room for a
  *  plan the reader has added to without letting one request grow unbounded. */
 const MAX_STOPS = 8;
+
+/** A guest's narrations per day, by address. The options screen asks once
+ *  per card, two or three cards per visit; twenty is six or seven visits,
+ *  which nobody planning one evening makes. */
+const GUEST_PER_IP_DAY = 20;
+/** Every guest's narrations per day, together — the bill's ceiling. At
+ *  roughly 200 tokens in and 170 out per call this is a few dollars. */
+const GUEST_PER_DAY = 2000;
+
+/** The caller's address, salted and hashed — what the counter is keyed by.
+ *  The first `x-forwarded-for` hop is the client as the platform saw it; a
+ *  call that carries none shares one key, and so the tightest cap. */
+async function guestKey(req: Request): Promise<string> {
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim()
+    || req.headers.get("cf-connecting-ip") || "unknown";
+  const salt = Deno.env.get("GUEST_SALT") ?? Deno.env.get("SUPABASE_URL") ?? "";
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}:${ip}`));
+  return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 /** Long enough for a name and eight short sentences with the model's own
  *  reasoning in front of them — thinking and text share this budget. Too
@@ -189,12 +224,13 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Same gate as every other function here: signed in, nothing more. There
-  // is no editors check because there is nothing privileged about asking
-  // for a sentence.
+  // Who is asking. An account holder passes as before; a guest is anyone
+  // else, and is let through to `narrate` alone, under the counter — see
+  // the header. There is no editors check because there is nothing
+  // privileged about asking for a sentence.
   const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
   const { data: userData } = await admin.auth.getUser(token);
-  if (!userData?.user?.id) return json({ error: "not signed in" }, 401);
+  const signedIn = !!userData?.user?.id;
 
   const anthropic = new Anthropic({ apiKey });
 
@@ -205,6 +241,21 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     action = typeof body.action === "string" ? body.action : null;
+
+    if (!signedIn) {
+      if (action !== "narrate") return json({ error: "not signed in" }, 401);
+      const key = await guestKey(req);
+      const { data: allowed, error } = await admin.rpc("guest_assist_allowed", {
+        p_ip_hash: key, p_ip_cap: GUEST_PER_IP_DAY, p_day_cap: GUEST_PER_DAY,
+      });
+      // A counter that cannot be read is a door that stays shut: the app
+      // draws its fallback either way, and an open door on a broken meter
+      // is the one failure this file must not have.
+      if (error || allowed !== true) {
+        console.log("plan-assist guest refused", { key: key.slice(0, 8), error: error?.message ?? null });
+        return json({ error: "guest allowance used" }, 429);
+      }
+    }
 
     // ── parse: a sentence in, wizard answers out ──────────────────────
     //

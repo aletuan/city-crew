@@ -145,10 +145,11 @@ type Reply = {
 /**
  * The narration for a plan, or the empty one.
  *
- * Never throws and never rejects. Every failure — signed out, no network,
- * the function missing, a model that refused — arrives here as the same
- * empty `Narration`, and the screen renders its fallback without knowing
- * which of those happened. That is the whole contract: the caller has one
+ * Never throws and never rejects. Every failure — a guest past the day's
+ * allowance (the function answers guests under a counter; see its header),
+ * no network, the function missing, a model that refused — arrives here as
+ * the same empty `Narration`, and the screen renders its fallback without
+ * knowing which of those happened. That is the whole contract: the caller has one
  * code path, and it is the one that also runs offline.
  *
  * Slugs are checked against the stops that were sent. The function checks
