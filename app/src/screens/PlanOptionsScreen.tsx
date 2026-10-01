@@ -30,7 +30,7 @@
 // add a reason, and a reason nobody asked for reads as an apology for the
 // catalog. The count stays; the apology went.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -53,7 +53,7 @@ import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
 import { useSave } from '../lib/save';
 import { stopCount, summaryLine } from '../lib/sketch';
-import { stopFacts } from '../lib/stopFacts';
+import { sharedArea, stopFacts } from '../lib/stopFacts';
 import StopGallery, { hasPicture } from '../components/StopGallery';
 import { draftFrom, type TripDraft } from '../lib/trip';
 import type { Nav, RootRoute } from '../nav';
@@ -496,6 +496,15 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
   // no carousel, and a first row marked as "the one on screen" would be
   // pointing at nothing.
   const pictured = hasPicture(places);
+  // One district for the whole plan means the heading names it (or the
+  // model did, and the byline's city stands in) and the rows need not.
+  const oneArea = sharedArea(places);
+  // The press feedback belongs to the whole card, picture included, while
+  // the press itself is taken by the body alone — see the note at the
+  // carousel below for why the two are no longer one element.
+  const press = useRef(new Animated.Value(1)).current;
+  const springTo = (v: number) =>
+    Animated.spring(press, { toValue: v, useNativeDriver: true, speed: 40, bounciness: 5 }).start();
   const badge = BADGE[plan.lens];
   const badgeText = t(badge.en, badge.vi, badge.ja);
   // The border and the star follow one rule — the lens — rather than the
@@ -513,7 +522,7 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
 
   return (
     <Animated.View
-      style={{
+      style={[s.cardWrap, {
         opacity: rise,
         // 18pt, and up rather than in from the side. The cards are a
         // list, and a list assembles downward; sliding them in
@@ -521,45 +530,57 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
         // 14 was the first figure and it was too quiet to read even once
         // the fade stopped hiding it — a card moving a tenth of its own
         // height is a card that did not move.
-        transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
-      }}
+        transform: [
+          { translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) },
+          { scale: press },
+        ],
+      }]}
     >
-      <PressableScale
-        scaleTo={0.985}
-        onPress={onPress}
-        containerStyle={s.cardWrap}
-        // A card is the screen's main control, and without these VoiceOver
-        // read it as loose text with no hint it could be tapped.
-        accessibilityRole="button"
-        accessibilityLabel={`${name}, ${badgeText}`}
-        // The highlight is a border, which nothing but a pixel can see; the
-        // id names the card that wears it so the rule can be pinned.
-        testID={best ? 'plan-card-best' : undefined}
-      >
-        <Card style={[s.card, best && s.cardBest]}>
-          {/* The stops' own covers, one page each — the picture the saved
-              trip opens on, so the plan a reader picks here is the plan
-              they find there. A band rather than the detail's 16:10:
-              three of these stack on one screen, and the stops under the
-              picture are what is being compared.
+      <Card style={[s.card, best && s.cardBest]}>
+        {/* The stops' own covers, one page each — the picture the saved
+            trip opens on, so the plan a reader picks here is the plan
+            they find there. A band rather than the detail's 16:10:
+            three of these stack on one screen, and the stops under the
+            picture are what is being compared.
 
-              The whole card stays one control. A swipe is the carousel's,
-              because a scroll that moves takes the touch from the press;
-              a tap anywhere, the picture included, opens the plan. */}
-          <StopGallery
-            places={places}
-            aspectRatio={3}
-            page={shot}
-            onPage={setShot}
-            testID="plan-gallery"
-          />
+            Beside the pressable body, not inside it. The first build had
+            the whole card as one control with the carousel in it, on the
+            theory that a scroll which moves takes the touch from the
+            press; on the phone the press took it from the scroll, and the
+            pages could not be swiped. So the picture is its own touch
+            region — a swipe pages it, a tap on it opens the plan through
+            `onPressPage` — and the body below is the button. */}
+        <StopGallery
+          places={places}
+          aspectRatio={3}
+          page={shot}
+          onPage={setShot}
+          onPressPage={onPress}
+          testID="plan-gallery"
+        />
+        <PressableScale
+          // No scale of its own: the body pressing in while the picture
+          // above it stood still read as the card breaking in half. The
+          // press drives the whole card's `press` value instead.
+          scaleTo={1}
+          onPress={onPress}
+          onPressIn={() => springTo(0.985)}
+          onPressOut={() => springTo(1)}
+          // A card is the screen's main control, and without these VoiceOver
+          // read it as loose text with no hint it could be tapped.
+          accessibilityRole="button"
+          accessibilityLabel={`${name}, ${badgeText}`}
+          // The highlight is a border, which nothing but a pixel can see; the
+          // id names the card that wears it so the rule can be pinned.
+          testID={best ? 'plan-card-best' : undefined}
+        >
           <View style={s.cardBody}>
+            {/* The badge above the name rather than beside it. Beside, it
+                took 110pt of the row and the name was clipped at one line
+                — "Market morning and lon…" on a 393pt phone — on the one
+                screen where the name is the thing being chosen. Above, the
+                name has the width and two lines. */}
             <View style={s.head}>
-              {/* The model's name when the sketch screen managed to fetch
-                  one, the areas when it did not. Resolved on the screen, from
-                  `words`, which is captured per set of plans and never
-                  changes under the reader. */}
-              <Text style={s.name} numberOfLines={1}>{name}</Text>
               {best ? (
                 <LinearGradient {...gradAI} style={s.badgeOn}>
                   <Ionicons name="star" size={11} color={colors.accentInk} />
@@ -570,6 +591,11 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
                   <Text style={s.badgeText}>{badgeText}</Text>
                 </View>
               )}
+              {/* The model's name when the sketch screen managed to fetch
+                  one, the areas when it did not. Resolved on the screen, from
+                  `words`, which is captured per set of plans and never
+                  changes under the reader. */}
+              <Text style={s.name} numberOfLines={2} testID="plan-name">{name}</Text>
             </View>
 
             {/* The leg lives *inside* the stop's own column, and that is
@@ -585,7 +611,13 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
               // the accent and the name a heavier weight, the pair the
               // saved trip uses, so the picture points at a row.
               const here = pictured && i === shot;
-              const line = why?.get(st.place.slug);
+              // The model's sentence for one stop at a time: the one whose
+              // picture is on screen, or the first when there is no
+              // picture. Three sentences on a card made the list a page
+              // to read rather than a set to choose from; one, moving with
+              // the carousel, is what the carousel is pointing at.
+              const line = (pictured ? i === shot : i === 0) ? why?.get(st.place.slug) : undefined;
+              const facts = stopFacts(st.place, st, day, tz, lang, t, { area: !oneArea });
               return (
                 <View key={st.place.slug} style={s.stop}>
                   <Text style={[s.time, here && s.timeHere]}>{clockOf(st.arriveMin)}</Text>
@@ -601,9 +633,10 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
                         one screen where the names *are* the choice — and half
                         this catalog has a name longer than what was left. What
                         else the line carries, and when, is `stopFacts`'s. */}
-                    <Text style={s.stopMeta} numberOfLines={1}>
-                      {stopFacts(st.place, st, day, tz, lang, t)}
-                    </Text>
+                    {/* Nothing at all when every fact is absent — a plan in
+                        one district whose places state no hours — rather
+                        than an empty line holding the row open. */}
+                    {!!facts && <Text style={s.stopMeta} numberOfLines={1}>{facts}</Text>}
                     {/* The model's reason for the stop, which this screen asked
                         for and then never showed: the editor and the saved trip
                         both print it. Nothing in its place when there is none —
@@ -638,11 +671,20 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
                   total > 0 ? `~${money(total)}` : null,
                 ])}
               </Text>
+              {/* The way in, said. The card was a button only VoiceOver
+                  could hear: a border, a picture and a list, and nothing
+                  that looked pressable. The footnote that used to say
+                  "Tap one to nudge its times and save it" was removed for
+                  saying it about all three; this says it on each, in two
+                  words and a chevron, where the eye lands last. */}
+              <View style={s.open}>
+                <Text style={s.openText}>{t('View & edit', 'Xem & sửa', '見る・編集')}</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.accent} />
+              </View>
             </View>
           </View>
-
-        </Card>
-      </PressableScale>
+        </PressableScale>
+      </Card>
     </Animated.View>
   );
 }
@@ -666,8 +708,9 @@ const s = StyleSheet.create({
   cardBody: { padding: space.cardPadding },
   cardBest: { borderColor: colors.accentFill, borderWidth: 1 },
 
-  head: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  name: { ...type.headline, color: colors.text, flex: 1 },
+  // A column: the badge, then the name under it with the whole width.
+  head: { alignItems: 'flex-start', gap: 8, marginBottom: 12 },
+  name: { ...type.headline, color: colors.text },
 
   badge: {
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill,
@@ -725,10 +768,15 @@ const s = StyleSheet.create({
   legText: { ...CAPTION, color: colors.textTertiary },
 
   foot: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,
     marginTop: 12, paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft,
   },
-  summary: { ...CAPTION, color: colors.textSecondary },
+  summary: { ...CAPTION, color: colors.textSecondary, flexShrink: 1 },
+  // The accent, as the info card's rows use it for the value that goes
+  // somewhere: the one colour on the card that means "press".
+  open: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  openText: { ...CAPTION, color: colors.accent, fontWeight: font.semibold },
   dropped: { ...CAPTION, color: colors.textTertiary, marginTop: 2, marginBottom: 6 },
 
   emptyCard: { alignItems: 'center', padding: space.cardPadding },
