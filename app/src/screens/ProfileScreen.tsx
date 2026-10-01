@@ -23,7 +23,7 @@ import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
 import { useAuth } from '../lib/auth';
-import { useIsEditor, useIsGuideAnywhere } from '../lib/useGuideGrant';
+import { useGrantSettled, useIsEditor, useIsGuideAnywhere } from '../lib/useGuideGrant';
 import { useMyTrips } from '../lib/mytrips';
 import { membersOf, useMyPreferences } from '../lib/data';
 import { useCrew } from '../lib/crew';
@@ -499,6 +499,14 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   // gallery, which includes the ones a guide keeps.
   const editor = useIsEditor();
   const guide = useIsGuideAnywhere();
+  // Whether the question behind those two has been answered this launch.
+  // Until it has, and when nothing remembered says yes, the badge's room
+  // is held so Edit profile does not move when the answer lands. The
+  // answer is one network round-trip behind the page, and when it was a
+  // yes, Edit profile slid right by the badge's width and the gap — the
+  // one movement on a page that had otherwise finished drawing. A
+  // remembered answer (`prime`) spares a returning reader even the hold.
+  const settled = useGrantSettled();
   const taste = useMemo(
     () => cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)),
     [prefs.data.categories],
@@ -620,7 +628,18 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
                   {editor ? t('Super User', 'Super User', 'スーパーユーザー') : t('Local Guide', 'Local Guide', 'ローカルガイド')}
                 </Text>
               </PressableScale>
-            ) : null}
+            ) : settled ? null : (
+              // The badge itself, invisible: its own footprint, without a
+              // width to measure and keep right. Super User's label stands
+              // in for both; Local Guide's is a few points off in each
+              // language, which is how far Edit profile moves if the
+              // answer is that one — and not at all if it is Super User
+              // or nothing remembered was wrong.
+              <View style={[s.roleBadge, s.rolePending]} accessible={false} aria-hidden testID="role-pending">
+                <Ionicons name="medal" size={13} color={colors.accent} />
+                <Text style={s.roleText}>{t('Super User', 'Super User', 'スーパーユーザー')}</Text>
+              </View>
+            )}
             <PressableScale
               scaleTo={0.94}
               style={s.editBtn}
@@ -879,6 +898,7 @@ const s = StyleSheet.create({
   },
   roleGuide: { borderColor: colors.ok, backgroundColor: colors.okSoft },
   roleEditor: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  rolePending: { opacity: 0 },
   roleText: { fontSize: 13, fontWeight: font.semibold },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginBottom: 4 },
   avatarBig: {

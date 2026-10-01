@@ -43,6 +43,8 @@ vi.mock('../nav', async (orig) => ({
 const state = vi.hoisted(() => ({
   guide: false,
   editor: false,
+  /** The launch question answered. True by default: the ordinary page. */
+  settled: true,
   lang: 'en' as 'en' | 'vi' | 'ja',
   scheme: 'dark' as 'dark' | 'light',
   pref: 'dark' as 'dark' | 'light' | 'system',
@@ -80,6 +82,7 @@ vi.mock('../lib/i18n', () => ({
 vi.mock('../lib/useGuideGrant', () => ({
   useIsEditor: () => state.editor,
   useIsGuideAnywhere: () => state.guide,
+  useGrantSettled: () => state.settled,
 }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({
@@ -170,6 +173,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   state.guide = false;
   state.editor = false;
+  state.settled = true;
   state.trips = [];
   spies.signOut.mockImplementation(async () => {});
   Object.assign(state, {
@@ -413,6 +417,31 @@ describe('interests', () => {
 // is shown alone; a reader with neither gets no badge; a tap explains the
 // grant in the desk's words.
 describe('the role badge', () => {
+  // The answer is a network round-trip behind the page. Until it lands,
+  // the badge's room is held — invisibly, by the badge's own shape — so
+  // Edit profile does not move when it does.
+  it('holds the badge’s room while the answer is out, without saying anything', () => {
+    state.settled = false;
+    render(<ProfileScreen navigation={nav() as unknown as Nav} />);
+    const held = screen.getByTestId('role-pending');
+    expect(held.getAttribute('aria-hidden')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Edit profile' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Super User|Local Guide/ })).toBeNull();
+  });
+
+  it('lets the room go once the answer is in and is no', () => {
+    render(<ProfileScreen navigation={nav() as unknown as Nav} />);
+    expect(screen.queryByTestId('role-pending')).toBeNull();
+  });
+
+  it('draws a remembered badge rather than holding its room', () => {
+    state.settled = false;
+    state.editor = true;
+    render(<ProfileScreen navigation={nav() as unknown as Nav} />);
+    expect(screen.queryByTestId('role-pending')).toBeNull();
+    expect(screen.getByRole('button', { name: /Super User/ })).toBeTruthy();
+  });
+
   it('is absent for a reader with no grant', () => {
     draw();
     expect(screen.queryByText('Local Guide')).toBeNull();
