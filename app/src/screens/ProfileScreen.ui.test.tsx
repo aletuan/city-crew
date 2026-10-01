@@ -383,6 +383,18 @@ describe('interests', () => {
     draw();
     expect(screen.getByText('Edit profile to add your interests.')).toBeTruthy();
   });
+
+  // A section of their own, headed, with the way to change them beside
+  // the heading — not a row of the facts card behind a heart glyph.
+  it('stands under its own heading, with an Edit that opens the profile editor', () => {
+    state.categories = ['cafes'];
+    const { raw } = draw();
+    expect(screen.getByText('Interests')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit interests' }));
+    expect(raw.navigate).toHaveBeenCalledWith('EditProfile');
+    // The facts card ends at Member since now: no heart row.
+    expect(document.querySelector('[data-icon="heart-outline"]')).toBeNull();
+  });
 });
 
 describe('the level ring', () => {

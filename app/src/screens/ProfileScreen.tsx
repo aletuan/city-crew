@@ -562,48 +562,65 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           value={email ?? ''}
         />
         {profile.location ? (
-          <AboutRow icon="location-outline" label={t('Hometown', 'Quê quán', '出身地')} value={profile.location} />
+          <AboutRow
+            icon="location-outline"
+            label={t('Hometown', 'Quê quán', '出身地')}
+            value={profile.location}
+            last={!memberSince}
+          />
         ) : null}
         {memberSince ? (
           <AboutRow
             icon="calendar-outline"
             label={t('Member since', 'Thành viên từ', '登録日')}
             value={memberSinceLabel(memberSince, lang)}
+            last
           />
         ) : null}
-        {/* The categories, not the old free-text box. That box was read
-            by nothing and accepted anything — "Sleep", "Nitendo" — so
-            editing it moved to chips, and this row follows them rather
-            than going on showing a value with no way back to it.
+      </Card>
 
-            Chips here too, not a joined sentence: they are the same
-            objects the picker draws, wearing the same glyph and hue, so
-            the row reads as the answer to the question that screen asked
-            rather than as a paraphrase of it. Flat, because nothing on
-            this card is tappable — the way to change them is the Edit
-            profile button at the top. */}
-        <AboutRow icon="heart-outline" label={t('Interests', 'Sở thích', '興味')} last>
-          {taste.length ? (
-            <View style={s.tasteChips}>
-              {taste.map((k) => (
-                <View key={k} style={s.tasteChip}>
-                  <Ionicons name={CATEGORIES[k].icon} size={14} color={CATEGORIES[k].color} />
-                  <Text style={s.tasteChipText}>
-                    {t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja)}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <Text style={s.aboutValue}>
-              {t(
-                'Edit profile to add your interests.',
-                'Sửa hồ sơ để cập nhật sở thích của bạn.',
-                '「プロフィール編集」で興味を追加できます。',
-              )}
-            </Text>
-          )}
-        </AboutRow>
+      {/* The interests, as a section of their own. They were the last row
+          of the card above, behind a heart glyph and a caption, and three
+          chips crammed into the value column of a facts table read as one
+          more fact — where they are the one thing on this screen the
+          reader chose, and the one thing they might want to change. So:
+          a heading with the way to change them beside it, and the chips
+          with the width of the card. The chips are the picker's own,
+          glyph and hue, at rest. The heading's "Edit" goes where the Edit
+          profile button goes, because that is where the picker lives; it
+          is here too so the reader is not sent back up to find it. */}
+      <View style={s.sectionRow}>
+        <Text style={s.sectionInRow}>{t('Interests', 'Sở thích', '興味')}</Text>
+        <PressableScale
+          scaleTo={0.94}
+          onPress={() => navigation.navigate('EditProfile')}
+          accessibilityRole="button"
+          accessibilityLabel={t('Edit interests', 'Chỉnh sửa sở thích', '興味を編集')}
+        >
+          <Text style={s.sectionAction}>{t('Edit', 'Chỉnh sửa', '編集')}</Text>
+        </PressableScale>
+      </View>
+      <Card style={s.featureCard}>
+        {taste.length ? (
+          <View style={s.tasteChips}>
+            {taste.map((k) => (
+              <View key={k} style={s.tasteChip}>
+                <Ionicons name={CATEGORIES[k].icon} size={15} color={CATEGORIES[k].color} />
+                <Text style={s.tasteChipText}>
+                  {t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={[s.aboutValue, s.tasteEmpty]}>
+            {t(
+              'Edit profile to add your interests.',
+              'Sửa hồ sơ để cập nhật sở thích của bạn.',
+              '「プロフィール編集」で興味を追加できます。',
+            )}
+          </Text>
+        )}
       </Card>
 
       {/* Friends above Preferences, deliberately: this row is the one
@@ -758,14 +775,21 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
 
 const s = StyleSheet.create({
   // The picker's chip, at rest: same glyph and hue, no press state and no
-  // border — this card is a page of answers, not a set of controls.
-  tasteChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+  // border — this card is a page of answers, not a set of controls. A
+  // size up from when they sat in a table's value column: with the card's
+  // width to themselves, 13.5pt chips read as leftovers.
+  tasteChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 14 },
   tasteChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
-    paddingHorizontal: 10, paddingVertical: 5,
+    paddingHorizontal: 14, paddingVertical: 9,
   },
-  tasteChipText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
+  tasteChipText: { color: colors.text, fontSize: 14.5, fontWeight: font.medium },
+  tasteEmpty: { paddingVertical: 14 },
+  // A heading with an action at its end, on the heading's own baseline.
+  sectionRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 10 },
+  sectionInRow: { color: colors.text, ...type.section },
+  sectionAction: { color: colors.accent, ...type.meta, fontWeight: font.semibold },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginBottom: 4 },
   avatarBig: {
     width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
