@@ -20,7 +20,8 @@
 
 import React from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '../uitest/render';
+import { Animated } from 'react-native';
+import { act, fireEvent, render, screen, within } from '../uitest/render';
 import { addDays, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
 import { narratableOf, type Narration } from '../lib/assist';
@@ -111,6 +112,10 @@ const renderScreen = (over: object = {}) => {
   return navigation;
 };
 
+/** Every card's name, top to bottom. By id rather than by text: a stop in
+ *  a plan that crosses districts prints its district too, so "Tây Hồ" can
+ *  be a heading on one card and a line on another. */
+const names = () => screen.getAllByTestId('plan-name').map((el) => el.textContent);
 /** Every badge on screen, top to bottom — which is the order of the lenses. */
 const badges = () => screen.queryAllByText(/^(Best match|Iconic views|Low-key)$/).map((el) => el.textContent);
 const regen = () => screen.getByRole('button', { name: 'Regenerate' });
@@ -223,11 +228,13 @@ describe('the cards', () => {
     expect(badges()).toEqual(['Low-key', 'Best match']);
   });
 
-  it('prints each stop with its time, district and rating, and the leg out of it', () => {
+  // The rating is gone from the line: four facts under every stop, above a
+  // sentence and a leg, made a card to read rather than one to choose.
+  it('prints each stop with its time and the leg out of it, and never the rating', () => {
     renderScreen();
     expect(screen.getByText('Cộng Café')).toBeTruthy();
     expect(screen.getByText('19:15')).toBeTruthy();
-    expect(screen.getAllByText('Hoàn Kiếm · 4.5★')).toHaveLength(2);
+    expect(screen.queryByText(/★/)).toBeNull();
     expect(screen.getByText('350 m · ≈ 5 min')).toBeTruthy();
     expect(screen.getByText('4.2 km · ≈ 18 min')).toBeTruthy();
     expect(document.querySelectorAll('[data-icon="walk-outline"]')).toHaveLength(1);
@@ -243,17 +250,37 @@ describe('the cards', () => {
     const timed = place('timed', 'Timed Café', { duration_min: 60, opening_hours: week } as Partial<Place>);
     planTrips.mockImplementation(() => [plan('match', [stop(timed, 18 * 60, 75)])]);
     renderScreen();
-    expect(screen.getByText('Hoàn Kiếm · 4.5★ · 75 min · open until 22:00')).toBeTruthy();
+    // One stop, one district: the heading names it and the line does not.
+    expect(screen.getByText('75 min · open until 22:00')).toBeTruthy();
+  });
+
+  // In Melbourne 59 of 66 places carry the council's "Melbourne City", and
+  // a card said it in its heading and under each of its stops. The line
+  // names the district only when the plan has more than one.
+  it('prints the district under a stop only when the plan crosses districts', () => {
+    renderScreen();
+    // The match plan stays in Hoàn Kiếm: its heading says so, once, and its
+    // stops — with no hours and no stated dwell — carry no line at all.
+    expect(screen.getAllByText('Hoàn Kiếm')).toHaveLength(1);
+    // The iconic plan crosses town, so each stop names its own.
+    expect(screen.getByText('Đống Đa')).toBeTruthy();
+    expect(within(screen.getByRole('button', { name: 'Đống Đa +1 area, Iconic views' })).getByText('Tây Hồ')).toBeTruthy();
   });
 
   // The model wrote a sentence for each stop while the reader waited; the
   // card now prints it, and prints nothing for a stop it skipped.
-  it('prints the model\'s line under each stop it wrote one for', () => {
+  it('prints the model\'s line under the first stop alone when the card has no picture', () => {
     cachedNarration.mockImplementation(() => ({
-      title: null, why: new Map([['cafe', 'Coffee on the balcony, then down the street.']]), fromModel: true,
+      title: null,
+      why: new Map([
+        ['cafe', 'Coffee on the balcony, then down the street.'],
+        ['dinner', 'Dinner where the queue is the review.'],
+      ]),
+      fromModel: true,
     }));
     renderScreen();
     expect(screen.getByText('Coffee on the balcony, then down the street.')).toBeTruthy();
+    expect(screen.queryByText('Dinner where the queue is the review.')).toBeNull();
     expect(document.querySelectorAll('[data-testid="plan-why"]')).toHaveLength(1);
   });
 
@@ -279,7 +306,8 @@ describe('the cards', () => {
   // the screen is then blank with the content technically present.
   it('settles the risen cards at full opacity and no offset', () => {
     renderScreen();
-    const wrap = screen.getAllByTestId('plan-card-best')[0].parentElement as HTMLElement;
+    // Pressable → Card → the risen wrapper.
+    const wrap = screen.getAllByTestId('plan-card-best')[0].parentElement!.parentElement as HTMLElement;
     const style = wrap.getAttribute('style') ?? '';
     expect(style).toContain('opacity: 1');
     expect(style).toContain('translateY(0px)');
@@ -315,9 +343,7 @@ describe('the cards', () => {
     renderScreen();
     // One district stays put; two districts say "+1 area"; a lone other
     // district names itself.
-    expect(screen.getByText('Hoàn Kiếm')).toBeTruthy();
-    expect(screen.getByText('Đống Đa +1 area')).toBeTruthy();
-    expect(screen.getByText('Tây Hồ')).toBeTruthy();
+    expect(names()).toEqual(['Hoàn Kiếm', 'Đống Đa +1 area', 'Tây Hồ']);
   });
 
   it('names the outing when none of its places has a district', () => {
@@ -331,11 +357,8 @@ describe('the cards', () => {
     cachedNarration.mockImplementation((stops: { slug: string }[]) =>
       (stops[0].slug === 'temple' ? words('Temples and a rooftop') : stops[0].slug === 'cafe' ? words('Ignored') : null));
     renderScreen();
-    expect(screen.getByText('Planner name')).toBeTruthy();
+    expect(names()).toEqual(['Planner name', 'Temples and a rooftop', 'Tây Hồ']);
     expect(screen.queryByText('Ignored')).toBeNull();
-    expect(screen.getByText('Temples and a rooftop')).toBeTruthy();
-    expect(screen.queryByText('Đống Đa +1 area')).toBeNull();
-    expect(screen.getByText('Tây Hồ')).toBeTruthy();
     expect(cachedNarration).toHaveBeenCalledWith(narratableOf(ICONIC.stops as never), 'en');
   });
 
@@ -348,6 +371,42 @@ describe('the cards', () => {
     renderScreen();
     expect(screen.queryByText(/^Tap one/)).toBeNull();
     expect(screen.getAllByRole('button', { name: /Best match|Iconic views|Low-key/ })).toHaveLength(3);
+  });
+
+  // What the eye gets instead of the footnote: two words and a chevron at
+  // the foot of each card, in the accent the info card's rows use for the
+  // value that goes somewhere.
+  // The body takes the press and the whole card answers it: a spring to
+  // 0.985 on the way down and back to 1 on the way up, on the wrapper
+  // that also carries the rise. The first build scaled the body alone and
+  // the picture stood still, which read as the card breaking in half.
+  // `Animated` does not tick here (see setup.tsx), so what is pinned is
+  // the two springs the press asks for, not the frames they draw.
+  it('presses the whole card in from its body, and lets it back', () => {
+    const spring = vi.spyOn(Animated, 'spring');
+    renderScreen();
+    const body = screen.getByRole('button', { name: 'Hoàn Kiếm, Best match' });
+    fireEvent.mouseDown(body, { button: 0 });
+    fireEvent.mouseUp(body, { button: 0 });
+    const asked = spring.mock.calls.map((c) => (c[1] as { toValue: number }).toValue);
+    expect(asked).toContain(0.985);
+    expect(asked.at(-1)).toBe(1);
+    spring.mockRestore();
+  });
+
+  it('names the way in at the foot of every card', () => {
+    renderScreen();
+    expect(screen.getAllByText('View & edit')).toHaveLength(3);
+  });
+
+  // Beside the name the badge took 110pt of the row and the name was cut
+  // at one line; above it, the name has the width.
+  it('puts the badge above the name', () => {
+    renderScreen();
+    const card = screen.getByRole('button', { name: 'Hoàn Kiếm, Best match' });
+    const badge = within(card).getByText('Best match');
+    const name = within(card).getByText('Hoàn Kiếm');
+    expect(badge.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
@@ -476,7 +535,7 @@ describe('narration prefetch', () => {
 describe('picking a card', () => {
   it('opens PlanEdit on that lens with the same seed, the answers and the areas name the card shows', () => {
     const navigation = renderScreen({ from: ['weekend'] });
-    fireEvent.click(screen.getByText('Tây Hồ'));
+    fireEvent.click(screen.getByRole('button', { name: 'Tây Hồ, Low-key' }));
     expect(navigation.navigate).toHaveBeenCalledTimes(1);
     expect(navigation.navigate).toHaveBeenCalledWith('PlanEdit', {
       ...routeWith({ from: ['weekend'] }).params,
@@ -560,6 +619,35 @@ describe('the picture on each card', () => {
     expect(first).not.toBe(second);
     act(() => galleryProps().onPage(1));
     expect(times()).toEqual([second, first]);
+  });
+
+  // One sentence per card, the one under the picture on screen: three
+  // sentences made the list a page to read, and one that moves with the
+  // carousel is what the carousel points at.
+  it('prints the model\'s line for the stop on screen, and moves it with the page', () => {
+    planTrips.mockImplementation(() => [PICTURED]);
+    cachedNarration.mockImplementation(() => ({
+      title: null,
+      why: new Map([['a', 'First, for the light.'], ['b', 'Then, for the view.']]),
+      fromModel: true,
+    }));
+    render(<PlanOptionsScreen navigation={nav() as unknown as Nav} route={routeWith()} />);
+    expect(screen.getByText('First, for the light.')).toBeTruthy();
+    expect(screen.queryByText('Then, for the view.')).toBeNull();
+    act(() => galleryProps().onPage(1));
+    expect(screen.queryByText('First, for the light.')).toBeNull();
+    expect(screen.getByText('Then, for the view.')).toBeTruthy();
+  });
+
+  // The picture stands beside the card's button, not inside it, so that a
+  // swipe is the carousel's alone; a tap on it still opens the plan.
+  it('opens the plan from a tap on its picture', () => {
+    planTrips.mockImplementation(() => [PICTURED]);
+    const navigation = nav();
+    render(<PlanOptionsScreen navigation={navigation as unknown as Nav} route={routeWith()} />);
+    fireEvent.click(screen.getAllByTestId('gallery-page')[1]);
+    expect(navigation.navigate).toHaveBeenCalledTimes(1);
+    expect(navigation.navigate).toHaveBeenCalledWith('PlanEdit', expect.objectContaining({ lens: 'match' }));
   });
 
   it('marks no row when no stop has a picture', () => {

@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '../uitest/render';
+import { act, fireEvent, render, screen } from '../uitest/render';
 import type { Place } from '../lib/types';
 
 const state = vi.hoisted(() => ({ credit: false }));
@@ -67,6 +67,27 @@ describe('StopGallery', () => {
     expect(container.querySelector('img[src="https://img/a.jpg"]')).toBeTruthy();
     expect(screen.getByText('🍜')).toBeTruthy();
     expect(screen.getByText('📍')).toBeTruthy();
+  });
+
+  // The plan options card stands the carousel beside its button and hands
+  // it the same open: a tap on any page, picture or emoji, goes in, and
+  // none of the pages is a second button for VoiceOver to meet.
+  it('opens from a tap on any page when given a way in, without announcing buttons', () => {
+    const open = vi.fn();
+    render(
+      <StopGallery
+        places={[place({ place_photos: [photo('https://img/a.jpg')] }), place()]}
+        aspectRatio={3} page={0} onPage={() => {}} onPressPage={open} testID="gallery"
+      />,
+    );
+    fireEvent.click(screen.getAllByTestId('gallery-page')[1]);
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('offers no page to tap when not asked to', () => {
+    render(<Held places={[place({ place_photos: [photo('https://img/a.jpg')] }), place()]} />);
+    expect(screen.queryAllByTestId('gallery-page')).toHaveLength(0);
   });
 
   it('draws nothing when no stop has a picture', () => {

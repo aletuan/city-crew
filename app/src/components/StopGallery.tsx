@@ -16,7 +16,7 @@
 // there is what they find again once the plan is saved.
 
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { dotWindow } from '../lib/format';
 import { coverOf } from '../lib/place';
@@ -29,7 +29,7 @@ export function hasPicture(places: readonly (Place | null | undefined)[]): boole
   return places.some((p) => !!p && !!coverOf(p));
 }
 
-export default function StopGallery({ places, aspectRatio, page, onPage, testID }: {
+export default function StopGallery({ places, aspectRatio, page, onPage, onPressPage, testID }: {
   /** One per stop, in order; null for a place no longer listed. */
   places: readonly (Place | null | undefined)[];
   /** Width over height. The list's band and the detail's picture differ,
@@ -38,6 +38,19 @@ export default function StopGallery({ places, aspectRatio, page, onPage, testID 
   /** The page on screen, held by the screen so a row can be marked. */
   page: number;
   onPage: (i: number) => void;
+  /**
+   * A tap on any page, when the picture is also a way into what it shows.
+   *
+   * The plan options card passes its own open here, because the carousel
+   * cannot live *inside* the card's pressable: a horizontal scroll and a
+   * press on the same touch are two responders arguing over one finger,
+   * and on the phone the swipe lost. So the picture stands beside the
+   * pressable body rather than in it, and this is how a tap on it still
+   * opens the plan. The pages are not announced as buttons — the body
+   * already is, once, with the card's name — so VoiceOver meets one
+   * control per card and not one per photograph.
+   */
+  onPressPage?: () => void;
   testID?: string;
 }) {
   const [width, setWidth] = useState(0);
@@ -62,10 +75,9 @@ export default function StopGallery({ places, aspectRatio, page, onPage, testID 
       >
         {places.map((p, i) => {
           const ph = p ? coverOf(p) : undefined;
-          return ph
+          const pageView = ph
             ? (
               <Image
-                key={`shot-${i}`}
                 source={{ uri: ph.photo_uri }}
                 style={[s.shot, shot]}
                 contentFit="cover"
@@ -73,10 +85,17 @@ export default function StopGallery({ places, aspectRatio, page, onPage, testID 
               />
             )
             : (
-              <View key={`shot-${i}`} style={[s.shot, s.bare, shot]}>
+              <View style={[s.shot, s.bare, shot]}>
                 <Text style={s.emoji}>{p?.emoji ?? '📍'}</Text>
               </View>
             );
+          return onPressPage
+            ? (
+              <Pressable key={`shot-${i}`} onPress={onPressPage} accessible={false} testID="gallery-page">
+                {pageView}
+              </Pressable>
+            )
+            : <React.Fragment key={`shot-${i}`}>{pageView}</React.Fragment>;
         })}
       </ScrollView>
       {attr ? <Text style={s.attr} numberOfLines={1}>{attr}</Text> : null}
