@@ -434,6 +434,22 @@ describe('the role badge', () => {
     fireEvent.click(screen.getByText('Super User'));
     expect(alert).toHaveBeenCalledWith('Super User', expect.stringMatching(/every place in the app/));
   });
+
+  // Two roles, two colours: the badge's edge and glyph follow the role,
+  // and an editor who is also a guide wears the editor's, not the guide's.
+  it('wears a different colour for each role, the editor’s when both apply', () => {
+    const edge = (label: string) => getComputedStyle(screen.getByText(label).parentElement!).borderColor;
+    state.guide = true;
+    draw();
+    const guideEdge = edge('Local Guide');
+    expect(document.querySelector('[data-icon="star"]')).toBeTruthy();
+    cleanup();
+    state.editor = true;
+    draw();
+    expect(document.querySelector('[data-icon="medal"]')).toBeTruthy();
+    expect(edge('Super User')).not.toBe(guideEdge);
+    expect(guideEdge).not.toBe('');
+  });
 });
 
 describe('the level ring', () => {
