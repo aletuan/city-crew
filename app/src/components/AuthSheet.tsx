@@ -49,6 +49,7 @@ const TITLES: Record<SignInWhy, (t: T) => string> = {
   copy: (t) => t('Save a copy to your account', 'Lưu bản sao về tài khoản', 'コピーを自分のアカウントに保存'),
   saved: (t) => t('See the places you saved', 'Xem địa điểm đã lưu', '保存したスポットを見る'),
   search: (t) => t('Find new places on Google Maps', 'Tìm địa điểm mới trên Google Maps', 'Google マップで新しいスポットを探す'),
+  trip: (t) => t('Save this trip', 'Lưu chuyến đi này', 'この旅程を保存'),
 };
 
 /** Width over height of both files (900×471). */

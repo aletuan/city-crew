@@ -79,7 +79,7 @@ export default function PlanEditScreen({ navigation, route }: {
   const { data: places } = usePlaces();
   const { city } = useCity();
   const { session, profile } = useAuth();
-  const { mine } = useSave();
+  const { mine, askToSignIn } = useSave();
   const { taste, budgetVnd } = usePlanProfile();
   const note = useNoteEvent();
 
@@ -267,7 +267,12 @@ export default function PlanEditScreen({ navigation, route }: {
   );
 
   const onSave = async () => {
-    if (!session?.user?.id || !city || !current.length) return;
+    // A guest's tap used to fall through this guard to nothing, with only
+    // the caption under the button to say why — the same dead control the
+    // bookmark and the heart were cured of. They raise the sign-in sheet
+    // with the thing reached for named in its title; so does this.
+    if (!session?.user?.id) { askToSignIn('trip'); return; }
+    if (!city || !current.length) return;
     setSaving(true);
     try {
       const tripId = await saveTrip({

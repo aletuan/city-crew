@@ -48,7 +48,8 @@ vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
 vi.mock('../lib/catalog', () => ({ usePlaces: () => ({ data: PLACES }) }));
-vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: mine.current, reload: vi.fn() } }) }));
+const askToSignIn = vi.hoisted(() => vi.fn());
+vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: mine.current, reload: vi.fn() }, askToSignIn }) }));
 vi.mock('../lib/tasteProfile', () => ({
   useNoteEvent: () => note,
   usePlanProfile: () => ({ taste: null, budgetVnd: 400000 }),
@@ -484,6 +485,10 @@ describe('saving', () => {
     save();
     await act(async () => {});
     expect(saveTrip).not.toHaveBeenCalled();
+    // The sheet the bookmark and the heart raise, titled for a trip — not
+    // a tap that goes nowhere with a caption to explain it.
+    expect(askToSignIn).toHaveBeenCalledTimes(1);
+    expect(askToSignIn).toHaveBeenCalledWith('trip');
   });
 
   it('does not write without a city', async () => {
