@@ -467,14 +467,14 @@ export default function SketchingScreen({ navigation, route }: {
   // order every trip subtitle keeps.
   //
   // Two lines rather than one, and the break is chosen rather than found.
-  // Centred, at 15pt, "Thứ Sáu, 25 tháng 9 · Ban ngày · Quanh Melbourne ·
-  // gần tôi" is wider than a phone, and the wrap landed wherever the last
+  // Centred, at 15pt, "Thứ Sáu, 25 tháng 9 · Ban ngày · Melbourne ·
+  // Gần bạn" is wider than a phone, and the wrap landed wherever the last
   // word fell — on a real screen that was "tôi", alone on its own line
   // under four segments. An orphan reads as a layout that came out wrong.
   //
   // When on top, where beneath it: the one boundary in the string that
   // means anything. `p.where` already carries its own separator when it
-  // is a city rather than a district ("Quanh Melbourne · gần tôi"), so
+  // is a city rather than a district ("Melbourne · Gần bạn"), so
   // the second line is a phrase and not a fragment.
   // The two halves of the dateline, kept apart rather than joined.
   //
@@ -494,7 +494,7 @@ export default function SketchingScreen({ navigation, route }: {
 
   // `p.where` arrives already joined, and sometimes with a separator in
   // it: a district is "Hoàn Kiếm", a dropped pin is its own name, and the
-  // default is "Quanh Melbourne · gần tôi". Splitting on the separator
+  // default is "Melbourne · Gần bạn". Splitting on the separator
   // `summaryLine` uses gives the cell the same two ranks the date has —
   // and when there is no separator the cell simply has one line, which is
   // the honest answer rather than an invented second one.
@@ -759,7 +759,7 @@ export default function SketchingScreen({ navigation, route }: {
  * qualifies it.
  *
  * The qualifier is optional and the cell does not invent one. `p.where`
- * is a district on one visit and "Quanh Melbourne · gần tôi" on the next,
+ * is a district on one visit and "Melbourne · Gần bạn" on the next,
  * so a cell that always drew two lines would have to make the second one
  * up — and the date cell beside it fixes the row's height either way, so
  * a one-line cell centres against it rather than shrinking the row.
