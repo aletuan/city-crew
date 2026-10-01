@@ -618,7 +618,7 @@ describe('the picture on each card', () => {
       const f = stack.pop()!;
       const p = f.memoizedProps;
       if (p && typeof p === 'object' && p.testID === 'plan-gallery' && 'onPage' in p) {
-        return p as unknown as { onPage: (i: number) => void };
+        return p as unknown as { onPage: (i: number) => void; aspectRatio: number };
       }
       if (f.sibling) stack.push(f.sibling);
       if (f.child) stack.push(f.child);
@@ -631,6 +631,8 @@ describe('the picture on each card', () => {
     const { container } = render(
       <PlanOptionsScreen navigation={nav() as unknown as Nav} route={routeWith()} />,
     );
+    // 2.2:1 — see the comment beside the figure in the screen.
+    expect(galleryProps().aspectRatio).toBe(2.2);
     expect(container.querySelector('img[src="https://img/a.jpg"]')).toBeTruthy();
     expect(container.querySelector('img[src="https://img/b.jpg"]')).toBeTruthy();
     const [first, second] = times();

@@ -8,12 +8,23 @@
 // its own place, and the pages are that place's photographs, in the order
 // its detail screen opens them.
 //
-// A count rather than dots. The band is 66pt tall (measured on the
-// reference: 767×158 px in a 942 px-wide capture of a 393pt phone) and a
-// pill of dots along its bottom edge sat on whatever the photograph had
-// there — faces, mostly. The count is the same figure the detail screen
-// floats over its hero, so a reader who swipes to the second picture here
-// and opens the place arrives at "2 / 3" and not at a surprise.
+// A count rather than dots: a pill of dots along the bottom edge sat on
+// whatever the photograph had there — faces, mostly. The count is the same
+// figure the detail screen floats over its hero, so a reader who swipes to
+// the second picture here and opens the place arrives at "2 / 3" and not
+// at a surprise.
+//
+// ── how tall ──
+//
+// The reference draws the band at 66pt (767×158 px in a 942 px-wide
+// capture of a 393pt phone, 4.85:1), and at that height a bar's interior
+// was a stripe of lit shelving with the people cropped at the shoulder.
+// The owner asked for more picture. 2:1 — 148pt on the 295pt a card has
+// beside the rail — is where the photographs in the catalog, shot in
+// landscape at 4:3 and 16:9, keep both the room and the people in it;
+// 16:9 (166pt) showed no more of either and cost a stop's whole body
+// below the fold on a 667pt screen. The options card, where three plans
+// stack to be compared, stays a step shorter (see `PlanOptionsScreen`).
 //
 // Nothing at all for a place without a photograph. `StopGallery` draws an
 // emoji on grey for such a stop because its index has to hold the stop's
@@ -28,11 +39,12 @@ import { photosOf } from '../lib/place';
 import type { Place } from '../lib/types';
 import { useFlag } from '../lib/useFlag';
 import { colors, font, onPhoto, radius } from '../theme';
+import { LIFT_AFTER_MS } from './useListDrag';
 
-/** Width over height of the band, as measured on the reference. */
-export const HERO_ASPECT = 767 / 158;
+/** Width over height of the band — see "how tall" above. */
+export const HERO_ASPECT = 2;
 
-export default function StopHero({ place, onPress, testID }: {
+export default function StopHero({ place, onPress, onHold, onRelease, testID }: {
   place: Place;
   /**
    * The same open the card's identity band has. The pictures cannot sit
@@ -43,6 +55,15 @@ export default function StopHero({ place, onPress, testID }: {
    * buttons: the band below already is, once, with the place's name.
    */
   onPress: () => void;
+  /**
+   * The hold completed on a page, with the finger at `pageY`: the card's
+   * lift, when the card can be moved. The picture is the biggest thing on
+   * the card and the first thing a thumb lands on, so a hold that only
+   * worked on the name under it would feel broken on the picture.
+   */
+  onHold?: (pageY: number) => void;
+  /** The page let go of the touch — see `useListDrag`'s `onRelease`. */
+  onRelease?: () => void;
   testID?: string;
 }) {
   const photos = photosOf(place);
@@ -69,7 +90,15 @@ export default function StopHero({ place, onPress, testID }: {
         ))}
       >
         {photos.map((ph, i) => (
-          <Pressable key={`shot-${i}`} onPress={onPress} accessible={false} testID="hero-page">
+          <Pressable
+            key={`shot-${i}`}
+            onPress={onPress}
+            onLongPress={onHold ? (e) => onHold(e.nativeEvent.pageY) : undefined}
+            delayLongPress={LIFT_AFTER_MS}
+            onPressOut={onRelease}
+            accessible={false}
+            testID="hero-page"
+          >
             <Image
               source={{ uri: ph.photo_uri }}
               style={[s.shot, { width, aspectRatio: HERO_ASPECT }]}

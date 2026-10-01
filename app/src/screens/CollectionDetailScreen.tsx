@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, PanResponder, Pressable, StyleProp, StyleSheet,
+  ActivityIndicator, Alert, Animated, Dimensions, FlatList, Modal, Pressable, StyleProp, StyleSheet,
   Text, View,
   ViewStyle,
 } from 'react-native';
@@ -13,6 +13,7 @@ import {
   AmbientWarmth, Avatar, Empty, GradientCta, PressableScale, RoundIconButton, Screen,
   fireHaptic, useTabBarClearance,
 } from '../components/ui';
+import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useAuth } from '../lib/auth';
 import { useCollections, useCuratorAvatar, useLikes, usePlaces } from '../lib/catalog';
@@ -23,7 +24,7 @@ import {
 } from '../lib/data';
 import { atHandle, normalizeHandle } from '../lib/handle';
 import { useCity } from '../lib/city';
-import { dropSlot, moveItem, sameOrder, stepAside } from '../lib/order';
+import { moveItem, sameOrder } from '../lib/order';
 import { useReport } from '../components/reportFlow';
 import { useSave } from '../lib/save';
 import { useNoteEvent } from '../lib/tasteProfile';
@@ -145,21 +146,6 @@ function blockerSentence(
 const SAVE_AFTER_MS = 600;
 
 /**
- * How long a finger rests on a card before the card lifts.
- *
- * The same card opens its place on a tap, and the list under it scrolls,
- * so the hold has to be told apart from both. A tap is over in about a
- * tenth of a second. A scroll moves the finger first, and more than ten
- * points of travel before the hold completes cancels the lift, so a
- * flick never picks a card up. What is left is a finger that lands and
- * stays, which is only ever a hold or a hesitation. 400 ms sits under
- * iOS's own 500 ms long press, so the lift does not feel slow to take,
- * and is long enough that a thumb resting on a card while reading does
- * not lift it.
- */
-const LIFT_AFTER_MS = 400;
-
-/**
  * A card's pitch before it has reported its size: a 16:10 photograph the
  * width of a phone, the two lines under it, and the gap below. Only ever
  * used for the first frame, or on a platform that does not report layout.
@@ -211,37 +197,22 @@ function LiftCell({ index, style, children, ...cell }: {
  * ── the lift is the card's, the drag is the list's ──
  *
  * The card only lifts. The drag after it belongs to a responder on the
- * list around the cards (see the screen's `drag`), which claims the touch
- * from the card's button on the finger's first move. While JavaScript
- * holds the touch, React Native tells the scroll view to leave it alone,
- * so the list cannot take the drag over as a scroll.
- *
- * This replaced a gesture-handler pan that waited out a long press. On a
- * phone it lifted (the haptic fired) and then never moved. The pan was
- * one native recognizer being arbitrated against the scroll view's,
- * reconfigured on every render mid-gesture, and none of that could be
- * watched from a test. The responder system is the one every button in
- * the app already runs on.
- *
- * All of it is JavaScript and React Native's own `Animated`. The usual
- * recipe is `react-native-reanimated`, a native module: a new build
- * through the store before anybody could drag, and every OTA after it
- * refused by the builds already installed.
+ * list around the cards, and the hold, the drag and the drop — and why
+ * they are built on the responder system rather than on gesture-handler
+ * or reanimated — are `useListDrag`, which the plan editor shares.
  *
  * VoiceOver cannot drag, so the card offers "Move up" and "Move down" as
  * accessibility actions, and says so in its hint.
  */
 function DraggableCard({
-  place, index, count, lifted, shift, dragY, onOpen, onUp, onDown, onLift, onRelease, onPitch,
+  place, index, count, style, onOpen, onUp, onDown, onLift, onRelease, onPitch,
 }: {
   place: Place;
   index: number;
   count: number;
-  /** This card is the one in the finger. */
-  lifted: boolean;
-  /** How far this card has stepped aside for the one in the finger. */
-  shift: number;
-  dragY: Animated.Value;
+  /** What this card wears right now — raised and travelling, stepped
+   *  aside, or nothing — from `useListDrag`'s `styleOf`. */
+  style: ReturnType<ReturnType<typeof useListDrag>['styleOf']>;
   onOpen: () => void;
   onUp: () => void;
   onDown: () => void;
@@ -261,9 +232,7 @@ function DraggableCard({
   return (
     <Animated.View
       onLayout={(e) => onPitch(place.slug, e.nativeEvent.layout.height)}
-      style={lifted
-        ? [s.cardLifted, { transform: [{ translateY: dragY }, { scale: 1.02 }] }]
-        : shift !== 0 && { transform: [{ translateY: shift }] }}
+      style={style}
       testID={`drag-${place.slug}`}
     >
       <PlaceCard
@@ -602,71 +571,16 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
 
   // ── the card in the finger ──
   //
-  // `lift` is for drawing: which card is up and which slot it hovers over,
-  // so the cards between can step aside. `liftRef` is the same thing for
-  // the touch handlers, which fire faster than renders and must not read a
-  // render behind. `dragY` is the finger's travel, driven straight into
-  // the lifted card's transform so a move does not re-render the list.
-  // `y0` is where the finger was when the card lifted: the travel is
-  // measured from there, not from where the touch began.
-  type Held = { from: number; to: number; pitch: number; y0: number };
-  const [lift, setLift] = useState<Held | null>(null);
-  const liftRef = useRef<Held | null>(null);
-  // Whether the list's responder has taken the touch from the card.
-  const claimed = useRef(false);
-  const dragY = useRef(new Animated.Value(0)).current;
-  const pitchBySlug = useRef(new Map<string, number>());
-  const raise = (next: Held | null) => {
-    liftRef.current = next;
-    setLift(next);
-  };
-  const pitches = () => drafted.map((p) => pitchBySlug.current.get(p.slug) ?? PITCH_GUESS);
-  const onLift = (index: number, pageY: number) => {
-    dragY.setValue(0);
-    claimed.current = false;
-    raise({ from: index, to: index, pitch: pitches()[index], y0: pageY });
-    fireHaptic('light');
-  };
-  const onDrag = (pageY: number) => {
-    const held = liftRef.current;
-    if (!held) return;
-    const dy = pageY - held.y0;
-    dragY.setValue(dy);
-    const to = dropSlot(pitches(), held.from, dy);
-    if (to !== held.to) {
-      raise({ ...held, to });
-      fireHaptic('selection');
-    }
-  };
-  // Landing is the same move VoiceOver's actions make, from the lifted
-  // card's place to the slot it was let go over, and saves the same way.
-  const onDrop = () => {
-    const held = liftRef.current;
-    if (!held) return;
-    raise(null);
-    if (held.to !== held.from) shuffle(held.from, held.to);
-  };
-  // The card's button has let go of the touch. Either the list claimed it,
-  // which is the hand-over and the drag goes on, or the finger came up
-  // without moving, and the card goes back where it was.
-  const onRelease = () => { if (!claimed.current) onDrop(); };
-
-  // The drag itself, on the list around the cards. It asks for the touch
-  // on every move and wants it only while a card is up, so a scroll or a
-  // tap never meets it. Once it has the touch it does not give it back.
-  // Made once. Its handlers read the latest `onDrag` and `onDrop` through
-  // a ref, as the unmount above reads `flush`.
-  const dragTo = useRef({ onDrag, onDrop });
-  useEffect(() => { dragTo.current = { onDrag, onDrop }; });
-  const [drag] = useState(() => PanResponder.create({
-    onMoveShouldSetPanResponderCapture: () => liftRef.current !== null,
-    onPanResponderGrant: () => { claimed.current = true; },
-    onPanResponderMove: (_e, g) => dragTo.current.onDrag(g.moveY),
-    onPanResponderRelease: () => dragTo.current.onDrop(),
-    onPanResponderTerminate: () => dragTo.current.onDrop(),
-    onPanResponderTerminationRequest: () => false,
-  }));
-  const onPitch = (slug: string, pitch: number) => { pitchBySlug.current.set(slug, pitch); };
+  // The hold, the drag and the drop are `useListDrag`'s, shared with the
+  // plan editor; landing calls `shuffle`, the same move VoiceOver's
+  // actions make, and saves the same way. The pitch guess is a 16:10
+  // photograph the width of a phone, the two lines under it, and the gap
+  // below — only ever used for the first frame.
+  const { lift, panHandlers, onLift, onRelease, onPitch, styleOf } = useListDrag({
+    keys: drafted.map((p) => p.slug),
+    onMove: shuffle,
+    pitchGuess: PITCH_GUESS,
+  });
 
   // Deliberately inert, and now inert for two different reasons — which
   // is why the sentence branches. A private list has no address to send
@@ -1048,7 +962,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       {loading && members.length === 0 && <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />}
       {!loading && !col && <Empty text={t('Collection not found.', 'Không tìm thấy bộ sưu tập.', 'コレクションが見つかりません。')} />}
       <LiftedCard.Provider value={lift ? lift.from : -1}>
-        <View style={s.dragArea} {...drag.panHandlers}>
+        <View style={s.dragArea} {...panHandlers}>
           <FlatList
             data={drafted}
             keyExtractor={(p) => p.slug}
@@ -1066,9 +980,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                     place={item}
                     index={index}
                     count={drafted.length}
-                    lifted={lift?.from === index}
-                    shift={lift ? stepAside(index, lift.from, lift.to, lift.pitch) : 0}
-                    dragY={dragY}
+                    style={styleOf(index)}
                     onOpen={open}
                     onUp={() => shuffle(index, index - 1)}
                     onDown={() => shuffle(index, index + 1)}
@@ -1307,10 +1219,6 @@ const s = StyleSheet.create({
   // Lifted: above its neighbours, with the shadow of something held off
   // the page. `zIndex` for iOS and the web, `elevation` for Android.
   arrangeCellLifted: { zIndex: 10, elevation: 6 },
-  cardLifted: {
-    zIndex: 10, elevation: 6,
-    shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 16, shadowOffset: { width: 0, height: 8 },
-  },
 
   // The dashed slot at the end of the list, matching the collections
   // screen's own last row down to the well and the gap.

@@ -17,6 +17,7 @@
 import { appFlags } from '../lib/flags';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PanResponder, type PanResponderCallbacks } from 'react-native';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { todayISO } from '../lib/day';
 import { derivedTitle, type Narration } from '../lib/assist';
@@ -69,6 +70,15 @@ vi.mock('../lib/data', async (orig) => ({
 }));
 
 import PlanEditScreen from './PlanEditScreen';
+
+// The list's drag responder, as `useListDrag` made it: the real one, with
+// its callbacks kept so a test can play the touch system's side.
+const responder = vi.hoisted(() => ({ config: null as null | PanResponderCallbacks }));
+const realCreate = PanResponder.create.bind(PanResponder);
+vi.spyOn(PanResponder, 'create').mockImplementation((config) => {
+  responder.config = config;
+  return realCreate(config);
+});
 
 const place = (slug: string, name: string, extra: Partial<Place>): Place => ({
   slug, name_en: name, name_vi: name, name_ja: null, category: 'food', is_featured: false,
@@ -154,10 +164,61 @@ const names = () => Array.from(document.querySelectorAll('[aria-label^="Open "]'
 const control: Record<string, (name: string) => string> = {
   remove: (n) => `Arrive 15 min earlier at ${n}`,
   add: (n) => `Arrive 15 min later at ${n}`,
-  'chevron-up': (n) => `Move ${n} up`,
-  'chevron-down': (n) => `Move ${n} down`,
   close: (n) => `Remove ${n}`,
 };
+
+/** Props of the first committed element matching `pick`. */
+const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, any> => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && pick(p)) return p;
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  throw new Error('no matching element in the committed tree');
+};
+/** Row `i`'s identity band — the pressable that opens the place and
+ *  carries the hold and VoiceOver's actions. */
+const band = (i: number) => {
+  const name = names()[i];
+  if (!name) throw new Error(`no row #${i}`);
+  return propsWhere((p) => p.accessibilityLabel === `Open ${name}` && 'onLongPress' in p);
+};
+/** One step, the way VoiceOver takes it. */
+const act11y = (i: number, actionName: string) => act(() => {
+  band(i).onAccessibilityAction({ nativeEvent: { actionName } });
+});
+// Where the finger is when the card lifts; the drag is measured from here.
+const Y0 = 480;
+const cfg = () => responder.config!;
+const evt = {} as never;
+const at = (dy: number) => ({ moveY: Y0 + dy }) as never;
+/** The hold completes on row `i`'s band. */
+const lift = (i: number) => act(() => { band(i).onLongPress({ nativeEvent: { pageY: Y0 } }); });
+/** The finger's first move: the list asks for the touch and, when it wants
+ *  it, is granted it and the band is told it has lost it. */
+const claim = (i: number) => {
+  let wanted = false;
+  act(() => {
+    wanted = !!cfg().onMoveShouldSetPanResponderCapture!(evt, at(0));
+    if (wanted) { cfg().onPanResponderGrant!(evt, at(0)); band(i).onPressOut(); }
+  });
+  return wanted;
+};
+const moveBy = (dy: number) => act(() => { cfg().onPanResponderMove!(evt, at(dy)); });
+const drop = () => act(() => { cfg().onPanResponderRelease!(evt, at(0)); });
+/** The row as React Native Web measures it, by hand: jsdom has no
+ *  ResizeObserver, and the handler is left on the node for one. */
+const measure = (slug: string, height: number) => act(() => {
+  (screen.getByTestId(`drag-${slug}`) as unknown as { __reactLayoutHandler: (e: unknown) => void })
+    .__reactLayoutHandler({ nativeEvent: { layout: { height } } });
+});
+const scroller = () => propsWhere((p) => 'scrollEnabled' in p && 'contentContainerStyle' in p);
 const press = (glyph: string, i: number) => {
   const name = names()[i];
   if (!name) throw new Error(`no row #${i}`);
@@ -170,6 +231,7 @@ const payload = () => saveTrip.mock.calls[0][0] as Payload;
 beforeEach(() => {
   appFlags.reset();
   vi.clearAllMocks();
+  responder.config = null;
   saveTrip.mockImplementation(async () => 'trip-1');
   planTrips.mockImplementation(() => [EVENING]);
   cachedNarration.mockImplementation(() => words());
@@ -392,20 +454,87 @@ describe('editing', () => {
     expect(screen.queryByText('Earlier than the stop above.')).toBeNull();
   });
 
-  it('moves a stop down and up without moving the evening’s start', () => {
+  // VoiceOver cannot drag, so each card offers Move up and Move down as
+  // actions — the arrows the rail used to carry.
+  it('moves a stop down and up by VoiceOver’s actions without moving the evening’s start', () => {
     renderScreen();
-    press('chevron-down', 0);
+    act11y(0, 'moveDown');
     expect(names()).toEqual(['Bún Chả Hương Liên', 'Cộng Café', 'Sky Bar']);
     expect(screen.getByText('18:00')).toBeTruthy();
-    press('chevron-up', 2);
+    act11y(2, 'moveUp');
     expect(names()).toEqual(['Bún Chả Hương Liên', 'Sky Bar', 'Cộng Café']);
   });
 
-  it('ignores the up arrow on the first stop and the down arrow on the last', () => {
+  it('offers no Move up on the first stop and no Move down on the last', () => {
     renderScreen();
-    press('chevron-up', 0);
-    press('chevron-down', 2);
+    const actions = (i: number) => (band(i).accessibilityActions as { name: string }[]).map((a) => a.name);
+    expect(actions(0)).toEqual(['moveDown']);
+    expect(actions(1)).toEqual(['moveUp', 'moveDown']);
+    expect(actions(2)).toEqual(['moveUp']);
+    expect(band(0).accessibilityHint).toMatch(/Hold and drag/);
+  });
+
+  // The hold-and-drag the collection screen has, on the stops. The rows
+  // are 360 tall until measured; a row is passed once the held row's
+  // centre is past its middle.
+  it('moves a stop by holding and dragging it, and retimes the evening', () => {
+    renderScreen();
+    lift(0);
+    expect(claim(0)).toBe(true);
+    // Held still while a stop is up.
+    expect(scroller().scrollEnabled).toBe(false);
+    moveBy(100);
     expect(names()).toEqual(['Cộng Café', 'Bún Chả Hương Liên', 'Sky Bar']);
+    moveBy(200);
+    drop();
+    expect(names()).toEqual(['Bún Chả Hương Liên', 'Cộng Café', 'Sky Bar']);
+    expect(screen.getByText('18:00')).toBeTruthy();
+    expect(scroller().scrollEnabled).toBe(true);
+  });
+
+  it('drags over the rows as they measured, not as guessed', () => {
+    renderScreen();
+    measure('dinner', 600);
+    lift(0);
+    claim(0);
+    moveBy(200);
+    drop();
+    expect(names()).toEqual(['Cộng Café', 'Bún Chả Hương Liên', 'Sky Bar']);
+    lift(0);
+    claim(0);
+    moveBy(320);
+    drop();
+    expect(names()).toEqual(['Bún Chả Hương Liên', 'Cộng Café', 'Sky Bar']);
+  });
+
+  it('puts a held stop down where it was when the finger comes up without moving', () => {
+    renderScreen();
+    lift(1);
+    act(() => { band(1).onPressOut(); });
+    expect(names()).toEqual(['Cộng Café', 'Bún Chả Hương Liên', 'Sky Bar']);
+    expect(scroller().scrollEnabled).toBe(true);
+  });
+
+  it('lifts from a hold on the picture as well as on the name', () => {
+    renderScreen();
+    const page = propsWhere((p) => p.testID === 'hero-page' && 'onLongPress' in p);
+    act(() => { page.onLongPress({ nativeEvent: { pageY: Y0 } }); });
+    expect(claim(0)).toBe(true);
+    moveBy(300);
+    drop();
+    expect(names()).toEqual(['Bún Chả Hương Liên', 'Cộng Café', 'Sky Bar']);
+  });
+
+  it('offers no hold, no actions and no promise of moving on a plan of one stop', () => {
+    planTrips.mockImplementation(() => [plan('classic', [stop(CAFE, 18 * 60, 60)])]);
+    renderScreen();
+    expect(band(0).onLongPress).toBeUndefined();
+    expect(band(0).accessibilityActions).toBeUndefined();
+    expect(band(0).accessibilityHint).toBeUndefined();
+    const page = propsWhere((p) => p.testID === 'hero-page');
+    expect(page.onLongPress).toBeUndefined();
+    expect(screen.getByText('Nudge the time with − and +.')).toBeTruthy();
+    expect(screen.queryByText(/Hold a stop/)).toBeNull();
   });
 
   it('removes a stop and the chips follow', () => {
@@ -425,7 +554,7 @@ describe('editing', () => {
 
   it('retires a model title once the order changes but keeps the sentences', async () => {
     const navigation = renderScreen();
-    press('chevron-down', 1);
+    act11y(1, 'moveDown');
     expect(screen.queryByText('Coffee, noodles, skyline')).toBeNull();
     expect(screen.getByText('An evening in the Old Quarter')).toBeTruthy();
     expect(screen.getByText('An easy first stop before the crowds.')).toBeTruthy();
@@ -590,11 +719,13 @@ describe('the header and the company', () => {
     expect(screen.queryByText('Save first, then invite')).toBeNull();
   });
 
-  it('says what the controls do, and does not promise dragging', () => {
+  it('says what the controls do: hold to move, − and + for the time', () => {
     renderScreen();
-    expect(screen.getByText('Nudge a time, or move a stop')).toBeTruthy();
+    expect(screen.getByText('Hold a stop to move it. Nudge its time with − and +.')).toBeTruthy();
     // The stepper is named on every card.
     expect(screen.getAllByText('Time')).toHaveLength(3);
+    // No arrows on the rail any more: remove is the only tool there.
+    expect(screen.queryByRole('button', { name: /^Move / })).toBeNull();
     expect(screen.queryByText(/Drag/)).toBeNull();
   });
 });

@@ -6,12 +6,14 @@
 // dinner and dinner stays at eight. Without that, every edit quietly undoes
 // the last one and nothing on screen admits it.
 //
-// The list is not a drag-and-drop surface. Stops move with arrows rather
-// than by dragging, and that is a deliberate trade rather than a stub:
-// `FlatList` with a pan responder inside a `ScrollView` fights the scroll
-// gesture, and getting it right needs a gesture-handler dependency this app
-// does not carry. Two buttons reorder a three-stop evening in one tap each
-// and work under VoiceOver, which dragging does not.
+// Stops are moved by holding one and dragging it, the way a collection's
+// places are: `useListDrag`, shared with that screen, which also records
+// why it is built on the responder system and not on gesture-handler or
+// reanimated. This file used to say the opposite — that dragging inside a
+// `ScrollView` fought the scroll and needed a dependency the app did not
+// carry — and moved stops with two arrows instead. The collection screen
+// then proved the drag; the arrows live on as VoiceOver's "Move up" and
+// "Move down" actions on each card, since VoiceOver cannot drag.
 //
 // ── on Share, and on where Invite went ──
 //
@@ -36,21 +38,22 @@
 // on the rail by how it is made. What the reference has and this page
 // does not: a stop count (the rail numbers the stops, and the options
 // card dropped its count for the same reason); "Edit all times" and a
-// per-stop Edit (nothing behind either); a kebab menu holding the reorder
-// and remove controls (one tap each on the rail beats two behind a menu,
-// and VoiceOver reaches them); and the drag affordance, for the reason
-// at the top of this file. The thread down the rail is drawn solid where
-// the reference dashes it: iOS draws a dashed border only when all four
-// sides carry one, which on a 1pt-wide view is a 2pt double line.
+// per-stop Edit (nothing behind either); a kebab menu over the remove
+// control (one tap on the rail beats two behind a menu); and the "⋮⋮"
+// grip, since holding to lift is already the app's convention and the
+// line above the stops says so. The thread down the rail is drawn solid
+// where the reference dashes it: iOS draws a dashed border only when all
+// four sides carry one, which on a 1pt-wide view is a 2pt double line.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AmbientWarmth, Card, GradientCta, IconSubtitle, PressableScale, RoundIconButton, Screen,
   fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
 import StopHero from '../components/StopHero';
+import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
 import {
   cachedNarration, derivedTitle, factLine, freshen, narratableOf, prefetchNarration,
   type Narration,
@@ -279,6 +282,21 @@ export default function PlanEditScreen({ navigation, route }: {
   const km = legs.reduce((n, l) => n + (l?.km ?? 0), 0);
   const company = COMPANY.find((c) => c.key === p.company);
 
+  // ── the stop in the finger ──
+  //
+  // Landing is `move`, the same call the arrows made and VoiceOver's
+  // actions still make, so a dragged stop keeps the rule the screen exists
+  // for: a time set by hand is never recomputed. The pitch guess is a 2:1
+  // picture on a 295pt card, the body under it and the leg row below —
+  // only ever used for the first frame. One stop has no order to change,
+  // and a card that lifts to go nowhere is a gesture that seems broken.
+  const canArrange = current.length > 1;
+  const { lift, panHandlers, onLift, onRelease, onPitch, styleOf } = useListDrag({
+    keys: current.map((st) => st.place.slug),
+    onMove: (from, to) => setStops(move(current, from, to)),
+    pitchGuess: 360,
+  });
+
   // Date first, place after, company nowhere: the chips below carry who
   // is going, and every trip subtitle keeps this same order.
   const line = summaryLine([
@@ -414,9 +432,15 @@ export default function PlanEditScreen({ navigation, route }: {
       )}
     >
       <AmbientWarmth />
+      {/* The drag's responder, around the whole list: it asks for the touch
+          on every move and wants it only while a stop is up. Held still
+          while one is, so the drag and the scroll never answer the same
+          finger. */}
+      <View style={s.dragArea} {...panHandlers}>
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!lift}
       >
         {/* The evening in three facts, read before the stops are: when it
             runs, how far it goes, who is on it. Each is a fact and not a
@@ -442,13 +466,15 @@ export default function PlanEditScreen({ navigation, route }: {
         </View>
 
         {/* What the controls on the cards do, said once above them rather
-            than as a letter-spaced eyebrow. The reference says "Drag to
-            reorder"; nothing here drags (see the top of the file), so this
-            says what does happen. */}
+            than as a letter-spaced eyebrow. "Hold", not "drag": the hold is
+            what tells a move apart from a tap and a scroll, and a reader
+            told to drag drags at once and scrolls. */}
         <View style={s.hint}>
-          <Ionicons name="swap-vertical-outline" size={15} color={colors.textTertiary} />
+          <Ionicons name="move-outline" size={15} color={colors.textTertiary} />
           <Text style={s.hintText}>
-            {t('Nudge a time, or move a stop', 'Chỉnh giờ, hoặc đổi thứ tự điểm', '時間を調整するか、順番を入れ替える')}
+            {canArrange
+              ? t('Hold a stop to move it. Nudge its time with − and +.', 'Giữ một điểm để kéo đổi chỗ. Chỉnh giờ bằng − và +.', 'スポットを長押しして動かす。時刻は − と + で調整。')
+              : t('Nudge the time with − and +.', 'Chỉnh giờ bằng − và +.', '時刻は − と + で調整。')}
           </Text>
         </View>
 
@@ -460,8 +486,25 @@ export default function PlanEditScreen({ navigation, route }: {
           // neutral pin on the neutral ground, not a guess.
           const cat = CATEGORIES[categoriesOf(stop.place)[0]];
           const open = () => navigation.navigate('PlaceDetail', { slug: stop.place.slug });
+          const hold = canArrange ? (pageY: number) => onLift(i, pageY) : undefined;
+          // VoiceOver cannot drag: the arrows the rail used to carry, as
+          // actions on the card. Only the ones that go somewhere.
+          const actions = canArrange
+            ? [
+              ...(i > 0 ? [{ name: 'moveUp', label: t('Move up', 'Chuyển lên', '上へ移動') }] : []),
+              ...(i < current.length - 1 ? [{ name: 'moveDown', label: t('Move down', 'Chuyển xuống', '下へ移動') }] : []),
+            ]
+            : undefined;
           return (
-          <View key={stop.place.slug}>
+          // The row the drag lifts: the card and the leg out of it, so a
+          // stop travels with its journey and the rows it passes step
+          // aside by the pair's height, which is what `onPitch` reports.
+          <Animated.View
+            key={stop.place.slug}
+            style={styleOf(i)}
+            onLayout={(e) => onPitch(stop.place.slug, e.nativeEvent.layout.height)}
+            testID={`drag-${stop.place.slug}`}
+          >
             {/* The stop's number in a disc on the gutter, and the thread
                 running from it down to the next — the itinerary's order,
                 drawn, so a card moved with the arrows is seen to have
@@ -478,7 +521,7 @@ export default function PlanEditScreen({ navigation, route }: {
                   and tapped the way the band below is. The card's padding
                   moved down to `cardBody` for this: a picture inset by
                   16pt inside a 22pt-radius card is a picture in a frame. */}
-              <StopHero place={stop.place} onPress={open} testID="stop-hero" />
+              <StopHero place={stop.place} onPress={open} onHold={hold} onRelease={onRelease} testID="stop-hero" />
               <View style={s.cardBody}>
               {/* What the place is, up top; what you do to it, at the
                   bottom. The old card led every row with the time stepper,
@@ -500,6 +543,16 @@ export default function PlanEditScreen({ navigation, route }: {
               <PressableScale
                 style={s.identity}
                 onPress={open}
+                onLongPress={hold ? (e) => hold(e.nativeEvent.pageY) : undefined}
+                delayLongPress={LIFT_AFTER_MS}
+                onPressOut={onRelease}
+                accessibilityHint={canArrange
+                  ? t('Hold and drag to change the order.', 'Giữ rồi kéo để đổi thứ tự.', '長押ししてドラッグすると並び順を変えられます。')
+                  : undefined}
+                accessibilityActions={actions}
+                onAccessibilityAction={(e) => setStops(
+                  move(current, i, e.nativeEvent.actionName === 'moveUp' ? i - 1 : i + 1),
+                )}
                 accessibilityRole="button"
                 accessibilityLabel={t(
                   `Open ${stop.place.name_en}`,
@@ -582,9 +635,9 @@ export default function PlanEditScreen({ navigation, route }: {
               <View style={s.railDivider} />
 
               {/* The controls, on their own rail under the divider: nudge
-                  the hour on the left, reorder and remove on the right.
-                  Everything above the divider is the place; everything on
-                  the rail is what you can do to it. */}
+                  the hour on the left, remove on the right. Everything
+                  above the divider is the place; everything on the rail is
+                  what you can do to it. */}
               <View style={s.rail}>
                 <View style={s.timeBox}>
                   {/* Named, because the stepper used to be the only
@@ -613,25 +666,9 @@ export default function PlanEditScreen({ navigation, route }: {
                   </PressableScale>
                 </View>
 
+                {/* Remove, alone on the right: the two arrows that stood
+                    beside it are the hold (and VoiceOver's actions) now. */}
                 <View style={s.tools}>
-                  <PressableScale
-                    haptic="selection"
-                    onPress={() => setStops(move(current, i, i - 1))}
-                    containerStyle={[s.tool, i === 0 && s.toolOff]}
-                    accessibilityRole="button"
-                    accessibilityLabel={t(`Move ${stop.place.name_en} up`, `Đưa ${stop.place.name_en} lên`, `${stop.place.name_en}を上へ`)}
-                  >
-                    <Ionicons name="chevron-up" size={16} color={colors.textSecondary} />
-                  </PressableScale>
-                  <PressableScale
-                    haptic="selection"
-                    onPress={() => setStops(move(current, i, i + 1))}
-                    containerStyle={[s.tool, i === current.length - 1 && s.toolOff]}
-                    accessibilityRole="button"
-                    accessibilityLabel={t(`Move ${stop.place.name_en} down`, `Đưa ${stop.place.name_en} xuống`, `${stop.place.name_en}を下へ`)}
-                  >
-                    <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-                  </PressableScale>
                   <PressableScale
                     onPress={() => { fireHaptic('light'); setStops(remove(current, i)); }}
                     containerStyle={s.tool}
@@ -671,7 +708,7 @@ export default function PlanEditScreen({ navigation, route }: {
                 </Text>
               </View>
             )}
-          </View>
+          </Animated.View>
           );
         })}
 
@@ -714,6 +751,7 @@ export default function PlanEditScreen({ navigation, route }: {
             )}
         </Text>
       </ScrollView>
+      </View>
     </Screen>
   );
 }
@@ -738,6 +776,8 @@ const s = StyleSheet.create({
   chipText: { color: colors.text, fontSize: 14, fontWeight: font.medium, fontVariant: ['tabular-nums'] },
 
   hint: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 10 },
+  // The responder that carries a lifted stop: the list's whole height.
+  dragArea: { flex: 1 },
   hintText: { ...CAPTION, color: colors.textSecondary },
 
   // The gutter is the disc's width; the card takes the rest. 12pt between
@@ -839,7 +879,6 @@ const s = StyleSheet.create({
 
   tools: { flexDirection: 'row', gap: 2 },
   tool: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  toolOff: { opacity: 0.25 },
 
   warn: { ...CAPTION, color: colors.accent, marginTop: 8 },
 
