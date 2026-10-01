@@ -43,8 +43,6 @@ vi.mock('../nav', async (orig) => ({
 const state = vi.hoisted(() => ({
   guide: false,
   editor: false,
-  /** The launch question answered. True by default: the ordinary page. */
-  settled: true,
   lang: 'en' as 'en' | 'vi' | 'ja',
   scheme: 'dark' as 'dark' | 'light',
   pref: 'dark' as 'dark' | 'light' | 'system',
@@ -82,7 +80,6 @@ vi.mock('../lib/i18n', () => ({
 vi.mock('../lib/useGuideGrant', () => ({
   useIsEditor: () => state.editor,
   useIsGuideAnywhere: () => state.guide,
-  useGrantSettled: () => state.settled,
 }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({
@@ -173,7 +170,6 @@ beforeEach(async () => {
   vi.clearAllMocks();
   state.guide = false;
   state.editor = false;
-  state.settled = true;
   state.trips = [];
   spies.signOut.mockImplementation(async () => {});
   Object.assign(state, {
@@ -413,45 +409,31 @@ describe('interests', () => {
   });
 });
 
-// The reader's standing, said under their name. Editor outranks guide and
-// is shown alone; a reader with neither gets no badge; a tap explains the
-// grant in the desk's words.
+// The reader's standing, as a small disc on the avatar's top-right corner.
+// Editor outranks guide and is shown alone; a reader with neither wears
+// none; a tap explains the grant in the desk's words.
 describe('the role badge', () => {
-  // The answer is a network round-trip behind the page. Until it lands,
-  // the badge's room is held — invisibly, by the badge's own shape — so
-  // Edit profile does not move when it does.
-  it('holds the badge’s room while the answer is out, without saying anything', () => {
-    state.settled = false;
-    render(<ProfileScreen navigation={nav() as unknown as Nav} />);
-    const held = screen.getByTestId('role-pending');
-    expect(held.getAttribute('aria-hidden')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Edit profile' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Super User|Local Guide/ })).toBeNull();
-  });
-
-  it('lets the room go once the answer is in and is no', () => {
-    render(<ProfileScreen navigation={nav() as unknown as Nav} />);
-    expect(screen.queryByTestId('role-pending')).toBeNull();
-  });
-
-  it('draws a remembered badge rather than holding its room', () => {
-    state.settled = false;
-    state.editor = true;
-    render(<ProfileScreen navigation={nav() as unknown as Nav} />);
-    expect(screen.queryByTestId('role-pending')).toBeNull();
-    expect(screen.getByRole('button', { name: /Super User/ })).toBeTruthy();
-  });
+  const badge = (name: RegExp | string) => screen.getByRole('button', { name });
 
   it('is absent for a reader with no grant', () => {
     draw();
+    expect(screen.queryByRole('button', { name: /Local Guide|Super User/ })).toBeNull();
+    expect(screen.queryByTestId('role-badge')).toBeNull();
+  });
+
+  it('sits on the avatar, not under the name, and says nothing in words', () => {
+    state.guide = true;
+    draw();
+    const disc = badge('Local Guide');
+    expect(screen.getByTestId('avatar-box').contains(disc)).toBe(true);
     expect(screen.queryByText('Local Guide')).toBeNull();
-    expect(screen.queryByText('Super User')).toBeNull();
+    expect(disc.querySelector('[data-icon="star"]')).toBeTruthy();
   });
 
   it('names a local guide, and says what the grant lets them do', () => {
     state.guide = true;
     draw();
-    fireEvent.click(screen.getByText('Local Guide'));
+    fireEvent.click(badge('Local Guide'));
     expect(alert).toHaveBeenCalledWith(
       'Local Guide',
       'You can edit, and add photos to, places in your collections and places you imported.',
@@ -462,28 +444,34 @@ describe('the role badge', () => {
     state.guide = true;
     state.editor = true;
     draw();
-    expect(screen.queryByText('Local Guide')).toBeNull();
-    fireEvent.click(screen.getByText('Super User'));
+    expect(screen.queryByRole('button', { name: 'Local Guide' })).toBeNull();
+    const disc = badge('Super User');
+    expect(disc.querySelector('[data-icon="medal"]')).toBeTruthy();
+    fireEvent.click(disc);
     expect(alert).toHaveBeenCalledWith('Super User', expect.stringMatching(/every place in the app/));
   });
 
-  // Two roles, two colours: the badge's edge and glyph follow the role,
+  // Two roles, two colours: the disc's edge and glyph follow the role,
   // and an editor who is also a guide wears the editor's, not the guide's.
   // react-native-web writes colours as classes, which jsdom's computed
-  // style does not resolve, so the class list is what is compared — the
-  // way the plan cards' marked time is read.
+  // style does not resolve, so the class list is what is compared.
   it('wears a different colour for each role, the editor’s when both apply', () => {
-    const dress = (label: string) => screen.getByText(label).parentElement!.className;
+    const dress = (name: string) => badge(name).firstElementChild!.className;
     state.guide = true;
     draw();
     const guideDress = dress('Local Guide');
-    expect(document.querySelector('[data-icon="star"]')).toBeTruthy();
     cleanup();
     state.editor = true;
     draw();
-    expect(document.querySelector('[data-icon="medal"]')).toBeTruthy();
     expect(dress('Super User')).not.toBe(guideDress);
     expect(guideDress).toMatch(/borderColor/);
+  });
+
+  // Words only on Edit profile: the pencil it wore was not wanted.
+  it('keeps Edit profile to its words, with no glyph', () => {
+    draw();
+    const edit = screen.getByRole('button', { name: 'Edit profile' });
+    expect(edit.querySelector('[data-icon]')).toBeNull();
   });
 });
 
@@ -519,10 +507,6 @@ describe('the three doors', () => {
     expect(screen.getByRole('button', { name: '0 Trips' })).toBeTruthy();
   });
 
-  it('wears a pencil on Edit profile', () => {
-    draw();
-    expect(screen.getByRole('button', { name: 'Edit profile' }).querySelector('[data-icon="pencil-outline"]')).toBeTruthy();
-  });
 });
 
 describe('the level ring', () => {
