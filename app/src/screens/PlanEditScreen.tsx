@@ -59,6 +59,7 @@ import { membersOf } from '../lib/place';
 import { useSave } from '../lib/save';
 import { useNoteEvent, usePlanProfile } from '../lib/tasteProfile';
 import { stopCount, summaryLine } from '../lib/sketch';
+import { useFlag } from '../lib/useFlag';
 import { draftFrom, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
@@ -235,6 +236,9 @@ export default function PlanEditScreen({ navigation, route }: {
   // The same sum a saved trip is priced by, so the figure here is the one
   // TripDetail will show for it.
   const spend = spendVnd(current.map((s) => s.place));
+  // Behind the place detail's price switch (#598), like the options card
+  // and the saved trip: a per-person sum of prices the reader cannot see.
+  const showPrice = useFlag('place_price');
 
   // Date first, place after, company nowhere: the crew row below carries
   // who is going, and every trip subtitle keeps this same order.
@@ -587,7 +591,7 @@ export default function PlanEditScreen({ navigation, route }: {
           {summaryLine([
             stopCount(current.length, t),
             current.length ? `${clockOf(from)}–${clockOf(to)}` : null,
-            spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人')}` : null,
+            showPrice && spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人')}` : null,
           ])}
         </Text>
 

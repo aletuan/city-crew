@@ -36,6 +36,7 @@ const state = vi.hoisted(() => ({
   invites: [] as { trip_id: string; invitee: string; status: string }[],
   crewCounts: {} as Record<string, number | null>,
   credit: false,
+  price: true,
   ships: [] as { requester: string; addressee: string; status: string }[],
 }));
 
@@ -76,7 +77,11 @@ vi.mock('../lib/auth', () => ({
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
-vi.mock('../lib/useFlag', () => ({ useFlag: () => state.credit }));
+// Two switches: the photo credit, off unless a test turns it on, and the
+// price, on here so the money tests can read it — it ships off (#598).
+vi.mock('../lib/useFlag', () => ({
+  useFlag: (key: string) => (key === 'place_price' ? state.price : state.credit),
+}));
 vi.mock('../lib/mytrips', () => ({
   useMyTrips: () => ({ loaded: state.loaded, data: state.trips, reload: tripsReload }),
 }));
@@ -216,6 +221,7 @@ beforeEach(() => {
   state.invites = [];
   state.crewCounts = {};
   state.credit = false;
+  state.price = true;
   state.ships = [];
   crewProps.last = null;
   sheetProps.last = null;
@@ -345,6 +351,13 @@ describe('the itinerary', () => {
 });
 
 describe('the money', () => {
+  it('is not there while the price switch is off, which is how it ships', () => {
+    state.price = false;
+    show();
+    expect(screen.queryByText('Roughly')).toBeNull();
+    expect(screen.queryByText(/₫/)).toBeNull();
+  });
+
   it('splits food from everything else and states the per-person total', () => {
     show();
     // Pho 60k + café 35k are food; the museum's 40k is not.
