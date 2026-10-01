@@ -23,6 +23,7 @@ import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
 import { useAuth } from '../lib/auth';
+import { useIsEditor, useIsGuideAnywhere } from '../lib/useGuideGrant';
 import { membersOf, useMyPreferences } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
@@ -475,6 +476,11 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   // `prefs.reload` is stable; `prefs` is a new object on every load.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefs.reload]));
+  // The reader's standing in the catalog, for the badge under their name.
+  // Editor outranks guide and is shown alone: the desk's hand keeps every
+  // gallery, which includes the ones a guide keeps.
+  const editor = useIsEditor();
+  const guide = useIsGuideAnywhere();
   const taste = useMemo(
     () => cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)),
     [prefs.data.categories],
@@ -543,14 +549,55 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
               </Text>
             ) : null}
           </View>
-          <PressableScale
-            scaleTo={0.94}
-            style={s.editBtn}
-            onPress={() => navigation.navigate('EditProfile')}
-            accessibilityRole="button"
-          >
-            <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}</Text>
-          </PressableScale>
+          {/* The role, said where the reader looks for who they are. The
+              grant used to show only as a control that appeared on some
+              galleries and not others, with nothing on the account to say
+              why — so a guide did not know they were one until they met
+              the panel. A badge here names it, and a tap says what it
+              lets them do, in the words the desk uses when it grants it.
+              Editor outranks guide and is the one badge shown. Nothing at
+              all for a reader with neither: an empty slot is not news. */}
+          <View style={s.heroActions}>
+            {editor || guide ? (
+              <PressableScale
+                scaleTo={0.94}
+                style={[s.roleBadge, editor ? s.roleEditor : s.roleGuide]}
+                accessibilityRole="button"
+                accessibilityHint={t('Explains what this lets you do', 'Giải thích quyền này', 'この権限でできることを説明します')}
+                onPress={() => Alert.alert(
+                  editor ? t('Super User', 'Super User', 'スーパーユーザー') : t('Local Guide', 'Local Guide', 'ローカルガイド'),
+                  editor
+                    ? t(
+                      'You can edit, and add photos to, every place in the app — new or already listed.',
+                      'Bạn có thể chỉnh sửa, thêm ảnh cho tất cả các địa điểm, mới hoặc đã có trong ứng dụng.',
+                      'アプリ内のすべての場所（新規・既存）を編集し、写真を追加できます。',
+                    )
+                    : t(
+                      'You can edit, and add photos to, places in your collections and places you imported.',
+                      'Bạn có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của mình hoặc các địa điểm đã nhập.',
+                      '自分のコレクションの場所や、自分が追加した場所を編集し、写真を追加できます。',
+                    ),
+                )}
+              >
+                <Ionicons
+                  name={editor ? 'medal' : 'star'}
+                  size={13}
+                  color={editor ? colors.accent : colors.ok}
+                />
+                <Text style={[s.roleText, { color: editor ? colors.accent : colors.ok }]}>
+                  {editor ? t('Super User', 'Super User', 'スーパーユーザー') : t('Local Guide', 'Local Guide', 'ローカルガイド')}
+                </Text>
+              </PressableScale>
+            ) : null}
+            <PressableScale
+              scaleTo={0.94}
+              style={s.editBtn}
+              onPress={() => navigation.navigate('EditProfile')}
+              accessibilityRole="button"
+            >
+              <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}</Text>
+            </PressableScale>
+          </View>
         </View>
       </View>
 
@@ -584,22 +631,12 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           chips crammed into the value column of a facts table read as one
           more fact — where they are the one thing on this screen the
           reader chose, and the one thing they might want to change. So:
-          a heading with the way to change them beside it, and the chips
-          with the width of the card. The chips are the picker's own,
-          glyph and hue, at rest. The heading's "Edit" goes where the Edit
-          profile button goes, because that is where the picker lives; it
-          is here too so the reader is not sent back up to find it. */}
-      <View style={s.sectionRow}>
-        <Text style={s.sectionInRow}>{t('Interests', 'Sở thích', '興味')}</Text>
-        <PressableScale
-          scaleTo={0.94}
-          onPress={() => navigation.navigate('EditProfile')}
-          accessibilityRole="button"
-          accessibilityLabel={t('Edit interests', 'Chỉnh sửa sở thích', '興味を編集')}
-        >
-          <Text style={s.sectionAction}>{t('Edit', 'Chỉnh sửa', '編集')}</Text>
-        </PressableScale>
-      </View>
+          a heading, and the chips with the width of the card. The chips
+          are the picker's own, glyph and hue, at rest. No "Edit" beside
+          the heading: it was there for one build and opened the same
+          screen as the Edit profile button four lines up, and two ways
+          to the same place on one screen is one too many. */}
+      <Text style={s.section}>{t('Interests', 'Sở thích', '興味')}</Text>
       <Card style={s.featureCard}>
         {taste.length ? (
           <View style={s.tasteChips}>
@@ -786,10 +823,15 @@ const s = StyleSheet.create({
   },
   tasteChipText: { color: colors.text, fontSize: 14.5, fontWeight: font.medium },
   tasteEmpty: { paddingVertical: 14 },
-  // A heading with an action at its end, on the heading's own baseline.
-  sectionRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 10 },
-  sectionInRow: { color: colors.text, ...type.section },
-  sectionAction: { color: colors.accent, ...type.meta, fontWeight: font.semibold },
+  // The role badge and the Edit profile button, one row under the name.
+  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' },
+  roleBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderRadius: radius.pill, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 7,
+  },
+  roleGuide: { borderColor: colors.ok, backgroundColor: colors.okSoft },
+  roleEditor: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  roleText: { fontSize: 13, fontWeight: font.semibold },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginBottom: 4 },
   avatarBig: {
     width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
@@ -868,7 +910,7 @@ const s = StyleSheet.create({
   // it is white. Matching that card makes the button read as part of the
   // same set of objects rather than a hole in the background.
   editBtn: {
-    alignSelf: 'flex-start', marginTop: 4,
+    alignSelf: 'flex-start',
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
     backgroundColor: colors.surfaceCard, paddingHorizontal: 16, paddingVertical: 8,
   },

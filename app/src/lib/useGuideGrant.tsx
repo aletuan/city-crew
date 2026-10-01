@@ -40,6 +40,14 @@ export function useIsEditor(): boolean {
   return useSyncExternalStore(guideGrant.subscribe, () => guideGrant.isEditor(uid));
 }
 
+/** Whether the reader is a local guide of any city — the profile's badge
+ *  question, not a place's. See `anywhere` on the store. */
+export function useIsGuideAnywhere(): boolean {
+  const { session } = useAuth();
+  const uid = session?.user?.id ?? null;
+  return useSyncExternalStore(guideGrant.subscribe, () => guideGrant.anywhere(uid));
+}
+
 /** The one launch question: both answers, side by side. */
 async function askGrant() {
   const [cities, editor] = await Promise.all([fetchGuideCities(), fetchIsEditor()]);
