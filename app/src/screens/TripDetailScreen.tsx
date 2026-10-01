@@ -95,6 +95,11 @@ export default function TripDetailScreen({ navigation, route }: {
   const [shot, setShot] = useState(0);
   const [galleryW, setGalleryW] = useState(0);
   const credit = useFlag('photo_attribution');
+  // The "Roughly" card is behind the place detail's price switch (#598),
+  // with the options card's footer and the editor's total: the price has
+  // no home yet, and a trip's budget is three of them added up. Read here,
+  // with the other switch, because hooks come before the early returns.
+  const showPrice = useFlag('place_price');
 
   // Who is coming. Above the early return with the two above, and for the
   // same reason: React counts hooks, and one declared under a branch that
@@ -621,6 +626,7 @@ export default function TripDetailScreen({ navigation, route }: {
           </View>
         </Card>
 
+        {showPrice && (
         <Card style={[s.card, s.spend]}>
           <Text style={s.spendTitle}>{t('Roughly', 'Ước chừng', 'おおよそ')}</Text>
           <View style={s.spendRow}>
@@ -649,6 +655,7 @@ export default function TripDetailScreen({ navigation, route }: {
             )}
           </Text>
         </Card>
+        )}
 
         <PressableScale
           onPress={owned ? confirmDelete : confirmLeave}

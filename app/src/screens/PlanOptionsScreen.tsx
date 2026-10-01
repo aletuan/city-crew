@@ -52,8 +52,9 @@ import { membersOf } from '../lib/place';
 import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
 import { useSave } from '../lib/save';
-import { stopCount, summaryLine } from '../lib/sketch';
+import { summaryLine } from '../lib/sketch';
 import { sharedArea, stopFacts } from '../lib/stopFacts';
+import { useFlag } from '../lib/useFlag';
 import StopGallery, { hasPicture } from '../components/StopGallery';
 import { draftFrom, type TripDraft } from '../lib/trip';
 import type { Nav, RootRoute } from '../nav';
@@ -499,6 +500,11 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
   // One district for the whole plan means the heading names it (or the
   // model did, and the byline's city stands in) and the rows need not.
   const oneArea = sharedArea(places);
+  // The same switch that hides the price on the place detail (#598): a
+  // sum of prices nobody can see on the places is a figure nobody can
+  // check. When the price gets a home, one row in `app_flags` shows it
+  // here, on the editor's total and on the saved trip at once.
+  const showPrice = useFlag('place_price');
   // The press feedback belongs to the whole card, picture included, while
   // the press itself is taken by the body alone — see the note at the
   // carousel below for why the two are no longer one element.
@@ -611,12 +617,12 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
               // the accent and the name a heavier weight, the pair the
               // saved trip uses, so the picture points at a row.
               const here = pictured && i === shot;
-              // The model's sentence for one stop at a time: the one whose
-              // picture is on screen, or the first when there is no
-              // picture. Three sentences on a card made the list a page
-              // to read rather than a set to choose from; one, moving with
-              // the carousel, is what the carousel is pointing at.
-              const line = (pictured ? i === shot : i === 0) ? why?.get(st.place.slug) : undefined;
+              // The model's sentence under every stop it wrote one for. One
+              // build showed it for the stop on screen alone, to thin the
+              // card; the reader asked for all of them back — the sentence
+              // is the one thing here that says *why* a stop, and the
+              // second stop's reason is not less wanted than the first's.
+              const line = why?.get(st.place.slug);
               const facts = stopFacts(st.place, st, day, tz, lang, t, { area: !oneArea });
               return (
                 <View key={st.place.slug} style={s.stop}>
@@ -663,12 +669,15 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
             })}
 
             <View style={s.foot}>
+              {/* No stop count: the rows above are the stops, two or three
+                  of them, and a reader counts two rows faster than they
+                  read "2 stops". The hours and the distance are what the
+                  rows do not say. The price waits on its switch. */}
               <Text style={s.summary}>
                 {summaryLine([
-                  stopCount(plan.stops.length, t),
                   `~${hours(plan.windowMin)}`,
                   km > 0 ? fmtDistance(km) : null,
-                  total > 0 ? `~${money(total)}` : null,
+                  showPrice && total > 0 ? `~${money(total)}` : null,
                 ])}
               </Text>
               {/* The way in, said. The card was a button only VoiceOver

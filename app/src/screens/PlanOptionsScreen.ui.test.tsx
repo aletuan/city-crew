@@ -21,6 +21,7 @@
 import React from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { Animated } from 'react-native';
+import { appFlags } from '../lib/flags';
 import { act, fireEvent, render, screen, within } from '../uitest/render';
 import { addDays, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
@@ -131,7 +132,7 @@ beforeEach(() => {
   mine.current = [];
 });
 
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => { vi.useRealTimers(); appFlags.reset(); });
 
 describe('the header', () => {
   it('calls an evening an evening, and goes back from its back button', () => {
@@ -269,19 +270,23 @@ describe('the cards', () => {
 
   // The model wrote a sentence for each stop while the reader waited; the
   // card now prints it, and prints nothing for a stop it skipped.
-  it('prints the model\'s line under the first stop alone when the card has no picture', () => {
-    cachedNarration.mockImplementation(() => ({
+  // Every stop the model wrote for gets its line, and a stop it skipped
+  // gets nothing in its place. (One build kept the line to the stop on
+  // screen; the reader wanted the second stop's reason as much as the
+  // first's.)
+  it('prints the model\'s line under each stop it wrote one for', () => {
+    cachedNarration.mockImplementation((stops: { slug: string }[]) => ({
       title: null,
-      why: new Map([
+      why: new Map(stops[0].slug === 'cafe' ? [
         ['cafe', 'Coffee on the balcony, then down the street.'],
         ['dinner', 'Dinner where the queue is the review.'],
-      ]),
+      ] : []),
       fromModel: true,
     }));
     renderScreen();
     expect(screen.getByText('Coffee on the balcony, then down the street.')).toBeTruthy();
-    expect(screen.queryByText('Dinner where the queue is the review.')).toBeNull();
-    expect(document.querySelectorAll('[data-testid="plan-why"]')).toHaveLength(1);
+    expect(screen.getByText('Dinner where the queue is the review.')).toBeTruthy();
+    expect(document.querySelectorAll('[data-testid="plan-why"]')).toHaveLength(2);
   });
 
   // The screen before this one spends five seconds on a paw in a ring,
@@ -313,21 +318,34 @@ describe('the cards', () => {
     expect(style).toContain('translateY(0px)');
   });
 
-  it('summarises count, hours, distance and per-person spend, in thousands or millions', () => {
+  // No stop count: the rows are the stops. The spend shows only once the
+  // price switch is on (#598); these two turn it on to pin the arithmetic.
+  it('summarises hours, distance and per-person spend, in thousands or millions', () => {
+    appFlags.set('place_price', true);
     renderScreen();
-    expect(screen.getByText('2 stops · ~3h · 350 m · ~250k ₫')).toBeTruthy();
+    expect(screen.getByText('~3h · 350 m · ~250k ₫')).toBeTruthy();
     // 900k + 200k + 30k.
-    expect(screen.getByText('2 stops · ~3h · 4.2 km · ~1.1M ₫')).toBeTruthy();
+    expect(screen.getByText('~3h · 4.2 km · ~1.1M ₫')).toBeTruthy();
     // No legs and nothing priced: distance and spend are left out, not zero.
-    expect(screen.getByText('1 stop · ~1.5h')).toBeTruthy();
+    expect(screen.getByText('~1.5h')).toBeTruthy();
+  });
+
+  // The default: the price has no home (#598), so the footer says the
+  // hours and the distance and keeps the sum to itself.
+  it('keeps the spend off the footer while the price switch is off', () => {
+    renderScreen();
+    expect(screen.getByText('~3h · 350 m')).toBeTruthy();
+    expect(screen.queryByText(/₫/)).toBeNull();
+    expect(screen.queryByText(/\d stops? ·/)).toBeNull();
   });
 
   it('prints a round million without a decimal', () => {
+    appFlags.set('place_price', true);
     planTrips.mockImplementation(() => [
       plan('match', [stop(CAFE, 18 * 60)], { costVnd: { food: 1_000_000, activity: 0, transport: 0 } }),
     ]);
     renderScreen();
-    expect(screen.getByText('1 stop · ~1h · ~1M ₫')).toBeTruthy();
+    expect(screen.getByText('~1h · ~1M ₫')).toBeTruthy();
   });
 
   it('drops a leg nobody measured rather than guessing one', () => {
@@ -336,7 +354,7 @@ describe('the cards', () => {
     ]);
     renderScreen();
     expect(screen.queryByText(/≈/)).toBeNull();
-    expect(screen.getByText('2 stops · ~2.5h')).toBeTruthy();
+    expect(screen.getByText('~2.5h')).toBeTruthy();
   });
 
   it('heads a card with its areas when no model has named it', () => {
@@ -619,24 +637,6 @@ describe('the picture on each card', () => {
     expect(first).not.toBe(second);
     act(() => galleryProps().onPage(1));
     expect(times()).toEqual([second, first]);
-  });
-
-  // One sentence per card, the one under the picture on screen: three
-  // sentences made the list a page to read, and one that moves with the
-  // carousel is what the carousel points at.
-  it('prints the model\'s line for the stop on screen, and moves it with the page', () => {
-    planTrips.mockImplementation(() => [PICTURED]);
-    cachedNarration.mockImplementation(() => ({
-      title: null,
-      why: new Map([['a', 'First, for the light.'], ['b', 'Then, for the view.']]),
-      fromModel: true,
-    }));
-    render(<PlanOptionsScreen navigation={nav() as unknown as Nav} route={routeWith()} />);
-    expect(screen.getByText('First, for the light.')).toBeTruthy();
-    expect(screen.queryByText('Then, for the view.')).toBeNull();
-    act(() => galleryProps().onPage(1));
-    expect(screen.queryByText('First, for the light.')).toBeNull();
-    expect(screen.getByText('Then, for the view.')).toBeTruthy();
   });
 
   // The picture stands beside the card's button, not inside it, so that a

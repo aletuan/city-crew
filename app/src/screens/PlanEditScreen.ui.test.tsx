@@ -14,6 +14,7 @@
 // the real one, because what an arrow press does to the other stops is the
 // behaviour under test, not a detail to be mocked away.
 
+import { appFlags } from '../lib/flags';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
@@ -157,6 +158,7 @@ type Payload = { stops: { placeSlug: string; arriveMin: number; why: string | nu
 const payload = () => saveTrip.mock.calls[0][0] as Payload;
 
 beforeEach(() => {
+  appFlags.reset();
   vi.clearAllMocks();
   saveTrip.mockImplementation(async () => 'trip-1');
   planTrips.mockImplementation(() => [EVENING]);
@@ -183,7 +185,9 @@ describe('the plan as it arrives', () => {
     expect(screen.getByText(/Old Quarter/)).toBeTruthy();
   });
 
+  // The spend shows only once the price switch is on (#598).
   it('summarises count, window and per-person spend including the ride fare', () => {
+    appFlags.set('place_price', true);
     renderScreen();
     // 50k + 200k in prices, plus one 15k ride out to the rooftop.
     expect(screen.getByText('3 stops · 18:00–22:00 · ~265k ₫ / person')).toBeTruthy();
@@ -192,7 +196,14 @@ describe('the plan as it arrives', () => {
     expect(screen.getAllByText(/≈ \d+ min/)).toHaveLength(2);
   });
 
+  it('keeps the spend off the summary while the price switch is off', () => {
+    renderScreen();
+    expect(screen.getByText('3 stops · 18:00–22:00')).toBeTruthy();
+    expect(screen.queryByText(/₫/)).toBeNull();
+  });
+
   it('prints a spend of a million or more in millions', () => {
+    appFlags.set('place_price', true);
     planTrips.mockImplementation(() => [plan('classic', [stop({ ...CAFE, price_vnd: 1_240_000 } as Place, 18 * 60, 60)])]);
     renderScreen();
     expect(screen.getByText('1 stop · 18:00–19:00 · ~1.2M ₫ / person')).toBeTruthy();
@@ -345,6 +356,7 @@ describe('editing', () => {
   });
 
   it('removes a stop and the summary follows', () => {
+    appFlags.set('place_price', true);
     renderScreen();
     press('close', 2);
     expect(names()).toEqual(['Cộng Café', 'Bún Chả Hương Liên']);
