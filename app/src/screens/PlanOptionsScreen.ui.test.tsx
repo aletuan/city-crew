@@ -20,6 +20,7 @@
 
 import React from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { Animated } from 'react-native';
 import { act, fireEvent, render, screen, within } from '../uitest/render';
 import { addDays, fromISO, todayISO } from '../lib/day';
 import { dateline } from '../lib/format';
@@ -375,6 +376,24 @@ describe('the cards', () => {
   // What the eye gets instead of the footnote: two words and a chevron at
   // the foot of each card, in the accent the info card's rows use for the
   // value that goes somewhere.
+  // The body takes the press and the whole card answers it: a spring to
+  // 0.985 on the way down and back to 1 on the way up, on the wrapper
+  // that also carries the rise. The first build scaled the body alone and
+  // the picture stood still, which read as the card breaking in half.
+  // `Animated` does not tick here (see setup.tsx), so what is pinned is
+  // the two springs the press asks for, not the frames they draw.
+  it('presses the whole card in from its body, and lets it back', () => {
+    const spring = vi.spyOn(Animated, 'spring');
+    renderScreen();
+    const body = screen.getByRole('button', { name: 'Hoàn Kiếm, Best match' });
+    fireEvent.mouseDown(body, { button: 0 });
+    fireEvent.mouseUp(body, { button: 0 });
+    const asked = spring.mock.calls.map((c) => (c[1] as { toValue: number }).toValue);
+    expect(asked).toContain(0.985);
+    expect(asked.at(-1)).toBe(1);
+    spring.mockRestore();
+  });
+
   it('names the way in at the foot of every card', () => {
     renderScreen();
     expect(screen.getAllByText('View & edit')).toHaveLength(3);
