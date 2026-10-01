@@ -54,6 +54,7 @@ const state = vi.hoisted(() => ({
   ships: [] as { requester: string; addressee: string; status: string; created_at: string }[],
   categories: [] as string[],
   mine: [] as { members: { slug: string }[] }[],
+  trips: [] as { id: string }[],
   city: { short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as
     { short_en: string; short_vi: string; short_ja: string } | null,
   mode: 'manual' as 'auto' | 'manual',
@@ -101,6 +102,7 @@ vi.mock('../lib/data', () => ({
 }));
 vi.mock('../lib/crew', () => ({ useCrew: () => ({ ships: { data: state.ships } }) }));
 vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine } }) }));
+vi.mock('../lib/mytrips', () => ({ useMyTrips: () => ({ data: state.trips }) }));
 vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city, mode: state.mode }) }));
 vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: state.scheme, pref: state.pref, setPref: () => {}, ready: true }),
@@ -168,6 +170,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   state.guide = false;
   state.editor = false;
+  state.trips = [];
   spies.signOut.mockImplementation(async () => {});
   Object.assign(state, {
     lang: 'en' as Lang,
@@ -452,6 +455,44 @@ describe('the role badge', () => {
     expect(document.querySelector('[data-icon="medal"]')).toBeTruthy();
     expect(dress('Super User')).not.toBe(guideDress);
     expect(guideDress).toMatch(/borderColor/);
+  });
+});
+
+// Three numbers under the hero, each a door into the tab that holds it.
+describe('the three doors', () => {
+  const p = (slug: string) => ({ slug });
+
+  it('counts collections, distinct saved places and trips', () => {
+    state.mine = [{ members: [p('a'), p('b')] }, { members: [p('a'), p('c')] }];
+    state.trips = [{ id: 't1' }, { id: 't2' }, { id: 't3' }];
+    draw();
+    expect(screen.getByRole('button', { name: '2 Collections' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '3 Saved places' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '3 Trips' })).toBeTruthy();
+    // No review count: there is no review feature.
+    expect(screen.queryByText(/Reviews/)).toBeNull();
+  });
+
+  it('opens the tab each number lives in', () => {
+    const { parent } = draw();
+    fireEvent.click(screen.getByRole('button', { name: '0 Collections' }));
+    expect(parent.navigate).toHaveBeenLastCalledWith('Collections');
+    fireEvent.click(screen.getByRole('button', { name: '0 Saved places' }));
+    expect(parent.navigate).toHaveBeenLastCalledWith('Collections');
+    fireEvent.click(screen.getByRole('button', { name: '0 Trips' }));
+    expect(parent.navigate).toHaveBeenLastCalledWith('Trips');
+    expect(parent.navigate).toHaveBeenCalledTimes(3);
+  });
+
+  it('reads zero trips while the list has not loaded', () => {
+    state.trips = null as unknown as { id: string }[];
+    draw();
+    expect(screen.getByRole('button', { name: '0 Trips' })).toBeTruthy();
+  });
+
+  it('wears a pencil on Edit profile', () => {
+    draw();
+    expect(screen.getByRole('button', { name: 'Edit profile' }).querySelector('[data-icon="pencil-outline"]')).toBeTruthy();
   });
 });
 
