@@ -239,7 +239,7 @@ describe('the button', () => {
     tap('Cafés');
     fireEvent.click(cta());
     expect(sent(navigation)).toMatchObject({
-      where: 'Around Hanoi · Near you', district: null, atLat: 21.03, atLng: 105.85,
+      where: 'Hanoi · Near you', district: null, atLat: 21.03, atLng: 105.85,
     });
   });
 });
@@ -452,7 +452,7 @@ describe('where the day starts', () => {
   it('says “near you” around the city, and the sheet opens on the empty answer', () => {
     renderScreen();
     expect(sheet.props!.visible).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: /Around Hanoi · Near you/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Hanoi · Near you/ }));
     expect(screen.getByText('start-sheet-open')).toBeTruthy();
     expect(sheet.props!.value).toEqual({ district: null, at: null, atName: null });
     expect(sheet.props!.places).toBe(state.places);
@@ -460,13 +460,13 @@ describe('where the day starts', () => {
     expect(screen.queryByText('start-sheet-open')).toBeNull();
   });
 
-  // Before the city resolves the label printed "Around  · Near you" — a
-  // hole where the name goes.
+  // Before the city resolves the label printed " · Near you" — a hole
+  // where the name goes, with the separator still standing beside it.
   it('says plain “near you” before the city has loaded, with no hole for its name', () => {
     state.city = null;
     renderScreen();
     expect(screen.getByRole('button', { name: 'Near you' })).toBeTruthy();
-    expect(screen.queryByText(/Around/)).toBeNull();
+    expect(screen.queryByText(/^\s*·/)).toBeNull();
   });
 
   // A city with no Japanese short name must not print "null" into the
@@ -475,7 +475,7 @@ describe('where the day starts', () => {
     state.lang = 'ja';
     state.city = { short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: null } as unknown as Record<string, string>;
     renderScreen();
-    expect(screen.getByRole('button', { name: /Hanoi周辺 · 現在地/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Hanoi · 現在地/ })).toBeTruthy();
     expect(screen.queryByText(/null/)).toBeNull();
   });
 

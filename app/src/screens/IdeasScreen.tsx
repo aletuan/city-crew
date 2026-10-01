@@ -149,11 +149,16 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   // case here was the exception, and it showed once `SketchingScreen`
   // split the pair onto two lines and the second one opened with a small
   // letter.
+  //
+  // The city's name alone, not "Around Melbourne". The row already shows
+  // a pin, and the plan subtitles repeat this string on three screens;
+  // "Around" was the one word in it that said nothing a reader did not
+  // know, and the owner asked for it to go. Japanese drops 周辺 with it.
   const whereLabel = draft.district
     ?? (draft.at
       ? (draft.atName ?? t('A pin you dropped', 'Ghim bạn đã thả', '置いたピン'))
       : city
-        ? t(`Around ${city.short_en} · Near you`, `Quanh ${city.short_vi} · Gần bạn`, `${city.short_ja ?? city.short_en}周辺 · 現在地`)
+        ? t(`${city.short_en} · Near you`, `${city.short_vi} · Gần bạn`, `${city.short_ja ?? city.short_en} · 現在地`)
         : t('Near you', 'Gần bạn', '現在地'));
 
   /**

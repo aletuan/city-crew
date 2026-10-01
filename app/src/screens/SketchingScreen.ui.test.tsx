@@ -335,10 +335,10 @@ describe('while it waits', () => {
   // cell splits on it rather than printing it, so the default reads as
   // two ranks the way a district reads as one.
   it('splits a where that carries its own separator', () => {
-    renderScreen({ where: 'Around Melbourne · Near you' });
-    expect(screen.getByText('Around Melbourne')).toBeTruthy();
+    renderScreen({ where: 'Melbourne · Near you' });
+    expect(screen.getByText('Melbourne')).toBeTruthy();
     expect(screen.getByText('Near you')).toBeTruthy();
-    expect(screen.queryByText('Around Melbourne · Near you')).toBeNull();
+    expect(screen.queryByText('Melbourne · Near you')).toBeNull();
   });
 
   // Nine categories exist and nothing caps the choosing, so the row is
