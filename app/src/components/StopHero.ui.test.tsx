@@ -107,32 +107,38 @@ describe('StopHero', () => {
     expect(page.onLongPress).toBeUndefined();
   });
 
-  it('counts the pages in the corner and follows the swipe, clamped to the pages there are', () => {
+  // The marks are `PageDots`', in the corner every carousel uses; what is
+  // this band's is the page they follow, clamped to the pages there are.
+  it('marks the pages and follows the swipe, clamped to the pages there are', () => {
     draw([
       photo('https://img/a.jpg'),
       photo('https://img/b.jpg', { sort_order: 1 }),
       photo('https://img/c.jpg', { sort_order: 2 }),
     ]);
-    expect(screen.getByText('1/3')).toBeTruthy();
+    const marks = () => [...screen.getByTestId('hero-dots').children].map((el) => (el as HTMLElement).className);
+    /** The one mark dressed unlike the others: the page in hand. */
+    const inHand = () => { const m = marks(); return m.findIndex((c) => m.indexOf(c) === m.lastIndexOf(c)); };
+    expect(marks()).toHaveLength(3);
+    expect(inHand()).toBe(0);
     measure(300);
     swipe(300);
-    expect(screen.getByText('2/3')).toBeTruthy();
+    expect(inHand()).toBe(1);
     // Rounded to the nearer page, as the scroll view itself settles.
     swipe(170);
-    expect(screen.getByText('2/3')).toBeTruthy();
+    expect(inHand()).toBe(1);
     swipe(140);
-    expect(screen.getByText('1/3')).toBeTruthy();
+    expect(inHand()).toBe(0);
     // A momentum end reported past the end, or before the start, stays
     // on a page that exists.
     swipe(1500);
-    expect(screen.getByText('3/3')).toBeTruthy();
+    expect(inHand()).toBe(2);
     swipe(-300);
-    expect(screen.getByText('1/3')).toBeTruthy();
+    expect(inHand()).toBe(0);
   });
 
-  it('shows no count for a single photograph, where there is nowhere to swipe to', () => {
+  it('shows no marks for a single photograph, where there is nowhere to swipe to', () => {
     draw([photo('https://img/a.jpg')]);
-    expect(screen.queryByText(/\d\/\d/)).toBeNull();
+    expect(screen.queryByTestId('hero-dots')).toBeNull();
   });
 
   it('credits the photograph on screen, page by page, when the switch is on', () => {

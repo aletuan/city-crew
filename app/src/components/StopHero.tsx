@@ -8,11 +8,12 @@
 // its own place, and the pages are that place's photographs, in the order
 // its detail screen opens them.
 //
-// A count rather than dots: a pill of dots along the bottom edge sat on
-// whatever the photograph had there — faces, mostly. The count is the same
-// figure the detail screen floats over its hero, so a reader who swipes to
-// the second picture here and opens the place arrives at "2 / 3" and not
-// at a surprise.
+// The page marks are `PageDots`, the same pill every carousel in the app
+// wears, in the same corner. This band opened with a count in the top
+// corner instead, on the argument that a 66pt band had no bottom edge to
+// spare for dots; at 148pt it has, and a stop that marked its pages
+// differently from the trip the plan becomes was one more thing to
+// learn.
 //
 // ── how tall ──
 //
@@ -33,12 +34,12 @@
 
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { photosOf } from '../lib/place';
 import type { Place } from '../lib/types';
 import { useFlag } from '../lib/useFlag';
-import { colors, font, onPhoto, radius } from '../theme';
+import { colors, onPhoto } from '../theme';
+import PageDots from './PageDots';
 import { LIFT_AFTER_MS } from './useListDrag';
 
 /** Width over height of the band — see "how tall" above. */
@@ -109,12 +110,7 @@ export default function StopHero({ place, onPress, onHold, onRelease, testID }: 
         ))}
       </ScrollView>
       {attr ? <Text style={s.attr} numberOfLines={1}>{attr}</Text> : null}
-      {photos.length > 1 && (
-        <View style={s.counter} aria-hidden>
-          <Ionicons name="images-outline" size={13} color={onPhoto.text} />
-          <Text style={s.counterText}>{page + 1}/{photos.length}</Text>
-        </View>
-      )}
+      <PageDots count={photos.length} page={page} testID="hero-dots" />
     </View>
   );
 }
@@ -124,16 +120,8 @@ const s = StyleSheet.create({
   // The same credit `StopGallery` prints, in the same corner, so one
   // photograph is signed the same way wherever it is shown.
   attr: {
-    position: 'absolute', left: 12, bottom: 10, maxWidth: '50%',
+    position: 'absolute', left: 12, bottom: 12, maxWidth: '50%',
     fontSize: 9, color: onPhoto.text, opacity: 0.55,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
-  // The detail screen's counter pill, at the size a 66pt band can carry:
-  // the same scrim and hairline, a point tighter all round.
-  counter: {
-    position: 'absolute', top: 10, right: 12, flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(10,11,10,0.58)', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
-  },
-  counterText: { color: onPhoto.text, fontSize: 12, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
 });

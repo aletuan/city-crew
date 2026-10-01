@@ -30,7 +30,6 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image } from 'expo-image';
 import { useFlag } from '../lib/useFlag';
 import {
   AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, useTabBarClearance,
@@ -46,17 +45,17 @@ import { useMyTrips } from '../lib/mytrips';
 import { useInvitations } from '../lib/invitations';
 import { splitFriendships } from '../lib/friends';
 import InviteSheet from '../components/InviteSheet';
+import StopGallery from '../components/StopGallery';
 import TripCrew from '../components/TripCrew';
 import { cancelTripReminder } from '../lib/reminders';
-import { clockOf, dateline, dotWindow, fmtMinutes } from '../lib/format';
+import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { mapsRouteUrl, mapsSearchUrl, routeMode } from '../lib/maps';
-import { coverOf } from '../lib/place';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { legsOf } from '../lib/travel';
 import { spendVnd, tripCover } from '../lib/trips';
-import { colors, font, onPhoto, radius, space, type } from '../theme';
+import { colors, font, radius, space, type } from '../theme';
 import type { Nav, RootRoute } from '../nav';
 
 const money = (vnd: number) => (vnd >= 1_000_000
@@ -87,14 +86,8 @@ export default function TripDetailScreen({ navigation, route }: {
    * present on the second. React counts hooks, so the second render
    * throws rather than misbehaving quietly.
    *
-   * The width is measured rather than taken from the window, because the
-   * gallery sits inside the screen's own horizontal padding.
-   * `Dimensions.get` minus a constant is the version that breaks on the
-   * next screen that pads differently.
    */
   const [shot, setShot] = useState(0);
-  const [galleryW, setGalleryW] = useState(0);
-  const credit = useFlag('photo_attribution');
   // The "Roughly" card is behind the place detail's price switch (#598),
   // with the options card's footer and the editor's total: the price has
   // no home yet, and a trip's budget is three of them added up. Read here,
@@ -223,10 +216,6 @@ export default function TripDetailScreen({ navigation, route }: {
    * the desk hid is excluded there and stays excluded here.
    */
   const cover = tripCover(stops);
-  // The credit is the `photo_attribution` switch's to draw or not — see
-  // `lib/flags.ts`; `credit` is read above the early return with the
-  // other hooks.
-  const shotAttr = credit && stops[shot]?.places ? coverOf(stops[shot].places!)?.attribution_name : null;
 
   /** Send what was ticked and take back what was unticked, in that order:
    *  a press that both invites and withdraws should not leave the trip
@@ -393,48 +382,19 @@ export default function TripDetailScreen({ navigation, route }: {
             Trips card took in #264. The padding lives on the inner view
             so the picture can run to the card's edges. */}
         <Card style={s.card}>
-          {cover && (
-            <View onLayout={(e) => setGalleryW(e.nativeEvent.layout.width)}>
-              <ScrollView
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={(e) =>
-                  setShot(Math.round(e.nativeEvent.contentOffset.x / galleryW))}
-              >
-                {stops.map((stop, i) => {
-                  const ph = stop.places ? coverOf(stop.places) : undefined;
-                  return ph
-                    ? (
-                      <Image
-                        key={`${trip.id}-shot-${i}`}
-                        source={{ uri: ph.photo_uri }}
-                        style={[s.shot, { width: galleryW }]}
-                        contentFit="cover"
-                        transition={200}
-                      />
-                    )
-                    : (
-                      <View key={`${trip.id}-shot-${i}`} style={[s.shot, s.shotBare, { width: galleryW }]}>
-                        <Text style={{ fontSize: 52 }}>{stop.places?.emoji ?? '📍'}</Text>
-                      </View>
-                    );
-                })}
-              </ScrollView>
-              {/* The credit belongs to the picture on screen, so it is read
-                  from the current page rather than printed once. This is
-                  also why a carousel is easier to license than a strip of
-                  thumbnails: one photograph visible, one credit owed. */}
-              {shotAttr ? <Text style={s.attr} numberOfLines={1}>{shotAttr}</Text> : null}
-              {stops.length > 1 && (
-                <View style={s.dots}>
-                  {dotWindow(stops.length, shot).map((i) => (
-                    <View key={i} style={[s.dot, i === shot && s.dotOn]} />
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
+          {/* `StopGallery`, which was lifted out of this screen and then
+              not used by it: the plan options card drew the shared one and
+              this card kept its own copy, with the marks in a different
+              corner. One carousel now, one set of marks (`PageDots`); the
+              only thing this screen decides is the proportion, the
+              detail's 16:10, because this picture has the card to itself. */}
+          <StopGallery
+            places={stops.map((st) => st.places)}
+            aspectRatio={16 / 10}
+            page={shot}
+            onPage={setShot}
+            testID="trip-gallery"
+          />
 
           <View style={s.cardBody}>
             {stops.map((stop, i) => {
@@ -736,25 +696,6 @@ const s = StyleSheet.create({
   // 16:10, `PlaceCard`'s ratio rather than the Trips card's 3:1 band. The
   // roles are reversed here: on the list the picture identifies a card
   // among cards, and here it is the thing being looked at.
-  shot: { aspectRatio: 16 / 10, backgroundColor: colors.surfaceGlass },
-  shotBare: { alignItems: 'center', justifyContent: 'center' },
-  // Required wherever the photo is shown; read from the page on screen.
-  attr: {
-    position: 'absolute', right: 12, bottom: 12, maxWidth: '50%',
-    fontSize: 9, color: onPhoto.text, opacity: 0.55,
-    textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
-  },
-  // The same pill of dots `PlaceDetailScreen` floats over its hero, and
-  // the same `dotWindow` behind it, so a long day gets a fixed strip
-  // instead of a row that runs off the picture.
-  dots: {
-    position: 'absolute', bottom: 12, alignSelf: 'center',
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    backgroundColor: 'rgba(10,11,10,0.45)', borderRadius: radius.pill,
-    paddingHorizontal: 11, paddingVertical: 8,
-  },
-  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.38)' },
-  dotOn: { width: 8, height: 8, borderRadius: 4, backgroundColor: onPhoto.text },
 
   // The `View plan ›` row from the Trips tab, in the footer of the card
   // it acts on. `gap` between the glyph and its word, and the detail
