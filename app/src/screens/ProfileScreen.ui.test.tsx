@@ -437,18 +437,21 @@ describe('the role badge', () => {
 
   // Two roles, two colours: the badge's edge and glyph follow the role,
   // and an editor who is also a guide wears the editor's, not the guide's.
+  // react-native-web writes colours as classes, which jsdom's computed
+  // style does not resolve, so the class list is what is compared — the
+  // way the plan cards' marked time is read.
   it('wears a different colour for each role, the editor’s when both apply', () => {
-    const edge = (label: string) => getComputedStyle(screen.getByText(label).parentElement!).borderColor;
+    const dress = (label: string) => screen.getByText(label).parentElement!.className;
     state.guide = true;
     draw();
-    const guideEdge = edge('Local Guide');
+    const guideDress = dress('Local Guide');
     expect(document.querySelector('[data-icon="star"]')).toBeTruthy();
     cleanup();
     state.editor = true;
     draw();
     expect(document.querySelector('[data-icon="medal"]')).toBeTruthy();
-    expect(edge('Super User')).not.toBe(guideEdge);
-    expect(guideEdge).not.toBe('');
+    expect(dress('Super User')).not.toBe(guideDress);
+    expect(guideDress).toMatch(/borderColor/);
   });
 });
 
