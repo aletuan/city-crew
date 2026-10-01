@@ -418,3 +418,8 @@ for f in "$ROOT"/supabase/migrations/*_reorder_collection.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/reorder_collection_test.sql"
+echo "→ guest narration"
+for f in "$ROOT"/supabase/migrations/*_guest_narration.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/guest_narration_test.sql"
