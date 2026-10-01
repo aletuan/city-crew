@@ -27,7 +27,7 @@ const photo = (uri: string, over: Partial<PlacePhoto> = {}): PlacePhoto => ({
 const place = (photos: PlacePhoto[]) => ({ slug: 'p', place_photos: photos }) as unknown as Place;
 
 /** Props of the first committed element matching `pick`. */
-const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, (...a: unknown[]) => void> => {
+const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, any> => {
   type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
   const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
   const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
@@ -35,7 +35,7 @@ const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<strin
   while (stack.length) {
     const f = stack.pop()!;
     const p = f.memoizedProps;
-    if (p && typeof p === 'object' && pick(p)) return p as Record<string, (...a: unknown[]) => void>;
+    if (p && typeof p === 'object' && pick(p)) return p;
     if (f.sibling) stack.push(f.sibling);
     if (f.child) stack.push(f.child);
   }
@@ -71,10 +71,10 @@ describe('StopHero', () => {
     expect(srcs()).toEqual([]);
   });
 
-  it('keeps the reference band\u2019s proportion', () => {
-    // 767 px over 158 px on the capture; the one figure that decides how
-    // tall a 295pt-wide card's picture is (61pt).
-    expect(HERO_ASPECT).toBeCloseTo(4.85, 2);
+  it('keeps the proportion the component argues for', () => {
+    // 2:1 — see "how tall" in the component. The one figure that decides
+    // how tall a 295pt-wide card's picture is (148pt).
+    expect(HERO_ASPECT).toBe(2);
   });
 
   // The card's identity band is the button; the pictures take the same
@@ -85,6 +85,26 @@ describe('StopHero', () => {
     fireEvent.click(screen.getAllByTestId('hero-page')[1]);
     expect(open).toHaveBeenCalledTimes(1);
     expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  // The card's lift, from a hold on the picture: the biggest thing on the
+  // card and the first thing a thumb lands on.
+  it('lifts from a hold on any page when given a way to, and lets go on press out', () => {
+    const onHold = vi.fn();
+    const onRelease = vi.fn();
+    render(<StopHero place={place([photo('https://img/a.jpg'), photo('https://img/b.jpg', { sort_order: 1 })])} onPress={() => {}} onHold={onHold} onRelease={onRelease} testID="hero" />);
+    const page = propsWhere((p) => p.testID === 'hero-page' && 'onLongPress' in p);
+    expect(page.delayLongPress).toBeGreaterThanOrEqual(300);
+    act(() => { page.onLongPress({ nativeEvent: { pageY: 512 } }); });
+    expect(onHold).toHaveBeenCalledWith(512);
+    act(() => { page.onPressOut(); });
+    expect(onRelease).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers no hold when not given one', () => {
+    draw([photo('https://img/a.jpg')]);
+    const page = propsWhere((p) => p.testID === 'hero-page');
+    expect(page.onLongPress).toBeUndefined();
   });
 
   it('counts the pages in the corner and follows the swipe, clamped to the pages there are', () => {

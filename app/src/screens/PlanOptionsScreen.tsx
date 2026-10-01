@@ -545,9 +545,14 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
       <Card style={[s.card, best && s.cardBest]}>
         {/* The stops' own covers, one page each — the picture the saved
             trip opens on, so the plan a reader picks here is the plan
-            they find there. A band rather than the detail's 16:10:
-            three of these stack on one screen, and the stops under the
-            picture are what is being compared.
+            they find there. Shorter than the detail's 16:10 and than the
+            editor's 2:1 (`StopHero`): three of these stack on one screen,
+            and the stops under the picture are what is being compared.
+            2.2:1 — 150pt on a 331pt card — up from the 3:1 band (110pt)
+            it opened with: the owner asked for more picture, and at 3:1
+            a riverside terrace was a strip of string lights with the
+            river cropped out. At 2.2 the second card's picture still
+            starts above the fold on a 667pt screen; at 2:1 it did not.
 
             Beside the pressable body, not inside it. The first build had
             the whole card as one control with the carousel in it, on the
@@ -558,7 +563,7 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
             `onPressPage` — and the body below is the button. */}
         <StopGallery
           places={places}
-          aspectRatio={3}
+          aspectRatio={2.2}
           page={shot}
           onPage={setShot}
           onPressPage={onPress}
