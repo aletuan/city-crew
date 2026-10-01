@@ -20,6 +20,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { todayISO } from '../lib/day';
 import { derivedTitle, type Narration } from '../lib/assist';
+import { fmtDistance } from '../lib/geo';
+import { legsOfPlan } from '../lib/itinerary';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
 
@@ -71,12 +73,19 @@ import PlanEditScreen from './PlanEditScreen';
 const place = (slug: string, name: string, extra: Partial<Place>): Place => ({
   slug, name_en: name, name_vi: name, name_ja: null, category: 'food', is_featured: false,
   vibe_tags: [], neighborhood_en: 'Hoàn Kiếm', neighborhood_vi: null, neighborhood_ja: null,
-  address: null, lat: null, lng: null, ...extra,
+  address: null, lat: null, lng: null, place_photos: [], ...extra,
 } as Place);
+
+const photo = (uri: string, sort_order = 0) => ({
+  id: uri, photo_uri: uri, is_cover: sort_order === 0, is_hidden: false, sort_order, attribution_name: null,
+});
 
 // Café and dinner a short walk apart; the rooftop across town, so the last
 // leg is a ride and costs a fare.
-const CAFE = place('cafe', 'Cộng Café', { categories: ['cafes'], lat: 21.0285, lng: 105.8542, price_vnd: 50000, rating: 4.6 } as Partial<Place>);
+const CAFE = place('cafe', 'Cộng Café', {
+  categories: ['cafes'], lat: 21.0285, lng: 105.8542, price_vnd: 50000, rating: 4.6,
+  place_photos: [photo('https://img/cafe-1.jpg'), photo('https://img/cafe-2.jpg', 1)],
+} as Partial<Place>);
 const DINNER = place('dinner', 'Bún Chả Hương Liên', { categories: ['eats'], lat: 21.0300, lng: 105.8560, price_vnd: 200000 } as Partial<Place>);
 const ROOF = place('roof', 'Sky Bar', { categories: ['views'], lat: 21.0700, lng: 105.8200 } as Partial<Place>);
 const PINNED = place('pinned', 'Collection Pick', {});
@@ -177,7 +186,7 @@ describe('the plan as it arrives', () => {
     expect(screen.getByText('18:00')).toBeTruthy();
     expect(screen.getByText('19:15')).toBeTruthy();
     expect(screen.getByText('21:00')).toBeTruthy();
-    expect(screen.getByText('Hoàn Kiếm · 90 min')).toBeTruthy();
+    expect(screen.getByText('Hoàn Kiếm · Eats · 90 min')).toBeTruthy();
     expect(screen.getByText('4.6')).toBeTruthy();
     expect(screen.getByText('An easy first stop before the crowds.')).toBeTruthy();
     // The model's name for the evening beats the lens name in the params.
@@ -186,20 +195,41 @@ describe('the plan as it arrives', () => {
     expect(screen.getByText(/Old Quarter/)).toBeTruthy();
   });
 
-  // The spend shows only once the price switch is on (#598).
-  it('summarises count, window and per-person spend including the ride fare', () => {
+  // The evening's facts are chips under the title: the window, the
+  // distance, the company, and — behind the price switch (#598) — the
+  // spend. No stop count: the rail numbers the stops.
+  it('chips the window, the distance by how the route is made, the company and the spend', () => {
     appFlags.set('place_price', true);
     renderScreen();
+    expect(screen.getByText('18:00–22:00')).toBeTruthy();
+    // The legs summed, as the options card sums them, and worn as a ride
+    // because the last leg is one. Computed here from the same stops so
+    // a screen that summed two of the three legs would be caught.
+    const km = legsOfPlan(EVENING.stops.map((st) => ({ ...st, pinned: false })))
+      .reduce((n, l) => n + (l?.km ?? 0), 0);
+    expect(km).toBeGreaterThan(5);
+    expect(screen.getByText(fmtDistance(km))).toBeTruthy();
+    expect(screen.getByText('Friends')).toBeTruthy();
     // 50k + 200k in prices, plus one 15k ride out to the rooftop.
-    expect(screen.getByText('3 stops · 18:00–22:00 · ~265k ₫ / person')).toBeTruthy();
+    expect(screen.getByText('~265k ₫ / person')).toBeTruthy();
+    expect(screen.queryByText(/\d stops?/)).toBeNull();
+    // One walk between the first two legs, one ride out to the rooftop,
+    // and the ride again on the distance chip.
     expect(document.querySelectorAll('[data-icon="walk-outline"]')).toHaveLength(1);
-    expect(document.querySelectorAll('[data-icon="car-outline"]')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-icon="car-outline"]')).toHaveLength(2);
     expect(screen.getAllByText(/≈ \d+ min/)).toHaveLength(2);
   });
 
-  it('keeps the spend off the summary while the price switch is off', () => {
+  it('wears the distance as a walk when every leg is one', () => {
+    planTrips.mockImplementation(() => [plan('classic', [stop(CAFE, 18 * 60, 60), stop(DINNER, 19 * 60 + 15, 90)])]);
     renderScreen();
-    expect(screen.getByText('3 stops · 18:00–22:00')).toBeTruthy();
+    expect(document.querySelectorAll('[data-icon="walk-outline"]')).toHaveLength(2);
+    expect(document.querySelectorAll('[data-icon="car-outline"]')).toHaveLength(0);
+  });
+
+  it('keeps the spend off the chips while the price switch is off', () => {
+    renderScreen();
+    expect(screen.getByText('18:00–22:00')).toBeTruthy();
     expect(screen.queryByText(/₫/)).toBeNull();
   });
 
@@ -207,13 +237,33 @@ describe('the plan as it arrives', () => {
     appFlags.set('place_price', true);
     planTrips.mockImplementation(() => [plan('classic', [stop({ ...CAFE, price_vnd: 1_240_000 } as Place, 18 * 60, 60)])]);
     renderScreen();
-    expect(screen.getByText('1 stop · 18:00–19:00 · ~1.2M ₫ / person')).toBeTruthy();
+    expect(screen.getByText('18:00–19:00')).toBeTruthy();
+    expect(screen.getByText('~1.2M ₫ / person')).toBeTruthy();
   });
 
-  it('leaves spend out of the summary when nothing costs anything', () => {
+  it('leaves spend and distance out when nothing costs anything and nothing is travelled', () => {
+    appFlags.set('place_price', true);
     planTrips.mockImplementation(() => [plan('classic', [stop(ROOF, 20 * 60, 60)])]);
     renderScreen();
-    expect(screen.getByText('1 stop · 20:00–21:00')).toBeTruthy();
+    expect(screen.getByText('20:00–21:00')).toBeTruthy();
+    expect(screen.queryByText(/₫/)).toBeNull();
+    expect(screen.queryByText(/km$| m$/)).toBeNull();
+  });
+
+  // The stops down a numbered rail, each card wearing its place's own
+  // photographs where it has any, and the picture opening the place the
+  // way the name does.
+  it('numbers the stops down the rail and opens a place from its picture', () => {
+    const navigation = renderScreen();
+    expect(screen.getByText('1')).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
+    expect(screen.getByText('3')).toBeTruthy();
+    // Only the café has photographs: one band, two pages, the count.
+    expect(screen.getAllByTestId('stop-hero')).toHaveLength(1);
+    expect(screen.getAllByTestId('hero-page')).toHaveLength(2);
+    expect(screen.getByText('1/2')).toBeTruthy();
+    fireEvent.click(screen.getAllByTestId('hero-page')[1]);
+    expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cafe' });
   });
 
   it('opens the lens the reader tapped, not merely the first plan', () => {
@@ -311,7 +361,9 @@ describe('narration that was not cached yet', () => {
     renderScreen();
     expect(prefetchNarration).not.toHaveBeenCalled();
     expect(screen.getByText('Nothing left in this plan.')).toBeTruthy();
-    expect(screen.getByText('0 stops')).toBeTruthy();
+    // Nothing to window, nothing to travel; the company still stands.
+    expect(screen.queryByText(/\d\d:\d\d–/)).toBeNull();
+    expect(screen.getByText('Friends')).toBeTruthy();
   });
 });
 
@@ -356,13 +408,16 @@ describe('editing', () => {
     expect(names()).toEqual(['Cộng Café', 'Bún Chả Hương Liên', 'Sky Bar']);
   });
 
-  it('removes a stop and the summary follows', () => {
+  it('removes a stop and the chips follow', () => {
     appFlags.set('place_price', true);
     renderScreen();
     press('close', 2);
     expect(names()).toEqual(['Cộng Café', 'Bún Chả Hương Liên']);
-    // The ride went with the rooftop.
-    expect(screen.getByText(/^2 stops · 18:00–.* · ~250k ₫ \/ person$/)).toBeTruthy();
+    // The ride went with the rooftop: the window closes at dinner's end,
+    // the fare leaves the spend, and the distance is a walk again.
+    expect(screen.getByText(/^18:00–/).textContent).not.toBe('18:00–22:00');
+    expect(screen.getByText('~250k ₫ / person')).toBeTruthy();
+    expect(document.querySelectorAll('[data-icon="car-outline"]')).toHaveLength(0);
     press('close', 0);
     press('close', 0);
     expect(screen.getByText('Nothing left in this plan.')).toBeTruthy();
@@ -512,7 +567,7 @@ describe('saving', () => {
   });
 });
 
-describe('the header and the crew row', () => {
+describe('the header and the company', () => {
   it('Share says it is a mock rather than doing nothing', () => {
     renderScreen();
     fireEvent.click(screen.getByRole('button', { name: 'Share' }));
@@ -526,16 +581,21 @@ describe('the header and the crew row', () => {
     expect(saveTrip).not.toHaveBeenCalled();
   });
 
-  it('points a plan with company at inviting after Save', () => {
-    renderScreen();
-    expect(screen.getByText('Just you, for now')).toBeTruthy();
-    expect(screen.getByText('Save first, then invite')).toBeTruthy();
+  // The company is the wizard's own word for the answer the reader gave
+  // there, and the avatar row that used to argue with it is gone.
+  it('names the company the way the wizard did', () => {
+    renderScreen({ company: 'solo' });
+    expect(screen.getByText('Just me')).toBeTruthy();
+    expect(screen.queryByText('Just you, for now')).toBeNull();
+    expect(screen.queryByText('Save first, then invite')).toBeNull();
   });
 
-  it('says nothing about inviting on a solo plan', () => {
-    renderScreen({ company: 'solo' });
-    expect(screen.getByText('Just you, for now')).toBeTruthy();
-    expect(screen.queryByText('Save first, then invite')).toBeNull();
+  it('says what the controls do, and does not promise dragging', () => {
+    renderScreen();
+    expect(screen.getByText('Nudge a time, or move a stop')).toBeTruthy();
+    // The stepper is named on every card.
+    expect(screen.getAllByText('Time')).toHaveLength(3);
+    expect(screen.queryByText(/Drag/)).toBeNull();
   });
 });
 
