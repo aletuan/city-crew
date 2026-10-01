@@ -77,6 +77,12 @@ export type GuideGrant = {
   /** Whether this account is an editor, as of now: the desk's hand, which
    *  keeps every gallery. `false` until known, like `get`. */
   isEditor: (uid: string | null) => boolean;
+  /** Whether this account holds any guide grant at all — one city, several
+   *  or all of them. `get` with no city answers only for the all-cities
+   *  grant, because a control over a nameless place must not appear for a
+   *  guide of one city; a badge on the account's own profile is the other
+   *  question, "are you a guide", and a guide of Hanoi is one. */
+  anywhere: (uid: string | null) => boolean;
   /** Back to knowing nothing. For tests, and for signing out. */
   reset: () => void;
 };
@@ -133,6 +139,7 @@ export function guideGrantStore(): GuideGrant {
       }
     },
     isEditor: (uid) => !!uid && state.uid === uid && state.editor,
+    anywhere: (uid) => !!uid && state.uid === uid && state.cities.length > 0,
     reset: () => set(EMPTY),
   };
 }

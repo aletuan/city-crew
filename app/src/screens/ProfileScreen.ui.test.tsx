@@ -41,6 +41,8 @@ vi.mock('../nav', async (orig) => ({
 }));
 
 const state = vi.hoisted(() => ({
+  guide: false,
+  editor: false,
   lang: 'en' as 'en' | 'vi' | 'ja',
   scheme: 'dark' as 'dark' | 'light',
   pref: 'dark' as 'dark' | 'light' | 'system',
@@ -72,6 +74,11 @@ vi.mock('../lib/i18n', () => ({
     t: (en: string, vi: string, ja?: string) =>
       (state.lang === 'vi' ? vi : state.lang === 'ja' ? (ja ?? en) : en),
   }),
+}));
+// The reader's standing, as the grant store would answer it.
+vi.mock('../lib/useGuideGrant', () => ({
+  useIsEditor: () => state.editor,
+  useIsGuideAnywhere: () => state.guide,
 }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({
@@ -159,6 +166,8 @@ const press = (start: string) => fireEvent.click(button(start));
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  state.guide = false;
+  state.editor = false;
   spies.signOut.mockImplementation(async () => {});
   Object.assign(state, {
     lang: 'en' as Lang,
@@ -384,16 +393,46 @@ describe('interests', () => {
     expect(screen.getByText('Edit profile to add your interests.')).toBeTruthy();
   });
 
-  // A section of their own, headed, with the way to change them beside
-  // the heading — not a row of the facts card behind a heart glyph.
-  it('stands under its own heading, with an Edit that opens the profile editor', () => {
+  // A section of their own, headed — not a row of the facts card behind a
+  // heart glyph, and with no Edit of its own: Edit profile, four lines up,
+  // is the one way to the picker.
+  it('stands under its own heading, with no second way to the editor', () => {
     state.categories = ['cafes'];
-    const { raw } = draw();
+    draw();
     expect(screen.getByText('Interests')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Edit interests' }));
-    expect(raw.navigate).toHaveBeenCalledWith('EditProfile');
-    // The facts card ends at Member since now: no heart row.
+    expect(screen.queryByRole('button', { name: /Edit interests/ })).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Edit profile' })).toHaveLength(1);
     expect(document.querySelector('[data-icon="heart-outline"]')).toBeNull();
+  });
+});
+
+// The reader's standing, said under their name. Editor outranks guide and
+// is shown alone; a reader with neither gets no badge; a tap explains the
+// grant in the desk's words.
+describe('the role badge', () => {
+  it('is absent for a reader with no grant', () => {
+    draw();
+    expect(screen.queryByText('Local Guide')).toBeNull();
+    expect(screen.queryByText('Super User')).toBeNull();
+  });
+
+  it('names a local guide, and says what the grant lets them do', () => {
+    state.guide = true;
+    draw();
+    fireEvent.click(screen.getByText('Local Guide'));
+    expect(alert).toHaveBeenCalledWith(
+      'Local Guide',
+      'You can edit, and add photos to, places in your collections and places you imported.',
+    );
+  });
+
+  it('names an editor as Super User, and only that, even when also a guide', () => {
+    state.guide = true;
+    state.editor = true;
+    draw();
+    expect(screen.queryByText('Local Guide')).toBeNull();
+    fireEvent.click(screen.getByText('Super User'));
+    expect(alert).toHaveBeenCalledWith('Super User', expect.stringMatching(/every place in the app/));
   });
 });
 

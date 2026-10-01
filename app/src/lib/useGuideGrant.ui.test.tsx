@@ -24,7 +24,7 @@ vi.mock('./auth', () => ({
 vi.mock('./data', () => ({ fetchGuideCities, fetchIsEditor }));
 
 import { guideGrant } from './guideGrant';
-import { GuideGrantSync, useIsEditor, useIsGuide } from './useGuideGrant';
+import { GuideGrantSync, useIsEditor, useIsGuide, useIsGuideAnywhere } from './useGuideGrant';
 
 function Probe() {
   return (
@@ -33,6 +33,7 @@ function Probe() {
       <span data-testid="danang">{String(useIsGuide('danang'))}</span>
       <span data-testid="unnamed">{String(useIsGuide(null))}</span>
       <span data-testid="editor">{String(useIsEditor())}</span>
+      <span data-testid="anywhere">{String(useIsGuideAnywhere())}</span>
     </>
   );
 }
@@ -54,6 +55,8 @@ describe('the launch question', () => {
     expect(read('danang')).toBe('false');
     // A place nobody has named yet belongs to no one city.
     expect(read('unnamed')).toBe('false');
+    // ...but the account is a guide, which is what its own profile asks.
+    expect(read('anywhere')).toBe('true');
     expect(read('editor')).toBe('false');
     expect(fetchGuideCities).toHaveBeenCalledOnce();
     expect(fetchIsEditor).toHaveBeenCalledOnce();

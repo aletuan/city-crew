@@ -66,6 +66,25 @@ describe('guideGrantStore', () => {
     expect(s.get('u1', 'hue')).toBe(false);
   });
 
+  // The badge's question: a guide of one city is a guide, where `get`
+  // with no city would say no.
+  it('says whether an account is a guide anywhere, which one city is enough for', async () => {
+    const s = guideGrantStore();
+    expect(s.anywhere('u1')).toBe(false);
+    await s.load('u1', hanoi);
+    expect(s.anywhere('u1')).toBe(true);
+    expect(s.get('u1')).toBe(false);
+    expect(s.anywhere('u2')).toBe(false);
+    expect(s.anywhere(null)).toBe(false);
+    s.reset();
+    await s.load('u1', everywhere);
+    expect(s.anywhere('u1')).toBe(true);
+    s.reset();
+    await s.load('u1', desk);
+    expect(s.anywhere('u1')).toBe(false);
+    expect(s.isEditor('u1')).toBe(true);
+  });
+
   it('answers no for an account the desk has granted nothing', async () => {
     const s = guideGrantStore();
     await s.load('u1', nowhere);
