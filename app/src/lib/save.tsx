@@ -35,8 +35,9 @@ import { goTo } from '../nav';
  * - `copy`: Save a copy, on somebody else's list.
  * - `saved`: the map's saved-only filter, as a disc or in the filter sheet.
  * - `search`: asking Google Maps for places the catalog has not got.
+ * - `trip`: Save to Trips, under a drafted plan.
  */
-export type SignInWhy = 'save' | 'like' | 'copy' | 'saved' | 'search';
+export type SignInWhy = 'save' | 'like' | 'copy' | 'saved' | 'search' | 'trip';
 
 type Save = {
   /** Open whatever this person needs next in order to save this place. */

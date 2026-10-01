@@ -33,7 +33,7 @@ vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: theme.scheme }) }))
 import AuthSheet, { ART_ASPECT, ART_HEIGHT } from './AuthSheet';
 import { labelScaleCap } from '../theme';
 
-const REASONS = ['save', 'like', 'copy', 'saved', 'search'] as const;
+const REASONS = ['save', 'like', 'copy', 'saved', 'search', 'trip'] as const;
 const open = (why?: SignInWhy) =>
   render(<AuthSheet visible why={why} onClose={() => {}} onSignIn={() => {}} />);
 /** Every line of text the sheet shows, in order. */
@@ -55,12 +55,13 @@ describe('what it says', () => {
     ['copy', 'Lưu bản sao về tài khoản'],
     ['saved', 'Xem địa điểm đã lưu'],
     ['search', 'Tìm địa điểm mới trên Google Maps'],
+    ['trip', 'Lưu chuyến đi này'],
   ] as const)('names %s in its title', (why, title) => {
     open(why);
     expect(lines()[0]).toBe(title);
   });
 
-  // Five ways in used to read as one sheet.
+  // Five ways in used to read as one sheet; a sixth joined with the trip.
   it('reads differently for every reason', () => {
     const seen = new Set<string>();
     for (const why of REASONS) {
