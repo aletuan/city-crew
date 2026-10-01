@@ -521,15 +521,28 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
               247pt beside the 88pt ring, which fits most display names
               whole on one line — the handle was what pushed them over,
               not the width. A name long enough to need two takes two and
-              truncates after that; the dot goes with the shared line that
-              made it a separator. */}
+              truncates after that.
+
+              The dot came back one line down. The handle and the bio each
+              had a line of their own under the name, and three stacked
+              lines of small grey type beside the ring read as a form; the
+              bio is a tagline — "Food lover", "Coffee first." — and a
+              tagline sits after the address the way it does on every
+              profile the reader has seen: "@trang · Food lover". One
+              line, two lines at most for a long tagline, and the handle
+              is never what gets cut because it comes first. Three Text
+              runs rather than one string, so each keeps its own colour
+              and a test can still find each on its own. */}
           <View style={s.nameBlock}>
             <Text style={s.accountName} numberOfLines={2}>{name}</Text>
-            {profile.handle ? (
-              <Text style={s.handle} numberOfLines={1}>{`@${profile.handle}`}</Text>
+            {profile.handle || profile.bio ? (
+              <Text style={s.handleLine} numberOfLines={2}>
+                {profile.handle ? <Text style={s.handle}>{`@${profile.handle}`}</Text> : null}
+                {profile.handle && profile.bio ? <Text style={s.handle}>{' · '}</Text> : null}
+                {profile.bio ? <Text style={s.heroBody}>{profile.bio}</Text> : null}
+              </Text>
             ) : null}
           </View>
-          {profile.bio ? <Text style={s.heroBody} numberOfLines={2}>{profile.bio}</Text> : null}
           <PressableScale
             scaleTo={0.94}
             style={s.editBtn}
@@ -824,6 +837,8 @@ const s = StyleSheet.create({
     lineHeight: 28,
   },
   handle: { color: colors.textTertiary, ...type.meta },
+  // The shared line's own box; the runs inside carry their colours.
+  handleLine: { ...type.meta, lineHeight: 21 },
   // The card surface, not the glass tint: on paper the tint is a grey
   // smudge on a warm page, where the About-me card sitting inches below
   // it is white. Matching that card makes the button read as part of the

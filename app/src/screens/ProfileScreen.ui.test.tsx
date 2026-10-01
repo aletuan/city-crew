@@ -20,7 +20,7 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import type { Nav } from '../nav';
 
@@ -293,12 +293,26 @@ describe('guest hub', () => {
 });
 
 describe('account identity', () => {
-  it('shows the full name, the handle and the bio', () => {
+  it('shows the full name, and the handle and the bio on one line with a dot between', () => {
     state.profile = { full_name: 'Le Minh', handle: 'leminh', bio: 'Coffee first.' };
     draw();
     expect(screen.getByText('Le Minh')).toBeTruthy();
-    expect(screen.getByText('@leminh')).toBeTruthy();
-    expect(screen.getByText('Coffee first.')).toBeTruthy();
+    const handle = screen.getByText('@leminh');
+    const bio = screen.getByText('Coffee first.');
+    // Runs of one Text: the same parent, reading "@leminh · Coffee first."
+    expect(handle.parentElement).toBe(bio.parentElement);
+    expect(handle.parentElement!.textContent).toBe('@leminh · Coffee first.');
+  });
+
+  it('draws no dot when only one of the two is there', () => {
+    state.profile = { full_name: 'Le Minh', handle: 'leminh' };
+    draw();
+    expect(screen.getByText('@leminh').parentElement!.textContent).toBe('@leminh');
+    cleanup();
+    state.profile = { full_name: 'Le Minh', bio: 'Coffee first.' };
+    draw();
+    expect(screen.getByText('Coffee first.').parentElement!.textContent).toBe('Coffee first.');
+    expect(screen.queryByText(/·/)).toBeNull();
   });
 
   it('falls back to the local part of the email when there is no name, and draws no empty handle', () => {
