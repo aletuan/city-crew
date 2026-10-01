@@ -48,7 +48,12 @@
  *  `cities` is the raw column: city ids, with `null` a member meaning
  *  every city. An all-cities grant is one null, not a list of every city
  *  there is, so a city added tomorrow is covered without asking again. */
-type State = { uid: string | null; cities: (string | null)[]; editor: boolean; asked: boolean };
+type State = {
+  uid: string | null; cities: (string | null)[]; editor: boolean; asked: boolean;
+  /** The database has answered — or failed to, which also ends the wait.
+   *  Until then the grants may be a remembered answer (see `prime`). */
+  settled: boolean;
+};
 
 /** What one launch asks the database, in one go: the guide grant's
  *  cities, and whether this account is an editor.
@@ -83,17 +88,34 @@ export type GuideGrant = {
    *  guide of one city; a badge on the account's own profile is the other
    *  question, "are you a guide", and a guide of Hanoi is one. */
   anywhere: (uid: string | null) => boolean;
+  /**
+   * A remembered answer for this account, from the last launch: taken only
+   * while this launch's question is still out, so a stale yes can never
+   * outlive the database's no. Ignored for another account, and ignored
+   * once `load` has settled.
+   *
+   * Why it exists: the profile's badge is drawn from this store, and the
+   * store opened every launch knowing nothing. The badge then arrived a
+   * network round-trip after the page, and pushed the button beside it
+   * over when it did. The profile row itself had been spared that by a
+   * stash in AsyncStorage; this is the same courtesy for the grant.
+   */
+  prime: (uid: string | null, grant: Grant) => void;
+  /** Whether this launch's question about this account has been answered
+   *  (or has failed). `true` for nobody: a guest has nothing to wait for.
+   *  Until it is true, a screen may hold the room a badge would take. */
+  settled: (uid: string | null) => boolean;
   /** Back to knowing nothing. For tests, and for signing out. */
   reset: () => void;
 };
 
-const EMPTY: State = { uid: null, cities: [], editor: false, asked: false };
+const EMPTY: State = { uid: null, cities: [], editor: false, asked: false, settled: false };
 
 /** Same account, same grants, same asked — compared by value, because the
  *  list is rebuilt by every load and an identity check would notify every
  *  subscriber on a request that changed nothing. */
 const same = (a: State, b: State) =>
-  a.uid === b.uid && a.asked === b.asked && a.editor === b.editor
+  a.uid === b.uid && a.asked === b.asked && a.settled === b.settled && a.editor === b.editor
   && a.cities.length === b.cities.length
   && a.cities.every((c, i) => c === b.cities[i]);
 
@@ -127,19 +149,33 @@ export function guideGrantStore(): GuideGrant {
       // state carrying grants also carries `asked`, and this line is past
       // the early return that catches those. The one thing that clears
       // `asked` is `reset`, which clears the uid with it, so there is no
-      // way to arrive here holding a yes.
-      set({ uid, cities: [], editor: false, asked: true });
+      // way to arrive here holding a yes — except a remembered one
+      // (`prime`), which `state.uid === uid` keeps through the ask.
+      const kept = state.uid === uid ? state : EMPTY;
+      set({ uid, cities: kept.cities, editor: kept.editor, asked: true, settled: false });
       try {
         const { cities, editor } = await ask();
-        set({ uid, cities, editor, asked: true });
+        set({ uid, cities, editor, asked: true, settled: true });
       } catch {
         // A signed-out reader, a table that is not there yet, a network
         // that went away: all of them mean "draw no control", which is
-        // what the state already says.
+        // what the state already says — unless a remembered answer was
+        // primed, which stays: last launch's grant beats a dead network.
+        // Settled either way, so nothing waits on a question that will
+        // not be answered.
+        set({ ...state, settled: true });
       }
     },
     isEditor: (uid) => !!uid && state.uid === uid && state.editor,
     anywhere: (uid) => !!uid && state.uid === uid && state.cities.length > 0,
+    prime: (uid, grant) => {
+      if (!uid) return;
+      if (state.uid === uid && state.settled) return;
+      // Before the ask, or during it: either way the ask's own answer
+      // replaces this when it lands.
+      set({ uid, cities: grant.cities, editor: grant.editor, asked: state.uid === uid && state.asked, settled: false });
+    },
+    settled: (uid) => !uid || (state.uid === uid && state.settled),
     reset: () => set(EMPTY),
   };
 }

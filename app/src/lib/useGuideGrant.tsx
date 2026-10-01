@@ -2,8 +2,10 @@
 
 import { useEffect, useSyncExternalStore } from 'react';
 import { useAuth } from './auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchGuideCities, fetchIsEditor } from './data';
-import { guideGrant } from './guideGrant';
+import { cacheKey, packCache, unpackCache } from './data/cache';
+import { guideGrant, type Grant } from './guideGrant';
 
 /**
  * Whether this account is a local guide *in this city*, answered on the
@@ -48,11 +50,40 @@ export function useIsGuideAnywhere(): boolean {
   return useSyncExternalStore(guideGrant.subscribe, () => guideGrant.anywhere(uid));
 }
 
+/** Whether this launch's question about the reader has been answered.
+ *  Until it has, the profile holds the room its badge would take. */
+export function useGrantSettled(): boolean {
+  const { session } = useAuth();
+  const uid = session?.user?.id ?? null;
+  return useSyncExternalStore(guideGrant.subscribe, () => guideGrant.settled(uid));
+}
+
 /** The one launch question: both answers, side by side. */
-async function askGrant() {
+async function askGrant(): Promise<Grant> {
   const [cities, editor] = await Promise.all([fetchGuideCities(), fetchIsEditor()]);
   return { cities, editor };
 }
+
+/**
+ * The grant, stashed per account the way `auth.tsx` stashes the profile
+ * row: the same key scheme, the same pack, the same seven-day age. Keyed
+ * by uid, so another account is a miss, never a wrong hit; a cache is a
+ * convenience, so its failures are swallowed. Packed as a one-row list
+ * because `unpackCache` trusts lists only.
+ */
+const stash = (uid: string) => cacheKey('grant', 'all', uid);
+async function recall(uid: string) {
+  try {
+    const hit = unpackCache<Grant[]>(await AsyncStorage.getItem(stash(uid)), Date.now());
+    const kept = hit?.data[0];
+    if (kept) guideGrant.prime(uid, kept);
+  } catch { /* nothing worth surfacing: the ask is the truth */ }
+}
+const remember = (uid: string) => async () => {
+  const grant = await askGrant();
+  AsyncStorage.setItem(stash(uid), packCache([grant], Date.now())).catch(() => {});
+  return grant;
+};
 
 /**
  * Asks once, at launch, and renders nothing.
@@ -65,10 +96,21 @@ async function askGrant() {
  *
  * `load` is idempotent per account, so this being mounted at the same
  * time as any other reader costs one request, not two.
+ *
+ * And it remembers: last launch's answer is primed from AsyncStorage
+ * while this launch's request is out, so a badge the reader had
+ * yesterday is on the first frame today. See `prime` in the store for
+ * why a remembered yes can never outlive the database's no.
  */
 export function GuideGrantSync() {
   const { session } = useAuth();
   const uid = session?.user?.id ?? null;
-  useEffect(() => { void guideGrant.load(uid, askGrant); }, [uid]);
+  useEffect(() => {
+    if (!uid) { void guideGrant.load(uid, askGrant); return; }
+    // The ask first — it marks the account asked about, so the recall
+    // below primes into this launch's question and not before it.
+    void guideGrant.load(uid, remember(uid));
+    void recall(uid);
+  }, [uid]);
   return null;
 }

@@ -161,6 +161,93 @@ describe('guideGrantStore', () => {
     expect(saw.mock.calls.length).toBe(afterFirst);
   });
 
+  // ── a remembered answer, and the wait for the real one ──
+
+  it('is unsettled while the question is out, and settled once answered', async () => {
+    const s = guideGrantStore();
+    let answer!: (g: { cities: (string | null)[]; editor: boolean }) => void;
+    const slow = () => new Promise<{ cities: (string | null)[]; editor: boolean }>((r) => { answer = r; });
+    expect(s.settled('u1')).toBe(false);
+    const loading = s.load('u1', slow);
+    expect(s.settled('u1')).toBe(false);
+    answer({ cities: [], editor: true });
+    await loading;
+    expect(s.settled('u1')).toBe(true);
+    // Nobody has nothing to wait for.
+    expect(s.settled(null)).toBe(true);
+    // Another account's question is not this one's.
+    expect(s.settled('u2')).toBe(false);
+  });
+
+  it('settles when the question fails, so nothing waits on it', async () => {
+    const s = guideGrantStore();
+    await s.load('u1', () => Promise.reject(new Error('offline')));
+    expect(s.settled('u1')).toBe(true);
+    expect(s.isEditor('u1')).toBe(false);
+  });
+
+  it('takes a remembered answer while the question is out, then the real one', async () => {
+    const s = guideGrantStore();
+    let answer!: (g: { cities: (string | null)[]; editor: boolean }) => void;
+    const slow = () => new Promise<{ cities: (string | null)[]; editor: boolean }>((r) => { answer = r; });
+    const loading = s.load('u1', slow);
+    s.prime('u1', { cities: ['hanoi'], editor: true });
+    expect(s.isEditor('u1')).toBe(true);
+    expect(s.get('u1', 'hanoi')).toBe(true);
+    expect(s.settled('u1')).toBe(false);
+    // The database says less than last launch did: its word wins.
+    answer({ cities: [], editor: false });
+    await loading;
+    expect(s.isEditor('u1')).toBe(false);
+    expect(s.get('u1', 'hanoi')).toBe(false);
+    expect(s.settled('u1')).toBe(true);
+  });
+
+  it('keeps a remembered answer given before the question was asked', async () => {
+    const s = guideGrantStore();
+    s.prime('u1', { cities: [], editor: true });
+    expect(s.isEditor('u1')).toBe(true);
+    let answer!: (g: { cities: (string | null)[]; editor: boolean }) => void;
+    const slow = () => new Promise<{ cities: (string | null)[]; editor: boolean }>((r) => { answer = r; });
+    const ask = vi.fn(slow);
+    const loading = s.load('u1', ask);
+    // Asking did not wipe what was remembered, and still asked.
+    expect(s.isEditor('u1')).toBe(true);
+    expect(ask).toHaveBeenCalledTimes(1);
+    answer({ cities: [], editor: true });
+    await loading;
+    expect(s.isEditor('u1')).toBe(true);
+  });
+
+  it('ignores a remembered answer once the real one has landed', async () => {
+    const s = guideGrantStore();
+    await s.load('u1', nowhere);
+    s.prime('u1', { cities: [null], editor: true });
+    expect(s.isEditor('u1')).toBe(false);
+    expect(s.get('u1', 'hanoi')).toBe(false);
+  });
+
+  it('keeps a remembered answer when the question fails', async () => {
+    const s = guideGrantStore();
+    const loading = s.load('u1', () => Promise.reject(new Error('offline')));
+    s.prime('u1', { cities: [], editor: true });
+    await loading;
+    expect(s.isEditor('u1')).toBe(true);
+    expect(s.settled('u1')).toBe(true);
+  });
+
+  it('ignores a remembered answer for nobody, and tells subscribers of one that counts', () => {
+    const s = guideGrantStore();
+    const heard = vi.fn();
+    s.subscribe(heard);
+    s.prime(null, { cities: [null], editor: true });
+    expect(heard).not.toHaveBeenCalled();
+    expect(s.isEditor(null)).toBe(false);
+    s.prime('u1', { cities: [null], editor: true });
+    expect(heard).toHaveBeenCalledTimes(1);
+    expect(s.anywhere('u1')).toBe(true);
+  });
+
   it('goes back to knowing nothing when reset', async () => {
     const s = guideGrantStore();
     await s.load('u1', everywhere);
