@@ -24,16 +24,33 @@
 // trip_invites migration is that table. But an invitation has to point at a
 // trip, and on this screen the plan does not exist yet: it is a draft the
 // reader may still walk away from. So inviting lives on the trip's own
-// screen, after Save, and the crew row here says so instead of offering a
-// button that would have to invent a trip to work.
+// screen, after Save, and the caption under Save says so instead of
+// offering a button that would have to invent a trip to work.
+//
+// ── the shape of the page ──
+//
+// From the reference design, in order: the facts of the evening as chips
+// under the title (when, how far, with whom); a line saying what the
+// controls do; then the stops down a numbered rail, each a card wearing
+// the place's own photographs, with the journey between two cards marked
+// on the rail by how it is made. What the reference has and this page
+// does not: a stop count (the rail numbers the stops, and the options
+// card dropped its count for the same reason); "Edit all times" and a
+// per-stop Edit (nothing behind either); a kebab menu holding the reorder
+// and remove controls (one tap each on the rail beats two behind a menu,
+// and VoiceOver reaches them); and the drag affordance, for the reason
+// at the top of this file. The thread down the rail is drawn solid where
+// the reference dashes it: iOS draws a dashed border only when all four
+// sides carry one, which on a 1pt-wide view is a 2pt double line.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  AmbientWarmth, Avatar, Card, GradientCta, IconSubtitle, PressableScale, RoundIconButton, Screen,
+  AmbientWarmth, Card, GradientCta, IconSubtitle, PressableScale, RoundIconButton, Screen,
   fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
+import StopHero from '../components/StopHero';
 import {
   cachedNarration, derivedTitle, factLine, freshen, narratableOf, prefetchNarration,
   type Narration,
@@ -48,6 +65,7 @@ import { saveTrip } from '../lib/data';
 import { spendVnd } from '../lib/trips';
 import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
+import { routeMode } from '../lib/maps';
 import { useI18n } from '../lib/i18n';
 import {
   legsOfPlan, move, NUDGE_MIN, nudge, outOfOrder, remove, windowOf, type Editable,
@@ -58,12 +76,25 @@ import { scheduleTripReminder } from '../lib/reminders';
 import { membersOf } from '../lib/place';
 import { useSave } from '../lib/save';
 import { useNoteEvent, usePlanProfile } from '../lib/tasteProfile';
-import { stopCount, summaryLine } from '../lib/sketch';
+import { summaryLine } from '../lib/sketch';
 import { useFlag } from '../lib/useFlag';
-import { draftFrom, type TripDraft } from '../lib/trip';
+import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
-import { colors, font, space, type } from '../theme';
+import { colors, font, radius, space, type } from '../theme';
+
+/** One fact of the evening, worn as a chip under the title. Not a control:
+ *  no role, no press — the glyph is the accent's because the reference
+ *  colours it so, and because a grey glyph on a grey chip was the one
+ *  thing on the page with no contrast of its own. */
+function Fact({ icon, text }: { icon: string; text: string }) {
+  return (
+    <View style={s.chip}>
+      <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={15} color={colors.accent} />
+      <Text style={s.chipText}>{text}</Text>
+    </View>
+  );
+}
 
 const money = (vnd: number) => (vnd >= 1_000_000
   ? `${Math.round(vnd / 100_000) / 10}M ₫`
@@ -78,7 +109,7 @@ export default function PlanEditScreen({ navigation, route }: {
   const p = route.params;
   const { data: places } = usePlaces();
   const { city } = useCity();
-  const { session, profile } = useAuth();
+  const { session } = useAuth();
   const { mine, askToSignIn } = useSave();
   const { taste, budgetVnd } = usePlanProfile();
   const note = useNoteEvent();
@@ -239,9 +270,17 @@ export default function PlanEditScreen({ navigation, route }: {
   // Behind the place detail's price switch (#598), like the options card
   // and the saved trip: a per-person sum of prices the reader cannot see.
   const showPrice = useFlag('place_price');
+  // The evening's facts, for the chips under the title. Distance is the
+  // legs summed — the figure the options card prints in its footer — and
+  // it wears the glyph of how the whole route is made: a walk only when
+  // every measured leg is one, as the map's directions decide it. Company
+  // comes from the table the wizard's tiles read, so "Friends" here is the
+  // tile the reader tapped there.
+  const km = legs.reduce((n, l) => n + (l?.km ?? 0), 0);
+  const company = COMPANY.find((c) => c.key === p.company);
 
-  // Date first, place after, company nowhere: the crew row below carries
-  // who is going, and every trip subtitle keeps this same order.
+  // Date first, place after, company nowhere: the chips below carry who
+  // is going, and every trip subtitle keeps this same order.
   const line = summaryLine([
     dateline(lang, fromISO(day) ?? new Date()),
     p.where,
@@ -379,34 +418,39 @@ export default function PlanEditScreen({ navigation, route }: {
         contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: clearance }}
         showsVerticalScrollIndicator={false}
       >
-        {/* The reader's own face — the profile has one now, so the initial
-            it used to wear is only the fallback Avatar itself draws. The
-            row itself always stands: hiding it on solo pushed the page
-            around and took the face with it, and the owner sent it back.
+        {/* The evening in three facts, read before the stops are: when it
+            runs, how far it goes, who is on it. Each is a fact and not a
+            control — plain words to VoiceOver, no role. The spend joins
+            them only behind the place detail's price switch (#598), and
+            only when something costs anything.
 
-            What is no longer here is Invite. It was a labelled mock for a
-            reason that has since been fixed — trip_invites is that
-            membership table — but an invitation points at a trip, and
-            here the plan does not exist yet. So on a plan with company
-            the row says what the button would have had to lie about — a
-            sentence, not a disabled control — and a solo plan does not
-            even say that: pointing at inviting under a plan marked
-            "just me" is the app arguing with the reader. */}
-        <View style={s.crew}>
-          <View style={s.avatars}>
-            <Avatar url={profile.avatar_url} size={30} />
-          </View>
-          <Text style={s.crewText}>{t('Just you, for now', 'Hiện chỉ có bạn', '今はあなただけ')}</Text>
-          {p.company !== 'solo' && (
-            <Text style={s.crewHint}>
-              {t('Save first, then invite', 'Lưu trước rồi mời', '保存してから招待')}
-            </Text>
+            What is not here is the reader's own face. A row with their
+            avatar and "Just you, for now" used to open the page, and
+            under a plan already marked "friends" it argued with the
+            answer the reader gave; the company chip states that answer
+            instead, and the caption under Save says where inviting
+            happens. */}
+        <View style={s.chips}>
+          {current.length > 0 && <Fact icon="time-outline" text={`${clockOf(from)}–${clockOf(to)}`} />}
+          {km > 0 && (
+            <Fact icon={routeMode(legs) === 'walking' ? 'walk-outline' : 'car-outline'} text={fmtDistance(km)} />
+          )}
+          {company && <Fact icon={company.icon} text={t(company.en, company.vi, company.ja)} />}
+          {showPrice && spend > 0 && (
+            <Fact icon="wallet-outline" text={`~${money(spend)} / ${t('person', 'người', '人')}`} />
           )}
         </View>
 
-        <Text style={s.eyebrow}>
-          {t('STOPS · NUDGE A TIME OR MOVE ONE', 'CÁC ĐIỂM · CHỈNH GIỜ HOẶC ĐỔI THỨ TỰ', 'スポット · 時間や順番を調整')}
-        </Text>
+        {/* What the controls on the cards do, said once above them rather
+            than as a letter-spaced eyebrow. The reference says "Drag to
+            reorder"; nothing here drags (see the top of the file), so this
+            says what does happen. */}
+        <View style={s.hint}>
+          <Ionicons name="swap-vertical-outline" size={15} color={colors.textTertiary} />
+          <Text style={s.hintText}>
+            {t('Nudge a time, or move a stop', 'Chỉnh giờ, hoặc đổi thứ tự điểm', '時間を調整するか、順番を入れ替える')}
+          </Text>
+        </View>
 
         {current.map((stop, i) => {
           // The first category the place carries, worn as a glyph in a
@@ -415,9 +459,27 @@ export default function PlanEditScreen({ navigation, route }: {
           // "café" everywhere else. A place nothing classifies gets the
           // neutral pin on the neutral ground, not a guess.
           const cat = CATEGORIES[categoriesOf(stop.place)[0]];
+          const open = () => navigation.navigate('PlaceDetail', { slug: stop.place.slug });
           return (
           <View key={stop.place.slug}>
+            {/* The stop's number in a disc on the gutter, and the thread
+                running from it down to the next — the itinerary's order,
+                drawn, so a card moved with the arrows is seen to have
+                moved and not merely to have swapped its text. The last
+                stop ends the thread: a line running on past the evening's
+                end points at nothing. */}
+            <View style={s.stopRow}>
+              <View style={s.gutter}>
+                <View style={s.disc}><Text style={s.discText}>{i + 1}</Text></View>
+                {i < current.length - 1 && <View style={s.thread} />}
+              </View>
             <Card style={[s.card, wrong.includes(i) && s.rowWrong]}>
+              {/* The place's own photographs, full-bleed above the body
+                  and tapped the way the band below is. The card's padding
+                  moved down to `cardBody` for this: a picture inset by
+                  16pt inside a 22pt-radius card is a picture in a frame. */}
+              <StopHero place={stop.place} onPress={open} testID="stop-hero" />
+              <View style={s.cardBody}>
               {/* What the place is, up top; what you do to it, at the
                   bottom. The old card led every row with the time stepper,
                   which put the controls between the reader and the name —
@@ -437,7 +499,7 @@ export default function PlanEditScreen({ navigation, route }: {
                   band takes the tap and the controls keep theirs. */}
               <PressableScale
                 style={s.identity}
-                onPress={() => navigation.navigate('PlaceDetail', { slug: stop.place.slug })}
+                onPress={open}
                 accessibilityRole="button"
                 accessibilityLabel={t(
                   `Open ${stop.place.name_en}`,
@@ -468,8 +530,15 @@ export default function PlanEditScreen({ navigation, route }: {
                       </View>
                     )}
                   </View>
+                  {/* District, kind, and how long — the kind by the name
+                      the category wears everywhere else, so the glyph in
+                      the well has its word beside it. */}
                   <Text style={s.area} numberOfLines={1}>
-                    {summaryLine([stop.place.neighborhood_en, fmtMinutes(stop.dwellMin, lang)])}
+                    {summaryLine([
+                      stop.place.neighborhood_en,
+                      cat ? t(cat.en, cat.vi, cat.ja) : null,
+                      fmtMinutes(stop.dwellMin, lang),
+                    ])}
                   </Text>
                 </View>
               </PressableScale>
@@ -518,6 +587,11 @@ export default function PlanEditScreen({ navigation, route }: {
                   the rail is what you can do to it. */}
               <View style={s.rail}>
                 <View style={s.timeBox}>
+                  {/* Named, because the stepper used to be the only
+                      labelled thing on the rail that was not labelled: a
+                      minus, a clock, a plus, and nothing to say the clock
+                      was the arrival. */}
+                  <Text style={s.timeLabel}>{t('Time', 'Giờ', '時刻')}</Text>
                   <PressableScale
                     haptic="selection"
                     onPress={() => setStops(nudge(current, i, -NUDGE_MIN))}
@@ -525,7 +599,7 @@ export default function PlanEditScreen({ navigation, route }: {
                     accessibilityRole="button"
                     accessibilityLabel={t(`Arrive ${NUDGE_MIN} min earlier at ${stop.place.name_en}`, `Đến ${stop.place.name_en} sớm ${NUDGE_MIN} phút`, `${stop.place.name_en}に${NUDGE_MIN}分早く着く`)}
                   >
-                    <Ionicons name="remove" size={15} color={colors.textSecondary} />
+                    <Ionicons name="remove" size={17} color={colors.text} />
                   </PressableScale>
                   <Text style={[s.time, stop.pinned && s.timePinned]}>{clockOf(stop.arriveMin)}</Text>
                   <PressableScale
@@ -535,7 +609,7 @@ export default function PlanEditScreen({ navigation, route }: {
                     accessibilityRole="button"
                     accessibilityLabel={t(`Arrive ${NUDGE_MIN} min later at ${stop.place.name_en}`, `Đến ${stop.place.name_en} muộn ${NUDGE_MIN} phút`, `${stop.place.name_en}に${NUDGE_MIN}分遅く着く`)}
                   >
-                    <Ionicons name="add" size={15} color={colors.textSecondary} />
+                    <Ionicons name="add" size={17} color={colors.text} />
                   </PressableScale>
                 </View>
 
@@ -568,15 +642,30 @@ export default function PlanEditScreen({ navigation, route }: {
                   </PressableScale>
                 </View>
               </View>
+              </View>
             </Card>
+            </View>
 
+            {/* How you get to the next stop, on the gutter: the thread
+                runs through a small disc wearing the mode, and the figure
+                sits beside it in the card's column. The same glyph and the
+                same "km · ≈ min" the options card and the saved trip
+                print, so one journey keeps one appearance; the reference
+                draws it as a bordered pill with a chevron, and a chevron
+                promises a screen that does not exist. */}
             {legs[i] && (
               <View style={s.legRow}>
-                <Ionicons
-                  name={legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
-                  size={12}
-                  color={colors.textTertiary}
-                />
+                <View style={s.legGutter}>
+                  <View style={s.thread} />
+                  <View style={s.modeDisc}>
+                    <Ionicons
+                      name={legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
+                      size={13}
+                      color={colors.textSecondary}
+                    />
+                  </View>
+                  <View style={s.thread} />
+                </View>
                 <Text style={s.legText}>
                   {fmtDistance(legs[i]!.km)} · ≈ {fmtMinutes(legs[i]!.minutes, lang)}
                 </Text>
@@ -592,16 +681,11 @@ export default function PlanEditScreen({ navigation, route }: {
           </Text></Card>
         )}
 
-        <Text style={s.total}>
-          {summaryLine([
-            stopCount(current.length, t),
-            current.length ? `${clockOf(from)}–${clockOf(to)}` : null,
-            showPrice && spend > 0 ? `~${money(spend)} / ${t('person', 'người', '人')}` : null,
-          ])}
-        </Text>
-
         {/* One button, the width of the screen. It is the only thing here
             that does anything. */}
+        {/* With the summary line gone, the air it carried above Save is
+            the wrapper's. */}
+        <View style={s.save} />
         <GradientCta
           icon="checkmark"
           wide
@@ -639,20 +723,46 @@ const CAPTION = { fontSize: 13, fontWeight: font.regular } as const;
 const s = StyleSheet.create({
   body: { ...type.body, color: colors.textSecondary },
 
-  crew: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: space.titleToContent },
-  avatars: { flexDirection: 'row' },
-  crewText: { ...CAPTION, color: colors.textSecondary, flex: 1 },
-  crewHint: { color: colors.textTertiary, fontSize: 12.5 },
-
-  eyebrow: {
-    ...CAPTION, color: colors.textTertiary, fontWeight: font.semibold,
-    letterSpacing: 0.6, marginBottom: 8,
+  // Wrapping, so a fourth chip (the spend, behind its switch) or a long
+  // Vietnamese company label takes a second line rather than running off
+  // the page. 8pt between chips both ways.
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
+  // The filter chip's shape (`Chip` in ui.tsx) at the filter chip's
+  // measurements, filled rather than outlined because these are read, not
+  // pressed — the outline is what the filter row uses to say "tap me".
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
+    paddingHorizontal: 14, paddingVertical: 8,
   },
+  chipText: { color: colors.text, fontSize: 14, fontWeight: font.medium, fontVariant: ['tabular-nums'] },
+
+  hint: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 10 },
+  hintText: { ...CAPTION, color: colors.textSecondary },
+
+  // The gutter is the disc's width; the card takes the rest. 12pt between
+  // them, the same gap the identity band keeps between its well and the
+  // name, so the page's two left edges line up with the card's.
+  stopRow: { flexDirection: 'row', alignItems: 'stretch', gap: 12 },
+  gutter: { width: 28, alignItems: 'center' },
+  /**
+   * The number, on the accent as a surface — `accentFill`, which is the
+   * same coral in both themes, under `accentInk`: near-black on coral is
+   * 6.8:1 where white is 2.7:1 (see the theme), and the reference's white
+   * numeral is the one figure on it that fails the floor.
+   */
+  disc: {
+    width: 28, height: 28, borderRadius: 14, backgroundColor: colors.accentFill,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  discText: { color: colors.accentInk, fontSize: 13, fontWeight: font.bold, fontVariant: ['tabular-nums'] },
+  thread: { flex: 1, width: 1, backgroundColor: colors.borderGlass, marginVertical: 4 },
 
   // `Card` carries no padding of its own — see the note on the component.
-  // Without this the stepper sat against the card's left edge and the
-  // corner radius clipped it.
-  card: { padding: space.cardPadding },
+  // It used to be on the card; the hero moved it to the body so the
+  // picture can meet the card's edges.
+  card: { flex: 1 },
+  cardBody: { padding: space.cardPadding },
   rowWrong: { borderColor: colors.accentFill, borderWidth: 1 },
 
   identity: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -687,12 +797,20 @@ const s = StyleSheet.create({
   rail: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10,
   },
-  timeBox: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  timeBox: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  timeLabel: { ...CAPTION, color: colors.textSecondary, marginRight: 8 },
+  // 34pt, up from 26: the reference draws the stepper as the card's main
+  // control, and 26 was under the 30pt a fingertip needs even before the
+  // three tools on the right were counted. 44 as drawn would push those
+  // tools off a 295pt card in Vietnamese.
   step: {
-    width: 26, height: 26, borderRadius: 13,
+    width: 34, height: 34, borderRadius: 17,
     alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass,
   },
-  time: { ...CAPTION, color: colors.text, width: 46, textAlign: 'center', fontVariant: ['tabular-nums'] },
+  time: {
+    color: colors.text, fontSize: 16, fontWeight: font.semibold,
+    width: 52, textAlign: 'center', fontVariant: ['tabular-nums'],
+  },
   /** A time the reader set, marked so they can see which ones the planner
    *  will no longer touch. */
   timePinned: { color: colors.accent, fontWeight: font.semibold },
@@ -720,14 +838,23 @@ const s = StyleSheet.create({
   },
 
   tools: { flexDirection: 'row', gap: 2 },
-  tool: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  tool: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   toolOff: { opacity: 0.25 },
 
   warn: { ...CAPTION, color: colors.accent, marginTop: 8 },
 
-  legRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginLeft: 12, paddingVertical: 6 },
-  legText: { ...CAPTION, color: colors.textTertiary },
+  // The leg's row is the gutter's width plus the gap, so its figure
+  // starts where the card does. 44pt tall: the mode disc and 8pt of
+  // thread above and below it, which is what keeps the next card's number
+  // from touching the disc.
+  legRow: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 44 },
+  legGutter: { width: 28, alignItems: 'center', alignSelf: 'stretch' },
+  modeDisc: {
+    width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
+  },
+  legText: { ...CAPTION, color: colors.textSecondary },
 
-  total: { ...CAPTION, color: colors.textSecondary, marginTop: 10, marginBottom: 16 },
+  save: { height: 18 },
   note: { ...CAPTION, color: colors.textTertiary, marginTop: 12 },
 });
