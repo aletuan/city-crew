@@ -24,6 +24,7 @@ import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
 import { useAuth } from '../lib/auth';
 import { useIsEditor, useIsGuideAnywhere } from '../lib/useGuideGrant';
+import { useMyTrips } from '../lib/mytrips';
 import { membersOf, useMyPreferences } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
@@ -425,6 +426,23 @@ function GuestHub({ navigation }: { navigation: Nav }) {
   );
 }
 
+/** One number and its word, a door into the tab that holds them. */
+function StatTile({ n, label, onPress }: { n: number; label: string; onPress: () => void }) {
+  return (
+    <PressableScale
+      scaleTo={0.96}
+      containerStyle={{ flex: 1 }}
+      style={s.stat}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${n} ${label}`}
+    >
+      <Text style={s.statN}>{n}</Text>
+      <Text style={s.statLabel} numberOfLines={1}>{label}</Text>
+    </PressableScale>
+  );
+}
+
 function AboutRow({ icon, label, value, children, last }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -501,6 +519,20 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
     return seen.size;
   }, [mine.data]);
   const { level, progress } = levelFromSaves(saved);
+  const trips = useMyTrips();
+
+  // The three doors under the hero. Each is a count the reader made and a
+  // tap into the tab that holds it — a number on a profile earns its place
+  // only as a door (the ring already says "how far"; these say "how many"
+  // and "where"). A tab navigator is the parent when the screen is in the
+  // app; the root ref is the way out when it is not, naming each tab's
+  // first screen (see the guest link's note on `getParent()?.`).
+  const hop = (tab: 'Collections' | 'Trips', first: 'CollectionsHome' | 'TripsHome') => {
+    fireHaptic('selection');
+    const parent = navigation.getParent();
+    if (parent) parent.navigate(tab);
+    else goTo(tab, { screen: first });
+  };
 
   return (
     <>
@@ -595,10 +627,26 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
               onPress={() => navigation.navigate('EditProfile')}
               accessibilityRole="button"
             >
+              {/* The pencil says "change", which a word alone, beside a
+                  badge wearing a glyph, said more quietly. */}
+              <Ionicons name="pencil-outline" size={14} color={colors.text} />
               <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}</Text>
             </PressableScale>
           </View>
         </View>
+      </View>
+
+      {/* Bare numbers over a hairline, not boxed tiles: four filled boxes
+          beside a title read as a second toolbar (the desk learned this in
+          #634), where the number alone is the thing being read. Three, not
+          the reference's four: there is no review feature, and a count
+          with no data behind it is the one number that must not appear. */}
+      <View style={s.stats}>
+        <StatTile n={mine.data.length} label={t('Collections', 'Bộ sưu tập', 'コレクション')} onPress={() => hop('Collections', 'CollectionsHome')} />
+        <View style={s.statDivider} />
+        <StatTile n={saved} label={t('Saved places', 'Địa điểm đã lưu', '保存した場所')} onPress={() => hop('Collections', 'CollectionsHome')} />
+        <View style={s.statDivider} />
+        <StatTile n={trips.data?.length ?? 0} label={t('Trips', 'Chuyến đi', 'トリップ')} onPress={() => hop('Trips', 'TripsHome')} />
       </View>
 
       <Text style={s.section}>{t('About me', 'Về tôi', '自己紹介')}</Text>
@@ -909,7 +957,18 @@ const s = StyleSheet.create({
   // smudge on a warm page, where the About-me card sitting inches below
   // it is white. Matching that card makes the button read as part of the
   // same set of objects rather than a hole in the background.
+  // Under the hero, over a hairline: the width is split three ways and
+  // the numbers centre in their thirds, with a short rule between.
+  stats: {
+    flexDirection: 'row', alignItems: 'center', marginTop: 14,
+    paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft,
+  },
+  stat: { alignItems: 'center', gap: 2, paddingVertical: 6 },
+  statN: { color: colors.text, fontSize: 22, fontWeight: font.bold, fontVariant: ['tabular-nums'] },
+  statLabel: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
+  statDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: colors.borderGlassSoft },
   editBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
     alignSelf: 'flex-start',
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
     backgroundColor: colors.surfaceCard, paddingHorizontal: 16, paddingVertical: 8,
