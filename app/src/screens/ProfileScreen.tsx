@@ -23,7 +23,7 @@ import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
 import { useAuth } from '../lib/auth';
-import { useGrantSettled, useIsEditor, useIsGuideAnywhere } from '../lib/useGuideGrant';
+import { useIsEditor, useIsGuideAnywhere } from '../lib/useGuideGrant';
 import { useMyTrips } from '../lib/mytrips';
 import { membersOf, useMyPreferences } from '../lib/data';
 import { useCrew } from '../lib/crew';
@@ -499,14 +499,27 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   // gallery, which includes the ones a guide keeps.
   const editor = useIsEditor();
   const guide = useIsGuideAnywhere();
-  // Whether the question behind those two has been answered this launch.
-  // Until it has, and when nothing remembered says yes, the badge's room
-  // is held so Edit profile does not move when the answer lands. The
-  // answer is one network round-trip behind the page, and when it was a
-  // yes, Edit profile slid right by the badge's width and the gap — the
-  // one movement on a page that had otherwise finished drawing. A
-  // remembered answer (`prime`) spares a returning reader even the hold.
-  const settled = useGrantSettled();
+  const role = editor
+    ? {
+      icon: 'medal' as const, color: colors.accent, dress: s.roleEditor,
+      name: t('Super User', 'Super User', 'スーパーユーザー'),
+      says: t(
+        'You can edit, and add photos to, every place in the app — new or already listed.',
+        'Bạn có thể chỉnh sửa, thêm ảnh cho tất cả các địa điểm, mới hoặc đã có trong ứng dụng.',
+        'アプリ内のすべての場所（新規・既存）を編集し、写真を追加できます。',
+      ),
+    }
+    : guide
+      ? {
+        icon: 'star' as const, color: colors.ok, dress: s.roleGuide,
+        name: t('Local Guide', 'Local Guide', 'ローカルガイド'),
+        says: t(
+          'You can edit, and add photos to, places in your collections and places you imported.',
+          'Bạn có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của mình hoặc các địa điểm đã nhập.',
+          '自分のコレクションの場所や、自分が追加した場所を編集し、写真を追加できます。',
+        ),
+      }
+      : null;
   const taste = useMemo(
     () => cleanTaste(prefs.data.categories, Object.keys(CATEGORIES)),
     [prefs.data.categories],
@@ -546,10 +559,42 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
     <>
       <View style={s.heroRow}>
         {/* No camera badge here: the level badge takes that corner, and
-            Edit profile shows the same picker with its badge intact. */}
-        <EngagementRing size={88} level={level} progress={progress}>
-          <AvatarPicker showCamera={false} />
-        </EngagementRing>
+            Edit profile shows the same picker with its badge intact.
+
+            The reader's standing, on the picture. A guide, and an editor
+            (the desk's hand), may keep galleries the panel would otherwise
+            refuse; it used to be said in a pill under the name, beside
+            Edit profile, and the owner found the pill loud for what it
+            is — a mark, not a message. So: a small disc on the ring's
+            top-right corner, the level's own halo at the opposite corner,
+            with the role's glyph in the role's colour. Editor outranks
+            guide and is the one disc shown; a reader with neither wears
+            none. A tap still says what the grant lets them do, in the
+            desk's words, and VoiceOver reads the role as the disc's name.
+
+            And because the disc lies on the picture, its arriving a
+            round-trip late moves nothing else on the page — which is
+            what the pill's held room was for. */}
+        <View style={s.avatarBox} testID="avatar-box">
+          <EngagementRing size={88} level={level} progress={progress}>
+            <AvatarPicker showCamera={false} />
+          </EngagementRing>
+          {role && (
+            <View style={s.roleHalo}>
+              <PressableScale
+                scaleTo={0.9}
+                style={[s.roleDisc, role.dress]}
+                accessibilityRole="button"
+                accessibilityLabel={role.name}
+                accessibilityHint={t('Explains what this lets you do', 'Giải thích quyền này', 'この権限でできることを説明します')}
+                onPress={() => Alert.alert(role.name, role.says)}
+                testID="role-badge"
+              >
+                <Ionicons name={role.icon} size={13} color={role.color} />
+              </PressableScale>
+            </View>
+          )}
+        </View>
         <View style={{ flex: 1, gap: 5 }}>
           {/* Two lines, two things: the name you are called, then the
               name you are found by.
@@ -589,66 +634,17 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
               </Text>
             ) : null}
           </View>
-          {/* The role, said where the reader looks for who they are. The
-              grant used to show only as a control that appeared on some
-              galleries and not others, with nothing on the account to say
-              why — so a guide did not know they were one until they met
-              the panel. A badge here names it, and a tap says what it
-              lets them do, in the words the desk uses when it grants it.
-              Editor outranks guide and is the one badge shown. Nothing at
-              all for a reader with neither: an empty slot is not news. */}
+          {/* Edit profile, by itself, under the name. Words only: it wore a
+              pencil for a while, and the owner did not care for it — a
+              glyph beside two words that already say "change" was one more
+              thing to read. */}
           <View style={s.heroActions}>
-            {editor || guide ? (
-              <PressableScale
-                scaleTo={0.94}
-                style={[s.roleBadge, editor ? s.roleEditor : s.roleGuide]}
-                accessibilityRole="button"
-                accessibilityHint={t('Explains what this lets you do', 'Giải thích quyền này', 'この権限でできることを説明します')}
-                onPress={() => Alert.alert(
-                  editor ? t('Super User', 'Super User', 'スーパーユーザー') : t('Local Guide', 'Local Guide', 'ローカルガイド'),
-                  editor
-                    ? t(
-                      'You can edit, and add photos to, every place in the app — new or already listed.',
-                      'Bạn có thể chỉnh sửa, thêm ảnh cho tất cả các địa điểm, mới hoặc đã có trong ứng dụng.',
-                      'アプリ内のすべての場所（新規・既存）を編集し、写真を追加できます。',
-                    )
-                    : t(
-                      'You can edit, and add photos to, places in your collections and places you imported.',
-                      'Bạn có thể chỉnh sửa và thêm ảnh cho các địa điểm trong bộ sưu tập của mình hoặc các địa điểm đã nhập.',
-                      '自分のコレクションの場所や、自分が追加した場所を編集し、写真を追加できます。',
-                    ),
-                )}
-              >
-                <Ionicons
-                  name={editor ? 'medal' : 'star'}
-                  size={13}
-                  color={editor ? colors.accent : colors.ok}
-                />
-                <Text style={[s.roleText, { color: editor ? colors.accent : colors.ok }]}>
-                  {editor ? t('Super User', 'Super User', 'スーパーユーザー') : t('Local Guide', 'Local Guide', 'ローカルガイド')}
-                </Text>
-              </PressableScale>
-            ) : settled ? null : (
-              // The badge itself, invisible: its own footprint, without a
-              // width to measure and keep right. Super User's label stands
-              // in for both; Local Guide's is a few points off in each
-              // language, which is how far Edit profile moves if the
-              // answer is that one — and not at all if it is Super User
-              // or nothing remembered was wrong.
-              <View style={[s.roleBadge, s.rolePending]} accessible={false} aria-hidden testID="role-pending">
-                <Ionicons name="medal" size={13} color={colors.accent} />
-                <Text style={s.roleText}>{t('Super User', 'Super User', 'スーパーユーザー')}</Text>
-              </View>
-            )}
             <PressableScale
               scaleTo={0.94}
               style={s.editBtn}
               onPress={() => navigation.navigate('EditProfile')}
               accessibilityRole="button"
             >
-              {/* The pencil says "change", which a word alone, beside a
-                  badge wearing a glyph, said more quietly. */}
-              <Ionicons name="pencil-outline" size={14} color={colors.text} />
               <Text style={s.editBtnText}>{t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}</Text>
             </PressableScale>
           </View>
@@ -892,14 +888,24 @@ const s = StyleSheet.create({
   tasteEmpty: { paddingVertical: 14 },
   // The role badge and the Edit profile button, one row under the name.
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' },
-  roleBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderRadius: radius.pill, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 7,
+  // The ring with its two corners: the level's pill at bottom-right (the
+  // ring's own), the role's disc at top-right (this screen's). Shrunk to
+  // the ring, so "top-right" is the ring's corner and not the row's.
+  avatarBox: { alignSelf: 'flex-start' },
+  // The level pill's halo, mirrored to the top: the page's ground around
+  // the disc, so the arc plainly runs underneath it (see EngagementRing).
+  roleHalo: {
+    position: 'absolute', right: -4, top: 0,
+    backgroundColor: colors.bg, borderRadius: 999, padding: 2.5,
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
+  },
+  // 24pt: the level pill's height, so the two corners read as a pair.
+  roleDisc: {
+    width: 24, height: 24, borderRadius: 12, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
   },
   roleGuide: { borderColor: colors.ok, backgroundColor: colors.okSoft },
   roleEditor: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
-  rolePending: { opacity: 0 },
-  roleText: { fontSize: 13, fontWeight: font.semibold },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginBottom: 4 },
   avatarBig: {
     width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center',
@@ -988,7 +994,6 @@ const s = StyleSheet.create({
   statLabel: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
   statDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: colors.borderGlassSoft },
   editBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
     alignSelf: 'flex-start',
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
     backgroundColor: colors.surfaceCard, paddingHorizontal: 16, paddingVertical: 8,
