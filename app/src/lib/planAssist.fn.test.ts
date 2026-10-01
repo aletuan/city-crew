@@ -98,10 +98,10 @@ describe('the door', () => {
     expect(h.create).not.toHaveBeenCalled();
   });
 
-  it('spends nothing on a caller without a session', async () => {
+  it('spends nothing on a parse from a caller without a session', async () => {
     h.fake.reset();
     h.fake.replies({ data: { user: null } });
-    const res = await call({ action: 'narrate', stops: [{ slug: 'a' }] });
+    const res = await call({ action: 'parse', text: 'jazz tonight', today: '2026-10-03', categories: ['nightlife'], districts: [] });
     expect(res.status).toBe(401);
     expect(h.create).not.toHaveBeenCalled();
   });
@@ -111,6 +111,75 @@ describe('the door', () => {
     expect(res.status).toBe(400);
     expect(h.create).not.toHaveBeenCalled();
   });
+});
+
+// A guest may ask `narrate` — under the counter. The replies come off one
+// queue in the order the handler asks: who the token is (nobody), then
+// what the counter says. What is pinned is that the counter is asked at
+// all, with the hashed address and both caps; that its two answers — yes,
+// and anything else — decide whether the model is paid; and that the key
+// is the first hop, salted, never the address itself.
+describe('the guest door', () => {
+  const guest = (headers: Record<string, string> = {}) =>
+    h.handler(new Request('https://p.test/functions/v1/plan-assist', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer anon', ...headers },
+      body: JSON.stringify({ action: 'narrate', stops: [{ slug: 'a', name: 'A', arrive: '19:00' }] }),
+    }));
+  const asked = () => h.fake.log.filter((c) => c.op === 'rpc').at(-1) as
+    { fn: string; payload: { p_ip_hash: string; p_ip_cap: number; p_day_cap: number } };
+  const sha = async (s: string) => Array.from(
+    new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))),
+    (b) => b.toString(16).padStart(2, '0'),
+  ).join('');
+
+  beforeEach(() => {
+    h.fake.reset();
+    h.fake.replies({ data: { user: null } });
+    h.env.GUEST_SALT = 'pepper';
+  });
+
+  it('asks the counter for the hashed first hop with both caps, and pays the model when it says yes', async () => {
+    h.fake.replies({ data: true, error: null });
+    h.create.mockResolvedValue(says({ title: 'T', stops: [{ slug: 'a', why: 'Because.' }] }));
+    const res = await guest({ 'x-forwarded-for': '203.0.113.9, 10.0.0.1' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ title: 'T', stops: [{ slug: 'a', why: 'Because.' }] });
+    expect(asked().fn).toBe('guest_assist_allowed');
+    expect(asked().payload).toEqual({ p_ip_hash: await sha('pepper:203.0.113.9'), p_ip_cap: 20, p_day_cap: 2000 });
+    expect(asked().payload.p_ip_hash).not.toContain('203.0.113.9');
+    expect(h.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses with 429 and pays nothing once the counter says no', async () => {
+    h.fake.replies({ data: false, error: null });
+    const res = await guest({ 'x-forwarded-for': '203.0.113.9' });
+    expect(res.status).toBe(429);
+    expect(h.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps the door shut when the counter cannot be read', async () => {
+    h.fake.replies({ data: null, error: { message: 'relation does not exist' } });
+    const res = await guest({ 'x-forwarded-for': '203.0.113.9' });
+    expect(res.status).toBe(429);
+    expect(h.create).not.toHaveBeenCalled();
+  });
+
+  it('counts a caller with no address under one shared key, salted the same', async () => {
+    h.fake.replies({ data: true, error: null });
+    h.create.mockResolvedValue(says({ title: null, stops: [] }));
+    await guest();
+    expect(asked().payload.p_ip_hash).toBe(await sha('pepper:unknown'));
+  });
+
+  it('salts with the project URL when no salt is set', async () => {
+    h.env.GUEST_SALT = undefined;
+    h.fake.replies({ data: true, error: null });
+    h.create.mockResolvedValue(says({ title: null, stops: [] }));
+    await guest({ 'x-forwarded-for': '203.0.113.9' });
+    expect(asked().payload.p_ip_hash).toBe(await sha('https://p.test:203.0.113.9'));
+  });
+
 });
 
 describe('narrate', () => {
