@@ -81,6 +81,22 @@ const OPERATIONAL = [
 /** The separators Google puts between a name and whatever it appended. */
 const SEPARATOR = /\s+[-–—]\s+/;
 
+/**
+ * The one separator the catalog writes between a name and its suffix.
+ *
+ * An em dash with a space each side, as `docs/place-naming.md` has it.
+ * Google sends a hyphen-minus because every keyboard has one; the catalog
+ * is a list a reader scans, and a hyphen between two words reads as a
+ * compound (`Hai-Bà-Trưng`) where a dash reads as a pause. This module
+ * used to write the hyphen back and leave the dash to the desk, which
+ * made the dash a reviewer's mark — and after a month the catalog held
+ * 268 hyphens to 15 dashes, so the mark marked nothing. The dash is a
+ * typographic rule now, applied on the way in; whether a row has been
+ * reviewed is `review_status`'s to say, and search folds every dash to
+ * one so a reader typing `-` still lands on the row (see `lib/search`).
+ */
+const DASH = " — ";
+
 const isForeign = (token: string) => FOREIGN.test(token);
 
 /**
@@ -142,8 +158,8 @@ export function cleanName(raw: string): CleanName {
   }
 
   const ja = dropped.length && dropped.some((d) => KANA.test(d))
-    ? dropped.join(" - ")
+    ? dropped.join(DASH)
     : null;
 
-  return { name: liftFirst(kept.join(" - ")), ja };
+  return { name: liftFirst(kept.join(DASH)), ja };
 }
