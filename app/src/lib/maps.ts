@@ -31,14 +31,15 @@ export type Point = {
 };
 
 /**
- * Google's own limit on `waypoints`, which is the stops between the first
- * and the last. Eleven stops therefore fit in one link.
+ * Google's own limit on `waypoints`, which is every stop before the last
+ * now that the origin is the reader's own position (see `mapsRouteUrl`).
+ * Ten stops therefore fit in one link.
  *
  * Reachable only from the editor: the planner builds at most five stops,
  * and a reader has to add six more by hand to find this edge. It is
  * handled rather than assumed away, and handled *loudly* — see the
  * `dropped` count, which the screen prints. A link that quietly visits
- * the wrong eleven of your twelve stops is worse than no link.
+ * the wrong ten of your eleven stops is worse than no link.
  */
 export const WAYPOINT_MAX = 9;
 
@@ -70,15 +71,30 @@ const placed = (p: Point): boolean =>
 const pinned = (p: Point): boolean => !!p.google_place_id && !!p.name_en;
 
 /**
- * One journey through every stop, for Google Maps to draw and navigate.
+ * One journey through every stop, for Google Maps to draw and navigate —
+ * starting from wherever the reader is when they tap.
  *
- * Null when there is no journey to describe: an empty trip, a single
- * stop, or a day whose places the catalog could never place. A single
- * stop is deliberately null rather than a link to that one place — the
- * row this feeds says "open the route", and a route through one point is
- * a promise the link would not keep. The trip screen answers that day
- * itself: its row falls back to `mapsSearchUrl` for the one stop,
- * relabelled to say what it honestly does.
+ * ── no origin, on purpose ──
+ *
+ * The link used to start at the first stop. It was the obvious shape
+ * and it answered the wrong question: the reader opening the route is
+ * standing somewhere, and that somewhere is neither the first stop nor
+ * the point the plan was drawn from. The point the plan was drawn from
+ * (`at_lat`/`at_lng` on the trip) is a hypothesis the planner used to
+ * pick a first stop that was near — it has done its work by the time
+ * the trip is saved, and the day it is opened the reader may be across
+ * town, or meeting friends who each set out from their own door. The
+ * Maps URLs API reads a missing `origin` as "the device's current
+ * location", which is the one answer that is right for every member of
+ * a crew: each phone draws its own leg to the first stop, and the stops
+ * are the same for all of them. So every stop is a waypoint, the last
+ * is the destination, and the origin is left to Google.
+ *
+ * Null only when there is nothing to go to: an empty trip, or a day
+ * whose places the catalog could never place. A single stop is a route
+ * now — from here to there — where it used to be refused as "a route
+ * through one point"; with the reader's own position as the start, one
+ * point is exactly a journey.
  *
  * Rows with no coordinates drop out rather than collapsing the route.
  * They are already drawn as "no longer listed" on the screen, and a
@@ -96,36 +112,33 @@ const pinned = (p: Point): boolean => !!p.google_place_id && !!p.name_en;
  * directions sheet lost its name.
  *
  * The Maps URLs API has the parameter this actually wanted: a place id
- * beside each name (`origin_place_id`, `destination_place_id`,
- * `waypoint_place_ids`) resolves the exact business — no branch
- * roulette — while the name is what the sheet displays. So a stop that
- * carries both travels by name, and a stop that does not falls back to
- * its coordinate, which cannot mislead anyone.
+ * beside each name (`destination_place_id`, `waypoint_place_ids`)
+ * resolves the exact business — no branch roulette — while the name is
+ * what the sheet displays. So a stop that carries both travels by name,
+ * and a stop that does not falls back to its coordinate, which cannot
+ * mislead anyone.
  *
- * The ends decide independently; the waypoints decide together, because
+ * The destination decides alone; the waypoints decide together, because
  * Google requires `waypoint_place_ids` to match `waypoints` one for one
- * — a middle list where one stop has no id sends coordinates for all of
- * them rather than names for none of the readers to trust.
+ * — a list where one stop has no id sends coordinates for all of them
+ * rather than names for none of the readers to trust.
  */
 export function mapsRouteUrl(
   stops: readonly Point[],
   mode: 'walking' | 'driving' = 'driving',
 ): Route | null {
   const pts = stops.filter(placed);
-  if (pts.length < 2) return null;
+  if (pts.length < 1) return null;
 
-  const origin = pts[0];
   const destination = pts[pts.length - 1];
-  const middle = pts.slice(1, -1);
-  // The end of the day is kept, not the ninth waypoint: whatever else a
+  const before = pts.slice(0, -1);
+  // The end of the day is kept, not the tenth waypoint: whatever else a
   // route is for, it has to arrive where the reader is going.
-  const waypoints = middle.slice(0, WAYPOINT_MAX);
+  const waypoints = before.slice(0, WAYPOINT_MAX);
   const namedWaypoints = waypoints.length > 0 && waypoints.every(pinned);
 
   const q = [
     'api=1',
-    `origin=${encodeURIComponent(pinned(origin) ? origin.name_en! : at(origin))}`,
-    pinned(origin) ? `origin_place_id=${encodeURIComponent(origin.google_place_id!)}` : null,
     `destination=${encodeURIComponent(pinned(destination) ? destination.name_en! : at(destination))}`,
     pinned(destination)
       ? `destination_place_id=${encodeURIComponent(destination.google_place_id!)}` : null,
@@ -140,7 +153,7 @@ export function mapsRouteUrl(
 
   return {
     url: `https://www.google.com/maps/dir/?${q}`,
-    dropped: middle.length - waypoints.length,
+    dropped: before.length - waypoints.length,
   };
 }
 
