@@ -477,16 +477,20 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
         <PressableScale onPress={onStart} accessibilityRole="button" style={{ alignSelf: 'flex-start', marginTop: 4 }}>
           <LinearGradient {...gradAI} style={s.heroCta}>
             <Text style={s.heroCtaText}>
-              {/* Two words at most, and the arrow beside them already
-                  says "start". "Bắt đầu khám phá" spent half its width
-                  on the verb the button is; the Japanese was doing the
-                  same with 探索を始める. Kept in step with the copy of
-                  this default in the desk's City hero screen — the two
-                  codebases share no module, so the only thing holding
-                  them together is that each says so. */}
+              {/* One word, and the arrow beside it already says
+                  "start". "Bắt đầu khám phá" spent half its width on
+                  the verb the button is; the Japanese was doing the
+                  same with 探索を始める. The English was "Let's go" for a
+                  while, which named the mood and not the act; the
+                  Vietnamese had said "Khám phá" — explore — all along,
+                  and the owner asked the other two to say the same.
+                  Kept in step with the copy of this default in the
+                  desk's City hero screen — the two codebases share no
+                  module, so the only thing holding them together is
+                  that each says so. */}
               {city?.hero_cta_en
                 ? t(city.hero_cta_en, city.hero_cta_vi, city.hero_cta_ja)
-                : t("Let's go", 'Khám phá', 'はじめる')}
+                : t('Explore', 'Khám phá', '探索する')}
             </Text>
             <Ionicons name="arrow-forward" size={17} color={colors.accentInk} />
           </LinearGradient>

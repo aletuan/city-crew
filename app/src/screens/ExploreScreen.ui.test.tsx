@@ -332,7 +332,7 @@ describe('the hero', () => {
     render(<ExploreScreen navigation={nav()} />);
     expect(screen.getByText('Ideas for a night in Hanoi')).toBeTruthy();
     expect(screen.getByText('Browse public collections and places — no account needed.')).toBeTruthy();
-    expect(screen.getByText("Let's go")).toBeTruthy();
+    expect(screen.getByText('Explore')).toBeTruthy();
   });
 
   it('wears the desk’s headline, sub-line and button when the city has them', () => {
@@ -482,7 +482,7 @@ describe('the hero', () => {
   it('sends the button to the planner in the Ideas tab', () => {
     state.places.data = [place('a')];
     render(<ExploreScreen navigation={nav()} />);
-    fireEvent.click(screen.getByText("Let's go"));
+    fireEvent.click(screen.getByText('Explore'));
     expect(spies.goTo).toHaveBeenCalledWith('Ideas', { screen: 'IdeasHome' });
   });
 });
@@ -892,7 +892,7 @@ describe('the pinned chips row', () => {
     expect(within(header).getByTestId('explore-filter')).toBeTruthy();
     expect(within(header).getByText('Places')).toBeTruthy();
     // And the scope is real: the hero is on the same screen and not in here.
-    expect(within(header).queryByText("Let's go")).toBeNull();
+    expect(within(header).queryByText('Explore')).toBeNull();
   });
 
   // The heading and its control stay on screen while the list scrolls
