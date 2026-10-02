@@ -119,6 +119,22 @@ describe('StopGallery', () => {
     expect(screen.getByText('Photo by Minh')).toBeTruthy();
   });
 
+  // A momentum end reported past the last page — or before the first —
+  // lands on a page that exists, so the row it points at exists too.
+  it('clamps the page a swipe lands on to the stops there are', () => {
+    state.credit = true;
+    render(<Held places={[
+      place({ place_photos: [photo('https://img/a.jpg', 'Photo by Lan')] } as Partial<Place>),
+      place({ place_photos: [photo('https://img/b.jpg', 'Photo by Minh')] } as Partial<Place>),
+      place({ place_photos: [photo('https://img/c.jpg', 'Photo by Thu')] } as Partial<Place>),
+    ]} />);
+    measure(320);
+    swipe(2000);
+    expect(screen.getByText('Photo by Thu')).toBeTruthy();
+    swipe(-320);
+    expect(screen.getByText('Photo by Lan')).toBeTruthy();
+  });
+
   it('draws no credit when the switch is off', () => {
     render(<Held places={[place({ place_photos: [photo('https://img/a.jpg', 'Photo by Lan')] } as Partial<Place>)]} />);
     expect(screen.queryByText('Photo by Lan')).toBeNull();

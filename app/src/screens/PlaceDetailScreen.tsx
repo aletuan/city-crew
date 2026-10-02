@@ -28,12 +28,13 @@ import { splitName, subtitleBeside } from '../lib/name';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
 import MiniMap, { canDrawMap } from '../components/MiniMap';
+import PageDots from '../components/PageDots';
 import { pinImage } from '../components/mapPins';
 import {
   atHandle, hostOf, instagramUrl, threadsUrl, websiteRepeatsHandle,
 } from '../lib/links';
 import { cityTz } from '../lib/clock';
-import { clockOf, dotWindow, groupHours, openState } from '../lib/format';
+import { clockOf, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsSearchUrl } from '../lib/maps';
@@ -429,13 +430,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               <Text style={s.counterText}>{photoIndex + 1} / {photos.length}</Text>
             </View>
           )}
-          {photos.length > 1 && (
-            <View style={s.dots}>
-              {dotWindow(photos.length, photoIndex).map((i) => (
-                <View key={i} style={[s.dot, i === photoIndex && s.dotOn]} />
-              ))}
-            </View>
-          )}
+          {/* The page marks every carousel wears (`PageDots`), at the
+              page margin because this picture runs to the screen's edge. */}
+          <PageDots count={photos.length} page={photoIndex} right={space.page} bottom={15} />
           {credit && photos[photoIndex]?.attribution_name ? (
             <Text style={s.attr} numberOfLines={1}>{photos[photoIndex].attribution_name}</Text>
           ) : null}
@@ -1088,25 +1085,6 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
   counterText: { color: onPhoto.text, fontSize: 12.5, fontWeight: font.semibold },
-  // Right, not centre. The bottom edge of a photograph then carries two
-  // objects instead of three-with-a-hole, and the middle — where a
-  // photographer puts the subject — is given back to the picture.
-  dots: {
-    position: 'absolute', bottom: 15, right: space.page,
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    backgroundColor: 'rgba(10,11,10,0.45)', borderRadius: radius.pill,
-    paddingHorizontal: 11, paddingVertical: 8,
-  },
-  // The one in hand is a bar, not a bigger dot. Six photographs is six
-  // marks 7pt across, and telling which of them was a point wider meant
-  // looking rather than glancing — the thing a page indicator exists to
-  // spare you. Length reads at a distance where diameter does not.
-  //
-  // Same height as the others, so the row keeps one baseline; and since
-  // exactly one is ever in hand, the strip's total width never changes
-  // as the reader pages, which is what would have made it twitch.
-  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(255,255,255,0.38)' },
-  dotOn: { width: 17, height: 7, borderRadius: 3.5, backgroundColor: onPhoto.text },
   // Required attribution, kept quiet — see the note in PlaceCard.
   //
   // Centre, which is the seat the dots left. It is the only one free:
