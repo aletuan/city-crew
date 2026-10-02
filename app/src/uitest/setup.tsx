@@ -25,8 +25,10 @@ import { vi } from 'vitest';
 
 /** A host element that renders its children and forwards its props. */
 const passthrough = (name: string) =>
-  function Stub({ children, ...rest }: { children?: React.ReactNode }) {
-    return React.createElement('div', { 'data-stub': name, ...rest }, children);
+  function Stub({ children, testID, ...rest }: { children?: React.ReactNode; testID?: string }) {
+    // `testID` becomes `data-testid`, as react-native-web renders it, so a
+    // test can find one shape in a drawing by the name the code gave it.
+    return React.createElement('div', { 'data-stub': name, 'data-testid': testID, ...rest }, children);
   };
 
 // ── the network, which no test may reach ──
@@ -91,6 +93,8 @@ vi.mock('react-native-svg', () => ({
   Path: passthrough('Path'),
   Rect: passthrough('Rect'),
   Circle: passthrough('Circle'),
+  Defs: passthrough('Defs'),
+  Mask: passthrough('Mask'),
 }));
 
 // Icons are drawn from a font that is not installed. The glyph name is kept

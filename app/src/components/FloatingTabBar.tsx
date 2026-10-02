@@ -39,6 +39,7 @@ import { useScheme } from '../lib/theme';
 import { colors, font, labelScaleCap, radius } from '../theme';
 import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
+import PlacesGlyph from './PlacesGlyph';
 
 /**
  * The ink on the selected pill — not `colors.badgeInk`, and measured.
@@ -65,9 +66,15 @@ const PILL_INK_DARK = '#141310';
 
 // [inactive, active]. Thin monochrome glyphs when idle; the selected tab
 // takes the solid variant, reversed out of the pill.
+//
+// The first two moved with their captions (App.tsx, 2 Oct 2026). The
+// planning tab, now "Explore", takes the compass the catalog tab wore —
+// the glyph a reader already reads as "find out what to do". The catalog
+// tab, now "Places", is not in this table: its glyph is a pin standing on
+// a map, which Ionicons does not have, drawn in `PlacesGlyph`. The bulb
+// that used to mark "Ideas" went with the word.
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
-  Ideas: ['bulb-outline', 'bulb'],
-  Explore: ['compass-outline', 'compass'],
+  Ideas: ['compass-outline', 'compass'],
   Trips: ['calendar-outline', 'calendar'],
   Collections: ['bookmark-outline', 'bookmark'],
   Profile: ['person-outline', 'person'],
@@ -207,6 +214,14 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               testID={`tab-${route.name.toLowerCase()}`}
             >
               <View>
+              {route.name === 'Explore' ? (
+                <PlacesGlyph
+                  size={22}
+                  solid={focused}
+                  color={focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5')}
+                  testID="places-glyph"
+                />
+              ) : (
               <Ionicons
                 name={ICONS[route.name][focused ? 1 : 0]}
                 size={22}
@@ -226,6 +241,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                 // the measurements — the two changes are one change.
                 color={focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5')}
               />
+              )}
               {/* Same mark the Profile card wears, one level up where
                   every screen can see it. Drawn beside the glyph rather
                   than tinting it: a dot is news, a recoloured icon is a
