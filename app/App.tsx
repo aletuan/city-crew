@@ -200,18 +200,24 @@ function Tabs() {
   // is what it calls the account tab; neither is a translation of the
   // English so much as the word that was already there.
   //
-  // The second tab is captioned by what it holds, not by the verb for
-  // looking at it. "Explore" / "Khám phá" named an activity, and the
-  // owner found the other four tabs — Ideas, Trips, Collections, Profile
-  // — all named things, so the odd one out read as a different kind of
-  // button (2 Oct 2026). "Places" is the noun the rest of the app already
-  // uses for what the tab lists; "Địa điểm" is the same length as "Khám
-  // phá" in the 55pt the cell gives it; スポット is four glyphs, under the
-  // six that clipped. The route is still `Explore` in code — a name in a
-  // navigator is an identifier, and every `navigate('Explore')` would
-  // have changed for no reader's benefit.
+  // The first two captions moved one tab to the left on 2 Oct 2026, on
+  // the owner's word, in two steps. The catalog tab had worn "Explore" /
+  // "Khám phá" and now says what it holds — "Places", the noun the rest
+  // of the app uses for its rows. The planning tab had worn "Ideas" / "Ý
+  // tưởng", and the word that had just come free fits it better than it
+  // ever fit a list: four questions and three plans is where a reader
+  // goes to find out what to do with an evening, which is what "khám phá"
+  // means, where the catalog is where they go to look something up. (The
+  // Trips empty state had been calling the same tab "Gợi ý" in
+  // Vietnamese, a third name; it follows the caption now.)
+  //
+  // Widths: "Địa điểm" and "Khám phá" are each eight characters, the 55pt
+  // the cell gives a Latin caption; スポット and 探索 are four and two
+  // glyphs, under the six that clipped. The routes are still `Ideas` and
+  // `Explore` in code — a name in a navigator is an identifier, and every
+  // `navigate('Explore')` would have changed for no reader's benefit.
   const labels: Record<string, string> = {
-    Ideas: t('Ideas', 'Ý tưởng', 'アイデア'),
+    Ideas: t('Explore', 'Khám phá', '探索'),
     Explore: t('Places', 'Địa điểm', 'スポット'),
     Trips: t('Trips', 'Chuyến đi', '旅程'),
     Collections: t('Collections', 'Bộ sưu tập', '保存'),
