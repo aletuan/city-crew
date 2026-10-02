@@ -269,9 +269,9 @@ function FirstTrip({ onPress }: { onPress: () => void }) {
       </Text>
       <Text style={s.firstBody}>
         {t(
-          'Answer four questions in Ideas and keep the plan you like.',
-          'Trả lời bốn câu trong Gợi ý rồi giữ lại phương án bạn thích.',
-          'アイデアで4つの質問に答え、気に入ったプランを保存しましょう。',
+          'Answer four questions in Explore and keep the plan you like.',
+          'Trả lời bốn câu trong Khám phá rồi giữ lại phương án bạn thích.',
+          '探索で4つの質問に答え、気に入ったプランを保存しましょう。',
         )}
       </Text>
       <GradientCta
