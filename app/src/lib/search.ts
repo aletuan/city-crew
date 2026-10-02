@@ -46,6 +46,12 @@ export function fold(s: string | null | undefined): string {
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/đ/gi, 'd')
+    // Every dash is one dash. The catalog writes an em dash between a
+    // name and its suffix (`docs/place-naming.md`), and no phone keyboard
+    // offers one without a long press: a reader types "lertermer - ham
+    // nghi" and must land on `Lertermer Coffee — Hàm Nghi`. Hyphen, non-
+    // breaking hyphen, figure dash, en dash, em dash, horizontal bar.
+    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015]/g, '-')
     .toLowerCase();
 }
 

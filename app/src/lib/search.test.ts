@@ -32,6 +32,15 @@ describe('fold', () => {
     expect(fold('\uFB01nest')).toBe('finest');
   });
 
+  // The catalog writes an em dash between a name and its suffix; a phone
+  // keyboard types a hyphen. Both fold to the one the reader typed.
+  it('folds every dash to a hyphen, so a typed hyphen finds a catalog dash', () => {
+    expect(fold('Lertermer Coffee — Hàm Nghi')).toBe('lertermer coffee - ham nghi');
+    expect(fold('Kafe – Quận 1')).toBe('kafe - quan 1');
+    expect(fold('Kafe \u2015 Quận 1')).toBe('kafe - quan 1');
+    expect(fold('well-known')).toBe('well-known');
+  });
+
   // `đ` is its own letter, not a d with a mark, so no decomposition form
   // takes it apart. The explicit fold stays.
   it('folds đ, which decomposition does not', () => {

@@ -11,11 +11,11 @@ const name = (s: string) => cleanName(s).name;
 
 describe('cleanName — trademark marks', () => {
   it('drops a mark stuck to the name', () => {
-    expect(name('Chidori Crepe® - Võ Trường Toản')).toBe('Chidori Crepe - Võ Trường Toản');
+    expect(name('Chidori Crepe® - Võ Trường Toản')).toBe('Chidori Crepe — Võ Trường Toản');
   });
 
   it('drops a leading mark, which sorted the row above the alphabet', () => {
-    expect(name('® XOCOATI - Artisan Cocoa Drinks')).toBe('XOCOATI - Artisan Cocoa Drinks');
+    expect(name('® XOCOATI - Artisan Cocoa Drinks')).toBe('XOCOATI — Artisan Cocoa Drinks');
   });
 
   it('drops ™, © and ℠ too', () => {
@@ -27,7 +27,7 @@ describe('cleanName — trademark marks', () => {
 
 describe('cleanName — operational suffixes', () => {
   it('cuts the hours the row already has a column for', () => {
-    expect(name('Cà Zone - Nguyễn Gia Trí - Open 24h')).toBe('Cà Zone - Nguyễn Gia Trí');
+    expect(name('Cà Zone - Nguyễn Gia Trí - Open 24h')).toBe('Cà Zone — Nguyễn Gia Trí');
   });
 
   it('cuts the Vietnamese phrasing as well', () => {
@@ -40,7 +40,7 @@ describe('cleanName — operational suffixes', () => {
   });
 
   it('cuts one suffix, not a stack — the middle of a name is never touched', () => {
-    expect(name('Kafe - 24h - Nguyễn Huệ')).toBe('Kafe - 24h - Nguyễn Huệ');
+    expect(name('Kafe - 24h - Nguyễn Huệ')).toBe('Kafe — 24h — Nguyễn Huệ');
   });
 
   it('never cuts the only segment there is', () => {
@@ -61,7 +61,7 @@ describe('cleanName — script name_en has no reader for', () => {
 
   it('drops Han that is as likely Chinese as anything', () => {
     expect(name('Meili 美丽 - Mì Bò Đài Loan Bình Thạnh'))
-      .toBe('Meili - Mì Bò Đài Loan Bình Thạnh');
+      .toBe('Meili — Mì Bò Đài Loan Bình Thạnh');
   });
 
   it('keeps a name that is entirely in another script', () => {
@@ -78,8 +78,8 @@ describe('cleanName — script name_en has no reader for', () => {
 describe('cleanName — the Japanese half of a bilingual sign', () => {
   it('moves kana to name_ja instead of throwing it away', () => {
     expect(cleanName('To - Hidden Cocktails Bar ト - 隠れ家バー')).toEqual({
-      name: 'To - Hidden Cocktails Bar',
-      ja: 'ト - 隠れ家バー',
+      name: 'To — Hidden Cocktails Bar',
+      ja: 'ト — 隠れ家バー',
     });
   });
 
@@ -122,12 +122,16 @@ describe('cleanName — the first letter', () => {
 
 describe('cleanName — whitespace and empties', () => {
   it('collapses the space a stripped mark leaves behind', () => {
-    expect(name('Chidori  Crepe ®  - Võ Trường Toản')).toBe('Chidori Crepe - Võ Trường Toản');
+    expect(name('Chidori  Crepe ®  - Võ Trường Toản')).toBe('Chidori Crepe — Võ Trường Toản');
   });
 
-  it('normalises the separator Google sent', () => {
-    expect(name('Kafe – Quận 1')).toBe('Kafe - Quận 1');
-    expect(name('Kafe — Quận 1')).toBe('Kafe - Quận 1');
+  // The catalog's one separator is the em dash (`docs/place-naming.md`),
+  // written on the way in: Google's hyphen, an en dash, or a dash already
+  // all come out the same.
+  it('writes the catalog’s dash whatever separator Google sent', () => {
+    expect(name('Kafe - Quận 1')).toBe('Kafe — Quận 1');
+    expect(name('Kafe – Quận 1')).toBe('Kafe — Quận 1');
+    expect(name('Kafe — Quận 1')).toBe('Kafe — Quận 1');
   });
 
   it('answers empty for empty, so the caller can fall back', () => {

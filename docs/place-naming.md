@@ -82,9 +82,24 @@ tiếng Nhật, không phải khi ta phiên âm hộ.
 
 ## Dấu gạch
 
-Dùng gạch dài `—` (em dash) giữa tên và hậu tố, không dùng `-`. Google trả
-về `-`, tên trong catalog dùng `—`. Đây là tín hiệu đọc được: thấy `-` trong
-một tên nghĩa là dòng đó chưa qua rà soát.
+Dùng gạch dài `—` (em dash) có khoảng trắng hai bên giữa tên và hậu tố,
+không dùng `-`. Gạch nối giữa hai từ đọc như từ ghép; gạch dài đọc như một
+nhịp ngắt, đúng với "tên, rồi nơi".
+
+Trước đây tài liệu này coi `-` là dấu "chưa rà soát", và `fetch-place` ghi
+lại `-` để giữ dấu đó cho người rà. Sau một tháng catalog có 268 tên dùng
+`-` và 15 tên dùng `—`: dấu hiệu không đánh dấu được gì. Từ 2/10/2026:
+
+- `fetch-place` tự đổi mọi loại gạch Google gửi (`-`, `–`, `—`) thành ` — `
+  ngay lúc nhập (`_shared/place-name.ts`). Gạch là quy tắc typography, máy
+  làm.
+- Dòng đã rà soát hay chưa là việc của cột `review_status`, không phải của
+  dấu gạch.
+- Tìm kiếm trong app gộp mọi loại gạch về một trước khi so khớp
+  (`lib/search.ts`), vì người dùng luôn gõ `-`.
+
+268 tên cũ còn dùng `-` được sửa theo đợt; đợt 2/10 làm 30 tên nhập từ
+19/9 (`20261002090000_place_import_audit_20261002.sql`).
 
 ## Slug thì không sửa
 
@@ -109,6 +124,7 @@ where name_en ~ '[®™©]'                    -- ký hiệu thương hiệu
    or name_en ~ '^[a-z]'                   -- chữ thường đầu dòng
    or name_en ilike '%open 24%'            -- giờ mở cửa
    or name_en ilike '% - CN %'             -- mã chi nhánh
+   or name_en like '% - %'                 -- gạch ngắn: chưa theo quy ước gạch
 order by name_en;
 ```
 
