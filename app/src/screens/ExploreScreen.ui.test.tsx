@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import { pinImage } from '../components/mapPins';
 import { appFlags } from '../lib/flags';
+import { CATEGORIES } from '../lib/categories';
 import type { Collection, Place } from '../lib/data';
 import type { Nav } from '../nav';
 
@@ -1423,20 +1424,34 @@ describe('the community shelf', () => {
     expect(srcs.filter((s) => s === 'member.jpg').length).toBeGreaterThanOrEqual(2);
   });
 
-  it('badges a card with the vibe its members share most', () => {
+  // The badge is a category — the same axis every chip, tile and pin
+  // reads — in that category's own colour. It used to be the members'
+  // most common vibe, drawn in white.
+  it('badges a card with the category its members share most, in its colour', () => {
     state.places.data = [
-      place('p1', { vibe_tags: ['nightlife', 'not-a-vibe'] }),
-      place('p2', { vibe_tags: ['nightlife', 'views'] }),
+      place('p1', { categories: ['nightlife', 'eats'] }),
+      place('p2', { categories: ['nightlife'] }),
     ];
     state.cols.data = [collection('bars', ['p1', 'p2'])];
     render(<ExploreScreen navigation={nav()} />);
     const card = shelfCard('List bars');
-    expect(card.querySelector('[data-icon="wine-outline"]')).toBeTruthy();
-    expect(card.querySelector('[data-icon="business-outline"]')).toBeNull();
+    const glyph = card.querySelector('[data-icon="wine-outline"]') as HTMLElement;
+    expect(glyph).toBeTruthy();
+    expect(glyph.getAttribute('data-color')).toBe(CATEGORIES.nightlife.color);
+    expect(card.querySelector('[data-icon="restaurant-outline"]')).toBeNull();
   });
 
-  it('wears no badge when its members carry no known vibe', () => {
-    state.places.data = [place('p1', { vibe_tags: ['not-a-vibe'] })];
+  // A place the desk has not classified still counts through its vibes,
+  // the way every other surface reads it.
+  it('reads an unclassified member’s category from its vibes', () => {
+    state.places.data = [place('p1', { categories: [], vibe_tags: ['cafes'] })];
+    state.cols.data = [collection('cups', ['p1'])];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(shelfCard('List cups').querySelector('[data-icon="cafe-outline"]')).toBeTruthy();
+  });
+
+  it('wears no badge when its members carry no known category', () => {
+    state.places.data = [place('p1', { categories: [], vibe_tags: ['not-a-vibe'] })];
     state.cols.data = [collection('plain', ['p1'])];
     render(<ExploreScreen navigation={nav()} />);
     const icons = [...shelfCard('List plain').querySelectorAll('[data-icon]')].map((i) => i.getAttribute('data-icon'));

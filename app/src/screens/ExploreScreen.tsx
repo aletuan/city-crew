@@ -27,7 +27,7 @@ import { CitySwitcherModal } from '../components/CitySwitcher';
 import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useOwnedStatusBar, useTabBarClearance, useTabBarLift } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
-import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, pinTint } from '../lib/categories';
+import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, pinTint, type CategoryStyle } from '../lib/categories';
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { useSky } from '../lib/sky';
@@ -52,7 +52,6 @@ import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { balanceBreak } from '../lib/balance';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
-import { VIBES } from '../lib/vibes';
 import { colors, display, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import { useScheme } from '../lib/theme';
 import { goTo, type Nav } from '../nav';
@@ -218,23 +217,35 @@ function ScrollNudge({ visible, onSearch, onAdd }: {
 // automatic photo pick until an editor overrides them.
 
 /**
- * A collection has no category of its own, so its badge comes from the vibe
- * its members share most — self-maintaining as membership changes. Unknown
- * vibes are skipped, and a collection with none stays badge-free rather
- * than wearing a guess.
+ * A collection has no category of its own, so its badge is the category
+ * its members share most — self-maintaining as membership changes. A
+ * collection whose members carry none stays badge-free rather than
+ * wearing a guess.
+ *
+ * Category, not vibe. This used to tally `vibe_tags` — the other axis,
+ * how a place *feels* — and draw the winning vibe's glyph in white. Two
+ * things were wrong with that at once. The vibe table borrows most of the
+ * category table's glyphs (a wine glass, a cup, a fork and knife), so a
+ * reader met what looked like a category badge that answered a different
+ * question; and white on the scrim was the one place in the app a
+ * category glyph did not wear its category's colour — every chip, tile,
+ * well and pin does, from the same table, and the colour code is only a
+ * code if it holds everywhere. `categoriesOf` is the same reading every
+ * other surface takes, vibes folded into categories for places the desk
+ * has not classified yet.
  */
-function collectionIcon(members: Place[]): keyof typeof Ionicons.glyphMap | null {
+function collectionBadge(members: Place[]): CategoryStyle | null {
   const tally = new Map<string, number>();
   for (const p of members) {
-    for (const v of p.vibe_tags) {
-      if (VIBES[v]) tally.set(v, (tally.get(v) ?? 0) + 1);
+    for (const c of categoriesOf(p)) {
+      if (CATEGORIES[c]) tally.set(c, (tally.get(c) ?? 0) + 1);
     }
   }
   let best: string | null = null;
-  for (const [vibe, n] of tally) {
-    if (!best || n > tally.get(best)!) best = vibe;
+  for (const [cat, n] of tally) {
+    if (!best || n > tally.get(best)!) best = cat;
   }
-  return best ? VIBES[best].icon : null;
+  return best ? CATEGORIES[best] : null;
 }
 
 /** Hero photography: the city's hand-picked cover place first, then a
@@ -588,7 +599,7 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
             const uri = coverFor(c);
             const members = membersOf(c, places);
             const count = members.length;
-            const badge = collectionIcon(members);
+            const badge = collectionBadge(members);
             // Your own published lists are on this shelf now — see
             // `fetchCollections` — and the heart is the one thing that
             // has to know it.
@@ -608,8 +619,12 @@ function CollectionShelf({ navigation }: { navigation: Nav }) {
                   style={StyleSheet.absoluteFill}
                 />
                 {badge && (
+                  // The glyph in its category's colour, on the scrim every
+                  // control over a photograph wears: the pastel is solved
+                  // to be read as a mark on the app's own grounds, and on
+                  // the 0.55 scrim it reads at 6:1 and better.
                   <View style={s.shelfBadge}>
-                    <Ionicons name={badge} size={15} color={onPhoto.text} />
+                    <Ionicons name={badge.icon} size={15} color={badge.color} />
                   </View>
                 )}
                 <View style={s.shelfCardText}>
