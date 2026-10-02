@@ -99,7 +99,9 @@ lại `-` để giữ dấu đó cho người rà. Sau một tháng catalog có 
   (`lib/search.ts`), vì người dùng luôn gõ `-`.
 
 268 tên cũ còn dùng `-` được sửa theo đợt; đợt 2/10 làm 30 tên nhập từ
-19/9 (`20261002090000_place_import_audit_20261002.sql`).
+19/9 (`20261002090000_place_import_audit_20261002.sql`), và 5 tên mà nửa
+sau gạch là một phần tên thật, chủ sở hữu xác nhận giữ, chỉ đổi gạch
+(`20261002110000_five_names_kept.sql`).
 
 ## Slug thì không sửa
 
