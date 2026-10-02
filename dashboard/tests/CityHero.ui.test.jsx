@@ -49,13 +49,13 @@ describe('CityHero', () => {
     await waitFor(() => expect(api.places).toHaveBeenCalledWith({ city: 'hcmc', all: true }));
     expect(previewTitle()).toBe('Ideas for a night in Saigon');
     expect(previewSub()).toBe('Browse public collections and places — no account needed.');
-    expect(previewCta()).toBe("Let's go →");
+    expect(previewCta()).toBe('Explore →');
     fireEvent.click(screen.getByRole('button', { name: 'VI' }));
     expect(previewTitle()).toBe('Gợi ý cho một đêm ở Sài Gòn');
     expect(previewCta()).toBe('Khám phá →');
     fireEvent.click(screen.getByRole('button', { name: 'JA' }));
     expect(previewTitle()).toBe('Saigon、夜のアイデア');
-    expect(previewCta()).toBe('はじめる →');
+    expect(previewCta()).toBe('探索する →');
     // The chip for this city is on; the pinned-place menu lists every
     // place with a photo and says which are not published.
     expect(screen.getByRole('button', { name: 'TP.HCM' }).className).toContain('on');
