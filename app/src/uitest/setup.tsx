@@ -108,8 +108,14 @@ vi.mock('react-native-svg', () => ({
 // carries. Passed straight to the DOM node — `StyleSheet.create` gives
 // react-native-web a plain object here, and React turns a bare number into
 // pixels, which is what the assertion reads back.
-const icon = ({ name, style }: { name?: string; style?: object }) =>
-  React.createElement('span', { 'data-icon': name, style });
+//
+// `color` is forwarded as `data-color`, as written: the category colour
+// code is a promise that one glyph wears one colour on every surface,
+// and a test can only hold that promise if it can read the colour off
+// the glyph. An attribute rather than a style, so the hex compares to
+// the table's entry without a round trip through rgb().
+const icon = ({ name, color, style }: { name?: string; color?: string; style?: object }) =>
+  React.createElement('span', { 'data-icon': name, 'data-color': color, style });
 vi.mock('@expo/vector-icons/Ionicons', () => ({ default: icon }));
 
 // These must return promises, not undefined. `fireHaptic` calls
