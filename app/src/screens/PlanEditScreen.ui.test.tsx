@@ -608,9 +608,11 @@ describe('saving', () => {
     // Pop before switching tabs, so nothing stale is left behind the Trips tab.
     expect((navigation.popToTop as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0])
       .toBeLessThan(navigation.parent.navigate.mock.invocationCallOrder[0]);
+    // The first stop's hour rides along, so the day's own note can be two
+    // hours before it; the words are the reminder module's to write.
     expect(scheduleTripReminder).toHaveBeenCalledWith(
-      { id: 'trip-1', day: todayISO(), title: 'Coffee, noodles, skyline' },
-      { title: 'Tomorrow: Coffee, noodles, skyline', body: 'Your plan starts in the morning. Sleep well.' },
+      { id: 'trip-1', day: todayISO(), title: 'Coffee, noodles, skyline', startMin: 18 * 60 },
+      expect.any(Function),
     );
   });
 

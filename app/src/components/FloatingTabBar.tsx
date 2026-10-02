@@ -33,6 +33,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
+import { useI18n } from '../lib/i18n';
 import { useInvitations } from '../lib/invitations';
 import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
@@ -124,7 +125,8 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   useEffect(() => {
     if (me && shouldRefresh(loadedAtRef.current, Date.now())) reload();
   }, [index, me, reload]);
-  const waiting = me ? splitFriendships(ships.data, me).incoming.length > 0 : false;
+  const requestsWaiting = me ? splitFriendships(ships.data, me).incoming.length : 0;
+  const waiting = requestsWaiting > 0;
 
   // And the same mark on Trips, for an invitation waiting on an answer.
   // The second signal the bar carries, and it earns its place by the same
@@ -132,6 +134,32 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // and the card that says so is two taps away. Read from the one shared
   // copy — see `lib/invitations` — so the dot costs no request of its own.
   const { waiting: invitesWaiting } = useInvitations();
+  const { t } = useI18n();
+
+  // What VoiceOver says for a tab wearing a dot. The dot is a 9pt view
+  // with no text, so until 2 Oct 2026 a reader using the screen reader
+  // heard "Profile" and never learned a person was waiting on them — the
+  // one signal the bar carries, carried for sighted readers only. The
+  // count goes in the label rather than a hint: a hint is read after a
+  // pause, and is off by default for many readers. The eye still gets a
+  // dot and no number, as before — see the dots' own comment.
+  const spoken = (name: string, label: string): string => {
+    if (name === 'Profile' && requestsWaiting > 0) {
+      return t(
+        `${label}, ${requestsWaiting} friend request${requestsWaiting === 1 ? '' : 's'} waiting`,
+        `${label}, ${requestsWaiting} lời mời kết bạn đang chờ`,
+        `${label}、友達リクエスト${requestsWaiting}件待ち`,
+      );
+    }
+    if (name === 'Trips' && invitesWaiting > 0) {
+      return t(
+        `${label}, ${invitesWaiting} trip invitation${invitesWaiting === 1 ? '' : 's'} waiting`,
+        `${label}, ${invitesWaiting} lời mời chuyến đi đang chờ`,
+        `${label}、旅程の招待${invitesWaiting}件待ち`,
+      );
+    }
+    return label;
+  };
 
   // The dot wears one pair per theme, selected or not: pill-ink core,
   // ringed in the pill's own coral.
@@ -210,7 +238,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
-              accessibilityLabel={label}
+              accessibilityLabel={spoken(route.name, label)}
               testID={`tab-${route.name.toLowerCase()}`}
             >
               <View>

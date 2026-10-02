@@ -328,8 +328,8 @@ describe('answering', () => {
     fireEvent.click(yes());
     await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
     expect(scheduleTripReminder).toHaveBeenCalledWith(
-      { id: 't1', day: '2026-09-12', title: 'Old Quarter crawl' },
-      { title: 'Tomorrow: Old Quarter crawl', body: 'Your plan starts in the morning. Sleep well.' },
+      { id: 't1', day: '2026-09-12', title: 'Old Quarter crawl', startMin: 9 * 60 },
+      expect.any(Function),
     );
   });
 

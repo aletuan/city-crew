@@ -22,7 +22,8 @@ vi.mock('./invitations', () => ({ useInvitations: () => ({ invites: state.invite
 
 import { ReminderSync } from './reminderSync';
 
-const trip = (id: string, owner_id: string) => ({ id, owner_id, day: '2026-09-20', title: `Trip ${id}` });
+const trip = (id: string, owner_id: string, stops: { arrive_min: number | null }[] = []) =>
+  ({ id, owner_id, day: '2026-09-20', title: `Trip ${id}`, trip_stops: stops });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -32,16 +33,18 @@ beforeEach(() => {
 
 describe('ReminderSync', () => {
   it('syncs the trips the reader is going on — planned or accepted, not merely asked', () => {
-    state.trips.data = [trip('own', 'me'), trip('yes', 'host'), trip('asked', 'host')];
+    state.trips.data = [trip('own', 'me', [{ arrive_min: 18 * 60 }]), trip('yes', 'host'), trip('asked', 'host')];
     state.invites.data = [
       { trip_id: 'yes', invitee_id: 'me', status: 'accepted' },
       { trip_id: 'asked', invitee_id: 'me', status: 'pending' },
     ];
     render(<ReminderSync />);
     expect(sync).toHaveBeenCalledTimes(1);
-    const [want, text] = sync.mock.calls[0] as [{ tripId: string }[], (w: { title: string }) => { title: string }];
+    const [want, t] = sync.mock.calls[0] as [{ tripId: string; startMin: number | null }[], (en: string) => string];
     expect(want.map((w) => w.tripId)).toEqual(['own', 'yes']);
-    expect(text({ title: 'Trip own' }).title).toBe('Tomorrow: Trip own');
+    // The first stop's hour rides along, for the day-of note.
+    expect(want.map((w) => w.startMin)).toEqual([18 * 60, null]);
+    expect(t('Tomorrow: Trip own')).toBe('Tomorrow: Trip own');
   });
 
   it('waits for the network: not on the cached launch copy, a load in flight, or an error', () => {

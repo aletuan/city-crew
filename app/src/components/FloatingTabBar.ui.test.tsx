@@ -27,6 +27,7 @@ vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 vi.mock('../lib/invitations', () => ({ useInvitations: () => invitations }));
 const theme = vi.hoisted(() => ({ scheme: 'dark' as 'dark' | 'light' }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: theme.scheme }) }));
+vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }) }));
 
 import FloatingTabBar from './FloatingTabBar';
 import PlacesGlyph from './PlacesGlyph';
@@ -60,7 +61,8 @@ function Scroller() {
 const mount = (props: BottomTabBarProps) => render(
   <TabBarDuckProvider><Scroller /><FloatingTabBar {...props} /></TabBarDuckProvider>,
 );
-const tab = (name: string) => screen.getByRole('tab', { name });
+/** By the tab's caption, with or without the waiting count a dot adds to the spoken name. */
+const tab = (name: string) => screen.getByRole('tab', { name: new RegExp(`^${name}(,|$)`) });
 /** The solid pin's outline, read off a selected glyph rendered alone, so
  *  the bar's tests can tell the two variants apart without knowing the path. */
 const PIN_SOLID = (() => {
@@ -169,6 +171,22 @@ describe('the five tabs', () => {
 describe('the waiting dots', () => {
   const request = (addressee: string): FriendshipRow => ({
     requester: 'linh', addressee, status: 'pending', created_at: '2026-09-01',
+  });
+
+  // The dot is a view with no text; the count goes into the tab's spoken
+  // name so a screen reader hears what the eye sees.
+  it('tells VoiceOver how many friend requests are waiting, and says nothing when none are', () => {
+    crew.ships = { data: [{ requester: 'them', addressee: 'me', status: 'pending', created_at: '2026-10-01T00:00:00Z' }], reload: vi.fn(), loadedAt: Date.now() };
+    mount(propsFor(0).props);
+    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile, 1 friend request waiting');
+    expect(tab('Trips').getAttribute('aria-label')).toBe('Trips');
+  });
+
+  it('tells VoiceOver how many trip invitations are waiting, plural and all', () => {
+    invitations.waiting = 2;
+    mount(propsFor(0).props);
+    expect(tab('Trips').getAttribute('aria-label')).toBe('Trips, 2 trip invitations waiting');
+    expect(tab('Profile').getAttribute('aria-label')).toBe('Profile');
   });
 
   it('marks Profile when somebody is waiting on an answer from this reader', () => {

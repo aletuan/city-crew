@@ -16,7 +16,7 @@ import { useAuth } from './auth';
 import { useI18n } from './i18n';
 import { useInvitations } from './invitations';
 import { useMyTrips } from './mytrips';
-import { reminderText, tripsToRemind } from './remind';
+import { tripsToRemind } from './remind';
 import { syncTripReminders } from './reminders';
 
 export function ReminderSync() {
@@ -33,13 +33,13 @@ export function ReminderSync() {
   // What the effect keys on: the wanted set as a value, not the array's
   // identity, so an unrelated re-render does not re-read the phone's
   // schedule. The language is in it because a reminder's words are.
-  const signature = `${lang}|${want.map((w) => `${w.tripId}:${w.day}:${w.title}`).join(',')}`;
+  const signature = `${lang}|${want.map((w) => `${w.tripId}:${w.day}:${w.title}:${w.startMin}`).join(',')}`;
   const settled = trips.loaded && !trips.loading && !trips.fromCache && !trips.error
     && invites.loaded && !invites.loading && !invites.error;
 
   useEffect(() => {
     if (!settled) return;
-    void syncTripReminders(want, (w) => reminderText(w.title, t));
+    void syncTripReminders(want, t);
     // `want` and `t` are read through `signature`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settled, signature]);
