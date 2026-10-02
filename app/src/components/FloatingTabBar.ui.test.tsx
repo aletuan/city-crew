@@ -29,6 +29,7 @@ const theme = vi.hoisted(() => ({ scheme: 'dark' as 'dark' | 'light' }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: theme.scheme }) }));
 
 import FloatingTabBar from './FloatingTabBar';
+import PlacesGlyph from './PlacesGlyph';
 import { TabBarDuckProvider, useTabBarDuck } from './tabBarDuck';
 
 const NAMES = ['Ideas', 'Explore', 'Trips', 'Collections', 'Profile'];
@@ -60,6 +61,14 @@ const mount = (props: BottomTabBarProps) => render(
   <TabBarDuckProvider><Scroller /><FloatingTabBar {...props} /></TabBarDuckProvider>,
 );
 const tab = (name: string) => screen.getByRole('tab', { name });
+/** The solid pin's outline, read off a selected glyph rendered alone, so
+ *  the bar's tests can tell the two variants apart without knowing the path. */
+const PIN_SOLID = (() => {
+  const { container, unmount } = render(<PlacesGlyph size={22} color="#000" solid />);
+  const d = container.querySelector('[data-testid="places-pin"]')!.getAttribute('d')!;
+  unmount();
+  return d;
+})();
 const dotsIn = (name: string) => tab(name).querySelectorAll('div').length;
 
 beforeEach(() => {
@@ -78,9 +87,19 @@ describe('the five tabs', () => {
     // `selected` state itself is set, but react-native-web drops
     // `accessibilityState` on the floor — see `Chip` — so the glyph is
     // what a test can read.)
-    expect(tab('Explore').querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('compass');
-    expect(tab('Ideas').querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('bulb-outline');
+    expect(tab('Ideas').querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('compass-outline');
     expect(tab('Profile').querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('person-outline');
+    // The Places tab (route `Explore`) draws no font glyph: its mark is
+    // `PlacesGlyph`, solid here because it is the selected one.
+    expect(tab('Explore').querySelector('[data-icon]')).toBeNull();
+    expect(tab('Explore').querySelector('[data-testid="places-glyph"]')).not.toBeNull();
+    expect(tab('Explore').querySelector('[data-testid="places-pin"]')?.getAttribute('d')).toBe(PIN_SOLID);
+  });
+
+  it('draws the Places glyph as an outline while another tab is selected', () => {
+    mount(propsFor(0).props);
+    expect(tab('Ideas').querySelector('[data-icon]')?.getAttribute('data-icon')).toBe('compass');
+    expect(tab('Explore').querySelector('[data-testid="places-pin"]')?.getAttribute('d')).not.toBe(PIN_SOLID);
   });
 
   it('goes to the tab that was pressed, after telling the navigator', () => {
