@@ -257,6 +257,18 @@ describe('the plan as it arrives', () => {
     expect(screen.getByText(/Old Quarter/)).toBeTruthy();
   });
 
+  // The name line is the brand; the ward after the catalog's dash opens
+  // the line under it (`lib/name`). VoiceOver's label keeps the whole
+  // name, which `names()` reads, so the two are pinned apart here.
+  it('prints the brand alone on a stop, and the whole name to VoiceOver', () => {
+    const branch = { ...ROOF, name_en: 'Sky Bar – Lotte Center' } as Place;
+    planTrips.mockImplementation(() => [plan('classic', [stop(branch, 20 * 60, 60)])]);
+    renderScreen();
+    expect(screen.getByText('Sky Bar')).toBeTruthy();
+    expect(screen.queryByText(/Lotte Center/)).toBeNull();
+    expect(names()).toEqual(['Sky Bar – Lotte Center']);
+  });
+
   // The evening's facts are chips under the title: the window, the
   // distance, the company, and — behind the price switch (#598) — the
   // spend. No stop count: the rail numbers the stops.

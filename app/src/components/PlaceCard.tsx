@@ -10,6 +10,7 @@ import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { openFragment, openState, sashLabel, shutLabel } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import { splitName } from '../lib/name';
 import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
 import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
@@ -223,8 +224,19 @@ export default function PlaceCard({
               photograph — a 40pt disc used to sit beside it, and the
               names this catalog actually holds are long enough that the
               disc's width was the difference between reading one and
-              reading "Bún chả Hàng Quạt — quán g…". */}
-          <Text style={s.name} numberOfLines={1}>{t(place.name_en, place.name_vi, place.name_ja)}</Text>
+              reading "Bún chả Hàng Quạt – quán g…".
+
+              And only the brand: what the catalog hangs after the dash
+              is the branch's ward or its building (`docs/place-naming.md`,
+              rule 4), and the ward is what the line under this one
+              prints, with a pin. "Comfy Coffee & Bakes – Thủ Đức" over
+              "⌖ Thủ Đức" said the one fact twice, in 169 rows. Two
+              branches of one brand in one ward is the case that would
+              need the suffix here, and the owner ruled it rare enough to
+              leave to the detail screen, which prints the full name and
+              the street address (2 Oct 2026). `splitName` cuts at the
+              first spaced dash and leaves a name without one whole. */}
+          <Text style={s.name} numberOfLines={1}>{splitName(t(place.name_en, place.name_vi, place.name_ja)).title}</Text>
           {/* Which part of town, before you have to open it to find out.
               ── the question this answers ──
 

@@ -34,6 +34,17 @@
 // empty, which is a name that starts with a dash rather than a name
 // with a qualifier.
 //
+// ── who shows which half ──
+//
+// The detail screen shows both, the subtitle filtered by
+// `subtitleBeside`. Every list row — `PlaceCard`, `MapPlaceCard`, the
+// Search zero-state rows, the plan editor's stop cards, the gallery's
+// header — shows the title alone. Since 2 Oct 2026 the catalog writes
+// the qualifier to the ward-or-building rule (`docs/place-naming.md`,
+// rule 4), and the ward is what a row prints under the name already;
+// the owner ruled that two branches of one brand in one ward is rare
+// enough to leave to the detail screen's address.
+//
 // Plain TypeScript, tested from `name.test.ts`.
 
 import { fold } from './address';

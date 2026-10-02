@@ -39,6 +39,14 @@ describe('MapPlaceCard', () => {
   // The hours are news only when they are about to matter: a place that
   // shuts in half an hour says so; one open until late says nothing; one
   // that is shut says that, and when it opens. Same rule `PlaceCard` keeps.
+  // The pin under this strip is the branch; the name line is the brand.
+  it('shows and speaks the brand alone, without the branch after the dash', () => {
+    render(<MapPlaceCard place={place({ name_en: 'Every Half Coffee Roasters – Đồng Khởi' })} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
+    expect(screen.getByText('Every Half Coffee Roasters')).toBeTruthy();
+    expect(screen.queryByText(/Đồng Khởi/)).toBeNull();
+    expect(screen.getByRole('button').getAttribute('aria-label')).toMatch(/^Every Half Coffee Roasters, /);
+  });
+
   it('says "until 23:00" when the place closes within the hour', () => {
     render(<MapPlaceCard place={place()} distanceKm={null} tint={null} now={HALF_PAST_TEN} onPress={() => {}} />);
     expect(screen.getByText(/until 23:00/)).toBeTruthy();
