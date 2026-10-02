@@ -324,9 +324,10 @@ describe('the itinerary', () => {
     expect(screen.getByText('No longer listed')).toBeTruthy();
     expect(screen.getByText('Gone now.')).toBeTruthy();
     expect(screen.getAllByText('—')).toHaveLength(2);
-    // The named stop opens; the gap has no button behind it.
+    // The named stop opens; the gap has no button behind it. (The route
+    // row is the other "Open …" button, and not a stop.)
     expect(screen.getByRole('button', { name: 'Open Pho 10' })).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: /^Open (?!in Google Maps)/ })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Open (?!the route)/ })).toHaveLength(1);
   });
 
   it('opens a stop’s place by its slug', () => {
@@ -388,7 +389,9 @@ describe('the way out to Google Maps', () => {
     fireEvent.click(screen.getByRole('button', { name: /Open the route/ }));
     const url = open.mock.calls[0][0];
     expect(url).toMatch(/^https:\/\/www\.google\.com\/maps\/dir\//);
-    expect(url).toContain('origin_place_id=g-pho');
+    // From wherever the reader is: no origin, the first stop a waypoint.
+    expect(url).not.toContain('origin');
+    expect(url).toContain('waypoint_place_ids=g-pho');
     expect(url).toContain('destination_place_id=g-cafe');
   });
 
@@ -398,20 +401,24 @@ describe('the way out to Google Maps', () => {
     })));
     state.trips = [trip({ trip_stops: many })];
     show();
-    // Nine waypoints plus both ends: one of the twelve is dropped.
-    expect(screen.getByText('Google Maps · first 11 only')).toBeTruthy();
+    // Nine waypoints plus the destination: two of the twelve are dropped.
+    expect(screen.getByText('Google Maps · first 10 only')).toBeTruthy();
   });
 
-  it('opens the one place when only one stop can be placed', () => {
+  // A one-stop day is a route from where the reader is to that stop; it
+  // used to be relabelled "Open in Google Maps" and open a search.
+  it('routes to the one place when only one stop can be placed', () => {
     const open = vi.spyOn(Linking, 'openURL').mockResolvedValue(true);
     state.trips = [trip({
       trip_stops: [stop(place()), stop(null)],
     })];
     show();
-    expect(screen.queryByText('Open the route')).toBeNull();
-    expect(screen.getByText('Open in Google Maps')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Open in Google Maps/ }));
-    expect(open.mock.calls[0][0]).toMatch(/maps\/search\/.*query_place_id=g-pho/);
+    expect(screen.queryByText('Open in Google Maps')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Open the route/ }));
+    const url = open.mock.calls[0][0];
+    expect(url).toMatch(/maps\/dir\//);
+    expect(url).toContain('destination_place_id=g-pho');
+    expect(url).not.toContain('waypoints');
   });
 
   it('draws no row when no stop can be placed', () => {
