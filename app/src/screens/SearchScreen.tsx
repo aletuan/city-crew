@@ -36,6 +36,7 @@ import { useBrowseTaste } from '../lib/tasteProfile';
 import { rankPopular } from '../lib/popular';
 import { collectionMatches, findPlaces, queryTerms } from '../lib/search';
 import { useI18n } from '../lib/i18n';
+import { splitName } from '../lib/name';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
@@ -561,8 +562,10 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
                     ? <Image source={{ uri: cover }} style={s.thumb} contentFit="cover" transition={200} />
                     : <View style={s.thumb} />}
                   <View style={{ flex: 1, gap: 4 }}>
+                    {/* The brand alone, as `PlaceCard` prints it: the ward
+                        after the dash is the row below. */}
                     <Text style={s.cardTitle} numberOfLines={1}>
-                      {t(pl.name_en, pl.name_vi, pl.name_ja ?? pl.name_en)}
+                      {splitName(t(pl.name_en, pl.name_vi, pl.name_ja ?? pl.name_en)).title}
                     </Text>
                     {/* The pin belongs to the area, the same mark at
                         the same size PlaceCard's district row wears — so

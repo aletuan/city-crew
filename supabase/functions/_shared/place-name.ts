@@ -84,7 +84,7 @@ const SEPARATOR = /\s+[-–—]\s+/;
 /**
  * The one separator the catalog writes between a name and its suffix.
  *
- * An em dash with a space each side, as `docs/place-naming.md` has it.
+ * An en dash with a space each side, as `docs/place-naming.md` has it.
  * Google sends a hyphen-minus because every keyboard has one; the catalog
  * is a list a reader scans, and a hyphen between two words reads as a
  * compound (`Hai-Bà-Trưng`) where a dash reads as a pause. This module
@@ -94,8 +94,18 @@ const SEPARATOR = /\s+[-–—]\s+/;
  * typographic rule now, applied on the way in; whether a row has been
  * reviewed is `review_status`'s to say, and search folds every dash to
  * one so a reader typing `-` still lands on the row (see `lib/search`).
+ *
+ * En, not em. The rule first shipped (2 Oct 2026, the same morning) with
+ * the em dash, and the owner read 169 of them in the app that afternoon
+ * and found the long bar heavy — a name is set bold at 17pt on a card,
+ * where an em dash is as wide as a short word. The en dash is the mark
+ * typography already uses for a pairing (`Hà Nội – Huế`), which is what
+ * a brand and its branch are; the em dash is for a break in a sentence,
+ * and a name is not a sentence. The hyphen stayed ruled out for the
+ * reason above. `20261002160000_place_names_en_dash.sql` moved the
+ * catalog over.
  */
-const DASH = " — ";
+const DASH = " – ";
 
 const isForeign = (token: string) => FOREIGN.test(token);
 

@@ -70,6 +70,7 @@ import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { routeMode } from '../lib/maps';
 import { useI18n } from '../lib/i18n';
+import { splitName } from '../lib/name';
 import {
   legsOfPlan, move, NUDGE_MIN, nudge, outOfOrder, remove, windowOf, type Editable,
 } from '../lib/itinerary';
@@ -569,7 +570,11 @@ export default function PlanEditScreen({ navigation, route }: {
                 </View>
                 <View style={s.headCol}>
                   <View style={s.nameRow}>
-                    <Text style={s.name} numberOfLines={1}>{stop.place.name_en}</Text>
+                    {/* The brand alone, as `PlaceCard` prints it: the ward
+                        after the dash opens the line below. The spoken
+                        labels keep the whole name — VoiceOver reads one
+                        card at a time and has no line below to lean on. */}
+                    <Text style={s.name} numberOfLines={1}>{splitName(stop.place.name_en).title}</Text>
                     {/* By the name, where a decision reads it — not buried
                         in the fallback line where a model's sentence used
                         to replace it. `sun`, not `onPhoto.star`: the star

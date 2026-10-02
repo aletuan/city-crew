@@ -72,6 +72,28 @@ describe('the name', () => {
     render(<PlaceCard place={place({ name_ja: null })} onPress={() => {}} />);
     expect(screen.getByText('Cong Caphe')).toBeTruthy();
   });
+
+  // The ward after the dash is the line under the name — see the
+  // component, and `docs/place-naming.md` on who shows which half.
+  it('shows the brand alone, leaving the branch after the dash to the line below', () => {
+    render(<PlaceCard place={place({ name_en: 'Comfy Coffee & Bakes – Thủ Đức', neighborhood_en: 'Thủ Đức' })} onPress={() => {}} />);
+    expect(screen.getByText('Comfy Coffee & Bakes')).toBeTruthy();
+    expect(screen.queryByText(/Bakes – Thủ Đức/)).toBeNull();
+    // The ward is still on the card, once.
+    expect(screen.getAllByText(/Thủ Đức/)).toHaveLength(1);
+  });
+
+  it('cuts the name in the reader’s own language', () => {
+    state.lang = 'vi';
+    render(<PlaceCard place={place({ name_vi: 'Cộng Cà Phê – Tràng Tiền' })} onPress={() => {}} />);
+    expect(screen.getByText('Cộng Cà Phê')).toBeTruthy();
+    expect(screen.queryByText(/Tràng Tiền/)).toBeNull();
+  });
+
+  it('leaves a hyphenated word whole: only a dash with a space each side is a cut', () => {
+    render(<PlaceCard place={place({ name_en: 'Coffee-N-Bagel 24/7' })} onPress={() => {}} />);
+    expect(screen.getByText('Coffee-N-Bagel 24/7')).toBeTruthy();
+  });
 });
 
 describe('the photograph', () => {

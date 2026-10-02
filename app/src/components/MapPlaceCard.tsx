@@ -14,6 +14,7 @@ import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { openFragment, openState, shutLabel } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import { splitName } from '../lib/name';
 import { colors, font, radius, space } from '../theme';
 import { PressableScale } from './ui';
 
@@ -38,7 +39,12 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   // the same split `PlaceCard` makes.
   const state = openState(place.opening_hours, now, cityTz(useCity().cities, place.city_id));
   const hours = state?.open ? openFragment(state, t) : shutLabel(state, t);
-  const name = t(place.name_en, place.name_vi, place.name_ja);
+  // The brand alone, as `PlaceCard` prints it. The suffix the catalog
+  // hangs after the dash is the branch's ward, and this strip sits under
+  // the pin that is standing in it — the map says where better than a
+  // word in the name line could. Spoken the same way: a listener walking
+  // the pins hears one name per pin, not a name and a ward per pin.
+  const name = splitName(t(place.name_en, place.name_vi, place.name_ja)).title;
   const ratingFact = place.rating ? `${place.rating.toFixed(1)}${place.rating_count ? ` (${fmtCount(place.rating_count)})` : ''}` : null;
   const distanceFact = distanceKm != null ? `${distanceKm < 10 ? distanceKm.toFixed(1) : Math.round(distanceKm)} km` : null;
   const facts = [

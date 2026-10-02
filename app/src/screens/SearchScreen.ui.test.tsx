@@ -126,8 +126,10 @@ const pho = place({
   neighborhood_en: 'Hoan Kiem', rating: 4.7, rating_count: 500,
   opening_hours: week('7:00 PM – 11:00 PM'), created_at: '2026-03-01T00:00:00Z',
 } as Partial<Place>);
+// Named to the catalog's rule — brand, dash, ward — so the rows below can
+// show they print the brand alone.
 const museum = place({
-  slug: 'fine-arts', name_en: 'Fine Arts Gallery', categories: ['heritage'],
+  slug: 'fine-arts', name_en: 'Fine Arts Gallery – Nguyễn Thái Học', categories: ['heritage'],
   neighborhood_en: 'Ba Dinh',
 });
 // The reader's own submission: searchable, but never recommended.
@@ -225,6 +227,13 @@ describe('the zero-state', () => {
     // Shopping exists only as the reader's own pending submission.
     expect(screen.queryByText('Shopping')).toBeNull();
     expect(screen.queryByText('Nightlife')).toBeNull();
+  });
+
+  it('prints the brand alone on a row, leaving the ward after the dash to the line below', () => {
+    mount();
+    const popular = textAfter('Most popular');
+    expect(popular).toContain('Fine Arts Gallery');
+    expect(popular).not.toContain('Nguyễn Thái Học');
   });
 
   it('lists only the places open at this minute', () => {

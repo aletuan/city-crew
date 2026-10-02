@@ -32,7 +32,7 @@ Ranh giới ở đây là chủ ý: chủ quán viết hoa để tạo phong cá
 **2. Không đưa thông tin vận hành vào tên.**
 Giờ mở cửa, số điện thoại, "Open 24h", "Mở cửa 24/24" — tất cả đã có cột
 riêng (`opening_hours`, `phone`). `Cà Zone - Nguyễn Gia Trí - Open 24h` →
-`Cà Zone — Nguyễn Gia Trí`.
+`Cà Zone – Nguyễn Gia Trí`.
 
 **3. Bỏ ký hiệu ®, ™, ©.**
 `Chidori Crepe®` → `Chidori Crepe`. Ký hiệu đứng đầu tên còn tệ hơn: nó đẩy
@@ -40,21 +40,21 @@ dòng đó ra khỏi thứ tự A–Z. `® XOCOATI - Artisan Cocoa Drinks` từn
 cùng mọi danh sách vì lý do này.
 
 **4. Hậu tố chi nhánh chỉ thêm khi có từ hai cơ sở trong catalog**, viết dạng
-`Tên — Phường/Khu`.
+`Tên – Phường/Khu`.
 
 Không dùng "CN", không dùng số nhà: `Tarobu Dessert Chè Đá Bào Khoai Dẻo -
-CN Điện Biên Phủ` → `Tarobu Dessert — Điện Biên Phủ`; `1000M Tea & Coffee -
-130A Nguyen Dinh Chieu` → `1000M Tea & Coffee — Nguyễn Đình Chiểu`.
+CN Điện Biên Phủ` → `Tarobu Dessert – Điện Biên Phủ`; `1000M Tea & Coffee -
+130A Nguyen Dinh Chieu` → `1000M Tea & Coffee – Nguyễn Đình Chiểu`.
 
 Khi hai quán khác nhau trùng tên, đây chính là cách tách chúng ra — hai quán
-`Nhâm Coffee` cách nhau 2 km thành `Nhâm Coffee — Thạnh Mỹ Tây` và
-`Nhâm Coffee — Gia Định`. Nhưng đừng tách thứ vốn đã khác: `Cafe Linh`,
+`Nhâm Coffee` cách nhau 2 km thành `Nhâm Coffee – Thạnh Mỹ Tây` và
+`Nhâm Coffee – Gia Định`. Nhưng đừng tách thứ vốn đã khác: `Cafe Linh`,
 `Café Linh`, `Cà phê Linh`, `Linh Coffee` là bốn quán với bốn biển hiệu khác
 nhau, để nguyên.
 
 **5. Không giữ slogan hay từ chỉ loại hình.**
 `Rêverie - Make dreams taste real` → `Rêverie`. `Chilli Thai - Vincom Center
-Dong Khoi - Thai restaurant` → `Chilli Thai — Vincom Center Đồng Khởi`. App
+Dong Khoi - Thai restaurant` → `Chilli Thai – Vincom Center Đồng Khởi`. App
 đã hiển thị category ngay cạnh tên; nhắc lại "Thai restaurant" chỉ tốn chỗ.
 
 **6. `name_en` chỉ dùng chữ Latin.**
@@ -65,8 +65,8 @@ nếu không có cột phù hợp:
 | --- | --- | --- |
 | `Kakinoki 호치민 2군 일식 이탈리안` | `Kakinoki` | — |
 | `Pacho Pocha Express - 파초포차` | `Pacho Pocha Express` | — |
-| `To - Hidden Cocktails Bar ト - 隠れ家バー` | `To — Hidden Cocktails Bar` | `ト — 隠れ家バー` |
-| `Meili 美丽 - Mì Bò Đài Loan Bình Thạnh` | `Meili — Mì Bò Đài Loan` | — |
+| `To - Hidden Cocktails Bar ト - 隠れ家バー` | `To – Hidden Cocktails Bar` | `ト – 隠れ家バー` |
+| `Meili 美丽 - Mì Bò Đài Loan Bình Thạnh` | `Meili – Mì Bò Đài Loan` | — |
 
 Hiện chưa có cột tiếng Hàn hay tiếng Trung, nên phần chữ Hàn/Trung bị bỏ.
 Nếu sau này catalog cần nó, thêm cột chứ đừng nhét lại vào `name_en`.
@@ -82,15 +82,22 @@ tiếng Nhật, không phải khi ta phiên âm hộ.
 
 ## Dấu gạch
 
-Dùng gạch dài `—` (em dash) có khoảng trắng hai bên giữa tên và hậu tố,
-không dùng `-`. Gạch nối giữa hai từ đọc như từ ghép; gạch dài đọc như một
-nhịp ngắt, đúng với "tên, rồi nơi".
+Dùng gạch ngang vừa `–` (en dash) có khoảng trắng hai bên giữa tên và hậu
+tố: `Tên – Phường/Khu`. Không dùng `-`: gạch nối giữa hai từ đọc như từ
+ghép, gạch ngang đọc như một nhịp ngắt, đúng với "tên, rồi nơi". Cũng
+không dùng gạch dài `—` (em dash): quy tắc ban đầu (sáng 2/10/2026) chọn
+gạch dài, chủ sở hữu đọc 169 tên trên app ngay chiều đó và thấy nặng về thị
+giác — tên đặt đậm 17pt trên card, gạch dài rộng bằng một từ ngắn. Trong
+typography, en dash là dấu cho một cặp (`Hà Nội – Huế`), đúng với quan hệ
+thương hiệu – chi nhánh; em dash là dấu ngắt câu, mà tên quán không phải
+một câu. `20261002160000_place_names_en_dash.sql` đổi toàn catalog.
 
 Trước đây tài liệu này coi `-` là dấu "chưa rà soát", và `fetch-place` ghi
 lại `-` để giữ dấu đó cho người rà. Sau một tháng catalog có 268 tên dùng
-`-` và 15 tên dùng `—`: dấu hiệu không đánh dấu được gì. Từ 2/10/2026:
+`-` và 15 tên dùng `—`: dấu hiệu không đánh dấu được gì. Từ
+2/10/2026:
 
-- `fetch-place` tự đổi mọi loại gạch Google gửi (`-`, `–`, `—`) thành ` — `
+- `fetch-place` tự đổi mọi loại gạch Google gửi (`-`, `–`, `—`) thành ` – `
   ngay lúc nhập (`_shared/place-name.ts`). Gạch là quy tắc typography, máy
   làm.
 - Dòng đã rà soát hay chưa là việc của cột `review_status`, không phải của
@@ -98,10 +105,23 @@ lại `-` để giữ dấu đó cho người rà. Sau một tháng catalog có 
 - Tìm kiếm trong app gộp mọi loại gạch về một trước khi so khớp
   (`lib/search.ts`), vì người dùng luôn gõ `-`.
 
-268 tên cũ còn dùng `-` được sửa theo đợt; đợt 2/10 làm 30 tên nhập từ
-19/9 (`20261002090000_place_import_audit_20261002.sql`), và 5 tên mà nửa
+268 tên cũ còn dùng `-` được sửa theo đợt, đều trong ngày 2/10: 30 tên nhập
+từ 19/9 (`20261002090000_place_import_audit_20261002.sql`), 5 tên mà nửa
 sau gạch là một phần tên thật, chủ sở hữu xác nhận giữ, chỉ đổi gạch
-(`20261002110000_five_names_kept.sql`).
+(`20261002110000_five_names_kept.sql`), và 233 tên còn lại rà theo năm
+nhóm (`20261002150000_place_names_legacy_dash.sql`).
+
+### Card chỉ in phần trước gạch
+
+Phần sau gạch là phường hoặc khu — thứ card đã in ở dòng dưới tên, kèm pin,
+và màn chi tiết in cả địa chỉ. `Comfy Coffee & Bakes – Thủ Đức` trên card
+trong phường Thủ Đức là một thông tin in hai lần. Nên `PlaceCard`,
+`MapPlaceCard`, dòng gợi ý trên Search và card điểm dừng trong trình sửa
+plan chỉ in `splitName(...).title` (`lib/name.ts`); màn chi tiết vẫn in đủ
+tên, với hậu tố làm subtitle khi nó nói điều địa chỉ chưa nói
+(`subtitleBeside`). Hai chi nhánh cùng một thương hiệu trong cùng một
+phường là chuyện hiếm, và khi có, dòng phường vẫn khác nhau hoặc màn chi
+tiết phân xử — chủ sở hữu quyết định như vậy ngày 2/10/2026.
 
 ## Slug thì không sửa
 
@@ -111,7 +131,7 @@ trông lệch nhau, và đó là bình thường:
 
 ```
 slug: chilli-thai-vincom-center-dong-khoi-thai-restaur
-name: Chilli Thai — Vincom Center Đồng Khởi
+name: Chilli Thai – Vincom Center Đồng Khởi
 ```
 
 ## Kiểm tra nhanh
@@ -126,7 +146,7 @@ where name_en ~ '[®™©]'                    -- ký hiệu thương hiệu
    or name_en ~ '^[a-z]'                   -- chữ thường đầu dòng
    or name_en ilike '%open 24%'            -- giờ mở cửa
    or name_en ilike '% - CN %'             -- mã chi nhánh
-   or name_en like '% - %'                 -- gạch ngắn: chưa theo quy ước gạch
+   or name_en ~ ' [-—] '                   -- gạch nối hay gạch dài: quy ước là en dash
 order by name_en;
 ```
 
