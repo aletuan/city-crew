@@ -365,7 +365,7 @@ describe('while a batch runs and after', () => {
     g.batch = { running: false, state: { a: 'done' }, done: 1, total: 1 };
     g.known = { a: { state: 'mine', slug: 'a' } };
     const { navigation } = mount();
-    fireEvent.click(screen.getByRole('button', { name: /Back to Explore/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Back to Places/ }));
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
   });
 
