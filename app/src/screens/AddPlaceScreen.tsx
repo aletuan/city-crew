@@ -67,7 +67,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
   );
   const chosen = addable.filter((c) => picked.includes(c.place_id));
   const done = {
-    label: t('Back to Explore', 'Về Khám phá', '探索に戻る'),
+    label: t('Back to Places', 'Về Địa điểm', 'スポットに戻る'),
     onPress: () => navigation.goBack(),
   };
   // The bar clears the tab bar itself, so the list must not clear it too —
@@ -79,7 +79,7 @@ export default function AddPlaceScreen({ navigation }: { navigation: Nav }) {
     if (!chosen.length || sending.current) return;
     sending.current = true;
     addMany(chosen).then((r) => {
-      // Back to Explore when the run was clean, because that is where the
+      // Back to Places when the run was clean, because that is where the
       // places now are. Not when something failed, and not when the cap
       // held anything back: navigating away from either is the app
       // deciding the reader does not need to know.

@@ -484,7 +484,7 @@ describe('a search that finds nothing', () => {
     expect(screen.getByText('Not in City Crew yet.')).toBeTruthy();
     expect(screen.getByText('We look it up on Google Maps')).toBeTruthy();
     expect(screen.getByText('OR TRY')).toBeTruthy();
-    fireEvent.click(screen.getByText('Back to Explore'));
+    fireEvent.click(screen.getByText('Back to Places'));
     expect(navigation.goBack).toHaveBeenCalled();
   });
 
@@ -520,7 +520,7 @@ describe('a search that finds nothing', () => {
     expect(screen.getByRole('progressbar')).toBeTruthy();
     expect(screen.queryByText('Add “zzz”')).toBeNull();
     // The fork survives the wait.
-    expect(screen.getByText('Back to Explore')).toBeTruthy();
+    expect(screen.getByText('Back to Places')).toBeTruthy();
   });
 
   it('says out loud when Google had nothing new', () => {
@@ -532,7 +532,7 @@ describe('a search that finds nothing', () => {
     expect(screen.queryByText('Already Known')).toBeNull();
     expect(screen.queryByText('On Google Maps')).toBeNull();
     expect(screen.queryByText('Add “zzz”')).toBeNull();
-    expect(screen.getByText('Back to Explore')).toBeTruthy();
+    expect(screen.getByText('Back to Places')).toBeTruthy();
   });
 });
 

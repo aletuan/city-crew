@@ -773,7 +773,7 @@ function NoMatches({ term }: { term: string }) {
  * that succeeds. A jump to another screen would fix this search and
  * teach nothing.
  *
- * "Back to Explore" is always last: the fork must never be a cul-de-sac,
+ * "Back to Places" is always last: the fork must never be a cul-de-sac,
  * and someone whose query held nothing recognisable still deserves a
  * door that is not the keyboard.
  */
@@ -811,7 +811,7 @@ function Fork({ routes, onSearch, onExplore }: {
         })}
         <ForkChip
           icon="compass-outline"
-          label={t('Back to Explore', 'Về Khám phá', '探索に戻る')}
+          label={t('Back to Places', 'Về Địa điểm', 'スポットに戻る')}
           onPress={onExplore}
         />
       </View>

@@ -199,9 +199,20 @@ function Tabs() {
   // what a Japanese app calls what sits behind a bookmark and マイページ
   // is what it calls the account tab; neither is a translation of the
   // English so much as the word that was already there.
+  //
+  // The second tab is captioned by what it holds, not by the verb for
+  // looking at it. "Explore" / "Khám phá" named an activity, and the
+  // owner found the other four tabs — Ideas, Trips, Collections, Profile
+  // — all named things, so the odd one out read as a different kind of
+  // button (2 Oct 2026). "Places" is the noun the rest of the app already
+  // uses for what the tab lists; "Địa điểm" is the same length as "Khám
+  // phá" in the 55pt the cell gives it; スポット is four glyphs, under the
+  // six that clipped. The route is still `Explore` in code — a name in a
+  // navigator is an identifier, and every `navigate('Explore')` would
+  // have changed for no reader's benefit.
   const labels: Record<string, string> = {
     Ideas: t('Ideas', 'Ý tưởng', 'アイデア'),
-    Explore: t('Explore', 'Khám phá', '探索'),
+    Explore: t('Places', 'Địa điểm', 'スポット'),
     Trips: t('Trips', 'Chuyến đi', '旅程'),
     Collections: t('Collections', 'Bộ sưu tập', '保存'),
     Profile: t('Profile', 'Cá nhân', 'マイページ'),
