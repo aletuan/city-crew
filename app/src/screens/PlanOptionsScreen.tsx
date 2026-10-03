@@ -55,6 +55,7 @@ import { useSave } from '../lib/save';
 import { summaryLine } from '../lib/sketch';
 import { sharedArea, stopFacts } from '../lib/stopFacts';
 import { useFlag } from '../lib/useFlag';
+import { RailColumn } from '../components/rail';
 import StopGallery, { hasPicture } from '../components/StopGallery';
 import { draftFrom, type TripDraft } from '../lib/trip';
 import type { Nav, RootRoute } from '../nav';
@@ -452,29 +453,14 @@ const CARD_STEP_MS = 60;
  * stagger is by card rather than by stop: three marks landing in order
  * reads as one hand dealing three options.
  */
-function StartMark({ nth }: { nth: number }) {
+function StartRail({ nth, last }: { nth: number; last: boolean }) {
   const still = useReducedMotion();
   // `CARD_IN` behind its own card's delay: the mark lands into a card
   // that has arrived, rather than hanging in the space where one is
-  // about to be.
+  // about to be. The mark itself, and the rail under it, are
+  // `components/rail` — the same the editor and the saved trip draw.
   const land = useArrival(240, ENTER_MS + nth * CARD_STEP_MS + CARD_IN_MS / 2, still);
-  return (
-    <Animated.View
-      style={[
-        s.start,
-        {
-          opacity: land,
-          // 2.6 rather than the orb's true ratio to this mark. Landing
-          // from the full 92pt would put a disc over the stop's name for
-          // a sixth of a second, which is a bloom across the text rather
-          // than a mark arriving.
-          transform: [{ scale: land.interpolate({ inputRange: [0, 1], outputRange: [2.6, 1] }) }],
-        },
-      ]}
-    >
-      <Ionicons name="paw" size={9} color={colors.accentInk} />
-    </Animated.View>
-  );
+  return <RailColumn first last={last} land={land} />;
 }
 
 /** One draft. Tapping it opens the editor, where times and order become
@@ -632,10 +618,9 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
               return (
                 <View key={st.place.slug} style={s.stop}>
                   <Text style={[s.time, here && s.timeHere]}>{clockOf(st.arriveMin)}</Text>
-                  <View style={s.dotCol}>
-                    {i === 0 ? <StartMark nth={nth} /> : <View style={s.dot} />}
-                    {i + 1 < plan.stops.length && <View style={s.rail} />}
-                  </View>
+                  {i === 0
+                    ? <StartRail nth={nth} last={plan.stops.length === 1} />
+                    : <RailColumn first={false} last={i + 1 === plan.stops.length} />}
                   <View style={s.body}>
                     <Text style={[s.stopName, here && s.stopNameHere]} numberOfLines={1}>{st.place.name_en}</Text>
                     {/* The district under the name rather than in a column beside
@@ -748,25 +733,8 @@ const s = StyleSheet.create({
     ...CAPTION, color: colors.textSecondary, width: 44,
     fontVariant: ['tabular-nums'], paddingTop: 2,
   },
-  // 16 rather than 10, which is what the start mark needs to hold a
-  // legible glyph. The rest of the column centres in it, so the dots and
-  // the rail stay on one axis and only the body moves, by 6pt.
-  dotCol: { alignItems: 'center', width: 16, alignSelf: 'stretch' },
-  dot: {
-    width: 8, height: 8, borderRadius: 4, marginTop: 6, backgroundColor: colors.accentFill,
-  },
-  // The same fill the dots wear, at the size a 9pt paw can be read in.
-  // `marginTop` is 2 against the dot's 6: a disc twice the width sits
-  // right against the name's cap height where a dot has to be nudged down
-  // to reach it.
-  start: {
-    width: 16, height: 16, borderRadius: 8, marginTop: 2,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentFill,
-  },
-  // No height. It fills whatever the stop beside it turned out to be —
-  // see the note where the leg is nested.
-  rail: { flex: 1, width: 2, backgroundColor: colors.borderGlassSoft },
+  // The dot column and the line are `components/rail`'s — see there for
+  // the sizes and why the line has no height of its own.
   body: { flex: 1, gap: space.nameToMeta },
   stopName: { ...type.body, color: colors.text, fontWeight: font.semibold },
   stopNameHere: { fontWeight: font.bold },

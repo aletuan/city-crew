@@ -336,10 +336,21 @@ describe('the itinerary', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'museum' });
   });
 
-  it('prints the journey into each stop after the first, and none into a delisted one', () => {
+  it('prints the journey out of each stop but the last, and none around a delisted one', () => {
     show();
     // Two legs for three stops, each "distance · ≈ N min".
     expect(screen.getAllByText(/^\d.* (m|km) · ≈ \d+ min$/)).toHaveLength(2);
+  });
+
+  // The rail the options card and the editor draw — see `components/rail`.
+  it('runs the stops down the shared rail: the paw first, dots after, a line between', () => {
+    show();
+    expect(document.querySelectorAll('[data-icon="paw"]')).toHaveLength(1);
+    expect(screen.getAllByTestId('rail-dot')).toHaveLength(2);
+    expect(screen.getAllByTestId('rail-line')).toHaveLength(2);
+    // The paw is beside the first hour.
+    const paw = document.querySelector('[data-icon="paw"]')!;
+    expect(paw.parentElement?.parentElement?.previousElementSibling?.textContent).toBe('09:00');
   });
 
   it('prints no journey where one end has no coordinates', () => {

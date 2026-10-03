@@ -324,14 +324,20 @@ describe('the plan as it arrives', () => {
     expect(screen.queryByText(/km$| m$/)).toBeNull();
   });
 
-  // The stops down a numbered rail, each card wearing its place's own
-  // photographs where it has any, and the picture opening the place the
-  // way the name does.
-  it('numbers the stops down the rail and opens a place from its picture', () => {
+  // The stops down the rail the options card draws — the paw on the
+  // first, a dot on the rest, a line between — each card wearing its
+  // place's own photographs where it has any, and the picture opening
+  // the place the way the name does.
+  it('runs the stops down the shared rail and opens a place from its picture', () => {
     const navigation = renderScreen();
-    expect(screen.getByText('1')).toBeTruthy();
-    expect(screen.getByText('2')).toBeTruthy();
-    expect(screen.getByText('3')).toBeTruthy();
+    expect(document.querySelectorAll('[data-icon="paw"]')).toHaveLength(1);
+    expect(screen.getAllByTestId('rail-dot')).toHaveLength(2);
+    // Two lines for three stops: none after the last.
+    expect(screen.getAllByTestId('rail-line')).toHaveLength(2);
+    // The paw stands at the first card, in the row that holds it.
+    const first = screen.getByTestId('drag-cafe');
+    expect(first.querySelectorAll('[data-icon="paw"]')).toHaveLength(1);
+    expect(screen.queryByText('1')).toBeNull();
     // Only the café has photographs: one band, two pages, the count.
     expect(screen.getAllByTestId('stop-hero')).toHaveLength(1);
     expect(screen.getAllByTestId('hero-page')).toHaveLength(2);
