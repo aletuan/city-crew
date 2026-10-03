@@ -346,11 +346,21 @@ export default function App() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // The toast's own timer, held on a ref so unmounting can cancel it. It
+  // used to hang off the callback as a property, which nothing cleared:
+  // a toast raised in the last 2.6 s of a test outlived the test, and the
+  // timer then called setState into a jsdom that had been torn down —
+  // "window is not defined", caught after the run, failing CI for a
+  // change three directories away (3 Oct 2026). In the browser the same
+  // timer firing after the desk unmounted was harmless and invisible,
+  // which is why it was never noticed there.
+  const toastTimer = useRef(null);
   const showToast = useCallback((msg) => {
     setToast(msg);
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => setToast(null), 2600);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2600);
   }, []);
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   useEffect(() => {
     api.cities().then(setCities).catch(() => {});
