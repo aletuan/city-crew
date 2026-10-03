@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { legBetween, legsOf, totalKm } from './travel';
+import { legBetween, legLine, legsOf, modeIcon, overallMode, totalKm, type Leg } from './travel';
 
 // Real coordinates from the Hanoi catalog, because a routing rule that
 // works on toy inputs and calls a seven-kilometre hop a walk has passed
@@ -96,5 +96,40 @@ describe('totalKm', () => {
     const legs = legsOf([HOAN_KIEM, NO_COORDS, WEST_LAKE]);
     expect(totalKm(legs)).toBe(0);
     expect(totalKm([])).toBe(0);
+  });
+});
+
+// The journey's glyph and its line, in one place. They used to be an inline
+// ternary and a template string copied into three screens and a chip, and
+// were made to agree by hand in #783 — which is how they would drift again.
+describe('modeIcon', () => {
+  it('is a walker for a walk and a car for a ride', () => {
+    expect(modeIcon('walk')).toBe('walk-outline');
+    expect(modeIcon('ride')).toBe('car-outline');
+  });
+});
+
+describe('overallMode', () => {
+  const leg = (mode: 'walk' | 'ride'): Leg => ({ km: 1, minutes: 10, mode });
+
+  it('is a walk only when every measured leg is one', () => {
+    expect(overallMode([leg('walk'), leg('walk')])).toBe('walk');
+    expect(overallMode([leg('walk'), null, leg('walk')])).toBe('walk');
+  });
+
+  it('is a ride when any leg is, and when nothing was measured', () => {
+    expect(overallMode([leg('walk'), leg('ride'), leg('walk')])).toBe('ride');
+    expect(overallMode([])).toBe('ride');
+    expect(overallMode([null, null])).toBe('ride');
+  });
+});
+
+describe('legLine', () => {
+  it('prints the distance, a dot, and an approximate time in the reader’s language', () => {
+    const leg: Leg = { km: 0.8, minutes: 13, mode: 'walk' };
+    expect(legLine(leg, 'en')).toBe('800 m · ≈ 13 min');
+    expect(legLine(leg, 'vi')).toBe('800 m · ≈ 13 phút');
+    expect(legLine(leg, 'ja')).toBe('800 m · ≈ 13分');
+    expect(legLine({ km: 6.24, minutes: 20, mode: 'ride' }, 'en')).toBe('6.2 km · ≈ 20 min');
   });
 });

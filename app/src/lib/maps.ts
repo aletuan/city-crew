@@ -19,7 +19,7 @@
 // a Directions API call per view for a picture the reader would then tap
 // to open this link anyway.
 
-import type { Leg } from './travel';
+import { overallMode, type Leg } from './travel';
 
 /** Somewhere on the earth, or a row the catalog could not place. A stop
  *  may also carry its Google identity — see `pinned`. */
@@ -176,8 +176,7 @@ export function mapsRouteUrl(
  * over the one that is a trap.
  */
 export function routeMode(legs: readonly (Leg | null)[]): 'walking' | 'driving' {
-  const known = legs.filter((l): l is Leg => l != null);
-  return known.length > 0 && known.every((l) => l.mode === 'walk') ? 'walking' : 'driving';
+  return overallMode(legs) === 'walk' ? 'walking' : 'driving';
 }
 
 /**

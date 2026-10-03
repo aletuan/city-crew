@@ -45,7 +45,7 @@ import { DEFAULT_TZ } from '../lib/clock';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
-import { clockOf, dateline, fmtMinutes } from '../lib/format';
+import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { fmtDistance } from '../lib/geo';
 import { membersOf } from '../lib/place';
@@ -55,6 +55,7 @@ import { useSave } from '../lib/save';
 import { summaryLine } from '../lib/sketch';
 import { sharedArea, stopFacts } from '../lib/stopFacts';
 import { useFlag } from '../lib/useFlag';
+import LegRow from '../components/LegRow';
 import { RailColumn } from '../components/rail';
 import StopGallery, { hasPicture } from '../components/StopGallery';
 import { draftFrom, type TripDraft } from '../lib/trip';
@@ -641,18 +642,7 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
                     {/* Dropped rather than guessed when a stop has no coordinates
                         — `legBetween` returns null and the row would be a number
                         nobody measured. */}
-                    {plan.legs[i] && (
-                      <View style={s.legRow}>
-                        <Ionicons
-                          name={plan.legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
-                          size={12}
-                          color={colors.textTertiary}
-                        />
-                        <Text style={s.legText}>
-                          {fmtDistance(plan.legs[i]!.km)} · ≈ {fmtMinutes(plan.legs[i]!.minutes, lang)}
-                        </Text>
-                      </View>
-                    )}
+                    {plan.legs[i] && <LegRow leg={plan.legs[i]!} style={s.leg} />}
                   </View>
                 </View>
               );
@@ -744,10 +734,8 @@ const s = StyleSheet.create({
   // the plan is saved.
   why: { ...CAPTION, color: colors.textSecondary, lineHeight: 18 },
 
-  // Doubled from 5. Ten points of air between two stops read as one block
-  // of text with a line in it rather than as two places you go to.
-  legRow: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 10 },
-  legText: { ...CAPTION, color: colors.textTertiary },
+  // `LegRow`'s place on this card: 10pt of air either side, between two stops.
+  leg: { paddingVertical: 10 },
 
   foot: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,

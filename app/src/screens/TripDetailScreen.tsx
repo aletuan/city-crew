@@ -34,6 +34,7 @@ import { useFlag } from '../lib/useFlag';
 import {
   AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
+import LegRow from '../components/LegRow';
 import { RailColumn } from '../components/rail';
 import { useAuth } from '../lib/auth';
 import { fromISO } from '../lib/day';
@@ -50,7 +51,7 @@ import StopGallery from '../components/StopGallery';
 import TripCrew from '../components/TripCrew';
 import { cancelTripReminder } from '../lib/reminders';
 import { clockOf, dateline, fmtMinutes } from '../lib/format';
-import { fmtDistance } from '../lib/geo';
+import {  } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { mapsRouteUrl, routeMode } from '../lib/maps';
 import { stopCount, summaryLine } from '../lib/sketch';
@@ -496,18 +497,7 @@ export default function TripDetailScreen({ navigation, route }: {
                       stop it led to, as "how you got here"; one journey
                       should not sit in two places depending on which screen
                       the reader is standing on. */}
-                  {legs[i] && (
-                    <View style={s.legRow}>
-                      <Ionicons
-                        name={legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
-                        size={12}
-                        color={colors.textTertiary}
-                      />
-                      <Text style={s.legText}>
-                        {fmtDistance(legs[i]!.km)} · ≈ {fmtMinutes(legs[i]!.minutes, lang)}
-                      </Text>
-                    </View>
-                  )}
+                  {legs[i] && <LegRow leg={legs[i]!} style={s.leg} />}
                 </View>
               </View>
               );
@@ -657,10 +647,8 @@ const s = StyleSheet.create({
     ...CAPTION, color: colors.textSecondary, width: 44,
     fontVariant: ['tabular-nums'], paddingTop: 2,
   },
-  // The same row the options screen and the editor draw, at the same size
-  // and in the same colour, under the stop it leaves.
-  legRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
-  legText: { ...CAPTION, color: colors.textTertiary },
+  // `LegRow`'s place on this screen: 8pt under the stop's last line.
+  leg: { marginTop: 8 },
   /** The stop and the leg out of it, in one column beside the rail. */
   body: { flex: 1 },
   who: { gap: space.nameToMeta },
