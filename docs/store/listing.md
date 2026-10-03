@@ -14,17 +14,19 @@ dùng chung cho mọi ngôn ngữ.
 
 ## Subtitle (30 ký tự)
 
-- EN: `Vietnam city guide & plans`
-- VI: `Cẩm nang thành phố Việt Nam`
-- JA: `ベトナムの街ガイドとプラン`
+- EN (26/30): `City guides, lists & plans`
+- VI (30/30): `Cẩm nang, danh sách & kế hoạch`
+- JA: `街ガイド・リスト・プラン`
 
-Subtitle được Apple lập chỉ mục tìm kiếm với trọng số cao, nên nó mang từ khoá
-người ta thật sự gõ ("Vietnam") thay vì từ tiếp thị ("curated"). Vì `vietnam` đã
-nằm ở đây, keywords EN không lặp lại nó.
+Từ 1.0.5 subtitle không gắn với một nước: app có Melbourne từ 1.0.4, và
+"Vietnam city guide" làm người ở Melbourne lướt qua. Subtitle vẫn được lập chỉ
+mục với trọng số cao, nên nó mang ba từ người ta gõ ("city guide", "lists",
+"plans"); `vietnam` chuyển xuống keywords. Bản cũ (≤1.0.4): `Vietnam city
+guide & plans`.
 
 ## Promotional text (170 ký tự — đổi được không cần review)
 
-- EN: `Hand-picked cafés, restaurants and bars in five Vietnamese cities, lists from people who actually go, and a plan for the day you pick.`
+- EN (đang chạy từ 1.0.4): `Hand-picked cafés, restaurants and bars across Vietnam and Melbourne, lists from people who actually go, and a plan for the day you pick.`
 - VI: `Quán cà phê, nhà hàng và bar được chọn tay ở năm thành phố Việt Nam, danh sách từ người đi thật, và kế hoạch cho đúng ngày bạn chọn.`
 - JA: `ベトナム5都市の厳選スポット、実際に通う人のリスト、そして選んだ日のプラン。`
 
@@ -185,7 +187,8 @@ lặp lại là phí ký tự. Tên thành phố là từ khoá đáng giá nh�
 `melbourne`, `map` và bỏ `itinerary`, `weekend` để lọt 100 ký tự; VI/JA chưa
 có localization trên App Store Connect nên chưa cần cập nhật.
 
-- EN (99/100): `saigon,hanoi,danang,dalat,hue,vungtau,melbourne,cafe,restaurant,bar,nightlife,travel,food,date,map`
+- EN 1.0.5 (97/100): `vietnam,saigon,hanoi,danang,dalat,hue,vungtau,melbourne,cafe,restaurant,bar,nightlife,travel,food` — `vietnam` vào vì subtitle mới không còn nó; bỏ `date,map` cho đủ chỗ.
+- EN ≤1.0.4 (99/100): `saigon,hanoi,danang,dalat,hue,vungtau,melbourne,cafe,restaurant,bar,nightlife,travel,food,date,map`
 - VI (96/100): `sài gòn,hà nội,đà nẵng,đà lạt,huế,quán cà phê,nhà hàng,ăn uống,đi chơi,hẹn hò,cuối tuần,địa điểm`
 - JA (54/100): `ホーチミン,ハノイ,ダナン,ダラット,フエ,ベトナム,カフェ,レストラン,旅行,グルメ,デート,週末,プラン`
 
@@ -380,21 +383,71 @@ Thêm ba thành phố, và trang địa điểm đọc được trong một cái
 • いちばん小さい文字サイズでも、いちばん大きくても、すべての行が収まります。
 ```
 
+## Release notes v1.0.5 (What's New)
+
+Viết từ các PR merge sau build 1.0.4 (23) — #692 → #783. `app.json` lên
+1.0.5 ở #715 (Apple đóng train 1.0.4 khi duyệt). Không có mặt ở đây: Data
+Desk, test, docs, RLS (#714), privacy policy (#707 — nằm ở Description và
+Notes, không phải What's New). Tab đổi tên (#778–#780) phải có: người đã cài
+1.0.4 mở app sẽ thấy tab của mình đổi chỗ.
+
+### EN
+
+```
+Plans you can shape, places you can find.
+
+• New tabs: Explore is where you plan a day out; Places holds the catalog, as a list or a map.
+• Plans start from wherever you are, with a picture and a reason for every stop.
+• Hold and drag to reorder places in a collection, your collections, and the stops in a plan.
+• A second reminder on the day of your trip, two hours before the first stop.
+• Short tips point out what's new the first time you meet it.
+• A tidier profile, and every city's front page has its own verse.
+• Steadier: if one screen fails, the rest of the app keeps working.
+```
+
+### VI
+
+```
+Kế hoạch theo ý bạn, địa điểm dễ tìm hơn.
+
+• Tab mới: Khám phá là nơi lên kế hoạch cho một ngày đi chơi; Địa điểm chứa danh sách quán, xem dạng list hoặc bản đồ.
+• Kế hoạch bắt đầu từ chỗ bạn đang đứng, mỗi điểm dừng có ảnh và lý do nên ghé.
+• Giữ và kéo để sắp xếp địa điểm trong bộ sưu tập, các bộ sưu tập, và các điểm dừng trong kế hoạch.
+• Thêm một lời nhắc vào đúng ngày đi, hai tiếng trước điểm dừng đầu tiên.
+• Mẹo ngắn chỉ ra cái mới ngay lần đầu bạn gặp.
+• Trang cá nhân gọn hơn, và mỗi thành phố có một câu thơ riêng ở trang đầu.
+• Ổn định hơn: một màn hình lỗi không kéo cả app theo.
+```
+
+### JA
+
+```
+自分で組めるプラン、見つけやすいスポット。
+
+• タブを一新：「探索」で一日の予定を立て、「スポット」で一覧と地図を見られます。
+• プランは今いる場所から始まり、立ち寄り先ごとに写真と理由が付きます。
+• 長押しでドラッグ：コレクション内のスポット、コレクション、プランの立ち寄り先を並べ替え。
+• 当日のリマインダーを追加（最初の立ち寄り先の2時間前）。
+• 新しい機能は初めて出会ったときに短いヒントで紹介。
+• プロフィールを整理し、各都市のトップに専用のことばを。
+• 安定性の向上：ひとつの画面でエラーが起きても、アプリ全体は止まりません。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
 sai theo thời gian (Apple guideline 2.3 — Accurate Metadata). Tính đến
-2026-09-26, database production có **7 thành phố active / 715 địa điểm đã
+2026-10-03, database production có **7 thành phố active / 804 địa điểm đã
 duyệt** (Hải Phòng tắt `is_active` ngày 26/09 vì 0 địa điểm):
 
 | Thành phố | Địa điểm đã publish |
 |---|---|
-| TP. Hồ Chí Minh | 295 |
-| Hà Nội | 239 |
-| Đà Nẵng | 64 |
-| Đà Lạt | 45 |
+| TP. Hồ Chí Minh | 302 |
+| Hà Nội | 265 |
+| Đà Nẵng | 70 |
+| Melbourne | 69 |
+| Đà Lạt | 51 |
 | Huế | 39 |
-| Melbourne | 25 |
 | Vũng Tàu | 8 |
 | Hải Phòng | 0 — **inactive** |
 
@@ -403,6 +456,29 @@ Description bản 1.0.4 kể đúng bảy thành phố active. Bật lại Hải
 
 Câu kiểm tra lại:
 `select c.id, c.is_active, count(p.*) filter (where p.is_published and p.review_status='approved') from cities c left join places p on p.city_id = c.id group by 1,2 order by 3 desc;`
+
+## Screenshots — bộ 1.0.5
+
+Bộ "City Crew English story v3" (3/10): 7 ảnh bìa — nền cam, khung máy, mèo
+màu nước, chữ tiếng Anh — dựng bằng công cụ tạo ảnh quanh ảnh chụp thật của
+build hiện tại (tab Explore / Places của #778–#780). Dùng cho mọi ngôn ngữ;
+chưa bật localization VI/JA. Bản gốc 852×1846 không lọt ô 6.9" — đã phóng
+lên 1290×2796; bản upload nằm ở `Desktop/Store/City-Crew-Story-English-v3/
+appstore-1290x2796/`. Ảnh 03 sửa một lỗi của công cụ tạo ảnh: "Fìnd" → "Find".
+
+| # | Headline | Màn |
+|---|---|---|
+| 1 | Find your next favorite place. | Explore, Sài Gòn |
+| 2 | Find a place that feels like you. | Places — list |
+| 3 | Find a good spot close by. | Places — map |
+| 4 | Get to know a place before you go. | Place detail (Heim) |
+| 5 | Your favorite places, your kind of list. | Collections |
+| 6 | Make plans for good company. | Plan a trip |
+| 7 | A few ways to go. The choice is yours. | Trip options |
+
+Kiểm trước khi dùng lại một bộ ảnh tạo bằng công cụ: chữ trên nền (dấu lạ như
+"Fìnd"), tên tab khớp `App.tsx`, và màn trong máy là ảnh chụp thật — guideline
+2.3.3 cho phép trang trí khung, không cho phép vẽ một UI app không có.
 
 ## Screenshots — bộ 1.0.4
 
