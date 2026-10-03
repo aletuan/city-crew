@@ -15,7 +15,8 @@
 // distances with a speed applied, and everything below is chosen to fail
 // in the direction of a plan that runs late rather than early.
 
-import { distanceKm } from './geo';
+import { distanceKm, fmtDistance } from './geo';
+import { fmtMinutes } from './format';
 
 /** Just enough of a place to route between. Structural, so a full `Place`
  *  satisfies it and a test fixture does not have to invent thirty
@@ -129,4 +130,36 @@ export function totalKm(legs: readonly (Leg | null)[]): number {
   let km = 0;
   for (const l of legs) if (l) km += l.km;
   return km;
+}
+
+// ── how a journey is shown ──
+//
+// Three screens draw the same evening — the options card, the editor,
+// the saved trip — and each printed a leg as a walker-or-car glyph and
+// "distance · ≈ time". The ternary and the template string were copied
+// into all three and into the editor's distance chip, and made to agree
+// by hand in #783, which is how they would have drifted again. They are
+// here now, so "the same line" is a fact about the code (`LegRow` draws
+// it), the way `PageDots` and `rail` already are for their marks.
+
+/** The glyph a journey wears, by how it is made. */
+export function modeIcon(mode: Mode): 'walk-outline' | 'car-outline' {
+  return mode === 'walk' ? 'walk-outline' : 'car-outline';
+}
+
+/**
+ * How the whole route is made: a walk only when every measured leg is
+ * one, a ride otherwise — and a ride when nothing was measured, since a
+ * route of unknown legs is not a walk anyone promised. `routeMode` in
+ * `lib/maps` says the same in Google's words.
+ */
+export function overallMode(legs: readonly (Leg | null)[]): Mode {
+  const known = legs.filter((l): l is Leg => l != null);
+  return known.length > 0 && known.every((l) => l.mode === 'walk') ? 'walk' : 'ride';
+}
+
+/** "800 m · ≈ 13 min": the distance, a dot, and the time as an estimate,
+ *  in the reader's language. */
+export function legLine(leg: Leg, lang: string): string {
+  return `${fmtDistance(leg.km)} · ≈ ${fmtMinutes(leg.minutes, lang)}`;
 }

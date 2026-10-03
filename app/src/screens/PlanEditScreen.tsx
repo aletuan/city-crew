@@ -91,6 +91,7 @@ import {
   AmbientWarmth, Card, GradientCta, IconSubtitle, PressableScale, RoundIconButton, Screen,
   fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
+import LegRow from '../components/LegRow';
 import { RailColumn } from '../components/rail';
 import StopHero from '../components/StopHero';
 import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
@@ -108,7 +109,7 @@ import { saveTrip } from '../lib/data';
 import { spendVnd } from '../lib/trips';
 import { clockOf, dateline, fmtMinutes } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
-import { routeMode } from '../lib/maps';
+import { modeIcon, overallMode } from '../lib/travel';
 import { useI18n } from '../lib/i18n';
 import { splitName } from '../lib/name';
 import {
@@ -502,7 +503,7 @@ export default function PlanEditScreen({ navigation, route }: {
         <View style={s.chips}>
           {current.length > 0 && <Fact icon="time-outline" text={`${clockOf(from)}–${clockOf(to)}`} />}
           {km > 0 && (
-            <Fact icon={routeMode(legs) === 'walking' ? 'walk-outline' : 'car-outline'} text={fmtDistance(km)} />
+            <Fact icon={modeIcon(overallMode(legs))} text={fmtDistance(km)} />
           )}
           {company && <Fact icon={company.icon} text={t(company.en, company.vi, company.ja)} />}
           {showPrice && spend > 0 && (
@@ -735,18 +736,7 @@ export default function PlanEditScreen({ navigation, route }: {
                 saved trip print, so one journey keeps one appearance; the
                 reference draws it as a bordered pill with a chevron, and a
                 chevron promises a screen that does not exist. */}
-            {legs[i] && (
-              <View style={s.legRow}>
-                <Ionicons
-                  name={legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
-                  size={12}
-                  color={colors.textTertiary}
-                />
-                <Text style={s.legText}>
-                  {fmtDistance(legs[i]!.km)} · ≈ {fmtMinutes(legs[i]!.minutes, lang)}
-                </Text>
-              </View>
-            )}
+            {legs[i] && <LegRow leg={legs[i]!} style={s.leg} />}
               </View>
             </View>
           </Animated.View>
@@ -918,11 +908,9 @@ const s = StyleSheet.create({
 
   warn: { ...CAPTION, color: colors.accent, marginTop: 8 },
 
-  // The same row the options card and the saved trip draw: a 12pt glyph,
-  // 5pt, the figure, in the tertiary ink. In the card's column, so the
-  // figure starts where the card does.
-  legRow: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingTop: 12 },
-  legText: { ...CAPTION, color: colors.textTertiary },
+  // `LegRow`'s place on this screen: 12pt under the card, in the card's
+  // column so the figure starts where the card does.
+  leg: { paddingTop: 12 },
 
   save: { height: 18 },
   note: { ...CAPTION, color: colors.textTertiary, marginTop: 12 },
