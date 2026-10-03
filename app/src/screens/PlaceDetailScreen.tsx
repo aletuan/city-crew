@@ -28,7 +28,7 @@ import { splitName, subtitleBeside } from '../lib/name';
 import { useCity } from '../lib/city';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
 import MiniMap, { canDrawMap } from '../components/MiniMap';
-import PageDots from '../components/PageDots';
+import PhotoCarousel from '../components/PhotoCarousel';
 import { pinImage } from '../components/mapPins';
 import {
   atHandle, hostOf, instagramUrl, threadsUrl, websiteRepeatsHandle,
@@ -139,7 +139,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     setPagedFor(coverUri);
     setPhotoIndex(0);
   }
-  const credit = useFlag('photo_attribution');
   const [hoursOpen, setHoursOpen] = useState(false);
   const showPrice = useFlag('place_price');
   // How many lines the address wanted before anything clamped it, and
@@ -326,6 +325,76 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     ? `https://${site}`
     : site;
 
+  // What lies over the hero whether or not it has photographs: the two
+  // scrims, the three floating buttons, the counter. Laid between the
+  // pages and the marks by `PhotoCarousel`, so the marks stay on top of
+  // the scrim they were sized against; laid over the grey fallback the
+  // same way when there is nothing to page.
+  const heroOverlays = (
+    <>
+            {/* Two scrims, and neither is a wash over the picture.
+                The top one exists for the clock and the three discs and for
+                nothing else: it is strongest at the very top edge and gone
+                within the status bar's own height plus a little, so on most
+                photographs you cannot point at where it ends.
+                The bottom one is the older job — the counter, the dots and
+                the credit sit on it — and it now also gives the rounded
+                corners something to end in rather than a hard cut. */}
+            <LinearGradient
+              pointerEvents="none"
+              colors={['rgba(10,11,10,0.36)', 'rgba(10,11,10,0.10)', 'transparent']}
+              locations={[0, 0.45, 1]}
+              style={[s.heroScrimTop, { height: insets.top + 78 }]}
+            />
+            <LinearGradient
+              pointerEvents="none"
+              colors={['transparent', 'rgba(10,11,10,0.34)']}
+              style={s.heroScrimBottom}
+            />
+
+            <PressableScale
+              onPress={() => navigation.goBack()} scaleTo={0.9}
+              containerStyle={[s.fabSlot, { left: space.page, top: insets.top + 8 }]} style={s.fab} accessibilityLabel="Back"
+              accessibilityRole="button"
+              testID="detail-back"
+            >
+              <Ionicons name="chevron-back" size={22} color={onPhoto.text} />
+            </PressableScale>
+            <PressableScale
+              onPress={share} scaleTo={0.9}
+              containerStyle={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} style={s.fab} accessibilityLabel="Share"
+              accessibilityRole="button"
+            >
+              <Ionicons name="share-outline" size={20} color={onPhoto.text} />
+            </PressableScale>
+            {/* The same control as the bookmark on the card that got you
+                here — same glyph, same sheet, same rows underneath. It was a
+                heart wired to component state: it filled in, it meant
+                nothing, and it forgot on the way back. */}
+            <PressableScale
+              onPress={() => save(place)} scaleTo={0.9} haptic="selection"
+              containerStyle={[s.fabSlot, { right: space.page, top: insets.top + 8 }]} style={s.fab}
+              accessibilityRole="button"
+              accessibilityState={{ selected: saved }}
+              // Two ids for the two states, so a smoke flow can wait on the
+              // save having landed without reading a trilingual label.
+              testID={saved ? 'detail-saved' : 'detail-save'}
+              accessibilityLabel={saved
+                ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
+                : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
+            >
+              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? onPhoto.accent : onPhoto.text} />
+            </PressableScale>
+
+            {photos.length > 0 && (
+              <View style={s.counter}>
+                <Ionicons name="images-outline" size={13} color={onPhoto.text} />
+                <Text style={s.counterText}>{photoIndex + 1} / {photos.length}</Text>
+              </View>
+            )}
+    </>
+  );
+
   return (
     // No top safe area: the photograph is what belongs against the top of
     // the glass, and insetting the screen is exactly what put a beige band
@@ -338,21 +407,30 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
         onScroll={onScroll}
         scrollEventThrottle={16}
       >
-        {/* ── hero carousel ── */}
+        {/* ── hero carousel ──
+            `PhotoCarousel`'s paging, given the screen's width and the
+            height this screen decides, remounted when the desk changes the
+            cover under it so the strip starts again at the new first page.
+            The marks sit at the page margin because this picture runs to
+            the screen's edge; the credit moves to the middle, see `attr`. */}
         <View style={[s.heroWrap, { height: heroH }]}>
           {photos.length > 0 ? (
-            <ScrollView
-              key={coverUri ?? 'no-cover'}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={(e) => setPhotoIndex(Math.round(e.nativeEvent.contentOffset.x / heroW))}
-            >
-              {photos.map((ph, i) => (
+            <PhotoCarousel
+              pages={photos}
+              page={photoIndex}
+              onPage={setPhotoIndex}
+              width={heroW}
+              height={heroH}
+              scrollKey={coverUri ?? 'no-cover'}
+              dotsRight={space.page}
+              dotsBottom={15}
+              attrStyle={s.attr}
+              attributionOf={(ph) => ph.attribution_name}
+              renderPage={(ph, i, size) => (
                 <Image
                   key={ph.photo_uri}
                   source={{ uri: ph.photo_uri }}
-                  style={[s.hero, { width: heroW, height: heroH }]}
+                  style={[s.hero, size]}
                   contentFit="cover"
                   transition={200}
                   testID={i === 0 ? 'detail-photo' : undefined}
@@ -362,80 +440,18 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     `${fullName}の写真 ${i + 1}/${photos.length}`,
                   )}
                 />
-              ))}
-            </ScrollView>
+              )}
+            >
+              {heroOverlays}
+            </PhotoCarousel>
           ) : (
-            <View style={[s.hero, s.heroFallback, { width: heroW, height: heroH }]}>
-              <Text style={{ fontSize: 64 }}>{place.emoji ?? '📍'}</Text>
-            </View>
+            <>
+              <View style={[s.hero, s.heroFallback, { width: heroW, height: heroH }]}>
+                <Text style={{ fontSize: 64 }}>{place.emoji ?? '📍'}</Text>
+              </View>
+              {heroOverlays}
+            </>
           )}
-
-          {/* Two scrims, and neither is a wash over the picture.
-              The top one exists for the clock and the three discs and for
-              nothing else: it is strongest at the very top edge and gone
-              within the status bar's own height plus a little, so on most
-              photographs you cannot point at where it ends.
-              The bottom one is the older job — the counter, the dots and
-              the credit sit on it — and it now also gives the rounded
-              corners something to end in rather than a hard cut. */}
-          <LinearGradient
-            pointerEvents="none"
-            colors={['rgba(10,11,10,0.36)', 'rgba(10,11,10,0.10)', 'transparent']}
-            locations={[0, 0.45, 1]}
-            style={[s.heroScrimTop, { height: insets.top + 78 }]}
-          />
-          <LinearGradient
-            pointerEvents="none"
-            colors={['transparent', 'rgba(10,11,10,0.34)']}
-            style={s.heroScrimBottom}
-          />
-
-          <PressableScale
-            onPress={() => navigation.goBack()} scaleTo={0.9}
-            containerStyle={[s.fabSlot, { left: space.page, top: insets.top + 8 }]} style={s.fab} accessibilityLabel="Back"
-            accessibilityRole="button"
-            testID="detail-back"
-          >
-            <Ionicons name="chevron-back" size={22} color={onPhoto.text} />
-          </PressableScale>
-          <PressableScale
-            onPress={share} scaleTo={0.9}
-            containerStyle={[s.fabSlot, { right: space.page + 52, top: insets.top + 8 }]} style={s.fab} accessibilityLabel="Share"
-            accessibilityRole="button"
-          >
-            <Ionicons name="share-outline" size={20} color={onPhoto.text} />
-          </PressableScale>
-          {/* The same control as the bookmark on the card that got you
-              here — same glyph, same sheet, same rows underneath. It was a
-              heart wired to component state: it filled in, it meant
-              nothing, and it forgot on the way back. */}
-          <PressableScale
-            onPress={() => save(place)} scaleTo={0.9} haptic="selection"
-            containerStyle={[s.fabSlot, { right: space.page, top: insets.top + 8 }]} style={s.fab}
-            accessibilityRole="button"
-            accessibilityState={{ selected: saved }}
-            // Two ids for the two states, so a smoke flow can wait on the
-            // save having landed without reading a trilingual label.
-            testID={saved ? 'detail-saved' : 'detail-save'}
-            accessibilityLabel={saved
-              ? t('Saved — change collections', 'Đã lưu — đổi bộ sưu tập', '保存済み — コレクションを変更')
-              : t('Save to a collection', 'Lưu vào bộ sưu tập', 'コレクションに保存')}
-          >
-            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? onPhoto.accent : onPhoto.text} />
-          </PressableScale>
-
-          {photos.length > 0 && (
-            <View style={s.counter}>
-              <Ionicons name="images-outline" size={13} color={onPhoto.text} />
-              <Text style={s.counterText}>{photoIndex + 1} / {photos.length}</Text>
-            </View>
-          )}
-          {/* The page marks every carousel wears (`PageDots`), at the
-              page margin because this picture runs to the screen's edge. */}
-          <PageDots count={photos.length} page={photoIndex} right={space.page} bottom={15} />
-          {credit && photos[photoIndex]?.attribution_name ? (
-            <Text style={s.attr} numberOfLines={1}>{photos[photoIndex].attribution_name}</Text>
-          ) : null}
         </View>
 
         <View style={s.body}>

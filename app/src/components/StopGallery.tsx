@@ -15,14 +15,13 @@
 // plan options screen can wear the same picture: what a reader compares
 // there is what they find again once the plan is saved.
 
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { coverOf } from '../lib/place';
 import type { Place } from '../lib/types';
-import { useFlag } from '../lib/useFlag';
-import { colors, onPhoto } from '../theme';
-import PageDots from './PageDots';
+import { colors } from '../theme';
+import PhotoCarousel from './PhotoCarousel';
 
 /** Whether any of these places has a photograph to page to. */
 export function hasPicture(places: readonly (Place | null | undefined)[]): boolean {
@@ -53,59 +52,37 @@ export default function StopGallery({ places, aspectRatio, page, onPage, onPress
   onPressPage?: () => void;
   testID?: string;
 }) {
-  const [width, setWidth] = useState(0);
-  const credit = useFlag('photo_attribution');
   if (!hasPicture(places)) return null;
 
-  const here = places[page];
-  // The credit belongs to the picture on screen, so it is read from the
-  // current page rather than printed once. This is also why a carousel is
-  // easier to license than a strip of thumbnails: one photograph visible,
-  // one credit owed.
-  const attr = credit && here ? coverOf(here)?.attribution_name : null;
-  const shot = { aspectRatio, width };
-
   return (
-    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} testID={testID}>
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        // Clamped, so a momentum end reported past the last page cannot
-        // name a stop that is not there.
-        onMomentumScrollEnd={(e) => onPage(Math.min(
-          places.length - 1,
-          Math.max(0, Math.round(e.nativeEvent.contentOffset.x / width)),
-        ))}
-      >
-        {places.map((p, i) => {
-          const ph = p ? coverOf(p) : undefined;
-          const pageView = ph
-            ? (
-              <Image
-                source={{ uri: ph.photo_uri }}
-                style={[s.shot, shot]}
-                contentFit="cover"
-                transition={200}
-              />
-            )
-            : (
-              <View style={[s.shot, s.bare, shot]}>
-                <Text style={s.emoji}>{p?.emoji ?? '📍'}</Text>
-              </View>
-            );
-          return onPressPage
-            ? (
-              <Pressable key={`shot-${i}`} onPress={onPressPage} accessible={false} testID="gallery-page">
-                {pageView}
-              </Pressable>
-            )
-            : <React.Fragment key={`shot-${i}`}>{pageView}</React.Fragment>;
-        })}
-      </ScrollView>
-      {attr ? <Text style={s.attr} numberOfLines={1}>{attr}</Text> : null}
-      <PageDots count={places.length} page={page} />
-    </View>
+    <PhotoCarousel
+      pages={places}
+      page={page}
+      onPage={onPage}
+      aspectRatio={aspectRatio}
+      // The credit belongs to the picture on screen — one photograph
+      // visible, one credit owed — which is also why a carousel is easier
+      // to license than a strip of thumbnails.
+      attributionOf={(p) => (p ? coverOf(p)?.attribution_name : null)}
+      renderPage={(p, i, size) => {
+        const ph = p ? coverOf(p) : undefined;
+        const pageView = ph
+          ? <Image source={{ uri: ph.photo_uri }} style={[s.shot, size]} contentFit="cover" transition={200} />
+          : (
+            <View style={[s.shot, s.bare, size]}>
+              <Text style={s.emoji}>{p?.emoji ?? '📍'}</Text>
+            </View>
+          );
+        return onPressPage
+          ? (
+            <Pressable key={`shot-${i}`} onPress={onPressPage} accessible={false} testID="gallery-page">
+              {pageView}
+            </Pressable>
+          )
+          : <React.Fragment key={`shot-${i}`}>{pageView}</React.Fragment>;
+      }}
+      testID={testID}
+    />
   );
 }
 
@@ -116,13 +93,4 @@ const s = StyleSheet.create({
   // at 52pt, what the detail used, a 3:1 band held an emoji taller than
   // half its own height.
   emoji: { fontSize: 40 },
-  // Required wherever the photo is shown; read from the page on screen.
-  // Bottom left: the page marks (`PageDots`) have the right-hand corner
-  // on every card, and the hero's middle seat is for a counter this card
-  // does not carry.
-  attr: {
-    position: 'absolute', left: 12, bottom: 12, maxWidth: '50%',
-    fontSize: 9, color: onPhoto.text, opacity: 0.55,
-    textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
-  },
 });

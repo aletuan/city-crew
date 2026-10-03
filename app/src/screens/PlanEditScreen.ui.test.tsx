@@ -341,7 +341,7 @@ describe('the plan as it arrives', () => {
     // Only the café has photographs: one band, two pages, the count.
     expect(screen.getAllByTestId('stop-hero')).toHaveLength(1);
     expect(screen.getAllByTestId('hero-page')).toHaveLength(2);
-    expect(screen.getByTestId('hero-dots').children).toHaveLength(2);
+    expect(screen.getByTestId('stop-hero-dots').children).toHaveLength(2);
     fireEvent.click(screen.getAllByTestId('hero-page')[1]);
     expect(navigation.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'cafe' });
   });
