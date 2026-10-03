@@ -40,7 +40,7 @@ là nói dối reviewer — và cả hai đều đã từng sai trong chính fil
 Thank you for reviewing City Crew. Free app: no in-app purchases,
 subscriptions or paid content (confirmed in our 2.1(b) reply on 1.0 (6)).
 
-SIGN-IN: Every content screen (Explore, Collections, place pages, Search,
+SIGN-IN: Every content screen (Places, Collections, place pages, Search,
 the map) works signed out. An account adds saving, collections, trip plans
 and friends. Accounts are an email address and a password; the credentials
 in the Sign-In Information fields above are a working account with saved
@@ -57,8 +57,8 @@ stores nothing. Denying it is fine — the app falls back to Ho Chi Minh
 City, and the city is changed by hand at Profile > Current city. The
 position is never stored, by us or with a saved trip.
 
-MAPS: Google Maps SDK draws the maps (Explore map mode, place pages, the
-trip start sheet) and shows the user's position on them. Google Places
+MAPS: Google Maps SDK draws the maps (the Places tab's map, place pages,
+the trip start sheet) and shows the user's position on them. Google Places
 and Geocoding are called from our own server, for the start sheet only,
 with the search text and a point to search near: a dropped pin, a picked
 area, or — when neither is set — the user's position (see LOCATION).
