@@ -55,8 +55,7 @@ import { useSave } from '../lib/save';
 import { summaryLine } from '../lib/sketch';
 import { sharedArea, stopFacts } from '../lib/stopFacts';
 import { useFlag } from '../lib/useFlag';
-import LegRow from '../components/LegRow';
-import { RailColumn } from '../components/rail';
+import StopRow from '../components/StopRow';
 import StopGallery, { hasPicture } from '../components/StopGallery';
 import { draftFrom, type TripDraft } from '../lib/trip';
 import type { Nav, RootRoute } from '../nav';
@@ -454,15 +453,6 @@ const CARD_STEP_MS = 60;
  * stagger is by card rather than by stop: three marks landing in order
  * reads as one hand dealing three options.
  */
-function StartRail({ nth, last }: { nth: number; last: boolean }) {
-  const still = useReducedMotion();
-  // `CARD_IN` behind its own card's delay: the mark lands into a card
-  // that has arrived, rather than hanging in the space where one is
-  // about to be. The mark itself, and the rail under it, are
-  // `components/rail` — the same the editor and the saved trip draw.
-  const land = useArrival(240, ENTER_MS + nth * CARD_STEP_MS + CARD_IN_MS / 2, still);
-  return <RailColumn first last={last} land={land} />;
-}
 
 /** One draft. Tapping it opens the editor, where times and order become
  *  the reader's rather than the planner's. */
@@ -477,6 +467,12 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
   nth: number;
 }) {
   const { t, lang } = useI18n();
+  // The paw on the first stop lands into the card, `CARD_IN` behind the
+  // card's own delay, so it arrives into a card that has arrived rather
+  // than hanging in the space where one is about to be. The mark and the
+  // rail it heads are `components/rail`; the row is `StopRow`.
+  const still = useReducedMotion();
+  const land = useArrival(240, ENTER_MS + nth * CARD_STEP_MS + CARD_IN_MS / 2, still);
   // Which stop the picture on top is showing, so its row can say so.
   const [shot, setShot] = useState(0);
   const places = plan.stops.map((st) => st.place);
@@ -617,34 +613,31 @@ function PlanCard({ plan, name, why, day, tz, nth, onPress }: {
               const line = why?.get(st.place.slug);
               const facts = stopFacts(st.place, st, day, tz, lang, t, { area: !oneArea });
               return (
-                <View key={st.place.slug} style={s.stop}>
-                  <Text style={[s.time, here && s.timeHere]}>{clockOf(st.arriveMin)}</Text>
-                  {i === 0
-                    ? <StartRail nth={nth} last={plan.stops.length === 1} />
-                    : <RailColumn first={false} last={i + 1 === plan.stops.length} />}
-                  <View style={s.body}>
-                    <Text style={[s.stopName, here && s.stopNameHere]} numberOfLines={1}>{st.place.name_en}</Text>
-                    {/* The district under the name rather than in a column beside
-                        it, which is how the editor and the saved trip already
-                        print it. Right-aligned it took 96pt off every name on the
-                        one screen where the names *are* the choice — and half
-                        this catalog has a name longer than what was left. What
-                        else the line carries, and when, is `stopFacts`'s. */}
-                    {/* Nothing at all when every fact is absent — a plan in
-                        one district whose places state no hours — rather
-                        than an empty line holding the row open. */}
-                    {!!facts && <Text style={s.stopMeta} numberOfLines={1}>{facts}</Text>}
-                    {/* The model's reason for the stop, which this screen asked
-                        for and then never showed: the editor and the saved trip
-                        both print it. Nothing in its place when there is none —
-                        the line above already carries the facts. */}
-                    {!!line && <Text style={s.why} numberOfLines={2} testID="plan-why">{line}</Text>}
-                    {/* Dropped rather than guessed when a stop has no coordinates
-                        — `legBetween` returns null and the row would be a number
-                        nobody measured. */}
-                    {plan.legs[i] && <LegRow leg={plan.legs[i]!} style={s.leg} />}
-                  </View>
-                </View>
+                <StopRow
+                  key={st.place.slug}
+                  time={clockOf(st.arriveMin)}
+                  here={here}
+                  first={i === 0}
+                  last={i + 1 === plan.stops.length}
+                  land={i === 0 ? land : undefined}
+                  name={st.place.name_en}
+                  // One line: on the one screen where the names *are* the
+                  // choice, a wrapped name pushes the next option down.
+                  nameLines={1}
+                  // The district under the name, as the editor and the saved
+                  // trip print it; what else the line carries, and when, is
+                  // `stopFacts`'s. Nothing at all when every fact is absent.
+                  meta={facts || null}
+                  // The model's reason for the stop; the editor and the saved
+                  // trip both print it, and this screen used to ask for it and
+                  // then not show it.
+                  why={line ?? null}
+                  whyLines={2}
+                  // Dropped rather than guessed when a stop has no coordinates
+                  // — `legBetween` returns null and the row would be a number
+                  // nobody measured.
+                  leg={plan.legs[i]}
+                />
               );
             })}
 
@@ -712,30 +705,7 @@ const s = StyleSheet.create({
   },
   badgeOnText: { ...CAPTION, color: colors.accentInk, fontWeight: font.semibold },
 
-  // `flex-start`, not `center`: a stop is two lines now, and centred the
-  // hour and the dot would float to the middle of the pair instead of
-  // sitting on the name they belong to.
-  stop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  // The 2 is optical, not arithmetic — the caption's smaller cap height
-  // sits high in its line box, so matching the box tops leaves the digits
-  // reading above the name. TripDetail's own time column does the same.
-  time: {
-    ...CAPTION, color: colors.textSecondary, width: 44,
-    fontVariant: ['tabular-nums'], paddingTop: 2,
-  },
-  // The dot column and the line are `components/rail`'s — see there for
-  // the sizes and why the line has no height of its own.
-  body: { flex: 1, gap: space.nameToMeta },
-  stopName: { ...type.body, color: colors.text, fontWeight: font.semibold },
-  stopNameHere: { fontWeight: font.bold },
-  timeHere: { color: colors.accent, fontWeight: font.semibold },
-  stopMeta: { ...CAPTION, color: colors.textTertiary },
-  // TripDetail's `why`, so the sentence reads the same before and after
-  // the plan is saved.
-  why: { ...CAPTION, color: colors.textSecondary, lineHeight: 18 },
 
-  // `LegRow`'s place on this card: 10pt of air either side, between two stops.
-  leg: { paddingVertical: 10 },
 
   foot: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,
