@@ -3,7 +3,11 @@
 // Two grounds, one system. Dark is the cinematic original: near-black
 // charcoal, translucent smoky surfaces, thin warm-gray hairlines. Light is
 // warm paper with white cards and near-black type. Both carry the same
-// coral accent, used sparingly for active state only.
+// coral accent, used sparingly for active state only — with one standing
+// exception, the itinerary rail (`components/rail`): its paw and dots are
+// coral on every stop because the rail is the route, drawn once per
+// screen, not a state. A coral surface under anything that is not the
+// route is still what the rule forbids.
 //
 // HOW THE SWITCH WORKS. Every colour below is a `DynamicColorIOS` pair, a
 // value UIKit resolves against the window's interface style at draw time.

@@ -34,6 +34,7 @@ import { useFlag } from '../lib/useFlag';
 import {
   AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
+import { RailColumn } from '../components/rail';
 import { useAuth } from '../lib/auth';
 import { fromISO } from '../lib/day';
 import {
@@ -418,45 +419,16 @@ export default function TripDetailScreen({ navigation, route }: {
                 }
                 : { style: s.who };
               return (
-              <View key={`${trip.id}-${i}`}>
-                {i > 0 ? <View style={s.divider} /> : null}
-                {/* How you get here from the stop before.
-
-                    Not decoration: the options screen and the editor both
-                    print this line, and saving the plan was losing it. A
-                    reader chose between "6.2 km · ≈ 20 min" and "50 m · ≈ 2
-                    min", saved the one they wanted, opened it again and
-                    found neither — the distance that decided the choice had
-                    gone. Nothing was stored to lose, and nothing needs to
-                    be: `legsOf` measures it from coordinates the query
-                    already carries.
-
-                    Drawn the way the other two screens draw it, down to the
-                    glyph and the separator, rather than the pill the design
-                    reference uses — one journey should not have two
-                    appearances depending on which screen the reader is
-                    standing on.
-
-                    Under the rule and above the stop it leads to, because
-                    that is what it answers: *how you got here*. Indented to
-                    the name column, so the time gutter stays a column of
-                    times only. */}
-                {i > 0 && legs[i - 1] && (
-                  <View style={s.legRow}>
-                    <Ionicons
-                      name={legs[i - 1]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
-                      size={12}
-                      color={colors.textTertiary}
-                    />
-                    <Text style={s.legText}>
-                      {fmtDistance(legs[i - 1]!.km)} · ≈ {fmtMinutes(legs[i - 1]!.minutes, lang)}
-                    </Text>
-                  </View>
-                )}
-                <View style={s.stopRow}>
-                  <Text style={[s.stopTime, here && s.stopTimeHere]}>
-                    {stop.arrive_min != null ? clockOf(stop.arrive_min) : '—'}
-                  </Text>
+              // The row the options card draws: the hour, the rail, the
+              // stop. The rail (`components/rail`) replaced a hairline
+              // between stops on 3 Oct 2026, when the owner asked for the
+              // three screens that draw an evening to draw one rail.
+              <View key={`${trip.id}-${i}`} style={[s.stop, i < stops.length - 1 && s.stopGap]}>
+                <Text style={[s.stopTime, here && s.stopTimeHere]}>
+                  {stop.arrive_min != null ? clockOf(stop.arrive_min) : '—'}
+                </Text>
+                <RailColumn first={i === 0} last={i === stops.length - 1} />
+                <View style={s.body}>
                   <Who {...whoProps}>
                     {stop.places
                       ? (
@@ -506,6 +478,36 @@ export default function TripDetailScreen({ navigation, route }: {
                       </Text>
                     )}
                   </Who>
+                  {/* How you get to the next stop, under the stop it leaves.
+
+                      Not decoration: the options screen and the editor both
+                      print this line, and saving the plan was losing it. A
+                      reader chose between "6.2 km · ≈ 20 min" and "50 m · ≈ 2
+                      min", saved the one they wanted, opened it again and
+                      found neither — the distance that decided the choice
+                      had gone. Nothing was stored to lose, and nothing needs
+                      to be: `legsOf` measures it from coordinates the query
+                      already carries.
+
+                      Drawn the way the other two screens draw it, down to
+                      the glyph and the separator, and in the same place —
+                      under the stop the journey leaves, inside the rail's
+                      row so the line runs past it. It used to sit above the
+                      stop it led to, as "how you got here"; one journey
+                      should not sit in two places depending on which screen
+                      the reader is standing on. */}
+                  {legs[i] && (
+                    <View style={s.legRow}>
+                      <Ionicons
+                        name={legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
+                        size={12}
+                        color={colors.textTertiary}
+                      />
+                      <Text style={s.legText}>
+                        {fmtDistance(legs[i]!.km)} · ≈ {fmtMinutes(legs[i]!.minutes, lang)}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
               );
@@ -633,28 +635,37 @@ const s = StyleSheet.create({
   // picture to the corner radius — the same trick the Trips card uses.
   card: { marginBottom: space.cardGap, overflow: 'hidden' },
   cardBody: { padding: space.cardPadding },
+  // Between the stops and the route row, and above the money: the rule a
+  // section break keeps. It used to stand between stops too, where the
+  // rail's line now runs.
   divider: {
     height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
     marginVertical: 12,
   },
 
-  stopRow: { flexDirection: 'row', gap: 12 },
+  // The options card's row, measure for measure: `flex-start` so the hour
+  // and the mark sit on the name they belong to rather than floating to
+  // the middle of a two-line stop; a 44pt time column; 10pt between.
+  stop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  // 12pt under a stop with another after it, where a hairline with 12pt
+  // either side used to stand. The rail's line fills it.
+  stopGap: { paddingBottom: 12 },
+  // The 2 is optical, not arithmetic — the caption's smaller cap height
+  // sits high in its line box, so matching the box tops leaves the digits
+  // reading above the name. The options card's own time column does the same.
   stopTime: {
-    ...CAPTION, color: colors.textSecondary, width: 46,
+    ...CAPTION, color: colors.textSecondary, width: 44,
     fontVariant: ['tabular-nums'], paddingTop: 2,
   },
   // The same row the options screen and the editor draw, at the same size
-  // and in the same colour. Indented past the time gutter (46 + the row's
-  // 12pt gap) so the leg lines up with the names rather than with the
-  // clock — the times are a column, and a distance is not a time.
-  legRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    marginLeft: 46 + 12, marginBottom: 10,
-  },
+  // and in the same colour, under the stop it leaves.
+  legRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
   legText: { ...CAPTION, color: colors.textTertiary },
-  who: { flex: 1, gap: space.nameToMeta },
+  /** The stop and the leg out of it, in one column beside the rail. */
+  body: { flex: 1 },
+  who: { gap: space.nameToMeta },
   /** The same column, taken apart for the pressable branch. */
-  whoOuter: { flex: 1 },
+  whoOuter: { alignSelf: 'stretch' },
   whoInner: { gap: space.nameToMeta },
   name: { ...type.body, color: colors.text, fontWeight: font.semibold },
   // The stop the gallery is on. Weight only — see the note at the call

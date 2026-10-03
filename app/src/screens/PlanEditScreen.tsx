@@ -33,10 +33,10 @@
 //
 // From the reference design, in order: the facts of the evening as chips
 // under the title (when, how far, with whom); a line saying what the
-// controls do; then the stops down a numbered rail, each a card wearing
-// the place's own photographs, with the journey between two cards marked
-// on the rail by how it is made. What the reference has and this page
-// does not: a stop count (the rail numbers the stops, and the options
+// controls do; then the stops down the rail, each a card wearing the
+// place's own photographs, with the journey between two cards printed
+// under the card it leaves. What the reference has and this page does
+// not: a stop count (the rail and the times say how many, and the options
 // card dropped its count for the same reason); "Edit all times" and a
 // per-stop Edit (nothing behind either); a kebab menu over the remove
 // control (one tap on the rail beats two behind a menu); and the "⋮⋮"
@@ -56,15 +56,17 @@
 // solid coral numeral and kept the time inside the card. What was taken
 // and what was not, and why:
 //
-// - **The numeral stays, its coral goes.** The theme's first rule is that
-//   coral is for active state, used sparingly; a solid coral disc on
-//   every stop was the loudest thing on the page and said nothing — every
-//   stop is a stop. The disc is now the same quiet surface the mode disc
-//   on the thread already wears, so the rail is one material, and the
-//   page's coral is left to what it marks: a time the reader set, a row
-//   out of order, and Save. The numeral itself stays, because on this
-//   page order is a thing the reader changes, and VoiceOver's "Move up"
-//   needs a number to move from.
+// - **The rail is the options card's.** First the numerals lost their
+//   coral surface (the theme's rule: coral for state, and every stop is
+//   a stop); then, the same day, the owner asked for the options card's
+//   rail outright — the paw on the first stop, a dot on the rest, one
+//   2pt line — and for the saved trip to draw it too. `components/rail`
+//   is that rail, and says why the paw and why coral on every stop. The
+//   numerals went with it: order is a thing the reader changes here, but
+//   the rail and the clock already say what it is, and VoiceOver's "Move
+//   up" names the stop, not a number. The mode disc that sat on the
+//   thread went too — the leg is printed under the card it leaves, as the
+//   other two screens print it, glyph and "km · ≈ min" and nothing else.
 // - **The time stays in the card.** On the two read-only screens the hour
 //   leads the row, and the opinion asked for the same here. Here the hour
 //   is a control — the stepper — and a figure printed twice, once by the
@@ -89,6 +91,7 @@ import {
   AmbientWarmth, Card, GradientCta, IconSubtitle, PressableScale, RoundIconButton, Screen,
   fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
+import { RailColumn } from '../components/rail';
 import StopHero from '../components/StopHero';
 import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
 import {
@@ -547,17 +550,15 @@ export default function PlanEditScreen({ navigation, route }: {
             onLayout={(e) => onPitch(stop.place.slug, e.nativeEvent.layout.height)}
             testID={`drag-${stop.place.slug}`}
           >
-            {/* The stop's number in a disc on the gutter, and the thread
-                running from it down to the next — the itinerary's order,
-                drawn, so a card moved with the arrows is seen to have
-                moved and not merely to have swapped its text. The last
-                stop ends the thread: a line running on past the evening's
-                end points at nothing. */}
+            {/* The rail beside the card — `components/rail`, the one the
+                options card and the saved trip draw. The column stretches
+                to the row, so the line reaches the next mark across the
+                card and the leg under it; the last stop ends the line,
+                since a line running on past the evening's end points at
+                nothing. */}
             <View style={s.stopRow}>
-              <View style={s.gutter}>
-                <View style={s.disc}><Text style={s.discText}>{i + 1}</Text></View>
-                {i < current.length - 1 && <View style={s.thread} />}
-              </View>
+              <RailColumn first={i === 0} last={i === current.length - 1} />
+              <View style={[s.column, i < current.length - 1 && s.columnGap]}>
             <Card style={[s.card, wrong.includes(i) && s.rowWrong]}>
               {/* The place's own photographs, full-bleed above the body
                   and tapped the way the band below is. The card's padding
@@ -727,33 +728,27 @@ export default function PlanEditScreen({ navigation, route }: {
               </View>
               </View>
             </Card>
-            </View>
 
-            {/* How you get to the next stop, on the gutter: the thread
-                runs through a small disc wearing the mode, and the figure
-                sits beside it in the card's column. The same glyph and the
-                same "km · ≈ min" the options card and the saved trip
-                print, so one journey keeps one appearance; the reference
-                draws it as a bordered pill with a chevron, and a chevron
-                promises a screen that does not exist. */}
+            {/* How you get to the next stop, under the card it leaves and
+                inside the rail's row, so the line runs past it. The same
+                glyph and the same "km · ≈ min" the options card and the
+                saved trip print, so one journey keeps one appearance; the
+                reference draws it as a bordered pill with a chevron, and a
+                chevron promises a screen that does not exist. */}
             {legs[i] && (
               <View style={s.legRow}>
-                <View style={s.legGutter}>
-                  <View style={s.thread} />
-                  <View style={s.modeDisc}>
-                    <Ionicons
-                      name={legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
-                      size={13}
-                      color={colors.textSecondary}
-                    />
-                  </View>
-                  <View style={s.thread} />
-                </View>
+                <Ionicons
+                  name={legs[i]!.mode === 'walk' ? 'walk-outline' : 'car-outline'}
+                  size={12}
+                  color={colors.textTertiary}
+                />
                 <Text style={s.legText}>
                   {fmtDistance(legs[i]!.km)} · ≈ {fmtMinutes(legs[i]!.minutes, lang)}
                 </Text>
               </View>
             )}
+              </View>
+            </View>
           </Animated.View>
           );
         })}
@@ -826,30 +821,23 @@ const s = StyleSheet.create({
   dragArea: { flex: 1 },
   hintText: { ...CAPTION, color: colors.textSecondary },
 
-  // The gutter is the disc's width; the card takes the rest. 12pt between
-  // them, the same gap the identity band keeps between its well and the
-  // name, so the page's two left edges line up with the card's.
+  // The rail column is `components/rail`'s 16pt; the card takes the rest.
+  // 12pt between them, the same gap the identity band keeps between its
+  // well and the name, so the page's two left edges line up with the
+  // card's. `stretch`, so the rail's line spans the card and the leg.
   stopRow: { flexDirection: 'row', alignItems: 'stretch', gap: 12 },
-  gutter: { width: 28, alignItems: 'center' },
-  /**
-   * The number, on the same quiet disc the mode glyph wears further down
-   * the thread (`modeDisc`), so the rail is one material from top to
-   * bottom. It wore the accent as a surface until 3 Oct 2026 — see "the
-   * rail, read against the other two screens" above for why that went.
-   * Semibold, not bold: on a neutral ground the numeral no longer has to
-   * hold its own against coral.
-   */
-  disc: {
-    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-  },
-  discText: { color: colors.text, fontSize: 13, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
-  thread: { flex: 1, width: 1, backgroundColor: colors.borderGlass, marginVertical: 4 },
+  // The card and the leg out of it, in one column beside the rail. 12pt
+  // under a stop that has one after it: the leg row adds its own above
+  // the figure, so a stop with a measured leg is card, 12, figure, 12,
+  // next card — close to the 44pt the old leg row held — and a stop whose
+  // leg could not be measured still clears the next card.
+  column: { flex: 1 },
+  columnGap: { paddingBottom: 12 },
 
   // `Card` carries no padding of its own — see the note on the component.
   // It used to be on the card; the hero moved it to the body so the
   // picture can meet the card's edges.
-  card: { flex: 1 },
+  card: { alignSelf: 'stretch' },
   cardBody: { padding: space.cardPadding },
   rowWrong: { borderColor: colors.accentFill, borderWidth: 1 },
 
@@ -930,17 +918,11 @@ const s = StyleSheet.create({
 
   warn: { ...CAPTION, color: colors.accent, marginTop: 8 },
 
-  // The leg's row is the gutter's width plus the gap, so its figure
-  // starts where the card does. 44pt tall: the mode disc and 8pt of
-  // thread above and below it, which is what keeps the next card's number
-  // from touching the disc.
-  legRow: { flexDirection: 'row', alignItems: 'center', gap: 12, height: 44 },
-  legGutter: { width: 28, alignItems: 'center', alignSelf: 'stretch' },
-  modeDisc: {
-    width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-  },
-  legText: { ...CAPTION, color: colors.textSecondary },
+  // The same row the options card and the saved trip draw: a 12pt glyph,
+  // 5pt, the figure, in the tertiary ink. In the card's column, so the
+  // figure starts where the card does.
+  legRow: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingTop: 12 },
+  legText: { ...CAPTION, color: colors.textTertiary },
 
   save: { height: 18 },
   note: { ...CAPTION, color: colors.textTertiary, marginTop: 12 },
