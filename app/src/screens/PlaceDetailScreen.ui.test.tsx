@@ -516,11 +516,18 @@ describe('PlaceDetailScreen — hero', () => {
     const r = render(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
     swipeTo(2);
     expect(screen.getByText('3 / 3')).toBeTruthy();
+    const pageBefore = document.querySelector('img[src="c.jpg"]');
 
     state.catalog = { loading: false, data: [three('c.jpg')] };
     r.rerender(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
     expect(screen.getByText('1 / 3')).toBeTruthy();
     expect(heroPhotos()[0]).toBe('c.jpg');
+    // And the strip itself started again: the scroll view was remounted
+    // (`scrollKey`), so the page for c.jpg is a new node and the strip's
+    // offset is back at the first page rather than three pages in, where
+    // it would have shown b.jpg under a counter saying 1 / 3. Keyed by
+    // uri, a kept scroll view would have reused the node.
+    expect(document.querySelector('img[src="c.jpg"]')).not.toBe(pageBefore);
   });
 
   // Only a new cover moves the reader. A reload that changes nothing
