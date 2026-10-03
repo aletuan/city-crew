@@ -31,7 +31,7 @@ import { useAuth } from '../lib/auth';
 import { useCrew } from '../lib/crew';
 import { fromISO } from '../lib/day';
 import { answerInvite } from '../lib/data';
-import { reminderText } from '../lib/remind';
+import { startMinOf } from '../lib/remind';
 import { scheduleTripReminder } from '../lib/reminders';
 import { useMyTrips } from '../lib/mytrips';
 import { clockOf, dateline, fmtMinutes } from '../lib/format';
@@ -81,14 +81,15 @@ export default function TripInvitationScreen({ navigation, route }: {
     try {
       await answerInvite(tripId, said);
       // The promise this screen makes above the buttons: accepting brings
-      // the reminder the evening before. Planted here, on the tap, because
-      // this is the moment a permission sheet makes sense to the reader;
-      // the background sync that also covers it never asks. Declining
-      // needs nothing — an invitee was never reminded before saying yes.
+      // the reminders, the evening before and on the day. Planted here, on
+      // the tap, because this is the moment a permission sheet makes sense
+      // to the reader; the background sync that also covers it never asks.
+      // Declining needs nothing — an invitee was never reminded before
+      // saying yes.
       if (said === 'accepted' && trip) {
         void scheduleTripReminder(
-          { id: trip.id, day: trip.day, title: trip.title },
-          reminderText(trip.title, t),
+          { id: trip.id, day: trip.day, title: trip.title, startMin: startMinOf(trip.trip_stops ?? []) },
+          t,
         );
       }
       invites.reload();
@@ -241,9 +242,9 @@ export default function TripInvitationScreen({ navigation, route }: {
           <Ionicons name="lock-closed-outline" size={17} color={colors.textTertiary} />
           <Text style={s.noteText}>
             {t(
-              `${from?.full_name ? `${from.full_name} keeps` : 'They keep'} the plan. Accepting puts it in your Trips and you get the reminder the evening before.`,
-              `${from?.full_name || 'Họ'} giữ kế hoạch. Đồng ý thì chuyến vào mục Chuyến đi của bạn, và bạn được nhắc vào tối hôm trước.`,
-              `予定は${from?.full_name || 'この人'}のものです。承諾すると旅程に入り、前の晩にリマインダーが届きます。`,
+              `${from?.full_name ? `${from.full_name} keeps` : 'They keep'} the plan. Accepting puts it in your Trips and you get a reminder the evening before and on the day.`,
+              `${from?.full_name || 'Họ'} giữ kế hoạch. Đồng ý thì chuyến vào mục Chuyến đi của bạn, và bạn được nhắc vào tối hôm trước và trong ngày đi.`,
+              `予定は${from?.full_name || 'この人'}のものです。承諾すると旅程に入り、前の晩と当日にリマインダーが届きます。`,
             )}
           </Text>
         </Card>

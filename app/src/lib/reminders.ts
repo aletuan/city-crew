@@ -4,18 +4,21 @@
 // the maths to 100%, and this file needs a phone to mean anything.
 //
 // Local notifications only. The date of a trip is known the moment it is
-// saved, so the phone can carry its own reminder — no server, no push
-// token, and it fires with the app closed or the network gone. (Remote
+// saved, so the phone can carry its own reminders — no server, no push
+// token, and they fire with the app closed or the network gone. (Remote
 // push is a different feature with a different cost: Expo Go cannot
 // receive it at all since SDK 53, so it waits for a development build.)
+//
+// Two notes per trip — the evening before and the day of — see
+// `lib/remind` for when each fires and why.
 //
 // Every function here is best-effort and swallows its failures: a
 // reminder is a courtesy, and no courtesy is worth failing a save over.
 
 import * as Notifications from 'expo-notifications';
 import {
-  planReminderSync, reminderFireDate, reminderIdFor, tripIdOfReminder,
-  type ReminderHeld, type ReminderWant,
+  fireDateFor, planReminderSync, REMINDER_KINDS, reminderIdFor, reminderOf, reminderText,
+  type ReminderHeld, type ReminderKind, type ReminderWant, type Translate,
 } from './remind';
 
 // Foreground behaviour: show the banner. Without a handler the default
@@ -44,47 +47,49 @@ async function ensurePermission(): Promise<boolean> {
   }
 }
 
-/** One identifier per trip, so a delete can find what a save planted. */
-const idFor = reminderIdFor;
-
 /**
- * Plant the evening-before reminder for a saved trip. No-op when the
- * moment has passed (see reminderFireDate), when permission is refused,
- * or when the platform balks — a save must never fail over a courtesy.
+ * Plant both notes for a saved trip. No-op for a note whose moment has
+ * passed (see `lib/remind`), when permission is refused, or when the
+ * platform balks — a save must never fail over a courtesy.
  */
 export async function scheduleTripReminder(
-  trip: { id: string; day: string; title: string },
-  content: { title: string; body: string },
+  trip: { id: string; day: string; title: string; startMin: number | null },
+  t: Translate,
 ): Promise<void> {
   try {
-    const fire = reminderFireDate(trip.day, new Date());
-    if (!fire) return;
+    const w: ReminderWant = { tripId: trip.id, day: trip.day, title: trip.title, startMin: trip.startMin };
+    const now = new Date();
+    const due = REMINDER_KINDS
+      .map((kind) => ({ kind, fire: fireDateFor(kind, w, now) }))
+      .filter((d): d is { kind: ReminderKind; fire: Date } => d.fire !== null);
+    if (!due.length) return;
     if (!(await ensurePermission())) return;
-    await plant(trip, content, fire);
+    for (const { kind, fire } of due) await plant(kind, w, reminderText(kind, w, t), fire);
   } catch { /* a courtesy, not a contract */ }
 }
 
-/** The day and title ride along in `data`, so a later sync can tell a
- *  reminder that is still right from one planted for an older version. */
+/** The day, title and start ride along in `data`, so a later sync can
+ *  tell a note that is still right from one planted for an older version. */
 async function plant(
-  trip: { id: string; day: string; title: string },
+  kind: ReminderKind,
+  w: ReminderWant,
   content: { title: string; body: string },
   fire: Date,
 ): Promise<void> {
   await Notifications.scheduleNotificationAsync({
-    identifier: idFor(trip.id),
+    identifier: reminderIdFor(w.tripId, kind),
     content: {
       title: content.title,
       body: content.body,
       sound: false,
-      data: { tripId: trip.id, day: trip.day, title: trip.title },
+      data: { tripId: w.tripId, kind, day: w.day, title: w.title, startMin: w.startMin },
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fire },
   });
 }
 
 /**
- * Make the phone hold exactly the reminders `want` calls for — see
+ * Make the phone hold exactly the notes `want` calls for — see
  * `planReminderSync` for the rule.
  *
  * Never asks for permission. It runs on its own, at launch and whenever
@@ -95,38 +100,43 @@ async function plant(
  */
 export async function syncTripReminders(
   want: readonly ReminderWant[],
-  text: (w: ReminderWant) => { title: string; body: string },
+  t: Translate,
   now: Date = new Date(),
 ): Promise<void> {
   try {
     const all = await Notifications.getAllScheduledNotificationsAsync();
     const held: ReminderHeld[] = [];
     for (const n of all) {
-      const tripId = tripIdOfReminder(n.identifier);
-      if (!tripId) continue;
-      const data = (n.content?.data ?? {}) as { day?: unknown; title?: unknown };
+      const ours = reminderOf(n.identifier);
+      if (!ours) continue;
+      const data = (n.content?.data ?? {}) as { day?: unknown; title?: unknown; startMin?: unknown };
       held.push({
-        tripId,
+        ...ours,
         day: typeof data.day === 'string' ? data.day : null,
         title: typeof data.title === 'string' ? data.title : null,
+        startMin: typeof data.startMin === 'number' ? data.startMin : null,
       });
     }
     const plan = planReminderSync(want, held, now);
-    for (const tripId of plan.cancel) await cancelTripReminder(tripId);
+    for (const { tripId, kind } of plan.cancel) await cancel(tripId, kind);
     if (!plan.schedule.length) return;
     const { granted } = await Notifications.getPermissionsAsync();
     if (!granted) return;
-    for (const w of plan.schedule) {
-      const fire = reminderFireDate(w.day, now);
-      if (fire) await plant({ id: w.tripId, day: w.day, title: w.title }, text(w), fire);
+    for (const { kind, want: w } of plan.schedule) {
+      const fire = fireDateFor(kind, w, now);
+      if (fire) await plant(kind, w, reminderText(kind, w, t), fire);
     }
   } catch { /* a courtesy, not a contract */ }
 }
 
-/** A deleted trip takes its reminder with it — a phone that pings about
+async function cancel(tripId: string, kind: ReminderKind): Promise<void> {
+  try {
+    await Notifications.cancelScheduledNotificationAsync(reminderIdFor(tripId, kind));
+  } catch { /* already gone is the goal state */ }
+}
+
+/** A deleted trip takes both its notes with it — a phone that pings about
  *  a plan its owner erased is the app talking to itself. */
 export async function cancelTripReminder(tripId: string): Promise<void> {
-  try {
-    await Notifications.cancelScheduledNotificationAsync(idFor(tripId));
-  } catch { /* already gone is the goal state */ }
+  for (const kind of REMINDER_KINDS) await cancel(tripId, kind);
 }
