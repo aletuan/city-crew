@@ -44,6 +44,43 @@
 // line above the stops says so. The thread down the rail is drawn solid
 // where the reference dashes it: iOS draws a dashed border only when all
 // four sides carry one, which on a 1pt-wide view is a 2pt double line.
+//
+// ── the rail, read against the other two screens (3 Oct 2026) ──
+//
+// The owner brought a second opinion on this page's timeline — five
+// points — and asked for it to be read against the saved trip
+// (`TripDetailScreen`) and the options card (`PlanOptionsScreen`), which
+// draw the same evening. Three rails, and they did not agree: the options
+// card leads with a time column and 8pt dots on a 2pt rail; the saved
+// trip leads with a time column and no rail at all; this page led with a
+// solid coral numeral and kept the time inside the card. What was taken
+// and what was not, and why:
+//
+// - **The numeral stays, its coral goes.** The theme's first rule is that
+//   coral is for active state, used sparingly; a solid coral disc on
+//   every stop was the loudest thing on the page and said nothing — every
+//   stop is a stop. The disc is now the same quiet surface the mode disc
+//   on the thread already wears, so the rail is one material, and the
+//   page's coral is left to what it marks: a time the reader set, a row
+//   out of order, and Save. The numeral itself stays, because on this
+//   page order is a thing the reader changes, and VoiceOver's "Move up"
+//   needs a number to move from.
+// - **The time stays in the card.** On the two read-only screens the hour
+//   leads the row, and the opinion asked for the same here. Here the hour
+//   is a control — the stepper — and a figure printed twice, once by the
+//   node and once between − and +, invites the question which one is
+//   real. The saved trip, which cannot edit it, leads with it.
+// - **The leg is already on the connector**, as a disc on the thread with
+//   the figure beside it, and the saved trip prints the same glyph and the
+//   same "km · ≈ min". Making it a tap that opens directions was not
+//   taken: a leg's directions need an origin, and the app decided
+//   (`lib/maps`) to send none, so that the route always starts from where
+//   the reader is standing.
+// - **No grip**, for the reason already above: holding to lift is the
+//   convention, and the line over the stops says so.
+// - **The rest of the weight note was already so**: the thread is 1pt and
+//   neutral, the travel glyph is neutral, the hour is semibold and coral
+//   only once set by hand.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -795,16 +832,18 @@ const s = StyleSheet.create({
   stopRow: { flexDirection: 'row', alignItems: 'stretch', gap: 12 },
   gutter: { width: 28, alignItems: 'center' },
   /**
-   * The number, on the accent as a surface — `accentFill`, which is the
-   * same coral in both themes, under `accentInk`: near-black on coral is
-   * 6.8:1 where white is 2.7:1 (see the theme), and the reference's white
-   * numeral is the one figure on it that fails the floor.
+   * The number, on the same quiet disc the mode glyph wears further down
+   * the thread (`modeDisc`), so the rail is one material from top to
+   * bottom. It wore the accent as a surface until 3 Oct 2026 — see "the
+   * rail, read against the other two screens" above for why that went.
+   * Semibold, not bold: on a neutral ground the numeral no longer has to
+   * hold its own against coral.
    */
   disc: {
-    width: 28, height: 28, borderRadius: 14, backgroundColor: colors.accentFill,
-    alignItems: 'center', justifyContent: 'center',
+    width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
-  discText: { color: colors.accentInk, fontSize: 13, fontWeight: font.bold, fontVariant: ['tabular-nums'] },
+  discText: { color: colors.text, fontSize: 13, fontWeight: font.semibold, fontVariant: ['tabular-nums'] },
   thread: { flex: 1, width: 1, backgroundColor: colors.borderGlass, marginVertical: 4 },
 
   // `Card` carries no padding of its own — see the note on the component.
