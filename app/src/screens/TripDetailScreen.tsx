@@ -34,8 +34,7 @@ import { useFlag } from '../lib/useFlag';
 import {
   AmbientWarmth, Card, Empty, IconSubtitle, PressableScale, Screen, useTabBarClearance,
 } from '../components/ui';
-import LegRow from '../components/LegRow';
-import { RailColumn } from '../components/rail';
+import StopRow from '../components/StopRow';
 import { useAuth } from '../lib/auth';
 import { fromISO } from '../lib/day';
 import {
@@ -395,111 +394,45 @@ export default function TripDetailScreen({ navigation, route }: {
               // for every row when there is no gallery, which is what
               // keeps a trip with no photographs looking exactly as it did.
               const here = !!cover && i === shot;
-              // The same band the editor makes tappable, for the same
-              // reason: a saved trip names places, and a named place that
-              // will not open is a dead end. Only when there is a place to
-              // open — a row drawn as "no longer listed" has no detail
-              // screen behind it, and a press that goes nowhere is worse
-              // than no press at all.
-              const Who = place ? PressableScale : View;
-              const whoProps = place
-                ? {
-                  // Split across the two halves on purpose: `flex` has to
-                  // land on the outer Pressable or the column collapses,
-                  // `gap` on the inner view or it spaces nothing. See
-                  // `PressableScale`, which documents this exact trap.
-                  containerStyle: s.whoOuter,
-                  style: s.whoInner,
-                  onPress: () => navigation.navigate('PlaceDetail', { slug: place.slug }),
-                  accessibilityRole: 'button' as const,
-                  accessibilityLabel: t(
-                    `Open ${place.name_en}`,
-                    `Mở ${place.name_en}`,
-                    `${place.name_en}を開く`,
-                  ),
-                }
-                : { style: s.who };
+              // `StopRow` — the row the options card draws, so a stop reads
+              // the same before and after the plan is saved. Pressable only
+              // when there is a place to open: a row drawn as "no longer
+              // listed" has no detail screen behind it, and a press that
+              // goes nowhere is worse than no press at all. The leg out of
+              // each stop is not decoration: the options card and the editor
+              // both print it, and saving the plan was losing it — a reader
+              // chose between "6.2 km · ≈ 20 min" and "50 m · ≈ 2 min",
+              // saved the one they wanted, and found neither. Nothing is
+              // stored to lose; `legsOf` measures it from coordinates the
+              // query already carries.
               return (
-              // The row the options card draws: the hour, the rail, the
-              // stop. The rail (`components/rail`) replaced a hairline
-              // between stops on 3 Oct 2026, when the owner asked for the
-              // three screens that draw an evening to draw one rail.
-              <View key={`${trip.id}-${i}`} style={[s.stop, i < stops.length - 1 && s.stopGap]}>
-                <Text style={[s.stopTime, here && s.stopTimeHere]}>
-                  {stop.arrive_min != null ? clockOf(stop.arrive_min) : '—'}
-                </Text>
-                <RailColumn first={i === 0} last={i === stops.length - 1} />
-                <View style={s.body}>
-                  <Who {...whoProps}>
-                    {stop.places
-                      ? (
-                        <>
-                          {/* Which name the picture above belongs to.
-
-                              The weight only, and nothing dimmed. Fading
-                              the other four would make the itinerary
-                              harder to read to say something about the
-                              carousel, and the itinerary is why the screen
-                              exists. Semibold to bold is a small shift on
-                              purpose: it should be findable when you go
-                              looking and invisible when you are not.
-
-                              The hour beside it takes the accent, which is
-                              the louder half of the pair and the one that
-                              carries at a glance. Two quiet marks rather
-                              than one shout. */}
-                          <Text style={[s.name, here && s.nameHere]}>{stop.places.name_en}</Text>
-                          <Text style={s.area}>
-                            {summaryLine([
-                              stop.places.neighborhood_en,
-                              stop.dwell_min ? fmtMinutes(stop.dwell_min, lang) : null,
-                            ])}
-                          </Text>
-                        </>
-                      )
-                      : (
-                        // Drawn as a gap rather than dropped. The reader kept
-                        // five stops; a list of four with no explanation is
-                        // the app losing one in front of them.
-                        <Text style={s.gone}>
-                          {t('No longer listed', 'Không còn trong danh mục', '掲載終了')}
-                        </Text>
-                      )}
-                    {/* Only a model's sentence is stored — the fact line the
-                        editor falls back to is derived from opening hours and
-                        would be last August's by now. `why_lang` says which
-                        language it was written in, so a trip read after a
-                        language switch can say so instead of looking broken. */}
-                    {!!stop.why && (
-                      <Text style={s.why}>
-                        {stop.why}
-                        {stop.why_lang && stop.why_lang !== lang ? (
-                          <Text style={s.whyLang}>{`  · ${stop.why_lang.toUpperCase()}`}</Text>
-                        ) : null}
-                      </Text>
-                    )}
-                  </Who>
-                  {/* How you get to the next stop, under the stop it leaves.
-
-                      Not decoration: the options screen and the editor both
-                      print this line, and saving the plan was losing it. A
-                      reader chose between "6.2 km · ≈ 20 min" and "50 m · ≈ 2
-                      min", saved the one they wanted, opened it again and
-                      found neither — the distance that decided the choice
-                      had gone. Nothing was stored to lose, and nothing needs
-                      to be: `legsOf` measures it from coordinates the query
-                      already carries.
-
-                      Drawn the way the other two screens draw it, down to
-                      the glyph and the separator, and in the same place —
-                      under the stop the journey leaves, inside the rail's
-                      row so the line runs past it. It used to sit above the
-                      stop it led to, as "how you got here"; one journey
-                      should not sit in two places depending on which screen
-                      the reader is standing on. */}
-                  {legs[i] && <LegRow leg={legs[i]!} style={s.leg} />}
-                </View>
-              </View>
+                <StopRow
+                  key={`${trip.id}-${i}`}
+                  time={stop.arrive_min != null ? clockOf(stop.arrive_min) : null}
+                  here={here}
+                  first={i === 0}
+                  last={i === stops.length - 1}
+                  name={place ? place.name_en : null}
+                  // Drawn as a gap rather than dropped. The reader kept five
+                  // stops; a list of four with no explanation is the app
+                  // losing one in front of them.
+                  gone={t('No longer listed', 'Không còn trong danh mục', '掲載終了')}
+                  meta={place
+                    ? summaryLine([place.neighborhood_en, stop.dwell_min ? fmtMinutes(stop.dwell_min, lang) : null])
+                    : null}
+                  // Only a model's sentence is stored — the fact line the
+                  // editor falls back to is derived from opening hours and
+                  // would be last August's by now. `why_lang` says which
+                  // language it was written in, so a trip read after a
+                  // language switch can say so instead of looking broken.
+                  why={stop.why}
+                  whyLang={stop.why_lang}
+                  leg={legs[i]}
+                  onPress={place ? () => navigation.navigate('PlaceDetail', { slug: place.slug }) : undefined}
+                  pressLabel={place
+                    ? t(`Open ${place.name_en}`, `Mở ${place.name_en}`, `${place.name_en}を開く`)
+                    : undefined}
+                />
               );
             })}
 
@@ -633,37 +566,6 @@ const s = StyleSheet.create({
     marginVertical: 12,
   },
 
-  // The options card's row, measure for measure: `flex-start` so the hour
-  // and the mark sit on the name they belong to rather than floating to
-  // the middle of a two-line stop; a 44pt time column; 10pt between.
-  stop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  // 12pt under a stop with another after it, where a hairline with 12pt
-  // either side used to stand. The rail's line fills it.
-  stopGap: { paddingBottom: 12 },
-  // The 2 is optical, not arithmetic — the caption's smaller cap height
-  // sits high in its line box, so matching the box tops leaves the digits
-  // reading above the name. The options card's own time column does the same.
-  stopTime: {
-    ...CAPTION, color: colors.textSecondary, width: 44,
-    fontVariant: ['tabular-nums'], paddingTop: 2,
-  },
-  // `LegRow`'s place on this screen: 8pt under the stop's last line.
-  leg: { marginTop: 8 },
-  /** The stop and the leg out of it, in one column beside the rail. */
-  body: { flex: 1 },
-  who: { gap: space.nameToMeta },
-  /** The same column, taken apart for the pressable branch. */
-  whoOuter: { alignSelf: 'stretch' },
-  whoInner: { gap: space.nameToMeta },
-  name: { ...type.body, color: colors.text, fontWeight: font.semibold },
-  // The stop the gallery is on. Weight only — see the note at the call
-  // site for why nothing else is dimmed to make this stand out.
-  nameHere: { fontWeight: font.bold },
-  stopTimeHere: { color: colors.accent, fontWeight: font.semibold },
-  area: { ...CAPTION, color: colors.textTertiary },
-  gone: { ...type.body, color: colors.textTertiary, fontStyle: 'italic' },
-  why: { ...CAPTION, color: colors.textSecondary, lineHeight: 18, marginTop: 4 },
-  whyLang: { color: colors.textTertiary, fontWeight: font.semibold },
 
   // The card chrome PlaceDetail gives its address and phone rows, because
   // this is the same kind of row: a fact you tap to leave the app with.

@@ -286,7 +286,7 @@ describe('the cards', () => {
     renderScreen();
     expect(screen.getByText('Coffee on the balcony, then down the street.')).toBeTruthy();
     expect(screen.getByText('Dinner where the queue is the review.')).toBeTruthy();
-    expect(document.querySelectorAll('[data-testid="plan-why"]')).toHaveLength(2);
+    expect(document.querySelectorAll('[data-testid="stop-why"]')).toHaveLength(2);
   });
 
   // The screen before this one spends five seconds on a paw in a ring,
