@@ -72,7 +72,7 @@ City Crew is a hand-picked guide to seven cities: Ho Chi Minh City, Hanoi,
 Da Nang, Da Lat, Hue and Vung Tau in Vietnam, and Melbourne. No account
 needed to look around.
 
-EXPLORE
+PLACES
 Cafés, restaurants, bars and places worth going out of your way for. Our
 editors check every one before it appears, so the list stays short and
 stays good. See them as a list or as pins on a map, sort by what is nearest
