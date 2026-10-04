@@ -214,12 +214,12 @@ export const PRIVACY: Doc = {
     { k: 'ul',
       en: [
         '**Choosing a city.** On your phone only, to open on the nearest city the app covers.',
-        '**Where should it start?** When you open this screen without dropping a pin, your position is sent through our server to Google, so the map can say which street you are on and a search can look near you first. Our server passes it on and keeps nothing; Google receives it to answer that request.',
+        '**Choose a starting point** When you open this screen without dropping a pin, your position is sent through our server to Google, so the map can say which street you are on and a search can look near you first. Our server passes it on and keeps nothing; Google receives it to answer that request.',
         '**The maps.** The maps in the app are drawn by Google Maps, which runs inside the app. When a map shows where you are, that position is handled by Google’s map software, under [Google’s privacy policy](https://policies.google.com/privacy).',
       ],
       vi: [
         '**Chọn thành phố.** Chỉ trên điện thoại, để mở đúng thành phố gần nhất mà app có.',
-        '**Bắt đầu từ đâu?** Khi bạn mở màn này mà chưa thả ghim, vị trí của bạn được gửi qua máy chủ của chúng tôi tới Google, để bản đồ ghi được bạn đang ở đường nào và ô tìm kiếm ưu tiên những chỗ gần bạn. Máy chủ của chúng tôi chỉ chuyển tiếp và không giữ lại gì; Google nhận vị trí để trả lời đúng yêu cầu đó.',
+        '**Chọn địa điểm bắt đầu** Khi bạn mở màn này mà chưa thả ghim, vị trí của bạn được gửi qua máy chủ của chúng tôi tới Google, để bản đồ ghi được bạn đang ở đường nào và ô tìm kiếm ưu tiên những chỗ gần bạn. Máy chủ của chúng tôi chỉ chuyển tiếp và không giữ lại gì; Google nhận vị trí để trả lời đúng yêu cầu đó.',
         '**Bản đồ.** Bản đồ trong app do Google Maps vẽ, chạy ngay bên trong app. Khi bản đồ hiện vị trí của bạn, vị trí đó do phần mềm bản đồ của Google xử lý, theo [chính sách quyền riêng tư của Google](https://policies.google.com/privacy).',
       ] },
     { k: 'p',
@@ -248,12 +248,12 @@ export const PRIVACY: Doc = {
       vi: 'Ngoài Supabase, điện thoại của bạn kết nối trực tiếp tới ba dịch vụ. Như mọi yêu cầu trên internet, mỗi dịch vụ đều thấy địa chỉ IP của điện thoại; không dịch vụ nào nhận tên, email hay tài khoản của bạn.' },
     { k: 'ul',
       en: [
-        'Google Maps — draws the maps inside the app. Naming and finding places for “Where should it start?” goes to Google through our server, as set out above.',
+        'Google Maps — draws the maps inside the app. Naming and finding places for “Choose a starting point” goes to Google through our server, as set out above.',
         '[Open-Meteo](https://open-meteo.com/) — the weather on Places. It is asked about the centre of the city you are browsing, never about your own position.',
         '[Expo](https://expo.dev) — delivers updates to the app itself.',
       ],
       vi: [
-        'Google Maps — vẽ bản đồ bên trong app. Việc đặt tên và tìm chỗ cho “Bắt đầu từ đâu?” đi tới Google qua máy chủ của chúng tôi, như đã nêu ở trên.',
+        'Google Maps — vẽ bản đồ bên trong app. Việc đặt tên và tìm chỗ cho “Chọn địa điểm bắt đầu” đi tới Google qua máy chủ của chúng tôi, như đã nêu ở trên.',
         '[Open-Meteo](https://open-meteo.com/) — thời tiết trên màn Địa điểm. App hỏi về trung tâm thành phố bạn đang xem, không bao giờ hỏi về vị trí của bạn.',
         '[Expo](https://expo.dev) — phân phối các bản cập nhật cho chính app.',
       ] },

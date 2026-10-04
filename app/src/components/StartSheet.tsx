@@ -332,18 +332,19 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
       <Pressable style={s.scrim} onPress={onClose} />
       <View style={[s.sheet, { bottom: kb, maxHeight: (winH - kb) * 0.9 }]}>
         <View style={s.grabber} />
-        <Text style={s.title}>{t('Where should it start?', 'Bắt đầu từ đâu?', 'どこから始めますか？')}</Text>
+        <Text style={s.title}>{t('Choose a starting point', 'Chọn địa điểm bắt đầu', '出発地点を選ぶ')}</Text>
         <Text style={s.sub}>
           {t(
-            // "Lean toward", not "keep walkable": the planner favours what
-            // is near this answer, it guarantees nothing — a reader outside
-            // the centre gets a first leg that is honestly a ride, and the
-            // plan prints every leg's real distance. The store listing set
-            // this rule first (docs/store/listing.md: never write
-            // "walkable"); this line was the straggler still promising it.
-            "Roughly is fine — plans lean toward what's nearby.",
-            'Áng chừng là được — kế hoạch sẽ ưu tiên những chỗ gần đó.',
-            'だいたいで大丈夫 — 近くの場所を優先します。',
+            // The owner's wording (4 Oct 2026): what to do on this sheet,
+            // in the order the sheet offers it — a spot near you, or the
+            // search box. The line it replaced promised that plans "lean
+            // toward what's nearby", which was already the softest claim
+            // the store listing allows (docs/store/listing.md: never write
+            // "walkable"); this one promises nothing about distance at
+            // all, and the plan still prints every leg's real figure.
+            'Pick a spot near you, or search for a starting point in the address box.',
+            'Chọn một chỗ gần bạn, hoặc tìm kiếm địa điểm xuất phát trong phần tìm địa chỉ.',
+            '近くの場所を選ぶか、住所検索で出発地点を探してください。',
           )}
         </Text>
 
