@@ -88,32 +88,29 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  AmbientWarmth, Card, GradientCta, IconSubtitle, PressableScale, RoundIconButton, Screen,
-  fireHaptic, successHaptic, useTabBarClearance,
+  AmbientWarmth, Card, GradientCta, IconSubtitle, RoundIconButton, Screen, fireHaptic, successHaptic, useTabBarClearance,
 } from '../components/ui';
 import LegRow from '../components/LegRow';
+import StopCard from '../components/StopCard';
 import { RailColumn } from '../components/rail';
-import StopHero from '../components/StopHero';
-import { LIFT_AFTER_MS, useListDrag } from '../components/useListDrag';
+import { useListDrag } from '../components/useListDrag';
 import {
   cachedNarration, derivedTitle, factLine, freshen, narratableOf, prefetchNarration,
   type Narration,
 } from '../lib/assist';
 import { DEFAULT_TZ } from '../lib/clock';
 import { useAuth } from '../lib/auth';
-import { CATEGORIES, categoriesOf } from '../lib/categories';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import { saveTrip } from '../lib/data';
 import { spendVnd } from '../lib/trips';
-import { clockOf, dateline, fmtMinutes, openLabel } from '../lib/format';
+import { clockOf, dateline } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { modeIcon, overallMode } from '../lib/travel';
 import { useI18n } from '../lib/i18n';
-import { splitName } from '../lib/name';
 import {
-  legsOfPlan, move, NUDGE_MIN, nudge, outOfOrder, remove, windowOf, type Editable,
+  legsOfPlan, move, nudge, outOfOrder, remove, windowOf, type Editable,
 } from '../lib/itinerary';
 import { planTrips } from '../lib/planner';
 import { startMinOf } from '../lib/remind';
@@ -525,22 +522,6 @@ export default function PlanEditScreen({ navigation, route }: {
         </View>
 
         {current.map((stop, i) => {
-          // The first category the place carries, worn as a glyph in a
-          // soft well — the same hue this concept wears on Explore's
-          // filter row and the wizard's chips, so a café here looks like
-          // "café" everywhere else. A place nothing classifies gets the
-          // neutral pin on the neutral ground, not a guess.
-          const cat = CATEGORIES[categoriesOf(stop.place)[0]];
-          const open = () => navigation.navigate('PlaceDetail', { slug: stop.place.slug });
-          const hold = canArrange ? (pageY: number) => onLift(i, pageY) : undefined;
-          // VoiceOver cannot drag: the arrows the rail used to carry, as
-          // actions on the card. Only the ones that go somewhere.
-          const actions = canArrange
-            ? [
-              ...(i > 0 ? [{ name: 'moveUp', label: t('Move up', 'Chuyển lên', '上へ移動') }] : []),
-              ...(i < current.length - 1 ? [{ name: 'moveDown', label: t('Move down', 'Chuyển xuống', '下へ移動') }] : []),
-            ]
-            : undefined;
           return (
           // The row the drag lifts: the card and the leg out of it, so a
           // stop travels with its journey and the rows it passes step
@@ -560,171 +541,37 @@ export default function PlanEditScreen({ navigation, route }: {
             <View style={s.stopRow}>
               <RailColumn first={i === 0} last={i === current.length - 1} />
               <View style={[s.column, i < current.length - 1 && s.columnGap]}>
-            <Card style={[s.card, wrong.includes(i) && s.rowWrong]}>
-              {/* The place's own photographs, full-bleed above the body
-                  and tapped the way the band below is. The card's padding
-                  moved down to `cardBody` for this: a picture inset by
-                  16pt inside a 22pt-radius card is a picture in a frame. */}
-              <StopHero place={stop.place} onPress={open} onHold={hold} onRelease={onRelease} testID="stop-hero" />
-              <View style={s.cardBody}>
-              {/* What the place is, up top; what you do to it, at the
-                  bottom. The old card led every row with the time stepper,
-                  which put the controls between the reader and the name —
-                  the first thing on a card about a place was a minus
-                  button. The identity band now reads left to right as
-                  glyph, name, rating; the controls share a rail under the
-                  divider, editor-chrome rather than content. */}
-              {/* The band is the way into the place; the rail underneath
-                  is the way into the plan. Tapping a name asked for the
-                  place and got nothing — the one card in the app that
-                  names a place and would not open it.
-
-                  The whole card is deliberately not the target. Its lower
-                  half is a time stepper and three small buttons, and a
-                  press swallowing those is how a reader nudging nine
-                  o'clock ends up on a different screen. So the identity
-                  band takes the tap and the controls keep theirs. */}
-              <PressableScale
-                style={s.identity}
-                onPress={open}
-                onLongPress={hold ? (e) => hold(e.nativeEvent.pageY) : undefined}
-                delayLongPress={LIFT_AFTER_MS}
-                onPressOut={onRelease}
-                accessibilityHint={canArrange
-                  ? t('Hold and drag to change the order.', 'Giữ rồi kéo để đổi thứ tự.', '長押ししてドラッグすると並び順を変えられます。')
-                  : undefined}
-                accessibilityActions={actions}
-                onAccessibilityAction={(e) => setStops(
-                  move(current, i, e.nativeEvent.actionName === 'moveUp' ? i - 1 : i + 1),
-                )}
-                accessibilityRole="button"
-                accessibilityLabel={openLabel(stop.place.name_en, t)}
-              >
-                <View style={[s.well, cat && { backgroundColor: `${cat.color}24` }]}>
-                  <Ionicons
-                    name={cat?.icon ?? 'location-outline'}
-                    size={20}
-                    color={cat?.color ?? colors.textTertiary}
-                  />
-                </View>
-                <View style={s.headCol}>
-                  <View style={s.nameRow}>
-                    {/* The brand alone, as `PlaceCard` prints it: the ward
-                        after the dash opens the line below. The spoken
-                        labels keep the whole name — VoiceOver reads one
-                        card at a time and has no line below to lean on. */}
-                    <Text style={s.name} numberOfLines={1}>{splitName(stop.place.name_en).title}</Text>
-                    {/* By the name, where a decision reads it — not buried
-                        in the fallback line where a model's sentence used
-                        to replace it. `sun`, not `onPhoto.star`: the star
-                        colour is confined by its own comment to photo
-                        scrims, and `sun` is the same gold solved for the
-                        page, dark enough on paper to be seen. */}
-                    {stop.place.rating != null && (
-                      <View style={s.rating}>
-                        <Ionicons name="star" size={12} color={colors.sun} />
-                        <Text style={s.ratingText}>{stop.place.rating}</Text>
-                      </View>
-                    )}
-                  </View>
-                  {/* District, kind, and how long — the kind by the name
-                      the category wears everywhere else, so the glyph in
-                      the well has its word beside it. */}
-                  <Text style={s.area} numberOfLines={1}>
-                    {summaryLine([
-                      stop.place.neighborhood_en,
-                      cat ? t(cat.en, cat.vi, cat.ja) : null,
-                      fmtMinutes(stop.dwellMin, lang),
-                    ])}
-                  </Text>
-                </View>
-              </PressableScale>
-
-              {/* A sentence if one was written, and the facts behind it if
-                  not. Never nothing, and never a spinner: the plan is
-                  complete before the words arrive — and since the options
-                  screen started asking ahead, they normally arrived before
-                  this screen did. Full width, because a sentence squeezed
-                  into a column beside controls was two clipped words.
-
-                  The rating is left out of the fallback here — `factLine`
-                  would happily print it, but it sits beside the name now,
-                  and a line that repeats the header one row down reads as
-                  a screen stuttering.
-
-                  Rendered even when empty: `s.why` reserves two lines, and
-                  a card that skipped the element would still jump in the
-                  one late-landing case left — the tap faster than the
-                  model. */}
-              <Text style={s.why} numberOfLines={2}>
-                {live.why.get(stop.place.slug)
-                  || factLine({
-                    slug: stop.place.slug,
-                    name: stop.place.name_en,
-                    rating: null,
-                    openingHours: stop.place.opening_hours,
-                    arriveMin: stop.arriveMin,
-                  }, now, city?.tz ?? DEFAULT_TZ, t)}
-              </Text>
-
-              {/* Only when the reader made it so. A plan reading backwards
-                  with nothing saying so is a plan that gets somebody to a
-                  closed door. */}
-              {wrong.includes(i) && (
-                <Text style={s.warn}>
-                  {t('Earlier than the stop above.', 'Sớm hơn điểm phía trên.', '前のスポットより早い時刻です。')}
-                </Text>
-              )}
-
-              <View style={s.railDivider} />
-
-              {/* The controls, on their own rail under the divider: nudge
-                  the hour on the left, remove on the right. Everything
-                  above the divider is the place; everything on the rail is
-                  what you can do to it. */}
-              <View style={s.rail}>
-                <View style={s.timeBox}>
-                  {/* Named, because the stepper used to be the only
-                      labelled thing on the rail that was not labelled: a
-                      minus, a clock, a plus, and nothing to say the clock
-                      was the arrival. */}
-                  <Text style={s.timeLabel}>{t('Time', 'Giờ', '時刻')}</Text>
-                  <PressableScale
-                    haptic="selection"
-                    onPress={() => setStops(nudge(current, i, -NUDGE_MIN))}
-                    containerStyle={s.step}
-                    accessibilityRole="button"
-                    accessibilityLabel={t(`Arrive ${NUDGE_MIN} min earlier at ${stop.place.name_en}`, `Đến ${stop.place.name_en} sớm ${NUDGE_MIN} phút`, `${stop.place.name_en}に${NUDGE_MIN}分早く着く`)}
-                  >
-                    <Ionicons name="remove" size={17} color={colors.text} />
-                  </PressableScale>
-                  <Text style={[s.time, stop.pinned && s.timePinned]}>{clockOf(stop.arriveMin)}</Text>
-                  <PressableScale
-                    haptic="selection"
-                    onPress={() => setStops(nudge(current, i, NUDGE_MIN))}
-                    containerStyle={s.step}
-                    accessibilityRole="button"
-                    accessibilityLabel={t(`Arrive ${NUDGE_MIN} min later at ${stop.place.name_en}`, `Đến ${stop.place.name_en} muộn ${NUDGE_MIN} phút`, `${stop.place.name_en}に${NUDGE_MIN}分遅く着く`)}
-                  >
-                    <Ionicons name="add" size={17} color={colors.text} />
-                  </PressableScale>
-                </View>
-
-                {/* Remove, alone on the right: the two arrows that stood
-                    beside it are the hold (and VoiceOver's actions) now. */}
-                <View style={s.tools}>
-                  <PressableScale
-                    onPress={() => { fireHaptic('light'); setStops(remove(current, i)); }}
-                    containerStyle={s.tool}
-                    accessibilityRole="button"
-                    accessibilityLabel={t(`Remove ${stop.place.name_en}`, `Bỏ ${stop.place.name_en}`, `${stop.place.name_en}を外す`)}
-                  >
-                    <Ionicons name="close" size={16} color={colors.textTertiary} />
-                  </PressableScale>
-                </View>
-              </View>
-              </View>
-            </Card>
+            <StopCard
+              place={stop.place}
+              arriveMin={stop.arriveMin}
+              dwellMin={stop.dwellMin}
+              pinned={stop.pinned}
+              // A sentence if one was written, and the facts behind it if
+              // not. Never nothing, and never a spinner: the plan is
+              // complete before the words arrive — and since the options
+              // screen started asking ahead, they normally arrived before
+              // this screen did. The rating is left out of the fallback —
+              // `factLine` would happily print it, but the card sets it
+              // beside the name, and a line that repeats the header one
+              // row down reads as a screen stuttering.
+              why={live.why.get(stop.place.slug)
+                || factLine({
+                  slug: stop.place.slug,
+                  name: stop.place.name_en,
+                  rating: null,
+                  openingHours: stop.place.opening_hours,
+                  arriveMin: stop.arriveMin,
+                }, now, city?.tz ?? DEFAULT_TZ, t)}
+              wrong={wrong.includes(i)}
+              canMoveUp={canArrange && i > 0}
+              canMoveDown={canArrange && i < current.length - 1}
+              onOpen={() => navigation.navigate('PlaceDetail', { slug: stop.place.slug })}
+              onHold={canArrange ? (pageY) => onLift(i, pageY) : undefined}
+              onRelease={onRelease}
+              onNudge={(delta) => setStops(nudge(current, i, delta))}
+              onRemove={() => { fireHaptic('light'); setStops(remove(current, i)); }}
+              onMove={(dir) => setStops(move(current, i, dir === 'up' ? i - 1 : i + 1))}
+            />
 
             {/* How you get to the next stop, under the card it leaves and
                 inside the rail's row, so the line runs past it. The same
@@ -818,91 +665,15 @@ const s = StyleSheet.create({
   // next card — close to the 44pt the old leg row held — and a stop whose
   // leg could not be measured still clears the next card.
   column: { flex: 1 },
+  // The screen's own cards — the empty and the gone states — stretch to
+  // the column, as the stop card does inside `StopCard`.
+  card: { alignSelf: 'stretch' },
   columnGap: { paddingBottom: 12 },
 
-  // `Card` carries no padding of its own — see the note on the component.
-  // It used to be on the card; the hero moved it to the body so the
-  // picture can meet the card's edges.
-  card: { alignSelf: 'stretch' },
-  cardBody: { padding: space.cardPadding },
-  rowWrong: { borderColor: colors.accentFill, borderWidth: 1 },
 
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  /**
-   * The one place a category hue touches a fill.
-   *
-   * The colour discipline everywhere else — the glyph carries the hue,
-   * never a surface — still holds as a rule; this well is its measured
-   * exception, from the reference design. The wash is the glyph's *own*
-   * colour at 14% alpha, so it reads as the glyph's halo rather than as a
-   * second colour, and at that alpha it sits behind the icon as ground in
-   * both the cream and the near-black theme. A place with no category
-   * keeps the neutral glass instead — a guess would colour it wrong.
-   */
-  well: {
-    width: 44, height: 44, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass,
-  },
-  headCol: { flex: 1, gap: space.nameToMeta },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { ...type.body, color: colors.text, fontWeight: font.semibold, flex: 1 },
-  rating: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  ratingText: {
-    ...CAPTION, color: colors.textSecondary,
-    fontWeight: font.semibold, fontVariant: ['tabular-nums'],
-  },
-  area: { ...CAPTION, color: colors.textTertiary },
 
-  railDivider: {
-    height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft, marginTop: 12,
-  },
-  rail: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10,
-  },
-  timeBox: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  timeLabel: { ...CAPTION, color: colors.textSecondary, marginRight: 8 },
-  // 34pt, up from 26: the reference draws the stepper as the card's main
-  // control, and 26 was under the 30pt a fingertip needs even before the
-  // three tools on the right were counted. 44 as drawn would push those
-  // tools off a 295pt card in Vietnamese.
-  step: {
-    width: 34, height: 34, borderRadius: 17,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceGlass,
-  },
-  time: {
-    color: colors.text, fontSize: 16, fontWeight: font.semibold,
-    width: 52, textAlign: 'center', fontVariant: ['tabular-nums'],
-  },
-  /** A time the reader set, marked so they can see which ones the planner
-   *  will no longer touch. */
-  timePinned: { color: colors.accent, fontWeight: font.semibold },
-  /** The model's sentence, or the facts standing in for it. A step down
-   *  from the name and a step up from the area line, because it is the row's
-   *  only claim about why this place rather than another. */
-  // Full width under the row now, so it needs the air a new block needs
-  // rather than the 3pt that separated it from the line above it inside a
-  // column.
-  // Two lines' worth of room whether or not two lines arrive.
-  //
-  // The rule above this line in the body — never a spinner, because a row
-  // that shuffled its own height when the words landed would be the screen
-  // admitting it was waiting — was written and then not enforced. The
-  // fallback is one line of facts and a model's sentence is two, so every
-  // card grew 18pt when the narration returned, up to four seconds in.
-  // With two stops that is 36pt, and Save to Trips walked out from under
-  // whichever finger was reaching for it.
-  //
-  // `minHeight` rather than a fixed height: the line is capped at two by
-  // `numberOfLines`, so this reserves the maximum rather than imposing it,
-  // and a language whose caption wraps differently is not clipped.
-  why: {
-    ...CAPTION, color: colors.textSecondary, lineHeight: 18, marginTop: 10, minHeight: 36,
-  },
 
-  tools: { flexDirection: 'row', gap: 2 },
-  tool: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
 
-  warn: { ...CAPTION, color: colors.accent, marginTop: 8 },
 
   // `LegRow`'s place on this screen: 12pt under the card, in the card's
   // column so the figure starts where the card does.
