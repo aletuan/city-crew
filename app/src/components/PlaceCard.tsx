@@ -3,7 +3,6 @@ import {
   type AccessibilityActionEvent, type AccessibilityActionInfo, type GestureResponderEvent, StyleSheet, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useFlag } from '../lib/useFlag';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
 import { useCity } from '../lib/city';
@@ -15,6 +14,7 @@ import { useSave } from '../lib/save';
 import { vibeColor, vibeLabel } from '../lib/vibes';
 import { colors, font, labelScaleCap, onPhoto, quoteFace, radius, space, type } from '../theme';
 import { Card, PressableScale } from './ui';
+import PhotoCredit from './PhotoCredit';
 
 export default function PlaceCard({
   place, onPress, testID, onLongPress, delayLongPress, onPressOut,
@@ -63,7 +63,6 @@ export default function PlaceCard({
   // set here it means one thing, which is why its style can be amber
   // unconditionally rather than behind a second test.
   const when = hours?.open ? openFragment(hours, t) : null;
-  const credit = useFlag('photo_attribution');
   return (
     <PressableScale
       onPress={onPress}
@@ -85,9 +84,7 @@ export default function PlaceCard({
                 contentFit="cover"
                 transition={200}
               />
-              {credit && cover.attribution_name
-                ? <Text style={s.attr} numberOfLines={1}>{cover.attribution_name}</Text>
-                : null}
+              <PhotoCredit name={cover.attribution_name} style={s.attr} />
             </>
           ) : (
             <View style={[s.photo, s.photoFallback]}>

@@ -107,7 +107,7 @@ import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import { saveTrip } from '../lib/data';
 import { spendVnd } from '../lib/trips';
-import { clockOf, dateline, fmtMinutes } from '../lib/format';
+import { clockOf, dateline, fmtMinutes, openLabel } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { modeIcon, overallMode } from '../lib/travel';
 import { useI18n } from '../lib/i18n';
@@ -598,11 +598,7 @@ export default function PlanEditScreen({ navigation, route }: {
                   move(current, i, e.nativeEvent.actionName === 'moveUp' ? i - 1 : i + 1),
                 )}
                 accessibilityRole="button"
-                accessibilityLabel={t(
-                  `Open ${stop.place.name_en}`,
-                  `Mở ${stop.place.name_en}`,
-                  `${stop.place.name_en}を開く`,
-                )}
+                accessibilityLabel={openLabel(stop.place.name_en, t)}
               >
                 <View style={[s.well, cat && { backgroundColor: `${cat.color}24` }]}>
                   <Ionicons

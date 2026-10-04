@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, openFragment, openState, sashLabel, shortDateline, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, openFragment, openLabel, openState, sashLabel, shortDateline, shutLabel, splitHours } from './format';
 import { instantOn } from './clock';
 import { fmtDistance } from './geo';
 
@@ -770,5 +770,19 @@ describe('shortDateline', () => {
   // this file does.
   it('falls back to English for a language it does not know', () => {
     expect(shortDateline('fr', fri)).toBe('Fri, 25 Sep');
+  });
+});
+
+// What VoiceOver calls a control that opens a place. It was typed out in
+// three languages at every site that had one; one function, so the verb
+// cannot drift between the editor's card and the saved trip's row.
+describe('openLabel', () => {
+  it('names the place after the verb, in the reader’s language', () => {
+    const en = (a: string) => a;
+    const vi = (_a: string, b: string) => b;
+    const ja = (_a: string, _b: string, c: string) => c;
+    expect(openLabel('Cộng Cà Phê', en)).toBe('Open Cộng Cà Phê');
+    expect(openLabel('Cộng Cà Phê', vi)).toBe('Mở Cộng Cà Phê');
+    expect(openLabel('Cộng Cà Phê', ja)).toBe('Cộng Cà Phêを開く');
   });
 });

@@ -49,7 +49,7 @@ import InviteSheet from '../components/InviteSheet';
 import StopGallery from '../components/StopGallery';
 import TripCrew from '../components/TripCrew';
 import { cancelTripReminder } from '../lib/reminders';
-import { clockOf, dateline, fmtMinutes } from '../lib/format';
+import { clockOf, dateline, fmtMinutes, openLabel } from '../lib/format';
 import {  } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { mapsRouteUrl, routeMode } from '../lib/maps';
@@ -430,7 +430,7 @@ export default function TripDetailScreen({ navigation, route }: {
                   leg={legs[i]}
                   onPress={place ? () => navigation.navigate('PlaceDetail', { slug: place.slug }) : undefined}
                   pressLabel={place
-                    ? t(`Open ${place.name_en}`, `Mở ${place.name_en}`, `${place.name_en}を開く`)
+                    ? openLabel(place.name_en, t)
                     : undefined}
                 />
               );
