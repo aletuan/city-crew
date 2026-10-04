@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dotWindow, fmtDuration, fmtMinutes, groupHours, openFragment, openLabel, openState, sashLabel, shortDateline, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, dotWindow, fmtDuration, fmtMinutes, groupHours, openFragment, openLabel, openState, sashLabel, shortDateline, shutLabel, splitHours } from './format';
 import { instantOn } from './clock';
 import { fmtDistance } from './geo';
 
@@ -784,5 +784,22 @@ describe('openLabel', () => {
     expect(openLabel('Cộng Cà Phê', en)).toBe('Open Cộng Cà Phê');
     expect(openLabel('Cộng Cà Phê', vi)).toBe('Mở Cộng Cà Phê');
     expect(openLabel('Cộng Cà Phê', ja)).toBe('Cộng Cà Phêを開く');
+  });
+});
+
+// The hero's own line: the weekday and the day of the month, nothing
+// else. The owner asked for the comma and the month to go (4 Oct 2026):
+// the pill carries the weather at its end, and the month is the half of
+// a date nobody needs telling — see `dateline` for the longer argument.
+describe('dayline', () => {
+  const sun = new Date(2026, 9, 4); // Sunday, 4 October 2026
+  it('spells the weekday and gives the day, in each language', () => {
+    expect(dayline('vi', sun)).toBe('Chủ Nhật 4');
+    expect(dayline('en', sun)).toBe('Sunday 4');
+    expect(dayline('ja', sun)).toBe('4日（日）');
+  });
+  it('keeps the weekday whole on a weekday too', () => {
+    expect(dayline('vi', new Date(2026, 8, 25))).toBe('Thứ Sáu 25');
+    expect(dayline('en', new Date(2026, 8, 25))).toBe('Friday 25');
   });
 });
