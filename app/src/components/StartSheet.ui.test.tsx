@@ -101,7 +101,7 @@ afterEach(() => { vi.restoreAllMocks(); });
 describe('the map, and what it shows', () => {
   it('opens on the city when nothing is known, and asks the geocoder nothing', () => {
     openSheet();
-    expect(screen.getByText('Where should it start?')).toBeTruthy();
+    expect(screen.getByText('Choose a starting point')).toBeTruthy();
     expect(centre()).toBe('21.03,105.85');
     // No pin and no position: there is no point to put a name to.
     expect(nameOf).not.toHaveBeenCalled();
