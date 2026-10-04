@@ -64,6 +64,25 @@ export function dateline(lang: string, now: Date): string {
 }
 
 /**
+ * The hero's line: the weekday and the day of the month, and no more —
+ * "Sunday 4" / "Chủ Nhật 4" / "4日（日）".
+ *
+ * `dateline` kept the month because a second screen wanted the whole
+ * date; on Explore's cover the owner asked for the comma and the month
+ * to go (4 Oct 2026). The argument is `dateline`'s own, taken one step
+ * further: the weekday is the half of a date the reader does not already
+ * have, the day of the month is on their own clock a thumb's width above,
+ * and the month is on it too. The pill then has the width it needs for
+ * the weather hanging off its end on a small phone, which "Thứ Năm, 7
+ * tháng 8" and a temperature did not leave it.
+ */
+export function dayline(lang: string, now: Date): string {
+  if (lang === 'vi') return `${DAYS_VI[now.getDay()]} ${now.getDate()}`;
+  if (lang === 'ja') return `${now.getDate()}日（${DAYS_JA[now.getDay()]}）`;
+  return `${DAYS_EN[now.getDay()]} ${now.getDate()}`;
+}
+
+/**
  * The same date with the month as a numeral: "Fri, 25 Sep" / "T6, 25/09"
  * / "9/25（金）".
  *

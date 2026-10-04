@@ -31,7 +31,7 @@ import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, pinTint, type 
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { useSky } from '../lib/sky';
-import { dateline } from '../lib/format';
+import { dayline } from '../lib/format';
 import { Collection, coverOf, fetchPlaceIndex, membersOf, Place, PlaceIndexRow, touchesCity } from '../lib/data';
 import { useCollections, useLikes, usePlaces } from '../lib/catalog';
 import { useAuth } from '../lib/auth';
@@ -411,7 +411,7 @@ function Hero({ place, heroH, onStart, onSearch, scrollY }: {
           glass, because the top of this picture can be any sky. */}
       <View style={[s.heroTop, { top: insets.top + 6 }]}>
         <View style={s.heroDate}>
-          <Text style={s.heroDateText}>{dateline(lang, new Date())}</Text>
+          <Text style={s.heroDateText}>{dayline(lang, new Date())}</Text>
           {sky ? (
             <>
               <Ionicons name={sky.icon} size={14} color={sky.gold ? onPhoto.sun : onPhoto.textSecondary} />
