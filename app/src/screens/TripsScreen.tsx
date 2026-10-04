@@ -43,7 +43,6 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { useFlag } from '../lib/useFlag';
 import { AddPill } from '../components/add';
 import {
   AmbientWarmth, Card, GradientCta, PressableScale, Screen, Skeleton, useTabBarClearance,
@@ -68,6 +67,7 @@ import { sortInvites, splitByStanding } from '../lib/invites';
 import InviteCard from '../components/InviteCard';
 import { colors, font, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
+import PhotoCredit from '../components/PhotoCredit';
 
 const money = (vnd: number) => (vnd >= 1_000_000
   ? `${Math.round(vnd / 100_000) / 10}M ₫`
@@ -144,7 +144,6 @@ function TripCard({ trip, cityName, past, onPress, testID }: {
   const hidden = stops.length - shown.length;
   const start = stops[0]?.arrive_min;
   const cover = tripCover(stops);
-  const credit = useFlag('photo_attribution');
 
   return (
     <PressableScale onPress={onPress} scaleTo={0.985} style={[s.card, past && s.cardPast]} testID={testID}>
@@ -171,9 +170,7 @@ function TripCard({ trip, cityName, past, onPress, testID }: {
       {cover && (
         <View>
           <Image source={{ uri: cover.photo_uri }} style={s.cover} contentFit="cover" transition={200} />
-          {credit && cover.attribution_name
-            ? <Text style={s.attr} numberOfLines={1}>{cover.attribution_name}</Text>
-            : null}
+          <PhotoCredit name={cover.attribution_name} style={s.attr} />
         </View>
       )}
       <View style={s.cardBody}>

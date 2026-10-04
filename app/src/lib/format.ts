@@ -620,3 +620,13 @@ export function sashLabel(
   const at = clockOf(state.opensAtMin);
   return t(`Opens ${at}`, `Mở ${at}`, `${at}開店`);
 }
+
+/**
+ * What VoiceOver calls a control that opens a place: the verb, then the
+ * name. Typed out in three languages at every site that had one until
+ * 4 Oct 2026 — the editor's card, the saved trip's row — and one copy
+ * here so the verb cannot drift between them.
+ */
+export function openLabel(name: string, t: (en: string, vi: string, ja: string) => string): string {
+  return t(`Open ${name}`, `Mở ${name}`, `${name}を開く`);
+}

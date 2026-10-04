@@ -65,6 +65,13 @@ import PlacesGlyph from './PlacesGlyph';
 const PILL_INK_LIGHT = '#A33724';
 const PILL_INK_DARK = '#141310';
 
+/** The ink a glyph and its caption wear: on the pill when selected, at
+ *  full strength on the glass when idle (see the glyph's note on why
+ *  not a mid grey). It was the same four-way ternary written three
+ *  times, which is three places to change two of. */
+const inkOf = (focused: boolean, light: boolean) =>
+  (focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5'));
+
 // [inactive, active]. Thin monochrome glyphs when idle; the selected tab
 // takes the solid variant, reversed out of the pill.
 //
@@ -246,7 +253,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                 <PlacesGlyph
                   size={22}
                   solid={focused}
-                  color={focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5')}
+                  color={inkOf(focused, light)}
                   testID="places-glyph"
                 />
               ) : (
@@ -267,7 +274,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                 // averages towards mid-tone, and a mid-tone glyph on it
                 // cannot contrast at any opacity. See GlassMaterial for
                 // the measurements — the two changes are one change.
-                color={focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5')}
+                color={inkOf(focused, light)}
               />
               )}
               {/* Same mark the Profile card wears, one level up where
@@ -287,7 +294,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                 numberOfLines={1}
                 maxFontSizeMultiplier={labelScaleCap}
                 style={[s.caption, !focused && glassHalo(light), {
-                  color: focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5'),
+                  color: inkOf(focused, light),
                   fontWeight: focused ? font.semibold : font.regular,
                 }]}
               >

@@ -38,11 +38,11 @@
 
 import React, { useState } from 'react';
 import {
-  ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle,
+  ScrollView, StyleSheet, View, type StyleProp, type TextStyle, type ViewStyle,
 } from 'react-native';
-import { useFlag } from '../lib/useFlag';
 import { onPhoto } from '../theme';
 import PageDots from './PageDots';
+import PhotoCredit from './PhotoCredit';
 
 /** The pair that decides a page's shape — spread onto the caller's picture. */
 export type PageSize = { width: number; height: number } | { width: number; aspectRatio: number };
@@ -80,11 +80,9 @@ export default function PhotoCarousel<T>({
   testID?: string;
 }) {
   const [measured, setMeasured] = useState(0);
-  const credit = useFlag('photo_attribution');
   if (!pages.length) return null;
   const w = width ?? measured;
   const size: PageSize = height != null ? { width: w, height } : { width: w, aspectRatio: aspectRatio ?? 1 };
-  const attr = credit ? attributionOf(pages[page]) : null;
 
   return (
     <View
@@ -108,7 +106,7 @@ export default function PhotoCarousel<T>({
         {pages.map((item, i) => renderPage(item, i, size))}
       </ScrollView>
       {children}
-      {attr ? <Text style={attrStyle ?? s.attr} numberOfLines={1}>{attr}</Text> : null}
+      <PhotoCredit name={attributionOf(pages[page])} style={attrStyle ?? s.attr} />
       <PageDots count={pages.length} page={page} right={dotsRight} bottom={dotsBottom} testID={testID ? `${testID}-dots` : undefined} />
     </View>
   );
