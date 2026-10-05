@@ -354,6 +354,23 @@ describe('account identity', () => {
     expect(screen.getByText('March 2025')).toBeTruthy();
   });
 
+  // A fact wears a bare glyph, as the place's address and phone do on
+  // PlaceDetail; the coral well is for a row that answers a tap. About
+  // me is the one card of facts on this screen, and it used to wear the
+  // well of the rows that go somewhere.
+  it('draws its facts with a bare glyph, and keeps the coral well for rows that go somewhere', () => {
+    state.profile = { location: 'Da Nang' };
+    state.memberSince = new Date(2025, 2, 14);
+    draw();
+    // Three facts — email, hometown, member since — none in a well.
+    expect(screen.getAllByTestId('fact-glyph')).toHaveLength(3);
+    const about = screen.getByText('Hometown').closest('[data-testid="about-row"]');
+    expect(about?.querySelector('[data-testid="round-icon"]')).toBeNull();
+    // The Friends row still goes somewhere, and still wears the well.
+    const friends = screen.getByText('Connect with friends').closest('[data-testid="feature-row"]');
+    expect(friends?.querySelector('[data-testid="round-icon"]')).not.toBeNull();
+  });
+
   it.each([
     ['vi' as const, 'Thành viên từ', 'Tháng 3, 2025'],
     ['ja' as const, '登録日', '2025年3月'],
