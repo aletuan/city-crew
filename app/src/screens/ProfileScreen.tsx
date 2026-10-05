@@ -49,10 +49,36 @@ function memberSinceLabel(d: Date, lang: Lang): string {
   return `${MONTHS_EN[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+/** The coral well: a row that answers a tap wears one — a setting that
+ *  opens a screen, the crew card, a download. */
 function RoundIcon({ name }: { name: keyof typeof Ionicons.glyphMap }) {
   return (
-    <View style={s.roundIcon}>
+    <View style={s.roundIcon} testID="round-icon">
       <Ionicons name={name} size={20} color={colors.accent} />
+    </View>
+  );
+}
+
+/**
+ * A fact's glyph: bare, in the tertiary ink, the way `PlaceDetailScreen`
+ * draws the address, the phone and the hours. About me is the one card
+ * of facts on this screen — an email, a hometown, a month — and until
+ * 5 Oct 2026 its three rows wore the same coral well as the rows that
+ * go somewhere, so the three glyphs competed with the three answers
+ * beside them. The owner's reading, and a second opinion's: it was the
+ * wells, not the glyphs. Taking the well off rather than tinting it
+ * neutral keeps the app to two treatments instead of three — a well
+ * means the row responds to a tap, a bare glyph means it only tells you
+ * something — and matches the one other screen that prints facts.
+ *
+ * The slot keeps the well's 44pt, so the words column sits where it does
+ * on every other row of the card. 19pt, the detail screen's size for
+ * the same job.
+ */
+function FactGlyph({ name }: { name: keyof typeof Ionicons.glyphMap }) {
+  return (
+    <View style={s.factGlyph} testID="fact-glyph">
+      <Ionicons name={name} size={19} color={colors.textTertiary} />
     </View>
   );
 }
@@ -70,6 +96,7 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
       style={[s.featureRow, !last && s.featureRowDivider]}
       onPress={onPress}
       accessibilityRole="button"
+      testID="feature-row"
     >
       <RoundIcon name={icon} />
       <View style={{ flex: 1, gap: 3 }}>
@@ -456,8 +483,8 @@ function AboutRow({ icon, label, value, children, last }: {
   last?: boolean;
 }) {
   return (
-    <View style={[s.featureRow, !last && s.featureRowDivider]}>
-      <RoundIcon name={icon} />
+    <View style={[s.featureRow, !last && s.featureRowDivider]} testID="about-row">
+      <FactGlyph name={icon} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.aboutLabel}>{label}</Text>
         {children ?? <Text style={s.aboutValue}>{value}</Text>}
@@ -735,7 +762,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           the card opens the crew now. The number is friends, the dot is
           requests — two different facts, and neither borrows the other's
           mark. */}
-      <PressableScale onPress={() => navigation.navigate('Crew')} accessibilityRole="button">
+      <PressableScale onPress={() => navigation.navigate('Crew')} accessibilityRole="button" testID="feature-row">
         <Card style={s.friendsCard}>
           <View>
             <RoundIcon name="people-outline" />
@@ -927,6 +954,8 @@ const s = StyleSheet.create({
     width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
+  // The well's footprint without the well — see `FactGlyph`.
+  factGlyph: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   featureTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   // Regular, not semibold: a settings label names a row, it does not head
   // a paragraph. The value takes the rest of the line and is pushed right
