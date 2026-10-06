@@ -610,13 +610,46 @@ describe('friends card', () => {
 });
 
 describe('settings card', () => {
-  it('names the current city, and says when it came from location', () => {
+  it('names the current city on one line and where the choice came from on the next', () => {
     const { unmount } = render(<ProfileScreen navigation={nav().n} />);
+    // The city is a text node of its own, not a prefix of a longer line:
+    // `getByText` matches whole strings, so the old "Hanoi · from your
+    // location" would fail here.
     expect(screen.getByText('Hanoi')).toBeTruthy();
+    expect(screen.getByText('Chosen by you')).toBeTruthy();
+    expect(screen.queryByText('By location')).toBeNull();
     unmount();
     state.mode = 'auto';
     draw();
-    expect(screen.getByText('Hanoi · from your location')).toBeTruthy();
+    expect(screen.getByText('Hanoi')).toBeTruthy();
+    expect(screen.getByText('By location')).toBeTruthy();
+    expect(screen.queryByText('Chosen by you')).toBeNull();
+  });
+
+  it('sets the source line under the city, smaller, and keeps the label on the row’s centre', () => {
+    state.mode = 'auto';
+    draw();
+    const city = screen.getByText('Hanoi');
+    const source = screen.getByText('By location');
+    // Same column: the two share a parent, and the city comes first.
+    expect(source.parentElement).toBe(city.parentElement);
+    expect(city.parentElement!.firstElementChild).toBe(city);
+    // Not through getComputedStyle: jsdom answers 14px for font-size
+    // whatever was set, and the two would tie. A StyleSheet style lands as
+    // an `r-fontSize-…` class, so the figure is read off that class's rule.
+    const fontSize = (el: HTMLElement) => {
+      const cls = [...el.classList].find((c) => c.startsWith('r-fontSize-'))!;
+      for (const sheet of Array.from(document.styleSheets))
+        for (const rule of Array.from(sheet.cssRules))
+          if (rule instanceof CSSStyleRule && rule.selectorText === `.${cls}`) return parseFloat(rule.style.getPropertyValue('font-size'));
+      throw new Error(`no rule for ${cls}`);
+    };
+    expect(fontSize(source)).toBeLessThan(fontSize(city));
+    // The label is a sibling of that column, not of the city — so the
+    // row's centre alignment, not the column's, decides where it sits.
+    const label = screen.getByText('Current city');
+    expect(label.parentElement).toBe(city.parentElement!.parentElement);
+    expect(getComputedStyle(label.parentElement!).alignItems).toBe('center');
   });
 
   it('holds a place for a city not loaded yet', () => {
