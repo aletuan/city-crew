@@ -307,10 +307,42 @@ describe('the upcoming trip', () => {
     expect(screen.queryByText(/Later|Gone|Far/)).toBeNull();
   });
 
-  it('is not a button', async () => {
+  // It used to be a plain View: the one row on the screen that said
+  // something was about to happen and could not take you to it. The
+  // owner asked for both rows to open what they name (7 Oct 2026).
+  it('opens the trip', async () => {
     trips.data = [{ id: 't1', title: 'Hanoi day', day: '2026-09-11' }];
+    const navigation = await renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: /Hanoi day/ }));
+    expect(navigation.navigate).toHaveBeenLastCalledWith('TripDetail', { id: 't1' });
+  });
+});
+
+// The chevron says "goes somewhere", as it does on every row of Profile,
+// and it is drawn at the one size the app's row-end chevrons share. A
+// row that goes nowhere — a like on a list that is gone — has none, which
+// is also the only thing that tells the two apart.
+describe('the chevron at the end of a row', () => {
+  const chevronIn = (el: Element) => el.querySelector('[data-icon="chevron-forward"]');
+
+  it('ends the trip row and the live applause row, at 17pt in the tertiary ink', async () => {
+    trips.data = [{ id: 't1', title: 'Hanoi day', day: '2026-09-11' }];
+    catalog.cols = [col('c1', 'pho-walk', 'Pho walk')];
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao')]);
     await renderScreen();
-    expect(screen.queryByRole('button', { name: /Hanoi day/ })).toBeNull();
+    for (const name of [/Hanoi day/, /@bao liked “Pho walk”/]) {
+      const chevron = chevronIn(screen.getByRole('button', { name }))!;
+      expect(chevron).toBeTruthy();
+      expect(chevron.getAttribute('data-size')).toBe('17');
+      expect(chevron.getAttribute('data-color')).toBe(colors.textTertiary);
+    }
+  });
+
+  it('is absent from a like on a list that is gone', async () => {
+    data.fetchApplause.mockImplementation(async () => [like('c-gone', '2026-09-11T10:00:00Z', 'bao')]);
+    await renderScreen();
+    const row = screen.getByText('@bao liked “…”').closest('[data-testid="earlier-card"]')!;
+    expect(chevronIn(row)).toBeNull();
   });
 });
 

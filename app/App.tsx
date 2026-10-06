@@ -179,6 +179,11 @@ function ProfileStack() {
           brings its form and its place screen with it. */}
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
       <Stack.Screen name="CollectionForm" component={CollectionFormScreen} />
+      {/* Activity's trip row opens the trip, the same way (7 Oct 2026):
+          pushed here so the back button returns to Activity rather than
+          landing the reader on the Trips tab. TripDetail's own reach is
+          PlaceDetail, already below. */}
+      <Stack.Screen name="TripDetail" component={TripDetailScreen} />
       <Stack.Screen name="PlaceDetail" component={PlaceDetailScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
     </Stack.Navigator>

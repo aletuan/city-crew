@@ -67,8 +67,11 @@ export function AddSlot({ title, subtitle, onPress }: {
           <Text style={s.slotSub} numberOfLines={2}>{subtitle}</Text>
         </View>
         {/* On both now. The row leads somewhere, and the one that had no
-            chevron was reading as a card you could not press. */}
-        <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            chevron was reading as a card you could not press. 17, like
+            every other row-end chevron in the app — it was 18 beside the
+            18pt title, which is the one size on the row the chevron does
+            not need to match. */}
+        <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
       </PressableScale>
     </View>
   );
