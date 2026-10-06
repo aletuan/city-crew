@@ -71,13 +71,39 @@ function memberSinceLabel(d: Date, lang: Lang): string {
  * the well on their own rows; they are not this screen's to change, and
  * are noted for the day they are.
  */
-function RowGlyph({ name }: { name: keyof typeof Ionicons.glyphMap }) {
+function RowGlyph({ name, line }: {
+  name: keyof typeof Ionicons.glyphMap;
+  /** The height of the row's first line, when the glyph should sit level
+   *  with it rather than with the row's middle — see `GLYPH_BOX`. */
+  line?: number;
+}) {
+  const lift = line == null ? undefined : { height: GLYPH_BOX, marginTop: (line - GLYPH_BOX) / 2 };
   return (
-    <View style={s.rowGlyph} testID="row-glyph">
+    <View style={[s.rowGlyph, lift]} testID="row-glyph">
       <Ionicons name={name} size={19} color={colors.textTertiary} />
     </View>
   );
 }
+
+/**
+ * Where the glyph sits on a two-line row: level with the first line, as
+ * `PlaceDetailScreen` sets its own against a label. The owner caught the
+ * difference the day the wells came off (6 Oct 2026): there the glyph
+ * marks the label, here it had floated to the middle of label-plus-value,
+ * so the same bare glyph read as two conventions one tab apart.
+ *
+ * The arithmetic is the detail screen's. The slot is `GLYPH_BOX` tall —
+ * room for a 19pt glyph's whole line, where a box the height of the
+ * label's line clipped it — and a margin of `(line − GLYPH_BOX) / 2`
+ * puts the box's middle on the first line's middle, whatever the second
+ * line does. The first lines are stated, not left to the platform: 15 for
+ * the 12.5pt caption (the system face gives 14.9), 19 for the 16pt title
+ * (19.1). A single-line row passes no line and lets the row centre it,
+ * which lands in the same place.
+ */
+const GLYPH_BOX = 26;
+const CAPTION_LINE = 15;
+const TITLE_LINE = 19;
 
 function FeatureRow({ icon, title, sub, onPress, last }: {
   icon: keyof typeof Ionicons.glyphMap;
@@ -89,17 +115,17 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
   return (
     <PressableScale
       scaleTo={0.98}
-      style={[s.featureRow, !last && s.featureRowDivider]}
+      style={[s.twoLineRow, !last && s.featureRowDivider]}
       onPress={onPress}
       accessibilityRole="button"
       testID="feature-row"
     >
-      <RowGlyph name={icon} />
+      <RowGlyph name={icon} line={TITLE_LINE} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.featureTitle}>{title}</Text>
         <Text style={s.featureSub}>{sub}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
     </PressableScale>
   );
 }
@@ -479,8 +505,8 @@ function AboutRow({ icon, label, value, children, last }: {
   last?: boolean;
 }) {
   return (
-    <View style={[s.featureRow, !last && s.featureRowDivider]} testID="about-row">
-      <RowGlyph name={icon} />
+    <View style={[s.twoLineRow, !last && s.featureRowDivider]} testID="about-row">
+      <RowGlyph name={icon} line={CAPTION_LINE} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.aboutLabel}>{label}</Text>
         {children ?? <Text style={s.aboutValue}>{value}</Text>}
@@ -761,7 +787,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
       <PressableScale onPress={() => navigation.navigate('Crew')} accessibilityRole="button" testID="feature-row">
         <Card style={s.friendsCard}>
           <View>
-            <RowGlyph name="people-outline" />
+            <RowGlyph name="people-outline" line={TITLE_LINE} />
             {crew.incoming.length > 0 ? <View style={s.reqDot} /> : null}
           </View>
           <View style={{ flex: 1, gap: 3 }}>
@@ -770,8 +796,8 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
               {t('Find friends and share your plans.', 'Tìm kiếm bạn bè và chia sẻ kế hoạch.', '友達を探して、計画を共有。')}
             </Text>
           </View>
-          {crew.friends.length > 0 ? <Text style={s.friendCount}>{crew.friends.length}</Text> : null}
-          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+          {crew.friends.length > 0 ? <Text style={[s.friendCount, s.rowEnd]}>{crew.friends.length}</Text> : null}
+          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
         </Card>
       </PressableScale>
 
@@ -945,10 +971,14 @@ const s = StyleSheet.create({
 
   featureCard: { paddingHorizontal: space.cardPadding },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  // A row of two lines: the glyph is lifted to the first (see `GLYPH_BOX`),
+  // and the chevron at the far end keeps the middle through `rowEnd`.
+  twoLineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, paddingVertical: 14 },
+  rowEnd: { alignSelf: 'center' },
   featureRowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft },
   // The old well's footprint without the well — see `RowGlyph`.
   rowGlyph: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  featureTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
+  featureTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: TITLE_LINE },
   // Regular, not semibold: a settings label names a row, it does not head
   // a paragraph. The value takes the rest of the line and is pushed right
   // by its own flex rather than by a spacer view.
@@ -984,7 +1014,7 @@ const s = StyleSheet.create({
   },
   friendCount: { color: colors.textTertiary, fontSize: 15.5, fontWeight: font.semibold },
   friendsCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
     padding: space.cardPadding,
   },
 
@@ -1026,7 +1056,7 @@ const s = StyleSheet.create({
   },
   editBtnText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
 
-  aboutLabel: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
+  aboutLabel: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium, lineHeight: CAPTION_LINE },
   aboutValue: { color: colors.text, fontSize: 15.5, fontWeight: font.regular, lineHeight: 21 },
 
   signOutBtn: {

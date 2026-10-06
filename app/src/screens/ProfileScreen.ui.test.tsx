@@ -370,6 +370,23 @@ describe('account identity', () => {
     expect(screen.getAllByTestId('row-glyph').length).toBeGreaterThanOrEqual(4);
   });
 
+  // Level with the first line, as the detail screen sets its glyphs
+  // against a label — the owner caught the glyph floating to the middle
+  // of label-plus-value the day the wells came off. Asserted the way the
+  // detail screen's test does: the slot's middle is the first line's.
+  it('sets the glyph level with the row’s first line, on facts and on the crew card', () => {
+    state.profile = { location: 'Da Nang' };
+    state.memberSince = new Date(2025, 2, 14);
+    draw();
+    const slotOf = (text: string, row: string) =>
+      getComputedStyle(screen.getByText(text).closest(`[data-testid="${row}"]`)!.querySelector('[data-testid="row-glyph"]')!);
+    const about = slotOf('Hometown', 'about-row');
+    expect(parseFloat(about.height)).toBeGreaterThan(19);
+    expect(parseFloat(about.marginTop) + parseFloat(about.height) / 2).toBeCloseTo(15 / 2, 5);
+    const friends = slotOf('Connect with friends', 'feature-row');
+    expect(parseFloat(friends.marginTop) + parseFloat(friends.height) / 2).toBeCloseTo(19 / 2, 5);
+  });
+
   it.each([
     ['vi' as const, 'Thành viên từ', 'Tháng 3, 2025'],
     ['ja' as const, '登録日', '2025年3月'],
