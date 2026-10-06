@@ -3,8 +3,9 @@
 // Three sections, three kinds of thing. REQUESTS are questions: somebody
 // asked to join your crew and the card carries the only two answers.
 // UPCOMING is the one trip about to happen. EARLIER is news: applause on
-// your lists. News rows do nothing on tap except the applause rows, which
-// open the list that earned it.
+// your lists. A row opens what it names — the trip, the list that earned
+// the like — and wears the chevron that says so; a like on a list that is
+// gone opens nothing and wears none.
 //
 // The applause comes through `likes_on_mine`, which names every liker
 // to the one person allowed to ask — the owner of the list. "Someone
@@ -279,7 +280,12 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
           <Text style={s.eyebrow}>{t('Upcoming', 'Sắp tới', 'これから')}</Text>
           <Card testID="upcoming-card">
             {upcoming.map((item, i) => (
-              <View key={`t-${item.tripId}`} style={[s.row, i > 0 && s.rowDivider]}>
+              <PressableScale
+                key={`t-${item.tripId}`}
+                style={[s.row, i > 0 && s.rowDivider]}
+                onPress={() => navigation.navigate('TripDetail', { id: item.tripId })}
+                accessibilityRole="button"
+              >
                 {/* The accent, alone among the marks: every calendar in
                     the app is `colors.accent` and `icons.test.ts` holds
                     it to that — the day a plan turns on is the one
@@ -297,7 +303,8 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                         : t(`“${item.title}” is in ${item.inDays} days`, `“${item.title}” còn ${item.inDays} ngày nữa`, `「${item.title}」まであと${item.inDays}日`)}
                   </Text>
                 </View>
-              </View>
+                <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
+              </PressableScale>
             ))}
           </Card>
         </>
@@ -349,6 +356,10 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                       </Text>
                       <Text style={s.meta}>{agoLabel(item.at)}</Text>
                     </View>
+                    {/* Only where there is somewhere to go: the same
+                        condition as the role above, so what VoiceOver
+                        hears and what the eye sees agree. */}
+                    {title ? <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} /> : null}
                   </PressableScale>
                 );
               })}
@@ -416,6 +427,9 @@ const s = StyleSheet.create({
     paddingHorizontal: space.cardPadding, paddingVertical: 13,
   },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  // The row aligns its top so the mark can sit on the first line of text;
+  // the chevron keeps the middle, as Profile's rows do it.
+  rowEnd: { alignSelf: 'center' },
   // The mark is Profile's `RowGlyph`, to the figure: a bare 19pt outline
   // glyph, tertiary (the calendar excepted — see the row), in the well's
   // 44pt footprint, with the well gone. It was the well — 44pt, radius 13, soft coral fill under a

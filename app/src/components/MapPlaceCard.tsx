@@ -74,7 +74,9 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
         </View>
         <Text style={s.facts} numberOfLines={1}>{facts.join(' · ')}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+      {/* 17, the one size a row-end chevron has in this app (Profile,
+          Search, the planning screen); this was 16 for no written reason. */}
+      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
     </PressableScale>
   );
 }
