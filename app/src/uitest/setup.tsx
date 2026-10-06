@@ -118,8 +118,12 @@ vi.mock('react-native-svg', () => ({
 // and a test can only hold that promise if it can read the colour off
 // the glyph. An attribute rather than a style, so the hex compares to
 // the table's entry without a round trip through rgb().
-const icon = ({ name, color, style }: { name?: string; color?: string; style?: object }) =>
-  React.createElement('span', { 'data-icon': name, 'data-color': color, style });
+//
+// `size` likewise, as `data-size`: a heading's mark and the glyphs under
+// it are meant to be one size, and that is a figure the glyph is given,
+// not one its box carries.
+const icon = ({ name, color, size, style }: { name?: string; color?: string; size?: number; style?: object }) =>
+  React.createElement('span', { 'data-icon': name, 'data-color': color, 'data-size': size, style });
 vi.mock('@expo/vector-icons/Ionicons', () => ({ default: icon }));
 
 // These must return promises, not undefined. `fireHaptic` calls

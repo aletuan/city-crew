@@ -67,9 +67,11 @@ function memberSinceLabel(d: Date, lang: Lang): string {
  * dot, the values that are links.
  *
  * The slot keeps the well's 44pt, so the words column sits where it did
- * on every row of every card. Activity and Delete account still wear
- * the well on their own rows; they are not this screen's to change, and
- * are noted for the day they are.
+ * on every row of every card. The Delete account screen's download row
+ * followed the same day, to these figures. The Activity screen's feed
+ * marks still wear the well — a screen with a route and, at the time of
+ * writing, nothing that navigates to it — and are noted for the day it
+ * is decided whether that screen stays.
  */
 function RowGlyph({ name, line }: {
   name: keyof typeof Ionicons.glyphMap;

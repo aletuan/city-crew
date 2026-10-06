@@ -86,6 +86,47 @@ describe('the delete account screen', () => {
 
   // Which account. Neither alert ever said, and the day somebody has two
   // this is the only thing on the screen that tells them apart.
+  // The wells came off Profile's rows on 6 Oct 2026 (#793), and the
+  // download row is one of Profile's rows standing on this screen; the
+  // two heading marks were the last glyphs here drawn filled and in
+  // colour. Asserted against the four glyphs under "Will be deleted",
+  // which are the convention the rest of the card already keeps.
+  it('leads the download row with a bare glyph, level with its title', () => {
+    render(<DeleteAccountScreen navigation={nav()} />);
+    const row = screen.getByText('Download your data').closest('[data-testid="takeout-row"]')!;
+    expect(row.querySelector('[data-testid="round-icon"]')).toBeNull();
+    const slot = row.querySelector('[data-testid="row-glyph"]')!;
+    const glyph = slot.querySelector('span')!;
+    expect(glyph.getAttribute('data-icon')).toBe('download-outline');
+    const item = screen.getByText('Profile, photo and username').parentElement!.querySelector('span')!;
+    expect(glyph.getAttribute('data-color')).toBe(item.getAttribute('data-color'));
+    // The slot's middle on the title line's middle, as Profile's test
+    // reads it, on a row that aligns its top rather than its centre.
+    const m = getComputedStyle(slot);
+    expect(parseFloat(m.height)).toBeGreaterThan(19);
+    expect(parseFloat(m.marginTop) + parseFloat(m.height) / 2).toBeCloseTo(19 / 2, 5);
+    // The slot's own parent, not the pressable: `PressableScale` puts
+    // the row style on the view inside the touchable.
+    expect(getComputedStyle(slot.parentElement!).alignItems).toBe('flex-start');
+  });
+
+  it('marks the two headings the way the lines under them are marked', () => {
+    render(<DeleteAccountScreen navigation={nav()} />);
+    const itemRow = screen.getByText('Profile, photo and username').parentElement!;
+    const item = itemRow.querySelector('span')!;
+    const token = (el: Element, prop: string) => [...el.classList].find((c) => c.startsWith(`r-${prop}-`));
+    for (const [label, name] of [['Will be deleted', 'close-circle-outline'], ['Will remain', 'checkmark-circle-outline']]) {
+      const head = screen.getByText(label).parentElement!;
+      const mark = head.querySelector('span')!;
+      expect(mark.getAttribute('data-icon')).toBe(name);
+      expect(mark.getAttribute('data-color')).toBe(item.getAttribute('data-color'));
+      expect(mark.getAttribute('data-size')).toBe(item.getAttribute('data-size'));
+      // Same gap, so the marks and the glyphs stand in one column.
+      expect(token(head, 'gap')).toBeDefined();
+      expect(token(head, 'gap')).toBe(token(itemRow, 'gap'));
+    }
+  });
+
   it('names the account it would delete', () => {
     render(<DeleteAccountScreen navigation={nav()} />);
     expect(screen.getByText('Trang')).toBeTruthy();
