@@ -15,7 +15,7 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  addPlacePhoto, fetchGuideCities, fetchMyPhotoCounts, fetchPlaceId, removePlacePhoto,
+  addPlacePhoto, fetchGuideCities, fetchMyPhotoCounts, fetchPlaceId, removePhotoFile, removePlacePhoto,
   uploadPlacePhoto, fetchIsEditor,
 } from './guide';
 
@@ -178,19 +178,59 @@ describe('uploadPlacePhoto', () => {
 });
 
 describe('removePlacePhoto', () => {
-  // Nothing but an id: `uploaders remove their own photos` makes that
-  // safe. A row that is not this account's is simply not deleted.
+  // Nothing but an id for the row: `uploaders remove their own photos`
+  // makes that safe. A row that is not this account's is simply not
+  // deleted.
   it('deletes by id and leaves the rest to the policy', async () => {
     fake().replies({ data: null });
-    await removePlacePhoto('ph1');
+    await removePlacePhoto('ph1', null);
     expect(fake().log[0]).toMatchObject({
       table: 'place_photos', op: 'delete', filters: [['id', 'ph1']],
     });
+    expect(fake().log).toHaveLength(1);
   });
 
-  it('throws when the delete fails', async () => {
+  // The file after the row, never before: a row pointing at a missing
+  // file is a broken picture on every screen, a file with no row is a
+  // few hundred kilobytes nobody sees. Fifty-six of the latter were
+  // swept out on 6 Oct 2026, most of them left by this very delete.
+  it('takes the file out of the bucket once the row is gone', async () => {
+    fake().replies({ data: null }, { data: [{ name: 'u1/cong-1.jpg' }] });
+    await removePlacePhoto('ph1', 'u1/cong-1.jpg');
+    expect(fake().log.map((a) => a.op)).toEqual(['delete', 'storage']);
+    expect(fake().log[1]).toMatchObject({ table: 'place-photos', fn: 'remove', payload: ['u1/cong-1.jpg'] });
+  });
+
+  it('does not touch the bucket when the row delete fails', async () => {
     fake().replies({ error: { message: 'gone' } });
-    await expect(removePlacePhoto('ph1')).rejects.toThrow('gone');
+    await expect(removePlacePhoto('ph1', 'u1/cong-1.jpg')).rejects.toThrow('gone');
+    expect(fake().log.filter((a) => a.op === 'storage')).toEqual([]);
+  });
+
+  // The row is what the person asked about; the file is housekeeping,
+  // and `prune-photos` sweeps what this misses. A thrown remove would
+  // tell them the delete failed when it did not.
+  it('is quiet when the file will not go', async () => {
+    fake().replies({ data: null }, { throws: new Error('storage down') });
+    await expect(removePlacePhoto('ph1', 'u1/cong-1.jpg')).resolves.toBeUndefined();
+  });
+});
+
+describe('removePhotoFile', () => {
+  it('removes the one path from the place-photos bucket', async () => {
+    fake().replies({ data: [{ name: 'u1/x.jpg' }] });
+    await removePhotoFile('u1/x.jpg');
+    expect(fake().log[0]).toMatchObject({ table: 'place-photos', op: 'storage', fn: 'remove', payload: ['u1/x.jpg'] });
+  });
+
+  // Best effort, by design: it is called from the places where the row is
+  // already gone or never landed, and nothing the caller could do with the
+  // failure would help the reader.
+  it('swallows a refusal and a thrown client alike', async () => {
+    fake().replies({ data: null, error: { message: 'Object not found' } });
+    await expect(removePhotoFile('u1/x.jpg')).resolves.toBeUndefined();
+    fake().replies({ throws: new Error('storage down') });
+    await expect(removePhotoFile('u1/x.jpg')).resolves.toBeUndefined();
   });
 });
 

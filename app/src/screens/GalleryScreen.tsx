@@ -157,7 +157,11 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         text: t('Delete', 'Xoá', '削除'),
         style: 'destructive',
         onPress: () => {
-          void run(async () => { for (const id of ids) await removePlacePhoto(id); });
+          void run(async () => {
+            // The path from the rows on screen, so the file goes with the
+            // row — see `removePlacePhoto` for why the row goes first.
+            for (const id of ids) await removePlacePhoto(id, photos?.find((p) => p.id === id)?.storage_path ?? null);
+          });
           setMode('view');
           setPicked([]);
         },

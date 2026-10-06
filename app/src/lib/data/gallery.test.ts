@@ -24,7 +24,8 @@ describe('fetchGallery', () => {
     expect(await fetchGallery('place-1')).toEqual([{ id: 'a', sort_order: 0 }]);
     const q = fake().log[0];
     expect(q).toMatchObject({ table: 'place_photos', op: 'select', filters: [['place_id', 'place-1']] });
-    for (const col of ['source', 'is_hidden', 'is_cover', 'sort_order']) {
+    // `storage_path` is what a delete hands to the bucket afterwards.
+    for (const col of ['source', 'is_hidden', 'is_cover', 'sort_order', 'storage_path']) {
       expect(String(q.payload)).toContain(col);
     }
     expect(JSON.stringify(q.order)).toContain('sort_order');

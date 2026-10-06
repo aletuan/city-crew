@@ -32,6 +32,9 @@ export type GalleryPhoto = {
   is_hidden: boolean;
   sort_order: number;
   source: string;
+  /** Where the file is in `place-photos`; null for a row whose picture
+   *  was never ours to store. A delete passes it on to the bucket. */
+  storage_path: string | null;
 };
 
 /** Who may open the gallery at all: the same three conditions that let a

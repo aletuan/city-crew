@@ -157,18 +157,56 @@ export async function uploadPlacePhoto(path: string, bytes: ArrayBuffer): Promis
 }
 
 /**
- * Take one back.
+ * Take one back: the row, and then the file behind it.
  *
- * `uploaders remove their own photos` is what makes this safe to call
- * with nothing but an id: a row that is not this account's is not
+ * `uploaders remove their own photos` is what makes the row half safe to
+ * call with nothing but an id: a row that is not this account's is not
  * deleted, and RLS answers that with silence rather than an error. So
  * the caller cannot tell a refusal from a success, and does not need to
  * — either way the photograph the person wanted gone is gone or was
  * never theirs.
+ *
+ * The file after the row, never before. A row pointing at a missing
+ * file is a broken picture on every screen that draws the place; a file
+ * with no row is a few hundred kilobytes nobody sees. Until 6 Oct 2026
+ * this was the row alone, and the sweep that day found fifty-six such
+ * files, most of them left by this delete — see `prune-photos`. The
+ * remove is best effort (`removePhotoFile`): the row is what the person
+ * asked about, and the broom catches what the bucket will not give up.
+ *
+ * `storagePath` is null for a row that never had a file of ours — the
+ * Google-sourced rows before `rehost-photos` — and then there is nothing
+ * to take out.
  */
-export async function removePlacePhoto(id: string): Promise<void> {
+export async function removePlacePhoto(id: string, storagePath: string | null): Promise<void> {
   const { error } = await supabase.from('place_photos').delete().eq('id', id);
   if (error) throw new Error(error.message);
+  if (storagePath) await removePhotoFile(storagePath);
+}
+
+/**
+ * One file out of the bucket, quietly.
+ *
+ * Called where the row is already gone (`removePlacePhoto`) or never
+ * landed (`useAddPhoto`, when the insert after the upload is refused),
+ * which is why it does not throw: nothing the caller could do with the
+ * failure would help the reader, and a thrown remove would report a
+ * delete as failed when the thing they asked for has happened. Storage
+ * answers a path the policy will not let this account see with an empty
+ * list rather than an error — the same silence as the row — so success
+ * is not read either. What stays behind, `prune-photos` sweeps.
+ *
+ * The policy that lets an uploader's remove find their own object is
+ * `local guides read their own place photos`: Storage removes only what
+ * the caller can select, the lesson the 10 Sep migration learned for
+ * editors.
+ */
+export async function removePhotoFile(path: string): Promise<void> {
+  try {
+    await supabase.storage.from('place-photos').remove([path]);
+  } catch {
+    // Housekeeping; see above.
+  }
 }
 
 /**

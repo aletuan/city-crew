@@ -18,7 +18,7 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { decode } from 'base64-arraybuffer';
 import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
-import { addPlacePhoto, fetchMyPhotoCounts, uploadPlacePhoto } from '../lib/data';
+import { addPlacePhoto, fetchMyPhotoCounts, removePhotoFile, uploadPlacePhoto } from '../lib/data';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import {
   canAddPhoto, photoPath, refusePhoto, PHOTO_PX, PHOTO_QUALITY,
@@ -110,17 +110,27 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
       setStage('uploading');
       const path = photoPath(uid, place.slug, Date.now());
       const publicUrl = await uploadPlacePhoto(path, decode(shrunk.base64));
-      await addPlacePhoto({
-        placeId,
-        uid,
-        publicUrl,
-        storagePath: path,
-        // Past everything already on the place, so the gallery — which is
-        // in `sort_order` — puts it at the end rather than in front of
-        // pictures that were here before it. The cover moves onto it
-        // anyway, by the trigger `addPlacePhoto` describes.
-        sortOrder: count + 1,
-      });
+      try {
+        await addPlacePhoto({
+          placeId,
+          uid,
+          publicUrl,
+          storagePath: path,
+          // Past everything already on the place, so the gallery — which is
+          // in `sort_order` — puts it at the end rather than in front of
+          // pictures that were here before it. The cover moves onto it
+          // anyway, by the trigger `addPlacePhoto` describes.
+          sortOrder: count + 1,
+        });
+      } catch (e) {
+        // The file landed and the row did not — the policy said no, or the
+        // network went between the two writes. Take the file back out
+        // before saying so, or it sits in the bucket with nothing
+        // pointing at it: the third of the three leaks `prune-photos`
+        // was written to sweep. Best effort, like the remove it calls.
+        await removePhotoFile(path);
+        throw e;
+      }
       successHaptic();
       await recount();
       onAdded();
