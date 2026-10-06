@@ -68,10 +68,8 @@ function memberSinceLabel(d: Date, lang: Lang): string {
  *
  * The slot keeps the well's 44pt, so the words column sits where it did
  * on every row of every card. The Delete account screen's download row
- * followed the same day, to these figures. The Activity screen's feed
- * marks still wear the well — a screen with a route and, at the time of
- * writing, nothing that navigates to it — and are noted for the day it
- * is decided whether that screen stays.
+ * and the Activity screen's feed marks followed the same day, to these
+ * figures; the well is gone from the Profile stack.
  */
 function RowGlyph({ name, line }: {
   name: keyof typeof Ionicons.glyphMap;
@@ -791,11 +789,16 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           the app behaves, and then the ways out. */}
       <Text style={s.section}>{t('Friends', 'Bạn bè', '友達')}</Text>
       {/* The pill said "Coming soon" from the day this screen shipped;
-          the card opens the crew now. The number is friends, the dot is
+          the row opens the crew now. The number is friends, the dot is
           requests — two different facts, and neither borrows the other's
           mark. */}
-      <PressableScale onPress={() => navigation.navigate('Crew')} accessibilityRole="button" testID="feature-row">
-        <Card style={s.friendsCard}>
+      <Card style={s.featureCard}>
+        <PressableScale
+          style={[s.twoLineRow, s.featureRowDivider]}
+          onPress={() => navigation.navigate('Crew')}
+          accessibilityRole="button"
+          testID="feature-row"
+        >
           <View>
             <RowGlyph name="people-outline" line={TITLE_LINE} />
             {crew.incoming.length > 0 ? <View style={s.reqDot} /> : null}
@@ -808,8 +811,28 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           </View>
           {crew.friends.length > 0 ? <Text style={[s.friendCount, s.rowEnd]}>{crew.friends.length}</Text> : null}
           <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
-        </Card>
-      </PressableScale>
+        </PressableScale>
+        {/* The door to Activity, re-hung. The feed's one entry used to be
+            the "N requests waiting" banner on Crew, and when Crew grew a
+            Requests tab (#309, 23 Aug 2026) the banner came down with the
+            requests it pointed at — nobody meant to close the feed, but
+            the applause on your lists and the trip coming up were left
+            behind a route nothing navigated to, for six weeks.
+
+            Under the friends row rather than a bell in the header: what
+            the feed holds is who liked your lists and who wants to join
+            your crew, which is this section's subject, and a header bell
+            would be the one control on the screen outside a card. The
+            request dot stays on the friends row — Crew is the inbox since
+            #309; Activity answers requests too, but as news. */}
+        <FeatureRow
+          icon="notifications-outline"
+          title={t('Activity', 'Hoạt động', 'アクティビティ')}
+          sub={t('Likes on your lists, and your next trip.', 'Lượt thích trên list của bạn, và chuyến đi sắp tới.', 'リストへのいいねと、次の旅程。')}
+          onPress={() => navigation.navigate('Activity')}
+          last
+        />
+      </Card>
 
       {/* Named the way About me and Friends are, so this screen reads
           as sections rather than a stray card between them. The guest
@@ -1023,10 +1046,6 @@ const s = StyleSheet.create({
     borderWidth: 2, borderColor: colors.bgElevated,
   },
   friendCount: { color: colors.textTertiary, fontSize: 15.5, fontWeight: font.semibold },
-  friendsCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
-    padding: space.cardPadding,
-  },
 
   section: { color: colors.text, ...type.section, marginTop: 10 },
 
