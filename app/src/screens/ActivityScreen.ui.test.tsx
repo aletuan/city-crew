@@ -216,6 +216,73 @@ describe('the marks down the left', () => {
   });
 });
 
+// A trip that is tomorrow sat under EARLIER — the owner's screenshot of
+// 7 Oct 2026 read "“Bữa tối hai người đầu giờ” là ngày mai" beneath
+// "TRƯỚC ĐÓ", a thing about to happen filed under things that had. The
+// feed now has a heading for each tense.
+describe('the two tenses', () => {
+  const tomorrow = { id: 't1', title: 'Hanoi day', day: '2026-09-12' };
+  const liked = () => {
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao')]);
+    data.mine = [col('c1', 'pho-walk', 'Pho walk')];
+  };
+
+  it('files the trip under Upcoming, above Earlier, and the applause under Earlier', async () => {
+    trips.data = [tomorrow];
+    liked();
+    await renderScreen();
+    const upcoming = screen.getByText('Upcoming');
+    const earlier = screen.getByText('Earlier');
+    const trip = screen.getByText('“Hanoi day” is tomorrow');
+    const applause = screen.getByText('@bao liked “Pho walk”');
+    const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(before(upcoming, trip)).toBe(true);
+    expect(before(trip, earlier)).toBe(true);
+    expect(before(earlier, applause)).toBe(true);
+    // Two cards, not one: the trip and the applause do not share a row list.
+    expect(trip.closest('[data-testid="upcoming-card"]')).toBeTruthy();
+    expect(applause.closest('[data-testid="earlier-card"]')).toBeTruthy();
+    expect(trip.closest('[data-testid="earlier-card"]')).toBeNull();
+  });
+
+  it('shows no Upcoming heading without a trip', async () => {
+    liked();
+    await renderScreen();
+    expect(screen.queryByText('Upcoming')).toBeNull();
+    expect(screen.getByText('Earlier')).toBeTruthy();
+  });
+
+  // A trip and no applause: the page is not quiet, so it does not say it
+  // is, and an Earlier heading over nothing would be a label for a list of
+  // none.
+  it('shows neither Earlier nor the quiet note while a trip is the only news', async () => {
+    trips.data = [tomorrow];
+    await renderScreen();
+    expect(screen.getByText('Upcoming')).toBeTruthy();
+    expect(screen.queryByText('Earlier')).toBeNull();
+    expect(screen.queryByText(/Quiet so far/)).toBeNull();
+  });
+
+  it('keeps the quiet note under Earlier when there is nothing at all', async () => {
+    await renderScreen();
+    expect(screen.queryByText('Upcoming')).toBeNull();
+    expect(screen.getByText('Earlier')).toBeTruthy();
+    expect(screen.getByText(/Quiet so far/)).toBeTruthy();
+  });
+
+  it('says Sắp tới and これから in the other two languages', async () => {
+    trips.data = [tomorrow];
+    i18n.lang = 'vi';
+    const first = render(<ActivityScreen navigation={nav()} />);
+    await flush();
+    expect(screen.getByText('Sắp tới')).toBeTruthy();
+    first.unmount();
+    i18n.lang = 'ja';
+    await renderScreen();
+    expect(screen.getByText('これから')).toBeTruthy();
+  });
+});
+
 describe('the upcoming trip', () => {
   it.each([
     ['2026-09-11', '“Hanoi day” is today'],
