@@ -18,6 +18,7 @@ import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { Applause, FriendshipRow } from '../lib/friends';
 import type { FriendProfile } from '../lib/data';
+import { colors } from '../theme';
 
 const ME = 'me';
 const NOW = new Date('2026-09-11T12:00:00');
@@ -174,6 +175,44 @@ describe('the EARLIER states', () => {
     await renderScreen();
     expect(screen.queryByRole('progressbar')).toBeNull();
     expect(screen.getByText('Someone liked “Pho walk”')).toBeTruthy();
+  });
+});
+
+// The feed's marks wore Profile's well — 44pt, radius 13, soft coral
+// fill — until 6 Oct 2026, three days after Profile took the well off
+// every row it had (#793). This screen opens from that card now, and a
+// reader who taps a bare glyph and lands on a column of coral boxes has
+// met two conventions in two taps. The mark is the bare glyph, lifted
+// to the line's first row of text as Profile lifts its own.
+describe('the marks down the left', () => {
+  it('are bare glyphs, one per row, and no well — the heart tertiary, the calendar the accent', async () => {
+    trips.data = [{ id: 't1', title: 'Hanoi day', day: '2026-09-11' }];
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao')]);
+    data.mine = [col('c1', 'pho-walk', 'Pho walk')];
+    await renderScreen();
+    expect(document.querySelector('[data-testid="round-icon"]')).toBeNull();
+    const slots = screen.getAllByTestId('row-glyph');
+    expect(slots).toHaveLength(2);
+    const [trip, applause] = slots.map((el) => el.querySelector('span')!);
+    expect(trip.getAttribute('data-icon')).toBe('calendar-outline');
+    expect(applause.getAttribute('data-icon')).toBe('heart-outline');
+    for (const glyph of [trip, applause]) expect(glyph.getAttribute('data-size')).toBe('19');
+    // Read as the hex the stub was handed; a computed style would come
+    // back as rgb(). The calendar keeps the accent every calendar in the
+    // app wears (`icons.test.ts`); the heart is the tertiary ink.
+    expect(applause.getAttribute('data-color')).toBe(colors.textTertiary);
+    expect(trip.getAttribute('data-color')).toBe(colors.accent);
+  });
+
+  it('sit level with the line’s first row of text, on a top-aligned row', async () => {
+    trips.data = [{ id: 't1', title: 'Hanoi day', day: '2026-09-11' }];
+    await renderScreen();
+    const slot = screen.getByTestId('row-glyph');
+    const m = getComputedStyle(slot);
+    // The line is 15pt on a 21pt line height; the slot's middle meets it.
+    expect(parseFloat(m.height)).toBeGreaterThan(19);
+    expect(parseFloat(m.marginTop) + parseFloat(m.height) / 2).toBeCloseTo(21 / 2, 5);
+    expect(getComputedStyle(slot.parentElement!).alignItems).toBe('flex-start');
   });
 });
 

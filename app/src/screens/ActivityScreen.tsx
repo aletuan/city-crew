@@ -278,8 +278,13 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
             if (item.kind === 'trip') {
               return (
                 <View key={`t-${item.tripId}`} style={[s.row, i > 0 && s.rowDivider]}>
-                  <View style={s.mark}>
-                    <Ionicons name="calendar-outline" size={20} color={colors.accent} />
+                  {/* The accent, alone among the marks: every calendar in
+                      the app is `colors.accent` and `icons.test.ts` holds
+                      it to that — the day a plan turns on is the one
+                      meta fact allowed the colour. The heart below is
+                      tertiary like the rest of the bare glyphs. */}
+                  <View style={s.mark} testID="row-glyph">
+                    <Ionicons name="calendar-outline" size={19} color={colors.accent} />
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={s.line}>
@@ -309,8 +314,8 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                 // hear that this row opens the list.
                 accessibilityRole={title ? 'button' : undefined}
               >
-                <View style={s.mark}>
-                  <Ionicons name="heart-outline" size={20} color={colors.accent} />
+                <View style={s.mark} testID="row-glyph">
+                  <Ionicons name="heart-outline" size={19} color={colors.textTertiary} />
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={s.line} numberOfLines={2}>
@@ -347,6 +352,11 @@ function slugFor(
   return null;
 }
 
+/** The feed line's line height, and the box that holds a 19pt glyph's
+ *  whole line — see `mark`. */
+const LINE = 21;
+const MARK_BOX = 26;
+
 const s = StyleSheet.create({
   eyebrow: {
     color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
@@ -372,22 +382,28 @@ const s = StyleSheet.create({
   },
   declineText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.semibold },
 
+  // Top-aligned, so the mark can be set against the line's first row of
+  // text; a liked list's line wraps to two on a narrow phone, and a mark
+  // centred against two rows sits in the gap between them.
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 13,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 13,
     paddingHorizontal: space.cardPadding, paddingVertical: 13,
   },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
-  // The same box Profile's RoundIcon draws — 44pt, radius 13, soft fill
-  // under a hairline, outline glyph at 20 — so the feed's marks and the
-  // settings rows' read as one family. Filled glyphs at solid accent
-  // were the "darker" the review named: in the light theme accent is a
-  // brick, and a filled heart of it carries far more ink than the
-  // outline the rest of the app draws.
+  // The mark is Profile's `RowGlyph`, to the figure: a bare 19pt outline
+  // glyph, tertiary (the calendar excepted — see the row), in the well's
+  // 44pt footprint, with the well gone. It was the well — 44pt, radius 13, soft coral fill under a
+  // hairline — drawn to match Profile's rows while they wore one; they
+  // took it off on 6 Oct 2026 (#793), and this screen opens from one of
+  // them now, so a reader tapping a bare glyph and landing on a column
+  // of coral boxes had met two conventions in two taps.
+  //
+  // The arithmetic is Profile's too: the 26pt box holds a 19pt glyph's
+  // whole line, and `(21 − 26) / 2` sets its middle on the 21pt line's
+  // middle, whatever the second row of text does.
   mark: {
-    width: 44, height: 44, borderRadius: 13,
-    backgroundColor: colors.accentSoft,
-    borderWidth: 1, borderColor: colors.borderGlassSoft,
+    width: 44, height: MARK_BOX, marginTop: (LINE - MARK_BOX) / 2,
     alignItems: 'center', justifyContent: 'center',
   },
-  line: { color: colors.text, fontSize: 15, lineHeight: 21 },
+  line: { color: colors.text, fontSize: 15, lineHeight: LINE },
 });

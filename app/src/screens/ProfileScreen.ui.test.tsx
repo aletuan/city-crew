@@ -288,6 +288,13 @@ describe('guest hub', () => {
     expect(rows[3].compareDocumentPosition(screen.getByText('Preferences')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  // News needs an account to have happened to; a guest has no lists to
+  // be liked and no trips to come up.
+  it('offers no activity feed to a guest', () => {
+    draw();
+    expect(screen.queryByText('Activity')).toBeNull();
+  });
+
   it('never says "guest"', () => {
     draw();
     expect(document.body.textContent?.toLowerCase()).not.toContain('guest');
@@ -573,6 +580,30 @@ describe('friends card', () => {
     press('Connect with friends');
     expect(raw.navigate).toHaveBeenCalledWith('Crew');
     expect(screen.getByText('Find friends and share your plans.')).toBeTruthy();
+  });
+
+  // The feed had no door from 23 Aug 2026 (#309) until 6 Oct: its one
+  // entry was the "requests waiting" banner on Crew, and the two-tab
+  // Crew took the banner down with the requests it had pointed at. The
+  // applause and the trips it also carried were left behind a route
+  // nothing navigated to. It hangs here now, under the friends row.
+  it('opens the activity feed from the Friends card', () => {
+    const { raw } = draw();
+    press('Activity');
+    expect(raw.navigate).toHaveBeenCalledWith('Activity');
+    expect(screen.getByText('Likes on your lists, and your next trip.')).toBeTruthy();
+  });
+
+  it('files Activity in the same card as the friends row, under it', () => {
+    draw();
+    const friends = screen.getByText('Connect with friends').closest('[data-testid="feature-row"]')!;
+    const activity = screen.getByText('Activity').closest('[data-testid="feature-row"]')!;
+    expect(activity).not.toBe(friends);
+    expect(activity.parentElement).toBe(friends.parentElement);
+    expect(friends.compareDocumentPosition(activity) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(activity.compareDocumentPosition(screen.getByText('Preferences')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // One glyph each, the same bare kind.
+    expect(activity.querySelectorAll('[data-testid="row-glyph"]')).toHaveLength(1);
   });
 
   it('counts accepted friends only, and shows no number with none', () => {
