@@ -45,7 +45,14 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
   // does not reach a café in Huế, and the insert policy says so too.
   const granted = useIsGuide(place.city_id);
   const editor = useIsEditor();
-  const [busy, setBusy] = useState(false);
+  // Which of the two slow steps is running. Adding took one to three
+  // seconds on a phone, and the screen had one bit to show for it; the
+  // two steps that take the time are the shrink (`manipulateAsync` on a
+  // 12-megapixel frame) and the upload, and a screen that can name the
+  // step is a screen that can show something changing. The row insert and
+  // the re-read after it are fast enough to live under "uploading".
+  const [stage, setStage] = useState<AddStage>('idle');
+  const busy = stage !== 'idle';
   const [counts, setCounts] = useState({ mineHere: 0, mineToday: 0 });
 
   const me = { uid, granted, editor };
@@ -89,7 +96,7 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
     });
     if (picked.canceled || !picked.assets[0]) return;
 
-    setBusy(true);
+    setStage('shrinking');
     try {
       if (!uid) throw new Error('not_signed_in');
       if (!placeId) throw new Error('place_not_found');
@@ -100,6 +107,7 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
       );
       if (!shrunk.base64) throw new Error('bad_image');
 
+      setStage('uploading');
       const path = photoPath(uid, place.slug, Date.now());
       const publicUrl = await uploadPlacePhoto(path, decode(shrunk.base64));
       await addPlacePhoto({
@@ -122,9 +130,12 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
         e instanceof Error ? e.message : String(e),
       );
     } finally {
-      setBusy(false);
+      setStage('idle');
     }
   };
 
-  return { add, busy, mayOffer };
+  return { add, busy, stage, mayOffer };
 }
+
+/** The step an add is on; `idle` between adds. */
+export type AddStage = 'idle' | 'shrinking' | 'uploading';

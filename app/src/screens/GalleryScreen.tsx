@@ -239,9 +239,10 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
       right={mode === 'view' ? (
         <AddPill
           header
-          label={adder.busy ? '…' : t('Add', 'Thêm', '追加')}
+          label={t('Add', 'Thêm', '追加')}
+          busy={adder.busy}
           accessibilityLabel={t('Add a photo', 'Thêm ảnh', '写真を追加')}
-          onPress={() => { if (!adder.busy) void adder.add(); }}
+          onPress={() => { void adder.add(); }}
         />
       ) : undefined}
     >
@@ -276,7 +277,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
 
         {photos === null ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />
-        ) : shown.length === 0 ? (
+        ) : shown.length === 0 && !adder.busy ? (
           <Empty text={t('No photos yet. Add the first one.', 'Chưa có ảnh nào. Thêm ảnh đầu tiên nhé.', 'まだ写真がありません。最初の1枚を追加しましょう。')} />
         ) : (
           <View style={s.grid} testID="gallery-grid">
@@ -327,6 +328,26 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                 </PressableScale>
               );
             })}
+            {/* Where the photograph will land, while it is on its way.
+                The grid used to do nothing until the read-back after the
+                insert, and the one sign of the one-to-three seconds in
+                between was the header pill's word turning into "…". The
+                tile takes the new photograph's cell — the end of the
+                grid, the size of every other cell — and names the step
+                being waited on, in the two words the two slow steps
+                actually divide into. Indeterminate, because the storage
+                client reports no bytes; a bar that guessed would be
+                worse than a word that is true. */}
+            {adder.busy && (
+              <View style={[s.tile, s.waiting, { width: cell, height: cell }]} testID="gallery-uploading">
+                <ActivityIndicator color={colors.accent} />
+                <Text style={s.waitingText}>
+                  {adder.stage === 'shrinking'
+                    ? t('Compressing…', 'Đang nén…', '圧縮中…')
+                    : t('Uploading…', 'Đang tải lên…', 'アップロード中…')}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -423,6 +444,10 @@ const s = StyleSheet.create({
     flex: 1, borderRadius: 12, overflow: 'hidden',
     backgroundColor: colors.surfaceGlassStrong,
   },
+  // Not `flex: 1`: the waiting tile is given its cell outright, like the
+  // pressables around it get theirs through `containerStyle`.
+  waiting: { flex: 0, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  waitingText: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
   hiddenVeil: {
     backgroundColor: 'rgba(6,5,8,0.55)',
     alignItems: 'center', justifyContent: 'center',
