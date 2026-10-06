@@ -136,7 +136,7 @@ trong `_shared/` (test từ `app/src/lib/*.test.ts`, ngoài cổng coverage):
 | `delete-account` | app (`auth.tsx`) | chính chủ tài khoản |
 | `scan-city`, `suspend-user` | dashboard | editor |
 | `refresh-places`, `shrink-photos` | `pg_cron` (`cron.sql` cạnh function) | token `ops_tokens` hoặc editor — `_shared/gate.ts` |
-| `rehost-photos`, `refresh-photos` | chạy tay khi cần | như trên |
+| `rehost-photos`, `refresh-photos`, `prune-photos` | chạy tay khi cần (`prune-photos/run.sql`) | như trên |
 
 **Việc định kỳ** chạy bằng `pg_cron` + `pg_net` gọi Edge Function với
 token trong `ops_tokens`. Script lịch nằm ở `supabase/functions/<job>/cron.sql`
