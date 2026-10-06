@@ -48,7 +48,17 @@ const data = vi.hoisted(() => ({
   fetchMyPhotoCounts: vi.fn(async () => ({ mineHere: 0, mineToday: 0 })),
   addPlacePhoto: vi.fn(async (_row: unknown) => 'photo-new'),
   uploaded: vi.fn((_path: string) => {}),
+  picker: vi.fn(),
 }));
+// The two slow steps, held open by a test that wants to look at the
+// screen between them; by default each settles on its own. Outside
+// `data`, whose every member is a mock to be cleared.
+const gates = vi.hoisted(() => ({
+  shrink: { hold: false, release: () => {} },
+  upload: { hold: false, release: () => {} },
+}));
+const gate = (g: { hold: boolean; release: () => void }) =>
+  g.hold ? new Promise<void>((r) => { g.release = r; }) : Promise.resolve();
 
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
@@ -70,17 +80,20 @@ vi.mock('../lib/data', () => ({
   removePlacePhoto: data.removePlacePhoto,
   fetchMyPhotoCounts: data.fetchMyPhotoCounts,
   addPlacePhoto: data.addPlacePhoto,
-  uploadPlacePhoto: (path: string) => { data.uploaded(path); return Promise.resolve(`http://cdn/${path}`); },
+  uploadPlacePhoto: async (path: string) => { data.uploaded(path); await gate(gates.upload); return `http://cdn/${path}`; },
 }));
 vi.mock('expo-image-picker', () => ({
-  launchImageLibraryAsync: () => Promise.resolve(
-    state.picked
-      ? { canceled: false, assets: [{ uri: 'file://roll/IMG_1.HEIC' }] }
-      : { canceled: true, assets: [] },
-  ),
+  launchImageLibraryAsync: () => {
+    data.picker();
+    return Promise.resolve(
+      state.picked
+        ? { canceled: false, assets: [{ uri: 'file://roll/IMG_1.HEIC' }] }
+        : { canceled: true, assets: [] },
+    );
+  },
 }));
 vi.mock('expo-image-manipulator', () => ({
-  manipulateAsync: () => Promise.resolve({ base64: 'AAAA' }),
+  manipulateAsync: async () => { await gate(gates.shrink); return { base64: 'AAAA' }; },
   SaveFormat: { JPEG: 'jpeg' },
 }));
 vi.mock('base64-arraybuffer', () => ({ decode: () => new ArrayBuffer(4) }));
@@ -149,6 +162,8 @@ const confirmLast = () => {
 };
 
 beforeEach(() => {
+  gates.shrink = { hold: false, release: () => {} };
+  gates.upload = { hold: false, release: () => {} };
   state.uid = 'u1';
   state.editor = false;
   state.guide = true;
@@ -383,6 +398,54 @@ describe('adding one', () => {
     });
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
     expect(data.reload).toHaveBeenCalled();
+  });
+
+  // Adding took one to three seconds on a phone and the only sign of it
+  // was the pill's word turning into "…" — a narrower pill that read as
+  // a different button, over a grid that did nothing until the read-back
+  // landed (owner, 7 Oct 2026). The pill now keeps its word and its width
+  // and goes quiet; the grid grows a waiting tile that names the step it
+  // is on, because those are the two steps that actually take the time.
+  it('keeps the pill\'s word while adding, locks it, and walks a waiting tile through both steps', async () => {
+    gates.shrink.hold = true;
+    gates.upload.hold = true;
+    show([photo('a')]);
+    await grid();
+    const pill = screen.getByRole('button', { name: 'Add a photo' });
+    fireEvent.click(pill);
+    await screen.findByTestId('gallery-uploading');
+    expect(screen.getByText('Compressing…')).toBeTruthy();
+    expect(screen.getByText('Add')).toBeTruthy();
+    expect(screen.queryByText('…')).toBeNull();
+    expect(pill.getAttribute('aria-disabled')).toBe('true');
+    expect(pill.getAttribute('aria-busy')).toBe('true');
+    // The pill's plus has made way for its spinner.
+    expect(pill.querySelector('[role="progressbar"]')).toBeTruthy();
+    // A second tap while it works opens nothing.
+    fireEvent.click(pill);
+    expect(data.picker).toHaveBeenCalledTimes(1);
+    // The tile sits at the end of the grid, the size of a cell.
+    const tile = screen.getByTestId('gallery-uploading');
+    expect(tile.parentElement).toBe(screen.getByTestId('gallery-grid'));
+    expect(tile).toBe(screen.getByTestId('gallery-grid').lastElementChild);
+    await act(async () => { gates.shrink.release(); });
+    await screen.findByText('Uploading…');
+    expect(screen.queryByText('Compressing…')).toBeNull();
+    await act(async () => { gates.upload.release(); });
+    await waitFor(() => expect(data.addPlacePhoto).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByTestId('gallery-uploading')).toBeNull());
+    expect(pill.getAttribute('aria-disabled')).not.toBe('true');
+  });
+
+  it('shows the waiting tile in place of the empty note while the first photo is on its way', async () => {
+    gates.upload.hold = true;
+    show([]);
+    await screen.findByText(/No photos yet/);
+    fireEvent.click(screen.getByRole('button', { name: 'Add a photo' }));
+    await screen.findByTestId('gallery-uploading');
+    expect(screen.queryByText(/No photos yet/)).toBeNull();
+    await act(async () => { gates.upload.release(); });
+    await waitFor(() => expect(data.addPlacePhoto).toHaveBeenCalled());
   });
 
   it('writes nothing when the picker is dismissed', async () => {

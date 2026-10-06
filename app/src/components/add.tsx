@@ -35,7 +35,7 @@
 // the mistake this file exists to stop repeating.
 
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { HEADER_CONTROL_H, PressableScale } from './ui';
@@ -113,24 +113,43 @@ export function AddSlot({ title, subtitle, onPress }: {
  * section heading only when that section has rows, and how Trips hides it
  * until the first trip exists.
  */
-export function AddPill({ label, onPress, compact, header, accessibilityLabel }: {
+export function AddPill({ label, onPress, compact, header, busy, accessibilityLabel }: {
   label: string;
   onPress: () => void;
   compact?: boolean;
   /** In a screen's header, where it sits beside a 34pt title and next to
    *  the 44pt round buttons the other tabs put in that slot. */
   header?: boolean;
+  /** The thing it adds is on its way. The pill keeps its word and its
+   *  width, the plus makes way for a spinner, and a tap does nothing.
+   *
+   *  Gallery used to pass `'…'` as the label instead, and the pill shrank
+   *  to the width of three dots: a narrower, wordless pill in the same
+   *  slot read as a different button, not the same one working (owner,
+   *  7 Oct 2026). The word is what says which button this still is; the
+   *  spinner is what says it is busy; and the two are kept apart so
+   *  neither has to mean both. */
+  busy?: boolean;
   accessibilityLabel?: string;
 }) {
+  const glyph = compact ? 16 : 18;
   return (
     <PressableScale
       onPress={onPress}
+      disabled={busy}
       scaleTo={0.94}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ busy: !!busy, disabled: !!busy }}
+      aria-disabled={busy}
+      aria-busy={busy}
     >
-      <LinearGradient {...gradAI} style={[s.pill, compact && s.pillCompact, header && s.pillHeader]}>
-        <Ionicons name="add" size={compact ? 16 : 18} color={colors.accentInk} />
+      <LinearGradient {...gradAI} style={[s.pill, compact && s.pillCompact, header && s.pillHeader, busy && s.pillBusy]}>
+        {/* The spinner takes the plus's own box, so the word does not move
+            when one replaces the other. */}
+        {busy
+          ? <View style={{ width: glyph, height: glyph, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator size="small" color={colors.accentInk} /></View>
+          : <Ionicons name="add" size={glyph} color={colors.accentInk} />}
         <Text style={[s.pillText, compact && s.pillTextCompact]}>{label}</Text>
       </LinearGradient>
     </PressableScale>
@@ -167,6 +186,11 @@ const s = StyleSheet.create({
   // content, which is right beside a section heading and wrong beside a
   // screen title.
   pillHeader: { minHeight: HEADER_CONTROL_H, paddingHorizontal: 16, justifyContent: 'center' },
+  // Dimmed, not greyed: the gradient stays so the pill is still plainly
+  // the same object, and 0.7 is the figure `working` rows use elsewhere
+  // for "taken, not yet answered" — a little less, since this one also
+  // carries a spinner saying so.
+  pillBusy: { opacity: 0.7 },
   pillText: { color: colors.accentInk, fontSize: 15.5, fontWeight: font.semibold },
   pillTextCompact: { fontSize: 14 },
 });
