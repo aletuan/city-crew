@@ -153,14 +153,11 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
  * the value on the right makes them plainly two different rows, and the
  * question of which hierarchy is "right" stops being asked.
  */
-function SettingRow({ icon, label, value, detail, onPress, last }: {
+function SettingRow({ icon, label, value, onPress, last }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   /** Absent on rows that are a destination rather than a setting. */
   value?: string;
-  /** Where the value came from, under it in smaller type. Only the
-   *  city row has one: see the note on the value below. */
-  detail?: string;
   onPress: () => void;
   last?: boolean;
 }) {
@@ -177,29 +174,23 @@ function SettingRow({ icon, label, value, detail, onPress, last }: {
           a settings row that grows a second line for one city and not
           another makes the card look uneven for a reason nobody can see.
 
-          The city row used to say "Hà Nội · theo vị trí của bạn" on that
-          one line, and on a 320pt window the line was the one that went:
-          the name survived and the half that explained it was the half
-          that truncated. So the explanation has its own line now, under
-          the name and a size down, and both lines are given on every
-          city — "chosen by you" on the manual case rather than nothing,
-          because a row that is two lines in one mode and one in the
-          other changes height when the reader taps "Use my location",
-          and the card below it jumps. The label stays on the row's
-          centre, between the two, which `featureRow` already does.
+          One line, and only the value. The city row has tried to say
+          more here twice. "Hà Nội · theo vị trí của bạn" on the one line
+          truncated on a 320pt window, and the half that went was the
+          half that explained the city. A second, smaller line under the
+          name ("Theo vị trí" / "Tự chọn", #795) kept the words but made
+          this the one row in the card that was two lines tall, beside
+          Language and Appearance at one — the thing the move to the
+          right had been for was that the three rows read as one kind.
+          Where the city came from is said in the sheet this row opens,
+          under "Use my location", where there is room to say it in a
+          sentence; the row names the city and leaves the rest to it.
 
           With no value it is still what holds the glyph against the right
           edge, so the empty case is a spacer rather than nothing. */}
       {value === undefined
         ? <View style={{ flex: 1 }} />
-        : detail === undefined
-          ? <Text style={s.settingValue} numberOfLines={1}>{value}</Text>
-          : (
-            <View style={s.settingStack}>
-              <Text style={s.settingStackValue} numberOfLines={1}>{value}</Text>
-              <Text style={s.settingDetail} numberOfLines={1}>{detail}</Text>
-            </View>
-          )}
+        : <Text style={s.settingValue} numberOfLines={1}>{value}</Text>}
       <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
     </PressableScale>
   );
@@ -218,7 +209,7 @@ function SettingRow({ icon, label, value, detail, onPress, last }: {
  *  convention is a weaker signal than a heading. See `AppCard`. */
 function SettingsCard() {
   const { t, lang } = useI18n();
-  const { city, mode } = useCity();
+  const { city } = useCity();
   const [open, setOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
@@ -241,13 +232,6 @@ function SettingsCard() {
           // showing — it changes when you travel, and the label now says so.
           label={t('Current city', 'Thành phố hiện tại', '現在の都市')}
           value={city ? t(city.short_en, city.short_vi, city.short_ja) : '…'}
-          // Not "automatic" / "manual": those name the setting, and the
-          // reader is looking at the result. "By location" says why it is
-          // this city, and "chosen by you" says why it will stay this city
-          // when they travel — the one thing a manual pick changes.
-          detail={mode === 'auto'
-            ? t('By location', 'Theo vị trí', '現在地から')
-            : t('Chosen by you', 'Tự chọn', '手動で選択')}
           onPress={() => setOpen(true)}
         />
         <SettingRow
@@ -1022,23 +1006,6 @@ const s = StyleSheet.create({
   settingValue: {
     flex: 1, textAlign: 'right',
     color: colors.textTertiary, fontSize: 15, fontWeight: font.regular,
-  },
-  // The two-line value is a column that takes the row's remaining width
-  // and puts both lines against its right edge. The texts inside size to
-  // their content, which is why they carry `maxWidth: '100%'` rather than
-  // `flex: 1` — in a column `flex: 1` is height, and a one-line Text with
-  // nothing to shrink against never truncates, it overflows. The 3pt gap
-  // is `About me`'s: that card stacks a 12.5pt caption over its value at
-  // 3, and this one stacks a 15pt value over a 12.5pt caption — the same
-  // two sizes the other way up, so the two cards keep one rhythm.
-  settingStack: { flex: 1, alignItems: 'flex-end', gap: 3 },
-  settingStackValue: {
-    maxWidth: '100%', textAlign: 'right',
-    color: colors.textTertiary, fontSize: 15, fontWeight: font.regular,
-  },
-  settingDetail: {
-    maxWidth: '100%', textAlign: 'right',
-    color: colors.textTertiary, fontSize: 12.5, fontWeight: font.regular,
   },
   featureSub: { color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, lineHeight: 19 },
 
