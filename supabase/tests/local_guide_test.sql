@@ -12,9 +12,10 @@
 --   2222…  signed in, no grant
 --   3333…  a local guide who submitted nothing
 
-grant usage on schema public to rls_client;
+grant usage on schema public, storage to rls_client;
 grant select, insert, update, delete on public.places, public.place_photos to rls_client;
 grant select on public.local_guides to rls_client;
+grant select, insert, delete on storage.objects to rls_client;
 
 insert into public.local_guides (user_id) values
   ('11111111-1111-1111-1111-111111111111'),
@@ -211,6 +212,39 @@ begin
   select count(*) into left_ from public.place_photos where photo_uri = 'lg/desk.jpg';
   assert left_ = 1, 'a guide removed a photograph the desk had placed';
 end $$;
+
+-- ── and the file behind it ───────────────────────────────────────────
+-- Storage removes only what the caller can select (the 10 Sep lesson),
+-- and until 6 Oct 2026 a guide could select nothing in the bucket: the
+-- row went and the file stayed, fifty-six times. Exercised rather than
+-- read, because that is exactly how the first version passed review —
+-- a delete policy that looked complete and matched nothing.
+do $$
+declare mine_left int; theirs_left int; seen int;
+begin
+  insert into storage.objects (bucket_id, name) values
+    ('place-photos', '11111111-1111-1111-1111-111111111111/lg-live-1.jpg'),
+    ('place-photos', '33333333-3333-3333-3333-333333333333/lg-live-2.jpg'),
+    ('place-photos', 'lg-live/00000000-0000-0000-0000-00000000c0de.jpg');
+
+  set local role rls_client;
+  set local test.uid = '11111111-1111-1111-1111-111111111111';
+  -- Their own folder, and only it: not another guide's, not the imports'.
+  select count(*) into seen from storage.objects where bucket_id = 'place-photos';
+  delete from storage.objects where name = '11111111-1111-1111-1111-111111111111/lg-live-1.jpg';
+  delete from storage.objects where name = '33333333-3333-3333-3333-333333333333/lg-live-2.jpg';
+  delete from storage.objects where name = 'lg-live/00000000-0000-0000-0000-00000000c0de.jpg';
+  reset role;
+
+  assert seen = 1, format('a guide should see one object, their own; saw %s', seen);
+  select count(*) into mine_left from storage.objects where name like '11111111-1111-1111-1111-111111111111/%';
+  assert mine_left = 0, 'a guide could not remove their own file — the delete found nothing to delete';
+  select count(*) into theirs_left from storage.objects
+    where name like '33333333-3333-3333-3333-333333333333/%' or name like 'lg-live/%';
+  assert theirs_left = 2, 'a guide removed a file that was not in their folder';
+end $$;
+
+delete from storage.objects where name like '33333333-3333-3333-3333-333333333333/%' or name like 'lg-live/%';
 
 -- ── and a person with no grant reads nothing about the grants ────────
 do $$

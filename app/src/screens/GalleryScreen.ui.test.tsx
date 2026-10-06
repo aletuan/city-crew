@@ -44,7 +44,8 @@ const data = vi.hoisted(() => ({
   setCover: vi.fn(async () => {}),
   setHidden: vi.fn(async () => {}),
   reorderGallery: vi.fn(async () => {}),
-  removePlacePhoto: vi.fn(async (_id: string) => {}),
+  removePlacePhoto: vi.fn(async (_id: string, _path: string | null) => {}),
+  removePhotoFile: vi.fn(async (_path: string) => {}),
   fetchMyPhotoCounts: vi.fn(async () => ({ mineHere: 0, mineToday: 0 })),
   addPlacePhoto: vi.fn(async (_row: unknown) => 'photo-new'),
   uploaded: vi.fn((_path: string) => {}),
@@ -78,6 +79,7 @@ vi.mock('../lib/data', () => ({
   setHidden: data.setHidden,
   reorderGallery: data.reorderGallery,
   removePlacePhoto: data.removePlacePhoto,
+  removePhotoFile: data.removePhotoFile,
   fetchMyPhotoCounts: data.fetchMyPhotoCounts,
   addPlacePhoto: data.addPlacePhoto,
   uploadPlacePhoto: async (path: string) => { data.uploaded(path); await gate(gates.upload); return `http://cdn/${path}`; },
@@ -116,9 +118,10 @@ const place = (over: Partial<Place> = {}): Place => ({
 
 const photo = (id: string, over: Partial<GalleryPhoto> = {}): GalleryPhoto => ({
   id, photo_uri: `http://cdn/${id}.jpg`, is_cover: false, is_hidden: false, sort_order: 0,
-  source: 'google', ...over,
+  source: 'google', storage_path: `cong-caphe/${id}.jpg`, ...over,
 });
-const mine = (id: string, over: Partial<GalleryPhoto> = {}) => photo(id, { source: 'upload', ...over });
+const mine = (id: string, over: Partial<GalleryPhoto> = {}) =>
+  photo(id, { source: 'upload', storage_path: `u1/cong-caphe-${id}.jpg`, ...over });
 
 const nav = () => ({ navigate: vi.fn(), goBack: vi.fn() }) as unknown as Nav;
 const route = (slug = 'cong-caphe') => ({ params: { slug } }) as RootRoute<'Gallery'>;
@@ -328,7 +331,8 @@ describe('the menu on one photograph', () => {
     expect(alert.mock.calls.at(-1)![0]).toBe('Delete this photo?');
     expect(data.removePlacePhoto).not.toHaveBeenCalled();
     confirmLast();
-    await waitFor(() => expect(data.removePlacePhoto).toHaveBeenCalledWith('m'));
+    // The row's id and its file's path, so the bucket is cleared with it.
+    await waitFor(() => expect(data.removePlacePhoto).toHaveBeenCalledWith('m', 'u1/cong-caphe-m.jpg'));
     await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
   });
 
@@ -359,7 +363,7 @@ describe('choosing several', () => {
     expect(alert.mock.calls.at(-1)![0]).toBe('Delete 2 photos?');
     confirmLast();
     await waitFor(() => expect(data.removePlacePhoto).toHaveBeenCalledTimes(2));
-    expect(data.removePlacePhoto.mock.calls.map((c) => c[0])).toEqual(['g', 'm2']);
+    expect(data.removePlacePhoto.mock.calls).toEqual([['g', 'cong-caphe/g.jpg'], ['m2', 'u1/cong-caphe-m2.jpg']]);
     await waitFor(() => expect(screen.queryByTestId('gallery-delete-picked')).toBeNull());
   });
 
@@ -446,6 +450,32 @@ describe('adding one', () => {
     expect(screen.queryByText(/No photos yet/)).toBeNull();
     await act(async () => { gates.upload.release(); });
     await waitFor(() => expect(data.addPlacePhoto).toHaveBeenCalled());
+  });
+
+  // The third way a file ends up with no row: the storage write landed
+  // and the insert was refused. Until 6 Oct 2026 the file simply stayed.
+  it('takes the file back out when the row insert is refused', async () => {
+    data.addPlacePhoto.mockImplementationOnce(async () => { throw new Error('new row violates row-level security'); });
+    show([photo('a')]);
+    await grid();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a photo' }));
+    await waitFor(() => expect(data.removePhotoFile).toHaveBeenCalledTimes(1));
+    expect(data.removePhotoFile.mock.calls[0][0]).toBe(data.uploaded.mock.calls[0][0]);
+    expect(alert).toHaveBeenCalledWith('Could not add your photo', expect.stringMatching(/row-level security/));
+  });
+
+  it('leaves the bucket alone when the upload itself fails', async () => {
+    gates.upload.hold = false;
+    data.addPlacePhoto.mockClear();
+    show([photo('a')]);
+    await grid();
+    // Make the storage write the failing step: the mock calls `uploaded`
+    // before it answers, so a throw there is the upload throwing.
+    data.uploaded.mockImplementationOnce(() => { throw new Error('bucket full'); });
+    fireEvent.click(screen.getByRole('button', { name: 'Add a photo' }));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not add your photo', 'bucket full'));
+    expect(data.removePhotoFile).not.toHaveBeenCalled();
+    expect(data.addPlacePhoto).not.toHaveBeenCalled();
   });
 
   it('writes nothing when the picker is dismissed', async () => {

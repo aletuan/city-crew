@@ -321,7 +321,8 @@ run "$DB" -f "$HERE/moderation_log_test.sql"
 # proving nothing. Run here and both that file and `search_path_test.sql`
 # sweep these functions along with every other.
 echo "→ local guides"
-for f in "$ROOT"/supabase/migrations/*_local_guide_photos.sql; do
+for f in "$ROOT"/supabase/migrations/*_local_guide_photos.sql \
+         "$ROOT"/supabase/migrations/*_uploaders_read_own_photos.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/local_guide_test.sql"

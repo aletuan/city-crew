@@ -15,7 +15,9 @@ import { supabase } from '../supabase';
 import type { GalleryPhoto } from '../gallery';
 
 /** The catalog's photo columns plus `source`, which the sheet prints. */
-const COLS = 'id, photo_uri, is_cover, is_hidden, sort_order, source';
+// `storage_path` rides along for one reason: a delete hands it to the
+// bucket once the row is gone (`removePlacePhoto`).
+const COLS = 'id, photo_uri, is_cover, is_hidden, sort_order, source, storage_path';
 
 /**
  * Every photograph on the place, hidden ones included.

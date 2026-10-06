@@ -5,7 +5,7 @@ import { canKeepGallery, galleryActions, galleryOrder, type GalleryPhoto } from 
 import { canAddPhoto } from './guide';
 
 const photo = (over: Partial<GalleryPhoto> = {}): GalleryPhoto => ({
-  id: 'p', photo_uri: 'x', is_cover: false, is_hidden: false, sort_order: 0, source: 'google', ...over,
+  id: 'p', photo_uri: 'x', is_cover: false, is_hidden: false, sort_order: 0, source: 'google', storage_path: null, ...over,
 });
 
 describe('who may keep the gallery', () => {
