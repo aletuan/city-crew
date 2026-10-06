@@ -156,7 +156,8 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
       ...(p ? [{
         key: 'report',
         icon: 'flag-outline' as const,
-        title: t(`Report ${atHandle(p.handle)}`, `Báo cáo ${atHandle(p.handle)}`, `${atHandle(p.handle)} を報告`),
+        // The verb alone: the sheet's header names them — see `ActionSheet`.
+        title: t('Report', 'Báo cáo', '報告する'),
         desc: t(
           'Tell the desk about their name, photo or bio. They are not told who reported them.',
           'Báo cho desk về tên, ảnh hoặc tiểu sử của họ. Họ không biết ai đã báo cáo.',

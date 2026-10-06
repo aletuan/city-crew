@@ -253,7 +253,8 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   const reportAction = (p: FriendProfile): PersonAction => ({
     key: 'report',
     icon: 'flag-outline',
-    title: t(`Report ${tag(p)}`, `Báo cáo ${tag(p)}`, `${tag(p)} を報告`),
+    // The verb alone: the sheet's header names them — see `ActionSheet`.
+    title: t('Report', 'Báo cáo', '報告する'),
     desc: t(
       'Tell the desk about their name, photo or bio. They are not told who reported them.',
       'Báo cho desk về tên, ảnh hoặc tiểu sử của họ. Họ không biết ai đã báo cáo.',
@@ -313,7 +314,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       {
         key: 'unfriend',
         icon: 'person-remove-outline',
-        title: t(`Unfriend ${tag(p)}`, `Hủy kết bạn với ${tag(p)}`, `${tag(p)} と友達をやめる`),
+        title: t('Unfriend', 'Hủy kết bạn', '友達をやめる'),
         desc: t(
           'Take them out of your crew. They will not be told, and either of you can ask again later.',
           'Bỏ họ khỏi crew. Họ sẽ không được báo, và sau này ai cũng có thể mời lại.',
@@ -329,7 +330,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
       },
       blockAction(
         p,
-        t(`Block ${tag(p)}`, `Chặn ${tag(p)}`, `${tag(p)} をブロック`),
+        t('Block', 'Chặn', 'ブロック'),
         t(
           'Ends the friendship and keeps it ended: no requests either way, and their likes leave your Activity.',
           'Hủy kết bạn và giữ nguyên như vậy: không ai mời được ai, và lượt thích của họ rời khỏi Hoạt động.',
