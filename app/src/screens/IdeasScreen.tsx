@@ -145,7 +145,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   // them rather than telling them something.
   //
   // Capitalised after the separator, because that is what every other
-  // pair in this app does: "Thứ Bảy, 26 tháng 9 · Ban ngày". The lower
+  // pair in this app does: "Thứ Bảy, 26 T9 · Ban ngày". The lower
   // case here was the exception, and it showed once `SketchingScreen`
   // split the pair onto two lines and the second one opened with a small
   // letter.

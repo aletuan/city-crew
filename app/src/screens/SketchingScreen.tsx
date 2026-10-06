@@ -467,7 +467,7 @@ export default function SketchingScreen({ navigation, route }: {
   // order every trip subtitle keeps.
   //
   // Two lines rather than one, and the break is chosen rather than found.
-  // Centred, at 15pt, "Thứ Sáu, 25 tháng 9 · Ban ngày · Melbourne ·
+  // Centred, at 15pt, "Thứ Sáu, 25 T9 · Ban ngày · Melbourne ·
   // Gần bạn" is wider than a phone, and the wrap landed wherever the last
   // word fell — on a real screen that was "tôi", alone on its own line
   // under four segments. An orphan reads as a layout that came out wrong.
@@ -478,7 +478,7 @@ export default function SketchingScreen({ navigation, route }: {
   // the second line is a phrase and not a fragment.
   // The two halves of the dateline, kept apart rather than joined.
   //
-  // They used to be one `summaryLine` — "Thứ Bảy, 26 tháng 9 · Ban ngày" —
+  // They used to be one `summaryLine` — "Thứ Bảy, 26 T9 · Ban ngày" —
   // centred at 15pt with the whole of `p.where` on a second line under it,
   // and the note this replaces recorded what that cost: the four segments
   // are wider than a phone, so the break had to be *chosen by hand*

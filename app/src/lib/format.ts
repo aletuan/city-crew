@@ -54,11 +54,34 @@ const MONTHS_EN = [
  * needs telling. So the weekday keeps its whole name and the month goes
  * to three letters.
  *
- * Vietnamese and Japanese are left alone: both already write the month
- * as a numeral, so there was never anything to clip.
+ * Japanese is left alone: it already writes the month as a numeral, so
+ * there was never anything to clip.
+ *
+ * ── Vietnamese: "T10", not "tháng 10" (7 Oct 2026) ──
+ *
+ * Vietnamese spelled its month for a while, and it was the one branch
+ * that did. On the planning screen's date row the line sits beside the
+ * Ban ngày / Buổi tối control, which is itself wider than Day / Evening,
+ * so the language lost room from both sides: "Thứ Tư, 7 tháng 10" showed
+ * as "Thứ Tư, 7 thán…", a date clipped in the middle of its own month.
+ * The month now goes to "T" and its number — "Thứ Tư, 7 T10" — the way
+ * a Vietnamese calendar abbreviates it, and the exact parallel of the
+ * English form: weekday whole, month short. No Vietnamese date now runs
+ * longer than the widest English one ("Chủ Nhật, 28 T12" is 16 to
+ * "Wednesday, Dec 30"'s 17), which the test holds, so a row that fits
+ * English fits Vietnamese.
+ *
+ * Rejected: "thg 10", the CLDR and iOS abbreviation. Three characters
+ * longer, and with the wider control beside it the line was still at the
+ * edge on a 320pt window. Rejected too: shortening the weekday instead.
+ * "T" plus a number is ALSO how Vietnamese abbreviates a weekday (T2–T7),
+ * so "T4" is both Thứ Tư and tháng 4; the month may wear the notation
+ * only while the weekday keeps its whole name, and `DAYS_VI` is what
+ * keeps it. `shortDateline` writes the weekday as "Thứ 4" for the same
+ * reason.
  */
 export function dateline(lang: string, now: Date): string {
-  if (lang === 'vi') return `${DAYS_VI[now.getDay()]}, ${now.getDate()} tháng ${now.getMonth() + 1}`;
+  if (lang === 'vi') return `${DAYS_VI[now.getDay()]}, ${now.getDate()} T${now.getMonth() + 1}`;
   if (lang === 'ja') return `${now.getMonth() + 1}月${now.getDate()}日（${DAYS_JA[now.getDay()]}）`;
   return `${DAYS_EN[now.getDay()]}, ${MONTHS_EN[now.getMonth()]} ${now.getDate()}`;
 }

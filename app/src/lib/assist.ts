@@ -84,7 +84,7 @@ export function narratableOf(stops: readonly {
  * one the reader pictures.
  *
  * `dateline` is not reused here: this is a name, not a date, and "Thứ Bảy,
- * 16 tháng 8 ở Hoàn Kiếm" is a sentence rather than a title.
+ * 16 T8 ở Hoàn Kiếm" is a sentence rather than a title.
  */
 export function derivedTitle(
   stops: readonly Narratable[],

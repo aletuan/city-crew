@@ -491,8 +491,43 @@ describe('dateline', () => {
     expect(dateline('en', new Date(2026, 6, 1))).toBe('Wednesday, Jul 1');
   });
 
-  it('uses the Vietnamese day names and "tháng"', () => {
-    expect(dateline('vi', sat)).toBe('Thứ Bảy, 15 tháng 8');
+  // The Vietnamese parallel of the English form: the weekday whole, the
+  // month as "T" and its number — "Thứ Bảy, 15 T8", the way a Vietnamese
+  // calendar abbreviates it. "15 tháng 8" was the one branch that spelled
+  // the month, and on the planning screen's date row, beside Ban
+  // ngày/Buổi tối, "Thứ Tư, 7 tháng 10" ran to "Thứ Tư, 7 thán…" (owner's
+  // screenshot, 7 Oct 2026).
+  it('uses the Vietnamese day names and abbreviates the month to T-number', () => {
+    expect(dateline('vi', sat)).toBe('Thứ Bảy, 15 T8');
+    expect(dateline('vi', new Date(2026, 9, 7))).toBe('Thứ Tư, 7 T10');
+  });
+
+  // "T" and a number is also how Vietnamese abbreviates a weekday (T2–T7),
+  // so "T4" is both Thứ Tư and tháng 4. The form is unambiguous only while
+  // the weekday stays spelled; a dateline that read "T4, 7 T4" would be two
+  // different facts in one notation. Asserted on the month where the
+  // collision is worst.
+  it('never abbreviates the Vietnamese weekday, so T-number can only mean the month', () => {
+    const wedInApril = new Date(2026, 3, 1); // Wednesday, 1 April 2026
+    expect(dateline('vi', wedInApril)).toBe('Thứ Tư, 1 T4');
+    for (let d = 0; d < 7; d++) {
+      const line = dateline('vi', new Date(2026, 3, 1 + d));
+      expect(line).toMatch(/^(Chủ Nhật|Thứ (Hai|Ba|Tư|Năm|Sáu|Bảy)), /);
+    }
+  });
+
+  // The width argument, held as a fact: no Vietnamese line is longer than
+  // the longest English one, so a row that fits every English date fits
+  // every Vietnamese date. Not date-for-date — "Chủ Nhật, 4 T1" beats
+  // "Sunday, Jan 4" by one, because Chủ Nhật is two letters longer than
+  // Sunday — but the row is sized for its widest day, and that day is
+  // "Wednesday, Dec 30", at 17.
+  it('never runs longer in Vietnamese than the widest English line', () => {
+    const dates: Date[] = [];
+    for (let m = 0; m < 12; m++) for (let d = 1; d <= 31; d++) dates.push(new Date(2026, m, d));
+    const widestEn = Math.max(...dates.map((date) => dateline('en', date).length));
+    expect(widestEn).toBe(17);
+    for (const date of dates) expect(dateline('vi', date).length).toBeLessThanOrEqual(widestEn);
   });
 
   it('puts the Japanese weekday in its brackets', () => {
@@ -504,7 +539,7 @@ describe('dateline', () => {
   it('lines Sunday up with index zero', () => {
     const sun = new Date(2026, 7, 16);
     expect(dateline('en', sun)).toBe('Sunday, Aug 16');
-    expect(dateline('vi', sun)).toBe('Chủ Nhật, 16 tháng 8');
+    expect(dateline('vi', sun)).toBe('Chủ Nhật, 16 T8');
     expect(dateline('ja', sun)).toBe('8月16日（日）');
   });
 
