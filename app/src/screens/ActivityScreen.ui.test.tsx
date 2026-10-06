@@ -364,7 +364,7 @@ describe('the ⋯ sheet', () => {
     expect(screen.getAllByText('Anh Tran').length).toBeGreaterThan(1);
     expect(screen.getByRole('button', { name: 'Decline and block' })).toBeTruthy();
     expect(screen.getByText('The request goes, silently. They can ask again another day.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Report @anh' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Report' })).toBeTruthy();
   });
 
   it('declines from the sheet the same way the card does', async () => {
@@ -417,7 +417,7 @@ describe('the ⋯ sheet', () => {
     crew.people = { a: person('a', 'anh', '', 'https://x/a.jpg') };
     await renderScreen();
     await openSheet();
-    fireEvent.click(screen.getByRole('button', { name: 'Report @anh' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Report' }));
     await waitFor(() => expect(report).toHaveBeenCalledWith({
       kind: 'profile', id: 'a', name: '@anh', avatarUrl: 'https://x/a.jpg',
     }));

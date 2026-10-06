@@ -246,7 +246,7 @@ describe('answering a request', () => {
   it('the sheet’s own Decline declines', async () => {
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Options' }));
-    const dialog = await screen.findByRole('button', { name: 'Report @minh' });
+    const dialog = await screen.findByRole('button', { name: 'Report' });
     expect(dialog).toBeTruthy();
     const declines = screen.getAllByRole('button', { name: 'Decline' });
     fireEvent.click(declines.at(-1)!);
@@ -266,7 +266,7 @@ describe('answering a request', () => {
   it('reporting from the sheet hands the desk the profile', async () => {
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Options' }));
-    await pickSheetAction('Report @minh');
+    await pickSheetAction('Report');
     await waitFor(() => expect(report).toHaveBeenCalledWith({
       kind: 'profile', id: 'r', name: 'Minh', avatarUrl: undefined,
     }));
@@ -323,7 +323,7 @@ describe('your friends', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Options' }));
     // The sheet says who it is about: the same line appears a second time.
     expect(await screen.findAllByText('@anh · 3 mutual saves')).toHaveLength(2);
-    await pickSheetAction('Unfriend @anh');
+    await pickSheetAction('Unfriend');
     await waitFor(() => expect(alert).toHaveBeenCalled());
     const [title, body, buttons] = alert.mock.calls[0];
     expect(title).toBe('Unfriend @anh?');
@@ -340,7 +340,7 @@ describe('your friends', () => {
     render(<CrewScreen navigation={nav()} />);
     crew.ships.reload.mockClear();
     fireEvent.click(screen.getByRole('button', { name: 'Options' }));
-    await pickSheetAction('Block @anh');
+    await pickSheetAction('Block');
     await waitFor(() => expect(alert).toHaveBeenCalled());
     expect(alert.mock.calls[0][0]).toBe('Block @anh?');
     confirmLast();
@@ -359,7 +359,7 @@ describe('your friends', () => {
     fireEvent.mouseDown(row);
     await new Promise((r) => setTimeout(r, 600));
     fireEvent.mouseUp(row);
-    expect(await screen.findByRole('button', { name: 'Unfriend @anh' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Unfriend' })).toBeTruthy();
   });
 });
 
@@ -566,12 +566,30 @@ describe('somebody whose profile never arrived', () => {
     expect(screen.queryByRole('button', { name: /Report/ })).toBeNull();
   });
 
+  // The sheet's rows lead with a bare glyph on the title's line, the
+  // convention Profile and the detail screen share — no well, and the
+  // person named once, in the header, not in every row.
+  it('leads each row with a bare glyph on the title’s line, and names the person once', async () => {
+    crew.ships.data = [edge(ME, 'f', 'accepted')];
+    render(<CrewScreen navigation={nav()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Options' }));
+    await screen.findByRole('button', { name: 'Unfriend' });
+    const glyphs = document.querySelectorAll('[data-testid="sheet-glyph"]');
+    expect(glyphs.length).toBeGreaterThanOrEqual(2);
+    const slot = getComputedStyle(glyphs[0]);
+    expect(parseFloat(slot.height)).toBeGreaterThan(19);
+    expect(parseFloat(slot.marginTop) + parseFloat(slot.height) / 2).toBeCloseTo(19 / 2, 5);
+    expect(screen.queryByRole('button', { name: /Unfriend .+/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Block .+/ })).toBeNull();
+  });
+
   it('can still be unfriended from the options sheet', async () => {
     crew.ships.data = [edge(ME, 'f', 'accepted')];
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Options' }));
-    await pickSheetAction('Unfriend this person');
+    await pickSheetAction('Unfriend');
     await waitFor(() => expect(alert).toHaveBeenCalled());
+    // The row is the verb alone; the dialog, with the sheet gone, says who.
     expect(alert.mock.calls[0][0]).toBe('Unfriend this person?');
     confirmLast();
     await waitFor(() => expect(data.removeFriendship).toHaveBeenCalledWith(ME, 'f'));
@@ -594,7 +612,7 @@ describe('a write that fails says so', () => {
     crew.people = { a: person('a', 'anh') };
     render(<CrewScreen navigation={nav()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Options' }));
-    await pickSheetAction('Unfriend @anh');
+    await pickSheetAction('Unfriend');
     await waitFor(() => expect(alert).toHaveBeenCalled());
     confirmLast();
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not unfriend', 'offline'));

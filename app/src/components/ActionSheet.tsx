@@ -19,6 +19,24 @@
 // The confirmation that follows a destructive choice stays a system
 // dialog, raised from the row's own `onPress` once this sheet has gone —
 // see the timing note on the row.
+//
+// ── the glyph, and the name that is not repeated ──
+//
+// Each row led with a 44pt well around its glyph — neutral, or a wash of
+// the warning red for a destructive act — until 6 Oct 2026, when the
+// owner took the wells off Profile's rows and asked for this sheet to
+// follow. The glyph is bare now, 19pt, in the text ink or the warning
+// red, level with the title the way Profile's and the detail screen's
+// glyphs sit on their first line (the same 26pt box and the same lift;
+// `RowGlyph` on Profile has the arithmetic). The red on a destructive
+// row is carried by the glyph and the title together, which is what the
+// well was adding a third time.
+//
+// And the rows no longer name the person. "Unfriend @anh", "Block
+// @anh", "Report @anh" under a header that already shows @anh said the
+// handle four times on one sheet; the verb alone is the row, and the
+// header is who. The confirmation dialog that follows keeps the handle,
+// because by then the sheet — and the name — is gone.
 
 import React, { useEffect, useRef } from 'react';
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -27,6 +45,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PressableScale } from './ui';
 import { useI18n } from '../lib/i18n';
 import { colors, font, radius, space } from '../theme';
+
+/** The title's stated line (16pt, the system face gives 19.1) and the
+ *  glyph's box — Profile's `RowGlyph` numbers, so the two screens' glyphs
+ *  land on the same line for the same reasons. */
+const TITLE_LINE = 19;
+const GLYPH_BOX = 26;
 
 export type SheetAction = {
   key: string;
@@ -85,10 +109,10 @@ export default function ActionSheet({ visible, header, actions, onClose }: {
               accessibilityLabel={a.title}
               accessibilityHint={a.desc}
             >
-              <View style={[s.mark, a.destructive && s.markBad]}>
+              <View style={s.glyph} testID="sheet-glyph">
                 <Ionicons
                   name={a.icon}
-                  size={20}
+                  size={19}
                   color={a.destructive ? colors.bad : colors.text}
                 />
               </View>
@@ -133,22 +157,20 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.card,
     overflow: 'hidden',
   },
+  // `flex-start`, so the glyph can sit on the title's line rather than
+  // the middle of title-plus-sentence — see the header.
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
     paddingHorizontal: space.cardPadding, paddingVertical: 14,
   },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
-  // The same box the settings rows wear, in neutral rather than coral:
-  // these are not places to go, they are things to do, and one of them
-  // is a thing to be careful about.
-  mark: {
-    width: 44, height: 44, borderRadius: 13,
+  // The old well's 44pt footprint, a 26pt box with room for a 19pt
+  // glyph's whole line, lifted so its middle is the 19pt title line's.
+  glyph: {
+    width: 44, height: GLYPH_BOX, marginTop: (TITLE_LINE - GLYPH_BOX) / 2,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
-  markBad: { backgroundColor: colors.badSoft },
-  rowTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
+  rowTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: TITLE_LINE },
   rowTitleBad: { color: colors.bad },
   rowDesc: { color: colors.textTertiary, fontSize: 13.5, lineHeight: 18 },
 });
