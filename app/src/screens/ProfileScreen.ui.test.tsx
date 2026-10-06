@@ -354,21 +354,37 @@ describe('account identity', () => {
     expect(screen.getByText('March 2025')).toBeTruthy();
   });
 
-  // A fact wears a bare glyph, as the place's address and phone do on
-  // PlaceDetail; the coral well is for a row that answers a tap. About
-  // me is the one card of facts on this screen, and it used to wear the
-  // well of the rows that go somewhere.
-  it('draws its facts with a bare glyph, and keeps the coral well for rows that go somewhere', () => {
+  // Every row leads with the same bare glyph, as the place's address and
+  // phone do on PlaceDetail — no coral well anywhere on the screen. The
+  // chevron already says which rows go somewhere.
+  it('leads every row with a bare glyph and wears no well anywhere', () => {
     state.profile = { location: 'Da Nang' };
     state.memberSince = new Date(2025, 2, 14);
     draw();
-    // Three facts — email, hometown, member since — none in a well.
-    expect(screen.getAllByTestId('fact-glyph')).toHaveLength(3);
+    expect(document.querySelector('[data-testid="round-icon"]')).toBeNull();
+    // Three facts, the crew card, and the settings rows — each with one glyph.
     const about = screen.getByText('Hometown').closest('[data-testid="about-row"]');
-    expect(about?.querySelector('[data-testid="round-icon"]')).toBeNull();
-    // The Friends row still goes somewhere, and still wears the well.
+    expect(about?.querySelectorAll('[data-testid="row-glyph"]')).toHaveLength(1);
     const friends = screen.getByText('Connect with friends').closest('[data-testid="feature-row"]');
-    expect(friends?.querySelector('[data-testid="round-icon"]')).not.toBeNull();
+    expect(friends?.querySelectorAll('[data-testid="row-glyph"]')).toHaveLength(1);
+    expect(screen.getAllByTestId('row-glyph').length).toBeGreaterThanOrEqual(4);
+  });
+
+  // Level with the first line, as the detail screen sets its glyphs
+  // against a label — the owner caught the glyph floating to the middle
+  // of label-plus-value the day the wells came off. Asserted the way the
+  // detail screen's test does: the slot's middle is the first line's.
+  it('sets the glyph level with the row’s first line, on facts and on the crew card', () => {
+    state.profile = { location: 'Da Nang' };
+    state.memberSince = new Date(2025, 2, 14);
+    draw();
+    const slotOf = (text: string, row: string) =>
+      getComputedStyle(screen.getByText(text).closest(`[data-testid="${row}"]`)!.querySelector('[data-testid="row-glyph"]')!);
+    const about = slotOf('Hometown', 'about-row');
+    expect(parseFloat(about.height)).toBeGreaterThan(19);
+    expect(parseFloat(about.marginTop) + parseFloat(about.height) / 2).toBeCloseTo(15 / 2, 5);
+    const friends = slotOf('Connect with friends', 'feature-row');
+    expect(parseFloat(friends.marginTop) + parseFloat(friends.height) / 2).toBeCloseTo(19 / 2, 5);
   });
 
   it.each([

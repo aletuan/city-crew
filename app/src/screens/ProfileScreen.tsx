@@ -49,39 +49,61 @@ function memberSinceLabel(d: Date, lang: Lang): string {
   return `${MONTHS_EN[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-/** The coral well: a row that answers a tap wears one — a setting that
- *  opens a screen, the crew card, a download. */
-function RoundIcon({ name }: { name: keyof typeof Ionicons.glyphMap }) {
+/**
+ * The glyph every row on this screen leads with: bare, 19pt, in the
+ * tertiary ink, the way `PlaceDetailScreen` draws the address, the phone
+ * and the hours.
+ *
+ * Until 5 Oct 2026 every row wore a 44pt coral well around a 20pt glyph,
+ * and a second opinion the owner brought read the wells, not the glyphs,
+ * as the thing competing with the words. The well came off the three
+ * rows of facts first (About me), on the argument that a well could mean
+ * "this row answers a tap" and a bare glyph "this row only tells you
+ * something". The owner then asked for the rest of the screen to follow
+ * (6 Oct): the settings rows and the crew card already carry a chevron,
+ * which says "goes somewhere" on its own, so the well was saying it a
+ * second time in colour. One treatment on the screen, then, and the
+ * accent is left to what it marks here — the level ring, the request
+ * dot, the values that are links.
+ *
+ * The slot keeps the well's 44pt, so the words column sits where it did
+ * on every row of every card. Activity and Delete account still wear
+ * the well on their own rows; they are not this screen's to change, and
+ * are noted for the day they are.
+ */
+function RowGlyph({ name, line }: {
+  name: keyof typeof Ionicons.glyphMap;
+  /** The height of the row's first line, when the glyph should sit level
+   *  with it rather than with the row's middle — see `GLYPH_BOX`. */
+  line?: number;
+}) {
+  const lift = line == null ? undefined : { height: GLYPH_BOX, marginTop: (line - GLYPH_BOX) / 2 };
   return (
-    <View style={s.roundIcon} testID="round-icon">
-      <Ionicons name={name} size={20} color={colors.accent} />
+    <View style={[s.rowGlyph, lift]} testID="row-glyph">
+      <Ionicons name={name} size={19} color={colors.textTertiary} />
     </View>
   );
 }
 
 /**
- * A fact's glyph: bare, in the tertiary ink, the way `PlaceDetailScreen`
- * draws the address, the phone and the hours. About me is the one card
- * of facts on this screen — an email, a hometown, a month — and until
- * 5 Oct 2026 its three rows wore the same coral well as the rows that
- * go somewhere, so the three glyphs competed with the three answers
- * beside them. The owner's reading, and a second opinion's: it was the
- * wells, not the glyphs. Taking the well off rather than tinting it
- * neutral keeps the app to two treatments instead of three — a well
- * means the row responds to a tap, a bare glyph means it only tells you
- * something — and matches the one other screen that prints facts.
+ * Where the glyph sits on a two-line row: level with the first line, as
+ * `PlaceDetailScreen` sets its own against a label. The owner caught the
+ * difference the day the wells came off (6 Oct 2026): there the glyph
+ * marks the label, here it had floated to the middle of label-plus-value,
+ * so the same bare glyph read as two conventions one tab apart.
  *
- * The slot keeps the well's 44pt, so the words column sits where it does
- * on every other row of the card. 19pt, the detail screen's size for
- * the same job.
+ * The arithmetic is the detail screen's. The slot is `GLYPH_BOX` tall —
+ * room for a 19pt glyph's whole line, where a box the height of the
+ * label's line clipped it — and a margin of `(line − GLYPH_BOX) / 2`
+ * puts the box's middle on the first line's middle, whatever the second
+ * line does. The first lines are stated, not left to the platform: 15 for
+ * the 12.5pt caption (the system face gives 14.9), 19 for the 16pt title
+ * (19.1). A single-line row passes no line and lets the row centre it,
+ * which lands in the same place.
  */
-function FactGlyph({ name }: { name: keyof typeof Ionicons.glyphMap }) {
-  return (
-    <View style={s.factGlyph} testID="fact-glyph">
-      <Ionicons name={name} size={19} color={colors.textTertiary} />
-    </View>
-  );
-}
+const GLYPH_BOX = 26;
+const CAPTION_LINE = 15;
+const TITLE_LINE = 19;
 
 function FeatureRow({ icon, title, sub, onPress, last }: {
   icon: keyof typeof Ionicons.glyphMap;
@@ -93,17 +115,17 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
   return (
     <PressableScale
       scaleTo={0.98}
-      style={[s.featureRow, !last && s.featureRowDivider]}
+      style={[s.twoLineRow, !last && s.featureRowDivider]}
       onPress={onPress}
       accessibilityRole="button"
       testID="feature-row"
     >
-      <RoundIcon name={icon} />
+      <RowGlyph name={icon} line={TITLE_LINE} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.featureTitle}>{title}</Text>
         <Text style={s.featureSub}>{sub}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+      <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
     </PressableScale>
   );
 }
@@ -146,7 +168,7 @@ function SettingRow({ icon, label, value, onPress, last }: {
       onPress={onPress}
       accessibilityRole="button"
     >
-      <RoundIcon name={icon} />
+      <RowGlyph name={icon} />
       <Text style={s.settingLabel} numberOfLines={1}>{label}</Text>
       {/* The value takes what is left and truncates rather than wrapping:
           "Hà Nội · theo vị trí của bạn" is long, and a settings row that
@@ -483,8 +505,8 @@ function AboutRow({ icon, label, value, children, last }: {
   last?: boolean;
 }) {
   return (
-    <View style={[s.featureRow, !last && s.featureRowDivider]} testID="about-row">
-      <FactGlyph name={icon} />
+    <View style={[s.twoLineRow, !last && s.featureRowDivider]} testID="about-row">
+      <RowGlyph name={icon} line={CAPTION_LINE} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={s.aboutLabel}>{label}</Text>
         {children ?? <Text style={s.aboutValue}>{value}</Text>}
@@ -765,7 +787,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
       <PressableScale onPress={() => navigation.navigate('Crew')} accessibilityRole="button" testID="feature-row">
         <Card style={s.friendsCard}>
           <View>
-            <RoundIcon name="people-outline" />
+            <RowGlyph name="people-outline" line={TITLE_LINE} />
             {crew.incoming.length > 0 ? <View style={s.reqDot} /> : null}
           </View>
           <View style={{ flex: 1, gap: 3 }}>
@@ -774,8 +796,8 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
               {t('Find friends and share your plans.', 'Tìm kiếm bạn bè và chia sẻ kế hoạch.', '友達を探して、計画を共有。')}
             </Text>
           </View>
-          {crew.friends.length > 0 ? <Text style={s.friendCount}>{crew.friends.length}</Text> : null}
-          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />
+          {crew.friends.length > 0 ? <Text style={[s.friendCount, s.rowEnd]}>{crew.friends.length}</Text> : null}
+          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
         </Card>
       </PressableScale>
 
@@ -949,14 +971,14 @@ const s = StyleSheet.create({
 
   featureCard: { paddingHorizontal: space.cardPadding },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  // A row of two lines: the glyph is lifted to the first (see `GLYPH_BOX`),
+  // and the chevron at the far end keeps the middle through `rowEnd`.
+  twoLineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, paddingVertical: 14 },
+  rowEnd: { alignSelf: 'center' },
   featureRowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderGlassSoft },
-  roundIcon: {
-    width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.borderGlassSoft,
-  },
-  // The well's footprint without the well — see `FactGlyph`.
-  factGlyph: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  featureTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
+  // The old well's footprint without the well — see `RowGlyph`.
+  rowGlyph: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  featureTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: TITLE_LINE },
   // Regular, not semibold: a settings label names a row, it does not head
   // a paragraph. The value takes the rest of the line and is pushed right
   // by its own flex rather than by a spacer view.
@@ -979,15 +1001,20 @@ const s = StyleSheet.create({
   },
   featureSub: { color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, lineHeight: 19 },
 
+  // On the glyph's shoulder. It sat on the well's corner (−2, −2) while
+  // there was a well; on a bare 19pt glyph centred in a 44pt slot the
+  // glyph spans 12.5–31.5, so a 10pt dot at 8 from the top and the right
+  // (26–36) overlaps its top-right corner the way a badge sits on an
+  // icon, rather than floating in the slot's empty corner 13pt away.
   reqDot: {
-    position: 'absolute', top: -2, right: -2,
+    position: 'absolute', top: 8, right: 8,
     width: 10, height: 10, borderRadius: 5,
     backgroundColor: colors.accent,
     borderWidth: 2, borderColor: colors.bgElevated,
   },
   friendCount: { color: colors.textTertiary, fontSize: 15.5, fontWeight: font.semibold },
   friendsCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
     padding: space.cardPadding,
   },
 
@@ -1029,7 +1056,7 @@ const s = StyleSheet.create({
   },
   editBtnText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
 
-  aboutLabel: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
+  aboutLabel: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium, lineHeight: CAPTION_LINE },
   aboutValue: { color: colors.text, fontSize: 15.5, fontWeight: font.regular, lineHeight: 21 },
 
   signOutBtn: {
