@@ -168,10 +168,22 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
             about "the count of red things" going up by one, and this had
             put it up by five. The heading is what carries the meaning
             anyway; the lines under it are contents, and contents do not
-            each need to be told again what list they are in. */}
+            each need to be told again what list they are in.
+
+            And the mark is drawn as the lines' glyphs are drawn — outline,
+            17pt, `textTertiary`, at the same gap, so the five stand in one
+            column — rather than filled and in colour, which it was until
+            6 Oct 2026. A filled red cross over four outline grey glyphs
+            was the one glyph on the card in a different hand, and the
+            owner read it as that: an inconsistency, not an emphasis. What
+            the two headings mean is carried twice already without the
+            colour — by the words (`bị` against `được`, below) and by the
+            shape (a cross against a tick) — which is also the pair a
+            reader who cannot tell red from green is left with. The count
+            of red things on the screen is now one, the button. */}
         <View style={[s.block, s.divider]}>
           <View style={s.blockHead}>
-            <Ionicons name="close-circle" size={16} color={colors.bad} />
+            <Ionicons name="close-circle-outline" size={17} color={colors.textTertiary} />
             <Text style={s.label}>{t('Will be deleted', 'Sẽ bị xoá', '削除されるもの')}</Text>
           </View>
           {gone.map(([icon, line]) => (
@@ -192,7 +204,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
             burning the library. */}
         <View style={s.block}>
           <View style={s.blockHead}>
-            <Ionicons name="checkmark-circle" size={16} color={colors.ok} />
+            <Ionicons name="checkmark-circle-outline" size={17} color={colors.textTertiary} />
             {/* The pair, as a pair in each language. Vietnamese has two
                 passives and picks between them by whether what happened
                 was wanted — `bị` for the bad, `được` for the good — so
@@ -224,16 +236,24 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
       <Card style={s.card}>
         <PressableScale
           scaleTo={0.98}
-          style={s.row}
+          style={s.twoLineRow}
           onPress={takeout.busy ? undefined : takeout.run}
           accessibilityRole="button"
           accessibilityState={{ busy: takeout.busy }}
+          testID="takeout-row"
         >
-          <View style={s.roundIcon}>
-            <Ionicons name="download-outline" size={20} color={colors.accent} />
+          {/* Profile's `RowGlyph`, to the figure, and for the same reason
+              Profile gave its rows the bare glyph on 6 Oct 2026 (#793):
+              the chevron already says the row goes somewhere, and the
+              coral well was saying it a second time in colour. Lifted to
+              the title line — `(TITLE_LINE − GLYPH_BOX) / 2` — rather
+              than centred on title-plus-sub, which is the convention
+              Profile and the detail screen settled on the same day. */}
+          <View style={s.glyph} testID="row-glyph">
+            <Ionicons name="download-outline" size={19} color={colors.textTertiary} />
           </View>
-          <View style={s.who}>
-            <Text style={s.whoName}>{t('Download your data', 'Tải dữ liệu của bạn', 'データをダウンロード')}</Text>
+          <View style={s.words}>
+            <Text style={s.actionTitle}>{t('Download your data', 'Tải dữ liệu của bạn', 'データをダウンロード')}</Text>
             <Text style={s.actionSub}>{t(
               'A copy of everything above, as one file.',
               'Một bản sao của mọi thứ ở trên, trong một tệp.',
@@ -241,8 +261,8 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
             )}</Text>
           </View>
           {takeout.busy
-            ? <ActivityIndicator color={colors.textTertiary} />
-            : <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} />}
+            ? <ActivityIndicator color={colors.textTertiary} style={s.rowEnd} />
+            : <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />}
         </PressableScale>
       </Card>
       {takeout.error ? <FormError>{failText(takeout.error)}</FormError> : null}
@@ -271,6 +291,13 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
   );
 }
 
+/** Profile's `RowGlyph` figures: a 26pt box holds a 19pt glyph's whole
+ *  line, and `(line − box) / 2` sets its middle on the 16pt title's 19pt
+ *  line. Restated here rather than imported so a screen does not reach
+ *  into another screen's module for two numbers. */
+const GLYPH_BOX = 26;
+const TITLE_LINE = 19;
+
 // `featureCard`'s figures throughout, because this is one of `Profile`'s
 // cards and being *almost* one would read as a mistake rather than as a
 // variation.
@@ -284,18 +311,29 @@ const s = StyleSheet.create({
   who: { flex: 1, gap: 2 },
   whoName: { color: colors.text, fontSize: 15.5, fontWeight: font.semibold },
   whoHandle: { color: colors.textTertiary, ...type.meta },
-  // `roundIcon` and the sub-line are `ProfileScreen`'s, to the figure: the
-  // download row is an ordinary settings row that happens to be standing
-  // on this screen, and it should read as one.
-  roundIcon: {
-    width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.borderGlassSoft,
+  // `FeatureRow`'s figures from `ProfileScreen`, to the point: the
+  // download row is one of Profile's two-line rows that happens to be
+  // standing on this screen, and it should read as one. Top-aligned, so
+  // the glyph can be set against the title; the chevron and the spinner
+  // centre themselves on the row instead.
+  twoLineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, paddingVertical: 14 },
+  rowEnd: { alignSelf: 'center' },
+  // The well's 44pt footprint without the well, `GLYPH_BOX` tall and
+  // lifted to the title line — the arithmetic is explained at Profile's
+  // `RowGlyph`, and the two figures are its.
+  glyph: {
+    width: 44, height: GLYPH_BOX, marginTop: (TITLE_LINE - GLYPH_BOX) / 2,
+    alignItems: 'center', justifyContent: 'center',
   },
-  actionSub: { color: colors.textSecondary, ...type.meta },
+  words: { flex: 1, gap: 3 },
+  actionTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: TITLE_LINE },
+  actionSub: { color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, lineHeight: 19 },
 
   block: { paddingVertical: 14, gap: 9 },
+  // One gap for the heading and the lines under it: the mark and the four
+  // glyphs are the same size, and at the same gap they make one column.
   item: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  blockHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  blockHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   // `aboutLabel` and `aboutValue`, to the point: the card above this one
   // on the profile says what somebody's account holds in exactly this
   // type, and this one says what would be taken out of it.
