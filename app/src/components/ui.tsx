@@ -710,8 +710,8 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
  * which made `[s.card, past && s.cardPast]` a type error and pushed callers
  * towards one merged style per combination.
  */
-export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[s.card, style]}>{children}</View>;
+export function Card({ children, style, testID }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; testID?: string }) {
+  return <View style={[s.card, style]} testID={testID}>{children}</View>;
 }
 
 /** Reflected city light: heavily diffused amber, strongest across the

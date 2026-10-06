@@ -1,9 +1,9 @@
-// Activity — what happened while you were away.
+// Activity — what happened while you were away, and what is about to.
 //
-// Two sections, two kinds of thing. REQUESTS are questions: somebody
+// Three sections, three kinds of thing. REQUESTS are questions: somebody
 // asked to join your crew and the card carries the only two answers.
-// EARLIER is news: applause on your lists, and the one trip about to
-// happen. News rows do nothing on tap except the applause rows, which
+// UPCOMING is the one trip about to happen. EARLIER is news: applause on
+// your lists. News rows do nothing on tap except the applause rows, which
 // open the list that earned it.
 //
 // The applause comes through `likes_on_mine`, which names every liker
@@ -69,6 +69,10 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
     () => buildActivity(applause ?? [], trips.data, todayISO()),
     [applause, trips.data],
   );
+  // Split by tense for the two headings; `buildActivity` keeps its one
+  // ordered list because the order inside each half is its to decide.
+  const upcoming = feed.filter((i): i is Extract<ActivityItem, { kind: 'trip' }> => i.kind === 'trip');
+  const earlier = feed.filter((i): i is Extract<ActivityItem, { kind: 'applause' }> => i.kind === 'applause');
 
   // A collection id is what the applause carries; the title is what the
   // reader needs. Both shelves are searched — the liked list is yours,
@@ -263,72 +267,94 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
         </>
       )}
 
-      <Text style={s.eyebrow}>{t('Earlier', 'Trước đó', 'これまで')}</Text>
-      {loading ? (
-        <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
-      ) : feed.length === 0 ? (
-        <Empty text={t(
-          'Quiet so far. Likes on your lists and upcoming trips will show here.',
-          'Chưa có gì. Lượt thích trên các list và chuyến đi sắp tới sẽ hiện ở đây.',
-          'まだ静かです。リストへのいいねや近い旅程がここに表示されます。',
-        )} />
-      ) : (
-        <Card>
-          {feed.map((item, i) => {
-            if (item.kind === 'trip') {
-              return (
-                <View key={`t-${item.tripId}`} style={[s.row, i > 0 && s.rowDivider]}>
-                  {/* The accent, alone among the marks: every calendar in
-                      the app is `colors.accent` and `icons.test.ts` holds
-                      it to that — the day a plan turns on is the one
-                      meta fact allowed the colour. The heart below is
-                      tertiary like the rest of the bare glyphs. */}
-                  <View style={s.mark} testID="row-glyph">
-                    <Ionicons name="calendar-outline" size={19} color={colors.accent} />
-                  </View>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={s.line}>
-                      {item.inDays === 0
-                        ? t(`“${item.title}” is today`, `“${item.title}” là hôm nay`, `「${item.title}」は今日です`)
-                        : item.inDays === 1
-                          ? t(`“${item.title}” is tomorrow`, `“${item.title}” là ngày mai`, `「${item.title}」は明日です`)
-                          : t(`“${item.title}” is in ${item.inDays} days`, `“${item.title}” còn ${item.inDays} ngày nữa`, `「${item.title}」まであと${item.inDays}日`)}
-                    </Text>
-                  </View>
-                </View>
-              );
-            }
-            const title = titleOf(item.collection_id);
-            // The handle, not the full name: it is how the rest of the
-            // app names a person in public ("by @trang"), and it is the
-            // name they chose to be known by. The full name stays on
-            // the request card, where recognising a human is the
-            // decision being made.
-            const who = item.liker_handle ? atHandle(item.liker_handle) : null;
-            return (
-              <PressableScale
-                key={`a-${item.collection_id}-${item.at}`}
-                style={[s.row, i > 0 && s.rowDivider]}
-                onPress={title ? () => navigation.navigate('CollectionDetail', { slug: slugFor(item.collection_id, [...mine.data, ...cols.data]) ?? '' }) : undefined}
-                // A button only when it goes somewhere — VoiceOver has to
-                // hear that this row opens the list.
-                accessibilityRole={title ? 'button' : undefined}
-              >
+      {/* Two tenses, two headings. The one trip about to happen used to
+          sit in the same card as the applause, under EARLIER — and the
+          owner's screenshot (7 Oct 2026) read "“Bữa tối hai người đầu
+          giờ” là ngày mai" beneath "TRƯỚC ĐÓ": a thing about to happen
+          filed under things that had. The heading is drawn only when
+          there is a trip to put under it; a heading over nothing is a
+          label for a list of none. */}
+      {upcoming.length > 0 && (
+        <>
+          <Text style={s.eyebrow}>{t('Upcoming', 'Sắp tới', 'これから')}</Text>
+          <Card testID="upcoming-card">
+            {upcoming.map((item, i) => (
+              <View key={`t-${item.tripId}`} style={[s.row, i > 0 && s.rowDivider]}>
+                {/* The accent, alone among the marks: every calendar in
+                    the app is `colors.accent` and `icons.test.ts` holds
+                    it to that — the day a plan turns on is the one
+                    meta fact allowed the colour. The heart below is
+                    tertiary like the rest of the bare glyphs. */}
                 <View style={s.mark} testID="row-glyph">
-                  <Ionicons name="heart-outline" size={19} color={colors.textTertiary} />
+                  <Ionicons name="calendar-outline" size={19} color={colors.accent} />
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={s.line} numberOfLines={2}>
-                    {who
-                      ? t(`${who} liked “${title ?? '…'}”`, `${who} đã thích “${title ?? '…'}”`, `${who} が「${title ?? '…'}」にいいねしました`)
-                      : t(`Someone liked “${title ?? '…'}”`, `Ai đó đã thích “${title ?? '…'}”`, `誰かが「${title ?? '…'}」にいいねしました`)}
+                  <Text style={s.line}>
+                    {item.inDays === 0
+                      ? t(`“${item.title}” is today`, `“${item.title}” là hôm nay`, `「${item.title}」は今日です`)
+                      : item.inDays === 1
+                        ? t(`“${item.title}” is tomorrow`, `“${item.title}” là ngày mai`, `「${item.title}」は明日です`)
+                        : t(`“${item.title}” is in ${item.inDays} days`, `“${item.title}” còn ${item.inDays} ngày nữa`, `「${item.title}」まであと${item.inDays}日`)}
                   </Text>
-                  <Text style={s.meta}>{agoLabel(item.at)}</Text>
                 </View>
-              </PressableScale>
-            );
-          })}
-        </Card>
+              </View>
+            ))}
+          </Card>
+        </>
+      )}
+
+      {/* EARLIER is drawn when there is applause, while the applause is
+          still on its way, or when there is nothing on the page at all —
+          then it carries the quiet note, which also names the trips that
+          would appear above. A trip and no applause draws no EARLIER: the
+          page is not quiet, so it does not say it is. */}
+      {(loading || earlier.length > 0 || upcoming.length === 0) && (
+        <>
+          <Text style={s.eyebrow}>{t('Earlier', 'Trước đó', 'これまで')}</Text>
+          {loading ? (
+            <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
+          ) : earlier.length === 0 ? (
+            <Empty text={t(
+              'Quiet so far. Likes on your lists and upcoming trips will show here.',
+              'Chưa có gì. Lượt thích trên các list và chuyến đi sắp tới sẽ hiện ở đây.',
+              'まだ静かです。リストへのいいねや近い旅程がここに表示されます。',
+            )} />
+          ) : (
+            <Card testID="earlier-card">
+              {earlier.map((item, i) => {
+                const title = titleOf(item.collection_id);
+                // The handle, not the full name: it is how the rest of the
+                // app names a person in public ("by @trang"), and it is the
+                // name they chose to be known by. The full name stays on
+                // the request card, where recognising a human is the
+                // decision being made.
+                const who = item.liker_handle ? atHandle(item.liker_handle) : null;
+                return (
+                  <PressableScale
+                    key={`a-${item.collection_id}-${item.at}`}
+                    style={[s.row, i > 0 && s.rowDivider]}
+                    onPress={title ? () => navigation.navigate('CollectionDetail', { slug: slugFor(item.collection_id, [...mine.data, ...cols.data]) ?? '' }) : undefined}
+                    // A button only when it goes somewhere — VoiceOver has to
+                    // hear that this row opens the list.
+                    accessibilityRole={title ? 'button' : undefined}
+                  >
+                    <View style={s.mark} testID="row-glyph">
+                      <Ionicons name="heart-outline" size={19} color={colors.textTertiary} />
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={s.line} numberOfLines={2}>
+                        {who
+                          ? t(`${who} liked “${title ?? '…'}”`, `${who} đã thích “${title ?? '…'}”`, `${who} が「${title ?? '…'}」にいいねしました`)
+                          : t(`Someone liked “${title ?? '…'}”`, `Ai đó đã thích “${title ?? '…'}”`, `誰かが「${title ?? '…'}」にいいねしました`)}
+                      </Text>
+                      <Text style={s.meta}>{agoLabel(item.at)}</Text>
+                    </View>
+                  </PressableScale>
+                );
+              })}
+            </Card>
+          )}
+        </>
       )}
       <PersonSheet
         visible={sheet !== null}
