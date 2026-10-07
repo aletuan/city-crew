@@ -124,9 +124,49 @@ describe('splitTrips with two trips on the same day', () => {
   const a = { day: '2026-08-20', id: 'a' };
   const b = { day: '2026-08-20', id: 'b' };
 
-  it('keeps them both, in the order they arrived', () => {
+  it('keeps them both, in the order they arrived, when nothing else tells them apart', () => {
     const { upcoming } = splitTrips([a, b], '2026-08-17', NOON);
     expect(upcoming.map((t) => t.id)).toEqual(['a', 'b']);
+  });
+
+  // Two plans for one day: the daytime one first, since it comes first;
+  // and within one half of the day, the plan made most recently first,
+  // because that is the one the reader just made and is looking for
+  // (owner, 7 Oct 2026). Nothing in the day's order tells two evening
+  // plans apart, so the clock they were created by does.
+  it('runs the daytime plan before the evening one', () => {
+    const eve = { day: '2026-08-20', id: 'eve', when_part: 'evening' as const, created_at: '2026-08-01T10:00:00Z' };
+    const noon = { day: '2026-08-20', id: 'noon', when_part: 'day' as const, created_at: '2026-08-01T09:00:00Z' };
+    expect(splitTrips([eve, noon], '2026-08-17', NOON).upcoming.map((t) => t.id)).toEqual(['noon', 'eve']);
+  });
+
+  it('within one half of the day, puts the plan made most recently first', () => {
+    const older = { day: '2026-08-20', id: 'older', when_part: 'evening' as const, created_at: '2026-08-01T10:00:00Z' };
+    const newer = { day: '2026-08-20', id: 'newer', when_part: 'evening' as const, created_at: '2026-08-15T10:00:00Z' };
+    expect(splitTrips([older, newer], '2026-08-17', NOON).upcoming.map((t) => t.id)).toEqual(['newer', 'older']);
+    // Whichever way they arrived.
+    expect(splitTrips([newer, older], '2026-08-17', NOON).upcoming.map((t) => t.id)).toEqual(['newer', 'older']);
+    // Across days the day still decides, whatever was made when.
+    const tomorrowNew = { day: '2026-08-18', id: 'tn', when_part: 'day' as const, created_at: '2026-08-16T10:00:00Z' };
+    expect(splitTrips([older, tomorrowNew], '2026-08-17', NOON).upcoming.map((t) => t.id)).toEqual(['tn', 'older']);
+  });
+
+  // A row from before `when_part` was read here has nothing to say about
+  // the half of the day; the pair falls through to when they were made.
+  it('falls back to creation when only one of the two names its half of the day', () => {
+    const half = { day: '2026-08-20', id: 'half', when_part: 'evening' as const, created_at: '2026-08-01T10:00:00Z' };
+    const bare = { day: '2026-08-20', id: 'bare', created_at: '2026-08-05T10:00:00Z' };
+    expect(splitTrips([half, bare], '2026-08-17', NOON).upcoming.map((t) => t.id)).toEqual(['bare', 'half']);
+    // Same half, same clock: equal, so arrival order stands.
+    const twin = { ...half, id: 'twin' };
+    expect(splitTrips([half, twin], '2026-08-17', NOON).upcoming.map((t) => t.id)).toEqual(['half', 'twin']);
+  });
+
+  it('on the past side, reads the day backwards: evening before daytime, newest-made first', () => {
+    const eve = { day: '2026-08-10', id: 'eve', when_part: 'evening' as const, created_at: '2026-08-01T10:00:00Z' };
+    const noonOld = { day: '2026-08-10', id: 'noonOld', when_part: 'day' as const, created_at: '2026-08-01T09:00:00Z' };
+    const noonNew = { day: '2026-08-10', id: 'noonNew', when_part: 'day' as const, created_at: '2026-08-09T09:00:00Z' };
+    expect(splitTrips([noonOld, eve, noonNew], '2026-08-17', NOON).past.map((t) => t.id)).toEqual(['eve', 'noonNew', 'noonOld']);
   });
 
   it('does the same on the other side of today', () => {

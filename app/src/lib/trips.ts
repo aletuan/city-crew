@@ -26,6 +26,11 @@ import type { PlacePhoto } from './types';
  */
 export type Dated = {
   day: string;
+  /** Which half of the day, and when the plan was made: the two
+   *  tie-breakers `splitTrips` reads when two trips share a day. Both
+   *  optional, since the callers that only split have neither. */
+  when_part?: 'day' | 'evening';
+  created_at?: string;
   trip_stops?: readonly { arrive_min?: number | null; dwell_min?: number | null }[];
 };
 
@@ -97,9 +102,34 @@ export function splitTrips<T extends Dated>(
   const upcoming: T[] = [];
   const past: T[] = [];
   for (const t of trips) (behind(t) ? past : upcoming).push(t);
-  upcoming.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
-  past.sort((a, b) => (a.day > b.day ? -1 : a.day < b.day ? 1 : 0));
+  upcoming.sort((a, b) => inDayOrder(a, b, 1));
+  past.sort((a, b) => inDayOrder(a, b, -1));
   return { upcoming, past };
+}
+
+/**
+ * The order of two trips, read forwards (`dir` 1, the upcoming half) or
+ * backwards (`dir` -1, the past half).
+ *
+ * The day decides first. Within one day, the daytime plan comes before
+ * the evening one, since it does; the past half reads the same day
+ * backwards, evening first, the way it reads the days. Within one half
+ * of one day the two are telling the reader nothing different about when,
+ * so the order falls to when they were *made*, most recent first on both
+ * sides — because the plan the reader just made is the one they are
+ * looking for, and two evening plans in creation order put it under the
+ * other (owner, 7 Oct 2026). Trips without either field keep the order
+ * they arrived in; the sort is stable and the comparison says "equal".
+ */
+function inDayOrder(a: Dated, b: Dated, dir: 1 | -1): number {
+  if (a.day !== b.day) return (a.day < b.day ? -1 : 1) * dir;
+  const half = (t: Dated) => (t.when_part === 'evening' ? 1 : t.when_part === 'day' ? 0 : null);
+  const ha = half(a), hb = half(b);
+  if (ha != null && hb != null && ha !== hb) return (ha - hb) * dir;
+  if (a.created_at && b.created_at && a.created_at !== b.created_at) {
+    return a.created_at > b.created_at ? -1 : 1;
+  }
+  return 0;
 }
 
 /**
