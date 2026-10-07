@@ -1,11 +1,17 @@
-// Activity — what happened while you were away, and what is about to.
+// Activity — what other people did with your lists and your crew while
+// you were away.
 //
-// Three sections, three kinds of thing. REQUESTS are questions: somebody
+// Two sections, two kinds of thing. REQUESTS are questions: somebody
 // asked to join your crew and the card carries the only two answers.
-// UPCOMING is the one trip about to happen. EARLIER is news: applause on
-// your lists. A row opens what it names — the trip, the list that earned
-// the like — and wears the chevron that says so; a like on a list that is
-// gone opens nothing and wears none.
+// EARLIER is news: applause on your lists. A row opens the list that
+// earned the like and wears the chevron that says so; a like on a list
+// that is gone opens nothing and wears none.
+//
+// Your own plans are not here. An UPCOMING section carried the nearest
+// trip for a day (6–7 Oct 2026) and went: by then the same fact was on
+// the Trips tab's dot, in the morning notification and on the Trips
+// screen, and this copy — the deepest, one line, and showing one trip
+// when there were two on the day — was the only one telling it wrong.
 //
 // The applause comes through `likes_on_mine`, which names every liker
 // to the one person allowed to ask — the owner of the list. "Someone
@@ -28,8 +34,6 @@ import {
   acceptFriendRequest, blockUser, fetchApplause,
   type FriendProfile, removeFriendship, useMyCollections,
 } from '../lib/data';
-import { useMyTrips } from '../lib/mytrips';
-import { todayISO } from '../lib/day';
 import {
   type ActivityItem, agoOf, type Applause, buildActivity, splitFriendships,
 } from '../lib/friends';
@@ -53,7 +57,6 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // provider's `people` covers every id the edges mention, askers
   // included.
   const { ships, blocks, people: askers } = useCrew();
-  const trips = useMyTrips();
   const mine = useMyCollections(me);
   const cols = useCollections();
 
@@ -66,14 +69,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
     fetchApplause(since).then(setApplause).catch(() => setApplause([]));
   }, [me]);
 
-  const feed = useMemo<ActivityItem[]>(
-    () => buildActivity(applause ?? [], trips.data, todayISO()),
-    [applause, trips.data],
-  );
-  // Split by tense for the two headings; `buildActivity` keeps its one
-  // ordered list because the order inside each half is its to decide.
-  const upcoming = feed.filter((i): i is Extract<ActivityItem, { kind: 'trip' }> => i.kind === 'trip');
-  const earlier = feed.filter((i): i is Extract<ActivityItem, { kind: 'applause' }> => i.kind === 'applause');
+  const earlier = useMemo<ActivityItem[]>(() => buildActivity(applause ?? []), [applause]);
 
   // A collection id is what the applause carries; the title is what the
   // reader needs. Both shelves are searched — the liked list is yours,
@@ -268,65 +264,16 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
         </>
       )}
 
-      {/* Two tenses, two headings. The one trip about to happen used to
-          sit in the same card as the applause, under EARLIER — and the
-          owner's screenshot (7 Oct 2026) read "“Bữa tối hai người đầu
-          giờ” là ngày mai" beneath "TRƯỚC ĐÓ": a thing about to happen
-          filed under things that had. The heading is drawn only when
-          there is a trip to put under it; a heading over nothing is a
-          label for a list of none. */}
-      {upcoming.length > 0 && (
-        <>
-          <Text style={s.eyebrow}>{t('Upcoming', 'Sắp tới', 'これから')}</Text>
-          <Card testID="upcoming-card">
-            {upcoming.map((item, i) => (
-              <PressableScale
-                key={`t-${item.tripId}`}
-                style={[s.row, i > 0 && s.rowDivider]}
-                onPress={() => navigation.navigate('TripDetail', { id: item.tripId })}
-                accessibilityRole="button"
-              >
-                {/* The accent, alone among the marks: every calendar in
-                    the app is `colors.accent` and `icons.test.ts` holds
-                    it to that — the day a plan turns on is the one
-                    meta fact allowed the colour. The heart below is
-                    tertiary like the rest of the bare glyphs. */}
-                <View style={s.mark} testID="row-glyph">
-                  <Ionicons name="calendar-outline" size={19} color={colors.accent} />
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={s.line}>
-                    {item.inDays === 0
-                      ? t(`“${item.title}” is today`, `“${item.title}” là hôm nay`, `「${item.title}」は今日です`)
-                      : item.inDays === 1
-                        ? t(`“${item.title}” is tomorrow`, `“${item.title}” là ngày mai`, `「${item.title}」は明日です`)
-                        : t(`“${item.title}” is in ${item.inDays} days`, `“${item.title}” còn ${item.inDays} ngày nữa`, `「${item.title}」まであと${item.inDays}日`)}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
-              </PressableScale>
-            ))}
-          </Card>
-        </>
-      )}
-
-      {/* EARLIER is drawn when there is applause, while the applause is
-          still on its way, or when there is nothing on the page at all —
-          then it carries the quiet note, which also names the trips that
-          would appear above. A trip and no applause draws no EARLIER: the
-          page is not quiet, so it does not say it is. */}
-      {(loading || earlier.length > 0 || upcoming.length === 0) && (
-        <>
-          <Text style={s.eyebrow}>{t('Earlier', 'Trước đó', 'これまで')}</Text>
-          {loading ? (
-            <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
-          ) : earlier.length === 0 ? (
-            <Empty text={t(
-              'Quiet so far. Likes on your lists and upcoming trips will show here.',
-              'Chưa có gì. Lượt thích trên các list và chuyến đi sắp tới sẽ hiện ở đây.',
-              'まだ静かです。リストへのいいねや近い旅程がここに表示されます。',
-            )} />
-          ) : (
+      <Text style={s.eyebrow}>{t('Earlier', 'Trước đó', 'これまで')}</Text>
+      {loading ? (
+        <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
+      ) : earlier.length === 0 ? (
+        <Empty text={t(
+          'Quiet so far. Likes on your lists will show here.',
+          'Chưa có gì. Lượt thích trên các list của bạn sẽ hiện ở đây.',
+          'まだ静かです。リストへのいいねがここに表示されます。',
+        )} />
+      ) : (
             <Card testID="earlier-card">
               {earlier.map((item, i) => {
                 const title = titleOf(item.collection_id);
@@ -364,8 +311,6 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                 );
               })}
             </Card>
-          )}
-        </>
       )}
       <PersonSheet
         visible={sheet !== null}
@@ -431,8 +376,7 @@ const s = StyleSheet.create({
   // the chevron keeps the middle, as Profile's rows do it.
   rowEnd: { alignSelf: 'center' },
   // The mark is Profile's `RowGlyph`, to the figure: a bare 19pt outline
-  // glyph, tertiary (the calendar excepted — see the row), in the well's
-  // 44pt footprint, with the well gone. It was the well — 44pt, radius 13, soft coral fill under a
+  // glyph, tertiary, in the well's 44pt footprint, with the well gone. It was the well — 44pt, radius 13, soft coral fill under a
   // hairline — drawn to match Profile's rows while they wore one; they
   // took it off on 6 Oct 2026 (#793), and this screen opens from one of
   // them now, so a reader tapping a bare glyph and landing on a column

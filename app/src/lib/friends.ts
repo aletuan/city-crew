@@ -84,36 +84,21 @@ export type Applause = {
 };
 
 export type ActivityItem =
-  | { kind: 'applause'; at: string; collection_id: string; liker_handle: string | null; liker_name: string | null }
-  | { kind: 'trip'; at: string; tripId: string; title: string; inDays: number };
-
-/** How far ahead a trip may be and still be worth a reminder. A week: any
- *  further and the reminder arrives before the anticipation does. */
-export const TRIP_REMINDER_DAYS = 7;
+  { kind: 'applause'; at: string; collection_id: string; liker_handle: string | null; liker_name: string | null };
 
 /**
- * The EARLIER section, assembled and ordered.
+ * The EARLIER section, assembled and ordered: applause, newest first.
  *
- * Applause newest first, with the single nearest upcoming trip (within
- * the reminder window, today included) placed by its own date at the top
- * — a plan about to happen outranks a like that already did. Trips
- * further out, and trips already past, say nothing.
+ * It used to lead with the nearest upcoming trip, as a reminder. That
+ * went on 7 Oct 2026: by then the same fact was said on the Trips tab's
+ * dot, in the morning notification and on the Trips screen itself, and
+ * this — the deepest and poorest of the four, one line, and cutting two
+ * trips on one day down to one — was the only copy telling it wrong.
+ * Activity is what other people did with your lists and your crew; your
+ * own plans have a tab.
  */
-export function buildActivity(
-  applause: readonly Applause[],
-  trips: readonly { id: string; title: string; day: string }[],
-  todayISO: string,
-): ActivityItem[] {
+export function buildActivity(applause: readonly Applause[]): ActivityItem[] {
   const out: ActivityItem[] = [];
-  const soon = trips
-    .map((t) => ({ t, inDays: dayDiff(todayISO, t.day) }))
-    .filter((x): x is { t: { id: string; title: string; day: string }; inDays: number } =>
-      x.inDays != null && x.inDays >= 0 && x.inDays <= TRIP_REMINDER_DAYS)
-    .sort((a, b) => a.inDays - b.inDays);
-  if (soon.length) {
-    const { t, inDays } = soon[0];
-    out.push({ kind: 'trip', at: t.day, tripId: t.id, title: t.title, inDays });
-  }
   const likes = [...applause].sort((a, b) => b.liked_at.localeCompare(a.liked_at));
   for (const a of likes) {
     out.push({
@@ -122,22 +107,6 @@ export function buildActivity(
     });
   }
   return out;
-}
-
-/** Whole days from one ISO day to another, or null when either does not
- *  parse. Local arithmetic on the date halves only, so a timezone can
- *  never make "tomorrow" read as today. */
-function dayDiff(fromISO: string, toISO: string): number | null {
-  const f = Date.UTC(...isoParts(fromISO) ?? [NaN, NaN, NaN]);
-  const t = Date.UTC(...isoParts(toISO) ?? [NaN, NaN, NaN]);
-  if (!isFinite(f) || !isFinite(t)) return null;
-  return Math.round((t - f) / 86400000);
-}
-
-function isoParts(s: string): [number, number, number] | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-  if (!m) return null;
-  return [Number(m[1]), Number(m[2]) - 1, Number(m[3])];
 }
 
 // ── the add flow's suggestions ──
