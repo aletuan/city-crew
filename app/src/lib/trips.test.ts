@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endMinOf, spendVnd, splitTrips, tripCover } from './trips';
+import { endMinOf, spendVnd, splitTrips, tripCover, tripsToday } from './trips';
 
 const trip = (day: string) => ({ day });
 
@@ -260,3 +260,33 @@ describe('tripCover', () => {
   });
 });
 
+// The tab bar's dot for "a trip today": the same reading `splitTrips`
+// gives the list — a trip on today's date that has not yet ended, grace
+// included — narrowed to today, because a dot for "a trip this week"
+// would be lit for most of a planner's life and a lit dot is no dot.
+describe('tripsToday', () => {
+  const trip = (day: string, arrive: number | null = 18 * 60, dwell = 90) =>
+    ({ id: day + arrive, day, trip_stops: arrive == null ? [] : [{ arrive_min: arrive, dwell_min: dwell }] });
+
+  it('names the trips on today\'s date, soonest first, and nothing else', () => {
+    const late = trip('2026-10-07', 20 * 60);
+    const early = trip('2026-10-07', 9 * 60);
+    const out = tripsToday([trip('2026-10-08'), late, trip('2026-10-06'), early], '2026-10-07', 8 * 60);
+    expect(out.map((t) => t.id)).toEqual([early.id, late.id]);
+  });
+
+  it('drops a trip today once it is over, grace included', () => {
+    const t = trip('2026-10-07', 9 * 60, 60); // ends 10:00
+    expect(tripsToday([t], '2026-10-07', 10 * 60 + 10)).toHaveLength(1);
+    expect(tripsToday([t], '2026-10-07', 13 * 60)).toHaveLength(0);
+  });
+
+  it('keeps a trip today whose stops carry no time', () => {
+    expect(tripsToday([trip('2026-10-07', null)], '2026-10-07', 23 * 60)).toHaveLength(1);
+  });
+
+  it('is empty with nothing today', () => {
+    expect(tripsToday([trip('2026-10-08')], '2026-10-07', 12 * 60)).toEqual([]);
+    expect(tripsToday([], '2026-10-07', 12 * 60)).toEqual([]);
+  });
+});

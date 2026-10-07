@@ -102,6 +102,37 @@ export function splitTrips<T extends Dated>(
   return { upcoming, past };
 }
 
+/**
+ * The trips on today's date that are not yet over, soonest first.
+ *
+ * For the tab bar's dot: lit on the day of a trip and only then. The
+ * reading is `splitTrips`'s — a trip is "today" while that function would
+ * still file it under upcoming, grace included, so the dot goes out at
+ * the same moment the card moves to Been there and not before. A trip
+ * whose stops carry no time stays all day; nothing says it is over.
+ *
+ * Today only, not the week ahead that Activity and the reminder look at:
+ * a dot for "a trip this week" would be lit for most of a planner's life,
+ * and a lit dot is no dot. The two signals already on the bar mean
+ * "somebody is waiting on you"; this one means "you have somewhere to be
+ * today", which is the one other thing worth a mark on every screen.
+ */
+export function tripsToday<T extends Dated>(trips: readonly T[], today: string, nowMin: number): T[] {
+  // `splitTrips` orders by day alone; within the one day the earliest
+  // start comes first, so the dot's spoken name is the trip nearest at
+  // hand. A trip with no timed stop sorts last — it has no "soon".
+  const startOf = (t: T) => {
+    let s: number | null = null;
+    for (const stop of t.trip_stops ?? []) {
+      if (stop.arrive_min != null && (s == null || stop.arrive_min < s)) s = stop.arrive_min;
+    }
+    return s ?? Number.POSITIVE_INFINITY;
+  };
+  return splitTrips(trips, today, nowMin).upcoming
+    .filter((t) => t.day === today)
+    .sort((a, b) => startOf(a) - startOf(b));
+}
+
 export type Priced = Located & { price_vnd?: number | null };
 
 /**
