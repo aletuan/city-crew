@@ -24,6 +24,7 @@ import { InvitationsProvider } from './src/lib/invitations';
 import { MyTripsProvider } from './src/lib/mytrips';
 import { ReminderSync } from './src/lib/reminderSync';
 import { GuideGrantSync } from './src/lib/useGuideGrant';
+import { SessionNavSync } from './src/lib/sessionNavSync';
 import { SaveProvider } from './src/lib/save';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
@@ -340,6 +341,14 @@ function Root() {
                         nothing; see `lib/guideGrant`. */}
                     <GuideGrantSync />
                     <ReminderSync />
+                    {/* Cuts every tab's stack back to its first screen
+                        the moment a signed-in account ends — signed out,
+                        or replaced — so a detail screen of the last
+                        account's private list is not still standing in
+                        the Collections tab for the next one to find as
+                        "Collection not found". A guest signing in keeps
+                        their place; see `lib/sessionNav`. */}
+                    <SessionNavSync />
                     <SaveProvider>
                       {/* The duck state sits above the navigator: screens
                           report scrolls into it, the bar animates out of it. */}
