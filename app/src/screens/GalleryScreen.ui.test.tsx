@@ -150,6 +150,16 @@ const grid = async () => {
   await act(async () => {});
   return g;
 };
+/** The empty note, drawn and settled — the same beat as `grid`, for the
+ *  same reason. The one test that pressed Add straight after finding the
+ *  note went red in CI's coverage pass (the slowest of the three) with
+ *  the loading render's handler: no place id yet, "place_not_found",
+ *  and the waiting tile never came. */
+const emptyNote = async () => {
+  const e = await screen.findByText(/No photos yet/);
+  await act(async () => {});
+  return e;
+};
 /** The tiles, in the order the grid draws them. */
 const tileIds = () => [...screen.getByTestId('gallery-grid').querySelectorAll('[data-testid^="gallery-tile-"]')]
   .map((el) => el.getAttribute('data-testid')!.replace('gallery-tile-', ''));
@@ -444,7 +454,7 @@ describe('adding one', () => {
   it('shows the waiting tile in place of the empty note while the first photo is on its way', async () => {
     gates.upload.hold = true;
     show([]);
-    await screen.findByText(/No photos yet/);
+    await emptyNote();
     fireEvent.click(screen.getByRole('button', { name: 'Add a photo' }));
     await screen.findByTestId('gallery-uploading');
     expect(screen.queryByText(/No photos yet/)).toBeNull();
@@ -481,7 +491,7 @@ describe('adding one', () => {
   it('writes nothing when the picker is dismissed', async () => {
     state.picked = false;
     show([]);
-    await screen.findByText(/No photos yet/);
+    await emptyNote();
     fireEvent.click(screen.getByRole('button', { name: 'Add a photo' }));
     await new Promise((r) => setTimeout(r, 0));
     expect(data.uploaded).not.toHaveBeenCalled();
