@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   agoOf, buildActivity, MIN_SUGGEST_CHARS, openSuggestions, REQUEST_DAILY_CAP,
   splitFriendships, standingWith, SUGGEST_LIMIT, suggestable, SUGGESTED_SHOWN, type Applause, type FriendshipRow,
+  type Copy,
 } from './friends';
 
 const edge = (
@@ -12,6 +13,9 @@ const edge = (
 
 const like = (collection_id: string, liked_at: string, handle: string | null = null): Applause => ({
   collection_id, liked_at, liker_handle: handle, liker_name: handle && 'Some One',
+});
+const copy = (collection_id: string, copied_at: string, handle: string | null = null): Copy => ({
+  collection_id, copied_at, copier_handle: handle, copier_name: handle && 'Some One',
 });
 
 describe('splitFriendships', () => {
@@ -62,10 +66,28 @@ describe('buildActivity', () => {
     const items = buildActivity([
       like('c1', '2026-08-22T10:00:00Z'),
       like('c2', '2026-08-23T09:00:00Z', 'lanphuong'),
-    ]);
+    ], []);
     expect(items.map((i) => i.kind)).toEqual(['applause', 'applause']);
     expect(items[0]).toMatchObject({ collection_id: 'c2', liker_handle: 'lanphuong', liker_name: 'Some One' });
     expect(items[1]).toMatchObject({ collection_id: 'c1', liker_handle: null });
+  });
+
+  // A copy is the stronger compliment and the newer signal (7 Oct 2026);
+  // it takes its place in the one timeline by when it happened, not in a
+  // section of its own.
+  it('weaves copies in with the applause, newest first, each in its own kind', () => {
+    const items = buildActivity(
+      [like('c1', '2026-08-22T10:00:00Z', 'anh'), like('c1', '2026-08-24T10:00:00Z', 'bao')],
+      [copy('c1', '2026-08-23T10:00:00Z', 'cam'), copy('c2', '2026-08-21T10:00:00Z')],
+    );
+    expect(items.map((i) => [i.kind, i.at])).toEqual([
+      ['applause', '2026-08-24T10:00:00Z'],
+      ['copy', '2026-08-23T10:00:00Z'],
+      ['applause', '2026-08-22T10:00:00Z'],
+      ['copy', '2026-08-21T10:00:00Z'],
+    ]);
+    expect(items[1]).toMatchObject({ kind: 'copy', collection_id: 'c1', copier_handle: 'cam', copier_name: 'Some One' });
+    expect(items[3]).toMatchObject({ kind: 'copy', collection_id: 'c2', copier_handle: null });
   });
 });
 

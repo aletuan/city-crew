@@ -660,6 +660,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
     did('copy');
     navigation.navigate('CollectionForm', {
       copyFrom: {
+        sourceId: col.id,
         cityId,
         title,
         desc: [sourceDesc, credit].filter(Boolean).join('\n\n'),

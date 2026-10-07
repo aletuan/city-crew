@@ -234,6 +234,7 @@ export type Database = {
       collections: {
         Row: {
           city_id: string
+          copied_from: string | null
           cover_photo_id: string | null
           created_at: string
           curator_handle: string | null
@@ -251,6 +252,7 @@ export type Database = {
         }
         Insert: {
           city_id?: string
+          copied_from?: string | null
           cover_photo_id?: string | null
           created_at?: string
           curator_handle?: string | null
@@ -268,6 +270,7 @@ export type Database = {
         }
         Update: {
           city_id?: string
+          copied_from?: string | null
           cover_photo_id?: string | null
           created_at?: string
           curator_handle?: string | null
@@ -289,6 +292,13 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collections_copied_from_fkey"
+            columns: ["copied_from"]
+            isOneToOne: false
+            referencedRelation: "collections"
             referencedColumns: ["id"]
           },
           {
@@ -1048,6 +1058,15 @@ export type Database = {
         Returns: {
           collection_id: string
           likes: number
+        }[]
+      }
+      copies_of_mine: {
+        Args: { since: string }
+        Returns: {
+          collection_id: string
+          copied_at: string
+          copier_handle: string
+          copier_name: string
         }[]
       }
       guide_may_manage: { Args: { photo: string }; Returns: boolean }

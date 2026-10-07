@@ -46,6 +46,8 @@ describe('createCollection', () => {
       desc_en: 'yên tĩnh', desc_vi: 'yên tĩnh', desc_ja: 'yên tĩnh',
       // RLS refuses an owned row created public. The app never asks.
       is_public: false,
+      // Made from scratch: no list it was copied from.
+      copied_from: null,
     });
     expect(slug).toMatch(/^quan-ca-phe-cu-[a-z0-9]{1,6}$/);
   });
@@ -539,7 +541,12 @@ describe('copyCollection', () => {
       { data: [{ id: 'p-a', slug: 'a' }, { id: 'p-b', slug: 'b' }] },  // the places
       { error: null },                                                 // the members
     );
-    expect(await copyCollection(input)).toMatch(/^borrowed-[a-z0-9]{6}$/);
+    expect(await copyCollection({ ...input, copiedFrom: 'c-src' })).toMatch(/^borrowed-[a-z0-9]{6}$/);
+
+    // The copy remembers its original on the row itself — that is what
+    // lets `copies_of_mine` tell the curator (7 Oct 2026).
+    expect(fake().log[0]).toMatchObject({ table: 'collections', op: 'insert' });
+    expect((fake().log[0].payload as { copied_from: string | null }).copied_from).toBe('c-src');
 
     const insert = fake().log[3];
     expect(insert).toMatchObject({ table: 'collection_places', op: 'insert' });

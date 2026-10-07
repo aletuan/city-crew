@@ -83,30 +83,55 @@ export type Applause = {
   liker_name: string | null;
 };
 
+/** A copy saved of one of the reader's lists, as `copies_of_mine` returns
+ *  it: the original's id, when the copy was made, and who made it — null
+ *  only when the copier's profile is gone. The copy itself is not named;
+ *  what the curator learns is that it was made, as with a like. */
+export type Copy = {
+  collection_id: string;
+  copied_at: string;
+  copier_handle: string | null;
+  copier_name: string | null;
+};
+
 export type ActivityItem =
-  { kind: 'applause'; at: string; collection_id: string; liker_handle: string | null; liker_name: string | null };
+  | { kind: 'applause'; at: string; collection_id: string; liker_handle: string | null; liker_name: string | null }
+  | { kind: 'copy'; at: string; collection_id: string; copier_handle: string | null; copier_name: string | null };
 
 /**
- * The EARLIER section, assembled and ordered: applause, newest first.
+ * The EARLIER section, assembled and ordered: applause and copies, in one
+ * timeline, newest first.
  *
- * It used to lead with the nearest upcoming trip, as a reminder. That
- * went on 7 Oct 2026: by then the same fact was said on the Trips tab's
- * dot, in the morning notification and on the Trips screen itself, and
- * this — the deepest and poorest of the four, one line, and cutting two
- * trips on one day down to one — was the only copy telling it wrong.
- * Activity is what other people did with your lists and your crew; your
- * own plans have a tab.
+ * Copies joined on 7 Oct 2026. "Save a copy" is the strongest compliment
+ * one reader pays another's list — stronger than a like, since it is the
+ * list they want to keep — and it had left no trace: `copyCollection`
+ * made a fresh list and nothing said where it came from. The row now
+ * remembers its original and `copies_of_mine` reports it under the same
+ * rules as the likes. One timeline rather than two sections, because a
+ * reader asking "what happened to my lists" wants the answer in the order
+ * it happened.
+ *
+ * Trips used to lead this list, as a reminder. They went the same day:
+ * by then the Trips tab's dot, the morning notification and the Trips
+ * screen all said it, and this copy — one line, showing one trip when
+ * there were two on the day — was the only one telling it wrong. Activity
+ * is what other people did with your lists and your crew.
  */
-export function buildActivity(applause: readonly Applause[]): ActivityItem[] {
+export function buildActivity(applause: readonly Applause[], copies: readonly Copy[]): ActivityItem[] {
   const out: ActivityItem[] = [];
-  const likes = [...applause].sort((a, b) => b.liked_at.localeCompare(a.liked_at));
-  for (const a of likes) {
+  for (const a of applause) {
     out.push({
       kind: 'applause', at: a.liked_at, collection_id: a.collection_id,
       liker_handle: a.liker_handle, liker_name: a.liker_name,
     });
   }
-  return out;
+  for (const c of copies) {
+    out.push({
+      kind: 'copy', at: c.copied_at, collection_id: c.collection_id,
+      copier_handle: c.copier_handle, copier_name: c.copier_name,
+    });
+  }
+  return out.sort((a, b) => b.at.localeCompare(a.at));
 }
 
 // ── the add flow's suggestions ──

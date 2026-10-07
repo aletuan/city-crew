@@ -201,6 +201,9 @@ export default function CollectionFormScreen({ navigation, route }: {
           title: name,
           desc,
           placeSlugs: copyFrom.placeSlugs,
+          // The row remembers its original, so the curator hears about
+          // the copy the way they hear about a like (7 Oct 2026).
+          copiedFrom: copyFrom.sourceId,
         });
         // A chosen cover rides a second write: `copyCollection` stays the
         // create-and-fill it was, and Auto — the common case — needs no

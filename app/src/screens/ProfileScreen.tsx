@@ -828,7 +828,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         <FeatureRow
           icon="notifications-outline"
           title={t('Activity', 'Hoạt động', 'アクティビティ')}
-          sub={t('Likes on your lists, and friend requests.', 'Lượt thích trên list của bạn, và lời mời kết bạn.', 'リストへのいいねと、友達リクエスト。')}
+          sub={t('Likes and copies of your lists, and friend requests.', 'Lượt thích và bản sao list của bạn, và lời mời kết bạn.', 'リストへのいいねやコピーと、友達リクエスト。')}
           onPress={() => navigation.navigate('Activity')}
           last
         />

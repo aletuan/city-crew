@@ -591,7 +591,7 @@ describe('friends card', () => {
     const { raw } = draw();
     press('Activity');
     expect(raw.navigate).toHaveBeenCalledWith('Activity');
-    expect(screen.getByText('Likes on your lists, and friend requests.')).toBeTruthy();
+    expect(screen.getByText('Likes and copies of your lists, and friend requests.')).toBeTruthy();
   });
 
   it('files Activity in the same card as the friends row, under it', () => {

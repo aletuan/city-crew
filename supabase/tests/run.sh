@@ -304,13 +304,15 @@ for f in "$ROOT"/supabase/migrations/*_named_applause.sql \
          "$ROOT"/supabase/migrations/*_report_cap_and_photo_reads.sql \
          "$ROOT"/supabase/migrations/*_block_pair_not_probeable.sql \
          "$ROOT"/supabase/migrations/*_close_signed_in_functions_to_anon.sql \
-         "$ROOT"/supabase/migrations/*_moderation_log.sql; do
+         "$ROOT"/supabase/migrations/*_moderation_log.sql \
+         "$ROOT"/supabase/migrations/*_collection_copies.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/reports_rls_test.sql"
 run "$DB" -f "$HERE/blocks_rls_test.sql"
 run "$DB" -f "$HERE/likes_moderation_rls_test.sql"
 run "$DB" -f "$HERE/moderation_log_test.sql"
+run "$DB" -f "$HERE/collection_copies_test.sql"
 
 # The second writer `place_photos` has ever had. Inside this block rather
 # than after it, and the reason is the `alter default privileges` line

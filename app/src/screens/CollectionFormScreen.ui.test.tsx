@@ -399,7 +399,7 @@ describe('renaming a list', () => {
 });
 
 describe('saving a copy of somebody else’s list', () => {
-  const SOURCE = { title: 'Hanoi by night', desc: 'By @linh', cityId: 'hanoi', placeSlugs: ['sam', 'heim'] };
+  const SOURCE = { sourceId: 'c-src', title: 'Hanoi by night', desc: 'By @linh', cityId: 'hanoi', placeSlugs: ['sam', 'heim'] };
   const openCopy = (navigation = nav()) => {
     catalog.data = [HEIM, SAM];
     render(<CollectionFormScreen navigation={navigation} route={routeWith({ copyFrom: SOURCE })} />);
@@ -439,6 +439,7 @@ describe('saving a copy of somebody else’s list', () => {
 
     await waitFor(() => expect(copyCollection).toHaveBeenCalledWith({
       ownerId: 'u1', cityId: 'hanoi', title: 'Mine now', desc: 'By @linh', placeSlugs: ['sam', 'heim'],
+      copiedFrom: 'c-src',
     }));
     // Auto, the common case, needs no second write.
     expect(updateCollection).not.toHaveBeenCalled();
