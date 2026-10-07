@@ -433,6 +433,58 @@ Kế hoạch theo ý bạn, địa điểm dễ tìm hơn.
 • 安定性の向上：ひとつの画面でエラーが起きても、アプリ全体は止まりません。
 ```
 
+## Release notes v1.0.6 (What's New)
+
+Viết từ các PR merge sau build 1.0.5 (26) — #785 → #809. Build native mới:
+expo 57.0.26 → 57.0.27 cùng expo-constants, expo-notifications, expo-updates,
+nên OTA không mang được; tag `v1.0.6`. `app.json` lên 1.0.6 trong PR này vì
+Apple đóng train 1.0.5 khi duyệt. Không có mặt ở đây: refactor component
+(#785–#789), prune-photos (#802, phía server), test. Privacy policy đổi ngày
+hiệu lực ở #809 (lưu ai đã sao chép list) — nằm trong policy, không phải
+What's New.
+
+### EN
+
+```
+See who keeps your lists, and know when your day is here.
+
+• Activity is back, on Profile under Friends: likes on your lists, and now who saved a copy of one.
+• A copy of someone's list remembers where it came from, and its curator hears about it.
+• The Trips tab wears a dot on the day of a trip.
+• Two plans on one day: daytime first, then the one you made most recently.
+• Adding a photo shows a spinner on the button while it works.
+• A calmer Profile: lighter icons, and the city row says simply which city you are in.
+• Smaller fixes, including Vietnamese dates written as T10.
+```
+
+### VI
+
+```
+Biết ai giữ list của bạn, và biết hôm nay là ngày đi.
+
+• Hoạt động đã trở lại, trong tab Cá nhân, ngay dưới Bạn bè: lượt thích trên list của bạn, và giờ có cả ai đã lưu bản sao.
+• Bản sao list của người khác nhớ nó từ đâu ra, và người tạo list được báo.
+• Tab Chuyến đi có chấm nhỏ vào đúng ngày đi.
+• Hai kế hoạch cùng một ngày: buổi ngày lên trước, rồi đến kế hoạch bạn mới tạo.
+• Thêm ảnh: nút hiện vòng xoay trong lúc tải lên.
+• Tab Cá nhân nhẹ nhàng hơn: biểu tượng gọn, dòng thành phố chỉ ghi bạn đang ở thành phố nào.
+• Sửa lỗi nhỏ, trong đó ngày tiếng Việt viết tháng là T10.
+```
+
+### JA
+
+```
+誰があなたのリストを保存したか、そして今日が出かける日だとわかる。
+
+• アクティビティが復活：プロフィールの「友達」の下に。リストへのいいねに加え、コピーを保存した人も表示。
+• 他の人のリストのコピーは元のリストを覚えていて、作成者に通知されます。
+• 旅程の当日は「旅程」タブにドットが付きます。
+• 同じ日にプランが2つあるときは、昼のプランが先、次に最近作ったプラン。
+• 写真の追加中はボタンにスピナーを表示。
+• プロフィールをすっきり：アイコンを軽くし、都市の行は今いる都市だけを表示。
+• 細かな修正（ベトナム語の日付で月をT10と表記など）。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
