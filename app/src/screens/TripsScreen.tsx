@@ -49,7 +49,6 @@ import {
 } from '../components/ui';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { useAuth } from '../lib/auth';
-import { useCity } from '../lib/city';
 import { fromISO, minutesOf, toISO } from '../lib/day';
 import { type Trip, type TripStopRow } from '../lib/data';
 import { useMyTrips } from '../lib/mytrips';
@@ -59,7 +58,7 @@ import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
 import { stopCount, summaryLine } from '../lib/sketch';
 import { COMPANY } from '../lib/trip';
-import { spansCities, spendVnd, splitTrips, tripCover } from '../lib/trips';
+import { spendVnd, splitTrips, tripCover } from '../lib/trips';
 import { useCrew } from '../lib/crew';
 import { useInvitations } from '../lib/invitations';
 import { answerInvite } from '../lib/data';
@@ -129,10 +128,9 @@ function CompanyChip({ company }: { company: string | null }) {
  * legible — greying it into the background would be the app deciding your
  * last weekend mattered less than your next one.
  */
-function TripCard({ trip, cityName, past, onPress, testID }: {
+function TripCard({ trip, past, onPress, testID }: {
   trip: Trip;
   testID?: string;
-  cityName: string | null;
   past: boolean;
   onPress: () => void;
 }) {
@@ -185,10 +183,18 @@ function TripCard({ trip, cityName, past, onPress, testID }: {
         <View style={s.metaRow}>
           <Ionicons name="calendar-outline" size={14} color={colors.accent} />
           <Text style={s.meta} numberOfLines={1}>
+            {/* The day and the hour, and not the city. The city used to
+                join them once a reader's trips spanned two, and on 7 Oct
+                2026 the owner read "from 18:00 · Saigon" above a stop
+                whose ward is "Sài Gòn" — a ward of that name since the
+                2025 merger, home to 78 places in the catalog — as the
+                same word twice. The stops' ward column already answers
+                "where", stop by stop, and the cover and the title say
+                the rest; the city was the one token on the card the
+                rest of it had made redundant. */}
             {summaryLine([
               day ? dateline(lang, day) : trip.day,
               start != null ? t(`from ${clockOf(start)}`, `từ ${clockOf(start)}`, `${clockOf(start)}から`) : null,
-              cityName,
             ])}
           </Text>
         </View>
@@ -283,7 +289,6 @@ function FirstTrip({ onPress }: { onPress: () => void }) {
 export default function TripsScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { session } = useAuth();
-  const { cities } = useCity();
   const clearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
   // Its tab, pressed again here, scrolls back to the top — the last step
@@ -367,16 +372,6 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
   // must not appear among the plans they have.
   const { upcoming, past } = splitTrips(mine, toISO(now), minutesOf(now));
 
-  // Named only when it distinguishes: one reader's trips are usually all
-  // in one city, and repeating that city down the list is noise. The
-  // moment a second city appears, every card starts saying which one it
-  // is — see spansCities.
-  const multiCity = spansCities(mine);
-  const cityName = (id: string) => {
-    if (!multiCity) return null;
-    const c = cities.find((x) => x.id === id);
-    return c ? t(c.short_en, c.short_vi, c.short_ja) : null;
-  };
 
   // Signed out is not an empty list, it is a different question, so it gets
   // the whole screen rather than a banner above nothing.
@@ -519,7 +514,6 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
               <TripCard
                 trip={trip}
                 testID={`trip-upcoming-${i}`}
-                cityName={cityName(trip.city_id)}
                 past={false}
                 onPress={() => navigation.navigate('TripDetail', { id: trip.id })}
               />
@@ -535,7 +529,6 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
             <View key={trip.id} style={s.row}>
               <TripCard
                 trip={trip}
-                cityName={cityName(trip.city_id)}
                 past
                 onPress={() => navigation.navigate('TripDetail', { id: trip.id })}
               />

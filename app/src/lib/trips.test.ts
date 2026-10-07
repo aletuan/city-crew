@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endMinOf, spansCities, spendVnd, splitTrips, tripCover } from './trips';
+import { endMinOf, spendVnd, splitTrips, tripCover } from './trips';
 
 const trip = (day: string) => ({ day });
 
@@ -260,14 +260,3 @@ describe('tripCover', () => {
   });
 });
 
-describe('spansCities', () => {
-  it('one city, however many trips, is not a spread', () => {
-    expect(spansCities([])).toBe(false);
-    expect(spansCities([{ city_id: 'hanoi' }])).toBe(false);
-    expect(spansCities([{ city_id: 'hanoi' }, { city_id: 'hanoi' }])).toBe(false);
-  });
-
-  it('a second city is', () => {
-    expect(spansCities([{ city_id: 'hanoi' }, { city_id: 'hcmc' }])).toBe(true);
-  });
-});

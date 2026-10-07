@@ -303,15 +303,21 @@ describe('the card', () => {
     expect(text()).not.toMatch(/₫/);
   });
 
-  // One reader's trips are usually all in one city, and repeating it down
-  // the list is noise. The moment a second city appears, every card says.
-  it('names the city only once a second one appears', () => {
+  // The card never names the city, even across two of them. It used to
+  // once a second city appeared, and on 7 Oct 2026 the owner read "from
+  // 18:00 · Saigon" over a stop whose ward is "Sài Gòn" — the ward of
+  // that name since the 2025 merger — as the same word twice. The stops'
+  // ward column already says where, stop by stop; the city was the one
+  // token on the card the rest of it had made redundant.
+  it('never names the city on the card, whichever cities the trips span', () => {
     show([trip()]);
     expect(text()).not.toMatch(/Hanoi/);
     cleanup();
     show([trip(), trip({ id: 't2', title: 'Down south', city_id: 'saigon' })]);
-    expect(text()).toMatch(/Hanoi/);
-    expect(text()).toMatch(/Saigon/);
+    expect(text()).not.toMatch(/Hanoi/);
+    expect(text()).not.toMatch(/Saigon/);
+    // The date and the hour stay.
+    expect(text()).toMatch(/from 18:00/);
   });
 
   it('dims a trip that has been, and keeps it legible', () => {
