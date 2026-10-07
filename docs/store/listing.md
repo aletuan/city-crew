@@ -446,43 +446,31 @@ What's New.
 ### EN
 
 ```
-See who keeps your lists, and know when your day is here.
-
-• Activity is back, on Profile under Friends: likes on your lists, and now who saved a copy of one.
-• A copy of someone's list remembers where it came from, and its curator hears about it.
-• The Trips tab wears a dot on the day of a trip.
-• Two plans on one day: daytime first, then the one you made most recently.
-• Adding a photo shows a spinner on the button while it works.
-• A calmer Profile: lighter icons, and the city row says simply which city you are in.
-• Smaller fixes, including Vietnamese dates written as T10.
+• Activity is now on Profile, under Friends: see who liked your collections and who saved a copy of them.
+• The Trips tab shows a dot on the day of a trip.
+• Adding a photo now shows a spinner while it uploads.
+• Profile: simpler icons, and the city row shows only your current city.
+• Vietnamese dates now use the short month format (T9, T10).
 ```
 
 ### VI
 
 ```
-Biết ai giữ list của bạn, và biết hôm nay là ngày đi.
-
-• Hoạt động đã trở lại, trong tab Cá nhân, ngay dưới Bạn bè: lượt thích trên list của bạn, và giờ có cả ai đã lưu bản sao.
-• Bản sao list của người khác nhớ nó từ đâu ra, và người tạo list được báo.
-• Tab Chuyến đi có chấm nhỏ vào đúng ngày đi.
-• Hai kế hoạch cùng một ngày: buổi ngày lên trước, rồi đến kế hoạch bạn mới tạo.
-• Thêm ảnh: nút hiện vòng xoay trong lúc tải lên.
-• Tab Cá nhân nhẹ nhàng hơn: biểu tượng gọn, dòng thành phố chỉ ghi bạn đang ở thành phố nào.
-• Sửa lỗi nhỏ, trong đó ngày tiếng Việt viết tháng là T10.
+• Mục Hoạt động nay nằm trong tab Cá nhân, dưới Bạn bè: xem ai đã thích và ai đã lưu bản sao bộ sưu tập của bạn.
+• Tab Chuyến đi hiện một chấm vào ngày có chuyến đi.
+• Khi thêm ảnh, nút hiện vòng xoay trong lúc tải lên.
+• Tab Cá nhân: biểu tượng đơn giản hơn, dòng thành phố chỉ hiện thành phố bạn đang ở.
+• Ngày tháng tiếng Việt dùng dạng tháng rút gọn (T9, T10).
 ```
 
 ### JA
 
 ```
-誰があなたのリストを保存したか、そして今日が出かける日だとわかる。
-
-• アクティビティが復活：プロフィールの「友達」の下に。リストへのいいねに加え、コピーを保存した人も表示。
-• 他の人のリストのコピーは元のリストを覚えていて、作成者に通知されます。
-• 旅程の当日は「旅程」タブにドットが付きます。
-• 同じ日にプランが2つあるときは、昼のプランが先、次に最近作ったプラン。
-• 写真の追加中はボタンにスピナーを表示。
-• プロフィールをすっきり：アイコンを軽くし、都市の行は今いる都市だけを表示。
-• 細かな修正（ベトナム語の日付で月をT10と表記など）。
+• プロフィールの「友達」の下にアクティビティを追加：コレクションへのいいねと、コピーを保存した人を確認できます。
+• 旅程がある日は「旅程」タブにドットを表示。
+• 写真の追加中、ボタンにスピナーを表示。
+• プロフィール：アイコンをシンプルにし、都市の行は現在の都市のみを表示。
+• ベトナム語の日付で月を短い形式（T9、T10）で表示。
 ```
 
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
