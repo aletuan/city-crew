@@ -64,6 +64,19 @@ describe('SessionNavSync', () => {
     expect(nav.resetRoot).toHaveBeenCalledTimes(1);
   });
 
+  it('remembers who was last signed in, so a switch back resets again', () => {
+    // a → b → a: two accounts ended, two resets. Comparing against the
+    // first account for ever would have called the return of `a` no
+    // change at all.
+    const r = render(<SessionNavSync />);
+    world.userId = 'b';
+    r.rerender(<SessionNavSync />);
+    nav.root = deep();
+    world.userId = 'a';
+    r.rerender(<SessionNavSync />);
+    expect(nav.resetRoot).toHaveBeenCalledTimes(2);
+  });
+
   it('leaves a guest who signs in exactly where they were', () => {
     world.userId = null;
     const r = render(<SessionNavSync />);
