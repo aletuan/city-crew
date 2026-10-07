@@ -22,9 +22,11 @@ const crew = vi.hoisted(() => ({
   ships: { data: [] as FriendshipRow[], reload: vi.fn(), loadedAt: null as number | null },
 }));
 const invitations = vi.hoisted(() => ({ waiting: 0 }));
+const trips = vi.hoisted(() => ({ data: [] as { id: string; title: string; day: string; trip_stops: { arrive_min: number | null; dwell_min: number | null }[] }[] }));
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: auth.session }) }));
 vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 vi.mock('../lib/invitations', () => ({ useInvitations: () => invitations }));
+vi.mock('../lib/mytrips', () => ({ useMyTrips: () => trips }));
 const theme = vi.hoisted(() => ({ scheme: 'dark' as 'dark' | 'light' }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: theme.scheme }) }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }) }));
@@ -77,6 +79,7 @@ beforeEach(() => {
   auth.session = { user: { id: 'me' } };
   crew.ships = { data: [], reload: vi.fn(), loadedAt: Date.now() };
   invitations.waiting = 0;
+  trips.data = [];
   theme.scheme = 'dark';
 });
 afterEach(() => { vi.useRealTimers(); });
@@ -207,6 +210,52 @@ describe('the waiting dots', () => {
     crew.ships.data = [{ requester: 'me', addressee: 'linh', status: 'pending', created_at: '2026-09-01' }];
     mount(propsFor(0).props);
     expect(dotsIn('Profile')).toBe(quiet);
+  });
+
+  // The third signal the bar carries, and a different kind from the two
+  // before it: not somebody waiting on this reader, but the one day the
+  // reader has something on. Lit on the day of a trip and only then — a
+  // dot for "a trip this week" would be lit for most of a planner's life,
+  // and a lit dot is no dot. The same mark as the other two, so the bar
+  // has one way of saying "look here" (owner, 7 Oct 2026).
+  it('marks Trips on the day of a trip, and says which', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 7, 8, 0));
+    const { unmount } = mount(propsFor(0).props);
+    const quiet = dotsIn('Trips');
+    unmount();
+
+    trips.data = [{ id: 't1', title: 'Hanoi day', day: '2026-10-07', trip_stops: [{ arrive_min: 18 * 60, dwell_min: 90 }] }];
+    mount(propsFor(0).props);
+    expect(dotsIn('Trips')).toBe(quiet + 1);
+    expect(tab('Trips').getAttribute('aria-label')).toBe('Trips, “Hanoi day” is today');
+  });
+
+  it('does not mark Trips for a trip tomorrow, nor for one that is over', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 7, 22, 0));
+    const { unmount } = mount(propsFor(0).props);
+    const quiet = dotsIn('Trips');
+    unmount();
+
+    trips.data = [
+      { id: 'tomorrow', title: 'Later', day: '2026-10-08', trip_stops: [{ arrive_min: 9 * 60, dwell_min: 60 }] },
+      { id: 'over', title: 'Gone', day: '2026-10-07', trip_stops: [{ arrive_min: 9 * 60, dwell_min: 60 }] },
+    ];
+    mount(propsFor(0).props);
+    expect(dotsIn('Trips')).toBe(quiet);
+    expect(tab('Trips').getAttribute('aria-label')).toBe('Trips');
+  });
+
+  // Two reasons, one dot; the spoken name leads with the one somebody
+  // else is waiting on.
+  it('speaks the invitation first when a trip is also today', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 7, 8, 0));
+    invitations.waiting = 1;
+    trips.data = [{ id: 't1', title: 'Hanoi day', day: '2026-10-07', trip_stops: [] }];
+    mount(propsFor(0).props);
+    expect(tab('Trips').getAttribute('aria-label')).toBe('Trips, 1 trip invitation waiting');
   });
 
   it('marks Trips for an invitation waiting on an answer', () => {

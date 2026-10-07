@@ -35,6 +35,9 @@ import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import { useI18n } from '../lib/i18n';
 import { useInvitations } from '../lib/invitations';
+import { useMyTrips } from '../lib/mytrips';
+import { minutesOf, todayISO } from '../lib/day';
+import { tripsToday } from '../lib/trips';
 import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
 import { colors, font, labelScaleCap, radius } from '../theme';
@@ -141,6 +144,16 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // and the card that says so is two taps away. Read from the one shared
   // copy — see `lib/invitations` — so the dot costs no request of its own.
   const { waiting: invitesWaiting } = useInvitations();
+  // And a third, of a different kind (7 Oct 2026): not somebody waiting
+  // on this reader, but the one day the reader has somewhere to be. Lit
+  // on the day of a trip and only then — see `tripsToday` for why not the
+  // week — and drawn as the same mark, so the bar has one way of saying
+  // "look here". Read from the shared trips copy, as the other two are
+  // read from theirs; it costs no request. The clock is read at render,
+  // and the bar re-renders on every tab change, which is as often as the
+  // dot needs to be right.
+  const myTrips = useMyTrips();
+  const today = tripsToday(myTrips.data, todayISO(), minutesOf());
   const { t } = useI18n();
 
   // What VoiceOver says for a tab wearing a dot. The dot is a 9pt view
@@ -164,6 +177,13 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
         `${label}, ${invitesWaiting} lời mời chuyến đi đang chờ`,
         `${label}、旅程の招待${invitesWaiting}件待ち`,
       );
+    }
+    // After the invitation, when both apply: the one somebody else is
+    // waiting on comes first. The soonest trip is named, as Activity
+    // names it.
+    if (name === 'Trips' && today.length > 0) {
+      const title = today[0].title;
+      return t(`${label}, “${title}” is today`, `${label}, “${title}” là hôm nay`, `${label}、「${title}」は今日です`);
     }
     return label;
   };
@@ -283,7 +303,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
                   different icon. */}
               {route.name === 'Profile' && waiting
                 ? <View style={[s.reqDot, dotInk]} /> : null}
-              {route.name === 'Trips' && invitesWaiting > 0
+              {route.name === 'Trips' && (invitesWaiting > 0 || today.length > 0)
                 ? <View style={[s.reqDot, dotInk]} /> : null}
               </View>
               {/* Capped, because the island is 64pt whatever the reader's
