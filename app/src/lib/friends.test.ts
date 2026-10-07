@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   agoOf, buildActivity, MIN_SUGGEST_CHARS, openSuggestions, REQUEST_DAILY_CAP,
-  splitFriendships, standingWith, SUGGEST_LIMIT, suggestable, SUGGESTED_SHOWN,
-  TRIP_REMINDER_DAYS, type Applause, type FriendshipRow,
+  splitFriendships, standingWith, SUGGEST_LIMIT, suggestable, SUGGESTED_SHOWN, type Applause, type FriendshipRow,
 } from './friends';
 
 const edge = (
@@ -59,38 +58,14 @@ describe('standingWith', () => {
 });
 
 describe('buildActivity', () => {
-  const today = '2026-08-23';
-
   it('applause newest first', () => {
     const items = buildActivity([
       like('c1', '2026-08-22T10:00:00Z'),
       like('c2', '2026-08-23T09:00:00Z', 'lanphuong'),
-    ], [], today);
+    ]);
     expect(items.map((i) => i.kind)).toEqual(['applause', 'applause']);
     expect(items[0]).toMatchObject({ collection_id: 'c2', liker_handle: 'lanphuong', liker_name: 'Some One' });
     expect(items[1]).toMatchObject({ collection_id: 'c1', liker_handle: null });
-  });
-
-  it('the nearest upcoming trip leads, with its distance in days', () => {
-    const items = buildActivity([like('c1', '2026-08-22T10:00:00Z')], [
-      { id: 't-far', title: 'Far', day: '2026-08-29' },
-      { id: 't-near', title: 'Rooftops, then the river', day: '2026-08-26' },
-    ], today);
-    expect(items[0]).toMatchObject({ kind: 'trip', tripId: 't-near', inDays: 3 });
-    expect(items).toHaveLength(2);
-  });
-
-  it('today still counts; yesterday and beyond the window say nothing', () => {
-    expect(buildActivity([], [{ id: 't', title: 'Now', day: today }], today)[0])
-      .toMatchObject({ kind: 'trip', inDays: 0 });
-    expect(buildActivity([], [{ id: 't', title: 'Gone', day: '2026-08-22' }], today)).toEqual([]);
-    const far = `2026-08-${23 + TRIP_REMINDER_DAYS + 1}`;
-    expect(buildActivity([], [{ id: 't', title: 'Later', day: far }], today)).toEqual([]);
-  });
-
-  it('a trip whose day does not parse is silence, not a crash', () => {
-    expect(buildActivity([], [{ id: 't', title: 'Broken', day: 'someday' }], today)).toEqual([]);
-    expect(buildActivity([], [{ id: 't', title: 'Broken', day: '2026-08-25' }], 'not-a-day')).toEqual([]);
   });
 });
 

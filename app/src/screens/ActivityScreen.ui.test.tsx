@@ -52,8 +52,6 @@ vi.mock('../lib/data', () => ({
 const catalog = vi.hoisted(() => ({ cols: [] as Col[] }));
 vi.mock('../lib/catalog', () => ({ useCollections: () => ({ data: catalog.cols }) }));
 
-const trips = vi.hoisted(() => ({ data: [] as { id: string; title: string; day: string }[] }));
-vi.mock('../lib/mytrips', () => ({ useMyTrips: () => trips }));
 
 const crew = vi.hoisted(() => ({
   ships: { data: [] as FriendshipRow[], loading: false, reload: vi.fn() },
@@ -113,7 +111,6 @@ beforeEach(() => {
   data.fetchApplause.mockImplementation(async () => []);
   data.mine = [];
   catalog.cols = [];
-  trips.data = [];
   crew.ships.data = [];
   crew.ships.loading = false;
   crew.people = {};
@@ -164,7 +161,7 @@ describe('the EARLIER states', () => {
     await renderScreen();
     expect(screen.queryByRole('progressbar')).toBeNull();
     expect(screen.getByText(
-      'Quiet so far. Likes on your lists and upcoming trips will show here.',
+      'Quiet so far. Likes on your lists will show here.',
     )).toBeTruthy();
   });
 
@@ -185,27 +182,25 @@ describe('the EARLIER states', () => {
 // met two conventions in two taps. The mark is the bare glyph, lifted
 // to the line's first row of text as Profile lifts its own.
 describe('the marks down the left', () => {
-  it('are bare glyphs, one per row, and no well — the heart tertiary, the calendar the accent', async () => {
-    trips.data = [{ id: 't1', title: 'Hanoi day', day: '2026-09-11' }];
-    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao')]);
+  it('are bare hearts in the tertiary ink, one per row, and no well', async () => {
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao'), like('c1', '2026-09-10T10:00:00Z', 'anh')]);
     data.mine = [col('c1', 'pho-walk', 'Pho walk')];
     await renderScreen();
     expect(document.querySelector('[data-testid="round-icon"]')).toBeNull();
     const slots = screen.getAllByTestId('row-glyph');
     expect(slots).toHaveLength(2);
-    const [trip, applause] = slots.map((el) => el.querySelector('span')!);
-    expect(trip.getAttribute('data-icon')).toBe('calendar-outline');
-    expect(applause.getAttribute('data-icon')).toBe('heart-outline');
-    for (const glyph of [trip, applause]) expect(glyph.getAttribute('data-size')).toBe('19');
-    // Read as the hex the stub was handed; a computed style would come
-    // back as rgb(). The calendar keeps the accent every calendar in the
-    // app wears (`icons.test.ts`); the heart is the tertiary ink.
-    expect(applause.getAttribute('data-color')).toBe(colors.textTertiary);
-    expect(trip.getAttribute('data-color')).toBe(colors.accent);
+    for (const glyph of slots.map((el) => el.querySelector('span')!)) {
+      expect(glyph.getAttribute('data-icon')).toBe('heart-outline');
+      expect(glyph.getAttribute('data-size')).toBe('19');
+      // Read as the hex the stub was handed; a computed style would come
+      // back as rgb().
+      expect(glyph.getAttribute('data-color')).toBe(colors.textTertiary);
+    }
   });
 
   it('sit level with the line’s first row of text, on a top-aligned row', async () => {
-    trips.data = [{ id: 't1', title: 'Hanoi day', day: '2026-09-11' }];
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao')]);
+    data.mine = [col('c1', 'pho-walk', 'Pho walk')];
     await renderScreen();
     const slot = screen.getByTestId('row-glyph');
     const m = getComputedStyle(slot);
@@ -216,108 +211,6 @@ describe('the marks down the left', () => {
   });
 });
 
-// A trip that is tomorrow sat under EARLIER — the owner's screenshot of
-// 7 Oct 2026 read "“Bữa tối hai người đầu giờ” là ngày mai" beneath
-// "TRƯỚC ĐÓ", a thing about to happen filed under things that had. The
-// feed now has a heading for each tense.
-describe('the two tenses', () => {
-  const tomorrow = { id: 't1', title: 'Hanoi day', day: '2026-09-12' };
-  const liked = () => {
-    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao')]);
-    data.mine = [col('c1', 'pho-walk', 'Pho walk')];
-  };
-
-  it('files the trip under Upcoming, above Earlier, and the applause under Earlier', async () => {
-    trips.data = [tomorrow];
-    liked();
-    await renderScreen();
-    const upcoming = screen.getByText('Upcoming');
-    const earlier = screen.getByText('Earlier');
-    const trip = screen.getByText('“Hanoi day” is tomorrow');
-    const applause = screen.getByText('@bao liked “Pho walk”');
-    const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(before(upcoming, trip)).toBe(true);
-    expect(before(trip, earlier)).toBe(true);
-    expect(before(earlier, applause)).toBe(true);
-    // Two cards, not one: the trip and the applause do not share a row list.
-    expect(trip.closest('[data-testid="upcoming-card"]')).toBeTruthy();
-    expect(applause.closest('[data-testid="earlier-card"]')).toBeTruthy();
-    expect(trip.closest('[data-testid="earlier-card"]')).toBeNull();
-  });
-
-  it('shows no Upcoming heading without a trip', async () => {
-    liked();
-    await renderScreen();
-    expect(screen.queryByText('Upcoming')).toBeNull();
-    expect(screen.getByText('Earlier')).toBeTruthy();
-  });
-
-  // A trip and no applause: the page is not quiet, so it does not say it
-  // is, and an Earlier heading over nothing would be a label for a list of
-  // none.
-  it('shows neither Earlier nor the quiet note while a trip is the only news', async () => {
-    trips.data = [tomorrow];
-    await renderScreen();
-    expect(screen.getByText('Upcoming')).toBeTruthy();
-    expect(screen.queryByText('Earlier')).toBeNull();
-    expect(screen.queryByText(/Quiet so far/)).toBeNull();
-  });
-
-  it('keeps the quiet note under Earlier when there is nothing at all', async () => {
-    await renderScreen();
-    expect(screen.queryByText('Upcoming')).toBeNull();
-    expect(screen.getByText('Earlier')).toBeTruthy();
-    expect(screen.getByText(/Quiet so far/)).toBeTruthy();
-  });
-
-  it('says Sắp tới and これから in the other two languages', async () => {
-    trips.data = [tomorrow];
-    i18n.lang = 'vi';
-    const first = render(<ActivityScreen navigation={nav()} />);
-    await flush();
-    expect(screen.getByText('Sắp tới')).toBeTruthy();
-    first.unmount();
-    i18n.lang = 'ja';
-    await renderScreen();
-    expect(screen.getByText('これから')).toBeTruthy();
-  });
-});
-
-describe('the upcoming trip', () => {
-  it.each([
-    ['2026-09-11', '“Hanoi day” is today'],
-    ['2026-09-12', '“Hanoi day” is tomorrow'],
-    ['2026-09-15', '“Hanoi day” is in 4 days'],
-  ])('a trip on %s reads %s', async (day, line) => {
-    trips.data = [{ id: 't1', title: 'Hanoi day', day }];
-    await renderScreen();
-    expect(screen.getByText(line)).toBeTruthy();
-    expect(screen.queryByText(/Quiet so far/)).toBeNull();
-  });
-
-  it('names only the nearest trip, and none that is past or more than a week out', async () => {
-    trips.data = [
-      { id: 'past', title: 'Gone', day: '2026-09-10' },
-      { id: 'far', title: 'Far', day: '2026-09-19' },
-      { id: 'b', title: 'Later', day: '2026-09-14' },
-      { id: 'a', title: 'Sooner', day: '2026-09-13' },
-    ];
-    await renderScreen();
-    expect(screen.getByText('“Sooner” is in 2 days')).toBeTruthy();
-    expect(screen.queryByText(/Later|Gone|Far/)).toBeNull();
-  });
-
-  // It used to be a plain View: the one row on the screen that said
-  // something was about to happen and could not take you to it. The
-  // owner asked for both rows to open what they name (7 Oct 2026).
-  it('opens the trip', async () => {
-    trips.data = [{ id: 't1', title: 'Hanoi day', day: '2026-09-11' }];
-    const navigation = await renderScreen();
-    fireEvent.click(screen.getByRole('button', { name: /Hanoi day/ }));
-    expect(navigation.navigate).toHaveBeenLastCalledWith('TripDetail', { id: 't1' });
-  });
-});
-
 // The chevron says "goes somewhere", as it does on every row of Profile,
 // and it is drawn at the one size the app's row-end chevrons share. A
 // row that goes nowhere — a like on a list that is gone — has none, which
@@ -325,17 +218,14 @@ describe('the upcoming trip', () => {
 describe('the chevron at the end of a row', () => {
   const chevronIn = (el: Element) => el.querySelector('[data-icon="chevron-forward"]');
 
-  it('ends the trip row and the live applause row, at 17pt in the tertiary ink', async () => {
-    trips.data = [{ id: 't1', title: 'Hanoi day', day: '2026-09-11' }];
+  it('ends a live applause row, at 17pt in the tertiary ink', async () => {
     catalog.cols = [col('c1', 'pho-walk', 'Pho walk')];
     data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao')]);
     await renderScreen();
-    for (const name of [/Hanoi day/, /@bao liked “Pho walk”/]) {
-      const chevron = chevronIn(screen.getByRole('button', { name }))!;
-      expect(chevron).toBeTruthy();
-      expect(chevron.getAttribute('data-size')).toBe('17');
-      expect(chevron.getAttribute('data-color')).toBe(colors.textTertiary);
-    }
+    const chevron = chevronIn(screen.getByRole('button', { name: /@bao liked “Pho walk”/ }))!;
+    expect(chevron).toBeTruthy();
+    expect(chevron.getAttribute('data-size')).toBe('17');
+    expect(chevron.getAttribute('data-color')).toBe(colors.textTertiary);
   });
 
   it('is absent from a like on a list that is gone', async () => {

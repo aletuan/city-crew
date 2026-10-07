@@ -57,9 +57,13 @@ const CALENDAR = /<Ionicons\s+[^>]*?name="calendar-outline"[^>]*?color=\{([^}]+)
 describe('the calendar glyph', () => {
   const files = sources(ROOT);
 
+  // Three today: the invitation card, the planning screen and the trip
+  // card. Activity's trip row was a fourth until 7 Oct 2026, when the
+  // feed stopped carrying trips. The floor is a floor against the regex
+  // going blind, not a count of features.
   it('is drawn somewhere, so this test cannot pass by finding nothing', () => {
     const hits = files.flatMap((f) => [...readFileSync(f, 'utf8').matchAll(CALENDAR)]);
-    expect(hits.length).toBeGreaterThan(3);
+    expect(hits.length).toBeGreaterThanOrEqual(3);
   });
 
   it('is the accent at every call site', () => {

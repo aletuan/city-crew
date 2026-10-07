@@ -816,8 +816,8 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
             the "N requests waiting" banner on Crew, and when Crew grew a
             Requests tab (#309, 23 Aug 2026) the banner came down with the
             requests it pointed at — nobody meant to close the feed, but
-            the applause on your lists and the trip coming up were left
-            behind a route nothing navigated to, for six weeks.
+            the applause on your lists was left behind a route nothing
+            navigated to, for six weeks.
 
             Under the friends row rather than a bell in the header: what
             the feed holds is who liked your lists and who wants to join
@@ -828,7 +828,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         <FeatureRow
           icon="notifications-outline"
           title={t('Activity', 'Hoạt động', 'アクティビティ')}
-          sub={t('Likes on your lists, and your next trip.', 'Lượt thích trên list của bạn, và chuyến đi sắp tới.', 'リストへのいいねと、次の旅程。')}
+          sub={t('Likes on your lists, and friend requests.', 'Lượt thích trên list của bạn, và lời mời kết bạn.', 'リストへのいいねと、友達リクエスト。')}
           onPress={() => navigation.navigate('Activity')}
           last
         />
