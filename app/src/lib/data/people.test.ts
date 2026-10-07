@@ -18,7 +18,7 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  acceptFriendRequest, blockUser, fetchApplause, fetchCuratorAvatars, fetchFriendships,
+  acceptFriendRequest, blockUser, fetchApplause, fetchCopies, fetchCuratorAvatars, fetchFriendships,
   fetchMutualSaves, fetchMyBlocks, fetchProfilesById, fetchSuggestedFriends, profileByHandle,
   removeFriendship, searchHandles, sendFriendRequest, submitReport, unblockUser,
 } from './people';
@@ -363,6 +363,23 @@ describe('searchHandles', () => {
   it('answers empty when there is no data', async () => {
     fake().replies({ data: null });
     expect(await searchHandles('an')).toEqual([]);
+  });
+});
+
+describe('fetchCopies', () => {
+  it('asks the Postgres function for copies since an instant', async () => {
+    fake().replies({ data: [{ collection_id: 'c-1', copier_handle: 'bao' }] });
+    expect(await fetchCopies('2026-08-01T00:00:00Z')).toHaveLength(1);
+    const [q] = fake().log;
+    expect(q).toMatchObject({ op: 'rpc', fn: 'copies_of_mine' });
+    expect(q.payload).toEqual({ since: '2026-08-01T00:00:00Z' });
+  });
+
+  it('answers empty when the call failed or returned nothing', async () => {
+    fake().replies({ error: { message: 'timeout' } });
+    expect(await fetchCopies('2026-08-01T00:00:00Z')).toEqual([]);
+    fake().replies({ data: null });
+    expect(await fetchCopies('2026-08-01T00:00:00Z')).toEqual([]);
   });
 });
 

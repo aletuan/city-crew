@@ -249,6 +249,10 @@ export async function createCollection(input: {
   cityId: string;
   title: string;
   desc?: string;
+  /** The list this one is a copy of, when it is. Written onto the row as
+   *  `copied_from`, which is what lets the original's curator hear about
+   *  it (`copies_of_mine`); null for a list made from scratch. */
+  copiedFrom?: string | null;
 }): Promise<string> {
   const title = input.title.trim();
   const desc = input.desc?.trim() || null;
@@ -272,6 +276,7 @@ export async function createCollection(input: {
       title_en: title, title_vi: title, title_ja: title,
       desc_en: desc, desc_vi: desc, desc_ja: desc,
       is_public: false,
+      copied_from: input.copiedFrom ?? null,
     });
     if (!error) return slug;
     // A policy said no. The only policy that can, for a row carrying the
@@ -419,12 +424,15 @@ export async function copyCollection(input: {
   title: string;
   desc?: string;
   placeSlugs: readonly string[];
+  /** The original's id — see `createCollection`. */
+  copiedFrom?: string | null;
 }): Promise<string> {
   const slug = await createCollection({
     ownerId: input.ownerId,
     cityId: input.cityId,
     title: input.title,
     desc: input.desc,
+    copiedFrom: input.copiedFrom,
   });
   if (!input.placeSlugs.length) return slug;
 

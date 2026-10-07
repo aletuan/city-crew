@@ -195,6 +195,15 @@ export async function searchHandles(prefix: string): Promise<FriendProfile[]> {
   return (data ?? []) as FriendProfile[];
 }
 
+/** Recent copies of your public lists, each with its copier's name — see
+ *  `copies_of_mine`, `likes_on_mine`'s twin under the same rules. Quiet
+ *  on failure, like its twin: the feed shows what it could get. */
+export async function fetchCopies(sinceISO: string): Promise<import('../friends').Copy[]> {
+  const { data, error } = await supabase.rpc('copies_of_mine', { since: sinceISO });
+  if (error) return [];
+  return (data ?? []) as import('../friends').Copy[];
+}
+
 /** Recent likes on your public lists, each with its liker's name — see
  *  `likes_on_mine` (second cut: the owner always sees who). */
 export async function fetchApplause(sinceISO: string): Promise<import('../friends').Applause[]> {

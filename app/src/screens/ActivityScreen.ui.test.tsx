@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Haptics from 'expo-haptics';
 import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Nav } from '../nav';
-import type { Applause, FriendshipRow } from '../lib/friends';
+import type { Applause, Copy, FriendshipRow } from '../lib/friends';
 import type { FriendProfile } from '../lib/data';
 import { colors } from '../theme';
 
@@ -38,6 +38,7 @@ const data = vi.hoisted(() => ({
   removeFriendship: vi.fn(async (..._a: unknown[]) => {}),
   blockUser: vi.fn(async (..._a: unknown[]) => {}),
   fetchApplause: vi.fn(async (_since: string): Promise<Applause[]> => []),
+  fetchCopies: vi.fn(async (_since: string): Promise<Copy[]> => []),
   mine: [] as Col[],
   useMyCollections: vi.fn(),
 }));
@@ -46,6 +47,7 @@ vi.mock('../lib/data', () => ({
   removeFriendship: data.removeFriendship,
   blockUser: data.blockUser,
   fetchApplause: data.fetchApplause,
+  fetchCopies: data.fetchCopies,
   useMyCollections: (id: string | null) => { data.useMyCollections(id); return { data: data.mine }; },
 }));
 
@@ -109,6 +111,7 @@ beforeEach(() => {
     fn.mockImplementation(async () => {});
   }
   data.fetchApplause.mockImplementation(async () => []);
+  data.fetchCopies.mockImplementation(async () => []);
   data.mine = [];
   catalog.cols = [];
   crew.ships.data = [];
@@ -161,7 +164,7 @@ describe('the EARLIER states', () => {
     await renderScreen();
     expect(screen.queryByRole('progressbar')).toBeNull();
     expect(screen.getByText(
-      'Quiet so far. Likes on your lists will show here.',
+      'Quiet so far. Likes and copies of your lists will show here.',
     )).toBeTruthy();
   });
 
@@ -291,6 +294,45 @@ describe('the applause', () => {
     await renderScreen();
     expect(screen.getByText('@bao が「Pho walk（日本語）」にいいねしました')).toBeTruthy();
     expect(screen.getByText('1時間前')).toBeTruthy();
+  });
+});
+
+// "Save a copy" is the strongest compliment one reader pays another's
+// list, and until 7 Oct 2026 it left no trace: `copyCollection` made a
+// fresh list and nothing on the row said where it came from. The copy
+// now remembers its original, `copies_of_mine` tells the curator, and
+// the feed says so beside the likes — one timeline, by when it happened.
+describe('the copies', () => {
+  const copyOf = (collection_id: string, copied_at: string, handle: string | null = null): Copy =>
+    ({ collection_id, copied_at, copier_handle: handle, copier_name: handle && 'Some One' });
+
+  it('names the copier and the list, in the timeline with the likes, with its own glyph', async () => {
+    catalog.cols = [col('c1', 'pho-walk', 'Pho walk')];
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T09:00:00Z', 'anh')]);
+    data.fetchCopies.mockImplementation(async () => [copyOf('c1', '2026-09-11T10:00:00Z', 'bao'), copyOf('c1', '2026-09-10T10:00:00Z')]);
+    await renderScreen();
+    const lines = screen.getAllByText(/liked “|saved a copy of “/).map((n) => n.textContent);
+    expect(lines).toEqual([
+      '@bao saved a copy of “Pho walk”',
+      '@anh liked “Pho walk”',
+      'Someone saved a copy of “Pho walk”',
+    ]);
+    const row = screen.getByRole('button', { name: /@bao saved a copy/ });
+    expect(row.querySelector('[data-testid="row-glyph"] span')!.getAttribute('data-icon')).toBe('copy-outline');
+  });
+
+  it('opens the list that was copied', async () => {
+    catalog.cols = [col('c1', 'pho-walk', 'Pho walk')];
+    data.fetchCopies.mockImplementation(async () => [copyOf('c1', '2026-09-11T10:00:00Z', 'bao')]);
+    const navigation = await renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: /@bao saved a copy of “Pho walk”/ }));
+    expect(navigation.navigate).toHaveBeenLastCalledWith('CollectionDetail', { slug: 'pho-walk' });
+  });
+
+  it('asks for the same two weeks of copies as of applause', async () => {
+    await renderScreen();
+    expect(data.fetchCopies).toHaveBeenCalledTimes(1);
+    expect(data.fetchCopies.mock.calls[0][0]).toBe(data.fetchApplause.mock.calls[0][0]);
   });
 });
 

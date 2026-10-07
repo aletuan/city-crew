@@ -80,7 +80,13 @@ export type RootStackParamList = {
      *  source list's facts, carried whole because the source belongs to
      *  somebody else and no query of "mine" can resolve it. The copy is
      *  created on submit; backing out creates nothing. */
-    copyFrom?: { cityId: string; title: string; desc: string; placeSlugs: string[] };
+    copyFrom?: {
+      /** The original's row id, written onto the copy as `copied_from` so
+       *  its curator hears about it — see `copies_of_mine`. Optional only
+       *  because a list read from the launch cache may not carry its id. */
+      sourceId?: string;
+      cityId: string; title: string; desc: string; placeSlugs: string[];
+    };
   } | undefined;
   PlaceDetail: { slug: string };
   /** The place's photographs, for the guide who brought the place in.

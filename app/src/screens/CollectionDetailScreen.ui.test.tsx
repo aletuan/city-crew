@@ -1192,6 +1192,7 @@ describe("somebody else's list", () => {
     fireEvent.click(menuRow('Save a copy'));
     expect(raw.navigate).toHaveBeenCalledWith('CollectionForm', {
       copyFrom: {
+        sourceId: 'c1',
         cityId: 'hanoi',
         title: 'Old Quarter eats',
         desc: 'Where we eat.\n\nCopied from @hanoicrew',

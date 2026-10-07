@@ -3,9 +3,10 @@
 //
 // Two sections, two kinds of thing. REQUESTS are questions: somebody
 // asked to join your crew and the card carries the only two answers.
-// EARLIER is news: applause on your lists. A row opens the list that
-// earned the like and wears the chevron that says so; a like on a list
-// that is gone opens nothing and wears none.
+// EARLIER is news: applause on your lists, and copies saved of them,
+// in one timeline. A row opens the list that earned it and wears the
+// chevron that says so; one on a list that is gone opens nothing and
+// wears none.
 //
 // Your own plans are not here. An UPCOMING section carried the nearest
 // trip for a day (6–7 Oct 2026) and went: by then the same fact was on
@@ -31,11 +32,11 @@ import { useAuth } from '../lib/auth';
 import { useCollections } from '../lib/catalog';
 import { useCrew } from '../lib/crew';
 import {
-  acceptFriendRequest, blockUser, fetchApplause,
+  acceptFriendRequest, blockUser, fetchApplause, fetchCopies,
   type FriendProfile, removeFriendship, useMyCollections,
 } from '../lib/data';
 import {
-  type ActivityItem, agoOf, type Applause, buildActivity, splitFriendships,
+  type ActivityItem, agoOf, type Applause, buildActivity, type Copy, splitFriendships,
 } from '../lib/friends';
 import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
@@ -63,13 +64,16 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const crew = useMemo(() => splitFriendships(ships.data, me ?? ''), [ships.data, me]);
 
   const [applause, setApplause] = useState<Applause[] | null>(null);
+  const [copies, setCopies] = useState<Copy[] | null>(null);
   useEffect(() => {
-    if (!me) { setApplause([]); return; }
+    if (!me) { setApplause([]); setCopies([]); return; }
     const since = new Date(Date.now() - APPLAUSE_DAYS * 86400000).toISOString();
     fetchApplause(since).then(setApplause).catch(() => setApplause([]));
+    // The same window: a copy is news for as long as a like is.
+    fetchCopies(since).then(setCopies).catch(() => setCopies([]));
   }, [me]);
 
-  const earlier = useMemo<ActivityItem[]>(() => buildActivity(applause ?? []), [applause]);
+  const earlier = useMemo<ActivityItem[]>(() => buildActivity(applause ?? [], copies ?? []), [applause, copies]);
 
   // A collection id is what the applause carries; the title is what the
   // reader needs. Both shelves are searched — the liked list is yours,
@@ -187,7 +191,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   // Only what EARLIER is built from. The crew edges feed REQUESTS, and
   // waiting on them blanked the feed behind a spinner on every answer's
   // reload.
-  const loading = applause === null;
+  const loading = applause === null || copies === null;
 
   return (
     <AuthScreen>
@@ -269,9 +273,9 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
         <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
       ) : earlier.length === 0 ? (
         <Empty text={t(
-          'Quiet so far. Likes on your lists will show here.',
-          'Chưa có gì. Lượt thích trên các list của bạn sẽ hiện ở đây.',
-          'まだ静かです。リストへのいいねがここに表示されます。',
+          'Quiet so far. Likes and copies of your lists will show here.',
+          'Chưa có gì. Lượt thích và bản sao list của bạn sẽ hiện ở đây.',
+          'まだ静かです。リストへのいいねやコピーがここに表示されます。',
         )} />
       ) : (
             <Card testID="earlier-card">
@@ -282,10 +286,21 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                 // name they chose to be known by. The full name stays on
                 // the request card, where recognising a human is the
                 // decision being made.
-                const who = item.liker_handle ? atHandle(item.liker_handle) : null;
+                const who = (item.kind === 'applause' ? item.liker_handle : item.copier_handle);
+                const by = who ? atHandle(who) : null;
+                const shown = title ?? '…';
+                // Two kinds, one sentence shape. The copy's verb is the
+                // button's own words — "Save a copy" is what they pressed.
+                const line = item.kind === 'applause'
+                  ? (by
+                    ? t(`${by} liked “${shown}”`, `${by} đã thích “${shown}”`, `${by} が「${shown}」にいいねしました`)
+                    : t(`Someone liked “${shown}”`, `Ai đó đã thích “${shown}”`, `誰かが「${shown}」にいいねしました`))
+                  : (by
+                    ? t(`${by} saved a copy of “${shown}”`, `${by} đã lưu bản sao “${shown}”`, `${by} が「${shown}」のコピーを保存しました`)
+                    : t(`Someone saved a copy of “${shown}”`, `Ai đó đã lưu bản sao “${shown}”`, `誰かが「${shown}」のコピーを保存しました`));
                 return (
                   <PressableScale
-                    key={`a-${item.collection_id}-${item.at}`}
+                    key={`${item.kind}-${item.collection_id}-${item.at}`}
                     style={[s.row, i > 0 && s.rowDivider]}
                     onPress={title ? () => navigation.navigate('CollectionDetail', { slug: slugFor(item.collection_id, [...mine.data, ...cols.data]) ?? '' }) : undefined}
                     // A button only when it goes somewhere — VoiceOver has to
@@ -293,13 +308,11 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                     accessibilityRole={title ? 'button' : undefined}
                   >
                     <View style={s.mark} testID="row-glyph">
-                      <Ionicons name="heart-outline" size={19} color={colors.textTertiary} />
+                      <Ionicons name={item.kind === 'applause' ? 'heart-outline' : 'copy-outline'} size={19} color={colors.textTertiary} />
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
                       <Text style={s.line} numberOfLines={2}>
-                        {who
-                          ? t(`${who} liked “${title ?? '…'}”`, `${who} đã thích “${title ?? '…'}”`, `${who} が「${title ?? '…'}」にいいねしました`)
-                          : t(`Someone liked “${title ?? '…'}”`, `Ai đó đã thích “${title ?? '…'}”`, `誰かが「${title ?? '…'}」にいいねしました`)}
+                        {line}
                       </Text>
                       <Text style={s.meta}>{agoLabel(item.at)}</Text>
                     </View>
