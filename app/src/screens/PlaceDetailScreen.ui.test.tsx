@@ -433,7 +433,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.queryByTestId('detail-checkin')).toBeNull();
   });
 
-  it('hangs a glass Check-in pill at the right of the facts once the switch is on', () => {
+  it('hangs a bordered Check-in pill at the right of the facts once the switch is on', () => {
     state.checkin = true;
     state.uid = 'u1';
     // No map, so Directions is drawn as its pill and not as the disc
@@ -443,14 +443,27 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     const pill = screen.getByTestId('detail-checkin');
     expect(pill.getAttribute('aria-label')).toBe('Check-in');
     expect(pill.getAttribute('role')).toBe('button');
-    expect(pill.querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    expect(pill.querySelector('[data-icon="location"]')).toBeTruthy();
     expect(within(pill).getByText('Check-in')).toBeTruthy();
-    // The same pill as Directions — glass, hairline, accent type — so a
-    // control looks like the one control this screen already has, and
-    // not like the tinted facts beside it. `firstElementChild` is the
-    // inner view `PressableScale` puts `style` on.
-    const go = screen.getByTestId('detail-directions');
-    expect(pill.firstElementChild!.className).toBe(go.firstElementChild!.className);
+    // A bordered button, not a glass pill: the facts beside it are the
+    // glass ones, and a control wearing the same fill read as a fourth
+    // fact on the phone. Bare outline is the filter row's own word for
+    // "press me"; the accent at hairline strength is whose word it is.
+    // `firstElementChild` is the inner view `PressableScale` styles.
+    const inner = getComputedStyle(pill.firstElementChild!);
+    const fact = getComputedStyle(screen.getByTestId('detail-facts').firstElementChild!);
+    // jsdom resolves the longhands react-native-web writes, not the
+    // shorthand; the fill reads as the base class's transparent black.
+    expect(inner.borderTopColor).toBe('rgba(255, 111, 91, 0.28)');
+    expect(inner.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(fact.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    // The same height as the chips, so the two tops and the two
+    // baselines meet — 36 beside 30 read as a pill that had slipped.
+    expect(inner.paddingTop).toBe(fact.paddingTop);
+    expect(inner.paddingBottom).toBe(fact.paddingBottom);
+    expect(inner.minHeight).toBe('0px'); // the base class's; no 36 of its own
+    // What the height gave up, the target takes back: 30 + 7 + 7 = 44.
+    expect(propsWhere((p) => p.testID === 'detail-checkin').hitSlop).toEqual({ top: 7, bottom: 7 });
     // Its own column, pinned to the top right: the facts wrap under
     // themselves on a three-category place and never push it down.
     const row = pill.parentElement!;
