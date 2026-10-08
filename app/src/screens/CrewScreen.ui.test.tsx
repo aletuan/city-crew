@@ -112,7 +112,9 @@ describe('the frame', () => {
     const navigation = nav();
     render(<CrewScreen navigation={navigation} />);
     expect(screen.getByText('Your crew')).toBeTruthy();
-    expect(screen.getByText('Plans get better together')).toBeTruthy();
+    // No motto under the title: a line there is for a fact about the
+    // list, and this screen's one fact is on the Friends tab.
+    expect(screen.queryByText('Plans get better together')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
   });
