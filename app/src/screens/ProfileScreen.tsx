@@ -796,11 +796,11 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           own rather than a row in Interests, because the chips there are
           a picker at rest and a navigation row under a picker is two
           kinds of thing in one card. */}
-      <Text style={s.section}>{t('Visited', 'Đã ghé', '訪れた場所')}</Text>
+      <Text style={s.section}>{t('Check-ins', 'Check-in', 'チェックイン')}</Text>
       <Card style={s.featureCard}>
         <FeatureRow
           icon="location-outline"
-          title={t('Places you checked in at', 'Nơi bạn đã check-in', 'チェックインした場所')}
+          title={t('Places you checked in at', 'Địa điểm check-in', 'チェックインした場所')}
           sub={t('By month, newest first.', 'Theo tháng, mới nhất trước.', '月ごと、新しい順。')}
           count={visitSummary(visits.data).places}
           onPress={() => navigation.navigate('Visited')}

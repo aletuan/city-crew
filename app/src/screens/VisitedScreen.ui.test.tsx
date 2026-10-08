@@ -68,7 +68,7 @@ describe('VisitedScreen', () => {
   it('reads the visits for the account on the session', () => {
     show();
     expect(data.asked).toHaveBeenCalledWith('me');
-    expect(screen.getByText('Visited')).toBeTruthy();
+    expect(screen.getByText('Check-ins')).toBeTruthy();
   });
 
   it('spins before the first answer, and says so when there is nothing', () => {

@@ -91,7 +91,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
 
   return (
     <AuthScreen>
-      <AuthHeader onBack={() => navigation.goBack()} title={t('Visited', 'Đã ghé', '訪れた場所')} />
+      <AuthHeader onBack={() => navigation.goBack()} title={t('Check-ins', 'Địa điểm check-in', 'チェックインした場所')} />
 
       {!visits.loaded ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
