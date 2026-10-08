@@ -150,6 +150,10 @@ export type RootStackParamList = {
    *  the account, not about any city. */
   Crew: undefined;
   Activity: undefined;
+  /** The reader's own visits, by month. Under Profile with the two
+   *  above: a fact about the account, and its rows open places from
+   *  every city. */
+  Visited: undefined;
   SignIn: undefined;
   SignUp: undefined;
   ForgotPassword: undefined;

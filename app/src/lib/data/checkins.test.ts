@@ -19,18 +19,19 @@ beforeEach(() => fake().reset());
 describe('fetchMyCheckins', () => {
   it('reads the owner’s rows newest first, with the place’s slug flattened in', async () => {
     fake().replies({ data: [
-      { id: 'k2', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', places: { slug: 'cong' } },
+      { id: 'k2', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', places: { slug: 'cong', name_en: 'Cong', name_vi: 'Cộng', name_ja: null } },
       { id: 'k1', city_id: null, at: '2026-10-01T03:00:00Z', places: null },
     ] });
     const rows = await fetchMyCheckins('u1');
     const [call] = fake().log;
     expect(call.table).toBe('checkins');
+    expect(call.payload).toBe('id, city_id, at, places(slug, name_en, name_vi, name_ja)');
     expect(call.filters).toEqual([['user_id', 'u1']]);
     expect(call.order).toEqual(['at', { ascending: false }]);
     expect(rows).toEqual([
-      { id: 'k2', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00' },
+      { id: 'k2', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', place: { name_en: 'Cong', name_vi: 'Cộng', name_ja: null } },
       // A row whose place is gone has no slug to show; it still counts.
-      { id: 'k1', place_slug: '', city_id: null, at: '2026-10-01T03:00:00Z' },
+      { id: 'k1', place_slug: '', city_id: null, at: '2026-10-01T03:00:00Z', place: null },
     ]);
   });
   it('throws the database’s words when the read fails', async () => {

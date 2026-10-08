@@ -28,6 +28,11 @@ export type Checkin = {
   city_id: string | null;
   /** ISO instant, as Postgres hands back `timestamptz`. */
   at: string;
+  /** The place's names, embedded with the row so the Visited screen can
+   *  name a place from a city the catalog is not holding. Null when the
+   *  place is gone; absent on a row the cache kept before the column
+   *  rode along. */
+  place?: { name_en: string; name_vi: string; name_ja: string | null } | null;
 };
 
 /**
@@ -58,4 +63,47 @@ export function latestCheckin(rows: readonly Checkin[], slug: string): Checkin |
 export function canRepeat(latest: Checkin | null, now: Date): boolean {
   if (!latest) return true;
   return now.getTime() - new Date(latest.at).getTime() >= REPEAT_AFTER_MIN * 60_000;
+}
+
+/** One month of visits, newest first inside it. `month` is 1–12. */
+export type VisitSection = { key: string; year: number; month: number; data: Checkin[] };
+
+/**
+ * The visits filed by month, newest month first — the Visited screen's
+ * sections. Months are the phone's, as the sheet's clock is: a visit at
+ * 23:30 in Hanoi belongs to the evening the reader remembers, not to
+ * the UTC date.
+ *
+ * Sorted here rather than trusted, for the reason `latestCheckin` sorts;
+ * a copy, so the hook's list is left as it was.
+ */
+export function visitSections(rows: readonly Checkin[]): VisitSection[] {
+  const sorted = [...rows].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+  const out: VisitSection[] = [];
+  for (const r of sorted) {
+    const d = new Date(r.at);
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const key = `${year}-${String(month).padStart(2, '0')}`;
+    const last = out[out.length - 1];
+    if (last && last.key === key) last.data.push(r);
+    else out.push({ key, year, month, data: [r] });
+  }
+  return out;
+}
+
+const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/** A section's heading. Vietnamese writes the month as a number — "Tháng
+ *  10" — the way `dateline` does for the same reason: T1–T12 would read
+ *  as weekdays. */
+export function monthTitle(lang: string, year: number, month: number): string {
+  if (lang === 'vi') return `Tháng ${month}, ${year}`;
+  if (lang === 'ja') return `${year}年${month}月`;
+  return `${MONTHS_EN[month - 1]} ${year}`;
+}
+
+/** How many visits, and at how many distinct places. */
+export function visitSummary(rows: readonly Checkin[]): { visits: number; places: number } {
+  return { visits: rows.length, places: new Set(rows.map((r) => r.place_slug)).size };
 }
