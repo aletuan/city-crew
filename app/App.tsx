@@ -57,6 +57,7 @@ import EditProfileScreen from './src/screens/EditProfileScreen';
 import DeleteAccountScreen from './src/screens/DeleteAccountScreen';
 import CrewScreen from './src/screens/CrewScreen';
 import ActivityScreen from './src/screens/ActivityScreen';
+import VisitedScreen from './src/screens/VisitedScreen';
 
 // The trace's own zero is when `lib/trace` evaluates, early in the bundle;
 // this line runs once the whole import graph above has been evaluated, so
@@ -173,6 +174,9 @@ function ProfileStack() {
           not about any city, and the card that opens them sits here. */}
       <Stack.Screen name="Crew" component={CrewScreen} />
       <Stack.Screen name="Activity" component={ActivityScreen} />
+      {/* The visits, by month. Its rows open a place, which the stack
+          already has for the detail's sake. */}
+      <Stack.Screen name="Visited" component={VisitedScreen} />
       {/* Activity's applause rows open the list that earned the like,
           so the stack needs the detail — and the rule the Explore stack
           states follows it here: a screen registered in several stacks

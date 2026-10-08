@@ -23,9 +23,10 @@ import AvatarPicker from '../components/AvatarPicker';
 import EngagementRing from '../components/EngagementRing';
 import { levelFromSaves } from '../lib/level';
 import { useAuth } from '../lib/auth';
+import { visitSummary } from '../lib/checkin';
 import { useIsEditor, useIsGuideAnywhere } from '../lib/useGuideGrant';
 import { useMyTrips } from '../lib/mytrips';
-import { membersOf, useMyPreferences } from '../lib/data';
+import { membersOf, useMyCheckins, useMyPreferences } from '../lib/data';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import { useSave } from '../lib/save';
@@ -105,12 +106,15 @@ const GLYPH_BOX = 26;
 const CAPTION_LINE = 15;
 const TITLE_LINE = 19;
 
-function FeatureRow({ icon, title, sub, onPress, last }: {
+function FeatureRow({ icon, title, sub, onPress, last, count }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   sub: string;
   onPress: () => void;
   last?: boolean;
+  /** A number at the row's end, as the friends row draws its own. Zero
+   *  draws nothing: a count with nothing behind it is not a fact. */
+  count?: number;
 }) {
   return (
     <PressableScale
@@ -125,6 +129,7 @@ function FeatureRow({ icon, title, sub, onPress, last }: {
         <Text style={s.featureTitle}>{title}</Text>
         <Text style={s.featureSub}>{sub}</Text>
       </View>
+      {count ? <Text style={[s.friendCount, s.rowEnd]}>{count}</Text> : null}
       <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
     </PressableScale>
   );
@@ -527,6 +532,10 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { email, profile, memberSince, signOut, session } = useAuth();
   const [busy, setBusy] = useState(false);
+  // The visits, for the one number the row below shows. One copy per
+  // account, remembered between launches; the place screen reads the
+  // same one.
+  const visits = useMyCheckins(session?.user?.id ?? null);
   // The number on the friends card and the dot beside it. Sorted by the
   // pure half in lib/friends; the fetch itself is scoped by RLS to edges
   // this account is on.
@@ -778,6 +787,25 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
             )}
           </Text>
         )}
+      </Card>
+
+      {/* Where you have been, after what you like: both are facts about
+          who you are, and they read in that order — taste, then the
+          evidence. Not a fourth stat tile: the row of three carries its
+          own note on why four boxes read as a toolbar. A section of its
+          own rather than a row in Interests, because the chips there are
+          a picker at rest and a navigation row under a picker is two
+          kinds of thing in one card. */}
+      <Text style={s.section}>{t('Visited', 'Đã ghé', '訪れた場所')}</Text>
+      <Card style={s.featureCard}>
+        <FeatureRow
+          icon="location-outline"
+          title={t('Places you checked in at', 'Nơi bạn đã check-in', 'チェックインした場所')}
+          sub={t('By month, newest first.', 'Theo tháng, mới nhất trước.', '月ごと、新しい順。')}
+          count={visitSummary(visits.data).places}
+          onPress={() => navigation.navigate('Visited')}
+          last
+        />
       </Card>
 
       {/* Friends above Preferences, deliberately: this row is the one

@@ -58,6 +58,7 @@ const state = vi.hoisted(() => ({
   city: { short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as
     { short_en: string; short_vi: string; short_ja: string } | null,
   mode: 'manual' as 'auto' | 'manual',
+  checkins: [] as { id: string; place_slug: string; city_id: string | null; at: string }[],
 }));
 
 const spies = vi.hoisted(() => ({
@@ -99,6 +100,7 @@ vi.mock('../lib/data', () => ({
     spies.prefsFor(uid);
     return { data: { categories: state.categories }, reload: spies.reload };
   },
+  useMyCheckins: () => ({ data: state.checkins }),
 }));
 vi.mock('../lib/crew', () => ({ useCrew: () => ({ ships: { data: state.ships } }) }));
 vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine } }) }));
@@ -169,6 +171,7 @@ const press = (start: string) => fireEvent.click(button(start));
 beforeEach(async () => {
   vi.clearAllMocks();
   state.guide = false;
+  state.checkins = [];
   state.editor = false;
   state.trips = [];
   spies.signOut.mockImplementation(async () => {});
@@ -898,5 +901,40 @@ describe('its tab, pressed again', () => {
     draw();
     const ref = vi.mocked(useScrollToTop).mock.calls.at(-1)?.[0] as { current: unknown };
     expect(ref.current).toHaveProperty('scrollTo');
+  });
+});
+
+// ── the visits ──
+//
+// A row of its own section, between Interests and Friends — the places a
+// person has been are a fact about who they are, not about who they go
+// with. Not a fourth stat tile: the stats row's own note says four boxes
+// read as a toolbar.
+describe('visited places', () => {
+  it('opens the visits, and counts the distinct places on the row', () => {
+    state.checkins = [
+      { id: 'a', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00Z' },
+      { id: 'b', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-01T03:00:00Z' },
+      { id: 'c', place_slug: 'pizza', city_id: 'saigon', at: '2026-09-20T03:00:00Z' },
+    ];
+    const { raw } = draw();
+    const row = screen.getByText('Places you checked in at').closest('[data-testid="feature-row"]')!;
+    expect(row.textContent).toContain('2');
+    expect(row.textContent).not.toContain('3');
+    fireEvent.click(row);
+    expect(raw.navigate).toHaveBeenCalledWith('Visited');
+  });
+
+  it('shows no number before the first visit', () => {
+    draw();
+    const row = screen.getByText('Places you checked in at').closest('[data-testid="feature-row"]')!;
+    expect(row.textContent).toBe('Places you checked in at' + 'By month, newest first.');
+  });
+
+  it('sits under Interests and above Friends', () => {
+    draw();
+    const title = screen.getByText('Places you checked in at');
+    expect(screen.getByText('Interests').compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(title.compareDocumentPosition(screen.getByText('Friends')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

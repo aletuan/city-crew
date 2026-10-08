@@ -6,15 +6,20 @@ import type { Checkin } from '../checkin';
 import { DAILY_LIMIT, refusedByPolicy } from '../quota';
 import { fetchPlaceId } from './guide';
 
-type CheckinRow = { id: string; city_id: string | null; at: string; places: { slug: string } | null };
+type CheckinRow = {
+  id: string; city_id: string | null; at: string;
+  places: { slug: string; name_en: string; name_vi: string; name_ja: string | null } | null;
+};
 
 /** Every visit this account has recorded, newest first, with the
- *  place's slug flattened in. A row whose place is gone keeps its date
- *  and an empty slug: the visit happened, whatever became of the row. */
+ *  place's slug and names flattened in — the names because the Visited
+ *  screen lists places from every city, and the catalog holds one. A row
+ *  whose place is gone keeps its date and an empty slug: the visit
+ *  happened, whatever became of the row. */
 export async function fetchMyCheckins(ownerId: string): Promise<Checkin[]> {
   const { data, error } = await supabase
     .from('checkins')
-    .select('id, city_id, at, places(slug)')
+    .select('id, city_id, at, places(slug, name_en, name_vi, name_ja)')
     .eq('user_id', ownerId)
     .order('at', { ascending: false });
   if (error) throw new Error(error.message);
@@ -22,6 +27,7 @@ export async function fetchMyCheckins(ownerId: string): Promise<Checkin[]> {
   // types a to-one embed as an array and the runtime does not.
   return ((data ?? []) as unknown as CheckinRow[]).map((r) => ({
     id: r.id, place_slug: r.places?.slug ?? '', city_id: r.city_id, at: r.at,
+    place: r.places ? { name_en: r.places.name_en, name_vi: r.places.name_vi, name_ja: r.places.name_ja } : null,
   }));
 }
 
