@@ -28,6 +28,7 @@ import { useIsEditor, useIsGuideAnywhere } from '../lib/useGuideGrant';
 import { useMyTrips } from '../lib/mytrips';
 import { membersOf, useMyPreferences } from '../lib/data';
 import { useMyCheckins } from '../lib/checkins';
+import { useActivityFresh } from '../lib/useActivityFresh';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import { useSave } from '../lib/save';
@@ -107,15 +108,35 @@ const GLYPH_BOX = 26;
 const CAPTION_LINE = 15;
 const TITLE_LINE = 19;
 
-function FeatureRow({ icon, title, sub, onPress, last, count }: {
+/**
+ * A number at a row's end, in a pill.
+ *
+ * A pill, not a bare figure: on the phone "30" and "6" floated between
+ * the text and the chevron with nothing to say they were counts rather
+ * than values, and the settings rows two cards down print their value
+ * in that very spot. Two tones, one shape: quiet glass for a total —
+ * friends, places — and the accent for what is new, because the accent
+ * as a surface is for state (`theme.ts`) and "unseen" is one. Zero
+ * draws nothing: a count with nothing behind it is not a fact.
+ */
+function CountBadge({ n, tone = 'quiet' }: { n: number; tone?: 'quiet' | 'new' }) {
+  if (!n) return null;
+  return (
+    <View style={[s.badge, tone === 'new' && s.badgeNew, s.rowEnd]} testID="count-badge">
+      <Text style={[s.badgeText, tone === 'new' && s.badgeNewText]}>{n}</Text>
+    </View>
+  );
+}
+
+function FeatureRow({ icon, title, sub, onPress, last, count, tone }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   sub: string;
   onPress: () => void;
   last?: boolean;
-  /** A number at the row's end, as the friends row draws its own. Zero
-   *  draws nothing: a count with nothing behind it is not a fact. */
+  /** A number at the row's end — see `CountBadge`. */
   count?: number;
+  tone?: 'quiet' | 'new';
 }) {
   return (
     <PressableScale
@@ -130,7 +151,7 @@ function FeatureRow({ icon, title, sub, onPress, last, count }: {
         <Text style={s.featureTitle}>{title}</Text>
         <Text style={s.featureSub}>{sub}</Text>
       </View>
-      {count ? <Text style={[s.friendCount, s.rowEnd]}>{count}</Text> : null}
+      <CountBadge n={count ?? 0} tone={tone} />
       <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
     </PressableScale>
   );
@@ -537,6 +558,9 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   // copy, so a check-in made a moment ago on a place's screen is already
   // in this count. Its own copy here said 2 under a list of 29 once.
   const visits = useMyCheckins();
+  // What is new in the feed since it was last opened — see
+  // `lib/activityFresh` for why that, and not a total.
+  const fresh = useActivityFresh(session?.user?.id ?? null);
   // The number on the friends card and the dot beside it. Sorted by the
   // pure half in lib/friends; the fetch itself is scoped by RLS to edges
   // this account is on.
@@ -838,7 +862,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
               {t('Find friends and share your plans.', 'Tìm kiếm bạn bè và chia sẻ kế hoạch.', '友達を探して、計画を共有。')}
             </Text>
           </View>
-          {crew.friends.length > 0 ? <Text style={[s.friendCount, s.rowEnd]}>{crew.friends.length}</Text> : null}
+          <CountBadge n={crew.friends.length} />
           <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
         </PressableScale>
         {/* The door to Activity, re-hung. The feed's one entry used to be
@@ -857,6 +881,8 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         <FeatureRow
           icon="notifications-outline"
           title={t('Activity', 'Hoạt động', 'アクティビティ')}
+          count={fresh}
+          tone="new"
           sub={t('Likes and copies of your lists, and friend requests.', 'Lượt thích và bản sao list của bạn, và lời mời kết bạn.', 'リストへのいいねやコピーと、友達リクエスト。')}
           onPress={() => navigation.navigate('Activity')}
           last
@@ -1074,7 +1100,16 @@ const s = StyleSheet.create({
     backgroundColor: colors.accent,
     borderWidth: 2, borderColor: colors.bgElevated,
   },
-  friendCount: { color: colors.textTertiary, fontSize: 15.5, fontWeight: font.semibold },
+  // The pill: 22pt tall so it sits inside the 44pt row without touching
+  // its edges, `minWidth` so "6" and "30" are the same shape, the
+  // radius half the height for a true capsule.
+  badge: {
+    minWidth: 26, height: 22, paddingHorizontal: 8, borderRadius: 11,
+    backgroundColor: colors.surfaceGlassStrong, alignItems: 'center', justifyContent: 'center',
+  },
+  badgeText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.semibold },
+  badgeNew: { backgroundColor: colors.accentSoft },
+  badgeNewText: { color: colors.accent },
 
   section: { color: colors.text, ...type.section, marginTop: 10 },
 

@@ -29,6 +29,8 @@ import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import { useReport } from '../components/reportFlow';
 import { Avatar, Card, Empty, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { APPLAUSE_DAYS } from '../lib/activityFresh';
+import { markActivitySeen } from '../lib/useActivityFresh';
 import { useCollections } from '../lib/catalog';
 import { useCrew } from '../lib/crew';
 import {
@@ -47,7 +49,7 @@ import type { Nav } from '../nav';
 /** How far back the applause reaches. Two weeks: long enough that a
  *  weekly reader misses nothing, short enough that the screen is news
  *  rather than an archive. */
-const APPLAUSE_DAYS = 14;
+
 
 export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -67,6 +69,8 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const [copies, setCopies] = useState<Copy[] | null>(null);
   useEffect(() => {
     if (!me) { setApplause([]); setCopies([]); return; }
+    // Opening the feed is the look the profile's number counts from.
+    void markActivitySeen(me);
     const since = new Date(Date.now() - APPLAUSE_DAYS * 86400000).toISOString();
     fetchApplause(since).then(setApplause).catch(() => setApplause([]));
     // The same window: a copy is news for as long as a like is.

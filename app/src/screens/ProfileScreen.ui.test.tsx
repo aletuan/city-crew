@@ -59,6 +59,7 @@ const state = vi.hoisted(() => ({
     { short_en: string; short_vi: string; short_ja: string } | null,
   mode: 'manual' as 'auto' | 'manual',
   checkins: [] as { id: string; place_slug: string; city_id: string | null; at: string }[],
+  fresh: 0,
 }));
 
 const spies = vi.hoisted(() => ({
@@ -102,6 +103,7 @@ vi.mock('../lib/data', () => ({
   },
 }));
 vi.mock('../lib/checkins', () => ({ useMyCheckins: () => ({ data: state.checkins }) }));
+vi.mock('../lib/useActivityFresh', () => ({ useActivityFresh: () => state.fresh }));
 vi.mock('../lib/crew', () => ({ useCrew: () => ({ ships: { data: state.ships } }) }));
 vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine } }) }));
 vi.mock('../lib/mytrips', () => ({ useMyTrips: () => ({ data: state.trips }) }));
@@ -172,6 +174,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   state.guide = false;
   state.checkins = [];
+  state.fresh = 0;
   state.editor = false;
   state.trips = [];
   spies.signOut.mockImplementation(async () => {});
@@ -936,5 +939,37 @@ describe('visited places', () => {
     const title = screen.getByText('Places you checked in at');
     expect(screen.getByText('Interests').compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(title.compareDocumentPosition(screen.getByText('Friends')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+// ── the numbers at the rows' ends ──
+//
+// A pill, not a bare figure: on the phone "30" and "6" floated between
+// the text and the chevron with nothing to say they were counts rather
+// than values. Two tones, one shape — quiet glass for a total (friends,
+// places), the accent for what is new (activity) — because the accent
+// as a surface is for state, and "unseen" is one.
+describe('the badges', () => {
+  const edge = (requester: string, addressee: string, status: string) =>
+    ({ requester, addressee, status, created_at: '2026-09-01T00:00:00Z' });
+  it('draws a total in a quiet pill', () => {
+    state.ships = [edge('me', 'a', 'accepted'), edge('b', 'me', 'accepted')];
+    draw();
+    const badge = screen.getByText('2').parentElement!;
+    expect(badge.getAttribute('data-testid')).toBe('count-badge');
+    expect(getComputedStyle(badge).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(badge).borderTopLeftRadius).not.toBe('0px');
+  });
+
+  it('draws what is new on Activity in the accent, and nothing when nothing is', () => {
+    draw();
+    const row = () => screen.getByText('Activity').closest('[data-testid="feature-row"]')!;
+    expect(row().querySelector('[data-testid="count-badge"]')).toBeNull();
+    cleanup();
+    state.fresh = 3;
+    draw();
+    const badge = row().querySelector('[data-testid="count-badge"]')!;
+    expect(badge.textContent).toBe('3');
+    expect(getComputedStyle(badge).backgroundColor).toBe('rgba(255, 111, 91, 0.1)');
   });
 });
