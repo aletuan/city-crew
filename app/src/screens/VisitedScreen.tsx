@@ -29,10 +29,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { AuthHeader, AuthScreen } from '../components/authUi';
 import { Card, Empty, PressableScale } from '../components/ui';
-import { useAuth } from '../lib/auth';
 import { type Checkin, monthTitle, visitSections, visitSummary } from '../lib/checkin';
 import { useCity } from '../lib/city';
-import { removeCheckin, useMyCheckins } from '../lib/data';
+import { useMyCheckins } from '../lib/checkins';
+import { removeCheckin } from '../lib/data';
 import { clockOf, shortDateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, space, type } from '../theme';
@@ -45,9 +45,7 @@ const MARK_BOX = 26;
 
 export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
-  const { session } = useAuth();
-  const me = session?.user?.id ?? null;
-  const visits = useMyCheckins(me);
+  const visits = useMyCheckins();
   const { cities } = useCity();
   const [menuFor, setMenuFor] = useState<Checkin | null>(null);
 
