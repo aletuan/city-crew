@@ -20,7 +20,7 @@ import React from 'react';
 import { Alert, Linking, Share } from 'react-native';
 import { isShielded } from '../lib/share';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, within } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import { pinImage } from '../components/mapPins';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
@@ -47,9 +47,13 @@ const state = vi.hoisted(() => ({
   uid: null as string | null,
   price: false,
   checkin: false,
+  checkins: [] as { id: string; place_slug: string; city_id: string | null; at: string }[],
 }));
 const spies = vi.hoisted(() => ({
   save: vi.fn(),
+  addCheckin: vi.fn(async () => {}),
+  removeCheckin: vi.fn(async () => {}),
+  reloadCheckins: vi.fn(),
   note: vi.fn(),
   bySlug: vi.fn(),
   setStatusBarStyle: vi.fn(),
@@ -83,6 +87,10 @@ vi.mock('../lib/data', async () => ({
   fetchPlaceId: async () => 'place-uuid',
   fetchMyPhotoCounts: async () => ({ mineHere: 0, mineToday: 0 }),
   addPlacePhoto: async () => 'photo-id',
+  // The reader's check-ins, as the hook hands them to the screen.
+  useMyCheckins: () => ({ data: state.checkins, loading: false, loaded: true, error: null, loadedAt: 1, fromCache: false, reload: spies.reloadCheckins }),
+  addCheckin: spies.addCheckin,
+  removeCheckin: spies.removeCheckin,
 }));
 // The grant is read from a store now, not fetched — see `lib/guideGrant`.
 vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide, useIsEditor: () => false }));
@@ -253,6 +261,10 @@ beforeEach(() => {
   state.credit = false;
   state.price = false;
   state.checkin = false;
+  state.checkins = [];
+  spies.addCheckin.mockReset().mockResolvedValue(undefined);
+  spies.removeCheckin.mockReset().mockResolvedValue(undefined);
+  spies.reloadCheckins.mockReset();
   state.city = null;
   state.lang = 'en';
   state.guide = false;
@@ -474,17 +486,82 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(getComputedStyle(screen.getByTestId('detail-facts')).flexGrow).toBe('1');
   });
 
-  it('tells the reader check-in is on its way, in their language', () => {
+  // ── the visit itself: one row, now, at this place ──
+  const visit = (id: string, minutesAgo: number) =>
+    ({ id, place_slug: 'cong-caphe', city_id: 'hanoi', at: new Date(WED_10AM.getTime() - minutesAgo * 60000).toISOString() });
+
+  it('writes a visit on the tap, asks the list to refresh, and tells the taste profile nothing', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    show();
+    const noted = spies.note.mock.calls.length;
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    await waitFor(() => expect(spies.addCheckin).toHaveBeenCalledWith({ ownerId: 'u1', placeSlug: 'cong-caphe', cityId: 'hanoi' }));
+    await waitFor(() => expect(spies.reloadCheckins).toHaveBeenCalledTimes(1));
+    expect(spies.note).toHaveBeenCalledTimes(noted);
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it('wears the visit once it is written: tinted, ticked, and named as a state', () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    state.checkins = [visit('k1', 60)];
+    show();
+    expect(screen.queryByTestId('detail-checkin')).toBeNull();
+    const pill = screen.getByTestId('detail-checked-in');
+    expect(pill.querySelector('[data-icon="checkmark"]')).toBeTruthy();
+    expect(within(pill).getByText('Checked in')).toBeTruthy();
+    // The accent as a surface, now that there is a state for it to mean
+    // — the one tint this row is allowed, and it was promised in #812.
+    expect(getComputedStyle(pill.firstElementChild!).backgroundColor).toBe('rgba(255, 111, 91, 0.1)');
+    expect(a11yState('Checked in — options').selected).toBe(true);
+  });
+
+  it('opens the options on a worn pill: again, once ten minutes have passed, and undo', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    state.checkins = [visit('k1', 60), visit('k0', 60 * 24 * 3)];
+    show();
+    fireEvent.click(screen.getByTestId('detail-checked-in'));
+    expect(await screen.findByText('Checked in here')).toBeTruthy();
+    expect(screen.getByText(/Last time/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Check in again/ }));
+    await waitFor(() => expect(spies.addCheckin).toHaveBeenCalledTimes(1));
+    expect(spies.removeCheckin).not.toHaveBeenCalled();
+  });
+
+  it('offers only the undo inside the ten-minute window — a second tap is not a second visit', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    state.checkins = [visit('k1', 2), visit('k0', 60 * 24)];
+    show();
+    fireEvent.click(screen.getByTestId('detail-checked-in'));
+    await screen.findByText('Checked in here');
+    expect(screen.queryByRole('button', { name: /Check in again/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Remove last check-in/ }));
+    // The newest one, and only it: the visit three days ago stays.
+    await waitFor(() => expect(spies.removeCheckin).toHaveBeenCalledWith('k1'));
+    await waitFor(() => expect(spies.reloadCheckins).toHaveBeenCalledTimes(1));
+  });
+
+  it('says so, in the reader\u2019s words, when the day\u2019s cap refuses the visit', async () => {
     state.checkin = true;
     state.uid = 'u1';
     state.lang = 'vi';
+    spies.addCheckin.mockRejectedValueOnce(new Error('daily_limit'));
     show();
-    // The screen notes its own opening; the tap must add nothing to the
-    // taste profile — a door that is not open yet is not a preference.
-    const noted = spies.note.mock.calls.length;
     fireEvent.click(screen.getByTestId('detail-checkin'));
-    expect(alert).toHaveBeenCalledWith('Check-in sắp ra mắt', expect.stringContaining('ghé'));
-    expect(spies.note).toHaveBeenCalledTimes(noted);
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Không check-in được', expect.stringContaining('30')));
+    expect(spies.reloadCheckins).not.toHaveBeenCalled();
+  });
+
+  it('shows any other refusal as it came', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    spies.addCheckin.mockRejectedValueOnce(new Error('offline'));
+    show();
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not check in', 'offline'));
   });
 
   // ── the price, which ships hidden ──

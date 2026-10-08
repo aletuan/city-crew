@@ -46,6 +46,7 @@
 
 import type { Collection, Place } from './types';
 import type { Trip } from './data/trips';
+import type { Checkin } from './checkin';
 import type { Preferences } from './data/preferences';
 import type { FriendshipRow } from './friends';
 import type { HistoryEventRow, LikedCollectionRow, SubmittedPlaceRow } from './data/export';
@@ -84,6 +85,8 @@ export type ExportInput = {
   handles: Record<string, string>;
   submitted: SubmittedPlaceRow[];
   history: HistoryEventRow[];
+  /** Every visit recorded, from `fetchMyCheckins`. */
+  checkins: Checkin[];
 };
 
 export type ExportBundle = {
@@ -114,6 +117,8 @@ export type ExportBundle = {
     blocked: { handle: string }[];
   };
   history: { place_slug: string | null; event: string; city_id: string | null; at: string }[];
+  /** Where and when, and nothing else — that is all a check-in is yet. */
+  checkins: { place_slug: string | null; city_id: string | null; at: string }[];
   places_added: { slug: string; name: string; submitted_at: string | null }[];
 };
 
@@ -279,6 +284,14 @@ export function buildExport(input: ExportInput, now: Date, lang: ExportLang): Ex
       event: h.kind,
       city_id: h.city_id,
       at: isoUtc(h.created_at) ?? '',
+    })),
+
+    // The row's id is the database's business; a visit whose place is
+    // gone keeps its instant and names nothing, like an event above.
+    checkins: input.checkins.map((c) => ({
+      place_slug: c.place_slug || null,
+      city_id: c.city_id,
+      at: isoUtc(c.at) ?? '',
     })),
 
     places_added: input.submitted.map((p) => ({

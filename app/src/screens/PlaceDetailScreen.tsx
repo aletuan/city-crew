@@ -22,7 +22,10 @@ import { useAuth } from '../lib/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { coverOf, fmtCount, isFree, photosOf, usePlaceBySlug } from '../lib/data';
+import { addCheckin, coverOf, fmtCount, isFree, photosOf, removeCheckin, useMyCheckins, usePlaceBySlug } from '../lib/data';
+import { canRepeat, latestCheckin } from '../lib/checkin';
+import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
+import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { usePlaces } from '../lib/catalog';
 import { shortAddress } from '../lib/address';
 import { splitName, subtitleBeside } from '../lib/name';
@@ -35,7 +38,7 @@ import {
   atHandle, hostOf, instagramUrl, threadsUrl, websiteRepeatsHandle,
 } from '../lib/links';
 import { cityTz } from '../lib/clock';
-import { clockOf, groupHours, openState } from '../lib/format';
+import { clockOf, groupHours, openState, shortDateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsSearchUrl } from '../lib/maps';
@@ -43,7 +46,7 @@ import { useSave } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, display, font, onPhoto, radius, space, type } from '../theme';
-import { AmbientWarmth, Card, Empty, PressableScale, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, Empty, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
 import type { Nav, RootRoute } from '../nav';
@@ -146,7 +149,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // the signed-in only — a guest has nobody to check in as, and the
   // bookmark already plays the door-to-sign-in part on this screen.
   const { session } = useAuth();
-  const showCheckin = useFlag('place_checkin') && !!session?.user?.id;
+  const uid = session?.user?.id ?? null;
+  const showCheckin = useFlag('place_checkin') && !!uid;
+  // The reader's visits, one copy per account, remembered between
+  // launches; the pill reads the newest one here. Asked for nobody when
+  // the pill is not drawn, which resolves empty without a request.
+  const visits = useMyCheckins(showCheckin ? uid : null);
+  const [checkinMenu, setCheckinMenu] = useState(false);
+  const [checking, setChecking] = useState(false);
   // How many lines the address wanted before anything clamped it, and
   // whether the reader has asked for the rest. `null` is "not measured
   // yet", which is also the one paint that runs unclamped. Up here with
@@ -399,6 +409,61 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
     </>
   );
 
+  // ── check-in ──
+  const latestVisit = latestCheckin(visits.data, place.slug);
+  const checkIn = async () => {
+    if (checking || !uid) return;
+    setChecking(true);
+    try {
+      await addCheckin({ ownerId: uid, placeSlug: place.slug, cityId: place.city_id ?? city?.id ?? null });
+      successHaptic();
+      visits.reload();
+    } catch (e) {
+      // The cap gets its own words, as the collection form's does. Not
+      // noted in the taste profile either way: `place_events` is the
+      // private signal and this is the reader's own record — see
+      // `lib/checkin` for why the two are kept apart.
+      Alert.alert(
+        t('Could not check in', 'Không check-in được', 'チェックインできませんでした'),
+        isDailyLimit(e)
+          ? t(
+            `You can check in ${DAILY_CAPS.checkins} times a day. Come back tomorrow.`,
+            `Mỗi ngày bạn có thể check-in ${DAILY_CAPS.checkins} lần. Mai quay lại nhé.`,
+            `1日に${DAILY_CAPS.checkins}回までチェックインできます。また明日どうぞ。`,
+          )
+          : (e as Error).message,
+      );
+    } finally {
+      setChecking(false);
+    }
+  };
+  const undoCheckin = async () => {
+    if (!latestVisit) return;
+    try {
+      await removeCheckin(latestVisit.id);
+      visits.reload();
+    } catch (e) {
+      Alert.alert(t('Could not remove it', 'Không bỏ được', '削除できませんでした'), (e as Error).message);
+    }
+  };
+  // What a worn pill offers. "Again" only once the window has passed:
+  // inside it a second tap is a slip, and the one honest thing to offer
+  // a slip is the undo.
+  const checkinActions: SheetAction[] = [
+    ...(canRepeat(latestVisit, new Date()) ? [{
+      key: 'again', icon: 'location' as const,
+      title: t('Check in again', 'Check-in lần nữa', 'もう一度チェックイン'),
+      desc: t('Adds another visit, now.', 'Ghi thêm một lần ghé, lúc này.', '今の訪問をもう1回記録します。'),
+      onPress: () => { setCheckinMenu(false); void checkIn(); },
+    }] : []),
+    {
+      key: 'undo', icon: 'trash-outline' as const, destructive: true,
+      title: t('Remove last check-in', 'Bỏ check-in gần nhất', '直近のチェックインを削除'),
+      desc: t('Only the most recent one; earlier visits stay.', 'Chỉ lần gần nhất; các lần trước vẫn giữ.', '直近の1件だけ。それ以前の記録は残ります。'),
+      onPress: () => { setCheckinMenu(false); void undoCheckin(); },
+    },
+  ];
+
   return (
     // No top safe area: the photograph is what belongs against the top of
     // the glass, and insetting the screen is exactly what put a beige band
@@ -596,24 +661,28 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               misleads it comes down on every phone without a build. */}
           {showCheckin && (
             <PressableScale
-              onPress={() => Alert.alert(
-                t('Check-in is coming soon', 'Check-in sắp ra mắt', 'チェックインは近日公開'),
-                t(
-                  'Soon you will be able to mark the places you have been to.',
-                  'Sắp tới bạn có thể đánh dấu những nơi mình đã ghé.',
-                  '訪れた場所をもうすぐ記録できるようになります。',
-                ),
-              )}
+              // Rest: the tap is the visit. Worn: the tap is the menu —
+              // again, or undo — so a slip never writes a second row.
+              onPress={latestVisit ? () => setCheckinMenu(true) : () => { void checkIn(); }}
+              disabled={checking}
               haptic="selection"
               accessibilityRole="button"
-              accessibilityLabel={t('Check-in', 'Check-in', 'チェックイン')}
+              accessibilityState={{ selected: !!latestVisit, busy: checking }}
+              accessibilityLabel={latestVisit
+                ? t('Checked in — options', 'Đã check-in — tuỳ chọn', 'チェックイン済み — オプション')
+                : t('Check-in', 'Check-in', 'チェックイン')}
               containerStyle={s.checkinSlot}
-              style={s.checkin}
+              // The accent as a surface, now that there is a state for it
+              // to mean (#812 promised exactly this): tinted once a visit
+              // is written, bare outline until then.
+              style={[s.checkin, latestVisit && s.checkinOn]}
               hitSlop={{ top: 7, bottom: 7 }}
-              testID="detail-checkin"
+              testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
             >
-              <Ionicons name="location" size={15} color={colors.accent} />
-              <Text style={s.goText}>{t('Check-in', 'Check-in', 'チェックイン')}</Text>
+              <Ionicons name={latestVisit ? 'checkmark' : 'location'} size={15} color={colors.accent} />
+              <Text style={s.goText}>
+                {latestVisit ? t('Checked in', 'Đã check-in', 'チェックイン済み') : t('Check-in', 'Check-in', 'チェックイン')}
+              </Text>
             </PressableScale>
           )}
           </View>
@@ -1044,6 +1113,24 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
         </View>
       </ScrollView>
+      {/* The worn pill's menu. The header says when, in the reader's own
+          date format, because "again" and "undo" both need the reader to
+          know which visit they are looking at. */}
+      {showCheckin && latestVisit && (
+        <ActionSheet
+          visible={checkinMenu}
+          onClose={() => setCheckinMenu(false)}
+          actions={checkinActions}
+          header={(
+            <View style={s.checkinHead}>
+              <Text style={s.checkinHeadTitle}>{t('Checked in here', 'Bạn đã check-in ở đây', 'ここにチェックイン済み')}</Text>
+              <Text style={s.checkinHeadMeta}>
+                {t('Last time', 'Lần gần nhất', '前回')} · {shortDateline(lang, new Date(latestVisit.at))} · {clockOf(new Date(latestVisit.at).getHours() * 60 + new Date(latestVisit.at).getMinutes())}
+              </Text>
+            </View>
+          )}
+        />
+      )}
     </View>
   );
 }
@@ -1213,6 +1300,11 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.accentLine, borderRadius: radius.pill,
     paddingHorizontal: 12, paddingVertical: 6,
   },
+  // Worn: the one tint this row is allowed, because it is a state.
+  checkinOn: { backgroundColor: colors.accentSoft },
+  checkinHead: { gap: 2 },
+  checkinHeadTitle: { color: colors.text, fontSize: 18, fontFamily: display.semibold },
+  checkinHeadMeta: { color: colors.textTertiary, fontSize: 14 },
   // The filter row's chip, at rest: same hairline, same radius, same
   // type, so a category looks like the same thing here as there. Glass
   // fill rather than the filter's bare outline, because these are facts
