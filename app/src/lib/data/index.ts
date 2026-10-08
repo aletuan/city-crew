@@ -39,5 +39,6 @@ export * from './preferences';
 export * from './people';
 export * from './guide';
 export * from './gallery';
+export * from './checkins';
 export * from './invites';
 export * from './hooks';

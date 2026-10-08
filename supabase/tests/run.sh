@@ -426,3 +426,11 @@ for f in "$ROOT"/supabase/migrations/*_guest_narration.sql; do
   run "$DB" -f "$f" >/dev/null
 done
 run "$DB" -f "$HERE/guest_narration_test.sql"
+
+# Check-ins: a table of the reader's own visits. Needs `places` and the
+# auth stub, and the ask-once convention, so after that block.
+echo "→ check-ins"
+for f in "$ROOT"/supabase/migrations/*_checkins.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/checkins_test.sql"

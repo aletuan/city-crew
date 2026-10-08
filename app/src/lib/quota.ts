@@ -37,6 +37,9 @@ export const TOO_SOON = 'too_soon';
 export const DAILY_CAPS = {
   collections: 20,
   placesIntoLists: 300,
+  /** Thirty visits in a day is a long day out with room to spare; more
+   *  is a script. `20261008130000_checkins.sql`. */
+  checkins: 30,
 } as const;
 
 export type Refusal = { code?: string | null; message?: string | null } | null | undefined;

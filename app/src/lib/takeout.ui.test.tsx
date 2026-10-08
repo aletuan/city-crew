@@ -34,6 +34,7 @@ const reads = vi.hoisted(() => ({
   fetchMyBlocks: vi.fn(async () => ['b1']),
   fetchMySubmittedPlaces: vi.fn(async () => []),
   fetchMyHistory: vi.fn(async () => []),
+  fetchMyCheckins: vi.fn(async () => [{ id: 'k1', place_slug: 'cong', city_id: 'hanoi', at: '2026-09-20T03:00:00Z' }]),
   fetchProfilesById: vi.fn(async (ids: string[]) => Object.fromEntries(ids.map((id) => [id, {
     id, handle: `${id}_handle`, full_name: `Private Name ${id}`, avatar_url: `https://faces/${id}.jpg`,
   }]))),
@@ -49,6 +50,7 @@ vi.mock('./auth', () => ({
 vi.mock('./i18n', () => ({ useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }) }));
 vi.mock('./data', () => ({
   fetchMyCollections: reads.fetchMyCollections,
+  fetchMyCheckins: reads.fetchMyCheckins,
   fetchMyTrips: reads.fetchMyTrips,
   fetchPreferences: reads.fetchPreferences,
   fetchFriendships: reads.fetchFriendships,
@@ -123,6 +125,14 @@ describe('useTakeout', () => {
       }]);
       expect(takeout.busy).toBe(false);
       expect(takeout.error).toBeNull();
+    });
+
+    it('carries the check-ins, read for this account', async () => {
+      mount();
+      await run();
+      expect(reads.fetchMyCheckins).toHaveBeenCalledWith('me');
+      expect(JSON.parse(world.written[0].body).checkins)
+        .toEqual([{ place_slug: 'cong', city_id: 'hanoi', at: '2026-09-20T03:00:00.000Z' }]);
     });
 
     it('asks for every other end of an edge, and every block — never for the reader', async () => {

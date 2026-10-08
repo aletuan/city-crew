@@ -22,7 +22,7 @@ import { useCallback, useState } from 'react';
 import { useAuth } from './auth';
 import { useI18n } from './i18n';
 import {
-  fetchFriendships, fetchMyBlocks, fetchMyCollections, fetchMyTrips,
+  fetchFriendships, fetchMyBlocks, fetchMyCheckins, fetchMyCollections, fetchMyTrips,
   fetchPreferences, fetchProfilesById,
 } from './data';
 import { fetchMyHistory, fetchMyLikedCollections, fetchMySubmittedPlaces } from './data/export';
@@ -83,7 +83,7 @@ export function useTakeout() {
       const { File, Paths, Sharing } = await nativeIO();
       if (!(await Sharing.isAvailableAsync())) throw new Error('sharing_unavailable');
 
-      const [collections, likes, trips, preferences, friendships, blocked, submitted, history] =
+      const [collections, likes, trips, preferences, friendships, blocked, submitted, history, checkins] =
         await Promise.all([
           fetchMyCollections(uid),
           fetchMyLikedCollections(uid),
@@ -93,6 +93,7 @@ export function useTakeout() {
           fetchMyBlocks(),
           fetchMySubmittedPlaces(uid),
           fetchMyHistory(uid),
+          fetchMyCheckins(uid),
         ]);
 
       // Already keyed by id, and the export wants only the handle out of
@@ -114,7 +115,7 @@ export function useTakeout() {
           created_at: (session?.user as { created_at?: string } | undefined)?.created_at ?? null,
         },
         profile, preferences, collections, likes, trips,
-        friendships, blocked, handles, submitted, history,
+        friendships, blocked, handles, submitted, history, checkins,
       }, now, lang as ExportLang);
 
       // The cache directory, not documents: this is a copy the reader is

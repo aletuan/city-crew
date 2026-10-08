@@ -79,6 +79,41 @@ export type Database = {
         }
         Relationships: []
       }
+      checkins: {
+        Row: {
+          at: string
+          city_id: string | null
+          created_at: string
+          id: string
+          place_id: string
+          user_id: string
+        }
+        Insert: {
+          at?: string
+          city_id?: string | null
+          created_at?: string
+          id?: string
+          place_id: string
+          user_id: string
+        }
+        Update: {
+          at?: string
+          city_id?: string | null
+          created_at?: string
+          id?: string
+          place_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkins_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cities: {
         Row: {
           center_lat: number

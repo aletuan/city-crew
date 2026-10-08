@@ -26,7 +26,7 @@ const bare = (over: Partial<ExportInput> = {}): ExportInput => ({
   profile: { handle: 'dang', full_name: 'Tran Hai Dang', location: '', bio: '', interests: '', avatar_url: 'https://x/y.jpg' },
   preferences: { categories: ['cafes'], budget_vnd: null, history_on: true },
   collections: [], likes: [], trips: [], friendships: [], blocked: [],
-  handles: {}, submitted: [], history: [],
+  handles: {}, submitted: [], history: [], checkins: [],
   ...over,
 });
 
@@ -243,6 +243,19 @@ describe('history and contributions', () => {
     const history = [{ kind: 'open', city_id: null, created_at: 'nonsense', places: null }];
     expect(buildExport(bare({ history }), NOW, 'en').history[0])
       .toEqual({ place_slug: null, event: 'open', city_id: null, at: '' });
+  });
+
+  it('lists check-ins as place, city and instant — nothing else is kept about one', () => {
+    const checkins = [
+      { id: 'k1', place_slug: 'p', city_id: 'hanoi', at: '2026-10-08T10:00:00+07:00' },
+      { id: 'k0', place_slug: '', city_id: null, at: 'nonsense' },
+    ];
+    expect(buildExport(bare({ checkins }), NOW, 'en').checkins).toEqual([
+      { place_slug: 'p', city_id: 'hanoi', at: '2026-10-08T03:00:00.000Z' },
+      // The row's own id is the database's business, and a gone place
+      // leaves no slug to name.
+      { place_slug: null, city_id: null, at: '' },
+    ]);
   });
 
   it('records places added as contributions that outlive the account', () => {
