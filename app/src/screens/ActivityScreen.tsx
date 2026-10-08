@@ -29,8 +29,7 @@ import PersonSheet, { type PersonAction } from '../components/PersonSheet';
 import { useReport } from '../components/reportFlow';
 import { Avatar, Card, Empty, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
-import { APPLAUSE_DAYS } from '../lib/activityFresh';
-import { markActivitySeen } from '../lib/useActivityFresh';
+import { APPLAUSE_DAYS } from '../lib/activityWindow';
 import { useCollections } from '../lib/catalog';
 import { useCrew } from '../lib/crew';
 import {
@@ -69,8 +68,6 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   const [copies, setCopies] = useState<Copy[] | null>(null);
   useEffect(() => {
     if (!me) { setApplause([]); setCopies([]); return; }
-    // Opening the feed is the look the profile's number counts from.
-    void markActivitySeen(me);
     const since = new Date(Date.now() - APPLAUSE_DAYS * 86400000).toISOString();
     fetchApplause(since).then(setApplause).catch(() => setApplause([]));
     // The same window: a copy is news for as long as a like is.
