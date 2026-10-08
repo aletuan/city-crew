@@ -23,3 +23,14 @@ begin
   select enabled into seeded from public.app_flags where key = 'photo_attribution';
   assert seeded is true, 'photo_attribution must ship on: the credit is what Google asks for';
 end $$;
+
+-- The second switch: the Check-in placeholder. The app ships it off and
+-- this row is what shows it, so the row has to be there and on — and
+-- `on conflict do nothing` means a hand-flipped value is left alone,
+-- which a re-run of the migration above has just exercised.
+do $$
+declare seeded bool;
+begin
+  select enabled into seeded from public.app_flags where key = 'place_checkin';
+  assert seeded is true, 'place_checkin must be seeded on: the app ships it off and only this row draws the pill';
+end $$;
