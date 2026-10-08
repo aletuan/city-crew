@@ -25,9 +25,10 @@
 // - **Nothing for a single page.** There is nowhere to swipe to, and a
 //   lone dot is a control that promises one.
 //
-// The pill's scrim is the lightest of the three the hero wears
-// (0.45, under the 44pt discs' 0.55 and the labelled counter's 0.58),
-// because it holds no type.
+// The pill's scrim is the lighter of the two the hero wears (0.45,
+// under the 44pt discs' 0.55), because it holds no type. A third, the
+// labelled "1 / 6" counter at 0.58, went on 8 October 2026: it said
+// what these dots say.
 
 import React from 'react';
 import { StyleSheet, View } from 'react-native';

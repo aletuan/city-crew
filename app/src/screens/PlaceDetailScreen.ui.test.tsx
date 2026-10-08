@@ -225,6 +225,12 @@ const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<strin
 };
 /** The carousel's photographs, in the order a swipe reaches them. */
 const heroPhotos = () => [...document.querySelectorAll('img')].map((i) => i.getAttribute('src'));
+/** Which page the hero's dots say is on screen — the one mark of position
+ *  the hero has left, now that the counter is gone. */
+const heroPage = () => {
+  const dots = propsWhere((p) => typeof p.count === 'number' && typeof p.page === 'number' && 'bottom' in p);
+  return { page: dots.page as unknown as number, count: dots.count as unknown as number };
+};
 // react-native-web drops `accessibilityState`, so what VoiceOver would be
 // told is read off the props the screen handed the control.
 const a11yState = (label: string) =>
@@ -413,12 +419,23 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
   // way, and a switch in `app_flags` decides whether the pill is drawn at
   // all — so it can be taken down on every phone the moment it misleads.
   it('draws no check-in as it ships', () => {
+    state.uid = 'u1';
+    show();
+    expect(screen.queryByTestId('detail-checkin')).toBeNull();
+  });
+
+  // A guest has nobody to check in as. Hidden rather than a door to the
+  // sign-in form: the bookmark already plays that part on this screen,
+  // and a placeholder has nothing to offer on the far side of signing in.
+  it('keeps check-in from a guest even with the switch on', () => {
+    state.checkin = true;
     show();
     expect(screen.queryByTestId('detail-checkin')).toBeNull();
   });
 
   it('hangs a glass Check-in pill at the right of the facts once the switch is on', () => {
     state.checkin = true;
+    state.uid = 'u1';
     // No map, so Directions is drawn as its pill and not as the disc
     // over the tiles — the pill is what Check-in is measured against.
     mapStub.canDraw = false;
@@ -446,6 +463,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
 
   it('tells the reader check-in is on its way, in their language', () => {
     state.checkin = true;
+    state.uid = 'u1';
     state.lang = 'vi';
     show();
     // The screen notes its own opening; the tap must add nothing to the
@@ -535,7 +553,18 @@ describe('PlaceDetailScreen — hero', () => {
     }));
     expect(heroPhotos()[0]).toBe('cover.jpg');
     expect(heroPhotos()).toEqual(['cover.jpg', 'b.jpg']);
-    expect(screen.getByText('1 / 2')).toBeTruthy();
+    expect(heroPage()).toEqual({ page: 0, count: 2 });
+  });
+
+  // The "1 / 6" pill in the hero's corner said what the dots in the other
+  // corner already said, and said it in type over a photograph — one more
+  // scrim, one more thing to read, for a number nobody acts on. VoiceOver
+  // keeps the position: every photograph is still "Photo n of m".
+  it('draws no counter over the photograph: the dots are the position', () => {
+    show(place({ place_photos: [photo('a.jpg'), photo('b.jpg', { sort_order: 1 }), photo('c.jpg', { sort_order: 2 })] }));
+    expect(screen.queryByText(/^\d+ \/ \d+$/)).toBeNull();
+    expect(document.querySelector('[data-icon="images-outline"]')).toBeNull();
+    expect(heroPage()).toEqual({ page: 0, count: 3 });
   });
 
   it('names each photo, and where it sits in the set, for VoiceOver', () => {
@@ -549,10 +578,10 @@ describe('PlaceDetailScreen — hero', () => {
     ]);
   });
 
-  it('advances the counter as the carousel is swiped', () => {
+  it('moves the dots as the carousel is swiped', () => {
     show(place({ place_photos: [photo('a.jpg'), photo('b.jpg', { sort_order: 1 }), photo('c.jpg', { sort_order: 2 })] }));
     swipeTo(2);
-    expect(screen.getByText('3 / 3')).toBeTruthy();
+    expect(heroPage().page).toBe(2);
   });
 
   // The keeper's way of choosing a cover: swipe to the picture here, set
@@ -567,12 +596,12 @@ describe('PlaceDetailScreen — hero', () => {
     const n = nav();
     const r = render(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
     swipeTo(2);
-    expect(screen.getByText('3 / 3')).toBeTruthy();
+    expect(heroPage().page).toBe(2);
     const pageBefore = document.querySelector('img[src="c.jpg"]');
 
     state.catalog = { loading: false, data: [three('c.jpg')] };
     r.rerender(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
-    expect(screen.getByText('1 / 3')).toBeTruthy();
+    expect(heroPage().page).toBe(0);
     expect(heroPhotos()[0]).toBe('c.jpg');
     // And the strip itself started again: the scroll view was remounted
     // (`scrollKey`), so the page for c.jpg is a new node and the strip's
@@ -592,7 +621,7 @@ describe('PlaceDetailScreen — hero', () => {
     swipeTo(1);
     state.catalog = { loading: false, data: [{ ...p, rating: 4.9 } as Place] };
     r.rerender(<PlaceDetailScreen navigation={n} route={route('cong-caphe')} />);
-    expect(screen.getByText('2 / 2')).toBeTruthy();
+    expect(heroPage().page).toBe(1);
   });
 
   it('credits the photographer of the photo on screen when attribution is on', () => {
