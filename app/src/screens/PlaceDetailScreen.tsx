@@ -572,15 +572,25 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 onto a second line. */}
           </View>
           {/* ── check-in ──
-              A placeholder, drawn to be judged where it will live. The
-              pill is the Directions pill — glass, hairline, accent type
-              — because that is what a *control* looks like on this
-              screen, and the facts beside it are tinted exactly so that
-              they do not. Not the tinted fill the mockup wore: the
+              A placeholder, drawn to be judged where it will live. It
+              opened as the Directions pill — glass, hairline, accent
+              type — and on the phone that read as a fourth fact: same
+              fill, same hairline, same "coloured glyph and a word" as
+              the chips to its left, with only the colour of the word to
+              say otherwise. So it is a *bordered* button now, the way
+              the filter row on Explore says "press me" with a bare
+              outline where this row says "read me" with a glass fill
+              (see `fact`); the outline is the accent at hairline
+              strength, and the pin is filled, one solid mark in a row
+              of outlines. Not the tinted fill the mockup wore: the
               accent as a surface is for state (`theme.ts`), and a pill
-              at rest is not one. When check-in is real, *having*
-              checked in is the state, and that is when the pill earns
-              `accentSoft` and a filled pin.
+              at rest is not one. When check-in is real, *having* checked
+              in is the state, and that is when it earns `accentSoft`.
+
+              The height is the chips' 30, not a control's 36: the first
+              version stood 6pt taller and its word sat 3pt under the
+              chips' baseline, which the eye read as a pill that had
+              slipped. The 44pt target is `hitSlop`'s to keep.
 
               Behind `place_checkin`, off as shipped, so the day it
               misleads it comes down on every phone without a build. */}
@@ -598,10 +608,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               accessibilityRole="button"
               accessibilityLabel={t('Check-in', 'Check-in', 'チェックイン')}
               containerStyle={s.checkinSlot}
-              style={s.go}
+              style={s.checkin}
+              hitSlop={{ top: 7, bottom: 7 }}
               testID="detail-checkin"
             >
-              <Ionicons name="location-outline" size={15} color={colors.accent} />
+              <Ionicons name="location" size={15} color={colors.accent} />
               <Text style={s.goText}>{t('Check-in', 'Check-in', 'チェックイン')}</Text>
             </PressableScale>
           )}
@@ -1190,12 +1201,18 @@ const s = StyleSheet.create({
 
   factsRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 16 },
   facts: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-  // Top-aligned beside the facts, which are 30pt tall to this pill's 36:
-  // a control is allowed to stand taller than the things to read beside
-  // it, as Directions does beside its address. Flush with the first
-  // row's top rather than centred on it, so a wrapped second row of
-  // facts does not drag the pill down with it.
+  // Flush with the first row's top rather than centred on the column,
+  // so a wrapped second row of facts does not drag the pill down with
+  // it. Same height as the chips, so flush tops are flush baselines.
   checkinSlot: { flexShrink: 0, marginLeft: 12, alignSelf: 'flex-start' },
+  // The chip's box — padding, radius, gap — with the fill taken out and
+  // the hairline recoloured: the two differences that make a button of
+  // it, and nothing else, so it still belongs to the row it sits in.
+  checkin: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    borderWidth: 1, borderColor: colors.accentLine, borderRadius: radius.pill,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
   // The filter row's chip, at rest: same hairline, same radius, same
   // type, so a category looks like the same thing here as there. Glass
   // fill rather than the filter's bare outline, because these are facts
