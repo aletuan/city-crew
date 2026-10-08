@@ -22,6 +22,7 @@ import { CatalogProvider } from './src/lib/catalog';
 import { CrewProvider } from './src/lib/crew';
 import { InvitationsProvider } from './src/lib/invitations';
 import { MyTripsProvider } from './src/lib/mytrips';
+import { CheckinsProvider } from './src/lib/checkins';
 import { ReminderSync } from './src/lib/reminderSync';
 import { GuideGrantSync } from './src/lib/useGuideGrant';
 import { SessionNavSync } from './src/lib/sessionNavSync';
@@ -336,6 +337,11 @@ function Root() {
                         all read the one list — and a delete on any of
                         them lands in the copy the others draw. */}
                     <MyTripsProvider>
+                    {/* And the check-ins, the fifth time: the pill on a
+                        place, the count on the profile and the list
+                        behind it read one copy, so a visit written on
+                        one is on the others without a relaunch. */}
+                    <CheckinsProvider>
                     {/* The phone's trip reminders, kept to the trips the
                         reader is going on — planned, or accepted. */}
                     {/* Asks once whether this account is a local
@@ -360,6 +366,7 @@ function Root() {
                         <Tabs />
                       </TabBarDuckProvider>
                     </SaveProvider>
+                    </CheckinsProvider>
                     </MyTripsProvider>
                     </InvitationsProvider>
                   </CrewProvider>

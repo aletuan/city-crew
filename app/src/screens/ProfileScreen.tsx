@@ -26,7 +26,8 @@ import { useAuth } from '../lib/auth';
 import { visitSummary } from '../lib/checkin';
 import { useIsEditor, useIsGuideAnywhere } from '../lib/useGuideGrant';
 import { useMyTrips } from '../lib/mytrips';
-import { membersOf, useMyCheckins, useMyPreferences } from '../lib/data';
+import { membersOf, useMyPreferences } from '../lib/data';
+import { useMyCheckins } from '../lib/checkins';
 import { useCrew } from '../lib/crew';
 import { splitFriendships } from '../lib/friends';
 import { useSave } from '../lib/save';
@@ -532,10 +533,10 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
   const { email, profile, memberSince, signOut, session } = useAuth();
   const [busy, setBusy] = useState(false);
-  // The visits, for the one number the row below shows. One copy per
-  // account, remembered between launches; the place screen reads the
-  // same one.
-  const visits = useMyCheckins(session?.user?.id ?? null);
+  // The visits, for the one number the row below shows — the app's one
+  // copy, so a check-in made a moment ago on a place's screen is already
+  // in this count. Its own copy here said 2 under a list of 29 once.
+  const visits = useMyCheckins();
   // The number on the friends card and the dot beside it. Sorted by the
   // pure half in lib/friends; the fetch itself is scoped by RLS to edges
   // this account is on.

@@ -13,16 +13,10 @@ import type { Checkin } from '../lib/checkin';
 const data = vi.hoisted(() => ({
   visits: { data: [] as Checkin[], loading: false, loaded: true, error: null as string | null, loadedAt: 1, fromCache: false, reload: vi.fn() },
   removeCheckin: vi.fn(async (_id: string) => {}),
-  asked: vi.fn((_uid: string | null) => {}),
+  asked: vi.fn(() => {}),
 }));
-vi.mock('../lib/data', () => ({
-  useMyCheckins: (uid: string | null) => { data.asked(uid); return data.visits; },
-  removeCheckin: data.removeCheckin,
-}));
-const auth = vi.hoisted(() => ({ me: 'me' as string | null }));
-vi.mock('../lib/auth', () => ({
-  useAuth: () => ({ session: auth.me ? { user: { id: auth.me } } : null }),
-}));
+vi.mock('../lib/data', () => ({ removeCheckin: data.removeCheckin }));
+vi.mock('../lib/checkins', () => ({ useMyCheckins: () => { data.asked(); return data.visits; } }));
 vi.mock('../lib/city', () => ({
   useCity: () => ({
     cities: [
@@ -57,7 +51,6 @@ const visit = (id: string, slug: string, at: string, over: Partial<Checkin> = {}
 
 beforeEach(() => {
   vi.clearAllMocks();
-  auth.me = 'me';
   i18n.lang = 'en';
   data.visits = { data: [], loading: false, loaded: true, error: null, loadedAt: 1, fromCache: false, reload: vi.fn() };
   data.removeCheckin.mockReset().mockResolvedValue(undefined);
@@ -65,9 +58,9 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('VisitedScreen', () => {
-  it('reads the visits for the account on the session', () => {
+  it('reads the one shared list, and names itself', () => {
     show();
-    expect(data.asked).toHaveBeenCalledWith('me');
+    expect(data.asked).toHaveBeenCalled();
     expect(screen.getByText('Check-ins')).toBeTruthy();
   });
 

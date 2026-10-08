@@ -87,10 +87,12 @@ vi.mock('../lib/data', async () => ({
   fetchPlaceId: async () => 'place-uuid',
   fetchMyPhotoCounts: async () => ({ mineHere: 0, mineToday: 0 }),
   addPlacePhoto: async () => 'photo-id',
-  // The reader's check-ins, as the hook hands them to the screen.
-  useMyCheckins: () => ({ data: state.checkins, loading: false, loaded: true, error: null, loadedAt: 1, fromCache: false, reload: spies.reloadCheckins }),
   addCheckin: spies.addCheckin,
   removeCheckin: spies.removeCheckin,
+}));
+// The reader's check-ins, as the provider hands them to every screen.
+vi.mock('../lib/checkins', () => ({
+  useMyCheckins: () => ({ data: state.checkins, loading: false, loaded: true, error: null, loadedAt: 1, fromCache: false, reload: spies.reloadCheckins }),
 }));
 // The grant is read from a store now, not fetched — see `lib/guideGrant`.
 vi.mock('../lib/useGuideGrant', () => ({ useIsGuide: () => state.guide, useIsEditor: () => false }));

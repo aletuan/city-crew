@@ -100,8 +100,8 @@ vi.mock('../lib/data', () => ({
     spies.prefsFor(uid);
     return { data: { categories: state.categories }, reload: spies.reload };
   },
-  useMyCheckins: () => ({ data: state.checkins }),
 }));
+vi.mock('../lib/checkins', () => ({ useMyCheckins: () => ({ data: state.checkins }) }));
 vi.mock('../lib/crew', () => ({ useCrew: () => ({ ships: { data: state.ships } }) }));
 vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine } }) }));
 vi.mock('../lib/mytrips', () => ({ useMyTrips: () => ({ data: state.trips }) }));

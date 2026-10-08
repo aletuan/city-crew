@@ -22,7 +22,8 @@ import { useAuth } from '../lib/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { addCheckin, coverOf, fmtCount, isFree, photosOf, removeCheckin, useMyCheckins, usePlaceBySlug } from '../lib/data';
+import { addCheckin, coverOf, fmtCount, isFree, photosOf, removeCheckin, usePlaceBySlug } from '../lib/data';
+import { useMyCheckins } from '../lib/checkins';
 import { canRepeat, latestCheckin } from '../lib/checkin';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
@@ -151,10 +152,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const { session } = useAuth();
   const uid = session?.user?.id ?? null;
   const showCheckin = useFlag('place_checkin') && !!uid;
-  // The reader's visits, one copy per account, remembered between
-  // launches; the pill reads the newest one here. Asked for nobody when
-  // the pill is not drawn, which resolves empty without a request.
-  const visits = useMyCheckins(showCheckin ? uid : null);
+  // The reader's visits — the one copy the whole app shares, so the
+  // reload after a tap here is what the profile's count draws too.
+  const visits = useMyCheckins();
   const [checkinMenu, setCheckinMenu] = useState(false);
   const [checking, setChecking] = useState(false);
   // How many lines the address wanted before anything clamped it, and

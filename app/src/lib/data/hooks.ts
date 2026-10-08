@@ -19,8 +19,6 @@ import {
 } from './collections';
 import { fetchPreferences, NO_PREFERENCES, type Preferences } from './preferences';
 import { fetchCuratorAvatars, type FriendProfile, profileByHandle } from './people';
-import { fetchMyCheckins } from './checkins';
-import type { Checkin } from '../checkin';
 
 // Both catalogs scope to the selected city TOGETHER: membersOf() resolves
 // collection members against the in-memory places list, so a mismatched
@@ -142,19 +140,10 @@ export const useMyCollections = (ownerId: string | null | undefined) => {
   return usePersistedFetch(mineKey('mine', ownerId), fetcher, [] as Collection[]);
 };
 
-/**
- * Every visit this account has recorded. Remembered between launches
- * under the account's key like the lists above, so the pill on a place
- * is right on its first frame for a place visited last week. Signed out
- * this resolves empty, so the one screen reading it needs no branch.
- */
-export const useMyCheckins = (ownerId: string | null | undefined) => {
-  const fetcher = useCallback(
-    () => (ownerId ? fetchMyCheckins(ownerId) : Promise.resolve([] as Checkin[])),
-    [ownerId],
-  );
-  return usePersistedFetch(mineKey('checkins', ownerId), fetcher, [] as Checkin[]);
-};
+// Check-ins have no hook here — `lib/checkins` fetches them once for the
+// whole app, for the reason trips below are not here either: three
+// screens read the one list, and a visit written on one must show on
+// the others without a relaunch.
 
 // Trips have no hook here either — `lib/mytrips` fetches them once for
 // the whole app and persists them the way the catalog queries persist
