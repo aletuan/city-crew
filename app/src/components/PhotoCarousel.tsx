@@ -32,7 +32,7 @@
 // hero's runs to the screen's edge. The credit is bottom left by default
 // — the marks have the right corner — and the hero moves it to the middle
 // for a reason it gives. Overlays a screen lays over the picture (the
-// hero's scrims, its floating buttons, its counter) go between the pages
+// hero's scrims, its floating buttons) go between the pages
 // and the marks, so the marks stay on top of the scrim they were sized
 // against.
 

@@ -1,4 +1,4 @@
-// Place detail — hero carousel with photo counter, floating share/save,
+// Place detail — hero carousel with page dots, floating share/save,
 // rating badge, icon fact row, and one grouped card of Address / Hours /
 // Call / Website rows, the weekly table folded behind the open-now line.
 //
@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useFlag } from '../lib/useFlag';
+import { useAuth } from '../lib/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -141,8 +142,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   }
   const [hoursOpen, setHoursOpen] = useState(false);
   const showPrice = useFlag('place_price');
-  // The door before the room: see `place_checkin` in `lib/flags`.
-  const showCheckin = useFlag('place_checkin');
+  // The door before the room: see `place_checkin` in `lib/flags`. For
+  // the signed-in only — a guest has nobody to check in as, and the
+  // bookmark already plays the door-to-sign-in part on this screen.
+  const { session } = useAuth();
+  const showCheckin = useFlag('place_checkin') && !!session?.user?.id;
   // How many lines the address wanted before anything clamped it, and
   // whether the reader has asked for the rest. `null` is "not measured
   // yet", which is also the one paint that runs unclamped. Up here with
@@ -388,12 +392,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? onPhoto.accent : onPhoto.text} />
             </PressableScale>
 
-            {photos.length > 0 && (
-              <View style={s.counter}>
-                <Ionicons name="images-outline" size={13} color={onPhoto.text} />
-                <Text style={s.counterText}>{photoIndex + 1} / {photos.length}</Text>
-              </View>
-            )}
+            {/* No "1 / 6" in the other corner. It said what the dots say,
+                in type over a photograph — a third scrim, and a number
+                nobody acts on. VoiceOver never read it: each photograph
+                is "Photo n of m" by itself, and still is. */}
     </>
   );
 
@@ -1138,12 +1140,6 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(10,11,10,0.55)', alignItems: 'center', justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
-  counter: {
-    position: 'absolute', left: space.page, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(10,11,10,0.58)', borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
-  },
-  counterText: { color: onPhoto.text, fontSize: 12.5, fontWeight: font.semibold },
   // Required attribution, kept quiet — see the note in PlaceCard.
   //
   // Centre, which is the seat the dots left. It is the only one free:
