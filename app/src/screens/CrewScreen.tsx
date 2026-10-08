@@ -434,10 +434,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
   return (
     <Screen
       title={t('Your crew', 'Crew của bạn', 'あなたのクルー')}
-      /* The motto alone: the count that used to open this line lives on
-         the Friends tab now, beside the list it counts — one fact, one
-         place. */
-      subtitle={t('Plans get better together', 'Kế hoạch vui hơn khi có nhau', '計画は一緒がいい')}
+      /* No subtitle. It held a count once, then the motto alone once
+         the count moved to the Friends tab — and a motto under a title
+         is marketing copy where navigation belongs (HIG). A line under
+         a title is for a fact about the list: a count, a window, a
+         freshness. This screen's one fact is on the tab, so the slot
+         stays empty rather than filled (8 Oct 2026). */
       onBack={() => navigation.goBack()}
       right={(
         <RoundIconButton
