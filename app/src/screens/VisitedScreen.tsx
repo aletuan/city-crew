@@ -12,12 +12,23 @@
 // ── the shape ──
 //
 // Activity's shape, deliberately: an eyebrow per group, a card of rows
-// under it, bare 19pt glyphs in the 44pt slot, a chevron only where a
-// row goes somewhere. The groups are months rather than Upcoming and
-// Earlier, because a visit has no future half. The row's second line is
-// the day, the clock and the city — the city because the list spans
-// every city the reader has been to, while the catalog on the phone
-// holds one. The names come with the rows for the same reason.
+// under it, a chevron only where a row goes somewhere. The groups are
+// months rather than Upcoming and Earlier, because a visit has no
+// future half. The row's second line is the day, the clock and the city
+// — the city because the list spans every city the reader has been to,
+// while the catalog on the phone holds one. The names and the covers
+// come with the rows for the same reason.
+//
+// The row leads with the place's cover, not a glyph. It opened with a
+// pin in Activity's bare 44pt slot, and on a phone thirty pins in a
+// column told the eye nothing — a glyph every row shares is decoration,
+// where a picture is the one thing that says which row this is (Maps'
+// recents, Timeline, every music app). 48pt, rounded 10, the shape a
+// content thumbnail takes here as against the circle a person takes on
+// Crew; a place with no picture gets the pin on a glass square of the
+// same size, so the names stay in one column either way. The pictures
+// are the covers the cards draw, at full size: a thumbnail endpoint is
+// a later cut, and `expo-image` caches and downsizes in the meantime.
 //
 // Undo is a ⋯ per row and a sheet, as the request cards on Activity do
 // it, not a swipe: nothing in this app swipes to delete yet, and one
@@ -25,6 +36,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { AuthHeader, AuthScreen } from '../components/authUi';
@@ -38,10 +50,11 @@ import { useI18n } from '../lib/i18n';
 import { colors, display, font, space, type } from '../theme';
 import type { Nav } from '../nav';
 
-// Activity's figures, for the same mark: a 19pt glyph's whole line in a
-// 26pt box, set on the middle of a 21pt first line of text.
 const LINE = 21;
-const MARK_BOX = 26;
+/** The thumbnail's side. Two lines of text under it stand about 41pt;
+ *  48 clears them with a hair to spare and is the size a list thumbnail
+ *  takes on iOS (Maps' recents are 48). */
+const THUMB = 48;
 
 export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
@@ -119,8 +132,12 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                       accessibilityRole={opens ? 'button' : undefined}
                       testID="visit-row"
                     >
-                      <View style={s.mark}>
-                        <Ionicons name="location-outline" size={19} color={colors.textTertiary} />
+                      <View style={s.thumb} testID="visit-thumb">
+                        {v.place?.cover ? (
+                          <Image source={{ uri: v.place.cover }} style={s.thumbImage} contentFit="cover" transition={150} aria-hidden />
+                        ) : (
+                          <Ionicons name="location-outline" size={19} color={colors.textTertiary} />
+                        )}
                       </View>
                       <View style={{ flex: 1, gap: 2 }}>
                         <Text style={s.name} numberOfLines={2} testID="visit-name">{nameOf(v)}</Text>
@@ -168,18 +185,21 @@ const s = StyleSheet.create({
     color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
     letterSpacing: 1.1, textTransform: 'uppercase', marginTop: 6,
   },
-  // Activity's row, to the figure — see the note there for the mark's
-  // arithmetic and why the row aligns its top.
+  // Centred, unlike Activity's top-aligned rows: a 48pt picture beside
+  // two lines of text wants its middle on theirs, where a 19pt glyph
+  // wanted the first line's. 12 of padding, not 13, so the 48 sits in a
+  // 72pt row and three rows make the card's rhythm.
   row: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 13,
-    paddingHorizontal: space.cardPadding, paddingVertical: 13,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: space.cardPadding, paddingVertical: 12,
   },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
   rowEnd: { alignSelf: 'center' },
-  mark: {
-    width: 44, height: MARK_BOX, marginTop: (LINE - MARK_BOX) / 2,
-    alignItems: 'center', justifyContent: 'center',
+  thumb: {
+    width: THUMB, height: THUMB, borderRadius: 10, overflow: 'hidden',
+    backgroundColor: colors.surfaceGlassStrong, alignItems: 'center', justifyContent: 'center',
   },
+  thumbImage: { width: THUMB, height: THUMB },
   name: { color: colors.text, fontSize: 15, lineHeight: LINE, fontWeight: font.medium },
   meta: { color: colors.textTertiary, ...type.meta },
   sheetTitle: { color: colors.text, fontSize: 18, fontFamily: display.semibold },

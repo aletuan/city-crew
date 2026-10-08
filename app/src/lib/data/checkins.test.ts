@@ -19,19 +19,35 @@ beforeEach(() => fake().reset());
 describe('fetchMyCheckins', () => {
   it('reads the owner’s rows newest first, with the place’s slug flattened in', async () => {
     fake().replies({ data: [
-      { id: 'k2', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', places: { slug: 'cong', name_en: 'Cong', name_vi: 'Cộng', name_ja: null } },
+      {
+        id: 'k2', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00',
+        places: {
+          slug: 'cong', name_en: 'Cong', name_vi: 'Cộng', name_ja: null,
+          // The cover wins over sort order; a hidden one never shows.
+          place_photos: [
+            { photo_uri: 'https://x/second.jpg', is_cover: false, is_hidden: false, sort_order: 1 },
+            { photo_uri: 'https://x/hidden-cover.jpg', is_cover: true, is_hidden: true, sort_order: 0 },
+            { photo_uri: 'https://x/cover.jpg', is_cover: true, is_hidden: false, sort_order: 5 },
+          ],
+        },
+      },
       { id: 'k1', city_id: null, at: '2026-10-01T03:00:00Z', places: null },
+      {
+        id: 'k0', city_id: 'hanoi', at: '2026-09-01T03:00:00Z',
+        places: { slug: 'bare', name_en: 'Bare', name_vi: 'Bare', name_ja: 'ベア', place_photos: [] },
+      },
     ] });
     const rows = await fetchMyCheckins('u1');
     const [call] = fake().log;
     expect(call.table).toBe('checkins');
-    expect(call.payload).toBe('id, city_id, at, places(slug, name_en, name_vi, name_ja)');
+    expect(call.payload).toBe('id, city_id, at, places(slug, name_en, name_vi, name_ja, place_photos(photo_uri, is_cover, is_hidden, sort_order))');
     expect(call.filters).toEqual([['user_id', 'u1']]);
     expect(call.order).toEqual(['at', { ascending: false }]);
     expect(rows).toEqual([
-      { id: 'k2', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', place: { name_en: 'Cong', name_vi: 'Cộng', name_ja: null } },
+      { id: 'k2', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', place: { name_en: 'Cong', name_vi: 'Cộng', name_ja: null, cover: 'https://x/cover.jpg' } },
       // A row whose place is gone has no slug to show; it still counts.
       { id: 'k1', place_slug: '', city_id: null, at: '2026-10-01T03:00:00Z', place: null },
+      { id: 'k0', place_slug: 'bare', city_id: 'hanoi', at: '2026-09-01T03:00:00Z', place: { name_en: 'Bare', name_vi: 'Bare', name_ja: 'ベア', cover: null } },
     ]);
   });
   it('throws the database’s words when the read fails', async () => {
@@ -80,5 +96,42 @@ describe('removeCheckin', () => {
   it('throws the database’s words when it fails', async () => {
     fake().replies({ data: null, error: { message: 'offline' } });
     await expect(removeCheckin('k1')).rejects.toThrow('offline');
+  });
+});
+
+describe('the cover, when no photo is flagged', () => {
+  it('falls back to the first by sort order, skipping hidden ones', async () => {
+    fake().replies({ data: [{
+      id: 'k', city_id: null, at: '2026-10-01T03:00:00Z',
+      places: {
+        slug: 'p', name_en: 'P', name_vi: 'P', name_ja: null,
+        place_photos: [
+          { photo_uri: 'https://x/third.jpg', is_cover: false, is_hidden: false, sort_order: 3 },
+          { photo_uri: 'https://x/hidden-first.jpg', is_cover: false, is_hidden: true, sort_order: 0 },
+          { photo_uri: 'https://x/second.jpg', is_cover: false, is_hidden: false, sort_order: 2 },
+        ],
+      },
+    }] });
+    const [row] = await fetchMyCheckins('u1');
+    expect(row.place?.cover).toBe('https://x/second.jpg');
+  });
+  it('settles two flagged covers by sort order', async () => {
+    fake().replies({ data: [{
+      id: 'k', city_id: null, at: '2026-10-01T03:00:00Z',
+      places: {
+        slug: 'p', name_en: 'P', name_vi: 'P', name_ja: null,
+        place_photos: [
+          { photo_uri: 'https://x/later-cover.jpg', is_cover: true, is_hidden: false, sort_order: 4 },
+          { photo_uri: 'https://x/earlier-cover.jpg', is_cover: true, is_hidden: false, sort_order: 1 },
+        ],
+      },
+    }] });
+    const [row] = await fetchMyCheckins('u1');
+    expect(row.place?.cover).toBe('https://x/earlier-cover.jpg');
+  });
+  it('reads a row the cache kept before photos rode along as having none', async () => {
+    fake().replies({ data: [{ id: 'k', city_id: null, at: '2026-10-01T03:00:00Z', places: { slug: 'p', name_en: 'P', name_vi: 'P', name_ja: null } }] });
+    const [row] = await fetchMyCheckins('u1');
+    expect(row.place?.cover).toBeNull();
   });
 });

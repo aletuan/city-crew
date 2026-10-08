@@ -45,7 +45,7 @@ const nav = () => {
 const show = () => { const r = nav(); render(<VisitedScreen navigation={r.n} />); return r; };
 const visit = (id: string, slug: string, at: string, over: Partial<Checkin> = {}): Checkin => ({
   id, place_slug: slug, city_id: 'hanoi', at,
-  place: { name_en: `${slug} en`, name_vi: `${slug} vi`, name_ja: null },
+  place: { name_en: `${slug} en`, name_vi: `${slug} vi`, name_ja: null, cover: `https://x/${slug}.jpg` },
   ...over,
 });
 
@@ -149,6 +149,36 @@ describe('VisitedScreen', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Remove this visit/ }));
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not remove it', 'offline'));
     expect(data.visits.reload).not.toHaveBeenCalled();
+  });
+
+  // The place's own picture at the row's head, not a pin thirty times
+  // over: a glyph every row shares tells the eye nothing, a cover tells
+  // it which row this is. The same shape whether or not there is a
+  // picture, so the names stay in one column.
+  it('leads with the place\u2019s cover, and a glyph in the same box when there is none', () => {
+    data.visits.data = [
+      visit('a', 'cong', '2026-10-15T05:00:00Z'),
+      visit('b', 'bare', '2026-10-14T05:00:00Z', { place: { name_en: 'Bare', name_vi: 'Bare', name_ja: null, cover: null } }),
+      visit('g', '', '2026-10-13T05:00:00Z', { place: null }),
+    ];
+    show();
+    const rows = screen.getAllByTestId('visit-row');
+    const img = rows[0].querySelector('img')!;
+    expect(img.getAttribute('src')).toBe('https://x/cong.jpg');
+    // Decorative: the name beside it is what VoiceOver reads.
+    expect(img.getAttribute('aria-hidden')).toBe('true');
+    expect(rows[1].querySelector('img')).toBeNull();
+    expect(rows[1].querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    expect(rows[2].querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    // One box for all three, 48 square, rounded, so the names line up.
+    const boxes = rows.map((r) => r.querySelector('[data-testid="visit-thumb"]')!);
+    for (const b of boxes) {
+      const box = getComputedStyle(b);
+      expect(box.width).toBe('48px');
+      expect(box.height).toBe('48px');
+      expect(box.borderTopLeftRadius).toBe('10px');
+    }
+    expect(new Set(boxes.map((b) => b.className)).size).toBe(1);
   });
 
   it('goes back from its header', () => {

@@ -28,11 +28,11 @@ export type Checkin = {
   city_id: string | null;
   /** ISO instant, as Postgres hands back `timestamptz`. */
   at: string;
-  /** The place's names, embedded with the row so the Visited screen can
-   *  name a place from a city the catalog is not holding. Null when the
-   *  place is gone; absent on a row the cache kept before the column
-   *  rode along. */
-  place?: { name_en: string; name_vi: string; name_ja: string | null } | null;
+  /** The place's names and its cover, embedded with the row so the
+   *  Visited screen can name and picture a place from a city the catalog
+   *  is not holding. Null when the place is gone; absent on a row the
+   *  cache kept before the columns rode along. */
+  place?: { name_en: string; name_vi: string; name_ja: string | null; cover: string | null } | null;
 };
 
 /**
