@@ -12,6 +12,11 @@ describe('flagsStore', () => {
     expect(flagsStore().get('photo_attribution')).toBe(true);
   });
 
+  it('ships with check-in hidden: the row in the table is what shows it', () => {
+    expect(FLAG_DEFAULTS.place_checkin).toBe(false);
+    expect(flagsStore().get('place_checkin')).toBe(false);
+  });
+
   it('takes a row from the table over the default', async () => {
     const fake = fakeSupabase();
     fake.replies({ data: [{ key: 'photo_attribution', enabled: false }] });

@@ -57,6 +57,19 @@ export const FLAG_DEFAULTS = {
    * what a table is for and a constant is not.
    */
   place_price: false,
+  /**
+   * Draw the Check-in pill on a place's detail screen. **Off** as
+   * shipped, because what the pill opens is not built yet: the tap says
+   * so, in a sentence, and that is the whole feature today.
+   *
+   * A placeholder has one job — to be seen, so the idea can be judged in
+   * its place rather than in a mockup — and one risk, which is that it
+   * outstays its welcome. Hence a switch and not a constant: the row in
+   * `app_flags` turns it on for the preview, and turns it off again, on
+   * every phone at once, the morning it starts to mislead. See
+   * `20261008090000_place_checkin_app_flags.sql` for the row.
+   */
+  place_checkin: false,
 } as const;
 
 export type FlagKey = keyof typeof FLAG_DEFAULTS;

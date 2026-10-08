@@ -20,7 +20,7 @@ import React from 'react';
 import { Alert, Linking, Share } from 'react-native';
 import { isShielded } from '../lib/share';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, within } from '../uitest/render';
 import { pinImage } from '../components/mapPins';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
@@ -46,6 +46,7 @@ const state = vi.hoisted(() => ({
   guide: false,
   uid: null as string | null,
   price: false,
+  checkin: false,
 }));
 const spies = vi.hoisted(() => ({
   save: vi.fn(),
@@ -97,7 +98,8 @@ vi.mock('../lib/tasteProfile', () => ({ useNoteEvent: () => spies.note }));
 // `app_flags` says otherwise — so that is what these tests see unless one
 // of them turns it on.
 vi.mock('../lib/useFlag', () => ({
-  useFlag: (key: string) => (key === 'place_price' ? state.price : state.credit),
+  useFlag: (key: string) => (key === 'place_price' ? state.price
+    : key === 'place_checkin' ? state.checkin : state.credit),
 }));
 vi.mock('../lib/theme', () => ({
   useScheme: () => ({ scheme: 'light', setScheme: () => {}, ready: true }),
@@ -244,6 +246,7 @@ beforeEach(() => {
   state.saved = [];
   state.credit = false;
   state.price = false;
+  state.checkin = false;
   state.city = null;
   state.lang = 'en';
   state.guide = false;
@@ -402,6 +405,55 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     show();
     expect(screen.getByText('Cafés')).toBeTruthy();
     expect(document.querySelector('[data-icon="cafe-outline"]')).toBeTruthy();
+  });
+
+  // ── check-in, a door drawn before the room behind it ──
+  //
+  // A placeholder: the pill is real, the tap says the feature is on its
+  // way, and a switch in `app_flags` decides whether the pill is drawn at
+  // all — so it can be taken down on every phone the moment it misleads.
+  it('draws no check-in as it ships', () => {
+    show();
+    expect(screen.queryByTestId('detail-checkin')).toBeNull();
+  });
+
+  it('hangs a glass Check-in pill at the right of the facts once the switch is on', () => {
+    state.checkin = true;
+    // No map, so Directions is drawn as its pill and not as the disc
+    // over the tiles — the pill is what Check-in is measured against.
+    mapStub.canDraw = false;
+    show();
+    const pill = screen.getByTestId('detail-checkin');
+    expect(pill.getAttribute('aria-label')).toBe('Check-in');
+    expect(pill.getAttribute('role')).toBe('button');
+    expect(pill.querySelector('[data-icon="location-outline"]')).toBeTruthy();
+    expect(within(pill).getByText('Check-in')).toBeTruthy();
+    // The same pill as Directions — glass, hairline, accent type — so a
+    // control looks like the one control this screen already has, and
+    // not like the tinted facts beside it. `firstElementChild` is the
+    // inner view `PressableScale` puts `style` on.
+    const go = screen.getByTestId('detail-directions');
+    expect(pill.firstElementChild!.className).toBe(go.firstElementChild!.className);
+    // Its own column, pinned to the top right: the facts wrap under
+    // themselves on a three-category place and never push it down.
+    const row = pill.parentElement!;
+    expect(row.lastElementChild).toBe(pill);
+    expect(within(row).getByTestId('detail-facts').nextElementSibling).toBe(pill);
+    expect(getComputedStyle(row).flexDirection).toBe('row');
+    expect(getComputedStyle(pill).alignSelf).toBe('flex-start');
+    expect(getComputedStyle(screen.getByTestId('detail-facts')).flexGrow).toBe('1');
+  });
+
+  it('tells the reader check-in is on its way, in their language', () => {
+    state.checkin = true;
+    state.lang = 'vi';
+    show();
+    // The screen notes its own opening; the tap must add nothing to the
+    // taste profile — a door that is not open yet is not a preference.
+    const noted = spies.note.mock.calls.length;
+    fireEvent.click(screen.getByTestId('detail-checkin'));
+    expect(alert).toHaveBeenCalledWith('Check-in sắp ra mắt', expect.stringContaining('ghé'));
+    expect(spies.note).toHaveBeenCalledTimes(noted);
   });
 
   // ── the price, which ships hidden ──

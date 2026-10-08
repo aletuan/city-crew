@@ -141,6 +141,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   }
   const [hoursOpen, setHoursOpen] = useState(false);
   const showPrice = useFlag('place_price');
+  // The door before the room: see `place_checkin` in `lib/flags`.
+  const showCheckin = useFlag('place_checkin');
   // How many lines the address wanted before anything clamped it, and
   // whether the reader has asked for the rest. `null` is "not measured
   // yet", which is also the one paint that runs unclamped. Up here with
@@ -507,6 +509,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               glass. Never a tinted fill: that is the rule in
               `lib/categories`, and a row of pastel pills is the one
               thing this app's colour discipline does not do. */}
+          {/* Two columns, not one wrapping row: the facts wrap under
+              themselves on the left, and the one control sits pinned
+              to the top right whatever they do. In one row a third
+              category pushed the pill onto the second line, where it
+              read as a fourth fact. */}
+          <View style={s.factsRow}>
           <View style={s.facts} testID="detail-facts">
             {/* What this place is, on the functional axis — the same
                 `categories` the filter row, the planner and search read.
@@ -560,6 +568,41 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 schedule needs it; on this screen it was a guess dressed
                 as a fact, and the pill that pushed a two-category row
                 onto a second line. */}
+          </View>
+          {/* ── check-in ──
+              A placeholder, drawn to be judged where it will live. The
+              pill is the Directions pill — glass, hairline, accent type
+              — because that is what a *control* looks like on this
+              screen, and the facts beside it are tinted exactly so that
+              they do not. Not the tinted fill the mockup wore: the
+              accent as a surface is for state (`theme.ts`), and a pill
+              at rest is not one. When check-in is real, *having*
+              checked in is the state, and that is when the pill earns
+              `accentSoft` and a filled pin.
+
+              Behind `place_checkin`, off as shipped, so the day it
+              misleads it comes down on every phone without a build. */}
+          {showCheckin && (
+            <PressableScale
+              onPress={() => Alert.alert(
+                t('Check-in is coming soon', 'Check-in sắp ra mắt', 'チェックインは近日公開'),
+                t(
+                  'Soon you will be able to mark the places you have been to.',
+                  'Sắp tới bạn có thể đánh dấu những nơi mình đã ghé.',
+                  '訪れた場所をもうすぐ記録できるようになります。',
+                ),
+              )}
+              haptic="selection"
+              accessibilityRole="button"
+              accessibilityLabel={t('Check-in', 'Check-in', 'チェックイン')}
+              containerStyle={s.checkinSlot}
+              style={s.go}
+              testID="detail-checkin"
+            >
+              <Ionicons name="location-outline" size={15} color={colors.accent} />
+              <Text style={s.goText}>{t('Check-in', 'Check-in', 'チェックイン')}</Text>
+            </PressableScale>
+          )}
           </View>
 
           {/* ── highlights ── */}
@@ -1149,7 +1192,14 @@ const s = StyleSheet.create({
   ratingDot: { color: colors.textTertiary, fontSize: 15, fontWeight: font.regular },
   ratingCount: { color: colors.textSecondary, ...type.meta },
 
-  facts: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 16 },
+  factsRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 16 },
+  facts: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
+  // Top-aligned beside the facts, which are 30pt tall to this pill's 36:
+  // a control is allowed to stand taller than the things to read beside
+  // it, as Directions does beside its address. Flush with the first
+  // row's top rather than centred on it, so a wrapped second row of
+  // facts does not drag the pill down with it.
+  checkinSlot: { flexShrink: 0, marginLeft: 12, alignSelf: 'flex-start' },
   // The filter row's chip, at rest: same hairline, same radius, same
   // type, so a category looks like the same thing here as there. Glass
   // fill rather than the filter's bare outline, because these are facts
