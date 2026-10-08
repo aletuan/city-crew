@@ -59,7 +59,7 @@ const state = vi.hoisted(() => ({
     { short_en: string; short_vi: string; short_ja: string } | null,
   mode: 'manual' as 'auto' | 'manual',
   checkins: [] as { id: string; place_slug: string; city_id: string | null; at: string }[],
-  fresh: 0,
+  feed: 0,
 }));
 
 const spies = vi.hoisted(() => ({
@@ -103,7 +103,7 @@ vi.mock('../lib/data', () => ({
   },
 }));
 vi.mock('../lib/checkins', () => ({ useMyCheckins: () => ({ data: state.checkins }) }));
-vi.mock('../lib/useActivityFresh', () => ({ useActivityFresh: () => state.fresh }));
+vi.mock('../lib/useActivityCount', () => ({ useActivityCount: () => state.feed }));
 vi.mock('../lib/crew', () => ({ useCrew: () => ({ ships: { data: state.ships } }) }));
 vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine } }) }));
 vi.mock('../lib/mytrips', () => ({ useMyTrips: () => ({ data: state.trips }) }));
@@ -174,7 +174,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   state.guide = false;
   state.checkins = [];
-  state.fresh = 0;
+  state.feed = 0;
   state.editor = false;
   state.trips = [];
   spies.signOut.mockImplementation(async () => {});
@@ -946,30 +946,36 @@ describe('visited places', () => {
 //
 // A pill, not a bare figure: on the phone "30" and "6" floated between
 // the text and the chevron with nothing to say they were counts rather
-// than values. Two tones, one shape — quiet glass for a total (friends,
-// places), the accent for what is new (activity) — because the accent
-// as a surface is for state, and "unseen" is one.
+// than values. One tone and one width for every row, because the number
+// means one thing on all of them — the size of what is behind the row.
 describe('the badges', () => {
   const edge = (requester: string, addressee: string, status: string) =>
     ({ requester, addressee, status, created_at: '2026-09-01T00:00:00Z' });
-  it('draws a total in a quiet pill', () => {
+  it('draws a total in a pill, the same pill on every row', () => {
     state.ships = [edge('me', 'a', 'accepted'), edge('b', 'me', 'accepted')];
+    state.feed = 5;
+    state.checkins = [{ id: 'k', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00Z' }];
     draw();
-    const badge = screen.getByText('2').parentElement!;
-    expect(badge.getAttribute('data-testid')).toBe('count-badge');
-    expect(getComputedStyle(badge).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
-    expect(getComputedStyle(badge).borderTopLeftRadius).not.toBe('0px');
+    const badges = screen.getAllByTestId('count-badge');
+    expect(badges.map((b) => b.textContent)).toEqual(['1', '2', '5']);
+    const classes = new Set(badges.map((b) => b.className));
+    expect(classes.size).toBe(1);
+    const box = getComputedStyle(badges[0]);
+    expect(box.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(box.minWidth).toBe('32px');
+    expect(box.height).toBe('22px');
   });
 
-  it('draws what is new on Activity in the accent, and nothing when nothing is', () => {
+  it('counts the feed and the requests waiting on Activity, and nothing when both are empty', () => {
     draw();
     const row = () => screen.getByText('Activity').closest('[data-testid="feature-row"]')!;
     expect(row().querySelector('[data-testid="count-badge"]')).toBeNull();
     cleanup();
-    state.fresh = 3;
+    state.feed = 3;
+    state.ships = [edge('z', 'me', 'pending'), edge('me', 'q', 'pending')];
     draw();
-    const badge = row().querySelector('[data-testid="count-badge"]')!;
-    expect(badge.textContent).toBe('3');
-    expect(getComputedStyle(badge).backgroundColor).toBe('rgba(255, 111, 91, 0.1)');
+    // Three in the feed and the one request waiting on this account —
+    // the one the reader sent does not count.
+    expect(row().querySelector('[data-testid="count-badge"]')!.textContent).toBe('4');
   });
 });

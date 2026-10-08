@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 //
-// The hook behind the Activity row's number, and the mark the feed
-// leaves when it is opened.
+// The hook behind the Activity row's number: the feed's two reads, over
+// the feed's window, summed; a guest answered zero off the network; a
+// failed half counted as empty rather than thrown.
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { render, screen, waitFor } from '../uitest/render';
 
 const reads = vi.hoisted(() => ({
@@ -14,60 +14,41 @@ const reads = vi.hoisted(() => ({
 }));
 vi.mock('./data', () => ({ fetchApplause: reads.fetchApplause, fetchCopies: reads.fetchCopies }));
 
-import { activitySeenKey } from './activityFresh';
-import { markActivitySeen, useActivityFresh } from './useActivityFresh';
+import { useActivityCount } from './useActivityCount';
 
 function Probe({ me }: { me: string | null }) {
-  return <span data-testid="n">{String(useActivityFresh(me))}</span>;
+  return <span data-testid="n">{String(useActivityCount(me))}</span>;
 }
 const like = (at: string) => ({ liked_at: at, collection_id: 'c', liker_handle: 'a', liker_name: null });
 const copy = (at: string) => ({ copied_at: at, collection_id: 'c', copier_handle: 'b', copier_name: null });
 
-beforeEach(async () => {
-  vi.useRealTimers();
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-08T10:00:00Z'));
   reads.fetchApplause.mockReset().mockResolvedValue([]);
   reads.fetchCopies.mockReset().mockResolvedValue([]);
-  await AsyncStorage.removeItem(activitySeenKey('u1'));
 });
 
-describe('useActivityFresh', () => {
+describe('useActivityCount', () => {
   it('is zero for a guest, and asks nothing', async () => {
     render(<Probe me={null} />);
     await waitFor(() => expect(screen.getByTestId('n').textContent).toBe('0'));
     expect(reads.fetchApplause).not.toHaveBeenCalled();
   });
 
-  it('counts likes and copies newer than the last look, and asks only since then', async () => {
-    await AsyncStorage.setItem(activitySeenKey('u1'), '2026-10-07T00:00:00.000Z');
+  it('sums likes and copies over the feed’s window', async () => {
     reads.fetchApplause.mockResolvedValue([like('2026-10-08T01:00:00Z'), like('2026-10-06T01:00:00Z')]);
     reads.fetchCopies.mockResolvedValue([copy('2026-10-07T12:00:00Z')]);
     render(<Probe me="u1" />);
-    await waitFor(() => expect(screen.getByTestId('n').textContent).toBe('2'));
-    // The server is asked from the last look, not from the window's
-    // start, when the look is the later of the two.
-    expect(reads.fetchApplause).toHaveBeenCalledWith('2026-10-07T00:00:00.000Z');
-    expect(reads.fetchCopies).toHaveBeenCalledWith('2026-10-07T00:00:00.000Z');
-  });
-
-  it('counts the whole window for a feed never opened', async () => {
-    reads.fetchApplause.mockResolvedValue([like('2026-10-08T01:00:00Z')]);
-    reads.fetchCopies.mockResolvedValue([copy('2026-10-07T12:00:00Z'), copy('2026-10-05T12:00:00Z')]);
-    render(<Probe me="u1" />);
     await waitFor(() => expect(screen.getByTestId('n').textContent).toBe('3'));
+    expect(reads.fetchApplause).toHaveBeenCalledWith('2026-09-24T10:00:00.000Z');
+    expect(reads.fetchCopies).toHaveBeenCalledWith('2026-09-24T10:00:00.000Z');
   });
 
-  it('reads zero when the network fails, rather than throwing', async () => {
+  it('counts the half that answered when the other fails', async () => {
     reads.fetchApplause.mockRejectedValue(new Error('offline'));
     reads.fetchCopies.mockResolvedValue([copy('2026-10-07T12:00:00Z')]);
     render(<Probe me="u1" />);
-    await waitFor(() => expect(reads.fetchCopies).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByTestId('n').textContent).toBe('1'));
-  });
-});
-
-describe('markActivitySeen', () => {
-  it('stamps now under the account’s key', async () => {
-    await markActivitySeen('u1', new Date('2026-10-08T10:00:00Z'));
-    expect(await AsyncStorage.getItem(activitySeenKey('u1'))).toBe('2026-10-08T10:00:00.000Z');
   });
 });

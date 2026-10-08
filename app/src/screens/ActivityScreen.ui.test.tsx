@@ -62,9 +62,6 @@ const crew = vi.hoisted(() => ({
 }));
 vi.mock('../lib/crew', () => ({ useCrew: () => crew }));
 
-const seen = vi.hoisted(() => ({ mark: vi.fn(async (_uid: string) => {}) }));
-vi.mock('../lib/useActivityFresh', () => ({ markActivitySeen: seen.mark }));
-
 const auth = vi.hoisted(() => ({ me: 'me' as string | null }));
 vi.mock('../lib/auth', () => ({
   useAuth: () => ({ session: auth.me ? { user: { id: auth.me } } : null }),
@@ -532,16 +529,3 @@ describe('the ⋯ sheet', () => {
   });
 });
 
-// Opening the feed is the look the profile's number counts from: the
-// mark is left on mount, for this account, and not for a guest.
-describe('the mark', () => {
-  it('stamps the look when the feed opens, for the signed-in account only', () => {
-    const { unmount } = render(<ActivityScreen navigation={nav()} />);
-    expect(seen.mark).toHaveBeenCalledWith('me');
-    unmount();
-    auth.me = null;
-    seen.mark.mockClear();
-    render(<ActivityScreen navigation={nav()} />);
-    expect(seen.mark).not.toHaveBeenCalled();
-  });
-});
