@@ -21,8 +21,18 @@ appId: host.exp.Exponent
       # Signing out swaps the page under a scroll position that was at the
       # bottom; the guest's button is at the top, and scrolling up also
       # brings back the tab bar the scroll down ducked.
+      #
+      # Centred, like the scroll down above. Without it the scroll stops
+      # the moment the button clears the top edge, and on 9 October it
+      # stopped with the button at y 32–90 — under the status bar. The
+      # next flow's tap lands on the middle of it, iOS reads a tap on the
+      # status bar as "scroll to top", the page jumps and the sign-in
+      # screen never opens: `04-sign-in` failed on `signin-email is
+      # visible` once, then passed four runs in a row, because where the
+      # scroll stops is a matter of luck.
       - scrollUntilVisible:
           element:
             id: "profile-sign-in"
           direction: UP
+          centerElement: true
           timeout: 20000
