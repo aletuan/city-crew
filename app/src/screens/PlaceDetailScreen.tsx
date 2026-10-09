@@ -670,8 +670,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               strength, and the pin is filled, one solid mark in a row
               of outlines. Not the tinted fill the mockup wore: the
               accent as a surface is for state (`theme.ts`), and a pill
-              at rest is not one. When check-in is real, *having* checked
-              in is the state, and that is when it earns `accentSoft`.
+              at rest is not one. *Having* checked in is the state, and
+              the state wears the accent solid — see "worn" below.
 
               The height is the chips' 30, not a control's 36: the first
               version stood 6pt taller and its word sat 3pt under the
@@ -690,19 +690,36 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               accessibilityRole="button"
               accessibilityState={{ selected: !!latestVisit, busy: checking }}
               accessibilityLabel={latestVisit
-                ? t('Checked in — options', 'Đã check-in — tuỳ chọn', 'チェックイン済み — オプション')
-                : t('Check-in', 'Check-in', 'チェックイン')}
+                ? t('Visited — options', 'Đã qua — tuỳ chọn', '訪問済み — オプション')
+                : t('Check in', 'Check-in', 'チェックイン')}
               containerStyle={s.checkinSlot}
-              // The accent as a surface, now that there is a state for it
-              // to mean (#812 promised exactly this): tinted once a visit
-              // is written, bare outline until then.
+              // ── worn ──
+              // Solid once a visit is written, bare outline until then:
+              // `accentFill`, the token for "switched on", the way a ticked
+              // checkbox wears it. It was `accentSoft` first, and on the
+              // phone a 10% tint inside a 28% hairline read as the same
+              // pill with the light on it — the two states told apart by
+              // a glyph and two letters.
+              //
+              // The word changes for the same reason. "Check-in" and
+              // "Checked in" (VI "Check-in" / "Đã check-in") share the
+              // word that carries the meaning, so a glance read both as
+              // the verb. "Visited" / "Đã qua" shares nothing with it,
+              // and stays true months later, where "Checked in" read as
+              // "you are here now". "Đã qua", not "Đã ghé" — the first
+              // draft, borrowed from the Visited screen's "Bỏ lần ghé
+              // này"; the owner read "Đã qua" as the better word.
+              //
+              // The rest label is a verb because a button is one: "Check
+              // in", not the noun. Vietnamese has no such split and keeps
+              // "Check-in".
               style={[s.checkin, latestVisit && s.checkinOn]}
               hitSlop={{ top: 7, bottom: 7 }}
               testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
             >
-              <Ionicons name={latestVisit ? 'checkmark' : 'location'} size={15} color={colors.accent} />
-              <Text style={s.goText}>
-                {latestVisit ? t('Checked in', 'Đã check-in', 'チェックイン済み') : t('Check-in', 'Check-in', 'チェックイン')}
+              <Ionicons name={latestVisit ? 'checkmark' : 'location'} size={15} color={latestVisit ? colors.accentInk : colors.accent} />
+              <Text style={[s.goText, latestVisit && s.checkinOnText]}>
+                {latestVisit ? t('Visited', 'Đã qua', '訪問済み') : t('Check in', 'Check-in', 'チェックイン')}
               </Text>
             </PressableScale>
           )}
@@ -1360,8 +1377,11 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.accentLine, borderRadius: radius.pill,
     paddingHorizontal: 12, paddingVertical: 6,
   },
-  // Worn: the one tint this row is allowed, because it is a state.
-  checkinOn: { backgroundColor: colors.accentSoft },
+  // Worn: the one fill this row is allowed, because it is a state. The
+  // hairline takes the fill's colour so the pill keeps its exact size.
+  // Near-black on it, never white: 6.8:1 against 2.7:1 (`accentInk`).
+  checkinOn: { backgroundColor: colors.accentFill, borderColor: colors.accentFill },
+  checkinOnText: { color: colors.accentInk },
   checkinHead: { gap: 12 },
   checkinHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   checkinHeadTitle: { flex: 1, color: colors.text, fontSize: 18, fontFamily: display.semibold },
