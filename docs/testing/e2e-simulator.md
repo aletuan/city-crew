@@ -46,20 +46,25 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `04-sign-in` | test account | 1 m 39 s (chạy riêng) |
 | `05-plan-trip` | test account | 1 m 50 s |
 | `06-save-place` | test account | 1 m 21 s |
-| `08-explore-filter` | guest | 49 s |
+| `08-explore-filter` | guest | 50 s |
+| `09-collections-browse` | guest | 42 s |
+| `11-collection-crud` | test account | 2 m 19 s |
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
-**Kết quả gần nhất:** 09/10/2026, iPhone 17 · iOS 26.5 · Expo Go, code tại
-`a76b125f` (main) — **7/8 passed** ở lượt đầu; `04-sign-in` hỏng ở
-`signin-email is visible` rồi **passed khi chạy lại riêng** (1 m 39 s), nên
-8/8 xanh nhưng có một flow chập chờn. Ảnh lúc hỏng: Profile đã cuộn về đầu
-và màn đăng nhập không mở. Cây trợ năng cùng lúc đặt `profile-sign-in` ở
-y 32–90 — dưới thanh trạng thái. `common/ensure-signed-out.yaml` cuộn lên
-`profile-sign-in` **không** có `centerElement`, nên nó dừng ngay khi nút vừa
-lộ ra ở mép trên; một cú chạm ở đó rơi vào thanh trạng thái, mà iOS hiểu là
-"cuộn về đầu". Đã sửa cùng ngày: thêm `centerElement: true`, rồi cả suite
-**8/8 passed trong 8 m** và `04-sign-in` chạy riêng thêm 3 lượt đều xanh. Lần đo 26/09 (7/7, 6 m 27 s)
-chạy trước khi `08-explore-filter` vào `config.yaml`.
+**Kết quả gần nhất:** 09/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **10/10
+passed trong 11 m 29 s**, với `09-collections-browse` và `11-collection-crud`
+vừa vào `config.yaml`. Trước khi vào, mỗi flow đã xanh hai lượt liên tiếp
+khi chạy riêng (lượt hai của `11` chứng minh phần dọn dẹp). Một lượt `11`
+đã hỏng ở bước đăng nhập với "No connection" — mạng giữa simulator và
+Supabase, chưa tới phần collection; lượt sau xanh.
+
+Cùng ngày, `04-sign-in` chập chờn đã được sửa: `common/ensure-signed-out.yaml`
+cuộn lên `profile-sign-in` không có `centerElement`, nên đôi khi dừng với nút
+nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái (iOS hiểu là
+"cuộn về đầu"). Thêm `centerElement: true` rồi `04` xanh bốn lượt liền.
+
+**Ngân sách:** 11 m 29 s trên 12 phút. Flow tiếp theo cần chỗ: rút ngắn một
+flow hiện có, hoặc nâng ngân sách có chủ ý.
 
 ## 3. Chạy
 
@@ -100,8 +105,8 @@ flowchart TB
   SU[Sign up + delete account]:::man
   FILT[Explore filter + sort]:::ok
   MAP[Explore map + pin ảnh]:::gap
-  COL[Collections tab + detail]:::gap
-  CC[Tạo/sửa/xoá collection]:::gap
+  COL[Collections tab + detail]:::ok
+  CC[Tạo/sửa/xoá collection]:::ok
   LANG[Đổi ngôn ngữ VI/JA]:::gap
   TD[Trip detail: sửa, mời bạn]:::gap
   FP[Quên mật khẩu]:::gap
@@ -123,14 +128,14 @@ sách toàn suite ≤ 12 phút.
 | Flow mới | Đăng nhập | Kiểm | testID cần thêm | Ghi chú |
 |---|---|---|---|---|
 | `08-explore-filter` ✅ viết xong 26/09 | guest | Ghim vị trí Hà Nội; sort theo khoảng cách, thêm "đang mở", số bộ lọc trên nút đúng, Reset trả về như cũ | `filter-sort-*`, `filter-status-*`, `filter-saved`, `filter-reset`, `filter-apply`, `filter-close` (đã thêm; đếm qua số trong nhãn nút `explore-filter`, vì badge bên trong nút không lên cây trợ năng iOS) | Bản đồ **không test được trong Expo Go**: `canDrawMap` = false trên iOS store client (không có Google Maps key), nút `explore-view` không được vẽ. Phần map chuyển sang đợt 3 (dev client) |
-| `09-collections-browse` | guest | Tab Collections: collection cộng đồng đầu tiên → detail → place đầu → quay về; cũng mở từ "From the community" trên Explore | `collection-card-<i>`, `collection-place-<i>`, `collection-back` | Hiện Collections/CollectionDetail chưa có testID nào ngoài banner lỗi |
+| `09-collections-browse` ✅ xong 09/10 | guest | Tab Collections: collection cộng đồng đầu tiên → detail → place đầu → quay về; cũng mở từ "From the community" trên Explore | `collection-card-<i>`, `collection-place-<i>`, `collection-back` | Hiện Collections/CollectionDetail chưa có testID nào ngoài banner lỗi |
 | `10-place-detail-deep` | guest | Mở place có map + giờ mở cửa: `detail-facts` hiện, MiniMap hiện, `detail-directions` mở action sheet (không rời app), gallery mở và đóng | `detail-minimap`, `detail-hours`, `detail-gallery` | Nối dài 02 thay vì flow riêng nếu muốn tiết kiệm thời gian |
 
 ### Đợt 2 — tài khoản và dữ liệu của người dùng
 
 | Flow mới | Đăng nhập | Kiểm | testID cần thêm |
 |---|---|---|---|
-| `11-collection-crud` | test account | Tạo collection "Maestro CRUD", đổi tên, thêm 1 place, xoá place, xoá collection; dọn "Maestro CRUD" còn sót trước khi chạy | `collection-more`, `collection-rename`, `collection-delete`, `collection-row-<i>` |
+| `11-collection-crud` ✅ xong 09/10 | test account | Tạo collection "Maestro CRUD", đổi tên, thêm 1 place, xoá place, xoá collection; dọn "Maestro CRUD" còn sót trước khi chạy | `collection-more`, `collection-rename`, `collection-delete`, `collection-row-<i>` |
 | `12-language` | guest | Profile → ngôn ngữ → Tiếng Việt: tab bar đổi nhãn ("Khám phá"); mở Explore và place detail không crash; → 日本語; trả về English. Đây là chỗ duy nhất được assert theo label — chính label là thứ đang kiểm | `profile-language`, `lang-<en\|vi\|ja>` |
 | `13-trip-edit` | test account | Lưu một trip (dùng lại phần đầu của 05), mở detail, đổi giờ/đổi thứ tự điểm, lưu, kiểm thay đổi còn sau cold start, xoá | `trip-edit`, `trip-stop-<i>`, `trip-save` |
 | `14-forgot-password` | guest | Sign in → quên mật khẩu → nhập email test → thấy màn xác nhận (không đọc mail) | `signin-forgot`, `forgot-email`, `forgot-submit`, `forgot-sent` |

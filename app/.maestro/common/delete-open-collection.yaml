@@ -1,0 +1,21 @@
+# Reusable: delete the collection whose page is open. Ends on the
+# Collections list, Yours tab.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "collection-more"
+- extendedWaitUntil:
+    visible:
+      id: "collection-menu-delete"
+    timeout: 5000
+- tapOn:
+    id: "collection-menu-delete"
+# A system alert: no ids, so the button is matched in all three languages.
+- tapOn:
+    text: "Delete|Xoá|削除"
+- extendedWaitUntil:
+    visible:
+      id: "collections-yours"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 5000

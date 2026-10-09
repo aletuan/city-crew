@@ -248,6 +248,7 @@ function NewCollectionRow({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       title={t('New collection', 'Bộ sưu tập mới', '新しいコレクション')}
       subtitle={t('Group places for your next plan', 'Nhóm địa điểm cho kế hoạch tới', '次の予定に向けてスポットをまとめる')}
+      testID="collection-new"
     />
   );
 }
@@ -603,18 +604,23 @@ export default function CollectionsScreen({ navigation, route }: {
   // shows a padlock for your own and a byline for everyone else's, and
   // the two row shapes split the same way: yours swipe, the community's
   // do not.
+  //
+  // `at` is a card's place in its whole list, not in its row-item: the
+  // smoke flows open "the first community collection" as
+  // `collection-card-0`, and it has to be the same card whichever shape
+  // the reader last picked.
   type ListRow =
     | { kind: 'own'; c: Collection }
-    | { kind: 'com'; c: Collection }
-    | { kind: 'pair'; pair: Collection[]; own: boolean };
+    | { kind: 'com'; c: Collection; at: number }
+    | { kind: 'pair'; pair: Collection[]; own: boolean; at: number };
   const pairUp = (list: Collection[], own: boolean): ListRow[] => {
     const out: ListRow[] = [];
-    for (let i = 0; i < list.length; i += 2) out.push({ kind: 'pair', pair: list.slice(i, i + 2), own });
+    for (let i = 0; i < list.length; i += 2) out.push({ kind: 'pair', pair: list.slice(i, i + 2), own, at: i });
     return out;
   };
   const shape = (list: Collection[], own: boolean): ListRow[] => (view === 'tile'
     ? pairUp(list, own)
-    : list.map((c): ListRow => ({ kind: own ? 'own' : 'com', c })));
+    : list.map((c, at): ListRow => (own ? { kind: 'own', c } : { kind: 'com', c, at })));
   const sections = session && tab === 'yours'
     ? (mineReady ? [{ own: true, data: shape(sift(mine.data), true) }] : [])
     : [{ own: false, data: shape(sift(visible), false) }];
@@ -652,7 +658,7 @@ export default function CollectionsScreen({ navigation, route }: {
         {session ? (
           <UnderlineTabs
             tabs={[
-              { key: 'yours', icon: 'bookmark-outline', label: t('Yours', 'Của bạn', '自分の') },
+              { key: 'yours', icon: 'bookmark-outline', label: t('Yours', 'Của bạn', '自分の'), testID: 'collections-yours' },
               { key: 'community', icon: 'globe-outline', label: t('Community', 'Cộng đồng', 'みんなの') },
             ]}
             active={tab}
@@ -756,7 +762,7 @@ export default function CollectionsScreen({ navigation, route }: {
               if (item.kind === 'pair') {
                 return (
                   <View style={s.gridRow}>
-                    {item.pair.map((c) => {
+                    {item.pair.map((c, j) => {
                       const uri = coverFor(c);
                       const members = membersOf(c, places).length;
                       const my = !!c.id && myLikes.includes(c.id);
@@ -765,6 +771,7 @@ export default function CollectionsScreen({ navigation, route }: {
                           key={c.slug}
                           style={[s.gcard, { width: gcardW, height: gcardH }]}
                           onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
+                          testID={item.own ? undefined : `collection-card-${item.at + j}`}
                           accessibilityRole="button"
                           accessibilityLabel={t(c.title_en, c.title_vi, c.title_ja)}
                         >
@@ -927,6 +934,7 @@ export default function CollectionsScreen({ navigation, route }: {
                         silence the one the meta line keeps. */}
                     <PressableScale
                       onPress={() => navigation.navigate('CollectionDetail', { slug: c.slug })}
+                      testID={`collection-card-${item.at}`}
                       accessibilityRole="button"
                       accessibilityLabel={byline
                         ? `${t(c.title_en, c.title_vi, c.title_ja)}, ${byline}`

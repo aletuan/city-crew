@@ -75,16 +75,18 @@ function OwnEmpty({ onExplore }: { onExplore: () => void }) {
  * rows meant Delete was not marked at all. Neutral against `bad` is
  * 4.11:1, so the red says something again.
  */
-function MenuRow({ icon, label, onPress, danger, first }: {
+function MenuRow({ icon, label, onPress, danger, first, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
   danger?: boolean;
   first?: boolean;
+  testID?: string;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      testID={testID}
       accessibilityRole="button"
       style={({ pressed }) => [s.menuRow, !first && s.menuDivider, pressed && s.menuRowOn]}
     >
@@ -238,6 +240,7 @@ function DraggableCard({
       <PlaceCard
         place={place}
         onPress={onOpen}
+        testID={`collection-place-${index}`}
         onLongPress={(e) => onLift(index, e.nativeEvent.pageY)}
         delayLongPress={LIFT_AFTER_MS}
         onPressOut={onRelease}
@@ -888,6 +891,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
           icon="ellipsis-horizontal"
           onPress={openMenu}
           label={t('More', 'Thêm', 'その他')}
+          testID="collection-more"
         />
       </View>
     </View>
@@ -898,6 +902,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       title={title}
       subtitle={byline}
       onBack={() => navigation.goBack()}
+      backTestID="collection-back"
       right={headerRight}
     >
       <AmbientWarmth />
@@ -990,7 +995,9 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                     onPitch={onPitch}
                   />
                 )
-                : <PlaceCard place={item} onPress={open} />;
+                // By position, mine or not, so a smoke flow opens the first
+                // place whichever card shape the list is drawn with.
+                : <PlaceCard place={item} onPress={open} testID={`collection-place-${index}`} />;
             }}
             ListEmptyComponent={!loading && col
               ? (owned
@@ -1061,6 +1068,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 icon="create-outline"
                 label={t('Edit collection', 'Sửa bộ sưu tập', 'コレクションを編集')}
                 onPress={() => act(edit)}
+                testID="collection-menu-edit"
               />
               <MenuRow
                 icon="share-outline"
@@ -1086,6 +1094,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
                 label={t('Delete collection', 'Xoá bộ sưu tập', 'コレクションを削除')}
                 onPress={() => act(remove)}
                 danger
+                testID="collection-menu-delete"
               />
             </>
           ) : (

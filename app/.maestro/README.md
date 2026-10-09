@@ -29,13 +29,17 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `05-plan-trip.yaml` | Deletes the account's leftover upcoming trips; answers the Ideas wizard (Friends + up to three moods); waits out Sketching; opens the recommended plan; saves it; finds it as the only upcoming trip; deletes it. |
 | `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
 | `08-explore-filter.yaml` | Pins the location to Hanoi; sorts Explore by distance, then adds "open now"; the filter button's count shows both; Reset clears them and the list is back. The map toggle is not covered — Expo Go on iOS draws no map. |
+| `09-collections-browse.yaml` | As a guest: the Collections tab's first community card opens on its places; the first place opens on its own page; Back walks place → collection → list. The card id is the same in grid and row view. |
+| `11-collection-crud.yaml` | Deletes any "Maestro CRUD…" list a failed run left; creates "Maestro CRUD"; renames it "Maestro CRUD 2" from its menu; saves the first Explore place into it and sees it there; takes it out from inside the collection; deletes the list. Leaves 06's "Maestro smoke" alone. |
 | `07-sign-up-delete.yaml` | **Not run by `npm run smoke:ios`** — see GUIDELINES.md ("Manual QA"). Documents signing up a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skipping the taste picker, then deleting that same account from Profile → Delete account, ending back on the guest view; iOS's own "Use Strong Password?" panel on the password field can't be driven by Maestro, so this path is checked by hand once per release instead. |
 
 The signed-in flows share `common/start.yaml` (open fresh, grant
 notifications — saving a trip plants a reminder, and the permission alert
 would stand over Trips), `common/ensure-signed-in.yaml`,
-`common/ensure-signed-out.yaml`, `common/sign-in.yaml` and
-`common/delete-first-trip.yaml`. Every flow cleans up what it made, and
+`common/ensure-signed-out.yaml`, `common/sign-in.yaml`,
+`common/delete-first-trip.yaml`, `common/open-save-sheet.yaml` (the
+bookmark, in either state) and `common/delete-open-collection.yaml`
+(the open collection's menu → Delete → the system alert). Every flow cleans up what it made, and
 cleans up what a failed earlier run left, before it starts.
 
 `common/dismiss-welcome.yaml` and `common/expo-go-prep.yaml` are subflows
@@ -178,6 +182,8 @@ reaches the native view.
 | `PlaceDetailScreen` | `detail-save` / `detail-saved` — one id per state |
 | `SaveSheet` | `save-row-<index>`, `save-done` |
 | `CollectionFormScreen` | `collection-name`, `collection-submit` |
+| `CollectionsScreen` | `collection-card-<index>` (community; same index in grid and rows), `collections-yours` (the Yours tab, signed in), `collection-new` (the dashed row at the foot of Yours) |
+| `CollectionDetailScreen` | `collection-place-<index>`, `collection-back`, `collection-more`, `collection-menu-edit`, `collection-menu-delete` |
 
 Renaming one of these is a breaking change for this suite, and
 `scripts/maestroIds.test.ts` fails in CI when a flow names an id the

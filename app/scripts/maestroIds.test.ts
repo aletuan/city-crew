@@ -5,7 +5,8 @@
 // not found" on a flow nobody had touched. This reads the ids out of the
 // flows and out of the source and fails here, in CI, the moment they part.
 //
-// The source side is read from the lines that set `testID`: quoted ids,
+// The source side is read from the lines that set a `testID` (or forward
+// one, as `backTestID` does): quoted ids,
 // and the fixed front of a template (`place-card-${index}` answers for
 // `place-card-0`).
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -41,7 +42,9 @@ const sourceIds = () => {
   const files = walk(join(app, 'src'), (f) => f.endsWith('.tsx') && !/\.test\.tsx$/.test(f));
   for (const file of files) {
     for (const line of readFileSync(file, 'utf8').split('\n')) {
-      if (!line.includes('testID')) continue;
+      // Any case: a prop that forwards an id under its own name
+      // (`backTestID="collection-back"`) sets it just the same.
+      if (!/testid/i.test(line)) continue;
       for (const m of line.matchAll(/['"]([a-z0-9][a-z0-9-]*)['"]/g)) exact.add(m[1]);
       for (const m of line.matchAll(/`([a-z0-9-]+)\$\{/g)) prefixes.add(m[1]);
     }

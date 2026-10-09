@@ -1,0 +1,171 @@
+# A collection's whole life on the test account: make it, rename it, put a
+# place in it, take the place out, delete it.
+#
+# The flow finds its own list by title — "Maestro CRUD", then "Maestro CRUD
+# 2" — which is the account's data, not a translated label, so matching it
+# as text is safe. Any list of that name a failed run left behind is
+# deleted first; the account's other lists ("Maestro smoke", which 06 keeps)
+# are not touched.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-in.yaml
+
+- tapOn:
+    id: "tab-collections"
+- extendedWaitUntil:
+    visible:
+      id: "collections-yours"
+    timeout: 20000
+- tapOn:
+    id: "collections-yours"
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Leftovers from a run that died half way.
+- repeat:
+    while:
+      visible:
+        text: "Maestro CRUD.*"
+    commands:
+      - tapOn:
+          text: "Maestro CRUD.*"
+      - extendedWaitUntil:
+          visible:
+            id: "collection-more"
+          timeout: 15000
+      - runFlow: common/delete-open-collection.yaml
+
+# Create. The dashed "New collection" row sits at the foot of the list.
+- scrollUntilVisible:
+    element:
+      id: "collection-new"
+    direction: DOWN
+    timeout: 15000
+- scroll
+- tapOn:
+    id: "collection-new"
+- extendedWaitUntil:
+    visible:
+      id: "collection-name"
+    timeout: 10000
+- tapOn:
+    id: "collection-name"
+- inputText: "Maestro CRUD"
+- hideKeyboard
+- tapOn:
+    id: "collection-submit"
+# The form goes back to the list, where the new one is at the top.
+- scrollUntilVisible:
+    element:
+      text: "Maestro CRUD"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    text: "Maestro CRUD"
+
+# Rename, from the collection's own menu. The form comes back filled in.
+- extendedWaitUntil:
+    visible:
+      id: "collection-more"
+    timeout: 15000
+- tapOn:
+    id: "collection-more"
+- tapOn:
+    id: "collection-menu-edit"
+- extendedWaitUntil:
+    visible:
+      id: "collection-name"
+    timeout: 10000
+- tapOn:
+    id: "collection-name"
+- eraseText: 40
+- inputText: "Maestro CRUD 2"
+- hideKeyboard
+- tapOn:
+    id: "collection-submit"
+- extendedWaitUntil:
+    visible:
+      text: "Maestro CRUD 2"
+    timeout: 15000
+# Back to the list first: a tab keeps its stack, and the Collections tab
+# must reopen on the list, not on this page, when the flow returns to it.
+- tapOn:
+    id: "collection-back"
+- extendedWaitUntil:
+    visible:
+      id: "collections-yours"
+    timeout: 10000
+
+# Add a place: the first one on Explore, through its bookmark. A place a
+# failed 06 left saved shows `detail-saved`; either state opens the sheet.
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- tapOn:
+    id: "place-card-0"
+- extendedWaitUntil:
+    visible:
+      id: "detail-name"
+    timeout: 20000
+- runFlow: common/open-save-sheet.yaml
+# The sheet's rows are the account's lists, each labelled with its title
+# and its count ("Maestro CRUD 2, Empty") — ours by its title. A ticked row
+# leads with the tick's glyph ("\uf21d, Maestro CRUD 2, 1 place"), and
+# Maestro matches the whole label, hence the leading ".*".
+- tapOn:
+    text: ".*Maestro CRUD 2.*"
+- tapOn:
+    id: "save-done"
+- tapOn:
+    id: "detail-back"
+
+# The place is in the list.
+- tapOn:
+    id: "tab-collections"
+- tapOn:
+    id: "collections-yours"
+- scrollUntilVisible:
+    element:
+      text: "Maestro CRUD 2"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    text: "Maestro CRUD 2"
+- extendedWaitUntil:
+    visible:
+      id: "collection-place-0"
+    timeout: 15000
+
+# Take it out again, from the place's own page inside the collection.
+- tapOn:
+    id: "collection-place-0"
+- extendedWaitUntil:
+    visible:
+      id: "detail-saved"
+    timeout: 20000
+- runFlow: common/open-save-sheet.yaml
+- tapOn:
+    text: ".*Maestro CRUD 2.*"
+- tapOn:
+    id: "save-done"
+- tapOn:
+    id: "detail-back"
+- extendedWaitUntil:
+    visible:
+      id: "collection-more"
+    timeout: 10000
+- extendedWaitUntil:
+    notVisible:
+      id: "collection-place-0"
+    timeout: 10000
+
+# And delete the list itself: back on Yours, and gone from it.
+- runFlow: common/delete-open-collection.yaml
+- assertNotVisible:
+    text: "Maestro CRUD.*"
