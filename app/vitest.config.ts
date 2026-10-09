@@ -186,14 +186,6 @@ const NATIVE_ONLY = [
 ];
 
 const IMPURE = [
-  // A React hook, imports Alert and Keyboard — and since 9 October fully
-  // rendered by `candidates.ui.test.tsx`, at 100% of lines and functions
-  // and 98.63% of branches. The one branch left is `suggestOne`'s
-  // `if (!city)`, which only `addMany` calls, after the same check: it is
-  // there to narrow the type, and no reader can reach it. Passing
-  // `city.id` in would remove it; that is a change to the hook, not a
-  // test, so it waits for its own commit rather than riding in on one.
-  'src/lib/candidates.ts',
   'src/lib/database.types.ts', // generated from the schema; one runtime const, no logic
   'src/lib/channel.ts', // reads expo-updates; two consts, no logic to hold
   'src/lib/reminders.ts', // talks to expo-notifications; the maths it uses is remind.ts, which the gate holds
