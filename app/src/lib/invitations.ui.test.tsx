@@ -123,6 +123,49 @@ describe('the batch', () => {
     await waitFor(() => expect(fetchCrewCounts).toHaveBeenCalledTimes(3));
     expect(screen.getByTestId('counts').textContent).toBe('{"trip-a":1,"trip-b":2}');
   });
+
+  // Two asks in flight, answered out of order: the older one must land on
+  // nothing. Without these two the `live` guard was reached or not by
+  // timing alone — the same file read 86.11% of branches on one run and
+  // 82.85% on the next, and CI turned red on the providers' floor over a
+  // change that touched no provider. Each ask is held open here and let
+  // go by hand, so the order is the test's and not the scheduler's.
+  //
+  // Between the two asks trip-b is declined, so the older ask is the only
+  // one that knows about it — which is what makes a late answer visible.
+  const heldAsk = () => {
+    let settle!: { ok: (m: Record<string, { accepted: number }>) => void; fail: () => void };
+    fetchCrewCounts.mockImplementationOnce(() => new Promise((ok, fail) => {
+      settle = { ok, fail: () => fail(new Error('offline')) };
+    }));
+    return () => settle;
+  };
+
+  it('an older answer that lands late does not overwrite a newer one', async () => {
+    const first = heldAsk();
+    mount();
+    await waitFor(() => expect(fetchCrewCounts).toHaveBeenCalledTimes(1));
+    world.rows = [asked('trip-a', 'pending'), asked('trip-b', 'declined')];
+    refresh();
+    await waitFor(() => expect(screen.getByTestId('counts').textContent).toBe('{"trip-a":1}'));
+
+    first().ok({ 'trip-a': { accepted: 9 }, 'trip-b': { accepted: 9 } });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByTestId('counts').textContent).toBe('{"trip-a":1}');
+  });
+
+  it('an older failure that lands late marks nothing failed', async () => {
+    const first = heldAsk();
+    mount();
+    await waitFor(() => expect(fetchCrewCounts).toHaveBeenCalledTimes(1));
+    world.rows = [asked('trip-a', 'pending'), asked('trip-b', 'declined')];
+    refresh();
+    await waitFor(() => expect(screen.getByTestId('counts').textContent).toBe('{"trip-a":1}'));
+
+    first().fail();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByTestId('counts').textContent).toBe('{"trip-a":1}');
+  });
 });
 
 // Coming back from the background asks again — but only for a list older

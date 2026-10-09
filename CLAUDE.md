@@ -58,14 +58,14 @@ speculative ones, and a red PR costs a cycle of the reviewer's trust.
 | `src/lib/**/*.ts` | **100** on statements, branches, functions and lines |
 | `src/screens/*.tsx` | 99 lines / 99 statements / 91 branches / 91 functions |
 | `src/components/*.tsx` | 95 lines / 95 statements / 93 branches / 90 functions |
-| `src/lib/*.tsx` (the providers) | 97 lines / 86 branches |
+| `src/lib/*.tsx` (the providers) | 97 lines / 89 branches |
 | `supabase/functions/*/*.ts` | 100 lines / 100 statements / 94 branches / 66 functions |
 
 The screens, components, providers and Edge Functions floors are a
 ratchet: when a file's coverage goes up, raise the floor by hand in the
-same change. They are the figures
-the weakest file stood at, so removing a covered line can drop a file
-under the floor without any behaviour changing — that has happened.
+same change. They are the figures the weakest file stood at, so removing
+a covered line can drop a file under the floor without any behaviour
+changing — that has happened.
 
 **An Edge Function no test loads is invisible to its floor**: v8 reports
 only files something imported. `scripts/edgeFunctionTests.test.ts` fails

@@ -218,8 +218,16 @@ const IMPURE = [
 // `createContext` is given for a tree with no provider above it; a floor
 // there would ask for tests of code no reader can reach. Today's truth,
 // rounded down, each column one file's: `catalog.tsx` at 97.6% lines,
-// `invitations.tsx` at 86.11% branches.
-const PROVIDERS_FLOOR = { lines: 97, branches: 86 };
+// `invitations.tsx` at 89.18% branches.
+//
+// That second figure was first written down as 86.11, and CI read 82.85
+// on the same code. `invitations.tsx` drops an answer that lands after a
+// newer ask, and whether any test reached that guard was left to timing:
+// two local runs in four went each way. A floor over a number that moves
+// on its own is a coin toss, so the guard got two tests that hold each
+// ask open and let them go in order, and the figure stopped moving —
+// three full runs since, identical in every provider and function file.
+const PROVIDERS_FLOOR = { lines: 97, branches: 89 };
 
 // ── the Edge Functions' floor ──
 //
