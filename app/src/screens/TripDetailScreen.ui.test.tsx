@@ -255,7 +255,7 @@ describe('the itinerary', () => {
     show();
     expect(screen.getByText('Old Quarter crawl')).toBeTruthy();
     // 12:00 arrival plus a 30-minute dwell at the last stop.
-    expect(screen.getByText('Saturday, Sep 12 · 09:00–12:30')).toBeTruthy();
+    expect(screen.getByText('Sat, 12 Sep · 09:00–12:30')).toBeTruthy();
   });
 
   it('falls back to the raw day and no hours when it cannot read them', () => {
@@ -277,7 +277,7 @@ describe('the itinerary', () => {
       ],
     })];
     show();
-    expect(screen.getByText('Saturday, Sep 12')).toBeTruthy();
+    expect(screen.getByText('Sat, 12 Sep')).toBeTruthy();
     expect(screen.queryByText(/–/)).toBeNull();
   });
 
@@ -289,7 +289,7 @@ describe('the itinerary', () => {
       ],
     })];
     show();
-    expect(screen.getByText('Saturday, Sep 12 · 09:00–11:00')).toBeTruthy();
+    expect(screen.getByText('Sat, 12 Sep · 09:00–11:00')).toBeTruthy();
   });
 
   it('leaves through the header, by the stack', () => {

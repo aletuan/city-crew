@@ -283,6 +283,19 @@ describe('the applause', () => {
     }
   });
 
+  // A week of distances, then the date — past a week nobody counts back.
+  it('tells a time older than a week as a date, in the check-in rows\u2019 form', async () => {
+    data.mine = [col('c1', 'pho-walk', 'Pho walk')];
+    data.fetchApplause.mockImplementation(async () => [
+      like('c1', '2026-09-04T10:00:00', 'bao'), // 7 days: still a distance
+      like('c1', '2026-09-03T10:00:00', 'anh'), // 8 days: a date
+    ]);
+    await renderScreen();
+    expect(screen.getByText('7 days ago')).toBeTruthy();
+    expect(screen.getByText('3 Sep')).toBeTruthy();
+    expect(screen.queryByText('8 days ago')).toBeNull();
+  });
+
   it('opens the liked list by its slug, from either shelf', async () => {
     catalog.cols = [col('c1', 'pho-walk', 'Pho walk')];
     data.mine = [col('c2', 'my-cafes', 'My cafes')];

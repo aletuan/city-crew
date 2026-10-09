@@ -39,7 +39,7 @@ import {
   atHandle, hostOf, instagramUrl, threadsUrl, websiteRepeatsHandle,
 } from '../lib/links';
 import { cityTz } from '../lib/clock';
-import { clockOf, groupHours, openState, shortDateline } from '../lib/format';
+import { clockOf, dateline, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsSearchUrl } from '../lib/maps';
@@ -1126,7 +1126,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             <View style={s.checkinHead}>
               <Text style={s.checkinHeadTitle}>{t('Checked in here', 'Bạn đã check-in ở đây', 'ここにチェックイン済み')}</Text>
               <Text style={s.checkinHeadMeta}>
-                {t('Last time', 'Lần gần nhất', '前回')} · {shortDateline(lang, new Date(latestVisit.at))} · {clockOf(new Date(latestVisit.at).getHours() * 60 + new Date(latestVisit.at).getMinutes())}
+                {t('Last time', 'Lần gần nhất', '前回')} · {dateline(lang, new Date(latestVisit.at))} · {clockOf(new Date(latestVisit.at).getHours() * 60 + new Date(latestVisit.at).getMinutes())}
               </Text>
             </View>
           )}

@@ -140,12 +140,12 @@ describe('the way in', () => {
 describe('when', () => {
   it('spells the day and the first stop’s time', () => {
     show();
-    expect(screen.getByText('Friday, Aug 28 · from 17:00')).toBeTruthy();
+    expect(screen.getByText('Fri, 28 Aug · from 17:00')).toBeTruthy();
   });
 
   it('keeps the day alone when the first stop has no time', () => {
     show({ trip: trip({ trip_stops: [{ ...trip().trip_stops![0], arrive_min: null as never }] }) });
-    expect(screen.getByText('Friday, Aug 28')).toBeTruthy();
+    expect(screen.getByText('Fri, 28 Aug')).toBeTruthy();
     expect(screen.queryByText(/from \d/)).toBeNull();
   });
 
@@ -162,7 +162,7 @@ describe('the stops', () => {
   it('draws the card with no stops at all: no route line, the day alone', () => {
     show({ trip: trip({ trip_stops: undefined as never }) });
     expect(screen.getByText('Cà phê rồi hẻm Sài Gòn')).toBeTruthy();
-    expect(screen.getByText('Friday, Aug 28')).toBeTruthy();
+    expect(screen.getByText('Fri, 28 Aug')).toBeTruthy();
     expect(screen.queryByText(/·/)).toBeNull();
     // Both answers are still on offer; a plan with no stops is still a plan.
     expect(screen.getByText('I’m in')).toBeTruthy();
