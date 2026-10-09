@@ -14,6 +14,7 @@ flows:
   - "06-save-place.yaml"
   - "08-explore-filter.yaml"
   - "09-collections-browse.yaml"
+  - "10-check-in.yaml"
   - "11-collection-crud.yaml"
 executionOrder:
   continueOnFailure: true
@@ -27,4 +28,5 @@ executionOrder:
     - 06-save-place
     - 08-explore-filter
     - 09-collections-browse
+    - 10-check-in
     - 11-collection-crud

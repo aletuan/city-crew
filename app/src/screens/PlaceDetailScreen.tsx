@@ -1167,6 +1167,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                       </Text>
                       <PressableScale
                         onPress={() => { void undoCheckin(v.id); }}
+                        // One id for every row's trash: a flow tidying up
+                        // taps the first until the sheet closes itself.
+                        testID="checkin-visit-remove"
                         scaleTo={0.85}
                         hitSlop={{ top: 8, bottom: 8, left: 10, right: 10 }}
                         accessibilityRole="button"
