@@ -332,7 +332,6 @@ Deno.serve(async (req) => {
       if (!out || out.type !== "text") return json({ ok: false });
 
       const draft = JSON.parse(out.text) as Record<string, unknown>;
-      const un = (v: unknown) => (typeof v === "string" && v && v !== UNKNOWN ? v : null);
 
       console.log("plan-assist parse", {
         chars: text.length,

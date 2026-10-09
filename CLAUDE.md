@@ -59,7 +59,7 @@ speculative ones, and a red PR costs a cycle of the reviewer's trust.
 | `src/screens/*.tsx` | 99 lines / 99 statements / 91 branches / 91 functions |
 | `src/components/*.tsx` | 95 lines / 95 statements / 93 branches / 90 functions |
 | `src/lib/*.tsx` (the providers) | 97 lines / 89 branches |
-| `supabase/functions/*/*.ts` | 100 lines / 100 statements / 94 branches / 66 functions |
+| `supabase/functions/*/*.ts` | 100 lines / 100 statements / 94 branches / 100 functions |
 
 The screens, components, providers and Edge Functions floors are a
 ratchet: when a file's coverage goes up, raise the floor by hand in the

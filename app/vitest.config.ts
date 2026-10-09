@@ -243,12 +243,12 @@ const PROVIDERS_FLOOR = { lines: 97, branches: 89 };
 // is absent from this report rather than at zero, and no floor here can
 // see it. `scripts/edgeFunctionTests.test.ts` holds that side.
 //
-// The same ratchet as the screens. `classify.ts` holds branches at 94.11;
-// `plan-assist/index.ts` holds functions at 66.66, and the reason is one
-// helper, `un`, that nothing in the file has called since it was written
-// (a6a86ce39). Deleting it lifts the column to 100 — a change to the
-// function, so not made here.
-const FUNCTIONS_FLOOR = { lines: 100, statements: 100, branches: 94, functions: 66 };
+// The same ratchet as the screens. `classify.ts` holds branches at 94.11.
+// Functions stood at 66.66 for one day, held there by `plan-assist`'s
+// `un`, a helper nothing had called since it was written (a6a86ce39) —
+// every field it would have cleaned is checked against its own list
+// instead. It is gone, and every file stands at 100 in that column.
+const FUNCTIONS_FLOOR = { lines: 100, statements: 100, branches: 94, functions: 100 };
 
 // Coverage globs as v8 reports paths once `allowExternal` is on: by where
 // the file is, not relative to `app/`. A relative `include` then matches
