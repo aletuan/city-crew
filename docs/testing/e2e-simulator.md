@@ -48,12 +48,14 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `06-save-place` | test account | 1 m 21 s |
 | `08-explore-filter` | guest | 50 s |
 | `09-collections-browse` | guest | 42 s |
+| `10-check-in` | test account | 1 m 9 s |
 | `11-collection-crud` | test account | 2 m 19 s |
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
-**Kết quả gần nhất:** 09/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **10/10
-passed trong 11 m 29 s**, với `09-collections-browse` và `11-collection-crud`
-vừa vào `config.yaml`. Trước khi vào, mỗi flow đã xanh hai lượt liên tiếp
+**Kết quả gần nhất:** 09/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **11/11
+passed trong 12 m 11 s**, với `10-check-in` vừa vào `config.yaml`. Lượt
+trước cùng ngày: 10/10 trong 11 m 29 s, khi `09-collections-browse` và
+`11-collection-crud` vào. Trước khi vào, mỗi flow đã xanh hai lượt liên tiếp
 khi chạy riêng (lượt hai của `11` chứng minh phần dọn dẹp). Một lượt `11`
 đã hỏng ở bước đăng nhập với "No connection" — mạng giữa simulator và
 Supabase, chưa tới phần collection; lượt sau xanh.
@@ -63,8 +65,14 @@ cuộn lên `profile-sign-in` không có `centerElement`, nên đôi khi dừng 
 nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái (iOS hiểu là
 "cuộn về đầu"). Thêm `centerElement: true` rồi `04` xanh bốn lượt liền.
 
-**Ngân sách:** 11 m 29 s trên 12 phút. Flow tiếp theo cần chỗ: rút ngắn một
-flow hiện có, hoặc nâng ngân sách có chủ ý.
+**Ngân sách: dưới 20 phút** cho cả suite (quyết định của chủ dự án,
+09/10). Thời gian không phải ràng buộc chặt: một flow đáng giá vẫn vào dù
+làm suite dài thêm một hai phút. 11 flow hiện chạy 12 m 11 s, còn khoảng
+7 phút cho các flow tiếp theo.
+
+`10-check-in` được thử cả nhánh dọn dẹp: một flow tạm check-in rồi dừng, `10`
+dọn lượt ghé đó rồi chạy hết (1 m 5 s); lượt sau từ trạng thái sạch (51 s);
+truy vấn `checkins` của tài khoản test sau đó: 0 dòng.
 
 ## 3. Chạy
 
@@ -113,6 +121,7 @@ flowchart TB
   LG[Local guide: ảnh, cover]:::gap
   DL[Deep link place/trip]:::gap
   LF[Mất mạng / load-fail]:::gap
+  CI[Check-in tại một địa điểm]:::ok
 ```
 
 Xanh: đã có flow. Vàng: QA tay. Cam: chưa có.
@@ -121,7 +130,7 @@ Xanh: đã có flow. Vàng: QA tay. Cam: chưa có.
 
 Nguyên tắc chọn flow (từ GUIDELINES): chỉ thêm đường mà **hỏng thì người dùng
 không dùng được app**, và **vitest không phủ được**. Mỗi flow tốn ~1 phút; ngân
-sách toàn suite ≤ 12 phút.
+sách toàn suite < 20 phút (xem mục 2).
 
 ### Đợt 1 — những gì 1.0.4 vừa đổi (ưu tiên cao)
 

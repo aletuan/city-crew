@@ -1,0 +1,88 @@
+# Check in at a place, see the visit written, take it back.
+#
+# The pill draws only for a signed-in reader and only while the
+# `place_checkin` flag is on (`app_flags`), so this flow is also the one
+# place the suite notices that flag being turned off. The visit is a real
+# row in `checkins`, written and read back through RLS — the pill turns to
+# `detail-checked-in` only after `visits.reload()` has read it from the
+# server, not on the tap.
+#
+# Repeatable: `may_check_in` counts the rows that exist (three a day at
+# one place, ten minutes apart), and this flow deletes its row — and any
+# a failed run left at the same place — so the cap never fills.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-in.yaml
+
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- tapOn:
+    id: "place-card-0"
+- extendedWaitUntil:
+    visible:
+      id: "detail-name"
+    timeout: 20000
+
+# Leftovers: a visit a failed run left here wears the pill already. Its
+# sheet lists every visit with its own trash, and closes itself when the
+# last one goes.
+- runFlow:
+    when:
+      visible:
+        id: "detail-checked-in"
+    commands:
+      - tapOn:
+          id: "detail-checked-in"
+      - extendedWaitUntil:
+          visible:
+            id: "checkin-head"
+          timeout: 10000
+      - repeat:
+          while:
+            visible:
+              id: "checkin-visit-remove"
+          commands:
+            - tapOn:
+                id: "checkin-visit-remove"
+            - waitForAnimationToEnd:
+                timeout: 3000
+
+# Check in: the bare pill is the visit.
+- extendedWaitUntil:
+    visible:
+      id: "detail-checkin"
+    timeout: 15000
+- tapOn:
+    id: "detail-checkin"
+- extendedWaitUntil:
+    visible:
+      id: "detail-checked-in"
+    timeout: 20000
+
+# The worn pill opens the sheet: the visit is listed, and its trash takes
+# it back. One visit, so the sheet closes and the pill goes bare again.
+- tapOn:
+    id: "detail-checked-in"
+- extendedWaitUntil:
+    visible:
+      id: "checkin-head"
+    timeout: 10000
+- assertVisible:
+    id: "checkin-visit"
+- tapOn:
+    id: "checkin-visit-remove"
+- extendedWaitUntil:
+    visible:
+      id: "detail-checkin"
+    timeout: 20000
+- assertNotVisible:
+    id: "detail-checked-in"
+- tapOn:
+    id: "detail-back"
