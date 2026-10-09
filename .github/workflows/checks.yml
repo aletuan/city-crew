@@ -192,10 +192,12 @@ jobs:
       # different set of lines than a laptop with a `.env` (80% on CI,
       # 86% locally, for the same file and the same tests).
       #
-      # The floors are today's real figures rounded down — api.js at 83.5
-      # lines / 51.3 functions is the lowest file and sets both. Raise them
-      # by hand, in the same change, whenever coverage goes up — never
-      # lower them to make a change pass.
+      # The floors are today's real figures: every file in scope stands at
+      # 100 lines and 100 functions. api.js was the last one under, at 84.1
+      # lines / 52.5 functions, until its uploads, deletes, edge-function
+      # wrappers and resizeImage got tests; nothing is left to ratchet, so
+      # a new function in src/ now arrives with its test or turns this red.
+      # Never lower them to make a change pass.
       - if: '!cancelled()'
         run: npm run coverage
       # The components, rendered. Same two steps as the app: the suite, then

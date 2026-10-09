@@ -320,3 +320,167 @@ describe('parse', () => {
     expect(await (await call(ask())).json()).toEqual({ ok: false });
   });
 });
+
+// The input a client did not send, and the answers a model sent half of.
+//
+// Every `??`, `Array.isArray` and optional chain in the handler is a field
+// that may be missing, and each one picks a default a reader can end up
+// reading: "—" in the facts, "an evening" in the ask, `null` for a title.
+// The tests above all send the full shape, so none of those defaults had
+// ever run. What is pinned is the default each one falls back to, and
+// that a missing field is a refusal or a blank — never a crash that takes
+// the whole answer with it.
+describe('what is missing', () => {
+  const ask = (over: Record<string, unknown> = {}) => ({
+    action: 'parse', text: 'coffee', today: '2026-09-10', categories: ['cafe'], districts: ['Tay Ho'], ...over,
+  });
+  const blank = { company: 'unknown', categories: [], district: 'unknown', date: '', when: 'unknown' };
+
+  it('counts a call with no Authorization header as a guest, handing GoTrue an empty token', async () => {
+    h.fake.reset();
+    h.fake.replies({ data: { user: null } });
+    const res = await h.handler(new Request('https://p.test/functions/v1/plan-assist', {
+      method: 'POST', body: JSON.stringify(ask()),
+    }));
+    expect(res.status).toBe(401);
+    expect(h.fake.log[0]).toMatchObject({ fn: 'getUser', payload: '' });
+  });
+
+  it('refuses an action that is not a string, and says which', async () => {
+    const res = await call({ action: 7 });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'unknown action: 7' });
+  });
+
+  it('refuses a guest whose action is not a string as it refuses any other', async () => {
+    h.fake.reset();
+    h.fake.replies({ data: { user: null } });
+    expect((await call({ action: ['narrate'] })).status).toBe(401);
+    expect(h.fake.log.some((c) => c.op === 'rpc')).toBe(false);
+  });
+
+  it('refuses a parse with no sentence, no category list, or no day', async () => {
+    expect((await call(ask({ text: undefined }))).status).toBe(400);
+    h.fake.replies({ data: { user: { id: 'u1' } } });
+    expect((await call(ask({ categories: 'cafe' }))).status).toBe(400);
+    h.fake.replies({ data: { user: { id: 'u1' } } });
+    expect((await call(ask({ today: undefined }))).status).toBe(400);
+    expect(h.create).not.toHaveBeenCalled();
+  });
+
+  it('asks a parse with no areas as having none, and can then name no district', async () => {
+    h.create.mockResolvedValue(says({ ...blank, district: 'Tay Ho' }));
+    const res = await call(ask({ districts: 'Tay Ho' }));
+    expect(sent().messages[0].content).toContain('Areas available: (none).');
+    expect(sent().output_config.format.schema.properties.district.enum).toEqual(['unknown']);
+    expect((await res.json()).district).toBeNull();
+  });
+
+  it('reads a parse answer with no category list as no categories', async () => {
+    h.create.mockResolvedValue(says({ ...blank, categories: 'cafe' }));
+    expect((await (await call(ask())).json()).categories).toEqual([]);
+  });
+
+  it('answers a parse whose reply has no text block with ok: false', async () => {
+    h.create.mockResolvedValue({ ...says({}), content: [{ type: 'thinking', thinking: '…' }] });
+    expect(await (await call(ask())).json()).toEqual({ ok: false });
+  });
+
+  it('logs the refusal category when the model gives one, on either action', async () => {
+    const log = vi.mocked(console.log);
+    h.create.mockResolvedValue(says({}, { stop_reason: 'refusal', stop_details: { category: 'cyber' } }));
+    expect(await (await call(ask())).json()).toEqual({ ok: false });
+    expect(log).toHaveBeenCalledWith('plan-assist parse refusal', 'cyber');
+    h.fake.replies({ data: { user: { id: 'u1' } } });
+    expect(await (await call({ action: 'narrate', stops: [{ slug: 'a' }] })).json()).toEqual({ title: null, stops: [] });
+    expect(log).toHaveBeenCalledWith('plan-assist refusal', 'cyber');
+  });
+
+  it('refuses a narrate whose stops are not a list', async () => {
+    expect((await call({ action: 'narrate', stops: { slug: 'a' } })).status).toBe(400);
+    expect(h.create).not.toHaveBeenCalled();
+  });
+
+  // A bare stop and no draft: every fact the model is shown falls back to
+  // a dash, and the ask to its plainest reading — English, an evening,
+  // anything, nobody stated. A language the function does not carry is
+  // English too, rather than a word the model has to guess at.
+  it('describes a bare stop with dashes, and a missing draft as the plainest ask', async () => {
+    h.create.mockResolvedValue(says({ title: 'T', stops: [] }));
+    await call({ action: 'narrate', lang: 'xx', stops: [{ slug: 'bare' }] });
+    expect(sent().messages[0].content).toBe([
+      'Language: English.',
+      'Company: unstated.',
+      'Asked for: anything.',
+      'When: an evening.',
+      '',
+      'The stops, in order:',
+      '1. bare',
+      '   name: —',
+      '   kind: —',
+      '   area: —',
+      '   arrives: —',
+    ].join('\n'));
+  });
+
+  it('carries every answer the draft does have, and a stop’s rating, into the ask', async () => {
+    h.create.mockResolvedValue(says({ title: 'T', stops: [] }));
+    await call({
+      action: 'narrate',
+      draft: { company: 'family', categories: ['cafe', 'views'], when: 'day', where: 'Tay Ho' },
+      stops: [{ slug: 'a', name: 'A', categories: ['cafe'], neighborhood: 'Quang An', arrive: '09:00', rating: 4.6 }],
+    });
+    const content = sent().messages[0].content;
+    expect(content).toContain('Language: English.');
+    expect(content).toContain('Company: family.');
+    expect(content).toContain('Asked for: cafe, views.');
+    expect(content).toContain('When: a day out around Tay Ho.');
+    expect(content).toContain('   rating: 4.6');
+  });
+
+  it('answers a narrate whose reply has no text block with the empty plan', async () => {
+    h.create.mockResolvedValue({ ...says({}), content: [] });
+    const res = await call({ action: 'narrate', stops: [{ slug: 'a' }] });
+    expect(await res.json()).toEqual({ title: null, stops: [] });
+  });
+
+  it('reads a narration with no title and no stops as nothing to say', async () => {
+    h.create.mockResolvedValue(says({}));
+    const res = await call({ action: 'narrate', stops: [{ slug: 'a' }] });
+    expect(await res.json()).toEqual({ title: null, stops: [] });
+  });
+
+  it('drops a line with no slug or no words, rather than printing it under nobody', async () => {
+    h.create.mockResolvedValue(says({ title: 7, stops: [{ why: 'Orphan line.' }, { slug: 'a' }, { slug: 'b', why: 'Kept.' }] }));
+    const res = await call({ action: 'narrate', stops: [{ slug: 'a' }, { slug: 'b' }] });
+    expect(await res.json()).toEqual({ title: null, stops: [{ slug: 'b', why: 'Kept.' }] });
+  });
+});
+
+describe('the guest key, from what the platform says', () => {
+  const sha = async (s: string) => Array.from(
+    new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))),
+    (b) => b.toString(16).padStart(2, '0'),
+  ).join('');
+  const guest = (headers: Record<string, string>) => {
+    h.fake.reset();
+    h.fake.replies({ data: { user: null } }, { data: false, error: null });
+    return h.handler(new Request('https://p.test/functions/v1/plan-assist', {
+      method: 'POST', headers, body: JSON.stringify({ action: 'narrate', stops: [{ slug: 'a' }] }),
+    }));
+  };
+  const key = () => (h.fake.log.find((c) => c.op === 'rpc')!.payload as { p_ip_hash: string }).p_ip_hash;
+
+  it('falls back to Cloudflare’s address when there is no forwarded hop', async () => {
+    h.env.GUEST_SALT = 'pepper';
+    await guest({ 'cf-connecting-ip': '198.51.100.4' });
+    expect(key()).toBe(await sha('pepper:198.51.100.4'));
+  });
+
+  it('still hashes, with an empty salt, when neither the salt nor the URL is set', async () => {
+    h.env.GUEST_SALT = undefined;
+    h.env.SUPABASE_URL = undefined;
+    await guest({ 'x-forwarded-for': '203.0.113.9' });
+    expect(key()).toBe(await sha(':203.0.113.9'));
+  });
+});

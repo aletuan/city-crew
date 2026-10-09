@@ -58,15 +58,20 @@ speculative ones, and a red PR costs a cycle of the reviewer's trust.
 | `src/lib/**/*.ts` | **100** on statements, branches, functions and lines |
 | `src/screens/*.tsx` | 99 lines / 99 statements / 91 branches / 91 functions |
 | `src/components/*.tsx` | 95 lines / 95 statements / 93 branches / 90 functions |
+| `src/lib/*.tsx` (the providers) | 97 lines / 89 branches |
+| `supabase/functions/*/*.ts` | 100 lines / 100 statements / 94 branches / 66 functions |
 
-The screens and components floors are a ratchet: when a file's coverage
-goes up, raise the floor by hand in the same change. They are the figures
-the weakest file stood at, so removing a covered line can drop a file
-under the floor without any behaviour changing — that has happened.
+The screens, components, providers and Edge Functions floors are a
+ratchet: when a file's coverage goes up, raise the floor by hand in the
+same change. They are the figures the weakest file stood at, so removing
+a covered line can drop a file under the floor without any behaviour
+changing — that has happened.
 
-**`src/lib/*.tsx` has no floor at all.** The providers are React contexts,
-outside the `*.ts` gate, and nothing turns red when one ships untested. Their
-own `*.ui.test.tsx` files are the only thing holding them — write one.
+**An Edge Function no test loads is invisible to its floor**: v8 reports
+only files something imported. `scripts/edgeFunctionTests.test.ts` fails
+instead, until the function gets a `*.fn.test.ts` beside the others in
+`src/lib` (load it unchanged, as `deleteAccount.fn.test.ts` does) or a
+named reason in that file.
 
 The other jobs: `bundle` (`npx expo export`), `dashboard`, `data`, and
 `migrations`, which runs `supabase/tests/run.sh` against a throwaway
