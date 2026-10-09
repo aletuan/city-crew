@@ -531,6 +531,18 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(a11yState('Visited — options').selected).toBe(true);
   });
 
+  it('says the worn state in Vietnamese without the word the rest label uses', () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    state.lang = 'vi';
+    state.checkins = [visit('k1', 60)];
+    show();
+    const pill = screen.getByTestId('detail-checked-in');
+    expect(within(pill).getByText('Đã qua')).toBeTruthy();
+    expect(within(pill).queryByText(/check/i)).toBeNull();
+    expect(pill.getAttribute('aria-label')).toBe('Đã qua — tuỳ chọn');
+  });
+
   it('opens the options on a worn pill: again, once ten minutes have passed, and undo', async () => {
     state.checkin = true;
     state.uid = 'u1';

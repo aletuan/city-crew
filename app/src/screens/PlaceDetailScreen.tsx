@@ -690,7 +690,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               accessibilityRole="button"
               accessibilityState={{ selected: !!latestVisit, busy: checking }}
               accessibilityLabel={latestVisit
-                ? t('Visited — options', 'Đã ghé — tuỳ chọn', '訪問済み — オプション')
+                ? t('Visited — options', 'Đã qua — tuỳ chọn', '訪問済み — オプション')
                 : t('Check in', 'Check-in', 'チェックイン')}
               containerStyle={s.checkinSlot}
               // ── worn ──
@@ -704,10 +704,11 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               // The word changes for the same reason. "Check-in" and
               // "Checked in" (VI "Check-in" / "Đã check-in") share the
               // word that carries the meaning, so a glance read both as
-              // the verb. "Visited" / "Đã ghé" shares nothing with it, is
-              // the word the Visited screen already uses for one of these
-              // rows ("Bỏ lần ghé này"), and stays true months later,
-              // where "Checked in" read as "you are here now".
+              // the verb. "Visited" / "Đã qua" shares nothing with it,
+              // and stays true months later, where "Checked in" read as
+              // "you are here now". "Đã qua", not "Đã ghé" — the first
+              // draft, borrowed from the Visited screen's "Bỏ lần ghé
+              // này"; the owner read "Đã qua" as the better word.
               //
               // The rest label is a verb because a button is one: "Check
               // in", not the noun. Vietnamese has no such split and keeps
@@ -718,7 +719,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
             >
               <Ionicons name={latestVisit ? 'checkmark' : 'location'} size={15} color={latestVisit ? colors.accentInk : colors.accent} />
               <Text style={[s.goText, latestVisit && s.checkinOnText]}>
-                {latestVisit ? t('Visited', 'Đã ghé', '訪問済み') : t('Check in', 'Check-in', 'チェックイン')}
+                {latestVisit ? t('Visited', 'Đã qua', '訪問済み') : t('Check in', 'Check-in', 'チェックイン')}
               </Text>
             </PressableScale>
           )}
