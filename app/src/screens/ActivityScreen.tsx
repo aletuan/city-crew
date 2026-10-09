@@ -33,8 +33,7 @@ import { APPLAUSE_DAYS } from '../lib/activityWindow';
 import { useCollections } from '../lib/catalog';
 import { useCrew } from '../lib/crew';
 import {
-  acceptFriendRequest, blockUser, fetchApplause, fetchCopies,
-  type FriendProfile, removeFriendship, useMyCollections,
+  acceptFriendRequest, blockUser, fetchApplause, fetchCopies, removeFriendship, type FriendProfile, useCuratorAvatarsQuery, useMyCollections,
 } from '../lib/data';
 import {
   type ActivityItem, agoOf, type Applause, buildActivity, type Copy, splitFriendships,
@@ -75,6 +74,17 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
   }, [me]);
 
   const earlier = useMemo<ActivityItem[]>(() => buildActivity(applause ?? [], copies ?? []), [applause, copies]);
+
+  // The faces, by handle: the same lookup the bylines use, because a
+  // liker need not be a curator and need not be a friend, so neither the
+  // catalog's faces nor the crew's cover everyone here. One batched ask
+  // for every actor on the screen; a handle with no face gets the blank
+  // disc, as does a like whose liker is unnamed.
+  const actors = useMemo(
+    () => earlier.map((it) => (it.kind === 'applause' ? it.liker_handle : it.copier_handle) ?? '').filter(Boolean),
+    [earlier],
+  );
+  const faces = useCuratorAvatarsQuery(actors);
 
   // A collection id is what the applause carries; the title is what the
   // reader needs. Both shelves are searched — the liked list is yours,
@@ -308,8 +318,18 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                     // hear that this row opens the list.
                     accessibilityRole={title ? 'button' : undefined}
                   >
-                    <View style={s.mark} testID="row-glyph">
-                      <Ionicons name={item.kind === 'applause' ? 'heart-outline' : 'copy-outline'} size={19} color={colors.textTertiary} />
+                    {/* Who, then what: the actor's face leads the row, as
+                        every social feed has it (Instagram, Threads), and
+                        the kind of thing they did rides on its corner as a
+                        badge — the heart or the copy, filled and in the
+                        accent, small enough to be a mark and not a second
+                        picture. It replaced a bare glyph per row, which
+                        told the eye nothing once five rows shared it. */}
+                    <View style={s.face} testID="row-face">
+                      <Avatar url={who ? faces.data[who] : null} size={FACE} />
+                      <View style={s.kind} testID="kind-badge">
+                        <Ionicons name={item.kind === 'applause' ? 'heart' : 'copy'} size={11} color={colors.accent} />
+                      </View>
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
                       <Text style={s.line} numberOfLines={2}>
@@ -351,7 +371,10 @@ function slugFor(
 /** The feed line's line height, and the box that holds a 19pt glyph's
  *  whole line — see `mark`. */
 const LINE = 21;
-const MARK_BOX = 26;
+/** The face's side: the 44pt the slot it replaced had, so the text
+ *  column stays where it was, and the width a row's leading avatar has
+ *  everywhere else here (the request cards are 46, a card's own call). */
+const FACE = 44;
 
 const s = StyleSheet.create({
   eyebrow: {
@@ -378,29 +401,27 @@ const s = StyleSheet.create({
   },
   declineText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.semibold },
 
-  // Top-aligned, so the mark can be set against the line's first row of
-  // text; a liked list's line wraps to two on a narrow phone, and a mark
-  // centred against two rows sits in the gap between them.
+  // Centred: a 44pt face beside one or two lines of text wants its
+  // middle on theirs. The rows were top-aligned while the mark was a
+  // 19pt glyph set on the first line; a face has no first line to sit on.
   row: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 13,
-    paddingHorizontal: space.cardPadding, paddingVertical: 13,
+    flexDirection: 'row', alignItems: 'center', gap: 13,
+    paddingHorizontal: space.cardPadding, paddingVertical: 12,
   },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
   // The row aligns its top so the mark can sit on the first line of text;
   // the chevron keeps the middle, as Profile's rows do it.
   rowEnd: { alignSelf: 'center' },
-  // The mark is Profile's `RowGlyph`, to the figure: a bare 19pt outline
-  // glyph, tertiary, in the well's 44pt footprint, with the well gone. It was the well — 44pt, radius 13, soft coral fill under a
-  // hairline — drawn to match Profile's rows while they wore one; they
-  // took it off on 6 Oct 2026 (#793), and this screen opens from one of
-  // them now, so a reader tapping a bare glyph and landing on a column
-  // of coral boxes had met two conventions in two taps.
-  //
-  // The arithmetic is Profile's too: the 26pt box holds a 19pt glyph's
-  // whole line, and `(21 − 26) / 2` sets its middle on the 21pt line's
-  // middle, whatever the second row of text does.
-  mark: {
-    width: 44, height: MARK_BOX, marginTop: (LINE - MARK_BOX) / 2,
+  face: { width: FACE, height: FACE },
+  // The badge: a 20pt disc on the card's own ground with the row's
+  // hairline around it, hung a hair past the face's corner so it reads
+  // as pinned on rather than printed on. 11pt glyph: the heart is a
+  // mark here, not an icon to tap.
+  kind: {
+    position: 'absolute', right: -3, bottom: -3,
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
     alignItems: 'center', justifyContent: 'center',
   },
   line: { color: colors.text, fontSize: 15, lineHeight: LINE },
