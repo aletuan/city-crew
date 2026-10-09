@@ -39,7 +39,7 @@ import { CATEGORIES, categoryLabel } from '../lib/categories';
 import { usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { DEFAULT_TZ, instantOn } from '../lib/clock';
-import { clockOf, fmtMinutes, openState, shortDateline } from '../lib/format';
+import { clockOf, dateline, fmtMinutes, openState } from '../lib/format';
 import { fmtDistance } from '../lib/geo';
 import { planGap } from '../lib/gaps';
 import { useI18n } from '../lib/i18n';
@@ -487,9 +487,9 @@ export default function SketchingScreen({ navigation, route }: {
   // The card below needs them separate anyway, and having them separate
   // is what retires the hand-chosen break: each cell sizes itself, so
   // there is no line left to overflow.
-  // `shortDateline`, not `dateline`: the cell has half a card and the
-  // long form ran to "Thứ Sáu, 25 thá…", clipped inside its own month.
-  const dateText = shortDateline(lang, fromISO(day) ?? new Date());
+  // One `dateline` for every day the app names (9 Oct 2026); it is the
+  // short form this cell asked for, so the cell still fits it.
+  const dateText = dateline(lang, fromISO(day) ?? new Date());
   const halfText = p.when === 'day' ? t('Day', 'Ban ngày', '昼') : t('Evening', 'Buổi tối', '夜');
 
   // `p.where` arrives already joined, and sometimes with a separator in

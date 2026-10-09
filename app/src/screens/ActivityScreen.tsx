@@ -30,6 +30,7 @@ import { useReport } from '../components/reportFlow';
 import { Avatar, Card, Empty, PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { APPLAUSE_DAYS } from '../lib/activityWindow';
+import { numericDate } from '../lib/format';
 import { useCollections } from '../lib/catalog';
 import { useCrew } from '../lib/crew';
 import {
@@ -50,7 +51,7 @@ import type { Nav } from '../nav';
 
 
 export default function ActivityScreen({ navigation }: { navigation: Nav }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { session } = useAuth();
   const me = session?.user?.id ?? null;
   // Edges and faces from the one shared copy — answered on Crew, gone
@@ -194,9 +195,13 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
     if (ago.unit === 'now') return t('just now', 'vừa xong', 'たった今');
     if (ago.unit === 'minutes') return t(`${ago.n}m ago`, `${ago.n} phút trước`, `${ago.n}分前`);
     if (ago.unit === 'hours') return t(`${ago.n}h ago`, `${ago.n} giờ trước`, `${ago.n}時間前`);
-    return ago.n === 1
-      ? t('yesterday', 'hôm qua', '昨日')
-      : t(`${ago.n} days ago`, `${ago.n} ngày trước`, `${ago.n}日前`);
+    if (ago.n === 1) return t('yesterday', 'hôm qua', '昨日');
+    // A week of "n days ago", then the date: past a week nobody counts
+    // back, they look at a calendar — Mail and Instagram turn the same
+    // corner. The date is `numericDate`, the check-in rows' form, so a
+    // day already past is written one way across the profile stack.
+    if (ago.n > RELATIVE_DAYS) return numericDate(lang, new Date(iso));
+    return t(`${ago.n} days ago`, `${ago.n} ngày trước`, `${ago.n}日前`);
   };
 
   // Only what EARLIER is built from. The crew edges feed REQUESTS, and
@@ -371,6 +376,8 @@ function slugFor(
 /** The feed line's line height, and the box that holds a 19pt glyph's
  *  whole line — see `mark`. */
 const LINE = 21;
+/** How many days a time is told as a distance before it is told as a date. */
+const RELATIVE_DAYS = 7;
 /** The face's side: the 44pt the slot it replaced had, so the text
  *  column stays where it was, and the width a row's leading avatar has
  *  everywhere else here (the request cards are 46, a card's own call). */

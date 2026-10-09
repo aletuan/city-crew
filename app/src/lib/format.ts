@@ -30,60 +30,36 @@ const MONTHS_EN = [
 ];
 
 /**
- * A date as an editorial dateline: "Thursday, Aug 7" / "Thứ Năm, 7
- * tháng 8" / "8月7日（木）".
+ * A day coming up, with its weekday: "Thứ 4, 07/10" / "Wed, 7 Oct" /
+ * "10/7（水）".
  *
- * Here rather than in a screen because a second screen wanted it, and a
- * second copy of the day names is how the app ends up saying "Thứ Bảy" in
- * one place and "T7" in another. `now` is a parameter for the same reason
- * everything else in this file takes one: a function that reads the clock
- * itself cannot be tested.
+ * ── one form, everywhere a day is named (9 Oct 2026) ──
  *
- * ── why the weekday is spelled and the month is not ──
+ * There were two. `dateline` wrote "Thứ Tư, 7 T10" for the trip cards,
+ * the plan screens and the invitations; `shortDateline` wrote "Thứ 4,
+ * 07/10" for the planner's date cell, which had half a card's width.
+ * The same day changed its spelling between two steps of one flow —
+ * Ideas to Sketching — and the owner, reading both beside the check-in
+ * rows' "07/10", asked for one. The short form won on three counts:
+ * "07/10" is how a Vietnamese reader writes a date by hand where "T10"
+ * is a calendar's abbreviation to be decoded; "Thứ 4" is the weekday
+ * as it is spoken; and it is the form that already fit the narrowest
+ * cell, so nothing that fit before stops fitting. The widest line in
+ * any language is "Thứ 4, 30/12" at 12, which the test holds.
  *
- * Both were spelled once, and on Explore's cover the pill that carries
- * this line — uppercase, letterspaced, with the weather hanging off its
- * end — ran to roughly the width left beside the search disc on a small
- * phone. Something had to give, and the two halves are not worth the
- * same.
- *
- * The weekday is the only token here the reader does not already have.
- * The clock at the top of their own screen says the date; nothing says
- * it is a Saturday, and that is the half that changes which places are
- * open and what kind of day it is to plan. The month is the half nobody
- * needs telling. So the weekday keeps its whole name and the month goes
- * to three letters.
- *
- * Japanese is left alone: it already writes the month as a numeral, so
- * there was never anything to clip.
- *
- * ── Vietnamese: "T10", not "tháng 10" (7 Oct 2026) ──
- *
- * Vietnamese spelled its month for a while, and it was the one branch
- * that did. On the planning screen's date row the line sits beside the
- * Ban ngày / Buổi tối control, which is itself wider than Day / Evening,
- * so the language lost room from both sides: "Thứ Tư, 7 tháng 10" showed
- * as "Thứ Tư, 7 thán…", a date clipped in the middle of its own month.
- * The month now goes to "T" and its number — "Thứ Tư, 7 T10" — the way
- * a Vietnamese calendar abbreviates it, and the exact parallel of the
- * English form: weekday whole, month short. No Vietnamese date now runs
- * longer than the widest English one ("Chủ Nhật, 28 T12" is 16 to
- * "Wednesday, Dec 30"'s 17), which the test holds, so a row that fits
- * English fits Vietnamese.
- *
- * Rejected: "thg 10", the CLDR and iOS abbreviation. Three characters
- * longer, and with the wider control beside it the line was still at the
- * edge on a 320pt window. Rejected too: shortening the weekday instead.
- * "T" plus a number is ALSO how Vietnamese abbreviates a weekday (T2–T7),
- * so "T4" is both Thứ Tư and tháng 4; the month may wear the notation
- * only while the weekday keeps its whole name, and `DAYS_VI` is what
- * keeps it. `shortDateline` writes the weekday as "Thứ 4" for the same
- * reason.
+ * Sunday is "CN" in Vietnamese — the one weekday with no number, and
+ * "Chủ Nhật, 04/01" at 15 is three past the cell. English keeps a
+ * three-letter month because d/m is not read the same everywhere;
+ * Japanese writes month/day with the weekday in its brackets, the
+ * order the language reads in. `numericDate` below is this line with
+ * the weekday taken off, for a day already past.
  */
 export function dateline(lang: string, now: Date): string {
-  if (lang === 'vi') return `${DAYS_VI[now.getDay()]}, ${now.getDate()} T${now.getMonth() + 1}`;
-  if (lang === 'ja') return `${now.getMonth() + 1}月${now.getDate()}日（${DAYS_JA[now.getDay()]}）`;
-  return `${DAYS_EN[now.getDay()]}, ${MONTHS_EN[now.getMonth()]} ${now.getDate()}`;
+  const d = String(now.getDate()).padStart(2, '0');
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  if (lang === 'vi') return `${NUM_DAYS_VI[now.getDay()]}, ${d}/${m}`;
+  if (lang === 'ja') return `${now.getMonth() + 1}/${now.getDate()}（${DAYS_JA[now.getDay()]}）`;
+  return `${DAYS_EN[now.getDay()].slice(0, 3)}, ${now.getDate()} ${MONTHS_EN[now.getMonth()]}`;
 }
 
 /**
@@ -138,12 +114,12 @@ export function dayline(lang: string, now: Date): string {
 /**
  * The date with no weekday: `08/10`, `8 Oct`, `10/8`.
  *
- * `shortDateline` leads with the weekday because it names a day coming
- * up, and "Thứ 6" is how a plan is spoken of. A visit already made is
+ * `dateline` leads with the weekday because it names a day coming up,
+ * and "Thứ 6" is how a plan is spoken of. A visit already made is
  * placed by its date alone, the way a receipt is — and a list of thirty
  * check-ins wearing "Thứ 5," on every row said the weekday thirty times
- * for no reader. Same padding and order as `shortDateline`, so the two
- * agree where they both appear.
+ * for no reader. Same padding and order as `dateline`, so the two agree
+ * where they both appear.
  */
 export function numericDate(lang: string, now: Date): string {
   const d = String(now.getDate()).padStart(2, '0');
@@ -153,13 +129,6 @@ export function numericDate(lang: string, now: Date): string {
   return `${now.getDate()} ${MONTHS_EN[now.getMonth()]}`;
 }
 
-export function shortDateline(lang: string, now: Date): string {
-  const d = String(now.getDate()).padStart(2, '0');
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  if (lang === 'vi') return `${NUM_DAYS_VI[now.getDay()]}, ${d}/${m}`;
-  if (lang === 'ja') return `${now.getMonth() + 1}/${now.getDate()}（${DAYS_JA[now.getDay()]}）`;
-  return `${DAYS_EN[now.getDay()].slice(0, 3)}, ${now.getDate()} ${MONTHS_EN[now.getMonth()]}`;
-}
 
 /**
  * A count of minutes, spelled: "75 min" / "75 phút" / "75分".

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, dotWindow, fmtDuration, fmtMinutes, groupHours, numericDate, openFragment, openLabel, openState, sashLabel, shortDateline, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, dotWindow, fmtDuration, fmtMinutes, groupHours, numericDate, openFragment, openLabel, openState, sashLabel, shutLabel, splitHours } from './format';
 import { instantOn } from './clock';
 import { fmtDistance } from './geo';
 
@@ -472,79 +472,61 @@ describe('openState', () => {
 });
 
 describe('dateline', () => {
-  // A fixed instant, because a function that reads the clock itself
-  // cannot be tested — which is why `now` is a parameter.
-  const sat = new Date(2026, 7, 15); // Saturday, 15 August 2026
+  // A Friday, so the weekday is worth reading and the month has two
+  // digits; and a Sunday in January, where padding and CN both show.
+  const fri = new Date(2026, 8, 25);
+  const jan = new Date(2026, 0, 4);
 
-  // The weekday whole, the month clipped — the asymmetry is the point,
-  // so it is asserted rather than left to look like a typo.
-  it('spells the weekday out in English and clips the month', () => {
-    expect(dateline('en', sat)).toBe('Saturday, Aug 15');
+  // "Thứ 6", not "T6": the letter alone is timetable shorthand a reader
+  // has to expand before it means a day. And "25/09", not "25 T9": the
+  // way a date is written by hand, not a calendar's abbreviation.
+  it('numbers the weekday and the month in Vietnamese', () => {
+    expect(dateline('vi', fri)).toBe('Thứ 6, 25/09');
+    expect(dateline('vi', new Date(2026, 8, 21))).toBe('Thứ 2, 21/09');
+    expect(dateline('vi', new Date(2026, 9, 7))).toBe('Thứ 4, 07/10');
   });
 
-  // May, June and July are already short enough to spell. They are
-  // clipped anyway: a list of days where one month is whole and the next
-  // is abbreviated reads as a bug, not a style.
-  it('clips even the months that would have fit', () => {
-    expect(dateline('en', new Date(2026, 4, 1))).toBe('Friday, May 1');
-    expect(dateline('en', new Date(2026, 5, 1))).toBe('Monday, Jun 1');
-    expect(dateline('en', new Date(2026, 6, 1))).toBe('Wednesday, Jul 1');
+  // Sunday is the one day the pattern cannot take: it has no number in
+  // this scheme, and spelling it runs past what the cell holds.
+  it('leaves Sunday as CN, which is the only form that fits', () => {
+    expect(dateline('vi', jan)).toBe('CN, 04/01');
+    expect('Chủ Nhật, 04/01'.length).toBeGreaterThan(13);
   });
 
-  // The Vietnamese parallel of the English form: the weekday whole, the
-  // month as "T" and its number — "Thứ Bảy, 15 T8", the way a Vietnamese
-  // calendar abbreviates it. "15 tháng 8" was the one branch that spelled
-  // the month, and on the planning screen's date row, beside Ban
-  // ngày/Buổi tối, "Thứ Tư, 7 tháng 10" ran to "Thứ Tư, 7 thán…" (owner's
-  // screenshot, 7 Oct 2026).
-  it('uses the Vietnamese day names and abbreviates the month to T-number', () => {
-    expect(dateline('vi', sat)).toBe('Thứ Bảy, 15 T8');
-    expect(dateline('vi', new Date(2026, 9, 7))).toBe('Thứ Tư, 7 T10');
+  it('keeps a three-letter month in English, because d/m is not read the same everywhere', () => {
+    expect(dateline('en', fri)).toBe('Fri, 25 Sep');
+    expect(dateline('en', jan)).toBe('Sun, 4 Jan');
   });
 
-  // "T" and a number is also how Vietnamese abbreviates a weekday (T2–T7),
-  // so "T4" is both Thứ Tư and tháng 4. The form is unambiguous only while
-  // the weekday stays spelled; a dateline that read "T4, 7 T4" would be two
-  // different facts in one notation. Asserted on the month where the
-  // collision is worst.
-  it('never abbreviates the Vietnamese weekday, so T-number can only mean the month', () => {
-    const wedInApril = new Date(2026, 3, 1); // Wednesday, 1 April 2026
-    expect(dateline('vi', wedInApril)).toBe('Thứ Tư, 1 T4');
-    for (let d = 0; d < 7; d++) {
-      const line = dateline('vi', new Date(2026, 3, 1 + d));
-      expect(line).toMatch(/^(Chủ Nhật|Thứ (Hai|Ba|Tư|Năm|Sáu|Bảy)), /);
-    }
-  });
-
-  // The width argument, held as a fact: no Vietnamese line is longer than
-  // the longest English one, so a row that fits every English date fits
-  // every Vietnamese date. Not date-for-date — "Chủ Nhật, 4 T1" beats
-  // "Sunday, Jan 4" by one, because Chủ Nhật is two letters longer than
-  // Sunday — but the row is sized for its widest day, and that day is
-  // "Wednesday, Dec 30", at 17.
-  it('never runs longer in Vietnamese than the widest English line', () => {
-    const dates: Date[] = [];
-    for (let m = 0; m < 12; m++) for (let d = 1; d <= 31; d++) dates.push(new Date(2026, m, d));
-    const widestEn = Math.max(...dates.map((date) => dateline('en', date).length));
-    expect(widestEn).toBe(17);
-    for (const date of dates) expect(dateline('vi', date).length).toBeLessThanOrEqual(widestEn);
-  });
-
-  it('puts the Japanese weekday in its brackets', () => {
-    expect(dateline('ja', sat)).toBe('8月15日（土）');
+  it('writes the Japanese form month first, weekday in its brackets', () => {
+    expect(dateline('ja', fri)).toBe('9/25（金）');
+    expect(dateline('ja', jan)).toBe('1/4（日）');
   });
 
   // Sunday is index 0 in both tables, and getting that wrong shifts every
   // day of the week by one — a bug that looks like a translation problem.
   it('lines Sunday up with index zero', () => {
     const sun = new Date(2026, 7, 16);
-    expect(dateline('en', sun)).toBe('Sunday, Aug 16');
-    expect(dateline('vi', sun)).toBe('Chủ Nhật, 16 T8');
-    expect(dateline('ja', sun)).toBe('8月16日（日）');
+    expect(dateline('en', sun)).toBe('Sun, 16 Aug');
+    expect(dateline('vi', sun)).toBe('CN, 16/08');
+    expect(dateline('ja', sun)).toBe('8/16（日）');
+  });
+
+  // The width argument, held as a fact: the one form has to fit the
+  // narrowest cell that ever wanted a date — the planner's, at half a
+  // card — in every language and on every day of the year.
+  it('never runs past twelve characters, in any language, on any day', () => {
+    const dates: Date[] = [];
+    for (let m = 0; m < 12; m++) for (let d = 1; d <= 31; d++) dates.push(new Date(2026, m, d));
+    for (const lang of ['en', 'vi', 'ja']) {
+      const widest = Math.max(...dates.map((date) => dateline(lang, date).length));
+      expect(widest).toBeLessThanOrEqual(12);
+    }
+    expect(Math.max(...dates.map((date) => dateline('vi', date).length))).toBe(12);
   });
 
   it('falls back to English for a language it does not know', () => {
-    expect(dateline('fr', sat)).toBe('Saturday, Aug 15');
+    expect(dateline('fr', fri)).toBe('Fri, 25 Sep');
   });
 });
 
@@ -761,52 +743,6 @@ describe('sashLabel', () => {
   });
 });
 
-describe('shortDateline', () => {
-  // A Friday, so the weekday is worth reading and the month has two
-  // digits — the shape the facts card was clipping.
-  const fri = new Date(2026, 8, 25);
-  // A single-digit day and month, which is where padding shows.
-  const jan = new Date(2026, 0, 4);
-
-  // "Thứ 6", not "T6": the letter alone is timetable shorthand a reader
-  // has to expand before it means a day.
-  it('numbers the month in Vietnamese and names the weekday', () => {
-    expect(shortDateline('vi', fri)).toBe('Thứ 6, 25/09');
-    expect(shortDateline('vi', new Date(2026, 8, 21))).toBe('Thứ 2, 21/09');
-  });
-
-  // Sunday is the one day the pattern cannot take: it has no number in
-  // this scheme, and spelling it runs past what the cell holds.
-  it('leaves Sunday as CN, which is the only form that fits', () => {
-    expect(shortDateline('vi', jan)).toBe('CN, 04/01');
-    expect('Chủ Nhật, 04/01'.length).toBeGreaterThan(13);
-  });
-
-  it('keeps a three-letter month in English, because d/m is not read the same everywhere', () => {
-    expect(shortDateline('en', fri)).toBe('Fri, 25 Sep');
-    expect(shortDateline('en', jan)).toBe('Sun, 4 Jan');
-  });
-
-  it('writes the Japanese form the way the long one does', () => {
-    expect(shortDateline('ja', fri)).toBe('9/25（金）');
-  });
-
-  // The point of it: short enough for a cell with half a card's width,
-  // where `dateline` is not.
-  it('is short enough for the cell that wanted it', () => {
-    expect(shortDateline('vi', fri).length).toBeLessThan(dateline('vi', fri).length);
-    expect(shortDateline('vi', fri).length).toBeLessThanOrEqual(13);
-    // And the long form it replaces does not.
-    expect(dateline('vi', fri).length).toBeGreaterThan(13);
-    expect(shortDateline('en', fri).length).toBeLessThanOrEqual(13);
-  });
-
-  // An unknown language falls to English, the way every other helper in
-  // this file does.
-  it('falls back to English for a language it does not know', () => {
-    expect(shortDateline('fr', fri)).toBe('Fri, 25 Sep');
-  });
-});
 
 // What VoiceOver calls a control that opens a place. It was typed out in
 // three languages at every site that had one; one function, so the verb
