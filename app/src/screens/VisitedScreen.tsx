@@ -39,8 +39,7 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 're
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
-import { Card, Empty, PressableScale, RoundIconButton, Screen, useTabBarClearance } from '../components/ui';
-import FilterSheet, { type FilterSection, type FilterValues } from '../components/FilterSheet';
+import { Card, Chip, Empty, PressableScale, Screen, useTabBarClearance } from '../components/ui';
 import SearchField from '../components/SearchField';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
 import {
@@ -73,46 +72,44 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const [menuFor, setMenuFor] = useState<Checkin | null>(null);
   const clearance = useTabBarClearance();
 
-  // Two ways to narrow the list, behind two doors in the header as
-  // Explore has them: the search box, and a sheet with a section per
-  // question — the city and the kind of place. The sheet replaced two
-  // rows of chips that took a hundred points of header for a list of
-  // forty rows; see `FilterSheet` for the argument. Each section is
-  // offered only when there is a choice to make — one city is a fact,
-  // not a filter — and the door itself goes when neither has one.
-  const [searching, setSearching] = useState(false);
+  // Two ways to narrow the list, laid out as the Search screen lays out
+  // its own: the box first, always there, and a wrap of chips under it.
+  // This is the third drawing. Two scrolling rows of chips with an "All"
+  // each (#827) were too much header; a search door and a filter sheet
+  // (#828) put the chips a tap away, and on the phone the owner wanted
+  // them back in sight with the box, not behind a door — the Search
+  // screen's shape, which a reader already knows. So: the box without a
+  // toggle, and the chips wrapping as "Duyệt theo" wraps, cities first
+  // and then kinds, each wearing what it wears on Explore.
+  //
+  // One city and one kind at a time, and a chosen chip tapped again lets
+  // go — that is the "All" chip's job done by the chip itself, which
+  // saves a chip per question and is what a highlighted chip invites.
+  // Multi-select is not here on purpose: on one's own check-ins "Hà Nội
+  // or Sài Gòn" is two taps either way, and the union is a second kind
+  // of control before anyone has asked for it. A question is offered
+  // only when there is a choice to make — one city is a fact, not a
+  // filter — so a single-city reader sees only the kinds, and a reader
+  // with one visit sees only the box.
   const [query, setQuery] = useState('');
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [applied, setApplied] = useState<FilterValues>({ city: null, kind: null });
+  const [city, setCity] = useState<string | null>(null);
+  const [kind, setKind] = useState<string | null>(null);
   const cityChoices = useMemo(() => visitCities(visits.data), [visits.data]);
   const kindChoices = useMemo(() => visitCategories(visits.data), [visits.data]);
   const cityName = (id: string) => {
     const c = cities.find((x) => x.id === id);
     return c ? t(c.short_en, c.short_vi, c.short_ja ?? c.short_en) : id;
   };
-  const sections: FilterSection[] = [
-    ...(cityChoices.length > 1 ? [{
-      key: 'city',
-      title: t('City', 'Thành phố', '都市'),
-      allLabel: t('Every city', 'Mọi thành phố', 'すべての都市'),
-      options: cityChoices.map((id) => ({ id, label: cityName(id) })),
-    }] : []),
-    ...(kindChoices.length > 1 ? [{
-      key: 'kind',
-      title: t('Kind of place', 'Thể loại', '種類'),
-      allLabel: t('Every kind', 'Mọi loại', 'すべての種類'),
-      options: kindChoices.map((k) => ({ id: k, label: categoryLabel(k, t), icon: CATEGORIES[k]?.icon, iconColor: CATEGORIES[k]?.color })),
-    }] : []),
-  ];
-  const narrowed = (values: FilterValues, q: string) => filterVisits(visits.data, values.city ?? null, values.kind ?? null)
-    .filter((v) => textMatches([v.place ? t(v.place.name_en, v.place.name_vi, v.place.name_ja ?? v.place.name_en) : '', v.city_id ? cityName(v.city_id) : ''], q));
-  const shown = useMemo(() => narrowed(applied, searching ? query : ''),
-    // `narrowed` closes over the same four things.
+  // The words typed match the place's name or its city, through the same
+  // fold the catalog search uses, and they narrow what the chips leave.
+  const shown = useMemo(() => filterVisits(visits.data, city, kind)
+    .filter((v) => textMatches([v.place ? t(v.place.name_en, v.place.name_vi, v.place.name_ja ?? v.place.name_en) : '', v.city_id ? cityName(v.city_id) : ''], query)),
+    // `cityName` closes over `cities` and `t`, which are listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [visits.data, applied, searching, query, cities, t]);
-  const sections_ = useMemo(() => visitSections(shown), [shown]);
+    [visits.data, city, kind, query, cities, t]);
+  const sections = useMemo(() => visitSections(shown), [shown]);
   const summary = visitSummary(shown);
-  const filtered = !!(applied.city || applied.kind);
+  const filtered = !!(city || kind);
 
   const nameOf = (v: Checkin) => (v.place
     ? t(v.place.name_en, v.place.name_vi, v.place.name_ja ?? v.place.name_en)
@@ -148,12 +145,11 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   // The one quiet line under the title. Unfiltered it is the whole: places
   // and cities. Narrowed, it names what the reader chose — "12 places ·
   // Hà Nội · Cà phê" — because that is the answer to the question the
-  // tap asked, and the sheet is closed by the time they read it. A
-  // search for a city's name counts as choosing it.
+  // tap asked. A search for a city's name counts as choosing it.
   const placesWord = t(`${summary.places} ${summary.places === 1 ? 'place' : 'places'}`, `${summary.places} địa điểm`, `${summary.places}か所`);
   const chosen = [
-    applied.city ? cityName(applied.city) : (summary.cities === 1 && (filtered || (searching && query)) ? cityName(shown[0]?.city_id ?? '') : null),
-    applied.kind ? categoryLabel(applied.kind, t) : null,
+    city ? cityName(city) : (summary.cities === 1 && (filtered || query) ? cityName(shown[0]?.city_id ?? '') : null),
+    kind ? categoryLabel(kind, t) : null,
   ].filter(Boolean);
   const summaryLine = chosen.length > 0
     ? [placesWord, ...chosen].join(' · ')
@@ -168,42 +164,41 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
       title={t('Check-ins', 'Địa điểm check-in', 'チェックインした場所')}
       subtitle={visits.loaded && visits.data.length > 0 ? summaryLine : undefined}
       onBack={() => navigation.goBack()}
-      right={(
-        <View style={s.doors}>
-          <RoundIconButton
-            icon={searching ? 'close' : 'search'}
-            label={searching ? t('Close search', 'Đóng tìm kiếm', '検索を閉じる') : t('Search visits', 'Tìm lần ghé', '訪問を検索')}
-            onPress={() => { if (searching) { setSearching(false); setQuery(''); } else setSearching(true); }}
-          />
-          {sections.length > 0 && (
-            <View>
-              <RoundIconButton icon="options-outline" label={t('Filter', 'Bộ lọc', '絞り込み')} onPress={() => setFiltersOpen(true)} />
-              {/* The dot: the sheet is closed by the time the list is
-                  read, so the door has to say something is applied — the
-                  same mark the Trips tab wears for a day that is today. */}
-              {filtered ? <View style={s.dot} testID="filter-dot" /> : null}
-            </View>
-          )}
-        </View>
-      )}
     >
       <ScrollView
         contentContainerStyle={{ padding: space.page, paddingBottom: clearance, gap: space.cardGap }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {searching ? (
-          <View style={s.searchRow}>
-            <SearchField
-              value={query}
-              onChangeText={setQuery}
-              autoFocus
-              testID={{ input: 'visits-input', clear: 'visits-clear' }}
-              placeholder={t('Place or city', 'Tên quán hoặc thành phố', '店名または都市')}
-            />
+        {/* No autoFocus: the box is furniture here, not the reason the
+            screen opened, and a keyboard over the list on arrival would
+            hide the list the reader came for. */}
+        <View style={s.searchRow}>
+          <SearchField
+            value={query}
+            onChangeText={setQuery}
+            testID={{ input: 'visits-input', clear: 'visits-clear' }}
+            placeholder={t('Place or city', 'Tên quán hoặc thành phố', '店名または都市')}
+          />
+        </View>
+        {(cityChoices.length > 1 || kindChoices.length > 1) && (
+          <View style={s.chipWrap}>
+            {cityChoices.length > 1 && cityChoices.map((id) => (
+              <Chip key={`c-${id}`} label={cityName(id)} active={city === id} onPress={() => setCity(city === id ? null : id)} />
+            ))}
+            {kindChoices.length > 1 && kindChoices.map((k) => (
+              <Chip
+                key={`k-${k}`}
+                label={categoryLabel(k, t)}
+                icon={CATEGORIES[k]?.icon}
+                iconColor={CATEGORIES[k]?.color}
+                active={kind === k}
+                onPress={() => setKind(kind === k ? null : k)}
+              />
+            ))}
           </View>
-        ) : null}
-      {!visits.loaded ? (
+        )}
+        {!visits.loaded ? (
           <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
         ) : visits.data.length === 0 ? (
           <Empty text={t(
@@ -213,14 +208,14 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
           )} />
         ) : (
           <>
-              {(filtered || query) && sections_.length === 0 && (
+            {(filtered || query) && sections.length === 0 && (
               <Empty text={t(
                 'No visits match both choices.',
                 'Không có lần ghé nào khớp cả hai lựa chọn.',
                 '両方の条件に合う訪問はありません。',
               )} />
             )}
-            {sections_.map((sec) => (
+            {sections.map((sec) => (
               <View key={sec.key} style={s.month}>
                 <Text style={s.eyebrow} testID="visit-month">{monthTitle(lang, sec.year, sec.month)}</Text>
                 <Card>
@@ -270,17 +265,6 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
 
       </ScrollView>
 
-      <FilterSheet
-        visible={filtersOpen}
-        title={t('Filter', 'Bộ lọc', '絞り込み')}
-        sections={sections}
-        applied={applied}
-        countFor={(values) => visitSummary(narrowed(values, searching ? query : '')).places}
-        noun={(n) => t(n === 1 ? 'place' : 'places', 'địa điểm', 'か所')}
-        onClose={() => setFiltersOpen(false)}
-        onApply={(values) => { setApplied(values); setFiltersOpen(false); }}
-      />
-
       <ActionSheet
         visible={menuFor !== null}
         onClose={() => setMenuFor(null)}
@@ -297,10 +281,11 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
 }
 
 const s = StyleSheet.create({
-  doors: { flexDirection: 'row', gap: 8 },
-  // Profile's `reqDot`, to the figure, on the filter door's corner.
-  dot: { position: 'absolute', top: 6, right: 6, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent },
   searchRow: { flexDirection: 'row' },
+  // The Search screen's `chipWrap`: the shared Chip carries its own
+  // right margin, so the wrap only owes the rhythm between lines. The
+  // page padding is the ScrollView's here, so none of its own.
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, marginTop: -2 },
   month: { gap: 8 },
   eyebrow: {
     color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
