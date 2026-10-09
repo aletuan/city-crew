@@ -26,6 +26,13 @@ export const RECENTS_KEPT = 8;
  *  re-running in any city, and a per-city list is mostly empty states. */
 export const RECENTS_KEY = 'citycrew.recentSearches';
 
+/** The check-ins screen's own memory. A separate key, not the catalog's:
+ *  what a reader looks for among their own visits ("cộng", "the pizza
+ *  place in Saigon") is not what they ask the catalog ("bánh mì"), and a
+ *  shared list would offer each box the other's shortcuts. Same rules,
+ *  same parse and remember — only the drawer differs. */
+export const VISIT_RECENTS_KEY = 'citycrew.recentVisitSearches';
+
 /**
  * Whatever storage handed back, as a list that is safe to render.
  *
