@@ -32,7 +32,12 @@ export type Checkin = {
    *  Visited screen can name and picture a place from a city the catalog
    *  is not holding. Null when the place is gone; absent on a row the
    *  cache kept before the columns rode along. */
-  place?: { name_en: string; name_vi: string; name_ja: string | null; cover: string | null } | null;
+  place?: {
+    name_en: string; name_vi: string; name_ja: string | null; cover: string | null;
+    /** The place's kinds (`lib/categories`), for the Visited screen's
+     *  second row of chips. Empty when the row has none. */
+    categories: string[];
+  } | null;
 };
 
 /**
@@ -127,7 +132,38 @@ export function monthTitle(lang: string, year: number, month: number): string {
   return `${MONTHS_EN[month - 1]} ${year}`;
 }
 
-/** How many visits, and at how many distinct places. */
-export function visitSummary(rows: readonly Checkin[]): { visits: number; places: number } {
-  return { visits: rows.length, places: new Set(rows.map((r) => r.place_slug)).size };
+/** How many visits, at how many distinct places, in how many cities.
+ *  A visit whose place is gone names no city and counts as none. */
+export function visitSummary(rows: readonly Checkin[]): { visits: number; places: number; cities: number } {
+  return {
+    visits: rows.length,
+    places: new Set(rows.map((r) => r.place_slug)).size,
+    cities: new Set(rows.map((r) => r.city_id).filter((c): c is string => !!c)).size,
+  };
+}
+
+/** Keys by how often they appear, most first, ties by first appearance
+ *  — the order a chip row reads best in: the choice most likely wanted
+ *  nearest the thumb. */
+function byFrequency(keys: readonly string[]): string[] {
+  const count = new Map<string, number>();
+  for (const k of keys) count.set(k, (count.get(k) ?? 0) + 1);
+  return [...count.keys()].sort((a, b) => count.get(b)! - count.get(a)!);
+}
+
+/** The cities visited, most visited first. */
+export function visitCities(rows: readonly Checkin[]): string[] {
+  return byFrequency(rows.map((r) => r.city_id).filter((c): c is string => !!c));
+}
+
+/** The kinds of place visited, most visited first, across every place. */
+export function visitCategories(rows: readonly Checkin[]): string[] {
+  return byFrequency(rows.flatMap((r) => r.place?.categories ?? []));
+}
+
+/** The visits in one city, of one kind, or both; the same list back
+ *  when nothing is chosen, so a caller can test identity. */
+export function filterVisits(rows: readonly Checkin[], city: string | null, category: string | null): readonly Checkin[] {
+  if (!city && !category) return rows;
+  return rows.filter((r) => (!city || r.city_id === city) && (!category || (r.place?.categories ?? []).includes(category)));
 }

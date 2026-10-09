@@ -3,7 +3,8 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  canRepeat, type Checkin, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN, visitSections, visitsInDay, visitSummary,
+  canRepeat, type Checkin, filterVisits, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN,
+  visitCategories, visitCities, visitSections, visitsInDay, visitSummary,
 } from './checkin';
 
 const row = (id: string, slug: string, at: string): Checkin => ({ id, place_slug: slug, city_id: 'hanoi', at });
@@ -108,10 +109,47 @@ describe('monthTitle', () => {
   });
 });
 
+const place = (cats: string[]) => ({ name_en: 'x', name_vi: 'x', name_ja: null, cover: null, categories: cats });
+const inCity = (id: string, slug: string, city: string | null, cats: string[] = []): Checkin =>
+  ({ id, place_slug: slug, city_id: city, at: '2026-10-01T05:00:00Z', place: place(cats) });
+
 describe('visitSummary', () => {
-  it('counts visits, and the distinct places among them', () => {
-    const rows = [row('a', 'cong', '2026-10-01T05:00:00Z'), row('b', 'cong', '2026-10-02T05:00:00Z'), row('c', 'pizza', '2026-10-03T05:00:00Z')];
-    expect(visitSummary(rows)).toEqual({ visits: 3, places: 2 });
-    expect(visitSummary([])).toEqual({ visits: 0, places: 0 });
+  it('counts visits, the distinct places among them, and the distinct cities', () => {
+    const rows = [
+      inCity('a', 'cong', 'hanoi'), inCity('b', 'cong', 'hanoi'), inCity('c', 'pizza', 'saigon'),
+      // A visit whose place is gone names no city, and counts as no city.
+      inCity('d', '', null),
+    ];
+    expect(visitSummary(rows)).toEqual({ visits: 4, places: 3, cities: 2 });
+    expect(visitSummary([])).toEqual({ visits: 0, places: 0, cities: 0 });
+  });
+});
+
+describe('the facets', () => {
+  const rows = [
+    inCity('a', 'cong', 'hanoi', ['cafes']),
+    inCity('b', 'pizza', 'melbourne', ['eats', 'nightlife']),
+    inCity('c', 'bun', 'melbourne', ['eats']),
+    inCity('d', 'lane', 'melbourne', []),
+    inCity('e', '', null),
+    // A row the cache kept before places rode along: no `place` at all.
+    row('f', 'old', '2026-09-01T05:00:00Z'),
+  ];
+  it('lists cities by how often they were visited, then by first appearance', () => {
+    expect(visitCities(rows)).toEqual(['melbourne', 'hanoi']);
+    // `row()` files everything under Hanoi; the cache-era row counts there too.
+    expect(visitCities([])).toEqual([]);
+  });
+  it('lists categories the same way, across every place visited', () => {
+    expect(visitCategories(rows)).toEqual(['eats', 'cafes', 'nightlife']);
+  });
+  it('filters by city, by category, and by both at once', () => {
+    expect(filterVisits(rows, null, null)).toBe(rows);
+    expect(filterVisits(rows, 'melbourne', null).map((r) => r.id)).toEqual(['b', 'c', 'd']);
+    expect(filterVisits(rows, null, 'eats').map((r) => r.id)).toEqual(['b', 'c']);
+    expect(filterVisits(rows, 'melbourne', 'nightlife').map((r) => r.id)).toEqual(['b']);
+    expect(filterVisits(rows, 'hanoi', 'eats')).toEqual([]);
+    // The cache-era row has no kinds, so a kind never finds it; a city does.
+    expect(filterVisits(rows, 'hanoi', null).map((r) => r.id)).toEqual(['a', 'f']);
   });
 });
