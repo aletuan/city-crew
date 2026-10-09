@@ -65,11 +65,10 @@ cuộn lên `profile-sign-in` không có `centerElement`, nên đôi khi dừng 
 nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái (iOS hiểu là
 "cuộn về đầu"). Thêm `centerElement: true` rồi `04` xanh bốn lượt liền.
 
-**Ngân sách: 13 phút** (trước là 12). Với `10-check-in` (khoảng 1 phút) suite
-vượt 12 phút, và 12 được nâng lên 13 có chủ ý thay vì cắt một flow: check-in
-là tính năng mới nhất (#812–#835) và chưa có gì kiểm nó trên máy thật. Flow
-tiếp theo phải nhường chỗ — `04-sign-in` (2 m) và `11` (2 m 19 s) là hai chỗ
-đáng rút trước.
+**Ngân sách: dưới 20 phút** cho cả suite (quyết định của chủ dự án,
+09/10). Thời gian không phải ràng buộc chặt: một flow đáng giá vẫn vào dù
+làm suite dài thêm một hai phút. 11 flow hiện chạy 12 m 11 s, còn khoảng
+7 phút cho các flow tiếp theo.
 
 `10-check-in` được thử cả nhánh dọn dẹp: một flow tạm check-in rồi dừng, `10`
 dọn lượt ghé đó rồi chạy hết (1 m 5 s); lượt sau từ trạng thái sạch (51 s);
@@ -131,7 +130,7 @@ Xanh: đã có flow. Vàng: QA tay. Cam: chưa có.
 
 Nguyên tắc chọn flow (từ GUIDELINES): chỉ thêm đường mà **hỏng thì người dùng
 không dùng được app**, và **vitest không phủ được**. Mỗi flow tốn ~1 phút; ngân
-sách toàn suite ≤ 13 phút (xem mục 2).
+sách toàn suite < 20 phút (xem mục 2).
 
 ### Đợt 1 — những gì 1.0.4 vừa đổi (ưu tiên cao)
 
