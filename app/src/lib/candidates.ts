@@ -167,10 +167,16 @@ export function useCandidates(): Candidates {
    * wear, and a batch that stopped on the first refusal would be a batch
    * that punishes selecting five results because one of them was already
    * here.
+   *
+   * The city comes in as an argument rather than off the closure. It used
+   * to be read here, behind an `if (!city) return 'failed'` that only
+   * `addMany` could reach — after making the same check itself — so the
+   * branch existed for the type checker and no reader could take it. It
+   * was the one branch in this file no test could cover, and it kept the
+   * file outside the 100% gate.
    */
-  const suggestOne = useCallback(async (c: Candidate): Promise<ItemState> => {
-    if (!city) return 'failed';
-    const out = await suggestPlace(c.place_id, city.id).catch(() => null);
+  const suggestOne = useCallback(async (c: Candidate, cityId: string): Promise<ItemState> => {
+    const out = await suggestPlace(c.place_id, cityId).catch(() => null);
     if (!out) return 'failed';
     if (out.ok) {
       // Marked here rather than re-searched: the row changes state in
@@ -218,9 +224,7 @@ export function useCandidates(): Candidates {
     }
     Alert.alert(t('Could not add it', 'Không thêm được', '追加できませんでした'), out.message);
     return 'failed';
-  // `city.id` is the stable key — see the note above `search`.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city?.id, t]);
+  }, [t]);
 
   /**
    * One at a time, on purpose.
@@ -253,7 +257,7 @@ export function useCandidates(): Candidates {
         continue;
       }
       mark(c.place_id, 'running');
-      const st = await suggestOne(c);
+      const st = await suggestOne(c, city.id);
       mark(c.place_id, st);
       tally[st === 'done' ? 'done'
         : st === 'skipped' ? 'skipped'
