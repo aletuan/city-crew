@@ -162,6 +162,11 @@ describe('the questions', () => {
 });
 
 describe('the button', () => {
+  it('wears the planner\'s paw — the mark the orb and the rail carry on', () => {
+    renderScreen();
+    expect(cta().querySelector('[data-icon="paw"]')).toBeTruthy();
+  });
+
   it('is dimmed with its reason until both company and a category are chosen', () => {
     renderScreen();
     // Said to VoiceOver as well as shown: dimmed until the draft is whole.
