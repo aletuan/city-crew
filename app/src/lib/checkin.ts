@@ -20,6 +20,8 @@
 // its owner, and deletable one at a time. Those are the properties of
 // user content, like a collection, not of a signal. Hence `checkins`.
 
+import { fold } from './search';
+
 /** One visit, as the screens hold it: the row's id (to undo it), the
  *  place by slug (the key every screen uses), where, and when. */
 export type Checkin = {
@@ -166,4 +168,18 @@ export function visitCategories(rows: readonly Checkin[]): string[] {
 export function filterVisits(rows: readonly Checkin[], city: string | null, category: string | null): readonly Checkin[] {
   if (!city && !category) return rows;
   return rows.filter((r) => (!city || r.city_id === city) && (!category || (r.place?.categories ?? []).includes(category)));
+}
+
+/**
+ * Whether every word typed appears somewhere in the haystack — tone
+ * marks and case aside, through `lib/search`'s own `fold`, so "cong"
+ * finds "Cộng" the way the Search screen's box does. A blank query
+ * matches everything, which is what an open box with nothing in it
+ * should mean.
+ */
+export function textMatches(hay: readonly string[], query: string): boolean {
+  const words = fold(query).split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const text = hay.map((h) => fold(h)).join(' ');
+  return words.every((w) => text.includes(w));
 }
