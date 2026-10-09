@@ -6,9 +6,11 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '../uitest/render';
 import type { Nav } from '../nav';
 import type { Checkin } from '../lib/checkin';
+import { VISIT_RECENTS_KEY } from '../lib/recents';
 
 const data = vi.hoisted(() => ({
   visits: { data: [] as Checkin[], loading: false, loaded: true, error: null as string | null, loadedAt: 1, fromCache: false, reload: vi.fn() },
@@ -184,28 +186,57 @@ describe('VisitedScreen', () => {
     expect(new Set(boxes.map((b) => b.className)).size).toBe(1);
   });
 
-  // The search box, always there under the title, and a wrap of chips
-  // under it — the Search screen's own box and its own "browse" chips —
-  // one city and one kind at a time, a chosen chip tapped again letting
-  // go. The summary under the title answers whatever the two leave.
-  describe('search and chips', () => {
+  // The search box, always there under the title. Tapping into it opens
+  // a panel under it — what was searched here before, then the cities,
+  // then the kinds of place — and Cancel closes the panel with the
+  // narrowing let go. The summary under the title answers whatever is
+  // typed and chosen.
+  describe('search, suggestions and chips', () => {
     const many = () => [
       visit('a', 'cong', '2026-10-15T05:00:00Z', { city_id: 'hanoi', place: { ...visit('a', 'cong', '').place!, categories: ['cafes'] } }),
       visit('b', 'pizza', '2026-10-14T05:00:00Z', { city_id: 'saigon', place: { ...visit('b', 'pizza', '').place!, categories: ['eats'] } }),
       visit('c', 'bun', '2026-10-13T05:00:00Z', { city_id: 'saigon', place: { ...visit('c', 'bun', '').place!, categories: ['eats', 'cafes'] } }),
     ];
     const names = () => screen.getAllByTestId('visit-name').map((e) => e.textContent);
-    const chips = () => screen.getAllByRole('button').filter((b) => b.hasAttribute('aria-selected'));
+    const input = () => screen.getByTestId('visits-input') as HTMLInputElement;
+    const open = () => fireEvent.focus(input());
+    const type = (v: string) => fireEvent.change(input(), { target: { value: v } });
+    const chips = () => screen.queryAllByRole('button').filter((b) => b.hasAttribute('aria-selected'));
     const chip = (label: string) => chips().find((b) => b.textContent === label)!;
     const selected = () => chips().filter((b) => b.getAttribute('aria-selected') === 'true').map((b) => b.textContent);
 
-    it('finds by name and by city from a box that is always there, and clears back to everything', () => {
+    beforeEach(async () => {
+      await AsyncStorage.removeItem(VISIT_RECENTS_KEY);
+      vi.mocked(AsyncStorage.setItem).mockClear();
+    });
+
+    it('keeps the panel closed until the box is tapped, and Cancel closes it with everything let go', () => {
       data.visits.data = many();
       show();
-      expect(screen.queryByRole('button', { name: /search/i })).toBeNull();
-      fireEvent.change(screen.getByTestId('visits-input'), { target: { value: 'piz' } });
+      expect(chips()).toHaveLength(0);
+      expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+      open();
+      expect(chips()).toHaveLength(4);
+      expect(screen.getByText('City')).toBeTruthy();
+      expect(screen.getByText('Kind of place')).toBeTruthy();
+      fireEvent.click(chip('Saigon'));
+      type('bun');
+      expect(names()).toEqual(['bun en']);
+      expect(screen.getByText('1 place · Saigon')).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(chips()).toHaveLength(0);
+      expect(input().value).toBe('');
+      expect(names()).toHaveLength(3);
+      expect(screen.getByText('3 places · 2 cities')).toBeTruthy();
+    });
+
+    it('finds by name and by city, and clears back to everything', () => {
+      data.visits.data = many();
+      show();
+      open();
+      type('piz');
       expect(names()).toEqual(['pizza en']);
-      fireEvent.change(screen.getByTestId('visits-input'), { target: { value: 'saigon' } });
+      type('saigon');
       expect(names()).toEqual(['pizza en', 'bun en']);
       expect(screen.getByText('2 places · Saigon')).toBeTruthy();
       fireEvent.click(screen.getByTestId('visits-clear'));
@@ -213,9 +244,10 @@ describe('VisitedScreen', () => {
       expect(screen.getByText('3 places · 2 cities')).toBeTruthy();
     });
 
-    it('offers the cities and the kinds there are, most visited first, and only where there is a choice', () => {
+    it('offers the cities and the kinds there are, most visited first, each group only where there is a choice', () => {
       data.visits.data = many();
       show();
+      open();
       // Saigon twice to Hanoi's once; cafés and eats twice each, cafés seen first.
       expect(chips().map((b) => b.textContent)).toEqual(['Saigon', 'Hanoi', 'Cafés', 'Eats']);
       expect(document.querySelector('[data-icon="cafe-outline"]')).toBeTruthy();
@@ -223,16 +255,27 @@ describe('VisitedScreen', () => {
       cleanup();
       data.visits.data = many().map((v) => ({ ...v, city_id: 'hanoi' }));
       show();
+      open();
       expect(chips().map((b) => b.textContent)).toEqual(['Cafés', 'Eats']);
+      expect(screen.queryByText('City')).toBeNull();
       cleanup();
       data.visits.data = many().map((v) => ({ ...v, place: { ...v.place!, categories: ['cafes'] } }));
       show();
+      open();
       expect(chips().map((b) => b.textContent)).toEqual(['Saigon', 'Hanoi']);
+      expect(screen.queryByText('Kind of place')).toBeNull();
+      cleanup();
+      data.visits.data = [visit('a', 'cong', '2026-10-15T05:00:00Z')];
+      show();
+      open();
+      expect(chips()).toHaveLength(0);
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
     });
 
     it('narrows by city, by kind, and by both; a chosen chip tapped again lets go', () => {
       data.visits.data = many();
       show();
+      open();
       fireEvent.click(chip('Saigon'));
       expect(names()).toEqual(['pizza en', 'bun en']);
       expect(screen.getByText('2 places · Saigon')).toBeTruthy();
@@ -260,22 +303,57 @@ describe('VisitedScreen', () => {
     it('narrows the chips\' answer by the words typed, and says so when nothing is left', () => {
       data.visits.data = many();
       show();
-      fireEvent.change(screen.getByTestId('visits-input'), { target: { value: 'piz' } });
+      open();
+      type('piz');
       fireEvent.click(chip('Hanoi'));
       expect(screen.queryAllByTestId('visit-row')).toHaveLength(0);
       expect(screen.getByText(/No visits match/)).toBeTruthy();
       // The box and the chips stay, so the reader can take either back.
-      expect(screen.getByTestId('visits-input')).toBeTruthy();
       expect(chips()).toHaveLength(4);
       fireEvent.click(chip('Hanoi'));
       expect(names()).toEqual(['pizza en']);
     });
 
-    it('draws no chips when there is nothing to choose between, and still the box', () => {
-      data.visits.data = [visit('a', 'cong', '2026-10-15T05:00:00Z')];
+    it('suggests what was searched here before, narrowed by what is typed, and runs one on a tap', async () => {
+      await AsyncStorage.setItem(VISIT_RECENTS_KEY, JSON.stringify(['pizza', 'cong', 'x1', 'x2', 'x3', 'x4']));
+      data.visits.data = many();
       show();
-      expect(chips()).toHaveLength(0);
-      expect(screen.getByTestId('visits-input')).toBeTruthy();
+      expect(screen.queryByText('Suggestions')).toBeNull();
+      open();
+      expect(await screen.findByText('Suggestions')).toBeTruthy();
+      // Five at most, newest first, as the catalog's box shows them.
+      expect(screen.getByRole('button', { name: 'x3' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'x4' })).toBeNull();
+      type('pi');
+      expect(screen.getByRole('button', { name: 'pizza' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'cong' })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'pizza' }));
+      expect(input().value).toBe('pizza');
+      expect(names()).toEqual(['pizza en']);
+      // The word in the box is not suggested back to itself.
+      expect(screen.queryByRole('button', { name: 'pizza' })).toBeNull();
+      type('');
+      fireEvent.click(screen.getByRole('button', { name: 'Clear suggestions' }));
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(VISIT_RECENTS_KEY, '[]');
+      expect(screen.queryByText('Suggestions')).toBeNull();
+    });
+
+    it('remembers a search once a row is opened or the return key is pressed, never a keystroke', async () => {
+      await AsyncStorage.setItem(VISIT_RECENTS_KEY, JSON.stringify(['older']));
+      vi.mocked(AsyncStorage.setItem).mockClear();
+      data.visits.data = many();
+      const { raw } = show();
+      open();
+      await screen.findByText('Suggestions');
+      type('bu');
+      type('bun');
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByTestId('visit-row'));
+      expect(raw.navigate).toHaveBeenCalledWith('PlaceDetail', { slug: 'bun' });
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(VISIT_RECENTS_KEY, JSON.stringify(['bun', 'older']));
+      type('piz');
+      fireEvent.keyDown(input(), { key: 'Enter' });
+      expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(VISIT_RECENTS_KEY, JSON.stringify(['piz', 'bun', 'older']));
     });
   });
 

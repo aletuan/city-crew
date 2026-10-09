@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  parseRecents, RECENTS_KEPT, RECENTS_SHOWN, rememberSearch,
+  parseRecents, RECENTS_KEPT, RECENTS_KEY, RECENTS_SHOWN, rememberSearch, VISIT_RECENTS_KEY,
 } from './recents';
 
 describe('rememberSearch', () => {
@@ -58,6 +58,12 @@ describe('parseRecents', () => {
   it('caps an oversized stored list', () => {
     const big = Array.from({ length: RECENTS_KEPT + 5 }, (_, i) => `q${i}`);
     expect(parseRecents(JSON.stringify(big))).toHaveLength(RECENTS_KEPT);
+  });
+});
+
+describe('the two drawers', () => {
+  it('keeps the catalog box and the check-ins box from reading each other', () => {
+    expect(VISIT_RECENTS_KEY).not.toBe(RECENTS_KEY);
   });
 });
 

@@ -21,7 +21,7 @@ import { colors, radius } from '../theme';
 import { PressableScale } from './ui';
 
 export default function SearchField({
-  value, onChangeText, placeholder, inputRef, autoFocus, onSubmitEditing,
+  value, onChangeText, placeholder, inputRef, autoFocus, onSubmitEditing, onFocus,
   // Whole ids, not a prefix the ids are built from. `scripts/maestroIds.test.ts`
   // reads the smoke flows' ids back out of the source as literal strings on
   // the lines that set `testID`, and a `${prefix}-input` template has no
@@ -38,6 +38,7 @@ export default function SearchField({
   testID?: { input: string; clear: string };
   autoFocus?: boolean;
   onSubmitEditing?: TextInputProps['onSubmitEditing'];
+  onFocus?: TextInputProps['onFocus'];
 }) {
   return (
     <View style={s.field}>
@@ -55,6 +56,7 @@ export default function SearchField({
         returnKeyType="search"
         clearButtonMode="never"
         onSubmitEditing={onSubmitEditing}
+        onFocus={onFocus}
         testID={testID.input}
       />
       {value.length > 0 && (
