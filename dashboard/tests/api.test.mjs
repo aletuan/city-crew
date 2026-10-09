@@ -453,3 +453,395 @@ test('setLocalGuide surfaces a refusal rather than reporting success', async () 
   const { api } = await loadApi([{ data: null, error: { message: 'not an editor' } }]);
   await assert.rejects(() => api.setLocalGuide('u1', true), /not an editor/);
 });
+
+// ---- the reads with no branch of their own. Each is one query, so what a
+// test can pin is the query: the table, and the filter that decides what
+// the screen is allowed to see. An outcome-only assertion would pass with
+// the filter deleted, because the fake returns whatever it was handed.
+
+test('reports reads the queue through its function, and an empty answer is an empty list', async () => {
+  const { api, client } = await loadApi([{ data: null, error: null }]);
+  assert.deepEqual(await api.reports(), []);
+  assert.equal(client.calls[0].kind, 'rpc');
+  assert.equal(client.calls[0].fn, 'reports_queue');
+});
+
+test('moderateCollection names the list and which way the switch goes', async () => {
+  const { api, client } = await loadApi([{ data: null, error: null }]);
+  await api.moderateCollection('c1', false);
+  assert.equal(client.calls[0].fn, 'moderate_collection');
+  assert.deepEqual(client.calls[0].args, { target: 'c1', hide: false });
+});
+
+test('categoryTerms answers category → terms, and a null terms column is an empty list', async () => {
+  const { api } = await loadApi([{
+    data: [{ category: 'fun', terms: ['cinema'] }, { category: 'food', terms: null }],
+    error: null,
+  }]);
+  assert.deepEqual(await api.categoryTerms(), { fun: ['cinema'], food: [] });
+});
+
+test('cities come back in the editors\' own order', async () => {
+  const { api, client } = await loadApi([{ data: [{ id: 'hanoi' }], error: null }]);
+  assert.deepEqual(await api.cities(), [{ id: 'hanoi' }]);
+  assert.deepEqual(client.calls[0].chain.find(([m]) => m === 'order'), ['order', ['sort_order']]);
+});
+
+test('city returns the one row, and says so when there is none', async () => {
+  const found = await loadApi([{ data: [{ id: 'hanoi', hero_title_en: 'x' }], error: null }]);
+  assert.equal((await found.api.city('hanoi')).hero_title_en, 'x');
+  assert.deepEqual(found.client.calls[0].chain.find(([m]) => m === 'eq'), ['eq', ['id', 'hanoi']]);
+
+  const missing = await loadApi([{ data: [], error: null }]);
+  await assert.rejects(() => missing.api.city('atlantis'), /not found/);
+});
+
+// The editor's photo strip is drawn in this order, and PostgREST hands an
+// embed back in none — so the sort is the function, not a nicety.
+test('place sorts its photos by sort_order, and a missing slug is not found', async () => {
+  const { api } = await loadApi([{
+    data: [{ slug: 'a', place_photos: [{ id: 'c', sort_order: 2 }, { id: 'a', sort_order: 0 }, { id: 'b', sort_order: 1 }] }],
+    error: null,
+  }]);
+  const place = await api.place('a');
+  assert.deepEqual(place.place_photos.map((p) => p.id), ['a', 'b', 'c']);
+
+  const missing = await loadApi([{ data: [], error: null }]);
+  await assert.rejects(() => missing.api.place('gone'), /not found/);
+});
+
+test('cityCounts tallies every place by city, unscoped', async () => {
+  const { api, client } = await loadApi([{
+    data: [{ city_id: 'hanoi' }, { city_id: 'hanoi' }, { city_id: 'dalat' }],
+    error: null,
+  }]);
+  assert.deepEqual(await api.cityCounts(), { hanoi: 2, dalat: 1 });
+  assert.equal(client.calls[0].chain.some(([m]) => m === 'eq'), false);
+});
+
+// Both flags, because either alone is a place nobody can see — the
+// sentence in the comment above `contributors` this pins.
+test('contributors counts only app-added places that are approved and published', async () => {
+  const { api, client } = await loadApi([
+    { data: [{ added_by: 'u1', city_id: 'hanoi' }, { added_by: 'u1', city_id: 'dalat' }], error: null },
+    { data: [{ id: 'u1', handle: 'nguyen' }], error: null },
+  ]);
+  const { rows, profiles } = await api.contributors(7);
+  assert.equal(rows.length, 2);
+  assert.equal(profiles.u1.handle, 'nguyen');
+  const eqs = client.calls[0].chain.filter(([m]) => m === 'eq').map(([, a]) => a);
+  assert.deepEqual(eqs, [['channel', 'mobile'], ['review_status', 'approved'], ['is_published', true]]);
+  // One lookup for the person who added both.
+  assert.deepEqual(client.calls[1].chain.find(([m]) => m === 'in'), ['in', ['id', ['u1']]]);
+  // The window starts at midnight six days back, so "7 days" includes today.
+  const [, [, since]] = client.calls[0].chain.find(([m]) => m === 'gte');
+  const expected = new Date(); expected.setHours(0, 0, 0, 0); expected.setDate(expected.getDate() - 6);
+  assert.equal(since, expected.toISOString());
+});
+
+test('contributors with nobody in the window skips the profile lookup', async () => {
+  const { api, client } = await loadApi([{ data: [], error: null }]);
+  assert.deepEqual(await api.contributors(), { rows: [], profiles: {} });
+  assert.equal(client.calls.length, 1);
+});
+
+test('contributors keeps the rows when the profile lookup comes back empty', async () => {
+  const { api } = await loadApi([
+    { data: [{ added_by: 'u1' }], error: null },
+    { data: null, error: { message: 'denied' } },
+  ]);
+  const { rows, profiles } = await api.contributors();
+  assert.equal(rows.length, 1);
+  assert.deepEqual(profiles, {});
+});
+
+test('coverage reads published places only', async () => {
+  const { api, client } = await loadApi([{ data: [{ slug: 'a' }], error: null }]);
+  assert.deepEqual(await api.coverage(), [{ slug: 'a' }]);
+  assert.equal(client.calls[0].table, 'places');
+  assert.deepEqual(client.calls[0].chain.find(([m]) => m === 'eq'), ['eq', ['is_published', true]]);
+});
+
+test('existingByPlaceIds keys the matches by google_place_id', async () => {
+  const { api, client } = await loadApi([{
+    data: [{ google_place_id: 'g1', slug: 'a', name_en: 'A', review_status: 'approved' }],
+    error: null,
+  }]);
+  const found = await api.existingByPlaceIds(['g1', 'g2']);
+  assert.deepEqual(Object.keys(found), ['g1']);
+  assert.equal(found.g1.slug, 'a');
+  assert.deepEqual(client.calls[0].chain.find(([m]) => m === 'in'), ['in', ['google_place_id', ['g1', 'g2']]]);
+});
+
+test('existingByPlaceIds asks nothing for an empty search', async () => {
+  const { api, client } = await loadApi([]);
+  assert.deepEqual(await api.existingByPlaceIds([]), {});
+  assert.deepEqual(await api.existingByPlaceIds(undefined), {});
+  assert.equal(client.calls.length, 0);
+});
+
+// ---- the edge-function wrappers. Two functions share an endpoint each and
+// tell their callers apart by `action`, so a wrong word here reaches the
+// other branch of the function, not an error.
+
+function recordInvoke(reply = { data: { ok: true }, error: null }) {
+  const sent = [];
+  return { sent, invoke: async (name, opts) => { sent.push([name, opts.body]); return reply; } };
+}
+
+test('each wrapper sends its own function name and body', async () => {
+  const rec = recordInvoke();
+  const { api } = await loadApi([], { invoke: rec.invoke });
+  await api.searchPlaces('phở', 'hanoi');
+  await api.importPlace('g1', 'food', 'hanoi');
+  await api.scanCategories();
+  await api.scanCity('dalat', 'cafe');
+  await api.suspendUser('u1');
+  await api.suspendUser('u2', false);
+  assert.deepEqual(rec.sent, [
+    ['fetch-place', { action: 'search', query: 'phở', city: 'hanoi' }],
+    ['fetch-place', { action: 'import', place_id: 'g1', category: 'food', city: 'hanoi' }],
+    ['scan-city', { action: 'categories' }],
+    ['scan-city', { action: 'scan', city: 'dalat', category_key: 'cafe' }],
+    ['suspend-user', { user_id: 'u1', suspend: true }],
+    ['suspend-user', { user_id: 'u2', suspend: false }],
+  ]);
+});
+
+test('invoke returns the function\'s data on success', async () => {
+  const rec = recordInvoke({ data: { results: [1] }, error: null });
+  const { api } = await loadApi([], { invoke: rec.invoke });
+  assert.deepEqual(await api.scanCategories(), { results: [1] });
+});
+
+// A non-2xx arrives as a generic "Edge Function returned a non-2xx status
+// code"; the sentence worth showing is in the response body.
+test('invoke surfaces the body of a non-2xx, not the generic wrapper message', async () => {
+  const error = { message: 'non-2xx', context: { json: async () => ({ error: 'already imported' }) } };
+  const { api } = await loadApi([], { invoke: async () => ({ data: null, error }) });
+  await assert.rejects(() => api.importPlace('g1'), /^Error: already imported$/);
+});
+
+test('invoke falls back to the wrapper message when the body is not JSON', async () => {
+  const error = { message: 'non-2xx', context: { json: async () => { throw new SyntaxError('bad'); } } };
+  const { api } = await loadApi([], { invoke: async () => ({ data: null, error }) });
+  await assert.rejects(() => api.importPlace('g1'), /^Error: non-2xx$/);
+});
+
+test('invoke falls back to the wrapper message when there is no response at all', async () => {
+  const { api } = await loadApi([], { invoke: async () => ({ data: null, error: { message: 'offline' } }) });
+  await assert.rejects(() => api.scanCategories(), /^Error: offline$/);
+});
+
+// A 200 that carries an error is still a failure.
+test('invoke treats an error inside a 200 as a failure', async () => {
+  const { api } = await loadApi([], { invoke: async () => ({ data: { error: 'quota' }, error: null }) });
+  await assert.rejects(() => api.scanCity('hanoi', 'cafe'), /quota/);
+});
+
+// ---- uploadPhoto: the one path a file enters the bucket from the desk.
+
+function recordBucket({ uploadError = null, removed } = {}) {
+  const log = { uploads: [], removes: [], buckets: [] };
+  const storageFrom = (name) => {
+    log.buckets.push(name);
+    return {
+      upload: async (path, blob, opts) => { log.uploads.push({ path, blob, opts }); return { error: uploadError }; },
+      getPublicUrl: (path) => ({ data: { publicUrl: `https://cdn.test/${path}` } }),
+      remove: async (paths) => {
+        log.removes.push(paths);
+        return { data: (removed ?? paths).map((name) => ({ name })), error: null };
+      },
+    };
+  };
+  return { log, storageFrom };
+}
+
+test('uploadPhoto on a slug that does not exist fails before anything is uploaded', async () => {
+  const bucket = recordBucket();
+  const { api } = await loadApi([{ data: [], error: null }], { storageFrom: bucket.storageFrom });
+  await assert.rejects(() => api.uploadPhoto('gone', 'blob', 'x.jpg'), /place not found/);
+  assert.equal(bucket.log.uploads.length, 0);
+});
+
+test('uploadPhoto stores the file under the slug, sanitised, marked as already shrunk', async () => {
+  const bucket = recordBucket();
+  const { api, client } = await loadApi([
+    { data: [{ id: 'p1' }], error: null },
+    { data: [{ sort_order: 0 }, { sort_order: 4 }, { sort_order: 2 }], error: null },
+    { data: [{ id: 'new' }], error: null },
+  ], { storageFrom: bucket.storageFrom });
+  const blob = { size: 1 };
+  const row = await api.uploadPhoto('cafe-a', blob, 'mặt tiền (1).png');
+  assert.deepEqual(row, { id: 'new' });
+
+  const [up] = bucket.log.uploads;
+  assert.match(up.path, /^cafe-a\/\d+-m_t_ti_n__1_\.png\.jpg$/);
+  assert.equal(up.blob, blob);
+  assert.deepEqual(up.opts, { contentType: 'image/jpeg', metadata: { shrunk: '1' } });
+  assert.ok(bucket.log.buckets.every((b) => b === 'place-photos'));
+
+  const [, insertArgs] = client.calls[2].chain.find(([m]) => m === 'insert');
+  assert.equal(insertArgs[0].sort_order, 5, 'one past the highest, not the count');
+  assert.equal(insertArgs[0].place_id, 'p1');
+  assert.equal(insertArgs[0].storage_path, up.path);
+  assert.equal(insertArgs[0].photo_uri, `https://cdn.test/${up.path}`);
+  assert.equal(insertArgs[0].source, 'upload');
+  assert.equal(insertArgs[0].is_cover, false);
+});
+
+test('uploadPhoto truncates a long name to 60 characters, and names a nameless file "photo"', async () => {
+  const bucket = recordBucket();
+  const long = 'a'.repeat(100);
+  const first = await loadApi([
+    { data: [{ id: 'p1' }], error: null }, { data: [], error: null }, { data: [{}], error: null },
+  ], { storageFrom: bucket.storageFrom });
+  await first.api.uploadPhoto('s', {}, long);
+  assert.match(bucket.log.uploads[0].path, new RegExp(`^s/\\d+-${'a'.repeat(60)}\\.jpg$`));
+  // The first photo of a place is sort_order 0, not 1 and not -Infinity.
+  const [, insertArgs] = first.client.calls[2].chain.find(([m]) => m === 'insert');
+  assert.equal(insertArgs[0].sort_order, 0);
+
+  const second = await loadApi([
+    { data: [{ id: 'p1' }], error: null }, { data: [], error: null }, { data: [{}], error: null },
+  ], { storageFrom: bucket.storageFrom });
+  await second.api.uploadPhoto('s', {});
+  assert.match(bucket.log.uploads[1].path, /^s\/\d+-photo\.jpg$/);
+});
+
+test('uploadPhoto surfaces a refused upload and writes no row', async () => {
+  const bucket = recordBucket({ uploadError: { message: 'Payload too large' } });
+  const { api, client } = await loadApi([{ data: [{ id: 'p1' }], error: null }], { storageFrom: bucket.storageFrom });
+  await assert.rejects(() => api.uploadPhoto('s', {}, 'x'), /Payload too large/);
+  assert.equal(client.calls.length, 1);
+});
+
+// ---- deletePhoto: the cover invariant from the other side. patchPhoto
+// keeps "exactly one cover" when one is chosen; this keeps it when the
+// chosen one goes away.
+
+test('deleting the cover promotes the first visible remaining photo', async () => {
+  const bucket = recordBucket();
+  const { api, client } = await loadApi([
+    { data: [{ id: 'ph1', place_id: 'p1', is_cover: true, storage_path: 'a/1.jpg' }], error: null },
+    { data: [], error: null },           // collections cleared
+    { data: [{ id: 'ph1' }], error: null }, // photo row deleted
+    { data: [{ id: 'ph2' }], error: null }, // next visible
+    { data: [{ id: 'ph2' }], error: null }, // promoted
+  ], { storageFrom: bucket.storageFrom });
+  assert.deepEqual(await api.deletePhoto('ph1'), { ok: true, left: [] });
+
+  const pick = client.calls[3].chain;
+  assert.ok(pick.some(([m, a]) => m === 'eq' && a[0] === 'place_id' && a[1] === 'p1'));
+  assert.ok(pick.some(([m, a]) => m === 'eq' && a[0] === 'is_hidden' && a[1] === false), 'a hidden photo cannot become the cover');
+  assert.ok(pick.some(([m, a]) => m === 'order' && a[0] === 'sort_order'));
+  const promote = client.calls[4].chain;
+  assert.deepEqual(promote.find(([m]) => m === 'update'), ['update', [{ is_cover: true }]]);
+  assert.deepEqual(promote.find(([m]) => m === 'eq'), ['eq', ['id', 'ph2']]);
+});
+
+test('deleting the cover of a place with nothing visible left promotes nothing', async () => {
+  const { api, client } = await loadApi([
+    { data: [{ id: 'ph1', place_id: 'p1', is_cover: true, storage_path: null }], error: null },
+    { data: [], error: null }, { data: [], error: null },
+    { data: [], error: null }, // no visible photo remains
+  ]);
+  await api.deletePhoto('ph1');
+  assert.equal(client.calls.length, 4);
+});
+
+test('deleting a photo that is not the cover leaves the cover alone', async () => {
+  const { api, client } = await loadApi([
+    { data: [{ id: 'ph2', place_id: 'p1', is_cover: false, storage_path: null }], error: null },
+    { data: [], error: null }, { data: [], error: null },
+  ]);
+  await api.deletePhoto('ph2');
+  assert.equal(client.calls.length, 3);
+  assert.equal(client.calls.some((c) => c.chain.some(([m, a]) => m === 'update' && a[0].is_cover === true)), false);
+});
+
+// collections.cover_photo_id would otherwise point at a row that is gone,
+// and a list's card would draw a broken picture.
+test('deletePhoto clears the cover of every list pointing at it, before deleting the row', async () => {
+  const { api, client } = await loadApi([
+    { data: [{ id: 'ph1', place_id: 'p1', is_cover: false, storage_path: null }], error: null },
+    { data: [{ id: 'col1' }], error: null }, { data: [], error: null },
+  ]);
+  await api.deletePhoto('ph1');
+  const clear = client.calls[1];
+  assert.equal(clear.table, 'collections');
+  assert.deepEqual(clear.chain.find(([m]) => m === 'update'), ['update', [{ cover_photo_id: null }]]);
+  assert.deepEqual(clear.chain.find(([m]) => m === 'eq'), ['eq', ['cover_photo_id', 'ph1']]);
+  const del = client.calls[2];
+  assert.equal(del.table, 'place_photos');
+  assert.ok(del.chain.some(([m]) => m === 'delete'));
+  assert.deepEqual(del.chain.find(([m]) => m === 'eq'), ['eq', ['id', 'ph1']]);
+});
+
+test('deletePhoto removes the stored object, and reports one Storage kept', async () => {
+  const bucket = recordBucket({ removed: [] });
+  const { api } = await loadApi([
+    { data: [{ id: 'ph1', place_id: 'p1', is_cover: false, storage_path: 'a/1.jpg' }], error: null },
+    { data: [], error: null }, { data: [], error: null },
+  ], { storageFrom: bucket.storageFrom });
+  const result = await api.deletePhoto('ph1');
+  assert.deepEqual(bucket.log.removes, [['a/1.jpg']]);
+  assert.deepEqual(bucket.log.buckets, ['place-photos']);
+  assert.deepEqual(result, { ok: true, left: ['a/1.jpg'] });
+});
+
+test('deletePhoto on an id that no longer exists touches nothing else', async () => {
+  const bucket = recordBucket();
+  const { api, client } = await loadApi([{ data: [], error: null }], { storageFrom: bucket.storageFrom });
+  await assert.rejects(() => api.deletePhoto('gone'), /not found/);
+  assert.equal(client.calls.length, 1);
+  assert.equal(bucket.log.removes.length, 0);
+});
+
+// ---- resizeImage. The browser does the decoding and encoding; what is ours
+// is the arithmetic (longest edge to maxEdge, never up) and the encoder
+// settings. Stand-ins for the three browser objects record what they are
+// asked, which is all that arithmetic produces — a real canvas would add
+// nothing these assertions could see.
+
+async function resizeWith(width, height, maxEdge) {
+  const drawn = [];
+  let toBlobArgs;
+  const canvas = {
+    getContext: (kind) => { assert.equal(kind, '2d'); return { drawImage: (...a) => drawn.push(a) }; },
+    toBlob: (cb, type, quality) => { toBlobArgs = [type, quality]; cb({ jpeg: true }); },
+  };
+  const bitmap = { width, height };
+  const saved = { createImageBitmap: globalThis.createImageBitmap, document: globalThis.document };
+  globalThis.createImageBitmap = async () => bitmap;
+  globalThis.document = { createElement: (tag) => { assert.equal(tag, 'canvas'); return canvas; } };
+  try {
+    const { resizeImage } = await import(`../src/api.js?t=${n++}`);
+    const blob = await (maxEdge === undefined ? resizeImage({}) : resizeImage({}, maxEdge));
+    return { blob, canvas, drawn, toBlobArgs, bitmap };
+  } finally {
+    globalThis.createImageBitmap = saved.createImageBitmap;
+    globalThis.document = saved.document;
+  }
+}
+
+test('resizeImage brings the longest edge down to 1200, keeping the proportions', async () => {
+  const landscape = await resizeWith(4000, 3000);
+  assert.deepEqual([landscape.canvas.width, landscape.canvas.height], [1200, 900]);
+  assert.deepEqual(landscape.drawn, [[landscape.bitmap, 0, 0, 1200, 900]]);
+  assert.deepEqual(landscape.toBlobArgs, ['image/jpeg', 0.8]);
+  assert.deepEqual(landscape.blob, { jpeg: true });
+
+  const portrait = await resizeWith(3024, 4032);
+  assert.deepEqual([portrait.canvas.width, portrait.canvas.height], [900, 1200]);
+});
+
+test('resizeImage never enlarges a photo already under the limit', async () => {
+  const small = await resizeWith(800, 600);
+  assert.deepEqual([small.canvas.width, small.canvas.height], [800, 600]);
+});
+
+test('resizeImage honours a smaller limit when one is asked for', async () => {
+  const thumb = await resizeWith(1000, 500, 400);
+  assert.deepEqual([thumb.canvas.width, thumb.canvas.height], [400, 200]);
+});

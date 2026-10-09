@@ -37,22 +37,29 @@ cùng các subflow trong `common/`, thì
 [`README.md`](../../app/.maestro/README.md) có bảng đầy đủ. Ở đây chỉ ghi thứ
 hai file kia không có: **thời gian đo được**, vì đó là ngân sách của cả suite.
 
-| Flow | Đăng nhập | Thời gian (26/09) |
+| Flow | Đăng nhập | Thời gian (09/10) |
 |---|---|---|
-| `00-launch` | guest | 22 s |
-| `01-explore` | guest | 42 s |
-| `02-place-detail` | guest | 27 s |
-| `03-search` | guest | 41 s |
-| `04-sign-in` | test account | 1 m 27 s |
-| `05-plan-trip` | test account | 1 m 33 s |
-| `06-save-place` | test account | 1 m 14 s |
-| `08-explore-filter` | guest | chưa đo |
+| `00-launch` | guest | 28 s |
+| `01-explore` | guest | 47 s |
+| `02-place-detail` | guest | 30 s |
+| `03-search` | guest | 42 s |
+| `04-sign-in` | test account | 1 m 39 s (chạy riêng) |
+| `05-plan-trip` | test account | 1 m 50 s |
+| `06-save-place` | test account | 1 m 21 s |
+| `08-explore-filter` | guest | 49 s |
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
-**Kết quả gần nhất:** 26/09/2026, iPhone 17 · iOS 26.5 · Expo Go SDK 57, code
-tại `001f75af` (main `da8c8f7` + nhánh `release/1.0.4-coverage`) — **7/7
-passed trong 6 m 27 s**. Lần đo đó chạy **trước** khi `08-explore-filter` vào
-`config.yaml`, nên flow thứ tám không nằm trong con số 6 m 27 s.
+**Kết quả gần nhất:** 09/10/2026, iPhone 17 · iOS 26.5 · Expo Go, code tại
+`a76b125f` (main) — **7/8 passed** ở lượt đầu; `04-sign-in` hỏng ở
+`signin-email is visible` rồi **passed khi chạy lại riêng** (1 m 39 s), nên
+8/8 xanh nhưng có một flow chập chờn. Ảnh lúc hỏng: Profile đã cuộn về đầu
+và màn đăng nhập không mở. Cây trợ năng cùng lúc đặt `profile-sign-in` ở
+y 32–90 — dưới thanh trạng thái. `common/ensure-signed-out.yaml` cuộn lên
+`profile-sign-in` **không** có `centerElement`, nên nó dừng ngay khi nút vừa
+lộ ra ở mép trên; một cú chạm ở đó rơi vào thanh trạng thái, mà iOS hiểu là
+"cuộn về đầu". Đây là giả thuyết, chưa sửa: muốn chắc phải thêm
+`centerElement: true` rồi xanh vài lượt liên tiếp. Lần đo 26/09 (7/7, 6 m 27 s)
+chạy trước khi `08-explore-filter` vào `config.yaml`.
 
 ## 3. Chạy
 

@@ -186,7 +186,14 @@ const NATIVE_ONLY = [
 ];
 
 const IMPURE = [
-  'src/lib/candidates.ts', // a React hook; imports Alert and Keyboard
+  // A React hook, imports Alert and Keyboard — and since 9 October fully
+  // rendered by `candidates.ui.test.tsx`, at 100% of lines and functions
+  // and 98.63% of branches. The one branch left is `suggestOne`'s
+  // `if (!city)`, which only `addMany` calls, after the same check: it is
+  // there to narrow the type, and no reader can reach it. Passing
+  // `city.id` in would remove it; that is a change to the hook, not a
+  // test, so it waits for its own commit rather than riding in on one.
+  'src/lib/candidates.ts',
   'src/lib/database.types.ts', // generated from the schema; one runtime const, no logic
   'src/lib/channel.ts', // reads expo-updates; two consts, no logic to hold
   'src/lib/reminders.ts', // talks to expo-notifications; the maths it uses is remind.ts, which the gate holds
@@ -197,6 +204,52 @@ const IMPURE = [
   'src/lib/testing.ts', // the stand-in for it — test scaffolding, not shipped
   'src/lib/types.ts', // types only, no statements to cover
 ];
+
+// ── the providers' floor ──
+//
+// `src/lib/*.tsx` had no number at all until 9 October: the contexts sit
+// outside the `*.ts` gate, and a provider could ship untested with
+// nothing turning red. `i18n.tsx` was the case in point — every string
+// the reader sees passes through its `t`, and its fallbacks for a missing
+// translation stood at 61% of branches with no test of its own.
+//
+// Lines and branches only. The functions column reads 30–66% on files
+// whose every line runs, because it counts the no-op defaults each
+// `createContext` is given for a tree with no provider above it; a floor
+// there would ask for tests of code no reader can reach. Today's truth,
+// rounded down, each column one file's: `catalog.tsx` at 97.6% lines,
+// `invitations.tsx` at 86.11% branches.
+const PROVIDERS_FLOOR = { lines: 97, branches: 86 };
+
+// ── the Edge Functions' floor ──
+//
+// They run on Deno, but every one that has a test is loaded unchanged by
+// a `*.fn.test.ts` here, so this run measures them. Until 9 October it did
+// not report them: the note below on `include` explains the one setting
+// that made the difference. The first reading then showed six functions
+// with no test of any kind, among them `fetch-place` — the one any
+// signed-in phone can make spend Google money — and `prune-photos`, which
+// deletes from Storage. Each has one now.
+//
+// v8 only reports a file something imported, so a function no test loads
+// is absent from this report rather than at zero, and no floor here can
+// see it. `scripts/edgeFunctionTests.test.ts` holds that side.
+//
+// The same ratchet as the screens. `classify.ts` holds branches at 94.11;
+// `plan-assist/index.ts` holds functions at 66.66, and the reason is one
+// helper, `un`, that nothing in the file has called since it was written
+// (a6a86ce39). Deleting it lifts the column to 100 — a change to the
+// function, so not made here.
+const FUNCTIONS_FLOOR = { lines: 100, statements: 100, branches: 94, functions: 66 };
+
+// Coverage globs as v8 reports paths once `allowExternal` is on: by where
+// the file is, not relative to `app/`. A relative `include` then matches
+// nothing and the report is empty — "Unknown% (0/0)", and a green run.
+// The `thresholds` keys below stay relative: they are matched against the
+// report's own names, which are, and the `**/app/…` form there matched
+// nothing either and turned every floor off without a word. Both were
+// measured by setting a floor no file can meet and watching for the error.
+const at = (p: string) => (p.startsWith('../') ? `**/${p.slice(3)}` : `**/app/${p}`);
 
 export default defineConfig({
   // React Native's own source is Flow, which nothing in this toolchain can
@@ -218,20 +271,20 @@ export default defineConfig({
       provider: 'v8',
       // `*.ts` only: every `.tsx` in `src/lib` is a React context.
       //
-      // One pure module is knowingly outside this gate:
-      // `supabase/functions/_shared/classify.ts`. It runs inside an Edge
-      // Function so it lives with the function, and `classify.test.ts`
-      // exercises it here — 18 cases, including loops over every row of its
-      // lookup table. Two ways of pulling it under the threshold were tried
-      // and both were worse: `include: ['../supabase/…']` matches nothing
-      // and reports a confident 100% of the files it did find, and
-      // re-rooting the whole gate at the repository took every other file
-      // to zero. Naming the exception is better than contorting the gate
-      // for one file, or than a silent hole that reads as coverage.
+      // `src/lib/*.tsx` and the Edge Functions carry floors of their own —
+      // see "the providers' floor" and "the Edge Functions' floor" above.
+      //
+      // `supabase/functions` used to be knowingly outside: `include:
+      // ['../supabase/…']` matched nothing and reported a confident 100% of
+      // the files it did find, and re-rooting the gate at the repository
+      // took every other file to zero. `allowExternal` is what was missing —
+      // without it v8 drops every file outside `app/` before `include` is
+      // read. It changes how paths are matched, which is what `at` is for.
       // `src/components` carries its own floor — see "the components'
       // floor" above.
-      include: ['src/lib/*.ts', 'src/lib/data/*.ts', 'src/screens/*.tsx', 'src/components/*.tsx'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', ...IMPURE, ...NATIVE_ONLY],
+      allowExternal: true,
+      include: ['src/lib/*.ts', 'src/lib/data/*.ts', 'src/screens/*.tsx', 'src/components/*.tsx', 'src/lib/*.tsx', '../supabase/functions/*/*.ts'].map(at),
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', ...IMPURE, ...NATIVE_ONLY].map(at),
       thresholds: {
         // Each file on its own — see "per file, not on average" above. The
         // pure half was already there in practice, since 100% of an
@@ -246,6 +299,11 @@ export default defineConfig({
         'src/screens/*.tsx': SCREENS_FLOOR,
         // The same shape for the components — see "the components' floor".
         'src/components/*.tsx': COMPONENTS_FLOOR,
+        // The contexts — see "the providers' floor".
+        'src/lib/*.tsx': PROVIDERS_FLOOR,
+        // `_shared/*.ts` and every function's own files — see "the Edge
+        // Functions' floor".
+        '../supabase/functions/*/*.ts': FUNCTIONS_FLOOR,
       },
     },
   },
