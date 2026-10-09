@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canRepeat, type Checkin, filterVisits, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN,
-  visitCategories, visitCities, visitSections, visitsInDay, visitSummary,
+  textMatches, visitCategories, visitCities, visitSections, visitsInDay, visitSummary,
 } from './checkin';
 
 const row = (id: string, slug: string, at: string): Checkin => ({ id, place_slug: slug, city_id: 'hanoi', at });
@@ -151,5 +151,19 @@ describe('the facets', () => {
     expect(filterVisits(rows, 'hanoi', 'eats')).toEqual([]);
     // The cache-era row has no kinds, so a kind never finds it; a city does.
     expect(filterVisits(rows, 'hanoi', null).map((r) => r.id)).toEqual(['a', 'f']);
+  });
+});
+
+describe('textMatches', () => {
+  it('finds every word typed somewhere in the haystack, tone marks and case aside', () => {
+    expect(textMatches(['Cộng Cà Phê', 'Hà Nội'], 'cong')).toBe(true);
+    expect(textMatches(['Cộng Cà Phê', 'Hà Nội'], 'ca phe ha noi')).toBe(true);
+    expect(textMatches(['Cộng Cà Phê', 'Hà Nội'], 'CỘNG')).toBe(true);
+    expect(textMatches(['Cộng Cà Phê', 'Hà Nội'], 'cong saigon')).toBe(false);
+  });
+  it('matches everything on an empty or blank query', () => {
+    expect(textMatches(['x'], '')).toBe(true);
+    expect(textMatches(['x'], '   ')).toBe(true);
+    expect(textMatches([], 'x')).toBe(false);
   });
 });

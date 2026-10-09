@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PlaceCard from '../components/PlaceCard';
+import SearchField from '../components/SearchField';
 import { AddSlot } from '../components/add';
 import AddBatchBar, { batchBarShown } from '../components/AddBatchBar';
 import CandidateRow from '../components/CandidateRow';
@@ -417,27 +418,14 @@ export default function SearchScreen({ navigation }: { navigation: Nav }) {
       <AmbientWarmth />
       <View style={s.header}>
         <BackButton onPress={() => navigation.goBack()} />
-        <View style={s.field}>
-          <Ionicons name="search-outline" size={19} color={colors.textTertiary} />
-          <TextInput
-            ref={inputRef}
-            style={s.input}
-            value={query}
-            onChangeText={setQuery}
-            placeholder={t('Search places and collections', 'Tìm địa điểm và bộ sưu tập', 'スポットやコレクションを検索')}
-            placeholderTextColor={colors.textTertiary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-            clearButtonMode="never"
-            testID="search-input"
-          />
-          {query.length > 0 && (
-            <PressableScale onPress={() => setQuery('')} scaleTo={0.9} accessibilityLabel="Clear" testID="search-clear">
-              <Ionicons name="close-circle" size={19} color={colors.textTertiary} />
-            </PressableScale>
-          )}
-        </View>
+        {/* The one box — `SearchField`, which this screen's drawing of it
+            became once the check-ins list wanted the same one. */}
+        <SearchField
+          inputRef={inputRef}
+          value={query}
+          onChangeText={setQuery}
+          placeholder={t('Search places and collections', 'Tìm địa điểm và bộ sưu tập', 'スポットやコレクションを検索')}
+        />
       </View>
 
       <FlatList
@@ -840,12 +828,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: space.page, paddingTop: 8, paddingBottom: 14,
   },
-  field: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    borderRadius: radius.pill, paddingHorizontal: 16, height: 44,
-  },
-  input: { flex: 1, color: colors.text, fontSize: 15.5, padding: 0 },
 
   section: {
     color: colors.text, ...type.section,

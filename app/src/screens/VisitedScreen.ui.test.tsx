@@ -184,53 +184,107 @@ describe('VisitedScreen', () => {
     expect(new Set(boxes.map((b) => b.className)).size).toBe(1);
   });
 
-  // Two rows of chips — cities, then kinds of place — each only when
-  // there is a choice to make, each with an "All", and the two combine.
-  describe('the filters', () => {
+  // Search and two sections of filter, behind two doors in the header,
+  // as Explore has them — the box is Explore's own, the sheet is one
+  // choice per section. The summary under the title answers whatever
+  // the two leave.
+  describe('search and filters', () => {
     const many = () => [
       visit('a', 'cong', '2026-10-15T05:00:00Z', { city_id: 'hanoi', place: { ...visit('a', 'cong', '').place!, categories: ['cafes'] } }),
       visit('b', 'pizza', '2026-10-14T05:00:00Z', { city_id: 'saigon', place: { ...visit('b', 'pizza', '').place!, categories: ['eats'] } }),
       visit('c', 'bun', '2026-10-13T05:00:00Z', { city_id: 'saigon', place: { ...visit('c', 'bun', '').place!, categories: ['eats', 'cafes'] } }),
     ];
     const names = () => screen.getAllByTestId('visit-name').map((e) => e.textContent);
+    const openFilters = () => fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
 
-    it('offers the cities and the kinds there are, most visited first, and hides a row with one choice', () => {
+    it('opens the box from the header, finds by name and by city, and closes it clean', () => {
       data.visits.data = many();
       show();
-      const chips = screen.getAllByRole('button', { name: /^(All|Saigon|Hanoi|Eats|Cafés)$/ }).map((b) => b.textContent);
-      // Saigon twice to Hanoi's once; cafés and eats twice each, and
-      // cafés was seen first.
-      expect(chips).toEqual(['All', 'Saigon', 'Hanoi', 'All', 'Cafés', 'Eats']);
+      expect(screen.queryByTestId('visits-input')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Search visits' }));
+      fireEvent.change(screen.getByTestId('visits-input'), { target: { value: 'piz' } });
+      expect(names()).toEqual(['pizza en']);
+      fireEvent.change(screen.getByTestId('visits-input'), { target: { value: 'saigon' } });
+      expect(names()).toEqual(['pizza en', 'bun en']);
+      expect(screen.getByText('2 places · Saigon')).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Close search' }));
+      expect(screen.queryByTestId('visits-input')).toBeNull();
+      expect(names()).toHaveLength(3);
+    });
+
+    it('offers the cities and the kinds there are, most visited first, and only sections with a choice', () => {
+      data.visits.data = many();
+      show();
+      openFilters();
+      const radios = screen.getAllByRole('radio').map((r) => r.getAttribute('aria-label'));
+      // Saigon twice to Hanoi's once; cafés and eats twice each, cafés seen first.
+      expect(radios).toEqual(['Every city', 'Saigon', 'Hanoi', 'Every kind', 'Cafés', 'Eats']);
       cleanup();
-      // One city, two kinds: only the kinds row is drawn.
       data.visits.data = many().map((v) => ({ ...v, city_id: 'hanoi' }));
       show();
-      expect(screen.queryByRole('button', { name: 'Hanoi' })).toBeNull();
-      expect(screen.getByRole('button', { name: 'Eats' })).toBeTruthy();
+      openFilters();
+      expect(screen.queryByRole('radio', { name: 'Hanoi' })).toBeNull();
+      expect(screen.getByRole('radio', { name: 'Eats' })).toBeTruthy();
     });
 
-    it('narrows by city, by kind, and by both, and says what is left', () => {
+    it('narrows by city, by kind, and by both, marks the door, and says what is left', () => {
       data.visits.data = many();
       show();
-      fireEvent.click(screen.getByRole('button', { name: 'Saigon' }));
+      expect(screen.queryByTestId('filter-dot')).toBeNull();
+      openFilters();
+      fireEvent.click(screen.getByRole('radio', { name: 'Saigon' }));
+      expect(screen.getByTestId('filter-apply').textContent).toContain('2');
+      fireEvent.click(screen.getByTestId('filter-apply'));
       expect(names()).toEqual(['pizza en', 'bun en']);
-      expect(screen.getByText('2 places · 1 city')).toBeTruthy();
-      fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
+      expect(screen.getByText('2 places · Saigon')).toBeTruthy();
+      expect(screen.getByTestId('filter-dot')).toBeTruthy();
+      openFilters();
+      fireEvent.click(screen.getByRole('radio', { name: 'Cafés' }));
+      fireEvent.click(screen.getByTestId('filter-apply'));
       expect(names()).toEqual(['bun en']);
-      // Back to every city, the kind still held.
-      fireEvent.click(screen.getAllByRole('button', { name: 'All' })[0]);
-      expect(names()).toEqual(['cong en', 'bun en']);
-      expect(screen.getByRole('button', { name: 'Cafés' }).getAttribute('aria-selected')).toBe('true');
+      expect(screen.getByText('1 place · Saigon · Cafés')).toBeTruthy();
+      // Reset inside the sheet takes both away at once.
+      openFilters();
+      fireEvent.click(screen.getByTestId('filter-reset'));
+      fireEvent.click(screen.getByTestId('filter-apply'));
+      expect(names()).toHaveLength(3);
+      expect(screen.getByText('3 places · 2 cities')).toBeTruthy();
+      expect(screen.queryByTestId('filter-dot')).toBeNull();
     });
 
-    it('says so when the two choices leave nothing, without losing the chips', () => {
+    it('counts in the sheet what the words typed already leave', () => {
+      // "pizza" typed, then Saigon chosen: the button promises the pizza
+      // places in Saigon, not every place in Saigon — the sheet narrows
+      // what the search left, never the whole list behind it.
       data.visits.data = many();
       show();
-      fireEvent.click(screen.getByRole('button', { name: 'Hanoi' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Eats' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Search visits' }));
+      fireEvent.change(screen.getByTestId('visits-input'), { target: { value: 'piz' } });
+      openFilters();
+      expect(screen.getByTestId('filter-apply').textContent).toBe('Show 1 place');
+      fireEvent.click(screen.getByRole('radio', { name: 'Saigon' }));
+      expect(screen.getByTestId('filter-apply').textContent).toBe('Show 1 place');
+      fireEvent.click(screen.getByRole('radio', { name: 'Hanoi' }));
+      expect(screen.getByTestId('filter-apply').textContent).toBe('Show 0 places');
+    });
+
+    it('says so when the choices leave nothing, and keeps the doors open', () => {
+      data.visits.data = many();
+      show();
+      openFilters();
+      fireEvent.click(screen.getByRole('radio', { name: 'Hanoi' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Eats' }));
+      fireEvent.click(screen.getByTestId('filter-apply'));
       expect(screen.queryAllByTestId('visit-row')).toHaveLength(0);
       expect(screen.getByText(/No visits match/)).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'Hanoi' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Filter' })).toBeTruthy();
+    });
+
+    it('hides the filter door when there is nothing to choose between', () => {
+      data.visits.data = [visit('a', 'cong', '2026-10-15T05:00:00Z')];
+      show();
+      expect(screen.queryByRole('button', { name: 'Filter' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Search visits' })).toBeTruthy();
     });
   });
 
