@@ -131,10 +131,16 @@ describe('VisitedScreen', () => {
     expect(rows[0].getAttribute('role')).toBe('button');
     expect(rows[1].getAttribute('role')).not.toBe('button');
     expect(rows[1].querySelector('[data-icon="chevron-forward"]')).toBeNull();
+    // The ⋯ is only where the chevron is not: a visit at a place the
+    // reader can open is taken back on the place's own screen, which
+    // holds the whole history; a visit at a removed place has nowhere
+    // else to be taken back from.
+    expect(within(rows[0]).queryByRole('button', { name: 'Options' })).toBeNull();
+    expect(within(rows[1]).getByRole('button', { name: 'Options' })).toBeTruthy();
   });
 
-  it('takes one visit back through its menu, and only that one', async () => {
-    data.visits.data = [visit('a', 'cong', '2026-10-15T05:00:00Z'), visit('b', 'cong', '2026-10-12T05:00:00Z')];
+  it('takes one visit at a removed place back through its menu, and only that one', async () => {
+    data.visits.data = [visit('a', '', '2026-10-15T05:00:00Z', { place: null }), visit('b', '', '2026-10-12T05:00:00Z', { place: null })];
     show();
     const rows = screen.getAllByTestId('visit-row');
     fireEvent.click(within(rows[1]).getByRole('button', { name: 'Options' }));
@@ -145,7 +151,7 @@ describe('VisitedScreen', () => {
   });
 
   it('says so when the undo fails, and leaves the list as it was', async () => {
-    data.visits.data = [visit('a', 'cong', '2026-10-15T05:00:00Z')];
+    data.visits.data = [visit('a', '', '2026-10-15T05:00:00Z', { place: null })];
     data.removeCheckin.mockRejectedValueOnce(new Error('offline'));
     show();
     fireEvent.click(screen.getByRole('button', { name: 'Options' }));
@@ -232,6 +238,13 @@ describe('VisitedScreen', () => {
 
     it('finds by name and by city, and clears back to everything', () => {
       data.visits.data = many();
+      i18n.lang = 'vi';
+      show();
+      // "địa điểm", not "quán": the list holds shops and parks as well as
+      // places to eat, and the title above says địa điểm already.
+      expect(input().getAttribute('placeholder')).toBe('Tên địa điểm hoặc thành phố');
+      cleanup();
+      i18n.lang = 'en';
       show();
       open();
       type('piz');

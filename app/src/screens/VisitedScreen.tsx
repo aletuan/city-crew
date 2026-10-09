@@ -30,9 +30,15 @@
 // are the covers the cards draw, at full size: a thumbnail endpoint is
 // a later cut, and `expo-image` caches and downsizes in the meantime.
 //
-// Undo is a ⋯ per row and a sheet, as the request cards on Activity do
-// it, not a swipe: nothing in this app swipes to delete yet, and one
-// screen teaching a gesture the others do not honour is a trap.
+// Undo lives on the place's own screen, which holds the whole history
+// of visits there and lets any one of them go. This list does not
+// repeat the control: a ⋯ on forty rows was forty things to read past
+// to find the row, for an action the row's tap already leads to. The
+// one exception is a visit at a place since removed from the catalog —
+// that row opens nothing, so its ⋯ and sheet stay, as the request cards
+// on Activity do it. Not a swipe either way: nothing in this app swipes
+// to delete yet, and one screen teaching a gesture the others do not
+// honour is a trap.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Keyboard, ScrollView, StyleSheet, Text, type TextInput, View } from 'react-native';
@@ -225,7 +231,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
             onFocus={() => setOpen(true)}
             onSubmitEditing={noteSearch}
             testID={{ input: 'visits-input', clear: 'visits-clear' }}
-            placeholder={t('Place or city', 'Tên quán hoặc thành phố', '店名または都市')}
+            placeholder={t('Place or city', 'Tên địa điểm hoặc thành phố', '場所または都市')}
           />
           {open && (
             <PressableScale
@@ -298,7 +304,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
               </View>
             )}
             {suggestions.length === 0 && cityChoices.length <= 1 && kindChoices.length <= 1 && (
-              <Text style={s.legend}>{t('Type a place or a city.', 'Gõ tên quán hoặc thành phố.', '店名か都市を入力。')}</Text>
+              <Text style={s.legend}>{t('Type a place or a city.', 'Gõ tên địa điểm hoặc thành phố.', '場所か都市を入力。')}</Text>
             )}
           </Card>
         )}
@@ -347,17 +353,20 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
                           <Text style={s.name} numberOfLines={2} testID="visit-name">{nameOf(v)}</Text>
                           <Text style={s.meta} testID="visit-meta">{metaOf(v)}</Text>
                         </View>
-                        <PressableScale
-                          onPress={() => setMenuFor(v)}
-                          scaleTo={0.85}
-                          hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
-                          containerStyle={s.rowEnd}
-                          accessibilityRole="button"
-                          accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション')}
-                        >
-                          <Ionicons name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
-                        </PressableScale>
-                        {opens ? <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} /> : null}
+                        {opens ? (
+                          <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
+                        ) : (
+                          <PressableScale
+                            onPress={() => setMenuFor(v)}
+                            scaleTo={0.85}
+                            hitSlop={{ top: 12, bottom: 12, left: 10, right: 10 }}
+                            containerStyle={s.rowEnd}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('Options', 'Tuỳ chọn', 'オプション')}
+                          >
+                            <Ionicons name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
+                          </PressableScale>
+                        )}
                       </PressableScale>
                     );
                   })}
