@@ -23,7 +23,7 @@
 // pin in Activity's bare 44pt slot, and on a phone thirty pins in a
 // column told the eye nothing — a glyph every row shares is decoration,
 // where a picture is the one thing that says which row this is (Maps'
-// recents, Timeline, every music app). 48pt, rounded 10, the shape a
+// recents, Timeline, every music app). 44pt, rounded 10, the shape a
 // content thumbnail takes here as against the circle a person takes on
 // Crew; a place with no picture gets the pin on a glass square of the
 // same size, so the names stay in one column either way. The pictures
@@ -45,16 +45,19 @@ import { type Checkin, monthTitle, visitSections, visitSummary } from '../lib/ch
 import { useCity } from '../lib/city';
 import { useMyCheckins } from '../lib/checkins';
 import { removeCheckin } from '../lib/data';
-import { clockOf, shortDateline } from '../lib/format';
+import { clockOf, numericDate } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 const LINE = 21;
-/** The thumbnail's side. Two lines of text under it stand about 41pt;
- *  48 clears them with a hair to spare and is the size a list thumbnail
- *  takes on iOS (Maps' recents are 48). */
-const THUMB = 48;
+/** The thumbnail's side: 44, the face's size on Activity and the slot
+ *  the glyph had, so a leading picture is one size wherever a list has
+ *  one. It opened at 48 — Maps' recents — and beside two lines of
+ *  15pt text that read a size too loud, the picture leading the row
+ *  instead of placing it. Two lines stand about 41pt; 44 still clears
+ *  them. */
+const THUMB = 44;
 
 export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
@@ -70,11 +73,12 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const nameOf = (v: Checkin) => (v.place
     ? t(v.place.name_en, v.place.name_vi, v.place.name_ja ?? v.place.name_en)
     : t('A place that was removed', 'Một địa điểm đã bị gỡ', '削除された場所'));
-  /** The day, the clock, and the city when the app still knows it. */
+  /** The date, the clock, and the city when the app still knows it. No
+   *  weekday — see `numericDate`: thirty rows of "Thứ 5," said nothing. */
   const metaOf = (v: Checkin) => {
     const d = new Date(v.at);
     const city = cities.find((c) => c.id === v.city_id);
-    const parts = [shortDateline(lang, d), clockOf(d.getHours() * 60 + d.getMinutes())];
+    const parts = [numericDate(lang, d), clockOf(d.getHours() * 60 + d.getMinutes())];
     if (city) parts.push(t(city.short_en, city.short_vi, city.short_ja ?? city.short_en));
     return parts.join(' · ');
   };
@@ -185,10 +189,9 @@ const s = StyleSheet.create({
     color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
     letterSpacing: 1.1, textTransform: 'uppercase', marginTop: 6,
   },
-  // Centred, unlike Activity's top-aligned rows: a 48pt picture beside
-  // two lines of text wants its middle on theirs, where a 19pt glyph
-  // wanted the first line's. 12 of padding, not 13, so the 48 sits in a
-  // 72pt row and three rows make the card's rhythm.
+  // Centred: a 44pt picture beside two lines of text wants its middle
+  // on theirs, where a 19pt glyph wanted the first line's. 12 of
+  // padding puts the 44 in a 68pt row.
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: space.cardPadding, paddingVertical: 12,

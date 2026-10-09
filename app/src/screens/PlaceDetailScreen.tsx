@@ -427,9 +427,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
         t('Could not check in', 'Không check-in được', 'チェックインできませんでした'),
         isDailyLimit(e)
           ? t(
-            `You can check in ${DAILY_CAPS.checkins} times a day. Come back tomorrow.`,
-            `Mỗi ngày bạn có thể check-in ${DAILY_CAPS.checkins} lần. Mai quay lại nhé.`,
-            `1日に${DAILY_CAPS.checkins}回までチェックインできます。また明日どうぞ。`,
+            `You have checked in here ${DAILY_CAPS.checkinsPerPlace} times today. Come back tomorrow.`,
+            `Hôm nay bạn đã check-in ở đây ${DAILY_CAPS.checkinsPerPlace} lần rồi. Mai quay lại nhé.`,
+            `今日はここに${DAILY_CAPS.checkinsPerPlace}回チェックイン済みです。また明日どうぞ。`,
           )
           : (e as Error).message,
       );
@@ -446,11 +446,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
       Alert.alert(t('Could not remove it', 'Không bỏ được', '削除できませんでした'), (e as Error).message);
     }
   };
-  // What a worn pill offers. "Again" only once the window has passed:
-  // inside it a second tap is a slip, and the one honest thing to offer
-  // a slip is the undo.
+  // What a worn pill offers. "Again" only while the rules allow another
+  // — ten minutes since the last, fewer than three today — because
+  // inside those a second tap is a slip, and the one honest thing to
+  // offer a slip is the undo.
   const checkinActions: SheetAction[] = [
-    ...(canRepeat(latestVisit, new Date()) ? [{
+    ...(canRepeat(visits.data, place.slug, new Date()) ? [{
       key: 'again', icon: 'location' as const,
       title: t('Check in again', 'Check-in lần nữa', 'もう一度チェックイン'),
       desc: t('Adds another visit, now.', 'Ghi thêm một lần ghé, lúc này.', '今の訪問をもう1回記録します。'),

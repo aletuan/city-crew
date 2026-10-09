@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  canRepeat, type Checkin, latestCheckin, monthTitle, REPEAT_AFTER_MIN, visitSections, visitSummary,
+  canRepeat, type Checkin, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN, visitSections, visitsInDay, visitSummary,
 } from './checkin';
 
 const row = (id: string, slug: string, at: string): Checkin => ({ id, place_slug: slug, city_id: 'hanoi', at });
@@ -32,14 +32,44 @@ describe('latestCheckin', () => {
 describe('canRepeat', () => {
   const at = '2026-10-08T03:00:00Z';
   it('allows a first visit, and another once the window has passed', () => {
-    expect(canRepeat(null, new Date(at))).toBe(true);
-    expect(canRepeat(row('a', 'cong', at), new Date('2026-10-08T03:10:00Z'))).toBe(true);
-    expect(canRepeat(row('a', 'cong', at), new Date('2026-10-09T03:00:00Z'))).toBe(true);
+    expect(canRepeat([], 'cong', new Date(at))).toBe(true);
+    expect(canRepeat([row('a', 'cong', at)], 'cong', new Date('2026-10-08T03:10:00Z'))).toBe(true);
+    expect(canRepeat([row('a', 'cong', at)], 'cong', new Date('2026-10-09T03:00:00Z'))).toBe(true);
   });
   it('refuses a second visit inside the window — that is a double tap, not a return', () => {
     expect(REPEAT_AFTER_MIN).toBe(10);
-    expect(canRepeat(row('a', 'cong', at), new Date('2026-10-08T03:09:59Z'))).toBe(false);
-    expect(canRepeat(row('a', 'cong', at), new Date(at))).toBe(false);
+    expect(canRepeat([row('a', 'cong', at)], 'cong', new Date('2026-10-08T03:09:59Z'))).toBe(false);
+    expect(canRepeat([row('a', 'cong', at)], 'cong', new Date(at))).toBe(false);
+  });
+  it('refuses a fourth visit at one place inside a day, and allows it at another', () => {
+    expect(PER_PLACE_PER_DAY).toBe(3);
+    const now = new Date('2026-10-08T20:00:00Z');
+    const three = [
+      row('a', 'cong', '2026-10-08T01:00:00Z'),
+      row('b', 'cong', '2026-10-08T08:00:00Z'),
+      row('c', 'cong', '2026-10-08T12:00:00Z'),
+    ];
+    expect(canRepeat(three, 'cong', now)).toBe(false);
+    expect(canRepeat(three, 'pizza', now)).toBe(true);
+    // Twenty-four hours on, the oldest has rolled out of the day.
+    expect(canRepeat(three, 'cong', new Date('2026-10-09T01:00:01Z'))).toBe(true);
+    // Two in the day and the window passed: still room for the third.
+    expect(canRepeat(three.slice(1), 'cong', now)).toBe(true);
+  });
+});
+
+describe('visitsInDay', () => {
+  it('counts this place\u2019s visits in the last twenty-four hours, strictly', () => {
+    const now = new Date('2026-10-08T20:00:00Z');
+    const rows = [
+      row('a', 'cong', '2026-10-07T20:00:00Z'), // exactly a day ago: out
+      row('b', 'cong', '2026-10-07T20:00:01Z'), // in
+      row('c', 'pizza', '2026-10-08T19:00:00Z'),
+      row('d', 'cong', '2026-10-08T19:00:00Z'),
+    ];
+    expect(visitsInDay(rows, 'cong', now)).toBe(2);
+    expect(visitsInDay(rows, 'pizza', now)).toBe(1);
+    expect(visitsInDay(rows, 'bun', now)).toBe(0);
   });
 });
 

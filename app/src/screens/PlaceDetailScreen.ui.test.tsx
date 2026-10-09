@@ -546,6 +546,17 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     await waitFor(() => expect(spies.reloadCheckins).toHaveBeenCalledTimes(1));
   });
 
+  it('offers no "again" once this place has three visits in the day', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    state.checkins = [visit('k3', 60), visit('k2', 60 * 5), visit('k1', 60 * 9), visit('k0', 60 * 48)];
+    show();
+    fireEvent.click(screen.getByTestId('detail-checked-in'));
+    await screen.findByText('Checked in here');
+    expect(screen.queryByRole('button', { name: /Check in again/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Remove last check-in/ })).toBeTruthy();
+  });
+
   it('says so, in the reader\u2019s words, when the day\u2019s cap refuses the visit', async () => {
     state.checkin = true;
     state.uid = 'u1';
@@ -553,7 +564,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     spies.addCheckin.mockRejectedValueOnce(new Error('daily_limit'));
     show();
     fireEvent.click(screen.getByTestId('detail-checkin'));
-    await waitFor(() => expect(alert).toHaveBeenCalledWith('Không check-in được', expect.stringContaining('30')));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Không check-in được', expect.stringMatching(/3 lần/)));
     expect(spies.reloadCheckins).not.toHaveBeenCalled();
   });
 

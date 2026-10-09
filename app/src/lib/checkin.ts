@@ -57,12 +57,36 @@ export function latestCheckin(rows: readonly Checkin[], slug: string): Checkin |
   return best;
 }
 
-/** Whether another visit may be written now — see `REPEAT_AFTER_MIN`.
- *  Compared as instants, not as strings: two ISO offsets of the same
- *  moment sort differently as text. */
-export function canRepeat(latest: Checkin | null, now: Date): boolean {
+/**
+ * How many visits one place may take in a day. Breakfast, lunch and a
+ * drink after work are three; a fourth is a tap that got away. A day is
+ * the last twenty-four hours, not the calendar day: the server has no
+ * clock of the reader's to draw midnight with, and a rolling day is the
+ * same rule for a reader in Hanoi and one in Melbourne. The insert
+ * policy counts the same window (`20261009090000_checkins_per_place.sql`).
+ *
+ * There is no cap across places any more: thirty in a day was a guess at
+ * "a script", and a day out that walks a whole lane of cafés is not one.
+ */
+export const PER_PLACE_PER_DAY = 3;
+
+/** This place's visits in the last twenty-four hours, strictly inside. */
+export function visitsInDay(rows: readonly Checkin[], slug: string, now: Date): number {
+  const from = now.getTime() - 86_400_000;
+  let n = 0;
+  for (const r of rows) if (r.place_slug === slug && new Date(r.at).getTime() > from) n += 1;
+  return n;
+}
+
+/** Whether another visit may be written at this place now — both rules
+ *  above, `REPEAT_AFTER_MIN` and `PER_PLACE_PER_DAY`. Compared as
+ *  instants, not as strings: two ISO offsets of the same moment sort
+ *  differently as text. */
+export function canRepeat(rows: readonly Checkin[], slug: string, now: Date): boolean {
+  const latest = latestCheckin(rows, slug);
   if (!latest) return true;
-  return now.getTime() - new Date(latest.at).getTime() >= REPEAT_AFTER_MIN * 60_000;
+  if (now.getTime() - new Date(latest.at).getTime() < REPEAT_AFTER_MIN * 60_000) return false;
+  return visitsInDay(rows, slug, now) < PER_PLACE_PER_DAY;
 }
 
 /** One month of visits, newest first inside it. `month` is 1–12. */
