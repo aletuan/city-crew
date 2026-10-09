@@ -24,7 +24,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { addCheckin, coverOf, fmtCount, isFree, photosOf, removeCheckin, usePlaceBySlug } from '../lib/data';
 import { useMyCheckins } from '../lib/checkins';
-import { canRepeat, latestCheckin } from '../lib/checkin';
+import { canRepeat, latestCheckin, visitsAt } from '../lib/checkin';
 import { DAILY_CAPS, isDailyLimit } from '../lib/quota';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { usePlaces } from '../lib/catalog';
@@ -47,7 +47,7 @@ import { useSave } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, display, font, onPhoto, radius, space, type } from '../theme';
-import { AmbientWarmth, Card, Empty, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, CountBadge, Empty, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
 import type { Nav, RootRoute } from '../nav';
@@ -110,6 +110,13 @@ function InfoRow({ icon, label, first, onPress, trailing, children }: {
     </>
   );
 }
+
+/** The check-in sheet's history: five rows in view, the rest scroll.
+ *  Five is a week of ordinary visits at a glance; 48 is the row the
+ *  Trips list uses for a one-line item, and five of them are 240 of a
+ *  sheet that must still leave the pill's row visible behind it. */
+const HISTORY_ROWS = 5;
+const HISTORY_ROW = 48;
 
 export default function PlaceDetailScreen({ navigation, route }: { navigation: Nav; route: RootRoute<'PlaceDetail'> }) {
   const { t, lang } = useI18n();
@@ -411,6 +418,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
   // ── check-in ──
   const latestVisit = latestCheckin(visits.data, place.slug);
+  const visitsHere = visitsAt(visits.data, place.slug);
   const checkIn = async () => {
     if (checking || !uid) return;
     setChecking(true);
@@ -437,33 +445,34 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
       setChecking(false);
     }
   };
-  const undoCheckin = async () => {
-    if (!latestVisit) return;
+  // Any one visit, not only the newest: the sheet lists them all, each
+  // with its own undo, because the one that was a slip is not always
+  // the last. The sheet stays open after one goes — the reader may be
+  // tidying two — and closes itself only when the last goes, since a
+  // sheet about a visit that no longer exists has nothing to show. No
+  // "are you sure": the sheet is already the second step after the
+  // pill, as the ⋯-then-sheet on the check-ins list was. The check-ins
+  // list itself no longer offers the undo for a place that opens, so
+  // this is the one place a visit is taken back (#831).
+  const undoCheckin = async (id: string) => {
+    if (visitsHere.length <= 1) setCheckinMenu(false);
     try {
-      await removeCheckin(latestVisit.id);
+      await removeCheckin(id);
       visits.reload();
     } catch (e) {
       Alert.alert(t('Could not remove it', 'Không bỏ được', '削除できませんでした'), (e as Error).message);
     }
   };
-  // What a worn pill offers. "Again" only while the rules allow another
-  // — ten minutes since the last, fewer than three today — because
-  // inside those a second tap is a slip, and the one honest thing to
-  // offer a slip is the undo.
-  const checkinActions: SheetAction[] = [
-    ...(canRepeat(visits.data, place.slug, new Date()) ? [{
-      key: 'again', icon: 'location' as const,
-      title: t('Check in again', 'Check-in lần nữa', 'もう一度チェックイン'),
-      desc: t('Adds another visit, now.', 'Ghi thêm một lần ghé, lúc này.', '今の訪問をもう1回記録します。'),
-      onPress: () => { setCheckinMenu(false); void checkIn(); },
-    }] : []),
-    {
-      key: 'undo', icon: 'trash-outline' as const, destructive: true,
-      title: t('Remove last check-in', 'Bỏ check-in gần nhất', '直近のチェックインを削除'),
-      desc: t('Only the most recent one; earlier visits stay.', 'Chỉ lần gần nhất; các lần trước vẫn giữ.', '直近の1件だけ。それ以前の記録は残ります。'),
-      onPress: () => { setCheckinMenu(false); void undoCheckin(); },
-    },
-  ];
+  // What a worn pill offers below the history. "Again" only while the
+  // rules allow another — ten minutes since the last, fewer than three
+  // today — because inside those a second tap is a slip, and the undo
+  // for a slip is on its row above.
+  const checkinActions: SheetAction[] = canRepeat(visits.data, place.slug, new Date()) ? [{
+    key: 'again', icon: 'location' as const,
+    title: t('Check in again', 'Check-in lần nữa', 'もう一度チェックイン'),
+    desc: t('Adds another visit, now.', 'Ghi thêm một lần ghé, lúc này.', '今の訪問をもう1回記録します。'),
+    onPress: () => { setCheckinMenu(false); void checkIn(); },
+  }] : [];
 
   return (
     // No top safe area: the photograph is what belongs against the top of
@@ -1114,9 +1123,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
 
         </View>
       </ScrollView>
-      {/* The worn pill's menu. The header says when, in the reader's own
-          date format, because "again" and "undo" both need the reader to
-          know which visit they are looking at. */}
+      {/* The worn pill's sheet: the history of visits here, newest
+          first, each in the reader's own date format with its own undo
+          on the right, and "again" below when the rules allow it. The
+          list scrolls past HISTORY_ROWS rows rather than growing the
+          sheet off the top of the screen — three a day for a regular
+          adds up — and the count in the header says when it does. */}
       {showCheckin && latestVisit && (
         <ActionSheet
           visible={checkinMenu}
@@ -1124,10 +1136,37 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           actions={checkinActions}
           header={(
             <View style={s.checkinHead}>
-              <Text style={s.checkinHeadTitle}>{t('Checked in here', 'Bạn đã check-in ở đây', 'ここにチェックイン済み')}</Text>
-              <Text style={s.checkinHeadMeta}>
-                {t('Last time', 'Lần gần nhất', '前回')} · {dateline(lang, new Date(latestVisit.at))} · {clockOf(new Date(latestVisit.at).getHours() * 60 + new Date(latestVisit.at).getMinutes())}
-              </Text>
+              {/* The count is the Profile's pill at the row's end, not a
+                  line of words under the title: one shape for "how many"
+                  across the app, and 20pt of sheet given back. Inset by
+                  the history card's padding so it stands on the trash
+                  column's axis below. */}
+              <View style={s.checkinHeadRow} testID="checkin-head">
+                <Text style={s.checkinHeadTitle}>{t('Checked in here', 'Bạn đã check-in ở đây', 'ここにチェックイン済み')}</Text>
+                <CountBadge n={visitsHere.length} style={s.checkinCount} />
+              </View>
+              <ScrollView style={s.history} bounces={false} showsVerticalScrollIndicator={visitsHere.length > HISTORY_ROWS}>
+                {visitsHere.map((v, i) => {
+                  const d = new Date(v.at);
+                  return (
+                    <View key={v.id} style={[s.historyRow, i > 0 && s.historyDivider]} testID="checkin-visit">
+                      <Ionicons name="time-outline" size={17} color={colors.textTertiary} />
+                      <Text style={s.historyText} numberOfLines={1}>
+                        {dateline(lang, d)} · {clockOf(d.getHours() * 60 + d.getMinutes())}
+                      </Text>
+                      <PressableScale
+                        onPress={() => { void undoCheckin(v.id); }}
+                        scaleTo={0.85}
+                        hitSlop={{ top: 8, bottom: 8, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Remove this visit', 'Bỏ lần ghé này', 'この訪問を削除')}
+                      >
+                        <Ionicons name="trash-outline" size={18} color={colors.bad} />
+                      </PressableScale>
+                    </View>
+                  );
+                })}
+              </ScrollView>
             </View>
           )}
         />
@@ -1303,9 +1342,23 @@ const s = StyleSheet.create({
   },
   // Worn: the one tint this row is allowed, because it is a state.
   checkinOn: { backgroundColor: colors.accentSoft },
-  checkinHead: { gap: 2 },
-  checkinHeadTitle: { color: colors.text, fontSize: 18, fontFamily: display.semibold },
-  checkinHeadMeta: { color: colors.textTertiary, fontSize: 14 },
+  checkinHead: { gap: 12 },
+  checkinHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  checkinHeadTitle: { flex: 1, color: colors.text, fontSize: 18, fontFamily: display.semibold },
+  checkinCount: { marginRight: space.cardPadding },
+  // The sheet's own card surface, as its rows below wear it. Capped at
+  // HISTORY_ROWS rows of HISTORY_ROW each; more scrolls inside.
+  history: {
+    maxHeight: HISTORY_ROWS * HISTORY_ROW,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.card,
+  },
+  historyRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: space.cardPadding, height: HISTORY_ROW,
+  },
+  historyDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  historyText: { flex: 1, color: colors.text, fontSize: 15 },
   // The filter row's chip, at rest: same hairline, same radius, same
   // type, so a category looks like the same thing here as there. Glass
   // fill rather than the filter's bare outline, because these are facts
