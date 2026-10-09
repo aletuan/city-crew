@@ -41,6 +41,8 @@ const data = vi.hoisted(() => ({
   fetchCopies: vi.fn(async (_since: string): Promise<Copy[]> => []),
   mine: [] as Col[],
   useMyCollections: vi.fn(),
+  avatars: {} as Record<string, string>,
+  avatarsAsked: vi.fn((_handles: string[]) => {}),
 }));
 vi.mock('../lib/data', () => ({
   acceptFriendRequest: data.acceptFriendRequest,
@@ -49,6 +51,7 @@ vi.mock('../lib/data', () => ({
   fetchApplause: data.fetchApplause,
   fetchCopies: data.fetchCopies,
   useMyCollections: (id: string | null) => { data.useMyCollections(id); return { data: data.mine }; },
+  useCuratorAvatarsQuery: (handles: string[]) => { data.avatarsAsked(handles); return { data: data.avatars }; },
 }));
 
 const catalog = vi.hoisted(() => ({ cols: [] as Col[] }));
@@ -104,6 +107,8 @@ const renderScreen = async (navigation = nav()) => {
 };
 
 beforeEach(() => {
+  data.avatars = {};
+  data.avatarsAsked.mockClear();
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOW);
   vi.clearAllMocks();
@@ -184,33 +189,47 @@ describe('the EARLIER states', () => {
 // reader who taps a bare glyph and lands on a column of coral boxes has
 // met two conventions in two taps. The mark is the bare glyph, lifted
 // to the line's first row of text as Profile lifts its own.
-describe('the marks down the left', () => {
-  it('are bare hearts in the tertiary ink, one per row, and no well', async () => {
+describe('the faces down the left', () => {
+  it('lead with the actor\u2019s avatar, and a small badge for what they did', async () => {
+    data.avatars = { bao: 'https://faces/bao.jpg' };
     data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao'), like('c1', '2026-09-10T10:00:00Z', 'anh')]);
     data.mine = [col('c1', 'pho-walk', 'Pho walk')];
     await renderScreen();
     expect(document.querySelector('[data-testid="round-icon"]')).toBeNull();
-    const slots = screen.getAllByTestId('row-glyph');
+    const slots = screen.getAllByTestId('row-face');
     expect(slots).toHaveLength(2);
-    for (const glyph of slots.map((el) => el.querySelector('span')!)) {
-      expect(glyph.getAttribute('data-icon')).toBe('heart-outline');
-      expect(glyph.getAttribute('data-size')).toBe('19');
-      // Read as the hex the stub was handed; a computed style would come
-      // back as rgb().
-      expect(glyph.getAttribute('data-color')).toBe(colors.textTertiary);
+    // Asked for by handle, once, for every actor on the screen — the
+    // same lookup the bylines use. A liker need not be a curator.
+    expect(data.avatarsAsked).toHaveBeenLastCalledWith(['bao', 'anh']);
+    // The one with a face wears it; the one without gets the blank disc.
+    expect(slots[0].querySelector('img')!.getAttribute('src')).toBe('https://faces/bao.jpg');
+    expect(slots[1].querySelector('img')).toBeNull();
+    expect(slots[1].querySelector('[data-icon="person-outline"]')).toBeTruthy();
+    for (const slot of slots) {
+      const badge = slot.querySelector('[data-testid="kind-badge"] span')!;
+      expect(badge.getAttribute('data-icon')).toBe('heart');
+      expect(badge.getAttribute('data-size')).toBe('11');
+      expect(badge.getAttribute('data-color')).toBe(colors.accent);
     }
   });
 
-  it('sit level with the line’s first row of text, on a top-aligned row', async () => {
+  it('are 44 across, centred on the row\u2019s two lines', async () => {
     data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', 'bao')]);
     data.mine = [col('c1', 'pho-walk', 'Pho walk')];
     await renderScreen();
-    const slot = screen.getByTestId('row-glyph');
+    const slot = screen.getByTestId('row-face');
     const m = getComputedStyle(slot);
-    // The line is 15pt on a 21pt line height; the slot's middle meets it.
-    expect(parseFloat(m.height)).toBeGreaterThan(19);
-    expect(parseFloat(m.marginTop) + parseFloat(m.height) / 2).toBeCloseTo(21 / 2, 5);
-    expect(getComputedStyle(slot.parentElement!).alignItems).toBe('flex-start');
+    expect(m.width).toBe('44px');
+    expect(m.height).toBe('44px');
+    expect(getComputedStyle(slot.parentElement!).alignItems).toBe('center');
+  });
+
+  it('shows a blank face for a like whose liker is unnamed', async () => {
+    data.fetchApplause.mockImplementation(async () => [like('c1', '2026-09-11T10:00:00Z', null)]);
+    data.mine = [col('c1', 'pho-walk', 'Pho walk')];
+    await renderScreen();
+    expect(data.avatarsAsked).toHaveBeenLastCalledWith([]);
+    expect(screen.getByTestId('row-face').querySelector('[data-icon="person-outline"]')).toBeTruthy();
   });
 });
 
@@ -318,7 +337,7 @@ describe('the copies', () => {
       'Someone saved a copy of “Pho walk”',
     ]);
     const row = screen.getByRole('button', { name: /@bao saved a copy/ });
-    expect(row.querySelector('[data-testid="row-glyph"] span')!.getAttribute('data-icon')).toBe('copy-outline');
+    expect(row.querySelector('[data-testid="kind-badge"] span')!.getAttribute('data-icon')).toBe('copy');
   });
 
   it('opens the list that was copied', async () => {
