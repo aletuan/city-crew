@@ -51,14 +51,15 @@ import { colors, font, gradAI, radius, space, type } from '../theme';
  * is asking to be read rather than taken. What it replaced it with is
  * nothing, which is the right size for it.
  */
-export function AddSlot({ title, subtitle, onPress }: {
+export function AddSlot({ title, subtitle, onPress, testID }: {
   title: string;
   subtitle: string;
   onPress: () => void;
+  testID?: string;
 }) {
   return (
     <View style={s.slotWrap}>
-      <PressableScale onPress={onPress} accessibilityRole="button" style={s.slot}>
+      <PressableScale onPress={onPress} accessibilityRole="button" style={s.slot} testID={testID}>
         <View style={s.slotIcon}>
           <Ionicons name="add" size={26} color={colors.accent} />
         </View>

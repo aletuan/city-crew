@@ -382,7 +382,7 @@ export function IconSubtitle({ icon, text }: {
   );
 }
 
-export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack }: {
+export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack, backTestID }: {
   title: string;
   /** One quiet line under the title. Only in the pushed-screen header —
    *  a tab root's large title has an eyebrow above it instead, and a
@@ -434,12 +434,14 @@ export function Screen({ title, subtitle, eyebrow, lede, children, right, onBack
    * edge-swipe and no sign that it is there.
    */
   onBack?: () => void;
+  /** For the smoke flows, which select by id: a pushed screen's way back. */
+  backTestID?: string;
 }) {
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
       {onBack ? (
         <View style={s.headerInline}>
-          <BackButton onPress={onBack} />
+          <BackButton onPress={onBack} testID={backTestID} />
           <View style={s.headerText}>
             <Text style={s.titleInline} numberOfLines={2}>{title}</Text>
             {/* The falsy guard comes first and stays: a caller computing
@@ -645,7 +647,7 @@ export function TileGrid({ cols, children }: { cols: number; children: React.Rea
  * twice. A tab carries one kind or the other, not both.
  */
 export function UnderlineTabs<K extends string>({ tabs, active, onChange, right }: {
-  tabs: { key: K; icon: keyof typeof Ionicons.glyphMap; label: string; count?: number; tally?: number }[];
+  tabs: { key: K; icon: keyof typeof Ionicons.glyphMap; label: string; count?: number; tally?: number; testID?: string }[];
   active: K;
   onChange: (k: K) => void;
   /** The row's far end — a small control about the list the tabs switch
@@ -662,7 +664,7 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
   const narrow = useNarrowWindow();
   return (
     <View style={[s.tabsRow, narrow && s.tabsRowNarrow]}>
-      {tabs.map(({ key, icon, label, count, tally }) => {
+      {tabs.map(({ key, icon, label, count, tally, testID }) => {
         const on = active === key;
         const worded = tally
           ? `${label} (${tally})`
@@ -675,6 +677,7 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
             haptic="selection"
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
             onPress={() => onChange(key)}
+            testID={testID}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
           >
@@ -869,7 +872,7 @@ export const glassHalo = (light: boolean) => ({
   textShadowRadius: 3,
 });
 
-export function RoundIconButton({ icon, onPress, label, size = 21, color }: {
+export function RoundIconButton({ icon, onPress, label, size = 21, color, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   label?: string;
@@ -890,12 +893,14 @@ export function RoundIconButton({ icon, onPress, label, size = 21, color }: {
    * is a `dyn()` — a value that resolves per theme, not a hex.
    */
   color?: ColorValue;
+  testID?: string;
 }) {
   return (
     <PressableScale
       onPress={onPress}
       scaleTo={0.92}
       style={s.backBtn}
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
@@ -1067,7 +1072,7 @@ export function Avatar({ url, size }: { url?: string | null; size: number }) {
 }
 
 /** In-page back control: the round glass button wearing a chevron. */
-export function BackButton({ onPress }: { onPress: () => void }) {
+export function BackButton({ onPress, testID }: { onPress: () => void; testID?: string }) {
   const { t } = useI18n();
   return (
     <RoundIconButton
@@ -1075,6 +1080,7 @@ export function BackButton({ onPress }: { onPress: () => void }) {
       size={22}
       onPress={onPress}
       label={t('Back', 'Quay lại', '戻る')}
+      testID={testID}
     />
   );
 }

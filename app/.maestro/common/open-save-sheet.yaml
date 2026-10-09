@@ -1,0 +1,22 @@
+# Reusable: on a place's page, open the save sheet from the bookmark,
+# whichever state it is in (`detail-save` or `detail-saved`).
+appId: host.exp.Exponent
+---
+- runFlow:
+    when:
+      visible:
+        id: "detail-saved"
+    commands:
+      - tapOn:
+          id: "detail-saved"
+- runFlow:
+    when:
+      visible:
+        id: "detail-save"
+    commands:
+      - tapOn:
+          id: "detail-save"
+- extendedWaitUntil:
+    visible:
+      id: "save-done"
+    timeout: 15000
