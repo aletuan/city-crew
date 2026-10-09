@@ -57,8 +57,8 @@ và màn đăng nhập không mở. Cây trợ năng cùng lúc đặt `profile-
 y 32–90 — dưới thanh trạng thái. `common/ensure-signed-out.yaml` cuộn lên
 `profile-sign-in` **không** có `centerElement`, nên nó dừng ngay khi nút vừa
 lộ ra ở mép trên; một cú chạm ở đó rơi vào thanh trạng thái, mà iOS hiểu là
-"cuộn về đầu". Đây là giả thuyết, chưa sửa: muốn chắc phải thêm
-`centerElement: true` rồi xanh vài lượt liên tiếp. Lần đo 26/09 (7/7, 6 m 27 s)
+"cuộn về đầu". Đã sửa cùng ngày: thêm `centerElement: true`, rồi cả suite
+**8/8 passed trong 8 m** và `04-sign-in` chạy riêng thêm 3 lượt đều xanh. Lần đo 26/09 (7/7, 6 m 27 s)
 chạy trước khi `08-explore-filter` vào `config.yaml`.
 
 ## 3. Chạy

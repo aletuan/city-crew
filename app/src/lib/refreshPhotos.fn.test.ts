@@ -159,7 +159,9 @@ describe('which places one call takes', () => {
     expect(await body(await call())).toEqual({ places: 0, refreshed: 0, hidden: 0, failed: 0, cursor: null, errors: [] });
     expect(first()).toMatchObject({
       payload: 'place_id, places!inner(id, slug, google_place_id)',
-      filters: [['source', 'google'], ['storage_path is', null], ['photo_ref not is', null]],
+      // Hidden rows are not work: the loop leaves them alone, so a place
+      // whose only stale rows are hidden must not be picked at all.
+      filters: [['source', 'google'], ['storage_path is', null], ['photo_ref not is', null], ['is_hidden', false]],
       order: ['place_id'],
     });
   });
