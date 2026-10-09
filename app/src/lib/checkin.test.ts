@@ -4,10 +4,32 @@
 import { describe, expect, it } from 'vitest';
 import {
   canRepeat, type Checkin, filterVisits, latestCheckin, monthTitle, PER_PLACE_PER_DAY, REPEAT_AFTER_MIN,
-  textMatches, visitCategories, visitCities, visitSections, visitsInDay, visitSummary,
+  textMatches, visitCategories, visitCities, visitSections, visitsInDay, visitSummary, visitsAt,
 } from './checkin';
 
 const row = (id: string, slug: string, at: string): Checkin => ({ id, place_slug: slug, city_id: 'hanoi', at });
+
+describe('visitsAt', () => {
+  it('lists this place\'s visits newest first and nothing from another, whatever order it was given', () => {
+    const rows = [
+      row('a', 'cong', '2026-10-01T03:00:00Z'),
+      row('b', 'pizza', '2026-10-08T03:00:00Z'),
+      row('c', 'cong', '2026-10-07T09:30:00Z'),
+      row('d', 'cong', '2026-10-03T09:30:00Z'),
+    ];
+    expect(visitsAt(rows, 'cong').map((r) => r.id)).toEqual(['c', 'd', 'a']);
+    expect(visitsAt(rows, 'pizza').map((r) => r.id)).toEqual(['b']);
+    expect(visitsAt(rows, 'bun')).toEqual([]);
+  });
+  it('keeps two visits at the same instant, in the order given', () => {
+    const rows = [row('x', 'cong', '2026-10-02T00:00:00Z'), row('y', 'cong', '2026-10-02T00:00:00Z')];
+    expect(visitsAt(rows, 'cong').map((r) => r.id)).toEqual(['x', 'y']);
+  });
+  it('agrees with latestCheckin about which is newest', () => {
+    const rows = [row('old', 'cong', '2026-10-01T00:00:00Z'), row('new', 'cong', '2026-10-02T00:00:00Z')];
+    expect(visitsAt(rows, 'cong')[0].id).toBe(latestCheckin(rows, 'cong')?.id);
+  });
+});
 
 describe('latestCheckin', () => {
   it('picks the newest visit at this place and nothing from another', () => {

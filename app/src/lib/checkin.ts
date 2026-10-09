@@ -55,6 +55,14 @@ export const REPEAT_AFTER_MIN = 10;
 /** The newest visit at this place, or null. Sorted here rather than
  *  trusted: the hook answers newest-first, but a cached list or a
  *  reload mid-write need not. */
+/** Every visit at this place, newest first — the sheet on the place's
+ *  screen draws them all, each with its own undo, so a reader can take
+ *  back the one that was a slip rather than only the newest. Sorted
+ *  here for the same reason `latestCheckin` sorts. */
+export function visitsAt(rows: readonly Checkin[], slug: string): Checkin[] {
+  return rows.filter((r) => r.place_slug === slug).sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+}
+
 export function latestCheckin(rows: readonly Checkin[], slug: string): Checkin | null {
   let best: Checkin | null = null;
   for (const r of rows) {

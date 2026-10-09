@@ -25,6 +25,7 @@ import { pinImage } from '../components/mapPins';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
 import { colors } from '../theme';
+import { clockOf } from '../lib/format';
 
 // jsdom lays nothing out, so the document is zero pixels wide — and the hero
 // is sized off the window: a zero-wide carousel pages by dividing by zero,
@@ -526,10 +527,54 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     show();
     fireEvent.click(screen.getByTestId('detail-checked-in'));
     expect(await screen.findByText('Checked in here')).toBeTruthy();
-    expect(screen.getByText(/Last time/)).toBeTruthy();
+    expect(screen.getByText('2 visits')).toBeTruthy();
+    // The whole history here, newest first, each with its own undo —
+    // not "last time" and one undo for the newest.
+    const rows = screen.getAllByTestId('checkin-visit');
+    expect(rows).toHaveLength(2);
+    // The clocks as the screen's own formatter says them on this run's
+    // clock, so the daylight-saving run reads the same test.
+    const clock = (minutesAgo: number) => { const d = new Date(WED_10AM.getTime() - minutesAgo * 60000); return clockOf(d.getHours() * 60 + d.getMinutes()); };
+    expect(rows[0].textContent).toContain(clock(60));
+    expect(rows[1].textContent).toContain(clock(60 * 24 * 3));
+    expect(clock(60)).not.toBe(clock(60 * 24 * 3));
+    expect(screen.queryByText(/Last time/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /Remove last check-in/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Check in again/ }));
     await waitFor(() => expect(spies.addCheckin).toHaveBeenCalledTimes(1));
     expect(spies.removeCheckin).not.toHaveBeenCalled();
+  });
+
+  it('takes back the visit chosen, not the newest, and keeps the sheet open for the rest', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    state.checkins = [visit('k1', 60), visit('k0', 60 * 24 * 3)];
+    show();
+    fireEvent.click(screen.getByTestId('detail-checked-in'));
+    await screen.findByText('Checked in here');
+    const rows = screen.getAllByTestId('checkin-visit');
+    fireEvent.click(within(rows[1]).getByRole('button', { name: /Remove this visit/ }));
+    await waitFor(() => expect(spies.removeCheckin).toHaveBeenCalledWith('k0'));
+    expect(spies.removeCheckin).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(spies.reloadCheckins).toHaveBeenCalledTimes(1));
+    // Still open: the web Modal would drop its children at the end of a
+    // fade-out, so end any fade there is and look again.
+    document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+    expect(screen.getByText('Checked in here')).toBeTruthy();
+  });
+
+  it('closes the sheet with the last visit taken back, since there is nothing left to show', async () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    state.checkins = [visit('k1', 60)];
+    show();
+    fireEvent.click(screen.getByTestId('detail-checked-in'));
+    await screen.findByText('Checked in here');
+    fireEvent.click(screen.getByRole('button', { name: /Remove this visit/ }));
+    await waitFor(() => expect(spies.removeCheckin).toHaveBeenCalledWith('k1'));
+    // The web Modal keeps its children until its fade-out ends; end it.
+    document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+    await waitFor(() => expect(screen.queryByText('Checked in here')).toBeNull());
   });
 
   it('offers only the undo inside the ten-minute window — a second tap is not a second visit', async () => {
@@ -540,8 +585,11 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     fireEvent.click(screen.getByTestId('detail-checked-in'));
     await screen.findByText('Checked in here');
     expect(screen.queryByRole('button', { name: /Check in again/ })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /Remove last check-in/ }));
-    // The newest one, and only it: the visit three days ago stays.
+    // No menu card at all then — the sheet is the history and its undos.
+    expect(screen.queryByTestId('sheet-actions')).toBeNull();
+    const rows = screen.getAllByTestId('checkin-visit');
+    fireEvent.click(within(rows[0]).getByRole('button', { name: /Remove this visit/ }));
+    // The newest one, and only it: the visit a day ago stays.
     await waitFor(() => expect(spies.removeCheckin).toHaveBeenCalledWith('k1'));
     await waitFor(() => expect(spies.reloadCheckins).toHaveBeenCalledTimes(1));
   });
@@ -554,7 +602,8 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     fireEvent.click(screen.getByTestId('detail-checked-in'));
     await screen.findByText('Checked in here');
     expect(screen.queryByRole('button', { name: /Check in again/ })).toBeNull();
-    expect(screen.getByRole('button', { name: /Remove last check-in/ })).toBeTruthy();
+    expect(screen.getByText('4 visits')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /Remove this visit/ })).toHaveLength(4);
   });
 
   it('says so, in the reader\u2019s words, when the day\u2019s cap refuses the visit', async () => {

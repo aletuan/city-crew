@@ -95,7 +95,11 @@ export default function ActionSheet({ visible, header, actions, onClose }: {
 
         {header}
 
-        <View style={s.group}>
+        {/* No card when there is nothing to put in it. The check-in
+            sheet's rows are all in its header once the day's cap is
+            reached, and an empty bordered card under them read as a
+            row that failed to load. */}
+        {actions.length > 0 && <View style={s.group}>
           {actions.map((a, i) => (
             <PressableScale
               key={a.key}
@@ -122,7 +126,7 @@ export default function ActionSheet({ visible, header, actions, onClose }: {
               </View>
             </PressableScale>
           ))}
-        </View>
+        </View>}
       </Animated.View>
     </Modal>
   );
