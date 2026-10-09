@@ -4,8 +4,8 @@
 // test here sees a pixel — layout is not simulated under jsdom — so what
 // is pinned is the other half of the contract: that the pieces which
 // change shape on a small phone lose nothing a reader could reach or a
-// screen reader could hear. The guide button drops its word and keeps
-// its name; the tab strip keeps every tab and its control.
+// screen reader could hear. The guide panel keeps its name and its words;
+// the tab strip keeps every tab and its control.
 
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -49,12 +49,14 @@ describe('a 320pt window', () => {
     expect(NARROW_WINDOW).toBeLessThanOrEqual(375);
   });
 
-  it('keeps the guide button’s name when its word goes', () => {
+  // The panel is one button at every width now, so a small phone changes
+  // nothing about it: the words keep the room the old pill used to take,
+  // and the name a screen reader hears is the same.
+  it('keeps the guide panel’s name and its words', () => {
     const onOpen = vi.fn();
     render(<LocalGuidePanel place={place} onOpen={onOpen} />);
     const btn = screen.getByRole('button', { name: 'Gallery' });
-    // The word is the accessible name now, not a text node.
-    expect(screen.queryByText('Gallery')).toBeNull();
+    expect(btn.contains(screen.getByText('Want to improve your gallery?'))).toBe(true);
     fireEvent.click(btn);
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
