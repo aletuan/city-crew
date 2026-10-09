@@ -36,6 +36,8 @@ const state = vi.hoisted(() => ({
   elsewhere: { loading: false, data: null as unknown },
   rows: [] as GalleryPhoto[],
   picked: true,
+  /** How many the roll hands back when `picked`. */
+  pickedCount: 1,
 }));
 const data = vi.hoisted(() => ({
   reload: vi.fn(),
@@ -85,11 +87,11 @@ vi.mock('../lib/data', () => ({
   uploadPlacePhoto: async (path: string) => { data.uploaded(path); await gate(gates.upload); return `http://cdn/${path}`; },
 }));
 vi.mock('expo-image-picker', () => ({
-  launchImageLibraryAsync: () => {
-    data.picker();
+  launchImageLibraryAsync: (opts: unknown) => {
+    data.picker(opts);
     return Promise.resolve(
       state.picked
-        ? { canceled: false, assets: [{ uri: 'file://roll/IMG_1.HEIC' }] }
+        ? { canceled: false, assets: Array.from({ length: state.pickedCount }, (_, i) => ({ uri: `file://roll/IMG_${i + 1}.HEIC` })) }
         : { canceled: true, assets: [] },
     );
   },
@@ -182,7 +184,9 @@ beforeEach(() => {
   state.guide = true;
   state.elsewhere = { loading: false, data: null };
   state.picked = true;
+  state.pickedCount = 1;
   for (const fn of Object.values(data)) fn.mockClear();
+  data.fetchMyPhotoCounts.mockReset().mockResolvedValue({ mineHere: 0, mineToday: 0 });
   alert.mockClear();
 });
 afterEach(cleanup);
@@ -486,6 +490,65 @@ describe('adding one', () => {
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not add your photo', 'bucket full'));
     expect(data.removePhotoFile).not.toHaveBeenCalled();
     expect(data.addPlacePhoto).not.toHaveBeenCalled();
+  });
+
+  // One trip to the roll for the whole batch (owner, 9 Oct 2026): five
+  // photographs used to be five rounds of Add → roll → wait. The roll
+  // is asked for as many as the caps still allow, so the refusal the
+  // policy would give the sixth is never reached.
+  it('asks the roll for several at once, as many as the caps leave room for', async () => {
+    data.fetchMyPhotoCounts.mockResolvedValue({ mineHere: 2, mineToday: 0 });
+    show([photo('a')]);
+    await grid();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a photo' }));
+    await waitFor(() => expect(data.picker).toHaveBeenCalledTimes(1));
+    expect(data.picker.mock.calls[0][0]).toMatchObject({ allowsMultipleSelection: true, selectionLimit: 3, orderedSelection: true });
+  });
+
+  it('adds every photo picked, in the order picked, with the first picked ending as the cover', async () => {
+    state.pickedCount = 3;
+    show([photo('a')]);
+    await grid();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a photo' }));
+    await waitFor(() => expect(data.addPlacePhoto).toHaveBeenCalledTimes(3));
+    // Three files, three paths, none the same.
+    expect(new Set(data.uploaded.mock.calls.map((c) => c[0])).size).toBe(3);
+    // Past everything already there, in the order the reader picked —
+    // and inserted last to first, because the cover trigger lands on the
+    // newest row, and the cover should be the one they reached for first.
+    expect(data.addPlacePhoto.mock.calls.map((c) => (c[0] as { sortOrder: number }).sortOrder)).toEqual([4, 3, 2]);
+    // One read-back for the batch, not one per photo.
+    await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
+    expect(data.reload).toHaveBeenCalledTimes(1);
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it('counts the batch on the waiting tile', async () => {
+    state.pickedCount = 3;
+    gates.upload.hold = true;
+    show([photo('a')]);
+    await grid();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a photo' }));
+    expect(await screen.findByText('Uploading… 1/3')).toBeTruthy();
+    await act(async () => { gates.upload.release(); });
+    expect(await screen.findByText('Uploading… 2/3')).toBeTruthy();
+    await act(async () => { gates.upload.release(); });
+    expect(await screen.findByText('Uploading… 3/3')).toBeTruthy();
+    await act(async () => { gates.upload.release(); });
+    await waitFor(() => expect(data.addPlacePhoto).toHaveBeenCalledTimes(3));
+  });
+
+  it('keeps the photos that landed, takes back the file of the one that did not, and says how many', async () => {
+    state.pickedCount = 3;
+    data.addPlacePhoto.mockImplementationOnce(async () => { throw new Error('new row violates row-level security'); });
+    show([photo('a')]);
+    await grid();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a photo' }));
+    await waitFor(() => expect(data.addPlacePhoto).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Could not add 1 of 3 photos', expect.stringMatching(/row-level security/)));
+    expect(data.removePhotoFile).toHaveBeenCalledTimes(1);
+    // The two that landed are read back all the same.
+    await waitFor(() => expect(data.fetchGallery).toHaveBeenCalledTimes(2));
   });
 
   it('writes nothing when the picker is dismissed', async () => {

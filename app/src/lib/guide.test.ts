@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canAddPhoto, photoPath, refusePhoto, MAX_PER_DAY, MAX_PER_PLACE,
+  canAddPhoto, photoPath, photoRoom, refusePhoto, MAX_PER_DAY, MAX_PER_PLACE,
   PHOTO_PX, PHOTO_QUALITY,
 } from './guide';
 
@@ -130,6 +130,22 @@ describe('what to say when it cannot go ahead', () => {
 // The numbers the policy counts against. Pinned because they live in two
 // files — here and in the migration — and a change to one that misses the
 // other turns a clear refusal into a silent one.
+describe('how many the roll may hand over at once', () => {
+  it('is the room left under both caps, for a guide', () => {
+    expect(photoRoom(ME, { mineHere: 0, mineToday: 0 })).toBe(5);
+    expect(photoRoom(ME, { mineHere: 3, mineToday: 0 })).toBe(2);
+    expect(photoRoom(ME, { mineHere: 0, mineToday: 9 })).toBe(1);
+    expect(photoRoom(ME, { mineHere: 2, mineToday: 8 })).toBe(2);
+  });
+  it('is never below nothing', () => {
+    expect(photoRoom(ME, { mineHere: 5, mineToday: 0 })).toBe(0);
+    expect(photoRoom(ME, { mineHere: 7, mineToday: 12 })).toBe(0);
+  });
+  it('is one batch for an editor, whom the caps do not bind', () => {
+    expect(photoRoom({ uid: 'e1', granted: false, editor: true }, { mineHere: 9, mineToday: 40 })).toBe(5);
+  });
+});
+
 describe('the limits, as the policy states them', () => {
   it('are five and ten', () => {
     expect(MAX_PER_PLACE).toBe(5);

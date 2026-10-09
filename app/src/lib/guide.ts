@@ -88,6 +88,19 @@ export function canAddPhoto(place: Guidable, me: Guide): boolean {
  * clock cannot be tested for what it returns, and this one is worth
  * testing because a bad path is a file nobody can find again.
  */
+/**
+ * How many photographs the roll may hand over in one go.
+ *
+ * The room left under both caps, so the picker's own limit says what the
+ * policy would otherwise say to the sixth after five uploads. An editor
+ * the caps do not bind gets one batch of MAX_PER_PLACE: the picker needs
+ * a number, and five is the figure this gallery already explains.
+ */
+export function photoRoom(me: Guide, counts: { mineHere: number; mineToday: number }): number {
+  if (me.uid && me.editor) return MAX_PER_PLACE;
+  return Math.max(0, Math.min(MAX_PER_PLACE - counts.mineHere, MAX_PER_DAY - counts.mineToday));
+}
+
 export function photoPath(uid: string, placeSlug: string, stamp: number): string {
   return `${uid}/${placeSlug}-${stamp}.jpg`;
 }

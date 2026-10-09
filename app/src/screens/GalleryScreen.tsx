@@ -349,6 +349,8 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
                   {adder.stage === 'shrinking'
                     ? t('Compressing…', 'Đang nén…', '圧縮中…')
                     : t('Uploading…', 'Đang tải lên…', 'アップロード中…')}
+                  {/* "2/4" only when there is a batch to count. */}
+                  {adder.progress.total > 1 ? ` ${adder.progress.done + 1}/${adder.progress.total}` : ''}
                 </Text>
               </View>
             )}
@@ -360,9 +362,9 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
         <Card style={s.tips}>
           <Text style={s.tipsTitle}>{t('How it works', 'Lưu ý', '使い方')}</Text>
           <Tip text={t(
-            'The cover is the picture that stands for the place. A photo you add becomes the cover.',
-            'Ảnh bìa là ảnh đại diện cho địa điểm. Ảnh bạn vừa thêm sẽ thành ảnh bìa.',
-            'カバーはこの場所を代表する写真です。追加した写真がカバーになります。',
+            'The cover is the picture that stands for the place. The first photo you pick becomes the cover.',
+            'Ảnh bìa là ảnh đại diện cho địa điểm. Ảnh đầu tiên bạn chọn sẽ thành ảnh bìa.',
+            'カバーはこの場所を代表する写真です。最初に選んだ写真がカバーになります。',
           )} />
           <Tip text={t(
             'You and the desk can do the same things to every photo here. The last change is the one that counts.',
@@ -370,9 +372,9 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
             'ここにある写真はあなたとデスクが同じように扱えます。最後の変更が有効です。',
           )} />
           <Tip text={t(
-            `JPG or PNG, up to ${MAX_PER_PLACE} of yours per place.`,
-            `JPG hoặc PNG, tối đa ${MAX_PER_PLACE} ảnh của bạn mỗi địa điểm.`,
-            `JPGまたはPNG、1つの場所につきあなたの写真は${MAX_PER_PLACE}枚まで。`,
+            `JPG or PNG, up to ${MAX_PER_PLACE} of yours per place — pick them all at once.`,
+            `JPG hoặc PNG, tối đa ${MAX_PER_PLACE} ảnh của bạn mỗi địa điểm, chọn một lần được nhiều ảnh.`,
+            `JPGまたはPNG、1つの場所につきあなたの写真は${MAX_PER_PLACE}枚まで。まとめて選べます。`,
           )} />
         </Card>
       </ScrollView>

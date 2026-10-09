@@ -21,7 +21,7 @@ import { useI18n } from '../lib/i18n';
 import { addPlacePhoto, fetchMyPhotoCounts, removePhotoFile, uploadPlacePhoto } from '../lib/data';
 import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import {
-  canAddPhoto, photoPath, refusePhoto, PHOTO_PX, PHOTO_QUALITY,
+  canAddPhoto, photoPath, photoRoom, refusePhoto, PHOTO_PX, PHOTO_QUALITY,
   type Guidable, type PhotoRefusal,
 } from '../lib/guide';
 import { successHaptic } from './ui';
@@ -52,6 +52,9 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
   // step is a screen that can show something changing. The row insert and
   // the re-read after it are fast enough to live under "uploading".
   const [stage, setStage] = useState<AddStage>('idle');
+  // Which of the batch is on its way: `done` have landed, of `total`
+  // picked. The tile says "2/4" from it when the batch is more than one.
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
   const busy = stage !== 'idle';
   const [counts, setCounts] = useState({ mineHere: 0, mineToday: 0 });
 
@@ -90,61 +93,97 @@ export function useAddPhoto({ place, placeId, count, onAdded }: {
     // No permission gate: on iOS the library opens through PHPicker, which
     // runs outside the app and needs no authorisation. A pre-check would
     // only invent a wall — the same note `AvatarPicker` carries.
+    //
+    // Several at once (owner, 9 Oct 2026): five photographs used to be
+    // five rounds of Add → roll → wait, and the roll can hand over the
+    // lot in one visit. The limit is the room the caps leave, so the
+    // policy's refusal of a sixth is never reached; ordered, because the
+    // order picked is the order they go on the place.
     const picked = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 1,
+      allowsMultipleSelection: true,
+      selectionLimit: photoRoom(me, counts),
+      orderedSelection: true,
     });
-    if (picked.canceled || !picked.assets[0]) return;
+    if (picked.canceled || picked.assets.length === 0) return;
 
+    // Last picked first. The cover trigger `addPlacePhoto` describes moves
+    // the cover onto each new row as it lands, so the row inserted last
+    // ends up as the cover — and the one the reader reached for first is
+    // the one that should. Sort order still follows the order picked:
+    // past everything already on the place, so the gallery — which is in
+    // `sort_order` — puts them at the end rather than in front of
+    // pictures that were here before them.
+    const batch = picked.assets.map((asset, i) => ({ uri: asset.uri, sortOrder: count + 1 + i })).reverse();
+    const stamp = Date.now();
+    const failed: Error[] = [];
+    let landed = 0;
+    setProgress({ done: 0, total: batch.length });
     setStage('shrinking');
     try {
       if (!uid) throw new Error('not_signed_in');
       if (!placeId) throw new Error('place_not_found');
-      const shrunk = await manipulateAsync(
-        picked.assets[0].uri,
-        [{ resize: { width: PHOTO_PX } }],
-        { compress: PHOTO_QUALITY, format: SaveFormat.JPEG, base64: true },
-      );
-      if (!shrunk.base64) throw new Error('bad_image');
+      for (const [i, item] of batch.entries()) {
+        setStage('shrinking');
+        try {
+          const shrunk = await manipulateAsync(
+            item.uri,
+            [{ resize: { width: PHOTO_PX } }],
+            { compress: PHOTO_QUALITY, format: SaveFormat.JPEG, base64: true },
+          );
+          if (!shrunk.base64) throw new Error('bad_image');
 
-      setStage('uploading');
-      const path = photoPath(uid, place.slug, Date.now());
-      const publicUrl = await uploadPlacePhoto(path, decode(shrunk.base64));
-      try {
-        await addPlacePhoto({
-          placeId,
-          uid,
-          publicUrl,
-          storagePath: path,
-          // Past everything already on the place, so the gallery — which is
-          // in `sort_order` — puts it at the end rather than in front of
-          // pictures that were here before it. The cover moves onto it
-          // anyway, by the trigger `addPlacePhoto` describes.
-          sortOrder: count + 1,
-        });
-      } catch (e) {
-        // The file landed and the row did not — the policy said no, or the
-        // network went between the two writes. Take the file back out
-        // before saying so, or it sits in the bucket with nothing
-        // pointing at it: the third of the three leaks `prune-photos`
-        // was written to sweep. Best effort, like the remove it calls.
-        await removePhotoFile(path);
-        throw e;
+          setStage('uploading');
+          // One stamp for the batch and the index on top: `Date.now()`
+          // twice in one loop can be the same millisecond, and two files
+          // on one path is one file.
+          const path = photoPath(uid, place.slug, stamp + i);
+          const publicUrl = await uploadPlacePhoto(path, decode(shrunk.base64));
+          try {
+            await addPlacePhoto({ placeId, uid, publicUrl, storagePath: path, sortOrder: item.sortOrder });
+          } catch (e) {
+            // The file landed and the row did not — the policy said no, or
+            // the network went between the two writes. Take the file back
+            // out before saying so, or it sits in the bucket with nothing
+            // pointing at it: the third of the three leaks `prune-photos`
+            // was written to sweep. Best effort, like the remove it calls.
+            await removePhotoFile(path);
+            throw e;
+          }
+          landed += 1;
+        } catch (e) {
+          // One failing does not stop the rest: the reader picked five and
+          // four of them are fine. What failed is said once, at the end,
+          // with a count, so the message matches what the grid shows.
+          failed.push(e instanceof Error ? e : new Error(String(e)));
+        }
+        setProgress({ done: i + 1, total: batch.length });
       }
-      successHaptic();
-      await recount();
-      onAdded();
+      if (landed > 0) {
+        successHaptic();
+        await recount();
+        onAdded();
+      }
+      if (failed.length > 0) throw failed[0];
     } catch (e) {
       Alert.alert(
-        t('Could not add your photo', 'Không thêm được ảnh', '写真を追加できませんでした'),
+        batch.length > 1
+          ? t(
+            `Could not add ${failed.length} of ${batch.length} photos`,
+            `Không thêm được ${failed.length}/${batch.length} ảnh`,
+            `${batch.length}枚のうち${failed.length}枚を追加できませんでした`,
+          )
+          : t('Could not add your photo', 'Không thêm được ảnh', '写真を追加できませんでした'),
         e instanceof Error ? e.message : String(e),
       );
     } finally {
       setStage('idle');
+      setProgress({ done: 0, total: 0 });
     }
   };
 
-  return { add, busy, stage, mayOffer };
+  return { add, busy, stage, progress, mayOffer };
 }
 
 /** The step an add is on; `idle` between adds. */
