@@ -527,7 +527,16 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     show();
     fireEvent.click(screen.getByTestId('detail-checked-in'));
     expect(await screen.findByText('Checked in here')).toBeTruthy();
-    expect(screen.getByText('2 visits')).toBeTruthy();
+    // The count is the Profile's pill, at the right of the title row —
+    // one shape for "how many" across the app — not a line of words
+    // under it. Flush with the trash column below: the history card's
+    // 16 of padding, so the three right-edge things share one axis.
+    expect(screen.queryByText('2 visits')).toBeNull();
+    const head = screen.getByTestId('checkin-head');
+    const badge = within(head).getByTestId('count-badge');
+    expect(badge.textContent).toBe('2');
+    expect(getComputedStyle(head).justifyContent).toBe('space-between');
+    expect(getComputedStyle(badge).marginRight).toBe('16px');
     // The whole history here, newest first, each with its own undo —
     // not "last time" and one undo for the newest.
     const rows = screen.getAllByTestId('checkin-visit');
@@ -602,7 +611,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     fireEvent.click(screen.getByTestId('detail-checked-in'));
     await screen.findByText('Checked in here');
     expect(screen.queryByRole('button', { name: /Check in again/ })).toBeNull();
-    expect(screen.getByText('4 visits')).toBeTruthy();
+    expect(within(screen.getByTestId('checkin-head')).getByTestId('count-badge').textContent).toBe('4');
     expect(screen.getAllByRole('button', { name: /Remove this visit/ })).toHaveLength(4);
   });
 
