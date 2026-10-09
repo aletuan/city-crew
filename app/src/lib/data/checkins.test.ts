@@ -22,7 +22,7 @@ describe('fetchMyCheckins', () => {
       {
         id: 'k2', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00',
         places: {
-          slug: 'cong', name_en: 'Cong', name_vi: 'Cộng', name_ja: null,
+          slug: 'cong', name_en: 'Cong', name_vi: 'Cộng', name_ja: null, categories: ['cafes', 'eats'],
           // The cover wins over sort order; a hidden one never shows.
           place_photos: [
             { photo_uri: 'https://x/second.jpg', is_cover: false, is_hidden: false, sort_order: 1 },
@@ -40,14 +40,15 @@ describe('fetchMyCheckins', () => {
     const rows = await fetchMyCheckins('u1');
     const [call] = fake().log;
     expect(call.table).toBe('checkins');
-    expect(call.payload).toBe('id, city_id, at, places(slug, name_en, name_vi, name_ja, place_photos(photo_uri, is_cover, is_hidden, sort_order))');
+    expect(call.payload).toBe('id, city_id, at, places(slug, name_en, name_vi, name_ja, categories, place_photos(photo_uri, is_cover, is_hidden, sort_order))');
     expect(call.filters).toEqual([['user_id', 'u1']]);
     expect(call.order).toEqual(['at', { ascending: false }]);
     expect(rows).toEqual([
-      { id: 'k2', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', place: { name_en: 'Cong', name_vi: 'Cộng', name_ja: null, cover: 'https://x/cover.jpg' } },
+      { id: 'k2', place_slug: 'cong', city_id: 'hanoi', at: '2026-10-08T03:00:00+07:00', place: { name_en: 'Cong', name_vi: 'Cộng', name_ja: null, cover: 'https://x/cover.jpg', categories: ['cafes', 'eats'] } },
       // A row whose place is gone has no slug to show; it still counts.
       { id: 'k1', place_slug: '', city_id: null, at: '2026-10-01T03:00:00Z', place: null },
-      { id: 'k0', place_slug: 'bare', city_id: 'hanoi', at: '2026-09-01T03:00:00Z', place: { name_en: 'Bare', name_vi: 'Bare', name_ja: 'ベア', cover: null } },
+      // No categories on the row: an empty list, never a hole.
+      { id: 'k0', place_slug: 'bare', city_id: 'hanoi', at: '2026-09-01T03:00:00Z', place: { name_en: 'Bare', name_vi: 'Bare', name_ja: 'ベア', cover: null, categories: [] } },
     ]);
   });
   it('throws the database’s words when the read fails', async () => {

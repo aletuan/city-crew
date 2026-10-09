@@ -35,13 +35,16 @@
 // screen teaching a gesture the others do not honour is a trap.
 
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import ActionSheet, { type SheetAction } from '../components/ActionSheet';
 import { AuthHeader, AuthScreen } from '../components/authUi';
-import { Card, Empty, PressableScale } from '../components/ui';
-import { type Checkin, monthTitle, visitSections, visitSummary } from '../lib/checkin';
+import { Card, Chip, Empty, PressableScale } from '../components/ui';
+import { CATEGORIES, categoryLabel } from '../lib/categories';
+import {
+  type Checkin, filterVisits, monthTitle, visitCategories, visitCities, visitSections, visitSummary,
+} from '../lib/checkin';
 import { useCity } from '../lib/city';
 import { useMyCheckins } from '../lib/checkins';
 import { removeCheckin } from '../lib/data';
@@ -68,8 +71,25 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const { cities } = useCity();
   const [menuFor, setMenuFor] = useState<Checkin | null>(null);
 
-  const sections = useMemo(() => visitSections(visits.data), [visits.data]);
-  const summary = visitSummary(visits.data);
+  // Two filters, one per row of chips, and they combine. Each row is
+  // drawn only when there is a choice to make — one city is not a
+  // filter, it is a fact — and each has its own "All", so the reader can
+  // let one go and keep the other. The chips are Explore's, in Explore's
+  // order of meaning: a kind of place wears its glyph and hue, a city
+  // wears neither.
+  const [city, setCity] = useState<string | null>(null);
+  const [kind, setKind] = useState<string | null>(null);
+  const cityChoices = useMemo(() => visitCities(visits.data), [visits.data]);
+  const kindChoices = useMemo(() => visitCategories(visits.data), [visits.data]);
+  const shown = useMemo(() => filterVisits(visits.data, city, kind), [visits.data, city, kind]);
+  const sections = useMemo(() => visitSections(shown), [shown]);
+  // What is left after the filters — so a city chip reads "12 places ·
+  // 1 city", which is the answer to the question the tap asked.
+  const summary = visitSummary(shown);
+  const cityName = (id: string) => {
+    const c = cities.find((x) => x.id === id);
+    return c ? t(c.short_en, c.short_vi, c.short_ja ?? c.short_en) : id;
+  };
 
   /** The place's name in the reader's language, or what to call a place
    *  that has since been taken down: the visit happened either way. */
@@ -101,11 +121,15 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
     onPress: () => { const v = menuFor; setMenuFor(null); if (v) void remove(v); },
   }];
 
+  // Places and cities, not visits: "30 lần ghé · 30 địa điểm" said one
+  // number twice to a reader who checks in once per place, and the city
+  // count is the fact the list cannot show on its own.
   const summaryLine = t(
-    `${summary.visits} ${summary.visits === 1 ? 'visit' : 'visits'} · ${summary.places} ${summary.places === 1 ? 'place' : 'places'}`,
-    `${summary.visits} lần ghé · ${summary.places} địa điểm`,
-    `${summary.visits}回 · ${summary.places}か所`,
+    `${summary.places} ${summary.places === 1 ? 'place' : 'places'} · ${summary.cities} ${summary.cities === 1 ? 'city' : 'cities'}`,
+    `${summary.places} địa điểm · ${summary.cities} thành phố`,
+    `${summary.places}か所 · ${summary.cities}都市`,
   );
+  const filtered = !!(city || kind);
 
   return (
     <AuthScreen>
@@ -113,7 +137,7 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
 
       {!visits.loaded ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: 20 }} />
-      ) : sections.length === 0 ? (
+      ) : visits.data.length === 0 ? (
         <Empty text={t(
           'No visits yet. Check in at a place to start the list.',
           'Chưa có lần ghé nào. Check-in ở một địa điểm để bắt đầu.',
@@ -122,6 +146,36 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
       ) : (
         <>
           <Text style={s.summary}>{summaryLine}</Text>
+          {cityChoices.length > 1 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chips} contentContainerStyle={s.chipRow}>
+              <Chip label={t('All', 'Tất cả', 'すべて')} active={city === null} onPress={() => setCity(null)} />
+              {cityChoices.map((id) => (
+                <Chip key={id} label={cityName(id)} active={city === id} onPress={() => setCity(id)} />
+              ))}
+            </ScrollView>
+          )}
+          {kindChoices.length > 1 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chips} contentContainerStyle={s.chipRow}>
+              <Chip label={t('All', 'Tất cả', 'すべて')} active={kind === null} onPress={() => setKind(null)} />
+              {kindChoices.map((k) => (
+                <Chip
+                  key={k}
+                  label={categoryLabel(k, t)}
+                  icon={CATEGORIES[k]?.icon}
+                  iconColor={CATEGORIES[k]?.color}
+                  active={kind === k}
+                  onPress={() => setKind(k)}
+                />
+              ))}
+            </ScrollView>
+          )}
+          {filtered && sections.length === 0 && (
+            <Empty text={t(
+              'No visits match both choices.',
+              'Không có lần ghé nào khớp cả hai lựa chọn.',
+              '両方の条件に合う訪問はありません。',
+            )} />
+          )}
           {sections.map((sec) => (
             <View key={sec.key} style={s.month}>
               <Text style={s.eyebrow} testID="visit-month">{monthTitle(lang, sec.year, sec.month)}</Text>
@@ -187,6 +241,11 @@ export default function VisitedScreen({ navigation }: { navigation: Nav }) {
 
 const s = StyleSheet.create({
   summary: { color: colors.textSecondary, ...type.meta, marginTop: -4 },
+  // Each row bleeds to the screen's edge so the last chip can scroll in
+  // from under it, as Explore's does; the gap between the two rows is
+  // the card gap halved, so they read as one control with two lines.
+  chips: { marginHorizontal: -space.page, marginTop: -4 },
+  chipRow: { paddingHorizontal: space.page, gap: 8 },
   month: { gap: 8 },
   eyebrow: {
     color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,

@@ -45,7 +45,7 @@ const nav = () => {
 const show = () => { const r = nav(); render(<VisitedScreen navigation={r.n} />); return r; };
 const visit = (id: string, slug: string, at: string, over: Partial<Checkin> = {}): Checkin => ({
   id, place_slug: slug, city_id: 'hanoi', at,
-  place: { name_en: `${slug} en`, name_vi: `${slug} vi`, name_ja: null, cover: `https://x/${slug}.jpg` },
+  place: { name_en: `${slug} en`, name_vi: `${slug} vi`, name_ja: null, cover: `https://x/${slug}.jpg`, categories: ['cafes'] },
   ...over,
 });
 
@@ -81,7 +81,7 @@ describe('VisitedScreen', () => {
       visit('c', 'cong', '2026-10-12T05:00:00Z'),
     ];
     show();
-    expect(screen.getByText('3 visits · 2 places')).toBeTruthy();
+    expect(screen.getByText('2 places · 2 cities')).toBeTruthy();
     const months = screen.getAllByTestId('visit-month').map((e) => e.textContent);
     expect(months).toEqual(['October 2026', 'September 2026']);
     const rows = screen.getAllByTestId('visit-row');
@@ -100,7 +100,7 @@ describe('VisitedScreen', () => {
     expect(screen.getByText('Tháng 10, 2026')).toBeTruthy();
     expect(screen.getByTestId('visit-name').textContent).toBe('cong vi');
     expect(screen.getByTestId('visit-meta').textContent).toMatch(/^15\/10 · \d\d:\d\d · Hà Nội$/);
-    expect(screen.getByText('1 lần ghé · 1 địa điểm')).toBeTruthy();
+    expect(screen.getByText('1 địa điểm · 1 thành phố')).toBeTruthy();
   });
 
   it('falls back to English for a Japanese reader when there is no Japanese, and names a gone place', () => {
@@ -159,7 +159,7 @@ describe('VisitedScreen', () => {
   it('leads with the place\u2019s cover, and a glyph in the same box when there is none', () => {
     data.visits.data = [
       visit('a', 'cong', '2026-10-15T05:00:00Z'),
-      visit('b', 'bare', '2026-10-14T05:00:00Z', { place: { name_en: 'Bare', name_vi: 'Bare', name_ja: null, cover: null } }),
+      visit('b', 'bare', '2026-10-14T05:00:00Z', { place: { name_en: 'Bare', name_vi: 'Bare', name_ja: null, cover: null, categories: [] } }),
       visit('g', '', '2026-10-13T05:00:00Z', { place: null }),
     ];
     show();
@@ -182,6 +182,56 @@ describe('VisitedScreen', () => {
       expect(box.borderTopLeftRadius).toBe('12px');
     }
     expect(new Set(boxes.map((b) => b.className)).size).toBe(1);
+  });
+
+  // Two rows of chips — cities, then kinds of place — each only when
+  // there is a choice to make, each with an "All", and the two combine.
+  describe('the filters', () => {
+    const many = () => [
+      visit('a', 'cong', '2026-10-15T05:00:00Z', { city_id: 'hanoi', place: { ...visit('a', 'cong', '').place!, categories: ['cafes'] } }),
+      visit('b', 'pizza', '2026-10-14T05:00:00Z', { city_id: 'saigon', place: { ...visit('b', 'pizza', '').place!, categories: ['eats'] } }),
+      visit('c', 'bun', '2026-10-13T05:00:00Z', { city_id: 'saigon', place: { ...visit('c', 'bun', '').place!, categories: ['eats', 'cafes'] } }),
+    ];
+    const names = () => screen.getAllByTestId('visit-name').map((e) => e.textContent);
+
+    it('offers the cities and the kinds there are, most visited first, and hides a row with one choice', () => {
+      data.visits.data = many();
+      show();
+      const chips = screen.getAllByRole('button', { name: /^(All|Saigon|Hanoi|Eats|Cafés)$/ }).map((b) => b.textContent);
+      // Saigon twice to Hanoi's once; cafés and eats twice each, and
+      // cafés was seen first.
+      expect(chips).toEqual(['All', 'Saigon', 'Hanoi', 'All', 'Cafés', 'Eats']);
+      cleanup();
+      // One city, two kinds: only the kinds row is drawn.
+      data.visits.data = many().map((v) => ({ ...v, city_id: 'hanoi' }));
+      show();
+      expect(screen.queryByRole('button', { name: 'Hanoi' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Eats' })).toBeTruthy();
+    });
+
+    it('narrows by city, by kind, and by both, and says what is left', () => {
+      data.visits.data = many();
+      show();
+      fireEvent.click(screen.getByRole('button', { name: 'Saigon' }));
+      expect(names()).toEqual(['pizza en', 'bun en']);
+      expect(screen.getByText('2 places · 1 city')).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Cafés' }));
+      expect(names()).toEqual(['bun en']);
+      // Back to every city, the kind still held.
+      fireEvent.click(screen.getAllByRole('button', { name: 'All' })[0]);
+      expect(names()).toEqual(['cong en', 'bun en']);
+      expect(screen.getByRole('button', { name: 'Cafés' }).getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('says so when the two choices leave nothing, without losing the chips', () => {
+      data.visits.data = many();
+      show();
+      fireEvent.click(screen.getByRole('button', { name: 'Hanoi' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Eats' }));
+      expect(screen.queryAllByTestId('visit-row')).toHaveLength(0);
+      expect(screen.getByText(/No visits match/)).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Hanoi' })).toBeTruthy();
+    });
   });
 
   it('goes back from its header', () => {
