@@ -64,6 +64,12 @@ export type SheetAction = {
    *  do ask raise their dialog from inside `onPress`, once this sheet
    *  has closed. */
   destructive?: boolean;
+  /** A row that is not yet a thing to do — a door drawn before the room
+   *  behind it is built, so the reader learns the room is coming. Dimmed
+   *  and said as dimmed, and the tap is refused rather than closing the
+   *  sheet over nothing: a row that looks live and does nothing teaches
+   *  the reader not to trust rows. Its `desc` should say when. */
+  disabled?: boolean;
   onPress: () => void;
 };
 
@@ -103,12 +109,17 @@ export default function ActionSheet({ visible, header, actions, onClose }: {
           {actions.map((a, i) => (
             <PressableScale
               key={a.key}
-              style={[s.row, i > 0 && s.rowDivider]}
-              scaleTo={0.985}
+              style={[s.row, i > 0 && s.rowDivider, a.disabled && s.rowOff]}
+              scaleTo={a.disabled ? 1 : 0.985}
               // The sheet goes first, always. A dialog raised over a
               // sheet that is still animating out is the stacked-modal
               // bug every platform has its own version of.
               onPress={() => { onClose(); setTimeout(a.onPress, 220); }}
+              // `disabled` alone: the Pressable then drops the press and
+              // says "dimmed" to VoiceOver itself; a guard on `onPress`
+              // and a separate `aria-disabled` were two more copies of
+              // the same fact, each one a thing to forget.
+              disabled={a.disabled}
               accessibilityRole="button"
               accessibilityLabel={a.title}
               accessibilityHint={a.desc}
@@ -168,6 +179,9 @@ const s = StyleSheet.create({
     paddingHorizontal: space.cardPadding, paddingVertical: 14,
   },
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
+  // 0.45, the figure the dimmed CTAs already use, so "not yet" reads the
+  // same on a row as on a button.
+  rowOff: { opacity: 0.45 },
   // The old well's 44pt footprint, a 26pt box with room for a 19pt
   // glyph's whole line, lifted so its middle is the 19pt title line's.
   glyph: {
