@@ -524,7 +524,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     state.checkin = true;
     state.uid = 'u1';
     state.checkins = [visit('k1', 60), visit('k0', 60 * 24 * 3)];
-    show();
+    const navSpy = show() as unknown as { navigate: ReturnType<typeof vi.fn> };
     fireEvent.click(screen.getByTestId('detail-checked-in'));
     expect(await screen.findByText('Checked in here')).toBeTruthy();
     // The count is the Profile's pill, at the right of the title row —
@@ -549,7 +549,23 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(clock(60)).not.toBe(clock(60 * 24 * 3));
     expect(screen.queryByText(/Last time/)).toBeNull();
     expect(screen.queryByRole('button', { name: /Remove last check-in/ })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /Check in again/ }));
+    // "Again" is the sheet's one commit, so it wears the system's primary
+    // button — the wide gradient CTA every sheet commits with — not a
+    // menu row. The review row below it is a placeholder that says so
+    // and refuses the tap: a row that looks live and does nothing
+    // teaches the reader not to trust rows.
+    const again = screen.getByTestId('detail-checkin-again');
+    expect(again.getAttribute('role')).toBe('button');
+    expect(within(again).getByText('Check in again')).toBeTruthy();
+    const review = screen.getByRole('button', { name: 'Write a review' });
+    expect(review.getAttribute('aria-disabled')).toBe('true');
+    expect(within(review).getByText(/Coming soon/)).toBeTruthy();
+    fireEvent.click(review);
+    expect(navSpy.navigate).not.toHaveBeenCalled();
+    // And the sheet is still here: a refused tap does not close it.
+    document.querySelectorAll('[class*="r-animationKeyframes"]').forEach((el) => fireEvent.animationEnd(el));
+    expect(screen.getByText('Checked in here')).toBeTruthy();
+    fireEvent.click(again);
     await waitFor(() => expect(spies.addCheckin).toHaveBeenCalledTimes(1));
     expect(spies.removeCheckin).not.toHaveBeenCalled();
   });
@@ -593,9 +609,9 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     show();
     fireEvent.click(screen.getByTestId('detail-checked-in'));
     await screen.findByText('Checked in here');
-    expect(screen.queryByRole('button', { name: /Check in again/ })).toBeNull();
-    // No menu card at all then — the sheet is the history and its undos.
-    expect(screen.queryByTestId('sheet-actions')).toBeNull();
+    expect(screen.queryByTestId('detail-checkin-again')).toBeNull();
+    // The review placeholder stays; it is not what the window is about.
+    expect(screen.getByRole('button', { name: 'Write a review' })).toBeTruthy();
     const rows = screen.getAllByTestId('checkin-visit');
     fireEvent.click(within(rows[0]).getByRole('button', { name: /Remove this visit/ }));
     // The newest one, and only it: the visit a day ago stays.
@@ -610,7 +626,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     show();
     fireEvent.click(screen.getByTestId('detail-checked-in'));
     await screen.findByText('Checked in here');
-    expect(screen.queryByRole('button', { name: /Check in again/ })).toBeNull();
+    expect(screen.queryByTestId('detail-checkin-again')).toBeNull();
     expect(within(screen.getByTestId('checkin-head')).getByTestId('count-badge').textContent).toBe('4');
     expect(screen.getAllByRole('button', { name: /Remove this visit/ })).toHaveLength(4);
   });
