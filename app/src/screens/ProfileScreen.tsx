@@ -9,7 +9,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AmbientWarmth, Card, fireHaptic, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, CountBadge, fireHaptic, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
 import { resetTips } from '../components/TipBox';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { useDuckOnScroll } from '../components/tabBarDuck';
@@ -108,26 +108,6 @@ const GLYPH_BOX = 26;
 const CAPTION_LINE = 15;
 const TITLE_LINE = 19;
 
-/**
- * A number at a row's end, in a pill.
- *
- * A pill, not a bare figure: on the phone "30" and "6" floated between
- * the text and the chevron with nothing to say they were counts rather
- * than values, and the settings rows two cards down print their value
- * in that very spot. One tone and one shape for every row, because the
- * number means one thing on all of them — the size of what is behind
- * the row. Zero draws nothing: a count with nothing behind it is not a
- * fact.
- */
-function CountBadge({ n }: { n: number }) {
-  if (!n) return null;
-  return (
-    <View style={[s.badge, s.rowEnd]} testID="count-badge">
-      <Text style={s.badgeText}>{n}</Text>
-    </View>
-  );
-}
-
 function FeatureRow({ icon, title, sub, onPress, last, count }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
@@ -150,7 +130,7 @@ function FeatureRow({ icon, title, sub, onPress, last, count }: {
         <Text style={s.featureTitle}>{title}</Text>
         <Text style={s.featureSub}>{sub}</Text>
       </View>
-      <CountBadge n={count ?? 0} />
+      <CountBadge n={count ?? 0} style={s.rowEnd} />
       <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
     </PressableScale>
   );
@@ -863,7 +843,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
               {t('Find friends and share your plans.', 'Tìm kiếm bạn bè và chia sẻ kế hoạch.', '友達を探して、計画を共有。')}
             </Text>
           </View>
-          <CountBadge n={crew.friends.length} />
+          <CountBadge n={crew.friends.length} style={s.rowEnd} />
           <Ionicons name="chevron-forward" size={17} color={colors.textTertiary} style={s.rowEnd} />
         </PressableScale>
         {/* The door to Activity, re-hung. The feed's one entry used to be
@@ -1104,12 +1084,6 @@ const s = StyleSheet.create({
   // its edges, the radius half the height for a true capsule. `minWidth`
   // 32 is two digits of 13pt semibold plus the padding — so "6", "30"
   // and "99" are one width, and the pills down a card line up.
-  badge: {
-    minWidth: 32, height: 22, paddingHorizontal: 8, borderRadius: 11,
-    backgroundColor: colors.surfaceGlassStrong, alignItems: 'center', justifyContent: 'center',
-  },
-  badgeText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.semibold },
-
   section: { color: colors.text, ...type.section, marginTop: 10 },
 
   // 2, not the 5 the column around it uses: a name and the handle under

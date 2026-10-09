@@ -710,6 +710,28 @@ export function UnderlineTabs<K extends string>({ tabs, active, onChange, right 
  * which made `[s.card, past && s.cardPast]` a type error and pushed callers
  * towards one merged style per combination.
  */
+/**
+ * A number at a row's end, in a pill.
+ *
+ * A pill, not a bare figure: on the Profile "30" and "6" floated between
+ * the text and the chevron with nothing to say they were counts rather
+ * than values, and the settings rows two cards down print their value
+ * in that very spot. One tone and one shape for every count, because the
+ * number means one thing wherever it stands — the size of what is behind
+ * the row, or above the list — which is why it lives here and not on
+ * the Profile alone: the check-in sheet on a place's screen says how
+ * many visits with the same pill. Zero draws nothing: a count with
+ * nothing behind it is not a fact.
+ */
+export function CountBadge({ n, style }: { n: number; style?: StyleProp<ViewStyle> }) {
+  if (!n) return null;
+  return (
+    <View style={[s.badge, style]} testID="count-badge">
+      <Text style={s.badgeText}>{n}</Text>
+    </View>
+  );
+}
+
 export function Card({ children, style, testID }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; testID?: string }) {
   return <View style={[s.card, style]} testID={testID}>{children}</View>;
 }
@@ -1145,6 +1167,11 @@ const s = StyleSheet.create({
     backgroundColor: colors.badgeSolid,
   },
   tabBadgeText: { color: colors.accentInk, fontSize: 12.5, fontWeight: font.semibold },
+  badge: {
+    minWidth: 32, height: 22, paddingHorizontal: 8, borderRadius: 11,
+    backgroundColor: colors.surfaceGlassStrong, alignItems: 'center', justifyContent: 'center',
+  },
+  badgeText: { color: colors.textSecondary, fontSize: 13, fontWeight: font.semibold },
   card: {
     backgroundColor: colors.surfaceCard, borderRadius: radius.card,
     borderWidth: 1, borderColor: colors.borderGlassSoft, overflow: 'hidden',

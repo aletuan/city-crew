@@ -47,7 +47,7 @@ import { useSave } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, display, font, onPhoto, radius, space, type } from '../theme';
-import { AmbientWarmth, Card, Empty, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, CountBadge, Empty, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
 import type { Nav, RootRoute } from '../nav';
@@ -1136,11 +1136,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
           actions={checkinActions}
           header={(
             <View style={s.checkinHead}>
-              <View style={{ gap: 2 }}>
+              {/* The count is the Profile's pill at the row's end, not a
+                  line of words under the title: one shape for "how many"
+                  across the app, and 20pt of sheet given back. Inset by
+                  the history card's padding so it stands on the trash
+                  column's axis below. */}
+              <View style={s.checkinHeadRow} testID="checkin-head">
                 <Text style={s.checkinHeadTitle}>{t('Checked in here', 'Bạn đã check-in ở đây', 'ここにチェックイン済み')}</Text>
-                <Text style={s.checkinHeadMeta}>
-                  {t(`${visitsHere.length} ${visitsHere.length === 1 ? 'visit' : 'visits'}`, `${visitsHere.length} lần`, `${visitsHere.length}回`)}
-                </Text>
+                <CountBadge n={visitsHere.length} style={s.checkinCount} />
               </View>
               <ScrollView style={s.history} bounces={false} showsVerticalScrollIndicator={visitsHere.length > HISTORY_ROWS}>
                 {visitsHere.map((v, i) => {
@@ -1340,8 +1343,9 @@ const s = StyleSheet.create({
   // Worn: the one tint this row is allowed, because it is a state.
   checkinOn: { backgroundColor: colors.accentSoft },
   checkinHead: { gap: 12 },
-  checkinHeadTitle: { color: colors.text, fontSize: 18, fontFamily: display.semibold },
-  checkinHeadMeta: { color: colors.textTertiary, fontSize: 14 },
+  checkinHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  checkinHeadTitle: { flex: 1, color: colors.text, fontSize: 18, fontFamily: display.semibold },
+  checkinCount: { marginRight: space.cardPadding },
   // The sheet's own card surface, as its rows below wear it. Capped at
   // HISTORY_ROWS rows of HISTORY_ROW each; more scrolls inside.
   history: {
