@@ -86,8 +86,9 @@ describe('VisitedScreen', () => {
     expect(months).toEqual(['October 2026', 'September 2026']);
     const rows = screen.getAllByTestId('visit-row');
     expect(rows.map((r) => within(r).getByTestId('visit-name').textContent)).toEqual(['pizza en', 'cong en', 'cong en']);
-    // The meta: the day, the time and the city, in that order.
-    expect(within(rows[0]).getByTestId('visit-meta').textContent).toMatch(/Saigon$/);
+    // The meta: the date, the time and the city, in that order — and no
+    // weekday: a visit already made is placed by its date, as a receipt is.
+    expect(within(rows[0]).getByTestId('visit-meta').textContent).toMatch(/^15 Oct · \d\d:\d\d · Saigon$/);
     expect(within(rows[1]).getByTestId('visit-meta').textContent).toMatch(/Hanoi$/);
     expect(within(rows[0]).getByTestId('visit-meta').textContent).toMatch(/\d\d:\d\d/);
   });
@@ -98,7 +99,7 @@ describe('VisitedScreen', () => {
     show();
     expect(screen.getByText('Tháng 10, 2026')).toBeTruthy();
     expect(screen.getByTestId('visit-name').textContent).toBe('cong vi');
-    expect(screen.getByTestId('visit-meta').textContent).toMatch(/Hà Nội$/);
+    expect(screen.getByTestId('visit-meta').textContent).toMatch(/^15\/10 · \d\d:\d\d · Hà Nội$/);
     expect(screen.getByText('1 lần ghé · 1 địa điểm')).toBeTruthy();
   });
 
@@ -170,12 +171,14 @@ describe('VisitedScreen', () => {
     expect(rows[1].querySelector('img')).toBeNull();
     expect(rows[1].querySelector('[data-icon="location-outline"]')).toBeTruthy();
     expect(rows[2].querySelector('[data-icon="location-outline"]')).toBeTruthy();
-    // One box for all three, 48 square, rounded, so the names line up.
+    // One box for all three, 44 square — the face's size on Activity, so
+    // a leading picture is one size wherever a list has one — rounded,
+    // so the names line up.
     const boxes = rows.map((r) => r.querySelector('[data-testid="visit-thumb"]')!);
     for (const b of boxes) {
       const box = getComputedStyle(b);
-      expect(box.width).toBe('48px');
-      expect(box.height).toBe('48px');
+      expect(box.width).toBe('44px');
+      expect(box.height).toBe('44px');
       expect(box.borderTopLeftRadius).toBe('10px');
     }
     expect(new Set(boxes.map((b) => b.className)).size).toBe(1);

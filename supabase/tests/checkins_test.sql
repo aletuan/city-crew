@@ -1,6 +1,7 @@
 -- Check-ins: owner reads, owner writes now, owner deletes; and the three
--- bounds on a write — the day's thirty, ten minutes at one place, and
--- `at` being now give or take.
+-- bounds on a write — three at one place in a day, ten minutes at one
+-- place, and `at` being now give or take. (The day's thirty across
+-- places, the first cut's bound, went in `*_checkins_per_place.sql`.)
 --
 --   e1000000-…-0001  the visitor
 --   e1000000-…-0002  somebody else
@@ -111,27 +112,61 @@ begin
   assert n = 1, format('the owner''s delete should take the one row at that place, left %s', n);
 end $$;
 
--- ── thirty in a day, and the thirty-first is refused ──
--- Seeded as the runner, spaced an hour apart so the ten-minute rule is
--- not what refuses the next one; the one row from above makes 30.
+-- ── three at one place in a day; the fourth is refused, another place is not ──
+-- Seeded as the runner, spaced hours apart so the ten-minute rule is not
+-- what refuses the next one; the one row from above makes three at the
+-- second place. Thirty-odd across places in the same day must pass —
+-- the cap across places is gone.
 insert into public.checkins (user_id, place_id, at, created_at)
 select 'e1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-0000000000a2',
-       now() - (i || ' hours')::interval, now() - (i || ' minutes')::interval
-  from generate_series(1, 29) i;
+       now() - (i || ' hours')::interval, now() - (i || ' hours')::interval
+  from generate_series(2, 3) i;
 do $$
 declare refused int := 0; n int;
 begin
   set local role rls_client;
   set local test.uid = 'e1000000-0000-0000-0000-000000000001';
-  select count(*) into n from public.checkins;
+  select count(*) into n from public.checkins where place_id = 'e1000000-0000-0000-0000-0000000000a2';
   begin
     insert into public.checkins (user_id, place_id)
-    values ('e1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-0000000000a1');
+    values ('e1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-0000000000a2');
   exception when insufficient_privilege then refused := refused + 1;
   end;
+  -- The other place has had one visit today, deleted above: room for three.
+  insert into public.checkins (user_id, place_id)
+  values ('e1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-0000000000a1');
   reset role;
-  assert n = 30, format('thirty visits in the day before the cap, saw %s', n);
-  assert refused = 1, 'the thirty-first visit in a day should be refused';
+  assert n = 3, format('three visits at the place before the rule, saw %s', n);
+  assert refused = 1, 'the fourth visit at one place in a day should be refused';
+end $$;
+
+-- ── a day later, the place is open again ──
+update public.checkins set at = at - interval '1 day', created_at = created_at - interval '1 day'
+ where place_id = 'e1000000-0000-0000-0000-0000000000a2';
+do $$
+begin
+  set local role rls_client;
+  set local test.uid = 'e1000000-0000-0000-0000-000000000001';
+  insert into public.checkins (user_id, place_id)
+  values ('e1000000-0000-0000-0000-000000000001', 'e1000000-0000-0000-0000-0000000000a2');
+  reset role;
+end $$;
+
+-- ── and thirty-odd places in one day are fine ──
+insert into public.places (id, slug, city_id, is_published, review_status)
+select ('e1000000-0000-0000-0000-0000000000' || lpad(to_hex(i), 2, '0'))::uuid, 'ck-many-' || i, 'hanoi', true, 'approved'
+  from generate_series(16, 47) i;
+do $$
+declare n int;
+begin
+  set local role rls_client;
+  set local test.uid = 'e1000000-0000-0000-0000-000000000001';
+  insert into public.checkins (user_id, place_id)
+  select 'e1000000-0000-0000-0000-000000000001', ('e1000000-0000-0000-0000-0000000000' || lpad(to_hex(i), 2, '0'))::uuid
+    from generate_series(16, 47) i;
+  select count(*) into n from public.checkins where created_at > now() - interval '1 minute';
+  reset role;
+  assert n >= 32, format('thirty-two places in a minute should all be allowed, saw %s', n);
 end $$;
 
 select 'all check-in checks passed' as result;

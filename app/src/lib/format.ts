@@ -135,6 +135,24 @@ export function dayline(lang: string, now: Date): string {
  * English keeps its three-letter month, which is unambiguous everywhere
  * and costs two characters.
  */
+/**
+ * The date with no weekday: `08/10`, `8 Oct`, `10/8`.
+ *
+ * `shortDateline` leads with the weekday because it names a day coming
+ * up, and "Thứ 6" is how a plan is spoken of. A visit already made is
+ * placed by its date alone, the way a receipt is — and a list of thirty
+ * check-ins wearing "Thứ 5," on every row said the weekday thirty times
+ * for no reader. Same padding and order as `shortDateline`, so the two
+ * agree where they both appear.
+ */
+export function numericDate(lang: string, now: Date): string {
+  const d = String(now.getDate()).padStart(2, '0');
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  if (lang === 'vi') return `${d}/${m}`;
+  if (lang === 'ja') return `${now.getMonth() + 1}/${now.getDate()}`;
+  return `${now.getDate()} ${MONTHS_EN[now.getMonth()]}`;
+}
+
 export function shortDateline(lang: string, now: Date): string {
   const d = String(now.getDate()).padStart(2, '0');
   const m = String(now.getMonth() + 1).padStart(2, '0');

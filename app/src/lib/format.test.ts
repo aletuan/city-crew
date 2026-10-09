@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, dotWindow, fmtDuration, fmtMinutes, groupHours, openFragment, openLabel, openState, sashLabel, shortDateline, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, dotWindow, fmtDuration, fmtMinutes, groupHours, numericDate, openFragment, openLabel, openState, sashLabel, shortDateline, shutLabel, splitHours } from './format';
 import { instantOn } from './clock';
 import { fmtDistance } from './geo';
 
@@ -836,5 +836,23 @@ describe('dayline', () => {
   it('keeps the weekday whole on a weekday too', () => {
     expect(dayline('vi', new Date(2026, 8, 25))).toBe('Thứ Sáu 25');
     expect(dayline('en', new Date(2026, 8, 25))).toBe('Friday 25');
+  });
+});
+
+// The weekday is for a day coming up; a visit already made is placed by
+// its date alone, as a receipt is. The check-ins list wore "Thứ 5," on
+// thirty rows of the same day, and the owner read it as noise.
+describe('numericDate', () => {
+  const fri = new Date(2026, 8, 25);
+  const jan = new Date(2026, 0, 4);
+  it('is day and month, padded in Vietnamese as the short dateline pads them', () => {
+    expect(numericDate('vi', fri)).toBe('25/09');
+    expect(numericDate('vi', jan)).toBe('04/01');
+  });
+  it('is day and short month in English, month and day in Japanese', () => {
+    expect(numericDate('en', fri)).toBe('25 Sep');
+    expect(numericDate('en', jan)).toBe('4 Jan');
+    expect(numericDate('ja', fri)).toBe('9/25');
+    expect(numericDate('ja', jan)).toBe('1/4');
   });
 });
