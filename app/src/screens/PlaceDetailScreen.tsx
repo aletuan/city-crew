@@ -47,7 +47,7 @@ import { useSave } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
 import { colors, display, font, onPhoto, radius, space, type } from '../theme';
-import { AmbientWarmth, Card, CountBadge, Empty, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
+import { AmbientWarmth, Card, CountBadge, Empty, GradientCta, PressableScale, successHaptic, useOwnedStatusBar, useTabBarClearance } from '../components/ui';
 import PricePill from '../components/PricePill';
 import LocalGuidePanel from '../components/LocalGuidePanel';
 import type { Nav, RootRoute } from '../nav';
@@ -463,16 +463,27 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
       Alert.alert(t('Could not remove it', 'Không bỏ được', '削除できませんでした'), (e as Error).message);
     }
   };
-  // What a worn pill offers below the history. "Again" only while the
+  // "Again" is the sheet's one commit, so it is drawn as every sheet's
+  // commit is — the wide gradient CTA under the history — and not as a
+  // menu row among rows (the reference mock made it a filled card of
+  // its own; the CTA is this app's filled card). Offered only while the
   // rules allow another — ten minutes since the last, fewer than three
   // today — because inside those a second tap is a slip, and the undo
-  // for a slip is on its row above.
-  const checkinActions: SheetAction[] = canRepeat(visits.data, place.slug, new Date()) ? [{
-    key: 'again', icon: 'location' as const,
-    title: t('Check in again', 'Check-in lần nữa', 'もう一度チェックイン'),
-    desc: t('Adds another visit, now.', 'Ghi thêm một lần ghé, lúc này.', '今の訪問をもう1回記録します。'),
-    onPress: () => { setCheckinMenu(false); void checkIn(); },
-  }] : [];
+  // for a slip is on its row above. Hidden rather than dimmed: the
+  // sheet is most often opened in the minutes after a check-in, and a
+  // big dimmed button there would read as a button that is broken.
+  const canAgain = canRepeat(visits.data, place.slug, new Date());
+  // Below it, what else a visit might lead to. The review is a door
+  // drawn before its room, as the Check-in pill itself was (#812): the
+  // owner wants the reader to learn that a visit will be rateable here,
+  // and a row that says "coming soon" and refuses the tap teaches that
+  // without pretending.
+  const checkinActions: SheetAction[] = [{
+    key: 'review', icon: 'create-outline' as const, disabled: true,
+    title: t('Write a review', 'Viết đánh giá', 'レビューを書く'),
+    desc: t('Coming soon — share what it was like.', 'Sắp có — chia sẻ trải nghiệm của bạn.', '近日公開 — 感想を共有できます。'),
+    onPress: () => {},
+  }];
 
   return (
     // No top safe area: the photograph is what belongs against the top of
@@ -1167,6 +1178,15 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   );
                 })}
               </ScrollView>
+              {canAgain && (
+                <GradientCta
+                  wide
+                  icon="location"
+                  label={t('Check in again', 'Check-in lần nữa', 'もう一度チェックイン')}
+                  onPress={() => { setCheckinMenu(false); void checkIn(); }}
+                  testID="detail-checkin-again"
+                />
+              )}
             </View>
           )}
         />
