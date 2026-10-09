@@ -698,7 +698,10 @@ describe('saving', () => {
   it('does not write without a city', async () => {
     cityState.current = { city: null };
     renderScreen();
-    expect(screen.getByText('Saved trips go to Trips, where you can invite your crew.')).toBeTruthy();
+    // Nothing under the button for a signed-in reader: Save says where
+    // the trip goes, and the screen goes there itself after the save.
+    expect(screen.queryByText(/Saved trips go to Trips/)).toBeNull();
+    expect(screen.queryByText(/Sign in to save/)).toBeNull();
     save();
     await act(async () => {});
     expect(saveTrip).not.toHaveBeenCalled();
