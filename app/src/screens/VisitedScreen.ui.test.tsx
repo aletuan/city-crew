@@ -171,15 +171,15 @@ describe('VisitedScreen', () => {
     expect(rows[1].querySelector('img')).toBeNull();
     expect(rows[1].querySelector('[data-icon="location-outline"]')).toBeTruthy();
     expect(rows[2].querySelector('[data-icon="location-outline"]')).toBeTruthy();
-    // One box for all three, 44 square — the face's size on Activity, so
-    // a leading picture is one size wherever a list has one — rounded,
-    // so the names line up.
+    // One box for all three, 56 square, rounded, so the names line up.
+    // 56 by the owner's eye after 48 and 44 both read too small: a
+    // picture of a place has a room in it, and a face does not.
     const boxes = rows.map((r) => r.querySelector('[data-testid="visit-thumb"]')!);
     for (const b of boxes) {
       const box = getComputedStyle(b);
-      expect(box.width).toBe('44px');
-      expect(box.height).toBe('44px');
-      expect(box.borderTopLeftRadius).toBe('10px');
+      expect(box.width).toBe('56px');
+      expect(box.height).toBe('56px');
+      expect(box.borderTopLeftRadius).toBe('12px');
     }
     expect(new Set(boxes.map((b) => b.className)).size).toBe(1);
   });

@@ -23,7 +23,7 @@
 // pin in Activity's bare 44pt slot, and on a phone thirty pins in a
 // column told the eye nothing — a glyph every row shares is decoration,
 // where a picture is the one thing that says which row this is (Maps'
-// recents, Timeline, every music app). 44pt, rounded 10, the shape a
+// recents, Timeline, every music app). 56pt, rounded 12, the shape a
 // content thumbnail takes here as against the circle a person takes on
 // Crew; a place with no picture gets the pin on a glass square of the
 // same size, so the names stay in one column either way. The pictures
@@ -51,13 +51,16 @@ import { colors, display, font, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 const LINE = 21;
-/** The thumbnail's side: 44, the face's size on Activity and the slot
- *  the glyph had, so a leading picture is one size wherever a list has
- *  one. It opened at 48 — Maps' recents — and beside two lines of
- *  15pt text that read a size too loud, the picture leading the row
- *  instead of placing it. Two lines stand about 41pt; 44 still clears
- *  them. */
-const THUMB = 44;
+/** The thumbnail's side: 56, the size a content thumbnail takes in a
+ *  list that is about the content (Apple Music's lists, Spotify's).
+ *  It opened at 48 and was taken to 44 to match the face on Activity;
+ *  the owner's eye on the phone said both were too small, and the
+ *  reason is fair — a picture of a place has a whole room in it and
+ *  needs the pixels to read, where a face reads at 44. So a place's
+ *  picture and a person's face are two sizes on purpose, each the size
+ *  its subject needs. Radius 12 keeps the 48:10 proportion. Two lines
+ *  of text stand about 41pt; the row is 80 with the padding. */
+const THUMB = 56;
 
 export default function VisitedScreen({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
@@ -189,9 +192,9 @@ const s = StyleSheet.create({
     color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
     letterSpacing: 1.1, textTransform: 'uppercase', marginTop: 6,
   },
-  // Centred: a 44pt picture beside two lines of text wants its middle
+  // Centred: a 56pt picture beside two lines of text wants its middle
   // on theirs, where a 19pt glyph wanted the first line's. 12 of
-  // padding puts the 44 in a 68pt row.
+  // padding puts the 56 in an 80pt row.
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: space.cardPadding, paddingVertical: 12,
@@ -199,7 +202,7 @@ const s = StyleSheet.create({
   rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
   rowEnd: { alignSelf: 'center' },
   thumb: {
-    width: THUMB, height: THUMB, borderRadius: 10, overflow: 'hidden',
+    width: THUMB, height: THUMB, borderRadius: 12, overflow: 'hidden',
     backgroundColor: colors.surfaceGlassStrong, alignItems: 'center', justifyContent: 'center',
   },
   thumbImage: { width: THUMB, height: THUMB },
