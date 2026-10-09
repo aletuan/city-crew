@@ -449,9 +449,19 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
               wide
               disabled={!ready}
               testID="ideas-sketch"
-              // No glyph. It is the only button on the screen and the
-              // words say what it does; a sparkle beside them was
-              // decoration, not a second reading of the label.
+              // The paw, and the paw only. A sparkle sat here once and
+              // went: it was decoration, not a second reading of the
+              // label, and it has since become every app's "AI" glyph.
+              // The paw is different in kind — it is the planner's own
+              // mark, the orb that turns while it thinks and the start
+              // mark on the rail after — so the button says *whose*
+              // planning this is, which the deliberately generic label
+              // does not. `GradientCta`'s own rule: a glyph earns its
+              // place beside a label that is generic. Not the map (the
+              // Places tab wears one 60pt below) and not the paper plane
+              // from the hero (the invite sheet already means "send" by
+              // it).
+              icon="paw"
               // Generic, and it stays generic — see the lede's note.
               label={t('Plan a trip', 'Lên kế hoạch', 'プランを立てる')}
               // `whereLabel` rather than the raw draft: only this screen

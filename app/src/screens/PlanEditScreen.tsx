@@ -607,23 +607,25 @@ export default function PlanEditScreen({ navigation, route }: {
           testID="plan-save"
         />
 
-        <Text style={s.note}>
-          {session?.user?.id
-            ? t(
-              // What saving does, and only that. This used to promise the
-              // times and order "stay editable after saving", but a saved
-              // trip opens in TripDetail, which is view-only — a promise
-              // nothing in the app keeps.
-              'Saved trips go to Trips, where you can invite your crew.',
-              'Chuyến đã lưu nằm trong Chuyến đi, nơi bạn có thể mời crew.',
-              '保存した旅程は「旅程」に入り、そこからクルーを招待できます。',
-            )
-            : t(
+        {/* A line under the button only for the guest, who has no other
+            way to know the tap will raise a sign-in sheet rather than
+            save. The signed-in reader had one too — "saved trips go to
+            Trips, where you can invite your crew" — and it went: the
+            button already says where the trip goes, the screen goes
+            there itself after the save, and the invite control is the
+            first thing on that tab. Before that it promised the times
+            "stay editable after saving", which TripDetail, being
+            view-only, never kept; a caption that has been wrong once and
+            redundant once is a caption the button does not need. */}
+        {!session?.user?.id && (
+          <Text style={s.note}>
+            {t(
               'Sign in to save this trip.',
               'Đăng nhập để lưu chuyến đi này.',
               'この旅程を保存するにはサインインしてください。',
             )}
-        </Text>
+          </Text>
+        )}
       </ScrollView>
       </View>
     </Screen>
