@@ -74,12 +74,20 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch (_) { /* empty body is fine */ }
   const limit = Math.min(MAX_LIMIT, Math.max(1, Number(body.limit) || DEFAULT_LIMIT));
 
-  // The places with work: a Google row that has a ref and no copy. Read
-  // through the rows rather than the places, then grouped, because that
-  // is the only table that knows which places are stale.
+  // The places with work: a visible Google row that has a ref and no
+  // copy. Read through the rows rather than the places, then grouped,
+  // because that is the only table that knows which places are stale.
+  //
+  // Visible, because a hidden row is not work — the loop below leaves it
+  // alone, and this function hides the rows it runs out of refs for. It
+  // keeps its ref and its empty path when it does, so without this filter
+  // every place this function had ever finished came back on the next
+  // call: a Place Details request and a batch slot spent on nothing, and
+  // a call with no `after` handed the same first places forever.
   let q = admin.from("place_photos")
     .select("place_id, places!inner(id, slug, google_place_id)")
     .eq("source", "google").is("storage_path", null).not("photo_ref", "is", null)
+    .eq("is_hidden", false)
     .order("place_id");
   if (Array.isArray(body.place_ids)) q = q.in("place_id", body.place_ids.slice(0, MAX_LIMIT));
   if (body.after) q = q.gt("place_id", body.after);
