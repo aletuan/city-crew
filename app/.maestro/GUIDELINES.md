@@ -72,6 +72,15 @@ minute or more per run; keep the suite short.
     notifications: allow`); a system alert over the screen breaks every
     step after it.
 
+11a. **After a system alert, relaunch before you open a Modal you
+    must read.** Once an `Alert` has been shown in a session, the owner's
+    `⋯` menu on a collection page reads to XCUITest as an empty tree —
+    on screen, but no ids. Measured on 10 October: fresh session, the
+    menu reads; cancel one delete alert and reopen it, and it does not.
+    A flow whose cleanup deletes (and so raises the alert) relaunches
+    with `common/start.yaml` before going on — see `11`. An alert at the
+    very end of a flow is harmless.
+
 **Secrets**
 
 12. **Credentials come in as `-e` variables** (`${TEST_EMAIL}`,

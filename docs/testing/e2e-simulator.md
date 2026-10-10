@@ -50,23 +50,28 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `09-collections-browse` | guest | 42 s |
 | `10-check-in` | test account | 1 m 9 s |
 | `11-collection-crud` | test account | 2 m |
-| `14-forgot-password` | guest | 48–50 s (chạy riêng) |
+| `14-forgot-password` | guest | 1 m 11 s |
 | `12-language` | guest | 1 m 43 s |
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
-**Kết quả gần nhất:** 10/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **12/13**:
-`14-forgot-password` vừa vào và xanh (hai lượt riêng liên tiếp, và trong
-suite); `11-collection-crud` đỏ. Từ một lượt suite lúc khoảng 07:45 mà
-driver Maestro mất kết nối giữa chừng (`DeviceUnreachableException`), mở
-menu `⋯` trên trang collection làm XCUITest thấy cây giao diện trống — menu
-vẫn hiện trên màn hình, các Modal khác (ngôn ngữ, lưu, check-in) vẫn đọc
-được — và vẫn thế sau khi khởi động lại simulator. Code trang collection
-không đổi so với lượt 12/12 sáng cùng ngày; đang điều tra. Các lượt trước:
-12/12 trong 13 m 38 s (10/10, `12-language` vào); 11/11 trong 12 m 11 s
-(09/10); 10/10 trong 11 m 29 s (09/10). Trước khi vào, mỗi flow đã xanh hai lượt liên tiếp
-khi chạy riêng (lượt hai của `11` chứng minh phần dọn dẹp). Một lượt `11`
-đã hỏng ở bước đăng nhập với "No connection" — mạng giữa simulator và
-Supabase, chưa tới phần collection; lượt sau xanh.
+**Kết quả gần nhất:** 10/10/2026, iPhone 17 · iOS 26.5 · Expo Go, code tại
+`0d120779` (main, đã gồm #848–#855) — **13/13 passed trong 15 m 7 s**.
+
+Trước đó cùng ngày `11-collection-crud` đỏ liền nhiều lượt, kể cả sau khi
+khởi động lại simulator. Nguyên nhân đã đo được: sau khi một `Alert` hệ thống
+đã hiện trong phiên, menu `⋯` của chủ collection đọc ra cây giao diện rỗng
+với XCUITest (phiên mới: đọc được; huỷ một hộp xoá rồi mở lại: không). Một
+lượt suite bị driver mất kết nối đã để lại "Maestro CRUD" trên tài khoản
+test; từ đó phần dọn dẹp của `11` luôn bật hộp xoá *trước* khi mở menu để
+đổi tên, hỏng, và để lại một list nữa — vòng lặp nằm ở dữ liệu tài khoản,
+không ở máy. `11` giờ mở lại app sau khi dọn (xanh hai lượt: một có list
+sót, một sạch); GUIDELINES có quy tắc 11a. Có thể đây cũng là lỗi với
+VoiceOver trên máy thật — chưa kiểm.
+
+Các lượt trước: 12/12 trong 13 m 38 s (10/10, `12-language` vào); 11/11 trong
+12 m 11 s (09/10, `10-check-in` vào); 10/10 trong 11 m 29 s (09/10, `09` và
+`11` vào). Một lượt `11` ngày 09/10 hỏng ở bước đăng nhập với "No
+connection" — mạng giữa simulator và Supabase; lượt sau xanh.
 
 Cùng ngày, `04-sign-in` chập chờn đã được sửa: `common/ensure-signed-out.yaml`
 cuộn lên `profile-sign-in` không có `centerElement`, nên đôi khi dừng với nút
@@ -75,8 +80,8 @@ nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái 
 
 **Ngân sách: dưới 20 phút** cho cả suite (quyết định của chủ dự án,
 09/10). Thời gian không phải ràng buộc chặt: một flow đáng giá vẫn vào dù
-làm suite dài thêm một hai phút. 12 flow hiện chạy 13 m 38 s, còn khoảng
-6 phút cho các flow tiếp theo.
+làm suite dài thêm một hai phút. 13 flow hiện chạy 15 m 7 s, còn khoảng
+5 phút cho các flow tiếp theo.
 
 `10-check-in` được thử cả nhánh dọn dẹp: một flow tạm check-in rồi dừng, `10`
 dọn lượt ghé đó rồi chạy hết (1 m 5 s); lượt sau từ trạng thái sạch (51 s);
