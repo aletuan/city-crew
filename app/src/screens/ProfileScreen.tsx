@@ -779,7 +779,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         {taste.length ? (
           <View style={s.tasteChips}>
             {taste.map((k) => (
-              <View key={k} style={s.tasteChip}>
+              <View key={k} style={s.tasteChip} testID={`interest-${k}`}>
                 <Ionicons name={CATEGORIES[k].icon} size={15} color={CATEGORIES[k].color} />
                 <Text style={s.tasteChipText}>
                   {t(CATEGORIES[k].en, CATEGORIES[k].vi, CATEGORIES[k].ja)}
@@ -998,11 +998,16 @@ const s = StyleSheet.create({
   // border — this card is a page of answers, not a set of controls. A
   // size up from when they sat in a table's value column: with the card's
   // width to themselves, 13.5pt chips read as leftovers.
+  //
+  // 44 tall, from the 37 its padding made: the same category chip is 44
+  // on Search, Places and a place's own facts row, and a Cafés pill at
+  // two heights across the app reads as two different things. Still no
+  // border and no press state — the height is for the family, not a tap.
   tasteChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 14 },
   tasteChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
-    paddingHorizontal: 14, paddingVertical: 9,
+    paddingHorizontal: 14, paddingVertical: 9, minHeight: 44,
   },
   tasteChipText: { color: colors.text, fontSize: 15, fontWeight: font.medium },
   tasteEmpty: { paddingVertical: 14 },

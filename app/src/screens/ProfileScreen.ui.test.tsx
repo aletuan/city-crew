@@ -436,6 +436,16 @@ describe('interests', () => {
     expect(screen.queryByText('Edit profile to add your interests.')).toBeNull();
   });
 
+  // The height every category chip in the app wears now — Search, Places,
+  // a place's facts row — so the family reads as one. Still not a control.
+  it('draws each chip 44 tall, and as a fact rather than a button', () => {
+    state.categories = ['cafes'];
+    draw();
+    const chip = screen.getByTestId('interest-cafes');
+    expect(getComputedStyle(chip).minHeight).toBe('44px');
+    expect(chip.getAttribute('role')).toBeNull();
+  });
+
   it('points at Edit profile when nothing usable is stored', () => {
     state.categories = ['Sleep'];
     draw();
