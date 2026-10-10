@@ -13,6 +13,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { colors, PALETTES } from './theme';
 
 const ROOT = __dirname;
 
@@ -27,11 +28,14 @@ function sources(dir: string): string[] {
   return out;
 }
 
-/** The names in `colors` whose value is a `dyn` pair. */
+/**
+ * The names in `colors` that go out as a `dyn` pair: those whose two sides
+ * differ in the standard look, paper and charcoal. The other looks wear one
+ * palette on both sides and so put no pair anywhere.
+ */
 function dynNames(): Set<string> {
-  const theme = readFileSync(join(ROOT, 'theme.ts'), 'utf8');
-  const block = theme.slice(theme.indexOf('export const colors = {'));
-  return new Set([...block.matchAll(/^\s+([a-zA-Z]+): dyn\(/gm)].map((m) => m[1]));
+  const { paper, charcoal } = PALETTES;
+  return new Set((Object.keys(colors) as (keyof typeof paper)[]).filter((k) => paper[k] !== charcoal[k]));
 }
 
 /**

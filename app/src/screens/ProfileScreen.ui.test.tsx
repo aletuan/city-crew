@@ -45,7 +45,7 @@ const state = vi.hoisted(() => ({
   editor: false,
   lang: 'en' as 'en' | 'vi' | 'ja',
   scheme: 'dark' as 'dark' | 'light',
-  pref: 'dark' as 'dark' | 'light' | 'system',
+  pref: 'dark' as 'dark' | 'light' | 'system' | 'coffee' | 'rose',
   ready: true,
   session: { user: { id: 'me' } } as { user: { id: string } } | null,
   email: 'minh.le@example.com' as string | null,
@@ -652,7 +652,7 @@ describe('friends card', () => {
     };
     state.ships = [edge('x', 'me', 'pending')];
     const { unmount } = render(<ProfileScreen navigation={nav().n} />);
-    expect(ring()).toBe('rgb(51, 35, 26)'); // bgElevatedHex.dark, the coffee sheet
+    expect(ring()).toBe('rgb(21, 22, 20)'); // bgElevatedHex.dark, the charcoal sheet
     unmount();
     state.scheme = 'light';
     render(<ProfileScreen navigation={nav().n} />);
@@ -716,23 +716,35 @@ describe('settings card', () => {
     expect(screen.queryByText('close-language')).toBeNull();
   });
 
-  // Three cases, and the third is the one that carries the rule: on Auto
-  // the words follow the setting while the glyph follows the ground the
-  // phone picked, so the row reads "Automatic" beside a moon.
+  // The third case carries the rule: on Auto the words follow the setting
+  // while the glyph follows the ground the phone picked, so the row reads
+  // "Automatic" beside a moon. The two looks wear their own mark — a cup
+  // is not a moon, though Coffee stands on the dark ground.
   it.each([
     ['dark' as const, 'dark' as const, 'Dark', 'moon-outline'],
     ['light' as const, 'light' as const, 'Light', 'sunny-outline'],
     ['system' as const, 'dark' as const, 'Automatic', 'moon-outline'],
+    ['coffee' as const, 'dark' as const, 'Coffee', 'cafe-outline'],
+    ['rose' as const, 'light' as const, 'Rose', 'flower-outline'],
   ])('shows the %s setting with its glyph and opens the theme sheet', (pref, scheme, label, glyph) => {
     state.pref = pref;
     state.scheme = scheme;
     draw();
-    const row = screen.getByText('Appearance').parentElement!;
+    const row = screen.getByText('Theme').parentElement!;
     expect(row.textContent).toContain(label);
     expect(row.querySelector(`[data-icon="${glyph}"]`)).toBeTruthy();
-    press('Appearance');
+    press('Theme');
     fireEvent.click(screen.getByText('close-theme'));
     expect(screen.queryByText('close-theme')).toBeNull();
+  });
+
+  // "Theme" in Vietnamese too — the owner's word, kept as the loanword —
+  // now that the choice is more than light and dark.
+  it('names the row Theme, in Vietnamese as in English', () => {
+    state.lang = 'vi';
+    draw();
+    expect(screen.getByText('Theme')).toBeTruthy();
+    expect(screen.queryByText('Giao diện')).toBeNull();
   });
 
   it('heads the members settings "Preferences" and the app card "App"', () => {
@@ -811,7 +823,7 @@ describe('show tips again', () => {
   it.each([['signed in', true], ['a guest', false]])('sits last in Preferences, after Appearance, %s', (_who, signedIn) => {
     if (!signedIn) state.session = null;
     draw();
-    const appearance = button('Appearance');
+    const appearance = button('Theme');
     const again = button('Show tips again');
     expect(again.parentElement).toBe(appearance.parentElement);
     expect(appearance.compareDocumentPosition(again) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

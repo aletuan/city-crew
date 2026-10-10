@@ -1,39 +1,48 @@
 // City Crew iOS design system.
 //
-// Two grounds, one system. Dark is "nâu cafe" (10 Oct 2026): coffee brown
-// #271910 under cream type, the owner's two-tone reference turned into a
-// whole theme — the cream #C7AA9A is the secondary type and the hairline,
-// a lighter cream the primary type. It replaced the cinematic original,
-// near-black charcoal #0A0B0A with warm-gray hairlines, in one change so
-// the change can be reverted in one; every dark value below that moved
-// says what it was. Light is warm paper with white cards and near-black
-// type.
+// Four palettes, worn as three looks (`lib/look.ts`, 10 Oct 2026). The
+// standard look is two grounds, one system: warm paper with white cards and
+// near-black type, and the cinematic charcoal #0A0B0A with warm-gray
+// hairlines — Light, Dark and Automatic in the Appearance sheet. Coffee is
+// the owner's two-tone reference turned into a whole theme: brown #271910
+// under cream type, the cream #C7AA9A the secondary type and the hairline.
+// It replaced charcoal for a day (#861) and is now a look of its own beside
+// it. Rose is the second reference, slate rose #B45865 on transparent
+// yellow #F4ECC2, a light look; its note is on `ROSE` below.
+//
+// Notes on a token below were written for the standard pair and the coffee
+// brown; a figure for another palette says which it is, and `theme.test.ts`
+// holds every palette to the same contrast floors.
 //
 // Why the cream is not the page anywhere: it is a mid-tone, and on it the
 // category hues fall to 1.0–1.3:1, the coral to 1.26 and the visited green
 // to 1.04. The colour code would stop being a code. On the brown they are
-// 6.0–8.1, 6.23 and 8.1. Both carry the same
-// coral accent, used sparingly for active state only — with one standing
+// 6.0–8.1, 6.23 and 8.1. Paper, charcoal and coffee carry the same
+// coral accent, Rose its rose, used sparingly for active state only — with one standing
 // exception, the itinerary rail (`components/rail`): its paw and dots are
 // coral on every stop because the rail is the route, drawn once per
 // screen, not a state. A coral surface under anything that is not the
 // route is still what the rule forbids.
 //
-// HOW THE SWITCH WORKS. Every colour below is a `DynamicColorIOS` pair, a
-// value UIKit resolves against the window's interface style at draw time.
+// HOW THE SWITCH WORKS. Every colour below that differs between the look's
+// two sides is a `DynamicColorIOS` pair, a value UIKit resolves against
+// the window's interface style at draw time.
 // That matters because `StyleSheet.create` runs once at import: a style
 // holding a plain string holds it forever, and no amount of re-rendering
 // would repaint it. A dynamic colour repaints itself, so the eighteen
 // module-scope stylesheets in this app need no restructuring at all —
 // `Appearance.setColorScheme()` flips the window and UIKit does the rest.
+// A pair has two sides and no more, so a change of look is a restart
+// instead: `loadedLook` below is read once, before any stylesheet is built.
 //
 // WHAT STAYS A PLAIN STRING, and why. Gradient stops: the accent gradient
-// is coral in both themes, and the scrims over photography are dark in both
+// is one per look (coral, or Rose's rose) on both sides, and the scrims over photography are dark in both
 // because they sit on photographs, not on the ground. Keeping them literal
 // also keeps dynamic colours out of expo-linear-gradient, which processes
 // its stops itself.
 
-import { DynamicColorIOS, Platform, type ColorValue } from 'react-native';
+import { DynamicColorIOS, Platform, Settings, type ColorValue } from 'react-native';
+import { readLook, storeOf, type Look } from './lib/look';
 
 /**
  * A colour that knows both themes.
@@ -44,6 +53,287 @@ import { DynamicColorIOS, Platform, type ColorValue } from 'react-native';
  */
 const dyn = (light: string, dark: string): ColorValue =>
   (Platform.OS === 'ios' ? DynamicColorIOS({ light, dark }) : dark);
+
+// ── the four palettes ──
+//
+// Every colour token's value, per palette. `colors` below is built from
+// whichever two the loaded look pairs (`lib/look.ts`), and keeps the notes
+// on what each token is for. A value that is the same on both sides of the
+// look goes out as a plain string, a value that differs as a `dyn` pair —
+// so under Coffee and Rose, which wear one palette on both sides, nothing
+// is dynamic at all, and the border bug in the note below cannot happen.
+
+export type Palette = {
+  bg: string;
+  bgElevated: string;
+  bgElevatedVeil: string;
+  surfaceCard: string;
+  surfaceGlass: string;
+  surfaceGlassStrong: string;
+  borderGlass: string;
+  borderGlassSoft: string;
+  text: string;
+  textSecondary: string;
+  textTertiary: string;
+  accent: string;
+  accentFill: string;
+  badge: string;
+  badgeSolid: string;
+  badgeInk: string;
+  accentBright: string;
+  accentInk: string;
+  accentSoft: string;
+  accentLine: string;
+  accentFaint: string;
+  emberGlow: string;
+  emberGlowFade: string;
+  sun: string;
+  soon: string;
+  ok: string;
+  open: string;
+  shutInk: string;
+  ink: string;
+  bad: string;
+  badSoft: string;
+  okSoft: string;
+  okInk: string;
+  /** The accent as a gradient's two stops — see `gradAI`. */
+  gradAI: readonly [string, string];
+  /** The engagement ring's track — see `ringTrack`. */
+  ringTrack: string;
+  /** Glyph and caption on the tab bar's selected pill. */
+  pillInk: string;
+  /** The welcome art's heart. */
+  heartInk: string;
+  /** The accent where it rides a photograph — see `onPhoto.accent`. */
+  onPhotoAccent: string;
+  /** The veil inside the frosted glass (tab bar, Explore's dock). */
+  glassVeil: string;
+  /** The halo behind type on that glass. */
+  glassHalo: string;
+  /** The accent all but faded out, the far end of a tinted wash. */
+  accentFade: string;
+};
+
+/** Light, the standard look: warm paper, white cards, near-black type. */
+const PAPER: Palette = {
+  bg: '#F5F1EA',
+  bgElevated: '#FFFFFF',
+  bgElevatedVeil: 'rgba(255,255,255,0.88)',
+  surfaceCard: '#FFFFFF',
+  surfaceGlass: 'rgba(23,21,15,0.05)',
+  surfaceGlassStrong: 'rgba(23,21,15,0.09)',
+  borderGlass: 'rgba(23,21,15,0.14)',
+  borderGlassSoft: 'rgba(23,21,15,0.08)',
+  text: '#17150F',
+  textSecondary: '#5C574E',
+  textTertiary: '#6E695E',
+  accent: '#C4402C',
+  accentFill: '#FF6F5B',
+  badge: 'rgba(255,111,91,0.16)',
+  badgeSolid: '#F7DCD3',
+  badgeInk: '#DC4C33',
+  accentBright: '#FF9A5C',
+  accentInk: '#141310',
+  accentSoft: 'rgba(255,111,91,0.10)',
+  accentLine: 'rgba(255,111,91,0.28)',
+  accentFaint: 'rgba(196,64,44,0.72)',
+  emberGlow: 'rgba(226,96,80,0.15)',
+  emberGlowFade: 'rgba(226,96,80,0.05)',
+  sun: '#B07C10',
+  soon: '#94670F',
+  ok: '#3F7A4A',
+  open: '#3F7D55',
+  shutInk: '#972F2B',
+  ink: '#211F1C',
+  bad: '#C2564A',
+  badSoft: '#F8DFD9',
+  okSoft: '#D9EBD7',
+  okInk: '#2F6B3B',
+  gradAI: ['#FF6F5B', '#FF9A5C'],
+  ringTrack: '#DDD7CB',
+  pillInk: '#A33724',
+  heartInk: '#E8542F',
+  onPhotoAccent: '#FF6F5B',
+  glassVeil: 'rgba(250,248,244,0.48)',
+  glassHalo: 'rgba(250,248,244,0.95)',
+  accentFade: 'rgba(255,111,91,0.02)',
+};
+
+/** Dark, the standard look: near-black charcoal, smoky surfaces, warm-gray
+ *  hairlines. The cinematic original, back as the dark half of the standard
+ *  look on 10 Oct 2026 after a day as the coffee brown (#861). */
+const CHARCOAL: Palette = {
+  bg: '#0A0B0A',
+  bgElevated: '#151614',
+  bgElevatedVeil: 'rgba(21,22,20,0.88)',
+  surfaceCard: 'rgba(38,34,28,0.72)',
+  surfaceGlass: 'rgba(247,247,245,0.06)',
+  surfaceGlassStrong: 'rgba(247,247,245,0.12)',
+  borderGlass: 'rgba(214,182,132,0.24)',
+  borderGlassSoft: 'rgba(214,182,132,0.16)',
+  text: '#F7F7F5',
+  textSecondary: '#B7B6B1',
+  textTertiary: '#8E908C',
+  accent: '#FF6F5B',
+  accentFill: '#FF6F5B',
+  badge: '#FF6F5B',
+  badgeSolid: '#FF6F5B',
+  badgeInk: '#141310',
+  accentBright: '#FF9A5C',
+  accentInk: '#141310',
+  accentSoft: 'rgba(255,111,91,0.10)',
+  accentLine: 'rgba(255,111,91,0.28)',
+  accentFaint: 'rgba(226,96,80,0.62)',
+  emberGlow: 'rgba(226,96,80,0.15)',
+  emberGlowFade: 'rgba(226,96,80,0.05)',
+  sun: '#F2B441',
+  soon: '#F2B441',
+  ok: '#8FBF8A',
+  open: '#8FBF8A',
+  shutInk: '#E2857A',
+  ink: '#ECEBE7',
+  bad: '#D98A80',
+  badSoft: '#2A1A18',
+  okSoft: '#182A1C',
+  okInk: '#8FBF8A',
+  gradAI: ['#FF6F5B', '#FF9A5C'],
+  ringTrack: '#252320',
+  pillInk: '#141310',
+  heartInk: '#FF6F5B',
+  onPhotoAccent: '#FF6F5B',
+  glassVeil: 'rgba(12,13,12,0.48)',
+  glassHalo: 'rgba(10,11,10,0.95)',
+  accentFade: 'rgba(255,111,91,0.02)',
+};
+
+/** "Nâu cafe" (#861): coffee brown #271910 under cream, from the owner's
+ *  two-tone reference. The cream #C7AA9A is the secondary type and the
+ *  hairline, never the page. Its own look now, pinned dark. */
+const COFFEE: Palette = {
+  bg: '#271910',
+  bgElevated: '#33231A',
+  bgElevatedVeil: 'rgba(39,25,16,0.9)',
+  surfaceCard: 'rgba(64,45,34,0.72)',
+  surfaceGlass: 'rgba(243,233,226,0.06)',
+  surfaceGlassStrong: 'rgba(243,233,226,0.12)',
+  borderGlass: 'rgba(199,170,154,0.24)',
+  borderGlassSoft: 'rgba(199,170,154,0.16)',
+  text: '#F3E9E2',
+  textSecondary: '#C7AA9A',
+  textTertiary: '#A88B7A',
+  accent: '#FF6F5B',
+  accentFill: '#FF6F5B',
+  badge: '#FF6F5B',
+  badgeSolid: '#FF6F5B',
+  badgeInk: '#141310',
+  accentBright: '#FF9A5C',
+  accentInk: '#141310',
+  accentSoft: 'rgba(255,111,91,0.10)',
+  accentLine: 'rgba(255,111,91,0.28)',
+  accentFaint: 'rgba(226,96,80,0.62)',
+  emberGlow: 'rgba(226,96,80,0.15)',
+  emberGlowFade: 'rgba(226,96,80,0.05)',
+  sun: '#F2B441',
+  soon: '#F2B441',
+  ok: '#8FBF8A',
+  open: '#8FBF8A',
+  shutInk: '#E2857A',
+  ink: '#EDE1D8',
+  bad: '#D98A80',
+  badSoft: '#422520',
+  okSoft: '#24361F',
+  okInk: '#8FBF8A',
+  gradAI: ['#FF6F5B', '#FF9A5C'],
+  ringTrack: '#3A2A20',
+  pillInk: '#141310',
+  heartInk: '#FF6F5B',
+  onPhotoAccent: '#FF6F5B',
+  glassVeil: 'rgba(39,25,16,0.48)',
+  glassHalo: 'rgba(39,25,16,0.95)',
+  accentFade: 'rgba(255,111,91,0.02)',
+};
+
+/**
+ * "Hồng" (10 Oct 2026): the owner's reference, transparent yellow #F4ECC2
+ * under slate rose #B45865, as a light look.
+ *
+ * The yellow is the page. The rose is the accent, but not as type: on the
+ * yellow it is 3.9:1, under the 4.5 small type needs, so the readable accent
+ * is the rose a step down, #9A4452 (5.3 on the page, 6.1 on a card), and the
+ * reference's own #B45865 is the fill — solid buttons, the gradient — with
+ * white on it (4.64; the reference's yellow on rose is 3.9). The gradient
+ * runs #A04A57 → #B45865 so its lighter end still carries white at 4.6.
+ * Type is a plum-black, #2B1A1D (13.9:1), and the secondary steps are
+ * rose-tinted greys, #5A4649 and #75605F (6.9 and 4.9, 1.49 apart).
+ * Destructive moves to a brick red, #9C3B2F, so it is not the accent.
+ */
+const ROSE: Palette = {
+  bg: '#F4ECC2',
+  bgElevated: '#FFFCEB',
+  bgElevatedVeil: 'rgba(255,252,235,0.88)',
+  surfaceCard: '#FFFCEB',
+  surfaceGlass: 'rgba(43,26,29,0.05)',
+  surfaceGlassStrong: 'rgba(43,26,29,0.09)',
+  borderGlass: 'rgba(43,26,29,0.14)',
+  borderGlassSoft: 'rgba(43,26,29,0.08)',
+  text: '#2B1A1D',
+  textSecondary: '#5A4649',
+  textTertiary: '#75605F',
+  accent: '#9A4452',
+  accentFill: '#B45865',
+  badge: 'rgba(180,88,101,0.16)',
+  badgeSolid: '#F0D2CA',
+  badgeInk: '#9A4452',
+  accentBright: '#B45865',
+  accentInk: '#FFFFFF',
+  accentSoft: 'rgba(180,88,101,0.12)',
+  accentLine: 'rgba(180,88,101,0.32)',
+  accentFaint: 'rgba(154,68,82,0.72)',
+  emberGlow: 'rgba(180,88,101,0.12)',
+  emberGlowFade: 'rgba(180,88,101,0.04)',
+  sun: '#A0720E',
+  soon: '#94670F',
+  ok: '#3F7A4A',
+  open: '#3F7D55',
+  shutInk: '#972F2B',
+  ink: '#3A2629',
+  bad: '#9C3B2F',
+  badSoft: '#F6D6C8',
+  okSoft: '#DCE8C4',
+  okInk: '#2F6B3B',
+  gradAI: ['#A04A57', '#B45865'],
+  ringTrack: '#E3D9AE',
+  pillInk: '#8E3C4A',
+  heartInk: '#B45865',
+  onPhotoAccent: '#EC8C98',
+  glassVeil: 'rgba(250,246,222,0.48)',
+  glassHalo: 'rgba(250,246,222,0.95)',
+  accentFade: 'rgba(180,88,101,0.02)',
+};
+
+export const PALETTES = { paper: PAPER, charcoal: CHARCOAL, coffee: COFFEE, rose: ROSE } as const;
+
+/** Each look's two sides: the light half and the dark half of every pair. */
+export const LOOKS: Record<Look, { light: Palette; dark: Palette }> = {
+  standard: { light: PAPER, dark: CHARCOAL },
+  coffee: { light: COFFEE, dark: COFFEE },
+  rose: { light: ROSE, dark: ROSE },
+};
+
+/**
+ * The look this run of the app is wearing, read once, before any
+ * stylesheet is built. `Settings` is iOS's NSUserDefaults, synchronous;
+ * anywhere it is missing (the web build, the test runner) this is the
+ * standard look.
+ */
+export const loadedLook: Look = readLook(storeOf(() => Settings));
+
+const SIDES = LOOKS[loadedLook];
+/** One token, as a plain value where the look's two sides agree and as a
+ *  `dyn` pair where they do not. */
+const pick = (k: Exclude<keyof Palette, 'gradAI'>): ColorValue =>
+  (SIDES.light[k] === SIDES.dark[k] ? SIDES.light[k] : dyn(SIDES.light[k], SIDES.dark[k]));
 
 /**
  * The page colour as plain hex, for the rare style that must resolve the
@@ -84,18 +374,21 @@ const dyn = (light: string, dark: string): ColorValue =>
  * `ios.buildReactNativeFromSource` in `expo-build-properties` as well,
  * slower builds, and a TestFlight binary; an EAS Update cannot carry it.
  */
-export const bgHex = { light: '#F5F1EA', dark: '#271910' } as const;
+export const bgHex = { light: SIDES.light.bg, dark: SIDES.dark.bg } as const;
 /** `colors.bgElevated` as plain hex, for a border — see `bgHex`. */
-export const bgElevatedHex = { light: '#FFFFFF', dark: '#33231A' } as const;
+export const bgElevatedHex = { light: SIDES.light.bgElevated, dark: SIDES.dark.bgElevated } as const;
+/** `colors.text` as plain hex, for a prop typed `string` (the tab bar's
+ *  idle glyphs) — the same escape hatch as `bgHex`, for another reason. */
+export const textHex = { light: SIDES.light.text, dark: SIDES.dark.text } as const;
 /** `colors.badgeSolid` as plain hex, for a border — see `bgHex`. */
-export const badgeSolidHex = { light: '#F7DCD3', dark: '#FF6F5B' } as const;
+export const badgeSolidHex = { light: SIDES.light.badgeSolid, dark: SIDES.dark.badgeSolid } as const;
 
 export const colors = {
-  /** The page. Coffee brown (charcoal #0A0B0A until 10 Oct 2026), or warm
-   *  paper — never pure black or pure white, and never uniform. */
-  bg: dyn(bgHex.light, bgHex.dark),
+  /** The page. Charcoal or warm paper, the coffee brown, or Rose's
+   *  yellow — never pure black or pure white, and never uniform. */
+  bg: pick('bg'),
   /** Surfaces that must be opaque: sheets, modals, the cards on paper. */
-  bgElevated: dyn(bgElevatedHex.light, bgElevatedHex.dark),
+  bgElevated: pick('bgElevated'),
   /**
    * `bgElevated` with a little of what is behind it showing through — for
    * a control that floats over something this app did not draw.
@@ -120,23 +413,21 @@ export const colors = {
    * to 3.80:1 at 0.88 and 4.05 at 0.90; the page brown at 0.90 is 4.65,
    * the only pair under the 0.90 ceiling that clears 4.5.
    */
-  bgElevatedVeil: dyn('rgba(255,255,255,0.88)', 'rgba(39,25,16,0.9)'),
+  bgElevatedVeil: pick('bgElevatedVeil'),
   /** Card fill. Smoky and translucent on charcoal so the ambient light
    *  reads through it; plain white on paper, where translucency would only
    *  muddy the ground it sits on. */
-  surfaceCard: dyn('#FFFFFF', 'rgba(64,45,34,0.72)'),
-
+  surfaceCard: pick('surfaceCard'),
   /** Tinted wells and quiet controls. The dark theme lifts with white at
    *  6%; the light theme cannot — white on paper is invisible — so it
    *  presses down with ink instead. */
-  surfaceGlass: dyn('rgba(23,21,15,0.05)', 'rgba(243,233,226,0.06)'),
-  surfaceGlassStrong: dyn('rgba(23,21,15,0.09)', 'rgba(243,233,226,0.12)'),
-  /** Hairlines: the reference's cream at low opacity on the brown (a warm
-   *  tan, 214/182/132, on charcoal), warm ink on paper. Never bright white,
-   *  never true black. */
-  borderGlass: dyn('rgba(23,21,15,0.14)', 'rgba(199,170,154,0.24)'),
-  borderGlassSoft: dyn('rgba(23,21,15,0.08)', 'rgba(199,170,154,0.16)'),
-
+  surfaceGlass: pick('surfaceGlass'),
+  surfaceGlassStrong: pick('surfaceGlassStrong'),
+  /** Hairlines: a warm tan, 214/182/132, at low opacity on charcoal, the
+   *  reference's cream on the brown, warm ink on paper and plum ink on
+   *  Rose's yellow. Never bright white, never true black. */
+  borderGlass: pick('borderGlass'),
+  borderGlassSoft: pick('borderGlassSoft'),
   /** Measured against their own ground: 16:1, 6.4:1 and 4.9:1 on paper,
    *  comfortably past the 4.5:1 small type needs.
    *
@@ -144,13 +435,12 @@ export const colors = {
    *  the reference's #C7AA9A 7.8 and 6.9, and #A88B7A 5.4 and 4.8 — a
    *  step down from #A08473, which was 4.9 on the page but 4.33 on a
    *  sheet. 1.45:1 between the second and third keeps the three steps
-   *  three. On charcoal these were #F7F7F5, #B7B6B1 and #8E908C, the
+   *  three. On charcoal they are #F7F7F5, #B7B6B1 and #8E908C, the
    *  third after #6E706D measured 3.9:1 under 12–15pt copy.
-   *  `theme.test.ts` holds all three to 4.5:1 on both dark grounds. */
-  text: dyn('#17150F', '#F3E9E2'),
-  textSecondary: dyn('#5C574E', '#C7AA9A'),
-  textTertiary: dyn('#6E695E', '#A88B7A'),
-
+   *  `theme.test.ts` holds all three to 4.5:1 on every palette's grounds. */
+  text: pick('text'),
+  textSecondary: pick('textSecondary'),
+  textTertiary: pick('textTertiary'),
   /**
    * The accent **as something to read** — a label, a glyph, a link.
    *
@@ -160,14 +450,14 @@ export const colors = {
    * the app showed three oranges at once: brick discs, coral gradients,
    * and pink tints, each claiming to be the identity colour.
    */
-  accent: dyn('#C4402C', '#FF6F5B'),
+  accent: pick('accent'),
   /**
    * The accent **as a surface** — a ticked checkbox, anything that must
    * read as switched on. One value for both themes, and the same coral the
    * gradient and the tints are made of, because a fill has no legibility
    * problem to solve: whatever sits on it is `accentInk`, 6.8:1 either way.
    */
-  accentFill: '#FF6F5B',
+  accentFill: pick('accentFill'),
   /**
    * A round emphasis badge: the selected tab's disc, the avatar's camera
    * button. The one pattern that changes *treatment* between themes rather
@@ -179,7 +469,7 @@ export const colors = {
    * eye to the tab bar over the content. Same reasoning, opposite answer,
    * which is why this cannot be one value.
    */
-  badge: dyn('rgba(255,111,91,0.16)', '#FF6F5B'),
+  badge: pick('badge'),
   /**
    * The same badge where it overlaps a photograph rather than a surface —
    * the avatar's camera button.
@@ -190,7 +480,7 @@ export const colors = {
    * sitting on whatever pixels happened to be under it. Dark needs no
    * variant: its badge is opaque already.
    */
-  badgeSolid: dyn(badgeSolidHex.light, badgeSolidHex.dark),
+  badgeSolid: pick('badgeSolid'),
   /**
    * What sits inside `badge`: near-black on the solid, the readable coral
    * on the tint.
@@ -203,30 +493,29 @@ export const colors = {
    * this colour reaches 3.64. Same tab, two thresholds, two reds — not an
    * oversight to tidy up.
    */
-  badgeInk: dyn('#DC4C33', '#141310'),
+  badgeInk: pick('badgeInk'),
   /** The warm end of the accent. Gradients run accent → accentBright and
    *  stay bright in both themes: they are fills, never type. */
-  accentBright: '#FF9A5C',
+  accentBright: pick('accentBright'),
   /** Type and glyphs that sit *on* the accent — near-black, because the
    *  accent is a saturated warm tone in either theme. Measured: near-black
    *  on coral is 6.8:1, white is 2.7:1, and white on the gradient's orange
    *  end falls to about 2.2:1 — under the 3:1 that graphical elements need,
    *  let alone text. */
-  accentInk: '#141310',
+  accentInk: pick('accentInk'),
   /** The accent at fill and hairline strength, for pills and tinted wells.
    *  Coral at low alpha reads on both grounds, so one value serves both. */
-  accentSoft: 'rgba(255,111,91,0.10)',
-  accentLine: 'rgba(255,111,91,0.28)',
+  accentSoft: pick('accentSoft'),
+  accentLine: pick('accentLine'),
   /** The accent whispered — a mark that should register as warmth, not as
    *  a second thing to read (the rating star). */
-  accentFaint: dyn('rgba(196,64,44,0.72)', 'rgba(226,96,80,0.62)'),
+  accentFaint: pick('accentFaint'),
   /** Ambient city-light warmth for background glows — the accent diffused,
    *  so the ground and the accent belong to one light. Plain strings: they
    *  feed a gradient, and the light theme does without the glow entirely
    *  (see AmbientWarmth), because a warm haze on paper reads as a stain. */
-  emberGlow: 'rgba(226,96,80,0.15)',
-  emberGlowFade: 'rgba(226,96,80,0.05)',
-
+  emberGlow: pick('emberGlow'),
+  emberGlowFade: pick('emberGlowFade'),
   /**
    * The sun in the weather mark, and the second non-coral colour in the
    * app after the rating star.
@@ -237,8 +526,7 @@ export const colors = {
    * and dark keeps the bright one. Both clear 3:1, which a glyph carrying
    * the difference between rain and sun has to.
    */
-  sun: dyn('#B07C10', '#F2B441'),
-
+  sun: pick('sun'),
   /**
    * The hour on a card, for the ninety minutes before it stops being
    * true — "until 23:00" on a place about to close.
@@ -254,12 +542,11 @@ export const colors = {
    * 3.66:1 on white it cannot carry 15pt type. This is measured for type
    * instead — 4.99:1 on the card's white, 9.2:1 on the dark card's fill.
    */
-  soon: dyn('#94670F', '#F2B441'),
-
-  ok: dyn('#3F7A4A', '#8FBF8A'),
+  soon: pick('soon'),
+  ok: pick('ok'),
   /** "Open now" on the place card's hours row: a shade greener and
    *  lighter than `ok`, chosen for that one line against white. */
-  open: dyn('#3F7D55', '#8FBF8A'),
+  open: pick('open'),
   /**
    * And the other half of that line — "closed, opens at eight".
    *
@@ -287,15 +574,15 @@ export const colors = {
    * Both clear of AA, and far enough from the coral to be a different
    * colour rather than a near-miss of one.
    */
-  shutInk: dyn('#972F2B', '#E2857A'),
+  shutInk: pick('shutInk'),
   /** The value on the place card's info rows — address, hours table,
    *  phone, site. Ink: darker than `textSecondary`, a hair warmer and
    *  softer than `text`, so the facts read as content rather than as
    *  captions and the small-caps label above stays the quieter of the
    *  two. */
-  ink: dyn('#211F1C', '#EDE1D8'),
+  ink: pick('ink'),
   /** Destructive. The dark theme's soft red is far too pale on paper. */
-  bad: dyn('#C2564A', '#D98A80'),
+  bad: pick('bad'),
   /** The well a delete action sits in, with `bad` itself as the glyph on
    *  top. It takes the ordinary `borderGlassSoft` hairline like any other
    *  control — a red-tinted edge of its own came out near black against
@@ -304,22 +591,22 @@ export const colors = {
    *  Opaque per-theme values rather than one translucent red like
    *  `accentSoft`: a tint has to stay pink to read as a warning, and the
    *  alpha that manages that on paper comes out beige over near-black. */
-  //  Dark #422520 on the brown (it was #2A1A18 on charcoal, which on
-  //  #271910 is the page itself): `bad` on it 5.2:1.
-  badSoft: dyn('#F8DFD9', '#422520'),
+  //  #422520 on the brown, #2A1A18 on charcoal — charcoal's well on
+  //  #271910 would be the page itself: `bad` on it 5.2:1.
+  badSoft: pick('badSoft'),
   /** `badSoft`'s counterpart, for the one thing that goes right loudly
    *  enough to need a ground: the banner that says a collection is now
    *  public. Built to the same recipe and the same weight — 1.11:1
    *  against paper where the red is 1.13:1 — so good news and bad news
    *  sit at the same distance from the page instead of one shouting. */
-  //  Dark #24361F on the brown (#182A1C on charcoal, which read as the
-  //  page with a green cast on #271910): `okInk` on it 6.2:1.
-  okSoft: dyn('#D9EBD7', '#24361F'),
+  //  #24361F on the brown, #182A1C on charcoal — charcoal's read as the
+  //  page with a green cast on #271910: `okInk` on it 6.2:1.
+  okSoft: pick('okSoft'),
   /** Words and glyphs *on* `okSoft`. `ok` itself is 4.1:1 on the paper
    *  side of that ground, under the 4.5:1 a 16pt label needs; a shade
    *  darker is 5.1:1. The dark side keeps `ok`'s own sage, 6.2:1 on its
    *  ground. First worn by the visited pill on a place's screen. */
-  okInk: dyn('#2F6B3B', '#8FBF8A'),
+  okInk: pick('okInk'),
 };
 
 /**
@@ -341,7 +628,7 @@ export const onPhoto = {
   line: 'rgba(247,247,245,0.22)',
   /** The accent as it must appear over a photograph: the bright coral,
    *  never the paper theme's darker one, which disappears into a scrim. */
-  accent: '#FF6F5B',
+  accent: SIDES.light.onPhotoAccent,
   /**
    * The rating star, and the one colour in the app that is not coral.
    *
@@ -406,7 +693,7 @@ export const gradAI = {
   // The bright coral, literally — not `colors.accent`, which is darker on
   // paper and dynamic besides. A gradient is a fill, and this one is the
   // app's loudest surface in both themes.
-  colors: ['#FF6F5B', '#FF9A5C'] as const,
+  colors: SIDES.light.gradAI,
   start: { x: 0, y: 0 },
   end: { x: 1, y: 0 },
 };
@@ -450,7 +737,18 @@ export const gradAI = {
  * The track is neutral on purpose. Colour on the ring means progress; a
  * tinted track would spend it on the part that has not happened yet.
  */
-export const ringTrack = { light: '#DDD7CB', dark: '#3A2A20' } as const;
+export const ringTrack = { light: SIDES.light.ringTrack, dark: SIDES.dark.ringTrack } as const;
+/** The tab bar's selected-pill ink, per side — see `FloatingTabBar`. */
+export const pillInk = { light: SIDES.light.pillInk, dark: SIDES.dark.pillInk } as const;
+/** The welcome art's heart, per side — see `welcomeArt`. */
+export const heartInk = { light: SIDES.light.heartInk, dark: SIDES.dark.heartInk } as const;
+/** The frosted glass's veil and its type halo, per side — see `GlassMaterial`. */
+export const glass = {
+  veil: { light: SIDES.light.glassVeil, dark: SIDES.dark.glassVeil },
+  halo: { light: SIDES.light.glassHalo, dark: SIDES.dark.glassHalo },
+} as const;
+/** The accent all but faded out, for the far end of a tinted wash. */
+export const accentFade = SIDES.light.accentFade;
 
 /**
  * The sweep, warm through to cool, shared by both themes.

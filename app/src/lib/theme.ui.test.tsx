@@ -14,6 +14,10 @@
 //
 // `Platform.OS` is forced to `'ios'`: `apply` is a no-op everywhere else,
 // and the test would pass on an empty function without it.
+//
+// The look (Coffee, Rose) is a fourth thing: kept in `Settings`, which the
+// runner has no copy of, so a stand-in keeps it in a plain object — and
+// leaving that out stands in for the web build, which cannot keep one.
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -21,6 +25,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, render, screen, waitFor } from '../uitest/render';
 
 const rn = vi.hoisted(() => ({
+  kept: {} as Record<string, unknown>,
+  settings: true,
+  reload: vi.fn(),
   set: vi.fn<(s: string) => void>(),
   get: vi.fn<() => string | null>(() => 'light'),
   listeners: [] as ((p: { colorScheme: string | null }) => void)[],
@@ -36,22 +43,34 @@ vi.mock('react-native', async (orig) => ({
       return { remove: () => { rn.listeners = rn.listeners.filter((f) => f !== fn); } };
     },
   },
+  get Settings() {
+    return rn.settings
+      ? { get: (k: string) => rn.kept[k], set: (v: Record<string, unknown>) => { Object.assign(rn.kept, v); } }
+      : undefined;
+  },
+  DevSettings: { reload: rn.reload },
 }));
+const updates = vi.hoisted(() => ({ reloadAsync: vi.fn(async () => {}) }));
+vi.mock('expo-updates', () => updates);
 
 import { ThemeProvider, useScheme } from './theme';
 
 const KEY = 'citycrew.scheme';
 
 function Probe() {
-  const { scheme, pref, setPref, ready } = useScheme();
+  const { scheme, pref, setPref, look, looks, ready } = useScheme();
   return (
     <>
       <span data-testid="scheme">{scheme}</span>
       <span data-testid="pref">{pref}</span>
+      <span data-testid="look">{look}</span>
+      <span data-testid="looks">{String(looks)}</span>
       <span data-testid="ready">{String(ready)}</span>
       <button type="button" onClick={() => setPref('system')}>auto</button>
       <button type="button" onClick={() => setPref('light')}>light</button>
       <button type="button" onClick={() => setPref('dark')}>dark</button>
+      <button type="button" onClick={() => setPref('coffee')}>coffee</button>
+      <button type="button" onClick={() => setPref('rose')}>rose</button>
     </>
   );
 }
@@ -66,6 +85,10 @@ const phoneTurns = (to: 'dark' | 'light') => act(() => {
 });
 
 beforeEach(async () => {
+  rn.kept = {};
+  rn.settings = true;
+  rn.reload.mockClear();
+  updates.reloadAsync.mockReset().mockResolvedValue(undefined);
   rn.set.mockClear();
   rn.get.mockReset().mockReturnValue('light');
   rn.listeners = [];
@@ -162,5 +185,100 @@ describe('the phone changes its mind', () => {
     act(() => { screen.getByText('auto').click(); });
     expect(screen.getByTestId('scheme').textContent).toBe('dark');
     expect(rn.set).toHaveBeenLastCalledWith('unspecified');
+  });
+});
+
+describe('another look', () => {
+  const LOOK = 'citycrew.look';
+  const text = (id: string) => screen.getByTestId(id).textContent;
+
+  // The colours are built once at import, so a look is a restart: kept
+  // first, where the next launch's import will find it, then reloaded.
+  it('keeps the look and the setting, then restarts into them', async () => {
+    mount();
+    await settled();
+    rn.set.mockClear();
+    act(() => { screen.getByText('coffee').click(); });
+    await waitFor(() => expect(updates.reloadAsync).toHaveBeenCalledTimes(1));
+    expect(rn.kept[LOOK]).toBe('coffee');
+    expect(await AsyncStorage.getItem(KEY)).toBe('coffee');
+    // Nothing repaints on the way out: the window pinned dark over the
+    // standard colours would be a frame of neither.
+    expect(rn.set).not.toHaveBeenCalled();
+    expect(text('pref')).toBe('system');
+  });
+
+  // A development client refuses `reloadAsync`.
+  it('falls back to the packager’s reload where the update one is refused', async () => {
+    updates.reloadAsync.mockRejectedValue(new Error('not in development'));
+    mount();
+    await settled();
+    act(() => { screen.getByText('rose').click(); });
+    await waitFor(() => expect(rn.reload).toHaveBeenCalledTimes(1));
+  });
+
+  it.each([['coffee', 'dark'], ['rose', 'light']] as const)('wears %s on its own ground, whatever the phone says', async (look, ground) => {
+    rn.kept[LOOK] = look;
+    await AsyncStorage.setItem(KEY, look);
+    rn.get.mockReturnValue(ground === 'dark' ? 'light' : 'dark');
+    mount();
+    await settled();
+    expect(text('look')).toBe(look);
+    expect(text('scheme')).toBe(ground);
+    expect(rn.set).toHaveBeenLastCalledWith(ground);
+    phoneTurns(ground === 'dark' ? 'light' : 'dark');
+    expect(text('scheme')).toBe(ground);
+  });
+
+  // Leaving a look is a restart too, back into the standard one.
+  it('restarts out of a look into the standard one', async () => {
+    rn.kept[LOOK] = 'coffee';
+    await AsyncStorage.setItem(KEY, 'coffee');
+    mount();
+    await settled();
+    act(() => { screen.getByText('light').click(); });
+    await waitFor(() => expect(updates.reloadAsync).toHaveBeenCalledTimes(1));
+    expect(rn.kept[LOOK]).toBe('standard');
+    expect(await AsyncStorage.getItem(KEY)).toBe('light');
+  });
+
+  // The look lost, or kept by a build that knew another: put right for
+  // next time, and not restarted into on a launch nobody asked to restart.
+  it('mends a look that disagrees with the setting, without restarting', async () => {
+    rn.kept[LOOK] = 'coffee';
+    await AsyncStorage.setItem(KEY, 'dark');
+    mount();
+    await settled();
+    expect(rn.kept[LOOK]).toBe('standard');
+    expect(text('pref')).toBe('dark');
+    expect(updates.reloadAsync).not.toHaveBeenCalled();
+  });
+
+  it('leaves a look that agrees alone', async () => {
+    rn.kept[LOOK] = 'rose';
+    await AsyncStorage.setItem(KEY, 'rose');
+    mount();
+    await settled();
+    expect(rn.kept[LOOK]).toBe('rose');
+  });
+
+  // The web build: nowhere to keep a look, so a restart would come back
+  // as it left. Nothing is offered, and nothing happens if it is asked.
+  it('offers no look, and restarts into none, where one cannot be kept', async () => {
+    rn.settings = false;
+    mount();
+    await settled();
+    expect(text('looks')).toBe('false');
+    act(() => { screen.getByText('coffee').click(); });
+    expect(updates.reloadAsync).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
+    expect(text('pref')).toBe('system');
+  });
+
+  it('can keep one on iOS', async () => {
+    mount();
+    await settled();
+    expect(text('looks')).toBe('true');
+    expect(text('look')).toBe('standard');
   });
 });

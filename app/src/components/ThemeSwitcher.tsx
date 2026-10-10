@@ -1,6 +1,10 @@
-// Appearance picker — the two grounds the app can stand on, opened from
+// Theme picker — the grounds and looks the app can wear, opened from
 // Profile's settings card. Same sheet grammar as the city and language
 // switchers, because it is the same kind of choice.
+//
+// "Theme", not "Appearance", since 10 Oct 2026, when it stopped being only
+// light or dark — the owner's word for it, kept as the English loanword in
+// Vietnamese rather than "Giao diện", and テーマ in Japanese.
 //
 // Three rows, and Auto is the first of them because it is the default.
 // This sheet once carried a note saying the opposite — two rows, no
@@ -18,12 +22,20 @@
 // both readings can be seen against each other — closing on the tap
 // would hide the result of the tap. A bottom sheet makes that view
 // better, not worse: everything above it is the screen repainting.
+//
+// FIVE ROWS since 10 Oct 2026: the standard three, then Coffee and Rose,
+// which are looks rather than grounds (`lib/look.ts`). Those two cannot
+// repaint in place — the colours are built at launch — so choosing one
+// asks first and restarts the app; the sheet says so on the row, before
+// the tap, rather than surprising anyone with a relaunch. Where a look
+// cannot be kept (the web build) the two rows are not offered at all.
 
 import React, { useEffect, useRef } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
+import { lookOf, needsRestart } from '../lib/look';
 import { Pref, Scheme, useScheme } from '../lib/theme';
 import { colors, font, radius, space } from '../theme';
 import { PressableScale } from './ui';
@@ -35,11 +47,27 @@ const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'system', icon: 'phone-portrait-outline' },
   { id: 'dark', icon: 'moon-outline' },
   { id: 'light', icon: 'sunny-outline' },
+  // The two looks name what they are of: a cup for the coffee brown, a
+  // flower for the rose.
+  { id: 'coffee', icon: 'cafe-outline' },
+  { id: 'rose', icon: 'flower-outline' },
 ];
 
+type T = (en: string, vi: string, ja?: string) => string;
+
+/** The glyph for a setting, as Profile's row shows it. The standard three
+ *  wear the ground showing — under Auto, the one the phone picked — and
+ *  the two looks their own mark. */
+export function schemeIcon(pref: Pref, scheme: Scheme): keyof typeof Ionicons.glyphMap {
+  if (pref === 'coffee' || pref === 'rose') return OPTIONS.find((o) => o.id === pref)!.icon;
+  return scheme === 'light' ? 'sunny-outline' : 'moon-outline';
+}
+
 /** The label for a setting, in the app's three languages. */
-export function schemeLabel(id: Pref, t: (en: string, vi: string, ja?: string) => string): string {
+export function schemeLabel(id: Pref, t: T): string {
   if (id === 'system') return t('Automatic', 'Tự động', '自動');
+  if (id === 'coffee') return t('Coffee', 'Nâu cafe', 'コーヒー');
+  if (id === 'rose') return t('Rose', 'Hồng', 'ローズ');
   return id === 'dark'
     ? t('Dark', 'Tối', 'ダーク')
     : t('Light', 'Sáng', 'ライト');
@@ -48,7 +76,7 @@ export function schemeLabel(id: Pref, t: (en: string, vi: string, ja?: string) =
 /** The second line on the Auto row: what the phone is doing right now.
  *  Without it the sheet can show a tick on Auto while the screen is
  *  plainly dark, and nothing on it explains which of the two won. */
-function systemNow(scheme: Scheme, t: (en: string, vi: string, ja?: string) => string): string {
+function systemNow(scheme: Scheme, t: T): string {
   return scheme === 'dark'
     ? t('Following the phone · Dark', 'Theo máy · Tối', '端末に合わせる · ダーク')
     : t('Following the phone · Light', 'Theo máy · Sáng', '端末に合わせる · ライト');
@@ -56,7 +84,25 @@ function systemNow(scheme: Scheme, t: (en: string, vi: string, ja?: string) => s
 
 export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useI18n();
-  const { scheme, pref, setPref } = useScheme();
+  const { scheme, pref, setPref, look, looks } = useScheme();
+  const options = looks ? OPTIONS : OPTIONS.filter((o) => lookOf(o.id) === 'standard');
+  // A row that changes the look restarts the app, which loses whatever
+  // screen the reader was on; it is asked once, here, and nowhere else.
+  const choose = (id: Pref) => {
+    if (!needsRestart(look, id)) { setPref(id); return; }
+    Alert.alert(
+      t('Restart to change the theme?', 'Khởi động lại để đổi theme?', 'テーマを変えるために再起動しますか？'),
+      t(
+        'City Crew will close and open again in the new colours.',
+        'City Crew sẽ đóng và mở lại với màu mới.',
+        'City Crew が閉じて、新しい色で開き直します。',
+      ),
+      [
+        { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
+        { text: t('Restart', 'Khởi động lại', '再起動'), onPress: () => setPref(id) },
+      ],
+    );
+  };
   const insets = useSafeAreaInsets();
   // The house entrance (SaveSheet's, via PersonSheet): the modal only
   // fades — the scrim brightens in place — while the sheet alone rises
@@ -79,8 +125,8 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
         }]}
       >
         <View style={s.handle} />
-        <Text style={s.title}>{t('Appearance', 'Giao diện', '外観')}</Text>
-        {OPTIONS.map((o, i) => {
+        <Text style={s.title}>{t('Theme', 'Theme', 'テーマ')}</Text>
+        {options.map((o, i) => {
           const active = o.id === pref;
           return (
             <View key={o.id}>
@@ -91,7 +137,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 // The sheet stays open — see the note in the header.
-                onPress={() => setPref(o.id)}
+                onPress={() => choose(o.id)}
               >
                 <Ionicons name={o.icon} size={18} color={active ? colors.accent : colors.textTertiary} />
                 <View style={{ flex: 1 }}>
@@ -100,6 +146,9 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
                   </Text>
                   {o.id === 'system' && (
                     <Text style={s.rowNote}>{systemNow(scheme, t)}</Text>
+                  )}
+                  {!active && needsRestart(look, o.id) && (
+                    <Text style={s.rowNote}>{t('Restarts the app', 'Ứng dụng sẽ khởi động lại', 'アプリが再起動します')}</Text>
                   )}
                 </View>
                 {active && <Ionicons name="checkmark" size={18} color={colors.accent} />}

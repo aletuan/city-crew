@@ -15,7 +15,7 @@ import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { useDuckOnScroll } from '../components/tabBarDuck';
 import { CitySwitcherModal } from '../components/CitySwitcher';
 import { LanguageSwitcherModal } from '../components/LanguageSwitcher';
-import { schemeLabel, ThemeSwitcherModal } from '../components/ThemeSwitcher';
+import { schemeIcon, schemeLabel, ThemeSwitcherModal } from '../components/ThemeSwitcher';
 import { PrimaryButton } from '../components/authUi';
 import LegalSheet from '../components/LegalSheet';
 import AboutSheet from '../components/AboutSheet';
@@ -252,10 +252,11 @@ function SettingsCard() {
         {/* The glyph follows the ground showing, the words follow the
             setting: on Auto the row reads "Automatic" beside whichever of
             the moon or the sun the phone has chosen. Saying "Dark" there
-            would hide that the choice is the phone's. */}
+            would hide that the choice is the phone's. Coffee and Rose
+            wear their own mark (`schemeIcon`). */}
         <SettingRow
-          icon={scheme === 'light' ? 'sunny-outline' : 'moon-outline'}
-          label={t('Appearance', 'Giao diện', '外観')}
+          icon={schemeIcon(pref, scheme)}
+          label={t('Theme', 'Theme', 'テーマ')}
           value={schemeLabel(pref, t)}
           onPress={() => setThemeOpen(true)}
         />

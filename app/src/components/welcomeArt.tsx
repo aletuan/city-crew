@@ -15,6 +15,7 @@ import { Image, type ImageProps } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { useLoop, useReducedMotion } from './ui';
 import { useScheme } from '../lib/theme';
+import { heartInk } from '../theme';
 
 /**
  * The welcome plane, drifting.
@@ -65,11 +66,12 @@ export function FloatingPlane({ source, style }: {
  * red read as a mark of punctuation rather than of affection. Art ink,
  * chosen against the drawing, the way the skyline's windows were.
  */
-const HEART_INK = { light: '#E8542F', dark: '#FF6F5B' } as const;
 
 export function HeartDoodle({ size = 24, style }: { size?: number; style?: StyleProp<ViewStyle> }) {
   const { scheme } = useScheme();
-  const ink = HEART_INK[scheme];
+  // Per look (`heartInk`): coral on paper and the dark grounds, the
+  // reference's own rose on the yellow, 3.9:1 there.
+  const ink = heartInk[scheme];
   return (
     <Svg width={size} height={size} viewBox="0 0 26 26" style={style}>
       <Path

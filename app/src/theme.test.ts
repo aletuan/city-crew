@@ -1,13 +1,14 @@
 // The one colour in the system whose value is an argument rather than a
 // choice, and the argument is measurable.
 //
-// Under the test runner `dyn` settles on the dark value (see its note), so
-// what these read is the dark theme's — which is also the punishing case:
-// a near-black disc thinned over a Google tile, which is always pale
-// because `MiniMap` passes no night style.
+// Every palette is measured, not only the one the test runner loads: a
+// look the runner never wears would otherwise ship unread. The punishing
+// case for the veil is a dark ground — a near-black disc thinned over a
+// Google tile, which is always pale because `MiniMap` passes no night
+// style — but the light looks are held to the same numbers.
 
 import { describe, expect, it } from 'vitest';
-import { colors } from './theme';
+import { colors, LOOKS, PALETTES } from './theme';
 
 /** `rgba(r,g,b,a)` → the three channels and the alpha. */
 function rgba(value: unknown): { rgb: [number, number, number]; alpha: number } {
@@ -53,13 +54,16 @@ const TILES: Record<string, [number, number, number]> = {
   'road casing': [0xBF, 0xBF, 0xBF],
 };
 
+const NAMED = Object.entries(PALETTES);
+
 describe('bgElevatedVeil', () => {
-  // One of the theme's own grounds, thinned: the elevated one on paper,
-  // the page itself on the coffee dark, whose elevated brown is too light
-  // to hold the coral over a white road (see the token's note).
-  it('is a ground of the theme thinned, not a wash of its own', () => {
-    const veil = rgba(colors.bgElevatedVeil);
-    expect([hex(colors.bg), hex(colors.bgElevated)]).toContainEqual(veil.rgb);
+  // One of the palette's own grounds, thinned: the elevated one on paper
+  // and on charcoal, the page itself on the coffee brown, whose elevated
+  // brown is too light to hold the coral over a white road (see the
+  // token's note).
+  it.each(NAMED)('is a ground of %s thinned, not a wash of its own', (_, p) => {
+    const veil = rgba(p.bgElevatedVeil);
+    expect([hex(p.bg), hex(p.bgElevated)]).toContainEqual(veil.rgb);
     expect(veil.alpha).toBeLessThan(1);
   });
 
@@ -68,9 +72,9 @@ describe('bgElevatedVeil', () => {
   // glyph is reading against the tiles instead, which change at every
   // address. 4.5 rather than the 3:1 a glyph is held to, because these
   // are the one control their cards exist for.
-  it('keeps the accent glyph at 4.5:1 over every tile a map puts under it', () => {
-    const veil = rgba(colors.bgElevatedVeil);
-    const glyph = hex(colors.accent);
+  it.each(NAMED)('keeps the %s accent glyph at 4.5:1 over every tile a map puts under it', (_, p) => {
+    const veil = rgba(p.bgElevatedVeil);
+    const glyph = hex(p.accent);
     for (const [name, tile] of Object.entries(TILES)) {
       expect(contrast(glyph, over(veil, tile)), `glyph over ${name}`).toBeGreaterThanOrEqual(4.5);
     }
@@ -78,36 +82,65 @@ describe('bgElevatedVeil', () => {
 
   // It still has to *look* thinned. A veil at 0.99 would pass the test
   // above and be a lie about what the token is for.
-  it('lets enough of the map through to read as translucent', () => {
-    expect(rgba(colors.bgElevatedVeil).alpha).toBeLessThanOrEqual(0.9);
+  it.each(NAMED)('lets enough of the map through %s to read as translucent', (_, p) => {
+    expect(rgba(p.bgElevatedVeil).alpha).toBeLessThanOrEqual(0.9);
   });
 });
 
-// The three text steps, on the two dark grounds they are drawn on. Dark
-// because that is what `dyn` settles on here — and because it is the
-// theme whose third step went unmeasured until it was found at 3.6:1.
-describe('text on the dark grounds', () => {
-  const grounds = { bg: colors.bg, bgElevated: colors.bgElevated };
-  const steps = {
-    text: colors.text, textSecondary: colors.textSecondary, textTertiary: colors.textTertiary,
-  };
-  it('keeps every text step at 4.5:1 or better', () => {
-    for (const [g, ground] of Object.entries(grounds)) {
-      for (const [s, step] of Object.entries(steps)) {
-        expect(contrast(hex(step), hex(ground)), `${s} on ${g}`).toBeGreaterThanOrEqual(4.5);
+// The three text steps, on the two grounds they are drawn on — the step
+// that went unmeasured until it was found at 3.6:1 was charcoal's third.
+describe('text on its grounds', () => {
+  it.each(NAMED)('keeps every text step at 4.5:1 or better on %s', (_, p) => {
+    for (const g of ['bg', 'bgElevated'] as const) {
+      for (const s of ['text', 'textSecondary', 'textTertiary', 'ink', 'accent', 'shutInk'] as const) {
+        expect(contrast(hex(p[s]), hex(p[g])), `${s} on ${g}`).toBeGreaterThanOrEqual(4.5);
       }
     }
+    // `soon` is drawn on a card's hours line, never on the page, and was
+    // measured there (see its note).
+    expect(contrast(hex(p.soon), hex(p.bgElevated)), 'soon on bgElevated').toBeGreaterThanOrEqual(4.5);
   });
-  // Lifting the third step must not collapse it into the second.
-  it('keeps tertiary visibly quieter than secondary', () => {
-    expect(contrast(hex(colors.textSecondary), hex(colors.textTertiary))).toBeGreaterThanOrEqual(1.4);
+  // Lifting the third step must not collapse it into the second. Paper is
+  // left out, and knowingly: its two steps are 1.31:1 apart and have been
+  // since the light theme shipped — they were never lifted, so never at
+  // risk of collapsing, and moving them is not this change's to make.
+  it.each(NAMED.filter(([n]) => n !== 'paper'))('keeps tertiary visibly quieter than secondary on %s', (_, p) => {
+    expect(contrast(hex(p.textSecondary), hex(p.textTertiary))).toBeGreaterThanOrEqual(1.4);
   });
 });
 
-// The visited pill's pair. Dark here, as everywhere in this file; the
-// paper side is 5.1:1 by the note on the token.
-describe('okInk', () => {
-  it('reads at 4.5:1 or better on okSoft', () => {
-    expect(contrast(hex(colors.okInk), hex(colors.okSoft))).toBeGreaterThanOrEqual(4.5);
+// What sits on the accent as a surface. 4.5 because a button's label is
+// type: rose is the palette that had to move to white for this, the
+// reference's yellow on its rose being 3.9:1.
+describe('accentInk', () => {
+  it.each(NAMED)('reads at 4.5:1 or better on every %s accent fill', (_, p) => {
+    for (const fill of [p.accentFill, ...p.gradAI]) {
+      expect(contrast(hex(p.accentInk), hex(fill)), fill).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
+
+// The visited pill's pair; and the delete well's, its counterpart.
+describe('okInk and bad', () => {
+  it.each(NAMED)('read at 4.5:1 or better on their wells in %s', (_, p) => {
+    expect(contrast(hex(p.okInk), hex(p.okSoft))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(hex(p.bad), hex(p.badSoft))).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe('looks', () => {
+  // The standard look is the only one that is two palettes, and so the
+  // only one that puts a `dyn` pair anywhere; the borders test reads it.
+  it('pairs paper with charcoal, and wears coffee and rose on both sides', () => {
+    expect(LOOKS.standard).toEqual({ light: PALETTES.paper, dark: PALETTES.charcoal });
+    expect(LOOKS.coffee.light).toBe(LOOKS.coffee.dark);
+    expect(LOOKS.rose.light).toBe(LOOKS.rose.dark);
+  });
+
+  // The runner has no `Settings`, so it loads the standard look, and `dyn`
+  // settles on its dark side: what every UI test reads is charcoal.
+  it('loads the standard look where nothing is stored', () => {
+    expect(colors.bg).toBe(PALETTES.charcoal.bg);
+    expect(colors.accentLine).toBe(PALETTES.paper.accentLine);
   });
 });

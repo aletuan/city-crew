@@ -112,7 +112,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
   edgePadding?: { top: number; right: number; bottom: number; left: number };
 }) {
   const { t } = useI18n();
-  const { scheme } = useScheme();
+  const { scheme, look } = useScheme();
   const ref = useRef<any>(null);
   const [ready, setReady] = useState(false);
   // Memoised so the lookup that hangs off it can hold: `pinned` filters a
@@ -197,7 +197,7 @@ export default function PlacesMap({ places, selectedSlug, onSelect, category, or
         // Google draws its own badge for every place we pin, because our
         // places are its places; and it has no dark mode to switch on, so
         // the night reading is a style too — see `lib/mapStyle`.
-        customMapStyle={mapStyle(scheme)}
+        customMapStyle={mapStyle(scheme, look)}
         initialRegion={{ latitude: first.lat, longitude: first.lng, latitudeDelta: OPENING_SPAN, longitudeDelta: OPENING_SPAN }}
         showsUserLocation
         showsMyLocationButton={false}
