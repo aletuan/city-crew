@@ -516,20 +516,20 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     show();
     expect(screen.queryByTestId('detail-checkin')).toBeNull();
     const pill = screen.getByTestId('detail-checked-in');
-    expect(pill.querySelector('[data-icon="checkmark"]')!.getAttribute('data-color')).toBe('#141310');
+    expect(pill.querySelector('[data-icon="checkmark"]')!.getAttribute('data-color')).toBe(String(colors.okInk));
     // A word that shares nothing with the rest label — "Checked in"
     // beside "Check-in" read as the same verb at a glance.
     const word = within(pill).getByText('Visited');
     expect(within(pill).queryByText(/check/i)).toBeNull();
-    // `accentFill`, solid, hairline included, so the pill keeps its size:
-    // the 10% tint it wore first read on the phone as the rest state lit.
+    // Green, filled, hairline included so the pill keeps its size: a
+    // different hue from the coral rest state, not only a fill. Coral
+    // here read as one more ask on a screen of coral asks.
     const inner = getComputedStyle(pill.firstElementChild!);
-    expect(inner.backgroundColor).toBe('rgb(255, 111, 91)');
-    expect(inner.borderTopColor).toBe('rgb(255, 111, 91)');
+    expect(inner.backgroundColor).toBe('rgb(24, 42, 28)'); // okSoft, dark
+    expect(inner.borderTopColor).toBe('rgb(24, 42, 28)');
     expect(inner.borderTopWidth).toBe('1px');
-    // Near-black on the coral, word and glyph (above) both: the accent's
-    // own red on its own fill would be a mark nobody could read.
-    expect(getComputedStyle(word).color).toBe('rgb(20, 19, 16)');
+    // `okInk` on it, word and glyph (above) both.
+    expect(getComputedStyle(word).color).toBe('rgb(143, 191, 138)'); // okInk, dark
     expect(a11yState('Visited — options').selected).toBe(true);
   });
 

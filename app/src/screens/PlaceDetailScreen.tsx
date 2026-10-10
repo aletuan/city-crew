@@ -671,7 +671,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               of outlines. Not the tinted fill the mockup wore: the
               accent as a surface is for state (`theme.ts`), and a pill
               at rest is not one. *Having* checked in is the state, and
-              the state wears the accent solid — see "worn" below.
+              the state wears a fill of its own — green, see "worn" below.
 
               The height is the chips', always: the first version stood
               6pt taller and its word sat 3pt under the chips' baseline,
@@ -697,12 +697,12 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 : t('Check in', 'Check-in', 'チェックイン')}
               containerStyle={s.checkinSlot}
               // ── worn ──
-              // Solid once a visit is written, bare outline until then:
-              // `accentFill`, the token for "switched on", the way a ticked
-              // checkbox wears it. It was `accentSoft` first, and on the
-              // phone a 10% tint inside a 28% hairline read as the same
-              // pill with the light on it — the two states told apart by
-              // a glyph and two letters.
+              // Filled once a visit is written, bare outline until then.
+              // It was `accentSoft` first, and on the phone a 10% tint
+              // inside a 28% hairline read as the same pill with the light
+              // on it; then solid `accentFill`, which read as one more
+              // coral ask. Green now (`okSoft` / `okInk`): a different hue
+              // as well as a fill, so rest and worn are two things.
               //
               // The word changes for the same reason. "Check-in" and
               // "Checked in" (VI "Check-in" / "Đã check-in") share the
@@ -719,7 +719,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               style={[s.checkin, latestVisit && s.checkinOn]}
               testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
             >
-              <Ionicons name={latestVisit ? 'checkmark' : 'location'} size={15} color={latestVisit ? colors.accentInk : colors.accent} />
+              <Ionicons name={latestVisit ? 'checkmark' : 'location'} size={15} color={latestVisit ? colors.okInk : colors.accent} />
               <Text style={[s.goText, latestVisit && s.checkinOnText]}>
                 {latestVisit ? t('Visited', 'Đã qua', '訪問済み') : t('Check in', 'Check-in', 'チェックイン')}
               </Text>
@@ -1388,9 +1388,15 @@ const s = StyleSheet.create({
   },
   // Worn: the one fill this row is allowed, because it is a state. The
   // hairline takes the fill's colour so the pill keeps its exact size.
-  // Near-black on it, never white: 6.8:1 against 2.7:1 (`accentInk`).
-  checkinOn: { backgroundColor: colors.accentFill, borderColor: colors.accentFill },
-  checkinOnText: { color: colors.accentInk },
+  //
+  // Green, not the coral it wore first. Solid coral said "done" loudly,
+  // but it is also the colour of every button on this screen that asks
+  // for something, and the owner's reference drew a visit as the quiet
+  // green the app already uses for good news (`okSoft`, the public-list
+  // banner's ground). Coral now means "do this", green "you did".
+  // `okInk` on it: 5.1:1 on paper, 7.2:1 on charcoal.
+  checkinOn: { backgroundColor: colors.okSoft, borderColor: colors.okSoft },
+  checkinOnText: { color: colors.okInk },
   checkinHead: { gap: 12 },
   checkinHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   checkinHeadTitle: { flex: 1, color: colors.text, fontSize: 18, fontFamily: display.semibold },
