@@ -312,9 +312,13 @@ export default function CollectionFormScreen({ navigation, route }: {
         testID="collection-name"
         returnKeyType="next"
       />
+      {/* "Description", with no "(optional)" after it (removed at the
+          owner's request, 10 Oct 2026). The form already says it: only
+          the name stops a save, and the placeholder below is a question
+          that can go unanswered. */}
       <FieldRow
         icon="text-outline"
-        label={t('Description (optional)', 'Mô tả (không bắt buộc)', '説明（任意）')}
+        label={t('Description', 'Mô tả', '説明')}
         placeholder={t('What ties these together?', 'Điều gì gắn kết những nơi này?', '共通点は何ですか？')}
         value={desc}
         onChangeText={setDesc}

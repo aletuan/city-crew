@@ -281,6 +281,14 @@ describe('renaming a list', () => {
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeTruthy();
   });
 
+  // Only the name stops a save, so the description's label says what it
+  // is and nothing more — the "(optional)" rider came off on 10 Oct 2026.
+  it('labels the description without calling it optional', () => {
+    openRename([HEIM, SAM]);
+    expect(screen.getByText('Description')).toBeTruthy();
+    expect(screen.queryByText(/optional/i)).toBeNull();
+  });
+
   it('writes the name, the description and the cover that was picked', async () => {
     openRename([HEIM, SAM]);
     fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: ' Late bars ' } });
