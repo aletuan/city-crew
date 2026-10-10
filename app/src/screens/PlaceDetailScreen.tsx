@@ -1447,7 +1447,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6, minHeight: FACT_HEIGHT,
   },
   // Worn: the one fill this row is allowed, because it is a state. The
-  // hairline takes the fill's colour so the pill keeps its exact size.
+  // hairline stays, transparent, so the pill keeps its exact size. It
+  // took the fill's colour first, `okSoft`, and on a phone in Dark under
+  // the app's Light that border resolved to the charcoal side and drew a
+  // near-black ring round a pale green pill — see `bgHex` in theme.ts.
   //
   // Green, not the coral it wore first. Solid coral said "done" loudly,
   // but it is also the colour of every button on this screen that asks
@@ -1455,7 +1458,7 @@ const s = StyleSheet.create({
   // green the app already uses for good news (`okSoft`, the public-list
   // banner's ground). Coral now means "do this", green "you did".
   // `okInk` on it: 5.1:1 on paper, 7.2:1 on charcoal.
-  checkinOn: { backgroundColor: colors.okSoft, borderColor: colors.okSoft },
+  checkinOn: { backgroundColor: colors.okSoft, borderColor: 'transparent' },
   checkinOnText: { color: colors.okInk },
   checkinHead: { gap: 12 },
   checkinHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },

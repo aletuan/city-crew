@@ -442,7 +442,9 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
     borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
-  toolBad: { backgroundColor: colors.badSoft, borderColor: colors.badSoft },
+  // The hairline only holds the size; a `badSoft` border would resolve to
+  // the phone's side of the pair, not the app's (`bgHex` in theme.ts).
+  toolBad: { backgroundColor: colors.badSoft, borderColor: 'transparent' },
   toolText: { fontSize: 14, fontWeight: font.semibold },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },

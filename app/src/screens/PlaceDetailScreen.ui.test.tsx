@@ -596,12 +596,14 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     // beside "Check-in" read as the same verb at a glance.
     const word = within(pill).getByText('Visited');
     expect(within(pill).queryByText(/check/i)).toBeNull();
-    // Green, filled, hairline included so the pill keeps its size: a
-    // different hue from the coral rest state, not only a fill. Coral
-    // here read as one more ask on a screen of coral asks.
+    // Green, filled: a different hue from the coral rest state, not only
+    // a fill. Coral here read as one more ask on a screen of coral asks.
     const inner = getComputedStyle(pill.firstElementChild!);
     expect(inner.backgroundColor).toBe('rgb(24, 42, 28)'); // okSoft, dark
-    expect(inner.borderTopColor).toBe('rgb(24, 42, 28)');
+    // The hairline stays to hold the size, and is transparent: as
+    // `okSoft` it resolved to the phone's side of the pair rather than
+    // the app's, a charcoal ring round a pale pill (theme.ts, `bgHex`).
+    expect(inner.borderTopColor).toBe('rgba(0, 0, 0, 0)');
     expect(inner.borderTopWidth).toBe('1px');
     // `okInk` on it, word and glyph (above) both.
     expect(getComputedStyle(word).color).toBe('rgb(143, 191, 138)'); // okInk, dark
