@@ -1,3 +1,4 @@
+import { bgHex } from '../theme';
 import { describe, expect, it } from 'vitest';
 import { mapStyle } from './mapStyle';
 
@@ -42,8 +43,15 @@ describe('mapStyle', () => {
 
   // The night ground is lifted off the app's own background on purpose:
   // the pins are Google's marker art and come out dark.
-  it('does not paint the night ground as dark as the app behind it', () => {
+  // Lighter, not merely different: a ground a hair darker than the page
+  // would pass "not equal" and swallow the pins all the same.
+  it('paints the night ground lighter than the app behind it', () => {
     const ground = mapStyle('dark').find((r) => !r.featureType && r.elementType === 'geometry');
-    expect((ground!.stylers[0] as { color: string }).color).not.toBe('#0A0B0A');
+    const lum = (h: string) => {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+        .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    expect(lum((ground!.stylers[0] as { color: string }).color)).toBeGreaterThan(lum(bgHex.dark));
   });
 });

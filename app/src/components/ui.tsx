@@ -846,7 +846,7 @@ export function GlassMaterial() {
   const light = useScheme().scheme === 'light';
   return (
     <BlurView intensity={38} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
-      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.48)' : 'rgba(12,13,12,0.48)' }} />
+      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.48)' : 'rgba(39,25,16,0.48)' }} />
     </BlurView>
   );
 }
@@ -867,7 +867,9 @@ export function GlassMaterial() {
  *
  */
 export const glassHalo = (light: boolean) => ({
-  textShadowColor: light ? 'rgba(250,248,244,0.95)' : 'rgba(10,11,10,0.95)',
+  // The dark side is the page's brown, #271910 (charcoal until the coffee
+  // theme): the halo stands in for the ground the glass has thinned.
+  textShadowColor: light ? 'rgba(250,248,244,0.95)' : 'rgba(39,25,16,0.95)',
   textShadowOffset: { width: 0, height: 0 },
   textShadowRadius: 3,
 });

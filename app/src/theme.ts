@@ -1,8 +1,18 @@
 // City Crew iOS design system.
 //
-// Two grounds, one system. Dark is the cinematic original: near-black
-// charcoal, translucent smoky surfaces, thin warm-gray hairlines. Light is
-// warm paper with white cards and near-black type. Both carry the same
+// Two grounds, one system. Dark is "nâu cafe" (10 Oct 2026): coffee brown
+// #271910 under cream type, the owner's two-tone reference turned into a
+// whole theme — the cream #C7AA9A is the secondary type and the hairline,
+// a lighter cream the primary type. It replaced the cinematic original,
+// near-black charcoal #0A0B0A with warm-gray hairlines, in one change so
+// the change can be reverted in one; every dark value below that moved
+// says what it was. Light is warm paper with white cards and near-black
+// type.
+//
+// Why the cream is not the page anywhere: it is a mid-tone, and on it the
+// category hues fall to 1.0–1.3:1, the coral to 1.26 and the visited green
+// to 1.04. The colour code would stop being a code. On the brown they are
+// 6.0–8.1, 6.23 and 8.1. Both carry the same
 // coral accent, used sparingly for active state only — with one standing
 // exception, the itinerary rail (`components/rail`): its paw and dots are
 // coral on every stop because the rail is the route, drawn once per
@@ -74,15 +84,15 @@ const dyn = (light: string, dark: string): ColorValue =>
  * `ios.buildReactNativeFromSource` in `expo-build-properties` as well,
  * slower builds, and a TestFlight binary; an EAS Update cannot carry it.
  */
-export const bgHex = { light: '#F5F1EA', dark: '#0A0B0A' } as const;
+export const bgHex = { light: '#F5F1EA', dark: '#271910' } as const;
 /** `colors.bgElevated` as plain hex, for a border — see `bgHex`. */
-export const bgElevatedHex = { light: '#FFFFFF', dark: '#151614' } as const;
+export const bgElevatedHex = { light: '#FFFFFF', dark: '#33231A' } as const;
 /** `colors.badgeSolid` as plain hex, for a border — see `bgHex`. */
 export const badgeSolidHex = { light: '#F7DCD3', dark: '#FF6F5B' } as const;
 
 export const colors = {
-  /** The page. Near-black charcoal, or warm paper — never pure black or
-   *  pure white, and never uniform. */
+  /** The page. Coffee brown (charcoal #0A0B0A until 10 Oct 2026), or warm
+   *  paper — never pure black or pure white, and never uniform. */
   bg: dyn(bgHex.light, bgHex.dark),
   /** Surfaces that must be opaque: sheets, modals, the cards on paper. */
   bgElevated: dyn(bgElevatedHex.light, bgElevatedHex.dark),
@@ -103,36 +113,43 @@ export const colors = {
    * 4.76 by day, 4.71 by night. At 0.78, which was the first answer, the
    * night figure is 3.31 — still legal for a glyph, and visibly thinner
    * than it should be for the one control the card exists for.
+   *
+   * On the coffee ground (10 Oct 2026) the night side thins the *page*
+   * colour, #271910, at 0.90, not `bgElevated`. The elevated brown is
+   * lighter than charcoal was, and over a white road it held the coral
+   * to 3.80:1 at 0.88 and 4.05 at 0.90; the page brown at 0.90 is 4.65,
+   * the only pair under the 0.90 ceiling that clears 4.5.
    */
-  bgElevatedVeil: dyn('rgba(255,255,255,0.88)', 'rgba(21,22,20,0.88)'),
+  bgElevatedVeil: dyn('rgba(255,255,255,0.88)', 'rgba(39,25,16,0.9)'),
   /** Card fill. Smoky and translucent on charcoal so the ambient light
    *  reads through it; plain white on paper, where translucency would only
    *  muddy the ground it sits on. */
-  surfaceCard: dyn('#FFFFFF', 'rgba(38,34,28,0.72)'),
+  surfaceCard: dyn('#FFFFFF', 'rgba(64,45,34,0.72)'),
 
   /** Tinted wells and quiet controls. The dark theme lifts with white at
    *  6%; the light theme cannot — white on paper is invisible — so it
    *  presses down with ink instead. */
-  surfaceGlass: dyn('rgba(23,21,15,0.05)', 'rgba(247,247,245,0.06)'),
-  surfaceGlassStrong: dyn('rgba(23,21,15,0.09)', 'rgba(247,247,245,0.12)'),
-  /** Hairlines: warm gray at low opacity on charcoal, warm ink on paper.
-   *  Never bright white, never true black. */
-  borderGlass: dyn('rgba(23,21,15,0.14)', 'rgba(214,182,132,0.24)'),
-  borderGlassSoft: dyn('rgba(23,21,15,0.08)', 'rgba(214,182,132,0.16)'),
+  surfaceGlass: dyn('rgba(23,21,15,0.05)', 'rgba(243,233,226,0.06)'),
+  surfaceGlassStrong: dyn('rgba(23,21,15,0.09)', 'rgba(243,233,226,0.12)'),
+  /** Hairlines: the reference's cream at low opacity on the brown (a warm
+   *  tan, 214/182/132, on charcoal), warm ink on paper. Never bright white,
+   *  never true black. */
+  borderGlass: dyn('rgba(23,21,15,0.14)', 'rgba(199,170,154,0.24)'),
+  borderGlassSoft: dyn('rgba(23,21,15,0.08)', 'rgba(199,170,154,0.16)'),
 
   /** Measured against their own ground: 16:1, 6.4:1 and 4.9:1 on paper,
    *  comfortably past the 4.5:1 small type needs.
    *
-   *  On charcoal the first two are 18.4:1 and 9.7:1. The third was #6E706D
-   *  until it was measured too: 3.9:1 on `bg` and 3.6:1 on `bgElevated`,
-   *  under the line, while carrying 12–15 pt copy — section labels, the
-   *  Ideas lede, the welcome sheet's rows, every leg row and placeholder.
-   *  #8E908C is 6.1:1 and 5.6:1, and still sits clearly below
-   *  `textSecondary`, so the three steps stay three. `theme.test.ts`
-   *  holds all three to 4.5:1 on both dark grounds. */
-  text: dyn('#17150F', '#F7F7F5'),
-  textSecondary: dyn('#5C574E', '#B7B6B1'),
-  textTertiary: dyn('#6E695E', '#8E908C'),
+   *  On the brown: #F3E9E2 is 14.3:1 on `bg` and 12.6 on `bgElevated`,
+   *  the reference's #C7AA9A 7.8 and 6.9, and #A88B7A 5.4 and 4.8 — a
+   *  step down from #A08473, which was 4.9 on the page but 4.33 on a
+   *  sheet. 1.45:1 between the second and third keeps the three steps
+   *  three. On charcoal these were #F7F7F5, #B7B6B1 and #8E908C, the
+   *  third after #6E706D measured 3.9:1 under 12–15pt copy.
+   *  `theme.test.ts` holds all three to 4.5:1 on both dark grounds. */
+  text: dyn('#17150F', '#F3E9E2'),
+  textSecondary: dyn('#5C574E', '#C7AA9A'),
+  textTertiary: dyn('#6E695E', '#A88B7A'),
 
   /**
    * The accent **as something to read** — a label, a glyph, a link.
@@ -276,7 +293,7 @@ export const colors = {
    *  softer than `text`, so the facts read as content rather than as
    *  captions and the small-caps label above stays the quieter of the
    *  two. */
-  ink: dyn('#211F1C', '#ECEBE7'),
+  ink: dyn('#211F1C', '#EDE1D8'),
   /** Destructive. The dark theme's soft red is far too pale on paper. */
   bad: dyn('#C2564A', '#D98A80'),
   /** The well a delete action sits in, with `bad` itself as the glyph on
@@ -287,16 +304,20 @@ export const colors = {
    *  Opaque per-theme values rather than one translucent red like
    *  `accentSoft`: a tint has to stay pink to read as a warning, and the
    *  alpha that manages that on paper comes out beige over near-black. */
-  badSoft: dyn('#F8DFD9', '#2A1A18'),
+  //  Dark #422520 on the brown (it was #2A1A18 on charcoal, which on
+  //  #271910 is the page itself): `bad` on it 5.2:1.
+  badSoft: dyn('#F8DFD9', '#422520'),
   /** `badSoft`'s counterpart, for the one thing that goes right loudly
    *  enough to need a ground: the banner that says a collection is now
    *  public. Built to the same recipe and the same weight — 1.11:1
    *  against paper where the red is 1.13:1 — so good news and bad news
    *  sit at the same distance from the page instead of one shouting. */
-  okSoft: dyn('#D9EBD7', '#182A1C'),
+  //  Dark #24361F on the brown (#182A1C on charcoal, which read as the
+  //  page with a green cast on #271910): `okInk` on it 6.2:1.
+  okSoft: dyn('#D9EBD7', '#24361F'),
   /** Words and glyphs *on* `okSoft`. `ok` itself is 4.1:1 on the paper
    *  side of that ground, under the 4.5:1 a 16pt label needs; a shade
-   *  darker is 5.1:1. Charcoal keeps `ok`'s own sage, 7.2:1 on its
+   *  darker is 5.1:1. The dark side keeps `ok`'s own sage, 6.2:1 on its
    *  ground. First worn by the visited pill on a place's screen. */
   okInk: dyn('#2F6B3B', '#8FBF8A'),
 };
@@ -429,7 +450,7 @@ export const gradAI = {
  * The track is neutral on purpose. Colour on the ring means progress; a
  * tinted track would spend it on the part that has not happened yet.
  */
-export const ringTrack = { light: '#DDD7CB', dark: '#252320' } as const;
+export const ringTrack = { light: '#DDD7CB', dark: '#3A2A20' } as const;
 
 /**
  * The sweep, warm through to cool, shared by both themes.

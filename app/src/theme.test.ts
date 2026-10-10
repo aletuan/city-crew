@@ -54,9 +54,12 @@ const TILES: Record<string, [number, number, number]> = {
 };
 
 describe('bgElevatedVeil', () => {
-  it('is the elevated ground thinned, not a wash of its own', () => {
+  // One of the theme's own grounds, thinned: the elevated one on paper,
+  // the page itself on the coffee dark, whose elevated brown is too light
+  // to hold the coral over a white road (see the token's note).
+  it('is a ground of the theme thinned, not a wash of its own', () => {
     const veil = rgba(colors.bgElevatedVeil);
-    expect(veil.rgb).toEqual(hex(colors.bgElevated));
+    expect([hex(colors.bg), hex(colors.bgElevated)]).toContainEqual(veil.rgb);
     expect(veil.alpha).toBeLessThan(1);
   });
 
