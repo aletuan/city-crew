@@ -35,6 +35,7 @@ import { Avatar, Card, PressableScale } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
+import { dropResume } from '../lib/resume';
 import { useTakeout } from '../lib/takeout';
 import { colors, font, space, type } from '../theme';
 import { leaveAuth, type Nav } from '../nav';
@@ -55,6 +56,11 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
       // Nothing sets `busy` back on this path: the account is gone, the
       // session with it, and this screen leaves with them. `ProfileHome`
       // is already rendering `GuestHub` by the time it arrives.
+      //
+      // And nothing is finished on the way out: `leaveAuth` resumes what a
+      // guest was signing in to do (`lib/resume`), and the reader leaving
+      // here has just stopped being anybody who could do it.
+      dropResume();
       leaveAuth(navigation);
     } catch (e) {
       setError((e as Error).message);

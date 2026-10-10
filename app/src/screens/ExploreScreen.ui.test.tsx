@@ -1184,8 +1184,25 @@ describe('the map’s quick filters', () => {
     await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /bookmarked only/i })); });
     expect(spies.askToSignIn).toHaveBeenCalledOnce();
-    expect(spies.askToSignIn).toHaveBeenCalledWith('saved');
+    expect(spies.askToSignIn).toHaveBeenCalledWith('saved', expect.any(Function));
     expect(screen.getByRole('button', { name: 'Filter and sort places' })).toBeTruthy();
+  });
+
+  // What the sheet hands back once the guest has signed in — see
+  // `lib/resume`. It must act as the render that knows they are signed in:
+  // the guest's own `pickSaved` would only raise the sheet a second time.
+  it('switches Bookmarked only on once the guest who asked has signed in', async () => {
+    state.places.data = [place('a', { lat: 21, lng: 105 })];
+    const navigation = nav();
+    const { rerender } = render(<ExploreScreen navigation={navigation} />);
+    await waitFor(() => expect(screen.getByTestId('places-map')).toBeTruthy());
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /bookmarked only/i })); });
+    const resume = spies.askToSignIn.mock.calls.at(-1)![1] as () => void;
+    state.uid = 'u1';
+    rerender(<ExploreScreen navigation={navigation} />);
+    await act(async () => { resume(); });
+    expect(spies.askToSignIn).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Filter and sort places, 1 applied' })).toBeTruthy();
   });
 
   it('switches Bookmarked only on and off for a signed-in reader', async () => {

@@ -644,12 +644,17 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
    * exists for the legacy select that omits the column.
    */
   const copyCityId = col?.city_id || city?.id;
+  const copyRef = useRef<() => void>(() => {});
   const copy = () => {
     if (!col) return;
     // Signed out this is the sheet, not an error: wanting somebody's list
     // is a good moment to be offered an account, and a disabled row would
     // have explained nothing.
-    if (!uid) { askToSignIn('copy'); return; }
+    // Signed in, the copy is finished on the reader's return: the form
+    // opens and waits for them, so nothing is written unasked. Through
+    // the ref because the `copy` that runs must be a render that knows
+    // the reader is signed in — this one does not.
+    if (!uid) { askToSignIn('copy', () => copyRef.current()); return; }
     const cityId = copyCityId;
     if (!cityId) return;
     const sourceDesc = t(col.desc_en, col.desc_vi, col.desc_ja)?.trim() || '';
@@ -674,6 +679,7 @@ export default function CollectionDetailScreen({ navigation, route }: { navigati
       },
     });
   };
+  copyRef.current = copy;
 
   // The tips true of this list as it stands, in the order a first visit
   // meets them. Held back until everything has loaded: a list whose owner

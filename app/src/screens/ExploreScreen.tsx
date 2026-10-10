@@ -1069,14 +1069,19 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         ? t('Showing only places closed now.', 'Chỉ hiện những điểm đã đóng cửa.', '営業時間外のスポットのみ表示します。')
         : t('Opening-hours filter off.', 'Bỏ lọc theo giờ mở cửa.', '営業時間の絞り込みを解除しました。'));
   };
+  const pickSavedRef = useRef<() => void>(() => {});
   const pickSaved = () => {
-    if (!session) { askToSignIn('saved'); return; }
+    // A guest's filter is off, so the act finished on their return can
+    // only turn it on. Through the ref, for the render that knows they
+    // are signed in — see `lib/resume`.
+    if (!session) { askToSignIn('saved', () => pickSavedRef.current()); return; }
     const on = !appliedFilters.savedOnly;
     setAppliedFilters({ ...appliedFilters, savedOnly: on });
     say(on
       ? t('Showing only places you saved.', 'Chỉ hiện những điểm lưu lại.', '保存したスポットのみ表示します。')
       : t('Saved-places filter off.', 'Bỏ lọc theo điểm đã lưu.', '保存済みの絞り込みを解除しました。'));
   };
+  pickSavedRef.current = pickSaved;
 
   const hero = useMemo(() => heroPlace(places, city?.hero_place_slug), [places, city?.hero_place_slug]);
 

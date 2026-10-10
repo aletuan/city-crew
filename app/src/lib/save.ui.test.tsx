@@ -31,12 +31,19 @@ const world = vi.hoisted(() => ({
   prefsFor: [] as (string | null | undefined)[],
 }));
 const goTo = vi.hoisted(() => vi.fn());
+// The root as the tab bar holds it, with the reader on Places (route
+// `Explore`). `ready` false is a launch before the container mounted.
+const navRef = vi.hoisted(() => ({
+  ready: true,
+  isReady() { return this.ready; },
+  getRootState: () => ({ index: 1, routes: [{ name: 'Ideas' }, { name: 'Explore' }] }),
+}));
 const addPlaceToCollection = vi.hoisted(() => vi.fn(async () => {}));
 const removePlaceFromCollection = vi.hoisted(() => vi.fn(async () => {}));
 const logPlaceEvent = vi.hoisted(() => vi.fn(async () => {}));
 const reload = vi.hoisted(() => vi.fn());
 
-vi.mock('../nav', () => ({ goTo }));
+vi.mock('../nav', () => ({ goTo, navRef }));
 vi.mock('./auth', () => ({ useAuth: () => ({ session: world.session, userId: world.userId }) }));
 vi.mock('./city', () => ({ useCity: () => ({ city: { id: 'hanoi' } }) }));
 vi.mock('./i18n', () => ({
@@ -61,6 +68,7 @@ vi.mock('./data', async (orig) => ({
 }));
 
 import { SaveProvider, useSave } from './save';
+import { dropResume, takeResume } from './resume';
 
 const place = { slug: 'cong-caphe', name_en: 'Cong Caphe', name_vi: 'Cộng' } as unknown as Place;
 
@@ -95,6 +103,8 @@ beforeEach(() => {
   world.mine = { data: [], loading: false, loaded: true, error: null, reload: () => {} };
   world.historyOn = false;
   goTo.mockClear();
+  navRef.ready = true;
+  dropResume();
   addPlaceToCollection.mockClear();
   removePlaceFromCollection.mockClear();
   logPlaceEvent.mockClear();
@@ -418,5 +428,65 @@ describe('the sheets’ ways out', () => {
     });
     fadeOut();
     await waitFor(() => expect(screen.queryByText('coffee')).toBeNull());
+  });
+});
+
+// What the sheet remembers for the reader's return — see `lib/resume`.
+describe('finishing what a guest started', () => {
+  function Asker({ run }: { run: () => void }) {
+    const { askToSignIn } = useSave();
+    return <button type="button" onClick={() => askToSignIn('like', run)}>tap the heart</button>;
+  }
+
+  it('remembers the bookmark and the tab it was tapped on', () => {
+    world.session = null;
+    mount();
+    tap();
+    const r = takeResume(Date.now());
+    expect(r?.tab).toBe('Explore');
+    expect(typeof r?.run).toBe('function');
+  });
+
+  // The act runs on a later render than the one the guest tapped, and it
+  // must be that later render's `save` — the guest's own would only raise
+  // the sheet again. With no lists yet, a signed-in save goes to the form.
+  it('finishes the save as the reader who has just signed in', () => {
+    world.session = null;
+    const { rerender } = mount();
+    tap();
+    const r = takeResume(Date.now())!;
+    world.session = { user: { id: 'u1' } };
+    rerender(<SaveProvider><Tapper /></SaveProvider>);
+    r.run!();
+    expect(goTo).toHaveBeenCalledWith('Collections', {
+      screen: 'CollectionForm', initial: false, params: { addPlaceSlug: 'cong-caphe' },
+    });
+  });
+
+  it('carries the act a screen hands over, as it was handed', () => {
+    const run = vi.fn();
+    world.session = null;
+    mount(<Asker run={run} />);
+    fireEvent.click(screen.getByText('tap the heart'));
+    expect(takeResume(Date.now())?.run).toBe(run);
+  });
+
+  it('keeps it through "Sign in" and forgets it on "Close"', () => {
+    world.session = null;
+    mount();
+    tap();
+    fireEvent.click(screen.getByText('Sign in / Sign up'));
+    expect(takeResume(Date.now())).not.toBeNull();
+    tap();
+    fireEvent.click(screen.getAllByLabelText('Close')[0]);
+    expect(takeResume(Date.now())).toBeNull();
+  });
+
+  it('has no tab to go back to before the navigator is ready', () => {
+    navRef.ready = false;
+    world.session = null;
+    mount();
+    tap();
+    expect(takeResume(Date.now())?.tab).toBeNull();
   });
 });
