@@ -24,19 +24,45 @@ env:
 - waitForAnimationToEnd:
     timeout: 5000
 
-# Leftovers from a run that died half way.
-- repeat:
-    while:
+# Leftovers from a run that died half way — and then a fresh start.
+#
+# The fresh start is not tidiness. Deleting raises the system alert, and
+# after an alert has been shown in a session the owner's ⋯ menu on a
+# collection page reads to XCUITest as an empty tree: the menu is on
+# screen, `collection-menu-edit` is not found. Measured on 10 October: in
+# a fresh session the menu reads; cancel one delete alert and reopen it,
+# and it does not. So a run that inherited a leftover failed at the
+# rename, and left a leftover of its own — eleven runs in a row, through
+# a simulator reboot. Relaunching after the cleanup breaks that loop.
+- runFlow:
+    when:
       visible:
         text: "Maestro CRUD.*"
     commands:
+      - repeat:
+          while:
+            visible:
+              text: "Maestro CRUD.*"
+          commands:
+            - tapOn:
+                text: "Maestro CRUD.*"
+            - extendedWaitUntil:
+                visible:
+                  id: "collection-more"
+                timeout: 15000
+            - runFlow: common/delete-open-collection.yaml
+      - runFlow: common/start.yaml
+      - runFlow: common/ensure-signed-in.yaml
       - tapOn:
-          text: "Maestro CRUD.*"
+          id: "tab-collections"
       - extendedWaitUntil:
           visible:
-            id: "collection-more"
-          timeout: 15000
-      - runFlow: common/delete-open-collection.yaml
+            id: "collections-yours"
+          timeout: 20000
+      - tapOn:
+          id: "collections-yours"
+      - waitForAnimationToEnd:
+          timeout: 5000
 
 # Create. The dashed "New collection" row sits at the foot of the list.
 - scrollUntilVisible:
