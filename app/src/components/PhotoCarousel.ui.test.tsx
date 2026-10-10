@@ -88,19 +88,17 @@ describe('PhotoCarousel', () => {
     swipe(-300); expect(onPage).toHaveBeenLastCalledWith(0);
   });
 
-  it('marks the pages in the corner it is told, following the page it is given', () => {
-    const { rerender } = draw({ dotsRight: 22, dotsBottom: 15 });
-    const pill = screen.getByTestId('car-dots') as HTMLElement;
-    expect(pill.children).toHaveLength(3);
+  it('counts the pages in the corner it is told, following the page it is given', () => {
+    const { rerender } = draw({ countRight: 22, countBottom: 15 });
+    const pill = screen.getByTestId('car-count') as HTMLElement;
+    expect(pill.textContent).toBe('1 / 3');
     expect(pill.style.right).toBe('22px');
     expect(pill.style.bottom).toBe('15px');
-    const first = [...pill.children].map((c) => (c as HTMLElement).className);
     rerender(
       <PhotoCarousel pages={shots} page={2} onPage={() => {}} aspectRatio={2} attributionOf={(sh) => sh.by}
         renderPage={(sh, i, style) => <Text key={sh.uri} style={style} testID={`page-${i}`}>{sh.uri}</Text>} testID="car" />,
     );
-    const last = [...pill.children].map((c) => (c as HTMLElement).className);
-    expect(last[2]).toBe(first[0]);
+    expect(screen.getByTestId('car-count').textContent).toBe('3 / 3');
   });
 
   it('credits the page on screen, only while the switch is on', () => {
@@ -125,7 +123,7 @@ describe('PhotoCarousel', () => {
     const root = screen.getByTestId('car');
     const order = [...root.querySelectorAll('[data-testid]')].map((el) => el.getAttribute('data-testid'));
     expect(order.indexOf('page-0')).toBeLessThan(order.indexOf('scrim'));
-    expect(order.indexOf('scrim')).toBeLessThan(order.indexOf('car-dots'));
+    expect(order.indexOf('scrim')).toBeLessThan(order.indexOf('car-count'));
   });
 
   it('draws nothing at all for no pages', () => {

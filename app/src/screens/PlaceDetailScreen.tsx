@@ -1,4 +1,4 @@
-// Place detail — hero carousel with page dots, floating share/save and
+// Place detail — hero carousel with a page count, floating share/save and
 // the place's kinds as glyphs, the score with check-in beside it, and one
 // grouped card of Address / Hours / Call / Website rows, the weekly table
 // folded behind the open-now line.
@@ -35,6 +35,7 @@ import { useCity } from '../lib/city';
 import { CATEGORIES, categoriesOf, categoryLabel } from '../lib/categories';
 import MiniMap, { canDrawMap } from '../components/MiniMap';
 import PhotoCarousel from '../components/PhotoCarousel';
+import { PAGE_COUNT_H } from '../components/PageCount';
 import { pinImage } from '../components/mapPins';
 import {
   atHandle, hostOf, instagramUrl, threadsUrl, websiteRepeatsHandle,
@@ -365,8 +366,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 nothing else: it is strongest at the very top edge and gone
                 within the status bar's own height plus a little, so on most
                 photographs you cannot point at where it ends.
-                The bottom one is the older job — the counter, the dots and
-                the credit sit on it — and it now also gives the rounded
+                The bottom one is the older job — the page count, the kinds
+                and the credit sit on it — and it now also gives the rounded
                 corners something to end in rather than a hard cut. */}
             <LinearGradient
               pointerEvents="none"
@@ -420,24 +421,32 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 row was the fourth band of boxes between the photograph and
                 the first fact a reader acts on, and the owner's reference
                 drew the kinds where the eye already is: bottom left, the
-                corner the dots leave free.
+                corner the page count leaves free.
 
                 The material is the cover's, not the page's. The back,
                 share and bookmark discs are one dark glass in both themes
                 because the ground under them is a photograph, not paper or
                 charcoal; a paper pill here would vanish into a bright
-                storefront, which is exactly what this cover has. Glyphs in
-                `onPhoto.text`, not each kind's hue: they sit beside three
-                white glyphs, and the hue's job — matching a chip on Explore
-                and a dot on the map — is not this screen's.
+                storefront, which is exactly what this cover has.
+
+                Glyphs in each kind's own hue, the one its chip wears on
+                Explore and its dot on the map. They shipped white first
+                (#854), beside the three white discs, and that broke the
+                rule `collectionBadge` on Explore records: a category glyph
+                wears its colour everywhere, because a colour code is only a
+                code if it holds everywhere, and the one white glyph that
+                used to exist was taken out for exactly that. The hues are
+                mid-tones made for dark ground, and this ground is dark
+                glass in both themes.
 
                 Words on a tap. Six of the nine glyphs say their kind on
                 sight; three do not — Views is a building, Culture a
                 library, Focus a book — so a tap names them, in a caption
                 over the cluster, and a second tap takes it away. Over it,
                 not inside it: opened in place, three names made the pill
-                about 330pt wide, and on a 390pt phone the dots leave it
-                250. VoiceOver hears the names either way. */}
+                about 330pt wide, and on a 390pt phone the page count
+                leaves it about 285 (it measured against the dots' 250
+                first). VoiceOver hears the names either way. */}
             {cats.length > 0 && (
               <PressableScale
                 onPress={() => setKindsOpen((o) => !o)}
@@ -453,7 +462,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 {cats.map((c, i) => (
                   <React.Fragment key={c}>
                     {i > 0 ? <View style={s.kindsRule} /> : null}
-                    <Ionicons name={CATEGORIES[c]?.icon ?? 'pricetag-outline'} size={19} color={onPhoto.text} />
+                    <Ionicons name={CATEGORIES[c]?.icon ?? 'pricetag-outline'} size={19} color={CATEGORIES[c]?.color ?? onPhoto.text} />
                   </React.Fragment>
                 ))}
               </PressableScale>
@@ -468,10 +477,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               </View>
             ) : null}
 
-            {/* No "1 / 6" in the other corner. It said what the dots say,
-                in type over a photograph — a third scrim, and a number
-                nobody acts on. VoiceOver never read it: each photograph
-                is "Photo n of m" by itself, and still is. */}
+            {/* Where the reader is in the photographs is `PageCount`'s
+                "2 / 4" at the bottom right, drawn by the carousel — see
+                that file for why a count and not dots. Not read aloud:
+                each photograph is "Photo n of m" by itself. */}
     </>
   );
 
@@ -571,8 +580,8 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               width={heroW}
               height={heroH}
               scrollKey={coverUri ?? 'no-cover'}
-              dotsRight={space.page}
-              dotsBottom={15}
+              countRight={space.page}
+              countBottom={15}
               attrStyle={s.attr}
               attributionOf={(ph) => ph.attribution_name}
               renderPage={(ph, i, size) => (
@@ -1351,8 +1360,8 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(10,11,10,0.55)', alignItems: 'center', justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
-  // Bottom left, the page margin in, bottoms flush with the dots' track
-  // at its right (`dotsBottom` 15). The labelled pill's alpha (0.58, as
+  // Bottom left, the page margin in, bottoms flush with the page count at
+  // its right (`countBottom` 15). The labelled pill's alpha (0.58, as
   // the rating pill on a card) rather than the discs' 0.55: it carries
   // type once open. 44 tall, the target every control here has.
   kindsSlot: { left: space.page, bottom: 15 },
@@ -1377,17 +1386,17 @@ const s = StyleSheet.create({
   kindsRule: { width: StyleSheet.hairlineWidth, height: 18, backgroundColor: onPhoto.line },
   // Required attribution, kept quiet — see the note in PlaceCard.
   //
-  // Above the dots, right-aligned to them: the line its old seat's note
+  // Above the page count, right-aligned to it: the line its old seat's note
   // named as "free and twice as wide". It sat centred on the bottom edge,
-  // the seat the dots left, until the kinds took the left corner — three
+  // the seat the page marks left, until the kinds took the left corner — three
   // glyphs there are about 125pt, and a centred credit at 30% of a 320pt
   // window starts 112pt in, so the two would have touched on the smallest
-  // phone and on a 390pt one too. The dots' track is 23pt tall (8 + 7 +
-  // 8) at bottom 15; this sits 6pt over it. The flag that draws it is off
+  // phone and on a 390pt one too. The count is `PAGE_COUNT_H` tall at
+  // bottom 15; this sits 6pt over it. The flag that draws it is off
   // today, by the owner's decision; the seat is kept so switching it on
   // moves nothing.
   attr: {
-    position: 'absolute', right: space.page, bottom: 15 + 23 + 6, maxWidth: '50%', textAlign: 'right',
+    position: 'absolute', right: space.page, bottom: 15 + PAGE_COUNT_H + 6, maxWidth: '50%', textAlign: 'right',
     fontSize: 9, color: '#fff', opacity: 0.55,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },

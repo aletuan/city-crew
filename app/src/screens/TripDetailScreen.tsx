@@ -376,7 +376,7 @@ export default function TripDetailScreen({ navigation, route }: {
           {/* `StopGallery`, which was lifted out of this screen and then
               not used by it: the plan options card drew the shared one and
               this card kept its own copy, with the marks in a different
-              corner. One carousel now, one set of marks (`PageDots`); the
+              corner. One carousel now, one page count (`PageCount`); the
               only thing this screen decides is the proportion, the
               detail's 16:10, because this picture has the card to itself. */}
           <StopGallery
