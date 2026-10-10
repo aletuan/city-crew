@@ -642,6 +642,23 @@ describe('friends card', () => {
     expect(screen.queryByText('1')).toBeNull();
   });
 
+  // Ringed in the card's own colour, picked in JS by the app's scheme: a
+  // `dyn` pair on a border follows the phone, so a light app on a dark
+  // phone cut the dot out of a white card with a charcoal ring.
+  it('rings the request dot in the card\u2019s colour for the app\u2019s theme', () => {
+    const ring = () => {
+      const card = screen.getByText('Connect with friends').parentElement!.parentElement!;
+      return [...card.firstElementChild!.children].map((d) => (d as HTMLElement).style.borderTopColor).find(Boolean);
+    };
+    state.ships = [edge('x', 'me', 'pending')];
+    const { unmount } = render(<ProfileScreen navigation={nav().n} />);
+    expect(ring()).toBe('rgb(21, 22, 20)'); // bgElevatedHex.dark
+    unmount();
+    state.scheme = 'light';
+    render(<ProfileScreen navigation={nav().n} />);
+    expect(ring()).toBe('rgb(255, 255, 255)'); // bgElevatedHex.light
+  });
+
   it('marks a waiting request with a dot beside the icon, and only then', () => {
     const dotCount = () => {
       const card = screen.getByText('Connect with friends').parentElement!.parentElement!;

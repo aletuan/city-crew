@@ -38,7 +38,7 @@ import type { LegalId } from '../lib/legal';
 import { cleanTaste } from '../lib/tastepick';
 import { Lang, useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
-import { colors, font, quoteFace, radius, space, type } from '../theme';
+import { bgElevatedHex, colors, font, quoteFace, radius, space, type } from '../theme';
 import { goTo, type Nav } from '../nav';
 
 const MONTHS_EN = [
@@ -534,6 +534,8 @@ function AboutRow({ icon, label, value, children, last }: {
 
 function AccountProfile({ navigation }: { navigation: Nav }) {
   const { t, lang } = useI18n();
+  // For the one border here that must resolve in JS — see `reqDot`.
+  const { scheme } = useScheme();
   const { email, profile, memberSince, signOut, session } = useAuth();
   const [busy, setBusy] = useState(false);
   // The visits, for the one number the row below shows — the app's one
@@ -838,7 +840,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
         >
           <View>
             <RowGlyph name="people-outline" line={TITLE_LINE} />
-            {crew.incoming.length > 0 ? <View style={s.reqDot} /> : null}
+            {crew.incoming.length > 0 ? <View style={[s.reqDot, { borderColor: bgElevatedHex[scheme] }]} /> : null}
           </View>
           <View style={{ flex: 1, gap: 3 }}>
             <Text style={s.featureTitle}>{t('Connect with friends', 'Kết nối bạn bè', '友達とつながる')}</Text>
@@ -1086,7 +1088,10 @@ const s = StyleSheet.create({
     position: 'absolute', top: 8, right: 8,
     width: 10, height: 10, borderRadius: 5,
     backgroundColor: colors.accent,
-    borderWidth: 2, borderColor: colors.bgElevated,
+    // The ring is the card's own colour, cut round the dot. Resolved in
+    // JS at the call site (`bgElevatedHex[scheme]`): a `dyn` pair on a
+    // border follows the phone's appearance, not the app's — `bgHex`.
+    borderWidth: 2,
   },
   // The pill: 22pt tall so it sits inside the 44pt row without touching
   // its edges, the radius half the height for a true capsule. `minWidth`

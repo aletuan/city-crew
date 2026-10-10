@@ -40,7 +40,7 @@ import { minutesOf, todayISO } from '../lib/day';
 import { tripsToday } from '../lib/trips';
 import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
-import { colors, font, labelScaleCap, radius } from '../theme';
+import { badgeSolidHex, colors, font, labelScaleCap, radius } from '../theme';
 import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
 import PlacesGlyph from './PlacesGlyph';
@@ -202,7 +202,9 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // idle bar. One mark, wherever it lands.
   const dotInk = {
     backgroundColor: light ? PILL_INK_LIGHT : PILL_INK_DARK,
-    borderColor: colors.badgeSolid as string,
+    // Plain hex, by the app's scheme: `badgeSolid` itself is a `dyn` pair,
+    // and on a border that follows the phone, not the app (`bgHex`).
+    borderColor: light ? badgeSolidHex.light : badgeSolidHex.dark,
   };
 
   // It used to clear the whole safe-area inset — 34pt on a modern iPhone,

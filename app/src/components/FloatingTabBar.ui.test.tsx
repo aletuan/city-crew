@@ -185,6 +185,21 @@ describe('the waiting dots', () => {
     expect(tab('Trips').getAttribute('aria-label')).toBe('Trips');
   });
 
+  // The ring is plain hex picked by the app's scheme, not the `dyn`
+  // `badgeSolid`: a dynamic pair on a border follows the phone, so a
+  // light app on a dark phone ringed the dot in charcoal-side coral.
+  it('rings the dot in the app\u2019s side of the pair, whatever the phone says', () => {
+    const ring = () => [...tab('Profile').querySelectorAll('div')]
+      .map((d) => (d as HTMLElement).style.borderTopColor).find(Boolean);
+    crew.ships.data = [request('me')];
+    const { unmount } = mount(propsFor(0).props);
+    expect(ring()).toBe('rgb(255, 111, 91)'); // badgeSolidHex.dark
+    unmount();
+    theme.scheme = 'light';
+    mount(propsFor(0).props);
+    expect(ring()).toBe('rgb(247, 220, 211)'); // badgeSolidHex.light
+  });
+
   it('tells VoiceOver how many trip invitations are waiting, plural and all', () => {
     invitations.waiting = 2;
     mount(propsFor(0).props);

@@ -43,15 +43,49 @@ const dyn = (light: string, dark: string): ColorValue =>
  * comes out cream on charcoal (measured, on TripCrew's face ring). Views
  * and text resolve correctly; only a border needs this escape hatch.
  * One source: `colors.bg` below is built from this same pair.
+ *
+ * ── why, in React Native's own code ──
+ *
+ * `RCTViewComponentView` (RN 0.86, Fabric) resolves a view's background
+ * against the view — `[_backgroundColor resolvedColorWithTraitCollection:
+ * self.traitCollection]` — but takes its border straight off the colour,
+ * `layer.borderColor = borderColor.CGColor`, and a dynamic UIColor asked
+ * for its CGColor outside a trait-scoped callback resolves against
+ * `UITraitCollection.currentTraitCollection`: the phone's, not the
+ * window's `overrideUserInterfaceStyle` that `Appearance.setColorScheme()`
+ * set. So a reader who picks Light in the app on a phone in Dark gets
+ * dark borders on light fills — the visited pill's green on 10 Oct 2026,
+ * ringed in `okSoft`'s charcoal-side #182A1C.
+ *
+ * The rule that follows, until a native patch resolves borders against
+ * the view: **never put a `dyn` pair on a border whose two sides differ
+ * enough to see.** A border that only holds a fill's size takes
+ * `'transparent'`; a border that must show takes a plain pair resolved
+ * with `useScheme()`, as `bgHex`, `bgElevatedHex` and `badgeSolidHex` do.
+ * The hairlines (`borderGlass`, `borderGlassSoft`) and a few same-hue
+ * rings still ride the bug (`borders.test.ts` lists them, and fails on
+ * any new one), and are the reason a native patch is worth a binary.
+ *
+ * That patch is two lines in `RCTViewComponentView.mm` — resolve the
+ * border's UIColor against `self.traitCollection` before taking its
+ * CGColor, as the background already is — but it is not a node_modules
+ * edit alone: Expo builds iOS against the prebuilt `React.xcframework`
+ * by default, which a patch to the source does not reach. It needs
+ * `ios.buildReactNativeFromSource` in `expo-build-properties` as well,
+ * slower builds, and a TestFlight binary; an EAS Update cannot carry it.
  */
 export const bgHex = { light: '#F5F1EA', dark: '#0A0B0A' } as const;
+/** `colors.bgElevated` as plain hex, for a border — see `bgHex`. */
+export const bgElevatedHex = { light: '#FFFFFF', dark: '#151614' } as const;
+/** `colors.badgeSolid` as plain hex, for a border — see `bgHex`. */
+export const badgeSolidHex = { light: '#F7DCD3', dark: '#FF6F5B' } as const;
 
 export const colors = {
   /** The page. Near-black charcoal, or warm paper — never pure black or
    *  pure white, and never uniform. */
   bg: dyn(bgHex.light, bgHex.dark),
   /** Surfaces that must be opaque: sheets, modals, the cards on paper. */
-  bgElevated: dyn('#FFFFFF', '#151614'),
+  bgElevated: dyn(bgElevatedHex.light, bgElevatedHex.dark),
   /**
    * `bgElevated` with a little of what is behind it showing through — for
    * a control that floats over something this app did not draw.
@@ -139,7 +173,7 @@ export const colors = {
    * sitting on whatever pixels happened to be under it. Dark needs no
    * variant: its badge is opaque already.
    */
-  badgeSolid: dyn('#F7DCD3', '#FF6F5B'),
+  badgeSolid: dyn(badgeSolidHex.light, badgeSolidHex.dark),
   /**
    * What sits inside `badge`: near-black on the solid, the readable coral
    * on the tint.
