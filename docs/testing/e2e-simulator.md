@@ -50,16 +50,20 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `09-collections-browse` | guest | 42 s |
 | `10-check-in` | test account | 1 m 9 s |
 | `11-collection-crud` | test account | 2 m |
+| `14-forgot-password` | guest | 48–50 s (chạy riêng) |
 | `12-language` | guest | 1 m 43 s |
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
-**Kết quả gần nhất:** 10/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **12/12
-passed trong 13 m 38 s**, với `12-language` vừa vào `config.yaml` (ở cuối,
-vì ngôn ngữ được lưu trên máy). Trước khi vào, nó xanh hai lượt liên tiếp
-khi chạy riêng, và đỏ đúng chỗ khi bộ chọn ngôn ngữ bị làm hỏng cố ý (chạm
-mà không đổi ngôn ngữ → `"Địa điểm" is visible` false). Các lượt trước:
-11/11 trong 12 m 11 s (09/10, `10-check-in` vào); 10/10 trong 11 m 29 s
-(09/10, `09` và `11` vào). Trước khi vào, mỗi flow đã xanh hai lượt liên tiếp
+**Kết quả gần nhất:** 10/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **12/13**:
+`14-forgot-password` vừa vào và xanh (hai lượt riêng liên tiếp, và trong
+suite); `11-collection-crud` đỏ. Từ một lượt suite lúc khoảng 07:45 mà
+driver Maestro mất kết nối giữa chừng (`DeviceUnreachableException`), mở
+menu `⋯` trên trang collection làm XCUITest thấy cây giao diện trống — menu
+vẫn hiện trên màn hình, các Modal khác (ngôn ngữ, lưu, check-in) vẫn đọc
+được — và vẫn thế sau khi khởi động lại simulator. Code trang collection
+không đổi so với lượt 12/12 sáng cùng ngày; đang điều tra. Các lượt trước:
+12/12 trong 13 m 38 s (10/10, `12-language` vào); 11/11 trong 12 m 11 s
+(09/10); 10/10 trong 11 m 29 s (09/10). Trước khi vào, mỗi flow đã xanh hai lượt liên tiếp
 khi chạy riêng (lượt hai của `11` chứng minh phần dọn dẹp). Một lượt `11`
 đã hỏng ở bước đăng nhập với "No connection" — mạng giữa simulator và
 Supabase, chưa tới phần collection; lượt sau xanh.
@@ -121,7 +125,7 @@ flowchart TB
   CC[Tạo/sửa/xoá collection]:::ok
   LANG[Đổi ngôn ngữ VI/JA]:::ok
   TD[Trip detail: sửa, mời bạn]:::gap
-  FP[Quên mật khẩu]:::gap
+  FP[Quên mật khẩu]:::ok
   LG[Local guide: ảnh, cover]:::gap
   DL[Deep link place/trip]:::gap
   LF[Mất mạng / load-fail]:::gap
@@ -151,7 +155,7 @@ sách toàn suite < 20 phút (xem mục 2).
 | `11-collection-crud` ✅ xong 09/10 | test account | Tạo collection "Maestro CRUD", đổi tên, thêm 1 place, xoá place, xoá collection; dọn "Maestro CRUD" còn sót trước khi chạy | `collection-more`, `collection-rename`, `collection-delete`, `collection-row-<i>` |
 | `12-language` ✅ xong 10/10 | guest | Profile → ngôn ngữ → Tiếng Việt: tab bar đổi nhãn ("Khám phá"); mở Explore và place detail không crash; → 日本語; trả về English. Đây là chỗ duy nhất được assert theo label — chính label là thứ đang kiểm | `profile-language`, `lang-<en\|vi\|ja>` |
 | `13-trip-edit` | test account | Lưu một trip (dùng lại phần đầu của 05), mở detail, đổi giờ/đổi thứ tự điểm, lưu, kiểm thay đổi còn sau cold start, xoá | `trip-edit`, `trip-stop-<i>`, `trip-save` |
-| `14-forgot-password` | guest | Sign in → quên mật khẩu → nhập email test → thấy màn xác nhận (không đọc mail) | `signin-forgot`, `forgot-email`, `forgot-submit`, `forgot-sent` |
+| `14-forgot-password` ✅ xong 10/10 | guest | Sign in → quên mật khẩu → xin mã cho `maestro-reset@example.com` (tên miền dành riêng: không tài khoản, không thư — **không** dùng email test, vì đó là hộp thư Gmail thật) → tới bước nhập mã → bấm Reset khi chưa có mã, form từ chối và ở lại. Chưa tới được việc server từ chối mã sai: ô mật khẩu mới bật bảng "Use Strong Password?" của iOS | `signin-forgot`, `forgot-email`, `forgot-submit`, `forgot-code`, `forgot-resend`, `forgot-reset` |
 
 ### Đợt 3 — cần hạ tầng mới
 

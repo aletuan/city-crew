@@ -16,6 +16,7 @@ flows:
   - "09-collections-browse.yaml"
   - "10-check-in.yaml"
   - "11-collection-crud.yaml"
+  - "14-forgot-password.yaml"
   # Last: the language it picks persists on the device. See its header.
   - "12-language.yaml"
 executionOrder:
@@ -32,4 +33,5 @@ executionOrder:
     - 09-collections-browse
     - 10-check-in
     - 11-collection-crud
+    - 14-forgot-password
     - 12-language

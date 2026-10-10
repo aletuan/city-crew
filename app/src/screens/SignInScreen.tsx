@@ -97,7 +97,7 @@ export default function SignInScreen({ navigation }: { navigation: Nav }) {
         testID="signin-password"
       />
       <View style={s.metaRow}>
-        <Pressable onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8}>
+        <Pressable onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8} testID="signin-forgot">
           <Text style={s.forgot}>{t('Forgot password?', 'Quên mật khẩu?', 'パスワードをお忘れですか？')}</Text>
         </Pressable>
       </View>
