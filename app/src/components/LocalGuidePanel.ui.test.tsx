@@ -164,7 +164,7 @@ describe('what it offers', () => {
     expect(btn.getAttribute('role')).toBe('button');
     expect(screen.getByTestId('panel').contains(btn)).toBe(true);
     expect(btn.contains(screen.getByText('Hi Trang,'))).toBe(true);
-    expect(btn.contains(screen.getByText('Want to improve your gallery?'))).toBe(true);
+    expect(btn.contains(screen.getByText('Would you like to add photos to your place?'))).toBe(true);
     expect(btn.contains(btn.querySelector('img'))).toBe(true);
     // The row-that-opens-a-screen sign, in the accent, and nothing filled.
     const chevron = btn.querySelector('[data-icon="chevron-forward"]')!;
@@ -178,7 +178,7 @@ describe('what it offers', () => {
   // it opens the screen where adding is one of four things to do.
   it('opens the gallery from anywhere on the card, and does nothing else', () => {
     draw();
-    fireEvent.click(screen.getByText('Want to improve your gallery?'));
+    fireEvent.click(screen.getByText('Would you like to add photos to your place?'));
     expect(onOpen).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByTestId('guide-open-gallery'));
     expect(onOpen).toHaveBeenCalledTimes(2);
@@ -193,8 +193,8 @@ describe('what it offers', () => {
     expect(screen.getByRole('button', { name: 'Gallery' })).toBeTruthy();
     // react-native-web drops the hint from the DOM, so it is read off the
     // committed props, as `StopCard.ui.test.tsx` reads its own.
-    expect(propsWhere((p) => p.testID === 'guide-open-gallery').accessibilityHint).toBe('Bạn muốn cải thiện gallery?');
-    expect(screen.getByText('Bạn muốn cải thiện gallery?')).toBeTruthy();
+    expect(propsWhere((p) => p.testID === 'guide-open-gallery').accessibilityHint).toBe('Bạn có muốn thêm ảnh cho địa điểm của mình?');
+    expect(screen.getByText('Bạn có muốn thêm ảnh cho địa điểm của mình?')).toBeTruthy();
   });
 
   // Their name, then a question — rather than claiming the place is
@@ -204,8 +204,19 @@ describe('what it offers', () => {
   it('greets the reader by name and asks, instead of instructing', () => {
     draw();
     expect(screen.getByText('Hi Trang,')).toBeTruthy();
-    expect(screen.getByText('Want to improve your gallery?')).toBeTruthy();
+    expect(screen.getByText('Would you like to add photos to your place?')).toBeTruthy();
     expect(screen.queryByText(/Keep it up to date/)).toBeNull();
+    // Not "improve": that judged a gallery that may already be good.
+    expect(screen.queryByText(/improve/i)).toBeNull();
+  });
+
+  // The question in Japanese too, and the hint is the same sentence as
+  // the line, in every language — one string, read twice.
+  it('asks the same question it hints, in Japanese', () => {
+    state.lang = 'ja';
+    draw();
+    expect(screen.getByText('この場所に写真を追加しますか？')).toBeTruthy();
+    expect(propsWhere((p) => p.testID === 'guide-open-gallery').accessibilityHint).toBe('この場所に写真を追加しますか？');
   });
 
   // The given name, which in a Vietnamese name is the last word. The
