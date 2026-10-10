@@ -113,6 +113,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
           onChangeText={(v) => setCode(cleanOtp(v))}
           keyboardType="number-pad"
           maxLength={OTP_MAX}
+          testID="forgot-code"
         />
         <FieldRow
           icon="lock-closed-outline"
@@ -126,6 +127,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
           autoComplete="new-password"
           onSubmitEditing={reset}
           returnKeyType="done"
+          testID="forgot-password"
         />
         {/* Between the fields and the action, where someone looks after
             finding no email to copy from. Disabled rather than hidden
@@ -136,6 +138,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
           disabled={busy || cooldown > 0}
           accessibilityRole="button"
           style={s.resend}
+          testID="forgot-resend"
         >
           <Text style={[s.resendText, cooldown > 0 && s.resendWaiting]}>
             {cooldown > 0
@@ -153,7 +156,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
           </Text>
         ) : null}
         {error ? <FormError>{failText(error)}</FormError> : null}
-        <PrimaryButton label={t('Reset password', 'Đặt lại mật khẩu', 'パスワードをリセット')} onPress={reset} busy={busy} />
+        <PrimaryButton label={t('Reset password', 'Đặt lại mật khẩu', 'パスワードをリセット')} onPress={reset} busy={busy} testID="forgot-reset" />
       </AuthScreen>
     );
   }
@@ -183,9 +186,10 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Nav }
         autoComplete="email"
         onSubmitEditing={send}
         returnKeyType="send"
+        testID="forgot-email"
       />
       {error ? <FormError>{failText(error)}</FormError> : null}
-      <PrimaryButton label={t('Send recovery code', 'Gửi mã khôi phục', 'コードを送信')} onPress={send} busy={busy} />
+      <PrimaryButton label={t('Send recovery code', 'Gửi mã khôi phục', 'コードを送信')} onPress={send} busy={busy} testID="forgot-submit" />
     </AuthScreen>
   );
 }

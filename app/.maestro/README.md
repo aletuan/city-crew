@@ -32,6 +32,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `09-collections-browse.yaml` | As a guest: the Collections tab's first community card opens on its places; the first place opens on its own page; Back walks place → collection → list. The card id is the same in grid and row view. |
 | `10-check-in.yaml` | Opens the first place on Explore; takes back any visit a failed run left there; checks in and waits for the pill to read back the visit from the server; opens the visit sheet and removes it; the pill is bare again. Needs the `place_checkin` flag on. |
 | `11-collection-crud.yaml` | Deletes any "Maestro CRUD…" list a failed run left; creates "Maestro CRUD"; renames it "Maestro CRUD 2" from its menu; saves the first Explore place into it and sees it there; takes it out from inside the collection; deletes the list. Leaves 06's "Maestro smoke" alone. |
+| `14-forgot-password.yaml` | As a guest: Sign in → Forgot password → asks for a code for `maestro-reset@example.com` (a reserved domain: no account, no mail sent — never the test account, whose address is a real mailbox) → reaches the code step with the resend link waiting → Reset with no code is refused by the form and stays put. Does not reach the server refusing a wrong code: that needs the new-password field, which raises iOS's "Use Strong Password?" panel. |
 | `12-language.yaml` | As a guest: Profile → Language → Tiếng Việt, the Places tab reads "Địa điểm", the first place opens and draws; the same in 日本語 ("スポット"); back to English. The only flow that asserts labels. Runs last — the choice persists on the device. |
 | `07-sign-up-delete.yaml` | **Not run by `npm run smoke:ios`** — see GUIDELINES.md ("Manual QA"). Documents signing up a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skipping the taste picker, then deleting that same account from Profile → Delete account, ending back on the guest view; iOS's own "Use Strong Password?" panel on the password field can't be driven by Maestro, so this path is checked by hand once per release instead. |
 
@@ -176,7 +177,8 @@ reaches the native view.
 | `SearchScreen` | `search-input`, `search-clear`, `search-result-<index>` |
 | `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account`, `profile-language` |
 | `LanguageSwitcher` | `lang-<en\|vi\|ja>` |
-| `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`, `signin-switch-signup` (`SwitchRow`); `auth-error` (`FormError`) |
+| `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`, `signin-switch-signup` (`SwitchRow`), `signin-forgot`; `auth-error` (`FormError`) |
+| `ForgotPasswordScreen` | `forgot-email`, `forgot-submit`; on the code step `forgot-code`, `forgot-resend`, `forgot-reset` (`forgot-password` is set but no flow types into it — see `14`'s header) |
 | `SignUpScreen` | `signup-name`, `signup-email`, `signup-password`, `signup-confirm`, `signup-submit`, `signup-taste-skip`, `signup-welcome-continue` |
 | `DeleteAccountScreen` | `delete-account-confirm` (`DangerButton`) |
 | `IdeasScreen` | `ideas-company-<solo\|couple\|friends\|family>`, `ideas-cat-<index>`, `ideas-sketch` |
