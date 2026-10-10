@@ -409,6 +409,7 @@ export default function TripDetailScreen({ navigation, route }: {
                 <StopRow
                   key={`${trip.id}-${i}`}
                   time={stop.arrive_min != null ? clockOf(stop.arrive_min) : null}
+                  timeTestID={`trip-stop-time-${i}`}
                   here={here}
                   first={i === 0}
                   last={i === stops.length - 1}

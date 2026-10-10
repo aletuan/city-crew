@@ -1,0 +1,144 @@
+# An edited plan keeps its edit: move the first stop 15 minutes earlier
+# in the editor, save, and find that hour on the saved trip — and again
+# after a cold start, so it is the server's copy being read, not the
+# screen's memory.
+#
+# 05 saves a plan untouched; this is the path where somebody changed it
+# first, which is where "the times you changed were lost on save" would
+# hide. The first stop, and earlier, because nothing is above it: a later
+# hour could run into the next stop and raise the "earlier than the stop
+# above" warning on it, and the flow would be testing that instead.
+#
+# The hours are read off the screen rather than assumed — the planner's
+# start depends on the clock — and carried in `output`. Saved trips have
+# no editor (only invites and delete), so the edit is the plan's, before
+# Save. Every upcoming trip is deleted first, as in 05, and this one at
+# the end.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-in.yaml
+
+# Leftovers from a run that failed half way.
+- tapOn:
+    id: "tab-trips"
+- waitForAnimationToEnd:
+    timeout: 5000
+- repeat:
+    while:
+      visible:
+        id: "trip-upcoming-0"
+    commands:
+      - runFlow: common/delete-first-trip.yaml
+
+# The wizard, as in 05.
+- tapOn:
+    id: "tab-ideas"
+- extendedWaitUntil:
+    visible:
+      id: "ideas-company-friends"
+    timeout: 30000
+- tapOn:
+    id: "ideas-company-friends"
+- tapOn:
+    id: "ideas-cat-0"
+- tapOn:
+    id: "ideas-cat-1"
+    optional: true
+- tapOn:
+    id: "ideas-cat-2"
+    optional: true
+- scrollUntilVisible:
+    element:
+      id: "ideas-sketch"
+    direction: DOWN
+    timeout: 10000
+- scroll
+- tapOn:
+    id: "ideas-sketch"
+- extendedWaitUntil:
+    visible:
+      id: "plan-card-best"
+    timeout: 90000
+- tapOn:
+    id: "plan-card-best"
+
+# The edit: the first stop's hour, then 15 minutes earlier.
+- scrollUntilVisible:
+    element:
+      id: "plan-stop-earlier-0"
+    direction: DOWN
+    centerElement: true
+    timeout: 20000
+- copyTextFrom:
+    id: "plan-stop-time-0"
+- evalScript: ${output.before = maestro.copiedText}
+- tapOn:
+    id: "plan-stop-earlier-0"
+- extendedWaitUntil:
+    notVisible:
+      id: "plan-stop-time-0"
+      text: ${output.before}
+    timeout: 5000
+- copyTextFrom:
+    id: "plan-stop-time-0"
+- evalScript: ${output.after = maestro.copiedText}
+
+# Save, as in 05: foot of the page, one more scroll, then the button.
+- scrollUntilVisible:
+    element:
+      id: "plan-save"
+    direction: DOWN
+    timeout: 20000
+- scroll
+- tapOn:
+    id: "plan-save"
+- extendedWaitUntil:
+    visible:
+      id: "trip-upcoming-0"
+    timeout: 60000
+
+# The saved trip wears the edited hour.
+- tapOn:
+    id: "trip-upcoming-0"
+- extendedWaitUntil:
+    visible:
+      id: "trip-stop-time-0"
+      text: ${output.after}
+    timeout: 20000
+
+# And still does after a cold start.
+- runFlow: common/start.yaml
+- tapOn:
+    id: "tab-trips"
+- extendedWaitUntil:
+    visible:
+      id: "trip-upcoming-0"
+    timeout: 30000
+- tapOn:
+    id: "trip-upcoming-0"
+- extendedWaitUntil:
+    visible:
+      id: "trip-stop-time-0"
+      text: ${output.after}
+    timeout: 20000
+
+# Delete it, from the page already open.
+- scrollUntilVisible:
+    element:
+      id: "trip-delete"
+    direction: DOWN
+    timeout: 20000
+- scroll
+- tapOn:
+    id: "trip-delete"
+- tapOn:
+    text: "Delete|Xoá|削除"
+- extendedWaitUntil:
+    visible:
+      id: "tab-trips"
+    timeout: 15000
+- assertNotVisible:
+    id: "trip-upcoming-0"

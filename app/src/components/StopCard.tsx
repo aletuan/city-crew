@@ -53,7 +53,7 @@ export { NUDGE_MIN };
 
 export default function StopCard({
   place, arriveMin, dwellMin, pinned, why, wrong, canMoveUp, canMoveDown,
-  onOpen, onHold, onRelease, onNudge, onRemove, onMove,
+  onOpen, onHold, onRelease, onNudge, onRemove, onMove, timeTestID, earlierTestID,
 }: {
   place: Place;
   arriveMin: number;
@@ -74,6 +74,9 @@ export default function StopCard({
   onNudge: (delta: number) => void;
   onRemove: () => void;
   onMove: (dir: 'up' | 'down') => void;
+  /** For the smoke flows: the hour, and the step that moves it earlier. */
+  timeTestID?: string;
+  earlierTestID?: string;
 }) {
   const { t, lang } = useI18n();
   // The first category the place carries, worn as a glyph in a soft well
@@ -169,6 +172,7 @@ export default function StopCard({
             <PressableScale
               haptic="selection"
               onPress={() => onNudge(-NUDGE_MIN)}
+              testID={earlierTestID}
               containerStyle={s.step}
               hitSlop={STEP_SLOP}
               accessibilityRole="button"
@@ -176,7 +180,7 @@ export default function StopCard({
             >
               <Ionicons name="remove" size={17} color={colors.text} />
             </PressableScale>
-            <Text style={[s.time, pinned && s.timePinned]}>{clockOf(arriveMin)}</Text>
+            <Text style={[s.time, pinned && s.timePinned]} testID={timeTestID}>{clockOf(arriveMin)}</Text>
             <PressableScale
               haptic="selection"
               onPress={() => onNudge(NUDGE_MIN)}

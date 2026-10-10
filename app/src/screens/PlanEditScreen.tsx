@@ -569,6 +569,8 @@ export default function PlanEditScreen({ navigation, route }: {
               onHold={canArrange ? (pageY) => onLift(i, pageY) : undefined}
               onRelease={onRelease}
               onNudge={(delta) => setStops(nudge(current, i, delta))}
+              timeTestID={`plan-stop-time-${i}`}
+              earlierTestID={`plan-stop-earlier-${i}`}
               onRemove={() => { fireHaptic('light'); setStops(remove(current, i)); }}
               onMove={(dir) => setStops(move(current, i, dir === 'up' ? i - 1 : i + 1))}
             />
