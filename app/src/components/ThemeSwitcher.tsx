@@ -55,6 +55,29 @@ const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
 
 type T = (en: string, vi: string, ja?: string) => string;
 
+/**
+ * How long the sheet is given to leave before the restart is asked for.
+ *
+ * The restart is asked for only once the sheet is gone. On 10 Oct 2026
+ * the owner pressed Restart on a phone and nothing happened: the sheet was
+ * still presented, the new look was kept (the next cold start wore it),
+ * and the app did not relaunch. The restart had been asked for from
+ * inside a presented modal, with the alert itself still dismissing over
+ * it. So the sheet closes first, and the restart waits for the Modal's
+ * own `onDismiss`. This is the iOS fade's 300 ms plus a margin, kept as
+ * a backstop in case that callback never comes.
+ */
+const DISMISS_MS = 450;
+
+/**
+ * How long the JavaScript can still be running after the restart was asked
+ * for before it is safe to say the restart did not happen. A relaunch tears
+ * this timer down with everything else, so the note below shows only when
+ * there is nothing else left to try: `reloadAsync` refused or queued
+ * forever, and `DevSettings.reload` is a no-op in a release build.
+ */
+const STUCK_MS = 3000;
+
 /** The glyph for a setting, as Profile's row shows it. The standard three
  *  wear the ground showing — under Auto, the one the phone picked — and
  *  the two looks their own mark. */
@@ -88,6 +111,30 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
   const options = looks ? OPTIONS : OPTIONS.filter((o) => lookOf(o.id) === 'standard');
   // A row that changes the look restarts the app, which loses whatever
   // screen the reader was on; it is asked once, here, and nowhere else.
+  // The choice waits in `pending` while the sheet leaves (see DISMISS_MS);
+  // whichever of `onDismiss` and the backstop comes first sends it, once.
+  const pending = useRef<Pref | null>(null);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const relaunch = () => {
+    const id = pending.current;
+    if (!id) return;
+    pending.current = null;
+    setPref(id);
+    timers.current.push(setTimeout(() => Alert.alert(
+      t('Close and reopen City Crew', 'Hãy đóng và mở lại City Crew', 'City Crew を閉じて開き直してください'),
+      t(
+        'The new theme is saved, and appears the next time the app opens.',
+        'Theme mới đã được lưu, và sẽ hiện ra ở lần mở app tiếp theo.',
+        '新しいテーマは保存されました。次にアプリを開いたときに反映されます。',
+      ),
+    ), STUCK_MS));
+  };
+  const agree = (id: Pref) => {
+    pending.current = id;
+    onClose();
+    timers.current.push(setTimeout(relaunch, DISMISS_MS));
+  };
   const choose = (id: Pref) => {
     if (!needsRestart(look, id)) { setPref(id); return; }
     Alert.alert(
@@ -99,7 +146,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
       ),
       [
         { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
-        { text: t('Restart', 'Khởi động lại', '再起動'), onPress: () => setPref(id) },
+        { text: t('Restart', 'Khởi động lại', '再起動'), onPress: () => agree(id) },
       ],
     );
   };
@@ -116,7 +163,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
     Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
   }, [visible, rise]);
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={relaunch} statusBarTranslucent>
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} />
       <Animated.View
         style={[s.sheet, {

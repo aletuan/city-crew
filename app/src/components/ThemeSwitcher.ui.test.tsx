@@ -11,9 +11,9 @@
 // is what keeps a regression from collapsing them back into one.
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Alert } from 'react-native';
-import { fireEvent, render, screen } from '../uitest/render';
+import { act, fireEvent, render, screen } from '../uitest/render';
 
 const setPref = vi.hoisted(() => vi.fn());
 const state = vi.hoisted(() => ({
@@ -123,6 +123,26 @@ describe('the two looks', () => {
     const buttons = alert().mock.calls[0][2]!;
     buttons.find((b) => b.text === label)!.onPress?.();
   };
+  /** The Modal's own word that it has gone — what iOS sends after the
+   *  fade. Read off the committed tree: react-native-web sends it only at
+   *  the end of a CSS animation, which jsdom never runs. */
+  const dismissed = () => {
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    while (stack.length) {
+      const f = stack.pop()!;
+      const props = f.memoizedProps;
+      if (props && typeof props.onDismiss === 'function' && 'onRequestClose' in props) {
+        (props.onDismiss as () => void)();
+        return;
+      }
+      if (f.sibling) stack.push(f.sibling);
+      if (f.child) stack.push(f.child);
+    }
+    throw new Error('no Modal in the committed tree');
+  };
 
   it('offers Coffee and Rose after the grounds, with their own marks', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
@@ -155,11 +175,67 @@ describe('the two looks', () => {
     expect(setPref).not.toHaveBeenCalled();
   });
 
-  it('chooses the look once the restart is agreed to', () => {
-    render(<ThemeSwitcherModal visible onClose={() => {}} />);
-    fireEvent.click(screen.getByText('Rose'));
-    confirm('Restart');
-    expect(setPref).toHaveBeenCalledWith('rose');
+  // Pressed on a phone with the sheet still up, the restart did nothing.
+  // So the sheet closes first and the look is chosen once it has gone —
+  // by the Modal's `onDismiss`, or by the backstop if that never comes.
+  describe('once the restart is agreed to', () => {
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('closes the sheet first, and chooses the look only after it has gone', () => {
+      const onClose = vi.fn();
+      render(<ThemeSwitcherModal visible onClose={onClose} />);
+      fireEvent.click(screen.getByText('Rose'));
+      confirm('Restart');
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(setPref).not.toHaveBeenCalled();
+      act(() => { vi.advanceTimersByTime(449); });
+      expect(setPref).not.toHaveBeenCalled();
+      act(() => { vi.advanceTimersByTime(1); });
+      expect(setPref).toHaveBeenCalledTimes(1);
+      expect(setPref).toHaveBeenCalledWith('rose');
+    });
+
+    it('chooses it when the sheet says it has gone, and only once', () => {
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      fireEvent.click(screen.getByText('Coffee'));
+      confirm('Restart');
+      act(() => { dismissed(); });
+      expect(setPref).toHaveBeenCalledWith('coffee');
+      act(() => { vi.advanceTimersByTime(500); });
+      act(() => { dismissed(); });
+      expect(setPref).toHaveBeenCalledTimes(1);
+    });
+
+    // A sheet closed by hand chooses nothing.
+    it('chooses nothing when the sheet goes without a restart agreed', () => {
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      act(() => { dismissed(); });
+      expect(setPref).not.toHaveBeenCalled();
+    });
+
+    // A relaunch takes this timer with it; one still running means the
+    // restart did not happen, and the reader is told what will work.
+    it('says how to finish the change if the app is still here after it', () => {
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      fireEvent.click(screen.getByText('Rose'));
+      confirm('Restart');
+      act(() => { vi.advanceTimersByTime(450 + 2999); });
+      expect(alert()).toHaveBeenCalledTimes(1);
+      act(() => { vi.advanceTimersByTime(1); });
+      expect(alert()).toHaveBeenCalledTimes(2);
+      expect(alert().mock.calls[1][0]).toBe('Close and reopen City Crew');
+    });
+
+    it('leaves nothing running once the sheet is gone from the tree', () => {
+      const { unmount } = render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      fireEvent.click(screen.getByText('Rose'));
+      confirm('Restart');
+      unmount();
+      act(() => { vi.advanceTimersByTime(10_000); });
+      expect(setPref).not.toHaveBeenCalled();
+      expect(alert()).toHaveBeenCalledTimes(1);
+    });
   });
 
   // Inside a look, the standard rows are the ones that restart — and the
