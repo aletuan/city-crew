@@ -15,7 +15,8 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
-import type { Nav } from '../nav';
+import { navRef, type Nav } from '../nav';
+import { dropResume, holdResume } from '../lib/resume';
 
 const deleteAccount = vi.hoisted(() => vi.fn(async () => {}));
 const account = vi.hoisted(() => ({
@@ -152,6 +153,24 @@ describe('the delete account screen', () => {
     // Not `goBack`: the account is gone and so is the session, and every
     // screen between here and the tab root belongs to it.
     await waitFor(() => expect(navigation.popToTop).toHaveBeenCalled());
+  });
+
+  // A guest's unfinished act must not outlive the account it was signing
+  // in for: whatever the sheet remembered is not run on the way out.
+  it('finishes nothing a guest left pending', async () => {
+    const run = vi.fn();
+    const go = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
+    vi.spyOn(navRef, 'isReady').mockReturnValue(true);
+    holdResume({ tab: 'Explore', run, at: Date.now() });
+    const navigation = nav();
+    render(<DeleteAccountScreen navigation={navigation} />);
+    fireEvent.click(deleteButton());
+    await waitFor(() => expect(navigation.popToTop).toHaveBeenCalled());
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    expect(run).not.toHaveBeenCalled();
+    expect(go).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+    dropResume();
   });
 
   // The failure the old alert reported by dumping `error.message` into a

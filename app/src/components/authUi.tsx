@@ -625,10 +625,10 @@ const s = StyleSheet.create({
   fieldLabelBad: { color: colors.bad },
   // Tucked under the field it belongs to, indented to its text column.
   fieldError: {
-    color: colors.bad, fontSize: 13.5, lineHeight: 18,
+    color: colors.bad, fontSize: 14, lineHeight: 18,
     marginTop: 6, marginBottom: 2, paddingHorizontal: space.cardPadding,
   },
-  fieldInput: { color: colors.text, fontSize: 15.5, paddingVertical: 2, paddingHorizontal: 0 },
+  fieldInput: { color: colors.text, fontSize: 16, paddingVertical: 2, paddingHorizontal: 0 },
 
   // Indented like `fieldError`: this is the same under-field zone, and
   // the two must line up on the one screen that can show both.
@@ -641,7 +641,7 @@ const s = StyleSheet.create({
   // what has not happened yet, and the ring already settled that it
   // stays neutral so the colour is spent on progress alone.
   meterSeg: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.surfaceGlassStrong },
-  meterLabel: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 18, fontWeight: font.medium },
+  meterLabel: { color: colors.textSecondary, fontSize: 14, lineHeight: 18, fontWeight: font.medium },
 
   primary: {
     borderRadius: radius.pill, minHeight: CONTROL_H, paddingVertical: 10,

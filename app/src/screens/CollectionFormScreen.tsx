@@ -396,7 +396,7 @@ export default function CollectionFormScreen({ navigation, route }: {
       </View>
       {/* This line used to promise "sharing comes later", and later came:
           the publish switch lives in the list's own menu now. */}
-      <Text style={{ color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, textAlign: 'center', lineHeight: 19 }}>
+      <Text style={{ color: colors.textTertiary, fontSize: 14, fontWeight: font.regular, textAlign: 'center', lineHeight: 19 }}>
         {t(
           'Private until you say so — Make public lives in the list’s own menu.',
           'Riêng tư cho đến khi bạn muốn — nút Công khai nằm trong menu của danh sách.',

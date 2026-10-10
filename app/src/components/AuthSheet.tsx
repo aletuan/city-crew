@@ -160,5 +160,5 @@ const s = StyleSheet.create({
   },
   primaryText: { color: colors.accentInk, fontSize: 17, fontWeight: font.semibold },
   secondary: { paddingVertical: 12 },
-  secondaryText: { color: colors.textSecondary, fontSize: 15.5, fontWeight: font.medium },
+  secondaryText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
 });

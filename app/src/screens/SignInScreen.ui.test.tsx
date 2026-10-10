@@ -10,7 +10,8 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '../uitest/render';
-import type { Nav } from '../nav';
+import { navRef, type Nav } from '../nav';
+import { dropResume, holdResume } from '../lib/resume';
 
 const signIn = vi.hoisted(() => vi.fn());
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ signIn }) }));
@@ -40,7 +41,7 @@ const fill = (email: string, password: string) => {
   fireEvent.change(screen.getByPlaceholderText('Enter your password'), { target: { value: password } });
 };
 
-beforeEach(() => signIn.mockReset());
+beforeEach(() => { signIn.mockReset(); dropResume(); });
 
 describe('signing in', () => {
   it('sends what was typed', async () => {
@@ -317,5 +318,58 @@ describe('the ways out of this screen', () => {
     render(<SignInScreen navigation={navigation} />);
     fireEvent.click(screen.getByLabelText(/back/i));
     expect(navigation.goBack).toHaveBeenCalled();
+  });
+});
+
+// What the sign-in sheet sent the reader here in the middle of — see
+// `lib/resume`. Finished on the way out, on the tab it was asked on.
+describe('finishing what the reader started', () => {
+  const signInWith = async (navigation: ReturnType<typeof nav>) => {
+    signIn.mockResolvedValue(undefined);
+    render(<SignInScreen navigation={navigation} />);
+    fill('reader@example.com', 'hunter2');
+    submit();
+    await waitFor(() => expect(navigation.popToTop).toHaveBeenCalled());
+  };
+
+  it('goes back to the tab and finishes the act there', async () => {
+    vi.spyOn(navRef, 'isReady').mockReturnValue(true);
+    const go = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
+    const run = vi.fn();
+    holdResume({ tab: 'Explore', run, at: Date.now() });
+    await signInWith(nav());
+    await waitFor(() => expect(run).toHaveBeenCalledOnce());
+    expect(go).toHaveBeenCalledWith('Explore');
+    // The tab first, then the act on it.
+    expect(go.mock.invocationCallOrder[0]).toBeLessThan(run.mock.invocationCallOrder[0]);
+    vi.restoreAllMocks();
+  });
+
+  it('goes back without acting when there is nothing safe to repeat', async () => {
+    vi.spyOn(navRef, 'isReady').mockReturnValue(true);
+    const go = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
+    holdResume({ tab: 'Trips', at: Date.now() });
+    await signInWith(nav());
+    await waitFor(() => expect(go).toHaveBeenCalledWith('Trips'));
+    vi.restoreAllMocks();
+  });
+
+  it('stays on Profile when that is where the reader was asked', async () => {
+    vi.spyOn(navRef, 'isReady').mockReturnValue(true);
+    const go = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
+    const run = vi.fn();
+    holdResume({ tab: 'Profile', run, at: Date.now() });
+    await signInWith(nav());
+    await waitFor(() => expect(run).toHaveBeenCalledOnce());
+    expect(go).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
+  it('goes nowhere when nothing was pending', async () => {
+    const go = vi.spyOn(navRef, 'navigate').mockImplementation(() => {});
+    await signInWith(nav());
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    expect(go).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
   });
 });

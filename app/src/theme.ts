@@ -87,10 +87,18 @@ export const colors = {
   borderGlassSoft: dyn('rgba(23,21,15,0.08)', 'rgba(214,182,132,0.16)'),
 
   /** Measured against their own ground: 16:1, 6.4:1 and 4.9:1 on paper,
-   *  comfortably past the 4.5:1 small type needs. */
+   *  comfortably past the 4.5:1 small type needs.
+   *
+   *  On charcoal the first two are 18.4:1 and 9.7:1. The third was #6E706D
+   *  until it was measured too: 3.9:1 on `bg` and 3.6:1 on `bgElevated`,
+   *  under the line, while carrying 12–15 pt copy — section labels, the
+   *  Ideas lede, the welcome sheet's rows, every leg row and placeholder.
+   *  #8E908C is 6.1:1 and 5.6:1, and still sits clearly below
+   *  `textSecondary`, so the three steps stay three. `theme.test.ts`
+   *  holds all three to 4.5:1 on both dark grounds. */
   text: dyn('#17150F', '#F7F7F5'),
   textSecondary: dyn('#5C574E', '#B7B6B1'),
-  textTertiary: dyn('#6E695E', '#6E706D'),
+  textTertiary: dyn('#6E695E', '#8E908C'),
 
   /**
    * The accent **as something to read** — a label, a glyph, a link.
@@ -252,6 +260,11 @@ export const colors = {
    *  against paper where the red is 1.13:1 — so good news and bad news
    *  sit at the same distance from the page instead of one shouting. */
   okSoft: dyn('#D9EBD7', '#182A1C'),
+  /** Words and glyphs *on* `okSoft`. `ok` itself is 4.1:1 on the paper
+   *  side of that ground, under the 4.5:1 a 16pt label needs; a shade
+   *  darker is 5.1:1. Charcoal keeps `ok`'s own sage, 7.2:1 on its
+   *  ground. First worn by the visited pill on a place's screen. */
+  okInk: dyn('#2F6B3B', '#8FBF8A'),
 };
 
 /**

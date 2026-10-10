@@ -74,5 +74,5 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderGlassSoft,
     borderRadius: radius.pill, paddingHorizontal: 16, height: 44,
   },
-  input: { flex: 1, color: colors.text, fontSize: 15.5, padding: 0 },
+  input: { flex: 1, color: colors.text, fontSize: 16, padding: 0 },
 });

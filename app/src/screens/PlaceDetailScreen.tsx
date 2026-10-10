@@ -1,6 +1,7 @@
-// Place detail — hero carousel with page dots, floating share/save,
-// rating badge, icon fact row, and one grouped card of Address / Hours /
-// Call / Website rows, the weekly table folded behind the open-now line.
+// Place detail — hero carousel with page dots, floating share/save and
+// the place's kinds as glyphs, the score with check-in beside it, and one
+// grouped card of Address / Hours / Call / Website rows, the weekly table
+// folded behind the open-now line.
 //
 // The hero is full-bleed: edge to edge, and up under the status bar, with
 // only its bottom corners rounded. It was a 12pt-inset rounded card, which
@@ -163,6 +164,9 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // reload after a tap here is what the profile's count draws too.
   const visits = useMyCheckins();
   const [checkinMenu, setCheckinMenu] = useState(false);
+  // The category icons on the cover say their names on a tap, and say
+  // nothing until then — see "kinds" over the hero.
+  const [kindsOpen, setKindsOpen] = useState(false);
   const [checking, setChecking] = useState(false);
   // How many lines the address wanted before anything clamped it, and
   // whether the reader has asked for the rest. `null` is "not measured
@@ -221,6 +225,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   const photos = photosOf(place);
   const reviews = fmtCount(place.rating_count);
   const cats = categoriesOf(place);
+  const priceShown = showPrice && (place.price_display || place.price_vnd != null);
   // Full width, and tall enough that what shows *below* the status bar is
   // still the 4:3.4 frame the inset card had — the inset's worth of
   // picture behind the clock is added, not taken out of the composition.
@@ -409,6 +414,60 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={saved ? onPhoto.accent : onPhoto.text} />
             </PressableScale>
 
+            {/* ── kinds ──
+                What kind of place this is, as glyphs on the picture, where
+                it used to be a row of labelled pills under the rating. That
+                row was the fourth band of boxes between the photograph and
+                the first fact a reader acts on, and the owner's reference
+                drew the kinds where the eye already is: bottom left, the
+                corner the dots leave free.
+
+                The material is the cover's, not the page's. The back,
+                share and bookmark discs are one dark glass in both themes
+                because the ground under them is a photograph, not paper or
+                charcoal; a paper pill here would vanish into a bright
+                storefront, which is exactly what this cover has. Glyphs in
+                `onPhoto.text`, not each kind's hue: they sit beside three
+                white glyphs, and the hue's job — matching a chip on Explore
+                and a dot on the map — is not this screen's.
+
+                Words on a tap. Six of the nine glyphs say their kind on
+                sight; three do not — Views is a building, Culture a
+                library, Focus a book — so a tap names them, in a caption
+                over the cluster, and a second tap takes it away. Over it,
+                not inside it: opened in place, three names made the pill
+                about 330pt wide, and on a 390pt phone the dots leave it
+                250. VoiceOver hears the names either way. */}
+            {cats.length > 0 && (
+              <PressableScale
+                onPress={() => setKindsOpen((o) => !o)}
+                scaleTo={0.96}
+                haptic="selection"
+                accessibilityRole="button"
+                accessibilityLabel={cats.map((c) => categoryLabel(c, t)).join(', ')}
+                accessibilityState={{ expanded: kindsOpen }}
+                containerStyle={[s.fabSlot, s.kindsSlot]}
+                style={s.kinds}
+                testID="detail-kinds"
+              >
+                {cats.map((c, i) => (
+                  <React.Fragment key={c}>
+                    {i > 0 ? <View style={s.kindsRule} /> : null}
+                    <Ionicons name={CATEGORIES[c]?.icon ?? 'pricetag-outline'} size={19} color={onPhoto.text} />
+                  </React.Fragment>
+                ))}
+              </PressableScale>
+            )}
+            {cats.length > 0 && kindsOpen ? (
+              <View
+                pointerEvents="none"
+                style={[s.fabSlot, s.kindsTip, { maxWidth: heroW - 2 * space.page }]}
+                testID="detail-kinds-names"
+              >
+                <Text style={s.kindText}>{cats.map((c) => categoryLabel(c, t)).join(' · ')}</Text>
+              </View>
+            ) : null}
+
             {/* No "1 / 6" in the other corner. It said what the dots say,
                 in type over a photograph — a third scrim, and a number
                 nobody acts on. VoiceOver never read it: each photograph
@@ -563,167 +622,137 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               <Text style={s.loc}>{neighborhood}</Text>
             </View>
           ) : null}
-          {place.rating ? (
-            // Spoken as one phrase. Left to itself a screen reader reads
-            // the star glyph, then the number, then a lone middle dot,
-            // then the count — four stops for one fact.
-            <View
-              style={s.ratingRow}
-              testID="detail-rating"
-              accessibilityRole="text"
-              accessibilityLabel={reviews
-                ? `${place.rating} — ${reviews} ${t('reviews', 'đánh giá', '件のレビュー')}`
-                : String(place.rating)}
-            >
-              <Ionicons name="star" size={17} color={colors.accent} />
-              <Text style={s.ratingValue}>{place.rating}</Text>
-              {reviews ? (
-                <>
-                  <Text style={s.ratingDot}>·</Text>
-                  <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー')}</Text>
-                </>
-              ) : null}
-            </View>
-          ) : null}
-
-          {/* ── fact row ── */}
-          {/* ── facts: what kind of place, what it costs, how long ──
-              A row of pills, in the shape the filter row and the cards
-              already use for the same concepts, rather than four bits of
-              grey text with glyphs that read as one run-on sentence. Kind
-              first: it is the answer to "what is this", and the glyph
-              carries the category's hue — the same hue its chip wears on
-              Explore and its dot wears on a card — while the pill stays
-              glass. Never a tinted fill: that is the rule in
-              `lib/categories`, and a row of pastel pills is the one
-              thing this app's colour discipline does not do. */}
-          {/* Two columns, not one wrapping row: the facts wrap under
-              themselves on the left, and the one control sits pinned
-              to the top right whatever they do. In one row a third
-              category pushed the pill onto the second line, where it
-              read as a fourth fact. */}
-          <View style={s.factsRow}>
-          <View style={s.facts} testID="detail-facts">
-            {/* What this place is, on the functional axis — the same
-                `categories` the filter row, the planner and search read.
-                This row used to say something else entirely: the label was
-                `vibe_tags[0]` capitalised and the icon was the legacy
-                two-value `category` column, so a bookstore filed as
-                'food' under the old axis showed a coffee cup beside the
-                word "Culture" — a label from one taxonomy, a glyph from
-                another, and neither of them the place's actual category.
-                It also never translated, because a raw vibe key has no
-                Vietnamese. `categoriesOf` keeps the legacy fallback for
-                rows written before the column existed, so nothing that
-                used to say something now says nothing. */}
-            {cats.map((c) => (
-              <View key={c} style={s.fact}>
-                <Ionicons
-                  name={CATEGORIES[c]?.icon ?? 'pricetag-outline'}
-                  size={15}
-                  color={CATEGORIES[c]?.color ?? colors.textSecondary}
-                />
-                <Text style={s.factText}>{categoryLabel(c, t)}</Text>
+          {/* ── the score, and the one thing to do about it ──
+              The rating at the left, check-in at the right: one line that
+              used to be two bands, the score and then a row of category
+              pills with the pill at its end. The categories are on the
+              cover now (see "kinds"); what was left of their row was a
+              control with nothing to sit beside. */}
+          {(place.rating || showCheckin || priceShown) ? (
+          <View style={s.metaRow} testID="detail-meta">
+          <View style={s.metaFacts}>
+            {place.rating ? (
+              // Spoken as one phrase. Left to itself a screen reader reads
+              // the star glyph, then the number, then a lone middle dot,
+              // then the count — four stops for one fact.
+              <View
+                style={s.ratingRow}
+                testID="detail-rating"
+                accessibilityRole="text"
+                accessibilityLabel={reviews
+                  ? `${place.rating} — ${reviews} ${t('reviews', 'đánh giá', '件のレビュー')}`
+                  : String(place.rating)}
+              >
+                <Ionicons name="star" size={17} color={colors.accent} />
+                <Text style={s.ratingValue}>{place.rating}</Text>
+                {reviews ? (
+                  <>
+                    <Text style={s.ratingDot}>·</Text>
+                    <Text style={s.ratingCount}>{reviews} {t('reviews', 'đánh giá', '件のレビュー')}</Text>
+                  </>
+                ) : null}
               </View>
-            ))}
+            ) : null}
             {/* FREE is already a pill of its own, accented because it is
                 the one price that is a state; a paid price is quiet text
-                and takes the glass pill and a tag like its neighbours.
+                and takes a tag glyph.
 
-                Behind a switch, and off: the price is what pushes a
-                three-category place onto a second line — twelve of the
-                eighteen that have three are café + eats + nightlife, and
-                that row wants 427pt of a 386pt card. Without it every one
-                of them fits, the heaviest by a single point.
+                On the rating's line now, as text, since the row of pills
+                it sat in moved onto the cover. It went behind its switch
+                because it pushed a three-category row onto a second line
+                (that row wanted 427pt of a 386pt card); it would wrap
+                this line the same way on a long count, which is the
+                reason to look again before the switch goes back on.
 
                 This screen is the only place in the app that has ever
                 drawn a price, so the switch hides it everywhere, on 557
                 published places of 648. That is why it is a row in
                 `app_flags` rather than a deletion — see `lib/flags` for
                 the one line that brings it back on every phone at once. */}
-            {showPrice && (place.price_display || place.price_vnd != null) ? (
+            {priceShown ? (
               isFree(place) ? (
                 <PricePill place={place} />
               ) : (
-                <View style={s.fact}>
+                <View style={s.priceLine}>
                   <Ionicons name="pricetag-outline" size={15} color={colors.textSecondary} />
                   <PricePill place={place} />
                 </View>
               )
             ) : null}
-            {/* No dwell here. "1–1.5h" is the planner's estimate of how
-                long people stay, and the planner still reads it where a
-                schedule needs it; on this screen it was a guess dressed
-                as a fact, and the pill that pushed a two-category row
-                onto a second line. */}
           </View>
-          {/* ── check-in ──
-              A placeholder, drawn to be judged where it will live. It
-              opened as the Directions pill — glass, hairline, accent
-              type — and on the phone that read as a fourth fact: same
-              fill, same hairline, same "coloured glyph and a word" as
-              the chips to its left, with only the colour of the word to
-              say otherwise. So it is a *bordered* button now, the way
-              the filter row on Explore says "press me" with a bare
-              outline where this row says "read me" with a glass fill
-              (see `fact`); the outline is the accent at hairline
-              strength, and the pin is filled, one solid mark in a row
-              of outlines. Not the tinted fill the mockup wore: the
-              accent as a surface is for state (`theme.ts`), and a pill
-              at rest is not one. *Having* checked in is the state, and
-              the state wears the accent solid — see "worn" below.
+            {/* ── check-in ──
+                A placeholder, drawn to be judged where it will live. It
+                opened as the Directions pill — glass, hairline, accent
+                type — and on the phone that read as a fourth fact: same
+                fill, same hairline, same "coloured glyph and a word" as
+                the chips to its left, with only the colour of the word to
+                say otherwise. So it is a *bordered* button now, the way
+                the filter row on Explore says "press me" with a bare
+                outline where that row said "read me" with a glass fill;
+                the outline is the accent at hairline
+                strength, and the pin is filled, one solid mark in a row
+                of outlines. Not the tinted fill the mockup wore: the
+                accent as a surface is for state (`theme.ts`), and a pill
+                at rest is not one. *Having* checked in is the state, and
+                the state wears a fill of its own — green, see "worn" below.
 
-              The height is the chips' 30, not a control's 36: the first
-              version stood 6pt taller and its word sat 3pt under the
-              chips' baseline, which the eye read as a pill that had
-              slipped. The 44pt target is `hitSlop`'s to keep.
+                It sat at the right of the category pills until those
+                moved onto the cover; it hangs at the right of the score
+                now, the owner's reference having put it beside the name.
+                Not beside the name: at `titleDetail` a name like "Off
+                street fine coffee" already wraps, and a 110pt pill beside
+                it would take a third of every name's line. The score's
+                line is short on every place, so the pill costs it nothing.
 
-              Behind `place_checkin`, off as shipped, so the day it
-              misleads it comes down on every phone without a build. */}
-          {showCheckin && (
-            <PressableScale
-              // Rest: the tap is the visit. Worn: the tap is the menu —
-              // again, or undo — so a slip never writes a second row.
-              onPress={latestVisit ? () => setCheckinMenu(true) : () => { void checkIn(); }}
-              disabled={checking}
-              haptic="selection"
-              accessibilityRole="button"
-              accessibilityState={{ selected: !!latestVisit, busy: checking }}
-              accessibilityLabel={latestVisit
-                ? t('Visited — options', 'Đã qua — tuỳ chọn', '訪問済み — オプション')
-                : t('Check in', 'Check-in', 'チェックイン')}
-              containerStyle={s.checkinSlot}
-              // ── worn ──
-              // Solid once a visit is written, bare outline until then:
-              // `accentFill`, the token for "switched on", the way a ticked
-              // checkbox wears it. It was `accentSoft` first, and on the
-              // phone a 10% tint inside a 28% hairline read as the same
-              // pill with the light on it — the two states told apart by
-              // a glyph and two letters.
-              //
-              // The word changes for the same reason. "Check-in" and
-              // "Checked in" (VI "Check-in" / "Đã check-in") share the
-              // word that carries the meaning, so a glance read both as
-              // the verb. "Visited" / "Đã qua" shares nothing with it,
-              // and stays true months later, where "Checked in" read as
-              // "you are here now". "Đã qua", not "Đã ghé" — the first
-              // draft, borrowed from the Visited screen's "Bỏ lần ghé
-              // này"; the owner read "Đã qua" as the better word.
-              //
-              // The rest label is a verb because a button is one: "Check
-              // in", not the noun. Vietnamese has no such split and keeps
-              // "Check-in".
-              style={[s.checkin, latestVisit && s.checkinOn]}
-              hitSlop={{ top: 7, bottom: 7 }}
-              testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
-            >
-              <Ionicons name={latestVisit ? 'checkmark' : 'location'} size={15} color={latestVisit ? colors.accentInk : colors.accent} />
-              <Text style={[s.goText, latestVisit && s.checkinOnText]}>
-                {latestVisit ? t('Visited', 'Đã qua', '訪問済み') : t('Check in', 'Check-in', 'チェックイン')}
-              </Text>
-            </PressableScale>
-          )}
+                44 drawn (`FACT_HEIGHT`), the height it had as one of the
+                chips and the target this app gives every control.
+
+                Behind `place_checkin`, off as shipped, so the day it
+                misleads it comes down on every phone without a build. */}
+            {showCheckin && (
+              <PressableScale
+                // Rest: the tap is the visit. Worn: the tap is the menu —
+                // again, or undo — so a slip never writes a second row.
+                onPress={latestVisit ? () => setCheckinMenu(true) : () => { void checkIn(); }}
+                disabled={checking}
+                haptic="selection"
+                accessibilityRole="button"
+                accessibilityState={{ selected: !!latestVisit, busy: checking }}
+                accessibilityLabel={latestVisit
+                  ? t('Visited — options', 'Đã qua — tuỳ chọn', '訪問済み — オプション')
+                  : t('Check in', 'Check-in', 'チェックイン')}
+                containerStyle={s.checkinSlot}
+                // ── worn ──
+                // Filled once a visit is written, bare outline until then.
+                // It was `accentSoft` first, and on the phone a 10% tint
+                // inside a 28% hairline read as the same pill with the light
+                // on it; then solid `accentFill`, which read as one more
+                // coral ask. Green now (`okSoft` / `okInk`): a different hue
+                // as well as a fill, so rest and worn are two things.
+                //
+                // The word changes for the same reason. "Check-in" and
+                // "Checked in" (VI "Check-in" / "Đã check-in") share the
+                // word that carries the meaning, so a glance read both as
+                // the verb. "Visited" / "Đã qua" shares nothing with it,
+                // and stays true months later, where "Checked in" read as
+                // "you are here now". "Đã qua", not "Đã ghé" — the first
+                // draft, borrowed from the Visited screen's "Bỏ lần ghé
+                // này"; the owner read "Đã qua" as the better word.
+                //
+                // The rest label is a verb because a button is one: "Check
+                // in", not the noun. Vietnamese has no such split and keeps
+                // "Check-in".
+                style={[s.checkin, latestVisit && s.checkinOn]}
+                testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
+              >
+                <Ionicons name={latestVisit ? 'checkmark' : 'location'} size={15} color={latestVisit ? colors.okInk : colors.accent} />
+                <Text style={[s.goText, latestVisit && s.checkinOnText]}>
+                  {latestVisit ? t('Visited', 'Đã qua', '訪問済み') : t('Check in', 'Check-in', 'チェックイン')}
+                </Text>
+              </PressableScale>
+            )}
           </View>
+          ) : null}
 
           {/* ── highlights ── */}
           {/* Unlabelled, the description read as boilerplate and got
@@ -1276,6 +1305,10 @@ const GLYPH_LIFT = (LABEL_LINE - GLYPH_BOX) / 2;
  *  this app supports; the rest is a tap away. */
 const ADDRESS_LINES = 2;
 
+/** The facts row's height — the category chips and Check in beside them.
+ *  44, the height the same chips have on Search and Places. */
+const FACT_HEIGHT = 44;
+
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
 
@@ -1318,21 +1351,43 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(10,11,10,0.55)', alignItems: 'center', justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
   },
+  // Bottom left, the page margin in, bottoms flush with the dots' track
+  // at its right (`dotsBottom` 15). The labelled pill's alpha (0.58, as
+  // the rating pill on a card) rather than the discs' 0.55: it carries
+  // type once open. 44 tall, the target every control here has.
+  kindsSlot: { left: space.page, bottom: 15 },
+  kinds: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    minHeight: 44, paddingHorizontal: 14, borderRadius: radius.pill,
+    backgroundColor: 'rgba(10,11,10,0.58)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
+  },
+  // The names, one step over the cluster: its 15 + 44, and 6 of air.
+  // The credit, when its switch is on, sits at the right at 44, so the
+  // two share no line.
+  kindsTip: {
+    left: space.page, bottom: 15 + 44 + 6,
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.pill,
+    backgroundColor: 'rgba(10,11,10,0.58)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: onPhoto.line,
+  },
+  kindText: { color: onPhoto.text, fontSize: 13, fontWeight: font.medium },
+  // The divider the reference drew between glyphs: without it two glyphs
+  // 12pt apart read as one mark.
+  kindsRule: { width: StyleSheet.hairlineWidth, height: 18, backgroundColor: onPhoto.line },
   // Required attribution, kept quiet — see the note in PlaceCard.
   //
-  // Centre, which is the seat the dots left. It is the only one free:
-  // this line and the dots cannot share the right-hand corner, and 94.5%
-  // of the catalog's photographs carry a name to print. The flag that
-  // draws it is off today and that is a decision of the owner's, not an
-  // accident — this seat is kept so the day it is switched on nothing
-  // has to be moved.
-  //
-  // Narrower than it was, because a middle between two objects is
-  // narrower than a corner: about 134pt of gap on a 402pt phone once the
-  // counter and a full seven-mark strip have taken theirs. If names
-  // start truncating, the line above this one is free and twice as wide.
+  // Above the dots, right-aligned to them: the line its old seat's note
+  // named as "free and twice as wide". It sat centred on the bottom edge,
+  // the seat the dots left, until the kinds took the left corner — three
+  // glyphs there are about 125pt, and a centred credit at 30% of a 320pt
+  // window starts 112pt in, so the two would have touched on the smallest
+  // phone and on a 390pt one too. The dots' track is 23pt tall (8 + 7 +
+  // 8) at bottom 15; this sits 6pt over it. The flag that draws it is off
+  // today, by the owner's decision; the seat is kept so switching it on
+  // moves nothing.
   attr: {
-    position: 'absolute', alignSelf: 'center', bottom: 16, maxWidth: '30%', textAlign: 'center',
+    position: 'absolute', right: space.page, bottom: 15 + 23 + 6, maxWidth: '50%', textAlign: 'right',
     fontSize: 9, color: '#fff', opacity: 0.55,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
@@ -1355,7 +1410,13 @@ const s = StyleSheet.create({
   // 8 above, against the subtitle's 4. The subtitle is part of the name
   // and sits close enough to be read with it; the score is a different
   // fact and takes the wider gap that says so.
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // The rating's line, with check-in pinned to its right. Centred on the
+  // pill: the line is one 24pt row of text beside a 44pt control, and a
+  // top-aligned score sat 10pt high of the pill's word.
+  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, minHeight: 24 },
+  metaFacts: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 4 },
+  priceLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   // The score keeps the size and weight it wore inside the badge. It was
   // never the type that made the badge expensive.
   ratingValue: { color: colors.text, fontSize: 18, fontWeight: font.bold },
@@ -1366,25 +1427,27 @@ const s = StyleSheet.create({
   ratingDot: { color: colors.textTertiary, fontSize: 15, fontWeight: font.regular },
   ratingCount: { color: colors.textSecondary, ...type.meta },
 
-  factsRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 16 },
-  facts: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-  // Flush with the first row's top rather than centred on the column,
-  // so a wrapped second row of facts does not drag the pill down with
-  // it. Same height as the chips, so flush tops are flush baselines.
-  checkinSlot: { flexShrink: 0, marginLeft: 12, alignSelf: 'flex-start' },
-  // The chip's box — padding, radius, gap — with the fill taken out and
-  // the hairline recoloured: the two differences that make a button of
-  // it, and nothing else, so it still belongs to the row it sits in.
+  // Its own column, so a score and a price that wrap do not push it.
+  checkinSlot: { flexShrink: 0, marginLeft: 12 },
+  // The category chip's box — padding, radius, gap — with the fill taken
+  // out and the hairline recoloured, from the days it sat at the end of
+  // that row; the chips are gone and the box is still this app's pill.
   checkin: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     borderWidth: 1, borderColor: colors.accentLine, borderRadius: radius.pill,
-    paddingHorizontal: 12, paddingVertical: 6,
+    paddingHorizontal: 12, paddingVertical: 6, minHeight: FACT_HEIGHT,
   },
   // Worn: the one fill this row is allowed, because it is a state. The
   // hairline takes the fill's colour so the pill keeps its exact size.
-  // Near-black on it, never white: 6.8:1 against 2.7:1 (`accentInk`).
-  checkinOn: { backgroundColor: colors.accentFill, borderColor: colors.accentFill },
-  checkinOnText: { color: colors.accentInk },
+  //
+  // Green, not the coral it wore first. Solid coral said "done" loudly,
+  // but it is also the colour of every button on this screen that asks
+  // for something, and the owner's reference drew a visit as the quiet
+  // green the app already uses for good news (`okSoft`, the public-list
+  // banner's ground). Coral now means "do this", green "you did".
+  // `okInk` on it: 5.1:1 on paper, 7.2:1 on charcoal.
+  checkinOn: { backgroundColor: colors.okSoft, borderColor: colors.okSoft },
+  checkinOnText: { color: colors.okInk },
   checkinHead: { gap: 12 },
   checkinHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   checkinHeadTitle: { flex: 1, color: colors.text, fontSize: 18, fontFamily: display.semibold },
@@ -1406,13 +1469,6 @@ const s = StyleSheet.create({
   // type, so a category looks like the same thing here as there. Glass
   // fill rather than the filter's bare outline, because these are facts
   // to read, not controls to press, and the fill is what says so.
-  fact: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    backgroundColor: colors.surfaceGlass,
-    borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
-    paddingHorizontal: 12, paddingVertical: 6,
-  },
-  factText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
 
   desc: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
   // The mark sits in its own disc so the label and the text share one
@@ -1436,7 +1492,7 @@ const s = StyleSheet.create({
   // the sentence it attributes would be reading the footnote first. The
   // link colour is the only thing that marks it as tappable — an icon at
   // this size is a smudge, and an underline in this face is a scar.
-  creditLine: { color: colors.textTertiary, fontSize: 12.5, marginTop: 6 },
+  creditLine: { color: colors.textTertiary, fontSize: 13, marginTop: 6 },
   creditLink: { color: colors.accent },
 
   // The Card supplies ground, border and radius; the horizontal inset
@@ -1471,7 +1527,8 @@ const s = StyleSheet.create({
   goOnMap: { position: 'absolute', right: 10, bottom: 10 },
   go: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    minHeight: 36, paddingHorizontal: 12,
+    // 44, from 36: it had no slop, so 36 was the whole target.
+    minHeight: 44, paddingHorizontal: 12,
     borderRadius: radius.pill,
     borderWidth: 1, borderColor: colors.borderGlassSoft,
     backgroundColor: colors.surfaceGlass,
@@ -1499,7 +1556,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.bgElevatedVeil,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  goText: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
+  goText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
   // A row is a column — label, then value. Only Hours lays itself across,
   // for the chevron at its end.
@@ -1577,7 +1634,7 @@ const s = StyleSheet.create({
   // The same 24 the other values keep: it is the second line of its pair,
   // and the glyph beside it is centred on a box that assumes so.
   openNow: {
-    color: colors.open, fontSize: 15.5, fontWeight: font.semibold,
+    color: colors.open, fontSize: 16, fontWeight: font.semibold,
     lineHeight: VALUE_LINE,
   },
   // The sash's own brick, not the grey it was. See `colors.shutInk`: the
@@ -1587,6 +1644,6 @@ const s = StyleSheet.create({
   openNowShut: { color: colors.shutInk },
   hoursTable: { paddingBottom: 16, paddingLeft: GUTTER },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  hourDay: { color: colors.ink, fontSize: 14.5, fontWeight: font.medium },
-  hourTime: { color: colors.ink, fontSize: 14.5, fontWeight: font.regular },
+  hourDay: { color: colors.ink, fontSize: 15, fontWeight: font.medium },
+  hourTime: { color: colors.ink, fontSize: 15, fontWeight: font.regular },
 });

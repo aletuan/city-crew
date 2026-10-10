@@ -200,5 +200,5 @@ const s = StyleSheet.create({
   // Still legible, plainly not pressable — a countdown greyed to the
   // point of illegibility is a number nobody can use.
   resendWaiting: { color: colors.textTertiary, fontWeight: font.regular },
-  resentNote: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 19, marginBottom: 4 },
+  resentNote: { color: colors.textSecondary, fontSize: 14, lineHeight: 19, marginBottom: 4 },
 });

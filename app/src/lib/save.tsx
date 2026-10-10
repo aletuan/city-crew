@@ -10,7 +10,7 @@
 // to draw its ticks, and reading them from two places would let one copy
 // go stale the moment the other wrote.
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import AuthSheet from '../components/AuthSheet';
 import SaveSheet from '../components/SaveSheet';
@@ -22,7 +22,8 @@ import {
 import { useCity } from './city';
 import { useI18n } from './i18n';
 import { DAILY_CAPS, isDailyLimit } from './quota';
-import { goTo } from '../nav';
+import { goTo, navRef } from '../nav';
+import { dropResume, focusedTab, holdResume } from './resume';
 
 /**
  * What the reader reached for when they were asked to sign in. The sheet
@@ -52,8 +53,12 @@ type Save = {
    * "control that does nothing" this app keeps deciding against.
    *
    * `why` picks the sheet's title and glyph; see `SignInWhy`.
+   *
+   * `resume` is the act to finish once the reader has signed in, run on
+   * the tab they were on — see `lib/resume`. Leave it out for an act that
+   * is not safe to repeat unasked; the reader is still taken back.
    */
-  askToSignIn: (why?: SignInWhy) => void;
+  askToSignIn: (why?: SignInWhy, resume?: () => void) => void;
   /** Is the place in any of their lists? Drives the bookmark's fill. */
   isSaved: (placeSlug: string) => boolean;
   /**
@@ -99,6 +104,19 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   // sheet fades out: closing clears the one and leaves the other.
   const [signInWhy, setSignInWhy] = useState<SignInWhy>('save');
 
+  // Ask, and remember what was being done and where — see `lib/resume`.
+  // The tab is read now, while the reader is still on it; by the time the
+  // sign-in form is done they are on Profile.
+  const ask = useCallback((why: SignInWhy, run?: () => void) => {
+    holdResume({ tab: navRef.isReady() ? focusedTab(navRef.getRootState()) : null, run, at: Date.now() });
+    setSignInWhy(why);
+    setAuthSheet(true);
+  }, []);
+  // The save to finish is *this* render's `save`, the one that knows the
+  // reader is signed in now — the one the guest tapped would only raise
+  // the sheet again.
+  const saveRef = useRef<(place: Place) => void>(() => {});
+
   const savedSlugs = useMemo(() => {
     const set = new Set<string>();
     for (const c of mine.data) {
@@ -108,7 +126,7 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   }, [mine.data]);
 
   const save = useCallback((place: Place) => {
-    if (!session) { setSignInWhy('save'); setAuthSheet(true); return; }
+    if (!session) { ask('save', () => saveRef.current(place)); return; }
     // Nowhere to put it yet — *known*, not merely not-yet-known. Rather
     // than open a sheet with one row in it that says "make a list first",
     // go straight to making the list and carry the place along — the
@@ -135,7 +153,8 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
     setTarget(place);
   // The four fields this actually branches on, not the Fetch object that carries them.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, mine.loaded, mine.loading, mine.error, mine.data.length, mine.reload]);
+  }, [session, mine.loaded, mine.loading, mine.error, mine.data.length, mine.reload, ask]);
+  saveRef.current = save;
 
   const toggle = useCallback(async (c: Collection, place: Place) => {
     try {
@@ -174,10 +193,9 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mine.reload, t, session, city?.id, historyOn]);
 
-  const askToSignIn = useCallback((why: SignInWhy = 'save') => {
-    setSignInWhy(why);
-    setAuthSheet(true);
-  }, []);
+  const askToSignIn = useCallback((why: SignInWhy = 'save', resume?: () => void) => {
+    ask(why, resume);
+  }, [ask]);
 
   const value = useMemo<Save>(() => ({
     save,
@@ -194,7 +212,8 @@ export function SaveProvider({ children }: { children: React.ReactNode }) {
       <AuthSheet
         visible={authSheet}
         why={signInWhy}
-        onClose={() => setAuthSheet(false)}
+        // "Not now" is an answer: what was asked for is forgotten with it.
+        onClose={() => { setAuthSheet(false); dropResume(); }}
         onSignIn={() => { setAuthSheet(false); goTo('Profile', { screen: 'SignIn', initial: false }); }}
       />
       <SaveSheet

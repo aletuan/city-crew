@@ -24,7 +24,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '../uit
 import { pinImage } from '../components/mapPins';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
-import { colors } from '../theme';
+import { colors, onPhoto } from '../theme';
 import { clockOf } from '../lib/format';
 
 // jsdom lays nothing out, so the document is zero pixels wide — and the hero
@@ -399,7 +399,11 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     show();
     const name = screen.getByTestId('detail-name');
     const rating = screen.getByTestId('detail-rating');
-    expect(rating.parentElement).toBe(name.parentElement);
+    // The rating shares its line with check-in now, and that line is the
+    // one that sits in the name's column.
+    const line = screen.getByTestId('detail-meta');
+    expect(line.contains(rating)).toBe(true);
+    expect(line.parentElement).toBe(name.parentElement);
     expect(name.compareDocumentPosition(rating) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -422,10 +426,72 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.getByTestId('detail-rating').getAttribute('aria-label')).toBe('4.6');
   });
 
-  it('names the category with its own glyph', () => {
-    show();
-    expect(screen.getByText('Cafés')).toBeTruthy();
-    expect(document.querySelector('[data-icon="cafe-outline"]')).toBeTruthy();
+  // ── the kinds, on the cover ──
+  //
+  // They were a row of labelled pills under the rating; they are glyphs
+  // on the photograph now, in the cover's dark glass, and say their names
+  // on a tap — because three of the nine glyphs do not say them on sight.
+  it('puts the kinds on the cover as glyphs, in the cover’s glass', () => {
+    show(place({ categories: ['cafes', 'eats'] }));
+    const kinds = screen.getByTestId('detail-kinds');
+    // On the hero, not in the page's column.
+    expect(kinds.compareDocumentPosition(screen.getByTestId('detail-name')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId('detail-name').parentElement!.contains(kinds)).toBe(false);
+    const cup = kinds.querySelector('[data-icon="cafe-outline"]')!;
+    const fork = kinds.querySelector('[data-icon="restaurant-outline"]')!;
+    // White, as the back, share and bookmark glyphs beside them are, in
+    // both themes: the ground is a photograph either way.
+    expect(cup.getAttribute('data-color')).toBe(onPhoto.text);
+    expect(fork.getAttribute('data-color')).toBe(onPhoto.text);
+    const inner = getComputedStyle(kinds.firstElementChild!);
+    expect(inner.backgroundColor).toBe('rgba(10, 11, 10, 0.58)');
+    expect(inner.minHeight).toBe('44px');
+    // Glyphs only until asked; the names are what VoiceOver hears.
+    expect(screen.queryByTestId('detail-kinds-names')).toBeNull();
+    expect(within(kinds).queryByText(/Cafés/)).toBeNull();
+    expect(kinds.getAttribute('aria-label')).toBe('Cafés, Eats');
+    expect(kinds.getAttribute('role')).toBe('button');
+    // No row of pills left under the rating.
+    expect(screen.queryByTestId('detail-facts')).toBeNull();
+  });
+
+  const kindsState = () =>
+    propsWhere((p) => p.testID === 'detail-kinds').accessibilityState as unknown as Record<string, boolean>;
+
+  it('names the kinds on a tap, and folds them on the next', () => {
+    show(place({ categories: ['cafes', 'eats'] }));
+    const kinds = screen.getByTestId('detail-kinds');
+    expect(kindsState()).toEqual({ expanded: false });
+    fireEvent.click(kinds);
+    // In a caption over the cluster, not inside it: the pill keeps its
+    // size, so three names never run it into the dots.
+    const names = screen.getByTestId('detail-kinds-names');
+    expect(names.textContent).toBe('Cafés · Eats');
+    expect(kinds.contains(names)).toBe(false);
+    expect(getComputedStyle(names).bottom).toBe('65px');
+    expect(within(kinds).queryByText(/Cafés/)).toBeNull();
+    expect(kindsState()).toEqual({ expanded: true });
+    fireEvent.click(kinds);
+    expect(screen.queryByTestId('detail-kinds-names')).toBeNull();
+    expect(kindsState()).toEqual({ expanded: false });
+  });
+
+  // A hairline between glyphs: two glyphs 12pt apart read as one mark.
+  it('draws a rule between kinds and none for a single kind', () => {
+    show(place({ categories: ['cafes', 'eats', 'nightlife'] }));
+    // Three glyphs and the two rules between them, in that order.
+    const parts = [...screen.getByTestId('detail-kinds').firstElementChild!.children];
+    expect(parts).toHaveLength(5);
+    expect(parts.map((el) => el.hasAttribute('data-icon'))).toEqual([true, false, true, false, true]);
+    cleanup();
+    show(place({ categories: ['cafes'] }));
+    expect(screen.getByTestId('detail-kinds').firstElementChild!.children).toHaveLength(1);
+  });
+
+  it('names the kinds in Vietnamese', () => {
+    state.lang = 'vi';
+    show(place({ categories: ['cafes', 'eats'] }));
+    expect(screen.getByTestId('detail-kinds').getAttribute('aria-label')).toBe('Cà phê, Ăn uống');
   });
 
   // ── check-in, a door drawn before the room behind it ──
@@ -448,7 +514,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.queryByTestId('detail-checkin')).toBeNull();
   });
 
-  it('hangs a bordered Check-in pill at the right of the facts once the switch is on', () => {
+  it('hangs a bordered Check-in pill at the right of the score once the switch is on', () => {
     state.checkin = true;
     state.uid = 'u1';
     // No map, so Directions is drawn as its pill and not as the disc
@@ -462,33 +528,43 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(pill.getAttribute('role')).toBe('button');
     expect(pill.querySelector('[data-icon="location"]')!.getAttribute('data-color')).toBe(colors.accent);
     expect(within(pill).getByText('Check in')).toBeTruthy();
-    // A bordered button, not a glass pill: the facts beside it are the
-    // glass ones, and a control wearing the same fill read as a fourth
-    // fact on the phone. Bare outline is the filter row's own word for
+    // A bordered button: bare outline is the filter row's own word for
     // "press me"; the accent at hairline strength is whose word it is.
     // `firstElementChild` is the inner view `PressableScale` styles.
     const inner = getComputedStyle(pill.firstElementChild!);
-    const fact = getComputedStyle(screen.getByTestId('detail-facts').firstElementChild!);
     // jsdom resolves the longhands react-native-web writes, not the
     // shorthand; the fill reads as the base class's transparent black.
     expect(inner.borderTopColor).toBe('rgba(255, 111, 91, 0.28)');
     expect(inner.backgroundColor).toBe('rgba(0, 0, 0, 0)');
-    expect(fact.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
-    // The same height as the chips, so the two tops and the two
-    // baselines meet — 36 beside 30 read as a pill that had slipped.
-    expect(inner.paddingTop).toBe(fact.paddingTop);
-    expect(inner.paddingBottom).toBe(fact.paddingBottom);
-    expect(inner.minHeight).toBe('0px'); // the base class's; no 36 of its own
-    // What the height gave up, the target takes back: 30 + 7 + 7 = 44.
-    expect(propsWhere((p) => p.testID === 'detail-checkin').hitSlop).toEqual({ top: 7, bottom: 7 });
-    // Its own column, pinned to the top right: the facts wrap under
-    // themselves on a three-category place and never push it down.
-    const row = pill.parentElement!;
+    // 44 drawn, so the pill needs no slop to be a 44pt target.
+    expect(inner.minHeight).toBe('44px');
+    expect(propsWhere((p) => p.testID === 'detail-checkin').hitSlop).toBeUndefined();
+    // On the score's line, at its right end, not beside the name: the
+    // name keeps the column's whole width.
+    const row = screen.getByTestId('detail-meta');
+    expect(pill.parentElement).toBe(row);
     expect(row.lastElementChild).toBe(pill);
-    expect(within(row).getByTestId('detail-facts').nextElementSibling).toBe(pill);
+    expect(row.firstElementChild!.contains(screen.getByTestId('detail-rating'))).toBe(true);
     expect(getComputedStyle(row).flexDirection).toBe('row');
-    expect(getComputedStyle(pill).alignSelf).toBe('flex-start');
-    expect(getComputedStyle(screen.getByTestId('detail-facts')).flexGrow).toBe('1');
+    expect(getComputedStyle(row).alignItems).toBe('center');
+    expect(getComputedStyle(row.firstElementChild!).flexGrow).toBe('1');
+    expect(screen.getByTestId('detail-name').parentElement!.contains(pill)).toBe(true);
+    expect(screen.getByTestId('detail-name').nextElementSibling).not.toBe(pill);
+  });
+
+  // A place with no score still has a visit to record: the line stands
+  // for the pill alone.
+  it('keeps the check-in line when the place has no score', () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    show(place({ rating: null, rating_count: null }));
+    expect(screen.queryByTestId('detail-rating')).toBeNull();
+    expect(screen.getByTestId('detail-meta').contains(screen.getByTestId('detail-checkin'))).toBe(true);
+  });
+
+  it('draws no line at all with no score, no check-in and no price', () => {
+    show(place({ rating: null, rating_count: null }));
+    expect(screen.queryByTestId('detail-meta')).toBeNull();
   });
 
   // ── the visit itself: one row, now, at this place ──
@@ -514,20 +590,20 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     show();
     expect(screen.queryByTestId('detail-checkin')).toBeNull();
     const pill = screen.getByTestId('detail-checked-in');
-    expect(pill.querySelector('[data-icon="checkmark"]')!.getAttribute('data-color')).toBe('#141310');
+    expect(pill.querySelector('[data-icon="checkmark"]')!.getAttribute('data-color')).toBe(String(colors.okInk));
     // A word that shares nothing with the rest label — "Checked in"
     // beside "Check-in" read as the same verb at a glance.
     const word = within(pill).getByText('Visited');
     expect(within(pill).queryByText(/check/i)).toBeNull();
-    // `accentFill`, solid, hairline included, so the pill keeps its size:
-    // the 10% tint it wore first read on the phone as the rest state lit.
+    // Green, filled, hairline included so the pill keeps its size: a
+    // different hue from the coral rest state, not only a fill. Coral
+    // here read as one more ask on a screen of coral asks.
     const inner = getComputedStyle(pill.firstElementChild!);
-    expect(inner.backgroundColor).toBe('rgb(255, 111, 91)');
-    expect(inner.borderTopColor).toBe('rgb(255, 111, 91)');
+    expect(inner.backgroundColor).toBe('rgb(24, 42, 28)'); // okSoft, dark
+    expect(inner.borderTopColor).toBe('rgb(24, 42, 28)');
     expect(inner.borderTopWidth).toBe('1px');
-    // Near-black on the coral, word and glyph (above) both: the accent's
-    // own red on its own fill would be a mark nobody could read.
-    expect(getComputedStyle(word).color).toBe('rgb(20, 19, 16)');
+    // `okInk` on it, word and glyph (above) both.
+    expect(getComputedStyle(word).color).toBe('rgb(143, 191, 138)'); // okInk, dark
     expect(a11yState('Visited — options').selected).toBe(true);
   });
 
@@ -710,7 +786,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
 
   it('falls back to the legacy category for rows written before `categories`', () => {
     show(place({ categories: [], category: 'food' }));
-    expect(screen.getByText('Eats')).toBeTruthy();
+    expect(screen.getByTestId('detail-kinds').getAttribute('aria-label')).toBe('Eats');
   });
 
   it('prints the description', () => {
@@ -832,7 +908,11 @@ describe('PlaceDetailScreen — hero', () => {
         photo('b.jpg', { sort_order: 1, attribution_name: 'Minh' }),
       ],
     }));
-    expect(screen.getByText('Linh')).toBeTruthy();
+    const credit = screen.getByText('Linh');
+    // Above the dots and flush to their right edge, clear of the kinds
+    // in the left corner: 15 (the dots' bottom) + 23 (their track) + 6.
+    expect(getComputedStyle(credit).bottom).toBe('44px');
+    expect(getComputedStyle(credit).textAlign).toBe('right');
     swipeTo(1);
     expect(screen.getByText('Minh')).toBeTruthy();
     expect(screen.queryByText('Linh')).toBeNull();
@@ -1334,8 +1414,10 @@ describe('PlaceDetailScreen — info card', () => {
 
 describe('PlaceDetailScreen — opening hours (Wednesday 10:00, Hanoi)', () => {
   const hoursButton = () => screen.getByRole('button', { name: /^Hours/ });
+  // Not the kinds: the cluster on the cover carries an `expanded` state too.
   const hoursState = () =>
-    propsWhere((p) => !!p.accessibilityState && 'expanded' in (p.accessibilityState as object))
+    propsWhere((p) => !!p.accessibilityState && 'expanded' in (p.accessibilityState as object)
+      && p.testID !== 'detail-kinds')
       .accessibilityState as unknown as Record<string, boolean>;
 
   it('says it is open and until when', () => {
@@ -1655,8 +1737,10 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     state.uid = 'u1';
     state.guide = true;
     show(place({ rating: 4.1, rating_count: 604, categories: ['cafes', 'eats'], submitted_by: 'u1' }));
-    expect(order('detail-rating')).toBeLessThan(order('detail-facts'));
-    expect(order('detail-facts')).toBeLessThan(order('detail-why'));
+    // The kinds ride the cover, so they are said before the name.
+    expect(order('detail-kinds')).toBeLessThan(order('detail-name'));
+    expect(order('detail-name')).toBeLessThan(order('detail-rating'));
+    expect(order('detail-rating')).toBeLessThan(order('detail-why'));
     expect(order('detail-why')).toBeLessThan(order('guide-panel'));
     expect(order('guide-panel')).toBeLessThan(order('detail-address'));
   });

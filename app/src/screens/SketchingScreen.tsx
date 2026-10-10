@@ -954,7 +954,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass, alignItems: 'center', justifyContent: 'center',
   },
   factText: { flexShrink: 1, minWidth: 0 },
-  factPrimary: { color: colors.text, fontSize: 14.5, fontWeight: font.semibold },
+  factPrimary: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
   factSecondary: { color: colors.textTertiary, fontSize: 13, marginTop: 1 },
   factDivide: {
     width: StyleSheet.hairlineWidth, height: 36,

@@ -56,7 +56,7 @@ describe('a 320pt window', () => {
     const onOpen = vi.fn();
     render(<LocalGuidePanel place={place} onOpen={onOpen} />);
     const btn = screen.getByRole('button', { name: 'Gallery' });
-    expect(btn.contains(screen.getByText('Want to improve your gallery?'))).toBe(true);
+    expect(btn.contains(screen.getByText('Would you like to add photos to your place?'))).toBe(true);
     fireEvent.click(btn);
     expect(onOpen).toHaveBeenCalledTimes(1);
   });

@@ -35,6 +35,7 @@ import { Avatar, Card, PressableScale } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { atHandle } from '../lib/handle';
 import { useI18n } from '../lib/i18n';
+import { dropResume } from '../lib/resume';
 import { useTakeout } from '../lib/takeout';
 import { colors, font, space, type } from '../theme';
 import { leaveAuth, type Nav } from '../nav';
@@ -55,6 +56,11 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
       // Nothing sets `busy` back on this path: the account is gone, the
       // session with it, and this screen leaves with them. `ProfileHome`
       // is already rendering `GuestHub` by the time it arrives.
+      //
+      // And nothing is finished on the way out: `leaveAuth` resumes what a
+      // guest was signing in to do (`lib/resume`), and the reader leaving
+      // here has just stopped being anybody who could do it.
+      dropResume();
       leaveAuth(navigation);
     } catch (e) {
       setError((e as Error).message);
@@ -309,7 +315,7 @@ const s = StyleSheet.create({
   // 2, not 14: a name and the handle under it are one identity read top
   // to bottom — the same figure and the same reason as the profile hero.
   who: { flex: 1, gap: 2 },
-  whoName: { color: colors.text, fontSize: 15.5, fontWeight: font.semibold },
+  whoName: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   whoHandle: { color: colors.textTertiary, ...type.meta },
   // `FeatureRow`'s figures from `ProfileScreen`, to the point: the
   // download row is one of Profile's two-line rows that happens to be
@@ -327,7 +333,7 @@ const s = StyleSheet.create({
   },
   words: { flex: 1, gap: 3 },
   actionTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: TITLE_LINE },
-  actionSub: { color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, lineHeight: 19 },
+  actionSub: { color: colors.textTertiary, fontSize: 14, fontWeight: font.regular, lineHeight: 19 },
 
   block: { paddingVertical: 14, gap: 9 },
   // One gap for the heading and the lines under it: the mark and the four
@@ -337,8 +343,8 @@ const s = StyleSheet.create({
   // `aboutLabel` and `aboutValue`, to the point: the card above this one
   // on the profile says what somebody's account holds in exactly this
   // type, and this one says what would be taken out of it.
-  label: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
-  value: { flex: 1, color: colors.text, fontSize: 15.5, fontWeight: font.regular, lineHeight: 21 },
+  label: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
+  value: { flex: 1, color: colors.text, fontSize: 16, fontWeight: font.regular, lineHeight: 21 },
 
   // `SignUpScreen`'s skip, verbatim. It sits in the same place under the
   // same kind of button, and it had been the one quiet action in the app

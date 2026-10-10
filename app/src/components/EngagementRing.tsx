@@ -127,7 +127,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999,
   },
   badgeText: {
-    color: colors.accentInk, fontSize: 11.5, lineHeight: 15, fontWeight: font.bold,
+    color: colors.accentInk, fontSize: 12, lineHeight: 15, fontWeight: font.bold,
     letterSpacing: 0.2,
   },
 });

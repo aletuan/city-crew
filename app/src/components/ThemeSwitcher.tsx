@@ -139,7 +139,7 @@ const s = StyleSheet.create({
   // The city sheet's own material for "this is the special one".
   rowOn: { backgroundColor: colors.accentSoft, borderRadius: radius.card - 6 },
   rowTitle: { color: colors.text, fontSize: 16, fontWeight: font.medium },
-  rowNote: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.regular, marginTop: 2 },
+  rowNote: { color: colors.textTertiary, fontSize: 13, fontWeight: font.regular, marginTop: 2 },
   // `marginVertical`, and it is the whole reason this line is visible.
   //
   // Without it the hairline sits flush against the next row, which is fine

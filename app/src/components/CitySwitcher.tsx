@@ -281,7 +281,7 @@ const s = StyleSheet.create({
     borderRadius: radius.card - 6, backgroundColor: colors.surfaceGlass,
   },
   searchInput: {
-    flex: 1, color: colors.text, fontSize: 15.5, padding: 0,
+    flex: 1, color: colors.text, fontSize: 16, padding: 0,
   },
   // Capped, so eight cities cannot push the rows off the bottom of the
   // screen. Below the cap the sheet is still its content's height —
@@ -312,7 +312,7 @@ const s = StyleSheet.create({
   // the special one" across the sheet — plus the tick above.
   rowOn: { backgroundColor: colors.accentSoft, borderRadius: radius.card - 6 },
   rowTitle: { color: colors.text, fontSize: 16, fontWeight: font.medium },
-  rowSub: { color: colors.textTertiary, fontSize: 12.5, marginTop: 2 },
+  rowSub: { color: colors.textTertiary, fontSize: 13, marginTop: 2 },
   nameRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   // Tabular figures so the column of counts lines up digit for digit;
   // 274 above 43 with proportional numerals reads as a ragged edge.
@@ -331,7 +331,7 @@ const s = StyleSheet.create({
     color: colors.accent, fontSize: 10, fontWeight: font.semibold, letterSpacing: 0.6,
   },
   // The empty-handed answer, under the well it answers for.
-  note: { color: colors.accent, fontSize: 12.5, lineHeight: 17, paddingHorizontal: 4, marginBottom: 6 },
+  note: { color: colors.accent, fontSize: 13, lineHeight: 17, paddingHorizontal: 4, marginBottom: 6 },
   // `marginVertical`, and it is the whole reason this line is visible.
   //
   // Without it the hairline sits flush against the next row, which is fine

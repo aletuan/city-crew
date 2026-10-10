@@ -1069,14 +1069,19 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
         ? t('Showing only places closed now.', 'Chỉ hiện những điểm đã đóng cửa.', '営業時間外のスポットのみ表示します。')
         : t('Opening-hours filter off.', 'Bỏ lọc theo giờ mở cửa.', '営業時間の絞り込みを解除しました。'));
   };
+  const pickSavedRef = useRef<() => void>(() => {});
   const pickSaved = () => {
-    if (!session) { askToSignIn('saved'); return; }
+    // A guest's filter is off, so the act finished on their return can
+    // only turn it on. Through the ref, for the render that knows they
+    // are signed in — see `lib/resume`.
+    if (!session) { askToSignIn('saved', () => pickSavedRef.current()); return; }
     const on = !appliedFilters.savedOnly;
     setAppliedFilters({ ...appliedFilters, savedOnly: on });
     say(on
       ? t('Showing only places you saved.', 'Chỉ hiện những điểm lưu lại.', '保存したスポットのみ表示します。')
       : t('Saved-places filter off.', 'Bỏ lọc theo điểm đã lưu.', '保存済みの絞り込みを解除しました。'));
   };
+  pickSavedRef.current = pickSaved;
 
   const hero = useMemo(() => heroPlace(places, city?.hero_place_slug), [places, city?.hero_place_slug]);
 
@@ -1638,7 +1643,7 @@ const s = StyleSheet.create({
   // Right edge, on the page margin, so it lines up with nothing and
   // competes with nothing.
   heroCredit: { position: 'absolute', right: space.page },
-  heroCreditText: { color: onPhoto.textSecondary, fontSize: 10.5, opacity: 0.72 },
+  heroCreditText: { color: onPhoto.textSecondary, fontSize: 11, opacity: 0.72 },
   // The screen's one loud control: the accent at full strength — the same
   // primary-button material the auth screens use.
   heroCta: {
@@ -1742,13 +1747,13 @@ const s = StyleSheet.create({
     borderRadius: radius.tabBar,
     overflow: 'hidden',
   },
-  nudgeTitle: { color: colors.text, fontSize: 14.5, fontWeight: font.semibold },
+  nudgeTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
   // Full strength, where this was `textTertiary` — which is #6E695E, the
   // exact mid-tone that could not be read on thin glass over a
   // photograph. Size and weight carry the hierarchy instead of colour:
-  // 12.5 regular under 14.5 semibold is already two steps down, and it is
+  // 13 regular under 15 semibold is already two steps down, and it is
   // the pair of steps that survives an unknown ground.
-  nudgeSub: { color: colors.text, fontSize: 12.5, opacity: 0.72 },
+  nudgeSub: { color: colors.text, fontSize: 13, opacity: 0.72 },
 
   // The pinned filter row. Its top padding is inline — FILTER_PAD plus
   // the safe-area inset — because pinned it is the top edge of the whole

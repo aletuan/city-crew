@@ -29,7 +29,7 @@
 // It had a solid coral "Gallery" pill at its right, and on the phone that
 // was the accent twice over — a filled button on a tinted card — beside a
 // check-in pill that is itself solid coral once worn. The word repeated
-// the line beside it ("…improve your gallery?") and gave up its own room
+// the line then beside it ("…improve your gallery?") and gave up its own room
 // on a 320pt window. So the whole card is the button now, and the only
 // mark that says so is a chevron: the row-that-opens-a-screen sign the
 // map card and the invite card already use. Not a bare "Gallery ›" link
@@ -69,6 +69,14 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
 
   if (!canKeepGallery(place, { uid, granted, editor })) return null;
 
+  // The line under the greeting, and the hint VoiceOver reads after
+  // "Gallery": one sentence, so the two can never drift apart.
+  const ask = t(
+    'Would you like to add photos to your place?',
+    'Bạn có muốn thêm ảnh cho địa điểm của mình?',
+    'この場所に写真を追加しますか？',
+  );
+
   return (
     // `testID` stays on a plain view so the screen can find the panel
     // without knowing it is pressable; the button keeps its own id.
@@ -81,7 +89,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
         onPress={onOpen}
         accessibilityRole="button"
         accessibilityLabel={t('Gallery', 'Gallery', 'ギャラリー')}
-        accessibilityHint={t('Want to improve your gallery?', 'Bạn muốn cải thiện gallery?', 'ギャラリーを充実させますか？')}
+        accessibilityHint={ask}
         // A card's press, not a button's: 0.97 on something this wide
         // moves its edges 5pt and reads as a lurch (InviteCard uses this).
         scaleTo={0.985}
@@ -117,11 +125,25 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
               no usable name, and then this greets a stranger rather than
               guessing, because "Chào 2024," is worse than "Chào bạn,".
 
-              The question is short because the column was: about twenty
-              characters at this size, beside the old button. "Bạn muốn bổ
-              sung thêm ảnh chứ?" was thirty and took two lines on the
-              phone, which is a third line of prose on a card whose whole
-              job is one button. Eighteen fits, and says the same thing.
+              The question names the one thing the gallery is mostly for,
+              adding photos, in the owner's own words. It replaced "Want
+              to improve your gallery?", which judged a gallery that may
+              already be good, said "gallery" where readers think
+              "photos", and in Vietnamese read "cải thiện gallery", half
+              English. The owner's draft, "Bạn có muốn bổ sung thêm ảnh
+              cho địa điểm của mình?", lost "bổ sung" — it and "thêm" both
+              mean "add more" — and its English, "add your place's
+              gallery", became "add photos to", since a gallery is
+              added to, not added.
+
+              At 43 characters it takes two lines beside the mark, where
+              the old line took one. That is the owner's call and the
+              room is there: the chevron left ~80pt the pill used to take
+              (see `sub`), and two lines are what this card stood at with
+              the pill. Rejected for it: "Add more photos to your
+              place?", one line; the owner kept the fuller sentence as
+              closer to what they meant.
+
               No space before the question mark — Vietnamese does not
               take one, and neither does any other string in this app. */}
           <Text style={s.title} numberOfLines={1}>
@@ -130,7 +152,7 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
               : t('Hi there,', 'Chào bạn,', 'こんにちは、')}
           </Text>
           <Text style={s.sub}>
-            {t('Want to improve your gallery?', 'Bạn muốn cải thiện gallery?', 'ギャラリーを充実させますか？')}
+            {ask}
           </Text>
         </View>
         {/* "Gallery" in every language was a request, and it still holds:
@@ -168,13 +190,14 @@ const s = StyleSheet.create({
   words: { flex: 1, gap: 2 },
   // A size down from `type.cardTitle`: the heading of a two-line aside is
   // not a card title.
-  title: { color: colors.accent, fontSize: 15.5, fontWeight: font.semibold },
+  title: { color: colors.accent, fontSize: 16, fontWeight: font.semibold },
   // The sub had ~140pt beside the old pill, about twenty characters at
   // this size — the reason both these lines are curt. An earlier draft
   // read "Help keep this place up to date" and wrapped to three ragged
   // lines in that space. The chevron takes 17pt where the pill took about
   // 100 (14 + 16 glyph + 6 + the word + 14), so the column has some 80pt
   // more now — about 158 on a 320pt window, where it had 78 and the
-  // greeting truncated. The lines stay as cut.
+  // greeting truncated. The question uses that room for a second line
+  // (see the comment at the words).
   sub: { color: colors.textSecondary, fontSize: 13 },
 });
