@@ -25,6 +25,7 @@ import { pinImage } from '../components/mapPins';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
 import { colors, onPhoto } from '../theme';
+import { CATEGORIES } from '../lib/categories';
 import { clockOf } from '../lib/format';
 
 // jsdom lays nothing out, so the document is zero pixels wide — and the hero
@@ -439,10 +440,11 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.getByTestId('detail-name').parentElement!.contains(kinds)).toBe(false);
     const cup = kinds.querySelector('[data-icon="cafe-outline"]')!;
     const fork = kinds.querySelector('[data-icon="restaurant-outline"]')!;
-    // White, as the back, share and bookmark glyphs beside them are, in
-    // both themes: the ground is a photograph either way.
-    expect(cup.getAttribute('data-color')).toBe(onPhoto.text);
-    expect(fork.getAttribute('data-color')).toBe(onPhoto.text);
+    // Each in its kind's own hue, as its chip on Explore and its dot on
+    // the map: a colour code holds everywhere or it is not a code.
+    expect(cup.getAttribute('data-color')).toBe(CATEGORIES.cafes.color);
+    expect(fork.getAttribute('data-color')).toBe(CATEGORIES.eats.color);
+    expect(cup.getAttribute('data-color')).not.toBe(onPhoto.text);
     const inner = getComputedStyle(kinds.firstElementChild!);
     expect(inner.backgroundColor).toBe('rgba(10, 11, 10, 0.58)');
     expect(inner.minHeight).toBe('44px');

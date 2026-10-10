@@ -426,10 +426,17 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 share and bookmark discs are one dark glass in both themes
                 because the ground under them is a photograph, not paper or
                 charcoal; a paper pill here would vanish into a bright
-                storefront, which is exactly what this cover has. Glyphs in
-                `onPhoto.text`, not each kind's hue: they sit beside three
-                white glyphs, and the hue's job — matching a chip on Explore
-                and a dot on the map — is not this screen's.
+                storefront, which is exactly what this cover has.
+
+                Glyphs in each kind's own hue, the one its chip wears on
+                Explore and its dot on the map. They shipped white first
+                (#854), beside the three white discs, and that broke the
+                rule `collectionBadge` on Explore records: a category glyph
+                wears its colour everywhere, because a colour code is only a
+                code if it holds everywhere, and the one white glyph that
+                used to exist was taken out for exactly that. The hues are
+                mid-tones made for dark ground, and this ground is dark
+                glass in both themes.
 
                 Words on a tap. Six of the nine glyphs say their kind on
                 sight; three do not — Views is a building, Culture a
@@ -453,7 +460,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 {cats.map((c, i) => (
                   <React.Fragment key={c}>
                     {i > 0 ? <View style={s.kindsRule} /> : null}
-                    <Ionicons name={CATEGORIES[c]?.icon ?? 'pricetag-outline'} size={19} color={onPhoto.text} />
+                    <Ionicons name={CATEGORIES[c]?.icon ?? 'pricetag-outline'} size={19} color={CATEGORIES[c]?.color ?? onPhoto.text} />
                   </React.Fragment>
                 ))}
               </PressableScale>

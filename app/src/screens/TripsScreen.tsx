@@ -429,7 +429,7 @@ export default function TripsScreen({ navigation }: { navigation: Nav }) {
       // the height are the ones every other tab uses.
       right={trips.data.length > 0 ? (
         <AddPill
-          header
+          tall
           label={t('New', 'Tạo mới', '新規')}
           onPress={() => navigation.getParent()?.navigate('Ideas')}
           accessibilityLabel={t('New trip', 'Chuyến đi mới', '新しい旅程')}

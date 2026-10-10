@@ -81,12 +81,22 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
 /**
  * The solid action.
  *
- * `compact` is the only dimension that varies, and it varies for a reason
- * rather than by accident: beside a section heading this sits in open
- * space, and inside the floating bar on Explore it shares a line with two
- * lines of text. Everything that carries the meaning — the gradient, the
- * ink on it, the radius, the weight — is the same either way, which is
- * the point of it being one component.
+ * Height is the only dimension that varies, and it varies for a reason
+ * rather than by accident: beside a section heading this sizes to its own
+ * content in open space; `tall`, it stands at the 44pt control height,
+ * beside a screen title or inside the floating dock on Explore. Everything
+ * that carries the meaning — the gradient, the ink on it, the radius, the
+ * weight, the word's size — is the same either way, which is the point of
+ * it being one component.
+ *
+ * There was a third, `compact`, for the dock: 7pt of padding, a 14pt word
+ * and a 16pt plus, about 31pt tall. It was the one control left under 44
+ * once #848–#852 brought the rest up, and the same "Add" read as two
+ * buttons — 31 in the dock, 44 in Gallery's header (owner, 10 Oct 2026).
+ * It was also the worst place to be small: the dock around it is itself a
+ * button that opens Search, so a tap a few points wide of the pill went
+ * somewhere else entirely. The dock is 64 with 8 of padding, which leaves
+ * 48: room for 44.
  */
 /**
  * The gradient pill that offers to make one more of something.
@@ -117,13 +127,13 @@ export function AddSlot({ title, subtitle, onPress, testID }: {
  * section heading only when that section has rows, and how Trips hides it
  * until the first trip exists.
  */
-export function AddPill({ label, onPress, compact, header, busy, accessibilityLabel }: {
+export function AddPill({ label, onPress, tall, busy, accessibilityLabel }: {
   label: string;
   onPress: () => void;
-  compact?: boolean;
-  /** In a screen's header, where it sits beside a 34pt title and next to
-   *  the 44pt round buttons the other tabs put in that slot. */
-  header?: boolean;
+  /** At the 44pt control height: in a screen's header, beside a 34pt title
+   *  and the 44pt round buttons the other tabs put in that slot, and in
+   *  Explore's floating dock. */
+  tall?: boolean;
   /** The thing it adds is on its way. The pill keeps its word and its
    *  width, the plus makes way for a spinner, and a tap does nothing.
    *
@@ -136,7 +146,7 @@ export function AddPill({ label, onPress, compact, header, busy, accessibilityLa
   busy?: boolean;
   accessibilityLabel?: string;
 }) {
-  const glyph = compact ? 16 : 18;
+  const glyph = 18;
   return (
     <PressableScale
       onPress={onPress}
@@ -148,13 +158,13 @@ export function AddPill({ label, onPress, compact, header, busy, accessibilityLa
       aria-disabled={busy}
       aria-busy={busy}
     >
-      <LinearGradient {...gradAI} style={[s.pill, compact && s.pillCompact, header && s.pillHeader, busy && s.pillBusy]}>
+      <LinearGradient {...gradAI} style={[s.pill, tall && s.pillTall, busy && s.pillBusy]}>
         {/* The spinner takes the plus's own box, so the word does not move
             when one replaces the other. */}
         {busy
           ? <View style={{ width: glyph, height: glyph, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator size="small" color={colors.accentInk} /></View>
           : <Ionicons name="add" size={glyph} color={colors.accentInk} />}
-        <Text style={[s.pillText, compact && s.pillTextCompact]}>{label}</Text>
+        <Text style={s.pillText}>{label}</Text>
       </LinearGradient>
     </PressableScale>
   );
@@ -184,17 +194,15 @@ const s = StyleSheet.create({
     paddingLeft: 14, paddingRight: 18, paddingVertical: 9,
     borderRadius: radius.pill,
   },
-  pillCompact: { paddingLeft: 11, paddingRight: 14, paddingVertical: 7 },
   // `HEADER_CONTROL_H`, so a pill and a round button in the same header
-  // slot are the same height. Everywhere else the pill sizes to its own
-  // content, which is right beside a section heading and wrong beside a
-  // screen title.
-  pillHeader: { minHeight: HEADER_CONTROL_H, paddingHorizontal: 16, justifyContent: 'center' },
+  // slot are the same height, and the dock's pill is the header's. Beside
+  // a section heading the pill sizes to its own content, which is right
+  // in open space and wrong beside a title or inside another button.
+  pillTall: { minHeight: HEADER_CONTROL_H, paddingHorizontal: 16, justifyContent: 'center' },
   // Dimmed, not greyed: the gradient stays so the pill is still plainly
   // the same object, and 0.7 is the figure `working` rows use elsewhere
   // for "taken, not yet answered" — a little less, since this one also
   // carries a spinner saying so.
   pillBusy: { opacity: 0.7 },
   pillText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
-  pillTextCompact: { fontSize: 14 },
 });
