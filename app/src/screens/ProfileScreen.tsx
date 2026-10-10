@@ -108,7 +108,7 @@ const GLYPH_BOX = 26;
 const CAPTION_LINE = 15;
 const TITLE_LINE = 19;
 
-function FeatureRow({ icon, title, sub, onPress, last, count }: {
+function FeatureRow({ icon, title, sub, onPress, last, count, testID = 'feature-row' }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   sub: string;
@@ -116,6 +116,8 @@ function FeatureRow({ icon, title, sub, onPress, last, count }: {
   last?: boolean;
   /** A number at the row's end — see `CountBadge`. */
   count?: number;
+  /** The smoke flows' handle on one row; the unit tests read the shared one. */
+  testID?: string;
 }) {
   return (
     <PressableScale
@@ -123,7 +125,7 @@ function FeatureRow({ icon, title, sub, onPress, last, count }: {
       style={[s.twoLineRow, !last && s.featureRowDivider]}
       onPress={onPress}
       accessibilityRole="button"
-      testID="feature-row"
+      testID={testID}
     >
       <RowGlyph name={icon} line={TITLE_LINE} />
       <View style={{ flex: 1, gap: 3 }}>
@@ -814,6 +816,7 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
           count={visitSummary(visits.data).places}
           onPress={() => navigation.navigate('Visited')}
           last
+          testID="profile-visited"
         />
       </Card>
 

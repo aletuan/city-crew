@@ -30,7 +30,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
 | `08-explore-filter.yaml` | Pins the location to Hanoi; sorts Explore by distance, then adds "open now"; the filter button's count shows both; Reset clears them and the list is back. The map toggle is not covered — Expo Go on iOS draws no map. |
 | `09-collections-browse.yaml` | As a guest: the Collections tab's first community card opens on its places; the first place opens on its own page; Back walks place → collection → list. The card id is the same in grid and row view. |
-| `10-check-in.yaml` | Opens the first place on Explore; takes back any visit a failed run left there; checks in and waits for the pill to read back the visit from the server; opens the visit sheet and removes it; the pill is bare again. Needs the `place_checkin` flag on. |
+| `10-check-in.yaml` | Opens the first place on Explore; takes back any visit a failed run left there; checks in and waits for the pill to read the visit back from the server; finds it in the history (Profile → Places you checked in at) under this month; opens the place from its row, still checked in; removes the visit from the sheet; back on the history, the row is gone. Needs the `place_checkin` flag on. |
 | `11-collection-crud.yaml` | Deletes any "Maestro CRUD…" list a failed run left; creates "Maestro CRUD"; renames it "Maestro CRUD 2" from its menu; saves the first Explore place into it and sees it there; takes it out from inside the collection; deletes the list. Leaves 06's "Maestro smoke" alone. |
 | `13-trip-edit.yaml` | Deletes leftover upcoming trips; plans as 05 does; in the editor reads the first stop's hour, moves it 15 minutes earlier and sees it change; saves; the saved trip shows the edited hour — and still does after a cold start; deletes the trip. Saved trips have no editor, so the edit is the plan's, before Save. |
 | `14-forgot-password.yaml` | As a guest: Sign in → Forgot password → asks for a code for `maestro-reset@example.com` (a reserved domain: no account, no mail sent — never the test account, whose address is a real mailbox) → reaches the code step with the resend link waiting → Reset with no code is refused by the form and stays put. Does not reach the server refusing a wrong code: that needs the new-password field, which raises iOS's "Use Strong Password?" panel. |
@@ -176,7 +176,8 @@ reaches the native view.
 | `CitySwitcher` | `city-row-<index>` |
 | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
 | `SearchScreen` | `search-input`, `search-clear`, `search-result-<index>` |
-| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account`, `profile-language` |
+| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account`, `profile-language`, `profile-visited` (Places you checked in at) |
+| `VisitedScreen` | `visit-month`, `visit-row` (match it by its label: a row that opens a place is one accessibility element, and `visit-name` inside it is not always in the tree) |
 | `LanguageSwitcher` | `lang-<en\|vi\|ja>` |
 | `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`, `signin-switch-signup` (`SwitchRow`), `signin-forgot`; `auth-error` (`FormError`) |
 | `ForgotPasswordScreen` | `forgot-email`, `forgot-submit`; on the code step `forgot-code`, `forgot-resend`, `forgot-reset` (`forgot-password` is set but no flow types into it — see `14`'s header) |

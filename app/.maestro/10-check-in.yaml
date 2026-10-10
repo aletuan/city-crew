@@ -1,4 +1,5 @@
-# Check in at a place, see the visit written, take it back.
+# Check in at a place, find the visit in the history, open the place from
+# it, take the visit back, and see the history let it go.
 #
 # The pill draws only for a signed-in reader and only while the
 # `place_checkin` flag is on (`app_flags`), so this flow is also the one
@@ -66,6 +67,64 @@ env:
       id: "detail-checked-in"
     timeout: 20000
 
+# The name, for the history to be matched against. The page draws the
+# short title (`splitName`) and the history the full name, so the history
+# is matched by what it starts with; the name is escaped first, because a
+# place called "Cộng (Nhà Thờ)" is a regex otherwise.
+- copyTextFrom:
+    id: "detail-name"
+# split/join rather than a regex: a regex literal inside `${}` evaluates
+# to undefined here (measured on 10 October), and the name with it.
+- evalScript: '${output.esc = maestro.copiedText.split("\\").join("\\\\").split(".").join("\\.").split("(").join("\\(").split(")").join("\\)").split("[").join("\\[").split("]").join("\\]").split("+").join("\\+").split("?").join("\\?").split("*").join("\\*").split("|").join("\\|")}'
+- evalScript: '${output.startsWith = output.esc + ".*"}'
+
+# The history: Profile → Places you checked in at. The visit is there,
+# under this month, read from the server by a second screen.
+- tapOn:
+    id: "tab-profile"
+# To the top first, then down to the row. The tab keeps its scroll, and
+# signing in leaves Profile part-way down: the row was already "visible"
+# at y 57, under the pinned title, so nothing scrolled and the title took
+# the tap (10 October, twice — centring the row did the same). Scrolled
+# down from the top, the row enters from the bottom and stops there, with
+# the tab bar ducked out of its way.
+- scrollUntilVisible:
+    element:
+      id: "avatar-box"
+    direction: UP
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "profile-visited"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "profile-visited"
+- extendedWaitUntil:
+    visible:
+      id: "visit-month"
+    timeout: 15000
+# Matched on the row, not on `visit-name` inside it: a row that opens a
+# place is one accessibility element, its label the whole line ("Bold
+# Brew – Huỳnh Thúc Kháng, 10 Oct · 20:30 · Hanoi"), and the name inside
+# it is not in the tree on its own — one run in two found it, the other
+# did not.
+- assertVisible:
+    id: "visit-row"
+    text: ${output.startsWith}
+
+# Its row opens the place it names, still wearing the visit.
+- tapOn:
+    id: "visit-row"
+    text: ${output.startsWith}
+- extendedWaitUntil:
+    visible:
+      id: "detail-name"
+      text: ${output.esc}
+    timeout: 20000
+- assertVisible:
+    id: "detail-checked-in"
+
 # The worn pill opens the sheet: the visit is listed, and its trash takes
 # it back. One visit, so the sheet closes and the pill goes bare again.
 - tapOn:
@@ -84,5 +143,12 @@ env:
     timeout: 20000
 - assertNotVisible:
     id: "detail-checked-in"
+
+# Back on the history, the visit is gone from it.
 - tapOn:
     id: "detail-back"
+- extendedWaitUntil:
+    notVisible:
+      id: "visit-row"
+      text: ${output.startsWith}
+    timeout: 15000

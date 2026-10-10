@@ -931,7 +931,7 @@ describe('visited places', () => {
       { id: 'c', place_slug: 'pizza', city_id: 'saigon', at: '2026-09-20T03:00:00Z' },
     ];
     const { raw } = draw();
-    const row = screen.getByText('Places you checked in at').closest('[data-testid="feature-row"]')!;
+    const row = screen.getByText('Places you checked in at').closest('[data-testid="profile-visited"]')!;
     expect(row.textContent).toContain('2');
     expect(row.textContent).not.toContain('3');
     fireEvent.click(row);
@@ -940,7 +940,7 @@ describe('visited places', () => {
 
   it('shows no number before the first visit', () => {
     draw();
-    const row = screen.getByText('Places you checked in at').closest('[data-testid="feature-row"]')!;
+    const row = screen.getByText('Places you checked in at').closest('[data-testid="profile-visited"]')!;
     expect(row.textContent).toBe('Places you checked in at' + 'By month, newest first.');
   });
 
