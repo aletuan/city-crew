@@ -652,7 +652,7 @@ describe('friends card', () => {
     };
     state.ships = [edge('x', 'me', 'pending')];
     const { unmount } = render(<ProfileScreen navigation={nav().n} />);
-    expect(ring()).toBe('rgb(21, 22, 20)'); // bgElevatedHex.dark
+    expect(ring()).toBe('rgb(51, 35, 26)'); // bgElevatedHex.dark, the coffee sheet
     unmount();
     state.scheme = 'light';
     render(<ProfileScreen navigation={nav().n} />);
