@@ -1314,8 +1314,27 @@ describe('signed out', () => {
     openMenu();
     fireEvent.click(menuRow('Save a copy'));
     // The sheet names what was reached for: a copy, not a place.
-    expect(spies.askToSignIn).toHaveBeenCalledWith('copy');
+    expect(spies.askToSignIn).toHaveBeenCalledWith('copy', expect.any(Function));
     expect(raw.navigate).not.toHaveBeenCalled();
+  });
+
+  // Finished on the reader's return, as the render that knows they are
+  // signed in — and finished as far as the form only: nothing is written
+  // until they press its button. See `lib/resume`.
+  it('opens the copy form once the guest who asked has signed in', () => {
+    const navigation = nav();
+    const route = { params: { slug: 'old-quarter' } } as RootRoute<'CollectionDetail'>;
+    const { rerender } = render(<CollectionDetailScreen navigation={navigation.n} route={route} />);
+    openMenu();
+    fireEvent.click(menuRow('Save a copy'));
+    const resume = spies.askToSignIn.mock.calls.at(-1)![1] as () => void;
+    state.uid = 'u2';
+    rerender(<CollectionDetailScreen navigation={navigation.n} route={route} />);
+    act(() => { resume(); });
+    expect(spies.askToSignIn).toHaveBeenCalledOnce();
+    expect(navigation.raw.navigate).toHaveBeenCalledWith('CollectionForm', expect.objectContaining({
+      copyFrom: expect.objectContaining({ cityId: expect.any(String) }),
+    }));
   });
 
   it('a list with no owner is never treated as yours', () => {

@@ -1,5 +1,6 @@
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createNavigationContainerRef, type RouteProp } from '@react-navigation/native';
+import { returnTab, takeResume } from './lib/resume';
 
 /**
  * What the wizard asked, in the shape the two screens after it need.
@@ -189,6 +190,23 @@ export function leaveAuth(navigation: Nav) {
   const deep = (navigation.getState()?.routes.length ?? 1) > 1;
   if (deep) navigation.popToTop();
   else navigation.replace('ProfileHome');
+  // Then whatever the sheet sent the reader here in the middle of — see
+  // `lib/resume`. Taken here and not on the session: a new account has
+  // its session a step before the welcome page this is called from.
+  //
+  // A frame for the tab, and a frame after that for the act. Coming from
+  // the sign-in form, this line runs in the same tick the session lands,
+  // before the tree has re-rendered as the new account; the act re-reads
+  // who is asking through its screen's latest render, and a frame is what
+  // gives that render the time to happen. Run any sooner and the act sees
+  // a guest, and raises the sheet it is meant to be finishing.
+  const r = takeResume(Date.now());
+  if (!r) return;
+  requestAnimationFrame(() => {
+    const tab = returnTab(r);
+    if (tab && navRef.isReady()) (navRef.navigate as (name: string) => void)(tab);
+    if (r.run) requestAnimationFrame(r.run);
+  });
 }
 export type RootRoute<T extends keyof RootStackParamList> = RouteProp<RootStackParamList, T>;
 
