@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '../uitest/render';
 import type { Lang } from '../lib/i18n';
 import type { Place } from '../lib/types';
+import { colors } from '../theme';
 
 const state = vi.hoisted(() => ({
   lang: 'en' as Lang,
@@ -57,6 +58,22 @@ const place = (over: Partial<Place> = {}): Place => ({
 } as unknown as Place);
 
 const onOpen = vi.fn();
+
+/** Props of the first committed element matching `pick`. */
+const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, unknown> => {
+  type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+  const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+  const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+  const stack: Fiber[] = [host[key].stateNode.current];
+  while (stack.length) {
+    const f = stack.pop()!;
+    const p = f.memoizedProps;
+    if (p && typeof p === 'object' && pick(p)) return p;
+    if (f.sibling) stack.push(f.sibling);
+    if (f.child) stack.push(f.child);
+  }
+  throw new Error('no matching element in the committed tree');
+};
 
 beforeEach(() => {
   state.lang = 'en';
@@ -134,24 +151,49 @@ describe('what it offers', () => {
   // cannot be done.
   it('offers one button, and does not draw the editing one yet', () => {
     draw();
-    expect(screen.getByTestId('guide-open-gallery')).toBeTruthy();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
     expect(screen.queryByText(/Edit Place/i)).toBeNull();
   });
 
-  // One door rather than one verb. The button no longer opens the picker:
-  // it opens the screen where adding is one of four things to do.
-  it('opens the gallery and does nothing else', () => {
+  // The card is the button: the greeting, the question and the mark are
+  // all inside it, so a tap anywhere on the panel opens the gallery. The
+  // solid "Gallery" pill it replaced was the accent twice on one card.
+  it('is the button, whole, with a chevron where the pill was', () => {
     draw();
-    fireEvent.click(screen.getByTestId('guide-open-gallery'));
+    const btn = screen.getByTestId('guide-open-gallery');
+    expect(btn.getAttribute('role')).toBe('button');
+    expect(screen.getByTestId('panel').contains(btn)).toBe(true);
+    expect(btn.contains(screen.getByText('Hi Trang,'))).toBe(true);
+    expect(btn.contains(screen.getByText('Want to improve your gallery?'))).toBe(true);
+    expect(btn.contains(btn.querySelector('img'))).toBe(true);
+    // The row-that-opens-a-screen sign, in the accent, and nothing filled.
+    const chevron = btn.querySelector('[data-icon="chevron-forward"]')!;
+    expect(chevron.getAttribute('data-color')).toBe(colors.accent);
+    expect(btn.querySelector('[data-icon="images-outline"], [data-icon="images"]')).toBeNull();
+    expect(screen.queryByText('Gallery')).toBeNull();
+    expect(getComputedStyle(btn.firstElementChild!).backgroundColor).toBe('rgba(255, 111, 91, 0.1)');
+  });
+
+  // One door rather than one verb. The card no longer opens the picker:
+  // it opens the screen where adding is one of four things to do.
+  it('opens the gallery from anywhere on the card, and does nothing else', () => {
+    draw();
+    fireEvent.click(screen.getByText('Want to improve your gallery?'));
     expect(onOpen).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId('guide-open-gallery'));
+    expect(onOpen).toHaveBeenCalledTimes(2);
     expect(screen.queryByText(/Add photo/)).toBeNull();
   });
 
-  // "Gallery" in every language, by request — it is the name of a screen.
+  // "Gallery" in every language, by request — it is the name of a screen,
+  // and VoiceOver says it first; the question follows as the hint.
   it('is called Gallery in Vietnamese too', () => {
     state.lang = 'vi';
     draw();
-    expect(screen.getByText('Gallery')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Gallery' })).toBeTruthy();
+    // react-native-web drops the hint from the DOM, so it is read off the
+    // committed props, as `StopCard.ui.test.tsx` reads its own.
+    expect(propsWhere((p) => p.testID === 'guide-open-gallery').accessibilityHint).toBe('Bạn muốn cải thiện gallery?');
     expect(screen.getByText('Bạn muốn cải thiện gallery?')).toBeTruthy();
   });
 

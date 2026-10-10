@@ -159,19 +159,21 @@ function FeatureRow({ icon, title, sub, onPress, last, count }: {
  * the value on the right makes them plainly two different rows, and the
  * question of which hierarchy is "right" stops being asked.
  */
-function SettingRow({ icon, label, value, onPress, last }: {
+function SettingRow({ icon, label, value, onPress, last, testID }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   /** Absent on rows that are a destination rather than a setting. */
   value?: string;
   onPress: () => void;
   last?: boolean;
+  testID?: string;
 }) {
   return (
     <PressableScale
       scaleTo={0.98}
       style={[s.featureRow, !last && s.featureRowDivider]}
       onPress={onPress}
+      testID={testID}
       accessibilityRole="button"
     >
       <RowGlyph name={icon} />
@@ -245,6 +247,7 @@ function SettingsCard() {
           label={t('Language', 'Ngôn ngữ', '言語')}
           value={langLabel ?? 'English'}
           onPress={() => setLangOpen(true)}
+          testID="profile-language"
         />
         {/* The glyph follows the ground showing, the words follow the
             setting: on Auto the row reads "Automatic" beside whichever of

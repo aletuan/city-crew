@@ -30,7 +30,9 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `06-save-place.yaml` | Opens the first place on Explore; saves it — into the first collection, or into a new "Maestro smoke" list if the account has none — and waits for the bookmark to fill; takes it out again; signs out. |
 | `08-explore-filter.yaml` | Pins the location to Hanoi; sorts Explore by distance, then adds "open now"; the filter button's count shows both; Reset clears them and the list is back. The map toggle is not covered — Expo Go on iOS draws no map. |
 | `09-collections-browse.yaml` | As a guest: the Collections tab's first community card opens on its places; the first place opens on its own page; Back walks place → collection → list. The card id is the same in grid and row view. |
+| `10-check-in.yaml` | Opens the first place on Explore; takes back any visit a failed run left there; checks in and waits for the pill to read back the visit from the server; opens the visit sheet and removes it; the pill is bare again. Needs the `place_checkin` flag on. |
 | `11-collection-crud.yaml` | Deletes any "Maestro CRUD…" list a failed run left; creates "Maestro CRUD"; renames it "Maestro CRUD 2" from its menu; saves the first Explore place into it and sees it there; takes it out from inside the collection; deletes the list. Leaves 06's "Maestro smoke" alone. |
+| `12-language.yaml` | As a guest: Profile → Language → Tiếng Việt, the Places tab reads "Địa điểm", the first place opens and draws; the same in 日本語 ("スポット"); back to English. The only flow that asserts labels. Runs last — the choice persists on the device. |
 | `07-sign-up-delete.yaml` | **Not run by `npm run smoke:ios`** — see GUIDELINES.md ("Manual QA"). Documents signing up a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skipping the taste picker, then deleting that same account from Profile → Delete account, ending back on the guest view; iOS's own "Use Strong Password?" panel on the password field can't be driven by Maestro, so this path is checked by hand once per release instead. |
 
 The signed-in flows share `common/start.yaml` (open fresh, grant
@@ -39,7 +41,9 @@ would stand over Trips), `common/ensure-signed-in.yaml`,
 `common/ensure-signed-out.yaml`, `common/sign-in.yaml`,
 `common/delete-first-trip.yaml`, `common/open-save-sheet.yaml` (the
 bookmark, in either state) and `common/delete-open-collection.yaml`
-(the open collection's menu → Delete → the system alert). Every flow cleans up what it made, and
+(the open collection's menu → Delete → the system alert),
+`common/pick-language.yaml` (Profile → Language → `${LANG_ID}`) and
+`common/open-first-place.yaml` (first Places card → its page → back). Every flow cleans up what it made, and
 cleans up what a failed earlier run left, before it starts.
 
 `common/dismiss-welcome.yaml` and `common/expo-go-prep.yaml` are subflows
@@ -170,7 +174,8 @@ reaches the native view.
 | `CitySwitcher` | `city-row-<index>` |
 | `PlaceDetailScreen` | `detail-name`, `detail-address`, `detail-photo`, `detail-back` |
 | `SearchScreen` | `search-input`, `search-clear`, `search-result-<index>` |
-| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account` |
+| `ProfileScreen` | `profile-sign-in` (guest), `profile-sign-out` (signed in), `profile-delete-account`, `profile-language` |
+| `LanguageSwitcher` | `lang-<en\|vi\|ja>` |
 | `SignInScreen` | `signin-email`, `signin-password`, `signin-submit`, `signin-switch-signup` (`SwitchRow`); `auth-error` (`FormError`) |
 | `SignUpScreen` | `signup-name`, `signup-email`, `signup-password`, `signup-confirm`, `signup-submit`, `signup-taste-skip`, `signup-welcome-continue` |
 | `DeleteAccountScreen` | `delete-account-confirm` (`DangerButton`) |
@@ -180,6 +185,7 @@ reaches the native view.
 | `TripsScreen` | `trip-upcoming-<index>` |
 | `TripDetailScreen` | `trip-delete` (owner), `trip-leave` (invitee) |
 | `PlaceDetailScreen` | `detail-save` / `detail-saved` — one id per state |
+| `PlaceDetailScreen` (check-in) | `detail-checkin` / `detail-checked-in` — one id per state; in the visit sheet `checkin-head`, `checkin-visit` (each row), `checkin-visit-remove` (each row's trash), `detail-checkin-again` |
 | `SaveSheet` | `save-row-<index>`, `save-done` |
 | `CollectionFormScreen` | `collection-name`, `collection-submit` |
 | `CollectionsScreen` | `collection-card-<index>` (community; same index in grid and rows), `collections-yours` (the Yours tab, signed in), `collection-new` (the dashed row at the foot of Yours) |

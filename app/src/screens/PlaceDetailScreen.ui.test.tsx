@@ -456,10 +456,12 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     mapStub.canDraw = false;
     show();
     const pill = screen.getByTestId('detail-checkin');
-    expect(pill.getAttribute('aria-label')).toBe('Check-in');
+    // A verb, because a button is one; the hyphenated noun was the label
+    // until the worn state needed a word that did not share it.
+    expect(pill.getAttribute('aria-label')).toBe('Check in');
     expect(pill.getAttribute('role')).toBe('button');
-    expect(pill.querySelector('[data-icon="location"]')).toBeTruthy();
-    expect(within(pill).getByText('Check-in')).toBeTruthy();
+    expect(pill.querySelector('[data-icon="location"]')!.getAttribute('data-color')).toBe(colors.accent);
+    expect(within(pill).getByText('Check in')).toBeTruthy();
     // A bordered button, not a glass pill: the facts beside it are the
     // glass ones, and a control wearing the same fill read as a fourth
     // fact on the phone. Bare outline is the filter row's own word for
@@ -505,19 +507,40 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(alert).not.toHaveBeenCalled();
   });
 
-  it('wears the visit once it is written: tinted, ticked, and named as a state', () => {
+  it('wears the visit once it is written: solid, ticked, and named as a state', () => {
     state.checkin = true;
     state.uid = 'u1';
     state.checkins = [visit('k1', 60)];
     show();
     expect(screen.queryByTestId('detail-checkin')).toBeNull();
     const pill = screen.getByTestId('detail-checked-in');
-    expect(pill.querySelector('[data-icon="checkmark"]')).toBeTruthy();
-    expect(within(pill).getByText('Checked in')).toBeTruthy();
-    // The accent as a surface, now that there is a state for it to mean
-    // — the one tint this row is allowed, and it was promised in #812.
-    expect(getComputedStyle(pill.firstElementChild!).backgroundColor).toBe('rgba(255, 111, 91, 0.1)');
-    expect(a11yState('Checked in — options').selected).toBe(true);
+    expect(pill.querySelector('[data-icon="checkmark"]')!.getAttribute('data-color')).toBe('#141310');
+    // A word that shares nothing with the rest label — "Checked in"
+    // beside "Check-in" read as the same verb at a glance.
+    const word = within(pill).getByText('Visited');
+    expect(within(pill).queryByText(/check/i)).toBeNull();
+    // `accentFill`, solid, hairline included, so the pill keeps its size:
+    // the 10% tint it wore first read on the phone as the rest state lit.
+    const inner = getComputedStyle(pill.firstElementChild!);
+    expect(inner.backgroundColor).toBe('rgb(255, 111, 91)');
+    expect(inner.borderTopColor).toBe('rgb(255, 111, 91)');
+    expect(inner.borderTopWidth).toBe('1px');
+    // Near-black on the coral, word and glyph (above) both: the accent's
+    // own red on its own fill would be a mark nobody could read.
+    expect(getComputedStyle(word).color).toBe('rgb(20, 19, 16)');
+    expect(a11yState('Visited — options').selected).toBe(true);
+  });
+
+  it('says the worn state in Vietnamese without the word the rest label uses', () => {
+    state.checkin = true;
+    state.uid = 'u1';
+    state.lang = 'vi';
+    state.checkins = [visit('k1', 60)];
+    show();
+    const pill = screen.getByTestId('detail-checked-in');
+    expect(within(pill).getByText('Đã qua')).toBeTruthy();
+    expect(within(pill).queryByText(/check/i)).toBeNull();
+    expect(pill.getAttribute('aria-label')).toBe('Đã qua — tuỳ chọn');
   });
 
   it('opens the options on a worn pill: again, once ten minutes have passed, and undo', async () => {

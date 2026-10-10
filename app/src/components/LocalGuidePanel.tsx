@@ -23,6 +23,18 @@
 // button per verb would be four buttons on a panel whose whole job is to
 // say "this is yours". The upload lives in `useAddPhoto`, behind the
 // gallery's own header.
+//
+// ── the panel is the door ──
+//
+// It had a solid coral "Gallery" pill at its right, and on the phone that
+// was the accent twice over — a filled button on a tinted card — beside a
+// check-in pill that is itself solid coral once worn. The word repeated
+// the line beside it ("…improve your gallery?") and gave up its own room
+// on a 320pt window. So the whole card is the button now, and the only
+// mark that says so is a chevron: the row-that-opens-a-screen sign the
+// map card and the invite card already use. Not a bare "Gallery ›" link
+// either — the 44pt a target needs is the card's height for free, where a
+// link is a 17pt line someone has to aim at.
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -36,7 +48,7 @@ import { useIsEditor, useIsGuide } from '../lib/useGuideGrant';
 import { canKeepGallery } from '../lib/gallery';
 import type { Place } from '../lib/types';
 import { colors, font, radius, space } from '../theme';
-import { PressableScale, useNarrowWindow } from './ui';
+import { PressableScale } from './ui';
 
 export default function LocalGuidePanel({ place, onOpen, testID }: {
   place: Place;
@@ -54,24 +66,32 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
   // later, once for every place its owner opened. See `lib/guideGrant`.
   const granted = useIsGuide(place.city_id);
   const editor = useIsEditor();
-  // On a 320pt window — an SE, or any iPhone with Display Zoom on — the
-  // words have about 78pt beside the mark and the button, not the ~140 the
-  // lines below were cut to fit: the greeting truncates and the question
-  // wraps to three lines, the exact shape this row was redrawn to avoid.
-  // The button gives up its word there and keeps its glyph; the word
-  // stays on it as the accessible name, so a screen reader hears
-  // "Gallery" on either width.
-  const narrow = useNarrowWindow();
 
   if (!canKeepGallery(place, { uid, granted, editor })) return null;
 
   return (
-    <View style={s.panel} testID={testID}>
-      <View style={s.head}>
+    // `testID` stays on a plain view so the screen can find the panel
+    // without knowing it is pressable; the button keeps its own id.
+    //
+    // Named "Gallery" for VoiceOver, the screen it opens, with the question
+    // as the hint: a card read out whole would be a sentence, then a name,
+    // then a question, before the reader learns it is a button at all.
+    <View style={s.slot} testID={testID}>
+      <PressableScale
+        onPress={onOpen}
+        accessibilityRole="button"
+        accessibilityLabel={t('Gallery', 'Gallery', 'ギャラリー')}
+        accessibilityHint={t('Want to improve your gallery?', 'Bạn muốn cải thiện gallery?', 'ギャラリーを充実させますか？')}
+        // A card's press, not a button's: 0.97 on something this wide
+        // moves its edges 5pt and reads as a lurch (InviteCard uses this).
+        scaleTo={0.985}
+        style={[s.panel, s.head]}
+        testID="guide-open-gallery"
+      >
         {/* The app's own mark rather than a camera glyph.
-            A camera said what the button beside it already says, twice on
-            one card — and said it about the tool instead of about who is
-            being asked. This panel only ever shows to the person who put
+            A camera said what the card already says, twice on one card —
+            and said it about the tool instead of about who is being
+            asked. This panel only ever shows to the person who put
             the place here, so the mark that belongs at its head is the one
             they recognise. The artwork carries its own cut-out background,
             so it reads on either ground. */}
@@ -97,8 +117,8 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
               no usable name, and then this greets a stranger rather than
               guessing, because "Chào 2024," is worse than "Chào bạn,".
 
-              The question is short because the column is: about twenty
-              characters at this size, beside the button. "Bạn muốn bổ
+              The question is short because the column was: about twenty
+              characters at this size, beside the old button. "Bạn muốn bổ
               sung thêm ảnh chứ?" was thirty and took two lines on the
               phone, which is a third line of prose on a card whose whole
               job is one button. Eighteen fits, and says the same thing.
@@ -113,20 +133,12 @@ export default function LocalGuidePanel({ place, onOpen, testID }: {
             {t('Want to improve your gallery?', 'Bạn muốn cải thiện gallery?', 'ギャラリーを充実させますか？')}
           </Text>
         </View>
-        {/* "Gallery" in every language, by request: it is the name of a
-            screen, and the one word the person who asked for it uses. */}
-        <PressableScale
-          onPress={onOpen}
-          accessibilityRole="button"
-          accessibilityLabel={t('Gallery', 'Gallery', 'ギャラリー')}
-          containerStyle={s.buttonSlot}
-          style={[s.button, narrow && s.buttonNarrow]}
-          testID="guide-open-gallery"
-        >
-          <Ionicons name={narrow ? 'images' : 'images-outline'} size={narrow ? 20 : 16} color={colors.accentInk} />
-          {narrow ? null : <Text style={s.buttonText}>{t('Gallery', 'Gallery', 'ギャラリー')}</Text>}
-        </PressableScale>
-      </View>
+        {/* "Gallery" in every language was a request, and it still holds:
+            it is the accessible name above, and the gallery screen's
+            title. It is not drawn here because the question beside it
+            already says the word. */}
+        <Ionicons name="chevron-forward" size={17} color={colors.accent} />
+      </PressableScale>
     </View>
   );
 }
@@ -135,12 +147,12 @@ const s = StyleSheet.create({
   // The accent at tint strength, the one place on this screen that takes a
   // fill: it is an offer rather than a fact, and everything around it —
   // the facts row, the info card — is glass or paper.
+  slot: { marginTop: space.headingToContent },
   panel: {
     backgroundColor: colors.accentSoft,
     borderRadius: radius.card, padding: space.cardPadding,
-    marginTop: space.headingToContent,
   },
-  // The mark, the words and the button on one line, where they used to
+  // The mark, the words and the chevron on one line, where they used to
   // stack. Stacked, this card ran 183pt — a third of the first screen,
   // spent on an affordance only the person who added the place can even
   // see, and paid for by pushing the opening hours below the fold.
@@ -154,29 +166,15 @@ const s = StyleSheet.create({
   // edges, where a 22pt glyph came with padding built in.
   markLogo: { width: 26, height: 26 },
   words: { flex: 1, gap: 2 },
-  // A size down from `type.cardTitle`: the words share their line with a
-  // button now, and the heading of a two-line aside is not a card title.
+  // A size down from `type.cardTitle`: the heading of a two-line aside is
+  // not a card title.
   title: { color: colors.accent, fontSize: 16, fontWeight: font.semibold },
-  // The sub has ~140pt beside the button, which is about twenty
-  // characters at this size — the reason both these lines are curt. An
-  // earlier draft read "Help keep this place up to date" and wrapped to
-  // three ragged lines in that space.
+  // The sub had ~140pt beside the old pill, about twenty characters at
+  // this size — the reason both these lines are curt. An earlier draft
+  // read "Help keep this place up to date" and wrapped to three ragged
+  // lines in that space. The chevron takes 17pt where the pill took about
+  // 100 (14 + 16 glyph + 6 + the word + 14), so the column has some 80pt
+  // more now — about 158 on a 320pt window, where it had 78 and the
+  // greeting truncated. The lines stay as cut.
   sub: { color: colors.textSecondary, fontSize: 13 },
-  // `containerStyle`, not `style`: PressableScale puts `style` on its inner
-  // animated view and only `containerStyle` on the Pressable, so a width
-  // set on the wrong one leaves the button its content's size.
-  buttonSlot: { flexShrink: 0 },
-  // Narrower than it was — 14pt of padding and a 16pt glyph rather than
-  // 18 and 17 — because it shares the line now. Still 44 high: a target
-  // may lose width to its neighbours and never height.
-  button: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    minHeight: 44, paddingHorizontal: 14,
-    borderRadius: radius.pill, backgroundColor: colors.accentFill,
-  },
-  // The glyph alone, in a 44pt disc: a pill with one icon in it reads as
-  // a pill missing its word, a circle reads as a button that was drawn
-  // that way.
-  buttonNarrow: { width: 44, paddingHorizontal: 0, justifyContent: 'center' },
-  buttonText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
 });

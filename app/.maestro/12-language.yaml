@@ -1,0 +1,50 @@
+# Switch the app to Vietnamese, then Japanese, then back to English: the
+# tab bar takes each language, and Explore and a place's page still draw
+# in it.
+#
+# The one flow that asserts labels, because the label is what it is
+# testing: "Địa điểm" and "スポット" are the Places tab in each language
+# (App.tsx's `labels`). Everything else is selected by id, as everywhere.
+#
+# The choice persists on the device, so this runs last in `config.yaml`:
+# a run that dies half way leaves the app in Vietnamese for nobody after
+# it, and the next run of this flow sets every language it checks
+# explicitly and ends on English.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
+
+# ── Vietnamese ──
+- runFlow:
+    file: common/pick-language.yaml
+    env:
+      LANG_ID: vi
+- extendedWaitUntil:
+    visible:
+      text: "Địa điểm"
+    timeout: 10000
+- runFlow: common/open-first-place.yaml
+
+# ── Japanese ──
+- runFlow:
+    file: common/pick-language.yaml
+    env:
+      LANG_ID: ja
+- extendedWaitUntil:
+    visible:
+      text: "スポット"
+    timeout: 10000
+- runFlow: common/open-first-place.yaml
+
+# ── and home ──
+- runFlow:
+    file: common/pick-language.yaml
+    env:
+      LANG_ID: en
+- extendedWaitUntil:
+    visible:
+      text: "Places"
+    timeout: 10000

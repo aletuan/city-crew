@@ -48,12 +48,18 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `06-save-place` | test account | 1 m 21 s |
 | `08-explore-filter` | guest | 50 s |
 | `09-collections-browse` | guest | 42 s |
-| `11-collection-crud` | test account | 2 m 19 s |
+| `10-check-in` | test account | 1 m 9 s |
+| `11-collection-crud` | test account | 2 m |
+| `12-language` | guest | 1 m 43 s |
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
-**Kết quả gần nhất:** 09/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **10/10
-passed trong 11 m 29 s**, với `09-collections-browse` và `11-collection-crud`
-vừa vào `config.yaml`. Trước khi vào, mỗi flow đã xanh hai lượt liên tiếp
+**Kết quả gần nhất:** 10/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **12/12
+passed trong 13 m 38 s**, với `12-language` vừa vào `config.yaml` (ở cuối,
+vì ngôn ngữ được lưu trên máy). Trước khi vào, nó xanh hai lượt liên tiếp
+khi chạy riêng, và đỏ đúng chỗ khi bộ chọn ngôn ngữ bị làm hỏng cố ý (chạm
+mà không đổi ngôn ngữ → `"Địa điểm" is visible` false). Các lượt trước:
+11/11 trong 12 m 11 s (09/10, `10-check-in` vào); 10/10 trong 11 m 29 s
+(09/10, `09` và `11` vào). Trước khi vào, mỗi flow đã xanh hai lượt liên tiếp
 khi chạy riêng (lượt hai của `11` chứng minh phần dọn dẹp). Một lượt `11`
 đã hỏng ở bước đăng nhập với "No connection" — mạng giữa simulator và
 Supabase, chưa tới phần collection; lượt sau xanh.
@@ -63,8 +69,14 @@ cuộn lên `profile-sign-in` không có `centerElement`, nên đôi khi dừng 
 nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái (iOS hiểu là
 "cuộn về đầu"). Thêm `centerElement: true` rồi `04` xanh bốn lượt liền.
 
-**Ngân sách:** 11 m 29 s trên 12 phút. Flow tiếp theo cần chỗ: rút ngắn một
-flow hiện có, hoặc nâng ngân sách có chủ ý.
+**Ngân sách: dưới 20 phút** cho cả suite (quyết định của chủ dự án,
+09/10). Thời gian không phải ràng buộc chặt: một flow đáng giá vẫn vào dù
+làm suite dài thêm một hai phút. 12 flow hiện chạy 13 m 38 s, còn khoảng
+6 phút cho các flow tiếp theo.
+
+`10-check-in` được thử cả nhánh dọn dẹp: một flow tạm check-in rồi dừng, `10`
+dọn lượt ghé đó rồi chạy hết (1 m 5 s); lượt sau từ trạng thái sạch (51 s);
+truy vấn `checkins` của tài khoản test sau đó: 0 dòng.
 
 ## 3. Chạy
 
@@ -107,12 +119,13 @@ flowchart TB
   MAP[Explore map + pin ảnh]:::gap
   COL[Collections tab + detail]:::ok
   CC[Tạo/sửa/xoá collection]:::ok
-  LANG[Đổi ngôn ngữ VI/JA]:::gap
+  LANG[Đổi ngôn ngữ VI/JA]:::ok
   TD[Trip detail: sửa, mời bạn]:::gap
   FP[Quên mật khẩu]:::gap
   LG[Local guide: ảnh, cover]:::gap
   DL[Deep link place/trip]:::gap
   LF[Mất mạng / load-fail]:::gap
+  CI[Check-in tại một địa điểm]:::ok
 ```
 
 Xanh: đã có flow. Vàng: QA tay. Cam: chưa có.
@@ -121,7 +134,7 @@ Xanh: đã có flow. Vàng: QA tay. Cam: chưa có.
 
 Nguyên tắc chọn flow (từ GUIDELINES): chỉ thêm đường mà **hỏng thì người dùng
 không dùng được app**, và **vitest không phủ được**. Mỗi flow tốn ~1 phút; ngân
-sách toàn suite ≤ 12 phút.
+sách toàn suite < 20 phút (xem mục 2).
 
 ### Đợt 1 — những gì 1.0.4 vừa đổi (ưu tiên cao)
 
@@ -136,7 +149,7 @@ sách toàn suite ≤ 12 phút.
 | Flow mới | Đăng nhập | Kiểm | testID cần thêm |
 |---|---|---|---|
 | `11-collection-crud` ✅ xong 09/10 | test account | Tạo collection "Maestro CRUD", đổi tên, thêm 1 place, xoá place, xoá collection; dọn "Maestro CRUD" còn sót trước khi chạy | `collection-more`, `collection-rename`, `collection-delete`, `collection-row-<i>` |
-| `12-language` | guest | Profile → ngôn ngữ → Tiếng Việt: tab bar đổi nhãn ("Khám phá"); mở Explore và place detail không crash; → 日本語; trả về English. Đây là chỗ duy nhất được assert theo label — chính label là thứ đang kiểm | `profile-language`, `lang-<en\|vi\|ja>` |
+| `12-language` ✅ xong 10/10 | guest | Profile → ngôn ngữ → Tiếng Việt: tab bar đổi nhãn ("Khám phá"); mở Explore và place detail không crash; → 日本語; trả về English. Đây là chỗ duy nhất được assert theo label — chính label là thứ đang kiểm | `profile-language`, `lang-<en\|vi\|ja>` |
 | `13-trip-edit` | test account | Lưu một trip (dùng lại phần đầu của 05), mở detail, đổi giờ/đổi thứ tự điểm, lưu, kiểm thay đổi còn sau cold start, xoá | `trip-edit`, `trip-stop-<i>`, `trip-save` |
 | `14-forgot-password` | guest | Sign in → quên mật khẩu → nhập email test → thấy màn xác nhận (không đọc mail) | `signin-forgot`, `forgot-email`, `forgot-submit`, `forgot-sent` |
 
