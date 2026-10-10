@@ -50,12 +50,18 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `09-collections-browse` | guest | 42 s |
 | `10-check-in` | test account | 1 m 9 s |
 | `11-collection-crud` | test account | 2 m |
+| `13-trip-edit` | test account | 1 m 49 s |
 | `14-forgot-password` | guest | 1 m 11 s |
 | `12-language` | guest | 1 m 43 s |
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
-**Kết quả gần nhất:** 10/10/2026, iPhone 17 · iOS 26.5 · Expo Go, code tại
-`0d120779` (main, đã gồm #848–#855) — **13/13 passed trong 15 m 7 s**.
+**Kết quả gần nhất:** 10/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **14/14
+passed trong 16 m 36 s**, với `13-trip-edit` vừa vào. Trước đó cùng ngày:
+13/13 trong 15 m 7 s trên `0d120779` (main, đã gồm #848–#855).
+
+Một lượt suite trong lúc làm `13` đỏ ở `11`: `hideKeyboard` đã tự gửi form
+tạo collection (ô tên gửi khi bấm return), màn hình đóng trước khi flow bấm
+`collection-submit`. `11` giờ chỉ bấm nút nếu nó còn trên màn hình.
 
 Trước đó cùng ngày `11-collection-crud` đỏ liền nhiều lượt, kể cả sau khi
 khởi động lại simulator. Nguyên nhân đã đo được: sau khi một `Alert` hệ thống
@@ -80,8 +86,8 @@ nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái 
 
 **Ngân sách: dưới 20 phút** cho cả suite (quyết định của chủ dự án,
 09/10). Thời gian không phải ràng buộc chặt: một flow đáng giá vẫn vào dù
-làm suite dài thêm một hai phút. 13 flow hiện chạy 15 m 7 s, còn khoảng
-5 phút cho các flow tiếp theo.
+làm suite dài thêm một hai phút. 14 flow hiện chạy 16 m 36 s, còn khoảng
+3 phút cho các flow tiếp theo.
 
 `10-check-in` được thử cả nhánh dọn dẹp: một flow tạm check-in rồi dừng, `10`
 dọn lượt ghé đó rồi chạy hết (1 m 5 s); lượt sau từ trạng thái sạch (51 s);
@@ -129,7 +135,8 @@ flowchart TB
   COL[Collections tab + detail]:::ok
   CC[Tạo/sửa/xoá collection]:::ok
   LANG[Đổi ngôn ngữ VI/JA]:::ok
-  TD[Trip detail: sửa, mời bạn]:::gap
+  PE[Sửa kế hoạch trước khi lưu]:::ok
+  TD[Trip detail: mời bạn]:::gap
   FP[Quên mật khẩu]:::ok
   LG[Local guide: ảnh, cover]:::gap
   DL[Deep link place/trip]:::gap
@@ -159,7 +166,7 @@ sách toàn suite < 20 phút (xem mục 2).
 |---|---|---|---|
 | `11-collection-crud` ✅ xong 09/10 | test account | Tạo collection "Maestro CRUD", đổi tên, thêm 1 place, xoá place, xoá collection; dọn "Maestro CRUD" còn sót trước khi chạy | `collection-more`, `collection-rename`, `collection-delete`, `collection-row-<i>` |
 | `12-language` ✅ xong 10/10 | guest | Profile → ngôn ngữ → Tiếng Việt: tab bar đổi nhãn ("Khám phá"); mở Explore và place detail không crash; → 日本語; trả về English. Đây là chỗ duy nhất được assert theo label — chính label là thứ đang kiểm | `profile-language`, `lang-<en\|vi\|ja>` |
-| `13-trip-edit` | test account | Lưu một trip (dùng lại phần đầu của 05), mở detail, đổi giờ/đổi thứ tự điểm, lưu, kiểm thay đổi còn sau cold start, xoá | `trip-edit`, `trip-stop-<i>`, `trip-save` |
+| `13-trip-edit` ✅ xong 10/10 | test account | Trip đã lưu không có màn sửa (chỉ mời bạn và xoá), nên phần sửa là của kế hoạch, trước Save: lập kế hoạch như 05 → trong màn sửa đọc giờ điểm đầu, lùi 15 phút → lưu → trip đã lưu mang đúng giờ mới, và vẫn vậy sau cold start → xoá. Đổi thứ tự bằng cách kéo chưa được thử với Maestro | `plan-stop-time-<i>`, `plan-stop-earlier-<i>`, `trip-stop-time-<i>` |
 | `14-forgot-password` ✅ xong 10/10 | guest | Sign in → quên mật khẩu → xin mã cho `maestro-reset@example.com` (tên miền dành riêng: không tài khoản, không thư — **không** dùng email test, vì đó là hộp thư Gmail thật) → tới bước nhập mã → bấm Reset khi chưa có mã, form từ chối và ở lại. Chưa tới được việc server từ chối mã sai: ô mật khẩu mới bật bảng "Use Strong Password?" của iOS | `signin-forgot`, `forgot-email`, `forgot-submit`, `forgot-code`, `forgot-resend`, `forgot-reset` |
 
 ### Đợt 3 — cần hạ tầng mới

@@ -32,6 +32,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `09-collections-browse.yaml` | As a guest: the Collections tab's first community card opens on its places; the first place opens on its own page; Back walks place → collection → list. The card id is the same in grid and row view. |
 | `10-check-in.yaml` | Opens the first place on Explore; takes back any visit a failed run left there; checks in and waits for the pill to read back the visit from the server; opens the visit sheet and removes it; the pill is bare again. Needs the `place_checkin` flag on. |
 | `11-collection-crud.yaml` | Deletes any "Maestro CRUD…" list a failed run left; creates "Maestro CRUD"; renames it "Maestro CRUD 2" from its menu; saves the first Explore place into it and sees it there; takes it out from inside the collection; deletes the list. Leaves 06's "Maestro smoke" alone. |
+| `13-trip-edit.yaml` | Deletes leftover upcoming trips; plans as 05 does; in the editor reads the first stop's hour, moves it 15 minutes earlier and sees it change; saves; the saved trip shows the edited hour — and still does after a cold start; deletes the trip. Saved trips have no editor, so the edit is the plan's, before Save. |
 | `14-forgot-password.yaml` | As a guest: Sign in → Forgot password → asks for a code for `maestro-reset@example.com` (a reserved domain: no account, no mail sent — never the test account, whose address is a real mailbox) → reaches the code step with the resend link waiting → Reset with no code is refused by the form and stays put. Does not reach the server refusing a wrong code: that needs the new-password field, which raises iOS's "Use Strong Password?" panel. |
 | `12-language.yaml` | As a guest: Profile → Language → Tiếng Việt, the Places tab reads "Địa điểm", the first place opens and draws; the same in 日本語 ("スポット"); back to English. The only flow that asserts labels. Runs last — the choice persists on the device. |
 | `07-sign-up-delete.yaml` | **Not run by `npm run smoke:ios`** — see GUIDELINES.md ("Manual QA"). Documents signing up a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skipping the taste picker, then deleting that same account from Profile → Delete account, ending back on the guest view; iOS's own "Use Strong Password?" panel on the password field can't be driven by Maestro, so this path is checked by hand once per release instead. |
@@ -183,9 +184,9 @@ reaches the native view.
 | `DeleteAccountScreen` | `delete-account-confirm` (`DangerButton`) |
 | `IdeasScreen` | `ideas-company-<solo\|couple\|friends\|family>`, `ideas-cat-<index>`, `ideas-sketch` |
 | `PlanOptionsScreen` | `plan-card-best` |
-| `PlanEditScreen` | `plan-save` |
+| `PlanEditScreen` | `plan-save`, `plan-stop-time-<index>`, `plan-stop-earlier-<index>` (the −15 min step) |
 | `TripsScreen` | `trip-upcoming-<index>` |
-| `TripDetailScreen` | `trip-delete` (owner), `trip-leave` (invitee) |
+| `TripDetailScreen` | `trip-delete` (owner), `trip-leave` (invitee), `trip-stop-time-<index>` |
 | `PlaceDetailScreen` | `detail-save` / `detail-saved` — one id per state |
 | `PlaceDetailScreen` (check-in) | `detail-checkin` / `detail-checked-in` — one id per state; in the visit sheet `checkin-head`, `checkin-visit` (each row), `checkin-visit-remove` (each row's trash), `detail-checkin-again` |
 | `SaveSheet` | `save-row-<index>`, `save-done` |

@@ -81,8 +81,17 @@ env:
     id: "collection-name"
 - inputText: "Maestro CRUD"
 - hideKeyboard
-- tapOn:
-    id: "collection-submit"
+# `hideKeyboard` can itself submit the form — the name field submits on
+# return — and the screen is gone before the tap. Seen on 10 October: the
+# list was back, the collection made, `collection-submit` not found. So
+# the button is pressed only if it is still there.
+- runFlow:
+    when:
+      visible:
+        id: "collection-submit"
+    commands:
+      - tapOn:
+          id: "collection-submit"
 # The form goes back to the list, where the new one is at the top.
 - scrollUntilVisible:
     element:
@@ -110,8 +119,15 @@ env:
 - eraseText: 40
 - inputText: "Maestro CRUD 2"
 - hideKeyboard
-- tapOn:
-    id: "collection-submit"
+# As above: the button is pressed only if `hideKeyboard` has not already
+# submitted the form.
+- runFlow:
+    when:
+      visible:
+        id: "collection-submit"
+    commands:
+      - tapOn:
+          id: "collection-submit"
 - extendedWaitUntil:
     visible:
       text: "Maestro CRUD 2"

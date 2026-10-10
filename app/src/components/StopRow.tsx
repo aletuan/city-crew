@@ -51,10 +51,12 @@ import { PressableScale } from './ui';
 
 export default function StopRow({
   time, here = false, first, last, land, name, gone, meta, why, whyLang, whyLines, nameLines, leg,
-  onPress, pressLabel, style,
+  onPress, pressLabel, style, timeTestID,
 }: {
   /** The arrival, already formatted; null prints a dash. */
   time: string | null;
+  /** For the smoke flows, which read a stop's hour back by id. */
+  timeTestID?: string;
   /** Whether the picture above is this stop's. */
   here?: boolean;
   first: boolean;
@@ -99,7 +101,7 @@ export default function StopRow({
   );
   return (
     <View style={[s.row, !last && s.gap, style]}>
-      <Text style={[s.time, here && s.timeHere]}>{time ?? '—'}</Text>
+      <Text style={[s.time, here && s.timeHere]} testID={timeTestID}>{time ?? '—'}</Text>
       <RailColumn first={first} last={last} land={land} />
       <View style={s.body}>
         {onPress
