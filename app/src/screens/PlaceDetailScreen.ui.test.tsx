@@ -478,9 +478,11 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     // baselines meet — 36 beside 30 read as a pill that had slipped.
     expect(inner.paddingTop).toBe(fact.paddingTop);
     expect(inner.paddingBottom).toBe(fact.paddingBottom);
-    expect(inner.minHeight).toBe('0px'); // the base class's; no 36 of its own
-    // What the height gave up, the target takes back: 30 + 7 + 7 = 44.
-    expect(propsWhere((p) => p.testID === 'detail-checkin').hitSlop).toEqual({ top: 7, bottom: 7 });
+    // 44 drawn, both of them — the height the same chips have on Search
+    // and Places — so the pill needs no slop to be a 44pt target.
+    expect(inner.minHeight).toBe('44px');
+    expect(fact.minHeight).toBe('44px');
+    expect(propsWhere((p) => p.testID === 'detail-checkin').hitSlop).toBeUndefined();
     // Its own column, pinned to the top right: the facts wrap under
     // themselves on a three-category place and never push it down.
     const row = pill.parentElement!;

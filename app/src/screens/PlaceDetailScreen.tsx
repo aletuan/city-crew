@@ -673,10 +673,13 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               at rest is not one. *Having* checked in is the state, and
               the state wears the accent solid — see "worn" below.
 
-              The height is the chips' 30, not a control's 36: the first
-              version stood 6pt taller and its word sat 3pt under the
-              chips' baseline, which the eye read as a pill that had
-              slipped. The 44pt target is `hitSlop`'s to keep.
+              The height is the chips', always: the first version stood
+              6pt taller and its word sat 3pt under the chips' baseline,
+              which the eye read as a pill that had slipped. Both were 30
+              with `hitSlop` making the target 44; both are 44 drawn now
+              (`FACT_HEIGHT`), because the same category chip on Search
+              and Places is, and a Cafés pill two sizes across the app
+              read as two different things.
 
               Behind `place_checkin`, off as shipped, so the day it
               misleads it comes down on every phone without a build. */}
@@ -714,7 +717,6 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
               // in", not the noun. Vietnamese has no such split and keeps
               // "Check-in".
               style={[s.checkin, latestVisit && s.checkinOn]}
-              hitSlop={{ top: 7, bottom: 7 }}
               testID={latestVisit ? 'detail-checked-in' : 'detail-checkin'}
             >
               <Ionicons name={latestVisit ? 'checkmark' : 'location'} size={15} color={latestVisit ? colors.accentInk : colors.accent} />
@@ -1276,6 +1278,10 @@ const GLYPH_LIFT = (LABEL_LINE - GLYPH_BOX) / 2;
  *  this app supports; the rest is a tap away. */
 const ADDRESS_LINES = 2;
 
+/** The facts row's height — the category chips and Check in beside them.
+ *  44, the height the same chips have on Search and Places. */
+const FACT_HEIGHT = 44;
+
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
 
@@ -1378,7 +1384,7 @@ const s = StyleSheet.create({
   checkin: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     borderWidth: 1, borderColor: colors.accentLine, borderRadius: radius.pill,
-    paddingHorizontal: 12, paddingVertical: 6,
+    paddingHorizontal: 12, paddingVertical: 6, minHeight: FACT_HEIGHT,
   },
   // Worn: the one fill this row is allowed, because it is a state. The
   // hairline takes the fill's colour so the pill keeps its exact size.
@@ -1410,7 +1416,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 7,
     backgroundColor: colors.surfaceGlass,
     borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
-    paddingHorizontal: 12, paddingVertical: 6,
+    paddingHorizontal: 12, paddingVertical: 6, minHeight: FACT_HEIGHT,
   },
   factText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
 
@@ -1471,7 +1477,8 @@ const s = StyleSheet.create({
   goOnMap: { position: 'absolute', right: 10, bottom: 10 },
   go: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    minHeight: 36, paddingHorizontal: 12,
+    // 44, from 36: it had no slop, so 36 was the whole target.
+    minHeight: 44, paddingHorizontal: 12,
     borderRadius: radius.pill,
     borderWidth: 1, borderColor: colors.borderGlassSoft,
     backgroundColor: colors.surfaceGlass,
