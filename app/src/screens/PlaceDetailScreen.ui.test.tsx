@@ -599,7 +599,7 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     // Green, filled: a different hue from the coral rest state, not only
     // a fill. Coral here read as one more ask on a screen of coral asks.
     const inner = getComputedStyle(pill.firstElementChild!);
-    expect(inner.backgroundColor).toBe('rgb(36, 54, 31)'); // okSoft, dark (coffee)
+    expect(inner.backgroundColor).toBe('rgb(24, 42, 28)'); // okSoft, dark (charcoal)
     // The hairline stays to hold the size, and is transparent: as
     // `okSoft` it resolved to the phone's side of the pair rather than
     // the app's, a charcoal ring round a pale pill (theme.ts, `bgHex`).

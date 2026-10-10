@@ -24,6 +24,7 @@
 // anything. The night reading recolours transit *geometry*, which is the
 // line on the ground, not the badge above it.
 
+import type { Look } from './look';
 import type { Scheme } from './theme';
 
 /** The shape `react-native-maps` takes for `customMapStyle`, declared
@@ -54,13 +55,31 @@ const NO_BADGES: MapStyleRule[] = [
  * how the map reads as a thing set into the screen rather than as the
  * screen itself.
  */
-// The coffee reading (10 Oct 2026): the charcoal style shifted into the
-// page's brown family step for step — land a lift above #271910 as it was
+const NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#1C1A15' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#B7B6B1' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0A0B0A' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#33302A' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#F7F7F5' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#1F2419' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1F2419' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2A2721' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9C978C' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#332F27' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#423B2F' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#C9C3B6' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2A2721' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#101A1F' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#4E6B75' }] },
+];
+
+// The coffee reading (10 Oct 2026), the Coffee look's own: the charcoal
+// style above shifted into the page's brown family step for step — land a lift above #271910 as it was
 // a lift above #0A0B0A, roads a step and two above the land, the labels in
 // the theme's cream steps, the stroke behind them the page itself. Water
 // and parks keep their own hue, cooled and greened off the brown, so the
 // map still says where the river is.
-const NIGHT: MapStyleRule[] = [
+const COFFEE_NIGHT: MapStyleRule[] = [
   { elementType: 'geometry', stylers: [{ color: '#3A2A1F' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#C7AA9A' }] },
   { elementType: 'labels.text.stroke', stylers: [{ color: '#271910' }] },
@@ -80,12 +99,14 @@ const NIGHT: MapStyleRule[] = [
 
 /**
  * The style for a map that carries our own pins, in the reading the
- * reader chose in Profile.
+ * reader chose in Profile. Rose is a light look and takes Google's own
+ * day map, as paper does; Coffee's night is its brown one.
  *
  * Not for `MiniMap`, which is a picker: there the reader is choosing a
  * point on the map rather than reading ours off it, and Google's badges
  * are what they aim at.
  */
-export function mapStyle(scheme: Scheme): MapStyleRule[] {
-  return scheme === 'dark' ? [...NO_BADGES, ...NIGHT] : NO_BADGES;
+export function mapStyle(scheme: Scheme, look: Look = 'standard'): MapStyleRule[] {
+  if (scheme !== 'dark') return NO_BADGES;
+  return [...NO_BADGES, ...(look === 'coffee' ? COFFEE_NIGHT : NIGHT)];
 }

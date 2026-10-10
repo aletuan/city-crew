@@ -18,15 +18,25 @@
 // bar prop that is typed `string`. Those read the scheme from here rather
 // than from `Appearance`, which does not promise to notify listeners of a
 // change the app itself made.
+//
+// THE LOOK (10 Oct 2026). Coffee and Rose are not a ground but a set of
+// colours, and a colour pair cannot hold a third set — `lib/look.ts` has
+// the whole argument. Choosing one keeps the look in `Settings` for the
+// next launch and restarts the JavaScript into it; each pins its ground
+// (Coffee dark, Rose light), so everything scheme-picked agrees with the
+// colours. Light, Dark and Automatic share the standard look and stay the
+// instant switch they were.
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Appearance, Platform } from 'react-native';
+import { Appearance, DevSettings, Platform, Settings } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Updates from 'expo-updates';
+import {
+  canHoldLook, lookOf, needsRestart, parsePref, pinnedScheme, readLook, storeOf, writeLook,
+  type Look, type Pref, type Scheme,
+} from './look';
 
-/** The ground: one of the two the design was drawn for. */
-export type Scheme = 'dark' | 'light';
-/** The setting: the two grounds, or a deferral to the phone. */
-export type Pref = Scheme | 'system';
+export type { Look, Pref, Scheme } from './look';
 
 /** Follow the phone. Someone who never opens the setting gets the app in
  *  the same ground as everything else they are looking at — and the two
@@ -43,13 +53,18 @@ type ThemeCtx = {
   /** What the person chose — what the Appearance sheet ticks. */
   pref: Pref;
   setPref: (p: Pref) => void;
+  /** The look the colours were built in, this run — what `theme.ts` read. */
+  look: Look;
+  /** Whether a look other than the standard one can be kept here at all.
+   *  Off iOS it cannot, and Coffee and Rose are not offered. */
+  looks: boolean;
   /** False until the stored choice has been read once — the app holds its
    *  first frame on this, so a dark-mode user never sees a white flash. */
   ready: boolean;
 };
 
 const Ctx = createContext<ThemeCtx>({
-  scheme: FALLBACK, pref: DEFAULT, setPref: () => {}, ready: true,
+  scheme: FALLBACK, pref: DEFAULT, setPref: () => {}, look: 'standard', looks: false, ready: true,
 });
 
 export const useScheme = () => useContext(Ctx);
@@ -70,33 +85,52 @@ function phoneScheme(): Scheme {
  */
 function apply(pref: Pref) {
   if (Platform.OS !== 'ios') return;
-  Appearance.setColorScheme(pref === 'system' ? 'unspecified' : pref);
+  Appearance.setColorScheme(pinnedScheme(pref) ?? 'unspecified');
 }
 
-/** The stored string, narrowed. Anything unrecognised — including the
- *  absence of a value on a fresh install — means the default. */
-function readPref(v: string | null): Pref {
-  return v === 'light' || v === 'dark' || v === 'system' ? v : DEFAULT;
+/** `Settings` as the look needs it; undefined off iOS. */
+const store = () => storeOf(() => Settings);
+
+/**
+ * Start the JavaScript again, into the look just kept. `reloadAsync` is the
+ * release build's way; a development client refuses it, and there the
+ * packager's reload is the same thing.
+ */
+async function restart() {
+  try {
+    await Updates.reloadAsync();
+  } catch {
+    DevSettings.reload();
+  }
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [pref, setPrefState] = useState<Pref>(DEFAULT);
   const [phone, setPhone] = useState<Scheme>(phoneScheme);
   const [ready, setReady] = useState(false);
+  // Read once, as `theme.ts` read it at import — this module may not
+  // import that one (docs/architecture.md), so it asks the same store.
+  const [look] = useState<Look>(() => readLook(store()));
 
   useEffect(() => {
     let live = true;
     AsyncStorage.getItem(STORE_KEY)
       .then((v) => {
         if (!live) return;
-        const stored = readPref(v);
+        const stored = parsePref(v);
+        // A setting whose look is not the one loaded — the look was lost,
+        // or kept by a build that did not know this one. The look is put
+        // right for the next launch and not restarted into now: a restart
+        // the reader did not ask for, at launch, is one bad read away from
+        // a loop that never draws a frame.
+        if (lookOf(stored) !== look) writeLook(store(), lookOf(stored));
         setPrefState(stored);
         apply(stored);
       })
       .catch(() => apply(DEFAULT))
       .finally(() => { if (live) setReady(true); });
     return () => { live = false; };
-  }, []);
+  }, [look]);
 
   // The phone's own switch. This listener fires for a change made in
   // Settings or by the sunset schedule, not for `setColorScheme` calls the
@@ -110,6 +144,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setPref = useCallback((next: Pref) => {
+    // Another look: kept, then restarted into. Nothing repaints first —
+    // the window pinned to the new ground over the old colours would be a
+    // frame of neither. Where the look cannot be kept, a restart would come
+    // back as it left, so nothing happens at all.
+    if (needsRestart(look, next)) {
+      if (Platform.OS !== 'ios' || !writeLook(store(), lookOf(next))) return;
+      AsyncStorage.setItem(STORE_KEY, next).catch(() => {}).finally(restart);
+      return;
+    }
     setPrefState(next);
     apply(next);
     // Read the phone back rather than trusting the last event: iOS may
@@ -117,13 +160,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // no listener fired for it because the window was not following.
     if (next === 'system') setPhone(phoneScheme());
     AsyncStorage.setItem(STORE_KEY, next).catch(() => {});
-  }, []);
+  }, [look]);
 
-  const scheme: Scheme = pref === 'system' ? phone : pref;
+  const scheme: Scheme = pinnedScheme(pref) ?? phone;
+  // iOS only: Android's `Settings` is a stub that warns and keeps nothing.
+  const looks = Platform.OS === 'ios' && canHoldLook(store());
 
   const value = useMemo<ThemeCtx>(
-    () => ({ scheme, pref, setPref, ready }),
-    [scheme, pref, setPref, ready],
+    () => ({ scheme, pref, setPref, look, looks, ready }),
+    [scheme, pref, setPref, look, looks, ready],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -24,7 +24,7 @@
 // The pill keeps the badge's split personality on purpose: solid coral on
 // charcoal, a pale coral on paper — the reasoning documented on the token
 // holds unchanged now the disc grew into a pill. What did change is
-// *which* badge token, and the ink on it; see PILL_INK_LIGHT.
+// *which* badge token, and the ink on it; see the note above `inkOf`.
 
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
@@ -40,7 +40,7 @@ import { minutesOf, todayISO } from '../lib/day';
 import { tripsToday } from '../lib/trips';
 import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
-import { badgeSolidHex, colors, font, labelScaleCap, radius } from '../theme';
+import { badgeSolidHex, colors, font, labelScaleCap, pillInk, radius, textHex } from '../theme';
 import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
 import PlacesGlyph from './PlacesGlyph';
@@ -64,16 +64,16 @@ import PlacesGlyph from './PlacesGlyph';
  * hue carried far enough down to reach 5.16.
  *
  * Dark needs no such move: #141310 on solid coral is already 6.79.
+ * Rose's pill is its own pale #F0D2CA, under #8E3C4A at 5.10. The values
+ * live in the palettes now (`pillInk` in theme.ts), one per look.
  */
-const PILL_INK_LIGHT = '#A33724';
-const PILL_INK_DARK = '#141310';
 
 /** The ink a glyph and its caption wear: on the pill when selected, at
  *  full strength on the glass when idle (see the glyph's note on why
  *  not a mid grey). It was the same four-way ternary written three
  *  times, which is three places to change two of. */
 const inkOf = (focused: boolean, light: boolean) =>
-  (focused ? (light ? PILL_INK_LIGHT : PILL_INK_DARK) : (light ? '#17150F' : '#F7F7F5'));
+  (focused ? pillInk[light ? 'light' : 'dark'] : textHex[light ? 'light' : 'dark']);
 
 // [inactive, active]. Thin monochrome glyphs when idle; the selected tab
 // takes the solid variant, reversed out of the pill.
@@ -201,7 +201,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // carries it on the pill and on paper, the coral ring on charcoal's
   // idle bar. One mark, wherever it lands.
   const dotInk = {
-    backgroundColor: light ? PILL_INK_LIGHT : PILL_INK_DARK,
+    backgroundColor: pillInk[light ? 'light' : 'dark'],
     // Plain hex, by the app's scheme: `badgeSolid` itself is a `dyn` pair,
     // and on a border that follows the phone, not the app (`bgHex`).
     borderColor: light ? badgeSolidHex.light : badgeSolidHex.dark,

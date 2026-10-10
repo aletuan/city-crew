@@ -16,7 +16,7 @@ import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useI18n } from '../lib/i18n';
 import { useScheme } from '../lib/theme';
-import { colors, display, font, gradAI, labelScaleCap, radius, space, type } from '../theme';
+import { colors, display, font, glass, gradAI, labelScaleCap, radius, space, type } from '../theme';
 
 // ── tab bar geometry ──
 // A floating glass island (see FloatingTabBar), inset from the screen
@@ -846,7 +846,7 @@ export function GlassMaterial() {
   const light = useScheme().scheme === 'light';
   return (
     <BlurView intensity={38} tint={light ? 'light' : 'dark'} style={StyleSheet.absoluteFill}>
-      <View style={{ flex: 1, backgroundColor: light ? 'rgba(250,248,244,0.48)' : 'rgba(39,25,16,0.48)' }} />
+      <View style={{ flex: 1, backgroundColor: glass.veil[light ? 'light' : 'dark'] }} />
     </BlurView>
   );
 }
@@ -867,9 +867,9 @@ export function GlassMaterial() {
  *
  */
 export const glassHalo = (light: boolean) => ({
-  // The dark side is the page's brown, #271910 (charcoal until the coffee
-  // theme): the halo stands in for the ground the glass has thinned.
-  textShadowColor: light ? 'rgba(250,248,244,0.95)' : 'rgba(39,25,16,0.95)',
+  // The look's own ground, per side (`glass` in theme.ts): the halo
+  // stands in for the ground the glass has thinned.
+  textShadowColor: glass.halo[light ? 'light' : 'dark'],
   textShadowOffset: { width: 0, height: 0 },
   textShadowRadius: 3,
 });

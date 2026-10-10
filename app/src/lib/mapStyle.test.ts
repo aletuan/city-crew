@@ -1,4 +1,4 @@
-import { bgHex } from '../theme';
+import { bgHex, PALETTES } from '../theme';
 import { describe, expect, it } from 'vitest';
 import { mapStyle } from './mapStyle';
 
@@ -53,5 +53,19 @@ describe('mapStyle', () => {
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     };
     expect(lum((ground!.stylers[0] as { color: string }).color)).toBeGreaterThan(lum(bgHex.dark));
+    // And the Coffee look's own night, over its own brown page.
+    const brown = mapStyle('dark', 'coffee').find((r) => !r.featureType && r.elementType === 'geometry');
+    expect(lum((brown!.stylers[0] as { color: string }).color)).toBeGreaterThan(lum(PALETTES.coffee.bg));
+  });
+
+  // Each dark look draws its night in its own family: charcoal's greys
+  // under the standard look, the brown under Coffee. Rose is a day look.
+  it('paints each look\u2019s night in its own palette', () => {
+    const ground = (look?: 'standard' | 'coffee' | 'rose') =>
+      (mapStyle('dark', look).find((r) => !r.featureType && r.elementType === 'geometry')!.stylers[0] as { color: string }).color;
+    expect(ground()).toBe('#1C1A15');
+    expect(ground('standard')).toBe('#1C1A15');
+    expect(ground('coffee')).toBe('#3A2A1F');
+    expect(mapStyle('light', 'rose')).toEqual(mapStyle('light'));
   });
 });

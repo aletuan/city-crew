@@ -27,7 +27,7 @@ import { useSave } from '../lib/save';
 import { useI18n } from '../lib/i18n';
 import { classifyLoadFail } from '../lib/loadfail';
 import { LoadFailBanner, LoadFailEmpty } from '../components/loadFail';
-import { colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
+import { accentFade, colors, font, gradAI, onPhoto, radius, space, type } from '../theme';
 import type { Nav } from '../nav';
 
 /** What `renderRightActions` hands back, and what the card animates from. */
@@ -125,7 +125,7 @@ function GuestNotice({ navigation }: { navigation: Nav }) {
 function EmptyCover() {
   return (
     <LinearGradient
-      colors={[colors.accentSoft, 'rgba(255,111,91,0.02)']}
+      colors={[colors.accentSoft, accentFade]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[s.thumbFill, s.thumbEmpty]}
