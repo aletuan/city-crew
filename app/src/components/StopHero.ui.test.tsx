@@ -107,18 +107,20 @@ describe('StopHero', () => {
     expect(page.onLongPress).toBeUndefined();
   });
 
-  // The marks are `PageDots`', in the corner every carousel uses; what is
-  // this band's is the page they follow, clamped to the pages there are.
-  it('marks the pages and follows the swipe, clamped to the pages there are', () => {
+  // The count is `PageCount`'s, in the corner every carousel uses; what is
+  // this band's is the page it follows, clamped to the pages there are.
+  it('counts the pages and follows the swipe, clamped to the pages there are', () => {
     draw([
       photo('https://img/a.jpg'),
       photo('https://img/b.jpg', { sort_order: 1 }),
       photo('https://img/c.jpg', { sort_order: 2 }),
     ]);
-    const marks = () => [...screen.getByTestId('hero-dots').children].map((el) => (el as HTMLElement).className);
-    /** The one mark dressed unlike the others: the page in hand. */
-    const inHand = () => { const m = marks(); return m.findIndex((c) => m.indexOf(c) === m.lastIndexOf(c)); };
-    expect(marks()).toHaveLength(3);
+    /** The page in hand, zero-based, as the count says it. */
+    const inHand = () => {
+      const [n, of] = screen.getByTestId('hero-count').textContent!.split(' / ').map(Number);
+      expect(of).toBe(3);
+      return n - 1;
+    };
     expect(inHand()).toBe(0);
     measure(300);
     swipe(300);
@@ -138,7 +140,7 @@ describe('StopHero', () => {
 
   it('shows no marks for a single photograph, where there is nowhere to swipe to', () => {
     draw([photo('https://img/a.jpg')]);
-    expect(screen.queryByTestId('hero-dots')).toBeNull();
+    expect(screen.queryByTestId('hero-count')).toBeNull();
   });
 
   it('credits the photograph on screen, page by page, when the switch is on', () => {

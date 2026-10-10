@@ -140,7 +140,7 @@ export function totalKm(legs: readonly (Leg | null)[]): number {
 // into all three and into the editor's distance chip, and made to agree
 // by hand in #783, which is how they would have drifted again. They are
 // here now, so "the same line" is a fact about the code (`LegRow` draws
-// it), the way `PageDots` and `rail` already are for their marks.
+// it), the way `PageCount` and `rail` already are for their marks.
 
 /** The glyph a journey wears, by how it is made. */
 export function modeIcon(mode: Mode): 'walk-outline' | 'car-outline' {

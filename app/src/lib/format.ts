@@ -219,14 +219,6 @@ export function splitHours(line: string): [string, string] {
   return i > 0 ? [line.slice(0, i), line.slice(i + 2)] : [line, ''];
 }
 
-/** Indices for the page-dot row: all pages up to 7, else a window sliding
- * with the active page so the strip never gets crowded. */
-export function dotWindow(count: number, active: number, max = 7): number[] {
-  if (count <= max) return Array.from({ length: count }, (_, i) => i);
-  const start = Math.min(Math.max(active - Math.floor(max / 2), 0), count - max);
-  return Array.from({ length: max }, (_, i) => start + i);
-}
-
 /**
  * Google's weekday strings, in short form, per language.
  *

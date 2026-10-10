@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, dotWindow, fmtDuration, fmtMinutes, groupHours, numericDate, openFragment, openLabel, openState, sashLabel, shutLabel, splitHours } from './format';
+import { CLOSING_SOON_MIN, MINUTES_IN_DAY, clockOf, dateline, dayline, fmtDuration, fmtMinutes, groupHours, numericDate, openFragment, openLabel, openState, sashLabel, shutLabel, splitHours } from './format';
 import { instantOn } from './clock';
 import { fmtDistance } from './geo';
 
@@ -90,36 +90,6 @@ describe('splitHours', () => {
 
   it('hands back an unsplittable line whole', () => {
     expect(splitHours('Open 24 hours')).toEqual(['Open 24 hours', '']);
-  });
-});
-
-describe('dotWindow', () => {
-  it('shows every page while they fit', () => {
-    expect(dotWindow(3, 0)).toEqual([0, 1, 2]);
-    expect(dotWindow(7, 3)).toEqual([0, 1, 2, 3, 4, 5, 6]);
-  });
-
-  it('keeps the window the same size once they do not', () => {
-    expect(dotWindow(20, 10)).toHaveLength(7);
-  });
-
-  it('centres on the active page in the middle of a long strip', () => {
-    expect(dotWindow(20, 10)).toEqual([7, 8, 9, 10, 11, 12, 13]);
-  });
-
-  it('pins to the start rather than running off it', () => {
-    expect(dotWindow(20, 0)).toEqual([0, 1, 2, 3, 4, 5, 6]);
-    expect(dotWindow(20, 2)).toEqual([0, 1, 2, 3, 4, 5, 6]);
-  });
-
-  it('pins to the end rather than running off it', () => {
-    expect(dotWindow(20, 19)).toEqual([13, 14, 15, 16, 17, 18, 19]);
-  });
-
-  it('always contains the active page', () => {
-    for (let active = 0; active < 20; active++) {
-      expect(dotWindow(20, active)).toContain(active);
-    }
   });
 });
 

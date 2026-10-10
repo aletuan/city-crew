@@ -146,21 +146,15 @@ describe('StopGallery', () => {
     expect(document.querySelectorAll('[data-testid="gallery"] > div').length).toBe(1);
   });
 
-  // One dot per stop, the one on screen marked.
-  it('dots the pages, and marks the one on screen', () => {
+  // One page per stop, counted: "1 / 2", then "2 / 2" once swiped.
+  it('counts the pages, and follows the one on screen', () => {
     const one = place({ place_photos: [photo('https://img/a.jpg')] } as Partial<Place>);
     render(<Held places={[one, place({ emoji: '🍜' })]} />);
-    const dots = () => [...document.querySelectorAll('[data-testid="gallery"] > div:last-child > div')]
-      .map((d) => d.className);
-    const [on, off] = dots();
-    expect(dots()).toHaveLength(2);
-    // The marked dot is drawn larger than the rest. Read as strings: the
-    // nodes are restyled in place, so a node kept across the swipe would
-    // report its new class.
-    expect(on).not.toBe(off);
+    const count = () => document.querySelector('[data-testid="gallery"] > div:last-child')!.textContent;
+    expect(count()).toBe('1 / 2');
     measure(320);
     swipe(320);
-    expect(dots()).toEqual([off, on]);
+    expect(count()).toBe('2 / 2');
   });
 });
 

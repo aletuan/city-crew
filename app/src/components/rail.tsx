@@ -8,7 +8,7 @@
 // options card's. So this is that rail, lifted out of `PlanOptionsScreen`
 // with its sizes and offsets intact, and the other two screens draw it
 // too. "The same mark" is a fact about the code now rather than a hope
-// about three files, as `PageDots` is for the carousels.
+// about three files, as `PageCount` is for the carousels.
 //
 // ── why the paw ──
 //

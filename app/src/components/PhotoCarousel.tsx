@@ -4,7 +4,7 @@
 // (`PlaceDetailScreen`), the stops of an outing (`StopGallery`), a stop's
 // own pictures on the editor's card (`StopHero`) — and until 3 Oct 2026
 // each wrote the same ScrollView, the same momentum-end arithmetic, the
-// same credit for the page on screen, beside the same `PageDots`. Two of
+// same credit for the page on screen, beside the same page marks. Two of
 // the three clamped the page; the hero did not, and a momentum end
 // reported past the last photograph could index one that was not there.
 // This is the one copy. What a page *is* stays with the caller, as
@@ -14,7 +14,7 @@
 // ── controlled ──
 //
 // The page is the caller's: two of the three screens need it (the trip
-// marks the row its picture is on, the hero prints a counter), and the
+// marks the row its picture is on, the hero names its pages), and the
 // third keeps a state of its own and hands it down. One shape, not two.
 //
 // ── width ──
@@ -27,7 +27,7 @@
 //
 // ── where the marks and the credit sit ──
 //
-// The marks are `PageDots`', in the corner it documents; the inset is
+// The marks are `PageCount`'s "2 / 4", in the corner it documents; the inset is
 // the caller's, since a card's picture sits inside a padded page and the
 // hero's runs to the screen's edge. The credit is bottom left by default
 // — the marks have the right corner — and the hero moves it to the middle
@@ -41,7 +41,7 @@ import {
   ScrollView, StyleSheet, View, type StyleProp, type TextStyle, type ViewStyle,
 } from 'react-native';
 import { onPhoto } from '../theme';
-import PageDots from './PageDots';
+import PageCount from './PageCount';
 import PhotoCredit from './PhotoCredit';
 
 /** The pair that decides a page's shape — spread onto the caller's picture. */
@@ -49,7 +49,7 @@ export type PageSize = { width: number; height: number } | { width: number; aspe
 
 export default function PhotoCarousel<T>({
   pages, page, onPage, renderPage, attributionOf, width, height, aspectRatio,
-  dotsRight, dotsBottom, attrStyle, scrollKey, children, style, testID,
+  countRight, countBottom, attrStyle, scrollKey, children, style, testID,
 }: {
   pages: readonly T[];
   /** The page on screen, zero-based, held by the caller. */
@@ -65,8 +65,8 @@ export default function PhotoCarousel<T>({
   /** One of the two decides the height; `height` wins when both are given. */
   height?: number;
   aspectRatio?: number;
-  dotsRight?: number;
-  dotsBottom?: number;
+  countRight?: number;
+  countBottom?: number;
   /** The credit's whole style, when the default corner is not the one —
    *  it replaces the default rather than merging over it, so a caller
    *  that centres the line does not inherit `left: 12`. */
@@ -107,7 +107,7 @@ export default function PhotoCarousel<T>({
       </ScrollView>
       {children}
       <PhotoCredit name={attributionOf(pages[page])} style={attrStyle ?? s.attr} />
-      <PageDots count={pages.length} page={page} right={dotsRight} bottom={dotsBottom} testID={testID ? `${testID}-dots` : undefined} />
+      <PageCount count={pages.length} page={page} right={countRight} bottom={countBottom} testID={testID ? `${testID}-count` : undefined} />
     </View>
   );
 }
