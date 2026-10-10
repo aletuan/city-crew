@@ -586,6 +586,8 @@ describe('CollectionsScreen — list view', () => {
       const face = screen.getByText(t).parentElement!;
       expect(face.previousElementSibling?.getAttribute('aria-hidden')).toBe('true');
       expect(getComputedStyle(face).position).toBe('absolute');
+      // From the top, so every title starts on the same line of its card.
+      expect(getComputedStyle(face).justifyContent).toBe('flex-start');
     }
     // A one-line title, the only line that could outgrow the ghost: the
     // same clamp class the ghost's own title line wears.
