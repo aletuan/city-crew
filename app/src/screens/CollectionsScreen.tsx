@@ -241,6 +241,43 @@ function CommunityEmpty({ signedIn, onCreate, onExplore }: {
  * when you have just decided the list is missing something — the same
  * moment, and now the same row, as the one under Explore's places.
  */
+/**
+ * The tallest row the reading view can draw, drawn invisibly, so that
+ * every row is that tall.
+ *
+ * On 10 Oct 2026 the owner sent two screenshots of the shelf: measured
+ * off them, a private list with no description ran about 62pt and a public
+ * one with a two-line description and a like count about 121, and the
+ * shelf read as uneven steps. Equal heights cannot be one number in pt: Dynamic Type scales
+ * the type and not the number, and a fixed height that holds the largest
+ * row at the default size clips it at the next one. The ghost is made of
+ * the same styles, so it scales with them, and the row's real content is
+ * laid over it (`cardFace`) instead of beside it.
+ *
+ * Four lines: a one-line title, the meta line, two lines of description
+ * and the likes line, which is the most any row shows. The title drops
+ * to one line for this. A two-line title would be the one thing able to
+ * outgrow the ghost, and reserving a second title line in every row
+ * would spend 22pt on space that few titles fill.
+ *
+ * Rejected: measuring the rows and growing them all to the tallest. The
+ * list is virtualised, so a taller row scrolled into view would re-lay
+ * every row above it while the reader is in the middle of them.
+ */
+function RowGhost() {
+  return (
+    <View style={s.ghost} aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <Text style={s.title} numberOfLines={1}>{' '}</Text>
+      <View style={s.metaRow}>
+        <View style={s.ghostMark} />
+        <Text style={s.meta}>{' '}</Text>
+      </View>
+      <Text style={s.blurb}>{' \n '}</Text>
+      <View style={s.likesRow}><Text style={s.meta}>{' '}</Text></View>
+    </View>
+  );
+}
+
 function NewCollectionRow({ onPress }: { onPress: () => void }) {
   const { t } = useI18n();
   return (
@@ -737,8 +774,11 @@ export default function CollectionsScreen({ navigation, route }: {
                 <Card style={s.card}>
                   <Skeleton style={[s.thumb, { width: coverW }]} />
                   <View style={s.cardText}>
-                    <Skeleton style={{ height: 18, width: '70%', borderRadius: 8 }} />
-                    <Skeleton style={{ height: 13, width: '45%', borderRadius: 7 }} />
+                    <RowGhost />
+                    <View style={s.cardFace}>
+                      <Skeleton style={{ height: 18, width: '70%', borderRadius: 8 }} />
+                      <Skeleton style={{ height: 13, width: '45%', borderRadius: 7 }} />
+                    </View>
                   </View>
                 </Card>
               </View>
@@ -953,157 +993,160 @@ export default function CollectionsScreen({ navigation, route }: {
                             : <EmptyCover />}
                         </View>
                         <View style={s.cardText}>
-                          <Text style={s.title} numberOfLines={2}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
-                          {/* A face and a handle, and no word between
-                              them. This row was the last "by" in the app:
-                              the tile dropped it when the avatar arrived,
-                              and the detail screen never had one. A verb
-                              was never what marked @trang as a person —
-                              the `@` does that, and the face does the
-                              rest. Repeated down a column the word carried
-                              nothing at all, which is what made it visible.
+                          <RowGhost />
+                          <View style={s.cardFace}>
+                            <Text style={s.title} numberOfLines={1}>{t(c.title_en, c.title_vi, c.title_ja)}</Text>
+                            {/* A face and a handle, and no word between
+                                them. This row was the last "by" in the app:
+                                the tile dropped it when the avatar arrived,
+                                and the detail screen never had one. A verb
+                                was never what marked @trang as a person —
+                                the `@` does that, and the face does the
+                                rest. Repeated down a column the word carried
+                                nothing at all, which is what made it visible.
 
-                              The handle leads because the layout leaves no
-                              choice. `Avatar` is a sibling `View` in the
-                              row, not a glyph inside the text, so it can
-                              only sit at the head of the line; with the
-                              count still first the face would be reading
-                              as the count's. Moving the handle up puts
-                              this line in the same order the detail screen
-                              uses, which is the order to be in.
+                                The handle leads because the layout leaves no
+                                choice. `Avatar` is a sibling `View` in the
+                                row, not a glyph inside the text, so it can
+                                only sit at the head of the line; with the
+                                count still first the face would be reading
+                                as the count's. Moving the handle up puts
+                                this line in the same order the detail screen
+                                uses, which is the order to be in.
 
-                              The seat is drawn whether or not there is a
-                              photograph to fill it — `faces` explains why
-                              where it is fetched, and the fetch is already
-                              paid for by the tiles.
+                                The seat is drawn whether or not there is a
+                                photograph to fill it — `faces` explains why
+                                where it is fetched, and the fetch is already
+                                paid for by the tiles.
 
-                              Width is a wash, not a saving: the word gave
-                              back about 26pt and the face spends 23. What
-                              changes is that the line is now facts
-                              separated by a dot, the same grammar the
-                              Yours row has always used, rather than half a
-                              sentence.
+                                Width is a wash, not a saving: the word gave
+                                back about 26pt and the face spends 23. What
+                                changes is that the line is now facts
+                                separated by a dot, the same grammar the
+                                Yours row has always used, rather than half a
+                                sentence.
 
-                              The label is the part that is not decoration.
-                              `Avatar` is `accessible={false}`, so the face
-                              says nothing aloud, and this row has never
-                              carried a label — dropping the word without
-                              one would leave a screen reader saying
-                              "@trang, 5 places" and nothing to mark the
-                              handle as a name. So the sentence survives
-                              where it is still doing work. */}
-                          <View style={s.metaRow}>
-                            <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={18} />
-                            <Text
-                              style={s.meta}
-                              numberOfLines={1}
-                              accessibilityLabel={byline}
-                            >
-                              {c.curator_handle ? `${atHandle(c.curator_handle)}  ·  ` : ''}
-                              {n} {t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
-                            </Text>
+                                The label is the part that is not decoration.
+                                `Avatar` is `accessible={false}`, so the face
+                                says nothing aloud, and this row has never
+                                carried a label — dropping the word without
+                                one would leave a screen reader saying
+                                "@trang, 5 places" and nothing to mark the
+                                handle as a name. So the sentence survives
+                                where it is still doing work. */}
+                            <View style={s.metaRow}>
+                              <Avatar url={c.owner_id ? faces[c.owner_id]?.avatar_url : undefined} size={18} />
+                              <Text
+                                style={s.meta}
+                                numberOfLines={1}
+                                accessibilityLabel={byline}
+                              >
+                                {c.curator_handle ? `${atHandle(c.curator_handle)}  ·  ` : ''}
+                                {n} {t(n === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}
+                              </Text>
+                            </View>
+                            {/* The sentence the curator wrote, which was
+                                the one thing about this list you could
+                                search for and not read.
+                                `collectionHaystack` has always folded
+                                `desc_*` into what a query matches, so the
+                                shelf would hand you a list on the strength
+                                of a line it never showed you.
+
+                                It earns the height here and nowhere else.
+                                The tiles are the looking mode and #430 spent
+                                that argument taking text off them; this is
+                                the reading mode, and a reading mode that
+                                omits the author's own description of the
+                                list is the grid with a smaller photograph.
+                                What made it urgent is that the shelf has
+                                changed under us: the desk's lists described
+                                themselves in their titles — "Rooftops with a
+                                view", "Cafés worth the detour" — and the
+                                lists people make are called "Family",
+                                "Study", "Dating". Those titles separate
+                                nothing. The sentence is the only thing that
+                                does.
+
+                                Two lines, because the column is 176pt wide
+                                on a 393pt phone — cover, chevron, and two
+                                card paddings take the rest — which is about
+                                23 characters a line, and the descriptions
+                                average 53. So two lines hold most of the
+                                typical one and clamp the long ones; one line
+                                would cut the average in half, and three
+                                would spend 20pt more on the tail of a
+                                minority. It costs the row about 45pt either
+                                way, roughly a fifth of a screenful, which is
+                                the trade this view exists to make. */}
+                            {blurb ? (
+                              <Text style={s.blurb} numberOfLines={2}>{blurb}</Text>
+                            ) : null}
+                            {/* The heart the tile wears, wearing it for the
+                                same reasons. On a public list somebody else
+                                made, this glyph is your own answer and the
+                                way you change it — the tile has always known
+                                that, and this row drew a tally instead:
+                                always filled, always coral, on every row at
+                                once. So a reader who had liked two lists saw
+                                six that claimed they had liked all six.
+
+                                `accentFaint` was picked to keep the tally
+                                quiet, and it does keep it quiet — on
+                                charcoal, where it resolves to #904035 under
+                                an accent of #FF6F5B. On paper the same token
+                                resolves to #D27161 under an accent of
+                                #C4402C, and a dimmed coral is just coral.
+                                The lesson is in which axis was used: the
+                                split has to be **hue**, not weight. Grey is
+                                a count; coral is you. Weight does not
+                                survive a change of theme.
+
+                                None of the rest is new either. The glyph
+                                pair, the two colours and the 15pt are what
+                                `CollectionDetailScreen` already draws for
+                                this exact fact, down to the count's gate —
+                                of the three places that show a like, this
+                                row was the only one not drawing it. 15
+                                rather than the tally's 13 because an outline
+                                heart that small spends its ink on a hairline
+                                and reads as a smudge, and because 15 is what
+                                a 15pt `meta` line is tuned for. `hitSlop`
+                                and no haptic of its own come from the tile:
+                                they are what let a button sit inside a row
+                                that is itself the target.
+
+                                The heart draws at any count. It is a control
+                                now, and the list nobody has liked yet is
+                                precisely the one that needs one. Only the
+                                number keeps the old rule. */}
+                            {c.id && c.is_public ? (
+                              <PressableScale
+                                containerStyle={s.likesWrap}
+                                style={s.likesRow}
+                                scaleTo={0.82}
+                                haptic="none"
+                                hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}
+                                onPress={() => onHeart(c)}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected: my }}
+                                accessibilityLabel={my
+                                  ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
+                                  : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
+                              >
+                                <Ionicons
+                                  name={my ? 'heart' : 'heart-outline'}
+                                  size={15}
+                                  color={my ? colors.accent : colors.textTertiary}
+                                />
+                                {likesWorthShowing(likes[c.slug]) && (
+                                  <Text style={s.meta}>
+                                    {likes[c.slug]} {t(likes[c.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
+                                  </Text>
+                                )}
+                              </PressableScale>
+                            ) : null}
                           </View>
-                          {/* The sentence the curator wrote, which was
-                              the one thing about this list you could
-                              search for and not read.
-                              `collectionHaystack` has always folded
-                              `desc_*` into what a query matches, so the
-                              shelf would hand you a list on the strength
-                              of a line it never showed you.
-
-                              It earns the height here and nowhere else.
-                              The tiles are the looking mode and #430 spent
-                              that argument taking text off them; this is
-                              the reading mode, and a reading mode that
-                              omits the author's own description of the
-                              list is the grid with a smaller photograph.
-                              What made it urgent is that the shelf has
-                              changed under us: the desk's lists described
-                              themselves in their titles — "Rooftops with a
-                              view", "Cafés worth the detour" — and the
-                              lists people make are called "Family",
-                              "Study", "Dating". Those titles separate
-                              nothing. The sentence is the only thing that
-                              does.
-
-                              Two lines, because the column is 176pt wide
-                              on a 393pt phone — cover, chevron, and two
-                              card paddings take the rest — which is about
-                              23 characters a line, and the descriptions
-                              average 53. So two lines hold most of the
-                              typical one and clamp the long ones; one line
-                              would cut the average in half, and three
-                              would spend 20pt more on the tail of a
-                              minority. It costs the row about 45pt either
-                              way, roughly a fifth of a screenful, which is
-                              the trade this view exists to make. */}
-                          {blurb ? (
-                            <Text style={s.blurb} numberOfLines={2}>{blurb}</Text>
-                          ) : null}
-                          {/* The heart the tile wears, wearing it for the
-                              same reasons. On a public list somebody else
-                              made, this glyph is your own answer and the
-                              way you change it — the tile has always known
-                              that, and this row drew a tally instead:
-                              always filled, always coral, on every row at
-                              once. So a reader who had liked two lists saw
-                              six that claimed they had liked all six.
-
-                              `accentFaint` was picked to keep the tally
-                              quiet, and it does keep it quiet — on
-                              charcoal, where it resolves to #904035 under
-                              an accent of #FF6F5B. On paper the same token
-                              resolves to #D27161 under an accent of
-                              #C4402C, and a dimmed coral is just coral.
-                              The lesson is in which axis was used: the
-                              split has to be **hue**, not weight. Grey is
-                              a count; coral is you. Weight does not
-                              survive a change of theme.
-
-                              None of the rest is new either. The glyph
-                              pair, the two colours and the 15pt are what
-                              `CollectionDetailScreen` already draws for
-                              this exact fact, down to the count's gate —
-                              of the three places that show a like, this
-                              row was the only one not drawing it. 15
-                              rather than the tally's 13 because an outline
-                              heart that small spends its ink on a hairline
-                              and reads as a smudge, and because 15 is what
-                              a 15pt `meta` line is tuned for. `hitSlop`
-                              and no haptic of its own come from the tile:
-                              they are what let a button sit inside a row
-                              that is itself the target.
-
-                              The heart draws at any count. It is a control
-                              now, and the list nobody has liked yet is
-                              precisely the one that needs one. Only the
-                              number keeps the old rule. */}
-                          {c.id && c.is_public ? (
-                            <PressableScale
-                              containerStyle={s.likesWrap}
-                              style={s.likesRow}
-                              scaleTo={0.82}
-                              haptic="none"
-                              hitSlop={{ top: 10, bottom: 10, left: 12, right: 16 }}
-                              onPress={() => onHeart(c)}
-                              accessibilityRole="button"
-                              accessibilityState={{ selected: my }}
-                              accessibilityLabel={my
-                                ? t('Unlike this collection', 'Bỏ thích bộ sưu tập này', 'いいねを取り消す')
-                                : t('Like this collection', 'Thích bộ sưu tập này', 'このコレクションにいいね')}
-                            >
-                              <Ionicons
-                                name={my ? 'heart' : 'heart-outline'}
-                                size={15}
-                                color={my ? colors.accent : colors.textTertiary}
-                              />
-                              {likesWorthShowing(likes[c.slug]) && (
-                                <Text style={s.meta}>
-                                  {likes[c.slug]} {t(likes[c.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
-                                </Text>
-                              )}
-                            </PressableScale>
-                          ) : null}
                         </View>
                       </Card>
                     </PressableScale>
@@ -1145,109 +1188,112 @@ export default function CollectionsScreen({ navigation, route }: {
                         : <EmptyCover />}
                     </Animated.View>
                     <View style={s.cardText}>
-                      <Text style={s.title} numberOfLines={open ? 1 : 2}>{t(own.title_en, own.title_vi, own.title_ja)}</Text>
-                      <View style={s.metaRow}>
-                        {/* The padlock says whose it is without spending a
-                            word on it. It used to be the only answer,
-                            because every owned list was private; now the
-                            glyph carries which of the two it is, and the
-                            detail screen uses the same pair for the same
-                            fact. */}
-                        <Ionicons
-                          name={own.is_public ? 'globe-outline' : 'lock-closed-outline'}
-                          size={13}
-                          color={own.is_public ? colors.ok : colors.textTertiary}
-                        />
-                        <Text style={s.meta} numberOfLines={1}>
-                          {/* "0 places" reads like a broken count; an empty
-                              list you just made deserves a sentence. */}
-                          {count === 0
-                            ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
-                            : `${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`}
-                          {`  ·  ${own.is_public
-                            ? t('Public', 'Công khai', '公開')
-                            : t('Private', 'Riêng tư', '非公開')}`}
-                        </Text>
-                      </View>
-                      {/* The same sentence, for the same reason, because
-                          this is the same view. The argument for showing
-                          it is weakest on your own lists — you wrote them
-                          — but a reading mode that describes other
-                          people's lists and not yours is two designs
-                          wearing one toggle.
-
-                          Gone while the row is open, which is the one
-                          difference. Open, the card is pinned to about a
-                          third of its width and the text column falls
-                          from 176pt to roughly 36: the title already
-                          drops to a single line rather than wrap into the
-                          space the meta needs, and a two-line sentence
-                          there would shred into four characters a line.
-                          The note above the card says what the open row
-                          is for — a name and a count — and a description
-                          is exactly what that excludes. */}
-                      {!open && ownBlurb ? (
-                        <Text style={s.blurb} numberOfLines={2}>{ownBlurb}</Text>
-                      ) : null}
-                      {/* How many people liked it — the answer to "is
-                          anybody reading this list", which the shelf could
-                          not give before and which a curator has no other
-                          way to find out.
-
-                          Its own line rather than the end of the meta one.
-                          On the meta line it was the fourth clause of a
-                          sentence that already reads "2 places · Public ·
-                          by @minh", competing with the byline for the last
-                          few points of width — and it is not the same kind
-                          of fact as the others. Those describe what the
-                          list *is*; this one is what other people did
-                          about it. A line of its own is also what buys the
-                          word "likes", so the number is read rather than
-                          decoded.
-
-                          Absent counts and zero both draw nothing —
-                          `likesWorthShowing` explains why, and a private
-                          list is always the absent case: the counts come
-                          from a function that returns public rows only,
-                          because a private list is one nobody may like. So
-                          the line never appears under a padlock, and never
-                          claims that a list nobody *could* like is a list
-                          nobody *did*. */}
-                      {likesWorthShowing(likes[own.slug]) && (
-                        <View style={s.likesRow}>
-                          {/* A count, and grey because of it. Your own
-                              tile wears the neutral mark and somebody
-                              else's wears coral, and that difference in
-                              hue is the whole of how a tally is told from
-                              a state — here, on the tiles, and on the
-                              community row beside this one.
-
-                              This heart was `accentFaint`: the same coral,
-                              dimmed, on the argument that dimness reads as
-                              warmth rather than as a second thing to read.
-                              It does, on charcoal. On paper the token
-                              resolves to #D27161 under an accent of
-                              #C4402C, and a dimmed coral is just coral —
-                              so the distinction lived only in the dark
-                              theme and said "you liked your own list" in
-                              the light one. Grey says nothing of the kind
-                              in either.
-
-                              Filled and 13pt, both unchanged: an outline
-                              heart that small spends most of its ink on a
-                              hairline and reads as a smudge — and the
-                              outline now belongs to the community row,
-                              where it means "not yet". Your own list
-                              cannot mean that. The database refuses a
-                              curator's like on their own list, so there is
-                              no state here to draw: a number, and a mark
-                              standing in for its word. */}
-                          <Ionicons name="heart" size={13} color={colors.textTertiary} />
-                          <Text style={s.meta}>
-                            {likes[own.slug]} {t(likes[own.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
+                      <RowGhost />
+                      <View style={s.cardFace}>
+                        <Text style={s.title} numberOfLines={1}>{t(own.title_en, own.title_vi, own.title_ja)}</Text>
+                        <View style={s.metaRow}>
+                          {/* The padlock says whose it is without spending a
+                              word on it. It used to be the only answer,
+                              because every owned list was private; now the
+                              glyph carries which of the two it is, and the
+                              detail screen uses the same pair for the same
+                              fact. */}
+                          <Ionicons
+                            name={own.is_public ? 'globe-outline' : 'lock-closed-outline'}
+                            size={13}
+                            color={own.is_public ? colors.ok : colors.textTertiary}
+                          />
+                          <Text style={s.meta} numberOfLines={1}>
+                            {/* "0 places" reads like a broken count; an empty
+                                list you just made deserves a sentence. */}
+                            {count === 0
+                              ? t('No places yet', 'Chưa có địa điểm', 'スポットはまだありません')
+                              : `${count} ${t(count === 1 ? 'place' : 'places', 'địa điểm', 'スポット')}`}
+                            {`  ·  ${own.is_public
+                              ? t('Public', 'Công khai', '公開')
+                              : t('Private', 'Riêng tư', '非公開')}`}
                           </Text>
                         </View>
-                      )}
+                        {/* The same sentence, for the same reason, because
+                            this is the same view. The argument for showing
+                            it is weakest on your own lists — you wrote them
+                            — but a reading mode that describes other
+                            people's lists and not yours is two designs
+                            wearing one toggle.
+
+                            Gone while the row is open, which is the one
+                            difference. Open, the card is pinned to about a
+                            third of its width and the text column falls
+                            from 176pt to roughly 36: the title already
+                            drops to a single line rather than wrap into the
+                            space the meta needs, and a two-line sentence
+                            there would shred into four characters a line.
+                            The note above the card says what the open row
+                            is for — a name and a count — and a description
+                            is exactly what that excludes. */}
+                        {!open && ownBlurb ? (
+                          <Text style={s.blurb} numberOfLines={2}>{ownBlurb}</Text>
+                        ) : null}
+                        {/* How many people liked it — the answer to "is
+                            anybody reading this list", which the shelf could
+                            not give before and which a curator has no other
+                            way to find out.
+
+                            Its own line rather than the end of the meta one.
+                            On the meta line it was the fourth clause of a
+                            sentence that already reads "2 places · Public ·
+                            by @minh", competing with the byline for the last
+                            few points of width — and it is not the same kind
+                            of fact as the others. Those describe what the
+                            list *is*; this one is what other people did
+                            about it. A line of its own is also what buys the
+                            word "likes", so the number is read rather than
+                            decoded.
+
+                            Absent counts and zero both draw nothing —
+                            `likesWorthShowing` explains why, and a private
+                            list is always the absent case: the counts come
+                            from a function that returns public rows only,
+                            because a private list is one nobody may like. So
+                            the line never appears under a padlock, and never
+                            claims that a list nobody *could* like is a list
+                            nobody *did*. */}
+                        {likesWorthShowing(likes[own.slug]) && (
+                          <View style={s.likesRow}>
+                            {/* A count, and grey because of it. Your own
+                                tile wears the neutral mark and somebody
+                                else's wears coral, and that difference in
+                                hue is the whole of how a tally is told from
+                                a state — here, on the tiles, and on the
+                                community row beside this one.
+
+                                This heart was `accentFaint`: the same coral,
+                                dimmed, on the argument that dimness reads as
+                                warmth rather than as a second thing to read.
+                                It does, on charcoal. On paper the token
+                                resolves to #D27161 under an accent of
+                                #C4402C, and a dimmed coral is just coral —
+                                so the distinction lived only in the dark
+                                theme and said "you liked your own list" in
+                                the light one. Grey says nothing of the kind
+                                in either.
+
+                                Filled and 13pt, both unchanged: an outline
+                                heart that small spends most of its ink on a
+                                hairline and reads as a smudge — and the
+                                outline now belongs to the community row,
+                                where it means "not yet". Your own list
+                                cannot mean that. The database refuses a
+                                curator's like on their own list, so there is
+                                no state here to draw: a number, and a mark
+                                standing in for its word. */}
+                            <Ionicons name="heart" size={13} color={colors.textTertiary} />
+                            <Text style={s.meta}>
+                              {likes[own.slug]} {t(likes[own.slug] === 1 ? 'like' : 'likes', 'lượt thích', 'いいね')}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   </Card>
                 </PressableScale>
@@ -1462,6 +1508,19 @@ const s = StyleSheet.create({
     flex: 1, gap: 5,
     paddingHorizontal: space.cardPadding, paddingVertical: 13,
   },
+  // What the row shows, laid over the ghost that sized it (`RowGhost`),
+  // with the same padding and gap so a full row lands line for line on
+  // the ghost's lines. Centred, because a row with less to say than the
+  // tallest — no description, no likes — would otherwise hang its text
+  // from the top of a card with a band of nothing under it.
+  cardFace: {
+    ...StyleSheet.absoluteFill, gap: 5, justifyContent: 'center',
+    paddingHorizontal: space.cardPadding, paddingVertical: 13,
+  },
+  ghost: { opacity: 0, gap: 5 },
+  // The face and the hearts are what make a meta line taller than its
+  // text alone; the ghost's stand-in is the larger of the two, the face.
+  ghostMark: { width: 18, height: 18 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   title: { color: colors.text, ...type.cardTitle },
   // `flexShrink: 1`: in `metaRow` this sits beside an 18pt face or a

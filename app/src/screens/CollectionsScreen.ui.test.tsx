@@ -556,6 +556,44 @@ describe('CollectionsScreen — list view', () => {
     expect(icons('bookmark-outline')).toBeGreaterThanOrEqual(2); // tab glyph + empty cover
   });
 
+  // One height for every row, whatever it has to say (the owner's two
+  // screenshots, 10 Oct 2026: 62pt beside 121). jsdom lays nothing out, so
+  // what is held here is the mechanism: every row carries the same hidden
+  // ghost, the tallest row there is, and draws its own text over it rather
+  // than beside it, so nothing the row says can make it taller.
+  it('sizes every row by the same hidden ghost, with its own text laid over it', async () => {
+    await rows();
+    state.mine.data = [
+      col('bare', ['a'], { owner_id: 'u1', is_public: false }),
+      col('full', ['a', 'b'], { owner_id: 'u1', desc_en: 'A sentence long enough to wrap onto a second line' }),
+    ];
+    state.likes = { full: 3 };
+    show();
+    await screen.findByText('A sentence long enough to wrap onto a second line');
+    const column = (title: string) => screen.getByText(title).parentElement!.parentElement!;
+    const ghosts = ['List bare', 'List full'].map((t) => {
+      const ghost = column(t).firstElementChild as HTMLElement;
+      expect(ghost.getAttribute('aria-hidden')).toBe('true');
+      expect(ghost.textContent!.trim()).toBe('');
+      return ghost;
+    });
+    expect(ghosts[0].innerHTML).toBe(ghosts[1].innerHTML);
+    // Four lines: title, meta, two of description, likes.
+    expect(ghosts[0].children).toHaveLength(4);
+    expect(ghosts[0].children[2].textContent).toBe(' \n ');
+    // The face is the ghost's sibling and covers it.
+    for (const t of ['List bare', 'List full']) {
+      const face = screen.getByText(t).parentElement!;
+      expect(face.previousElementSibling?.getAttribute('aria-hidden')).toBe('true');
+      expect(getComputedStyle(face).position).toBe('absolute');
+    }
+    // A one-line title, the only line that could outgrow the ghost: the
+    // same clamp class the ghost's own title line wears.
+    const ghostTitle = ghosts[0].firstElementChild!.className;
+    expect(screen.getByText('List bare').className).toBe(ghostTitle);
+    expect(screen.getByText('List full').className).toBe(ghostTitle);
+  });
+
   it('opening the swipe drops the description; closing brings it back', async () => {
     await rows();
     state.mine.data = [col('mine1', ['a'], { owner_id: 'u1', desc_en: 'Rooftops' })];
@@ -665,6 +703,27 @@ describe('CollectionsScreen — list view', () => {
     await act(async () => pressInAlert('Delete'));
     expect(alert).toHaveBeenLastCalledWith('Could not delete', 'forbidden');
     expect(spies.mineReload).not.toHaveBeenCalled();
+  });
+
+  // The same ghost under somebody else's lists, so the two tabs keep one
+  // row height between them as well as within each.
+  it('sizes a community row by the same ghost as your own', async () => {
+    await rows();
+    state.cols.data = [
+      col('theirs', ['a', 'b'], { curator_handle: 'trang', desc_en: 'Coffee crawl' }),
+      col('solo', ['a']),
+    ];
+    show({ tab: 'community' });
+    await screen.findByText('Coffee crawl');
+    const ghosts = ['List theirs', 'List solo'].map((t) => {
+      const face = screen.getByText(t).parentElement!;
+      expect(getComputedStyle(face).position).toBe('absolute');
+      return face.previousElementSibling as HTMLElement;
+    });
+    expect(ghosts[0].getAttribute('aria-hidden')).toBe('true');
+    expect(ghosts[0].innerHTML).toBe(ghosts[1].innerHTML);
+    expect(ghosts[0].children).toHaveLength(4);
+    expect(screen.getByText('List theirs').className).toBe(ghosts[0].firstElementChild!.className);
   });
 
   it('a community row names its curator for a screen reader and draws the heart', async () => {
