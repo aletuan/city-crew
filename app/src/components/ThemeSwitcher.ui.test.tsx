@@ -126,6 +126,9 @@ describe('the two looks', () => {
 
   it('offers Coffee and Rose after the grounds, with their own marks', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
+    // More than light and dark now, so the sheet is a theme, not an appearance.
+    expect(screen.getByText('Theme')).toBeTruthy();
+    expect(screen.queryByText('Appearance')).toBeNull();
     const rows = [...document.querySelectorAll('[role="radio"]')].map((r) => r.textContent);
     expect(rows.map((r) => r!.replace(/(Following|Restarts).*/, ''))).toEqual(['Automatic', 'Dark', 'Light', 'Coffee', 'Rose']);
     expect(document.querySelector('[data-icon="cafe-outline"]')).toBeTruthy();
@@ -146,7 +149,7 @@ describe('the two looks', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
     fireEvent.click(screen.getByText('Coffee'));
     expect(alert()).toHaveBeenCalledTimes(1);
-    expect(alert().mock.calls[0][0]).toBe('Restart to change the look?');
+    expect(alert().mock.calls[0][0]).toBe('Restart to change the theme?');
     expect(setPref).not.toHaveBeenCalled();
     confirm('Cancel');
     expect(setPref).not.toHaveBeenCalled();

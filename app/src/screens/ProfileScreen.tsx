@@ -256,7 +256,7 @@ function SettingsCard() {
             wear their own mark (`schemeIcon`). */}
         <SettingRow
           icon={schemeIcon(pref, scheme)}
-          label={t('Appearance', 'Giao diện', '外観')}
+          label={t('Theme', 'Theme', 'テーマ')}
           value={schemeLabel(pref, t)}
           onPress={() => setThemeOpen(true)}
         />

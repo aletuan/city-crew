@@ -730,12 +730,21 @@ describe('settings card', () => {
     state.pref = pref;
     state.scheme = scheme;
     draw();
-    const row = screen.getByText('Appearance').parentElement!;
+    const row = screen.getByText('Theme').parentElement!;
     expect(row.textContent).toContain(label);
     expect(row.querySelector(`[data-icon="${glyph}"]`)).toBeTruthy();
-    press('Appearance');
+    press('Theme');
     fireEvent.click(screen.getByText('close-theme'));
     expect(screen.queryByText('close-theme')).toBeNull();
+  });
+
+  // "Theme" in Vietnamese too — the owner's word, kept as the loanword —
+  // now that the choice is more than light and dark.
+  it('names the row Theme, in Vietnamese as in English', () => {
+    state.lang = 'vi';
+    draw();
+    expect(screen.getByText('Theme')).toBeTruthy();
+    expect(screen.queryByText('Giao diện')).toBeNull();
   });
 
   it('heads the members settings "Preferences" and the app card "App"', () => {
@@ -814,7 +823,7 @@ describe('show tips again', () => {
   it.each([['signed in', true], ['a guest', false]])('sits last in Preferences, after Appearance, %s', (_who, signedIn) => {
     if (!signedIn) state.session = null;
     draw();
-    const appearance = button('Appearance');
+    const appearance = button('Theme');
     const again = button('Show tips again');
     expect(again.parentElement).toBe(appearance.parentElement);
     expect(appearance.compareDocumentPosition(again) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

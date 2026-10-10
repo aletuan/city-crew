@@ -1,6 +1,10 @@
-// Appearance picker — the two grounds the app can stand on, opened from
+// Theme picker — the grounds and looks the app can wear, opened from
 // Profile's settings card. Same sheet grammar as the city and language
 // switchers, because it is the same kind of choice.
+//
+// "Theme", not "Appearance", since 10 Oct 2026, when it stopped being only
+// light or dark — the owner's word for it, kept as the English loanword in
+// Vietnamese rather than "Giao diện", and テーマ in Japanese.
 //
 // Three rows, and Auto is the first of them because it is the default.
 // This sheet once carried a note saying the opposite — two rows, no
@@ -87,7 +91,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
   const choose = (id: Pref) => {
     if (!needsRestart(look, id)) { setPref(id); return; }
     Alert.alert(
-      t('Restart to change the look?', 'Khởi động lại để đổi giao diện?', '外観を変えるために再起動しますか？'),
+      t('Restart to change the theme?', 'Khởi động lại để đổi theme?', 'テーマを変えるために再起動しますか？'),
       t(
         'City Crew will close and open again in the new colours.',
         'City Crew sẽ đóng và mở lại với màu mới.',
@@ -121,7 +125,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
         }]}
       >
         <View style={s.handle} />
-        <Text style={s.title}>{t('Appearance', 'Giao diện', '外観')}</Text>
+        <Text style={s.title}>{t('Theme', 'Theme', 'テーマ')}</Text>
         {options.map((o, i) => {
           const active = o.id === pref;
           return (
