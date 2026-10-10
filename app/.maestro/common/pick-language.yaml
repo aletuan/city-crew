@@ -1,0 +1,29 @@
+# Reusable: Profile → Language → the one in LANG_ID (en, vi or ja).
+# Ends on Profile with the tab bar showing, so the caller can read it.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "tab-profile"
+- scrollUntilVisible:
+    element:
+      id: "profile-language"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn:
+    id: "profile-language"
+- extendedWaitUntil:
+    visible:
+      id: "lang-${LANG_ID}"
+    timeout: 5000
+- tapOn:
+    id: "lang-${LANG_ID}"
+- waitForAnimationToEnd:
+    timeout: 5000
+# Scrolling down ducked the tab bar, and the tab bar is what the caller
+# reads next.
+- scrollUntilVisible:
+    element:
+      id: "tab-explore"
+    direction: UP
+    timeout: 15000

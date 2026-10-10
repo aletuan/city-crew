@@ -49,13 +49,17 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `08-explore-filter` | guest | 50 s |
 | `09-collections-browse` | guest | 42 s |
 | `10-check-in` | test account | 1 m 9 s |
-| `11-collection-crud` | test account | 2 m 19 s |
+| `11-collection-crud` | test account | 2 m |
+| `12-language` | guest | 1 m 43 s |
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
-**Kết quả gần nhất:** 09/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **11/11
-passed trong 12 m 11 s**, với `10-check-in` vừa vào `config.yaml`. Lượt
-trước cùng ngày: 10/10 trong 11 m 29 s, khi `09-collections-browse` và
-`11-collection-crud` vào. Trước khi vào, mỗi flow đã xanh hai lượt liên tiếp
+**Kết quả gần nhất:** 10/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **12/12
+passed trong 13 m 38 s**, với `12-language` vừa vào `config.yaml` (ở cuối,
+vì ngôn ngữ được lưu trên máy). Trước khi vào, nó xanh hai lượt liên tiếp
+khi chạy riêng, và đỏ đúng chỗ khi bộ chọn ngôn ngữ bị làm hỏng cố ý (chạm
+mà không đổi ngôn ngữ → `"Địa điểm" is visible` false). Các lượt trước:
+11/11 trong 12 m 11 s (09/10, `10-check-in` vào); 10/10 trong 11 m 29 s
+(09/10, `09` và `11` vào). Trước khi vào, mỗi flow đã xanh hai lượt liên tiếp
 khi chạy riêng (lượt hai của `11` chứng minh phần dọn dẹp). Một lượt `11`
 đã hỏng ở bước đăng nhập với "No connection" — mạng giữa simulator và
 Supabase, chưa tới phần collection; lượt sau xanh.
@@ -67,8 +71,8 @@ nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái 
 
 **Ngân sách: dưới 20 phút** cho cả suite (quyết định của chủ dự án,
 09/10). Thời gian không phải ràng buộc chặt: một flow đáng giá vẫn vào dù
-làm suite dài thêm một hai phút. 11 flow hiện chạy 12 m 11 s, còn khoảng
-7 phút cho các flow tiếp theo.
+làm suite dài thêm một hai phút. 12 flow hiện chạy 13 m 38 s, còn khoảng
+6 phút cho các flow tiếp theo.
 
 `10-check-in` được thử cả nhánh dọn dẹp: một flow tạm check-in rồi dừng, `10`
 dọn lượt ghé đó rồi chạy hết (1 m 5 s); lượt sau từ trạng thái sạch (51 s);
@@ -115,7 +119,7 @@ flowchart TB
   MAP[Explore map + pin ảnh]:::gap
   COL[Collections tab + detail]:::ok
   CC[Tạo/sửa/xoá collection]:::ok
-  LANG[Đổi ngôn ngữ VI/JA]:::gap
+  LANG[Đổi ngôn ngữ VI/JA]:::ok
   TD[Trip detail: sửa, mời bạn]:::gap
   FP[Quên mật khẩu]:::gap
   LG[Local guide: ảnh, cover]:::gap
@@ -145,7 +149,7 @@ sách toàn suite < 20 phút (xem mục 2).
 | Flow mới | Đăng nhập | Kiểm | testID cần thêm |
 |---|---|---|---|
 | `11-collection-crud` ✅ xong 09/10 | test account | Tạo collection "Maestro CRUD", đổi tên, thêm 1 place, xoá place, xoá collection; dọn "Maestro CRUD" còn sót trước khi chạy | `collection-more`, `collection-rename`, `collection-delete`, `collection-row-<i>` |
-| `12-language` | guest | Profile → ngôn ngữ → Tiếng Việt: tab bar đổi nhãn ("Khám phá"); mở Explore và place detail không crash; → 日本語; trả về English. Đây là chỗ duy nhất được assert theo label — chính label là thứ đang kiểm | `profile-language`, `lang-<en\|vi\|ja>` |
+| `12-language` ✅ xong 10/10 | guest | Profile → ngôn ngữ → Tiếng Việt: tab bar đổi nhãn ("Khám phá"); mở Explore và place detail không crash; → 日本語; trả về English. Đây là chỗ duy nhất được assert theo label — chính label là thứ đang kiểm | `profile-language`, `lang-<en\|vi\|ja>` |
 | `13-trip-edit` | test account | Lưu một trip (dùng lại phần đầu của 05), mở detail, đổi giờ/đổi thứ tự điểm, lưu, kiểm thay đổi còn sau cold start, xoá | `trip-edit`, `trip-stop-<i>`, `trip-save` |
 | `14-forgot-password` | guest | Sign in → quên mật khẩu → nhập email test → thấy màn xác nhận (không đọc mail) | `signin-forgot`, `forgot-email`, `forgot-submit`, `forgot-sent` |
 
