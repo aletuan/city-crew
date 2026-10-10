@@ -205,7 +205,9 @@ function ScrollNudge({ visible, onSearch, onAdd }: {
             {t('Search, or add your own', 'Tìm nhanh hoặc tự thêm', '検索、または自分で追加')}
           </Text>
         </View>
-        <AddPill compact label={t('Add', 'Thêm', '追加')} onPress={onAdd} />
+        {/* `tall`: the 44 every other control has, and the same "Add" as
+            Gallery's header — see `AddPill`. */}
+        <AddPill tall label={t('Add', 'Thêm', '追加')} onPress={onAdd} />
       </PressableScale>
     </Animated.View>
   );

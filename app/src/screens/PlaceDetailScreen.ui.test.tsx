@@ -25,6 +25,7 @@ import { pinImage } from '../components/mapPins';
 import type { Place } from '../lib/data';
 import type { Nav, RootRoute } from '../nav';
 import { colors, onPhoto } from '../theme';
+import { CATEGORIES } from '../lib/categories';
 import { clockOf } from '../lib/format';
 
 // jsdom lays nothing out, so the document is zero pixels wide — and the hero
@@ -236,8 +237,7 @@ const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<strin
 };
 /** The carousel's photographs, in the order a swipe reaches them. */
 const heroPhotos = () => [...document.querySelectorAll('img')].map((i) => i.getAttribute('src'));
-/** Which page the hero's dots say is on screen — the one mark of position
- *  the hero has left, now that the counter is gone. */
+/** Which page the hero's count says is on screen, read off its props. */
 const heroPage = () => {
   const dots = propsWhere((p) => typeof p.count === 'number' && typeof p.page === 'number' && 'bottom' in p);
   return { page: dots.page as unknown as number, count: dots.count as unknown as number };
@@ -439,10 +439,11 @@ describe('PlaceDetailScreen — title, rating, facts', () => {
     expect(screen.getByTestId('detail-name').parentElement!.contains(kinds)).toBe(false);
     const cup = kinds.querySelector('[data-icon="cafe-outline"]')!;
     const fork = kinds.querySelector('[data-icon="restaurant-outline"]')!;
-    // White, as the back, share and bookmark glyphs beside them are, in
-    // both themes: the ground is a photograph either way.
-    expect(cup.getAttribute('data-color')).toBe(onPhoto.text);
-    expect(fork.getAttribute('data-color')).toBe(onPhoto.text);
+    // Each in its kind's own hue, as its chip on Explore and its dot on
+    // the map: a colour code holds everywhere or it is not a code.
+    expect(cup.getAttribute('data-color')).toBe(CATEGORIES.cafes.color);
+    expect(fork.getAttribute('data-color')).toBe(CATEGORIES.eats.color);
+    expect(cup.getAttribute('data-color')).not.toBe(onPhoto.text);
     const inner = getComputedStyle(kinds.firstElementChild!);
     expect(inner.backgroundColor).toBe('rgba(10, 11, 10, 0.58)');
     expect(inner.minHeight).toBe('44px');
@@ -832,13 +833,14 @@ describe('PlaceDetailScreen — hero', () => {
     expect(heroPage()).toEqual({ page: 0, count: 2 });
   });
 
-  // The "1 / 6" pill in the hero's corner said what the dots in the other
-  // corner already said, and said it in type over a photograph — one more
-  // scrim, one more thing to read, for a number nobody acts on. VoiceOver
-  // keeps the position: every photograph is still "Photo n of m".
-  it('draws no counter over the photograph: the dots are the position', () => {
+  // A count, "1 / 3", where the dots were: the owner's reference, and the
+  // one mark that says the total at a glance. One of it, in the corner the
+  // carousel puts it, and no glyph beside it. VoiceOver keeps its own
+  // position: every photograph is still "Photo n of m".
+  it('says where the reader is as a count, "1 / 3", once', () => {
     show(place({ place_photos: [photo('a.jpg'), photo('b.jpg', { sort_order: 1 }), photo('c.jpg', { sort_order: 2 })] }));
-    expect(screen.queryByText(/^\d+ \/ \d+$/)).toBeNull();
+    expect(screen.getAllByText(/^\d+ \/ \d+$/)).toHaveLength(1);
+    expect(screen.getByText('1 / 3')).toBeTruthy();
     expect(document.querySelector('[data-icon="images-outline"]')).toBeNull();
     expect(heroPage()).toEqual({ page: 0, count: 3 });
   });
@@ -854,10 +856,11 @@ describe('PlaceDetailScreen — hero', () => {
     ]);
   });
 
-  it('moves the dots as the carousel is swiped', () => {
+  it('moves the count as the carousel is swiped', () => {
     show(place({ place_photos: [photo('a.jpg'), photo('b.jpg', { sort_order: 1 }), photo('c.jpg', { sort_order: 2 })] }));
     swipeTo(2);
     expect(heroPage().page).toBe(2);
+    expect(screen.getByText('3 / 3')).toBeTruthy();
   });
 
   // The keeper's way of choosing a cover: swipe to the picture here, set
@@ -909,9 +912,9 @@ describe('PlaceDetailScreen — hero', () => {
       ],
     }));
     const credit = screen.getByText('Linh');
-    // Above the dots and flush to their right edge, clear of the kinds
-    // in the left corner: 15 (the dots' bottom) + 23 (their track) + 6.
-    expect(getComputedStyle(credit).bottom).toBe('44px');
+    // Above the count and flush to its right edge, clear of the kinds in
+    // the left corner: 15 (the count's bottom) + 28 (its height) + 6.
+    expect(getComputedStyle(credit).bottom).toBe('49px');
     expect(getComputedStyle(credit).textAlign).toBe('right');
     swipeTo(1);
     expect(screen.getByText('Minh')).toBeTruthy();

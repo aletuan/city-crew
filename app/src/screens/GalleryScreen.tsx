@@ -242,7 +242,7 @@ export default function GalleryScreen({ navigation, route }: { navigation: Nav; 
       // the rule `AddPill` states.
       right={mode === 'view' ? (
         <AddPill
-          header
+          tall
           label={t('Add', 'Thêm', '追加')}
           busy={adder.busy}
           accessibilityLabel={t('Add a photo', 'Thêm ảnh', '写真を追加')}

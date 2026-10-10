@@ -1625,6 +1625,21 @@ describe('pull to refresh', () => {
 });
 
 describe('the scroll nudge', () => {
+  /** The `AddPill` the dock renders, by its props in the committed tree. */
+  const addPillProps = (): Record<string, unknown> => {
+    type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+    const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+    const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+    const stack: Fiber[] = [host[key].stateNode.current];
+    while (stack.length) {
+      const f = stack.pop()!;
+      const p = f.memoizedProps;
+      if (p && typeof p === 'object' && p.label === 'Add' && typeof p.onPress === 'function') return p;
+      if (f.sibling) stack.push(f.sibling);
+      if (f.child) stack.push(f.child);
+    }
+    throw new Error('no AddPill in the committed tree');
+  };
   const long = () => Array.from({ length: 6 }, (_, i) => place(`p${i}`));
   // Always mounted, so visibility is its fade: 0 is away, 1 is offered.
   const shown = () => {
@@ -1648,7 +1663,13 @@ describe('the scroll nudge', () => {
     settle();
     expect(shown()).toBe(true);
     expect(screen.getByText('Search, or add your own')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    // The dock's "Add" is the 44pt one, as in Gallery's header: the dock
+    // around it is a button to Search, so a small pill sent near misses
+    // there.
+    const add = screen.getByRole('button', { name: 'Add' });
+    // Asked for by the prop: what `tall` draws is pinned in add.ui.test.
+    expect(addPillProps().tall).toBe(true);
+    fireEvent.click(add);
     expect(navigation.navigate).toHaveBeenCalledWith('AddPlace');
     fireEvent.click(screen.getByText('Not finding it?'));
     expect(navigation.navigate).toHaveBeenCalledWith('Search');
