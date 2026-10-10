@@ -100,3 +100,11 @@ describe('text on the dark grounds', () => {
     expect(contrast(hex(colors.textSecondary), hex(colors.textTertiary))).toBeGreaterThanOrEqual(1.4);
   });
 });
+
+// The visited pill's pair. Dark here, as everywhere in this file; the
+// paper side is 5.1:1 by the note on the token.
+describe('okInk', () => {
+  it('reads at 4.5:1 or better on okSoft', () => {
+    expect(contrast(hex(colors.okInk), hex(colors.okSoft))).toBeGreaterThanOrEqual(4.5);
+  });
+});

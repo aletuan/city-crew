@@ -260,6 +260,11 @@ export const colors = {
    *  against paper where the red is 1.13:1 — so good news and bad news
    *  sit at the same distance from the page instead of one shouting. */
   okSoft: dyn('#D9EBD7', '#182A1C'),
+  /** Words and glyphs *on* `okSoft`. `ok` itself is 4.1:1 on the paper
+   *  side of that ground, under the 4.5:1 a 16pt label needs; a shade
+   *  darker is 5.1:1. Charcoal keeps `ok`'s own sage, 7.2:1 on its
+   *  ground. First worn by the visited pill on a place's screen. */
+  okInk: dyn('#2F6B3B', '#8FBF8A'),
 };
 
 /**
