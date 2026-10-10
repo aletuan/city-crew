@@ -94,7 +94,10 @@ const store = () => storeOf(() => Settings);
 /**
  * Start the JavaScript again, into the look just kept. `reloadAsync` is the
  * release build's way; a development client refuses it, and there the
- * packager's reload is the same thing.
+ * packager's reload is the same thing. In a release build `DevSettings.reload`
+ * is a no-op (React Native defines it only under `__DEV__`), so a refusal
+ * there ends in nothing — which is why the sheet that asked watches for the
+ * relaunch that never came (`STUCK_MS` in ThemeSwitcher).
  */
 async function restart() {
   try {
