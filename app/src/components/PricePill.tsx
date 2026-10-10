@@ -55,5 +55,5 @@ const s = StyleSheet.create({
     color: colors.accent, fontSize: 12, fontWeight: font.semibold,
     textTransform: 'uppercase', letterSpacing: 0.8,
   },
-  price: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
+  price: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
 });

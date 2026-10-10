@@ -220,5 +220,5 @@ const s = StyleSheet.create({
   },
   rowText: { color: colors.text, fontSize: 16, fontWeight: font.medium },
   cancel: { paddingVertical: 14, marginTop: 4 },
-  cancelText: { color: colors.textSecondary, fontSize: 15.5, fontWeight: font.medium },
+  cancelText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
 });

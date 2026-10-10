@@ -351,7 +351,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.accentLine,
   },
   rowTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
-  rowBody: { color: colors.textTertiary, fontSize: 13.5, lineHeight: 18 },
+  rowBody: { color: colors.textTertiary, fontSize: 14, lineHeight: 18 },
 
   // Its own top margin rather than the row's: SwitchRow is shared with
   // the auth screens, where it sits in a column that spaces itself.

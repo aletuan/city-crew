@@ -340,6 +340,7 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
                       onPress={() => set('when', key)}
                       haptic="selection"
                       scaleTo={0.96}
+                      hitSlop={{ top: 3, bottom: 3 }}
                       style={[s.segItem, on && s.segItemOn]}
                       accessibilityRole="radio"
                       aria-checked={on}
@@ -614,7 +615,7 @@ const s = StyleSheet.create({
   whenCard: { marginHorizontal: space.page, paddingVertical: 4 },
   whereRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 14, paddingVertical: 14 },
   whenRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 14, paddingVertical: 10 },
-  whereText: { color: colors.text, fontSize: 15.5, fontWeight: font.medium, flex: 1 },
+  whereText: { color: colors.text, fontSize: 16, fontWeight: font.medium, flex: 1 },
   // One track, two halves — the pill the app gives a chosen control, on a
   // recessed ground so the pair reads as a single switch rather than as
   // two buttons that happen to be adjacent.
@@ -623,8 +624,11 @@ const s = StyleSheet.create({
     borderRadius: radius.pill, backgroundColor: colors.bg,
     borderWidth: 1, borderColor: colors.borderGlassSoft,
   },
+  // 38 drawn, inside the track's 3pt padding, and the slop takes each half
+  // the 3pt above and below it: a 44pt target without a 52pt track. It
+  // measured 29 from padding alone.
   segItem: {
-    paddingHorizontal: 14, paddingVertical: 6,
+    minHeight: 38, paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center',
   },
   segItemOn: { backgroundColor: colors.accentSoft },
@@ -635,7 +639,7 @@ const s = StyleSheet.create({
   fromRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11 },
   thumb: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.surfaceGlass },
   thumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
-  fromTitle: { color: colors.text, fontSize: 15.5, fontWeight: font.semibold },
+  fromTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   fromMeta: { color: colors.textTertiary, fontSize: 13 },
 
   cta: { paddingHorizontal: space.page, marginTop: 4, gap: 10 },

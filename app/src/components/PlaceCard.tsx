@@ -383,7 +383,7 @@ const s = StyleSheet.create({
   // `lib/flags.ts` for why it has to be reversible without a release.
   attr: {
     position: 'absolute', right: 10, bottom: 8, maxWidth: '50%',
-    fontSize: 8.5, color: onPhoto.text, opacity: 0.5,
+    fontSize: 9, color: onPhoto.text, opacity: 0.5,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
   // ~10% tighter than the standard card body: this is a feed, not a form.
@@ -545,8 +545,8 @@ const s = StyleSheet.create({
   },
   // Three weights: the gold mark, the number, the count in parentheses.
   star: { color: onPhoto.star, fontSize: 13 },
-  ratingValue: { color: onPhoto.text, fontSize: 14.5, fontWeight: font.semibold },
-  ratingCount: { color: onPhoto.textSecondary, fontSize: 12.5, fontWeight: font.regular },
+  ratingValue: { color: onPhoto.text, fontSize: 15, fontWeight: font.semibold },
+  ratingCount: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.regular },
   statusRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     alignSelf: 'flex-start', marginTop: 8,
@@ -575,9 +575,9 @@ const s = StyleSheet.create({
   // Full-strength text, where the old chip used secondary: one word on a
   // card is the label, not an aside, and there is no second chip beside it
   // to make a run of dark type look heavy.
-  vibeLabel: { color: colors.text, fontSize: 12.5, fontWeight: font.semibold },
+  vibeLabel: { color: colors.text, fontSize: 13, fontWeight: font.semibold },
   // A rule, not a hairline: at 0.5pt it disappeared against the fill on a
   // light ground, and the count then read as part of the label.
   vibeSep: { width: 1, height: 13, backgroundColor: colors.borderGlassSoft },
-  vibeMore: { color: colors.textSecondary, fontSize: 12.5, fontWeight: font.medium },
+  vibeMore: { color: colors.textSecondary, fontSize: 13, fontWeight: font.medium },
 });

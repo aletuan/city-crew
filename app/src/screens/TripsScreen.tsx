@@ -589,7 +589,7 @@ const s = StyleSheet.create({
   // over a bright sky and invisible the rest of the time.
   attr: {
     position: 'absolute', right: 10, bottom: 8, maxWidth: '50%',
-    fontSize: 8.5, color: onPhoto.text, opacity: 0.5,
+    fontSize: 9, color: onPhoto.text, opacity: 0.5,
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 3,
   },
   /** For the two places that do sit inside a real `Card` — the skeleton

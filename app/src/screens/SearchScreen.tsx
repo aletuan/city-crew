@@ -844,10 +844,10 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, marginTop: 18, marginBottom: 10,
   },
   eyebrow: {
-    color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
+    color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold,
     letterSpacing: 1.1, textTransform: 'uppercase',
   },
-  clear: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
+  clear: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   recentRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: space.page,
@@ -856,7 +856,7 @@ const s = StyleSheet.create({
   // same band it was when the whole row was one button.
   recentHit: { flex: 1 },
   recentMain: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
-  recentTerm: { flex: 1, color: colors.text, fontSize: 15.5 },
+  recentTerm: { flex: 1, color: colors.text, fontSize: 16 },
   // The shared Chip carries its own right margin; the wrap only owes the
   // vertical rhythm between lines.
   chipWrap: {
@@ -894,7 +894,7 @@ const s = StyleSheet.create({
     textAlign: 'center', marginTop: 18,
   },
   noneHint: {
-    color: colors.textTertiary, fontSize: 14.5, lineHeight: 21,
+    color: colors.textTertiary, fontSize: 15, lineHeight: 21,
     textAlign: 'center', marginTop: 8, marginBottom: 4,
   },
 
@@ -911,7 +911,7 @@ const s = StyleSheet.create({
   rowRating: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.ok },
   rowStar: { color: onPhoto.star, fontSize: 13 },
-  rowRatingValue: { color: colors.text, fontSize: 14.5, fontWeight: font.semibold },
+  rowRatingValue: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
 
   // The fork wears the app's glass pills — the same face the vibe chips
   // and the save button have — because it is an offer, not a result. The

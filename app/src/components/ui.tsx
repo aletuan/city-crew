@@ -500,7 +500,7 @@ export function Chip({ label, active, onPress, icon, iconColor, testID }: {
       onPress={onPress}
       haptic="selection"
       scaleTo={0.94}
-      style={[s.chip, active && s.chipOn]}
+      style={[s.chip, onPress && s.chipTap, active && s.chipOn]}
       accessibilityRole={onPress ? 'button' : undefined}
       aria-selected={onPress ? !!active : undefined}
       testID={testID}
@@ -1112,7 +1112,7 @@ const s = StyleSheet.create({
   // `authUi`'s header uses, at this type size.
   headerText: { flex: 1, gap: 2, paddingTop: 5 },
   titleInline: { color: colors.text, ...type.titleDetail },
-  subtitle: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 18 },
+  subtitle: { color: colors.textSecondary, fontSize: 14, lineHeight: 18 },
   iconSubtitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { color: colors.text, ...type.title },
   // The dateline is the one place a screen title gets colour: it says
@@ -1134,9 +1134,13 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
     paddingHorizontal: 14, paddingVertical: 7, marginRight: 8,
   },
+  // Only a chip that does something is a target, and a target is 44pt —
+  // it measured 31 drawn from padding alone. A display-only chip keeps
+  // the padding's height, so a row of facts does not swell into buttons.
+  chipTap: { minHeight: 44 },
   // Selected control carries the accent — same rule as the language pill.
   chipOn: { backgroundColor: colors.surfaceGlass, borderColor: colors.borderGlass },
-  chipText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
+  chipText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
   // 82pt minimum so a two-line label does not make its cell taller than
   // the rest of its row — the whole point of a grid is that the cells
   // measure the same.
@@ -1172,7 +1176,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.badgeSolid,
   },
-  tabBadgeText: { color: colors.accentInk, fontSize: 12.5, fontWeight: font.semibold },
+  tabBadgeText: { color: colors.accentInk, fontSize: 13, fontWeight: font.semibold },
   badge: {
     minWidth: 32, height: 22, paddingHorizontal: 8, borderRadius: 11,
     backgroundColor: colors.surfaceGlassStrong, alignItems: 'center', justifyContent: 'center',

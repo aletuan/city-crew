@@ -79,3 +79,24 @@ describe('bgElevatedVeil', () => {
     expect(rgba(colors.bgElevatedVeil).alpha).toBeLessThanOrEqual(0.9);
   });
 });
+
+// The three text steps, on the two dark grounds they are drawn on. Dark
+// because that is what `dyn` settles on here — and because it is the
+// theme whose third step went unmeasured until it was found at 3.6:1.
+describe('text on the dark grounds', () => {
+  const grounds = { bg: colors.bg, bgElevated: colors.bgElevated };
+  const steps = {
+    text: colors.text, textSecondary: colors.textSecondary, textTertiary: colors.textTertiary,
+  };
+  it('keeps every text step at 4.5:1 or better', () => {
+    for (const [g, ground] of Object.entries(grounds)) {
+      for (const [s, step] of Object.entries(steps)) {
+        expect(contrast(hex(step), hex(ground)), `${s} on ${g}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+  // Lifting the third step must not collapse it into the second.
+  it('keeps tertiary visibly quieter than secondary', () => {
+    expect(contrast(hex(colors.textSecondary), hex(colors.textTertiary))).toBeGreaterThanOrEqual(1.4);
+  });
+});

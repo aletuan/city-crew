@@ -621,7 +621,7 @@ const s = StyleSheet.create({
   // Quieter than the Lede and above the button: a statement of fact the
   // reader should meet, not a second instruction competing with the one
   // the screen is actually asking.
-  privacyNote: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 19, marginTop: 14, marginBottom: 4 },
+  privacyNote: { color: colors.textSecondary, fontSize: 14, lineHeight: 19, marginTop: 14, marginBottom: 4 },
   // The other answer, offered rather than hidden. Centred under the
   // button it is an alternative to, and underlined because it is the one
   // piece of running text on these screens that is a control — the app

@@ -578,7 +578,9 @@ const s = StyleSheet.create({
   // The `View plan ›` row from the Trips tab, in the footer of the card
   // it acts on. `gap` between the glyph and its word, and the detail
   // pushed right by `flex` so the chevron keeps the edge.
-  route: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // A whole row that opens another app, and it was as tall as its caption
+  // (≈18pt). 44 makes it the target it reads as.
+  route: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 },
   routeText: { ...CAPTION, color: colors.accent, fontWeight: font.semibold },
   routeSub: { ...CAPTION, color: colors.textTertiary, flex: 1, textAlign: 'right', marginRight: 2 },
 
@@ -610,7 +612,7 @@ const s = StyleSheet.create({
   delete: {
     alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
-    paddingVertical: 11, paddingHorizontal: 20, marginTop: 4,
+    paddingVertical: 11, paddingHorizontal: 20, marginTop: 4, minHeight: 44,
   },
   deleteText: { ...CAPTION, color: colors.bad, fontWeight: font.semibold },
 });

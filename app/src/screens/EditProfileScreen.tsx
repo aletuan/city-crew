@@ -419,8 +419,8 @@ const s = StyleSheet.create({
   // two `preferences` blocks should measure the same from the border in.
   taste: { gap: 6, paddingHorizontal: space.cardPadding, paddingVertical: 14 },
   tasteTitle: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
-  tasteSub: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 19, marginBottom: 6 },
-  note: { color: colors.textSecondary, fontSize: 13.5, lineHeight: 19 },
+  tasteSub: { color: colors.textSecondary, fontSize: 14, lineHeight: 19, marginBottom: 6 },
+  note: { color: colors.textSecondary, fontSize: 14, lineHeight: 19 },
 
   // The privacy block keeps a card of its own rather than joining the
   // chips in theirs. They are both `preferences`, but one is a taste and

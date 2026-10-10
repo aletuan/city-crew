@@ -385,12 +385,12 @@ const FACE = 44;
 
 const s = StyleSheet.create({
   eyebrow: {
-    color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
+    color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold,
     letterSpacing: 1.1, textTransform: 'uppercase', marginTop: 6,
   },
   reqCard: { padding: space.cardPadding, gap: 14 },
   reqRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  reqTitle: { color: colors.text, fontSize: 15.5, lineHeight: 21 },
+  reqTitle: { color: colors.text, fontSize: 16, lineHeight: 21 },
   meta: { color: colors.textTertiary, ...type.meta },
   answers: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 },

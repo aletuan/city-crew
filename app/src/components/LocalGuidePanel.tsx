@@ -168,7 +168,7 @@ const s = StyleSheet.create({
   words: { flex: 1, gap: 2 },
   // A size down from `type.cardTitle`: the heading of a two-line aside is
   // not a card title.
-  title: { color: colors.accent, fontSize: 15.5, fontWeight: font.semibold },
+  title: { color: colors.accent, fontSize: 16, fontWeight: font.semibold },
   // The sub had ~140pt beside the old pill, about twenty characters at
   // this size — the reason both these lines are curt. An earlier draft
   // read "Help keep this place up to date" and wrapped to three ragged

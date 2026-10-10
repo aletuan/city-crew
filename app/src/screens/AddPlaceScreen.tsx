@@ -244,7 +244,7 @@ const s = StyleSheet.create({
     paddingHorizontal: space.page, paddingTop: 24, textAlign: 'center',
   },
   credit: {
-    color: colors.textTertiary, fontSize: 12.5,
+    color: colors.textTertiary, fontSize: 13,
     paddingHorizontal: space.page, paddingTop: 6, textAlign: 'center',
   },
   resultHead: {

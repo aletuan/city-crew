@@ -1412,7 +1412,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlassSoft, borderRadius: radius.pill,
     paddingHorizontal: 12, paddingVertical: 6,
   },
-  factText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
+  factText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
 
   desc: { color: colors.textSecondary, ...type.body, lineHeight: 24 },
   // The mark sits in its own disc so the label and the text share one
@@ -1436,7 +1436,7 @@ const s = StyleSheet.create({
   // the sentence it attributes would be reading the footnote first. The
   // link colour is the only thing that marks it as tappable — an icon at
   // this size is a smudge, and an underline in this face is a scar.
-  creditLine: { color: colors.textTertiary, fontSize: 12.5, marginTop: 6 },
+  creditLine: { color: colors.textTertiary, fontSize: 13, marginTop: 6 },
   creditLink: { color: colors.accent },
 
   // The Card supplies ground, border and radius; the horizontal inset
@@ -1499,7 +1499,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.bgElevatedVeil,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  goText: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
+  goText: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   // 17pt over a label and a 24pt line keeps every row a ≥58pt target.
   // A row is a column — label, then value. Only Hours lays itself across,
   // for the chevron at its end.
@@ -1577,7 +1577,7 @@ const s = StyleSheet.create({
   // The same 24 the other values keep: it is the second line of its pair,
   // and the glyph beside it is centred on a box that assumes so.
   openNow: {
-    color: colors.open, fontSize: 15.5, fontWeight: font.semibold,
+    color: colors.open, fontSize: 16, fontWeight: font.semibold,
     lineHeight: VALUE_LINE,
   },
   // The sash's own brick, not the grey it was. See `colors.shutInk`: the
@@ -1587,6 +1587,6 @@ const s = StyleSheet.create({
   openNowShut: { color: colors.shutInk },
   hoursTable: { paddingBottom: 16, paddingLeft: GUTTER },
   hourRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
-  hourDay: { color: colors.ink, fontSize: 14.5, fontWeight: font.medium },
-  hourTime: { color: colors.ink, fontSize: 14.5, fontWeight: font.regular },
+  hourDay: { color: colors.ink, fontSize: 15, fontWeight: font.medium },
+  hourTime: { color: colors.ink, fontSize: 15, fontWeight: font.regular },
 });

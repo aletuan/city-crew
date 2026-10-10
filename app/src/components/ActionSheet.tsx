@@ -190,5 +190,5 @@ const s = StyleSheet.create({
   },
   rowTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold, lineHeight: TITLE_LINE },
   rowTitleBad: { color: colors.bad },
-  rowDesc: { color: colors.textTertiary, fontSize: 13.5, lineHeight: 18 },
+  rowDesc: { color: colors.textTertiary, fontSize: 14, lineHeight: 18 },
 });

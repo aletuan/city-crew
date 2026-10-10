@@ -158,7 +158,7 @@ const s = StyleSheet.create({
   pinLive: { backgroundColor: colors.surfaceGlass },
 
   name: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
-  sub: { color: colors.textTertiary, fontSize: 13.5 },
+  sub: { color: colors.textTertiary, fontSize: 14 },
   subLive: { color: colors.ok, fontWeight: font.medium },
 
   viewBtn: {

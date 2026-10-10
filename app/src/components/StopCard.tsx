@@ -170,6 +170,7 @@ export default function StopCard({
               haptic="selection"
               onPress={() => onNudge(-NUDGE_MIN)}
               containerStyle={s.step}
+              hitSlop={STEP_SLOP}
               accessibilityRole="button"
               accessibilityLabel={t(`Arrive ${NUDGE_MIN} min earlier at ${place.name_en}`, `Đến ${place.name_en} sớm ${NUDGE_MIN} phút`, `${place.name_en}に${NUDGE_MIN}分早く着く`)}
             >
@@ -180,6 +181,7 @@ export default function StopCard({
               haptic="selection"
               onPress={() => onNudge(NUDGE_MIN)}
               containerStyle={s.step}
+              hitSlop={STEP_SLOP}
               accessibilityRole="button"
               accessibilityLabel={t(`Arrive ${NUDGE_MIN} min later at ${place.name_en}`, `Đến ${place.name_en} muộn ${NUDGE_MIN} phút`, `${place.name_en}に${NUDGE_MIN}分遅く着く`)}
             >
@@ -193,6 +195,7 @@ export default function StopCard({
             <PressableScale
               onPress={onRemove}
               containerStyle={s.tool}
+              hitSlop={TOOL_SLOP}
               accessibilityRole="button"
               accessibilityLabel={t(`Remove ${place.name_en}`, `Bỏ ${place.name_en}`, `${place.name_en}を外す`)}
             >
@@ -206,6 +209,13 @@ export default function StopCard({
 }
 
 const CAPTION = { fontSize: 13, fontWeight: font.regular } as const;
+
+// The stepper stays 34 drawn and the remove button 30, for the reason on
+// `s.step`: 44 drawn pushes the rail off a 295pt card in Vietnamese. The
+// slop makes each a 44pt target anyway — the time between − and + is 52pt
+// wide, so the two slops never meet.
+const STEP_SLOP = 5;
+const TOOL_SLOP = 7;
 
 const s = StyleSheet.create({
   // `Card` carries no padding of its own — see the note on the component.
