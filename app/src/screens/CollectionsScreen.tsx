@@ -1510,11 +1510,17 @@ const s = StyleSheet.create({
   },
   // What the row shows, laid over the ghost that sized it (`RowGhost`),
   // with the same padding and gap so a full row lands line for line on
-  // the ghost's lines. Centred, because a row with less to say than the
-  // tallest — no description, no likes — would otherwise hang its text
-  // from the top of a card with a band of nothing under it.
+  // the ghost's lines.
+  //
+  // From the top, not centred. Centred was the first answer (#864), on the
+  // argument that a row with less to say would otherwise hang from the
+  // top of the card over a band of nothing. The owner chose the top on
+  // 10 Oct 2026 after seeing it on the phone: down a column, every title
+  // then starts on the same line of its card, so the eye runs down the
+  // names, where centring set each title at a different depth by how
+  // much the row had under it.
   cardFace: {
-    ...StyleSheet.absoluteFill, gap: 5, justifyContent: 'center',
+    ...StyleSheet.absoluteFill, gap: 5, justifyContent: 'flex-start',
     paddingHorizontal: space.cardPadding, paddingVertical: 13,
   },
   ghost: { opacity: 0, gap: 5 },
