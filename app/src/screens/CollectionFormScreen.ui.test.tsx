@@ -234,12 +234,34 @@ describe('the cover picker', () => {
 const alerted = () => vi.mocked(Alert.alert).mock.calls.map(([title, body]) => [title, body]);
 
 describe('what stops a submit before it writes', () => {
-  it('asks for a name, and writes nothing', async () => {
+  // Dimmed, not a button that answers with an error: the header's Create
+  // stays inert until there is a name, spaces not counting.
+  it('dims Create until there is a name, and writes nothing', async () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    const button = () => screen.getByRole('button', { name: 'Create collection' });
+    expect(button().getAttribute('aria-disabled')).toBe('true');
     create('   ');
-
-    expect(await screen.findByText('Give the collection a name.')).toBeTruthy();
+    expect(button().getAttribute('aria-disabled')).toBe('true');
     expect(createCollection).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Rooftops' } });
+    expect(button().getAttribute('aria-disabled')).not.toBe('true');
+  });
+
+  // Up in the header, so the cover grid can never push it off screen:
+  // the short word on screen, the long one for VoiceOver, and nothing
+  // left at the foot of the form, the old privacy footnote included.
+  it('puts the submit in the header, with nothing after the form', () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    const button = screen.getByRole('button', { name: 'Create collection' });
+    expect(button.textContent).toBe('Create');
+    expect(screen.getByTestId('collection-submit').textContent).toBe('Create');
+    expect(screen.getByText('Name your list').parentElement).toBe(button.parentElement);
+    expect(screen.queryByText(/Private until you say so/)).toBeNull();
+  });
+
+  it('says a new list is private until it is made public from its menu', () => {
+    render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
+    expect(screen.getByText('Only you can see this list until you make it public from its menu.')).toBeTruthy();
   });
 
   // Unreachable in practice — the screen lives behind a control only
@@ -278,7 +300,21 @@ describe('renaming a list', () => {
   it('opens on the list’s own words', () => {
     openRename([HEIM, SAM]);
     expect(screen.getByText('Rename your list')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save changes' }).textContent).toBe('Save');
+  });
+
+  // The line under the title says what the list is now. It promised
+  // "only you can see this one" on every rename, public lists included.
+  it('warns that a public list’s new words show to everyone, and keeps a private one private', () => {
+    catalog.data = [HEIM];
+    saved.data = [{ ...(listOf([HEIM]) as object), is_public: true }];
+    const { unmount } = render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'night-bar' })} />);
+    expect(screen.getByText('This list is public — its new name and description will show to everyone.')).toBeTruthy();
+    expect(screen.queryByText(/Only you can see/)).toBeNull();
+    unmount();
+    saved.data = [{ ...(listOf([HEIM]) as object), is_public: false }];
+    render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'night-bar' })} />);
+    expect(screen.getByText('Only you can see this list until you make it public from its menu.')).toBeTruthy();
   });
 
   // Only the name stops a save, so the description's label says what it
@@ -398,7 +434,11 @@ describe('renaming a list', () => {
     render(<CollectionFormScreen navigation={navigation} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
     save();
 
-    expect(await screen.findByText('Row is locked')).toBeTruthy();
+    const message = await screen.findByText('Row is locked');
+    // Above the fields, beside the Save that raised it, not under the
+    // cover grid.
+    const name = screen.getByPlaceholderText('Weekend coffee');
+    expect(message.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(alerted()).toEqual([['Could not save the changes', 'row is locked']]);
     expect(navigation.goBack).not.toHaveBeenCalled();
     // And the button is a button again, for another go.

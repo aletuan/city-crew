@@ -22,7 +22,7 @@ import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, PrimaryButton, useFailText } from '../components/authUi';
+import { AuthHeader, AuthScreen, FieldRow, FormError, Lede, useFailText } from '../components/authUi';
 import { PressableScale, successHaptic } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { usePlaces } from '../lib/catalog';
@@ -175,11 +175,8 @@ export default function CollectionFormScreen({ navigation, route }: {
       : null;
 
   const submit = async () => {
+    // Never empty: the header's button is dimmed until there is a name.
     const name = title.trim();
-    if (!name) {
-      setError(t('Give the collection a name.', 'Đặt tên cho bộ sưu tập.', 'コレクションに名前をつけてください。'));
-      return;
-    }
     // Both are true whenever the screen is reachable — it lives behind the
     // header control that only signed-in users see, and the city resolves
     // before any tab renders. Checked anyway so a failure is a sentence
@@ -276,6 +273,10 @@ export default function CollectionFormScreen({ navigation, route }: {
 
   return (
     <AuthScreen>
+      {/* Save in the header (`HeaderAction`): the cover grid below holds
+          every photograph of every member, and with eleven of them the
+          old full-width button sat under the fold. Short words up here —
+          "Create", "Save" — with the long ones kept for VoiceOver. */}
       <AuthHeader
         onBack={() => navigation.goBack()}
         title={copyFrom
@@ -283,7 +284,21 @@ export default function CollectionFormScreen({ navigation, route }: {
           : editing
             ? t('Rename your list', 'Đổi tên danh sách', 'リストの名前を変更')
             : t('Name your list', 'Đặt tên danh sách', 'リストに名前を')}
+        action={{
+          label: editing || copyFrom ? t('Save', 'Lưu', '保存') : t('Create', 'Tạo', '作成'),
+          a11yLabel: copyFrom
+            ? t('Save the copy', 'Lưu bản sao', 'コピーを保存')
+            : editing
+              ? t('Save changes', 'Lưu thay đổi', '変更を保存')
+              : t('Create collection', 'Tạo bộ sưu tập', 'コレクションを作成'),
+          onPress: submit,
+          busy,
+          disabled: !title.trim(),
+          testID: 'collection-submit',
+        }}
       />
+      {/* Beside the Save that raised it, rather than under the cover grid. */}
+      {error ? <FormError>{failText(error)}</FormError> : null}
       <Lede>{copyFrom
           ? t(
             'Make it yours before it saves — nothing is copied until you do.',
@@ -296,11 +311,22 @@ export default function CollectionFormScreen({ navigation, route }: {
               'Đặt tên, và địa điểm bạn vừa lưu sẽ vào đầu tiên.',
               '名前をつければ、いま保存したスポットが最初に入ります。',
             )
-            : t(
-              'Only you can see this one. Add places to it as you find them.',
-              'Chỉ mình bạn thấy danh sách này. Thêm địa điểm vào khi bạn tìm được.',
-              'このリストはあなただけに表示されます。見つけたスポットを追加していきましょう。',
-            )}</Lede>
+            // Said of the list as it is. This line used to promise "only
+            // you can see this one" on every rename, public lists included,
+            // and a footnote under the button promised it again. A new
+            // list and a copy are always private (the insert policy
+            // refuses anything else), so only a rename can be public.
+            : col?.is_public
+              ? t(
+                'This list is public — its new name and description will show to everyone.',
+                'Danh sách này đang công khai — tên và mô tả mới sẽ hiện với mọi người.',
+                'このリストは公開中です — 新しい名前と説明はすべての人に表示されます。',
+              )
+              : t(
+                'Only you can see this list until you make it public from its menu.',
+                'Chỉ mình bạn thấy danh sách này cho đến khi bạn công khai nó trong menu của danh sách.',
+                'リストのメニューから公開するまで、このリストはあなただけに表示されます。',
+              )}</Lede>
       <FieldRow
         icon="bookmark-outline"
         label={t('Name', 'Tên', '名前')}
@@ -385,28 +411,6 @@ export default function CollectionFormScreen({ navigation, route }: {
           </View>
         </View>
       ) : null}
-      {error ? <FormError>{failText(error)}</FormError> : null}
-      <View style={{ marginTop: space.cardGap }}>
-        <PrimaryButton
-          label={copyFrom
-            ? t('Save the copy', 'Lưu bản sao', 'コピーを保存')
-            : editing
-              ? t('Save changes', 'Lưu thay đổi', '変更を保存')
-              : t('Create collection', 'Tạo bộ sưu tập', 'コレクションを作成')}
-          onPress={submit}
-          busy={busy}
-          testID="collection-submit"
-        />
-      </View>
-      {/* This line used to promise "sharing comes later", and later came:
-          the publish switch lives in the list's own menu now. */}
-      <Text style={{ color: colors.textTertiary, fontSize: 14, fontWeight: font.regular, textAlign: 'center', lineHeight: 19 }}>
-        {t(
-          'Private until you say so — Make public lives in the list’s own menu.',
-          'Riêng tư cho đến khi bạn muốn — nút Công khai nằm trong menu của danh sách.',
-          'あなたが公開するまで非公開です — 公開はリストのメニューから。',
-        )}
-      </Text>
     </AuthScreen>
   );
 }

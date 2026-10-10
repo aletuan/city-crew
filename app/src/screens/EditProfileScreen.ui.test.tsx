@@ -233,7 +233,7 @@ describe('the handle', () => {
     expect(spies.updateProfile).not.toHaveBeenCalled();
     expect(navigation.goBack).not.toHaveBeenCalled();
     // The spinner comes back off, so the reader can fix it and try again.
-    expect(saveButton().textContent).toBe('Save changes');
+    expect(saveButton().textContent).toBe('Save');
   });
 
   it('refuses one longer than twenty characters', async () => {
@@ -276,14 +276,25 @@ describe('the handle', () => {
 });
 
 describe('failures', () => {
-  it('puts any other profile failure by the button, in words', async () => {
+  it('puts any other profile failure under the header, in words', async () => {
     spies.updateProfile.mockRejectedValue(new Error('network down'));
     const { navigation } = renderScreen();
     touch();
     save();
-    expect(await screen.findByText('Network down')).toBeTruthy();
+    const message = await screen.findByText('Network down');
     expect(navigation.goBack).not.toHaveBeenCalled();
-    expect(saveButton().textContent).toBe('Save changes');
+    expect(saveButton().textContent).toBe('Save');
+    // Ahead of the avatar, so it shows beside the Save that raised it
+    // rather than at the foot of a form scrolled away from.
+    const photo = screen.getByText('Change profile photo');
+    expect(message.compareDocumentPosition(photo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // In the header, on the title's own row: the form runs past the fold,
+  // and a Save at its foot was out of sight for most of it.
+  it('keeps Save in the header, by the title', () => {
+    renderScreen();
+    expect(saveButton().parentElement).toBe(screen.getByText('Edit profile').parentElement);
   });
 
   it('keeps the form open when the preferences write fails after the profile landed', async () => {
@@ -315,7 +326,7 @@ describe('failures', () => {
     // is a chain of settled promises and one commit, which `act` drains
     // to completion. Waiting on the clock for it instead is a race that a
     // loaded runner loses — this test failed twice on CI and never here.
-    await waitFor(() => expect(saveButton().textContent).toBe('Save changes'));
+    await waitFor(() => expect(saveButton().textContent).toBe('Save'));
     await act(async () => { save(); });
     expect(navigation.goBack).toHaveBeenCalled();
     expect(screen.queryByText('Network down')).toBeNull();
