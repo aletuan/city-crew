@@ -195,6 +195,6 @@ const s = StyleSheet.create({
   // for "taken, not yet answered" — a little less, since this one also
   // carries a spinner saying so.
   pillBusy: { opacity: 0.7 },
-  pillText: { color: colors.accentInk, fontSize: 15.5, fontWeight: font.semibold },
+  pillText: { color: colors.accentInk, fontSize: 16, fontWeight: font.semibold },
   pillTextCompact: { fontSize: 14 },
 });

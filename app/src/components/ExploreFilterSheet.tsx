@@ -423,7 +423,7 @@ const s = StyleSheet.create({
     marginTop: space.headingToContent,
   },
 
-  error: { color: colors.bad, fontSize: 12.5, lineHeight: 18, marginTop: 10 },
+  error: { color: colors.bad, fontSize: 13, lineHeight: 18, marginTop: 10 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
   reset: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 4 },
   resetText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },

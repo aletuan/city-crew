@@ -156,7 +156,7 @@ const s = StyleSheet.create({
   words: { flex: 1, gap: 2 },
   // A size down from `type.cardTitle`: the words share their line with a
   // button now, and the heading of a two-line aside is not a card title.
-  title: { color: colors.accent, fontSize: 15.5, fontWeight: font.semibold },
+  title: { color: colors.accent, fontSize: 16, fontWeight: font.semibold },
   // The sub has ~140pt beside the button, which is about twenty
   // characters at this size — the reason both these lines are curt. An
   // earlier draft read "Help keep this place up to date" and wrapped to
@@ -178,5 +178,5 @@ const s = StyleSheet.create({
   // a pill missing its word, a circle reads as a button that was drawn
   // that way.
   buttonNarrow: { width: 44, paddingHorizontal: 0, justifyContent: 'center' },
-  buttonText: { color: colors.accentInk, fontSize: 14.5, fontWeight: font.semibold },
+  buttonText: { color: colors.accentInk, fontSize: 15, fontWeight: font.semibold },
 });

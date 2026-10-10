@@ -195,7 +195,8 @@ export default function MiniMap({ lat, lng, onPick, caption, height, onLocate, i
           ) : null}
         </MapView>
         {onLocate ? (
-          <PressableScale onPress={onLocate} scaleTo={0.9} style={s.locate} accessibilityRole="button">
+          // 36 drawn, so as not to cover more map; the slop makes it 44.
+          <PressableScale onPress={onLocate} scaleTo={0.9} style={s.locate} hitSlop={4} accessibilityRole="button">
             <Ionicons name="navigate" size={17} color={colors.accent} />
           </PressableScale>
         ) : null}

@@ -163,5 +163,5 @@ const s = StyleSheet.create({
     color: colors.text, fontSize: 15, fontWeight: font.semibold,
     textAlign: 'center', paddingVertical: 4,
   },
-  footNote: { color: colors.textTertiary, fontSize: 12.5, lineHeight: 18, textAlign: 'center' },
+  footNote: { color: colors.textTertiary, fontSize: 13, lineHeight: 18, textAlign: 'center' },
 });

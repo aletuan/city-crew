@@ -255,7 +255,7 @@ const s = StyleSheet.create({
   },
   title: { color: colors.text, fontSize: 22, fontFamily: display.bold },
   subtitle: { color: colors.textTertiary, fontSize: 14, marginTop: 3, marginBottom: 10 },
-  none: { color: colors.textTertiary, fontSize: 14.5, lineHeight: 21, paddingVertical: 18 },
+  none: { color: colors.textTertiary, fontSize: 15, lineHeight: 21, paddingVertical: 18 },
 
   list: { maxHeight: 300 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
@@ -268,7 +268,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.borderGlass,
   },
   tickOn: { backgroundColor: colors.accentFill, borderColor: colors.accentFill },
-  locked: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
+  locked: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
 
   note: {
     flexDirection: 'row', gap: 9, alignItems: 'flex-start',
@@ -278,5 +278,5 @@ const s = StyleSheet.create({
   noteText: { flex: 1, color: colors.textTertiary, fontSize: 13, lineHeight: 19 },
 
   later: { paddingVertical: 14, marginTop: 2, alignSelf: 'center' },
-  laterText: { color: colors.textSecondary, fontSize: 15.5, fontWeight: font.medium },
+  laterText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
 });

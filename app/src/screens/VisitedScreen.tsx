@@ -399,23 +399,23 @@ const s = StyleSheet.create({
   // the one control here that undoes rather than narrows. 44 tall to
   // match the box, 10 of padding so the word is not against its edge.
   cancel: { height: 44, justifyContent: 'center', paddingHorizontal: 10 },
-  cancelText: { color: colors.textSecondary, fontSize: 15.5, fontWeight: font.medium },
+  cancelText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
   panel: { padding: space.cardPadding, gap: space.headingToContent },
   group: { gap: 10 },
   legendRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   // The reference's group labels: quiet, sentence case, not the
   // uppercase eyebrow the months wear — these name parts of one card,
   // not sections of the page.
-  legend: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.semibold },
-  clear: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
+  legend: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
+  clear: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
   suggestion: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
-  suggestionText: { flex: 1, color: colors.text, fontSize: 15.5 },
+  suggestionText: { flex: 1, color: colors.text, fontSize: 16 },
   // The Search screen's `chipWrap`: the shared Chip carries its own
   // right margin, so the wrap only owes the rhythm between lines.
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
   month: { gap: 8 },
   eyebrow: {
-    color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
+    color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold,
     letterSpacing: 1.1, textTransform: 'uppercase', marginTop: 6,
   },
   // Centred: a 56pt picture beside two lines of text wants its middle

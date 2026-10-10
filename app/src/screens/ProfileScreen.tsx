@@ -1001,7 +1001,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass, borderRadius: radius.pill,
     paddingHorizontal: 14, paddingVertical: 9,
   },
-  tasteChipText: { color: colors.text, fontSize: 14.5, fontWeight: font.medium },
+  tasteChipText: { color: colors.text, fontSize: 15, fontWeight: font.medium },
   tasteEmpty: { paddingVertical: 14 },
   // The role badge and the Edit profile button, one row under the name.
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' },
@@ -1067,7 +1067,7 @@ const s = StyleSheet.create({
     flex: 1, textAlign: 'right',
     color: colors.textTertiary, fontSize: 15, fontWeight: font.regular,
   },
-  featureSub: { color: colors.textTertiary, fontSize: 13.5, fontWeight: font.regular, lineHeight: 19 },
+  featureSub: { color: colors.textTertiary, fontSize: 14, fontWeight: font.regular, lineHeight: 19 },
 
   // On the glyph's shoulder. It sat on the well's corner (−2, −2) while
   // there was a well; on a bare 19pt glyph centred in a 44pt slot the
@@ -1113,17 +1113,19 @@ const s = StyleSheet.create({
   },
   stat: { alignItems: 'center', gap: 2, paddingVertical: 6 },
   statN: { color: colors.text, fontSize: 22, fontWeight: font.bold, fontVariant: ['tabular-nums'] },
-  statLabel: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
+  statLabel: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
   statDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: colors.borderGlassSoft },
   editBtn: {
     alignSelf: 'flex-start',
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderGlassSoft,
     backgroundColor: colors.surfaceCard, paddingHorizontal: 16, paddingVertical: 8,
+    // 44, not the 33 the padding alone made: it is a button.
+    minHeight: 44, justifyContent: 'center',
   },
   editBtnText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
 
-  aboutLabel: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium, lineHeight: CAPTION_LINE },
-  aboutValue: { color: colors.text, fontSize: 15.5, fontWeight: font.regular, lineHeight: 21 },
+  aboutLabel: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium, lineHeight: CAPTION_LINE },
+  aboutValue: { color: colors.text, fontSize: 16, fontWeight: font.regular, lineHeight: 21 },
 
   signOutBtn: {
     borderRadius: radius.input, paddingVertical: 13, alignItems: 'center', marginTop: 6,
@@ -1146,5 +1148,5 @@ const s = StyleSheet.create({
   taglineText: { color: colors.textTertiary, fontFamily: quoteFace, fontSize: 16, textAlign: 'center', lineHeight: 25, letterSpacing: 0.2 },
   // Half a step under the quote, in the quote's own hand: the words
   // carry the weight, the name just signs them.
-  taglineBy: { color: colors.textTertiary, fontFamily: quoteFace, fontSize: 12.5, letterSpacing: 0.4, marginTop: -2 },
+  taglineBy: { color: colors.textTertiary, fontFamily: quoteFace, fontSize: 13, letterSpacing: 0.4, marginTop: -2 },
 });

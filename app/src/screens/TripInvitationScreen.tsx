@@ -314,15 +314,15 @@ const s = StyleSheet.create({
   plan: { paddingHorizontal: space.cardPadding, paddingVertical: 8 },
   stop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 8 },
   at: {
-    color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium,
+    color: colors.textSecondary, fontSize: 14, fontWeight: font.medium,
     width: 44, paddingTop: 1,
   },
   dot: {
     width: 8, height: 8, borderRadius: 4, marginTop: 6,
     backgroundColor: colors.accentFill,
   },
-  name: { ...type.cardTitle, fontSize: 15.5, color: colors.text },
-  where: { color: colors.textTertiary, fontSize: 12.5, marginTop: 1 },
+  name: { ...type.cardTitle, fontSize: 16, color: colors.text },
+  where: { color: colors.textTertiary, fontSize: 13, marginTop: 1 },
   leg: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 62, paddingBottom: 4 },
   legText: { color: colors.textTertiary, fontSize: 12 },
 
@@ -337,7 +337,7 @@ const s = StyleSheet.create({
     paddingHorizontal: space.cardPadding, paddingVertical: 14,
   },
   whoText: { flex: 1, color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
-  noteText: { flex: 1, color: colors.textTertiary, fontSize: 13.5, lineHeight: 20 },
+  noteText: { flex: 1, color: colors.textTertiary, fontSize: 14, lineHeight: 20 },
 
   answers: { flexDirection: 'row', gap: 10, marginTop: space.cardGap },
   busy: { opacity: 0.6 },
@@ -353,11 +353,11 @@ const s = StyleSheet.create({
   },
   noText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
   foot: {
-    color: colors.textTertiary, fontSize: 12.5, lineHeight: 18,
+    color: colors.textTertiary, fontSize: 13, lineHeight: 18,
     textAlign: 'center', marginTop: 12,
   },
   already: {
-    color: colors.textSecondary, fontSize: 14.5,
+    color: colors.textSecondary, fontSize: 15,
     textAlign: 'center', marginTop: space.cardGap,
   },
 });

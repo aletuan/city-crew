@@ -1250,7 +1250,7 @@ const s = StyleSheet.create({
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15, paddingHorizontal: 18 },
   menuRowOn: { backgroundColor: colors.surfaceGlass },
   menuDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
-  menuText: { color: colors.text, fontSize: 16.5, lineHeight: 22, fontWeight: font.medium },
+  menuText: { color: colors.text, fontSize: 17, lineHeight: 22, fontWeight: font.medium },
 
   emptyWrap: { marginHorizontal: space.page, marginTop: 24 },
   empty: {

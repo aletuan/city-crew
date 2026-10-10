@@ -762,17 +762,17 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 const s = StyleSheet.create({
   addCard: { padding: space.cardPadding, gap: 12 },
   typeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
-  typeName: { color: colors.text, fontSize: 14.5, fontWeight: font.medium, flexShrink: 1 },
-  typeHandle: { color: colors.textTertiary, fontSize: 13.5 },
+  typeName: { color: colors.text, fontSize: 15, fontWeight: font.medium, flexShrink: 1 },
+  typeHandle: { color: colors.textTertiary, fontSize: 14 },
 
   head: {
-    color: colors.textTertiary, fontSize: 12.5, fontWeight: font.semibold,
+    color: colors.textTertiary, fontSize: 13, fontWeight: font.semibold,
     letterSpacing: 1.1, textTransform: 'uppercase', marginTop: 6,
   },
 
   reqCard: { padding: space.cardPadding, gap: 14 },
   reqTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  reqTitle: { color: colors.text, fontSize: 15.5, lineHeight: 21 },
+  reqTitle: { color: colors.text, fontSize: 16, lineHeight: 21 },
   answers: { flexDirection: 'row', gap: 10 },
   half: { flex: 1 },
   // A row whose write is in flight: dimmed, and refusing the tap, so a
@@ -801,7 +801,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 9,
   },
-  addText: { color: colors.accentInk, fontSize: 13.5, fontWeight: font.semibold },
+  addText: { color: colors.accentInk, fontSize: 14, fontWeight: font.semibold },
 
   // The two reversals — cancel a request, lift a block — wear the same
   // quiet outline: neither is a thing to encourage, both must be easy.
@@ -809,5 +809,5 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderGlass, borderRadius: radius.pill,
     paddingHorizontal: 14, paddingVertical: 8,
   },
-  quietText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.semibold },
+  quietText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.semibold },
 });

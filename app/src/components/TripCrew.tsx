@@ -200,7 +200,7 @@ const s = StyleSheet.create({
     borderRadius: 999, borderWidth: 2,
   },
   line: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
-  sub: { color: colors.textTertiary, fontSize: 12.5, marginTop: 1 },
+  sub: { color: colors.textTertiary, fontSize: 13, marginTop: 1 },
 
   ghost: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -209,7 +209,7 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlass,
     backgroundColor: colors.surfaceGlass,
   },
-  ghostText: { color: colors.textSecondary, fontSize: 13.5, fontWeight: font.medium },
+  ghostText: { color: colors.textSecondary, fontSize: 14, fontWeight: font.medium },
 
   list: {
     marginTop: 12, gap: 2,
@@ -217,6 +217,6 @@ const s = StyleSheet.create({
     paddingTop: 10,
   },
   person: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  personName: { flex: 1, color: colors.text, fontSize: 14.5, fontWeight: font.medium },
-  said: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
+  personName: { flex: 1, color: colors.text, fontSize: 15, fontWeight: font.medium },
+  said: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
 });

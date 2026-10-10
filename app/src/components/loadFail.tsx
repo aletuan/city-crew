@@ -97,13 +97,13 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlassStrong,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  bannerText: { flex: 1, color: colors.textSecondary, fontSize: 13.5, lineHeight: 18 },
+  bannerText: { flex: 1, color: colors.textSecondary, fontSize: 14, lineHeight: 18 },
   retryPill: {
     paddingHorizontal: 12, minHeight: 32, justifyContent: 'center',
     borderRadius: radius.pill, backgroundColor: colors.bgElevated,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  retryPillText: { color: colors.text, fontSize: 13.5, fontWeight: font.semibold },
+  retryPillText: { color: colors.text, fontSize: 14, fontWeight: font.semibold },
 
   // `Empty`'s own padding and type, so the two states look like one
   // family; the glyph and the button are what this one adds.

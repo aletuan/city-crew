@@ -146,5 +146,5 @@ const s = StyleSheet.create({
   newText: { color: colors.accent, fontSize: 16, fontWeight: font.medium },
 
   done: { paddingVertical: 14, marginTop: 2, alignSelf: 'center' },
-  doneText: { color: colors.textSecondary, fontSize: 15.5, fontWeight: font.medium },
+  doneText: { color: colors.textSecondary, fontSize: 16, fontWeight: font.medium },
 });

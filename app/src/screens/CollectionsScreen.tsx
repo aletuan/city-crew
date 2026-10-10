@@ -672,7 +672,13 @@ export default function CollectionsScreen({ navigation, route }: {
                     style={[s.viewBtn, view === v && s.viewBtnOn]}
                     scaleTo={0.9}
                     haptic="selection"
-                    hitSlop={6}
+                    // 26×22 drawn, and the two halves touch, so the slop
+                    // grows each outward only: up, down, and away from its
+                    // neighbour — 44×44 apiece without either stealing the
+                    // other's taps. It was 38×34 at a flat 6.
+                    hitSlop={v === 'row'
+                      ? { top: 11, bottom: 11, left: 18, right: 1 }
+                      : { top: 11, bottom: 11, left: 1, right: 18 }}
                     onPress={() => pickView(v)}
                     accessibilityRole="button"
                     accessibilityState={{ selected: view === v }}
@@ -1321,7 +1327,7 @@ const s = StyleSheet.create({
   noticeTitle: { color: colors.text, ...type.cardTitle },
   // A step down from `type.body`: this is the supporting line, and at body
   // size it read as loud as the collection titles underneath it.
-  noticeBody: { color: colors.textSecondary, fontSize: 14.5, lineHeight: 20 },
+  noticeBody: { color: colors.textSecondary, fontSize: 15, lineHeight: 20 },
   noticeChip: {
     flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start',
     // 40 + 13: the icon well and its gap, so the chip starts on the text's
@@ -1340,10 +1346,10 @@ const s = StyleSheet.create({
   },
   gcard: { borderRadius: radius.image, overflow: 'hidden', justifyContent: 'flex-end' },
   gcardText: { padding: 12, gap: 2 },
-  gcardTitle: { color: onPhoto.text, fontSize: 15.5, fontWeight: font.semibold, lineHeight: 19 },
-  gcardBy: { color: onPhoto.textSecondary, fontSize: 12.5, fontWeight: font.medium, flexShrink: 1 },
+  gcardTitle: { color: onPhoto.text, fontSize: 16, fontWeight: font.semibold, lineHeight: 19 },
+  gcardBy: { color: onPhoto.textSecondary, fontSize: 13, fontWeight: font.medium, flexShrink: 1 },
   gcardFoot: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
-  gcardMeta: { color: onPhoto.textSecondary, fontSize: 12.5 },
+  gcardMeta: { color: onPhoto.textSecondary, fontSize: 13 },
   gcardLikes: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
   // The tile/list switch — two glyphs in a quiet glass capsule, the

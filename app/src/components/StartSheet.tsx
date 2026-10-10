@@ -561,7 +561,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  input: { flex: 1, color: colors.text, fontSize: 15.5, padding: 0 },
+  input: { flex: 1, color: colors.text, fontSize: 16, padding: 0 },
   missed: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 8 },
   // A tinted well rather than a bare line, unlike `missed`: that one
   // answers a search the reader just ran and is read in passing, while
@@ -573,7 +573,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surfaceGlass,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
-  blockedCta: { color: colors.accent, fontSize: 13.5, fontWeight: font.semibold },
+  blockedCta: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
 
   hits: {
     marginTop: 10,
@@ -587,7 +587,7 @@ const s = StyleSheet.create({
   // one card rather than a stack of them.
   hitTop: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderGlassSoft },
   hitName: { color: colors.text, fontSize: 15, fontWeight: font.semibold },
-  hitSub: { color: colors.textTertiary, fontSize: 12.5, marginTop: 2 },
+  hitSub: { color: colors.textTertiary, fontSize: 13, marginTop: 2 },
 
   label: {
     color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,

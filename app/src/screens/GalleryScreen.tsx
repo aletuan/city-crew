@@ -453,7 +453,7 @@ const s = StyleSheet.create({
   // Not `flex: 1`: the waiting tile is given its cell outright, like the
   // pressables around it get theirs through `containerStyle`.
   waiting: { flex: 0, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  waitingText: { color: colors.textTertiary, fontSize: 12.5, fontWeight: font.medium },
+  waitingText: { color: colors.textTertiary, fontSize: 13, fontWeight: font.medium },
   hiddenVeil: {
     backgroundColor: 'rgba(6,5,8,0.55)',
     alignItems: 'center', justifyContent: 'center',
@@ -465,7 +465,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 3, borderRadius: radius.pill,
     backgroundColor: 'rgba(6,5,8,0.62)',
   },
-  badgeText: { color: onPhoto.text, fontSize: 10.5, fontWeight: font.semibold },
+  badgeText: { color: onPhoto.text, fontSize: 11, fontWeight: font.semibold },
   more: {
     position: 'absolute', top: 6, right: 6,
     width: 26, height: 26, borderRadius: 13,
@@ -484,10 +484,10 @@ const s = StyleSheet.create({
   tickOn: { backgroundColor: colors.accentFill, borderColor: colors.accentFill },
 
   tips: { padding: space.cardPadding, gap: 10 },
-  tipsTitle: { color: colors.text, fontSize: 15.5, fontWeight: font.semibold },
+  tipsTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   tip: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   tipDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.accent, marginTop: 7 },
-  tipText: { flex: 1, color: colors.textSecondary, fontSize: 13.5, lineHeight: 19 },
+  tipText: { flex: 1, color: colors.textSecondary, fontSize: 14, lineHeight: 19 },
 
   who: sheetHeader,
   thumb: { width: 52, height: 52, borderRadius: 12, backgroundColor: colors.surfaceGlassStrong },
