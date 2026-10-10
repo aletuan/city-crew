@@ -1,0 +1,24 @@
+# Reusable: Places → the first card → its page draws → back. A check that
+# the two busiest screens still render, whatever language is set.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "tab-explore"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 30000
+- tapOn:
+    id: "place-card-0"
+- extendedWaitUntil:
+    visible:
+      id: "detail-name"
+    timeout: 20000
+- assertVisible:
+    id: "detail-address"
+- tapOn:
+    id: "detail-back"
+- extendedWaitUntil:
+    visible:
+      id: "place-card-0"
+    timeout: 10000

@@ -51,6 +51,7 @@ export function LanguageSwitcherModal({ visible, onClose }: { visible: boolean; 
                 accessibilityRole="radio"
                 accessibilityState={{ selected: active }}
                 onPress={() => { setLang(l.id); onClose(); }}
+                testID={`lang-${l.id}`}
               >
                 <Text style={[s.rowTitle, { flex: 1 }, active && { color: colors.accent }]}>
                   {l.label}
