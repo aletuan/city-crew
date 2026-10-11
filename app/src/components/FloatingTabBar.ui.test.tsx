@@ -172,7 +172,6 @@ describe('the five tabs', () => {
     expect(ink('Ideas')).toBe(PALETTES.paper.text);
   });
 
-  // The disc is the look's solid badge, and only the selected tab wears it.
   // The pill is the look's solid badge, and only the selected tab wears it:
   // the cell's width, 56 tall in the 64pt island, round-ended.
   it('wraps the selected tab in a pill of the look’s badge colour', () => {
@@ -184,6 +183,34 @@ describe('the five tabs', () => {
     expect(style.width).toBe('100%');
     expect(style.borderTopLeftRadius).toBe('28px');
     expect(getComputedStyle(pill('Ideas')).backgroundColor).not.toBe('rgb(255, 111, 91)');
+  });
+
+  // Drawn at 25, not 22: at 22 the ink came out a few points smaller than
+  // Threads' in a pill of the same size. Both kinds of glyph, the
+  // Ionicons four and the drawn pin.
+  it('draws every glyph at the one size', () => {
+    mount(propsFor(0).props);
+    for (const name of ['Ideas', 'Trips', 'Collections', 'Profile']) {
+      expect(tab(name).querySelector('[data-icon]')!.getAttribute('data-size')).toBe('25');
+    }
+    expect(tab('Explore').querySelector('[data-stub="Svg"]')!.getAttribute('width')).toBe('25');
+  });
+
+  // As far from the rim at the sides as above and below: the first and
+  // last pills meet the rim on three sides, and an uneven gap there is
+  // what the owner saw against Threads. The cells carry no inset of their
+  // own, so the row's is the whole of it.
+  it('keeps the pill as far from the rim at the sides as above and below', () => {
+    mount(propsFor(0).props);
+    const cell = tab('Ideas');
+    const row = getComputedStyle(cell.parentElement!);
+    const pill = parseFloat(getComputedStyle(cell.firstElementChild!).height);
+    const above = (64 - pill) / 2;
+    expect(above).toBe(4);
+    expect(parseFloat(row.paddingLeft)).toBe(above);
+    expect(parseFloat(row.paddingRight)).toBe(above);
+    expect(parseFloat(getComputedStyle(cell).paddingLeft || '0')).toBe(0);
+    expect(parseFloat(getComputedStyle(cell).paddingRight || '0')).toBe(0);
   });
 
   // The page's own margin, so its edges line up with the cards above it,

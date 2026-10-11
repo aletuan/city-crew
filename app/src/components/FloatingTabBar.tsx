@@ -83,8 +83,21 @@ const inkOf = (focused: boolean, light: boolean) =>
 // tab, now "Places", is not in this table: its glyph is a pin standing on
 // a map, which Ionicons does not have, drawn in `PlacesGlyph`. The bulb
 // that used to mark "Ideas" went with the word.
-/** The pill's height: the island's, less 4pt above and below. */
-const PILL_H = TAB_BAR_HEIGHT - 8;
+/** The air between the pill and the island's rim — the same on every
+ *  side, so the pill's round ends are concentric with the island's. */
+const PILL_INSET = 4;
+/** The pill's height: the island's, less the inset above and below. */
+const PILL_H = TAB_BAR_HEIGHT - PILL_INSET * 2;
+/**
+ * The glyph's box, in points. Ionicons draws inside its box with margin,
+ * so the ink is smaller than the number: measured on the owner's Pro Max
+ * screenshot (2.15px a point), at 22 the five glyphs drew 18–20pt —
+ * the compass 38px across, the person 40, the calendar and bookmark 43.
+ * Threads' glyphs in the same screenshot pair draw 46–48px, about 22pt,
+ * in a 53pt pill. At 25 ours draw about 21–23pt, the same ink in a pill
+ * 3pt taller; the owner had found the air around them too wide.
+ */
+const GLYPH = 25;
 
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
   Ideas: ['compass-outline', 'compass'],
@@ -275,7 +288,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               <View>
               {route.name === 'Explore' ? (
                 <PlacesGlyph
-                  size={22}
+                  size={GLYPH}
                   solid={focused}
                   color={inkOf(focused, light)}
                   testID="places-glyph"
@@ -283,7 +296,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               ) : (
               <Ionicons
                 name={ICONS[route.name][focused ? 1 : 0]}
-                size={22}
+                size={GLYPH}
                 // Only when idle: the selected glyph sits on an opaque
                 // pill, whose ground is known, so a halo there would be
                 // decoration on a problem that does not exist.
@@ -334,19 +347,27 @@ const s = StyleSheet.create({
     borderRadius: radius.tabBar,
     overflow: 'hidden',
   },
-  row: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  tab: {
-    flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 2,
+  // The inset is the row's, not the cell's: it puts the end cells' pills
+  // `PILL_INSET` from the rim at the sides, as they are above and below.
+  row: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: PILL_INSET,
   },
-  // A pill that fills its cell, Threads' shape: 4pt from the island's rim
-  // above and below, 2pt from the cell's edge either side. Its round ends
-  // are concentric with the island's, since 56/2 is the island's 32pt
-  // radius less the 4pt inset.
+  tab: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center' },
+  // A pill that fills its cell, Threads' shape: `PILL_INSET` from the
+  // island's rim on every side it meets. Its round ends are concentric
+  // with the island's, since 56/2 is the island's 32pt radius less 4.
   //
   // It went through a 52pt disc and then a 60×44 pill the same day (11 Oct
   // 2026). Both left a wide band of glass between the mark and the rim,
   // which the owner measured against Threads, whose pill is the cell.
+  //
+  // Then the inset was the cell's own 2pt padding at the sides against 4pt
+  // above and below. On a Pro Max screenshot the selected Explore pill sat
+  // 4px from the rim at the side and 8px from it above, at 2.15px a point
+  // — and the end was no longer concentric, so the hairline showed as a
+  // sliver beside it. Threads' pill, measured in the same screenshot pair,
+  // sits about 10px (4.5pt) from its rim on the left, top and bottom alike.
   tabInner: {
     width: '100%', height: PILL_H, borderRadius: PILL_H / 2,
     alignItems: 'center', justifyContent: 'center',
