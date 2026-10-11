@@ -198,9 +198,12 @@ describe('the looks', () => {
     };
     const strip = () => propsWhere((p) => !!p.horizontal && 'onMomentumScrollEnd' in p);
     const swipe = (x: number) => act(() => { strip().onMomentumScrollEnd({ nativeEvent: { contentOffset: { x } } }); });
-    /** The strip's page width, read off a page rather than assumed: the
-     *  runner lays out at no width at all, and the strip floors it. */
+    /** The strip's stride — a page and its gap, which is what it snaps by
+     *  and reads the page off. The page's width is read off a page rather
+     *  than assumed: the runner lays out at no width at all, and the
+     *  strip floors it. */
     const pageW = () => StyleSheet.flatten(propsWhere((p) => p.testID === 'look-page-0').style).width as number;
+    const stride = () => strip().snapToInterval as number;
     const radiosIn = (page: number) => screen.getByTestId(`look-page-${page}`).querySelectorAll('[role="radio"]').length;
 
     it('cuts the eleven into pages of four, four and three, and counts them on the heading', () => {
@@ -208,18 +211,36 @@ describe('the looks', () => {
       expect(screen.queryByTestId('look-page-3')).toBeNull();
       expect([radiosIn(0), radiosIn(1), radiosIn(2)]).toEqual([4, 4, 3]);
       expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 1/3');
-      // No dots, no arrows: the count is the whole of the indicator.
+      // No dots, no arrows: the count and the sliver are the indicator.
       expect(document.querySelector('[data-icon="chevron-forward"]')).toBeNull();
       expect(document.querySelector('[data-icon="chevron-back"]')).toBeNull();
     });
 
+    // The next page shows its edge: a page is narrower than the strip by
+    // the sliver, the strip snaps by a page and its gap rather than paging
+    // by its own width, and the trailing padding is the sliver again so
+    // the last page can reach the left edge too.
+    it('leaves a sliver of the next page showing, and snaps by a page', () => {
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      const p = strip();
+      expect(p.pagingEnabled).toBeFalsy();
+      expect(p.snapToAlignment).toBe('start');
+      expect(p.decelerationRate).toBe('fast');
+      const gap = p.snapToInterval - pageW();
+      expect(gap).toBeGreaterThan(0);
+      const content = StyleSheet.flatten(p.contentContainerStyle) as { gap: number; paddingRight: number };
+      expect(content.gap).toBe(gap);
+      // Explore's sliver, to the point: see `PEEK`.
+      expect(content.paddingRight).toBe(26);
+    });
+
     it('reports the page a swipe landed on, rounded and clamped', () => {
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
-      swipe(pageW() * 2);
+      swipe(stride() * 2);
       expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 3/3');
-      swipe(pageW() * 0.6);
+      swipe(stride() * 0.6);
       expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 2/3');
-      swipe(pageW() * 9);
+      swipe(stride() * 9);
       expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 3/3');
       swipe(-40);
       expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 1/3');
@@ -231,7 +252,7 @@ describe('the looks', () => {
       state.pref = 'cosmic';
       state.look = 'cosmic';
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
-      expect(strip().contentOffset).toEqual({ x: pageW(), y: 0 });
+      expect(strip().contentOffset).toEqual({ x: stride(), y: 0 });
       expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 2/3');
       expect(screen.getByTestId('look-page-1').querySelector('[data-icon="checkmark"]')).toBeTruthy();
 
@@ -239,7 +260,7 @@ describe('the looks', () => {
       state.pref = 'royal';
       state.look = 'royal';
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
-      expect(strip().contentOffset).toEqual({ x: pageW() * 2, y: 0 });
+      expect(strip().contentOffset).toEqual({ x: stride() * 2, y: 0 });
       expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 3/3');
 
       // And the first page from a ground, which is on no page.
@@ -254,7 +275,7 @@ describe('the looks', () => {
     // the worn look's page, as the strip itself does on its remount.
     it('starts the count over each time it opens', () => {
       const { rerender } = render(<ThemeSwitcherModal visible onClose={() => {}} />);
-      swipe(pageW() * 2);
+      swipe(stride() * 2);
       expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 3/3');
       rerender(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
       rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
