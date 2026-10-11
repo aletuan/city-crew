@@ -406,9 +406,9 @@ gate bằng `Authorization: Bearer` → `admin.auth.getUser(token)`.
 
 | action | Vào | Ra | Model |
 |---|---|---|---|
-| `narrate` | draft + **phương án người dùng đã chọn** (slug, tên, category, khu vực, rating, giờ đến) | `{ title, stops: [{slug, why}] }` | `claude-opus-5` |
-| `parse` | câu tự do + taxonomy + danh sách quận | `TripDraft` từng phần | `claude-opus-5` |
-| `revise` | plan hiện tại + yêu cầu sửa | `{ intent, params }` — planner chạy lại | `claude-opus-5` |
+| `narrate` | draft + **phương án người dùng đã chọn** (slug, tên, category, khu vực, rating, giờ đến) | `{ title, stops: [{slug, why}] }` | `claude-haiku-5-5` |
+| `parse` | câu tự do + taxonomy + danh sách quận | `TripDraft` từng phần | `claude-haiku-5-5` |
+| `revise` | plan hiện tại + yêu cầu sửa | `{ intent, params }` — planner chạy lại | `claude-haiku-5-5` |
 
 **Đi chệch thiết kế ban đầu, có chủ ý.** Bản đầu cho `narrate` đặt tên cho *cả
 ba* phương án trong một lời gọi, ngay ở màn PlanOptions. Bản đã dựng chỉ đặt
@@ -762,7 +762,14 @@ Kiếm, `claude-opus-5`, `effort: "low"`.
 
 | Model | Lần đầu (ghi cache) | Lần sau (đọc cache) | 1.000 lần/tháng |
 |---|---|---|---|
-| `claude-opus-5` | ~$0.0117 | ~$0.0072 | ~$8 |
+| `claude-opus-5` (đến 11 Oct 2026) | ~$0.0117 | ~$0.0072 | ~$8 |
+| `claude-haiku-5-5` (hiện tại) | ~$0.00024 | ~$0.00014 | ~$0.14 |
+
+Dòng Haiku tính từ cùng số token đo ở trên với giá $0.10/$0.50 mỗi triệu
+token vào/ra (đọc cache $0.01). Ngưỡng cache của Haiku 5.5 cũng là 512 nên
+prompt 786 token vẫn cache. Đổi vì hai việc này đều nhỏ và bị rào bằng
+schema enum; chất lượng câu tiếng Việt cần đọc lại trên plan thật sau khi
+đổi, và nếu phẳng thì `claude-sonnet-5-5` là bậc giữa ($2/$10).
 
 `parse` rẻ hơn nhiều — system prompt 1.115 token (cũng cache được), vào ~130,
 ra ~45: **~$0.0023 mỗi lần** khi cache ấm, tức ~$2/1.000 lần. Cũng đo thật.
