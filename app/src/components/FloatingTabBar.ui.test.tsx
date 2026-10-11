@@ -174,30 +174,31 @@ describe('the five tabs', () => {
 
   // The disc is the look's solid badge, and only the selected tab wears it.
   // The pill is the look's solid badge, and only the selected tab wears it:
-  // 44 tall in the 64pt island, round-ended, capped at 60 wide.
+  // the cell's width, 56 tall in the 64pt island, round-ended.
   it('wraps the selected tab in a pill of the look’s badge colour', () => {
     mount(propsFor(2).props);
     const pill = (name: string) => tab(name).firstElementChild as HTMLElement;
     const style = getComputedStyle(pill('Trips'));
     expect(style.backgroundColor).toBe('rgb(255, 111, 91)'); // charcoal's badgeSolid
-    expect(style.height).toBe('44px');
-    expect(style.maxWidth).toBe('60px');
-    expect(style.borderTopLeftRadius).toBe('22px');
+    expect(style.height).toBe('56px');
+    expect(style.width).toBe('100%');
+    expect(style.borderTopLeftRadius).toBe('28px');
     expect(getComputedStyle(pill('Ideas')).backgroundColor).not.toBe('rgb(255, 111, 91)');
   });
 
-  // 24pt in from each edge, centred, and never wider than 340.
-  it('sits the island 24pt in from the edges, and no wider than 340', () => {
+  // The page's own margin, so its edges line up with the cards above it,
+  // on any width of phone.
+  it('sits the island on the page margin, whatever the phone', () => {
     const island = () => getComputedStyle(tab('Ideas').parentElement!.parentElement!);
     win.width = 320;
     const { unmount } = mount(propsFor(0).props);
-    expect(island().left).toBe('24px');
-    expect(island().width).toBe('272px');
+    expect(island().left).toBe('22px');
+    expect(island().width).toBe('276px');
     unmount();
     win.width = 440;
     mount(propsFor(0).props);
-    expect(island().width).toBe('340px');
-    expect(island().left).toBe('50px');
+    expect(island().left).toBe('22px');
+    expect(island().width).toBe('396px');
   });
 
   it('stands down when a listener prevented the press', () => {
