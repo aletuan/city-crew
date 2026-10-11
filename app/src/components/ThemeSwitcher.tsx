@@ -55,6 +55,7 @@ import { lookOf, needsRestart, PINNED, type Pinned } from '../lib/look';
 import { Pref, Scheme, useScheme } from '../lib/theme';
 import { colors, font, PALETTES, radius, space } from '../theme';
 import { PressableScale } from './ui';
+import { useSheetDrag } from './sheetDrag';
 
 const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
   // The phone's own mark for "this device" — the same glyph iOS uses in
@@ -212,6 +213,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
   // this sheet, and the calmer the sheet's own motion, the more that
   // repaint reads as the event.
   const rise = useRef(new Animated.Value(1)).current;
+  const { drag, handlers } = useSheetDrag(visible, onClose);
   useEffect(() => {
     if (!visible) { rise.setValue(1); return; }
     Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
@@ -222,11 +224,15 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
       <Animated.View
         style={[s.sheet, {
           paddingBottom: 14 + insets.bottom,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }],
+          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }, { translateY: drag }],
         }]}
       >
-        <View style={s.handle} />
-        <Text style={s.title}>{t('Theme', 'Theme', 'テーマ')}</Text>
+        {/* The pull lives on the handle and title only: below them is a
+            list that scrolls, and keeps its own gesture. */}
+        <View {...handlers} testID="sheet-grab">
+          <View style={s.handle} />
+          <Text style={s.title}>{t('Theme', 'Theme', 'テーマ')}</Text>
+        </View>
         <ScrollView style={{ maxHeight: room }} bounces={false} showsVerticalScrollIndicator={false}>
         {grounds.map((o, i) => {
           const active = o.id === pref;

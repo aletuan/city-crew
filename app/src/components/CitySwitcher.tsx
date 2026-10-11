@@ -48,6 +48,7 @@ import { useI18n } from '../lib/i18n';
 import { fold } from '../lib/search';
 import { colors, font, radius, space } from '../theme';
 import { fireHaptic, PressableScale } from './ui';
+import { useSheetDrag } from './sheetDrag';
 
 /** Under this many live places a city is introduced as new — a promise
  *  kept small on purpose, so nobody walks into a young catalog expecting
@@ -117,6 +118,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
   }, []);
 
   const rise = useRef(new Animated.Value(1)).current;
+  const { drag, handlers } = useSheetDrag(visible, onClose);
   useEffect(() => {
     if (!visible) { rise.setValue(1); return; }
     setQuery('');
@@ -152,11 +154,15 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
           // Lifted, the sheet has less room, and a sheet taller than what
           // is left would push its own rows off the top of the screen.
           maxHeight: (winH - kb) * 0.92,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 360] }) }],
+          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 360] }) }, { translateY: drag }],
         }]}
       >
-        <View style={s.handle} />
-        <Text style={s.title}>{t('Choose a city', 'Chọn thành phố', '都市を選択')}</Text>
+        {/* The pull lives on the handle and title only: below them is a
+            list that scrolls, and keeps its own gesture. */}
+        <View {...handlers} testID="sheet-grab">
+          <View style={s.handle} />
+          <Text style={s.title}>{t('Choose a city', 'Chọn thành phố', '都市を選択')}</Text>
+        </View>
 
         <View style={s.search}>
           <Ionicons name="search" size={17} color={colors.textTertiary} />

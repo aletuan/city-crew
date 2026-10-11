@@ -6,6 +6,7 @@ import type { ExploreFilters, ExploreSort, ExploreStatus } from '../lib/exploreF
 import { useI18n } from '../lib/i18n';
 import { colors, display, font, radius, space } from '../theme';
 import { Card, fireHaptic, GradientCta, PressableScale } from './ui';
+import { useSheetDrag } from './sheetDrag';
 
 /** What the sheet looks like with nothing chosen — the state Reset
  *  returns to, and the one it compares against to know it has anything
@@ -82,6 +83,7 @@ export default function ExploreFilterSheet({
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const rise = useRef(new Animated.Value(1)).current;
+  const { drag, handlers } = useSheetDrag(visible, onClose);
   const [draft, setDraft] = useState(applied);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,9 +118,10 @@ export default function ExploreFilterSheet({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} />
       <Animated.View
+        {...handlers}
         style={[s.sheet, {
           paddingBottom: 14 + insets.bottom,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 420] }) }],
+          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 420] }) }, { translateY: drag }],
         }]}
       >
         <View style={s.handle} />
