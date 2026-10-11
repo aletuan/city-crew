@@ -6,8 +6,9 @@
 // every layout here takes that: buttons are `minHeight`, rows are padding
 // around their words. Three boxes are fixed by their nature — the 64pt
 // tab bar, the 20pt shut sash drawn across a photograph, the 21pt count
-// badge — and the caption inside each is capped at `labelScaleCap` so it
-// is smaller rather than clipped. Everything else is left to scale, and
+// badge. The sash and the badge cap their caption at `labelScaleCap` so
+// it is smaller rather than clipped; the tab bar has carried no words
+// since 11 Oct 2026, so there is nothing in it to grow. Everything else is left to scale, and
 // that half of the rule is pinned here too: a cap that crept onto body
 // copy would be the app deciding how big a reader's own words may be.
 //
@@ -56,7 +57,9 @@ beforeEach(() => { caps.clear(); });
 afterEach(() => { vi.useRealTimers(); });
 
 describe('the three boxes that cannot grow', () => {
-  it('caps the tab bar captions, and only the captions', () => {
+  // Glyphs only: the names are VoiceOver's, and no word is drawn that a
+  // reader's text size could push out of the 64pt island.
+  it('draws no words in the tab bar for a text size to grow', () => {
     const names = ['Ideas', 'Explore', 'Trips', 'Collections', 'Profile'];
     const props = {
       state: { index: 0, routes: names.map((name) => ({ key: `${name}-k`, name })) },
@@ -65,7 +68,7 @@ describe('the three boxes that cannot grow', () => {
     } as unknown as BottomTabBarProps;
     render(<TabBarDuckProvider><FloatingTabBar {...props} /></TabBarDuckProvider>);
 
-    for (const name of names) expect(caps.get(name)).toBe(labelScaleCap);
+    for (const name of names) expect(caps.has(name)).toBe(false);
   });
 
   it('caps the shut sash, and leaves the card’s own words to scale', () => {

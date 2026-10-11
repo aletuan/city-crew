@@ -1,33 +1,32 @@
 // The tab bar as a floating island — the social-app grammar, in the
 // app's own materials.
 //
-// Five glyphs, each above its own name, and the selected one sits in a
-// coral pill that wraps both — the shape carries "you are here", the word
-// says which here. The island is the same glass the pinned filter row
-// uses, ringed by the same hairline every card wears, and it ducks below
-// the edge while you scroll into content (see tabBarDuck).
+// Five glyphs, and the selected one sits in a round disc — the shape
+// carries "you are here". The island is the same glass the pinned filter
+// row uses, ringed by the same hairline every card wears, and it ducks
+// below the edge while you scroll into content (see tabBarDuck).
 //
-// ── why the captions came back ──
+// ── icons only, a second time ──
 //
-// This bar shipped icon-only, on the reasoning that the pill's shape says
-// enough and the names survive for VoiceOver. That holds for three of the
-// five. It does not hold for the calendar and the bookmark: Trips and
-// Collections are both "things I put aside", and no glyph distinguishes a
-// day I planned from a list I saved — the reader has to open one to find
-// out which. An icon is a reminder of a word you already know, and those
-// two never taught it.
+// This bar shipped icon-only once, and the captions came back because
+// two glyphs do not teach their words: Trips (a calendar) and Collections
+// (a bookmark) are both "things I put aside". On 11 Oct 2026 the owner
+// chose the icon-only bar again, from a reference, knowing that history:
+// the captions go, and the names stay for VoiceOver, which reads every
+// tab by its name and its waiting count. If the two tabs are mistaken for
+// each other again, a distinct glyph for Trips is the fix to reach for
+// before the words.
 //
-// The captions cost six points of island height and nothing else. They
-// are not a retreat from the icon-first idea; they are the two of five it
-// could not carry.
-//
-// The pill keeps the badge's split personality on purpose: solid coral on
-// charcoal, a pale coral on paper — the reasoning documented on the token
-// holds unchanged now the disc grew into a pill. What did change is
-// *which* badge token, and the ink on it; see the note above `inkOf`.
+// The disc is the badge, as a disc: `badgeSolid` under `pillInk`, both
+// taken from the look the reader chose in Profile → Theme — a pale coral
+// under brick on paper, solid coral under near-black on charcoal and the
+// coffee brown, Rose's pale rose under its deep rose. Solid rather than
+// the 16% `badge` tint because the bar is glass over whatever scrolls
+// beneath it, and a tint there would take the colour of the photograph.
+// See the note above `inkOf` for the ink's measurements.
 
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../lib/auth';
@@ -40,13 +39,13 @@ import { minutesOf, todayISO } from '../lib/day';
 import { tripsToday } from '../lib/trips';
 import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
-import { badgeSolidHex, colors, font, labelScaleCap, pillInk, radius, textHex } from '../theme';
+import { badgeSolidHex, colors, pillInk, radius, textHex } from '../theme';
 import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
 import PlacesGlyph from './PlacesGlyph';
 
 /**
- * The ink on the selected pill — not `colors.badgeInk`, and measured.
+ * The ink on the selected disc — not `colors.badgeInk`, and measured.
  *
  * Two things changed under that token at once. The pill is `badgeSolid`
  * rather than `badge`, because `badge` on paper is a 16% coral tint and
@@ -57,18 +56,18 @@ import PlacesGlyph from './PlacesGlyph';
  * fill there let the picture through and left the glyph sitting on
  * whatever pixels happened to be under it".
  *
- * And the pill now carries an 11pt word, not only a 22pt glyph, so it is
- * held to 4.5:1 where the disc only ever needed 3:1. On `badgeSolid`'s
- * pale coral, `badgeInk`'s #DC4C33 reaches 3.15 — fine for the glyph it
- * was chosen for, short for the caption beside it. #A33724 is the same
- * hue carried far enough down to reach 5.16.
+ * It was measured while the pill carried an 11pt word, so it is held to
+ * 4.5:1 where a glyph alone needs only 3:1. On `badgeSolid`'s pale coral,
+ * `badgeInk`'s #DC4C33 reaches 3.15; #A33724 is the same hue carried far
+ * enough down to reach 5.16. The word went on 11 Oct 2026 and the ink
+ * stayed: a margin over the threshold is not a reason to spend it.
  *
  * Dark needs no such move: #141310 on solid coral is already 6.79.
  * Rose's pill is its own pale #F0D2CA, under #8E3C4A at 5.10. The values
  * live in the palettes now (`pillInk` in theme.ts), one per look.
  */
 
-/** The ink a glyph and its caption wear: on the pill when selected, at
+/** The ink a glyph wears: on the disc when selected, at
  *  full strength on the glass when idle (see the glyph's note on why
  *  not a mid grey). It was the same four-way ternary written three
  *  times, which is three places to change two of. */
@@ -76,7 +75,7 @@ const inkOf = (focused: boolean, light: boolean) =>
   (focused ? pillInk[light ? 'light' : 'dark'] : textHex[light ? 'light' : 'dark']);
 
 // [inactive, active]. Thin monochrome glyphs when idle; the selected tab
-// takes the solid variant, reversed out of the pill.
+// takes the solid variant, reversed out of the disc.
 //
 // The first two moved with their captions (App.tsx, 2 Oct 2026). The
 // planning tab, now "Explore", takes the compass the catalog tab wore —
@@ -84,6 +83,8 @@ const inkOf = (focused: boolean, light: boolean) =>
 // tab, now "Places", is not in this table: its glyph is a pin standing on
 // a map, which Ionicons does not have, drawn in `PlacesGlyph`. The bulb
 // that used to mark "Ideas" went with the word.
+const DISC = TAB_BAR_HEIGHT - 12;
+
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
   Ideas: ['compass-outline', 'compass'],
   Trips: ['calendar-outline', 'calendar'],
@@ -252,12 +253,9 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
           return (
             <PressableScale
               key={route.key}
+              // The whole cell is the target; the disc inside it is only
+              // the mark.
               containerStyle={s.tab}
-              // The pill is this view, so it wraps the glyph *and* the
-              // word rather than sitting behind the glyph alone. A fill
-              // that stops above the caption leaves the selected tab's
-              // name outside the thing marking it selected, which reads
-              // as a highlight that missed.
               style={[s.tabInner, focused && { backgroundColor: colors.badgeSolid }]}
               scaleTo={0.9}
               // The navigator's tabPress listener already fires the
@@ -308,20 +306,6 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               {route.name === 'Trips' && (invitesWaiting > 0 || today.length > 0)
                 ? <View style={[s.reqDot, dotInk]} /> : null}
               </View>
-              {/* Capped, because the island is 64pt whatever the reader's
-                  text size — see `labelScaleCap`. An 11pt caption at the
-                  largest ordinary size is 14, and the row still clears
-                  the glyph; at AX5 it would be 34 and gone off the pill. */}
-              <Text
-                numberOfLines={1}
-                maxFontSizeMultiplier={labelScaleCap}
-                style={[s.caption, !focused && glassHalo(light), {
-                  color: inkOf(focused, light),
-                  fontWeight: focused ? font.semibold : font.regular,
-                }]}
-              >
-                {label}
-              </Text>
             </PressableScale>
           );
         })}
@@ -347,18 +331,14 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   row: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  tab: { flex: 1, height: '100%' },
+  tab: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center' },
+  // A disc as tall as the pill was: 6pt inside the 64pt island top and
+  // bottom, so it sits concentric with the island's round end. The island
+  // keeps its 64pt — every screen's bottom clearance is measured off it
+  // (`useTabBarClearance`) — and the six points the captions cost go to
+  // the disc's margin instead.
   tabInner: {
-    // Inset inside the cell so five pills do not touch: 6 top and bottom
-    // leaves a 52pt pill in the 64pt island, 3 each side leaves about
-    // 64pt of width on a small phone — enough for "Bộ sưu tập" at 11pt,
-    // which is the longest caption any of the three languages produces.
-    //
-    // Concentric with the island: inner radius = radius.tabBar − the
-    // inset, so the pill nests inside the island's curve instead of
-    // fighting it. At 52 tall that is a full round end either way.
-    flex: 1, marginVertical: 6, marginHorizontal: 3,
-    borderRadius: radius.tabBar - 6,
+    width: DISC, height: DISC, borderRadius: DISC / 2,
     alignItems: 'center', justifyContent: 'center',
   },
   // Geometry only — the colours are `dotInk`, picked per theme in render.
@@ -366,12 +346,5 @@ const s = StyleSheet.create({
     position: 'absolute', top: -1, right: -4,
     width: 9, height: 9, borderRadius: 4.5,
     borderWidth: 1.5,
-  },
-  caption: {
-    // 11, not the 11.5 the old full-width bar used: the island is inset
-    // 12pt each side, so its five cells are ~70pt where the old bar's
-    // were 75, and the longest label has to clear a pill rather than sit
-    // in an open row.
-    fontSize: 11, marginTop: 3, lineHeight: 13,
   },
 });

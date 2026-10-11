@@ -31,6 +31,7 @@ const theme = vi.hoisted(() => ({ scheme: 'dark' as 'dark' | 'light' }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: theme.scheme }) }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }) }));
 
+import { PALETTES } from '../theme';
 import FloatingTabBar from './FloatingTabBar';
 import PlacesGlyph from './PlacesGlyph';
 import { TabBarDuckProvider, useTabBarDuck } from './tabBarDuck';
@@ -85,9 +86,12 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); });
 
 describe('the five tabs', () => {
-  it('draws each tab with its name, and marks the selected one', () => {
+  // Glyphs only (11 Oct 2026): the names are for VoiceOver, and drawn
+  // nowhere on the bar.
+  it('names each tab for VoiceOver, draws no caption, and marks the selected one', () => {
     mount(propsFor(1).props);
-    expect(screen.getAllByRole('tab').map((el) => el.textContent)).toEqual(NAMES);
+    expect(screen.getAllByRole('tab').map((el) => el.getAttribute('aria-label'))).toEqual(NAMES);
+    expect(screen.getAllByRole('tab').map((el) => el.textContent)).toEqual(['', '', '', '', '']);
     // The selected glyph is the solid one; the rest are outlines. (The
     // `selected` state itself is set, but react-native-web drops
     // `accessibilityState` on the floor — see `Chip` — so the glyph is
@@ -146,21 +150,29 @@ describe('the five tabs', () => {
     expect(navigation.navigate).not.toHaveBeenCalled();
   });
 
-  // The pill's ink is measured per theme — see PILL_INK_LIGHT — and the
+  // The disc's ink is the look's `pillInk`, measured per palette, and the
   // idle glyphs are full-strength ink or paper, never a mid grey.
-  it('inks the captions for paper under a light theme, and for charcoal under dark', () => {
-    // The caption's colour is the one decided in render, so it lands
-    // inline where a test can read it; the glyph's goes to the icon font.
-    const ink = (name: string) => screen.getByText(name).style.color;
-    const { unmount } = mount(propsFor(1).props);
-    expect(ink('Explore')).toBe('rgb(20, 19, 16)');   // PILL_INK_DARK on solid coral
-    expect(ink('Ideas')).toBe('rgb(247, 247, 245)');  // full-strength paper, never a mid grey
+  it('inks the glyphs from the look: the disc’s ink when selected, full strength when idle', () => {
+    const ink = (name: string) => tab(name).querySelector('[data-icon]')!.getAttribute('data-color');
+    const { unmount } = mount(propsFor(2).props);
+    expect(ink('Trips')).toBe(PALETTES.charcoal.pillInk);   // near-black on solid coral
+    expect(ink('Ideas')).toBe(PALETTES.charcoal.text);      // full-strength paper, never a mid grey
     unmount();
 
     theme.scheme = 'light';
-    mount(propsFor(1).props);
-    expect(ink('Explore')).toBe('rgb(163, 55, 36)');  // PILL_INK_LIGHT: 5.16:1 on pale coral
-    expect(ink('Ideas')).toBe('rgb(23, 21, 15)');
+    mount(propsFor(2).props);
+    expect(ink('Trips')).toBe(PALETTES.paper.pillInk);      // 5.16:1 on pale coral
+    expect(ink('Ideas')).toBe(PALETTES.paper.text);
+  });
+
+  // The disc is the look's solid badge, and only the selected tab wears it.
+  it('rounds the selected tab into a disc of the look’s badge colour', () => {
+    mount(propsFor(2).props);
+    const disc = (name: string) => tab(name).firstElementChild as HTMLElement;
+    const style = getComputedStyle(disc('Trips'));
+    expect(style.backgroundColor).toBe('rgb(255, 111, 91)'); // charcoal's badgeSolid
+    expect(style.width).toBe(style.height);
+    expect(getComputedStyle(disc('Ideas')).backgroundColor).not.toBe('rgb(255, 111, 91)');
   });
 
   it('stands down when a listener prevented the press', () => {
