@@ -30,6 +30,12 @@ vi.mock('../lib/mytrips', () => ({ useMyTrips: () => trips }));
 const theme = vi.hoisted(() => ({ scheme: 'dark' as 'dark' | 'light' }));
 vi.mock('../lib/theme', () => ({ useScheme: () => ({ scheme: theme.scheme }) }));
 vi.mock('../lib/i18n', () => ({ useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }) }));
+// The phone the island is laid out across; jsdom's own window has no width.
+const win = vi.hoisted(() => ({ width: 393 }));
+vi.mock('react-native', async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  useWindowDimensions: () => ({ width: win.width, height: 852, scale: 3, fontScale: 1 }),
+}));
 
 import { PALETTES } from '../theme';
 import FloatingTabBar from './FloatingTabBar';
@@ -77,6 +83,7 @@ const PIN_SOLID = (() => {
 const dotsIn = (name: string) => tab(name).querySelectorAll('div').length;
 
 beforeEach(() => {
+  win.width = 393;
   auth.session = { user: { id: 'me' } };
   crew.ships = { data: [], reload: vi.fn(), loadedAt: Date.now() };
   invitations.waiting = 0;
@@ -166,13 +173,31 @@ describe('the five tabs', () => {
   });
 
   // The disc is the look's solid badge, and only the selected tab wears it.
-  it('rounds the selected tab into a disc of the look’s badge colour', () => {
+  // The pill is the look's solid badge, and only the selected tab wears it:
+  // 44 tall in the 64pt island, round-ended, capped at 60 wide.
+  it('wraps the selected tab in a pill of the look’s badge colour', () => {
     mount(propsFor(2).props);
-    const disc = (name: string) => tab(name).firstElementChild as HTMLElement;
-    const style = getComputedStyle(disc('Trips'));
+    const pill = (name: string) => tab(name).firstElementChild as HTMLElement;
+    const style = getComputedStyle(pill('Trips'));
     expect(style.backgroundColor).toBe('rgb(255, 111, 91)'); // charcoal's badgeSolid
-    expect(style.width).toBe(style.height);
-    expect(getComputedStyle(disc('Ideas')).backgroundColor).not.toBe('rgb(255, 111, 91)');
+    expect(style.height).toBe('44px');
+    expect(style.maxWidth).toBe('60px');
+    expect(style.borderTopLeftRadius).toBe('22px');
+    expect(getComputedStyle(pill('Ideas')).backgroundColor).not.toBe('rgb(255, 111, 91)');
+  });
+
+  // 24pt in from each edge, centred, and never wider than 340.
+  it('sits the island 24pt in from the edges, and no wider than 340', () => {
+    const island = () => getComputedStyle(tab('Ideas').parentElement!.parentElement!);
+    win.width = 320;
+    const { unmount } = mount(propsFor(0).props);
+    expect(island().left).toBe('24px');
+    expect(island().width).toBe('272px');
+    unmount();
+    win.width = 440;
+    mount(propsFor(0).props);
+    expect(island().width).toBe('340px');
+    expect(island().left).toBe('50px');
   });
 
   it('stands down when a listener prevented the press', () => {

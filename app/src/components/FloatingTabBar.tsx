@@ -1,8 +1,8 @@
 // The tab bar as a floating island — the social-app grammar, in the
 // app's own materials.
 //
-// Five glyphs, and the selected one sits in a round disc — the shape
-// carries "you are here". The island is the same glass the pinned filter
+// Five glyphs, and the selected one sits in a pill — the shape carries
+// "you are here". The island is the same glass the pinned filter
 // row uses, ringed by the same hairline every card wears, and it ducks
 // below the edge while you scroll into content (see tabBarDuck).
 //
@@ -17,7 +17,7 @@
 // each other again, a distinct glyph for Trips is the fix to reach for
 // before the words.
 //
-// The disc is the badge, as a disc: `badgeSolid` under `pillInk`, both
+// The pill is the badge's colours: `badgeSolid` under `pillInk`, both
 // taken from the look the reader chose in Profile → Theme — a pale coral
 // under brick on paper, solid coral under near-black on charcoal and the
 // coffee brown, Rose's pale rose under its deep rose. Solid rather than
@@ -40,12 +40,12 @@ import { tripsToday } from '../lib/trips';
 import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
 import { badgeSolidHex, colors, pillInk, radius, textHex } from '../theme';
-import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarLift } from './ui';
+import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarFrame, useTabBarLift } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
 import PlacesGlyph from './PlacesGlyph';
 
 /**
- * The ink on the selected disc — not `colors.badgeInk`, and measured.
+ * The ink on the selected pill — not `colors.badgeInk`, and measured.
  *
  * Two things changed under that token at once. The pill is `badgeSolid`
  * rather than `badge`, because `badge` on paper is a 16% coral tint and
@@ -67,7 +67,7 @@ import PlacesGlyph from './PlacesGlyph';
  * live in the palettes now (`pillInk` in theme.ts), one per look.
  */
 
-/** The ink a glyph wears: on the disc when selected, at
+/** The ink a glyph wears: on the pill when selected, at
  *  full strength on the glass when idle (see the glyph's note on why
  *  not a mid grey). It was the same four-way ternary written three
  *  times, which is three places to change two of. */
@@ -75,7 +75,7 @@ const inkOf = (focused: boolean, light: boolean) =>
   (focused ? pillInk[light ? 'light' : 'dark'] : textHex[light ? 'light' : 'dark']);
 
 // [inactive, active]. Thin monochrome glyphs when idle; the selected tab
-// takes the solid variant, reversed out of the disc.
+// takes the solid variant, reversed out of the pill.
 //
 // The first two moved with their captions (App.tsx, 2 Oct 2026). The
 // planning tab, now "Explore", takes the compass the catalog tab wore —
@@ -83,7 +83,8 @@ const inkOf = (focused: boolean, light: boolean) =>
 // tab, now "Places", is not in this table: its glyph is a pin standing on
 // a map, which Ionicons does not have, drawn in `PlacesGlyph`. The bulb
 // that used to mark "Ideas" went with the word.
-const DISC = TAB_BAR_HEIGHT - 12;
+const PILL_W = 60;
+const PILL_H = 44;
 
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
   Ideas: ['compass-outline', 'compass'],
@@ -214,6 +215,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   // indicator instead, and is shared so the screens' bottom padding
   // cannot drift away from where the bar actually sits.
   const lift = useTabBarLift();
+  const frame = useTabBarFrame();
 
   const slide = duck.anim.interpolate({
     inputRange: [0, 1],
@@ -226,6 +228,8 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
       pointerEvents={duck.ducked ? 'none' : 'auto'}
       style={[s.bar, {
         bottom: lift,
+        left: frame.left,
+        width: frame.width,
         borderColor: colors.borderGlass,
         transform: [{ translateY: slide }],
         opacity: fade,
@@ -253,7 +257,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
           return (
             <PressableScale
               key={route.key}
-              // The whole cell is the target; the disc inside it is only
+              // The whole cell is the target; the pill inside it is only
               // the mark.
               containerStyle={s.tab}
               style={[s.tabInner, focused && { backgroundColor: colors.badgeSolid }]}
@@ -316,7 +320,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
 
 const s = StyleSheet.create({
   bar: {
-    position: 'absolute', left: 12, right: 12,
+    position: 'absolute',
     height: TAB_BAR_HEIGHT,
     borderRadius: radius.tabBar,
     borderWidth: StyleSheet.hairlineWidth,
@@ -331,14 +335,17 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   row: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  tab: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center' },
-  // A disc as tall as the pill was: 6pt inside the 64pt island top and
-  // bottom, so it sits concentric with the island's round end. The island
-  // keeps its 64pt — every screen's bottom clearance is measured off it
-  // (`useTabBarClearance`) — and the six points the captions cost go to
-  // the disc's margin instead.
+  tab: {
+    flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  // A pill, Threads' shape, after a day as a 52pt disc that nearly filled
+  // the island's height. 44 tall leaves 10pt above and below in the 64pt
+  // island; 60 wide is a cell's width on a 393pt phone less its padding,
+  // and `width: '100%'` with the cap folds it to the cell on a narrower
+  // one rather than letting five pills overlap.
   tabInner: {
-    width: DISC, height: DISC, borderRadius: DISC / 2,
+    width: '100%', maxWidth: PILL_W, height: PILL_H, borderRadius: PILL_H / 2,
     alignItems: 'center', justifyContent: 'center',
   },
   // Geometry only — the colours are `dotInk`, picked per theme in render.
