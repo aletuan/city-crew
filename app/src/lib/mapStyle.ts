@@ -180,6 +180,47 @@ const COSMIC_NIGHT: MapStyleRule[] = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#7E86B0' }] },
 ];
 
+// Honey (11 Oct 2026): the coffee reading on a brown-black page — land a
+// lift above it in the same brown, roads warmer still, parks an olive.
+// The page is near-black, so the water is the one surface below it.
+const HONEY_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#2B2110' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#D9C9A6' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#1E1608' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#3E3220' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#FBF3E0' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#2B3420' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#2B3420' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#352A16' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#B09E78' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#3E321B' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#4B3D21' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#EFE4C9' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#352A16' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#110C04' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#8A8A6A' }] },
+];
+
+// Royal (11 Oct 2026): the midnight reading in a saturated blue — land
+// a lift above the page, water below it, parks a teal off the blue.
+const ROYAL_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#1151A3' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#E2E8F3' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#04408B' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#2A66B4' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#F7F6EE' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#1C5A6A' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1C5A6A' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1E5BAB' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#AEBFDB' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#2A66B4' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3B74BE' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#E8EDF7' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#1E5BAB' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#032E66' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#6E93C8' }] },
+];
+
 /** Each dark look's own night; a dark look not named here is charcoal's. */
 const NIGHTS: Partial<Record<Look, MapStyleRule[]>> = {
   coffee: COFFEE_NIGHT,
@@ -187,11 +228,13 @@ const NIGHTS: Partial<Record<Look, MapStyleRule[]>> = {
   navy: NAVY_NIGHT,
   chocolate: CHOCOLATE_NIGHT,
   cosmic: COSMIC_NIGHT,
+  honey: HONEY_NIGHT,
+  royal: ROYAL_NIGHT,
 };
 
 /**
  * The style for a map that carries our own pins, in the reading the
- * reader chose in Profile. The light looks — Rose, Blush, Slate — take
+ * reader chose in Profile. The light looks — Rose, Blush, Slate, Teal — take
  * Google's own day map, as paper does; each dark look its own night.
  *
  * Not for `MiniMap`, which is a picker: there the reader is choosing a
