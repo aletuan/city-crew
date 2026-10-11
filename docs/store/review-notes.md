@@ -41,12 +41,18 @@ Thank you for reviewing City Crew. Free app: no in-app purchases,
 subscriptions or paid content (confirmed in our 2.1(b) reply on 1.0 (6)).
 
 SIGN-IN: Every content screen (Places, Collections, place pages, Search,
-the map) works signed out. An account adds saving, collections, trip plans
-and friends. Accounts are an email address and a password; the credentials
+the map) works signed out. An account adds saving, collections, trip plans,
+check-ins and friends. Accounts are an email address and a password; the credentials
 in the Sign-In Information fields above are a working account with saved
 places, collections and a trip. Sign-up creates the account at the end of
 a short form; addresses are auto-confirmed, so no emailed code is needed.
 If the account gives you any trouble: anhlt1983@gmail.com.
+
+CHECK-IN: The Check in button on a place page records a visit to the
+signed-in account: which place, and when. It is a tap, not a location
+check; the device's position is never read or sent for it. The history is
+at Profile > Check-ins, where any visit can be removed; check-ins are in
+Download your data and are deleted with the account.
 
 LOCATION: Requested once. On the device it opens the nearest supported
 city, sorts places by distance ("nearest first") and centres the maps.
