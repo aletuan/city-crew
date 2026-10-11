@@ -24,6 +24,14 @@
 // the 16% `badge` tint because the bar is glass over whatever scrolls
 // beneath it, and a tint there would take the colour of the photograph.
 // See the note above `inkOf` for the ink's measurements.
+//
+// ONE PILL, travelling (11 Oct 2026). It used to be each tab's own
+// background, so a change of tab was a pill vanishing and another
+// appearing in the same frame. Now it is one view over the row that
+// springs to the new cell, stretched toward it and lifted on the way, the
+// way Threads' does — the measurements are in "the pill's travel" below.
+// The solid glyphs live in a window inside it, so a glyph is solid
+// exactly where the pill covers it, half and half mid-flight.
 
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
@@ -39,8 +47,8 @@ import { minutesOf, todayISO } from '../lib/day';
 import { tripsToday } from '../lib/trips';
 import { shouldRefresh } from '../lib/stale';
 import { useScheme } from '../lib/theme';
-import { badgeSolidHex, colors, pillInk, radius, textHex } from '../theme';
-import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useTabBarFrame, useTabBarLift } from './ui';
+import { badgeSolidHex, bgHex, colors, pillInk, radius, textHex } from '../theme';
+import { glassHalo, GlassMaterial, PressableScale, TAB_BAR_HEIGHT, useReducedMotion, useTabBarFrame, useTabBarLift } from './ui';
 import { useTabBarDuck } from './tabBarDuck';
 import PlacesGlyph from './PlacesGlyph';
 
@@ -98,6 +106,14 @@ const PILL_H = TAB_BAR_HEIGHT - PILL_INSET * 2;
  * 3pt taller; the owner had found the air around them too wide.
  */
 const GLYPH = 25;
+/** How much wider the pill runs per cell it travels, and the most it
+ *  will: one cell over covers both glyphs, as Threads' does. */
+const STRETCH_PER_STEP = 0.28;
+const STRETCH_MAX = 0.6;
+/** How far the pill grows while it travels or is pressed: 56pt to about
+ *  59, past the 4pt inset by a point and a half, as the recording's pill
+ *  rides past the rim. */
+const LIFT_SCALE = 1.06;
 
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
   Ideas: ['compass-outline', 'compass'],
@@ -230,6 +246,85 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   const lift = useTabBarLift();
   const frame = useTabBarFrame();
 
+  // ── the pill's travel ──
+  //
+  // Measured off a 60fps screen recording of Threads (11 Oct 2026): the
+  // pill leaves its cell stretched toward the next one, covering both
+  // glyphs for four or five frames (~75ms); it travels lifted — larger,
+  // past the bar's rim, paler, a clear glass rather than a grey — and the
+  // glyph turns solid exactly where the pill covers it, half one and half
+  // the other mid-way; then it holds the rise a beat and settles, about
+  // 300ms in all. The refraction through that glass is Liquid Glass and
+  // native-only; everything else is here.
+  const n = state.routes.length;
+  // Inside the island's hairline ring, less the inset either side.
+  // Floored at a point: before the window has a width (and in a test
+  // runner, whose window has none) the sum is negative, and an
+  // interpolation's ranges must still run forwards.
+  const cell = Math.max((frame.width - StyleSheet.hairlineWidth * 2 - PILL_INSET * 2) / n, 1);
+  const reduced = useReducedMotion();
+  const x = useRef(new Animated.Value(index * cell)).current;
+  const stretch = useRef(new Animated.Value(1)).current;
+  const rise = useRef(new Animated.Value(0)).current;
+  const shown = useRef({ index, cell });
+  useEffect(() => {
+    const was = shown.current;
+    shown.current = { index, cell };
+    // A new width (rotation, a split screen) is not a journey: jump.
+    if (was.cell !== cell || reduced) {
+      if (was.cell !== cell) { x.setValue(index * cell); return; }
+      Animated.timing(x, { toValue: index * cell, duration: 160, useNativeDriver: true }).start();
+      return;
+    }
+    if (was.index === index) return;
+    const steps = Math.abs(index - was.index);
+    Animated.parallel([
+      Animated.spring(x, { toValue: index * cell, useNativeDriver: true, stiffness: 320, damping: 28, mass: 1 }),
+      Animated.sequence([
+        Animated.timing(stretch, { toValue: 1 + Math.min(STRETCH_PER_STEP * steps, STRETCH_MAX), duration: 90, useNativeDriver: true }),
+        Animated.spring(stretch, { toValue: 1, useNativeDriver: true, stiffness: 260, damping: 18, mass: 1 }),
+      ]),
+      Animated.sequence([
+        Animated.timing(rise, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.delay(110),
+        Animated.timing(rise, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]),
+    ]).start();
+  }, [index, cell, reduced, x, stretch, rise]);
+  // The selected tab, pressed: the pill lifts under the finger rather
+  // than the cell shrinking away from it.
+  const press = (down: boolean) => {
+    if (reduced) return;
+    Animated.timing(rise, { toValue: down ? 0.7 : 0, duration: down ? 90 : 180, useNativeDriver: true }).start();
+  };
+  /** How much of a tab's idle glyph shows: all of it while the pill is a
+   *  cell or more away, none under it. */
+  const cover = (i: number) => x.interpolate({
+    inputRange: [(i - 1) * cell, i * cell, (i + 1) * cell],
+    outputRange: [1, 0, 1],
+    extrapolate: 'clamp',
+  });
+  /** A tab's mark, idle or solid. The solid ones live only in the pill's
+   *  window, so where the pill is, the glyph is solid. */
+  const glyph = (name: string, solid: boolean) => (name === 'Explore' ? (
+    <PlacesGlyph size={GLYPH} solid={solid} color={inkOf(solid, light)} testID={solid ? 'places-glyph-solid' : 'places-glyph'} />
+  ) : (
+    <Ionicons
+      name={ICONS[name][solid ? 1 : 0]}
+      size={GLYPH}
+      // Only on the glass: the solid glyph sits on an opaque pill, whose
+      // ground is known, so a halo there would be decoration on a
+      // problem that does not exist.
+      style={solid ? undefined : glassHalo(light)}
+      // Full strength when idle, where this used to be a mid grey. That
+      // grey was the reason the glass had to stay nearly opaque: over an
+      // unknown photograph the scrim averages towards mid-tone, and a
+      // mid-tone glyph on it cannot contrast at any opacity. See
+      // GlassMaterial for the measurements — the two changes are one.
+      color={inkOf(solid, light)}
+    />
+  ));
+
   const slide = duck.anim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, TAB_BAR_HEIGHT + lift + 8],
@@ -270,62 +365,82 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
           return (
             <PressableScale
               key={route.key}
-              // The whole cell is the target; the pill inside it is only
+              // The whole cell is the target; the pill over it is only
               // the mark.
               containerStyle={s.tab}
-              style={[s.tabInner, focused && { backgroundColor: colors.badgeSolid }]}
-              scaleTo={0.9}
+              style={s.tabInner}
+              // The glyph gives a little under the finger; the pill is
+              // what answers (`press` below), as Threads' does.
+              scaleTo={0.92}
               // The navigator's tabPress listener already fires the
               // selection haptic; a second one here would double-tap.
               haptic="none"
               onPress={onPress}
+              onPressIn={focused ? () => press(true) : undefined}
+              onPressOut={focused ? () => press(false) : undefined}
               onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={spoken(route.name, label)}
               testID={`tab-${route.name.toLowerCase()}`}
             >
-              <View>
-              {route.name === 'Explore' ? (
-                <PlacesGlyph
-                  size={GLYPH}
-                  solid={focused}
-                  color={inkOf(focused, light)}
-                  testID="places-glyph"
-                />
-              ) : (
-              <Ionicons
-                name={ICONS[route.name][focused ? 1 : 0]}
-                size={GLYPH}
-                // Only when idle: the selected glyph sits on an opaque
-                // pill, whose ground is known, so a halo there would be
-                // decoration on a problem that does not exist.
-                style={focused ? undefined : glassHalo(light)}
-                // See App's old bar: React Navigation typed these as
-                // strings, and the constraint outlived it — a glyph
-                // colour prop cannot take a dynamic pair either way.
-                //
-                // Full strength when idle, where this used to be a mid
-                // grey. That grey was the reason the glass had to stay
-                // nearly opaque: over an unknown photograph the scrim
-                // averages towards mid-tone, and a mid-tone glyph on it
-                // cannot contrast at any opacity. See GlassMaterial for
-                // the measurements — the two changes are one change.
-                color={inkOf(focused, light)}
-              />
-              )}
-              {/* Same mark the Profile card wears, one level up where
-                  every screen can see it. Drawn beside the glyph rather
-                  than tinting it: a dot is news, a recoloured icon is a
-                  different icon. */}
-              {route.name === 'Profile' && waiting
-                ? <View style={[s.reqDot, dotInk]} /> : null}
-              {route.name === 'Trips' && (invitesWaiting > 0 || today.length > 0)
-                ? <View style={[s.reqDot, dotInk]} /> : null}
-              </View>
+              {/* The idle glyph, every tab. It gives way as the pill
+                  arrives over it, and the solid copy in the pill's window
+                  takes its place — see `cover`. */}
+              <Animated.View style={{ opacity: cover(i) }}>
+                {glyph(route.name, false)}
+              </Animated.View>
             </PressableScale>
           );
         })}
+        {/* The pill: one for the whole bar, travelling between cells. Over
+            the glyphs and under no touch. Two layers on one track: the
+            ground, which stretches and lifts, and a window the cell's size
+            that does neither and shows the solid glyphs through it. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[s.pill, { width: cell, transform: [{ translateX: x }] }]}
+          testID="tab-pill"
+        >
+          <Animated.View
+            style={[s.pillGround, {
+              backgroundColor: colors.badgeSolid,
+              transform: [{ scaleX: stretch }, { scale: rise.interpolate({ inputRange: [0, 1], outputRange: [1, LIFT_SCALE] }) }],
+            }]}
+          >
+            <Animated.View
+              style={[s.pillGround, {
+                backgroundColor: light ? bgHex.light : textHex.dark,
+                opacity: rise.interpolate({ inputRange: [0, 1], outputRange: [0, light ? 0.55 : 0.22] }),
+              }]}
+            />
+          </Animated.View>
+          <View style={s.window}>
+            <Animated.View
+              style={[s.windowRow, { width: cell * n, transform: [{ translateX: Animated.multiply(x, -1) }] }]}
+              testID="tab-pill-glyphs"
+            >
+              {state.routes.map((route) => (
+                <View key={route.key} style={[s.windowCell, { width: cell }]}>
+                  {glyph(route.name, true)}
+                </View>
+              ))}
+            </Animated.View>
+          </View>
+        </Animated.View>
+        {/* The dots ride above everything, the pill included: on the
+            selected tab they would otherwise be under it. */}
+        <View pointerEvents="none" style={s.dotRow}>
+          {state.routes.map((route) => (
+            <View key={route.key} style={[s.windowCell, { width: cell }]}>
+              <View style={s.dotBox}>
+                {(route.name === 'Profile' && waiting)
+                  || (route.name === 'Trips' && (invitesWaiting > 0 || today.length > 0))
+                  ? <View style={[s.reqDot, dotInk]} testID={`dot-${route.name.toLowerCase()}`} /> : null}
+              </View>
+            </View>
+          ))}
+        </View>
       </View>
     </Animated.View>
   );
@@ -354,6 +469,7 @@ const s = StyleSheet.create({
     paddingHorizontal: PILL_INSET,
   },
   tab: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center' },
+  tabInner: { alignItems: 'center', justifyContent: 'center' },
   // A pill that fills its cell, Threads' shape: `PILL_INSET` from the
   // island's rim on every side it meets. Its round ends are concentric
   // with the island's, since 56/2 is the island's 32pt radius less 4.
@@ -368,10 +484,20 @@ const s = StyleSheet.create({
   // — and the end was no longer concentric, so the hairline showed as a
   // sliver beside it. Threads' pill, measured in the same screenshot pair,
   // sits about 10px (4.5pt) from its rim on the left, top and bottom alike.
-  tabInner: {
-    width: '100%', height: PILL_H, borderRadius: PILL_H / 2,
-    alignItems: 'center', justifyContent: 'center',
+  pill: {
+    position: 'absolute', left: PILL_INSET, top: (TAB_BAR_HEIGHT - PILL_H) / 2 - StyleSheet.hairlineWidth,
+    height: PILL_H,
   },
+  pillGround: { ...StyleSheet.absoluteFill, borderRadius: PILL_H / 2 },
+  window: { ...StyleSheet.absoluteFill, borderRadius: PILL_H / 2, overflow: 'hidden' },
+  windowRow: { position: 'absolute', left: 0, top: 0, bottom: 0, flexDirection: 'row' },
+  windowCell: { height: '100%', alignItems: 'center', justifyContent: 'center' },
+  dotRow: {
+    position: 'absolute', left: PILL_INSET, right: PILL_INSET, top: 0, bottom: 0,
+    flexDirection: 'row',
+  },
+  // The glyph's box, so a dot sits where it sat on the glyph.
+  dotBox: { width: GLYPH, height: GLYPH },
   // Geometry only — the colours are `dotInk`, picked per theme in render.
   reqDot: {
     position: 'absolute', top: -1, right: -4,
