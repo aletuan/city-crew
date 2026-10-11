@@ -125,6 +125,40 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const late = startMin > START_MIN[draft.when];
   const [sheet, setSheet] = useState(false);
 
+  /**
+   * The lists this plan can start from: yours, and touching this city.
+   *
+   * A plan is for one city — the one chosen up top — and a list of your
+   * own is not: it is stamped with the city it was made in and holds
+   * whatever was saved into it, Hanoi and Saigon alike (`fetchMyCollections`).
+   * This section used to offer every list you own with its whole count,
+   * so a reader planning Hanoi saw "8 places" on a list with three here,
+   * ticked it, and met "some places did not fit" two screens later with
+   * nothing pointing back at why.
+   *
+   * So the shelves' rule decides what appears — one place here is enough,
+   * which is `touchesCity` with the members already narrowed to here —
+   * and the count is the places here. The row keeps its two short lines;
+   * what changed is that both are now true of this plan. A list with
+   * nothing in this city cannot seed it and is not offered, rather than
+   * listed, ticked and silently dropped. Not "3 of 8", and no city under
+   * the count: the city is in the header already, and the one fact that
+   * picks seeds is how many places the planner will see.
+   *
+   * With no city resolved yet nothing is narrowed, and the only question
+   * left is whether the list holds anything — the shelves' answer too.
+   */
+  const seeds = useMemo(
+    () => mine.data
+      .map((c) => {
+        const all = membersOf(c, places);
+        const members = city?.id ? all.filter((p) => p.city_id === city.id) : all;
+        return { c, members };
+      })
+      .filter(({ members }) => members.length > 0),
+    [mine.data, places, city?.id],
+  );
+
   // Only categories this city actually has, the same rule Explore's filter
   // row follows: a chip must never lead to an empty answer.
   const cats = useMemo<string[]>(() => {
@@ -390,14 +424,13 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
           )}
         </View>
 
-        {mine.data.length > 0 && (
+        {seeds.length > 0 && (
           <View style={{ marginBottom: space.titleToContent }}>
             <Text style={s.heading}>
               {t('Start from what you love', 'Bắt đầu từ thứ bạn thích', 'お気に入りから始める')}
             </Text>
             <Card style={{ paddingVertical: 4 }}>
-              {mine.data.map((c, i) => {
-                const members = membersOf(c, places);
+              {seeds.map(({ c, members }, i) => {
                 const cover = c.cover?.photo_uri ?? (members[0] && coverOf(members[0])?.photo_uri);
                 const on = draft.from.includes(c.slug);
                 return (

@@ -24,7 +24,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen } from '../uitest/render';
 import { useScrollToTop } from '@react-navigation/native';
 import { addDays, toISO } from '../lib/day';
 import { dateline } from '../lib/format';
@@ -34,7 +34,7 @@ type Pos = { lat: number; lng: number } | null;
 type Coll = { slug: string; title_en: string; title_vi: string; title_ja: string; cover?: { photo_uri: string } | null };
 
 const state = vi.hoisted(() => ({
-  city: { short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as Record<string, string> | null,
+  city: { id: 'hn', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as Record<string, string> | null,
   places: [] as unknown[],
   mine: [] as unknown[],
   me: null as Pos,
@@ -112,7 +112,7 @@ const HINT = "Just pick who's going and one thing you fancy.";
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(at(10));
-  state.city = { short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' };
+  state.city = { id: 'hn', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' };
   state.lang = 'en';
   state.places = [place('a', ['cafes']), place('b', ['eats', 'views']), place('c', ['cafes'])];
   state.mine = [];
@@ -531,6 +531,10 @@ describe('where the day starts', () => {
 });
 
 describe('start from what you love', () => {
+  /** A member place in a city; `photo` makes it a cover candidate. */
+  const here = (photo?: string) => ({ city_id: 'hn', photo });
+  const away = (photo?: string) => ({ city_id: 'sg', photo });
+
   it('is absent for a reader with nothing saved (and for a guest)', () => {
     renderScreen();
     expect(screen.queryByText('Start from what you love')).toBeNull();
@@ -540,18 +544,22 @@ describe('start from what you love', () => {
     state.mine = [
       coll('pho', 'Phở run', { cover: { photo_uri: 'https://x/pho.jpg' } }),
       coll('lakes', 'Lakes'),
-      coll('empty', 'Empty'),
+      coll('mixed', 'Mixed'),
     ];
-    state.members = { pho: [{}, {}], lakes: [{ photo: 'https://x/lake.jpg' }] };
+    state.members = { pho: [here(), here()], lakes: [here('https://x/lake.jpg')], mixed: [away('https://x/sg.jpg'), here('https://x/mixed.jpg'), here(), away()] };
     const navigation = renderScreen();
     expect(screen.getByText('Start from what you love')).toBeTruthy();
-    expect(screen.getByText('2 places')).toBeTruthy();
     expect(screen.getByText('1 place')).toBeTruthy();
-    expect(screen.getByText('0 places')).toBeTruthy();
+    // The count is the places in this city, in the same short line as
+    // every other row: not "2 of 4", and never the four. So Phở run and
+    // Mixed read the same.
+    expect(screen.getAllByText('2 places')).toHaveLength(2);
+    expect(screen.queryByText('4 places')).toBeNull();
     // The header's painting is an image too; the covers are the ones
-    // under the collections.
+    // under the collections — and a list without a chosen cover takes
+    // its first place *here*, not its first place.
     expect([...document.querySelectorAll('img')].map((i) => i.getAttribute('src')).filter((src) => !src?.includes('ideas-art')))
-      .toEqual(['https://x/pho.jpg', 'https://x/lake.jpg']);
+      .toEqual(['https://x/pho.jpg', 'https://x/lake.jpg', 'https://x/mixed.jpg']);
 
     // react-native-web drops `accessibilityState`, so "ticked" is read off
     // the tick the row draws rather than off an aria attribute.
@@ -559,14 +567,39 @@ describe('start from what you love', () => {
     expect(ticked()).toEqual([false, false, false]);
     fireEvent.click(screen.getByRole('checkbox', { name: /Lakes/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /Phở run/ }));
-    fireEvent.click(screen.getByRole('checkbox', { name: /Empty/ }));
-    fireEvent.click(screen.getByRole('checkbox', { name: /Empty/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Mixed/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Mixed/ }));
     expect(ticked()).toEqual([true, true, false]);
 
     tap('Friends');
     tap('Cafés');
     fireEvent.click(cta());
     expect(sent(navigation).from).toEqual(['lakes', 'pho']);
+  });
+
+  // A plan is for the city on screen. A list with nothing there cannot
+  // seed it, so it is not offered — rather than listed at "0 places",
+  // ticked, and dropped in silence two screens on. Same for an empty one.
+  it('offers only the lists with a place in this city, and nothing when none has one', () => {
+    state.mine = [coll('saigon', 'Saigon weekend'), coll('empty', 'Empty'), coll('lakes', 'Lakes')];
+    state.members = { saigon: [away(), away()], lakes: [here()] };
+    renderScreen();
+    expect(screen.getAllByRole('checkbox').map((b) => b.textContent)).toEqual(['Lakes1 place']);
+
+    cleanup();
+    state.mine = [coll('saigon', 'Saigon weekend'), coll('empty', 'Empty')];
+    renderScreen();
+    expect(screen.queryByText('Start from what you love')).toBeNull();
+  });
+
+  // Before the city resolves there is no "here" to count: every list with
+  // anything in it is offered, whole, which is what the shelves do too.
+  it('offers every non-empty list, whole, while no city is chosen', () => {
+    state.city = null;
+    state.mine = [coll('mixed', 'Mixed'), coll('empty', 'Empty')];
+    state.members = { mixed: [away(), here(), away()] };
+    renderScreen();
+    expect(screen.getAllByRole('checkbox').map((b) => b.textContent)).toEqual(['Mixed3 places']);
   });
 });
 
