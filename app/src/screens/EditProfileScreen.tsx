@@ -252,8 +252,7 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         onBack={() => navigation.goBack()}
         title={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}
         action={{
-          label: t('Save', 'Lưu', '保存'),
-          a11yLabel: t('Save changes', 'Lưu thay đổi', '変更を保存'),
+          label: t('Save changes', 'Lưu thay đổi', '変更を保存'),
           onPress: save,
           busy,
           disabled: !edited && handleProblem(normalizeHandle(handle)) === null,

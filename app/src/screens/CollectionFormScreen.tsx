@@ -18,7 +18,7 @@
 // screens but they are just a list-row field and a primary button, and the
 // alternative is a second set that drifts from the first.
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
@@ -87,6 +87,8 @@ export default function CollectionFormScreen({ navigation, route }: {
     ? t(`Copy of ${copyFrom.title}`, `Bản sao của ${copyFrom.title}`, `「${copyFrom.title}」のコピー`).slice(0, MAX_TITLE)
     : route.params?.title ?? ''));
   const [desc, setDesc] = useState(copyFrom?.desc ?? route.params?.desc ?? '');
+  // What the form opened on, which `changed` measures against.
+  const [start] = useState({ title, desc });
   const [busy, setBusy] = useState(false);
   const failText = useFailText();
   const [error, setError] = useState<string | null>(null);
@@ -168,11 +170,48 @@ export default function CollectionFormScreen({ navigation, route }: {
     (width - space.page * 2 - COVER_GAP * (COVER_COLS - 1)) / COVER_COLS,
   );
 
-  const coverId = pick.chosen
-    ? pick.id
-    : current
-      ? current.id ?? choices.find((c) => c.ph.photo_uri === current.photo_uri)?.ph.id ?? null
-      : null;
+  const startCover = current
+    ? current.id ?? choices.find((c) => c.ph.photo_uri === current.photo_uri)?.ph.id ?? null
+    : null;
+  const coverId = pick.chosen ? pick.id : startCover;
+
+  // Whether the form now says something it did not say on opening — the
+  // one question both the ✓ and the discard guard ask, so the two can
+  // never disagree, as on the profile form.
+  //
+  // A rename's ✓ waits for it: lit on an untouched rename, it offered a
+  // save that would write back exactly what was there. A new list and a
+  // copy need only a name — the copy is born on submit, so submitting
+  // its prefilled suggestion unchanged is the whole point of the button.
+  const changed = title.trim() !== start.title.trim() || desc.trim() !== start.desc.trim() || coverId !== startCover;
+
+  // Leaving with changes asks first — header Back and iOS's swipe alike,
+  // both of which go through `beforeRemove`. A form that has just saved
+  // leaves without asking: `saved` is set before each `goBack`.
+  const saved = useRef(false);
+  useEffect(() => {
+    if (!changed) return undefined;
+    return navigation.addListener('beforeRemove', (e) => {
+      if (saved.current) return;
+      e.preventDefault();
+      Alert.alert(
+        t('Discard your changes?', 'Bỏ các thay đổi?', '変更を破棄しますか？'),
+        t(
+          'What you changed on this list has not been saved.',
+          'Những gì bạn vừa đổi trên danh sách này chưa được lưu.',
+          'このリストの変更はまだ保存されていません。',
+        ),
+        [
+          { text: t('Keep editing', 'Tiếp tục sửa', '編集を続ける'), style: 'cancel' },
+          {
+            text: t('Discard', 'Bỏ', '破棄'),
+            style: 'destructive',
+            onPress: () => navigation.dispatch(e.data.action),
+          },
+        ],
+      );
+    });
+  }, [changed, navigation, t]);
 
   const submit = async () => {
     // Never empty: the header's button is dimmed until there is a name.
@@ -208,6 +247,7 @@ export default function CollectionFormScreen({ navigation, route }: {
         if (coverId) await updateCollection(slug, { title: name, desc, coverPhotoId: coverId });
         successHaptic();
         mine.reload();
+        saved.current = true;
         // Pop the form off the stack it was pushed onto, so the tab it
         // came from keeps the source list as its history — then land on
         // the copy in the Collections tab, where Back leads to your own
@@ -241,6 +281,7 @@ export default function CollectionFormScreen({ navigation, route }: {
       mine.reload();
       // Back to the list, where the collection is now the first row of your
       // own section. Opening a new one instead would land on an empty screen.
+      saved.current = true;
       navigation.goBack();
     } catch (e) {
       // The daily cap — twenty lists, three hundred saves — is the one
@@ -275,8 +316,8 @@ export default function CollectionFormScreen({ navigation, route }: {
     <AuthScreen>
       {/* Save in the header (`HeaderAction`): the cover grid below holds
           every photograph of every member, and with eleven of them the
-          old full-width button sat under the fold. Short words up here —
-          "Create", "Save" — with the long ones kept for VoiceOver. */}
+          old full-width button sat under the fold. Lit once there is
+          something to submit — see `changed`. */}
       <AuthHeader
         onBack={() => navigation.goBack()}
         title={copyFrom
@@ -285,15 +326,14 @@ export default function CollectionFormScreen({ navigation, route }: {
             ? t('Rename your list', 'Đổi tên danh sách', 'リストの名前を変更')
             : t('Name your list', 'Đặt tên danh sách', 'リストに名前を')}
         action={{
-          label: editing || copyFrom ? t('Save', 'Lưu', '保存') : t('Create', 'Tạo', '作成'),
-          a11yLabel: copyFrom
+          label: copyFrom
             ? t('Save the copy', 'Lưu bản sao', 'コピーを保存')
             : editing
               ? t('Save changes', 'Lưu thay đổi', '変更を保存')
               : t('Create collection', 'Tạo bộ sưu tập', 'コレクションを作成'),
           onPress: submit,
           busy,
-          disabled: !title.trim(),
+          disabled: !title.trim() || (!!editing && !changed),
           testID: 'collection-submit',
         }}
       />
