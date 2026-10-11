@@ -70,6 +70,16 @@
 // The sheet opens on the page the worn look is on. Opening on the first
 // page would show a reader wearing Cosmic a sheet with no tick on it, and
 // the tick is the one thing a settings sheet owes on arrival.
+//
+// And the next page shows its edge. The count said there were three pages
+// and nothing said *swipe*: the owner's screenshot of the first cut had a
+// grid that looked complete, with "1/3" as its only hint. So a page is a
+// sliver narrower than the sheet and the strip snaps by page rather than
+// paging by its own width — the Explore shelf's grammar (`snapToInterval`,
+// start-aligned, a ~26pt sliver of the next card at every width), which
+// is the one horizontal surface this reader has already learned. A sliver
+// says there is more *and* which way it is, which neither dots nor a
+// count can.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -127,6 +137,14 @@ const DISMISS_MS = 450;
 
 /** Cards to a page of the looks: two rows of the grid of two. */
 const PER_PAGE = 4;
+/** How much of the next page shows at the right: Explore's shelf keeps a
+ *  ~26pt sliver of its third card at every width, and this is the same
+ *  sliver on the same reader. Enough to show the next card's rounded
+ *  corner and the start of its swatch; not enough to read as a column. */
+const PEEK = 26;
+/** Between pages — the grid's own gap, so the join reads as one more
+ *  column gap rather than as a seam. */
+const PAGE_GAP = 8;
 
 /**
  * How long the JavaScript can still be running after the restart was asked
@@ -212,10 +230,11 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   // The pages. Four to a page — two rows of the grid of two — which is
   // what the sheet held before paging on a phone of the usual height,
   // so a page is the grid a reader already knew, swiped rather than
-  // scrolled. The page's width is the sheet's inside, which is what
-  // `pagingEnabled` snaps by; the floor is for the test runner, which
-  // lays out at no width at all.
-  const pageW = Math.max(width - space.cardPadding * 2, 1);
+  // scrolled. The page is the sheet's inside less the sliver of the next
+  // page, and the strip snaps by a page and its gap; the floor is for
+  // the test runner, which lays out at no width at all.
+  const pageW = Math.max(width - space.cardPadding * 2 - PEEK, 1);
+  const stride = pageW + PAGE_GAP;
   const pages: typeof palettes[] = [];
   for (let i = 0; i < palettes.length; i += PER_PAGE) pages.push(palettes.slice(i, i + PER_PAGE));
   // Where the worn look is, or the first page from a ground: that page
@@ -330,15 +349,23 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
             </View>
             <ScrollView
               horizontal
-              pagingEnabled
               showsHorizontalScrollIndicator={false}
-              contentOffset={{ x: worn * pageW, y: 0 }}
+              // Pages settle on the sheet's left edge rather than wherever
+              // momentum died, as Explore's cards settle on the page
+              // margin. The trailing padding is what lets the last page
+              // reach that edge too: without it the strip ends a sliver
+              // short and the last page can never be the one in front.
+              snapToInterval={stride}
+              snapToAlignment="start"
+              decelerationRate="fast"
+              contentContainerStyle={{ gap: PAGE_GAP, paddingRight: PEEK }}
+              contentOffset={{ x: worn * stride, y: 0 }}
               // Clamped and rounded as the carousel's is: a momentum end
               // reported past the last page cannot name a page that is
               // not there.
               onMomentumScrollEnd={(e) => setPage(Math.min(
                 pages.length - 1,
-                Math.max(0, Math.round(e.nativeEvent.contentOffset.x / pageW)),
+                Math.max(0, Math.round(e.nativeEvent.contentOffset.x / stride)),
               ))}
             >
               {pages.map((cards, i) => (
