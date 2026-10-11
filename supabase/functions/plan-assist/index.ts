@@ -85,7 +85,8 @@ const MAX_STOPS = 8;
  *  which nobody planning one evening makes. */
 const GUEST_PER_IP_DAY = 20;
 /** Every guest's narrations per day, together — the bill's ceiling. At
- *  roughly 200 tokens in and 170 out per call this is a few dollars. */
+ *  roughly 260 fresh tokens in and 220 out per call this was a few
+ *  dollars on Opus and is a few cents on Haiku; the ceiling stays. */
 const GUEST_PER_DAY = 2000;
 
 /** The caller's address, salted and hashed — what the counter is keyed by.
@@ -113,7 +114,19 @@ const TIMEOUT_MS = 12_000;
  *  enough that pasting an essay cannot turn into a bill. */
 const MAX_TEXT = 600;
 
-const MODEL = "claude-opus-5";
+/**
+ * Haiku, since 11 Oct 2026. Both jobs here are small and fenced: a name
+ * and one line per stop inside an enum schema, or a sentence sorted into
+ * the wizard's own chips. Opus 5 did them at about 1.1 cents a call —
+ * nearly all of it output tokens, with the system prompt already cached —
+ * which at 5,000 regular readers was on the order of $1,000 a month.
+ * Haiku 5.5 is fifty times cheaper per token on both sides and keeps the
+ * same request shape: adaptive thinking on by default, `effort` honoured,
+ * structured outputs, a 512-token cache minimum the 786-token prompt
+ * clears. What it does not have is a server-side refusal fallback; the
+ * app already prints its own fallback for any failed call (`assist.ts`).
+ */
+const MODEL = "claude-haiku-5-5";
 
 /** What the wizard's first question offers, and therefore the only answers
  *  `parse` may give to it. Kept here rather than taken from the request:
