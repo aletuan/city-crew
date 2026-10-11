@@ -221,6 +221,66 @@ const ROYAL_NIGHT: MapStyleRule[] = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#6E93C8' }] },
 ];
 
+// Plum (12 Oct 2026): the chocolate reading on a light-dark indigo page —
+// land a lift above it, parks a slate green, water the one surface below.
+const PLUM_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#574F84' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#E6DAEB' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#4B4376' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#6D6499' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#F5F0F6' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#4A5A5E' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#4A5A5E' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#625A8F' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#C8B6CF' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#6B639A' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#7A72A8' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#F0E8F3' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#625A8F' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#2E2850' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9A93C4' }] },
+];
+
+// Violet (12 Oct 2026): the cosmic reading in plum — land a lift above
+// the page, water below it, parks an ash green.
+const VIOLET_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#3F1539' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#D7CDCD' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#31082C' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#55284F' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#F6EEF4' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#3A3634' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#3A3634' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#4A1F45' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#AC9BAA' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#562A51' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#65365F' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#E9DFE7' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#4A1F45' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#1E0419' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#8E7A8B' }] },
+];
+
+// Wine (12 Oct 2026): the coffee reading in burgundy — land a lift above
+// the page in the same red, parks a warm olive, water below the page.
+const WINE_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#602034' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#FACCD7' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#501627' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#7A3348' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#FBEFF2' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#553A34' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#553A34' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#6D2A41' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#D9A2B1' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#78334A' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#884059' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#F6DEE5' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#6D2A41' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#340C19' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#A77A8A' }] },
+];
+
 /** Each dark look's own night; a dark look not named here is charcoal's. */
 const NIGHTS: Partial<Record<Look, MapStyleRule[]>> = {
   coffee: COFFEE_NIGHT,
@@ -230,6 +290,9 @@ const NIGHTS: Partial<Record<Look, MapStyleRule[]>> = {
   cosmic: COSMIC_NIGHT,
   honey: HONEY_NIGHT,
   royal: ROYAL_NIGHT,
+  plum: PLUM_NIGHT,
+  violet: VIOLET_NIGHT,
+  wine: WINE_NIGHT,
 };
 
 /**

@@ -103,7 +103,8 @@ const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
   // flower for the rose, a heart for the blush, a cloud for the slate
   // grey, a star for the midnight sky, a boat for the navy, an ice cream
   // for the chocolate, a planet for the cosmic purple, a leaf for the
-  // teal, a bolt for the honey yellow, a diamond for the royal blue.
+  // teal, a bolt for the honey yellow, a diamond for the royal blue, a
+  // fruit for the plum, sparkles for the violet, a glass for the wine.
   { id: 'coffee', icon: 'cafe-outline' },
   { id: 'rose', icon: 'flower-outline' },
   { id: 'blush', icon: 'heart-outline' },
@@ -115,6 +116,9 @@ const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'duck', icon: 'leaf-outline' },
   { id: 'honey', icon: 'flash-outline' },
   { id: 'royal', icon: 'diamond-outline' },
+  { id: 'plum', icon: 'nutrition-outline' },
+  { id: 'violet', icon: 'sparkles-outline' },
+  { id: 'wine', icon: 'wine-outline' },
 ];
 
 const isLook = (id: Pref): id is Pinned => Object.prototype.hasOwnProperty.call(PINNED, id);
@@ -177,6 +181,9 @@ export function schemeLabel(id: Pref, t: T): string {
   if (id === 'duck') return t('Teal', 'Xanh cổ vịt', 'ティール');
   if (id === 'honey') return t('Honey', 'Mật ong', 'ハニー');
   if (id === 'royal') return t('Royal', 'Hoàng gia', 'ロイヤル');
+  if (id === 'plum') return t('Plum', 'Mận', 'プラム');
+  if (id === 'violet') return t('Violet', 'Tím', 'バイオレット');
+  if (id === 'wine') return t('Wine', 'Rượu vang', 'ワイン');
   return id === 'dark'
     ? t('Dark', 'Tối', 'ダーク')
     : t('Light', 'Sáng', 'ライト');

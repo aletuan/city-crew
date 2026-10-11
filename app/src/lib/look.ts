@@ -60,6 +60,9 @@ export const PINNED = {
   duck: 'light',
   honey: 'dark',
   royal: 'dark',
+  plum: 'dark',
+  violet: 'dark',
+  wine: 'dark',
 } as const satisfies Record<string, Scheme>;
 
 /** A look other than the standard one. */
