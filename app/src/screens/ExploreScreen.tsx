@@ -1506,7 +1506,7 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
                   onPress={pickSaved}
                   haptic="selection"
                   accessibilityRole="button"
-                  accessibilityLabel={t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')}
+                  accessibilityLabel={t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ')}
                   accessibilityState={{ selected: appliedFilters.savedOnly }}
                   hitSlop={4}
                   style={[s.filterButton, s.mapDisc, appliedFilters.savedOnly && s.mapDiscOn]}

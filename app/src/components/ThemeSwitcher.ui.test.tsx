@@ -176,16 +176,15 @@ describe('the looks', () => {
   });
 
   // The restart brings the reader back, so there is nothing to warn about
-  // and nothing to ask: only a moment's wait, said once over the looks,
-  // and not on a ground's row while the standard look is worn, where a
-  // ground repaints in place.
-  it('says a look takes a moment, and asks nothing before the tap', () => {
+  // and nothing to ask — and nothing said, either: the grounds are single
+  // lines, the looks a heading and their cards.
+  it('says nothing about the restart, and asks nothing before the tap', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
-    expect(screen.getByText('Changing these takes a moment')).toBeTruthy();
-    expect(screen.queryByText(/restarts/i)).toBeNull();
-    const note = (label: string) => screen.getByText(label).closest('[role="radio"]')!.textContent!.includes('Takes a moment');
-    expect(note('Dark')).toBe(false);
-    expect(note('Light')).toBe(false);
+    expect(screen.getByText('Colours')).toBeTruthy();
+    expect(screen.queryByText(/restart|moment/i)).toBeNull();
+    const row = (label: string) => screen.getByText(label).closest('[role="radio"]')!.textContent;
+    expect(row('Dark')).toBe('Dark');
+    expect(row('Light')).toBe('Light');
     fireEvent.click(screen.getByText('Navy'));
     expect(alert()).not.toHaveBeenCalled();
   });
@@ -271,8 +270,9 @@ describe('the looks', () => {
     const onClose = vi.fn();
     render(<ThemeSwitcherModal visible onClose={onClose} />);
     const row = (label: string) => screen.getByText(label).closest('[role="radio"]')!;
-    expect(row('Coffee').textContent).not.toContain('Takes a moment');
-    expect(row('Light').textContent).toContain('Takes a moment');
+    // No note on the way out either: a ground from here is a restart that
+    // brings the reader back, the same as a look.
+    expect(row('Light').textContent).toBe('Light');
     expect(row('Coffee').querySelector('[data-icon="checkmark"]')).toBeTruthy();
     fireEvent.click(screen.getByText('Coffee'));
     expect(setPref).toHaveBeenCalledWith('coffee');
@@ -289,7 +289,7 @@ describe('the looks', () => {
     expect(screen.queryByText('Coffee')).toBeNull();
     expect(screen.queryByText('Rose')).toBeNull();
     expect(screen.queryByText('Navy')).toBeNull();
-    expect(screen.queryByText('Changing these takes a moment')).toBeNull();
+    expect(screen.queryByText('Colours')).toBeNull();
     expect(document.querySelectorAll('[role="radio"]').length).toBe(3);
   });
 

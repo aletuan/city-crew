@@ -276,7 +276,7 @@ function SettingsCard() {
             "i", which About wears. */}
         <SettingRow
           icon="refresh-outline"
-          label={t('Show tips again', 'Hiện lại các tip', 'ヒントをもう一度表示')}
+          label={t('Show tips again', 'Bật lại các tip', 'ヒントをもう一度表示')}
           value={tipsBack ? t('Done', 'Đã bật lại', 'オンにしました') : undefined}
           onPress={() => {
             void resetTips(session?.user?.id).then(() => {

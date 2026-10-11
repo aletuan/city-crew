@@ -190,8 +190,8 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
               {mode === 'auto'
                 ? (here
                   ? t(`On · you're in ${here}`, `Đang bật · đang ở ${here}`, `オン · ${here}にいます`)
-                  : t('On — nearest city is selected for you', 'Đang bật — tự chọn thành phố gần nhất', 'オン — 最寄りの都市を自動選択'))
-                : t('Currently picking manually', 'Đang chọn thủ công', '現在は手動で選択中')}
+                  : t('On · nearest city is selected for you', 'Đang bật · chọn thành phố gần bạn nhất', 'オン · 最寄りの都市を自動選択'))
+                : t('Currently picking manually', 'Bạn đang tự chọn', '現在は手動で選択中')}
             </Text>
           </View>
         </PressableScale>
@@ -252,7 +252,7 @@ export function CitySwitcherModal({ visible, onClose }: { visible: boolean; onCl
           })}
           {shown.length === 0 && (
             <Text style={s.empty}>
-              {t('No city by that name', 'Không có thành phố nào như vậy', 'その名前の都市はありません')}
+              {t('No city by that name', 'Chưa có thành phố này', 'その名前の都市はありません')}
             </Text>
           )}
         </ScrollView>

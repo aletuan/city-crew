@@ -57,7 +57,7 @@ describe('one tip a visit', () => {
   });
 
   // The glyph says "tip" on screen; the word is for VoiceOver only. "Tip",
-  // as Profile's "Hiện lại các tip" says, not "Mẹo".
+  // as Profile's "Bật lại các tip" says, not "Mẹo".
   it('says "Tip" to a screen reader and not on screen', async () => {
     render(<TipBox eligible={OWNER} done={[]} />);
     await settle();

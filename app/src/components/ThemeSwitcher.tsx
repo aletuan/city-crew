@@ -36,9 +36,11 @@
 // restarts the app. It used to ask first, in an alert, because the restart
 // threw away where the reader was; since 11 Oct 2026 the restart puts them
 // back — this tab, this sheet, this far down the page (`returnTo`, and
-// `Return` in lib/look) — so there is nothing left to warn about, only a
-// moment's wait, which the sheet still names. Where a look cannot be kept
-// (the web build) they are not offered at all.
+// `Return` in lib/look) — so there is nothing left to warn about, and the
+// sheet says nothing: for a few hours it said "takes a moment", and the
+// owner read that as a line about the cost of a thing rather than the
+// thing. Coming back to this sheet in the new colours is the explanation.
+// Where a look cannot be kept (the web build) they are not offered at all.
 //
 // NINE since 11 Oct 2026, when Blush, Slate, Midnight and Navy came in,
 // and nine rows of 67pt do not fit a sheet on an iPhone SE. So the looks
@@ -132,8 +134,8 @@ export function schemeLabel(id: Pref, t: T): string {
  *  plainly dark, and nothing on it explains which of the two won. */
 function systemNow(scheme: Scheme, t: T): string {
   return scheme === 'dark'
-    ? t('Following the phone · Dark', 'Theo máy · Tối', '端末に合わせる · ダーク')
-    : t('Following the phone · Light', 'Theo máy · Sáng', '端末に合わせる · ライト');
+    ? t('Following the phone · Dark', 'Theo hệ thống · Tối', '端末に合わせる · ダーク')
+    : t('Following the phone · Light', 'Theo hệ thống · Sáng', '端末に合わせる · ライト');
 }
 
 /**
@@ -185,10 +187,10 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
     pending.current = null;
     setPref(id, returnTo?.());
     timers.current.push(setTimeout(() => Alert.alert(
-      t('Close and reopen City Crew', 'Hãy đóng và mở lại City Crew', 'City Crew を閉じて開き直してください'),
+      t('Close and reopen City Crew', 'Mở lại City Crew', 'City Crew を開き直してください'),
       t(
         'The new theme is saved, and appears the next time the app opens.',
-        'Theme mới đã được lưu, và sẽ hiện ra ở lần mở app tiếp theo.',
+        'Theme mới đã lưu. Mở lại app để thấy màu mới.',
         '新しいテーマは保存されました。次にアプリを開いたときに反映されます。',
       ),
     ), STUCK_MS));
@@ -253,9 +255,6 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                   {o.id === 'system' && (
                     <Text style={s.rowNote}>{systemNow(scheme, t)}</Text>
                   )}
-                  {!active && needsRestart(look, o.id) && (
-                    <Text style={s.rowNote}>{t('Takes a moment', 'Mất một lát', '少し時間がかかります')}</Text>
-                  )}
                 </View>
                 {active && <Ionicons name="checkmark" size={18} color={colors.accent} />}
               </PressableScale>
@@ -265,9 +264,6 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
         {palettes.length > 0 && (
           <>
             <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー')}</Text>
-            <Text style={s.sectionNote}>
-              {t('Changing these takes a moment', 'Đổi bảng màu mất một lát', 'カラーの変更には少し時間がかかります')}
-            </Text>
             <View style={s.grid}>
               {palettes.map((o) => {
                 const active = o.id === pref;
@@ -346,11 +342,7 @@ const s = StyleSheet.create({
   },
   section: {
     color: colors.text, fontSize: 15, fontWeight: font.semibold,
-    marginTop: 14, paddingHorizontal: 4,
-  },
-  sectionNote: {
-    color: colors.textTertiary, fontSize: 13, fontWeight: font.regular,
-    marginTop: 2, marginBottom: 10, paddingHorizontal: 4,
+    marginTop: 14, marginBottom: 10, paddingHorizontal: 4,
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   // Two to a line: half the row less half the gap between.

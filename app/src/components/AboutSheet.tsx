@@ -73,7 +73,7 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
       .filter(Boolean).join(' · ')
     // The build's own code: nothing published since has reached this
     // phone, or this is a build that never takes an update.
-    : t('Shipped with the build', 'Đi kèm bản cài', 'ビルドに同梱');
+    : t('Shipped with the build', 'Có sẵn trong bản cài', 'ビルドに同梱');
 
   // The share waiting for this sheet to finish going. See the note at
   // the top: raised any earlier, it is raised over the Modal.

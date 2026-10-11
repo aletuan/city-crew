@@ -56,11 +56,11 @@ function sortIcon(value: ExploreSort): keyof typeof Ionicons.glyphMap {
  * about now, and neither needs a 今 in front of it to say so.
  */
 export function statusLabel(value: ExploreStatus, t: ReturnType<typeof useI18n>['t']) {
-  if (value === 'open') return t('Open now', 'Đang mở', '営業中');
-  if (value === 'closed') return t('Closed now', 'Đã đóng', '営業時間外');
+  if (value === 'open') return t('Open now', 'Đang mở cửa', '営業中');
+  if (value === 'closed') return t('Closed now', 'Đang đóng cửa', '営業時間外');
   // "Any time", not "Any": it sits under a heading that asks about
   // opening hours, and the other two answers are about now.
-  return t('Any time', 'Bất kỳ', '指定なし');
+  return t('Any time', 'Mọi giờ', '指定なし');
 }
 
 export default function ExploreFilterSheet({
@@ -250,10 +250,10 @@ export default function ExploreFilterSheet({
           // Same reason as the sort rows: the tree otherwise reads the
           // bookmark glyph, the words, "Sign in" and the chevron glyph
           // as one comma-spliced label.
-          accessibilityLabel={t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')}
+          accessibilityLabel={t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ')}
           accessibilityHint={signedIn
             ? undefined
-            : t('Sign in to use this', 'Đăng nhập để dùng', 'サインインして使う')}
+            : t('Sign in to use this', 'Đăng nhập để lọc theo nơi đã lưu', 'サインインして使う')}
           style={[s.row, draft.savedOnly && s.rowOn]}
         >
           <Ionicons
@@ -262,7 +262,7 @@ export default function ExploreFilterSheet({
             color={draft.savedOnly ? colors.accent : colors.textSecondary}
           />
           <Text style={[s.rowText, draft.savedOnly && s.rowTextOn]}>
-            {t('Bookmarked only', 'Chỉ mục đã lưu', 'ブックマークのみ')}
+            {t('Bookmarked only', 'Chỉ nơi đã lưu', 'ブックマークのみ')}
           </Text>
           {/* Signed out this said "Sign in required" in grey, which is a
               refusal written as a label. It is a door, so it looks like
