@@ -50,8 +50,28 @@
 // over the grid, since it is true of every card but the one being worn;
 // the standard rows keep theirs on the row, where it is true of them only
 // from inside a look.
+//
+// ELEVEN LOOKS by the evening of 11 Oct 2026, and a grid of two is six
+// rows: a list scrolling inside a sheet that is itself pulled to close.
+// So the grid is paged sideways instead, four cards to a page, the way
+// the photographs on a place are (`PhotoCarousel`: `pagingEnabled`, the
+// page read off the momentum end). The three grounds above stay a list:
+// three rows that never grow are a setting, and a radio list is what a
+// setting looks like; the looks are a collection that does grow.
+//
+// What says where you are is a count, "11 colours · 2/3", on the heading
+// — not dots and not arrows. Dots were tried on every carousel and taken
+// off on 10 Oct for the reasons in `PageCount`: a count says the total,
+// is one size, and is read rather than counted. Arrows are the desktop's
+// affordance; on a phone the count already says there is a page after
+// this one, and a swipe is what a page is for. The owner's mockup had
+// both, and agreed to neither.
+//
+// The sheet opens on the page the worn look is on. Opening on the first
+// page would show a reader wearing Cosmic a sheet with no tick on it, and
+// the tick is the one thing a settings sheet owes on arrival.
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -104,6 +124,9 @@ type T = (en: string, vi: string, ja?: string) => string;
  * a backstop in case that callback never comes.
  */
 const DISMISS_MS = 450;
+
+/** Cards to a page of the looks: two rows of the grid of two. */
+const PER_PAGE = 4;
 
 /**
  * How long the JavaScript can still be running after the restart was asked
@@ -185,7 +208,22 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   // status bar's inset and the sheet's own chrome — handle, title and the
   // home indicator, about 100pt. On every phone this ships to the nine
   // fit without it; it is there for the largest text sizes.
-  const { height } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
+  // The pages. Four to a page — two rows of the grid of two — which is
+  // what the sheet held before paging on a phone of the usual height,
+  // so a page is the grid a reader already knew, swiped rather than
+  // scrolled. The page's width is the sheet's inside, which is what
+  // `pagingEnabled` snaps by; the floor is for the test runner, which
+  // lays out at no width at all.
+  const pageW = Math.max(width - space.cardPadding * 2, 1);
+  const pages: typeof palettes[] = [];
+  for (let i = 0; i < palettes.length; i += PER_PAGE) pages.push(palettes.slice(i, i + PER_PAGE));
+  // Where the worn look is, or the first page from a ground: that page
+  // is the one the strip opens on (`contentOffset`), and the one the
+  // count names until a swipe lands somewhere else.
+  const worn = Math.floor(Math.max(0, palettes.findIndex((o) => o.id === pref)) / PER_PAGE);
+  const [page, setPage] = useState(worn);
+  useEffect(() => { if (visible) setPage(worn); }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
   // A card that changes the look restarts the app. The choice waits in
   // `pending` while the sheet leaves (see DISMISS_MS); whichever of
   // `onDismiss` and the backstop comes first sends it, once, with where
@@ -275,32 +313,65 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
         })}
         {palettes.length > 0 && (
           <>
-            <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー')}</Text>
-            <View style={s.grid}>
-              {palettes.map((o) => {
-                const active = o.id === pref;
-                return (
-                  <PressableScale
-                    key={o.id}
-                    haptic="selection"
-                    containerStyle={s.cardCell}
-                    style={[s.card, active && s.rowOn]}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: active }}
-                    onPress={() => choose(o.id)}
-                  >
-                    <Swatch look={o.id as Pinned} />
-                    <View style={s.cardLabel}>
-                      <Ionicons name={o.icon} size={16} color={active ? colors.accent : colors.textTertiary} />
-                      <Text style={[s.cardTitle, active && { color: colors.accent }]} numberOfLines={1}>
-                        {schemeLabel(o.id, t)}
-                      </Text>
-                      {active && <Ionicons name="checkmark" size={16} color={colors.accent} />}
-                    </View>
-                  </PressableScale>
-                );
-              })}
+            <View style={s.sectionRow}>
+              <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー')}</Text>
+              {/* The count, and only with somewhere to swipe to — the
+                  rule `PageCount` keeps. Tabular digits so a swipe moves
+                  the page and not the dot. */}
+              {pages.length > 1 && (
+                <Text style={s.pageCount} testID="look-pages">
+                  {t(
+                    `${palettes.length} colours · ${page + 1}/${pages.length}`,
+                    `${palettes.length} bảng màu · ${page + 1}/${pages.length}`,
+                    `${palettes.length}色 · ${page + 1}/${pages.length}`,
+                  )}
+                </Text>
+              )}
             </View>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              contentOffset={{ x: worn * pageW, y: 0 }}
+              // Clamped and rounded as the carousel's is: a momentum end
+              // reported past the last page cannot name a page that is
+              // not there.
+              onMomentumScrollEnd={(e) => setPage(Math.min(
+                pages.length - 1,
+                Math.max(0, Math.round(e.nativeEvent.contentOffset.x / pageW)),
+              ))}
+            >
+              {pages.map((cards, i) => (
+                // A last page of three keeps its empty cell: the cards
+                // are one size on every page, and a stretched card would
+                // be the one card drawn differently.
+                <View key={i} style={[s.grid, { width: pageW }]} testID={`look-page-${i}`}>
+                  {cards.map((o) => {
+                    const active = o.id === pref;
+                    return (
+                      <PressableScale
+                        key={o.id}
+                        haptic="selection"
+                        containerStyle={s.cardCell}
+                        style={[s.card, active && s.rowOn]}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: active }}
+                        onPress={() => choose(o.id)}
+                      >
+                        <Swatch look={o.id as Pinned} />
+                        <View style={s.cardLabel}>
+                          <Ionicons name={o.icon} size={16} color={active ? colors.accent : colors.textTertiary} />
+                          <Text style={[s.cardTitle, active && { color: colors.accent }]} numberOfLines={1}>
+                            {schemeLabel(o.id, t)}
+                          </Text>
+                          {active && <Ionicons name="checkmark" size={16} color={colors.accent} />}
+                        </View>
+                      </PressableScale>
+                    );
+                  })}
+                </View>
+              ))}
+            </ScrollView>
           </>
         )}
         </ScrollView>
@@ -352,10 +423,17 @@ const s = StyleSheet.create({
     height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
     marginHorizontal: 4, marginVertical: 3,
   },
+  sectionRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   section: {
     color: colors.text, fontSize: 15, fontWeight: font.semibold,
     marginTop: 14, marginBottom: 10, paddingHorizontal: 4,
   },
+  pageCount: {
+    color: colors.textTertiary, fontSize: 13, paddingHorizontal: 4,
+    fontVariant: ['tabular-nums'],
+  },
+  // One page of the strip: the grid of two, two rows deep, at the width
+  // the strip snaps by.
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   // Two to a line: half the row less half the gap between.
   cardCell: { width: '48.5%' },

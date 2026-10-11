@@ -13,8 +13,8 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Alert } from 'react-native';
-import { act, fireEvent, render, screen } from '../uitest/render';
+import { Alert, StyleSheet } from 'react-native';
+import { act, cleanup, fireEvent, render, screen } from '../uitest/render';
 import type { Look, Pref } from '../lib/look';
 import { PALETTES } from '../theme';
 
@@ -173,6 +173,93 @@ describe('the looks', () => {
       expect(fills, look).toContain(rgb(p.badgeSolid));
       expect(fills, look).toContain(rgb(p.accentFill));
     }
+  });
+
+  // Eleven looks are six rows of the grid, so the grid is paged sideways,
+  // four to a page, with a count on the heading rather than dots or
+  // arrows — see the sheet's header. jsdom lays nothing out and
+  // react-native-web's ScrollView has no momentum, so the strip's own
+  // handler is called with what a swipe would report, as the carousel
+  // tests do.
+  describe('paged four to a page', () => {
+    const propsWhere = (pick: (p: Record<string, unknown>) => boolean): Record<string, any> => {
+      type Fiber = { child: Fiber | null; sibling: Fiber | null; memoizedProps: Record<string, unknown> | null };
+      const host = document.body.firstElementChild as unknown as Record<string, { stateNode: { current: Fiber } }>;
+      const key = Object.keys(host).find((k) => k.startsWith('__reactContainer'))!;
+      const stack: Fiber[] = [host[key].stateNode.current];
+      while (stack.length) {
+        const f = stack.pop()!;
+        const p = f.memoizedProps;
+        if (p && typeof p === 'object' && pick(p)) return p;
+        if (f.sibling) stack.push(f.sibling);
+        if (f.child) stack.push(f.child);
+      }
+      throw new Error('no matching element in the committed tree');
+    };
+    const strip = () => propsWhere((p) => !!p.horizontal && 'onMomentumScrollEnd' in p);
+    const swipe = (x: number) => act(() => { strip().onMomentumScrollEnd({ nativeEvent: { contentOffset: { x } } }); });
+    /** The strip's page width, read off a page rather than assumed: the
+     *  runner lays out at no width at all, and the strip floors it. */
+    const pageW = () => StyleSheet.flatten(propsWhere((p) => p.testID === 'look-page-0').style).width as number;
+    const radiosIn = (page: number) => screen.getByTestId(`look-page-${page}`).querySelectorAll('[role="radio"]').length;
+
+    it('cuts the eleven into pages of four, four and three, and counts them on the heading', () => {
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      expect(screen.queryByTestId('look-page-3')).toBeNull();
+      expect([radiosIn(0), radiosIn(1), radiosIn(2)]).toEqual([4, 4, 3]);
+      expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 1/3');
+      // No dots, no arrows: the count is the whole of the indicator.
+      expect(document.querySelector('[data-icon="chevron-forward"]')).toBeNull();
+      expect(document.querySelector('[data-icon="chevron-back"]')).toBeNull();
+    });
+
+    it('reports the page a swipe landed on, rounded and clamped', () => {
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      swipe(pageW() * 2);
+      expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 3/3');
+      swipe(pageW() * 0.6);
+      expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 2/3');
+      swipe(pageW() * 9);
+      expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 3/3');
+      swipe(-40);
+      expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 1/3');
+    });
+
+    // The tick is the one thing a settings sheet owes on arrival, so the
+    // strip opens where the worn look is, and the count says so.
+    it('opens on the page of the look being worn', () => {
+      state.pref = 'cosmic';
+      state.look = 'cosmic';
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      expect(strip().contentOffset).toEqual({ x: pageW(), y: 0 });
+      expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 2/3');
+      expect(screen.getByTestId('look-page-1').querySelector('[data-icon="checkmark"]')).toBeTruthy();
+
+      cleanup();
+      state.pref = 'royal';
+      state.look = 'royal';
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      expect(strip().contentOffset).toEqual({ x: pageW() * 2, y: 0 });
+      expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 3/3');
+
+      // And the first page from a ground, which is on no page.
+      cleanup();
+      state.pref = 'system';
+      state.look = 'standard';
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      expect(strip().contentOffset).toEqual({ x: 0, y: 0 });
+    });
+
+    // Closed on page three and opened again: the count starts over from
+    // the worn look's page, as the strip itself does on its remount.
+    it('starts the count over each time it opens', () => {
+      const { rerender } = render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      swipe(pageW() * 2);
+      expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 3/3');
+      rerender(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
+      rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
+      expect(screen.getByTestId('look-pages').textContent).toBe('11 colours · 1/3');
+    });
   });
 
   // The restart brings the reader back, so there is nothing to warn about
