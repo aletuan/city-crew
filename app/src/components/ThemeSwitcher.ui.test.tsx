@@ -14,12 +14,14 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Alert } from 'react-native';
 import { act, fireEvent, render, screen } from '../uitest/render';
+import type { Look, Pref } from '../lib/look';
+import { PALETTES } from '../theme';
 
 const setPref = vi.hoisted(() => vi.fn());
 const state = vi.hoisted(() => ({
   scheme: 'light' as 'light' | 'dark',
-  pref: 'light' as 'light' | 'dark' | 'system' | 'coffee' | 'rose',
-  look: 'standard' as 'standard' | 'coffee' | 'rose',
+  pref: 'light' as Pref,
+  look: 'standard' as Look,
   looks: true,
 }));
 vi.mock('../lib/theme', () => ({
@@ -116,7 +118,7 @@ describe('the two grounds, and the deferral', () => {
   });
 });
 
-describe('the two looks', () => {
+describe('the looks', () => {
   const alert = () => vi.mocked(Alert.alert);
   /** The button the confirmation offers, pressed. */
   const confirm = (label: string) => {
@@ -144,25 +146,49 @@ describe('the two looks', () => {
     throw new Error('no Modal in the committed tree');
   };
 
-  it('offers Coffee and Rose after the grounds, with their own marks', () => {
+  it('offers the six looks after the grounds, with their own marks', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
     // More than light and dark now, so the sheet is a theme, not an appearance.
     expect(screen.getByText('Theme')).toBeTruthy();
     expect(screen.queryByText('Appearance')).toBeNull();
     const rows = [...document.querySelectorAll('[role="radio"]')].map((r) => r.textContent);
-    expect(rows.map((r) => r!.replace(/(Following|Restarts).*/, ''))).toEqual(['Automatic', 'Dark', 'Light', 'Coffee', 'Rose']);
-    expect(document.querySelector('[data-icon="cafe-outline"]')).toBeTruthy();
-    expect(document.querySelector('[data-icon="flower-outline"]')).toBeTruthy();
+    expect(rows.map((r) => r!.replace(/(Following|Restarts).*/, ''))).toEqual(
+      ['Automatic', 'Dark', 'Light', 'Coffee', 'Rose', 'Blush', 'Slate', 'Midnight', 'Navy'],
+    );
+    for (const icon of ['cafe-outline', 'flower-outline', 'heart-outline', 'cloud-outline', 'star-outline', 'boat-outline']) {
+      expect(document.querySelector(`[data-icon="${icon}"]`), icon).toBeTruthy();
+    }
   });
 
-  // A relaunch nobody was warned of reads as a crash.
-  it('says on the row, before the tap, that it restarts the app', () => {
+  // A name cannot tell "Xanh than" from "Xanh navy"; the card shows each
+  // look in its own colours, whichever look is being worn.
+  it('draws each look’s card in that look’s own page, pill and fill', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
+    const rgb = (h: string) => `rgb(${[1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)).join(', ')})`;
+    for (const look of ['coffee', 'rose', 'blush', 'slate', 'midnight', 'navy'] as const) {
+      const sw = screen.getByTestId(`swatch-${look}`);
+      const p = PALETTES[look];
+      expect(getComputedStyle(sw).backgroundColor, look).toBe(rgb(p.bg));
+      const fills = [...sw.querySelectorAll('div')].map((d) => getComputedStyle(d).backgroundColor);
+      expect(fills, look).toContain(rgb(p.text));
+      expect(fills, look).toContain(rgb(p.badgeSolid));
+      expect(fills, look).toContain(rgb(p.accentFill));
+    }
+  });
+
+  // A relaunch nobody was warned of reads as a crash. Said once, over the
+  // looks, before any of them is tapped; and not on a ground's row while
+  // the standard look is worn, where a ground repaints in place.
+  it('says before the tap that a look restarts the app', () => {
+    render(<ThemeSwitcherModal visible onClose={() => {}} />);
+    expect(screen.getByText('Changing these restarts the app')).toBeTruthy();
     const note = (label: string) => screen.getByText(label).closest('[role="radio"]')!.textContent!.includes('Restarts the app');
-    expect(note('Coffee')).toBe(true);
-    expect(note('Rose')).toBe(true);
     expect(note('Dark')).toBe(false);
     expect(note('Light')).toBe(false);
+    // And a new look asks as the first two do.
+    fireEvent.click(screen.getByText('Navy'));
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(setPref).not.toHaveBeenCalled();
   });
 
   it('asks before restarting, and does nothing on Cancel', () => {
@@ -261,6 +287,8 @@ describe('the two looks', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
     expect(screen.queryByText('Coffee')).toBeNull();
     expect(screen.queryByText('Rose')).toBeNull();
+    expect(screen.queryByText('Navy')).toBeNull();
+    expect(screen.queryByText('Changing these restarts the app')).toBeNull();
     expect(document.querySelectorAll('[role="radio"]').length).toBe(3);
   });
 
@@ -268,12 +296,19 @@ describe('the two looks', () => {
     const vi_ = (_en: string, vi: string) => vi;
     expect(schemeLabel('coffee', vi_)).toBe('Nâu cafe');
     expect(schemeLabel('rose', vi_)).toBe('Hồng');
+    expect(schemeLabel('blush', vi_)).toBe('Hồng phấn');
+    expect(schemeLabel('slate', vi_)).toBe('Xanh xám');
+    expect(schemeLabel('midnight', vi_)).toBe('Xanh than');
+    expect(schemeLabel('navy', vi_)).toBe('Xanh navy');
+    expect(schemeLabel('navy', (en) => en)).toBe('Navy');
     expect(schemeLabel('dark', vi_)).toBe('Tối');
   });
 
   it('gives Profile a look’s own mark, and a ground’s for the rest', () => {
     expect(schemeIcon('coffee', 'dark')).toBe('cafe-outline');
     expect(schemeIcon('rose', 'light')).toBe('flower-outline');
+    expect(schemeIcon('midnight', 'dark')).toBe('star-outline');
+    expect(schemeIcon('blush', 'light')).toBe('heart-outline');
     expect(schemeIcon('system', 'dark')).toBe('moon-outline');
     expect(schemeIcon('light', 'light')).toBe('sunny-outline');
   });

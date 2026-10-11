@@ -1,6 +1,6 @@
 // City Crew iOS design system.
 //
-// Four palettes, worn as three looks (`lib/look.ts`, 10 Oct 2026). The
+// Eight palettes, worn as seven looks (`lib/look.ts`, 10–11 Oct 2026). The
 // standard look is two grounds, one system: warm paper with white cards and
 // near-black type, and the cinematic charcoal #0A0B0A with warm-gray
 // hairlines — Light, Dark and Automatic in the Appearance sheet. Coffee is
@@ -8,7 +8,9 @@
 // under cream type, the cream #C7AA9A the secondary type and the hairline.
 // It replaced charcoal for a day (#861) and is now a look of its own beside
 // it. Rose is the second reference, slate rose #B45865 on transparent
-// yellow #F4ECC2, a light look; its note is on `ROSE` below.
+// yellow #F4ECC2, a light look; its note is on `ROSE` below. Four more
+// came from four two-tone references on 11 Oct 2026 — blush and slate,
+// light; midnight and navy, dark — each with its note on its palette.
 //
 // Notes on a token below were written for the standard pair and the coffee
 // brown; a figure for another palette says which it is, and `theme.test.ts`
@@ -54,13 +56,13 @@ import { readLook, storeOf, type Look } from './lib/look';
 const dyn = (light: string, dark: string): ColorValue =>
   (Platform.OS === 'ios' ? DynamicColorIOS({ light, dark }) : dark);
 
-// ── the four palettes ──
+// ── the palettes ──
 //
 // Every colour token's value, per palette. `colors` below is built from
 // whichever two the loaded look pairs (`lib/look.ts`), and keeps the notes
 // on what each token is for. A value that is the same on both sides of the
 // look goes out as a plain string, a value that differs as a `dyn` pair —
-// so under Coffee and Rose, which wear one palette on both sides, nothing
+// so under every look but the standard one, each one palette on both sides, nothing
 // is dynamic at all, and the border bug in the note below cannot happen.
 
 export type Palette = {
@@ -312,13 +314,251 @@ const ROSE: Palette = {
   accentFade: 'rgba(180,88,101,0.02)',
 };
 
-export const PALETTES = { paper: PAPER, charcoal: CHARCOAL, coffee: COFFEE, rose: ROSE } as const;
+/**
+ * "Hồng phấn" (11 Oct 2026): the owner's blush reference, pale pink
+ * #FEE5EB under plum-pink #CF7486, with #EABDDE and #463543 beside them.
+ * A light look.
+ *
+ * The pale pink is the page and the reference's #463543 is the type
+ * (9.52:1). #CF7486 is the colour the eye takes from the reference, and it
+ * is too light to be read or to carry a word: 2.71 as type on the page,
+ * 3.23 under white. So it is the bright end and the heart, and the
+ * readable accent is the same hue carried down to #A8475C (4.74 on the
+ * page, 5.35 on a card), the fill #B5566B under white (4.66). The
+ * reference's own pale-pink-on-#CF7486 is 2.71, which is why no word sits
+ * on it. The tab pill is the reference's #EABDDE under #463543, 6.93.
+ * The steps between are plum greys, #5A4453 and #76606F (7.38 and 4.80,
+ * 1.54 apart).
+ */
+const BLUSH: Palette = {
+  bg: '#FEE5EB',
+  bgElevated: '#FFF7F9',
+  bgElevatedVeil: 'rgba(255,247,249,0.88)',
+  surfaceCard: '#FFF7F9',
+  surfaceGlass: 'rgba(70,53,67,0.05)',
+  surfaceGlassStrong: 'rgba(70,53,67,0.09)',
+  borderGlass: 'rgba(70,53,67,0.14)',
+  borderGlassSoft: 'rgba(70,53,67,0.08)',
+  text: '#463543',
+  textSecondary: '#5A4453',
+  textTertiary: '#76606F',
+  accent: '#A8475C',
+  accentFill: '#B5566B',
+  badge: 'rgba(207,116,134,0.16)',
+  badgeSolid: '#EABDDE',
+  badgeInk: '#A8475C',
+  accentBright: '#CF7486',
+  accentInk: '#FFFFFF',
+  accentSoft: 'rgba(207,116,134,0.12)',
+  accentLine: 'rgba(207,116,134,0.32)',
+  accentFaint: 'rgba(168,71,92,0.72)',
+  emberGlow: 'rgba(207,116,134,0.12)',
+  emberGlowFade: 'rgba(207,116,134,0.04)',
+  sun: '#A0720E',
+  soon: '#94670F',
+  ok: '#3F7A4A',
+  open: '#3F7D55',
+  shutInk: '#972F2B',
+  ink: '#3A2A37',
+  bad: '#9C3B2F',
+  badSoft: '#F9D4CF',
+  okSoft: '#DCEBD3',
+  okInk: '#2F6B3B',
+  gradAI: ['#AD4E63', '#B5566B'],
+  ringTrack: '#F0CBD5',
+  pillInk: '#463543',
+  heartInk: '#CF7486',
+  onPhotoAccent: '#F4A6B6',
+  glassVeil: 'rgba(255,240,244,0.48)',
+  glassHalo: 'rgba(255,240,244,0.95)',
+  accentFade: 'rgba(207,116,134,0.02)',
+};
+
+/**
+ * "Xanh xám" (11 Oct 2026): the owner's slate reference, slate #424A58
+ * and light cream #F7F6F4, as a light look.
+ *
+ * The cream is the page. The slate is the accent, and the accent is what
+ * the reference is: two colours and nothing warm, so active state is the
+ * slate itself (8.27 on the page) rather than a coral the reference never
+ * had, and a button is slate under the cream (8.27). Type goes a step
+ * deeper, #232831 (13.70), so that a link in slate still reads apart from
+ * the text around it. The steps between are #4D5462 and #656C79 (7.04 and
+ * 4.89, 1.44 apart). The tab pill is a pale slate, #DFE2E8, under #2E3440
+ * (9.62) — Threads' grammar, a quiet pill under a dark mark.
+ */
+const SLATE: Palette = {
+  bg: '#F7F6F4',
+  bgElevated: '#FFFFFF',
+  bgElevatedVeil: 'rgba(255,255,255,0.88)',
+  surfaceCard: '#FFFFFF',
+  surfaceGlass: 'rgba(35,40,49,0.05)',
+  surfaceGlassStrong: 'rgba(35,40,49,0.09)',
+  borderGlass: 'rgba(35,40,49,0.14)',
+  borderGlassSoft: 'rgba(35,40,49,0.08)',
+  text: '#232831',
+  textSecondary: '#4D5462',
+  textTertiary: '#656C79',
+  accent: '#424A58',
+  accentFill: '#424A58',
+  badge: 'rgba(66,74,88,0.12)',
+  badgeSolid: '#DFE2E8',
+  badgeInk: '#424A58',
+  accentBright: '#5A6476',
+  accentInk: '#F7F6F4',
+  accentSoft: 'rgba(66,74,88,0.08)',
+  accentLine: 'rgba(66,74,88,0.26)',
+  accentFaint: 'rgba(66,74,88,0.72)',
+  emberGlow: 'rgba(66,74,88,0.10)',
+  emberGlowFade: 'rgba(66,74,88,0.04)',
+  sun: '#B07C10',
+  soon: '#94670F',
+  ok: '#3F7A4A',
+  open: '#3F7D55',
+  shutInk: '#972F2B',
+  ink: '#2A2F38',
+  bad: '#C2564A',
+  badSoft: '#F8DFD9',
+  okSoft: '#D9EBD7',
+  okInk: '#2F6B3B',
+  gradAI: ['#424A58', '#525C6E'],
+  ringTrack: '#E2E1DC',
+  pillInk: '#2E3440',
+  heartInk: '#5A6476',
+  onPhotoAccent: '#E4E7EC',
+  glassVeil: 'rgba(250,249,247,0.48)',
+  glassHalo: 'rgba(250,249,247,0.95)',
+  accentFade: 'rgba(66,74,88,0.02)',
+};
+
+/**
+ * "Xanh than" (11 Oct 2026): the owner's midnight reference, ink navy
+ * #252F52 under yellow cream #F9F8E2, as a dark look.
+ *
+ * The navy is the page and the cream the type (12.17). The accent is the
+ * cream carried to a gold, #F2D27A (8.88 on the page, 7.62 on a card),
+ * because the coral the other dark looks keep falls to 4.10 on this
+ * card: the navy is lighter than the brown or the charcoal. A button is
+ * gold under the navy (8.88), the tab pill the same gold under #1B2340
+ * (10.49). The steps are #D2D0B8 and #ABAA96 (8.37 and 5.55 on the page,
+ * 4.76 for the third on a card, 1.51 apart).
+ */
+const MIDNIGHT: Palette = {
+  bg: '#252F52',
+  bgElevated: '#2E3961',
+  bgElevatedVeil: 'rgba(37,47,82,0.9)',
+  surfaceCard: 'rgba(55,66,106,0.72)',
+  surfaceGlass: 'rgba(249,248,226,0.06)',
+  surfaceGlassStrong: 'rgba(249,248,226,0.12)',
+  borderGlass: 'rgba(249,248,226,0.22)',
+  borderGlassSoft: 'rgba(249,248,226,0.14)',
+  text: '#F9F8E2',
+  textSecondary: '#D2D0B8',
+  textTertiary: '#ABAA96',
+  accent: '#F2D27A',
+  accentFill: '#F2D27A',
+  badge: '#F2D27A',
+  badgeSolid: '#F2D27A',
+  badgeInk: '#252F52',
+  accentBright: '#F7E3A3',
+  accentInk: '#252F52',
+  accentSoft: 'rgba(242,210,122,0.10)',
+  accentLine: 'rgba(242,210,122,0.30)',
+  accentFaint: 'rgba(242,210,122,0.62)',
+  emberGlow: 'rgba(242,210,122,0.12)',
+  emberGlowFade: 'rgba(242,210,122,0.04)',
+  sun: '#F2B441',
+  soon: '#F2B441',
+  ok: '#9FCB9A',
+  open: '#9FCB9A',
+  shutInk: '#F0A096',
+  ink: '#EFEED6',
+  bad: '#EBA197',
+  badSoft: '#43303F',
+  okSoft: '#22392F',
+  okInk: '#9FCB9A',
+  gradAI: ['#F2D27A', '#F7E3A3'],
+  ringTrack: '#36426B',
+  pillInk: '#1B2340',
+  heartInk: '#F2D27A',
+  onPhotoAccent: '#F2D27A',
+  glassVeil: 'rgba(37,47,82,0.48)',
+  glassHalo: 'rgba(37,47,82,0.95)',
+  accentFade: 'rgba(242,210,122,0.02)',
+};
+
+/**
+ * "Xanh navy" (11 Oct 2026): the owner's navy reference, deep navy
+ * #162C39 under beige #C2B2A3, as a dark look.
+ *
+ * The beige is a mid-tone, so it is not the page (see the cream's note at
+ * the top of this file); it is the secondary type and the hairline, as the
+ * coffee brown's cream is (7.01 on the page). Type is the beige lifted to
+ * #F2ECE6 (12.33), the third step #A39486 (4.91, 4.53 on a card, 1.43
+ * under the beige) — the card is held to #1B3240, a lift the third step
+ * can still read on. The accent is the beige's own warm side, caramel
+ * #E6A979 (7.10, 6.54 on a card), so it reads apart from the beige type
+ * beside it; a button is caramel under the navy, the pill caramel under
+ * #10222D (8.00).
+ */
+const NAVY: Palette = {
+  bg: '#162C39',
+  bgElevated: '#1B3240',
+  bgElevatedVeil: 'rgba(22,44,57,0.9)',
+  surfaceCard: 'rgba(38,62,77,0.72)',
+  surfaceGlass: 'rgba(242,236,230,0.06)',
+  surfaceGlassStrong: 'rgba(242,236,230,0.12)',
+  borderGlass: 'rgba(194,178,163,0.24)',
+  borderGlassSoft: 'rgba(194,178,163,0.16)',
+  text: '#F2ECE6',
+  textSecondary: '#C2B2A3',
+  textTertiary: '#A39486',
+  accent: '#E6A979',
+  accentFill: '#E6A979',
+  badge: '#E6A979',
+  badgeSolid: '#E6A979',
+  badgeInk: '#162C39',
+  accentBright: '#EDBE96',
+  accentInk: '#162C39',
+  accentSoft: 'rgba(230,169,121,0.10)',
+  accentLine: 'rgba(230,169,121,0.30)',
+  accentFaint: 'rgba(230,169,121,0.62)',
+  emberGlow: 'rgba(230,169,121,0.14)',
+  emberGlowFade: 'rgba(230,169,121,0.05)',
+  sun: '#F2B441',
+  soon: '#F2B441',
+  ok: '#8FBF8A',
+  open: '#8FBF8A',
+  shutInk: '#EC958A',
+  ink: '#E9E1D9',
+  bad: '#E39A90',
+  badSoft: '#3A2A2E',
+  okSoft: '#1C3A30',
+  okInk: '#8FBF8A',
+  gradAI: ['#E6A979', '#EDBE96'],
+  ringTrack: '#22394A',
+  pillInk: '#10222D',
+  heartInk: '#E6A979',
+  onPhotoAccent: '#E6A979',
+  glassVeil: 'rgba(22,44,57,0.48)',
+  glassHalo: 'rgba(22,44,57,0.95)',
+  accentFade: 'rgba(230,169,121,0.02)',
+};
+
+export const PALETTES = {
+  paper: PAPER, charcoal: CHARCOAL, coffee: COFFEE, rose: ROSE,
+  blush: BLUSH, slate: SLATE, midnight: MIDNIGHT, navy: NAVY,
+} as const;
 
 /** Each look's two sides: the light half and the dark half of every pair. */
 export const LOOKS: Record<Look, { light: Palette; dark: Palette }> = {
   standard: { light: PAPER, dark: CHARCOAL },
   coffee: { light: COFFEE, dark: COFFEE },
   rose: { light: ROSE, dark: ROSE },
+  blush: { light: BLUSH, dark: BLUSH },
+  slate: { light: SLATE, dark: SLATE },
+  midnight: { light: MIDNIGHT, dark: MIDNIGHT },
+  navy: { light: NAVY, dark: NAVY },
 };
 
 /**

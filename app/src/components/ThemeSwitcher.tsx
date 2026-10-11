@@ -24,20 +24,29 @@
 // better, not worse: everything above it is the screen repainting.
 //
 // FIVE ROWS since 10 Oct 2026: the standard three, then Coffee and Rose,
-// which are looks rather than grounds (`lib/look.ts`). Those two cannot
+// which are looks rather than grounds (`lib/look.ts`). Those cannot
 // repaint in place — the colours are built at launch — so choosing one
-// asks first and restarts the app; the sheet says so on the row, before
-// the tap, rather than surprising anyone with a relaunch. Where a look
-// cannot be kept (the web build) the two rows are not offered at all.
+// asks first and restarts the app; the sheet says so before the tap,
+// rather than surprising anyone with a relaunch. Where a look cannot be
+// kept (the web build) they are not offered at all.
+//
+// NINE since 11 Oct 2026, when Blush, Slate, Midnight and Navy came in,
+// and nine rows of 67pt do not fit a sheet on an iPhone SE. So the looks
+// moved into a grid of two, each card a swatch drawn in the look's own
+// page, type, pill and fill — the one thing a name like "Xanh than" next
+// to "Xanh navy" could not say. The restart note moved with them, once,
+// over the grid, since it is true of every card but the one being worn;
+// the standard rows keep theirs on the row, where it is true of them only
+// from inside a look.
 
 import React, { useEffect, useRef } from 'react';
-import { Alert, Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
-import { lookOf, needsRestart } from '../lib/look';
+import { lookOf, needsRestart, PINNED, type Pinned } from '../lib/look';
 import { Pref, Scheme, useScheme } from '../lib/theme';
-import { colors, font, radius, space } from '../theme';
+import { colors, font, PALETTES, radius, space } from '../theme';
 import { PressableScale } from './ui';
 
 const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -47,11 +56,18 @@ const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'system', icon: 'phone-portrait-outline' },
   { id: 'dark', icon: 'moon-outline' },
   { id: 'light', icon: 'sunny-outline' },
-  // The two looks name what they are of: a cup for the coffee brown, a
-  // flower for the rose.
+  // The looks name what they are of: a cup for the coffee brown, a
+  // flower for the rose, a heart for the blush, a cloud for the slate
+  // grey, a star for the midnight sky, a boat for the navy.
   { id: 'coffee', icon: 'cafe-outline' },
   { id: 'rose', icon: 'flower-outline' },
+  { id: 'blush', icon: 'heart-outline' },
+  { id: 'slate', icon: 'cloud-outline' },
+  { id: 'midnight', icon: 'star-outline' },
+  { id: 'navy', icon: 'boat-outline' },
 ];
+
+const isLook = (id: Pref): id is Pinned => Object.prototype.hasOwnProperty.call(PINNED, id);
 
 type T = (en: string, vi: string, ja?: string) => string;
 
@@ -82,7 +98,7 @@ const STUCK_MS = 3000;
  *  wear the ground showing — under Auto, the one the phone picked — and
  *  the two looks their own mark. */
 export function schemeIcon(pref: Pref, scheme: Scheme): keyof typeof Ionicons.glyphMap {
-  if (pref === 'coffee' || pref === 'rose') return OPTIONS.find((o) => o.id === pref)!.icon;
+  if (isLook(pref)) return OPTIONS.find((o) => o.id === pref)!.icon;
   return scheme === 'light' ? 'sunny-outline' : 'moon-outline';
 }
 
@@ -91,6 +107,10 @@ export function schemeLabel(id: Pref, t: T): string {
   if (id === 'system') return t('Automatic', 'Tự động', '自動');
   if (id === 'coffee') return t('Coffee', 'Nâu cafe', 'コーヒー');
   if (id === 'rose') return t('Rose', 'Hồng', 'ローズ');
+  if (id === 'blush') return t('Blush', 'Hồng phấn', 'ブラッシュ');
+  if (id === 'slate') return t('Slate', 'Xanh xám', 'スレート');
+  if (id === 'midnight') return t('Midnight', 'Xanh than', 'ミッドナイト');
+  if (id === 'navy') return t('Navy', 'Xanh navy', 'ネイビー');
   return id === 'dark'
     ? t('Dark', 'Tối', 'ダーク')
     : t('Light', 'Sáng', 'ライト');
@@ -105,10 +125,36 @@ function systemNow(scheme: Scheme, t: T): string {
     : t('Following the phone · Light', 'Theo máy · Sáng', '端末に合わせる · ライト');
 }
 
+/**
+ * A look, drawn small in its own colours: its page, a line of its type and
+ * a shorter one of its secondary, its tab pill, and its fill. Plain hex
+ * from `PALETTES` — this is the other look, not the one being worn, so no
+ * token of the loaded look could draw it.
+ */
+function Swatch({ look }: { look: Pinned }) {
+  const p = PALETTES[look];
+  return (
+    <View style={[s.swatch, { backgroundColor: p.bg }]} testID={`swatch-${look}`}>
+      <View style={{ flex: 1, gap: 5 }}>
+        <View style={[s.swatchLine, { backgroundColor: p.text, width: '80%' }]} />
+        <View style={[s.swatchLine, { backgroundColor: p.textSecondary, width: '50%' }]} />
+      </View>
+      <View style={[s.swatchPill, { backgroundColor: p.badgeSolid }]} />
+      <View style={[s.swatchDot, { backgroundColor: p.accentFill }]} />
+    </View>
+  );
+}
+
 export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useI18n();
   const { scheme, pref, setPref, look, looks } = useScheme();
-  const options = looks ? OPTIONS : OPTIONS.filter((o) => lookOf(o.id) === 'standard');
+  const grounds = OPTIONS.filter((o) => lookOf(o.id) === 'standard');
+  const palettes = looks ? OPTIONS.filter((o) => isLook(o.id)) : [];
+  // What the sheet may take before its list scrolls: the window less the
+  // status bar's inset and the sheet's own chrome — handle, title, Done and
+  // the home indicator, about 150pt. On every phone this ships to the nine
+  // fit without it; it is there for the largest text sizes.
+  const { height } = useWindowDimensions();
   // A row that changes the look restarts the app, which loses whatever
   // screen the reader was on; it is asked once, here, and nowhere else.
   // The choice waits in `pending` while the sheet leaves (see DISMISS_MS);
@@ -151,6 +197,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
     );
   };
   const insets = useSafeAreaInsets();
+  const room = Math.max(height - insets.top - insets.bottom - 150, 240);
   // The house entrance (SaveSheet's, via PersonSheet): the modal only
   // fades — the scrim brightens in place — while the sheet alone rises
   // on a native-driven spring. See CitySwitcher for the longer note.
@@ -173,7 +220,8 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
       >
         <View style={s.handle} />
         <Text style={s.title}>{t('Theme', 'Theme', 'テーマ')}</Text>
-        {options.map((o, i) => {
+        <ScrollView style={{ maxHeight: room }} bounces={false} showsVerticalScrollIndicator={false}>
+        {grounds.map((o, i) => {
           const active = o.id === pref;
           return (
             <View key={o.id}>
@@ -203,6 +251,40 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
             </View>
           );
         })}
+        {palettes.length > 0 && (
+          <>
+            <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー')}</Text>
+            <Text style={s.sectionNote}>
+              {t('Changing these restarts the app', 'Đổi bảng màu sẽ khởi động lại ứng dụng', 'カラーを変えるとアプリが再起動します')}
+            </Text>
+            <View style={s.grid}>
+              {palettes.map((o) => {
+                const active = o.id === pref;
+                return (
+                  <PressableScale
+                    key={o.id}
+                    haptic="selection"
+                    containerStyle={s.cardCell}
+                    style={[s.card, active && s.rowOn]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    onPress={() => choose(o.id)}
+                  >
+                    <Swatch look={o.id as Pinned} />
+                    <View style={s.cardLabel}>
+                      <Ionicons name={o.icon} size={16} color={active ? colors.accent : colors.textTertiary} />
+                      <Text style={[s.cardTitle, active && { color: colors.accent }]} numberOfLines={1}>
+                        {schemeLabel(o.id, t)}
+                      </Text>
+                      {active && <Ionicons name="checkmark" size={16} color={colors.accent} />}
+                    </View>
+                  </PressableScale>
+                );
+              })}
+            </View>
+          </>
+        )}
+        </ScrollView>
         <PressableScale onPress={onClose} accessibilityRole="button" style={s.done}>
           <Text style={s.doneText}>{t('Done', 'Xong', '完了')}</Text>
         </PressableScale>
@@ -254,6 +336,32 @@ const s = StyleSheet.create({
     height: StyleSheet.hairlineWidth, backgroundColor: colors.borderGlassSoft,
     marginHorizontal: 4, marginVertical: 3,
   },
+  section: {
+    color: colors.text, fontSize: 15, fontWeight: font.semibold,
+    marginTop: 14, paddingHorizontal: 4,
+  },
+  sectionNote: {
+    color: colors.textTertiary, fontSize: 13, fontWeight: font.regular,
+    marginTop: 2, marginBottom: 10, paddingHorizontal: 4,
+  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // Two to a line: half the row less half the gap between.
+  cardCell: { width: '48.5%' },
+  card: { padding: 8, borderRadius: radius.card - 6, backgroundColor: colors.surfaceGlass },
+  cardLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 8, paddingHorizontal: 2, minHeight: 28 },
+  cardTitle: { flex: 1, color: colors.text, fontSize: 15, fontWeight: font.medium },
+  // A neutral hairline, half-grey, because the swatch is a pale page on a
+  // dark sheet as often as a dark page on a pale one, and has to stand out
+  // from either. Plain rgba, not a token: a token here would be the look
+  // being worn, not the look being drawn.
+  swatch: {
+    height: 52, borderRadius: radius.card - 10, flexDirection: 'row', alignItems: 'center',
+    gap: 8, paddingHorizontal: 10,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(128,128,128,0.35)',
+  },
+  swatchLine: { height: 5, borderRadius: 2.5 },
+  swatchPill: { width: 26, height: 18, borderRadius: 9 },
+  swatchDot: { width: 18, height: 18, borderRadius: 9 },
   done: { paddingVertical: 12, marginTop: 4, alignSelf: 'center' },
   doneText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
 });

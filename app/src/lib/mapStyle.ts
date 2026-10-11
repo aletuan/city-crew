@@ -97,10 +97,59 @@ const COFFEE_NIGHT: MapStyleRule[] = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#6B8A93' }] },
 ];
 
+// The two blue looks (11 Oct 2026), each in its own family by the coffee
+// reading's steps: land a lift above the page, roads a step and two above
+// the land, labels in the look's own type steps, the stroke behind them
+// the page itself. The page is already blue, so the river cannot be told
+// by hue alone: water goes *below* the page instead, the one surface
+// darker than the ground, and parks take a green off the navy.
+const MIDNIGHT_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#34406A' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#D2D0B8' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#252F52' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#4A5786' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#F9F8E2' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#2E4848' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#2E4848' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#3F4C7A' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#ABAA96' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#485687' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#56659A' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#E4E2CB' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#3F4C7A' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#18203A' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#7F8DB8' }] },
+];
+
+const NAVY_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#22394A' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#C2B2A3' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#162C39' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#3A5568' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#F2ECE6' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#22402F' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#22402F' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2C4659' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#A39486' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#335064' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3F5E74' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#DCCFC3' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2C4659' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0D1C25' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#6F8C9C' }] },
+];
+
+/** Each dark look's own night; a dark look not named here is charcoal's. */
+const NIGHTS: Partial<Record<Look, MapStyleRule[]>> = {
+  coffee: COFFEE_NIGHT,
+  midnight: MIDNIGHT_NIGHT,
+  navy: NAVY_NIGHT,
+};
+
 /**
  * The style for a map that carries our own pins, in the reading the
- * reader chose in Profile. Rose is a light look and takes Google's own
- * day map, as paper does; Coffee's night is its brown one.
+ * reader chose in Profile. The light looks — Rose, Blush, Slate — take
+ * Google's own day map, as paper does; each dark look its own night.
  *
  * Not for `MiniMap`, which is a picker: there the reader is choosing a
  * point on the map rather than reading ours off it, and Google's badges
@@ -108,5 +157,5 @@ const COFFEE_NIGHT: MapStyleRule[] = [
  */
 export function mapStyle(scheme: Scheme, look: Look = 'standard'): MapStyleRule[] {
   if (scheme !== 'dark') return NO_BADGES;
-  return [...NO_BADGES, ...(look === 'coffee' ? COFFEE_NIGHT : NIGHT)];
+  return [...NO_BADGES, ...(NIGHTS[look] ?? NIGHT)];
 }

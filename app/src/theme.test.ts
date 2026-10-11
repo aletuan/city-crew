@@ -120,6 +120,14 @@ describe('accentInk', () => {
   });
 });
 
+// The tab bar's selected pill: the glyph on it, at the 4.5 its note in
+// FloatingTabBar was measured to when the pill still carried a word.
+describe('pillInk', () => {
+  it.each(NAMED)('reads at 4.5:1 or better on the %s pill', (_, p) => {
+    expect(contrast(hex(p.pillInk), hex(p.badgeSolid))).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
 // The visited pill's pair; and the delete well's, its counterpart.
 describe('okInk and bad', () => {
   it.each(NAMED)('read at 4.5:1 or better on their wells in %s', (_, p) => {
@@ -131,10 +139,13 @@ describe('okInk and bad', () => {
 describe('looks', () => {
   // The standard look is the only one that is two palettes, and so the
   // only one that puts a `dyn` pair anywhere; the borders test reads it.
-  it('pairs paper with charcoal, and wears coffee and rose on both sides', () => {
+  it('pairs paper with charcoal, and wears every other look on both sides', () => {
     expect(LOOKS.standard).toEqual({ light: PALETTES.paper, dark: PALETTES.charcoal });
     expect(LOOKS.coffee.light).toBe(LOOKS.coffee.dark);
     expect(LOOKS.rose.light).toBe(LOOKS.rose.dark);
+    for (const l of ['blush', 'slate', 'midnight', 'navy'] as const) {
+      expect(LOOKS[l]).toEqual({ light: PALETTES[l], dark: PALETTES[l] });
+    }
   });
 
   // The runner has no `Settings`, so it loads the standard look, and `dyn`
