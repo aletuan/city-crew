@@ -473,6 +473,50 @@ What's New.
 • ベトナム語の日付で月を短い形式（T9、T10）で表示。
 ```
 
+## Release notes v1.0.7 (What's New)
+
+Viết từ các PR merge sau build 1.0.6 (30) — #812 → #880. Không đổi native
+module (package.json giữ nguyên) nhưng vẫn build mới để bản trên store chứa
+đủ code; `app.json` lên 1.0.7 vì Apple đóng train 1.0.6 khi duyệt. Check-in
+bật bằng flag `place_checkin` (đang on). Không có mặt ở đây: test/smoke suite
+(#842–#858), Edge Function tests (#834–#840), audit tên quán (#817).
+
+### EN
+
+```
+• Check in at a place to mark that you went. Your check-ins are on Profile, by month, with search and filters.
+• Pick a theme in Profile > Theme: eight new looks, from Coffee and Rose to Midnight and Cosmic.
+• A new tab bar: icons only, with a pill that slides to the tab you pick.
+• Add several photos to a place at once.
+• Sign in from a bookmark, a like or Save, and the app finishes what you started, on the same tab.
+• Plans: a "Current location" row to start from where you are, and only lists with places in that city are offered.
+• Easier to read and tap: higher-contrast text in dark mode and larger touch targets.
+```
+
+### VI
+
+```
+• Check-in tại một địa điểm để đánh dấu bạn đã đến. Danh sách check-in nằm trong tab Cá nhân, theo tháng, có tìm kiếm và bộ lọc.
+• Chọn giao diện ở Cá nhân > Theme: tám bảng màu mới, từ Nâu cafe, Hồng đến Xanh than, Vũ trụ.
+• Thanh tab mới: chỉ còn biểu tượng, với một viên nền trượt theo tab bạn chọn.
+• Thêm nhiều ảnh cho một địa điểm trong một lần.
+• Đăng nhập từ nút lưu, thích hoặc Lưu, app làm tiếp việc bạn đang làm, ngay trên tab đó.
+• Kế hoạch: thêm dòng "Vị trí hiện tại" để bắt đầu từ chỗ bạn đứng, và chỉ gợi ý những list có địa điểm ở thành phố đó.
+• Dễ đọc, dễ chạm hơn: chữ ở chế độ tối rõ hơn, vùng chạm lớn hơn.
+```
+
+### JA
+
+```
+• スポットでチェックインして、訪れた記録を残せます。チェックインはプロフィールに月ごとに表示され、検索と絞り込みもできます。
+• プロフィール > テーマで見た目を選べます：コーヒー、ローズからミッドナイト、コズミックまで8種類を追加。
+• 新しいタブバー：アイコンのみになり、選んだタブへピルがスライドします。
+• スポットに写真をまとめて追加できます。
+• 保存やいいねからサインインすると、続きの操作を同じタブで完了します。
+• プラン：「現在地」から開始できる行を追加し、その都市にスポットがあるリストだけを表示。
+• 読みやすく、押しやすく：ダークモードの文字コントラストを上げ、タップ領域を拡大。
+```
+
 ## Phạm vi phủ — kiểm lại trước mỗi lần nộp
 
 Description và release notes nói về số thành phố, nên chúng là metadata có thể
