@@ -88,6 +88,16 @@ const inkOf = (focused: boolean, light: boolean) =>
 const PILL_INSET = 4;
 /** The pill's height: the island's, less the inset above and below. */
 const PILL_H = TAB_BAR_HEIGHT - PILL_INSET * 2;
+/**
+ * The glyph's box, in points. Ionicons draws inside its box with margin,
+ * so the ink is smaller than the number: measured on the owner's Pro Max
+ * screenshot (2.15px a point), at 22 the five glyphs drew 18–20pt —
+ * the compass 38px across, the person 40, the calendar and bookmark 43.
+ * Threads' glyphs in the same screenshot pair draw 46–48px, about 22pt,
+ * in a 53pt pill. At 25 ours draw about 21–23pt, the same ink in a pill
+ * 3pt taller; the owner had found the air around them too wide.
+ */
+const GLYPH = 25;
 
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
   Ideas: ['compass-outline', 'compass'],
@@ -278,7 +288,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               <View>
               {route.name === 'Explore' ? (
                 <PlacesGlyph
-                  size={22}
+                  size={GLYPH}
                   solid={focused}
                   color={inkOf(focused, light)}
                   testID="places-glyph"
@@ -286,7 +296,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
               ) : (
               <Ionicons
                 name={ICONS[route.name][focused ? 1 : 0]}
-                size={22}
+                size={GLYPH}
                 // Only when idle: the selected glyph sits on an opaque
                 // pill, whose ground is known, so a halo there would be
                 // decoration on a problem that does not exist.

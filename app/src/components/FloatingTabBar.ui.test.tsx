@@ -185,6 +185,17 @@ describe('the five tabs', () => {
     expect(getComputedStyle(pill('Ideas')).backgroundColor).not.toBe('rgb(255, 111, 91)');
   });
 
+  // Drawn at 25, not 22: at 22 the ink came out a few points smaller than
+  // Threads' in a pill of the same size. Both kinds of glyph, the
+  // Ionicons four and the drawn pin.
+  it('draws every glyph at the one size', () => {
+    mount(propsFor(0).props);
+    for (const name of ['Ideas', 'Trips', 'Collections', 'Profile']) {
+      expect(tab(name).querySelector('[data-icon]')!.getAttribute('data-size')).toBe('25');
+    }
+    expect(tab('Explore').querySelector('[data-stub="Svg"]')!.getAttribute('width')).toBe('25');
+  });
+
   // As far from the rim at the sides as above and below: the first and
   // last pills meet the rim on three sides, and an uneven gap there is
   // what the owner saw against Threads. The cells carry no inset of their
