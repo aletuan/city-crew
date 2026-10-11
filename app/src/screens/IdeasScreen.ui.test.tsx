@@ -37,6 +37,9 @@ const state = vi.hoisted(() => ({
   city: { id: 'hn', short_en: 'Hanoi', short_vi: 'Hà Nội', short_ja: 'ハノイ' } as Record<string, string> | null,
   places: [] as unknown[],
   mine: [] as unknown[],
+  cols: [] as unknown[],
+  likes: {} as Record<string, number>,
+  uid: null as string | null,
   me: null as Pos,
   members: {} as Record<string, unknown[]>,
   lang: 'en' as 'en' | 'vi' | 'ja',
@@ -56,7 +59,12 @@ vi.mock('../lib/city', () => ({
   useCity: () => ({ city: state.city }),
   useMyPosition: () => state.me,
 }));
-vi.mock('../lib/catalog', () => ({ usePlaces: () => ({ data: state.places }) }));
+vi.mock('../lib/catalog', () => ({
+  usePlaces: () => ({ data: state.places }),
+  useCollections: () => ({ data: state.cols }),
+  useLikes: () => ({ likes: state.likes }),
+}));
+vi.mock('../lib/auth', () => ({ useAuth: () => ({ session: state.uid ? { user: { id: state.uid } } : null }) }));
 vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine, reload: vi.fn() } }) }));
 vi.mock('../lib/data', () => ({
   membersOf: (c: { slug: string }) => state.members[c.slug] ?? [],
@@ -116,6 +124,9 @@ beforeEach(() => {
   state.lang = 'en';
   state.places = [place('a', ['cafes']), place('b', ['eats', 'views']), place('c', ['cafes'])];
   state.mine = [];
+  state.cols = [];
+  state.likes = {};
+  state.uid = null;
   state.me = null;
   state.members = {};
   picker.props = null;
@@ -590,6 +601,77 @@ describe('start from what you love', () => {
     state.mine = [coll('saigon', 'Saigon weekend'), coll('empty', 'Empty')];
     renderScreen();
     expect(screen.queryByText('Start from what you love')).toBeNull();
+  });
+
+  const names = () => screen.getAllByRole('checkbox').map((b) => b.textContent!.replace(/\d+ places?$/, ''));
+  const more = () => screen.queryByTestId('seeds-more');
+
+  // Your own lists are what you came for; the community's are behind one
+  // tap, ranked as Explore ranks them, and your own published list is
+  // shown once, under Yours.
+  it('shows your lists first and keeps the community behind one tap, most liked first', () => {
+    state.uid = 'me';
+    state.mine = [coll('pho', 'Phở run'), coll('minepub', 'My public one', { owner_id: 'me' } as Partial<Coll>)];
+    state.cols = [
+      coll('quiet', 'Quiet corners'),
+      coll('loud', 'Loud nights'),
+      coll('minepub', 'My public one', { owner_id: 'me' } as Partial<Coll>),
+      coll('saigon', 'Saigon only'),
+    ];
+    state.likes = { loud: 9, quiet: 2 };
+    state.members = { pho: [here()], minepub: [here()], quiet: [here()], loud: [here()], saigon: [away()] };
+    renderScreen();
+    expect(screen.getByText('Collections with a place in Hanoi')).toBeTruthy();
+    expect(names()).toEqual(['Phở run', 'My public one']);
+    expect(screen.queryByText('Yours')).toBeNull();
+    expect(more()!.textContent).toBe('More · 2 community collections');
+
+    fireEvent.click(more()!);
+    expect(screen.getByText('Yours')).toBeTruthy();
+    expect(screen.getByText('Community')).toBeTruthy();
+    expect(names()).toEqual(['Phở run', 'My public one', 'Loud nights', 'Quiet corners']);
+    expect(more()).toBeNull();
+  });
+
+  // A guest owns nothing, and an account whose lists are all elsewhere
+  // owns nothing here: both see the city's own lists — three, then the
+  // rest — and can seed a plan from one.
+  it('offers a reader with no list here the three most liked, the rest a tap away, and seeds from them', () => {
+    state.cols = ['a', 'b', 'c', 'd', 'e'].map((k) => coll(k, `List ${k.toUpperCase()}`));
+    state.likes = { a: 1, b: 5, c: 4, d: 3, e: 2 };
+    state.members = Object.fromEntries(['a', 'b', 'c', 'd', 'e'].map((k) => [k, [here()]]));
+    const navigation = renderScreen();
+    expect(names()).toEqual(['List B', 'List C', 'List D']);
+    expect(screen.queryByText('Yours')).toBeNull();
+    expect(screen.queryByText('Community')).toBeNull();
+    expect(more()!.textContent).toBe('2 more');
+    fireEvent.click(more()!);
+    expect(names()).toEqual(['List B', 'List C', 'List D', 'List E', 'List A']);
+    expect(more()).toBeNull();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /List E/ }));
+    tap('Friends');
+    tap('Cafés');
+    fireEvent.click(cta());
+    expect(sent(navigation).from).toEqual(['e']);
+
+    cleanup();
+    state.uid = 'me';
+    state.mine = [coll('saigon', 'Saigon weekend')];
+    state.members.saigon = [away()];
+    state.cols = [coll('a', 'List A'), coll('b', 'List B')];
+    renderScreen();
+    expect(names()).toEqual(['List B', 'List A']);
+    expect(more()).toBeNull();
+  });
+
+  it('names no city under the heading while none is chosen', () => {
+    state.city = null;
+    state.cols = [coll('a', 'List A')];
+    state.members = { a: [here()] };
+    renderScreen();
+    expect(screen.getByText('Start from what you love')).toBeTruthy();
+    expect(screen.queryByText(/Collections with a place/)).toBeNull();
   });
 
   // Before the city resolves there is no "here" to count: every list with

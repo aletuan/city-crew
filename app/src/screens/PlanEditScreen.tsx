@@ -100,7 +100,7 @@ import {
 } from '../lib/assist';
 import { DEFAULT_TZ } from '../lib/clock';
 import { useAuth } from '../lib/auth';
-import { usePlaces } from '../lib/catalog';
+import { useCollections, usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import { saveTrip } from '../lib/data';
@@ -115,12 +115,11 @@ import {
 import { planTrips } from '../lib/planner';
 import { startMinOf } from '../lib/remind';
 import { scheduleTripReminder } from '../lib/reminders';
-import { membersOf } from '../lib/place';
 import { useSave } from '../lib/save';
 import { useNoteEvent, usePlanProfile } from '../lib/tasteProfile';
 import { summaryLine } from '../lib/sketch';
 import { useFlag } from '../lib/useFlag';
-import { COMPANY, draftFrom, type TripDraft } from '../lib/trip';
+import { COMPANY, draftFrom, seedMembers, type TripDraft } from '../lib/trip';
 import type { Place } from '../lib/types';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, radius, space, type } from '../theme';
@@ -153,6 +152,7 @@ export default function PlanEditScreen({ navigation, route }: {
   const { city } = useCity();
   const { session } = useAuth();
   const { mine, askToSignIn } = useSave();
+  const cols = useCollections();
   const { taste, budgetVnd } = usePlanProfile();
   const note = useNoteEvent();
 
@@ -163,10 +163,8 @@ export default function PlanEditScreen({ navigation, route }: {
   // rebuild below is only faithful if it gets the same inputs. The planner
   // still has no business knowing what a collection is.
   const pinned = useMemo(() => {
-    if (!p.from?.length) return [];
-    const wanted = new Set(p.from);
-    return mine.data.filter((c) => wanted.has(c.slug)).flatMap((c) => membersOf(c, places));
-  }, [p.from, mine.data, places]);
+    return seedMembers(p.from, [...mine.data, ...cols.data], places);
+  }, [p.from, mine.data, cols.data, places]);
 
   // Rebuilt from the same pure inputs the options screen used, so the plan
   // the reader tapped is the plan they get. Serialising stops through

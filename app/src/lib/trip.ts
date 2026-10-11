@@ -10,7 +10,8 @@
 // and a later one.
 
 import { distanceKm } from './geo';
-import type { Place } from './types';
+import { membersOf } from './place';
+import type { Collection, Place } from './types';
 
 /** Who the day is for. The one answer that changes the *shape* of a plan
  *  rather than its contents — a couple's evening and four friends' evening
@@ -102,6 +103,38 @@ export const EMPTY_DRAFT: TripDraft = {
 /** Toggle a value in a list, order preserved. */
 export function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+}
+
+/**
+ * The places a plan is seeded from: every member of every chosen list.
+ *
+ * Three screens derived this for themselves, each over `mine.data` alone,
+ * and that was right until 12 Oct 2026, when the Ideas screen started
+ * offering the community's lists for the city beside your own. A chosen
+ * slug can now come from either shelf, so the screens hand both in and
+ * this is the one place that resolves them.
+ *
+ * Your own published list is on both shelves under one slug, and a list
+ * is a list: its members are pinned once, whichever shelf it is read
+ * off first. Places are not deduplicated across lists, which is how it
+ * always was — two lists that share a café are two votes for it, and
+ * the planner's pinned budget handles the rest.
+ */
+export function seedMembers(
+  from: readonly string[] | null | undefined,
+  lists: readonly Collection[],
+  places: Place[],
+): Place[] {
+  if (!from?.length) return [];
+  const wanted = new Set(from);
+  const seen = new Set<string>();
+  const out: Place[] = [];
+  for (const c of lists) {
+    if (!wanted.has(c.slug) || seen.has(c.slug)) continue;
+    seen.add(c.slug);
+    out.push(...membersOf(c, places));
+  }
+  return out;
 }
 
 /**

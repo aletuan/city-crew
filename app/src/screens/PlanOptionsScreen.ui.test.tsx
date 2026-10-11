@@ -39,7 +39,11 @@ vi.mock('../lib/city', () => ({ useCity: () => cityState.current }));
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
-vi.mock('../lib/catalog', () => ({ usePlaces: () => ({ data: PLACES }) }));
+// One array for the community's lists, not a fresh `[]` per render: the
+// screen spreads it into a memo's dependencies, and a new array each
+// render is a plan recomputed each render — which rendered again.
+const NO_COLS = vi.hoisted(() => ({ data: [] as unknown[] }));
+vi.mock('../lib/catalog', () => ({ usePlaces: () => ({ data: PLACES }), useCollections: () => NO_COLS }));
 vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: mine.current, reload: vi.fn() } }) }));
 vi.mock('../lib/tasteProfile', () => ({
   usePlanProfile: () => ({ taste: null, budgetVnd: 400000 }),
