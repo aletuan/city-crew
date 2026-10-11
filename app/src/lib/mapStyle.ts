@@ -139,11 +139,54 @@ const NAVY_NIGHT: MapStyleRule[] = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#6F8C9C' }] },
 ];
 
+// Chocolate (11 Oct 2026): a lift above its light-dark page in the same
+// brown, the roads warmer still, parks an olive off the brown. Its page is
+// light enough that the water goes below it, as the blue looks' does.
+const CHOCOLATE_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#5B4C46' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#EECBC0' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#4E403B' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#73625B' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#FAF0EC' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#4F5543' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#4F5543' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#66564F' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#D0A79B' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#705F58' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#7E6C64' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#F5DED6' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#66564F' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#2F3238' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9FB3BE' }] },
+];
+
+// Cosmic (11 Oct 2026): the midnight reading in the purple family — land
+// a lift above the page, water below it.
+const COSMIC_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#2F2446' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#C9BFD6' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#211832' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#453860' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#F3EEF8' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#283A3A' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#283A3A' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#3A2D55' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9E93AE' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#443662' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#524174' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#E1D8EA' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#3A2D55' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#141027' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#7E86B0' }] },
+];
+
 /** Each dark look's own night; a dark look not named here is charcoal's. */
 const NIGHTS: Partial<Record<Look, MapStyleRule[]>> = {
   coffee: COFFEE_NIGHT,
   midnight: MIDNIGHT_NIGHT,
   navy: NAVY_NIGHT,
+  chocolate: CHOCOLATE_NIGHT,
+  cosmic: COSMIC_NIGHT,
 };
 
 /**

@@ -9,7 +9,8 @@
 // pair has exactly two sides. The owner asked for four looks — paper,
 // charcoal, the coffee brown (#861) and the rose-on-yellow reference — and
 // a third value has nowhere to go in a pair. Four more followed on 11 Oct
-// 2026, from four two-tone references: blush, slate, midnight and navy.
+// 2026, from four two-tone references: blush, slate, midnight and navy;
+// then chocolate and cosmic, the same day.
 //
 // So a look is chosen once, when `theme.ts` is first imported, and it
 // decides what the two sides of every pair are:
@@ -21,6 +22,8 @@
 //   slate     slate on both sides            — pinned light
 //   midnight  midnight on both sides         — pinned dark
 //   navy      navy on both sides             — pinned dark
+//   chocolate chocolate on both sides        — pinned dark
+//   cosmic    cosmic on both sides           — pinned dark
 //
 // Moving between Light, Dark and Automatic stays instant, as before: the
 // look does not change. Moving to or from any other look changes the look,
@@ -52,6 +55,8 @@ export const PINNED = {
   slate: 'light',
   midnight: 'dark',
   navy: 'dark',
+  chocolate: 'dark',
+  cosmic: 'dark',
 } as const satisfies Record<string, Scheme>;
 
 /** A look other than the standard one. */
