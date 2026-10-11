@@ -74,13 +74,15 @@ describe('mapStyle', () => {
     expect(ground('navy')).toBe('#22394A');
     expect(ground('chocolate')).toBe('#5B4C46');
     expect(ground('cosmic')).toBe('#2F2446');
-    for (const l of ['blush', 'slate'] as const) expect(mapStyle('light', l)).toEqual(mapStyle('light'));
+    expect(ground('honey')).toBe('#2B2110');
+    expect(ground('royal')).toBe('#1151A3');
+    for (const l of ['blush', 'slate', 'duck'] as const) expect(mapStyle('light', l)).toEqual(mapStyle('light'));
   });
 
   // The blue looks' land is a lift above their own page, as every night's
   // is; and their water is the one surface below it, since a blue river
   // on a blue ground would otherwise vanish.
-  it.each(['midnight', 'navy', 'chocolate', 'cosmic'] as const)('lifts the %s land above its page and sinks its water below', (look) => {
+  it.each(['midnight', 'navy', 'chocolate', 'cosmic', 'honey', 'royal'] as const)('lifts the %s land above its page and sinks its water below', (look) => {
     const rules = mapStyle('dark', look);
     const color = (f: string | undefined, e: string) =>
       (rules.find((r) => r.featureType === f && r.elementType === e)!.stylers[0] as { color: string }).color;

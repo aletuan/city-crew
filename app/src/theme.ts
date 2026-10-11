@@ -1,6 +1,6 @@
 // City Crew iOS design system.
 //
-// Ten palettes, worn as nine looks (`lib/look.ts`, 10–11 Oct 2026). The
+// Thirteen palettes, worn as twelve looks (`lib/look.ts`, 10–11 Oct 2026). The
 // standard look is two grounds, one system: warm paper with white cards and
 // near-black type, and the cinematic charcoal #0A0B0A with warm-gray
 // hairlines — Light, Dark and Automatic in the Appearance sheet. Coffee is
@@ -11,7 +11,8 @@
 // yellow #F4ECC2, a light look; its note is on `ROSE` below. Four more
 // came from four two-tone references on 11 Oct 2026 — blush and slate,
 // light; midnight and navy, dark — and two more that day, chocolate and
-// cosmic, both dark; each has its note on its palette.
+// cosmic, both dark; then three more, duck (light), honey and royal
+// (dark); each has its note on its palette.
 //
 // Notes on a token below were written for the standard pair and the coffee
 // brown; a figure for another palette says which it is, and `theme.test.ts`
@@ -663,10 +664,184 @@ const COSMIC: Palette = {
   accentFade: 'rgba(231,102,41,0.02)',
 };
 
+/**
+ * "Xanh cổ vịt" (11 Oct 2026): the owner's teal-and-cream reference,
+ * #2A9D8F on #FAF3E0, as a light look.
+ *
+ * The cream is the page and the teal is never the page: it is a mid-tone
+ * (3.0 under white type), the reason the header gives for never putting
+ * the standard cream under anything. So the teal is the fill, the pill's
+ * pale cousin and the gradient's start, under a near-black teal #0F2724
+ * (4.73 on the fill, 5.45 on the gradient's lighter end). As type the
+ * teal is 3.0 on the cream, so the accent is the same teal two steps
+ * down, #1E766B (4.91 on the page, 5.30 on a card, 4.5 over a map tile).
+ * The type is a teal-black and two teal greys (12.6, 8.7 and 5.2, 1.65
+ * apart). The pill is a pale teal #BFE5DE under a deep one (6.63).
+ */
+const DUCK: Palette = {
+  bg: '#FAF3E0',
+  bgElevated: '#FFFCF2',
+  bgElevatedVeil: 'rgba(255,252,242,0.88)',
+  surfaceCard: '#FFFCF2',
+  surfaceGlass: 'rgba(25,48,45,0.05)',
+  surfaceGlassStrong: 'rgba(25,48,45,0.09)',
+  borderGlass: 'rgba(25,48,45,0.14)',
+  borderGlassSoft: 'rgba(25,48,45,0.08)',
+  text: '#19302D',
+  textSecondary: '#2F4A46',
+  textTertiary: '#4E6B66',
+  accent: '#1E766B',
+  accentFill: '#2A9D8F',
+  badge: 'rgba(42,157,143,0.16)',
+  badgeSolid: '#BFE5DE',
+  badgeInk: '#1E766B',
+  accentBright: '#35A999',
+  accentInk: '#0F2724',
+  accentSoft: 'rgba(42,157,143,0.12)',
+  accentLine: 'rgba(42,157,143,0.32)',
+  accentFaint: 'rgba(30,118,107,0.72)',
+  emberGlow: 'rgba(42,157,143,0.12)',
+  emberGlowFade: 'rgba(42,157,143,0.04)',
+  sun: '#8F6A0C',
+  soon: '#8F6A0C',
+  ok: '#3F7A4A',
+  open: '#3F7D55',
+  shutInk: '#9A3A2E',
+  ink: '#20403B',
+  bad: '#9C3B2F',
+  badSoft: '#F7D6CF',
+  okSoft: '#D9EBD2',
+  okInk: '#2F6B3B',
+  gradAI: ['#2A9D8F', '#35A999'],
+  ringTrack: '#D9E8E0',
+  pillInk: '#14524A',
+  heartInk: '#2A9D8F',
+  onPhotoAccent: '#7FD4C7',
+  glassVeil: 'rgba(250,243,224,0.48)',
+  glassHalo: 'rgba(250,243,224,0.95)',
+  accentFade: 'rgba(42,157,143,0.02)',
+};
+
+/**
+ * "Mật ong" (11 Oct 2026): the owner's "chữ vàng tươi / chữ nâu đen"
+ * reference, #EDCA3B on #1E1608, as a dark look.
+ *
+ * The brown-black is the page (0.009, under the coffee brown's weight),
+ * the cards a step up in the same brown, #2A2010. The yellow is the
+ * accent, the fill and the pill, under the page itself (11.2) — the
+ * reference's own pairing, which needed no help: it is 11.2 on the page
+ * as type and 10.0 on a card. The type is a warm cream and two sand
+ * greys (16.2, 11.0 and 6.8, 1.61 apart). Midnight has gold on blue;
+ * this is the same gold on near-black, and the two sit apart on the
+ * sheet by their page.
+ */
+const HONEY: Palette = {
+  bg: '#1E1608',
+  bgElevated: '#2A2010',
+  bgElevatedVeil: 'rgba(30,22,8,0.9)',
+  surfaceCard: 'rgba(48,38,20,0.72)',
+  surfaceGlass: 'rgba(251,243,224,0.06)',
+  surfaceGlassStrong: 'rgba(251,243,224,0.12)',
+  borderGlass: 'rgba(217,201,166,0.22)',
+  borderGlassSoft: 'rgba(217,201,166,0.14)',
+  text: '#FBF3E0',
+  textSecondary: '#D9C9A6',
+  textTertiary: '#B09E78',
+  accent: '#EDCA3B',
+  accentFill: '#EDCA3B',
+  badge: '#EDCA3B',
+  badgeSolid: '#EDCA3B',
+  badgeInk: '#1E1608',
+  accentBright: '#F5D85A',
+  accentInk: '#1E1608',
+  accentSoft: 'rgba(237,202,59,0.12)',
+  accentLine: 'rgba(237,202,59,0.32)',
+  accentFaint: 'rgba(237,202,59,0.62)',
+  emberGlow: 'rgba(237,202,59,0.14)',
+  emberGlowFade: 'rgba(237,202,59,0.05)',
+  sun: '#EDCA3B',
+  soon: '#EDCA3B',
+  ok: '#B9D89A',
+  open: '#B9D89A',
+  shutInk: '#F2A99D',
+  ink: '#EFE4C9',
+  bad: '#F2A99D',
+  badSoft: '#4A2A22',
+  okSoft: '#34402A',
+  okInk: '#B9D89A',
+  gradAI: ['#EDCA3B', '#F5D85A'],
+  ringTrack: '#3A2E16',
+  pillInk: '#1E1608',
+  heartInk: '#EDCA3B',
+  onPhotoAccent: '#F5D85A',
+  glassVeil: 'rgba(30,22,8,0.48)',
+  glassHalo: 'rgba(30,22,8,0.95)',
+  accentFade: 'rgba(237,202,59,0.02)',
+};
+
+/**
+ * "Hoàng gia" (11 Oct 2026): the owner's "Royal Majolica / Marigold"
+ * reference, #F9BF02 on #04408B, as a dark look.
+ *
+ * The royal blue is the page (0.05 — the lightest dark page here, and
+ * still 9.2 under white type), the cards a step up, #0A4894. The
+ * marigold is never the page: it is a mid-tone, and white on it is 1.9.
+ * It is the accent, the fill and the pill, under the page itself (5.91
+ * as type on the page, 5.09 on a card, 5.91 as ink on the fill). The
+ * type is an off-white and two blue-greys (9.2, 8.1 and 5.3 on the
+ * page; 4.76 for the faintest on a card, 1.51 apart) — the tertiary was
+ * a step darker and sat at 4.16 on the card, so it came up and the
+ * secondary with it to keep the step. Midnight is the muted cousin;
+ * this is the flag's own blue and yellow, and the sheet shows both.
+ */
+const ROYAL: Palette = {
+  bg: '#04408B',
+  bgElevated: '#0A4894',
+  bgElevatedVeil: 'rgba(4,64,139,0.9)',
+  surfaceCard: 'rgba(16,80,160,0.72)',
+  surfaceGlass: 'rgba(247,246,238,0.06)',
+  surfaceGlassStrong: 'rgba(247,246,238,0.12)',
+  borderGlass: 'rgba(226,232,243,0.22)',
+  borderGlassSoft: 'rgba(226,232,243,0.14)',
+  text: '#F7F6EE',
+  textSecondary: '#E2E8F3',
+  textTertiary: '#AEBFDB',
+  accent: '#F9BF02',
+  accentFill: '#F9BF02',
+  badge: '#F9BF02',
+  badgeSolid: '#F9BF02',
+  badgeInk: '#04408B',
+  accentBright: '#FFD23F',
+  accentInk: '#04408B',
+  accentSoft: 'rgba(249,191,2,0.12)',
+  accentLine: 'rgba(249,191,2,0.32)',
+  accentFaint: 'rgba(249,191,2,0.62)',
+  emberGlow: 'rgba(249,191,2,0.14)',
+  emberGlowFade: 'rgba(249,191,2,0.05)',
+  sun: '#F9BF02',
+  soon: '#F9BF02',
+  ok: '#A9D9A0',
+  open: '#A9D9A0',
+  shutInk: '#F7B3AA',
+  ink: '#E8EDF7',
+  bad: '#F6A8A0',
+  badSoft: '#4C3862',
+  okSoft: '#1F4F62',
+  okInk: '#A9D9A0',
+  gradAI: ['#F9BF02', '#FFD23F'],
+  ringTrack: '#1C56A4',
+  pillInk: '#04408B',
+  heartInk: '#F9BF02',
+  onPhotoAccent: '#FFD23F',
+  glassVeil: 'rgba(4,64,139,0.48)',
+  glassHalo: 'rgba(4,64,139,0.95)',
+  accentFade: 'rgba(249,191,2,0.02)',
+};
+
 export const PALETTES = {
   paper: PAPER, charcoal: CHARCOAL, coffee: COFFEE, rose: ROSE,
   blush: BLUSH, slate: SLATE, midnight: MIDNIGHT, navy: NAVY,
-  chocolate: CHOCOLATE, cosmic: COSMIC,
+  chocolate: CHOCOLATE, cosmic: COSMIC, duck: DUCK, honey: HONEY, royal: ROYAL,
 } as const;
 
 /** Each look's two sides: the light half and the dark half of every pair. */
@@ -680,6 +855,9 @@ export const LOOKS: Record<Look, { light: Palette; dark: Palette }> = {
   navy: { light: NAVY, dark: NAVY },
   chocolate: { light: CHOCOLATE, dark: CHOCOLATE },
   cosmic: { light: COSMIC, dark: COSMIC },
+  duck: { light: DUCK, dark: DUCK },
+  honey: { light: HONEY, dark: HONEY },
+  royal: { light: ROYAL, dark: ROYAL },
 };
 
 /**
