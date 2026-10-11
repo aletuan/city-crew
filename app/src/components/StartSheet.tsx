@@ -7,10 +7,12 @@
 // where you are, and everything else on the sheet is a way of moving it.
 //
 // So: the map, the address field that moves it, the areas that reorder
-// around it, and the button. "Near me" is no longer a row of its own —
-// the locate button on the map is that answer, and it keeps it as *near
-// me* rather than as the coordinates you happened to be standing on, so
-// a plan made now and walked to later starts from where you are then.
+// around it, and the button. "Near me" was a row of its own, then only
+// the locate button on the map, and is a row again — see `meRow` for why
+// the map's button was not enough. Either way it keeps the answer as
+// *near me* rather than as the coordinates you happened to be standing
+// on, so a plan made now and walked to later starts from where you are
+// then.
 //
 // It shows no places, by choice rather than by licence: see the note at
 // the top of MiniMap.
@@ -40,7 +42,7 @@ import {
 import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MiniMap from './MiniMap';
-import { Chip, GradientCta, PressableScale } from './ui';
+import { Chip, GradientCta, PressableScale, SelectTick } from './ui';
 import { useCity, useMyPosition } from '../lib/city';
 import { findSpots, nameOf, type Spot } from '../lib/findplace';
 import { ctaMode } from '../lib/spots';
@@ -261,6 +263,23 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
   }, [where, onMe, t]);
 
   /**
+   * The second line of the "Current location" row.
+   *
+   * With no position there is nothing to name, and the one thing worth
+   * saying is that a tap is what changes it — the row is the only control
+   * on the sheet that may raise the permission dialog, see `locate`. With
+   * a position, and the row chosen, the geocoder's name for it: the same
+   * word the map's caption carries, without the "You're here" the caption
+   * needs because the caption sits on a map that could be showing
+   * anywhere. With a position and some other answer chosen, nothing: the
+   * row is an offer then, not a description, and a name under an offer
+   * reads as the thing already taken.
+   */
+  const meSub = !me
+    ? t('Not located yet · tap to locate', 'Chưa xác định được · nhấn để định vị', '未取得 · タップで取得')
+    : onMe ? where : '';
+
+  /**
    * Search, once, when the reader says so.
    *
    * On submit rather than per keystroke. Every search is one billed call
@@ -314,6 +333,12 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
    */
   const locate = async () => {
     setDraft({ district: null, at: null, atName: null });
+    // Taking this answer drops a half-typed search, as taking an area
+    // does: with the row beside the field, leaving "cau giay" in it kept
+    // the button saying Search over an answer that had already been given.
+    setQuery('');
+    setSettled('');
+    setHits(null);
     setMissed(false);
     const held = await Location.getForegroundPermissionsAsync();
     if (held.status === 'granted') { setBlocked(false); return; }
@@ -379,6 +404,42 @@ export default function StartSheet({ visible, places, value, onClose, onDone }: 
               }}
             />
           )}
+
+          {/* Where you are, as a row — the answer the map's locate button
+              gives, offered where there is no map to put a button on.
+
+              Two builds draw no map: Expo Go on an iPhone, and any build
+              made without the Google Maps key (`canDrawMap`). On both the
+              sheet still searched and still offered the areas, but "start
+              from where I am" had no control left at all, and nothing on
+              the sheet said that it was already the answer whenever no
+              area and no pin was chosen. A reader on such a build sent a
+              screenshot and asked for exactly this.
+
+              It stays when the map is there. A row with a tick is also the
+              one place the sheet *shows* which of its three answers is
+              current: the chips show an area, the map shows a pin, and
+              near-me was only ever a caption. */}
+          <PressableScale
+            onPress={locate}
+            scaleTo={0.985}
+            haptic="selection"
+            style={s.meRow}
+            accessibilityRole="button"
+            accessibilityLabel={t('Current location', 'Vị trí hiện tại', '現在地')}
+            aria-selected={onMe}
+          >
+            <View style={s.meIcon}>
+              <Ionicons name="navigate" size={16} color={colors.accent} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={s.hitName} numberOfLines={1}>
+                {t('Current location', 'Vị trí hiện tại', '現在地')}
+              </Text>
+              {meSub ? <Text style={s.hitSub} numberOfLines={1}>{meSub}</Text> : null}
+            </View>
+            <SelectTick on={onMe} />
+          </PressableScale>
 
           {/* What the locate button used to do silently, said out loud.
 
@@ -574,6 +635,23 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
   },
   blockedCta: { color: colors.accent, fontSize: 14, fontWeight: font.semibold },
+
+  // The same card as a search hit, so the two kinds of answer on the
+  // sheet that are a named point read as one family; the glyph gets a
+  // tinted well because a bare 16pt arrow next to 15pt text was the
+  // least visible thing on the sheet, and this row exists to be found.
+  meRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 11,
+    marginTop: 12, paddingHorizontal: 13, paddingVertical: 11,
+    borderRadius: radius.card,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderGlassSoft,
+  },
+  meIcon: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft,
+  },
 
   hits: {
     marginTop: 10,

@@ -19,7 +19,7 @@ import React from 'react';
 import { AppState, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '../uitest/render';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
 import type { Place } from '../lib/types';
 
 const findSpots = vi.hoisted(() => vi.fn(async () => [] as { name: string; label: string; lat: number; lng: number }[]));
@@ -461,6 +461,72 @@ describe('the locate button', () => {
 
     await act(async () => { onChange!('background'); onChange!('active'); });
     expect(screen.getByText(NOTICE)).toBeTruthy();
+  });
+});
+
+// The map's locate button, as a row — because two builds draw no map
+// (`canDrawMap`), and on those "start from where I am" had no control at
+// all. The permission flow is `locate`'s and is tested above; what is
+// this row's is that it exists without the map, which answer it shows as
+// current, and the line under its name.
+describe('the current-location row', () => {
+  const row = () => screen.getByRole('button', { name: 'Current location' });
+  const ticked = () => !!row().querySelector('[data-icon="checkmark"]');
+
+  // The stand-in map always draws, so "no map" here is the sheet's own
+  // case of nothing to centre one on; the keyless build's case (`MiniMap`
+  // returning null over a centre it has) leaves the sheet identical.
+  it('stands without a map, and takes the day back to near-me', async () => {
+    world.city = null;
+    location.getForegroundPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: false } as never);
+    const { onDone } = openSheet();
+    expect(screen.queryByTestId('centre')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'locate' })).toBeNull();
+    expect(row()).toBeTruthy();
+
+    fireEvent.click(chip('Tây Hồ'));
+    expect(ticked()).toBe(false);
+    fireEvent.click(row());
+    await waitFor(() => expect(location.getForegroundPermissionsAsync).toHaveBeenCalled());
+    expect(ticked()).toBe(true);
+    expect(chip('Tây Hồ').getAttribute('aria-selected')).toBe('false');
+    fireEvent.click(cta());
+    expect(onDone).toHaveBeenCalledWith(NOWHERE);
+  });
+
+  it('is the ticked answer whenever no area and no pin is, and says so to VoiceOver', () => {
+    openSheet();
+    expect(ticked()).toBe(true);
+    expect(row().getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(chip('Hà Đông'));
+    expect(ticked()).toBe(false);
+    expect(row().getAttribute('aria-selected')).toBe('false');
+    fireEvent.click(screen.getByRole('button', { name: 'drop a pin' }));
+    expect(ticked()).toBe(false);
+  });
+
+  it('asks for a tap while there is no position, names the point once there is, and offers silently otherwise', async () => {
+    openSheet();
+    expect(row().textContent).toBe('Current locationNot located yet · tap to locate');
+
+    cleanup();
+    world.me = { lat: 21.02, lng: 105.84 };
+    openSheet();
+    await waitFor(() => expect(row().textContent).toBe('Current locationHoàn Kiếm'));
+    fireEvent.click(chip('Hà Đông'));
+    // The geocoder is asked about Hà Đông now; the row must not borrow
+    // its answer for a point the reader has not chosen.
+    await named('Hoàn Kiếm');
+    expect(row().textContent).toBe('Current location');
+  });
+
+  it('drops a half-typed search, so the button stops offering to run it', () => {
+    openSheet();
+    type('cau giay');
+    expect(cta().textContent).toContain('Search');
+    fireEvent.click(row());
+    expect(field().value).toBe('');
+    expect(cta().textContent).toContain('Use this location');
   });
 });
 
