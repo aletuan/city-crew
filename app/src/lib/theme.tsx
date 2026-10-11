@@ -19,11 +19,12 @@
 // than from `Appearance`, which does not promise to notify listeners of a
 // change the app itself made.
 //
-// THE LOOK (10 Oct 2026). Coffee and Rose are not a ground but a set of
+// THE LOOK (10 Oct 2026). Coffee, Rose and the four looks after them
+// (Blush, Slate, Midnight, Navy) are not a ground but a set of
 // colours, and a colour pair cannot hold a third set — `lib/look.ts` has
 // the whole argument. Choosing one keeps the look in `Settings` for the
 // next launch and restarts the JavaScript into it; each pins its ground
-// (Coffee dark, Rose light), so everything scheme-picked agrees with the
+// (`PINNED` in lib/look), so everything scheme-picked agrees with the
 // colours. Light, Dark and Automatic share the standard look and stay the
 // instant switch they were.
 
@@ -56,7 +57,7 @@ type ThemeCtx = {
   /** The look the colours were built in, this run — what `theme.ts` read. */
   look: Look;
   /** Whether a look other than the standard one can be kept here at all.
-   *  Off iOS it cannot, and Coffee and Rose are not offered. */
+   *  Off iOS it cannot, and none of the looks is offered. */
   looks: boolean;
   /** False until the stored choice has been read once — the app holds its
    *  first frame on this, so a dark-mode user never sees a white flash. */

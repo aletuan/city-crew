@@ -8,6 +8,9 @@ describe('look', () => {
     expect(parseLook('standard')).toBe('standard');
     expect(parseLook(undefined)).toBe('standard');
     expect(parseLook('charcoal')).toBe('standard');
+    for (const l of ['blush', 'slate', 'midnight', 'navy']) expect(parseLook(l)).toBe(l);
+    // A name every object answers to is still not a look.
+    expect(parseLook('toString')).toBe('standard');
     expect(parseLook(3)).toBe('standard');
   });
 
@@ -26,6 +29,12 @@ describe('look', () => {
     expect(lookOf('dark')).toBe('standard');
     expect(lookOf('coffee')).toBe('coffee');
     expect(lookOf('rose')).toBe('rose');
+    for (const l of ['blush', 'slate', 'midnight', 'navy'] as const) expect(lookOf(l)).toBe(l);
+  });
+
+  // The sheet's order: the standard three, then the looks oldest first.
+  it('offers every look, in the order the sheet lists them', () => {
+    expect(PREFS).toEqual(['system', 'light', 'dark', 'coffee', 'rose', 'blush', 'slate', 'midnight', 'navy']);
   });
 
   it('pins coffee dark and rose light, and lets Automatic follow the phone', () => {
@@ -34,6 +43,12 @@ describe('look', () => {
     expect(pinnedScheme('dark')).toBe('dark');
     expect(pinnedScheme('coffee')).toBe('dark');
     expect(pinnedScheme('rose')).toBe('light');
+    // The two pale grounds are light, the two blues dark: the status bar
+    // and the blur follow.
+    expect(pinnedScheme('blush')).toBe('light');
+    expect(pinnedScheme('slate')).toBe('light');
+    expect(pinnedScheme('midnight')).toBe('dark');
+    expect(pinnedScheme('navy')).toBe('dark');
   });
 
   it('asks for a restart only when the look changes', () => {
@@ -43,6 +58,8 @@ describe('look', () => {
     expect(needsRestart('coffee', 'coffee')).toBe(false);
     expect(needsRestart('coffee', 'light')).toBe(true);
     expect(needsRestart('rose', 'coffee')).toBe(true);
+    expect(needsRestart('midnight', 'navy')).toBe(true);
+    expect(needsRestart('navy', 'navy')).toBe(false);
   });
 
   it('keeps the key the look is stored under', () => {

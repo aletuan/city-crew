@@ -18,6 +18,7 @@
 // The pure halves (`splitFriendships`, `cleanTaste`, `levelFromSaves`,
 // `schemeLabel`) run for real; hooks and sheets are stood in for.
 
+import type { Pref } from '../lib/look';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '../uitest/render';
@@ -45,7 +46,7 @@ const state = vi.hoisted(() => ({
   editor: false,
   lang: 'en' as 'en' | 'vi' | 'ja',
   scheme: 'dark' as 'dark' | 'light',
-  pref: 'dark' as 'dark' | 'light' | 'system' | 'coffee' | 'rose',
+  pref: 'dark' as Pref,
   ready: true,
   session: { user: { id: 'me' } } as { user: { id: string } } | null,
   email: 'minh.le@example.com' as string | null,
@@ -718,7 +719,7 @@ describe('settings card', () => {
 
   // The third case carries the rule: on Auto the words follow the setting
   // while the glyph follows the ground the phone picked, so the row reads
-  // "Automatic" beside a moon. The two looks wear their own mark — a cup
+  // "Automatic" beside a moon. The looks wear their own mark — a cup
   // is not a moon, though Coffee stands on the dark ground.
   it.each([
     ['dark' as const, 'dark' as const, 'Dark', 'moon-outline'],
@@ -726,6 +727,7 @@ describe('settings card', () => {
     ['system' as const, 'dark' as const, 'Automatic', 'moon-outline'],
     ['coffee' as const, 'dark' as const, 'Coffee', 'cafe-outline'],
     ['rose' as const, 'light' as const, 'Rose', 'flower-outline'],
+    ['navy' as const, 'dark' as const, 'Navy', 'boat-outline'],
   ])('shows the %s setting with its glyph and opens the theme sheet', (pref, scheme, label, glyph) => {
     state.pref = pref;
     state.scheme = scheme;
