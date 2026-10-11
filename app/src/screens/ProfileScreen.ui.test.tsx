@@ -885,11 +885,12 @@ describe('show tips again', () => {
     expect(divided(again)).toBe(false);
   });
 
-  // "tip", the word the owner reads them by, not "mẹo".
-  it('is called "Hiện lại các tip" in Vietnamese', () => {
+  // "tip", the word the owner reads them by, not "mẹo"; and "bật lại",
+  // the verb its done-state ("Đã bật lại") answers to.
+  it('is called "Bật lại các tip" in Vietnamese', () => {
     state.lang = 'vi';
     draw();
-    expect(screen.getByText('Hiện lại các tip')).toBeTruthy();
+    expect(screen.getByText('Bật lại các tip')).toBeTruthy();
     expect(screen.queryByText('Hiện lại các mẹo')).toBeNull();
   });
 

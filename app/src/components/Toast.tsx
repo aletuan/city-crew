@@ -90,7 +90,7 @@ const s = StyleSheet.create({
     // Sized to its words, and allowed to shrink before it overruns the
     // row. An iPhone SE leaves 239pt beside the two discs (375, less two
     // 22pt margins, two 36pt discs and two 10pt gaps); the longest note,
-    // "Chỉ mục đã lưu · 12 địa điểm", is 28 characters, and anything that
+    // "Chỉ nơi đã lưu · 12 địa điểm", is 28 characters, and anything that
     // does not fit ends in an ellipsis rather than a second line.
     flexShrink: 1,
     // The discs' own height, so the row reads as one line of things.
