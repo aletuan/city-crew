@@ -24,7 +24,7 @@ import PlaceCard from '../components/PlaceCard';
 import ExploreFilterSheet, { statusLabel } from '../components/ExploreFilterSheet';
 import { AddPill, AddSlot } from '../components/add';
 import { CitySwitcherModal } from '../components/CitySwitcher';
-import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useOwnedStatusBar, useTabBarClearance, useTabBarLift } from '../components/ui';
+import { AmbientWarmth, Chip, Empty, fireHaptic, glassHalo, GlassMaterial, PressableScale, Skeleton, TAB_BAR_HEIGHT, useOwnedStatusBar, useTabBarClearance, useTabBarFrame, useTabBarLift } from '../components/ui';
 import { useDuckOnScroll, useTabBarDuck } from '../components/tabBarDuck';
 import { createNudgeGate, NUDGE_SETTLE_MS } from '../lib/nudge';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel, pinTint, type CategoryStyle } from '../lib/categories';
@@ -156,6 +156,7 @@ function ScrollNudge({ visible, onSearch, onAdd }: {
 }) {
   const { t } = useI18n();
   const lift = useTabBarLift();
+  const frame = useTabBarFrame();
   const light = useScheme().scheme === 'light';
   const fade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -178,6 +179,9 @@ function ScrollNudge({ visible, onSearch, onAdd }: {
           // inset, this one stayed 28pt higher — so the offer arrived in
           // the dock the bar had left, and sat above it.
           bottom: lift,
+          // And the bar's width, from its own hook for the same reason.
+          left: frame.left,
+          width: frame.width,
           opacity: fade,
           // Rises into the dock from below — the direction the bar left in.
           transform: [{
@@ -1722,7 +1726,7 @@ const s = StyleSheet.create({
   // island radius, so the bottom slot reads as one place that changes
   // content rather than two things fighting for it.
   nudgeWrap: {
-    position: 'absolute', left: 12, right: 12,
+    position: 'absolute',
   },
   nudge: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
