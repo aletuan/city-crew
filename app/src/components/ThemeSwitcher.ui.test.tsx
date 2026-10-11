@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 //
-// The appearance sheet — the sibling that keeps its glyphs and its
-// "Done". Both are differences from the city and language sheets, both
+// The theme sheet — the sibling that keeps its glyphs and stays open on a
+// choice. Both are differences from the city and language sheets, both
 // are deliberate, and both are pinned here so a future "make them all
-// match" pass has to read the reasons before flattening them.
+// match" pass has to read the reasons before flattening them. (It had a
+// "Done" too, until 11 Oct 2026; see the sheet's header for why it went.)
 //
 // Since Auto arrived the sheet also has to say two things at once: which
 // row is ticked (the setting) and which ground is showing (the phone's
@@ -105,10 +106,13 @@ describe('the two grounds, and the deferral', () => {
     expect(setPref).toHaveBeenCalledWith('system');
   });
 
-  it('leaves through Done', () => {
+  // No "Done": the dimmed screen above the sheet is the way out, and it
+  // says so to VoiceOver.
+  it('leaves through the screen above it, and carries no Done', () => {
     const onClose = vi.fn();
     render(<ThemeSwitcherModal visible onClose={onClose} />);
-    fireEvent.click(screen.getByText('Done'));
+    expect(screen.queryByText('Done')).toBeNull();
+    fireEvent.click(screen.getByLabelText('Close'));
     expect(onClose).toHaveBeenCalled();
   });
 

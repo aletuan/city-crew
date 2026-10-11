@@ -17,11 +17,18 @@
 //
 // Unlike its siblings this sheet keeps its glyphs: a moon and a sun are
 // two different marks carrying meaning, where the language rows' three
-// identical marks carried none. And it keeps its "Done": choosing here
-// repaints the whole screen behind the sheet, which is the one moment
-// both readings can be seen against each other — closing on the tap
-// would hide the result of the tap. A bottom sheet makes that view
+// identical marks carried none. And it stays open on a choice: choosing
+// a ground repaints the whole screen behind the sheet, which is the one
+// moment both readings can be seen against each other — closing on the
+// tap would hide the result of the tap. A bottom sheet makes that view
 // better, not worse: everything above it is the screen repainting.
+//
+// It had a "Done" for leaving, and lost it on 11 Oct 2026. The owner asked
+// whether it was needed, and it no longer was: a look closes the sheet
+// itself on the way to its restart, and from inside a look every row is
+// one; only the three grounds, from the standard look, repaint in place,
+// and the dimmed screen above the sheet closes it there — it is labelled
+// "Close" for VoiceOver, so nobody is left without a way out.
 //
 // FIVE ROWS since 10 Oct 2026: the standard three, then Coffee and Rose,
 // which are looks rather than grounds (`lib/look.ts`). Those cannot
@@ -151,8 +158,8 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
   const grounds = OPTIONS.filter((o) => lookOf(o.id) === 'standard');
   const palettes = looks ? OPTIONS.filter((o) => isLook(o.id)) : [];
   // What the sheet may take before its list scrolls: the window less the
-  // status bar's inset and the sheet's own chrome — handle, title, Done and
-  // the home indicator, about 150pt. On every phone this ships to the nine
+  // status bar's inset and the sheet's own chrome — handle, title and the
+  // home indicator, about 100pt. On every phone this ships to the nine
   // fit without it; it is there for the largest text sizes.
   const { height } = useWindowDimensions();
   // A row that changes the look restarts the app, which loses whatever
@@ -197,7 +204,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
     );
   };
   const insets = useSafeAreaInsets();
-  const room = Math.max(height - insets.top - insets.bottom - 150, 240);
+  const room = Math.max(height - insets.top - insets.bottom - 100, 240);
   // The house entrance (SaveSheet's, via PersonSheet): the modal only
   // fades — the scrim brightens in place — while the sheet alone rises
   // on a native-driven spring. See CitySwitcher for the longer note.
@@ -285,9 +292,6 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
           </>
         )}
         </ScrollView>
-        <PressableScale onPress={onClose} accessibilityRole="button" style={s.done}>
-          <Text style={s.doneText}>{t('Done', 'Xong', '完了')}</Text>
-        </PressableScale>
       </Animated.View>
     </Modal>
   );
@@ -362,6 +366,4 @@ const s = StyleSheet.create({
   swatchLine: { height: 5, borderRadius: 2.5 },
   swatchPill: { width: 26, height: 18, borderRadius: 9 },
   swatchDot: { width: 18, height: 18, borderRadius: 9 },
-  done: { paddingVertical: 12, marginTop: 4, alignSelf: 'center' },
-  doneText: { color: colors.textSecondary, fontSize: 15, fontWeight: font.medium },
 });
