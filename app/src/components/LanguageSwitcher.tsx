@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LANGS, useI18n } from '../lib/i18n';
 import { colors, font, radius, space } from '../theme';
 import { PressableScale } from './ui';
+import { useSheetDrag } from './sheetDrag';
 
 export function LanguageSwitcherModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t, lang, setLang } = useI18n();
@@ -25,6 +26,7 @@ export function LanguageSwitcherModal({ visible, onClose }: { visible: boolean; 
   // fades — the scrim brightens in place — while the sheet alone rises
   // on a native-driven spring. See CitySwitcher for the longer note.
   const rise = useRef(new Animated.Value(1)).current;
+  const { drag, handlers } = useSheetDrag(visible, onClose);
   useEffect(() => {
     if (!visible) { rise.setValue(1); return; }
     Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
@@ -33,9 +35,10 @@ export function LanguageSwitcherModal({ visible, onClose }: { visible: boolean; 
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} />
       <Animated.View
+        {...handlers}
         style={[s.sheet, {
           paddingBottom: 14 + insets.bottom,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }],
+          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }, { translateY: drag }],
         }]}
       >
         <View style={s.handle} />

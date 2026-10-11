@@ -37,6 +37,7 @@ import { useI18n } from '../lib/i18n';
 import { shareSafely } from '../lib/share';
 import { colors, font, radius, space, type } from '../theme';
 import { fireHaptic, PressableScale } from './ui';
+import { useSheetDrag } from './sheetDrag';
 
 function Row({ label, value, first }: { label: string; value: string; first?: boolean }) {
   return (
@@ -60,6 +61,7 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
   // The house entrance, as in ThemeSwitcher: the modal fades, the sheet
   // alone rises on a native-driven spring.
   const rise = useRef(new Animated.Value(1)).current;
+  const { drag, handlers } = useSheetDrag(visible, onClose);
   useEffect(() => {
     if (!visible) { rise.setValue(1); return; }
     Animated.spring(rise, { toValue: 0, useNativeDriver: true, speed: 14, bounciness: 3 }).start();
@@ -103,10 +105,11 @@ export default function AboutSheet({ visible, onClose, info = APP_INFO }: {
     >
       <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={close} />
       <Animated.View
+        {...handlers}
         accessibilityViewIsModal
         style={[s.sheet, {
           paddingBottom: 14 + insets.bottom,
-          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }],
+          transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [0, 320] }) }, { translateY: drag }],
         }]}
       >
         <View style={s.handle} />
