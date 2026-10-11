@@ -48,7 +48,7 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `06-save-place` | test account | 1 m 21 s |
 | `08-explore-filter` | guest | 50 s |
 | `09-collections-browse` | guest | 42 s |
-| `10-check-in` | test account | 1 m 9 s |
+| `10-check-in` | test account | 1 m 18 s |
 | `11-collection-crud` | test account | 2 m |
 | `13-trip-edit` | test account | 1 m 49 s |
 | `14-forgot-password` | guest | 1 m 11 s |
@@ -56,12 +56,18 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
 **Kết quả gần nhất:** 10/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **14/14
-passed trong 16 m 36 s**, với `13-trip-edit` vừa vào. Trước đó cùng ngày:
-13/13 trong 15 m 7 s trên `0d120779` (main, đã gồm #848–#855).
+passed trong 16 m 30 s**, với `10-check-in` mở rộng sang lịch sử check-in:
+sau khi check-in, lượt ghé có trong Profile → "Places you checked in at"
+dưới tháng này; hàng đó mở lại đúng place, vẫn đã ghé; xoá lượt ghé xong,
+quay lại lịch sử thì hàng đã đi. Mutant "lịch sử bỏ lượt mới nhất" làm nó đỏ.
 
-Một lượt suite trong lúc làm `13` đỏ ở `11`: `hideKeyboard` đã tự gửi form
-tạo collection (ô tên gửi khi bấm return), màn hình đóng trước khi flow bấm
-`collection-submit`. `11` giờ chỉ bấm nút nếu nó còn trên màn hình.
+Hai bài học khi làm (GUIDELINES 9a, 9b): tab giữ vị trí cuộn — đăng nhập để
+Profile cuộn dở, hàng nằm sẵn dưới tiêu đề và tiêu đề nhận cú chạm; và hàng
+bấm được là một phần tử trợ năng, `visit-name` bên trong không phải lúc nào
+cũng có trong cây.
+
+Trước đó cùng ngày: 14/14 trong 16 m 36 s (`13-trip-edit` vào; `11` được
+sửa vì `hideKeyboard` có lúc tự gửi form tạo collection).
 
 Trước đó cùng ngày `11-collection-crud` đỏ liền nhiều lượt, kể cả sau khi
 khởi động lại simulator. Nguyên nhân đã đo được: sau khi một `Alert` hệ thống
@@ -86,7 +92,7 @@ nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái 
 
 **Ngân sách: dưới 20 phút** cho cả suite (quyết định của chủ dự án,
 09/10). Thời gian không phải ràng buộc chặt: một flow đáng giá vẫn vào dù
-làm suite dài thêm một hai phút. 14 flow hiện chạy 16 m 36 s, còn khoảng
+làm suite dài thêm một hai phút. 14 flow hiện chạy 16 m 30 s, còn khoảng
 3 phút cho các flow tiếp theo.
 
 `10-check-in` được thử cả nhánh dọn dẹp: một flow tạm check-in rồi dừng, `10`
