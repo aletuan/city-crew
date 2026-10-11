@@ -28,16 +28,16 @@
 // colours. Light, Dark and Automatic share the standard look and stay the
 // instant switch they were.
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Appearance, DevSettings, Platform, Settings } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
 import {
-  canHoldLook, lookOf, needsRestart, parsePref, pinnedScheme, readLook, storeOf, writeLook,
-  type Look, type Pref, type Scheme,
+  canHoldLook, lookOf, needsRestart, parsePref, pinnedScheme, readLook, storeOf, takeReturn, writeLook, writeReturn,
+  type Look, type Pref, type Return, type Scheme,
 } from './look';
 
-export type { Look, Pref, Scheme } from './look';
+export type { Look, Pref, Return, Scheme } from './look';
 
 /** Follow the phone. Someone who never opens the setting gets the app in
  *  the same ground as everything else they are looking at — and the two
@@ -53,7 +53,9 @@ type ThemeCtx = {
   scheme: Scheme;
   /** What the person chose — what the Appearance sheet ticks. */
   pref: Pref;
-  setPref: (p: Pref) => void;
+  /** Choose. A look restarts the app; `returnTo` is where the restart
+   *  should put the reader back, if somewhere (`Return` in lib/look). */
+  setPref: (p: Pref, returnTo?: Omit<Return, 'at'>) => void;
   /** The look the colours were built in, this run — what `theme.ts` read. */
   look: Look;
   /** Whether a look other than the standard one can be kept here at all.
@@ -62,10 +64,18 @@ type ThemeCtx = {
   /** False until the stored choice has been read once — the app holds its
    *  first frame on this, so a dark-mode user never sees a white flash. */
   ready: boolean;
+  /** Where the restart this launch came from left the reader, or null on
+   *  any other launch. Read once, before the navigator mounts. */
+  resume: Return | null;
+  /** The same, handed over once: the screen that reopens the sheet takes
+   *  it, so a remount of that screen later in the run does not open the
+   *  sheet again. */
+  claimResume: () => Return | null;
 };
 
 const Ctx = createContext<ThemeCtx>({
   scheme: FALLBACK, pref: DEFAULT, setPref: () => {}, look: 'standard', looks: false, ready: true,
+  resume: null, claimResume: () => null,
 });
 
 export const useScheme = () => useContext(Ctx);
@@ -115,6 +125,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Read once, as `theme.ts` read it at import — this module may not
   // import that one (docs/architecture.md), so it asks the same store.
   const [look] = useState<Look>(() => readLook(store()));
+  // And where the last restart left the reader, read once too — taken off
+  // the store here, before the navigator mounts, since the navigator is
+  // what needs it first (`landingState`).
+  const [resume] = useState<Return | null>(() => takeReturn(store(), Date.now()));
+  const claimed = useRef(false);
+  const claimResume = useCallback(() => {
+    if (claimed.current) return null;
+    claimed.current = true;
+    return resume;
+  }, [resume]);
 
   useEffect(() => {
     let live = true;
@@ -147,13 +167,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  const setPref = useCallback((next: Pref) => {
+  const setPref = useCallback((next: Pref, returnTo?: Omit<Return, 'at'>) => {
     // Another look: kept, then restarted into. Nothing repaints first —
     // the window pinned to the new ground over the old colours would be a
     // frame of neither. Where the look cannot be kept, a restart would come
-    // back as it left, so nothing happens at all.
+    // back as it left, so nothing happens at all. Where the reader was goes
+    // in beside the look, for the launch after the restart to read back.
     if (needsRestart(look, next)) {
       if (Platform.OS !== 'ios' || !writeLook(store(), lookOf(next))) return;
+      if (returnTo) writeReturn(store(), { ...returnTo, at: Date.now() });
       AsyncStorage.setItem(STORE_KEY, next).catch(() => {}).finally(restart);
       return;
     }
@@ -171,8 +193,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const looks = Platform.OS === 'ios' && canHoldLook(store());
 
   const value = useMemo<ThemeCtx>(
-    () => ({ scheme, pref, setPref, look, looks, ready }),
-    [scheme, pref, setPref, look, looks, ready],
+    () => ({ scheme, pref, setPref, look, looks, ready, resume, claimResume }),
+    [scheme, pref, setPref, look, looks, ready, resume, claimResume],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

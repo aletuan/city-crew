@@ -147,3 +147,92 @@ export function writeLook(store: LookStore, look: Look): boolean {
     return false;
   }
 }
+
+// ── coming back after the restart ──
+//
+// A look is a restart (see above), and a restart used to land the reader
+// on the first tab with the sheet gone: the one thing they were doing,
+// choosing a colour, was the thing the restart threw away — and so it was
+// asked about first, in an alert, which is its own interruption. Now the
+// sheet writes down where it was before the restart — the tab, that it was
+// open, how far the page was scrolled — and the next launch reads it back
+// once and puts the reader there, sheet open, in the new colours. Kept in
+// `Settings` beside the look, because the navigator needs it before it
+// mounts, and that is before AsyncStorage can answer.
+//
+// A minute, then it is ignored: a restart takes a second or two, and a
+// record older than that is one a crash left behind, which must not make
+// the next launch open a sheet nobody asked for.
+
+export type Return = {
+  /** The tab the reader was on. */
+  tab: string;
+  /** The sheet that was open on it, if one was. */
+  sheet?: 'theme';
+  /** How far down that tab's page was scrolled, in points. */
+  y?: number;
+  /** When it was written. */
+  at: number;
+};
+
+/** The NSUserDefaults key the return is kept under. */
+export const RETURN_KEY = 'citycrew.look.return';
+/** How long a return stays worth taking. */
+export const RETURN_TTL_MS = 60 * 1000;
+
+/** Keep where the reader is for the launch after the restart. */
+export function writeReturn(store: LookStore, r: Return): boolean {
+  if (!canHoldLook(store)) return false;
+  try {
+    store!.set!({ [RETURN_KEY]: JSON.stringify(r) });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** A kept return, if it reads as one. */
+function parseReturn(raw: unknown): Return | null {
+  if (typeof raw !== 'string') return null;
+  try {
+    const v = JSON.parse(raw) as Partial<Return> | null;
+    if (!v || typeof v.tab !== 'string' || typeof v.at !== 'number') return null;
+    return {
+      tab: v.tab,
+      at: v.at,
+      ...(v.sheet === 'theme' ? { sheet: 'theme' as const } : {}),
+      ...(typeof v.y === 'number' ? { y: v.y } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The kept return if it is still fresh, and gone either way: a launch reads
+ * it once, and a record it could not read is dropped rather than tried
+ * again. A stamp from the future is refused, as `takeResume` refuses one.
+ */
+export function takeReturn(store: LookStore, now: number): Return | null {
+  if (!canHoldLook(store)) return null;
+  let raw: unknown;
+  try {
+    raw = store!.get!(RETURN_KEY);
+    if (!raw) return null;
+    store!.set!({ [RETURN_KEY]: '' });
+  } catch {
+    return null;
+  }
+  const r = parseReturn(raw);
+  if (!r || r.at > now || now - r.at > RETURN_TTL_MS) return null;
+  return r;
+}
+
+/**
+ * Where the navigator opens: on the tab the reader left, or wherever it
+ * would have anyway. A partial state — the tab navigator fills in the
+ * other tabs around the one named.
+ */
+export function landingState(r: Return | null): { index: number; routes: { name: string }[] } | undefined {
+  return r ? { index: 0, routes: [{ name: r.tab }] } : undefined;
+}

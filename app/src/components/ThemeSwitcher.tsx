@@ -33,9 +33,12 @@
 // FIVE ROWS since 10 Oct 2026: the standard three, then Coffee and Rose,
 // which are looks rather than grounds (`lib/look.ts`). Those cannot
 // repaint in place — the colours are built at launch — so choosing one
-// asks first and restarts the app; the sheet says so before the tap,
-// rather than surprising anyone with a relaunch. Where a look cannot be
-// kept (the web build) they are not offered at all.
+// restarts the app. It used to ask first, in an alert, because the restart
+// threw away where the reader was; since 11 Oct 2026 the restart puts them
+// back — this tab, this sheet, this far down the page (`returnTo`, and
+// `Return` in lib/look) — so there is nothing left to warn about, only a
+// moment's wait, which the sheet still names. Where a look cannot be kept
+// (the web build) they are not offered at all.
 //
 // NINE since 11 Oct 2026, when Blush, Slate, Midnight and Navy came in,
 // and nine rows of 67pt do not fit a sheet on an iPhone SE. So the looks
@@ -52,7 +55,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../lib/i18n';
 import { lookOf, needsRestart, PINNED, type Pinned } from '../lib/look';
-import { Pref, Scheme, useScheme } from '../lib/theme';
+import { Pref, Return, Scheme, useScheme } from '../lib/theme';
 import { colors, font, PALETTES, radius, space } from '../theme';
 import { PressableScale } from './ui';
 import { useSheetDrag } from './sheetDrag';
@@ -153,7 +156,13 @@ function Swatch({ look }: { look: Pinned }) {
   );
 }
 
-export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
+  visible: boolean;
+  onClose: () => void;
+  /** Where the restart a look costs should put the reader back — asked at
+   *  the moment of the choice, by the screen that knows. */
+  returnTo?: () => Omit<Return, 'at'>;
+}) {
   const { t } = useI18n();
   const { scheme, pref, setPref, look, looks } = useScheme();
   const grounds = OPTIONS.filter((o) => lookOf(o.id) === 'standard');
@@ -163,10 +172,10 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
   // home indicator, about 100pt. On every phone this ships to the nine
   // fit without it; it is there for the largest text sizes.
   const { height } = useWindowDimensions();
-  // A row that changes the look restarts the app, which loses whatever
-  // screen the reader was on; it is asked once, here, and nowhere else.
-  // The choice waits in `pending` while the sheet leaves (see DISMISS_MS);
-  // whichever of `onDismiss` and the backstop comes first sends it, once.
+  // A card that changes the look restarts the app. The choice waits in
+  // `pending` while the sheet leaves (see DISMISS_MS); whichever of
+  // `onDismiss` and the backstop comes first sends it, once, with where
+  // the reader is so the restart can bring them back.
   const pending = useRef<Pref | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
@@ -174,7 +183,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
     const id = pending.current;
     if (!id) return;
     pending.current = null;
-    setPref(id);
+    setPref(id, returnTo?.());
     timers.current.push(setTimeout(() => Alert.alert(
       t('Close and reopen City Crew', 'Hãy đóng và mở lại City Crew', 'City Crew を閉じて開き直してください'),
       t(
@@ -191,18 +200,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
   };
   const choose = (id: Pref) => {
     if (!needsRestart(look, id)) { setPref(id); return; }
-    Alert.alert(
-      t('Restart to change the theme?', 'Khởi động lại để đổi theme?', 'テーマを変えるために再起動しますか？'),
-      t(
-        'City Crew will close and open again in the new colours.',
-        'City Crew sẽ đóng và mở lại với màu mới.',
-        'City Crew が閉じて、新しい色で開き直します。',
-      ),
-      [
-        { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
-        { text: t('Restart', 'Khởi động lại', '再起動'), onPress: () => agree(id) },
-      ],
-    );
+    agree(id);
   };
   const insets = useSafeAreaInsets();
   const room = Math.max(height - insets.top - insets.bottom - 100, 240);
@@ -256,7 +254,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
                     <Text style={s.rowNote}>{systemNow(scheme, t)}</Text>
                   )}
                   {!active && needsRestart(look, o.id) && (
-                    <Text style={s.rowNote}>{t('Restarts the app', 'Ứng dụng sẽ khởi động lại', 'アプリが再起動します')}</Text>
+                    <Text style={s.rowNote}>{t('Takes a moment', 'Mất một lát', '少し時間がかかります')}</Text>
                   )}
                 </View>
                 {active && <Ionicons name="checkmark" size={18} color={colors.accent} />}
@@ -268,7 +266,7 @@ export function ThemeSwitcherModal({ visible, onClose }: { visible: boolean; onC
           <>
             <Text style={s.section}>{t('Colours', 'Bảng màu', 'カラー')}</Text>
             <Text style={s.sectionNote}>
-              {t('Changing these restarts the app', 'Đổi bảng màu sẽ khởi động lại ứng dụng', 'カラーを変えるとアプリが再起動します')}
+              {t('Changing these takes a moment', 'Đổi bảng màu mất một lát', 'カラーの変更には少し時間がかかります')}
             </Text>
             <View style={s.grid}>
               {palettes.map((o) => {
