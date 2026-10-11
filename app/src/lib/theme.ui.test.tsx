@@ -58,7 +58,8 @@ import { ThemeProvider, useScheme } from './theme';
 const KEY = 'citycrew.scheme';
 
 function Probe() {
-  const { scheme, pref, setPref, look, looks, ready } = useScheme();
+  const { scheme, pref, setPref, look, looks, ready, resume, claimResume } = useScheme();
+  const [claimed, setClaimed] = React.useState<string>('');
   return (
     <>
       <span data-testid="scheme">{scheme}</span>
@@ -66,6 +67,10 @@ function Probe() {
       <span data-testid="look">{look}</span>
       <span data-testid="looks">{String(looks)}</span>
       <span data-testid="ready">{String(ready)}</span>
+      <span data-testid="resume">{resume ? `${resume.tab}/${resume.sheet ?? '-'}/${resume.y ?? '-'}` : 'none'}</span>
+      <span data-testid="claimed">{claimed}</span>
+      <button type="button" onClick={() => setClaimed(JSON.stringify(claimResume()))}>claim</button>
+      <button type="button" onClick={() => setPref('navy', { tab: 'Profile', sheet: 'theme', y: 420 })}>navy, from Profile</button>
       <button type="button" onClick={() => setPref('system')}>auto</button>
       <button type="button" onClick={() => setPref('light')}>light</button>
       <button type="button" onClick={() => setPref('dark')}>dark</button>
@@ -215,6 +220,52 @@ describe('another look', () => {
     await settled();
     act(() => { screen.getByText('rose').click(); });
     await waitFor(() => expect(rn.reload).toHaveBeenCalledTimes(1));
+  });
+
+  // Where the reader was rides in beside the look, for the launch after
+  // the restart; a choice made from nowhere in particular keeps nothing.
+  it('keeps where the reader was, beside the look, when told', async () => {
+    const RETURN = 'citycrew.look.return';
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(1_700_000_000_000));
+    mount();
+    await settled();
+    act(() => { screen.getByText('navy, from Profile').click(); });
+    await waitFor(() => expect(updates.reloadAsync).toHaveBeenCalledTimes(1));
+    expect(rn.kept[LOOK]).toBe('navy');
+    expect(JSON.parse(rn.kept[RETURN] as string)).toEqual({ tab: 'Profile', sheet: 'theme', y: 420, at: 1_700_000_000_000 });
+    vi.useRealTimers();
+  });
+
+  it('keeps no return for a look chosen from nowhere', async () => {
+    mount();
+    await settled();
+    act(() => { screen.getByText('coffee').click(); });
+    await waitFor(() => expect(updates.reloadAsync).toHaveBeenCalledTimes(1));
+    expect(rn.kept['citycrew.look.return']).toBeUndefined();
+  });
+
+  // The launch after: the return is read once off the store, offered to
+  // the navigator, and handed to the screen that reopens the sheet once.
+  it('reads the return back on the next launch, and hands it over once', async () => {
+    rn.kept[LOOK] = 'navy';
+    rn.kept['citycrew.look.return'] = JSON.stringify({ tab: 'Profile', sheet: 'theme', y: 300, at: Date.now() - 2000 });
+    mount();
+    await settled();
+    expect(text('resume')).toBe('Profile/theme/300');
+    expect(rn.kept['citycrew.look.return']).toBe('');
+    act(() => { screen.getByText('claim').click(); });
+    expect(JSON.parse(text('claimed')!)).toEqual(expect.objectContaining({ tab: 'Profile', sheet: 'theme', y: 300 }));
+    act(() => { screen.getByText('claim').click(); });
+    expect(text('claimed')).toBe('null');
+  });
+
+  it('has nothing to resume on an ordinary launch', async () => {
+    mount();
+    await settled();
+    expect(text('resume')).toBe('none');
+    act(() => { screen.getByText('claim').click(); });
+    expect(text('claimed')).toBe('null');
   });
 
   it.each([['coffee', 'dark'], ['rose', 'light']] as const)('wears %s on its own ground, whatever the phone says', async (look, ground) => {

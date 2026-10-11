@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { LOOK_KEY, PREFS, canHoldLook, lookOf, storeOf, needsRestart, parseLook, parsePref, pinnedScheme, readLook, writeLook } from './look';
+import {
+  LOOK_KEY, PREFS, RETURN_KEY, RETURN_TTL_MS, canHoldLook, landingState, lookOf, storeOf, needsRestart,
+  parseLook, parsePref, pinnedScheme, readLook, takeReturn, writeLook, writeReturn,
+} from './look';
 
 describe('look', () => {
   it('reads a stored look, and anything else as the standard one', () => {
@@ -95,5 +98,75 @@ describe('look', () => {
     expect(writeLook({ get: () => null }, 'rose')).toBe(false);
     expect(writeLook(undefined, 'rose')).toBe(false);
     expect(writeLook({ get: () => null, set: () => { throw new Error('full'); } }, 'rose')).toBe(false);
+  });
+});
+
+describe('the return after a restart', () => {
+  /** A store that keeps what it is given, as `Settings` does. */
+  const memory = () => {
+    const kept: Record<string, unknown> = {};
+    return { kept, store: { get: (k: string) => kept[k], set: (v: Record<string, unknown>) => { Object.assign(kept, v); } } };
+  };
+  const NOW = 1_700_000_000_000;
+
+  it('keeps the return as text under its key, and says when it could not', () => {
+    const { kept, store } = memory();
+    expect(writeReturn(store, { tab: 'Profile', sheet: 'theme', y: 420, at: NOW })).toBe(true);
+    expect(kept[RETURN_KEY]).toBe(JSON.stringify({ tab: 'Profile', sheet: 'theme', y: 420, at: NOW }));
+    expect(writeReturn({ get: () => null }, { tab: 'Profile', at: NOW })).toBe(false);
+    expect(writeReturn(undefined, { tab: 'Profile', at: NOW })).toBe(false);
+    expect(writeReturn({ get: () => null, set: () => { throw new Error('full'); } }, { tab: 'Profile', at: NOW })).toBe(false);
+  });
+
+  // Read once: the record is cleared on the way out, so a second reader in
+  // the same launch, or the next launch, finds nothing.
+  it('reads a fresh return back once, whole, and then it is gone', () => {
+    const { kept, store } = memory();
+    writeReturn(store, { tab: 'Profile', sheet: 'theme', y: 420, at: NOW });
+    expect(takeReturn(store, NOW + 1500)).toEqual({ tab: 'Profile', sheet: 'theme', y: 420, at: NOW });
+    expect(kept[RETURN_KEY]).toBe('');
+    expect(takeReturn(store, NOW + 1500)).toBeNull();
+  });
+
+  it('carries only the parts that were there', () => {
+    const { store } = memory();
+    writeReturn(store, { tab: 'Trips', at: NOW });
+    expect(takeReturn(store, NOW)).toEqual({ tab: 'Trips', at: NOW });
+  });
+
+  // A minute, then it is a record a crash left behind.
+  it('ignores a return that is stale, or from the future', () => {
+    const { store } = memory();
+    writeReturn(store, { tab: 'Profile', at: NOW });
+    expect(takeReturn(store, NOW + RETURN_TTL_MS + 1)).toBeNull();
+    writeReturn(store, { tab: 'Profile', at: NOW });
+    expect(takeReturn(store, NOW - 1)).toBeNull();
+    writeReturn(store, { tab: 'Profile', at: NOW });
+    expect(takeReturn(store, NOW + RETURN_TTL_MS)).not.toBeNull();
+  });
+
+  it('drops what it cannot read, and clears it all the same', () => {
+    const { kept, store } = memory();
+    for (const bad of ['{not json', '{"tab":3,"at":1}', '{"at":1}', '{"tab":"Profile"}', 'null', '[]', 7]) {
+      kept[RETURN_KEY] = bad;
+      expect(takeReturn(store, NOW), String(bad)).toBeNull();
+      expect(kept[RETURN_KEY], String(bad)).toBe('');
+    }
+    // A sheet it does not know, or a y that is not a number, are left out.
+    kept[RETURN_KEY] = JSON.stringify({ tab: 'Profile', at: NOW, sheet: 'city', y: 'far' });
+    expect(takeReturn(store, NOW)).toEqual({ tab: 'Profile', at: NOW });
+  });
+
+  it('reads nothing off a missing, empty or broken store', () => {
+    expect(takeReturn(undefined, NOW)).toBeNull();
+    expect(takeReturn({ get: () => null }, NOW)).toBeNull();
+    expect(takeReturn({ get: () => undefined, set: () => {} }, NOW)).toBeNull();
+    expect(takeReturn({ get: () => { throw new Error('no defaults'); }, set: () => {} }, NOW)).toBeNull();
+    expect(takeReturn({ get: () => '{"tab":"Profile","at":1}', set: () => { throw new Error('full'); } }, NOW)).toBeNull();
+  });
+
+  it('opens the navigator on the tab the reader left, and nowhere in particular otherwise', () => {
+    expect(landingState({ tab: 'Profile', at: NOW })).toEqual({ index: 0, routes: [{ name: 'Profile' }] });
+    expect(landingState(null)).toBeUndefined();
   });
 });

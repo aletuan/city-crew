@@ -124,11 +124,6 @@ describe('the two grounds, and the deferral', () => {
 
 describe('the looks', () => {
   const alert = () => vi.mocked(Alert.alert);
-  /** The button the confirmation offers, pressed. */
-  const confirm = (label: string) => {
-    const buttons = alert().mock.calls[0][2]!;
-    buttons.find((b) => b.text === label)!.onPress?.();
-  };
   /** The Modal's own word that it has gone — what iOS sends after the
    *  fade. Read off the committed tree: react-native-web sends it only at
    *  the end of a CSS animation, which jsdom never runs. */
@@ -180,35 +175,25 @@ describe('the looks', () => {
     }
   });
 
-  // A relaunch nobody was warned of reads as a crash. Said once, over the
-  // looks, before any of them is tapped; and not on a ground's row while
-  // the standard look is worn, where a ground repaints in place.
-  it('says before the tap that a look restarts the app', () => {
+  // The restart brings the reader back, so there is nothing to warn about
+  // and nothing to ask: only a moment's wait, said once over the looks,
+  // and not on a ground's row while the standard look is worn, where a
+  // ground repaints in place.
+  it('says a look takes a moment, and asks nothing before the tap', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
-    expect(screen.getByText('Changing these restarts the app')).toBeTruthy();
-    const note = (label: string) => screen.getByText(label).closest('[role="radio"]')!.textContent!.includes('Restarts the app');
+    expect(screen.getByText('Changing these takes a moment')).toBeTruthy();
+    expect(screen.queryByText(/restarts/i)).toBeNull();
+    const note = (label: string) => screen.getByText(label).closest('[role="radio"]')!.textContent!.includes('Takes a moment');
     expect(note('Dark')).toBe(false);
     expect(note('Light')).toBe(false);
-    // And a new look asks as the first two do.
     fireEvent.click(screen.getByText('Navy'));
-    expect(Alert.alert).toHaveBeenCalledTimes(1);
-    expect(setPref).not.toHaveBeenCalled();
-  });
-
-  it('asks before restarting, and does nothing on Cancel', () => {
-    render(<ThemeSwitcherModal visible onClose={() => {}} />);
-    fireEvent.click(screen.getByText('Coffee'));
-    expect(alert()).toHaveBeenCalledTimes(1);
-    expect(alert().mock.calls[0][0]).toBe('Restart to change the theme?');
-    expect(setPref).not.toHaveBeenCalled();
-    confirm('Cancel');
-    expect(setPref).not.toHaveBeenCalled();
+    expect(alert()).not.toHaveBeenCalled();
   });
 
   // Pressed on a phone with the sheet still up, the restart did nothing.
   // So the sheet closes first and the look is chosen once it has gone —
   // by the Modal's `onDismiss`, or by the backstop if that never comes.
-  describe('once the restart is agreed to', () => {
+  describe('once a look is tapped', () => {
     beforeEach(() => { vi.useFakeTimers(); });
     afterEach(() => { vi.useRealTimers(); });
 
@@ -216,29 +201,40 @@ describe('the looks', () => {
       const onClose = vi.fn();
       render(<ThemeSwitcherModal visible onClose={onClose} />);
       fireEvent.click(screen.getByText('Rose'));
-      confirm('Restart');
       expect(onClose).toHaveBeenCalledTimes(1);
       expect(setPref).not.toHaveBeenCalled();
       act(() => { vi.advanceTimersByTime(449); });
       expect(setPref).not.toHaveBeenCalled();
       act(() => { vi.advanceTimersByTime(1); });
       expect(setPref).toHaveBeenCalledTimes(1);
-      expect(setPref).toHaveBeenCalledWith('rose');
+      expect(setPref).toHaveBeenCalledWith('rose', undefined);
+    });
+
+    // Where the reader is goes with the choice, asked of the screen at
+    // that moment rather than when the sheet opened: the page may have
+    // scrolled since.
+    it('sends where the reader is along with the look', () => {
+      const returnTo = vi.fn(() => ({ tab: 'Profile', sheet: 'theme' as const, y: 380 }));
+      render(<ThemeSwitcherModal visible onClose={() => {}} returnTo={returnTo} />);
+      fireEvent.click(screen.getByText('Navy'));
+      expect(returnTo).not.toHaveBeenCalled();
+      act(() => { dismissed(); });
+      expect(returnTo).toHaveBeenCalledTimes(1);
+      expect(setPref).toHaveBeenCalledWith('navy', { tab: 'Profile', sheet: 'theme', y: 380 });
     });
 
     it('chooses it when the sheet says it has gone, and only once', () => {
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       fireEvent.click(screen.getByText('Coffee'));
-      confirm('Restart');
       act(() => { dismissed(); });
-      expect(setPref).toHaveBeenCalledWith('coffee');
+      expect(setPref).toHaveBeenCalledWith('coffee', undefined);
       act(() => { vi.advanceTimersByTime(500); });
       act(() => { dismissed(); });
       expect(setPref).toHaveBeenCalledTimes(1);
     });
 
     // A sheet closed by hand chooses nothing.
-    it('chooses nothing when the sheet goes without a restart agreed', () => {
+    it('chooses nothing when the sheet goes without a look tapped', () => {
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       act(() => { dismissed(); });
       expect(setPref).not.toHaveBeenCalled();
@@ -249,22 +245,20 @@ describe('the looks', () => {
     it('says how to finish the change if the app is still here after it', () => {
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       fireEvent.click(screen.getByText('Rose'));
-      confirm('Restart');
       act(() => { vi.advanceTimersByTime(450 + 2999); });
-      expect(alert()).toHaveBeenCalledTimes(1);
+      expect(alert()).not.toHaveBeenCalled();
       act(() => { vi.advanceTimersByTime(1); });
-      expect(alert()).toHaveBeenCalledTimes(2);
-      expect(alert().mock.calls[1][0]).toBe('Close and reopen City Crew');
+      expect(alert()).toHaveBeenCalledTimes(1);
+      expect(alert().mock.calls[0][0]).toBe('Close and reopen City Crew');
     });
 
     it('leaves nothing running once the sheet is gone from the tree', () => {
       const { unmount } = render(<ThemeSwitcherModal visible onClose={() => {}} />);
       fireEvent.click(screen.getByText('Rose'));
-      confirm('Restart');
       unmount();
       act(() => { vi.advanceTimersByTime(10_000); });
       expect(setPref).not.toHaveBeenCalled();
-      expect(alert()).toHaveBeenCalledTimes(1);
+      expect(alert()).not.toHaveBeenCalled();
     });
   });
 
@@ -274,16 +268,19 @@ describe('the looks', () => {
     state.look = 'coffee';
     state.pref = 'coffee';
     state.scheme = 'dark';
-    render(<ThemeSwitcherModal visible onClose={() => {}} />);
+    const onClose = vi.fn();
+    render(<ThemeSwitcherModal visible onClose={onClose} />);
     const row = (label: string) => screen.getByText(label).closest('[role="radio"]')!;
-    expect(row('Coffee').textContent).not.toContain('Restarts the app');
-    expect(row('Light').textContent).toContain('Restarts the app');
+    expect(row('Coffee').textContent).not.toContain('Takes a moment');
+    expect(row('Light').textContent).toContain('Takes a moment');
     expect(row('Coffee').querySelector('[data-icon="checkmark"]')).toBeTruthy();
     fireEvent.click(screen.getByText('Coffee'));
-    expect(alert()).not.toHaveBeenCalled();
     expect(setPref).toHaveBeenCalledWith('coffee');
+    expect(onClose).not.toHaveBeenCalled();
+    // A ground, from inside a look, is a restart: the sheet goes, nothing asks.
     fireEvent.click(screen.getByText('Light'));
-    expect(alert()).toHaveBeenCalledTimes(1);
+    expect(alert()).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('offers neither where a look cannot be kept', () => {
@@ -292,7 +289,7 @@ describe('the looks', () => {
     expect(screen.queryByText('Coffee')).toBeNull();
     expect(screen.queryByText('Rose')).toBeNull();
     expect(screen.queryByText('Navy')).toBeNull();
-    expect(screen.queryByText('Changing these restarts the app')).toBeNull();
+    expect(screen.queryByText('Changing these takes a moment')).toBeNull();
     expect(document.querySelectorAll('[role="radio"]').length).toBe(3);
   });
 

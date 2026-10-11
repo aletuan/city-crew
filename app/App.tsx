@@ -14,6 +14,7 @@ import { AuthProvider } from './src/lib/auth';
 import { CityProvider } from './src/lib/city';
 import { I18nProvider, useI18n } from './src/lib/i18n';
 import { ThemeProvider, useScheme } from './src/lib/theme';
+import { landingState } from './src/lib/look';
 import { holdingFirstFrame } from './src/lib/boot';
 import { appFlags } from './src/lib/flags';
 import { supabase } from './src/lib/supabase';
@@ -267,7 +268,7 @@ const navTheme = {
 
 /** Everything below the theme, so the scheme is readable from here down. */
 function Root() {
-  const { scheme, ready } = useScheme();
+  const { scheme, ready, resume } = useScheme();
   // The launch's switches — see `lib/flags.ts`. Fired once and not
   // awaited: the first frame is held for fonts and the theme, not for
   // this, and a switch that arrives a beat after the cards do is fine.
@@ -311,7 +312,10 @@ function Root() {
         <AuthProvider>
           <I18nProvider>
             <CityProvider>
-              <NavigationContainer theme={navTheme} ref={navRef}>
+              {/* A launch that is a theme's restart opens on the tab the
+                  reader left (`landingState`); any other, wherever the
+                  navigators would have put them. */}
+              <NavigationContainer theme={navTheme} ref={navRef} initialState={landingState(resume)}>
                 {/* Dark type on paper, light type on charcoal — the one
                     thing the window's interface style does not carry. */}
                 <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />

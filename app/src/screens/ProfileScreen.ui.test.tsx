@@ -61,12 +61,18 @@ const state = vi.hoisted(() => ({
   mode: 'manual' as 'auto' | 'manual',
   checkins: [] as { id: string; place_slug: string; city_id: string | null; at: string }[],
   feed: 0,
+  /** Where a theme's restart left the reader, on the launch that is one. */
+  resume: null as { tab: string; sheet?: 'theme'; y?: number; at: number } | null,
 }));
 
 const spies = vi.hoisted(() => ({
   signOut: vi.fn(async () => {}),
   reload: vi.fn(),
   prefsFor: vi.fn(),
+  /** What the theme sheet is told about where the page is, when it asks. */
+  returnTo: vi.fn(),
+  /** The tab bar's scroll listener, when the screen has one. */
+  duck: undefined as undefined | ((e: unknown) => void),
 }));
 
 // `t` answers in the language on state, so the member-since label and the
@@ -110,9 +116,9 @@ vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: state.mine } }) 
 vi.mock('../lib/mytrips', () => ({ useMyTrips: () => ({ data: state.trips }) }));
 vi.mock('../lib/city', () => ({ useCity: () => ({ city: state.city, mode: state.mode }) }));
 vi.mock('../lib/theme', () => ({
-  useScheme: () => ({ scheme: state.scheme, pref: state.pref, setPref: () => {}, ready: true }),
+  useScheme: () => ({ scheme: state.scheme, pref: state.pref, setPref: () => {}, ready: true, claimResume: () => state.resume }),
 }));
-vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => undefined }));
+vi.mock('../components/tabBarDuck', () => ({ useDuckOnScroll: () => spies.duck }));
 
 // Sheets have their own suites. What Profile owes each is opening it and
 // closing it, so every stand-in says which it is and offers a close.
@@ -128,8 +134,13 @@ vi.mock('../components/LanguageSwitcher', () => ({
 // `schemeLabel` stays real: the words on the Appearance row are its.
 vi.mock('../components/ThemeSwitcher', async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
-  ThemeSwitcherModal: ({ visible, onClose }: SheetProps) =>
-    (visible ? <button type="button" onClick={onClose}>close-theme</button> : null),
+  ThemeSwitcherModal: ({ visible, onClose, returnTo }: SheetProps & { returnTo?: () => unknown }) =>
+    (visible ? (
+      <>
+        <button type="button" onClick={onClose}>close-theme</button>
+        <button type="button" onClick={() => spies.returnTo(returnTo?.())}>return-to</button>
+      </>
+    ) : null),
 }));
 vi.mock('../components/LegalSheet', () => ({
   default: ({ id, onClose }: { id: string | null; onClose: () => void }) =>
@@ -173,6 +184,7 @@ const press = (start: string) => fireEvent.click(button(start));
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  state.resume = null;
   state.guide = false;
   state.checkins = [];
   state.feed = 0;
@@ -738,6 +750,40 @@ describe('settings card', () => {
     press('Theme');
     fireEvent.click(screen.getByText('close-theme'));
     expect(screen.queryByText('close-theme')).toBeNull();
+  });
+
+  // The launch after a theme's restart: the sheet the reader chose from
+  // is up again from the first frame, in the new colours, with nothing
+  // to tap to get back to it.
+  it('reopens the theme sheet from the first frame after a theme’s restart', () => {
+    state.resume = { tab: 'Profile', sheet: 'theme', y: 300, at: Date.now() };
+    draw();
+    expect(screen.getByText('close-theme')).toBeTruthy();
+  });
+
+  it('opens no sheet on an ordinary launch, nor on one that came back to another tab', () => {
+    draw();
+    expect(screen.queryByText('close-theme')).toBeNull();
+    cleanup();
+    state.resume = { tab: 'Trips', at: Date.now() };
+    draw();
+    expect(screen.queryByText('close-theme')).toBeNull();
+  });
+
+  // What the sheet is told when it asks: this tab, this sheet, and how far
+  // down the page is at that moment — read off the scroll as it happens,
+  // and still handed on to the tab bar's own listener.
+  it('tells the theme sheet where the page is, at the moment it asks', () => {
+    spies.duck = vi.fn();
+    draw();
+    const el = screen.getByTestId('profile-scroll');
+    el.scrollTop = 260;
+    fireEvent.scroll(el);
+    expect(spies.duck).toHaveBeenCalledTimes(1);
+    press('Theme');
+    fireEvent.click(screen.getByText('return-to'));
+    expect(spies.returnTo).toHaveBeenCalledWith({ tab: 'Profile', sheet: 'theme', y: 260 });
+    spies.duck = undefined;
   });
 
   // "Theme" in Vietnamese too — the owner's word, kept as the loanword —

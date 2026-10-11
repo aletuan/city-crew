@@ -6,8 +6,11 @@
 // About-me card and account actions. Champagne throughout — the
 // reference's violet gradient is translated, not copied.
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View,
+  type NativeScrollEvent, type NativeSyntheticEvent,
+} from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { AmbientWarmth, Card, CountBadge, fireHaptic, PressableScale, Screen, successHaptic, useTabBarClearance } from '../components/ui';
 import { resetTips } from '../components/TipBox';
@@ -220,7 +223,10 @@ function SettingsCard() {
   const { city } = useCity();
   const [open, setOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
-  const [themeOpen, setThemeOpen] = useState(false);
+  // Open from the first frame when this launch is the restart a theme
+  // cost and the sheet was up when it was chosen — see `ProfileReturn`.
+  const back = useContext(ProfileReturn);
+  const [themeOpen, setThemeOpen] = useState(back.sheet === 'theme');
   const { scheme, pref } = useScheme();
   const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語' }[lang];
   // The same reader the collection screen keys its tips by: the session,
@@ -283,7 +289,13 @@ function SettingsCard() {
       </Card>
       <CitySwitcherModal visible={open} onClose={() => setOpen(false)} />
       <LanguageSwitcherModal visible={langOpen} onClose={() => setLangOpen(false)} />
-      <ThemeSwitcherModal visible={themeOpen} onClose={() => setThemeOpen(false)} />
+      <ThemeSwitcherModal
+        visible={themeOpen}
+        onClose={() => setThemeOpen(false)}
+        // Asked at the moment of the choice: this tab, this sheet, and how
+        // far down the page is right then.
+        returnTo={() => ({ tab: 'Profile', sheet: 'theme', y: back.y.current })}
+      />
     </>
   );
 }
@@ -964,6 +976,17 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
   );
 }
 
+/**
+ * What the restart a theme costs has to put back on this screen, and what
+ * it needs from it: the sheet that was open and how far down the page was
+ * (`Return` in lib/look). A context rather than props, because the
+ * settings card sits in both the account's profile and the guest's, two
+ * levels under the scroll view that knows the offset.
+ */
+const ProfileReturn = createContext<{ sheet: 'theme' | null; y: React.MutableRefObject<number> }>({
+  sheet: null, y: { current: 0 },
+});
+
 export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
   const { ready, session } = useAuth();
@@ -973,6 +996,27 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   // of the walk back that ExploreScreen's `tabPress` note describes.
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
+  // Where the restart left the reader, taken once on this screen's first
+  // render of the run (see `claimResume`): the sheet reopens from its first
+  // frame, and the page goes back to where it was.
+  const { claimResume } = useScheme();
+  const [back] = useState(claimResume);
+  const landing = useRef(back?.y ?? 0);
+  const y = useRef(0);
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    y.current = e.nativeEvent.contentOffset.y;
+    duckScroll?.(e);
+  }, [duckScroll]);
+  // Back to where the page was, once the content is tall enough to hold
+  // it: a scroll asked of a page still drawing clamps to what is there,
+  // and the content below the fold arrives over a few frames.
+  const land = (height: number) => {
+    if (landing.current > 0 && height > landing.current) {
+      scrollRef.current?.scrollTo({ y: landing.current, animated: false });
+      landing.current = 0;
+    }
+  };
+  const returning = useMemo(() => ({ sheet: back?.sheet ?? null, y }), [back]);
 
   return (
     <Screen title={t('Profile', 'Cá nhân', 'プロフィール')}>
@@ -980,16 +1024,20 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
         <AmbientWarmth />
         <ScrollView
           ref={scrollRef}
+          testID="profile-scroll"
           contentContainerStyle={{ paddingHorizontal: space.page, paddingBottom: tabClearance, gap: space.cardGap }}
           showsVerticalScrollIndicator={false}
-          onScroll={duckScroll}
+          onScroll={onScroll}
+          onContentSizeChange={(_, height) => land(height)}
           scrollEventThrottle={16}
         >
-          {!ready
-            ? <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />
-            : session
-              ? <AccountProfile navigation={navigation} />
-              : <GuestHub navigation={navigation} />}
+          <ProfileReturn.Provider value={returning}>
+            {!ready
+              ? <ActivityIndicator color={colors.accent} style={{ marginTop: 48 }} />
+              : session
+                ? <AccountProfile navigation={navigation} />
+                : <GuestHub navigation={navigation} />}
+          </ProfileReturn.Provider>
         </ScrollView>
       </View>
     </Screen>
