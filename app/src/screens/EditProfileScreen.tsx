@@ -40,7 +40,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { AuthHeader, AuthScreen, FieldRow, FormError, PrimaryButton, useFailText } from '../components/authUi';
+import { AuthHeader, AuthScreen, FieldRow, FormError, useFailText } from '../components/authUi';
 import AvatarPicker from '../components/AvatarPicker';
 import TastePicker from '../components/TastePicker';
 import { Card, PressableScale, successHaptic, Toggle } from '../components/ui';
@@ -231,10 +231,38 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
 
   return (
     <AuthScreen>
+      {/* Save, in the header since 10 Oct 2026 (`HeaderAction`): this form
+          runs from an avatar through five fields to the privacy cards, and
+          the button at its foot was out of sight for most of it.
+
+          Lit when there is something to save, off the same `edited` the
+          discard guard reads — so the button and the "discard your
+          changes?" alert can never disagree about whether this form has
+          been touched.
+
+          And lit when there is something to *fix*, which is not the same
+          question. An account whose handle was never set opens this
+          screen clean and invalid: nothing has changed, and yet the one
+          thing this form exists to do is still undone. A Save that is
+          dead there explains nothing — the reader cannot press the
+          button that would have told them "Choose a username." So the
+          stored value is put through the same validator the save path
+          uses, and a form that cannot pass it keeps its button. */}
       <AuthHeader
         onBack={() => navigation.goBack()}
         title={t('Edit profile', 'Sửa hồ sơ', 'プロフィール編集')}
+        action={{
+          label: t('Save', 'Lưu', '保存'),
+          a11yLabel: t('Save changes', 'Lưu thay đổi', '変更を保存'),
+          onPress: save,
+          busy,
+          disabled: !edited && handleProblem(normalizeHandle(handle)) === null,
+        }}
       />
+      {/* Under the header, beside the Save that raised it. At the foot of
+          the form it sat below the privacy cards, out of sight of the
+          button that had just been pressed. */}
+      {error ? <FormError>{failText(error)}</FormError> : null}
       {/* Saved on pick, not on submit — see AvatarPicker. The caption
           names what the circle does rather than when it saves: "tap to
           change — saved right away" read as an instruction and a footnote,
@@ -390,26 +418,6 @@ export default function EditProfileScreen({ navigation }: { navigation: Nav }) {
         </View>
       ) : null}
 
-      {error ? <FormError>{failText(error)}</FormError> : null}
-      {/* Lit when there is something to save, off the same `edited` the
-          discard guard reads — so the button and the "discard your
-          changes?" alert can never disagree about whether this form has
-          been touched.
-
-          And lit when there is something to *fix*, which is not the same
-          question. An account whose handle was never set opens this
-          screen clean and invalid: nothing has changed, and yet the one
-          thing this form exists to do is still undone. A Save that is
-          dead there explains nothing — the reader cannot press the
-          button that would have told them "Choose a username." So the
-          stored value is put through the same validator the save path
-          uses, and a form that cannot pass it keeps its button. */}
-      <PrimaryButton
-        label={t('Save changes', 'Lưu thay đổi', '変更を保存')}
-        onPress={save}
-        busy={busy}
-        disabled={!edited && handleProblem(normalizeHandle(handle)) === null}
-      />
     </AuthScreen>
   );
 }

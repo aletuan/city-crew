@@ -91,11 +91,62 @@ export function StepDots({ step, total }: { step: number; total: number }) {
   );
 }
 
-export function AuthHeader({ onBack, title }: { onBack: () => void; title: string }) {
+/**
+ * The header's own submit, on the right of the title: "Save" where the
+ * screen is a form you edit and leave, as Contacts and Calendar put it.
+ *
+ * Only there. The two screens that wear it (the collection form, the
+ * profile form) are the ones whose content can run past the fold: a
+ * cover grid of every photograph in the list, an avatar above five
+ * fields. On 10 Oct 2026 the owner found the collection form's Save
+ * below eleven cover tiles, reachable only by scrolling past them. Up
+ * here it is on screen from the first frame, and the keyboard can never
+ * cover it. The sign-in, sign-up, reset and delete screens keep their
+ * full-width button: each asks one short thing, the button never leaves
+ * the screen, and it is the step forward rather than a save.
+ *
+ * Dimmed rather than hidden when there is nothing to submit, for the
+ * reason `PrimaryButton` gives. `a11yLabel` is the long name, "Save
+ * changes" where the screen shows "Save": VoiceOver reads the control
+ * without the form around it to explain the short one.
+ */
+export type HeaderAction = {
+  label: string;
+  a11yLabel?: string;
+  onPress: () => void;
+  busy?: boolean;
+  disabled?: boolean;
+  testID?: string;
+};
+
+export function AuthHeader({ onBack, title, action }: {
+  onBack: () => void; title: string; action?: HeaderAction;
+}) {
   return (
     <View style={s.header}>
       <BackButton onPress={onBack} />
       <Text style={s.title}>{title}</Text>
+      {action ? (
+        <PressableScale
+          onPress={action.busy || action.disabled ? undefined : action.onPress}
+          disabled={action.busy || action.disabled}
+          accessibilityRole="button"
+          accessibilityLabel={action.a11yLabel ?? action.label}
+          aria-busy={!!action.busy}
+          aria-disabled={!!action.disabled}
+          hitSlop={{ top: 6, bottom: 6, left: 10, right: 10 }}
+          testID={action.testID}
+          style={s.headerAction}
+        >
+          {action.busy
+            ? <ActivityIndicator color={colors.accent} />
+            : (
+              <Text style={[s.headerActionText, action.disabled && s.headerActionOff]}>
+                {action.label}
+              </Text>
+            )}
+        </PressableScale>
+      ) : null}
     </View>
   );
 }
@@ -591,6 +642,12 @@ const s = StyleSheet.create({
   // `paddingTop` optically centres a 26pt line against the 44pt control
   // without pinning either to the other's height.
   title: { flex: 1, color: colors.text, ...type.titleDetail, paddingTop: 7 },
+  // As tall as the back control beside it, so the word centres on the
+  // same line the arrow does, whatever the title below it wraps to.
+  headerAction: { height: CONTROL_H, justifyContent: 'center', minWidth: 44, alignItems: 'flex-end' },
+  // The readable accent, at the weight iOS gives a bar's confirm button.
+  headerActionText: { color: colors.accent, fontSize: 17, fontWeight: font.semibold },
+  headerActionOff: { color: colors.textTertiary },
   lede: { color: colors.textSecondary, ...type.body, lineHeight: 24, marginBottom: 2 },
 
   // Above everything, including the header: it is about the flow, not
