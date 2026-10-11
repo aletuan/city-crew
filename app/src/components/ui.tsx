@@ -27,8 +27,8 @@ import { colors, display, font, glass, gradAI, labelScaleCap, radius, space, typ
 // 64, up from the 58 the first icon-only island used, when the captions
 // came in. They went again on 11 Oct 2026 and the 64 stayed, at the
 // owner's choice: every screen's bottom clearance is measured off this
-// number, and the selected pill now sits in it with 10pt of air above and
-// below. See FloatingTabBar.
+// number, and the selected pill now sits in it 4pt from the rim. See
+// FloatingTabBar.
 export const TAB_BAR_HEIGHT = 64;
 /** The air between the island and the safe area's bottom edge. */
 export const TAB_BAR_GAP = 10;
@@ -89,26 +89,27 @@ export function useTabBarLift(): number {
   return Math.max(insets.bottom - 18, TAB_BAR_GAP);
 }
 
-/** The island's clearance from each side of the screen. 24, up from 12
- *  once the captions went (11 Oct 2026): five glyphs need less width than
- *  five words, and a bar that nearly touched both edges read as a strip
- *  rather than an island. Threads keeps about 20. */
-export const TAB_BAR_SIDE = 24;
-/** The widest the island grows. A Pro Max is 440pt across; past this the
- *  five cells only spread further apart and the glyphs drift from each
- *  other. 340 is a 393pt phone's island to within a point. */
-export const TAB_BAR_MAX_W = 340;
+/**
+ * The island's clearance from each side of the screen: the page's own
+ * margin, so its edges line up with the cards above it. Threads does the
+ * same.
+ *
+ * It was 12, and then for a few hours 24 with a 340pt cap (11 Oct 2026).
+ * On a Pro Max the cap left the bar about 45pt in from each edge, visibly
+ * narrower than the content over it. The owner measured it against the
+ * card above, and the cards are what the bar has to agree with.
+ */
+export const TAB_BAR_SIDE = space.page;
 
 /**
  * Where the island sits across the screen: `TAB_BAR_SIDE` in from each
- * edge, centred, and no wider than `TAB_BAR_MAX_W`. Shared, because the
- * Explore offer that takes the island's place in the same slot has to be
- * the same width, or the two read as different objects.
+ * edge. Shared, because the Explore offer that takes the island's place in
+ * the same slot has to be the same width, or the two read as different
+ * objects.
  */
 export function useTabBarFrame(): { left: number; width: number } {
   const { width: win } = useWindowDimensions();
-  const width = Math.min(TAB_BAR_MAX_W, win - TAB_BAR_SIDE * 2);
-  return { left: (win - width) / 2, width };
+  return { left: TAB_BAR_SIDE, width: win - TAB_BAR_SIDE * 2 };
 }
 
 /**

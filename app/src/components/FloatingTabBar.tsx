@@ -83,8 +83,8 @@ const inkOf = (focused: boolean, light: boolean) =>
 // tab, now "Places", is not in this table: its glyph is a pin standing on
 // a map, which Ionicons does not have, drawn in `PlacesGlyph`. The bulb
 // that used to mark "Ideas" went with the word.
-const PILL_W = 60;
-const PILL_H = 44;
+/** The pill's height: the island's, less 4pt above and below. */
+const PILL_H = TAB_BAR_HEIGHT - 8;
 
 const ICONS: Record<string, [keyof typeof Ionicons.glyphMap, keyof typeof Ionicons.glyphMap]> = {
   Ideas: ['compass-outline', 'compass'],
@@ -337,15 +337,18 @@ const s = StyleSheet.create({
   row: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   tab: {
     flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
-  // A pill, Threads' shape, after a day as a 52pt disc that nearly filled
-  // the island's height. 44 tall leaves 10pt above and below in the 64pt
-  // island; 60 wide is a cell's width on a 393pt phone less its padding,
-  // and `width: '100%'` with the cap folds it to the cell on a narrower
-  // one rather than letting five pills overlap.
+  // A pill that fills its cell, Threads' shape: 4pt from the island's rim
+  // above and below, 2pt from the cell's edge either side. Its round ends
+  // are concentric with the island's, since 56/2 is the island's 32pt
+  // radius less the 4pt inset.
+  //
+  // It went through a 52pt disc and then a 60×44 pill the same day (11 Oct
+  // 2026). Both left a wide band of glass between the mark and the rim,
+  // which the owner measured against Threads, whose pill is the cell.
   tabInner: {
-    width: '100%', maxWidth: PILL_W, height: PILL_H, borderRadius: PILL_H / 2,
+    width: '100%', height: PILL_H, borderRadius: PILL_H / 2,
     alignItems: 'center', justifyContent: 'center',
   },
   // Geometry only — the colours are `dotInk`, picked per theme in render.
