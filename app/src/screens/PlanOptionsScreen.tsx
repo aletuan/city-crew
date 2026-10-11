@@ -42,13 +42,12 @@ import {
   cachedNarration, narratableOf, prefetchNarration,
 } from '../lib/assist';
 import { DEFAULT_TZ } from '../lib/clock';
-import { usePlaces } from '../lib/catalog';
+import { useCollections, usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import { clockOf, dateline } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { fmtDistance } from '../lib/geo';
-import { membersOf } from '../lib/place';
 import { planTrips, type LensKey, type TripPlan } from '../lib/planner';
 import { usePlanProfile } from '../lib/tasteProfile';
 import { useSave } from '../lib/save';
@@ -57,7 +56,7 @@ import { sharedArea, stopFacts } from '../lib/stopFacts';
 import { useFlag } from '../lib/useFlag';
 import StopRow from '../components/StopRow';
 import StopGallery, { hasPicture } from '../components/StopGallery';
-import { draftFrom, type TripDraft } from '../lib/trip';
+import { draftFrom, type TripDraft, seedMembers } from '../lib/trip';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space, type } from '../theme';
 
@@ -104,6 +103,7 @@ export default function PlanOptionsScreen({ navigation, route }: {
   const { data: places } = usePlaces();
   const { city } = useCity();
   const { mine } = useSave();
+  const cols = useCollections();
   const { taste, budgetVnd } = usePlanProfile();
 
   // Both are the route's, not this screen's. Regenerate hands them to
@@ -124,10 +124,8 @@ export default function PlanOptionsScreen({ navigation, route }: {
   // screen has the reader's own lists, and the planner has no business
   // knowing what a collection is.
   const pinned = useMemo(() => {
-    if (!p.from?.length) return [];
-    const wanted = new Set(p.from);
-    return mine.data.filter((c) => wanted.has(c.slug)).flatMap((c) => membersOf(c, places));
-  }, [p.from, mine.data, places]);
+    return seedMembers(p.from, [...mine.data, ...cols.data], places);
+  }, [p.from, mine.data, cols.data, places]);
 
   const plans = useMemo(
     () => planTrips(draft, places, city?.id ?? null,

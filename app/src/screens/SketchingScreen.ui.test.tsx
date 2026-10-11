@@ -38,6 +38,7 @@ const catalog = vi.hoisted(() => ({
 type FakeCity = { id: string; tz?: string; short_en?: string; short_vi?: string; short_ja?: string | null };
 const cityState = vi.hoisted(() => ({ current: { city: { id: 'hanoi' } as FakeCity | null } }));
 const mine = vi.hoisted(() => ({ current: [] as unknown[] }));
+const cols = vi.hoisted(() => ({ current: [] as unknown[] }));
 // One object for the run, as the real hook's memo hands back: a fresh one
 // per render would re-plan on every render and restart the words' cap.
 const profile = vi.hoisted(() => ({ taste: { cafes: 2 }, budgetVnd: 400000 }));
@@ -53,7 +54,7 @@ vi.mock('react-native', async (orig) => ({
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
-vi.mock('../lib/catalog', () => ({ usePlaces: () => catalog.current }));
+vi.mock('../lib/catalog', () => ({ usePlaces: () => catalog.current, useCollections: () => ({ data: cols.current }) }));
 vi.mock('../lib/city', () => ({ useCity: () => cityState.current }));
 vi.mock('../lib/save', () => ({ useSave: () => ({ mine: { data: mine.current, reload: vi.fn() } }) }));
 vi.mock('../lib/tasteProfile', () => ({
@@ -247,6 +248,17 @@ describe('what it asks', () => {
     const [, , cityId, opts] = planTrips.mock.calls[0];
     expect(cityId).toBeNull();
     expect((opts as { pinned: Place[] }).pinned).toEqual([PINNED]);
+  });
+
+  // A chosen list can be the community's as well as your own since the
+  // Ideas screen offers both; and your own published list is on both
+  // shelves under one slug, pinned once.
+  it('seeds from a community collection too, and from a list on both shelves once', () => {
+    mine.current = [{ slug: 'mine', members: [PINNED] }];
+    cols.current = [{ slug: 'mine', members: [PINNED] }, { slug: 'pub', members: [ROOF] }];
+    renderScreen({ from: ['pub', 'mine'] });
+    const [, , , opts] = planTrips.mock.calls[0];
+    expect((opts as { pinned: Place[] }).pinned).toEqual([PINNED, ROOF]);
   });
 
   it('does not plan, ask for words or advance while the catalog is still loading', async () => {

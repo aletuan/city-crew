@@ -36,7 +36,7 @@ import {
   Chip, GradientCta, Screen, Skeleton, useLoop, useReducedMotion, useTabBarClearance,
 } from '../components/ui';
 import { CATEGORIES, categoryLabel } from '../lib/categories';
-import { usePlaces } from '../lib/catalog';
+import { useCollections, usePlaces } from '../lib/catalog';
 import { useCity } from '../lib/city';
 import { DEFAULT_TZ, instantOn } from '../lib/clock';
 import { clockOf, dateline, fmtMinutes, openState } from '../lib/format';
@@ -44,7 +44,6 @@ import { fmtDistance } from '../lib/geo';
 import { planGap } from '../lib/gaps';
 import { useI18n } from '../lib/i18n';
 import { narratableOf, NARRATION_HOLD_MS, prefetchNarration } from '../lib/assist';
-import { membersOf } from '../lib/place';
 import { planTrips } from '../lib/planner';
 import { legsOf } from '../lib/travel';
 import { useSave } from '../lib/save';
@@ -54,7 +53,7 @@ import {
   fitWants, STEP_FLOOR_MS, stepStates,
   type StepState,
 } from '../lib/sketch';
-import { draftFrom, type TripDraft } from '../lib/trip';
+import { draftFrom, type TripDraft, seedMembers } from '../lib/trip';
 import { clampDay, fromISO, todayISO } from '../lib/day';
 import type { Nav, RootRoute } from '../nav';
 import { colors, font, gradAI, radius, space } from '../theme';
@@ -216,6 +215,7 @@ export default function SketchingScreen({ navigation, route }: {
   const failed = !loading && !!error && places.length === 0;
   const { city } = useCity();
   const { mine } = useSave();
+  const cols = useCollections();
   const { taste, budgetVnd } = usePlanProfile();
 
   // The seed is fixed for this visit rather than read at render: a new
@@ -245,10 +245,8 @@ export default function SketchingScreen({ navigation, route }: {
   // only fed the empty-check; fatal once they feed the narration prefetch,
   // because words asked about the wrong plan are a cache nobody reads.
   const pinned = useMemo(() => {
-    if (!p.from?.length) return [];
-    const wanted = new Set(p.from);
-    return mine.data.filter((c) => wanted.has(c.slug)).flatMap((c) => membersOf(c, places));
-  }, [p.from, mine.data, places]);
+    return seedMembers(p.from, [...mine.data, ...cols.data], places);
+  }, [p.from, mine.data, cols.data, places]);
 
   // Run once the catalog is in. Cheap enough to run here and again on the
   // next screen — it is array arithmetic over a few hundred rows — and

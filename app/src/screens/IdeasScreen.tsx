@@ -32,8 +32,10 @@ import { useDuckOnScroll } from '../components/tabBarDuck';
 import IdeasHeaderArt from '../components/IdeasHeaderArt';
 import { CATEGORIES, CATEGORY_ORDER, categoriesOf, categoryLabel } from '../lib/categories';
 import { useCity, useMyPosition } from '../lib/city';
-import { usePlaces } from '../lib/catalog';
-import { coverOf, membersOf } from '../lib/data';
+import { useAuth } from '../lib/auth';
+import { useCollections, useLikes, usePlaces } from '../lib/catalog';
+import { type Collection, coverOf, membersOf, type Place } from '../lib/data';
+import { rankByLikes } from '../lib/likes';
 import { clockOf, dateline } from '../lib/format';
 import { addDays, clampDay, fromISO, toISO } from '../lib/day';
 import { useI18n } from '../lib/i18n';
@@ -63,6 +65,35 @@ const endOfDay = (iso: string): Date | undefined => {
  * answer rather than refusing it, which is a forgiving way to learn a
  * rule and leaves nothing to undo.
  */
+/** The tap that opens the community's lists. Explore's "See all" in
+ *  weight and colour, a chevron down rather than an arrow right because
+ *  what it opens is below, not elsewhere. */
+function MoreRow({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <PressableScale onPress={onPress} style={s.more} accessibilityRole="button" testID="seeds-more" hitSlop={6}>
+      <Text style={s.moreText}>{label}</Text>
+      <Ionicons name="chevron-down" size={16} color={colors.accent} />
+    </PressableScale>
+  );
+}
+
+/** A list, with only its members in this city — or all of them while no
+ *  city is chosen. The count a row prints, and the test of whether the
+ *  row appears at all. */
+function inCity(c: Collection, places: Place[], cityId: string | null | undefined): { c: Collection; members: Place[] } {
+  const all = membersOf(c, places);
+  return { c, members: cityId ? all.filter((p) => p.city_id === cityId) : all };
+}
+
+/**
+ * How many of the community's lists a reader with none of their own sees
+ * before the tap. Three rows are about 200pt — one card that still leaves
+ * the Plan button on the first screen of an iPhone 15 — and the three
+ * most liked are the city's answer to "what is there"; the rest is a
+ * longer list of the same kind, not a different offer.
+ */
+const COMMUNITY_FIRST = 3;
+
 function Section({ title, cols, children }: {
   title: string;
   cols: number;
@@ -81,6 +112,9 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const { city } = useCity();
   const { data: places } = usePlaces();
   const { mine } = useSave();
+  const cols = useCollections();
+  const { likes } = useLikes();
+  const uid = useAuth().session?.user?.id;
   const tabClearance = useTabBarClearance();
   const duckScroll = useDuckOnScroll();
   // Its tab, pressed again here, scrolls back to the top — the last step
@@ -126,13 +160,14 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const [sheet, setSheet] = useState(false);
 
   /**
-   * The lists this plan can start from: yours, and touching this city.
+   * The lists this plan can start from: yours, and the community's, each
+   * touching this city.
    *
-   * A plan is for one city — the one chosen up top — and a list of your
-   * own is not: it is stamped with the city it was made in and holds
-   * whatever was saved into it, Hanoi and Saigon alike (`fetchMyCollections`).
-   * This section used to offer every list you own with its whole count,
-   * so a reader planning Hanoi saw "8 places" on a list with three here,
+   * A plan is for one city — the one chosen up top — and a list is not:
+   * it is stamped with the city it was made in and holds whatever was
+   * saved into it, Hanoi and Saigon alike (`fetchMyCollections`). This
+   * section used to offer every list you own with its whole count, so a
+   * reader planning Hanoi saw "8 places" on a list with three here,
    * ticked it, and met "some places did not fit" two screens later with
    * nothing pointing back at why.
    *
@@ -142,22 +177,37 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
    * what changed is that both are now true of this plan. A list with
    * nothing in this city cannot seed it and is not offered, rather than
    * listed, ticked and silently dropped. Not "3 of 8", and no city under
-   * the count: the city is in the header already, and the one fact that
-   * picks seeds is how many places the planner will see.
+   * the count: the city is named once, in the line under the heading.
+   *
+   * The community's lists came in on 12 Oct 2026, and for the reader the
+   * old version had nothing for: a guest, who owns no list, and an
+   * account whose lists are all in another city. Both used to see no
+   * section at all. They see the city's own lists now, ranked as
+   * Explore's shelf ranks them (`rankByLikes`), the three most liked
+   * first and the rest a tap away. A reader with lists of their own here
+   * sees those, and the community's behind the same tap: their own are
+   * what they came for, and this screen is short on purpose. Your own
+   * published list is on both shelves under one slug and is shown once,
+   * under Yours — the Collections tab's rule.
    *
    * With no city resolved yet nothing is narrowed, and the only question
    * left is whether the list holds anything — the shelves' answer too.
    */
-  const seeds = useMemo(
-    () => mine.data
-      .map((c) => {
-        const all = membersOf(c, places);
-        const members = city?.id ? all.filter((p) => p.city_id === city.id) : all;
-        return { c, members };
-      })
-      .filter(({ members }) => members.length > 0),
+  const own = useMemo(
+    () => mine.data.map((c) => inCity(c, places, city?.id)).filter((x) => x.members.length > 0),
     [mine.data, places, city?.id],
   );
+  const community = useMemo(
+    () => rankByLikes(cols.data.filter((c) => !(uid && c.owner_id === uid)), likes)
+      .map((c) => inCity(c, places, city?.id))
+      .filter((x) => x.members.length > 0),
+    [cols.data, likes, uid, places, city?.id],
+  );
+  /** Whether the community's lists are open — all of them, or the ones
+   *  past the first three. Not remembered between visits: the screen
+   *  opens short, every time. */
+  const [more, setMore] = useState(false);
+  const seeds = own.length > 0 || community.length > 0;
 
   // Only categories this city actually has, the same rule Explore's filter
   // row follows: a chip must never lead to an empty answer.
@@ -239,6 +289,48 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
   const dayLabel = dateline(lang, fromISO(day) ?? new Date());
 
   const ready = canPlan(draft);
+
+  /** One list as a row: cover, name, the places here, a tick. */
+  const seedRow = ({ c, members }: { c: Collection; members: Place[] }, i: number) => {
+    const cover = c.cover?.photo_uri ?? (members[0] && coverOf(members[0])?.photo_uri);
+    const on = draft.from.includes(c.slug);
+    return (
+      <View key={c.slug}>
+        {i > 0 ? <View style={s.divider} /> : null}
+        <PressableScale
+          onPress={() => set('from', toggle(draft.from, c.slug))}
+          style={s.fromRow}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: on }}
+        >
+          {cover
+            ? <Image source={{ uri: cover }} style={s.thumb} contentFit="cover" transition={200} />
+            : <View style={[s.thumb, s.thumbEmpty]}>
+                <Ionicons name="bookmark-outline" size={18} color={colors.accentFaint} />
+              </View>}
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={s.fromTitle} numberOfLines={1}>
+              {t(c.title_en, c.title_vi, c.title_ja)}
+            </Text>
+            {/* The count alone. "Your collection" stood here
+                once — but every row this section holds is
+                yours, and a label identical on every row
+                says nothing. The count stays because it is
+                the one fact that picks seeds: eight places
+                feed a plan, one barely seasons it. */}
+            <Text style={s.fromMeta} numberOfLines={1}>
+              {t(
+                `${members.length} ${members.length === 1 ? 'place' : 'places'}`,
+                `${members.length} địa điểm`,
+                `${members.length}件`,
+              )}
+            </Text>
+          </View>
+          <SelectTick on={on} />
+        </PressableScale>
+      </View>
+    );
+  };
 
   return (
     <Screen
@@ -424,53 +516,68 @@ export default function IdeasScreen({ navigation }: { navigation: Nav }) {
           )}
         </View>
 
-        {seeds.length > 0 && (
+        {seeds && (
           <View style={{ marginBottom: space.titleToContent }}>
             <Text style={s.heading}>
               {t('Start from what you love', 'Bắt đầu từ thứ bạn thích', 'お気に入りから始める')}
             </Text>
-            <Card style={{ paddingVertical: 4 }}>
-              {seeds.map(({ c, members }, i) => {
-                const cover = c.cover?.photo_uri ?? (members[0] && coverOf(members[0])?.photo_uri);
-                const on = draft.from.includes(c.slug);
-                return (
-                  <View key={c.slug}>
-                    {i > 0 ? <View style={s.divider} /> : null}
-                    <PressableScale
-                      onPress={() => set('from', toggle(draft.from, c.slug))}
-                      style={s.fromRow}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: on }}
-                    >
-                      {cover
-                        ? <Image source={{ uri: cover }} style={s.thumb} contentFit="cover" transition={200} />
-                        : <View style={[s.thumb, s.thumbEmpty]}>
-                            <Ionicons name="bookmark-outline" size={18} color={colors.accentFaint} />
-                          </View>}
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <Text style={s.fromTitle} numberOfLines={1}>
-                          {t(c.title_en, c.title_vi, c.title_ja)}
-                        </Text>
-                        {/* The count alone. "Your collection" stood here
-                            once — but every row this section holds is
-                            yours, and a label identical on every row
-                            says nothing. The count stays because it is
-                            the one fact that picks seeds: eight places
-                            feed a plan, one barely seasons it. */}
-                        <Text style={s.fromMeta} numberOfLines={1}>
-                          {t(
-                            `${members.length} ${members.length === 1 ? 'place' : 'places'}`,
-                            `${members.length} địa điểm`,
-                            `${members.length}件`,
-                          )}
-                        </Text>
-                      </View>
-                      <SelectTick on={on} />
-                    </PressableScale>
-                  </View>
-                );
-              })}
-            </Card>
+            {/* Which lists these are, said once: the rows count places
+                here, and this is the line that says what "here" is. The
+                city's short name, as the row above the sections prints
+                it, so the two never disagree. */}
+            {city && (
+              <Text style={s.fromHint}>
+                {t(
+                  `Collections with a place in ${city.short_en}`,
+                  `Bộ sưu tập có địa điểm ở ${city.short_vi}`,
+                  `${city.short_ja ?? city.short_en}に場所があるコレクション`,
+                )}
+              </Text>
+            )}
+            {own.length > 0 && (
+              <>
+                {/* Labelled only once there are two cards to tell apart. */}
+                {more && community.length > 0 && (
+                  <Text style={s.groupLabel}>{t('Yours', 'Của bạn', '自分の')}</Text>
+                )}
+                <Card style={{ paddingVertical: 4 }}>{own.map(seedRow)}</Card>
+              </>
+            )}
+            {community.length > 0 && (own.length > 0
+              ? (more
+                ? (
+                  <>
+                    <Text style={s.groupLabel}>{t('Community', 'Cộng đồng', 'みんなの')}</Text>
+                    <Card style={{ paddingVertical: 4 }}>{community.map(seedRow)}</Card>
+                  </>
+                )
+                : (
+                  <MoreRow
+                    onPress={() => setMore(true)}
+                    label={t(
+                      `More · ${community.length} community ${community.length === 1 ? 'collection' : 'collections'}`,
+                      `Xem thêm · ${community.length} bộ sưu tập cộng đồng`,
+                      `もっと見る · みんなのコレクション${community.length}件`,
+                    )}
+                  />
+                ))
+              : (
+                <>
+                  <Card style={{ paddingVertical: 4 }}>
+                    {(more ? community : community.slice(0, COMMUNITY_FIRST)).map(seedRow)}
+                  </Card>
+                  {!more && community.length > COMMUNITY_FIRST && (
+                    <MoreRow
+                      onPress={() => setMore(true)}
+                      label={t(
+                        `${community.length - COMMUNITY_FIRST} more`,
+                        `Xem thêm ${community.length - COMMUNITY_FIRST}`,
+                        `さらに${community.length - COMMUNITY_FIRST}件`,
+                      )}
+                    />
+                  )}
+                </>
+              ))}
           </View>
         )}
 
@@ -674,6 +781,23 @@ const s = StyleSheet.create({
   thumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
   fromTitle: { color: colors.text, fontSize: 16, fontWeight: font.semibold },
   fromMeta: { color: colors.textTertiary, fontSize: 13 },
+  // Under the heading, in the rows' own meta voice: it is about the rows.
+  // On the heading's own margin, since it is the heading's second line;
+  // pulled up into the heading's gap so the two read as one block.
+  fromHint: {
+    color: colors.textTertiary, fontSize: 13, paddingHorizontal: space.page,
+    marginTop: -(space.headingToContent - 2), marginBottom: 10,
+  },
+  groupLabel: {
+    color: colors.textTertiary, fontSize: 12, fontWeight: font.semibold,
+    letterSpacing: 0.7, textTransform: 'uppercase', paddingHorizontal: space.page,
+    marginTop: 12, marginBottom: 8,
+  },
+  more: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4,
+    paddingVertical: 10, paddingHorizontal: space.page,
+  },
+  moreText: { color: colors.accent, fontSize: 14, fontWeight: font.medium },
 
   cta: { paddingHorizontal: space.page, marginTop: 4, gap: 10 },
   ctaOff: { opacity: 0.4 },

@@ -1,9 +1,9 @@
 // The wizard's arithmetic. No React here, and none in what it imports.
 
 import { describe, expect, it } from 'vitest';
-import { areaCentre, areasNear, canPlan, COMPANY, draftFrom, districtsOf, EMPTY_DRAFT, nearestAreaKm, startPoint, toggle } from './trip';
+import { areaCentre, areasNear, canPlan, COMPANY, draftFrom, districtsOf, EMPTY_DRAFT, nearestAreaKm, seedMembers, startPoint, toggle } from './trip';
 import { CATEGORIES } from './categories';
-import type { Place } from './types';
+import type { Collection, Place } from './types';
 
 const at = (neighborhood_en: string | null): Place => ({
   slug: `p${Math.random()}`, name_en: 'P', name_vi: 'P', name_ja: null, category: 'food',
@@ -433,5 +433,28 @@ describe('draftFrom', () => {
   it('gives a draft with no collections an empty list rather than undefined', () => {
     expect(draftFrom({ categories: [], district: null, when: 'evening' }, '2026-08-21').from)
       .toEqual([]);
+  });
+});
+
+describe('seedMembers', () => {
+  const a = at('Hoàn Kiếm'); const b = at('Ba Đình'); const c = at('Tây Hồ');
+  const list = (slug: string, members: Place[]): Collection =>
+    ({ slug, title_en: slug, title_vi: slug, title_ja: null, collection_places: [], members } as unknown as Collection);
+
+  it('is nothing until a list is chosen', () => {
+    expect(seedMembers(undefined, [list('x', [a])], [])).toEqual([]);
+    expect(seedMembers([], [list('x', [a])], [])).toEqual([]);
+  });
+
+  it('takes the members of the chosen lists only, in the order the lists come', () => {
+    const lists = [list('own', [a]), list('skip', [b]), list('pub', [c])];
+    expect(seedMembers(['pub', 'own'], lists, [])).toEqual([a, c]);
+  });
+
+  // Your own published list is on both shelves under one slug: one list,
+  // pinned once. Two lists sharing a place are still two votes for it.
+  it('pins a list on both shelves once, and a place in two lists twice', () => {
+    const lists = [list('own', [a, b]), list('own', [a, b]), list('pub', [b])];
+    expect(seedMembers(['own', 'pub'], lists, [])).toEqual([a, b, b]);
   });
 });
