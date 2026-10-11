@@ -1,6 +1,6 @@
 // City Crew iOS design system.
 //
-// Eight palettes, worn as seven looks (`lib/look.ts`, 10–11 Oct 2026). The
+// Ten palettes, worn as nine looks (`lib/look.ts`, 10–11 Oct 2026). The
 // standard look is two grounds, one system: warm paper with white cards and
 // near-black type, and the cinematic charcoal #0A0B0A with warm-gray
 // hairlines — Light, Dark and Automatic in the Appearance sheet. Coffee is
@@ -10,7 +10,8 @@
 // it. Rose is the second reference, slate rose #B45865 on transparent
 // yellow #F4ECC2, a light look; its note is on `ROSE` below. Four more
 // came from four two-tone references on 11 Oct 2026 — blush and slate,
-// light; midnight and navy, dark — each with its note on its palette.
+// light; midnight and navy, dark — and two more that day, chocolate and
+// cosmic, both dark; each has its note on its palette.
 //
 // Notes on a token below were written for the standard pair and the coffee
 // brown; a figure for another palette says which it is, and `theme.test.ts`
@@ -545,9 +546,127 @@ const NAVY: Palette = {
   accentFade: 'rgba(230,169,121,0.02)',
 };
 
+/**
+ * "Sô-cô-la" (11 Oct 2026): the owner's dusty-pink-on-chocolate reference,
+ * #DEAA9B on #4E403B, as a dark look.
+ *
+ * The chocolate is the page, and it is a light dark — 0.054 in luminance
+ * where the coffee brown is 0.012 — so everything on it has to be pale:
+ * a text step needs 0.42 or more to clear 4.5:1, which is why the three
+ * steps are a pink-white, a pale pink and the dusty pink's own weight
+ * (8.84, 6.57 and 4.57, 1.44 apart), and why the cards go a step *down*
+ * from the page (#443733) rather than up: a lift would leave the third
+ * step nothing to stand on. The dusty pink itself is 4.87 as type, which
+ * is why it is the fill and the pill (under #2B2220, 7.64) rather than the
+ * accent; the accent as type is the same pink lifted to #F0C8BB (6.45,
+ * and 4.5 over a map tile through the veil, where the reference pink is
+ * 3.6). The notes about the cream above apply here too: a mid-tone like
+ * the pink is never the page.
+ */
+const CHOCOLATE: Palette = {
+  bg: '#4E403B',
+  bgElevated: '#443733',
+  bgElevatedVeil: 'rgba(78,64,59,0.9)',
+  surfaceCard: 'rgba(60,48,44,0.72)',
+  surfaceGlass: 'rgba(250,240,236,0.06)',
+  surfaceGlassStrong: 'rgba(250,240,236,0.12)',
+  borderGlass: 'rgba(222,170,155,0.26)',
+  borderGlassSoft: 'rgba(222,170,155,0.16)',
+  text: '#FAF0EC',
+  textSecondary: '#EECBC0',
+  textTertiary: '#D0A79B',
+  accent: '#F0C8BB',
+  accentFill: '#DEAA9B',
+  badge: '#DEAA9B',
+  badgeSolid: '#DEAA9B',
+  badgeInk: '#2B2220',
+  accentBright: '#E9BCAE',
+  accentInk: '#2B2220',
+  accentSoft: 'rgba(222,170,155,0.12)',
+  accentLine: 'rgba(222,170,155,0.32)',
+  accentFaint: 'rgba(222,170,155,0.62)',
+  emberGlow: 'rgba(222,170,155,0.14)',
+  emberGlowFade: 'rgba(222,170,155,0.05)',
+  sun: '#F2B441',
+  soon: '#F2B441',
+  ok: '#BFDDB8',
+  open: '#BFDDB8',
+  shutInk: '#F3B5AA',
+  ink: '#F3E4DE',
+  bad: '#F2A99D',
+  badSoft: '#5A3A36',
+  okSoft: '#3A4738',
+  okInk: '#BFDDB8',
+  gradAI: ['#DEAA9B', '#E9BCAE'],
+  ringTrack: '#5F4F49',
+  pillInk: '#2B2220',
+  heartInk: '#DEAA9B',
+  onPhotoAccent: '#DEAA9B',
+  glassVeil: 'rgba(78,64,59,0.48)',
+  glassHalo: 'rgba(78,64,59,0.95)',
+  accentFade: 'rgba(222,170,155,0.02)',
+};
+
+/**
+ * "Vũ trụ" (11 Oct 2026): the owner's "Orange 04 / Cosmic Quiet"
+ * reference, #E76629 on #211832, as a dark look.
+ *
+ * The purple-black is the page (0.012, the coffee brown's weight), the
+ * type a lilac-white and two lilac greys (14.8, 9.6 and 5.8, 1.64 apart).
+ * The orange is the fill, the gradient's start and the pill, under the
+ * page itself (5.1), as Midnight's gold is. As type the orange is 5.1
+ * on the page but 3.8 over a map tile through the veil, so the accent is
+ * the same orange a step up, #F0803F (6.34 on the page, 4.5 over the
+ * tile), and the gradient runs from the reference to it.
+ */
+const COSMIC: Palette = {
+  bg: '#211832',
+  bgElevated: '#2B2140',
+  bgElevatedVeil: 'rgba(33,24,50,0.9)',
+  surfaceCard: 'rgba(52,41,74,0.72)',
+  surfaceGlass: 'rgba(243,238,248,0.06)',
+  surfaceGlassStrong: 'rgba(243,238,248,0.12)',
+  borderGlass: 'rgba(201,191,214,0.22)',
+  borderGlassSoft: 'rgba(201,191,214,0.14)',
+  text: '#F3EEF8',
+  textSecondary: '#C9BFD6',
+  textTertiary: '#9E93AE',
+  accent: '#F0803F',
+  accentFill: '#E76629',
+  badge: '#E76629',
+  badgeSolid: '#E76629',
+  badgeInk: '#211832',
+  accentBright: '#F0803F',
+  accentInk: '#211832',
+  accentSoft: 'rgba(231,102,41,0.12)',
+  accentLine: 'rgba(231,102,41,0.32)',
+  accentFaint: 'rgba(231,102,41,0.62)',
+  emberGlow: 'rgba(231,102,41,0.14)',
+  emberGlowFade: 'rgba(231,102,41,0.05)',
+  sun: '#F2B441',
+  soon: '#F2B441',
+  ok: '#9FCB9A',
+  open: '#9FCB9A',
+  shutInk: '#F0A096',
+  ink: '#EAE3F0',
+  bad: '#EBA197',
+  badSoft: '#43303F',
+  okSoft: '#22392F',
+  okInk: '#9FCB9A',
+  gradAI: ['#E76629', '#F0803F'],
+  ringTrack: '#342A4C',
+  pillInk: '#211832',
+  heartInk: '#E76629',
+  onPhotoAccent: '#F0803F',
+  glassVeil: 'rgba(33,24,50,0.48)',
+  glassHalo: 'rgba(33,24,50,0.95)',
+  accentFade: 'rgba(231,102,41,0.02)',
+};
+
 export const PALETTES = {
   paper: PAPER, charcoal: CHARCOAL, coffee: COFFEE, rose: ROSE,
   blush: BLUSH, slate: SLATE, midnight: MIDNIGHT, navy: NAVY,
+  chocolate: CHOCOLATE, cosmic: COSMIC,
 } as const;
 
 /** Each look's two sides: the light half and the dark half of every pair. */
@@ -559,6 +678,8 @@ export const LOOKS: Record<Look, { light: Palette; dark: Palette }> = {
   slate: { light: SLATE, dark: SLATE },
   midnight: { light: MIDNIGHT, dark: MIDNIGHT },
   navy: { light: NAVY, dark: NAVY },
+  chocolate: { light: CHOCOLATE, dark: CHOCOLATE },
+  cosmic: { light: COSMIC, dark: COSMIC },
 };
 
 /**

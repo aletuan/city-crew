@@ -152,9 +152,9 @@ describe('the looks', () => {
     expect(screen.queryByText('Appearance')).toBeNull();
     const rows = [...document.querySelectorAll('[role="radio"]')].map((r) => r.textContent);
     expect(rows.map((r) => r!.replace(/(Following|Restarts).*/, ''))).toEqual(
-      ['Automatic', 'Dark', 'Light', 'Coffee', 'Rose', 'Blush', 'Slate', 'Midnight', 'Navy'],
+      ['Automatic', 'Dark', 'Light', 'Coffee', 'Rose', 'Blush', 'Slate', 'Midnight', 'Navy', 'Chocolate', 'Cosmic'],
     );
-    for (const icon of ['cafe-outline', 'flower-outline', 'heart-outline', 'cloud-outline', 'star-outline', 'boat-outline']) {
+    for (const icon of ['cafe-outline', 'flower-outline', 'heart-outline', 'cloud-outline', 'star-outline', 'boat-outline', 'ice-cream-outline', 'planet-outline']) {
       expect(document.querySelector(`[data-icon="${icon}"]`), icon).toBeTruthy();
     }
   });
@@ -164,7 +164,7 @@ describe('the looks', () => {
   it('draws each look’s card in that look’s own page, pill and fill', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
     const rgb = (h: string) => `rgb(${[1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)).join(', ')})`;
-    for (const look of ['coffee', 'rose', 'blush', 'slate', 'midnight', 'navy'] as const) {
+    for (const look of ['coffee', 'rose', 'blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic'] as const) {
       const sw = screen.getByTestId(`swatch-${look}`);
       const p = PALETTES[look];
       expect(getComputedStyle(sw).backgroundColor, look).toBe(rgb(p.bg));
@@ -301,6 +301,8 @@ describe('the looks', () => {
     expect(schemeLabel('slate', vi_)).toBe('Xanh xám');
     expect(schemeLabel('midnight', vi_)).toBe('Xanh than');
     expect(schemeLabel('navy', vi_)).toBe('Xanh navy');
+    expect(schemeLabel('chocolate', vi_)).toBe('Sô-cô-la');
+    expect(schemeLabel('cosmic', vi_)).toBe('Vũ trụ');
     expect(schemeLabel('navy', (en) => en)).toBe('Navy');
     expect(schemeLabel('dark', vi_)).toBe('Tối');
   });
@@ -310,6 +312,7 @@ describe('the looks', () => {
     expect(schemeIcon('rose', 'light')).toBe('flower-outline');
     expect(schemeIcon('midnight', 'dark')).toBe('star-outline');
     expect(schemeIcon('blush', 'light')).toBe('heart-outline');
+    expect(schemeIcon('cosmic', 'dark')).toBe('planet-outline');
     expect(schemeIcon('system', 'dark')).toBe('moon-outline');
     expect(schemeIcon('light', 'light')).toBe('sunny-outline');
   });

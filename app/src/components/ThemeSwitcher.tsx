@@ -71,13 +71,16 @@ const OPTIONS: { id: Pref; icon: keyof typeof Ionicons.glyphMap }[] = [
   { id: 'light', icon: 'sunny-outline' },
   // The looks name what they are of: a cup for the coffee brown, a
   // flower for the rose, a heart for the blush, a cloud for the slate
-  // grey, a star for the midnight sky, a boat for the navy.
+  // grey, a star for the midnight sky, a boat for the navy, an ice cream
+  // for the chocolate, a planet for the cosmic purple.
   { id: 'coffee', icon: 'cafe-outline' },
   { id: 'rose', icon: 'flower-outline' },
   { id: 'blush', icon: 'heart-outline' },
   { id: 'slate', icon: 'cloud-outline' },
   { id: 'midnight', icon: 'star-outline' },
   { id: 'navy', icon: 'boat-outline' },
+  { id: 'chocolate', icon: 'ice-cream-outline' },
+  { id: 'cosmic', icon: 'planet-outline' },
 ];
 
 const isLook = (id: Pref): id is Pinned => Object.prototype.hasOwnProperty.call(PINNED, id);
@@ -124,6 +127,8 @@ export function schemeLabel(id: Pref, t: T): string {
   if (id === 'slate') return t('Slate', 'Xanh xám', 'スレート');
   if (id === 'midnight') return t('Midnight', 'Xanh than', 'ミッドナイト');
   if (id === 'navy') return t('Navy', 'Xanh navy', 'ネイビー');
+  if (id === 'chocolate') return t('Chocolate', 'Sô-cô-la', 'チョコレート');
+  if (id === 'cosmic') return t('Cosmic', 'Vũ trụ', 'コズミック');
   return id === 'dark'
     ? t('Dark', 'Tối', 'ダーク')
     : t('Light', 'Sáng', 'ライト');
