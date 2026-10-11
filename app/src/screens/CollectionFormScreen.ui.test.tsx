@@ -67,8 +67,22 @@ vi.mock('../nav', async (orig) => ({
 
 import CollectionFormScreen from './CollectionFormScreen';
 
+type BeforeRemove = (e: { preventDefault: () => void; data: { action: unknown } }) => void;
+/** A navigator that, like the real one, asks every `beforeRemove`
+ *  listener before the screen goes. `leave` says whether one held it. */
+const listeners = new Set<BeforeRemove>();
+const leave = () => {
+  let held = false;
+  for (const fn of [...listeners]) fn({ preventDefault: () => { held = true; }, data: { action: { type: 'GO_BACK' } } });
+  return held;
+};
 const nav = () => ({
-  navigate: vi.fn(), goBack: vi.fn(), replace: vi.fn(), popToTop: vi.fn(),
+  navigate: vi.fn(), goBack: vi.fn(), replace: vi.fn(), popToTop: vi.fn(), dispatch: vi.fn(),
+  addListener: vi.fn((name: string, fn: BeforeRemove) => {
+    if (name !== 'beforeRemove') return () => {};
+    listeners.add(fn);
+    return () => { listeners.delete(fn); };
+  }),
 }) as unknown as Nav;
 
 const routeWith = (params?: object) => ({ params }) as RootRoute<'CollectionForm'>;
@@ -79,6 +93,7 @@ const create = (title: string) => {
 };
 
 beforeEach(() => {
+  listeners.clear();
   createCollection.mockClear();
   addPlaceToCollection.mockClear();
   updateCollection.mockClear();
@@ -253,8 +268,8 @@ describe('what stops a submit before it writes', () => {
   it('puts the submit in the header, with nothing after the form', () => {
     render(<CollectionFormScreen navigation={nav()} route={routeWith()} />);
     const button = screen.getByRole('button', { name: 'Create collection' });
-    expect(button.textContent).toBe('Create');
-    expect(screen.getByTestId('collection-submit').textContent).toBe('Create');
+    expect(button.querySelector('[data-icon="checkmark"]')).toBeTruthy();
+    expect(screen.getByTestId('collection-submit').querySelector('[data-icon="checkmark"]')).toBeTruthy();
     expect(screen.getByText('Name your list').parentElement).toBe(button.parentElement);
     expect(screen.queryByText(/Private until you say so/)).toBeNull();
   });
@@ -300,7 +315,7 @@ describe('renaming a list', () => {
   it('opens on the list’s own words', () => {
     openRename([HEIM, SAM]);
     expect(screen.getByText('Rename your list')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Save changes' }).textContent).toBe('Save');
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeTruthy();
   });
 
   // The line under the title says what the list is now. It promised
@@ -399,11 +414,48 @@ describe('renaming a list', () => {
     saved.data = [listOf([HEIM])];
     // The name rides in on the route, the way `CollectionDetail` sends it.
     render(<CollectionFormScreen navigation={navigation} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
+    // An untouched rename has nothing to save; see `changed`.
+    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bar, late' } });
     save();
 
     await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
     expect(reload).toHaveBeenCalled();
     expect(goTo).not.toHaveBeenCalled();
+  });
+
+  // Lit only when the rename would write something new — and dim again
+  // once the words are put back.
+  it('lights ✓ only once the rename says something new', () => {
+    catalog.data = [HEIM];
+    saved.data = [listOf([HEIM])];
+    render(<CollectionFormScreen navigation={nav()} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
+    const button = () => screen.getByRole('button', { name: 'Save changes' });
+    expect(button().getAttribute('aria-disabled')).toBe('true');
+    fireEvent.change(screen.getByPlaceholderText('What ties these together?'), { target: { value: 'After midnight' } });
+    expect(button().getAttribute('aria-disabled')).not.toBe('true');
+    fireEvent.change(screen.getByPlaceholderText('What ties these together?'), { target: { value: '' } });
+    expect(button().getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: /^Heim, photo 2/ }));
+    expect(button().getAttribute('aria-disabled')).not.toBe('true');
+  });
+
+  // Back, or the swipe, with something unsaved asks first; with nothing,
+  // or once saved, it just goes.
+  it('asks before discarding changes, and only then', async () => {
+    catalog.data = [HEIM];
+    saved.data = [listOf([HEIM])];
+    const navigation = nav();
+    render(<CollectionFormScreen navigation={navigation} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
+    expect(leave()).toBe(false);
+    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bar, late' } });
+    expect(leave()).toBe(true);
+    const [title, , buttons] = vi.mocked(Alert.alert).mock.calls[0];
+    expect(title).toBe('Discard your changes?');
+    buttons!.find((b) => b.text === 'Discard')!.onPress!();
+    expect(navigation.dispatch).toHaveBeenCalledWith({ type: 'GO_BACK' });
+    save();
+    await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+    expect(leave()).toBe(false);
   });
 
   it('shows the Auto tile as the picture Auto would use', () => {
@@ -432,6 +484,8 @@ describe('renaming a list', () => {
     saved.data = [listOf([HEIM])];
     // The name rides in on the route, the way `CollectionDetail` sends it.
     render(<CollectionFormScreen navigation={navigation} route={routeWith({ slug: 'night-bar', title: 'Night bar' })} />);
+    // An untouched rename has nothing to save; see `changed`.
+    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Night bar, late' } });
     save();
 
     const message = await screen.findByText('Row is locked');
@@ -454,6 +508,23 @@ describe('saving a copy of somebody else’s list', () => {
     return navigation;
   };
   const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save the copy' }));
+
+  // Edited and saved, the copy leaves without a discard question: the
+  // changes went with it.
+  it('leaves without asking once the copy is saved', async () => {
+    const navigation = openCopy();
+    fireEvent.change(screen.getByPlaceholderText('Weekend coffee'), { target: { value: 'Late Hanoi' } });
+    expect(leave()).toBe(true);
+    save();
+    await waitFor(() => expect(navigation.goBack).toHaveBeenCalled());
+    expect(leave()).toBe(false);
+  });
+
+  // Born on submit, so its prefilled suggestion is worth saving as it is.
+  it('lights ✓ for an untouched copy', () => {
+    openCopy();
+    expect(screen.getByRole('button', { name: 'Save the copy' }).getAttribute('aria-disabled')).not.toBe('true');
+  });
 
   it('opens prefilled with its provenance, as a suggestion in an editable field', () => {
     openCopy();

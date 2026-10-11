@@ -233,7 +233,7 @@ describe('the handle', () => {
     expect(spies.updateProfile).not.toHaveBeenCalled();
     expect(navigation.goBack).not.toHaveBeenCalled();
     // The spinner comes back off, so the reader can fix it and try again.
-    expect(saveButton().textContent).toBe('Save');
+    expect(saveButton().querySelector('[data-icon="checkmark"]')).toBeTruthy();
   });
 
   it('refuses one longer than twenty characters', async () => {
@@ -283,7 +283,7 @@ describe('failures', () => {
     save();
     const message = await screen.findByText('Network down');
     expect(navigation.goBack).not.toHaveBeenCalled();
-    expect(saveButton().textContent).toBe('Save');
+    expect(saveButton().querySelector('[data-icon="checkmark"]')).toBeTruthy();
     // Ahead of the avatar, so it shows beside the Save that raised it
     // rather than at the foot of a form scrolled away from.
     const photo = screen.getByText('Change profile photo');
@@ -326,7 +326,7 @@ describe('failures', () => {
     // is a chain of settled promises and one commit, which `act` drains
     // to completion. Waiting on the clock for it instead is a race that a
     // loaded runner loses — this test failed twice on CI and never here.
-    await waitFor(() => expect(saveButton().textContent).toBe('Save'));
+    await waitFor(() => expect(saveButton().querySelector('[data-icon="checkmark"]')).toBeTruthy());
     await act(async () => { save(); });
     expect(navigation.goBack).toHaveBeenCalled();
     expect(screen.queryByText('Network down')).toBeNull();

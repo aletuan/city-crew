@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { BackButton, CONTROL_H, fireHaptic, PressableScale, useTabBarClearance } from './ui';
+import { BackButton, CONTROL_H, fireHaptic, HEADER_CONTROL_H, PressableScale, useTabBarClearance } from './ui';
 import { useI18n } from '../lib/i18n';
 import { PASSWORD_MIN, passwordStrength } from '../lib/password';
 import { sentenceCase, type AuthFail } from '../lib/authfail';
@@ -92,27 +92,37 @@ export function StepDots({ step, total }: { step: number; total: number }) {
 }
 
 /**
- * The header's own submit, on the right of the title: "Save" where the
- * screen is a form you edit and leave, as Contacts and Calendar put it.
+ * The header's own submit, on the right of the title: a round ✓ where the
+ * screen is a form you edit and leave, mirroring the round back control on
+ * the left — the pair iOS 26 gives an editing sheet, ‹ or ✕ one side and a
+ * tinted ✓ the other.
  *
  * Only there. The two screens that wear it (the collection form, the
  * profile form) are the ones whose content can run past the fold: a
  * cover grid of every photograph in the list, an avatar above five
  * fields. On 10 Oct 2026 the owner found the collection form's Save
- * below eleven cover tiles, reachable only by scrolling past them. Up
- * here it is on screen from the first frame, and the keyboard can never
- * cover it. The sign-in, sign-up, reset and delete screens keep their
- * full-width button: each asks one short thing, the button never leaves
- * the screen, and it is the step forward rather than a save.
+ * below eleven cover tiles; up here it is on screen from the first frame
+ * and no keyboard covers it. The sign-in, sign-up, reset and delete
+ * screens keep their full-width button: each asks one short thing, the
+ * button never leaves the screen, and it is the step forward rather than
+ * a save.
  *
- * Dimmed rather than hidden when there is nothing to submit, for the
- * reason `PrimaryButton` gives. `a11yLabel` is the long name, "Save
- * changes" where the screen shows "Save": VoiceOver reads the control
- * without the form around it to explain the short one.
+ * A glyph, not the word "Save" it replaced the same day. The word was
+ * the only bare text control in a header row of 44pt glass circles, and
+ * read as a link beside the back button. `label` is what VoiceOver says —
+ * "Save changes", "Create collection" — since the mark itself says
+ * nothing aloud.
+ *
+ * Colours, per look. Lit, it is the accent as a *surface* — `accentFill`
+ * under `accentInk`, the pair every filled control in the app uses, and
+ * the pair `theme.test.ts` holds to 4.5:1 in every palette: coral under
+ * near-black on paper, charcoal and the coffee brown, Rose's own rose
+ * under white. Dimmed, it is the back control's glass with a tertiary
+ * glyph, so "nothing to save yet" reads as the same object at rest rather
+ * than as a different one. Both are fills, never borders (`bgHex`).
  */
 export type HeaderAction = {
   label: string;
-  a11yLabel?: string;
   onPress: () => void;
   busy?: boolean;
   disabled?: boolean;
@@ -122,6 +132,7 @@ export type HeaderAction = {
 export function AuthHeader({ onBack, title, action }: {
   onBack: () => void; title: string; action?: HeaderAction;
 }) {
+  const lit = action && !action.disabled;
   return (
     <View style={s.header}>
       <BackButton onPress={onBack} />
@@ -130,21 +141,17 @@ export function AuthHeader({ onBack, title, action }: {
         <PressableScale
           onPress={action.busy || action.disabled ? undefined : action.onPress}
           disabled={action.busy || action.disabled}
+          scaleTo={0.92}
           accessibilityRole="button"
-          accessibilityLabel={action.a11yLabel ?? action.label}
+          accessibilityLabel={action.label}
           aria-busy={!!action.busy}
           aria-disabled={!!action.disabled}
-          hitSlop={{ top: 6, bottom: 6, left: 10, right: 10 }}
           testID={action.testID}
-          style={s.headerAction}
+          style={[s.headerAction, lit ? s.headerActionOn : s.headerActionOff]}
         >
           {action.busy
-            ? <ActivityIndicator color={colors.accent} />
-            : (
-              <Text style={[s.headerActionText, action.disabled && s.headerActionOff]}>
-                {action.label}
-              </Text>
-            )}
+            ? <ActivityIndicator color={colors.accentInk} />
+            : <Ionicons name="checkmark" size={22} color={lit ? colors.accentInk : colors.textTertiary} />}
         </PressableScale>
       ) : null}
     </View>
@@ -642,12 +649,13 @@ const s = StyleSheet.create({
   // `paddingTop` optically centres a 26pt line against the 44pt control
   // without pinning either to the other's height.
   title: { flex: 1, color: colors.text, ...type.titleDetail, paddingTop: 7 },
-  // As tall as the back control beside it, so the word centres on the
-  // same line the arrow does, whatever the title below it wraps to.
-  headerAction: { height: CONTROL_H, justifyContent: 'center', minWidth: 44, alignItems: 'flex-end' },
-  // The readable accent, at the weight iOS gives a bar's confirm button.
-  headerActionText: { color: colors.accent, fontSize: 17, fontWeight: font.semibold },
-  headerActionOff: { color: colors.textTertiary },
+  // The back control's circle, on the other side of the title.
+  headerAction: {
+    width: HEADER_CONTROL_H, height: HEADER_CONTROL_H, borderRadius: HEADER_CONTROL_H / 2,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  headerActionOn: { backgroundColor: colors.accentFill },
+  headerActionOff: { backgroundColor: colors.surfaceGlass },
   lede: { color: colors.textSecondary, ...type.body, lineHeight: 24, marginBottom: 2 },
 
   // Above everything, including the header: it is about the flow, not
