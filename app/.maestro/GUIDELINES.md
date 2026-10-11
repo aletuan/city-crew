@@ -65,6 +65,15 @@ minute or more per run; keep the suite short.
    the floating tab bar. **Do not** use `centerElement` there: a button
    at the end of the content can never be centred, and the scroll runs
    until the timeout. `centerElement` is for mid-page targets only.
+9a. **A tab keeps its scroll.** Before `scrollUntilVisible` on a tab's
+    root, scroll it back to the top first (up to something at the top,
+    as `10` does with `avatar-box`). Signing in leaves Profile part-way
+    down; a row already "visible" under the pinned title is not scrolled
+    to, and the title takes the tap.
+9b. **A row that opens something is one accessibility element.** Its
+    children (`visit-name` inside `visit-row`) are not reliably in the
+    tree; match the row by its label instead.
+
 10. **Wait on something, never sleep.** `extendedWaitUntil` with an
     explicit timeout. The first bundle load of a session can take a
     minute — hence 90 s on `tab-explore`.
