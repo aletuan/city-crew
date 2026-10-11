@@ -75,7 +75,7 @@ describe('what it does not know', () => {
     open(NOTHING);
     expect(valueOf('Phiên bản')).toBe('Không rõ');
     expect(valueOf('Kênh')).toBe('Bản phát triển');
-    expect(valueOf('Bản cập nhật')).toBe('Đi kèm bản cài');
+    expect(valueOf('Bản cập nhật')).toBe('Có sẵn trong bản cài');
     expect(valueOf('Runtime')).toBe('—');
   });
 
