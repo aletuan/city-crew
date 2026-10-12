@@ -91,10 +91,23 @@
 // figures, so nothing about one reader is ever on the wire). "New" goes
 // on a look that was not on the sheet the last time this
 // phone opened it, for that one opening; never on the first opening, when
-// everything would be new. A card that is both says Popular. The word sits
-// on the swatch's top-left corner in the sheet's own colours with the
-// swatch's hairline, so it reads on a pale page and a dark one alike, and
-// it is a word and not a number — the reasons are in that header too.
+// everything would be new. A card that is both says Popular. It is a word
+// and not a number — the reasons are in that header too.
+//
+// The word is a pill hung on the swatch's top-left corner, since the
+// evening of 12 Oct 2026: a glyph before the word (people for Popular, an
+// unread dot for New — not a star, which is Midnight's own mark, and not
+// sparkles, which is Violet's), the tab bar's pill colours (`badgeSolid`
+// under `pillInk`, the one pair in every look with a 4.5:1 floor between
+// them, and opaque, so it carries its own contrast onto any page the
+// swatch is painted in), 4pt over the swatch's edge so it reads as a tag
+// on the card rather than part of the painting, and the swatch's hairline
+// rather than a shadow, which nothing else in the app has. The first cut
+// was a quiet chip in the sheet's ground, inside the swatch; the owner's
+// reference (a mint pill with a star, overhanging) was louder, and a word
+// too quiet to notice is not doing a word's job. The pill wears the look
+// being worn, as the tick and the chosen name do: it is the sheet's
+// chrome, not the swatch's.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -107,7 +120,7 @@ import { useI18n } from '../lib/i18n';
 import { lookOf, needsRestart, PINNED, type Pinned } from '../lib/look';
 import { parseSeen, popularLooks, SEEN_LOOKS_KEY, serializeSeen, unseenLooks } from '../lib/lookLabels';
 import { Pref, Return, Scheme, useScheme } from '../lib/theme';
-import { colors, font, PALETTES, radius, space } from '../theme';
+import { colors, font, PALETTES, pillInk, radius, space } from '../theme';
 import { PressableScale } from './ui';
 import { useSheetDrag } from './sheetDrag';
 
@@ -450,7 +463,10 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                         <Swatch look={o.id as Pinned} />
                         {word && (
                           <View style={s.word} testID={`theme-${o.id}-${word}`}>
-                            <Text style={s.wordText}>
+                            {word === 'popular'
+                              ? <Ionicons name="people" size={10} color={pillInk[scheme]} />
+                              : <View style={[s.wordDot, { backgroundColor: pillInk[scheme] }]} testID={`theme-${o.id}-new-dot`} />}
+                            <Text style={[s.wordText, { color: pillInk[scheme] }]}>
                               {word === 'popular' ? t('Popular', 'Phổ biến', '人気') : t('New', 'Mới', '新着')}
                             </Text>
                           </View>
@@ -548,16 +564,19 @@ const s = StyleSheet.create({
   swatchLine: { height: 5, borderRadius: 2.5 },
   swatchPill: { width: 26, height: 18, borderRadius: 9 },
   swatchDot: { width: 18, height: 18, borderRadius: 9 },
-  // The word, on the swatch's top-left corner: the card's 8pt padding
-  // plus 3pt in from the swatch's edge, 14pt tall, which ends 1pt above
-  // the swatch's centred lines (they start 18.5pt down a 52pt swatch).
-  // The sheet's own ground and type, with the swatch's hairline, so it
-  // carries its own contrast onto any page the swatch is painted in.
+  // The word, hung on the swatch's top-left corner: 4pt over the swatch's
+  // edge on both sides (the card's 8pt padding, less 4), so it reads as a
+  // tag on the card. The tab bar's pill colours — `badgeSolid`, with the
+  // ink set inline per side since `pillInk` is a pair and not a token —
+  // and the swatch's hairline instead of a shadow.
   word: {
-    position: 'absolute', top: 11, left: 11,
-    paddingHorizontal: 6, paddingVertical: 1, borderRadius: 7,
-    backgroundColor: colors.bgElevated,
+    position: 'absolute', top: 4, left: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 9,
+    backgroundColor: colors.badgeSolid,
     borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(128,128,128,0.35)',
   },
-  wordText: { color: colors.text, fontSize: 10, lineHeight: 12, fontWeight: font.semibold },
+  // The unread dot, for New.
+  wordDot: { width: 6, height: 6, borderRadius: 3 },
+  wordText: { fontSize: 11, lineHeight: 13, fontWeight: font.semibold },
 });
