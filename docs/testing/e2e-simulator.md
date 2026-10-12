@@ -48,7 +48,7 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `06-save-place` | test account | 1 m 21 s |
 | `08-explore-filter` | guest | 50 s |
 | `09-collections-browse` | guest | 42 s |
-| `15-theme` | test account | chưa đo — thêm 12/10, chưa chạy trên simulator |
+| `15-theme` | test account | 3 m 17 s |
 | `10-check-in` | test account | 1 m 9 s |
 | `11-collection-crud` | test account | 2 m |
 | `13-trip-edit` | test account | 1 m 49 s |
@@ -56,9 +56,18 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `12-language` | guest | 1 m 43 s |
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
-**Kết quả gần nhất:** 10/10/2026, iPhone 17 · iOS 26.5 · Expo Go — **14/14
-passed trong 16 m 36 s**, với `13-trip-edit` vừa vào. Trước đó cùng ngày:
-13/13 trong 15 m 7 s trên `0d120779` (main, đã gồm #848–#855).
+**Kết quả gần nhất:** 12/10/2026, iPhone 17 · iOS 26.5 · Expo Go, code tại
+`0266e50b` (main, gồm #886 Ideas và #889 theme theo tài khoản) cộng bản sửa
+`15-theme` — **15/15 passed trong 19 m 21 s**. `05-plan-trip` và
+`13-trip-edit` xanh sau đổi phần bộ sưu tập của Ideas. `15-theme` lần đầu
+chạy trên simulator đã đỏ ở hai chỗ, cả hai do flow, không do app: dấu tick
+`theme-<id>-on` không có trong cây trợ năng (hàng bấm được là một phần tử;
+dấu tick nằm trong nhãn hàng dưới dạng glyph `\uf21d`), và `tapOn
+theme-close` chạm vào tâm lớp nền phủ cả màn hình — chính là hàng Automatic
+— nên "đóng" lại chọn Auto và để sheet mở.
+
+Trước đó: 14/14 trong 16 m 36 s (10/10, `13-trip-edit` vào); 13/13 trong
+15 m 7 s trên `0d120779` (10/10).
 
 Một lượt suite trong lúc làm `13` đỏ ở `11`: `hideKeyboard` đã tự gửi form
 tạo collection (ô tên gửi khi bấm return), màn hình đóng trước khi flow bấm
@@ -87,8 +96,9 @@ nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái 
 
 **Ngân sách: dưới 20 phút** cho cả suite (quyết định của chủ dự án,
 09/10). Thời gian không phải ràng buộc chặt: một flow đáng giá vẫn vào dù
-làm suite dài thêm một hai phút. 14 flow hiện chạy 16 m 36 s, còn khoảng
-3 phút cho các flow tiếp theo.
+làm suite dài thêm một hai phút. 15 flow hiện chạy 19 m 21 s — sát 20; flow
+tiếp theo cần rút ngắn một flow hiện có (`15-theme` 3 m 17 s, `11` 2 m) hoặc
+một quyết định nâng ngân sách.
 
 `10-check-in` được thử cả nhánh dọn dẹp: một flow tạm check-in rồi dừng, `10`
 dọn lượt ghé đó rồi chạy hết (1 m 5 s); lượt sau từ trạng thái sạch (51 s);

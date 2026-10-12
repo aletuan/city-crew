@@ -7,8 +7,9 @@
 # looks are checked by hand on a TestFlight build. The grounds take the
 # same path through the account, which is what this flow is for.
 #
-# Every step is read off a tick (`theme-<id>-on`), never a colour: Maestro
-# cannot see a colour, and the tick is what the sheet says it put on.
+# Every step is read off a tick, never a colour: Maestro cannot see a
+# colour, and the tick is what the sheet says it put on. The tick is read
+# in the row's label, not by `theme-<id>-on` — see `common/pick-theme.yaml`.
 #
 # Leaves the account on Auto and the device signed out, which is how the
 # flows after it expect to find things.
@@ -46,12 +47,27 @@ env:
     id: "profile-theme"
 # The read is one round trip after the sign-in; the tick moves when it
 # lands.
+# The tick is read on the row's label — see `common/pick-theme.yaml`.
 - extendedWaitUntil:
     visible:
-      id: "theme-dark-on"
+      id: "theme-dark"
+      text: ".*\uF21D.*"
     timeout: 15000
+# Closed by a tap on the backdrop above the sheet, not by `theme-close`.
+# `theme-close` IS the backdrop and covers the whole screen, so a tap on
+# it lands on its centre — which is the sheet's Automatic row. On 12
+# October that "close" chose Automatic and left the sheet open.
 - tapOn:
-    id: "theme-close"
+    point: "50%,15%"
+- waitForAnimationToEnd:
+    timeout: 5000
+# Scrolling down to the Theme row ducked the tab bar, and the next step
+# begins with a tab.
+- scrollUntilVisible:
+    element:
+      id: "tab-explore"
+    direction: UP
+    timeout: 15000
 
 # ── and home: Auto on the account, signed out ──
 - runFlow:

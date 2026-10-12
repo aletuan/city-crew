@@ -20,13 +20,23 @@ appId: host.exp.Exponent
     timeout: 5000
 - tapOn:
     id: "theme-${THEME_ID}"
-# The sheet stays open on a ground, so the tick is read on the row.
+# The sheet stays open on a ground, so the tick is read on the row — on
+# the row's own label, not on `theme-<id>-on`. The row is pressable, so
+# iOS makes it one accessibility element and the tick inside it is not in
+# the tree: on 12 October the sheet had Dark ticked, its row read
+# "…, Dark, \uf21d", and `theme-dark-on` was never found. \uf21d is the
+# checkmark glyph (the same one 11 reads on the save sheet's rows).
 - extendedWaitUntil:
     visible:
-      id: "theme-${THEME_ID}-on"
+      id: "theme-${THEME_ID}"
+      text: ".*\uF21D.*"
     timeout: 5000
+# Closed by a tap on the backdrop above the sheet, not by `theme-close`.
+# `theme-close` IS the backdrop and covers the whole screen, so a tap on
+# it lands on its centre — which is the sheet's Automatic row. On 12
+# October that "close" chose Automatic and left the sheet open.
 - tapOn:
-    id: "theme-close"
+    point: "50%,15%"
 - waitForAnimationToEnd:
     timeout: 5000
 - scrollUntilVisible:
