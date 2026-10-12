@@ -85,6 +85,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../lib/auth';
+import { saveTheme } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { lookOf, needsRestart, PINNED, type Pinned } from '../lib/look';
 import { Pref, Return, Scheme, useScheme } from '../lib/theme';
@@ -227,6 +229,11 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
 }) {
   const { t } = useI18n();
   const { scheme, pref, setPref, look, looks } = useScheme();
+  // The account's copy of a choice, when there is an account: the theme
+  // follows the account since 12 Oct 2026 (`lib/themeAccountSync`). A
+  // guest's choice stays on the device.
+  const uid = useAuth().userId;
+  const remember = (id: Pref) => (typeof uid === 'string' ? () => saveTheme(uid, id) : undefined);
   const grounds = OPTIONS.filter((o) => lookOf(o.id) === 'standard');
   const palettes = looks ? OPTIONS.filter((o) => isLook(o.id)) : [];
   // What the sheet may take before its list scrolls: the window less the
@@ -261,7 +268,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
     const id = pending.current;
     if (!id) return;
     pending.current = null;
-    setPref(id, returnTo?.());
+    setPref(id, returnTo?.(), remember(id));
     timers.current.push(setTimeout(() => Alert.alert(
       t('Close and reopen City Crew', 'Mở lại City Crew', 'City Crew を開き直してください'),
       t(
@@ -277,7 +284,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
     timers.current.push(setTimeout(relaunch, DISMISS_MS));
   };
   const choose = (id: Pref) => {
-    if (!needsRestart(look, id)) { setPref(id); return; }
+    if (!needsRestart(look, id)) { setPref(id, undefined, remember(id)); return; }
     agree(id);
   };
   const insets = useSafeAreaInsets();
@@ -296,7 +303,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   }, [visible, rise]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={relaunch} statusBarTranslucent>
-      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} />
+      <Pressable style={s.backdrop} onPress={onClose} accessibilityLabel={t('Close', 'Đóng', '閉じる')} testID="theme-close" />
       <Animated.View
         style={[s.sheet, {
           paddingBottom: 14 + insets.bottom,
@@ -322,6 +329,9 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                 accessibilityState={{ selected: active }}
                 // The sheet stays open — see the note in the header.
                 onPress={() => choose(o.id)}
+                // For the iOS smoke flows, with the tick's own id below;
+                // see `.maestro/README.md`.
+                testID={`theme-${o.id}`}
               >
                 <Ionicons name={o.icon} size={18} color={active ? colors.accent : colors.textTertiary} />
                 <View style={{ flex: 1 }}>
@@ -332,7 +342,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                     <Text style={s.rowNote}>{systemNow(scheme, t)}</Text>
                   )}
                 </View>
-                {active && <Ionicons name="checkmark" size={18} color={colors.accent} />}
+                {active && <Ionicons name="checkmark" size={18} color={colors.accent} testID={`theme-${o.id}-on`} />}
               </PressableScale>
             </View>
           );
@@ -391,6 +401,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                         accessibilityRole="radio"
                         accessibilityState={{ selected: active }}
                         onPress={() => choose(o.id)}
+                        testID={`theme-${o.id}`}
                       >
                         <Swatch look={o.id as Pinned} />
                         <View style={s.cardLabel}>
@@ -398,7 +409,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                           <Text style={[s.cardTitle, active && { color: colors.accent }]} numberOfLines={1}>
                             {schemeLabel(o.id, t)}
                           </Text>
-                          {active && <Ionicons name="checkmark" size={16} color={colors.accent} />}
+                          {active && <Ionicons name="checkmark" size={16} color={colors.accent} testID={`theme-${o.id}-on`} />}
                         </View>
                       </PressableScale>
                     );

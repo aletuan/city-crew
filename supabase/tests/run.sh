@@ -247,6 +247,15 @@ for f in "$ROOT"/supabase/migrations/*_history_on_by_default.sql; do
 done
 run "$DB" -f "$HERE/history_default_test.sql"
 
+# The theme column (12 Oct 2026). After the block above for the same
+# reason that block runs after `preferences_test.sql`: the test updates
+# the rows the backfill made. Listed, not globbed, for the same trap.
+echo "→ theme on the account"
+for f in "$ROOT"/supabase/migrations/*_preferences_theme.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/preferences_theme_test.sql"
+
 # The daily caps. After preferences and the collection blocks, because the
 # policies it rewrites count rows in those tables; it seeds and removes
 # its own account.

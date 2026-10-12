@@ -87,6 +87,40 @@ export async function savePreferences(ownerId: string, p: Preferences): Promise<
   if (error) throw new Error(error.message);
 }
 
+/**
+ * The theme this account chose, or null for one that never has.
+ *
+ * Its own column and its own two calls rather than a field on
+ * `Preferences`: that record is written whole by the taste picker and
+ * Edit profile, and a theme carried along in it would be overwritten by
+ * whichever screen last saved the other fields from a stale read. The
+ * value is the app's own `Pref` string (`lib/look`); the server keeps it
+ * as text so that a look this build has not heard of is still kept for
+ * the build that has.
+ */
+export async function fetchTheme(ownerId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('preferences')
+    .select('theme')
+    .eq('owner_id', ownerId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const theme = (data as { theme?: unknown } | null)?.theme;
+  return typeof theme === 'string' && theme ? theme : null;
+}
+
+/** Keep the theme on the account. An upsert of the one column, so a row
+ *  that exists keeps its categories and budget, and a row that somehow
+ *  does not is made with their defaults. */
+export async function saveTheme(ownerId: string, theme: string): Promise<void> {
+  const { error } = await supabase.from('preferences').upsert({
+    owner_id: ownerId,
+    theme,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw new Error(error.message);
+}
+
 export type EventKind = 'open' | 'save' | 'unsave' | 'plan_keep' | 'plan_drop';
 
 /**

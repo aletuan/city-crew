@@ -57,6 +57,9 @@ import { ThemeProvider, useScheme } from './theme';
 
 const KEY = 'citycrew.scheme';
 
+/** The account's copy of a choice, as the Theme sheet hands it in. */
+const remember = { fn: vi.fn<() => Promise<unknown>>(async () => {}) };
+
 function Probe() {
   const { scheme, pref, setPref, look, looks, ready, resume, claimResume } = useScheme();
   const [claimed, setClaimed] = React.useState<string>('');
@@ -76,6 +79,8 @@ function Probe() {
       <button type="button" onClick={() => setPref('dark')}>dark</button>
       <button type="button" onClick={() => setPref('coffee')}>coffee</button>
       <button type="button" onClick={() => setPref('rose')}>rose</button>
+      <button type="button" onClick={() => setPref('coffee', undefined, remember.fn)}>coffee, remembered</button>
+      <button type="button" onClick={() => setPref('dark', undefined, remember.fn)}>dark, remembered</button>
     </>
   );
 }
@@ -98,6 +103,59 @@ beforeEach(async () => {
   rn.get.mockReset().mockReturnValue('light');
   rn.listeners = [];
   await AsyncStorage.removeItem(KEY);
+  remember.fn.mockReset().mockResolvedValue(undefined);
+});
+
+// The account's copy of a choice (12 Oct 2026). A ground is kept and the
+// copy sent; a look is a restart, and the restart waits for the copy — a
+// request the relaunch tears down is a theme the next sign-in reads back
+// as the old one — but not forever, and not on its failure.
+describe('remembering the choice on the account', () => {
+  it('sends the copy of a ground alongside keeping it', async () => {
+    mount();
+    await settled();
+    act(() => { screen.getByText('dark, remembered').click(); });
+    expect(remember.fn).toHaveBeenCalledTimes(1);
+    expect(await AsyncStorage.getItem(KEY)).toBe('dark');
+  });
+
+  it('restarts into a look only once its copy has landed', async () => {
+    let land!: () => void;
+    remember.fn.mockReturnValue(new Promise<void>((resolve) => { land = resolve; }));
+    mount();
+    await settled();
+    act(() => { screen.getByText('coffee, remembered').click(); });
+    expect(remember.fn).toHaveBeenCalledTimes(1);
+    await act(async () => { await Promise.resolve(); });
+    expect(updates.reloadAsync).not.toHaveBeenCalled();
+    await act(async () => { land(); });
+    await waitFor(() => expect(updates.reloadAsync).toHaveBeenCalledTimes(1));
+  });
+
+  it('restarts all the same when the copy is refused', async () => {
+    remember.fn.mockRejectedValue(new Error('offline'));
+    mount();
+    await settled();
+    act(() => { screen.getByText('coffee, remembered').click(); });
+    await waitFor(() => expect(updates.reloadAsync).toHaveBeenCalledTimes(1));
+  });
+
+  it('gives up waiting for the copy after three seconds', async () => {
+    remember.fn.mockReturnValue(new Promise(() => {}));
+    mount();
+    await settled();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      act(() => { screen.getByText('coffee, remembered').click(); });
+      await act(async () => { vi.advanceTimersByTime(2999); });
+      expect(updates.reloadAsync).not.toHaveBeenCalled();
+      await act(async () => { vi.advanceTimersByTime(1); });
+      await act(async () => { await Promise.resolve(); });
+      expect(updates.reloadAsync).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('a fresh install', () => {

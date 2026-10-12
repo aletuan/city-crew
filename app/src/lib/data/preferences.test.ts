@@ -17,8 +17,8 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  clearMyHistory, fetchPassedOver, fetchPreferences, logPlaceEvent, NO_PREFERENCES,
-  savePreferences,
+  clearMyHistory, fetchPassedOver, fetchPreferences, fetchTheme, logPlaceEvent, NO_PREFERENCES,
+  savePreferences, saveTheme,
 } from './preferences';
 
 const fake = () => h.fake!;
@@ -257,5 +257,44 @@ describe('fetchPreferences', () => {
   it('throws when the read itself failed', async () => {
     fake().replies({ error: { message: 'timeout' } });
     await expect(fetchPreferences('u1')).rejects.toThrow('timeout');
+  });
+});
+
+// The theme on the account (12 Oct 2026): its own column and its own two
+// calls, so a save never carries the other fields from a stale read.
+describe('the theme', () => {
+  it('reads the account\u2019s theme, and null for one that never chose', async () => {
+    fake().replies({ data: { theme: 'cosmic' } });
+    expect(await fetchTheme('u-1')).toBe('cosmic');
+    expect(fake().log[0]).toMatchObject({ table: 'preferences', op: 'select' });
+    fake().reset();
+    fake().replies({ data: { theme: null } });
+    expect(await fetchTheme('u-1')).toBeNull();
+    fake().reset();
+    fake().replies({ data: null });
+    expect(await fetchTheme('u-1')).toBeNull();
+  });
+
+  it('throws what the database said on a read', async () => {
+    fake().replies({ error: { message: 'not yours' } });
+    await expect(fetchTheme('u-1')).rejects.toThrow('not yours');
+  });
+
+  // The one column, upserted: a row that exists keeps its categories and
+  // budget, which a whole-record write from a stale read would not.
+  it('keeps the theme in the one column, and touches nothing beside it', async () => {
+    await saveTheme('u-1', 'wine');
+    expect(fake().log[0]).toMatchObject({ table: 'preferences', op: 'insert', upsert: true });
+    const payload = fake().log[0].payload as Record<string, unknown>;
+    expect(payload).toMatchObject({ owner_id: 'u-1', theme: 'wine' });
+    expect(typeof payload.updated_at).toBe('string');
+    expect(payload).not.toHaveProperty('categories');
+    expect(payload).not.toHaveProperty('budget_vnd');
+    expect(payload).not.toHaveProperty('history_on');
+  });
+
+  it('throws what the database said on a write', async () => {
+    fake().replies({ error: { message: 'not yours' } });
+    await expect(saveTheme('u-1', 'wine')).rejects.toThrow('not yours');
   });
 });

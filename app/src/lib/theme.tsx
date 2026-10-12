@@ -47,6 +47,20 @@ const DEFAULT: Pref = 'system';
  *  build, a simulator that answers null). Dark is the app's original. */
 const FALLBACK: Scheme = 'dark';
 const STORE_KEY = 'citycrew.scheme';
+/** How long a restart waits for the account's copy of a look to be
+ *  written. A write still out after three seconds is a network that will
+ *  not land it before the reader gives up on the relaunch; the next change
+ *  writes again, and the sync on the next sign-in reads whatever landed. */
+const REMEMBER_MS = 3000;
+
+/** A promise, or the timeout, whichever is first; never a rejection. */
+function within(ms: number, p: Promise<unknown> | undefined): Promise<void> {
+  if (!p) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const t = setTimeout(resolve, ms);
+    p.then(() => { clearTimeout(t); resolve(); }, () => { clearTimeout(t); resolve(); });
+  });
+}
 
 type ThemeCtx = {
   /** The ground showing right now. */
@@ -54,8 +68,11 @@ type ThemeCtx = {
   /** What the person chose — what the Appearance sheet ticks. */
   pref: Pref;
   /** Choose. A look restarts the app; `returnTo` is where the restart
-   *  should put the reader back, if somewhere (`Return` in lib/look). */
-  setPref: (p: Pref, returnTo?: Omit<Return, 'at'>) => void;
+   *  should put the reader back, if somewhere (`Return` in lib/look).
+   *  `remember` is the account's copy of the choice, when there is an
+   *  account: a restart waits for it (briefly) so the write is not torn
+   *  down with the JavaScript. */
+  setPref: (p: Pref, returnTo?: Omit<Return, 'at'>, remember?: () => Promise<unknown>) => void;
   /** The look the colours were built in, this run — what `theme.ts` read. */
   look: Look;
   /** Whether a look other than the standard one can be kept here at all.
@@ -167,16 +184,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  const setPref = useCallback((next: Pref, returnTo?: Omit<Return, 'at'>) => {
+  const setPref = useCallback((next: Pref, returnTo?: Omit<Return, 'at'>, remember?: () => Promise<unknown>) => {
     // Another look: kept, then restarted into. Nothing repaints first —
     // the window pinned to the new ground over the old colours would be a
     // frame of neither. Where the look cannot be kept, a restart would come
     // back as it left, so nothing happens at all. Where the reader was goes
     // in beside the look, for the launch after the restart to read back.
+    // The account's copy goes out before the restart too, and the restart
+    // waits for it — a request the relaunch tears down is a theme the next
+    // sign-in reads back as the old one.
     if (needsRestart(look, next)) {
       if (Platform.OS !== 'ios' || !writeLook(store(), lookOf(next))) return;
       if (returnTo) writeReturn(store(), { ...returnTo, at: Date.now() });
-      AsyncStorage.setItem(STORE_KEY, next).catch(() => {}).finally(restart);
+      Promise.all([
+        AsyncStorage.setItem(STORE_KEY, next).catch(() => {}),
+        within(REMEMBER_MS, remember?.()),
+      ]).finally(restart);
       return;
     }
     setPrefState(next);
@@ -186,6 +209,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // no listener fired for it because the window was not following.
     if (next === 'system') setPhone(phoneScheme());
     AsyncStorage.setItem(STORE_KEY, next).catch(() => {});
+    remember?.().catch(() => {});
   }, [look]);
 
   const scheme: Scheme = pinnedScheme(pref) ?? phone;

@@ -31,6 +31,10 @@ vi.mock('../lib/theme', () => ({
 vi.mock('../lib/i18n', () => ({
   useI18n: () => ({ lang: 'en', setLang: () => {}, t: (en: string) => en }),
 }));
+const who = vi.hoisted(() => ({ userId: undefined as string | null | undefined }));
+const saveTheme = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('../lib/auth', () => ({ useAuth: () => ({ userId: who.userId }) }));
+vi.mock('../lib/data', () => ({ saveTheme }));
 
 import { schemeIcon, schemeLabel, ThemeSwitcherModal } from './ThemeSwitcher';
 
@@ -39,6 +43,8 @@ beforeEach(() => {
   state.pref = 'light';
   state.look = 'standard';
   state.looks = true;
+  who.userId = undefined;
+  saveTheme.mockClear();
   setPref.mockClear();
   vi.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
@@ -96,14 +102,14 @@ describe('the two grounds, and the deferral', () => {
     const onClose = vi.fn();
     render(<ThemeSwitcherModal visible onClose={onClose} />);
     fireEvent.click(screen.getByText('Dark'));
-    expect(setPref).toHaveBeenCalledWith('dark');
+    expect(setPref).toHaveBeenCalledWith('dark', undefined, undefined);
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it('hands the phone back the window when Auto is tapped', () => {
     render(<ThemeSwitcherModal visible onClose={() => {}} />);
     fireEvent.click(screen.getByText('Automatic'));
-    expect(setPref).toHaveBeenCalledWith('system');
+    expect(setPref).toHaveBeenCalledWith('system', undefined, undefined);
   });
 
   // No "Done": the dimmed screen above the sheet is the way out, and it
@@ -119,6 +125,44 @@ describe('the two grounds, and the deferral', () => {
   it('renders nothing while it is closed', () => {
     render(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
     expect(screen.queryByText('Dark')).toBeNull();
+  });
+});
+
+// The theme follows the account (12 Oct 2026): a signed-in reader's
+// choice goes out with a copy for the account; a guest's does not.
+describe('the account\u2019s copy', () => {
+  it('hands the account\u2019s copy in with a ground', async () => {
+    who.userId = 'me';
+    render(<ThemeSwitcherModal visible onClose={() => {}} />);
+    fireEvent.click(screen.getByText('Dark'));
+    expect(setPref).toHaveBeenCalledTimes(1);
+    const [id, back, remember] = setPref.mock.calls[0] as [string, unknown, (() => Promise<unknown>) | undefined];
+    expect([id, back]).toEqual(['dark', undefined]);
+    expect(saveTheme).not.toHaveBeenCalled();
+    await remember!();
+    expect(saveTheme).toHaveBeenCalledWith('me', 'dark');
+  });
+
+  it('hands it in with a look too, once the sheet has gone', async () => {
+    vi.useFakeTimers();
+    try {
+      who.userId = 'me';
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      fireEvent.click(screen.getByText('Rose'));
+      act(() => { vi.advanceTimersByTime(450); });
+      const remember = setPref.mock.calls[0][2] as () => Promise<unknown>;
+      await remember();
+      expect(saveTheme).toHaveBeenCalledWith('me', 'rose');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('hands in no copy for a guest', () => {
+    who.userId = null;
+    render(<ThemeSwitcherModal visible onClose={() => {}} />);
+    fireEvent.click(screen.getByText('Dark'));
+    expect(setPref).toHaveBeenCalledWith('dark', undefined, undefined);
   });
 });
 
@@ -314,7 +358,7 @@ describe('the looks', () => {
       expect(setPref).not.toHaveBeenCalled();
       act(() => { vi.advanceTimersByTime(1); });
       expect(setPref).toHaveBeenCalledTimes(1);
-      expect(setPref).toHaveBeenCalledWith('rose', undefined);
+      expect(setPref).toHaveBeenCalledWith('rose', undefined, undefined);
     });
 
     // Where the reader is goes with the choice, asked of the screen at
@@ -327,14 +371,14 @@ describe('the looks', () => {
       expect(returnTo).not.toHaveBeenCalled();
       act(() => { dismissed(); });
       expect(returnTo).toHaveBeenCalledTimes(1);
-      expect(setPref).toHaveBeenCalledWith('navy', { tab: 'Profile', sheet: 'theme', y: 380 });
+      expect(setPref).toHaveBeenCalledWith('navy', { tab: 'Profile', sheet: 'theme', y: 380 }, undefined);
     });
 
     it('chooses it when the sheet says it has gone, and only once', () => {
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       fireEvent.click(screen.getByText('Coffee'));
       act(() => { dismissed(); });
-      expect(setPref).toHaveBeenCalledWith('coffee', undefined);
+      expect(setPref).toHaveBeenCalledWith('coffee', undefined, undefined);
       act(() => { vi.advanceTimersByTime(500); });
       act(() => { dismissed(); });
       expect(setPref).toHaveBeenCalledTimes(1);
@@ -383,7 +427,7 @@ describe('the looks', () => {
     expect(row('Light').textContent).toBe('Light');
     expect(row('Coffee').querySelector('[data-icon="checkmark"]')).toBeTruthy();
     fireEvent.click(screen.getByText('Coffee'));
-    expect(setPref).toHaveBeenCalledWith('coffee');
+    expect(setPref).toHaveBeenCalledWith('coffee', undefined, undefined);
     expect(onClose).not.toHaveBeenCalled();
     // A ground, from inside a look, is a restart: the sheet goes, nothing asks.
     fireEvent.click(screen.getByText('Light'));

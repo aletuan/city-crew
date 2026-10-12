@@ -1,0 +1,36 @@
+# Reusable: Profile → Theme → the setting in THEME_ID (system, light or
+# dark — a look restarts the app, which Expo Go cannot do; see 15-theme).
+# Asserts the tick landed on it, closes the sheet, and ends on Profile
+# with the tab bar showing.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "tab-profile"
+- scrollUntilVisible:
+    element:
+      id: "profile-theme"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn:
+    id: "profile-theme"
+- extendedWaitUntil:
+    visible:
+      id: "theme-${THEME_ID}"
+    timeout: 5000
+- tapOn:
+    id: "theme-${THEME_ID}"
+# The sheet stays open on a ground, so the tick is read on the row.
+- extendedWaitUntil:
+    visible:
+      id: "theme-${THEME_ID}-on"
+    timeout: 5000
+- tapOn:
+    id: "theme-close"
+- waitForAnimationToEnd:
+    timeout: 5000
+- scrollUntilVisible:
+    element:
+      id: "tab-explore"
+    direction: UP
+    timeout: 15000

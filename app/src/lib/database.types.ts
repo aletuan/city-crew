@@ -801,6 +801,7 @@ export type Database = {
           budget_vnd: number | null
           categories: string[]
           history_on: boolean
+          theme: string | null
           owner_id: string
           updated_at: string
         }
@@ -808,6 +809,7 @@ export type Database = {
           budget_vnd?: number | null
           categories?: string[]
           history_on?: boolean
+          theme?: string | null
           owner_id: string
           updated_at?: string
         }
@@ -815,6 +817,7 @@ export type Database = {
           budget_vnd?: number | null
           categories?: string[]
           history_on?: boolean
+          theme?: string | null
           owner_id?: string
           updated_at?: string
         }
