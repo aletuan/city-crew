@@ -858,6 +858,32 @@ describe('sort and filter', () => {
     expect(spies.getForegroundPermissionsAsync).toHaveBeenCalledOnce();
     expect(cardNames()[0]).toContain('Place near');
   });
+
+  // The order's evidence: under "Nearest first" every card says how far,
+  // from the fix the sort was made with. Nothing says it under any other
+  // sort, position or no position — a figure that did not decide the
+  // order would be a figure to argue with.
+  it('prints the distance on each card under Nearest first, and nowhere else', async () => {
+    state.locationGranted = true;
+    state.places.data = [
+      place('far', { lat: 21.1, lng: 105.9 }),   // ~9.3 km from the fix
+      place('near', { lat: 21.029, lng: 105.854 }), // ~60 m
+    ];
+    render(<ExploreScreen navigation={nav()} />);
+    expect(screen.queryByText(/\d (m|km)$/)).toBeNull();
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    fireEvent.click(screen.getByText('Nearest first'));
+    await act(async () => { fireEvent.click(screen.getByText('Show 2 places')); });
+    const first = screen.getByTestId('place-card-0').textContent ?? '';
+    const second = screen.getByTestId('place-card-1').textContent ?? '';
+    expect(first).toMatch(/Place near.*50 m\b/);
+    expect(second).toMatch(/Place far.*9\.3 km\b/);
+    // Back to Recommended: the fix is still held, the figures go.
+    fireEvent.click(screen.getByTestId('explore-filter'));
+    fireEvent.click(screen.getByText('Recommended'));
+    await act(async () => { fireEvent.click(screen.getByText('Show 2 places')); });
+    expect(screen.queryByText(/\d (m|km)$/)).toBeNull();
+  });
 });
 
 // The pinned chips row is drawn over the Places heading: its top padding

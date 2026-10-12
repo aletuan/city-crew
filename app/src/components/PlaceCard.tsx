@@ -8,6 +8,7 @@ import { coverOf, fmtCount, isFlagged, isLive, Place } from '../lib/data';
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { openFragment, openState, sashLabel, shutLabel } from '../lib/format';
+import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { splitName } from '../lib/name';
 import { useSave } from '../lib/save';
@@ -17,12 +18,17 @@ import { Card, PressableScale } from './ui';
 import PhotoCredit from './PhotoCredit';
 
 export default function PlaceCard({
-  place, onPress, testID, onLongPress, delayLongPress, onPressOut,
+  place, onPress, testID, distanceKm, onLongPress, delayLongPress, onPressOut,
   accessibilityHint, accessibilityActions, onAccessibilityAction,
 }: {
   place: Place;
   onPress: () => void;
   testID?: string;
+  /** How far from the reader, when the list is in the order that figure
+   *  decides (Explore's "Nearest first") — null otherwise, and the line
+   *  under the name says nothing about it. See the meta row for why the
+   *  figure comes with the sort and not with the fix. */
+  distanceKm?: number | null;
   /** For a card that does more than open its place: the collection screen's,
    *  which lifts on a hold so it can be dragged, and offers VoiceOver the
    *  same moves as actions. */
@@ -63,6 +69,10 @@ export default function PlaceCard({
   // set here it means one thing, which is why its style can be amber
   // unconditionally rather than behind a second test.
   const when = hours?.open ? openFragment(hours, t) : null;
+  // "850 m", "1.2 km", "12 km": `fmtDistance` sets the precision, and its
+  // own note says why metres round to fifty and why the decimal is a full
+  // stop beside a "4.7" rating even in Vietnamese.
+  const far = distanceKm != null ? fmtDistance(distanceKm) : null;
   return (
     <PressableScale
       onPress={onPress}
@@ -304,16 +314,56 @@ export default function PlaceCard({
               room it is the hour that gives way, not the tag. Losing
               "đến 22:00" leaves a fact you can still read; a pill squeezed
               to "Cà…" leaves one you cannot. */}
-          {(where || when || place.vibe_tags.length > 0) && (
+          {/* The distance, when there is one, rides the same line, between
+              the district and the hour: "Kim Liên · 850 m · until 22:00".
+
+              ── why the figure is here at all ──
+
+              "Nearest first" orders the feed by a number no card printed.
+              The reader saw the cards reshuffle and could not tell 300 m
+              from 3 km, or whether the sort had taken at all. A figure on
+              each card is the evidence of the order, and the one fact the
+              reader who chose that order is asking for: whether it is a
+              walk. So the screen hands the distance over only with that
+              sort — a figure under "Recommended" would not match the
+              order it sat in, and every "why is 0.5 km under 3 km" would
+              be earned.
+
+              ── why this order on the line ──
+
+              District, then distance, then hour. District first because
+              the line reads as a sentence about a place and that is its
+              subject; the distance after it, as "Kim Liên · 850 m" reads
+              and "850 m · Kim Liên" does not. The hour stays last because
+              the line clips its tail on a long district and the hour is
+              the fact that was already chosen to give way (see the vibe
+              note above): the figure that justifies the order must not be
+              the one that is cut.
+
+              ── why the weight and not the colour ──
+
+              Semibold in the district's grey. The hour on this line is
+              already amber and bold for the forty-five minutes it is
+              urgent, and a second accent on a 13pt line leaves neither
+              one an accent. Weight alone lifts the figure enough to be
+              found at a glance down the feed.
+
+              The glyph changes with it: the pin marks a place on a map,
+              the arrow is the sort's own mark in the filter sheet, and a
+              line that says "from where you are" should wear the mark of
+              the control that asked for it. */}
+          {(where || far || when || place.vibe_tags.length > 0) && (
             <View style={s.metaRow}>
-              {(where || when) ? (
+              {(where || far || when) ? (
                 <View style={s.whereRow}>
-                  {where
-                    ? <Ionicons name="location-outline" size={13} color={colors.textTertiary} />
+                  {(where || far)
+                    ? <Ionicons name={far ? 'navigate-outline' : 'location-outline'} size={13} color={colors.textTertiary} />
                     : null}
                   <Text style={s.where} numberOfLines={1}>
                     {where}
-                    {where && when ? ' · ' : ''}
+                    {where && far ? ' · ' : ''}
+                    {far ? <Text style={s.far}>{far}</Text> : null}
+                    {(where || far) && when ? ' · ' : ''}
                     {when ? <Text style={s.soon}>{when}</Text> : null}
                   </Text>
                 </View>
@@ -534,6 +584,9 @@ const s = StyleSheet.create({
   // readers most likely to be planning an evening around a closing time
   // are not all seeing the hue.
   soon: { color: colors.soon, fontWeight: font.semibold },
+  // The distance, in the district's grey and the hour's weight — the meta
+  // row's note says why it is weight and not a second colour.
+  far: { fontWeight: font.semibold },
   // The rating supplies its own ground, like the bookmark: a photograph
   // can be any brightness, and a score has to be legible over all of them.
   ratingSlot: {

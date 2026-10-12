@@ -1424,6 +1424,17 @@ export default function ExploreScreen({ navigation }: { navigation: Nav }) {
               <PlaceCard
                 place={item}
                 testID={`place-card-${index}`}
+                // The figure goes with the sort, not with the fix: the
+                // reader may well have a position from the map or from
+                // an earlier sort, and a card under "Recommended" that
+                // said "2.1 km" above one that said "0.4 km" would be
+                // asking the reader to explain the order. Worked out here
+                // rather than kept on the place: one haversine per visible
+                // card is nothing, and the filter already did the same
+                // sum to order them.
+                distanceKm={appliedFilters.sort === 'distance' && sortOrigin && item.lat != null && item.lng != null
+                  ? distanceKm(sortOrigin.lat, sortOrigin.lng, item.lat, item.lng)
+                  : null}
                 onPress={() => navigation.navigate('PlaceDetail', { slug: item.slug })}
               />
             )}
