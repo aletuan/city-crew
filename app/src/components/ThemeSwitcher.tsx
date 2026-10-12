@@ -100,14 +100,23 @@
 // sparkles, which is Violet's), the tab bar's pill colours (`badgeSolid`
 // under `pillInk`, the one pair in every look with a 4.5:1 floor between
 // them, and opaque, so it carries its own contrast onto any page the
-// swatch is painted in), 4pt over the swatch's edge so it reads as a tag
-// on the card rather than part of the painting, and the swatch's hairline
+// swatch is painted in), over the swatch's edge so it reads as a tag on
+// the card rather than part of the painting, and the swatch's hairline
 // rather than a shadow, which nothing else in the app has. The first cut
 // was a quiet chip in the sheet's ground, inside the swatch; the owner's
 // reference (a mint pill with a star, overhanging) was louder, and a word
 // too quiet to notice is not doing a word's job. The pill wears the look
 // being worn, as the tick and the chosen name do: it is the sheet's
 // chrome, not the swatch's.
+//
+// And the swatch sits 12pt in from the card's edge, not 8, since the
+// same evening. At 8 the pill hung 4pt from the card's edge, on the curve
+// of its rounded corner, and read as touching the border. Two ways out:
+// move the pill along the edge past the curve, or give every card more
+// margin. The owner chose the margin — the preview does not need the
+// width — so all fourteen swatches are 8pt narrower and 4pt shorter (48,
+// so the card is no taller), and the pill sits 10pt from the card's edge
+// on three of them, 2pt over the swatch.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -549,28 +558,33 @@ const s = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   // Two to a line: half the row less half the gap between.
   cardCell: { width: '48.5%' },
-  card: { padding: 8, borderRadius: radius.card - 6, backgroundColor: colors.surfaceGlass },
+  // 12pt, not 8, so the word's pill clears the corner — see the header.
+  card: { padding: 12, borderRadius: radius.card - 6, backgroundColor: colors.surfaceGlass },
   cardLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 8, paddingHorizontal: 2, minHeight: 28 },
   cardTitle: { flex: 1, color: colors.text, fontSize: 15, fontWeight: font.medium },
   // A neutral hairline, half-grey, because the swatch is a pale page on a
   // dark sheet as often as a dark page on a pale one, and has to stand out
   // from either. Plain rgba, not a token: a token here would be the look
   // being worn, not the look being drawn.
+  // 48, down from 52 when the card's padding grew by 4 each way, so the
+  // card is no taller than it was; the lines still start 16pt down,
+  // 4pt under where the pill ends.
   swatch: {
-    height: 52, borderRadius: radius.card - 10, flexDirection: 'row', alignItems: 'center',
+    height: 48, borderRadius: radius.card - 10, flexDirection: 'row', alignItems: 'center',
     gap: 8, paddingHorizontal: 10,
     borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(128,128,128,0.35)',
   },
   swatchLine: { height: 5, borderRadius: 2.5 },
   swatchPill: { width: 26, height: 18, borderRadius: 9 },
   swatchDot: { width: 18, height: 18, borderRadius: 9 },
-  // The word, hung on the swatch's top-left corner: 4pt over the swatch's
-  // edge on both sides (the card's 8pt padding, less 4), so it reads as a
-  // tag on the card. The tab bar's pill colours — `badgeSolid`, with the
-  // ink set inline per side since `pillInk` is a pair and not a token —
-  // and the swatch's hairline instead of a shadow.
+  // The word, hung on the swatch's top-left corner: 10pt from the card's
+  // edge (its 12pt padding, less 2), clear of the corner's curve, and 2pt
+  // over the swatch, so it reads as a tag on the card. The tab bar's pill
+  // colours — `badgeSolid`, with the ink set inline per side since
+  // `pillInk` is a pair and not a token — and the swatch's hairline
+  // instead of a shadow.
   word: {
-    position: 'absolute', top: 4, left: 4,
+    position: 'absolute', top: 10, left: 10,
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 7, paddingVertical: 2, borderRadius: 9,
     backgroundColor: colors.badgeSolid,
