@@ -12,8 +12,10 @@
 // came from four two-tone references on 11 Oct 2026 — blush and slate,
 // light; midnight and navy, dark — and two more that day, chocolate and
 // cosmic, both dark; then three more, duck (light), honey and royal
-// (dark); and on 12 Oct plum, violet and wine, all dark. Each has its
-// note on its palette.
+// (dark); on 12 Oct plum, violet and wine, all dark; and that evening
+// four more from four two-tone references — maroon, neon and ember,
+// dark, and amber, the one light look among them. Each has its note on
+// its palette.
 //
 // Notes on a token below were written for the standard pair and the coffee
 // brown; a figure for another palette says which it is, and `theme.test.ts`
@@ -1012,11 +1014,250 @@ const WINE: Palette = {
   accentFade: 'rgba(245,143,176,0.02)',
 };
 
+/**
+ * "Đỏ mận" (12 Oct 2026): the owner's "Chữ đỏ mận / Chữ be kem"
+ * reference, #3D1223 and #E5D0B6, as a dark look.
+ *
+ * The maroon is the page (0.015, between the violet's and the coffee
+ * brown's weight) and the cream is everything that sits on it: the
+ * secondary type (10.0), the accent (10.7) and the fill, under maroon
+ * ink (10.7) — the reference has two colours and this look keeps to
+ * them, which is what tells it from Wine, whose page is a step redder
+ * and whose accent is a pink. The primary type is the cream warmed
+ * toward white (13.7), the tertiary a dusty tan (6.1, 1.64 under the
+ * secondary). Elevated surfaces lift the page by a tenth of its own red,
+ * as every dark look's do.
+ */
+const MAROON: Palette = {
+  bg: '#3D1223',
+  bgElevated: '#4B1A2C',
+  bgElevatedVeil: 'rgba(61,18,35,0.9)',
+  surfaceCard: 'rgba(85,34,53,0.72)',
+  surfaceGlass: 'rgba(247,235,221,0.06)',
+  surfaceGlassStrong: 'rgba(247,235,221,0.12)',
+  borderGlass: 'rgba(222,201,176,0.22)',
+  borderGlassSoft: 'rgba(222,201,176,0.14)',
+  text: '#F7EBDD',
+  textSecondary: '#DEC9B0',
+  textTertiary: '#B89A86',
+  accent: '#E5D0B6',
+  accentFill: '#E5D0B6',
+  badge: '#E5D0B6',
+  badgeSolid: '#E5D0B6',
+  badgeInk: '#3D1223',
+  accentBright: '#E5D0B6',
+  accentInk: '#3D1223',
+  accentSoft: 'rgba(229,208,182,0.14)',
+  accentLine: 'rgba(229,208,182,0.32)',
+  accentFaint: 'rgba(229,208,182,0.62)',
+  emberGlow: 'rgba(229,208,182,0.14)',
+  emberGlowFade: 'rgba(229,208,182,0.05)',
+  sun: '#F2B441',
+  soon: '#F2B441',
+  ok: '#BFD9A0',
+  open: '#BFD9A0',
+  shutInk: '#F3B5AA',
+  ink: '#F0DFCB',
+  bad: '#F2A99D',
+  badSoft: '#5E2A36',
+  okSoft: '#3F3B2A',
+  okInk: '#BFD9A0',
+  gradAI: ['#E5D0B6', '#D8BE9F'],
+  ringTrack: '#5E2A3B',
+  pillInk: '#3D1223',
+  heartInk: '#E5D0B6',
+  onPhotoAccent: '#E5D0B6',
+  glassVeil: 'rgba(61,18,35,0.48)',
+  glassHalo: 'rgba(61,18,35,0.95)',
+  accentFade: 'rgba(229,208,182,0.02)',
+};
+
+/**
+ * "Vàng đậm" (12 Oct 2026): the owner's "Chữ vàng đậm / Chữ đen than"
+ * reference, #FEB431 and #191820 — taken as the *light* half, amber page
+ * under charcoal type, because the dark half is Honey: #EDCA3B on
+ * #1E1608 is the same reading a shade browner, and a second of it would
+ * be a card the reader could not tell from the first.
+ *
+ * An amber page is the loudest ground in the set (0.54 — Rose's yellow
+ * is 0.84), and the charcoal is both the type and the accent: links,
+ * ticks and the pick mark are charcoal on amber (9.9), the fill is
+ * charcoal under amber ink (9.9), and the tab bar's pill is the
+ * secondary's near-black under a pale amber (8.8). Secondary and
+ * tertiary type are the charcoal let up through brown (7.0 and 4.9, 1.43
+ * apart — the floor, held by the tertiary at #574930: one step lighter
+ * reads 4.4 on the page). Elevated surfaces are the page let up to a
+ * straw (0.65), the one direction a saturated page can go. The warnings
+ * are dark on it where every other look's are light: the amber `soon`
+ * of the dark looks would vanish into this page, so it is a brown
+ * (4.9 on the straw).
+ */
+const AMBER: Palette = {
+  bg: '#FEB431',
+  bgElevated: '#FFCB66',
+  bgElevatedVeil: 'rgba(254,180,49,0.88)',
+  surfaceCard: '#FFCB66',
+  surfaceGlass: 'rgba(25,24,32,0.06)',
+  surfaceGlassStrong: 'rgba(25,24,32,0.10)',
+  borderGlass: 'rgba(25,24,32,0.16)',
+  borderGlassSoft: 'rgba(25,24,32,0.09)',
+  text: '#191820',
+  textSecondary: '#3A3326',
+  textTertiary: '#574930',
+  accent: '#191820',
+  accentFill: '#191820',
+  badge: 'rgba(25,24,32,0.16)',
+  badgeSolid: '#3A3326',
+  badgeInk: '#FFD27A',
+  accentBright: '#2A2430',
+  accentInk: '#FEB431',
+  accentSoft: 'rgba(25,24,32,0.10)',
+  accentLine: 'rgba(25,24,32,0.32)',
+  accentFaint: 'rgba(25,24,32,0.72)',
+  emberGlow: 'rgba(25,24,32,0.10)',
+  emberGlowFade: 'rgba(25,24,32,0.03)',
+  sun: '#7A4E00',
+  soon: '#7A4E00',
+  ok: '#1F5A2E',
+  open: '#1F5A2E',
+  shutInk: '#8C2B1F',
+  ink: '#221E1A',
+  bad: '#8C2B1F',
+  badSoft: '#FFD7C2',
+  okSoft: '#F6E2A8',
+  okInk: '#1F5A2E',
+  gradAI: ['#191820', '#2A2430'],
+  ringTrack: '#E9A52A',
+  pillInk: '#FFD27A',
+  heartInk: '#191820',
+  onPhotoAccent: '#FEB431',
+  glassVeil: 'rgba(255,203,102,0.48)',
+  glassHalo: 'rgba(255,203,102,0.95)',
+  accentFade: 'rgba(25,24,32,0.02)',
+};
+
+/**
+ * "Hồng neon" (12 Oct 2026): the owner's "Tím hồng neon / Tím mận tối"
+ * reference, #E670E5 and #271627, as a dark look.
+ *
+ * The dark plum is the page (0.012, Violet's neighbour) and the neon is
+ * the accent at full strength (6.4 on the page, 4.9 over a white map
+ * tile through the veil) — not lifted, as Wine's red had to be, because
+ * a neon is already light enough to be read and lifting it would be
+ * dimming it. The fill is the neon under plum ink (6.4), and so is the
+ * pill. What tells it from Violet is exactly that: Violet's accent is a
+ * lavender a reader rests on, this one is a sign in a window. Type is a
+ * pale rose-white, its secondary a greyed mauve and its tertiary a
+ * dusty one (15.1, 10.8 and 6.4; 1.70 apart).
+ */
+const NEON: Palette = {
+  bg: '#271627',
+  bgElevated: '#341E34',
+  bgElevatedVeil: 'rgba(39,22,39,0.9)',
+  surfaceCard: 'rgba(62,36,62,0.72)',
+  surfaceGlass: 'rgba(247,238,246,0.06)',
+  surfaceGlassStrong: 'rgba(247,238,246,0.12)',
+  borderGlass: 'rgba(220,200,218,0.22)',
+  borderGlassSoft: 'rgba(220,200,218,0.14)',
+  text: '#F7EEF6',
+  textSecondary: '#DCC8DA',
+  textTertiary: '#B096AE',
+  accent: '#E670E5',
+  accentFill: '#E670E5',
+  badge: '#E670E5',
+  badgeSolid: '#E670E5',
+  badgeInk: '#271627',
+  accentBright: '#E670E5',
+  accentInk: '#271627',
+  accentSoft: 'rgba(230,112,229,0.16)',
+  accentLine: 'rgba(230,112,229,0.32)',
+  accentFaint: 'rgba(230,112,229,0.62)',
+  emberGlow: 'rgba(230,112,229,0.16)',
+  emberGlowFade: 'rgba(230,112,229,0.05)',
+  sun: '#F2B441',
+  soon: '#F2B441',
+  ok: '#B9D89A',
+  open: '#B9D89A',
+  shutInk: '#F3B5AA',
+  ink: '#EFE2ED',
+  bad: '#F2A99D',
+  badSoft: '#4F2340',
+  okSoft: '#2E3A2A',
+  okInk: '#B9D89A',
+  gradAI: ['#E670E5', '#D45AD3'],
+  ringTrack: '#4A2A4A',
+  pillInk: '#271627',
+  heartInk: '#E670E5',
+  onPhotoAccent: '#E670E5',
+  glassVeil: 'rgba(39,22,39,0.48)',
+  glassHalo: 'rgba(39,22,39,0.95)',
+  accentFade: 'rgba(230,112,229,0.02)',
+};
+
+/**
+ * "Cam cháy" (12 Oct 2026): the owner's "Chữ đen cafe / Chữ cam cháy"
+ * reference, #0C0903 and #F46809, as a dark look.
+ *
+ * The page is a black with coffee in it (0.003 — the charcoal's weight,
+ * and the warmth is the whole of the difference between the two pages)
+ * and the burnt orange is the accent at full strength (6.5 on the page,
+ * 5.1 over a white tile through the veil), the fill and the pill under
+ * black ink (6.5). It is the standard dark look's own shape — one hot
+ * colour on near-black — and the reason it is a look of its own is the
+ * hue: the coral #FF6F5B has pink in it, this has none, and the two
+ * read as different rooms. Type is a warm off-white, its secondary a
+ * parchment and its tertiary a taupe (17.5, 12.8 and 7.0; 1.82 apart).
+ */
+const EMBER: Palette = {
+  bg: '#0C0903',
+  bgElevated: '#1A1510',
+  bgElevatedVeil: 'rgba(12,9,3,0.9)',
+  surfaceCard: 'rgba(36,29,22,0.72)',
+  surfaceGlass: 'rgba(246,239,232,0.06)',
+  surfaceGlassStrong: 'rgba(246,239,232,0.12)',
+  borderGlass: 'rgba(217,205,194,0.22)',
+  borderGlassSoft: 'rgba(217,205,194,0.14)',
+  text: '#F6EFE8',
+  textSecondary: '#D9CDC2',
+  textTertiary: '#A69787',
+  accent: '#F46809',
+  accentFill: '#F46809',
+  badge: '#F46809',
+  badgeSolid: '#F46809',
+  badgeInk: '#0C0903',
+  accentBright: '#F46809',
+  accentInk: '#0C0903',
+  accentSoft: 'rgba(244,104,9,0.14)',
+  accentLine: 'rgba(244,104,9,0.32)',
+  accentFaint: 'rgba(244,104,9,0.62)',
+  emberGlow: 'rgba(244,104,9,0.16)',
+  emberGlowFade: 'rgba(244,104,9,0.05)',
+  sun: '#F2B441',
+  soon: '#F2B441',
+  ok: '#B9D89A',
+  open: '#B9D89A',
+  shutInk: '#F3B5AA',
+  ink: '#EDE3D9',
+  bad: '#F2A99D',
+  badSoft: '#4A2418',
+  okSoft: '#2A3324',
+  okInk: '#B9D89A',
+  gradAI: ['#F46809', '#E05A05'],
+  ringTrack: '#2E2419',
+  pillInk: '#0C0903',
+  heartInk: '#F46809',
+  onPhotoAccent: '#F46809',
+  glassVeil: 'rgba(12,9,3,0.48)',
+  glassHalo: 'rgba(12,9,3,0.95)',
+  accentFade: 'rgba(244,104,9,0.02)',
+};
+
 export const PALETTES = {
   paper: PAPER, charcoal: CHARCOAL, coffee: COFFEE, rose: ROSE,
   blush: BLUSH, slate: SLATE, midnight: MIDNIGHT, navy: NAVY,
   chocolate: CHOCOLATE, cosmic: COSMIC, duck: DUCK, honey: HONEY, royal: ROYAL,
   plum: PLUM, violet: VIOLET, wine: WINE,
+  maroon: MAROON, amber: AMBER, neon: NEON, ember: EMBER,
 } as const;
 
 /** Each look's two sides: the light half and the dark half of every pair. */
@@ -1036,6 +1277,10 @@ export const LOOKS: Record<Look, { light: Palette; dark: Palette }> = {
   plum: { light: PLUM, dark: PLUM },
   violet: { light: VIOLET, dark: VIOLET },
   wine: { light: WINE, dark: WINE },
+  maroon: { light: MAROON, dark: MAROON },
+  amber: { light: AMBER, dark: AMBER },
+  neon: { light: NEON, dark: NEON },
+  ember: { light: EMBER, dark: EMBER },
 };
 
 /**

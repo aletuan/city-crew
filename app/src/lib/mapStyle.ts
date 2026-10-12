@@ -281,6 +281,66 @@ const WINE_NIGHT: MapStyleRule[] = [
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#A77A8A' }] },
 ];
 
+// Maroon (12 Oct 2026): wine's reading a step darker and browner — land a
+// lift above the page in its own red, parks a warm umber, water below.
+const MAROON_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#4E1A2E' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#DEC9B0' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#3D1223' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#6A2A40' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#F7EBDD' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#4A3430' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#4A3430' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#5A2238' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#B89A86' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#662A41' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#76344E' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#F0DFCB' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#5A2238' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#250A15' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9A7A86' }] },
+];
+
+// Neon (12 Oct 2026): violet's reading on the darker plum — the land a
+// lift in the same plum, the neon kept off the tiles for the pins.
+const NEON_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#352038' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#DCC8DA' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#271627' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#4E2E4E' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#F7EEF6' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#38322F' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#38322F' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#452A48' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#B096AE' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#532F57' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#633A68' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#EFE2ED' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#452A48' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#170B17' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#8E7A8B' }] },
+];
+
+// Ember (12 Oct 2026): charcoal's reading with coffee in the black — the
+// land a lift in warm greys, parks an olive, water the one true black.
+const EMBER_NIGHT: MapStyleRule[] = [
+  { elementType: 'geometry', stylers: [{ color: '#1B1612' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#D9CDC2' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0C0903' }] },
+  { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#3A2E24' }] },
+  { featureType: 'administrative.locality', elementType: 'labels.text.fill', stylers: [{ color: '#F6EFE8' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#24291B' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#24291B' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2A221C' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#A69787' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#36291F' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#473424' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#EDE3D9' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#2A221C' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#040201' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#7F7066' }] },
+];
+
 /** Each dark look's own night; a dark look not named here is charcoal's. */
 const NIGHTS: Partial<Record<Look, MapStyleRule[]>> = {
   coffee: COFFEE_NIGHT,
@@ -293,12 +353,16 @@ const NIGHTS: Partial<Record<Look, MapStyleRule[]>> = {
   plum: PLUM_NIGHT,
   violet: VIOLET_NIGHT,
   wine: WINE_NIGHT,
+  maroon: MAROON_NIGHT,
+  neon: NEON_NIGHT,
+  ember: EMBER_NIGHT,
 };
 
 /**
  * The style for a map that carries our own pins, in the reading the
- * reader chose in Profile. The light looks — Rose, Blush, Slate, Teal — take
- * Google's own day map, as paper does; each dark look its own night.
+ * reader chose in Profile. The light looks — Rose, Blush, Slate, Teal,
+ * Amber — take Google's own day map, as paper does; each dark look its
+ * own night.
  *
  * Not for `MiniMap`, which is a picker: there the reader is choosing a
  * point on the map rather than reading ours off it, and Google's badges
