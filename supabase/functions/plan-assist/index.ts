@@ -351,6 +351,7 @@ Deno.serve(async (req) => {
         input_tokens: parsed.usage.input_tokens,
         output_tokens: parsed.usage.output_tokens,
         cache_read: parsed.usage.cache_read_input_tokens,
+        cache_creation: parsed.usage.cache_creation_input_tokens,
       });
 
       return json({
@@ -472,6 +473,16 @@ Deno.serve(async (req) => {
       input_tokens: message.usage.input_tokens,
       output_tokens: message.usage.output_tokens,
       cache_read: message.usage.cache_read_input_tokens,
+      // Both halves of the cache, since 12 Oct 2026. Nine narrations in
+      // a row read `cache_read: 0` across minutes, inside the five-minute
+      // window, with the 786-token system prompt absent from
+      // `input_tokens` — so it was being written somewhere and never read
+      // back. Whether it is written at all is the next question, and this
+      // is the number that answers it. The suspect is the output schema:
+      // its `slug` enum is the plan's own slugs, so it differs per
+      // request, and if it sits before the system prompt in the cached
+      // prefix every request is a new prefix.
+      cache_creation: message.usage.cache_creation_input_tokens,
     });
 
     return json({
