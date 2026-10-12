@@ -5,22 +5,17 @@ import { PINNED, type Pinned } from './look';
 const looks = Object.keys(PINNED) as Pinned[];
 
 describe('popularLooks', () => {
-  it('names the most worn first, and no more than three', () => {
-    const counts = { coffee: 40, wine: 55, rose: 21, cosmic: 30, navy: 25 };
-    expect(popularLooks(counts, looks)).toEqual(['wine', 'coffee', 'cosmic']);
+  it('keeps the server’s order, and no more than three', () => {
+    expect(popularLooks(['wine', 'coffee', 'cosmic', 'navy', 'rose'], looks)).toEqual(['wine', 'coffee', 'cosmic']);
     expect(POPULAR_SHOWN).toBe(3);
   });
 
-  it('names nothing the server did not: a count of zero, a missing one, a theme that is not a look', () => {
-    expect(popularLooks({}, looks)).toEqual([]);
-    expect(popularLooks({ coffee: 0, dark: 90, system: 40 }, looks)).toEqual([]);
-    expect(popularLooks({ plum: 20 }, looks)).toEqual(['plum']);
-  });
-
-  // Two looks level on the server must not swap between openings: the
-  // sheet's order is the tie-break, whatever order the counts arrived in.
-  it('keeps the sheet’s order between looks that are level', () => {
-    expect(popularLooks({ wine: 20, coffee: 20, honey: 20, rose: 20 }, looks)).toEqual(['coffee', 'rose', 'honey']);
+  // Dark can be the most worn setting of all; the grounds are a list and
+  // carry no word, and the slot it would take goes to the next look.
+  it('passes over a ground the server named, and anything it does not know', () => {
+    expect(popularLooks([], looks)).toEqual([]);
+    expect(popularLooks(['dark', 'system'], looks)).toEqual([]);
+    expect(popularLooks(['dark', 'plum', 'light', 'wine', 'lavender', 'rose', 'coffee'], looks)).toEqual(['plum', 'wine', 'rose']);
   });
 });
 

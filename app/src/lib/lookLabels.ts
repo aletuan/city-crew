@@ -15,15 +15,17 @@
 //
 // ── Popular ──
 //
-// What people wear, not what they tap: the server counts
-// `preferences.theme` (`theme_counts`, see the migration for why a tap
-// counter measures the wrong thing) and says a figure only for a theme
-// past twenty wearers, so a small user base shows no badge at all rather
-// than "2 people". The three most worn of what it says get the word, no
-// number: a number on fourteen cards invites comparing fourteen numbers
-// in a choice that is about colour, and VS Code — which the owner had in
-// mind — keeps its install counts in the Marketplace and shows none in
-// its theme picker.
+// What people wear, not what they tap, and a share, not a count. The
+// server reads `preferences.theme` and names the themes at least a fifth
+// of the accounts that chose one wear, and at least two, most worn first
+// (`popular_themes`; the migration says why a tap counter measures the
+// wrong thing and why a fixed count is wrong at both ends — two of three
+// readers is popular, twenty of ten thousand is not). It says names and
+// no figures, so a small user base never puts "1 wears Wine" on a public
+// wire. The first three looks it names get the word, no number: a number
+// on fourteen cards invites comparing fourteen numbers in a choice that
+// is about colour, and VS Code — which the owner had in mind — keeps its
+// install counts in the Marketplace and shows none in its theme picker.
 //
 // ── New ──
 //
@@ -49,17 +51,14 @@ export const POPULAR_SHOWN = 3;
 export const SEEN_LOOKS_KEY = 'citycrew.seenLooks';
 
 /**
- * The looks that get "Popular": the most worn first, up to
- * `POPULAR_SHOWN`, among those the server said a figure for. A theme the
- * server did not name — under its threshold, or not a look at all — gets
- * nothing. Ties keep the sheet's order, so two looks level on the server
- * do not swap places between openings.
+ * The looks that get "Popular": the first `POPULAR_SHOWN` looks among the
+ * themes the server named, in the server's order. A ground the server
+ * named — Dark can be the most worn setting of all — gets nothing: the
+ * grounds are a list, and the word is for the cards.
  */
-export function popularLooks(counts: Record<string, number>, looks: readonly Pinned[]): Pinned[] {
-  return looks
-    .filter((id) => (counts[id] ?? 0) > 0)
-    .sort((a, b) => counts[b] - counts[a])
-    .slice(0, POPULAR_SHOWN);
+export function popularLooks(popular: readonly string[], looks: readonly Pinned[]): Pinned[] {
+  const isLook = new Set<string>(looks);
+  return popular.filter((id): id is Pinned => isLook.has(id)).slice(0, POPULAR_SHOWN);
 }
 
 /**

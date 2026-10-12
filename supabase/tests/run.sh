@@ -256,13 +256,15 @@ for f in "$ROOT"/supabase/migrations/*_preferences_theme.sql; do
 done
 run "$DB" -f "$HERE/preferences_theme_test.sql"
 
-# The count of wearers per theme (12 Oct 2026). After the column it
-# counts; its test seeds and removes its own twenty-four accounts.
-echo "→ theme counts"
-for f in "$ROOT"/supabase/migrations/*_theme_counts.sql; do
+# Which themes are popular (12 Oct 2026): the count function, then the
+# share function that replaced it the same day. After the column they
+# read; the test seeds and removes its own ten accounts.
+echo "→ popular themes"
+for f in "$ROOT"/supabase/migrations/*_theme_counts.sql \
+         "$ROOT"/supabase/migrations/*_popular_themes.sql; do
   run "$DB" -f "$f" >/dev/null
 done
-run "$DB" -f "$HERE/theme_counts_test.sql"
+run "$DB" -f "$HERE/popular_themes_test.sql"
 
 # The daily caps. After preferences and the collection blocks, because the
 # policies it rewrites count rows in those tables; it seeds and removes
