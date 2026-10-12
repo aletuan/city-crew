@@ -506,17 +506,27 @@ describe('the looks', () => {
       expect(fetchPopularThemes).toHaveBeenCalledTimes(2);
     });
 
-    // The word is drawn in the sheet's own colours with the swatch's
-    // hairline, so it reads on a pale page and a dark one alike.
-    it('draws the word in the sheet’s own ground, on the swatch', async () => {
+    // The word is a pill in the tab bar's colours, hung over the swatch's
+    // corner with the swatch's hairline — see the sheet's header for the
+    // owner's reference and what was kept of it.
+    it('hangs the word on the swatch as a pill, with a glyph for Popular and a dot for New', async () => {
+      await AsyncStorage.setItem(SEEN_LOOKS_KEY, JSON.stringify(ALL.filter((l) => l !== 'plum')));
       named.value = ['wine'];
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       await settled();
       const word = screen.getByTestId('theme-wine-popular');
       expect(screen.getByTestId('theme-wine').contains(word)).toBe(true);
+      expect(word.querySelector('[data-icon="people"]')).toBeTruthy();
+      expect(word.querySelector('[data-icon="star"]')).toBeNull();
       const style = getComputedStyle(word);
       expect(style.position).toBe('absolute');
+      expect(style.top).toBe('4px');
+      expect(style.left).toBe('4px');
       expect(style.borderTopColor).toBe('rgba(128, 128, 128, 0.35)');
+      expect(style.boxShadow === '' || style.boxShadow === 'none').toBe(true);
+      const fresh = screen.getByTestId('theme-plum-new');
+      expect(fresh.querySelector('[data-icon]')).toBeNull();
+      expect(screen.getByTestId('theme-plum-new-dot')).toBeTruthy();
     });
   });
 
