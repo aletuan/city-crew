@@ -756,33 +756,45 @@ Kiếm, `claude-opus-5`, `effort: "low"`.
 
 | Khoản | Token | Ghi chú |
 |---|---|---|
-| System prompt | 786 | Trên ngưỡng cache 512 của Opus 5 → cache có hiệu lực |
-| Phần thay đổi (draft + stop) | 260 | Nằm sau breakpoint cache |
+| System prompt | 786 | Cộng thêm đoạn API tự chèn mô tả schema: ~800 |
+| Phần thay đổi (draft + stop) | 260 | |
 | Ra | 219 | `thinking_tokens: 0` ở `effort: "low"` |
 
-| Model | Lần đầu (ghi cache) | Lần sau (đọc cache) | 1.000 lần/tháng |
-|---|---|---|---|
-| `claude-opus-5` (đến 11 Oct 2026) | ~$0.0117 | ~$0.0072 | ~$8 |
-| `claude-haiku-5-5` (hiện tại) | ~$0.00024 | ~$0.00014 | ~$0.14 |
+| Model | Mỗi lần | 1.000 lần/tháng |
+|---|---|---|
+| `claude-opus-5` (đến 11 Oct 2026) | ~$0.0117 | ~$12 |
+| `claude-haiku-5-5` (hiện tại) | ~$0.00022 | ~$0.22 |
 
 Dòng Haiku tính từ cùng số token đo ở trên với giá $0.10/$0.50 mỗi triệu
-token vào/ra (đọc cache $0.01). Ngưỡng cache của Haiku 5.5 cũng là 512 nên
-prompt 786 token vẫn cache. Đổi vì hai việc này đều nhỏ và bị rào bằng
-schema enum; chất lượng câu tiếng Việt cần đọc lại trên plan thật sau khi
-đổi, và nếu phẳng thì `claude-sonnet-5-5` là bậc giữa ($2/$10).
+token vào/ra. Đổi vì hai việc này đều nhỏ và bị rào bằng schema enum; chất
+lượng câu tiếng Việt cần đọc lại trên plan thật sau khi đổi, và nếu phẳng
+thì `claude-sonnet-5-5` là bậc giữa ($2/$10).
 
-`parse` rẻ hơn nhiều — system prompt 1.115 token (cũng cache được), vào ~130,
-ra ~45: **~$0.0023 mỗi lần** khi cache ấm, tức ~$2/1.000 lần. Cũng đo thật.
+**Cache của `narrate` tắt từ 12 Oct 2026, và chưa bao giờ đọc được.** Tám
+narration có log `cache_creation` cho thấy prefix được ghi mỗi lần (779–818
+token, không lần nào bằng nhau) và không lần nào đọc lại. Nguyên nhân là
+output schema: structured outputs chèn thêm một system prompt mô tả schema
+vào prefix được cache, và enum `slug` trong schema là slug của chính plan
+đó, nên mỗi plan là một prefix mới. Bật `cache_control` chỉ trả thêm 25%
+phí ghi trên ~800 token cho một lần đọc không bao giờ tới, đắt hơn không
+cache khoảng 9% mỗi lần. Cách sửa đã biết (model trả về số thứ tự stop,
+enum cố định "1".."8", hàm ánh xạ lại slug) để dành tới khi lưu lượng đủ
+dày: một lần đọc cần plan thứ hai bắt đầu trong vòng năm phút sau plan
+trước, ba thẻ của một lượt tạo plan gọi cùng một giây nên không đọc được
+của nhau, và ở giá Haiku toàn bộ chênh lệch là một phần ba của $0.00024.
+
+`parse` rẻ hơn nhiều — system prompt 1.115 token, vẫn có `cache_control` vì
+schema của nó chỉ đổi theo thành phố; vào ~130, ra ~45: **~$0.0023 mỗi lần**
+khi cache ấm, tức ~$2/1.000 lần. Cũng đo thật.
 
 Regenerate **không tốn gì** — nó chạy lại `planner.ts` thuần ở client, và lời
 gọi model chỉ xảy ra khi người dùng đã bấm vào một phương án. Đây là điều thiết
 kế cũ (đặt tên cả ba ở PlanOptions) không có, và là lý do chính để đổi.
 
-- **Cache** — system prompt, taxonomy và slot template là bất biến, đặt
-  `cache_control: {type:"ephemeral"}` ở cuối khối system. Ngưỡng cache tối
-  thiểu là 512 token trên Opus 5 và 1024 trên Sonnet 5; prompt hệ thống dự kiến
-  ~800–1200 token nên cache có hiệu lực trên Opus 5, còn Sonnet 5 thì cần prompt
-  đủ dài mới ăn.
+- **Cache** — thiết kế ban đầu đặt `cache_control: {type:"ephemeral"}` ở
+  cuối khối system vì system prompt là bất biến. Đo thật thì prefix không
+  bất biến (xem trên): schema enum theo plan nằm trong prefix. `narrate` tắt
+  cache; `parse` giữ, vì schema của nó bất biến trong một thành phố.
 - **Cap** — **không có cap theo tài khoản**, và đây là chỗ tài liệu ban đầu
   sai. Cap `narrate` không suy được từ `trips`: một người bấm vào phương án rồi
   không lưu vẫn tốn một lời gọi mà không để lại row nào. Đếm `trips` là đếm
