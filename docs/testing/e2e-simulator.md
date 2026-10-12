@@ -48,7 +48,7 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `06-save-place` | test account | 1 m 21 s |
 | `08-explore-filter` | guest | 50 s |
 | `09-collections-browse` | guest | 42 s |
-| `15-theme` | test account | 3 m 17 s |
+| `15-theme` | hai tài khoản test (A, B) | 5 m 48 s |
 | `10-check-in` | test account | 1 m 9 s |
 | `11-collection-crud` | test account | 2 m |
 | `13-trip-edit` | test account | 1 m 49 s |
@@ -57,10 +57,21 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
 **Kết quả gần nhất:** 12/10/2026, iPhone 17 · iOS 26.5 · Expo Go, code tại
-`0266e50b` (main, gồm #886 Ideas và #889 theme theo tài khoản) cộng bản sửa
-`15-theme` — **15/15 passed trong 19 m 21 s**. `05-plan-trip` và
-`13-trip-edit` xanh sau đổi phần bộ sưu tập của Ideas. `15-theme` lần đầu
-chạy trên simulator đã đỏ ở hai chỗ, cả hai do flow, không do app: dấu tick
+`53d7f176` (main, gồm #890 và #891) cộng `15-theme` mở rộng — **15/15 passed
+trong 22 m 2 s**. `15-theme` giờ dùng hai tài khoản: B (`citycrew-maestro-2`
+trong Keychain, theme Light, flow không bao giờ đổi) đăng nhập trên máy A vừa
+để Dark và phải nhận Light của mình; A sau B phải nhận lại Dark. Một khách
+một mình không phân biệt được "đọc theme của tài khoản" với "giữ theme của
+máy" sau khi đăng xuất để lại theme của tài khoản trên máy; tài khoản thứ hai
+với lựa chọn khác thì phân biệt được. Đã kiểm với một bản app cố ý hỏng (bỏ
+qua việc đọc theme khi đổi sang tài khoản khác): flow đỏ đúng ở bước B.
+Lượt chạy sau bản hỏng đó cũng đỏ, vì bản hỏng dừng giữa chừng khi B còn
+đăng nhập và `ensure-signed-in` giữ phiên đó, coi B là A, chọn Dark lên tài
+khoản B. `15-theme` giờ đăng xuất trước rồi đăng nhập A bằng tay.
+
+Trước đó cùng ngày: 15/15 trong 19 m 21 s với `15-theme` một tài khoản (3 m
+17 s). Lần đầu chạy trên simulator, flow đó đỏ ở hai chỗ, cả hai do flow,
+không do app: dấu tick
 `theme-<id>-on` không có trong cây trợ năng (hàng bấm được là một phần tử;
 dấu tick nằm trong nhãn hàng dưới dạng glyph `\uf21d`), và `tapOn
 theme-close` chạm vào tâm lớp nền phủ cả màn hình — chính là hàng Automatic
@@ -96,9 +107,10 @@ nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái 
 
 **Ngân sách: dưới 20 phút** cho cả suite (quyết định của chủ dự án,
 09/10). Thời gian không phải ràng buộc chặt: một flow đáng giá vẫn vào dù
-làm suite dài thêm một hai phút. 15 flow hiện chạy 19 m 21 s — sát 20; flow
-tiếp theo cần rút ngắn một flow hiện có (`15-theme` 3 m 17 s, `11` 2 m) hoặc
-một quyết định nâng ngân sách.
+làm suite dài thêm một hai phút. 15 flow hiện chạy 22 m 2 s — **vượt 20**
+từ khi `15-theme` có tài khoản thứ hai (+2 m 31 s). Cần rút ngắn một flow
+(`15-theme` 5 m 48 s là dài nhất; bước khách chọn Light có thể bỏ, vì B đã
+kiểm cùng điều đó chặt hơn) hoặc một quyết định nâng ngân sách.
 
 `10-check-in` được thử cả nhánh dọn dẹp: một flow tạm check-in rồi dừng, `10`
 dọn lượt ghé đó rồi chạy hết (1 m 5 s); lượt sau từ trạng thái sạch (51 s);
@@ -185,7 +197,7 @@ sách toàn suite < 20 phút (xem mục 2).
 | Việc | Vì sao cần | Đề xuất |
 |---|---|---|
 | Chạy lại `sign-up-delete` tự động | App Store 5.1.1(v) đang chỉ có QA tay | Tắt AutoFill password suggestions riêng trên simulator smoke (Settings → Passwords → Password Options), thử lại flow; nếu được thì đưa vào `config.yaml` với tag `slow` |
-| Mời bạn vào trip / Crew | Cần hai tài khoản đăng nhập cùng lúc | Tài khoản test thứ hai trong Keychain (`citycrew-maestro-2`); flow A mời, flow B chấp nhận qua `TripInvitationScreen` |
+| Mời bạn vào trip / Crew | Cần hai tài khoản đăng nhập cùng lúc | Tài khoản test thứ hai đã có (`citycrew-maestro-2`, 12/10, `smoke.sh` truyền vào dưới tên `TEST_EMAIL_2`/`TEST_PASSWORD_2`; `15-theme` đang dùng). Còn lại: flow A mời, flow B chấp nhận qua `TripInvitationScreen` |
 | Local guide (ảnh, cover, ẩn ảnh) | Cần quyền guide, ghi vào dữ liệu thật | Chỉ làm khi có Supabase staging; không cấp quyền guide cho test account trên production |
 | Deep link `citycrew://place/<id>` | Link chia sẻ là đường vào của người dùng mới | Cần dev client (Expo Go không nhận scheme của app) |
 | Explore map (`explore-view`, `places-map`, pin → `MapPlaceCard`) | Pin có ảnh là tính năng chính của 1.0.4 | Cần dev client có Google Maps key (`npx expo run:ios`), suite thứ hai với `appId: com.aletuan.citycrew`. Chế độ list/map lưu trong AsyncStorage (`VIEW_KEY`) — flow phải trả về list ở cuối |

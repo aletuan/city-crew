@@ -8,10 +8,12 @@
 #
 # One-time setup (see README.md, "Test account"):
 #   security add-generic-password -s citycrew-maestro -a <test-email> -w
+#   security add-generic-password -s citycrew-maestro-2 -a <second-email> -w
 #
 # Environment overrides: EXPO_URL (default exp://127.0.0.1:8081 — the
 # simulator is on this Mac, so loopback always reaches Metro), TEST_EMAIL,
-# TEST_PASSWORD. Nothing here prints the password.
+# TEST_PASSWORD, TEST_EMAIL_2, TEST_PASSWORD_2. Nothing here prints a
+# password.
 set -euo pipefail
 
 SERVICE=citycrew-maestro
@@ -42,17 +44,25 @@ if ! curl -fs --max-time 3 "$status_url" | grep -q 'packager-status:running'; th
   die "Metro is not answering at ${status_url%/status}. Start it in another tab: cd app && npx expo start"
 fi
 
-# ── test account ──
-if [ -z "${TEST_EMAIL:-}" ]; then
-  TEST_EMAIL="$(security find-generic-password -s "$SERVICE" 2>/dev/null \
-    | sed -n 's/^ *"acct"<blob>="\(.*\)"$/\1/p' || true)"
-fi
-if [ -z "${TEST_PASSWORD:-}" ]; then
-  TEST_PASSWORD="$(security find-generic-password -s "$SERVICE" -w 2>/dev/null || true)"
-fi
+# ── test accounts ──
+# The second is 15-theme's: whose theme a sign-in puts on can only be told
+# apart with two accounts. Asked for up front, because a flow handed an
+# unset variable types the literal "${TEST_EMAIL_2}" and fails on a
+# sign-in error far from the cause.
+keychain_account() {
+  security find-generic-password -s "$1" 2>/dev/null \
+    | sed -n 's/^ *"acct"<blob>="\(.*\)"$/\1/p' || true
+}
+keychain_password() { security find-generic-password -s "$1" -w 2>/dev/null || true; }
+[ -n "${TEST_EMAIL:-}" ] || TEST_EMAIL="$(keychain_account "$SERVICE")"
+[ -n "${TEST_PASSWORD:-}" ] || TEST_PASSWORD="$(keychain_password "$SERVICE")"
+[ -n "${TEST_EMAIL_2:-}" ] || TEST_EMAIL_2="$(keychain_account "$SERVICE-2")"
+[ -n "${TEST_PASSWORD_2:-}" ] || TEST_PASSWORD_2="$(keychain_password "$SERVICE-2")"
 [ -n "$TEST_EMAIL" ] && [ -n "$TEST_PASSWORD" ] || die "No test account in the Keychain.
   Add it once:  security add-generic-password -s $SERVICE -a <test-email> -w
   (it prompts for the password, so it never reaches the shell history)"
+[ -n "$TEST_EMAIL_2" ] && [ -n "$TEST_PASSWORD_2" ] || die "No second test account in the Keychain (15-theme signs in as both).
+  Add it once:  security add-generic-password -s $SERVICE-2 -a <second-email> -w"
 
 # ── run ──
 run="$repo/.smoke-local/maestro/$(date +%Y%m%d-%H%M%S)"
@@ -60,10 +70,11 @@ mkdir -p "$run"
 targets=("$@")
 [ ${#targets[@]} -eq 0 ] && targets=(.maestro)
 
-printf '▶ %s as %s → %s\n' "${targets[*]}" "$TEST_EMAIL" "${run#"$repo"/}"
+printf '▶ %s as %s and %s → %s\n' "${targets[*]}" "$TEST_EMAIL" "$TEST_EMAIL_2" "${run#"$repo"/}"
 set +e
 maestro test "${targets[@]}" \
   -e EXPO_URL="$EXPO_URL" -e TEST_EMAIL="$TEST_EMAIL" -e TEST_PASSWORD="$TEST_PASSWORD" \
+  -e TEST_EMAIL_2="$TEST_EMAIL_2" -e TEST_PASSWORD_2="$TEST_PASSWORD_2" \
   --format junit --output "$run/report.xml" \
   --test-output-dir "$run" --debug-output "$run" 2>&1 | tee "$run/console.log"
 code=${PIPESTATUS[0]}
