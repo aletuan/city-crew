@@ -1,0 +1,37 @@
+# Reusable: Profile → Theme, wait for the tick to be on THEME_ID (system,
+# light or dark), and close the sheet without choosing anything. Ends on
+# Profile with the tab bar showing. For the moments after a sign-in, when
+# what is being checked is whose theme the sheet put on.
+appId: host.exp.Exponent
+---
+- tapOn:
+    id: "tab-profile"
+- scrollUntilVisible:
+    element:
+      id: "profile-theme"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn:
+    id: "profile-theme"
+# The account's theme is one round trip after the sign-in; the tick moves
+# when it lands, so this waits longer than pick-theme's tick does.
+# The tick is read on the row's label — see `pick-theme.yaml`.
+- extendedWaitUntil:
+    visible:
+      id: "theme-${THEME_ID}"
+      text: ".*.*"
+    timeout: 15000
+# Closed by a tap on the backdrop above the sheet, not by `theme-close`:
+# see `pick-theme.yaml`.
+- tapOn:
+    point: "50%,15%"
+- waitForAnimationToEnd:
+    timeout: 5000
+# Scrolling down to the Theme row ducked the tab bar, and the next step
+# begins with a tab.
+- scrollUntilVisible:
+    element:
+      id: "tab-explore"
+    direction: UP
+    timeout: 15000

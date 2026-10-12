@@ -84,7 +84,8 @@ minute or more per run; keep the suite short.
 **Secrets**
 
 12. **Credentials come in as `-e` variables** (`${TEST_EMAIL}`,
-    `${TEST_PASSWORD}`) and are never written into a flow. Run through
+    `${TEST_PASSWORD}`, and `${TEST_EMAIL_2}` / `${TEST_PASSWORD_2}` for
+    the second account) and are never written into a flow. Run through
     `npm run smoke:ios`, which passes them from the Keychain — calling
     `npm run` with `-e PASSWORD=…` yourself makes npm echo the password.
 

@@ -1,25 +1,48 @@
 # The theme follows the account (12 Oct 2026): a choice made signed in is
 # the account's, a guest's choice is the device's, and signing back in
-# puts the account's on again.
+# puts the account's on again — the account's, not the last person's on
+# this phone, whether that was a guest or another account.
+#
+# Two accounts: TEST_EMAIL (A) and TEST_EMAIL_2 (B, the Keychain's
+# `citycrew-maestro-2`). A guest alone cannot tell "the account's theme
+# was read" from "the device's was kept" once a sign-out leaves the
+# device on the account's choice; a second account with a different
+# choice can. B is on Light and this flow never changes it: if B ever
+# signs in to Dark, A's theme leaked through the device, or a sign-in
+# wrote the device's theme over B's (B was set once, by hand, on 12
+# October; reset it with `pick-theme` light signed in as B).
 #
 # Grounds only — Light, Dark, Auto. A look is a restart, and Expo Go
 # refuses `reloadAsync` (the sheet then shows "Close and reopen"), so the
 # looks are checked by hand on a TestFlight build. The grounds take the
 # same path through the account, which is what this flow is for.
 #
-# Every step is read off a tick (`theme-<id>-on`), never a colour: Maestro
-# cannot see a colour, and the tick is what the sheet says it put on.
+# Every step is read off a tick, never a colour: Maestro cannot see a
+# colour, and the tick is what the sheet says it put on. The tick is read
+# in the row's label, not by `theme-<id>-on` — see `common/pick-theme.yaml`.
 #
-# Leaves the account on Auto and the device signed out, which is how the
-# flows after it expect to find things.
+# Not covered: an account that never chose. It takes the device's theme
+# on its first sign-in (lib/themeAccountSync, rule 4) and from then on
+# has chosen, so only a fresh account each run could check it — and the
+# sign-up form is what Maestro cannot drive (07-sign-up-delete).
+#
+# Leaves A on Auto and the device signed out, which is how the flows after
+# it expect to find things.
 appId: host.exp.Exponent
 env:
   EXPO_URL: exp://127.0.0.1:8081
 ---
 - runFlow: common/start.yaml
-- runFlow: common/ensure-signed-in.yaml
+# Signed out first, and A signed in by hand, not by `ensure-signed-in`:
+# that one keeps any session it finds, and a run of this flow that stops
+# between B's sign-in and its sign-out leaves B's. On 12 October the next
+# run took B for A, chose Dark on B's account, and failed on B's Light.
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "profile-sign-in"
+- runFlow: common/sign-in.yaml
 
-# ── the account chooses Dark ──
+# ── A chooses Dark ──
 - runFlow:
     file: common/pick-theme.yaml
     env:
@@ -32,28 +55,34 @@ env:
     env:
       THEME_ID: light
 
-# ── the account is back, and so is its Dark ──
+# ── A is back, and so is its Dark ──
 - runFlow: common/ensure-signed-in.yaml
-- tapOn:
-    id: "tab-profile"
-- scrollUntilVisible:
-    element:
-      id: "profile-theme"
-    direction: DOWN
-    centerElement: true
-    timeout: 15000
-- tapOn:
-    id: "profile-theme"
-# The read is one round trip after the sign-in; the tick moves when it
-# lands.
-- extendedWaitUntil:
-    visible:
-      id: "theme-dark-on"
-    timeout: 15000
-- tapOn:
-    id: "theme-close"
+- runFlow:
+    file: common/expect-theme.yaml
+    env:
+      THEME_ID: dark
 
-# ── and home: Auto on the account, signed out ──
+# ── B signs in on a device left on A's Dark, and gets its own Light ──
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "profile-sign-in"
+- runFlow:
+    file: common/sign-in.yaml
+    env:
+      TEST_EMAIL: ${TEST_EMAIL_2}
+      TEST_PASSWORD: ${TEST_PASSWORD_2}
+- runFlow:
+    file: common/expect-theme.yaml
+    env:
+      THEME_ID: light
+
+# ── and A, after B, is Dark again — then home: Auto, signed out ──
+- runFlow: common/ensure-signed-out.yaml
+- runFlow: common/ensure-signed-in.yaml
+- runFlow:
+    file: common/expect-theme.yaml
+    env:
+      THEME_ID: dark
 - runFlow:
     file: common/pick-theme.yaml
     env:
