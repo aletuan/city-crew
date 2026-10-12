@@ -827,9 +827,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   The heading row is also where the pick mark lives, at
                   the right. */}
               <View style={s.whyHead}>
-                <View style={s.whyMark}>
-                  <Text style={s.whyQuote}>{'\u201C'}</Text>
-                </View>
+                <Text style={s.whyQuote}>{'\u201C'}</Text>
                 <Text style={s.whyLabel}>{t('Highlights', 'Điểm nổi bật', '見どころ')}</Text>
                 {/* "City Crew pick", for a place the desk featured.
                     `is_featured` chose Explore's hero and was said nowhere
@@ -1574,15 +1572,15 @@ const s = StyleSheet.create({
   // A column since the heading took a line of its own (see the block):
   // the head row, then the paragraph at the screen's full width.
   why: { gap: 6, marginTop: 14 },
-  whyHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  // No disc since 12 Oct 2026 (see the block); the box stays 28 tall so
-  // the measured centring of the glyph holds, and narrows to the glyph.
-  whyMark: {
-    width: 18, height: 28, marginTop: 1,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  // Baseline-aligned, not centred: the mark is a glyph beside a word and
+  // sits on the word's line, its ink at cap height the way an opening
+  // quote does. Centred in a 28pt box (the disc's, kept a day after the
+  // disc went) it floated like a superscript, and the box's slack plus a
+  // 10pt gap put ~15pt between mark and word on the owner's phone. 6pt
+  // now, mark to word, with no box.
+  whyHead: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   whyQuote: {
-    color: colors.accent, fontSize: 22, fontFamily: display.bold,
+    color: colors.accent, fontSize: 22, lineHeight: 22, fontFamily: display.bold,
     includeFontPadding: false,
   },
   whyBody: { gap: 2 },
