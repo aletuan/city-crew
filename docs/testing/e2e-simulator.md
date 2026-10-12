@@ -17,8 +17,8 @@ những đường mà người dùng không thể thiếu.
 ```mermaid
 flowchart LR
   subgraph Mac
-    K[macOS Keychain<br/>citycrew-maestro] --> S[smoke.sh]
-    S -->|-e TEST_EMAIL / PASSWORD| M[Maestro CLI<br/>Java 17+]
+    K[macOS Keychain<br/>citycrew-maestro<br/>citycrew-maestro-2] --> S[smoke.sh]
+    S -->|-e TEST_EMAIL / PASSWORD<br/>TEST_EMAIL_2 / PASSWORD_2| M[Maestro CLI<br/>Java 17+]
     Metro[Metro<br/>npx expo start :8081]
     subgraph Sim[iOS Simulator]
       EG[Expo Go<br/>host.exp.Exponent]
@@ -105,12 +105,12 @@ cuộn lên `profile-sign-in` không có `centerElement`, nên đôi khi dừng 
 nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái (iOS hiểu là
 "cuộn về đầu"). Thêm `centerElement: true` rồi `04` xanh bốn lượt liền.
 
-**Ngân sách: dưới 20 phút** cho cả suite (quyết định của chủ dự án,
-09/10). Thời gian không phải ràng buộc chặt: một flow đáng giá vẫn vào dù
-làm suite dài thêm một hai phút. 15 flow hiện chạy 22 m 2 s — **vượt 20**
-từ khi `15-theme` có tài khoản thứ hai (+2 m 31 s). Cần rút ngắn một flow
-(`15-theme` 5 m 48 s là dài nhất; bước khách chọn Light có thể bỏ, vì B đã
-kiểm cùng điều đó chặt hơn) hoặc một quyết định nâng ngân sách.
+**Ngân sách: dưới 25 phút** cho cả suite (chủ dự án nâng từ 20 lên ngày
+12/10, khi `15-theme` có tài khoản thứ hai và suite lên 22 m 2 s; lần đặt
+đầu là 20 phút, 09/10). Thời gian không phải ràng buộc chặt: một flow đáng
+giá vẫn vào dù làm suite dài thêm một hai phút. Còn khoảng 3 phút cho flow
+mới. Khi cần chỗ, ứng viên rút ngắn đầu tiên là `15-theme` (5 m 48 s, dài
+nhất): bước khách chọn Light có thể bỏ, vì bước B kiểm cùng điều đó chặt hơn.
 
 `10-check-in` được thử cả nhánh dọn dẹp: một flow tạm check-in rồi dừng, `10`
 dọn lượt ghé đó rồi chạy hết (1 m 5 s); lượt sau từ trạng thái sạch (51 s);
@@ -120,6 +120,12 @@ truy vấn `checkins` của tài khoản test sau đó: 0 dòng.
 
 Lệnh chạy và cách đọc kết quả: [`README.md`](../../app/.maestro/README.md),
 mục *Running* và *Reading a failure*.
+
+Cần **hai tài khoản test trong Keychain** (`citycrew-maestro` và
+`citycrew-maestro-2`); thiếu cái thứ hai thì `smoke.sh` dừng ngay. Cách thêm:
+README, mục *Test account*. Tài khoản B phải để theme **Light**: nếu một
+lượt `15-theme` dừng khi B còn đăng nhập và B bị đổi theme, đặt lại Light
+bằng tay trước lượt sau.
 
 Một điều kiện chỉ ghi ở đây, vì nó thuộc về lúc chạy chứ không thuộc về công
 cụ: trước khi chạy, `git fetch && git log --oneline HEAD..origin/main` phải
@@ -173,7 +179,7 @@ Xanh: đã có flow. Vàng: QA tay. Cam: chưa có.
 
 Nguyên tắc chọn flow (từ GUIDELINES): chỉ thêm đường mà **hỏng thì người dùng
 không dùng được app**, và **vitest không phủ được**. Mỗi flow tốn ~1 phút; ngân
-sách toàn suite < 20 phút (xem mục 2).
+sách toàn suite < 25 phút (xem mục 2).
 
 ### Đợt 1 — những gì 1.0.4 vừa đổi (ưu tiên cao)
 
