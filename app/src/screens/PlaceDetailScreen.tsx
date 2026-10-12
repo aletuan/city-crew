@@ -45,6 +45,7 @@ import { clockOf, dateline, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsSearchUrl } from '../lib/maps';
+import { vibeColor, vibeLabel } from '../lib/vibes';
 import { useSave } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
@@ -809,11 +810,44 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   centring the line box centres the ink to within 0.3pt of
                   the disc's middle — measured off the font, at 22pt in a
                   28pt disc. */}
-              <View style={s.whyMark}>
-                <Text style={s.whyQuote}>{'\u201C'}</Text>
+              {/* ── the heading on a line of its own, since 12 Oct 2026 ──
+                  The mark used to sit in a gutter with the label *and the
+                  paragraph* beside it, so the paragraph was the one thing on
+                  the screen 40pt (a 28pt disc and its gap) in from the left
+                  edge the name, the info card and the map share. The owner
+                  asked for the paragraph on its own line, full width. One
+                  left edge for the screen, and at 16pt a line ~5 characters
+                  longer: a 120-character blurb goes from four lines to
+                  three or so. The mark keeps its disc and its meaning —
+                  it is still the quotation mark over these words, not a
+                  section icon — and the heading row is also where the
+                  pick mark lives, at the right. */}
+              <View style={s.whyHead}>
+                <View style={s.whyMark}>
+                  <Text style={s.whyQuote}>{'\u201C'}</Text>
+                </View>
+                <Text style={s.whyLabel}>{t('Highlights', 'Điểm nổi bật', '見どころ')}</Text>
+                {/* "City Crew pick", for a place the desk featured.
+                    `is_featured` chose Explore's hero and was said nowhere
+                    else — a reader could never learn a place was one of
+                    ours. A mark, not a pill: a glyph and the accent on the
+                    words. Not a tinted fill, because the accent as a
+                    surface is for state (`theme.ts`) and a place being
+                    featured is not something the reader did. Not under the
+                    paragraph as a credit: `blurbSource` says why "City
+                    Crew" under City Crew's own words costs attention and
+                    returns nothing; "chosen" is a different claim from
+                    "written", and it goes with the heading. Lost on a
+                    featured place with no blurb, which is not a case the
+                    catalog has: featuring means the desk wrote it up. */}
+                {place.is_featured ? (
+                  <View style={s.pick} testID="detail-pick">
+                    <Ionicons name="ribbon-outline" size={13} color={colors.accent} />
+                    <Text style={s.pickText}>{t('City Crew pick', 'City Crew chọn', 'City Crew のおすすめ')}</Text>
+                  </View>
+                ) : null}
               </View>
               <View style={s.whyBody}>
-                <Text style={s.whyLabel}>{t('Highlights', 'Điểm nổi bật', '見どころ')}</Text>
                 <Text style={s.desc} onPress={openBlurb} testID="detail-desc">{desc}</Text>
                 {/* Whose words those are. A line, not a badge: it belongs to
                     the paragraph above it and should read as its last line,
@@ -869,6 +903,30 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   </Text>
                 ) : null}
               </View>
+            </View>
+          ) : null}
+
+          {/* ── vibes ──
+              What the place feels like, the way the card in the feed says
+              it: a dot in the vibe's own hue and its word. `vibe_tags` was
+              on every card and on no detail screen — a reader who opened
+              "Yên tĩnh" from the feed found the word gone. Every tag here,
+              not the card's one-and-a-count: the card's line had room for
+              one, and this screen has the room. Dot and word, not a filled
+              chip, because a filled pill on this screen says "press me"
+              (the check-in button, the filter row on Explore) and these
+              say "read me"; `lib/vibes` keeps the hue to the dot for the
+              same reason. Drawn with or without a blurb: the tags are the
+              desk's, the blurb may be Google's, and a place can have the
+              one and not the other. */}
+          {place.vibe_tags.length ? (
+            <View style={s.vibes} testID="detail-vibes">
+              {place.vibe_tags.map((v) => (
+                <View key={v} style={s.vibe} testID={`detail-vibe-${v}`}>
+                  <View style={[s.vibeDot, { backgroundColor: vibeColor(v) }]} />
+                  <Text style={s.vibeText}>{vibeLabel(v, t)}</Text>
+                </View>
+              ))}
             </View>
           ) : null}
 
@@ -1487,7 +1545,10 @@ const s = StyleSheet.create({
   // left edge: a glyph inline with the heading would put the paragraph
   // under the heading and the heading beside the glyph, which is two
   // columns pretending to be one.
-  why: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  // A column since the heading took a line of its own (see the block):
+  // the head row, then the paragraph at the screen's full width.
+  why: { gap: 6, marginTop: 14 },
+  whyHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   whyMark: {
     width: 28, height: 28, borderRadius: 14, marginTop: 1,
     alignItems: 'center', justifyContent: 'center',
@@ -1497,8 +1558,18 @@ const s = StyleSheet.create({
     color: colors.accent, fontSize: 22, fontFamily: display.bold,
     includeFontPadding: false,
   },
-  whyBody: { flex: 1, gap: 2 },
-  whyLabel: { color: colors.accent, fontSize: 15, fontWeight: font.semibold },
+  whyBody: { gap: 2 },
+  // 16, the Local Guide panel's title, now that this is a heading row of
+  // its own rather than a label tucked over the paragraph.
+  whyLabel: { flex: 1, color: colors.accent, fontSize: 16, fontWeight: font.semibold },
+  pick: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  pickText: { color: colors.accent, fontSize: 12, fontWeight: font.semibold },
+  // The card's grammar for a vibe (`PlaceCard`): a 7pt dot in the vibe's
+  // hue, the word in full-strength type beside it.
+  vibes: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 10 },
+  vibe: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  vibeDot: { width: 7, height: 7, borderRadius: 3.5 },
+  vibeText: { color: colors.text, fontSize: 13, fontWeight: font.semibold },
 
   // Smaller and quieter than the blurb: an attribution that competed with
   // the sentence it attributes would be reading the footnote first. The
