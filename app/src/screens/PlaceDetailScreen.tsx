@@ -44,7 +44,7 @@ import { cityTz } from '../lib/clock';
 import { clockOf, dateline, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
-import { mapsSearchUrl } from '../lib/maps';
+import { mapsRouteUrl, mapsSearchUrl } from '../lib/maps';
 import { vibeLabel } from '../lib/vibes';
 import { useSave } from '../lib/save';
 import { shareSafely } from '../lib/share';
@@ -79,7 +79,7 @@ import type { Nav, RootRoute } from '../nav';
  * The hairline starts where the labels do rather than at the card's edge,
  * so the gutter reads as one column rather than as four interruptions.
  */
-function InfoRow({ icon, label, first, onPress, trailing, children }: {
+function InfoRow({ icon, label, first, onPress, trailing, hug, children }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   /** The row that opens the card draws no hairline above itself. */
@@ -89,6 +89,11 @@ function InfoRow({ icon, label, first, onPress, trailing, children }: {
    *  pressable: two targets in one row, the outer one swallowing taps
    *  meant for the inner, is a worse row than one honest button. */
   trailing?: React.ReactNode;
+  /** The words take only the width they need, so a control after them
+   *  sits beside the value rather than at the row's far end. For a row
+   *  whose control belongs to its value — Directions to the address —
+   *  and not to the row. */
+  hug?: boolean;
   children: React.ReactNode;
 }) {
   const tappable = !!onPress && !trailing;
@@ -104,7 +109,7 @@ function InfoRow({ icon, label, first, onPress, trailing, children }: {
         <View style={s.infoIconSlot}>
           <Ionicons name={icon} size={19} color={colors.textTertiary} />
         </View>
-        <View style={s.infoWords}>
+        <View style={[s.infoWords, hug && s.infoWordsHug]}>
           <Text style={s.infoLabel}>{label}</Text>
           {children}
         </View>
@@ -244,6 +249,18 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   // check was reading "has a position" off a value that means something
   // else, and `mapsSearchUrl` asks the question it means.
   const mapsUrl = mapsSearchUrl(place);
+  // What the Directions button opens, since 12 Oct 2026: a route to the
+  // place from wherever the reader is, not the place on the map. The
+  // button said "Directions" and opened the place's pin, which is the
+  // address row's own tap and the map's; the owner tapped it on the
+  // pavement and got a pin where a route was promised. `mapsRouteUrl`
+  // with one stop is exactly that journey — origin left to Google, which
+  // reads a missing one as the device's position (`lib/maps` says why) —
+  // so nothing here asks for location. Driving, as the route does when
+  // it knows nothing about the legs: the mode that is merely
+  // inconvenient over the one that strands somebody, and Google lets
+  // them switch once it is open.
+  const routeUrl = mapsRouteUrl([place], 'driving')?.url ?? null;
   // The card shows the address a local would say — street and ward —
   // not the city, postal code and country Google wrote for a reader
   // anywhere in the world. The share sheet and the Maps link below keep
@@ -346,6 +363,10 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
   /** Named once: the address row, its button and the map all do this. */
   const toMaps = () => open(
     mapsUrl!,
+    t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'),
+  );
+  const toRoute = () => open(
+    routeUrl!,
     t('Could not open Maps', 'Không mở được bản đồ', 'マップを開けませんでした'),
   );
   // Websites are typed in by hand and often arrive bare (`congcaphe.com`),
@@ -987,6 +1008,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   label={t('Address', 'Địa chỉ', '住所')}
                   first={firstRow === 'address'}
                   onPress={mapsUrl ? toMaps : undefined}
+                  hug={!!mapsUrl && !showsMap}
                   /* Only when there is no map to put the button on. It used
                      to live here always, and the row has no `gap`, so the
                      address ran straight into it: measured off a real
@@ -1001,18 +1023,30 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                      against 582–613 without, and 6–16 needed a third line
                      and got clamped where none would. So on a card with a
                      map the button moves onto the picture and the address
-                     takes the whole width; see `goOnMap`. */
+                     takes the whole width; see `goOnMap`.
+
+                     And when it does fall back here it is a square with
+                     the arrow, since 12 Oct 2026, not the labelled pill:
+                     36pt beside the address rather than 105 at the row's
+                     end (`hug`), so the address keeps its width and the
+                     control sits with the value it acts on — the owner's
+                     sketch. The arrow is the same glyph the disc on the
+                     map wears, and it keeps its name for VoiceOver. On the
+                     accent's tint, not the glass with a hairline the pill
+                     had: a glyph with no word beside it needs a ground
+                     that says "control" on its own, and the tint is what
+                     `MiniMap`'s own locate button stands on. */
                   trailing={mapsUrl && !showsMap ? (
                     <PressableScale
-                      onPress={toMaps}
+                      onPress={toRoute}
                       accessibilityRole="button"
                       accessibilityLabel={t('Directions', 'Chỉ đường', '経路')}
+                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                       containerStyle={s.goSlot}
                       style={s.go}
                       testID="detail-directions"
                     >
-                      <Ionicons name="navigate" size={15} color={colors.accent} />
-                      <Text style={s.goText}>{t('Directions', 'Chỉ đường', '経路')}</Text>
+                      <Ionicons name="navigate" size={18} color={colors.accent} />
                     </PressableScale>
                   ) : undefined}
                 >
@@ -1109,7 +1143,7 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                       button on the row — an address looks like a fact, not
                       a button — now made where it costs the picture least. */}
                   <PressableScale
-                    onPress={toMaps}
+                    onPress={toRoute}
                     accessibilityRole="button"
                     accessibilityLabel={t('Directions', 'Chỉ đường', '経路')}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
@@ -1633,13 +1667,15 @@ const s = StyleSheet.create({
   goSlot: { flexShrink: 0, marginLeft: 12, marginTop: ABOVE_VALUE - 6 },
   // On the map, clear of Google's attribution in the opposite corner.
   goOnMap: { position: 'absolute', right: 10, bottom: 10 },
+  // The square beside the address: 36, and 4pt of slop on each side to
+  // make the 44 this app gives every control — the pill it replaces was
+  // 44 tall with no slop, and 44 of tint beside a one-line address is
+  // taller than the words it serves. `radius.input`, the one corner
+  // between a pill's and a card's, for a square that is neither.
   go: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    // 44, from 36: it had no slop, so 36 was the whole target.
-    minHeight: 44, paddingHorizontal: 12,
-    borderRadius: radius.pill,
-    borderWidth: 1, borderColor: colors.borderGlassSoft,
-    backgroundColor: colors.surfaceGlass,
+    width: 36, height: 36, borderRadius: radius.input,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.accentSoft,
   },
   // A disc over the tiles, 40 rather than `MiniMap`'s locate button's 36
   // because this is the only control on the map and the one the card
@@ -1707,6 +1743,8 @@ const s = StyleSheet.create({
     justifyContent: 'center', overflow: 'visible',
   },
   infoWords: { flex: 1, minWidth: 0 },
+  // See `hug` on InfoRow: content width, shrinking before the control.
+  infoWordsHug: { flex: 0, flexShrink: 1 },
   // The same box at the other end of the row, so both ends stay level.
   infoChevronSlot: {
     height: GLYPH_BOX, marginTop: GLYPH_LIFT,

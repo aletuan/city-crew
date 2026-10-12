@@ -1327,16 +1327,43 @@ describe('PlaceDetailScreen — info card', () => {
   // The row is no longer the button; the button is. Tapping an address has
   // always opened Maps and nothing on the row said so — an address looks
   // like a fact, not a control — so the handoff has a named target now and
-  // the row itself is text again.
-  it('shortens the address and opens Google Maps on the exact place', () => {
+  // the row itself is text again. And the button opens a *route* (12 Oct
+  // 2026): it said Directions and opened the pin, which is what the map's
+  // own tap does. No origin in the link: Google reads that as the phone.
+  it('shortens the address and opens directions to the exact place from here', () => {
     show();
     const addr = screen.getByTestId('detail-address');
     // Country and the city this app is already about are dropped.
     expect(addr.textContent).toBe('152 Trieu Viet Vuong, Hai Ba Trung');
     fireEvent.click(screen.getByTestId('detail-directions'));
     expect(openURL).toHaveBeenCalledWith(
-      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Cộng Cà Phê - Old Quarter')}&query_place_id=gp1`,
+      `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent('Cộng Cà Phê - Old Quarter')}&destination_place_id=gp1&travelmode=driving`,
     );
+    expect(openURL.mock.calls[0][0]).not.toContain('origin=');
+  });
+
+  // The fallback, with no map to ride: a 36pt square with the arrow on
+  // the accent's tint, beside the address rather than at the row's end,
+  // and no word — the name is VoiceOver's.
+  it('falls back to a square with the arrow beside the address when there is no map', () => {
+    mapStub.canDraw = false;
+    show();
+    const go = screen.getByTestId('detail-directions');
+    expect(go.textContent).toBe('');
+    expect(go.getAttribute('aria-label')).toBe('Directions');
+    expect(go.querySelector('[data-icon="navigate"]')).toBeTruthy();
+    // The id is on the slot (its margin is what the gap test reads); the
+    // square is the slot's one child.
+    const box = getComputedStyle(go.firstElementChild as Element);
+    expect(box.width).toBe('36px');
+    expect(box.height).toBe('36px');
+    expect(box.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(box.borderTopWidth === '' || box.borderTopWidth === '0px').toBe(true);
+    // Beside the value: the words give up the row's width for it.
+    const words = screen.getByText('Address').parentElement!;
+    expect(getComputedStyle(words).flexGrow).toBe('0');
+    fireEvent.click(go);
+    expect(openURL).toHaveBeenCalledWith(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent('Cộng Cà Phê - Old Quarter')}&destination_place_id=gp1&travelmode=driving`);
   });
 
   it('names that button for VoiceOver', () => {
@@ -1344,11 +1371,11 @@ describe('PlaceDetailScreen — info card', () => {
     expect(screen.getByRole('button', { name: 'Directions' })).toBeTruthy();
   });
 
-  it('opens Maps on the coordinate when the place has no Google id', () => {
+  it('routes to the coordinate when the place has no Google id', () => {
     show(place({ google_place_id: null }));
     fireEvent.click(screen.getByTestId('detail-directions'));
     expect(openURL).toHaveBeenCalledWith(
-      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('21.01,105.85')}`,
+      `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent('21.01,105.85')}&travelmode=driving`,
     );
   });
 
