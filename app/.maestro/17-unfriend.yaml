@@ -1,0 +1,113 @@
+# Unfriend, and make friends again: A unfriends B from Your friends; B is
+# off A's list. A asks again by B's username; B finds the request on
+# Requests and accepts; A is on B's list. The second half is what puts
+# the fixture back — A and B friends, B A's only friend, which
+# 16-trip-invite needs — so the flow tests the whole friendship cycle and
+# leaves nothing changed.
+#
+# What only a device shows: the `friendships` policies between two real
+# accounts — either end may cut the edge, only the requester may ask,
+# only the addressee may accept.
+#
+# B_HANDLE is B's username, a fact of the fixture: B was made through the
+# API on 12 October with no handle asked for, so `handle_new_user` gave
+# it a random one. Override with `-e B_HANDLE=…` for another account.
+#
+# Starts from either state, so a run stopped half way does not break the
+# next: if A and B are not friends, the unfriend is skipped; a request
+# already sent and unanswered makes Send say so and B accepts it anyway.
+#
+# Leaves A and B friends and the device signed out.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+  B_HANDLE: usera8b792a2
+---
+- runFlow: common/start.yaml
+# A by hand, not by `ensure-signed-in`: see 15-theme.
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "profile-sign-in"
+- runFlow: common/sign-in.yaml
+- runFlow: common/open-crew.yaml
+
+# ── A unfriends B ──
+- tapOn:
+    id: "crew-tab-friends"
+# The list is fetched after the screen opens. Deciding on its first frame
+# skipped the unfriend on 12 October, with B arriving a moment later and
+# Send then answering "already friends". Waited for, optionally: on a run
+# that finds them not friends, this waits out its timeout and goes on.
+- extendedWaitUntil:
+    visible:
+      id: "crew-friend-0"
+    timeout: 10000
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "crew-friend-0"
+    commands:
+      # A long press on the row, not the ⋯ beside it: the row is
+      # pressable, so iOS makes it one accessibility element and the ⋯
+      # inside is not in the tree (the hierarchy on 12 October held only
+      # "@usera8b792a2"). The long press is the row's own way in.
+      - longPressOn:
+          id: "crew-friend-0"
+      - tapOn:
+          id: "sheet-action-unfriend"
+      # The confirmation is a system alert, raised once the sheet has
+      # gone: its button carries no id, and the title ("Unfriend @…?")
+      # does not match a full-string "Unfriend".
+      - tapOn:
+          text: "Unfriend"
+- extendedWaitUntil:
+    notVisible:
+      id: "crew-friend-0"
+    timeout: 15000
+
+# ── A asks again, by username ──
+- tapOn:
+    id: "crew-add"
+- tapOn:
+    id: "crew-handle"
+- inputText: ${B_HANDLE}
+- hideKeyboard
+- tapOn:
+    id: "crew-send"
+    optional: true
+# The request lands under Sent. A request already sent by a run that
+# stopped here reads the same.
+- extendedWaitUntil:
+    visible:
+      text: ".*waiting on their answer.*"
+    timeout: 15000
+
+# ── B accepts ──
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml
+- tapOn:
+    id: "profile-sign-in"
+- runFlow:
+    file: common/sign-in.yaml
+    env:
+      TEST_EMAIL: ${TEST_EMAIL_2}
+      TEST_PASSWORD: ${TEST_PASSWORD_2}
+- runFlow: common/open-crew.yaml
+- tapOn:
+    id: "crew-tab-requests"
+- extendedWaitUntil:
+    visible:
+      id: "crew-accept-0"
+    timeout: 15000
+- tapOn:
+    id: "crew-accept-0"
+- tapOn:
+    id: "crew-tab-friends"
+- extendedWaitUntil:
+    visible:
+      id: "crew-friend-0"
+    timeout: 15000
+
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-out.yaml

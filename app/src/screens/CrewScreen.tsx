@@ -450,6 +450,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
         <RoundIconButton
           icon="person-add-outline"
           label={t('Add a friend', 'Thêm bạn', '友達を追加')}
+          testID="crew-add"
           // The field belongs with the asking, so the control that opens
           // it takes you there — pressing ⊕ from the friends list and
           // getting a box on a screen about somebody else would be the
@@ -469,11 +470,11 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
           the trip wizard already puts on its Friends chip. */}
       <UnderlineTabs
         tabs={[
-          { key: 'requests', icon: 'mail-outline', label: t('Requests', 'Lời mời', 'リクエスト'), count: crew.incoming.length },
+          { key: 'requests', icon: 'mail-outline', label: t('Requests', 'Lời mời', 'リクエスト'), count: crew.incoming.length, testID: 'crew-tab-requests' },
           // A tally, not a count: how many friends is a fact, not news,
           // so it sits in the name in both states and never rings the
           // unchosen-tab bubble the way waiting requests do.
-          { key: 'friends', icon: 'people-outline', label: t('Your friends', 'Bạn bè', '友達'), tally: crew.friends.length },
+          { key: 'friends', icon: 'people-outline', label: t('Your friends', 'Bạn bè', '友達'), tally: crew.friends.length, testID: 'crew-tab-friends' },
         ]}
         active={tab}
         onChange={setTab}
@@ -493,6 +494,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                 <FieldRow
                   icon="at-outline"
                   label={t('Their username', 'Username của bạn ấy', '相手のユーザー名')}
+                  testID="crew-handle"
                   value={handle}
                   onChangeText={setHandle}
                   autoCapitalize="none"
@@ -520,7 +522,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                     ))}
                   </View>
                 )}
-                <PrimaryButton label={t('Send request', 'Gửi lời mời', 'リクエスト送信')} onPress={send} busy={busy} />
+                <PrimaryButton label={t('Send request', 'Gửi lời mời', 'リクエスト送信')} onPress={send} busy={busy} testID="crew-send" />
               </Card>
             )}
 
@@ -531,7 +533,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
             {crew.incoming.length > 0 && (
               <>
                 <Text style={s.head}>{t('Pending', 'Đang chờ', '保留中')}</Text>
-                {crew.incoming.map((r) => {
+                {crew.incoming.map((r, i) => {
                   const p = people[r.requester];
                   return (
                     <Card key={r.requester} style={s.reqCard}>
@@ -562,6 +564,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           disabled={pending.has(r.requester)}
                           aria-disabled={pending.has(r.requester)}
                           accessibilityRole="button"
+                          testID={`crew-accept-${i}`}
                         >
                           <LinearGradient {...gradAI} style={s.accept}>
                             <Ionicons name="checkmark" size={17} color={colors.accentInk} />
@@ -678,6 +681,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                       style={[s.row, i > 0 && s.rowDivider]}
                       onLongPress={() => openFriendSheet(known(id), mutual[id])}
                       accessibilityLabel={p ? atHandle(p.handle) : id}
+                      testID={`crew-friend-${i}`}
                     >
                       <Face p={p} />
                       <View style={{ flex: 1, gap: 2 }}>

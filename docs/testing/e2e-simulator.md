@@ -49,7 +49,8 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `08-explore-filter` | guest | 50 s |
 | `09-collections-browse` | guest | 42 s |
 | `15-theme` | hai tài khoản test (A, B) | 5 m 42 s |
-| `16-trip-invite` | hai tài khoản test (A, B) | 4 m 58 s |
+| `16-trip-invite` | hai tài khoản test (A, B) | 4 m 58 s – 7 m 53 s |
+| `17-unfriend` | hai tài khoản test (A, B) | 3 m 34 s |
 | `10-check-in` | test account | 1 m 9 s |
 | `11-collection-crud` | test account | 2 m |
 | `13-trip-edit` | test account | 1 m 49 s |
@@ -58,15 +59,27 @@ hai file kia không có: **thời gian đo được**, vì đó là ngân sách 
 | `07-sign-up-delete` | dùng một lần | không chạy tự động — QA tay mỗi release |
 
 **Kết quả gần nhất:** 12/10/2026, iPhone 17 · iOS 26.5 · Expo Go, code tại
-`75f692b7` (main, gồm #892–#894) cộng `16-trip-invite` — **16/16 passed
-trong 26 m 43 s**; ngân sách nâng lên 30 phút (xem dưới). `16-trip-invite`: A
-lập trip đi cùng bạn, mời B từ danh sách crew; B đăng nhập, chấp nhận ở mục
-Invitations của tab Trips; trip vào danh sách của B với nút Leave (không
-phải Delete); A đăng nhập lại thấy B "Coming", rồi xoá trip (xoá luôn bản
-của B). Đã kiểm với bản app cố ý hỏng (bấm "I'm in" mà ghi "declined"):
-flow đỏ đúng ở bước trip phải vào danh sách của B; lượt sau đó dọn được
-trip bản hỏng để lại và xanh. Fixture: A và B là bạn (12/10), B là bạn
-duy nhất của A.
+`75f692b7` (main, gồm #892–#894) cộng `16-trip-invite` và `17-unfriend` —
+**17/17 passed trong 33 m 32 s**, vượt ngân sách 30 phút (xem dưới).
+`16` lượt này 7 m 53 s, lượt trước 4 m 58 s: chênh lệch nằm ở phần lập
+trip qua Ideas, nơi Sketching chờ mô hình.
+
+`16-trip-invite`: A lập trip đi cùng bạn, mời B từ danh sách crew; B đăng
+nhập, chấp nhận ở mục Invitations của tab Trips; trip vào danh sách của B
+với nút Leave (không phải Delete); A đăng nhập lại thấy B "Coming", rồi xoá
+trip (xoá luôn bản của B). Đã kiểm với bản app cố ý hỏng (bấm "I'm in" mà
+ghi "declined"): flow đỏ đúng ở bước trip phải vào danh sách của B.
+
+`17-unfriend`: A huỷ kết bạn với B, gửi lại lời mời theo username, B chấp
+nhận — trả fixture của `16` về như cũ. Đã kiểm với bản app mà Unfriend
+không làm gì: flow đỏ ở bước B phải rời danh sách. Hai lần đỏ đầu là do
+flow: quyết định trước khi danh sách bạn tải xong (bỏ qua bước huỷ), và nút
+⋯ của hàng bạn không có trong cây trợ năng iOS — hàng bấm được nên gộp nó
+vào, như dấu tick ở sheet Theme. Flow nhấn giữ hàng thay vì bấm ⋯. Có thể
+đó cũng là lỗi với VoiceOver trên máy thật: nút ⋯ không đọc được riêng —
+chưa kiểm.
+
+Fixture: A và B là bạn (12/10), B là bạn duy nhất của A.
 
 Trước đó cùng ngày: 15/15 trong 22 m 2 s. `15-theme` giờ dùng hai tài khoản: B (`citycrew-maestro-2`
 trong Keychain, theme Light, flow không bao giờ đổi) đăng nhập trên máy A vừa
@@ -117,7 +130,8 @@ nằm dưới thanh trạng thái, và cú chạm rơi vào thanh trạng thái 
 
 **Ngân sách: dưới 30 phút** cho cả suite. Chủ dự án đặt 20 phút ngày 09/10,
 nâng lên 25 ngày 12/10 khi `15-theme` có tài khoản thứ hai (22 m 2 s), rồi
-lên 30 cùng ngày khi `16-trip-invite` vào (26 m 43 s). Thời gian không phải
+lên 30 cùng ngày khi `16-trip-invite` vào (26 m 43 s). Với `17-unfriend`,
+17 flow chạy **33 m 32 s — vượt 30**. Thời gian không phải
 ràng buộc chặt: một flow đáng giá vẫn vào dù làm suite dài thêm một hai
 phút. Khi cần chỗ: bước khách chọn Light trong `15-theme` (B kiểm cùng điều
 đó chặt hơn); `16` lập trip qua cả wizard Ideas như `05`, nên `05` có thể
@@ -174,6 +188,7 @@ flowchart TB
   MAP[Explore map + pin ảnh]:::gap
   COL[Collections tab + detail]:::ok
   CC[Tạo/sửa/xoá collection]:::ok
+  FR[Kết bạn / huỷ kết bạn]:::ok
   LANG[Đổi ngôn ngữ VI/JA]:::ok
   PE[Sửa kế hoạch trước khi lưu]:::ok
   TD[Trip detail: mời bạn]:::ok

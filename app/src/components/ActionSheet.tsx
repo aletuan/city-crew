@@ -133,6 +133,7 @@ export function SheetRows({ actions, onClose, titlesOnly }: {
       {actions.map((a, i) => (
         <PressableScale
           key={a.key}
+          testID={`sheet-action-${a.key}`}
           style={[s.row, i > 0 && s.rowDivider, a.disabled && s.rowOff, titlesOnly && s.rowShort]}
           scaleTo={a.disabled ? 1 : 0.985}
           // The sheet goes first, always. A dialog raised over a sheet

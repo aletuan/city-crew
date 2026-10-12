@@ -36,6 +36,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `14-forgot-password.yaml` | As a guest: Sign in → Forgot password → asks for a code for `maestro-reset@example.com` (a reserved domain: no account, no mail sent — never the test account, whose address is a real mailbox) → reaches the code step with the resend link waiting → Reset with no code is refused by the form and stays put. Does not reach the server refusing a wrong code: that needs the new-password field, which raises iOS's "Use Strong Password?" panel. |
 | `15-theme.yaml` | Two accounts. Signed in as A: Profile → Theme → Dark, the tick lands on it; signs out; as a guest picks Light; A signs back in and the sheet ticks Dark again, read from the account; B signs in on the phone A left on Dark and gets its own Light; A after B is Dark again; sets Auto; signs out. Grounds only — a look restarts the app, which Expo Go cannot do. Reads ticks in the row's label, never colours. |
 | `16-trip-invite.yaml` | Two accounts. A plans a trip with friends (as 05), opens it, Invite → ticks B (`invite-friend-0`) → Send; the crew row reads "Asked". B signs in, accepts the invitation on Trips (`invite-accept-0`); the trip joins B's list, and its foot is `trip-leave`, not `trip-delete`. A signs back in, the crew row reads "Coming"; A deletes the trip, which ends B's copy too. Needs A and B to be friends (see Test account). |
+| `17-unfriend.yaml` | Two accounts. A: Profile → Connect with friends → Your friends → long-press B's row (`crew-friend-0`; the ⋯ beside it is not in the iOS accessibility tree) → Unfriend → the alert's Unfriend; B is off the list. A asks again by B's username (`B_HANDLE` in the flow) → Send request; it reads "waiting on their answer". B signs in → Requests → Accept (`crew-accept-0`); A is on B's list. Puts the 16 fixture back, and starts from either state. |
 | `12-language.yaml` | As a guest: Profile → Language → Tiếng Việt, the Places tab reads "Địa điểm", the first place opens and draws; the same in 日本語 ("スポット"); back to English. The only flow that asserts labels. Runs last — the choice persists on the device. |
 | `07-sign-up-delete.yaml` | **Not run by `npm run smoke:ios`** — see GUIDELINES.md ("Manual QA"). Documents signing up a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skipping the taste picker, then deleting that same account from Profile → Delete account, ending back on the guest view; iOS's own "Use Strong Password?" panel on the password field can't be driven by Maestro, so this path is checked by hand once per release instead. |
 
@@ -48,6 +49,7 @@ bookmark, in either state) and `common/delete-open-collection.yaml`
 (the open collection's menu → Delete → the system alert),
 `common/pick-language.yaml` (Profile → Language → `${LANG_ID}`),
 `common/pick-theme.yaml` (Profile → Theme → `${THEME_ID}`, the tick, close),
+`common/open-crew.yaml` (Profile → Connect with friends, by the row's text),
 `common/expect-theme.yaml` (the same sheet, the tick already on `${THEME_ID}`, close without choosing) and
 `common/open-first-place.yaml` (first Places card → its page → back). Every flow cleans up what it made, and
 cleans up what a failed earlier run left, before it starts.
@@ -118,7 +120,11 @@ restricts `maestro test .maestro` to the numbered flows and fixes their order.
    to be A's only friend** — an invitation can only go to a friend, and
    the flow ticks the first row of A's invite sheet. Make it once: as A,
    Profile → Connect with friends → Add a friend → B's @handle → Send
-   request; as B, Requests → Accept. The flow never unfriends.
+   request; as B, Requests → Accept. `17-unfriend` unfriends and makes
+   friends again, so a run that passes leaves this as it found it; one
+   that stops between the two leaves them not friends — run `17` again,
+   it starts from either state. It types B's username, which is in the
+   flow as `B_HANDLE`.
 
 ## Running
 
