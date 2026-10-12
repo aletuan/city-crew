@@ -433,7 +433,12 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
 
   return (
     <Screen
-      title={t('Your crew', 'Crew của bạn', 'あなたのクルー')}
+      // "Thông tin bạn bè", the owner's wording (12 Oct 2026), and the
+      // one Vietnamese string on this screen that is not "crew": in
+      // Vietnamese the word is foreign and belongs to the app's name only,
+      // so this screen, the invitation line and the block alert say
+      // "bạn bè" instead. The English keeps the brand's word.
+      title={t('Your crew', 'Thông tin bạn bè', 'あなたのクルー')}
       /* No subtitle. It held a count once, then the motto alone once
          the count moved to the Friends tab — and a motto under a title
          is marketing copy where navigation belongs (HIG). A line under
@@ -536,7 +541,7 @@ export default function CrewScreen({ navigation }: { navigation: Nav }) {
                           <Text style={s.reqTitle}>
                             <Text style={{ fontWeight: font.bold }}>{nameOf(p)}</Text>
                             {' '}
-                            {t('wants to join your crew', 'muốn tham gia crew của bạn', 'がクルーに参加したがっています')}
+                            {t('wants to join your crew', 'muốn kết bạn với bạn', 'がクルーに参加したがっています')}
                           </Text>
                           {p ? <Text style={s.meta}>{atHandle(p.handle)}</Text> : null}
                         </View>
