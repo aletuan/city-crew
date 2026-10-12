@@ -1798,8 +1798,13 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     const desc = screen.getByTestId('detail-desc');
     expect(head.contains(desc)).toBe(false);
     expect(head.textContent).toContain('\u201C');
-    // A bare mark, no disc: the disc was the gutter's anchor.
-    expect(getComputedStyle(head.firstElementChild as Element).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    // A bare mark, no disc and no box: the first thing on the row is the
+    // glyph itself, on the word's baseline, 6pt from it.
+    const mark = head.firstElementChild as HTMLElement;
+    expect(mark.textContent).toBe('\u201C');
+    expect(getComputedStyle(mark).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(head).alignItems).toBe('baseline');
+    expect(getComputedStyle(head).gap).toBe('6px');
     // Head first, paragraph after, as direct children of the block.
     const kids = [...why.children];
     expect(kids.indexOf(head)).toBeLessThan(kids.indexOf(desc.parentElement!));
