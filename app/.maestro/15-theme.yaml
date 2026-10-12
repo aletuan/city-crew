@@ -1,0 +1,61 @@
+# The theme follows the account (12 Oct 2026): a choice made signed in is
+# the account's, a guest's choice is the device's, and signing back in
+# puts the account's on again.
+#
+# Grounds only — Light, Dark, Auto. A look is a restart, and Expo Go
+# refuses `reloadAsync` (the sheet then shows "Close and reopen"), so the
+# looks are checked by hand on a TestFlight build. The grounds take the
+# same path through the account, which is what this flow is for.
+#
+# Every step is read off a tick (`theme-<id>-on`), never a colour: Maestro
+# cannot see a colour, and the tick is what the sheet says it put on.
+#
+# Leaves the account on Auto and the device signed out, which is how the
+# flows after it expect to find things.
+appId: host.exp.Exponent
+env:
+  EXPO_URL: exp://127.0.0.1:8081
+---
+- runFlow: common/start.yaml
+- runFlow: common/ensure-signed-in.yaml
+
+# ── the account chooses Dark ──
+- runFlow:
+    file: common/pick-theme.yaml
+    env:
+      THEME_ID: dark
+
+# ── a guest on the same phone chooses Light ──
+- runFlow: common/ensure-signed-out.yaml
+- runFlow:
+    file: common/pick-theme.yaml
+    env:
+      THEME_ID: light
+
+# ── the account is back, and so is its Dark ──
+- runFlow: common/ensure-signed-in.yaml
+- tapOn:
+    id: "tab-profile"
+- scrollUntilVisible:
+    element:
+      id: "profile-theme"
+    direction: DOWN
+    centerElement: true
+    timeout: 15000
+- tapOn:
+    id: "profile-theme"
+# The read is one round trip after the sign-in; the tick moves when it
+# lands.
+- extendedWaitUntil:
+    visible:
+      id: "theme-dark-on"
+    timeout: 15000
+- tapOn:
+    id: "theme-close"
+
+# ── and home: Auto on the account, signed out ──
+- runFlow:
+    file: common/pick-theme.yaml
+    env:
+      THEME_ID: system
+- runFlow: common/ensure-signed-out.yaml

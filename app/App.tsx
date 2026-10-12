@@ -27,6 +27,7 @@ import { CheckinsProvider } from './src/lib/checkins';
 import { ReminderSync } from './src/lib/reminderSync';
 import { GuideGrantSync } from './src/lib/useGuideGrant';
 import { SessionNavSync } from './src/lib/sessionNavSync';
+import { ThemeAccountSync } from './src/lib/themeAccountSync';
 import { SaveProvider } from './src/lib/save';
 import { colors } from './src/theme';
 import { fireHaptic } from './src/components/ui';
@@ -363,6 +364,9 @@ function Root() {
                         "Collection not found". A guest signing in keeps
                         their place; see `lib/sessionNav`. */}
                     <SessionNavSync />
+                    {/* And the theme the account chose, read on sign-in
+                        and put on — see `lib/themeAccountSync`. */}
+                    <ThemeAccountSync />
                     <SaveProvider>
                       {/* The duck state sits above the navigator: screens
                           report scrolls into it, the bar animates out of it. */}

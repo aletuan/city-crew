@@ -276,6 +276,7 @@ function SettingsCard() {
           label={t('Theme', 'Theme', 'テーマ')}
           value={schemeLabel(pref, t)}
           onPress={() => setThemeOpen(true)}
+          testID="profile-theme"
         />
         {/* The tips under a collection's title retire once read three
             times, closed or acted on (see `lib/tips`), and this is the way

@@ -89,7 +89,15 @@ export function parseLook(v: unknown): Look {
 
 /** A stored setting, narrowed; anything unrecognised is Automatic. */
 export function parsePref(v: unknown): Pref {
-  return typeof v === 'string' && (PREFS as readonly string[]).includes(v) ? (v as Pref) : 'system';
+  return isPref(v) ? v : 'system';
+}
+
+/** Whether a value is a setting this build knows. `parsePref` folds the
+ *  rest into the default; a reader that must tell "unknown" from "Auto"
+ *  — the account sync, which must not overwrite a newer build's look with
+ *  Auto — asks this instead. */
+export function isPref(v: unknown): v is Pref {
+  return typeof v === 'string' && (PREFS as readonly string[]).includes(v);
 }
 
 /** The look a setting wears. */
