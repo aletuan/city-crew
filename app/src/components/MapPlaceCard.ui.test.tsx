@@ -30,10 +30,10 @@ describe('MapPlaceCard', () => {
     render(<MapPlaceCard place={place()} distanceKm={0.8} tint={null} now={NOON} onPress={() => {}} />);
     expect(screen.getByText('Cộng Cà Phê')).toBeTruthy();
     expect(screen.getByText(/4\.6/)).toBeTruthy();
-    expect(screen.getByText(/0\.8 km/)).toBeTruthy();
+    expect(screen.getByText(/800 m/)).toBeTruthy();
     expect(document.querySelector('img')?.getAttribute('src')).toBe('https://img/cong.jpg');
     // The spoken name carries the facts as words, and never the star glyph.
-    const btn = screen.getByRole('button', { name: /rated 4\.6 \(1\.2k\), 0\.8 km/ });
+    const btn = screen.getByRole('button', { name: /rated 4\.6 \(1\.2k\), 800 m/ });
     expect(btn.getAttribute('aria-label')).not.toMatch(/★/);
   });
 
@@ -98,6 +98,8 @@ describe('MapPlaceCard', () => {
     expect(document.querySelector('img')).toBeNull();
   });
 
+  // The list's card and this strip name the same place, so they say the
+  // same figure: `fmtDistance` for both, metres under a kilometre.
   it('rounds distance to the nearest km when >= 10', () => {
     render(<MapPlaceCard place={place()} distanceKm={12.4} tint={null} now={NOON} onPress={() => {}} />);
     expect(screen.getByText(/12 km/)).toBeTruthy();

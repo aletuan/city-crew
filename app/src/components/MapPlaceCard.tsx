@@ -13,6 +13,7 @@ import { coverOf, fmtCount, type Place } from '../lib/data';
 import { useCity } from '../lib/city';
 import { cityTz } from '../lib/clock';
 import { openFragment, openState, shutLabel } from '../lib/format';
+import { fmtDistance } from '../lib/geo';
 import { useI18n } from '../lib/i18n';
 import { splitName } from '../lib/name';
 import { colors, font, radius, space } from '../theme';
@@ -46,7 +47,12 @@ export default function MapPlaceCard({ place, distanceKm, tint, now, onPress }: 
   // the pins hears one name per pin, not a name and a ward per pin.
   const name = splitName(t(place.name_en, place.name_vi, place.name_ja)).title;
   const ratingFact = place.rating ? `${place.rating.toFixed(1)}${place.rating_count ? ` (${fmtCount(place.rating_count)})` : ''}` : null;
-  const distanceFact = distanceKm != null ? `${distanceKm < 10 ? distanceKm.toFixed(1) : Math.round(distanceKm)} km` : null;
+  // The same figure the list's cards print under "Nearest first", from
+  // the same formatter: metres to the nearest fifty while it is a walk,
+  // one decimal while it is a ride. This strip used to write "0.8 km" on
+  // its own, which beside a card saying "800 m" for the same place read
+  // as two measurements.
+  const distanceFact = distanceKm != null ? fmtDistance(distanceKm) : null;
   const facts = [
     ratingFact ? `★ ${ratingFact}` : null,
     distanceFact,

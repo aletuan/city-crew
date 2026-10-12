@@ -204,6 +204,59 @@ describe('the line under the name', () => {
   });
 });
 
+// The distance, which the card prints only when handed one: the screen
+// hands it over with "Nearest first" and with nothing else, so a figure
+// here always explains the order the card sits in.
+describe('the distance', () => {
+  const line = () => screen.getByTestId('card').textContent ?? '';
+  const card = (distanceKm: number | null | undefined, extra: Partial<Place> = {}) =>
+    render(<PlaceCard testID="card" onPress={() => {}} distanceKm={distanceKm} place={place({
+      neighborhood_en: 'Kim Lien', neighborhood_vi: 'Kim Liên', ...extra,
+    })} />);
+
+  it('says nothing when there is no figure', () => {
+    card(null);
+    expect(line()).toContain('Kim Lien');
+    expect(line()).not.toMatch(/·|\d+ m\b|km/);
+  });
+
+  // District first, then the figure: the line reads as a sentence about
+  // a place, and "Kim Lien · 850 m" is how that sentence goes.
+  it('follows the district, in metres while it is a walk', () => {
+    card(0.847);
+    expect(line()).toContain('Kim Lien · 850 m');
+  });
+
+  it('rounds to one decimal on a ride and to whole kilometres beyond ten', () => {
+    card(1.24);
+    expect(line()).toContain('Kim Lien · 1.2 km');
+    cleanup();
+    card(12.4);
+    expect(line()).toContain('Kim Lien · 12 km');
+  });
+
+  // A place with no district still gets its figure, and the line is
+  // not dropped the way an empty one is.
+  it('stands alone when the catalog has no district', () => {
+    card(0.4, { neighborhood_en: null, neighborhood_vi: null });
+    expect(line()).toContain('400 m');
+    expect(line()).not.toContain('·');
+  });
+
+  // The hour keeps its place at the end, after the figure: when the
+  // line is clipped it is the hour that goes, never the distance.
+  it('sits between the district and the closing hour', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-10T14:30:00Z')); // 21:30 Hanoi, half an hour to close
+    card(0.4, {
+      opening_hours: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        .map((d) => `${d}: 8:00 AM – 10:00 PM`),
+    });
+    expect(line()).toContain('Kim Lien · 400 m · until 22:00');
+    vi.useRealTimers();
+  });
+});
+
 // What the clock is allowed to put on the card, and where.
 //
 // Three states, three appearances, and the point of the set is that no
