@@ -256,6 +256,14 @@ for f in "$ROOT"/supabase/migrations/*_preferences_theme.sql; do
 done
 run "$DB" -f "$HERE/preferences_theme_test.sql"
 
+# The count of wearers per theme (12 Oct 2026). After the column it
+# counts; its test seeds and removes its own twenty-four accounts.
+echo "→ theme counts"
+for f in "$ROOT"/supabase/migrations/*_theme_counts.sql; do
+  run "$DB" -f "$f" >/dev/null
+done
+run "$DB" -f "$HERE/theme_counts_test.sql"
+
 # The daily caps. After preferences and the collection blocks, because the
 # policies it rewrites count rows in those tables; it seeds and removes
 # its own account.

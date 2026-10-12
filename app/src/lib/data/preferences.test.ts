@@ -17,7 +17,7 @@ vi.mock('../supabase', async () => {
 });
 
 import {
-  clearMyHistory, fetchPassedOver, fetchPreferences, fetchTheme, logPlaceEvent, NO_PREFERENCES,
+  clearMyHistory, fetchPassedOver, fetchPreferences, fetchTheme, fetchThemeCounts, logPlaceEvent, NO_PREFERENCES,
   savePreferences, saveTheme,
 } from './preferences';
 
@@ -296,5 +296,30 @@ describe('the theme', () => {
   it('throws what the database said on a write', async () => {
     fake().replies({ error: { message: 'not yours' } });
     await expect(saveTheme('u-1', 'wine')).rejects.toThrow('not yours');
+  });
+});
+
+// How many wear each theme (12 Oct 2026): a function, not a select, and
+// the function is the privacy boundary — a name and a figure, past
+// twenty wearers, never whose.
+describe('fetchThemeCounts', () => {
+  it('takes the totals from the function, keyed by theme', async () => {
+    fake().replies({ data: [{ theme: 'coffee', wearers: 41 }, { theme: 'wine', wearers: 20 }] });
+    expect(await fetchThemeCounts()).toEqual({ coffee: 41, wine: 20 });
+    expect(fake().log[0]).toMatchObject({ op: 'rpc', fn: 'theme_counts' });
+    expect(fake().log[0].payload).toBeUndefined();
+  });
+
+  // An empty map, never a throw: no card then carries the word, which is
+  // the sheet as it ships until there are twenty of anyone.
+  it('answers an empty map when the function failed or said nothing', async () => {
+    fake().replies({ error: { message: 'no such function' } });
+    expect(await fetchThemeCounts()).toEqual({});
+    fake().reset();
+    fake().replies({ data: null });
+    expect(await fetchThemeCounts()).toEqual({});
+    fake().reset();
+    fake().replies({ data: [] });
+    expect(await fetchThemeCounts()).toEqual({});
   });
 });

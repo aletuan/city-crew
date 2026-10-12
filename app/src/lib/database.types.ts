@@ -1181,6 +1181,13 @@ export type Database = {
           other: string
         }[]
       }
+      theme_counts: {
+        Args: never
+        Returns: {
+          theme: string
+          wearers: number
+        }[]
+      }
       trip_crew_counts: {
         Args: { trip_ids: string[] }
         Returns: {
