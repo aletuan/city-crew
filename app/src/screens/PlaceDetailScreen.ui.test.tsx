@@ -1788,6 +1788,65 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     expect(screen.queryByTestId('detail-why')).toBeNull();
   });
 
+  // The heading on a line of its own and the paragraph under it at the
+  // screen's full width (12 Oct 2026): the paragraph used to be the one
+  // thing 40pt in from the left edge everything else shares.
+  it('puts the heading on its own line and the paragraph under it, not beside the mark', () => {
+    show(place({ desc_en: 'Brunch and counter food under the arches.' }));
+    const why = screen.getByTestId('detail-why');
+    const head = screen.getByText('Highlights').parentElement!;
+    const desc = screen.getByTestId('detail-desc');
+    expect(head.contains(desc)).toBe(false);
+    expect(head.textContent).toContain('\u201C');
+    // Head first, paragraph after, as direct children of the block.
+    const kids = [...why.children];
+    expect(kids.indexOf(head)).toBeLessThan(kids.indexOf(desc.parentElement!));
+    expect(getComputedStyle(why).flexDirection).not.toBe('row');
+  });
+
+  // "City Crew pick": `is_featured` chose Explore's hero and was said
+  // nowhere else. On the heading row, as a mark and not a filled pill.
+  it('marks a featured place as City Crew’s pick on the heading row, and others not', () => {
+    show(place({ desc_en: 'Brunch and counter food under the arches.', is_featured: true }));
+    const pick = screen.getByTestId('detail-pick');
+    expect(pick.textContent).toBe('City Crew pick');
+    expect(screen.getByText('Highlights').parentElement!.contains(pick)).toBe(true);
+    expect(pick.querySelector('[data-icon="ribbon-outline"]')).toBeTruthy();
+    expect(getComputedStyle(pick).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    cleanup();
+    show(place({ desc_en: 'Brunch and counter food under the arches.', is_featured: false }));
+    expect(screen.queryByTestId('detail-pick')).toBeNull();
+  });
+
+  it.each([
+    ['vi', 'City Crew chọn'],
+    ['ja', 'City Crew のおすすめ'],
+  ] as const)('names the pick in %s', (lang, label) => {
+    state.lang = lang;
+    show(place({ desc_en: 'Brunch and counter food under the arches.', is_featured: true }));
+    expect(screen.getByText(label)).toBeTruthy();
+  });
+
+  // The vibes, as the card says them: a dot in the vibe's hue and its
+  // word, every tag, with or without a blurb.
+  it('says every vibe tag under the highlights, dot and word, and none where there are none', () => {
+    show(place({ desc_en: 'Brunch and counter food under the arches.', vibe_tags: ['cafes', 'views'] }));
+    const vibes = screen.getByTestId('detail-vibes');
+    expect(vibes.textContent).toBe('CafésViews');
+    const dot = screen.getByTestId('detail-vibe-views').firstElementChild as HTMLElement;
+    expect(getComputedStyle(dot).backgroundColor).toBe('rgb(111, 179, 192)');
+    expect(vibes.querySelector('[role="button"]')).toBeNull();
+    cleanup();
+    show(place({ vibe_tags: [] }));
+    expect(screen.queryByTestId('detail-vibes')).toBeNull();
+  });
+
+  it('says the vibes even where the desk has written nothing', () => {
+    show(place({ desc_en: null, desc_vi: null, desc_ja: null, vibe_tags: ['nightlife'] }));
+    expect(screen.queryByTestId('detail-why')).toBeNull();
+    expect(screen.getByTestId('detail-vibes').textContent).toBe('Nightlife');
+  });
+
   // Whose words these are. Most blurbs are the desk's own and carry no
   // credit at all; the ones that came out of somebody's Threads post are
   // theirs, and the line under the paragraph is where that gets said.
