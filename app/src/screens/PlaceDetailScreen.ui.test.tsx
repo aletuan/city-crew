@@ -1798,6 +1798,8 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     const desc = screen.getByTestId('detail-desc');
     expect(head.contains(desc)).toBe(false);
     expect(head.textContent).toContain('\u201C');
+    // A bare mark, no disc: the disc was the gutter's anchor.
+    expect(getComputedStyle(head.firstElementChild as Element).backgroundColor).toBe('rgba(0, 0, 0, 0)');
     // Head first, paragraph after, as direct children of the block.
     const kids = [...why.children];
     expect(kids.indexOf(head)).toBeLessThan(kids.indexOf(desc.parentElement!));
@@ -1827,14 +1829,20 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
     expect(screen.getByText(label)).toBeTruthy();
   });
 
-  // The vibes, as the card says them: a dot in the vibe's hue and its
-  // word, every tag, with or without a blurb.
-  it('says every vibe tag under the highlights, dot and word, and none where there are none', () => {
+  // The vibes as small chips: every tag, one fill from the theme, no dot
+  // in the vibe's hue, nothing pressable, with or without a blurb.
+  it('says every vibe tag under the highlights as a chip in the theme’s glass, and none where there are none', () => {
     show(place({ desc_en: 'Brunch and counter food under the arches.', vibe_tags: ['cafes', 'views'] }));
     const vibes = screen.getByTestId('detail-vibes');
     expect(vibes.textContent).toBe('CafésViews');
-    const dot = screen.getByTestId('detail-vibe-views').firstElementChild as HTMLElement;
-    expect(getComputedStyle(dot).backgroundColor).toBe('rgb(111, 179, 192)');
+    const chip = screen.getByTestId('detail-vibe-views');
+    // The word alone inside: no dot, so no second element.
+    expect(chip.children.length).toBe(1);
+    const fill = getComputedStyle(chip).backgroundColor;
+    expect(fill).not.toBe('rgba(0, 0, 0, 0)');
+    expect(fill).not.toBe('rgb(111, 179, 192)');
+    expect(getComputedStyle(screen.getByTestId('detail-vibe-cafes')).backgroundColor).toBe(fill);
+    expect(getComputedStyle(chip).borderTopWidth === '' || getComputedStyle(chip).borderTopWidth === '0px').toBe(true);
     expect(vibes.querySelector('[role="button"]')).toBeNull();
     cleanup();
     show(place({ vibe_tags: [] }));
@@ -1860,7 +1868,12 @@ describe('PlaceDetailScreen — what is this place, said without interruption', 
       reviewer_url: 'https://www.threads.com/@gowithchinne/post/DdeLnFwj10o',
     }));
     const credit = screen.getByTestId('blurb-credit');
+    // The paragraph's last run, not a line of its own (12 Oct 2026).
+    expect(screen.getByTestId('detail-desc').contains(credit)).toBe(true);
+    expect(screen.getByTestId('detail-desc').textContent).toMatch(/floors\.\s+.*gowithchinne$/);
     fireEvent.click(credit);
+    // Once, through the paragraph's own handler.
+    expect(openURL).toHaveBeenCalledTimes(1);
     // The mark carries the platform, so the words stop repeating it —
     // and the @ goes with them, being a second marker for the same thing.
     expect(credit.querySelector('[data-icon="logo-threads"]')).toBeTruthy();

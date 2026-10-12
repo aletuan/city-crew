@@ -45,7 +45,7 @@ import { clockOf, dateline, groupHours, openState } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { blurbCredit, blurbIcon, blurbLink } from '../lib/blurbSource';
 import { mapsSearchUrl } from '../lib/maps';
-import { vibeColor, vibeLabel } from '../lib/vibes';
+import { vibeLabel } from '../lib/vibes';
 import { useSave } from '../lib/save';
 import { shareSafely } from '../lib/share';
 import { useNoteEvent } from '../lib/tasteProfile';
@@ -818,10 +818,14 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                   asked for the paragraph on its own line, full width. One
                   left edge for the screen, and at 16pt a line ~5 characters
                   longer: a 120-character blurb goes from four lines to
-                  three or so. The mark keeps its disc and its meaning —
-                  it is still the quotation mark over these words, not a
-                  section icon — and the heading row is also where the
-                  pick mark lives, at the right. */}
+                  three or so. The mark keeps its meaning — it is still the
+                  quotation mark over these words, not a section icon — but
+                  not its disc: the disc was the gutter's anchor for a
+                  column of text, and on a heading row a bare mark in the
+                  display face reads as a magazine's opening quote, which
+                  is what the owner asked for on seeing it with the disc.
+                  The heading row is also where the pick mark lives, at
+                  the right. */}
               <View style={s.whyHead}>
                 <View style={s.whyMark}>
                   <Text style={s.whyQuote}>{'\u201C'}</Text>
@@ -848,14 +852,22 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                 ) : null}
               </View>
               <View style={s.whyBody}>
-                <Text style={s.desc} onPress={openBlurb} testID="detail-desc">{desc}</Text>
-                {/* Whose words those are. A line, not a badge: it belongs to
-                    the paragraph above it and should read as its last line,
-                    the way a pull quote is attributed.
+                {/* Whose words those are, at the end of them. It was a line
+                    of its own under the paragraph; since 12 Oct 2026 it is
+                    the paragraph's last run, after two spaces — a pull
+                    quote's attribution, on the owner's reading that the
+                    extra line broke the paragraph's rhythm. Nested in the
+                    paragraph's Text so it wraps with it, and with no press
+                    handler of its own: the paragraph's handler covers the
+                    run (a nested Text with its own would merely shadow it
+                    — checked, not doubled), so one handler is the whole
+                    truth of what a tap does. At
+                    15pt against the paragraph's 16, in the link colour —
+                    one step down says "attribution", two said "footnote".
 
-                    Under the blurb rather than over it because the sentence
-                    is what the reader came for; the attribution answers a
-                    question they only have once they have read it.
+                    After the blurb rather than before it because the
+                    sentence is what the reader came for; the attribution
+                    answers a question they only have once they have read it.
 
                     Google is credited by platform alone. The import copies
                     `editorialSummary`, which Google writes and signs with
@@ -878,52 +890,66 @@ export default function PlaceDetailScreen({ navigation, route }: { navigation: N
                     line rather than as two objects. A source with no mark
                     keeps the long wording; there is nothing else to carry
                     it. */}
-                {blurbFrom ? (
-                  <Text
-                    style={[s.creditLine, blurbHref ? s.creditLink : null]}
-                    onPress={openBlurb}
-                    accessibilityRole={blurbHref ? 'link' : undefined}
-                    testID="blurb-credit"
-                  >
-                    {blurbMark ? (
-                      <Ionicons
-                        name={blurbMark}
-                        size={13}
-                        color={blurbHref ? colors.accent : colors.textTertiary}
-                      />
-                    ) : null}
-                    {blurbMark ? '  ' : ''}
-                    {blurbFrom.kind === 'threads'
-                      ? (blurbFrom.name ?? 'Threads')
-                      : blurbFrom.kind === 'google'
-                        ? 'Google'
-                        : (blurbFrom.name
-                          ? t(`${blurbFrom.name} on ${blurbFrom.source}`, `${blurbFrom.name} trên ${blurbFrom.source}`, `${blurbFrom.name}（${blurbFrom.source}）`)
-                          : blurbFrom.source)}
-                  </Text>
-                ) : null}
+                <Text style={s.desc} onPress={openBlurb} testID="detail-desc">
+                  {desc}
+                  {blurbFrom ? (
+                    <Text
+                      style={[s.credit, blurbHref ? s.creditLink : null]}
+                      accessibilityRole={blurbHref ? 'link' : undefined}
+                      testID="blurb-credit"
+                    >
+                      {'  '}
+                      {blurbMark ? (
+                        <Ionicons
+                          name={blurbMark}
+                          size={13}
+                          color={blurbHref ? colors.accent : colors.textTertiary}
+                        />
+                      ) : null}
+                      {blurbMark ? ' ' : ''}
+                      {blurbFrom.kind === 'threads'
+                        ? (blurbFrom.name ?? 'Threads')
+                        : blurbFrom.kind === 'google'
+                          ? 'Google'
+                          : (blurbFrom.name
+                            ? t(`${blurbFrom.name} on ${blurbFrom.source}`, `${blurbFrom.name} trên ${blurbFrom.source}`, `${blurbFrom.name}（${blurbFrom.source}）`)
+                            : blurbFrom.source)}
+                    </Text>
+                  ) : null}
+                </Text>
               </View>
             </View>
           ) : null}
 
           {/* ── vibes ──
-              What the place feels like, the way the card in the feed says
-              it: a dot in the vibe's own hue and its word. `vibe_tags` was
-              on every card and on no detail screen — a reader who opened
-              "Yên tĩnh" from the feed found the word gone. Every tag here,
-              not the card's one-and-a-count: the card's line had room for
-              one, and this screen has the room. Dot and word, not a filled
-              chip, because a filled pill on this screen says "press me"
-              (the check-in button, the filter row on Explore) and these
-              say "read me"; `lib/vibes` keeps the hue to the dot for the
-              same reason. Drawn with or without a blurb: the tags are the
-              desk's, the blurb may be Google's, and a place can have the
-              one and not the other. */}
+              What the place feels like. `vibe_tags` was on every card in
+              the feed and on no detail screen — a reader who opened "Yên
+              tĩnh" from the feed found the word gone. Every tag here, not
+              the card's one-and-a-count: the card's line had room for one,
+              and this screen has the room.
+
+              Chips, since the evening of 12 Oct 2026, and small ones. The
+              first cut was the card's dot-and-word, on the argument that a
+              filled pill on this screen says "press me" (the check-in
+              button, the filter row on Explore). The owner's answer: what
+              says "press me" is the height, not the fill. Those controls
+              are 44pt; a 24pt chip with no border is a label, the way a
+              category tag under an App Store listing is, and a label is
+              what a vibe is — the reader learns the place is quiet, or
+              good to work in, and taps nothing. No dot inside, and one fill
+              for all of them, the theme's own glass (`surfaceGlass`, the
+              look cards' and the info card's material): the vibe palette's
+              hues sit next to the category pills' hues on the same screen,
+              and two colour systems for two taxonomies is one more than a
+              reader can hold. Not the accent's tint, either, which the
+              heading, the pick and the credit already carry — three more
+              would stop it marking anything. Drawn with or without a
+              blurb: the tags are the desk's, the blurb may be Google's,
+              and a place can have the one and not the other. */}
           {place.vibe_tags.length ? (
             <View style={s.vibes} testID="detail-vibes">
               {place.vibe_tags.map((v) => (
                 <View key={v} style={s.vibe} testID={`detail-vibe-${v}`}>
-                  <View style={[s.vibeDot, { backgroundColor: vibeColor(v) }]} />
                   <Text style={s.vibeText}>{vibeLabel(v, t)}</Text>
                 </View>
               ))}
@@ -1549,10 +1575,11 @@ const s = StyleSheet.create({
   // the head row, then the paragraph at the screen's full width.
   why: { gap: 6, marginTop: 14 },
   whyHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // No disc since 12 Oct 2026 (see the block); the box stays 28 tall so
+  // the measured centring of the glyph holds, and narrows to the glyph.
   whyMark: {
-    width: 28, height: 28, borderRadius: 14, marginTop: 1,
+    width: 18, height: 28, marginTop: 1,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
   },
   whyQuote: {
     color: colors.accent, fontSize: 22, fontFamily: display.bold,
@@ -1564,18 +1591,18 @@ const s = StyleSheet.create({
   whyLabel: { flex: 1, color: colors.accent, fontSize: 16, fontWeight: font.semibold },
   pick: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   pickText: { color: colors.accent, fontSize: 12, fontWeight: font.semibold },
-  // The card's grammar for a vibe (`PlaceCard`): a 7pt dot in the vibe's
-  // hue, the word in full-strength type beside it.
-  vibes: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 10 },
-  vibe: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  vibeDot: { width: 7, height: 7, borderRadius: 3.5 },
-  vibeText: { color: colors.text, fontSize: 13, fontWeight: font.semibold },
+  // A label's chip (see the block): 24pt — 16 of line and 4 of padding
+  // each way — against the 44pt of anything on this screen that is
+  // pressed; the theme's glass, no border, no dot.
+  vibes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  vibe: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: colors.surfaceGlass },
+  vibeText: { color: colors.text, fontSize: 13, lineHeight: 16, fontWeight: font.semibold },
 
-  // Smaller and quieter than the blurb: an attribution that competed with
-  // the sentence it attributes would be reading the footnote first. The
-  // link colour is the only thing that marks it as tappable — an icon at
-  // this size is a smudge, and an underline in this face is a scar.
-  creditLine: { color: colors.textTertiary, fontSize: 13, marginTop: 6 },
+  // The paragraph's last run (see the block): one step under its size,
+  // quieter than the sentence it attributes. The link colour is the only
+  // thing that marks the source as reachable — an underline in this face
+  // is a scar.
+  credit: { color: colors.textTertiary, fontSize: 15 },
   creditLink: { color: colors.accent },
 
   // The Card supplies ground, border and radius; the horizontal inset
