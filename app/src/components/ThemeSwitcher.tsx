@@ -115,8 +115,11 @@
 // move the pill along the edge past the curve, or give every card more
 // margin. The owner chose the margin — the preview does not need the
 // width — so all fourteen swatches are 8pt narrower and 4pt shorter (48,
-// so the card is no taller), and the pill sits 10pt from the card's edge
-// on three of them, 2pt over the swatch.
+// so the card is no taller). And the pill rides the swatch's top edge
+// with that edge through its middle, half above and half below, its
+// left edge on the swatch's: at 2pt over, as it first sat, the two edges
+// nearly met and read as missed rather than meant. Half-and-half is a
+// tag; one axis crossed, the other kept.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -567,8 +570,8 @@ const s = StyleSheet.create({
   // from either. Plain rgba, not a token: a token here would be the look
   // being worn, not the look being drawn.
   // 48, down from 52 when the card's padding grew by 4 each way, so the
-  // card is no taller than it was; the lines still start 16pt down,
-  // 4pt under where the pill ends.
+  // card is no taller than it was; the lines start 16pt down, 7pt under
+  // where the pill's lower half ends.
   swatch: {
     height: 48, borderRadius: radius.card - 10, flexDirection: 'row', alignItems: 'center',
     gap: 8, paddingHorizontal: 10,
@@ -577,14 +580,15 @@ const s = StyleSheet.create({
   swatchLine: { height: 5, borderRadius: 2.5 },
   swatchPill: { width: 26, height: 18, borderRadius: 9 },
   swatchDot: { width: 18, height: 18, borderRadius: 9 },
-  // The word, hung on the swatch's top-left corner: 10pt from the card's
-  // edge (its 12pt padding, less 2), clear of the corner's curve, and 2pt
-  // over the swatch, so it reads as a tag on the card. The tab bar's pill
-  // colours — `badgeSolid`, with the ink set inline per side since
-  // `pillInk` is a pair and not a token — and the swatch's hairline
-  // instead of a shadow.
+  // The word, riding the swatch's top edge: the pill is ~17pt tall (13pt
+  // of line, 2pt of padding each side, the hairline), the swatch starts
+  // 12pt down, so `top: 4` puts the edge through the pill's middle; the
+  // left edge sits on the swatch's own, 12pt in, past the curve of the
+  // card's corner. The tab bar's pill colours — `badgeSolid`, with the
+  // ink set inline per side since `pillInk` is a pair and not a token —
+  // and the swatch's hairline instead of a shadow.
   word: {
-    position: 'absolute', top: 10, left: 10,
+    position: 'absolute', top: 4, left: 12,
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 7, paddingVertical: 2, borderRadius: 9,
     backgroundColor: colors.badgeSolid,

@@ -520,10 +520,10 @@ describe('the looks', () => {
       expect(word.querySelector('[data-icon="star"]')).toBeNull();
       const style = getComputedStyle(word);
       expect(style.position).toBe('absolute');
-      // 10pt from the card's edge: past the curve of its corner, which is
-      // what the owner's geometry proposal was for.
-      expect(style.top).toBe('10px');
-      expect(style.left).toBe('10px');
+      // Riding the swatch's top edge, half above and half below, left
+      // edge on the swatch's own (12pt in, past the corner's curve).
+      expect(style.top).toBe('4px');
+      expect(style.left).toBe('12px');
       expect(getComputedStyle(word.parentElement!).padding).toBe('12px');
       expect(style.borderTopColor).toBe('rgba(128, 128, 128, 0.35)');
       expect(style.boxShadow === '' || style.boxShadow === 'none').toBe(true);
