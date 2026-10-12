@@ -118,13 +118,12 @@ const MAX_TEXT = 600;
  * Haiku, since 11 Oct 2026. Both jobs here are small and fenced: a name
  * and one line per stop inside an enum schema, or a sentence sorted into
  * the wizard's own chips. Opus 5 did them at about 1.1 cents a call —
- * nearly all of it output tokens, with the system prompt already cached —
- * which at 5,000 regular readers was on the order of $1,000 a month.
- * Haiku 5.5 is fifty times cheaper per token on both sides and keeps the
- * same request shape: adaptive thinking on by default, `effort` honoured,
- * structured outputs, a 512-token cache minimum the 786-token prompt
- * clears. What it does not have is a server-side refusal fallback; the
- * app already prints its own fallback for any failed call (`assist.ts`).
+ * nearly all of it output tokens — which at 5,000 regular readers was on
+ * the order of $1,000 a month. Haiku 5.5 is fifty times cheaper per token
+ * on both sides and keeps the same request shape: adaptive thinking on by
+ * default, `effort` honoured, structured outputs. What it does not have
+ * is a server-side refusal fallback; the app already prints its own
+ * fallback for any failed call (`assist.ts`).
  */
 const MODEL = "claude-haiku-5-5";
 
@@ -148,12 +147,28 @@ const LANGS: Record<string, string> = {
 };
 
 /**
- * Fixed, and first in the request, so it can be cached.
+ * Fixed, and first in the request. Everything that varies — the answers,
+ * the stops — goes in the user turn below.
  *
- * Everything that varies — the answers, the stops — goes in the user turn
- * below. Prompt caching is a prefix match: one interpolated value up here
- * and every request pays full price for the whole prompt. See
- * `docs/ai-agent-planner.md`.
+ * It is not cached, since 12 Oct 2026, and it was never cached before
+ * that either: eight narrations with `cache_creation` logged showed the
+ * prefix written every time (779–818 tokens, never the same number) and
+ * never read back. The output schema is why. Structured outputs add a
+ * system prompt of their own describing the schema, and it sits in the
+ * cached prefix; `slug` in that schema is an enum of the plan's own slugs,
+ * so every plan is a new prefix. With `cache_control` on, each call paid
+ * the write premium (1.25×) on ~800 tokens for a read that never came —
+ * about 9% more per call than no cache at all, on Haiku.
+ *
+ * The fix that makes the prefix constant is known — have the model answer
+ * with the stop's number (a fixed enum "1".."8") instead of its slug, and
+ * map it back here — and it is not worth a change in the output contract
+ * yet: a read needs a second plan to start inside five minutes of the
+ * first, and at today's traffic that is rare. The three cards of one
+ * visit cannot read each other's write either; they start in the same
+ * second. Turn it back on, with that fix, when `plan-assist narrate`
+ * entries sit under five minutes apart through the day. At Haiku prices
+ * the whole difference is a third of a call that costs $0.00024.
  */
 const SYSTEM = `You name a night out and say why each place is on the list.
 
@@ -410,7 +425,7 @@ Deno.serve(async (req) => {
       {
         model: MODEL,
         max_tokens: MAX_TOKENS,
-        system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
+        system: SYSTEM,
         output_config: {
           effort: "low",
           format: {
@@ -472,16 +487,11 @@ Deno.serve(async (req) => {
       returned: out.length,
       input_tokens: message.usage.input_tokens,
       output_tokens: message.usage.output_tokens,
+      // Both halves of the cache, kept while the cache is off: they read
+      // 0 and 0 now, and they are the instrument that showed it never
+      // worked (see `SYSTEM`) and will show whether it does when it is
+      // turned back on. `input_tokens` is the whole prompt meanwhile.
       cache_read: message.usage.cache_read_input_tokens,
-      // Both halves of the cache, since 12 Oct 2026. Nine narrations in
-      // a row read `cache_read: 0` across minutes, inside the five-minute
-      // window, with the 786-token system prompt absent from
-      // `input_tokens` — so it was being written somewhere and never read
-      // back. Whether it is written at all is the next question, and this
-      // is the number that answers it. The suspect is the output schema:
-      // its `slug` enum is the plan's own slugs, so it differs per
-      // request, and if it sits before the system prompt in the cached
-      // prefix every request is a new prefix.
       cache_creation: message.usage.cache_creation_input_tokens,
     });
 

@@ -33,21 +33,33 @@ vi.mock('../lib/i18n', () => ({
 }));
 const who = vi.hoisted(() => ({ userId: undefined as string | null | undefined }));
 const saveTheme = vi.hoisted(() => vi.fn(async () => {}));
+/** What the server says wears each theme — nothing, until a test says. */
+const wearers = vi.hoisted(() => ({ value: {} as Record<string, number> }));
+const fetchThemeCounts = vi.hoisted(() => vi.fn(async () => wearers.value));
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ userId: who.userId }) }));
-vi.mock('../lib/data', () => ({ saveTheme }));
+vi.mock('../lib/data', () => ({ saveTheme, fetchThemeCounts }));
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SEEN_LOOKS_KEY } from '../lib/lookLabels';
 import { schemeIcon, schemeLabel, ThemeSwitcherModal } from './ThemeSwitcher';
 
-beforeEach(() => {
+beforeEach(async () => {
   state.scheme = 'light';
   state.pref = 'light';
   state.look = 'standard';
   state.looks = true;
   who.userId = undefined;
+  wearers.value = {};
   saveTheme.mockClear();
   setPref.mockClear();
+  fetchThemeCounts.mockClear();
+  await AsyncStorage.removeItem(SEEN_LOOKS_KEY);
   vi.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
+
+/** Let the sheet's two asks on opening answer: the count, and the memory
+ *  read then written. Both are mocked promises, so a tick is enough. */
+const settled = () => act(() => new Promise<void>((r) => setTimeout(r, 0)));
 
 describe('the two grounds, and the deferral', () => {
   it('offers the three grounds, wearing their own marks', () => {
@@ -415,6 +427,98 @@ describe('the looks', () => {
 
   // Inside a look, the standard rows are the ones that restart — and the
   // look being worn neither asks nor carries the note.
+  // The two words on a card (12 Oct 2026) — see the header of
+  // `lib/lookLabels` for why words on a few cards and not an order.
+  describe('the words on a card', () => {
+    const ALL = ['coffee', 'rose', 'blush', 'slate', 'midnight', 'navy', 'chocolate', 'cosmic', 'duck', 'honey', 'royal', 'plum', 'violet', 'wine'];
+    const said = (word: string) => [...document.querySelectorAll(`[data-testid$="-${word}"]`)]
+      .map((el) => el.getAttribute('data-testid')!.replace(/^theme-/, '').replace(`-${word}`, ''));
+
+    it('puts Popular on the three most worn the server named, and on no ground', async () => {
+      // Dark has the most wearers of all and is a ground, not a look: the
+      // list is a setting and carries no word.
+      wearers.value = { dark: 900, wine: 55, coffee: 40, cosmic: 30, rose: 21 };
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      expect(said('popular').sort()).toEqual(['coffee', 'cosmic', 'wine']);
+      expect(screen.getAllByText('Popular').length).toBe(3);
+      expect(screen.queryByTestId('theme-dark-popular')).toBeNull();
+      expect(fetchThemeCounts).toHaveBeenCalledTimes(1);
+    });
+
+    // Nothing until there are twenty of anyone — the server's rule, and
+    // the sheet as it ships.
+    it('says nothing when the server names nothing', async () => {
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      expect(screen.queryByText('Popular')).toBeNull();
+      expect(screen.queryByText('New')).toBeNull();
+    });
+
+    it('puts New on a look that was not on the sheet last time, and on none the first time', async () => {
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      // The first opening: everything would be new, so nothing is — and
+      // what was shown is now remembered.
+      expect(screen.queryByText('New')).toBeNull();
+      expect(JSON.parse((await AsyncStorage.getItem(SEEN_LOOKS_KEY))!)).toEqual(ALL);
+      cleanup();
+      // The next opening, on a build that added two.
+      await AsyncStorage.setItem(SEEN_LOOKS_KEY, JSON.stringify(ALL.filter((l) => l !== 'plum' && l !== 'wine')));
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      expect(said('new').sort()).toEqual(['plum', 'wine']);
+      expect(screen.getAllByText('New').length).toBe(2);
+      // For this opening only.
+      expect(JSON.parse((await AsyncStorage.getItem(SEEN_LOOKS_KEY))!)).toEqual(ALL);
+    });
+
+    it('lets Popular win on a card that is both', async () => {
+      await AsyncStorage.setItem(SEEN_LOOKS_KEY, JSON.stringify(ALL.filter((l) => l !== 'wine')));
+      wearers.value = { wine: 55 };
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      expect(said('popular')).toEqual(['wine']);
+      expect(said('new')).toEqual([]);
+    });
+
+    // A memory that cannot be read labels nothing, and the sheet is the
+    // same sheet: a broken value must not put New on every card.
+    it('labels nothing when the memory cannot be read', async () => {
+      vi.mocked(AsyncStorage.getItem).mockRejectedValueOnce(new Error('disk'));
+      wearers.value = { wine: 55 };
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      expect(screen.queryByText('New')).toBeNull();
+      expect(said('popular')).toEqual(['wine']);
+    });
+
+    it('asks again on each opening, and not while closed', async () => {
+      const { rerender } = render(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
+      await settled();
+      expect(fetchThemeCounts).not.toHaveBeenCalled();
+      rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      rerender(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
+      rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      expect(fetchThemeCounts).toHaveBeenCalledTimes(2);
+    });
+
+    // The word is drawn in the sheet's own colours with the swatch's
+    // hairline, so it reads on a pale page and a dark one alike.
+    it('draws the word in the sheet’s own ground, on the swatch', async () => {
+      wearers.value = { wine: 55 };
+      render(<ThemeSwitcherModal visible onClose={() => {}} />);
+      await settled();
+      const word = screen.getByTestId('theme-wine-popular');
+      expect(screen.getByTestId('theme-wine').contains(word)).toBe(true);
+      const style = getComputedStyle(word);
+      expect(style.position).toBe('absolute');
+      expect(style.borderTopColor).toBe('rgba(128, 128, 128, 0.35)');
+    });
+  });
+
   it('asks on the way back out of a look, and not for the look being worn', () => {
     state.look = 'coffee';
     state.pref = 'coffee';

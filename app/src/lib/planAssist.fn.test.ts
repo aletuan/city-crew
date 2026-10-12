@@ -202,6 +202,21 @@ describe('narrate', () => {
     expect(sent().messages[0].content).toContain('Language: Vietnamese');
   });
 
+  it('asks for no cache on a narration, and still does on a parse', async () => {
+    // Measured 12 Oct 2026: the schema's per-plan slug enum sits in the
+    // cached prefix, so a narration's prefix was written on every call and
+    // read on none. A marker here is the 25% write premium for nothing.
+    // Parse's schema only changes with the city, so its marker stays.
+    h.create.mockResolvedValue(says({ title: 'T', stops: [] }));
+    await call({ action: 'narrate', stops: [stop('a')] });
+    expect(JSON.stringify(sent())).not.toContain('cache_control');
+    h.fake.replies({ data: { user: { id: 'u1' } } });
+    h.create.mockResolvedValue(says({ company: 'unknown', categories: [], district: 'unknown', date: '', when: 'unknown' }));
+    await call({ action: 'parse', text: 'x', today: '2026-10-03', categories: ['cafe'], districts: [] });
+    expect(JSON.stringify(sent())).toContain('"text":"You turn one sentence');
+    expect(JSON.stringify(sent())).toContain('"cache_control":{"type":"ephemeral"}');
+  });
+
   it('drops a place the model made up, and a line with nothing to say, but keeps the rest', async () => {
     h.create.mockResolvedValue(says({
       title: '  An evening in the Old Quarter ',
