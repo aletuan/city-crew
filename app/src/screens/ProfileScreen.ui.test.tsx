@@ -761,6 +761,26 @@ describe('settings card', () => {
     expect(screen.getByText('close-theme')).toBeTruthy();
   });
 
+  // The card is rendered by both personas, so signing in or out replaces
+  // it. The record is for the first frame of the run and must not reopen
+  // the sheet on the next persona — which it did, every time.
+  it('does not reopen the theme sheet when the card is replaced by a sign-out or sign-in', () => {
+    state.resume = { tab: 'Profile', sheet: 'theme', y: 300, at: Date.now() };
+    const r = nav();
+    const { rerender } = render(<ProfileScreen navigation={r.n} />);
+    fireEvent.click(screen.getByText('close-theme'));
+    expect(screen.queryByText('close-theme')).toBeNull();
+
+    state.session = null;
+    rerender(<ProfileScreen navigation={r.n} />);
+    expect(screen.getByText('Theme')).toBeTruthy();
+    expect(screen.queryByText('close-theme')).toBeNull();
+
+    state.session = { user: { id: 'other' } };
+    rerender(<ProfileScreen navigation={r.n} />);
+    expect(screen.queryByText('close-theme')).toBeNull();
+  });
+
   it('opens no sheet on an ordinary launch, nor on one that came back to another tab', () => {
     draw();
     expect(screen.queryByText('close-theme')).toBeNull();

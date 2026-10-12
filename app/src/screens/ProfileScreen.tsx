@@ -6,7 +6,7 @@
 // About-me card and account actions. Champagne throughout — the
 // reference's violet gradient is translated, not copied.
 
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View,
   type NativeScrollEvent, type NativeSyntheticEvent,
@@ -225,8 +225,19 @@ function SettingsCard() {
   const [langOpen, setLangOpen] = useState(false);
   // Open from the first frame when this launch is the restart a theme
   // cost and the sheet was up when it was chosen — see `ProfileReturn`.
+  //
+  // Read once and then spent. This card is rendered by both of the
+  // screen's personas, so signing in or out replaces it with a fresh
+  // one, and a fresh one read the same answer: for the rest of the run
+  // after a theme's restart, every sign-in and sign-out reopened the
+  // Theme sheet on its own (the owner's "pops up by itself", 12 Oct
+  // 2026). The record is for the launch's first frame and nothing after
+  // it, so the first card to read it spends it. Spent in an effect
+  // rather than in the initialiser, so a second initialiser call could
+  // not find it already gone.
   const back = useContext(ProfileReturn);
   const [themeOpen, setThemeOpen] = useState(back.sheet === 'theme');
+  useEffect(() => { if (back.sheet) back.spendSheet(); }, [back]);
   const { scheme, pref } = useScheme();
   const langLabel = { en: 'English', vi: 'Tiếng Việt', ja: '日本語' }[lang];
   // The same reader the collection screen keys its tips by: the session,
@@ -983,9 +994,13 @@ function AccountProfile({ navigation }: { navigation: Nav }) {
  * settings card sits in both the account's profile and the guest's, two
  * levels under the scroll view that knows the offset.
  */
-const ProfileReturn = createContext<{ sheet: 'theme' | null; y: React.MutableRefObject<number> }>({
-  sheet: null, y: { current: 0 },
-});
+const ProfileReturn = createContext<{
+  sheet: 'theme' | null;
+  /** Spend the sheet: the first card to read it says so, and no card
+   *  after it reads it again. */
+  spendSheet: () => void;
+  y: React.MutableRefObject<number>;
+}>({ sheet: null, spendSheet: () => {}, y: { current: 0 } });
 
 export default function ProfileScreen({ navigation }: { navigation: Nav }) {
   const { t } = useI18n();
@@ -1016,7 +1031,13 @@ export default function ProfileScreen({ navigation }: { navigation: Nav }) {
       landing.current = 0;
     }
   };
-  const returning = useMemo(() => ({ sheet: back?.sheet ?? null, y }), [back]);
+  // The sheet to reopen, which the card below spends on its first read —
+  // see `SettingsCard`. State rather than a ref so the spending is a
+  // render the card's next incarnation sees, not a mutation of a value
+  // handed out through context.
+  const [sheet, setSheet] = useState<'theme' | null>(back?.sheet ?? null);
+  const spendSheet = useCallback(() => setSheet(null), []);
+  const returning = useMemo(() => ({ sheet, spendSheet, y }), [sheet, spendSheet]);
 
   return (
     <Screen title={t('Profile', 'Cá nhân', 'プロフィール')}>
