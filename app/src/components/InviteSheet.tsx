@@ -145,7 +145,7 @@ export default function InviteSheet({
           </Text>
         ) : (
           <ScrollView style={s.list} contentContainerStyle={{ paddingVertical: 4 }} showsVerticalScrollIndicator={false}>
-            {rows.map((r) => {
+            {rows.map((r, row) => {
               const p = people[r.id];
               const on = picked.has(r.id);
               // Greyed once the seats are spoken for: an unticked row on a
@@ -159,6 +159,7 @@ export default function InviteSheet({
                   onPress={() => toggle(r.id, r.locked || benched)}
                   haptic={r.locked || benched ? 'none' : 'selection'}
                   accessibilityRole="checkbox"
+                  testID={`invite-friend-${row}`}
                   accessibilityState={{ checked: on, disabled: r.locked || benched }}
                   containerStyle={{ alignSelf: 'stretch' }}
                   style={[s.row, (r.locked || benched) && s.rowLocked]}
@@ -228,6 +229,7 @@ export default function InviteSheet({
           icon="paper-plane-outline"
           wide
           label={label}
+          testID="invite-send"
           disabled={sending || !moved}
           onPress={() => { if (!sending && moved) onSend(invite, withdraw); }}
         />

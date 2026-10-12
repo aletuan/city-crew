@@ -35,6 +35,7 @@ scripted from a Linux job). See "Why not CI" at the end.
 | `13-trip-edit.yaml` | Deletes leftover upcoming trips; plans as 05 does; in the editor reads the first stop's hour, moves it 15 minutes earlier and sees it change; saves; the saved trip shows the edited hour — and still does after a cold start; deletes the trip. Saved trips have no editor, so the edit is the plan's, before Save. |
 | `14-forgot-password.yaml` | As a guest: Sign in → Forgot password → asks for a code for `maestro-reset@example.com` (a reserved domain: no account, no mail sent — never the test account, whose address is a real mailbox) → reaches the code step with the resend link waiting → Reset with no code is refused by the form and stays put. Does not reach the server refusing a wrong code: that needs the new-password field, which raises iOS's "Use Strong Password?" panel. |
 | `15-theme.yaml` | Two accounts. Signed in as A: Profile → Theme → Dark, the tick lands on it; signs out; as a guest picks Light; A signs back in and the sheet ticks Dark again, read from the account; B signs in on the phone A left on Dark and gets its own Light; A after B is Dark again; sets Auto; signs out. Grounds only — a look restarts the app, which Expo Go cannot do. Reads ticks in the row's label, never colours. |
+| `16-trip-invite.yaml` | Two accounts. A plans a trip with friends (as 05), opens it, Invite → ticks B (`invite-friend-0`) → Send; the crew row reads "Asked". B signs in, accepts the invitation on Trips (`invite-accept-0`); the trip joins B's list, and its foot is `trip-leave`, not `trip-delete`. A signs back in, the crew row reads "Coming"; A deletes the trip, which ends B's copy too. Needs A and B to be friends (see Test account). |
 | `12-language.yaml` | As a guest: Profile → Language → Tiếng Việt, the Places tab reads "Địa điểm", the first place opens and draws; the same in 日本語 ("スポット"); back to English. The only flow that asserts labels. Runs last — the choice persists on the device. |
 | `07-sign-up-delete.yaml` | **Not run by `npm run smoke:ios`** — see GUIDELINES.md ("Manual QA"). Documents signing up a brand-new account (a random name and email, Maestro's own generators — never `${TEST_EMAIL}`), skipping the taste picker, then deleting that same account from Profile → Delete account, ending back on the guest view; iOS's own "Use Strong Password?" panel on the password field can't be driven by Maestro, so this path is checked by hand once per release instead. |
 
@@ -112,6 +113,12 @@ restricts `maestro test .maestro` to the numbered flows and fixes their order.
    `smoke.sh` refuses to start without it. If B ever reads Dark, a run
    stopped while signed in as B, or the app leaked A's theme; set B back
    to Light by hand before the next run.
+
+   `16-trip-invite` also needs **A and B to be accepted friends, and B
+   to be A's only friend** — an invitation can only go to a friend, and
+   the flow ticks the first row of A's invite sheet. Make it once: as A,
+   Profile → Connect with friends → Add a friend → B's @handle → Send
+   request; as B, Requests → Accept. The flow never unfriends.
 
 ## Running
 

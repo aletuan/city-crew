@@ -19,6 +19,7 @@ flows:
   - "13-trip-edit.yaml"
   - "14-forgot-password.yaml"
   - "15-theme.yaml"
+  - "16-trip-invite.yaml"
   # Last: the language it picks persists on the device. See its header.
   - "12-language.yaml"
 executionOrder:
@@ -38,4 +39,5 @@ executionOrder:
     - 13-trip-edit
     - 14-forgot-password
     - 15-theme
+    - 16-trip-invite
     - 12-language
