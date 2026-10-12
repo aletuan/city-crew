@@ -121,7 +121,7 @@ export default function DeleteAccountScreen({ navigation }: { navigation: Nav })
   const gone: [keyof typeof Ionicons.glyphMap, string][] = [
     ['person-outline', t('Profile, photo and username', 'Hồ sơ, ảnh đại diện và tên người dùng', 'プロフィール・写真・ユーザー名')],
     ['bookmark-outline', t('Collections, likes and trips', 'Bộ sưu tập, lượt thích và chuyến đi', 'コレクション・いいね・旅程')],
-    ['people-outline', t('Crew and blocked accounts', 'Crew và tài khoản đã chặn', 'クルーとブロック中のアカウント')],
+    ['people-outline', t('Crew and blocked accounts', 'Bạn bè và tài khoản đã chặn', 'クルーとブロック中のアカウント')],
     ['heart-outline', t('Taste preferences and history', 'Sở thích và lịch sử', '興味と履歴')],
   ];
 

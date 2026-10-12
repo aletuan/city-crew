@@ -152,7 +152,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
           p
             ? t(`Block ${atHandle(p.handle)}?`, `Chặn ${atHandle(p.handle)}?`, `${atHandle(p.handle)} をブロックしますか？`)
             : t('Block this person?', 'Chặn người này?', 'この人をブロックしますか？'),
-          t('They will not be told. You can undo this from Your crew.', 'Họ sẽ không được báo. Bạn có thể bỏ chặn trong Crew của bạn.', '相手に通知されません。クルー画面から解除できます。'),
+          t('They will not be told. You can undo this from Your crew.', 'Họ sẽ không được báo. Bạn có thể bỏ chặn trong Thông tin bạn bè.', '相手に通知されません。クルー画面から解除できます。'),
           [
             { text: t('Cancel', 'Huỷ', 'キャンセル'), style: 'cancel' },
             {
@@ -226,7 +226,7 @@ export default function ActivityScreen({ navigation }: { navigation: Nav }) {
                     <Text style={s.reqTitle}>
                       <Text style={{ fontWeight: font.bold }}>{p?.full_name || (p ? atHandle(p.handle) : '…')}</Text>
                       {' '}
-                      {t('wants to join your crew', 'muốn tham gia crew của bạn', 'がクルーに参加したがっています')}
+                      {t('wants to join your crew', 'muốn kết bạn với bạn', 'がクルーに参加したがっています')}
                     </Text>
                     {p ? <Text style={s.meta}>{atHandle(p.handle)}</Text> : null}
                   </View>
