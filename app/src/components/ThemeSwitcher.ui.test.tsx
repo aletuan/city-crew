@@ -33,11 +33,12 @@ vi.mock('../lib/i18n', () => ({
 }));
 const who = vi.hoisted(() => ({ userId: undefined as string | null | undefined }));
 const saveTheme = vi.hoisted(() => vi.fn(async () => {}));
-/** What the server says wears each theme — nothing, until a test says. */
-const wearers = vi.hoisted(() => ({ value: {} as Record<string, number> }));
-const fetchThemeCounts = vi.hoisted(() => vi.fn(async () => wearers.value));
+/** The themes the server names as popular, most worn first — none, until
+ *  a test says. */
+const named = vi.hoisted(() => ({ value: [] as string[] }));
+const fetchPopularThemes = vi.hoisted(() => vi.fn(async () => named.value));
 vi.mock('../lib/auth', () => ({ useAuth: () => ({ userId: who.userId }) }));
-vi.mock('../lib/data', () => ({ saveTheme, fetchThemeCounts }));
+vi.mock('../lib/data', () => ({ saveTheme, fetchPopularThemes }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SEEN_LOOKS_KEY } from '../lib/lookLabels';
@@ -49,15 +50,15 @@ beforeEach(async () => {
   state.look = 'standard';
   state.looks = true;
   who.userId = undefined;
-  wearers.value = {};
+  named.value = [];
   saveTheme.mockClear();
   setPref.mockClear();
-  fetchThemeCounts.mockClear();
+  fetchPopularThemes.mockClear();
   await AsyncStorage.removeItem(SEEN_LOOKS_KEY);
   vi.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
-/** Let the sheet's two asks on opening answer: the count, and the memory
+/** Let the sheet's two asks on opening answer: the names, and the memory
  *  read then written. Both are mocked promises, so a tick is enough. */
 const settled = () => act(() => new Promise<void>((r) => setTimeout(r, 0)));
 
@@ -434,20 +435,20 @@ describe('the looks', () => {
     const said = (word: string) => [...document.querySelectorAll(`[data-testid$="-${word}"]`)]
       .map((el) => el.getAttribute('data-testid')!.replace(/^theme-/, '').replace(`-${word}`, ''));
 
-    it('puts Popular on the three most worn the server named, and on no ground', async () => {
-      // Dark has the most wearers of all and is a ground, not a look: the
-      // list is a setting and carries no word.
-      wearers.value = { dark: 900, wine: 55, coffee: 40, cosmic: 30, rose: 21 };
+    it('puts Popular on the first three looks the server named, and on no ground', async () => {
+      // Dark is the most worn setting of all and is a ground, not a look:
+      // the list is a setting and carries no word.
+      named.value = ['dark', 'wine', 'coffee', 'cosmic', 'rose'];
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       await settled();
       expect(said('popular').sort()).toEqual(['coffee', 'cosmic', 'wine']);
       expect(screen.getAllByText('Popular').length).toBe(3);
       expect(screen.queryByTestId('theme-dark-popular')).toBeNull();
-      expect(fetchThemeCounts).toHaveBeenCalledTimes(1);
+      expect(fetchPopularThemes).toHaveBeenCalledTimes(1);
     });
 
-    // Nothing until there are twenty of anyone — the server's rule, and
-    // the sheet as it ships.
+    // Nothing until a theme is worn by a fifth of those who chose — the
+    // server's rule, and the sheet as it ships.
     it('says nothing when the server names nothing', async () => {
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       await settled();
@@ -475,7 +476,7 @@ describe('the looks', () => {
 
     it('lets Popular win on a card that is both', async () => {
       await AsyncStorage.setItem(SEEN_LOOKS_KEY, JSON.stringify(ALL.filter((l) => l !== 'wine')));
-      wearers.value = { wine: 55 };
+      named.value = ['wine'];
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       await settled();
       expect(said('popular')).toEqual(['wine']);
@@ -486,7 +487,7 @@ describe('the looks', () => {
     // same sheet: a broken value must not put New on every card.
     it('labels nothing when the memory cannot be read', async () => {
       vi.mocked(AsyncStorage.getItem).mockRejectedValueOnce(new Error('disk'));
-      wearers.value = { wine: 55 };
+      named.value = ['wine'];
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       await settled();
       expect(screen.queryByText('New')).toBeNull();
@@ -496,19 +497,19 @@ describe('the looks', () => {
     it('asks again on each opening, and not while closed', async () => {
       const { rerender } = render(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
       await settled();
-      expect(fetchThemeCounts).not.toHaveBeenCalled();
+      expect(fetchPopularThemes).not.toHaveBeenCalled();
       rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
       await settled();
       rerender(<ThemeSwitcherModal visible={false} onClose={() => {}} />);
       rerender(<ThemeSwitcherModal visible onClose={() => {}} />);
       await settled();
-      expect(fetchThemeCounts).toHaveBeenCalledTimes(2);
+      expect(fetchPopularThemes).toHaveBeenCalledTimes(2);
     });
 
     // The word is drawn in the sheet's own colours with the swatch's
     // hairline, so it reads on a pale page and a dark one alike.
     it('draws the word in the sheet’s own ground, on the swatch', async () => {
-      wearers.value = { wine: 55 };
+      named.value = ['wine'];
       render(<ThemeSwitcherModal visible onClose={() => {}} />);
       await settled();
       const word = screen.getByTestId('theme-wine-popular');

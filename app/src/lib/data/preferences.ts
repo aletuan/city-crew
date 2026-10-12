@@ -122,24 +122,23 @@ export async function saveTheme(ownerId: string, theme: string): Promise<void> {
 }
 
 /**
- * How many accounts wear each theme, by the theme's `Pref` string — for
- * the "Popular" word on the Theme sheet (`lib/lookLabels`).
+ * The themes that are popular, most worn first, by the theme's `Pref`
+ * string — for the "Popular" word on the Theme sheet (`lib/lookLabels`).
  *
- * Through a Postgres function, and that is the privacy boundary: the
- * function says a name and a figure, only for a theme past twenty
- * wearers, and nothing about whose (`theme_counts`). It answers a guest
- * too, since the sheet shows a guest the same cards.
+ * Through a Postgres function, and the function is the privacy boundary:
+ * it says names, in order, for the themes at least a fifth of the
+ * accounts that chose one wear — and at least two — and no figure for
+ * any of them (`popular_themes`, which says why a share and not a
+ * count). It answers a guest too, since the sheet shows a guest the same
+ * cards.
  *
- * Failure is an empty map, never a throw: every look then reads as
- * unremarkable and no card carries the word — the state the sheet ships
- * in until there are twenty of anyone.
+ * Failure is an empty list, never a throw: no card then carries the word,
+ * which is the sheet as it ships until a theme is worn by that many.
  */
-export async function fetchThemeCounts(): Promise<Record<string, number>> {
-  const { data, error } = await supabase.rpc('theme_counts');
-  if (error || !data) return {};
-  const out: Record<string, number> = {};
-  for (const row of data as { theme: string; wearers: number }[]) out[row.theme] = row.wearers;
-  return out;
+export async function fetchPopularThemes(): Promise<string[]> {
+  const { data, error } = await supabase.rpc('popular_themes');
+  if (error || !data) return [];
+  return (data as { theme: string }[]).map((row) => row.theme);
 }
 
 export type EventKind = 'open' | 'save' | 'unsave' | 'plan_keep' | 'plan_drop';

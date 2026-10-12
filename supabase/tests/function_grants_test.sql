@@ -20,9 +20,9 @@ declare
     -- The three daily caps' counts, moved out of their policies by
     -- 20260927120000_rls_ask_once. Present only in the second pass here.
     'own_collections_today', 'own_place_events_today', 'own_friend_requests_today',
-    -- Totals of a private column, said only past twenty wearers; the
-    -- Theme sheet asks for it signed out too. See 20261012120000_theme_counts.
-    'theme_counts'
+    -- The themes a fifth of those who chose wear, as names and nothing
+    -- else; the Theme sheet asks signed out too. See 20261012130000_popular_themes.
+    'popular_themes'
   ];
   stray text;
 begin

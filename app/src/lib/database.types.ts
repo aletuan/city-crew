@@ -1153,6 +1153,7 @@ export type Database = {
       own_photos_on_place: { Args: { target: string }; Returns: number }
       own_place_photos_today: { Args: never; Returns: number }
       random_handle: { Args: never; Returns: string }
+      popular_themes: { Args: never; Returns: { theme: string }[] }
       reorder_collection: {
         Args: { collection_slug: string; place_slugs: string[] }
         Returns: undefined
@@ -1179,13 +1180,6 @@ export type Database = {
         Returns: {
           mutual: number
           other: string
-        }[]
-      }
-      theme_counts: {
-        Args: never
-        Returns: {
-          theme: string
-          wearers: number
         }[]
       }
       trip_crew_counts: {

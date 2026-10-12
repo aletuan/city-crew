@@ -84,10 +84,12 @@
 // TWO WORDS on a few cards since 12 Oct 2026, and the grid in its one
 // order. The owner asked whether the looks could be ordered by how often
 // they are chosen; the answer, with the research behind it, is the header
-// of `lib/lookLabels`. "Popular" goes on the three most worn, by the
-// server's count of accounts wearing each (`theme_counts`, which says a
-// figure only past twenty wearers, so a small user base sees no word at
-// all). "New" goes on a look that was not on the sheet the last time this
+// of `lib/lookLabels`. "Popular" goes on the first three looks the server
+// names as worn by at least a fifth of the accounts that chose a theme,
+// and by at least two (`popular_themes`: a share, since two of three
+// readers is popular and twenty of ten thousand is not; names and no
+// figures, so nothing about one reader is ever on the wire). "New" goes
+// on a look that was not on the sheet the last time this
 // phone opened it, for that one opening; never on the first opening, when
 // everything would be new. A card that is both says Popular. The word sits
 // on the swatch's top-left corner in the sheet's own colours with the
@@ -100,7 +102,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../lib/auth';
-import { fetchThemeCounts, saveTheme } from '../lib/data';
+import { fetchPopularThemes, saveTheme } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { lookOf, needsRestart, PINNED, type Pinned } from '../lib/look';
 import { parseSeen, popularLooks, SEEN_LOOKS_KEY, serializeSeen, unseenLooks } from '../lib/lookLabels';
@@ -273,18 +275,18 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   const [page, setPage] = useState(worn);
   useEffect(() => { if (visible) setPage(worn); }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
   // The two words (see the header). Both are asked for on each opening:
-  // the count from the server, which is one small call and may have moved
+  // the names from the server, which is one small call and may have moved
   // since the last opening, and the ids last shown from the phone — which
   // are then replaced by the ids shown now, so "New" lasts this opening.
   // `live` keeps an answer that arrives after the sheet closed from
   // landing on the next opening's state.
   const ids = palettes.map((o) => o.id as Pinned);
-  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [named, setNamed] = useState<string[]>([]);
   const [unseen, setUnseen] = useState<Pinned[]>([]);
   useEffect(() => {
     if (!visible) return;
     let live = true;
-    fetchThemeCounts().then((c) => { if (live) setCounts(c); });
+    fetchPopularThemes().then((n) => { if (live) setNamed(n); });
     AsyncStorage.getItem(SEEN_LOOKS_KEY)
       .then((raw) => {
         if (live) setUnseen(unseenLooks(parseSeen(raw), ids));
@@ -295,7 +297,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
       .catch(() => {});
     return () => { live = false; };
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
-  const popular = popularLooks(counts, ids);
+  const popular = popularLooks(named, ids);
   const wordOn = (id: Pinned): 'popular' | 'new' | null =>
     popular.includes(id) ? 'popular' : unseen.includes(id) ? 'new' : null;
   // A card that changes the look restarts the app. The choice waits in
