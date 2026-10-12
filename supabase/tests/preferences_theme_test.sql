@@ -12,10 +12,16 @@ end $$;
 
 -- A look's name is a word. The check is the one limit the column has, so
 -- it is asserted by breaking it rather than by reading the catalog.
+--
+-- An upsert, not an update: whether this account has a row by now depends
+-- on which blocks ran before this one, and an update that touches no row
+-- breaks nothing — CI reported "a 33-character theme was accepted" for
+-- exactly that reason. The write has to land on a row to be refused.
 do $$
 begin
-  update public.preferences set theme = repeat('x', 33)
-   where owner_id = '11111111-1111-1111-1111-111111111111';
+  insert into public.preferences (owner_id, theme)
+  values ('11111111-1111-1111-1111-111111111111', repeat('x', 33))
+  on conflict (owner_id) do update set theme = excluded.theme;
   assert false, 'a 33-character theme was accepted';
 exception when check_violation then
   null;
@@ -24,8 +30,9 @@ end $$;
 do $$
 declare got text;
 begin
-  update public.preferences set theme = 'cosmic'
-   where owner_id = '11111111-1111-1111-1111-111111111111';
+  insert into public.preferences (owner_id, theme)
+  values ('11111111-1111-1111-1111-111111111111', 'cosmic')
+  on conflict (owner_id) do update set theme = excluded.theme;
   select theme into got from public.preferences
    where owner_id = '11111111-1111-1111-1111-111111111111';
   assert got = 'cosmic', format('theme read back as %s', got);
