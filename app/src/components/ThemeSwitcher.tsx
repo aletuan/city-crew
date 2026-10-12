@@ -80,15 +80,30 @@
 // is the one horizontal surface this reader has already learned. A sliver
 // says there is more *and* which way it is, which neither dots nor a
 // count can.
+//
+// TWO WORDS on a few cards since 12 Oct 2026, and the grid in its one
+// order. The owner asked whether the looks could be ordered by how often
+// they are chosen; the answer, with the research behind it, is the header
+// of `lib/lookLabels`. "Popular" goes on the three most worn, by the
+// server's count of accounts wearing each (`theme_counts`, which says a
+// figure only past twenty wearers, so a small user base sees no word at
+// all). "New" goes on a look that was not on the sheet the last time this
+// phone opened it, for that one opening; never on the first opening, when
+// everything would be new. A card that is both says Popular. The word sits
+// on the swatch's top-left corner in the sheet's own colours with the
+// swatch's hairline, so it reads on a pale page and a dark one alike, and
+// it is a word and not a number — the reasons are in that header too.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../lib/auth';
-import { saveTheme } from '../lib/data';
+import { fetchThemeCounts, saveTheme } from '../lib/data';
 import { useI18n } from '../lib/i18n';
 import { lookOf, needsRestart, PINNED, type Pinned } from '../lib/look';
+import { parseSeen, popularLooks, SEEN_LOOKS_KEY, serializeSeen, unseenLooks } from '../lib/lookLabels';
 import { Pref, Return, Scheme, useScheme } from '../lib/theme';
 import { colors, font, PALETTES, radius, space } from '../theme';
 import { PressableScale } from './ui';
@@ -257,6 +272,32 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
   const worn = Math.floor(Math.max(0, palettes.findIndex((o) => o.id === pref)) / PER_PAGE);
   const [page, setPage] = useState(worn);
   useEffect(() => { if (visible) setPage(worn); }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The two words (see the header). Both are asked for on each opening:
+  // the count from the server, which is one small call and may have moved
+  // since the last opening, and the ids last shown from the phone — which
+  // are then replaced by the ids shown now, so "New" lasts this opening.
+  // `live` keeps an answer that arrives after the sheet closed from
+  // landing on the next opening's state.
+  const ids = palettes.map((o) => o.id as Pinned);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [unseen, setUnseen] = useState<Pinned[]>([]);
+  useEffect(() => {
+    if (!visible) return;
+    let live = true;
+    fetchThemeCounts().then((c) => { if (live) setCounts(c); });
+    AsyncStorage.getItem(SEEN_LOOKS_KEY)
+      .then((raw) => {
+        if (live) setUnseen(unseenLooks(parseSeen(raw), ids));
+        return AsyncStorage.setItem(SEEN_LOOKS_KEY, serializeSeen(ids));
+      })
+      // A memory that cannot be read or kept labels nothing; the sheet
+      // is the same sheet without it.
+      .catch(() => {});
+    return () => { live = false; };
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+  const popular = popularLooks(counts, ids);
+  const wordOn = (id: Pinned): 'popular' | 'new' | null =>
+    popular.includes(id) ? 'popular' : unseen.includes(id) ? 'new' : null;
   // A card that changes the look restarts the app. The choice waits in
   // `pending` while the sheet leaves (see DISMISS_MS); whichever of
   // `onDismiss` and the backstop comes first sends it, once, with where
@@ -392,6 +433,7 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                 <View key={i} style={[s.grid, { width: pageW }]} testID={`look-page-${i}`}>
                   {cards.map((o) => {
                     const active = o.id === pref;
+                    const word = wordOn(o.id as Pinned);
                     return (
                       <PressableScale
                         key={o.id}
@@ -404,6 +446,13 @@ export function ThemeSwitcherModal({ visible, onClose, returnTo }: {
                         testID={`theme-${o.id}`}
                       >
                         <Swatch look={o.id as Pinned} />
+                        {word && (
+                          <View style={s.word} testID={`theme-${o.id}-${word}`}>
+                            <Text style={s.wordText}>
+                              {word === 'popular' ? t('Popular', 'Phổ biến', '人気') : t('New', 'Mới', '新着')}
+                            </Text>
+                          </View>
+                        )}
                         <View style={s.cardLabel}>
                           <Ionicons name={o.icon} size={16} color={active ? colors.accent : colors.textTertiary} />
                           <Text style={[s.cardTitle, active && { color: colors.accent }]} numberOfLines={1}>
@@ -497,4 +546,16 @@ const s = StyleSheet.create({
   swatchLine: { height: 5, borderRadius: 2.5 },
   swatchPill: { width: 26, height: 18, borderRadius: 9 },
   swatchDot: { width: 18, height: 18, borderRadius: 9 },
+  // The word, on the swatch's top-left corner: the card's 8pt padding
+  // plus 3pt in from the swatch's edge, 14pt tall, which ends 1pt above
+  // the swatch's centred lines (they start 18.5pt down a 52pt swatch).
+  // The sheet's own ground and type, with the swatch's hairline, so it
+  // carries its own contrast onto any page the swatch is painted in.
+  word: {
+    position: 'absolute', top: 11, left: 11,
+    paddingHorizontal: 6, paddingVertical: 1, borderRadius: 7,
+    backgroundColor: colors.bgElevated,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(128,128,128,0.35)',
+  },
+  wordText: { color: colors.text, fontSize: 10, lineHeight: 12, fontWeight: font.semibold },
 });

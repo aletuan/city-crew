@@ -19,7 +19,10 @@ declare
     'trip_invite_count', 'collection_like_counts',
     -- The three daily caps' counts, moved out of their policies by
     -- 20260927120000_rls_ask_once. Present only in the second pass here.
-    'own_collections_today', 'own_place_events_today', 'own_friend_requests_today'
+    'own_collections_today', 'own_place_events_today', 'own_friend_requests_today',
+    -- Totals of a private column, said only past twenty wearers; the
+    -- Theme sheet asks for it signed out too. See 20261012120000_theme_counts.
+    'theme_counts'
   ];
   stray text;
 begin
