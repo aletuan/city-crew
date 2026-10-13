@@ -29,7 +29,7 @@ const PLACE = {
   duration_min: 45, duration_max: null, website: 'https://cafe-a.example', phone: null, threads_handle: null,
   is_published: false, review_note: null, reviewer_source: null, reviewer_name: null, reviewer_url: null,
   review_status: 'pending', lat: 10.7731, lng: 106.7012, rating: 4.4, rating_count: 812,
-  google_place_id: 'gp-a', opening_hours: ['Mon 7–22', 'Tue 7–22'],
+  google_place_id: 'gp-a', opening_hours: ['Mon 7–22', 'Tue 7–22'], i18n: {},
   place_photos: [photo('p1', { is_cover: true }), photo('p2')],
 };
 const SIBLINGS = [{ slug: 'bar-z' }, { slug: 'cafe-a' }, { slug: 'park-c' }];
@@ -141,24 +141,50 @@ describe('PlaceEditor', () => {
 
   // The third language had a column for two months and no field: the
   // editor listed EN and VI by hand. Now every language in `langs.js` gets
-  // its three fields, and the save path accepts them — see `langs.js`.
-  it('shows and saves every language the catalog is written in, Japanese included', async () => {
-    openEditor('/place/cafe-a', { ...PLACE, name_ja: 'カフェA', desc_ja: null, neighborhood_ja: null });
+  // its three fields. Japanese lives in the `i18n` object, not in columns,
+  // and the form never knows: it reads flat keys and Save folds them back.
+  it('shows every language the catalog is written in, and saves Japanese into the object', async () => {
+    openEditor('/place/cafe-a', { ...PLACE, i18n: { ja: { name: 'カフェA' } } });
     await screen.findByDisplayValue('Café A');
     for (const base of ['name', 'desc', 'neighborhood']) {
       for (const lang of ['en', 'vi', 'ja']) expect(field(`${base}_${lang}`)).toBeTruthy();
     }
     expect(field('name_ja').value).toBe('カフェA');
     expect(field('desc_ja').tagName).toBe('TEXTAREA');
-    // The label names the language, the way the EN and VI ones always have.
     expect(screen.getByLabelText('BlurbJA')).toBe(field('desc_ja'));
     fireEvent.change(field('desc_ja'), { target: { value: '川沿いのベンチ。' } });
     fireEvent.change(field('neighborhood_ja'), { target: { value: '1区' } });
     fireEvent.click(saveButton());
     await findToast();
-    expect(api.savePlace).toHaveBeenCalledWith('cafe-a', expect.objectContaining({
-      desc_ja: '川沿いのベンチ。', neighborhood_ja: '1区', name_ja: 'カフェA',
-    }));
+    const sent = api.savePlace.mock.calls[0][1];
+    expect(sent.i18n).toEqual({ ja: { name: 'カフェA', desc: '川沿いのベンチ。', neighborhood: '1区' } });
+    expect(sent).not.toHaveProperty('desc_ja');
+    expect(sent).not.toHaveProperty('name_ja');
+    expect(sent).toHaveProperty('name_en', 'Café A');
+  });
+
+  // The flag: a model's words nobody has read in that language. Set by the
+  // draft, kept while nobody touches the text, cleared by an edit.
+  it('keeps a machine-drafted blurb flagged until a person changes it, and says so beside the field', async () => {
+    openEditor('/place/cafe-a', { ...PLACE, i18n: { ja: { desc: '川沿い。', machine: true } } });
+    await screen.findByDisplayValue('Café A');
+    expect(screen.getByLabelText(/BlurbJA/).id).toBe('desc_ja');
+    expect(screen.getByText('machine draft')).toBeTruthy();
+    // An unrelated edit saves the flag as it was.
+    fireEvent.change(field('name_en'), { target: { value: 'Café A+' } });
+    fireEvent.click(saveButton());
+    await findToast();
+    expect(api.savePlace.mock.calls[0][1].i18n).toEqual({ ja: { desc: '川沿い。', machine: true } });
+  });
+
+  it('clears the flag the moment the Japanese is edited', async () => {
+    openEditor('/place/cafe-a', { ...PLACE, i18n: { ja: { desc: '川沿い。', machine: true } } });
+    await screen.findByDisplayValue('Café A');
+    fireEvent.change(field('desc_ja'), { target: { value: '川沿いのベンチ。' } });
+    expect(screen.queryByText('machine draft')).toBeNull();
+    fireEvent.click(saveButton());
+    await findToast();
+    expect(api.savePlace.mock.calls[0][1].i18n).toEqual({ ja: { desc: '川沿いのベンチ。' } });
   });
 
   it('Approve and Flag save with the stamp, and the stamp wears the button', async () => {
@@ -505,6 +531,7 @@ describe('the blurb draft', () => {
     expect(api.draftBlurb).toHaveBeenCalledWith('park-c');
     expect(field('desc_vi').value).toBe('Bờ sông, ghế đá.');
     expect(field('desc_ja').value).toBe('川沿いのベンチ。');
+    expect(screen.getByText('machine draft')).toBeTruthy();
     expect(field('desc_en').value).toBe('Riverside benches.');
     expect(saveButton().disabled).toBe(false);
     expect(api.savePlace).not.toHaveBeenCalled();

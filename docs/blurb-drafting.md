@@ -62,3 +62,14 @@ Công viên trước, không phải vì nhiều mà vì có nguồn công khai �
 (Wikipedia). Thử một hai công viên, chủ sở hữu đọc, rồi mười di sản và
 26 điểm ngắm cảnh. Quán cà phê thì model chỉ có tên và giờ để viết, nên
 nguồn tốt hơn vẫn là bài Threads.
+
+## Bản tiếng Nhật máy viết, và dấu `machine`
+
+Từ 13 Oct 2026 function trả thêm `desc_ja`, và desk ghi nó vào
+`places.i18n` (`{"ja": {"desc": …, "machine": true}}`), không còn vào cột
+`desc_ja` (cột đó được trigger `sync_place_i18n` chép lại từ object cho
+tới khi app đọc thẳng object). `machine: true` nghĩa là chữ đúng như model
+viết và chưa ai sửa trong ngôn ngữ đó. Desk đặt dấu khi bấm "Draft blurb",
+giữ dấu khi Save mà không đụng ô JA, và bỏ dấu khi editor sửa chữ trong ô
+JA — xem `foldI18n` trong `dashboard/src/langs.js`. Trên editor, ô Blurb JA
+mang nhãn "machine draft" chừng nào dấu còn.

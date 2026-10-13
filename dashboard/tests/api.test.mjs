@@ -56,12 +56,13 @@ test('savePlace leaves reviewed_at alone for an ordinary field edit', async () =
   assert.equal(updateArgs[0].name_en, 'New name');
 });
 
-test('savePlace accepts every localized column langs.js produces, Japanese included', async () => {
+test('savePlace accepts the i18n object, and refuses a column that is only mirrored from it', async () => {
   const { api, client } = await loadApi([{ data: [{ slug: 'a-slug' }], error: null }]);
-  await api.savePlace('a-slug', { desc_ja: '川沿い', name_ja: 'カフェ', neighborhood_ja: '1区' });
+  await api.savePlace('a-slug', { i18n: { ja: { desc: '川沿い', machine: true } } });
   const [, updateArgs] = client.calls[0].chain.find(([m]) => m === 'update');
-  assert.equal(updateArgs[0].desc_ja, '川沿い');
-  assert.equal(updateArgs[0].neighborhood_ja, '1区');
+  assert.deepEqual(updateArgs[0].i18n, { ja: { desc: '川沿い', machine: true } });
+  const { api: api2 } = await loadApi([]);
+  await assert.rejects(() => api2.savePlace('a-slug', { desc_ja: '川沿い' }), /field not editable: desc_ja/);
 });
 
 test('savePlace surfaces "not an editor" rather than a bare 0-rows result', async () => {

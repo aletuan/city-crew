@@ -241,7 +241,15 @@ drops it into the JA field PR 1 created. Marked `machine` by
 construction. Cheap, and it stops the backlog growing in two languages
 while it shrinks in a third.
 
-## 4. Order
+## 4. Status (13 Oct, evening)
+
+3a merged (#921) and applied live: 117 rows carry `"ja"`, 0 mismatches,
+six machine drafts flagged. 3b in PR: the desk writes `i18n`, the
+`machine` flag is decided by `foldI18n`, `EDITABLE` refuses `desc_ja`.
+Remaining: 3c (app helper, search, types), 3d (drop the `_ja` columns and
+the trigger).
+
+## 5. Order
 
 PR 1 (desk) → PR 2 (app label) → PR 4 (write-blurb JA) are independent
 and deployable this week. PR 3 waits on the A/B decision above.
