@@ -395,6 +395,14 @@ describe('the ja mode', () => {
     expect(frames()).toEqual([]);
     expect(p).not.toContain('photograph');
     expect(h.fake.log.find((a) => a.table === 'place_photos')).toBeUndefined();
+    // Nor the hours, the address or the website: ten of the first batch's
+    // drafts put the opening hours into a blurb that never had them.
+    expect(p).toContain('Name: Công viên Thương Bạc / Thuong Bac Park');
+    expect(p).toContain('City: ');
+    expect(p).not.toContain('Hours:');
+    expect(p).not.toContain('Address:');
+    expect(p).not.toContain('Website:');
+    expect(p).not.toContain('District:');
     // Only an example that carries Japanese can show the register.
     expect(p).toContain('- Tao Dan Park\n  vi: Thảm cỏ râm mát giữa Quận 1.\n  en: Shaded lawns in D1.\n  ja: 1区の木陰の芝生。');
     expect(p).not.toContain('- Park 3');

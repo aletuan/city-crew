@@ -284,9 +284,16 @@ Deno.serve(async (req) => {
       ? null
       : (await wikiLead("vi", row.name_vi, cityNames)) ?? (await wikiLead("en", row.name_en, cityNames));
 
+    // In the ja mode the row's facts stop at the name and the city — what
+    // the Latin-alphabet rule and the register need. The first batch had
+    // the full block, and 10 of 66 drafts worked the opening hours into a
+    // blurb that in English never mentions them: hours go stale and a
+    // blurb is not re-synced, which is why the desk's own blurbs leave
+    // them out. The same door the photographs went out of (#925).
     const facts = [
       `Name: ${row.name_vi} / ${row.name_en}`,
       `City: ${city?.name_vi ?? row.city_id ?? "?"} / ${city?.name_en ?? ""}`,
+      ...(mode === "ja" ? [] : [
       `District: ${row.neighborhood_vi ?? row.neighborhood_en ?? "?"}`,
       `Address: ${row.address ?? "?"}`,
       `Kinds: ${kinds.join(", ") || "?"}`,
@@ -294,6 +301,7 @@ Deno.serve(async (req) => {
       `Google type: ${row.primary_type ?? "?"}`,
       `Hours: ${(row.opening_hours ?? []).join("; ") || "?"}`,
       `Website: ${row.website ?? "?"}`,
+      ]),
     ].join("\n");
 
     const anthropic = new Anthropic({ apiKey });
